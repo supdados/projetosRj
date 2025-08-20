@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Etapa - ProjetosRJ{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <header class="pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Editar Etapa</h1>
+    </header>
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+             <h5 class="mb-0">Projeto: <a href="{{ url_for('main.project_detail', project_id=etapa.project_id) }}" class="text-decoration-none">{{ etapa.project.titulo }}</a></h5>
+        </div>
+        <div class="card-body p-4">
+            <form method="POST" action="{{ action }}" class="needs-validation" novalidate>
+                <!-- Campo Oculto para Project ID, se necessário para redirecionamento ou lógica -->
+                {% if etapa and etapa.project_id %}
+                    <input type="hidden" name="project_id" value="{{ etapa.project_id }}">
+                {% elif request.args.get('project_id') %}
+                    <input type="hidden" name="project_id" value="{{ request.args.get('project_id') }}">
+                {% endif %}
+                <div class="mb-3">
+                    <label for="etapa_descricao" class="form-label">Descrição da Etapa <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="etapa_descricao" name="etapa_descricao" rows="4" required>{{ etapa.descricao }}</textarea>
+                    <div class="invalid-feedback">Por favor, informe a descrição da etapa.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="etapa_comentarios" class="form-label">Comentários:</label>
+                    <textarea class="form-control" id="etapa_comentarios" name="etapa_comentarios" rows="3">{{ etapa.comentarios or '' }}</textarea>
+                    <div class="form-text">Adicione comentários adicionais ou atualizações sobre esta etapa.</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="etapa_data_inicio" class="form-label">Data de Início:</label>
+                        <input type="date" class="form-control" id="etapa_data_inicio" name="etapa_data_inicio" value="{{ data_inicio_form }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="etapa_data_fim" class="form-label">Data de Fim:</label>
+                        <input type="date" class="form-control" id="etapa_data_fim" name="etapa_data_fim" value="{{ data_fim_form }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="etapa_responsavel" class="form-label">Responsável:</label>
+                        <input type="text" class="form-control" id="etapa_responsavel" name="etapa_responsavel" value="{{ etapa.responsavel if etapa.responsavel }}">
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="etapa_iniciada" name="etapa_iniciada" {{ 'checked' if etapa.iniciada else '' }}>
+                            <label class="form-check-label" for="etapa_iniciada">Marcar como Iniciada</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="etapa_done" name="etapa_done" {{ 'checked' if etapa.done else '' }}>
+                            <label class="form-check-label" for="etapa_done">Marcar como Concluída</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <a href="{{ url_for('main.project_detail', project_id=etapa.project_id if etapa else request.args.get('project_id')) }}" class="btn btn-outline-secondary me-2"><i class="fas fa-times me-1"></i>Cancelar</a>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+// Example starter JavaScript for disabling form submissions if there are invalid fields
+(function () {
+  'use strict'
+  var forms = document.querySelectorAll('.needs-validation')
+  Array.prototype.slice.call(forms)
+    .forEach(function (form) {
+      form.addEventListener('submit', function (event) {
+        if (!form.checkValidity()) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+        form.classList.add('was-validated')
+      }, false)
+    })
+})()
+</script>
+{% endblock %} 

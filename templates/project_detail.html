@@ -1,0 +1,2538 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes: {{ project.titulo }}{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* ====================================
+       GLASS MORPHISM - PROJECT DETAIL
+       ==================================== */
+    
+    :root {
+        --primary-color: #005A92;
+        --primary-dark: #004b79;
+        --text-color: #2d3748;
+        --text-muted: #718096;
+        --success-color: #38a169;
+        --warning-color: #d69e2e;
+        --danger-color: #e53e3e;
+        --info-color: #3182ce;
+        --transition-speed: 0.3s;
+        --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%);
+        --glass-border: rgba(255, 255, 255, 0.18);
+        --glass-shadow: 0 8px 32px rgba(0, 90, 146, 0.08);
+    }
+
+    body {
+        background-color: #f7f9fc;
+        min-height: 100vh;
+        position: relative;
+    }
+
+    /* Glass Project Header */
+    .project-header {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.95) 0%, 
+            rgba(0, 75, 121, 0.92) 50%,
+            rgba(0, 90, 146, 0.88) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 
+            0 8px 32px rgba(0, 90, 146, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .project-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+            radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+        background-size: 50px 50px, 80px 80px;
+        pointer-events: none;
+        opacity: 0.7;
+    }
+
+    .project-header h1 {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        font-size: 2rem;
+        color: white;
+        background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        position: relative;
+        z-index: 1;
+    }
+
+    .project-header p {
+        opacity: 0.9;
+        margin-bottom: 0;
+        font-size: 1rem;
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .project-header p span {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .project-header p span i {
+        margin-right: 0.5rem;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Glass Back Button */
+    .back-button {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.2) 0%, 
+            rgba(255, 255, 255, 0.1) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        transition: all var(--transition-speed) ease;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        border-radius: 10px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .back-button:hover {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.3) 0%, 
+            rgba(255, 255, 255, 0.15) 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+        color: white !important;
+    }
+
+    /* Glass Info Card */
+    .info-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        box-shadow: 
+            var(--glass-shadow),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        position: relative;
+        overflow: hidden;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .info-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .info-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+            0 12px 40px rgba(0, 90, 146, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .info-card .card-header {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.15) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 1.5rem 2rem;
+        position: relative;
+    }
+
+    .info-card .card-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 2rem;
+        right: 2rem;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    }
+
+    .info-card .card-header h4 {
+        font-weight: 600;
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+        font-size: 1.25rem;
+        margin-bottom: 0;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .info-card .card-header h4 i {
+        color: var(--primary-color);
+        margin-right: 0.75rem;
+        filter: drop-shadow(0 2px 4px rgba(0, 90, 146, 0.3));
+    }
+
+    .info-card .card-body {
+        padding: 2rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .info-card .card-footer {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.1) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 1.5rem 2rem;
+        position: relative;
+    }
+
+    .info-card .card-footer::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 2rem;
+        right: 2rem;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    }
+
+    /* Glass Details Grid */
+    .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .detail-item {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.15) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 1.25rem;
+        border-left: 4px solid var(--primary-color);
+        transition: all var(--transition-speed) ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .detail-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .detail-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 90, 146, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .detail-item strong {
+        color: var(--text-color);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: block;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Glass Priority Badges */
+    .priority-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all var(--transition-speed) ease;
+    }
+
+    .priority-urgente {
+        background: linear-gradient(135deg, 
+            rgba(229, 62, 62, 0.2) 0%, 
+            rgba(229, 62, 62, 0.1) 100%);
+        color: var(--danger-color) !important;
+        border-color: rgba(229, 62, 62, 0.3);
+    }
+
+    .priority-alta {
+        background: linear-gradient(135deg, 
+            rgba(214, 158, 46, 0.2) 0%, 
+            rgba(214, 158, 46, 0.1) 100%);
+        color: var(--warning-color) !important;
+        border-color: rgba(214, 158, 46, 0.3);
+    }
+
+    .priority-media {
+        background: linear-gradient(135deg, 
+            rgba(49, 130, 206, 0.2) 0%, 
+            rgba(49, 130, 206, 0.1) 100%);
+        color: var(--info-color) !important;
+        border-color: rgba(49, 130, 206, 0.3);
+    }
+
+    .priority-baixa {
+        background: linear-gradient(135deg, 
+            rgba(56, 161, 105, 0.2) 0%, 
+            rgba(56, 161, 105, 0.1) 100%);
+        color: var(--success-color) !important;
+        border-color: rgba(56, 161, 105, 0.3);
+    }
+
+    /* Glass Badges */
+    .badge {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 500;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .badge.bg-success {
+        background: linear-gradient(135deg, 
+            rgba(56, 161, 105, 0.9) 0%, 
+            rgba(56, 161, 105, 0.8) 100%) !important;
+        color: white !important;
+        border-color: rgba(56, 161, 105, 0.3);
+    }
+
+    .badge.bg-secondary {
+        background: linear-gradient(135deg, 
+            rgba(113, 128, 150, 0.9) 0%, 
+            rgba(113, 128, 150, 0.8) 100%) !important;
+        color: white !important;
+        border-color: rgba(113, 128, 150, 0.3);
+    }
+
+    .badge.bg-warning {
+        background: linear-gradient(135deg, 
+            rgba(214, 158, 46, 0.9) 0%, 
+            rgba(214, 158, 46, 0.8) 100%) !important;
+        color: white !important;
+        border-color: rgba(214, 158, 46, 0.3);
+    }
+
+    /* Status Badge Styles - Glass Morphism */
+    .bg-success-light {
+        background: linear-gradient(135deg, 
+            rgba(34, 197, 94, 0.9) 0%, 
+            rgba(22, 163, 74, 0.95) 100%) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        box-shadow: 0 4px 15px rgba(34, 197, 94, 0.25);
+        font-weight: 600;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .bg-success-light:hover {
+        background: linear-gradient(135deg, 
+            rgba(34, 197, 94, 1) 0%, 
+            rgba(22, 163, 74, 1) 100%) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+    }
+
+    .bg-secondary-light {
+        background: linear-gradient(135deg, 
+            rgba(107, 114, 128, 0.85) 0%, 
+            rgba(75, 85, 99, 0.9) 100%) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        box-shadow: 0 4px 15px rgba(107, 114, 128, 0.25);
+        font-weight: 600;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .bg-secondary-light:hover {
+        background: linear-gradient(135deg, 
+            rgba(107, 114, 128, 0.95) 0%, 
+            rgba(75, 85, 99, 1) 100%) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(107, 114, 128, 0.35);
+    }
+
+    .bg-danger-light {
+        background: linear-gradient(135deg, 
+            rgba(239, 68, 68, 0.9) 0%, 
+            rgba(220, 38, 38, 0.95) 100%) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
+        font-weight: 600;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .bg-danger-light:hover {
+        background: linear-gradient(135deg, 
+            rgba(239, 68, 68, 1) 0%, 
+            rgba(220, 38, 38, 1) 100%) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+    }
+
+    /* Glass Section Divider */
+    .section-divider {
+        display: flex;
+        align-items: center;
+        margin: 2.5rem 0 2rem 0;
+        position: relative;
+    }
+
+    .section-divider h2 {
+        margin-bottom: 0;
+        margin-right: 2rem;
+        font-weight: 700;
+        font-size: 1.5rem;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        position: relative;
+        z-index: 1;
+    }
+
+    .section-divider::after {
+        content: '';
+        flex: 1;
+        height: 2px;
+        background: linear-gradient(90deg, 
+            var(--primary-color) 0%, 
+            rgba(0, 90, 146, 0.3) 50%, 
+            transparent 100%);
+        border-radius: 1px;
+    }
+
+    /* Glass Objective Sections */
+    .objective-section {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.15) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0, 90, 146, 0.05);
+        margin-bottom: 1rem;
+        height: 100%;
+        transition: all var(--transition-speed) ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .objective-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .objective-section:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 90, 146, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .objective-section h5 {
+        color: var(--text-color);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .objective-section h5 i {
+        margin-right: 0.5rem;
+        color: var(--primary-color);
+    }
+
+    .objective-section p {
+        font-size: 0.9rem;
+        color: var(--text-color);
+        line-height: 1.6;
+        margin-bottom: 0;
+    }
+
+    /* Glass Indicators List */
+    .indicadores-list {
+        list-style-type: none;
+        padding-left: 0;
+        margin-bottom: 0;
+    }
+
+    .indicadores-list li {
+        position: relative;
+        padding-left: 1.5rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-color);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .indicadores-list li::before {
+        content: '●';
+        color: var(--primary-color);
+        font-size: 1rem;
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+    }
+
+    /* Glass Add Button */
+    .btn-add-etapa {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.9) 0%, 
+            rgba(0, 75, 121, 0.8) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        box-shadow: 
+            0 4px 15px rgba(0, 90, 146, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        transition: all var(--transition-speed) ease;
+    }
+
+    .btn-add-etapa:hover {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 1) 0%, 
+            rgba(0, 75, 121, 0.9) 100%);
+        transform: translateY(-2px);
+        box-shadow: 
+            0 8px 25px rgba(0, 90, 146, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        color: white !important;
+    }
+
+    /* Glass Edit Button */
+    .btn-warning {
+        background: linear-gradient(135deg, 
+            rgba(214, 158, 46, 0.9) 0%, 
+            rgba(214, 158, 46, 0.8) 100%) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .btn-warning:hover {
+        background: linear-gradient(135deg, 
+            rgba(214, 158, 46, 1) 0%, 
+            rgba(214, 158, 46, 0.9) 100%) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(214, 158, 46, 0.3);
+        color: white !important;
+    }
+
+    /* Glass Table Container */
+    .etapa-list .table-responsive {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.15) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--glass-shadow);
+        position: relative;
+    }
+
+    .etapa-list .table {
+        margin: 0;
+        background: transparent;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .etapa-list .table thead th {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.15) 0%, 
+            rgba(0, 75, 121, 0.1) 100%);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        color: var(--text-color);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        padding: 1.25rem 1.5rem;
+        position: relative;
+    }
+
+    .etapa-list .table tbody tr {
+        transition: all var(--transition-speed) ease;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .etapa-list .table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .etapa-list .table tbody td {
+        padding: 1.25rem 1.5rem;
+        vertical-align: middle;
+        border: none;
+        color: var(--text-color);
+        font-size: 0.9rem;
+    }
+
+    .etapa-descricao {
+        font-weight: 500;
+        color: var(--text-color) !important;
+    }
+
+    /* Glass Action Buttons */
+    .btn-floating {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.18) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 50%;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(0, 90, 146, 0.1);
+        transition: all var(--transition-speed) ease;
+        color: var(--text-color) !important;
+    }
+
+    .btn-floating:hover {
+        transform: translateY(-2px);
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.25) 0%, 
+            rgba(255, 255, 255, 0.1) 100%);
+        box-shadow: 0 8px 25px rgba(0, 90, 146, 0.15);
+        color: var(--primary-color) !important;
+    }
+
+    /* Glass Modal */
+    .modal-content {
+        background: var(--glass-bg);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 90, 146, 0.15);
+        overflow: hidden;
+    }
+
+    .modal-header.bg-primary {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.95) 0%, 
+            rgba(0, 75, 121, 0.9) 100%) !important;
+        backdrop-filter: blur(15px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        color: white;
+        padding: 1.5rem 2rem;
+    }
+
+    .modal-body {
+        padding: 2rem;
+        background: transparent;
+    }
+
+    .modal-footer {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.1) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 1.5rem 2rem;
+    }
+
+    /* Glass Form Controls */
+    .form-control, .form-select {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.15) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 8px;
+        color: var(--text-color);
+        transition: all var(--transition-speed) ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.2) 0%, 
+            rgba(255, 255, 255, 0.1) 100%);
+        border-color: rgba(0, 90, 146, 0.4) !important;
+        box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.1);
+    }
+
+    .form-label {
+        color: var(--text-color);
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Glass Mobile Cards */
+    .etapa-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        box-shadow: var(--glass-shadow);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--primary-color);
+        position: relative;
+        overflow: hidden;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .etapa-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .etapa-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px rgba(0, 90, 146, 0.12);
+    }
+
+    .etapa-card.iniciada:not(.done) {
+        border-left-color: var(--warning-color);
+    }
+
+    .etapa-card.done {
+        border-left-color: var(--success-color);
+        opacity: 0.8;
+    }
+
+    /* Glass View Toggle */
+    .view-toggle {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 1.5rem;
+    }
+
+    .view-toggle button {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.15) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text-color);
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .view-toggle button.active {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.9) 0%, 
+            rgba(0, 75, 121, 0.8) 100%);
+        color: white;
+        border-color: rgba(0, 90, 146, 0.3);
+    }
+
+    .view-toggle button:first-child {
+        border-radius: 8px 0 0 8px;
+    }
+
+    .view-toggle button:last-child {
+        border-radius: 0 8px 8px 0;
+    }
+
+    .view-toggle button i {
+        margin-right: 0.5rem;
+    }
+
+    /* Glass No Etapas Message */
+    .no-etapas-message {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 3rem 2rem;
+        text-align: center;
+        box-shadow: var(--glass-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .no-etapas-message::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .no-etapas-message i {
+        font-size: 3rem;
+        color: var(--text-muted);
+        margin-bottom: 1.5rem;
+        display: block;
+        filter: drop-shadow(0 4px 8px rgba(0, 90, 146, 0.1));
+    }
+
+    /* Glass AJAX Flash Messages */
+    #ajax-flash-messages-container {
+        position: fixed;
+        top: 90px;
+        right: 20px;
+        z-index: 1056;
+        min-width: 300px;
+        max-width: 450px;
+    }
+
+    #ajax-flash-messages-container .alert {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 90, 146, 0.15);
+        color: var(--text-color);
+    }
+
+    /* Drag and Drop Glass Effects */
+    .etapa-draggable-row {
+        /* cursor: grab !important; */ /* Removido para que apenas o handle seja 'grab' */
+        transition: all var(--transition-speed) ease;
+        position: relative;
+    }
+
+    .etapa-draggable-row.dragging {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.08) 0%, 
+            rgba(0, 90, 146, 0.03) 100%);
+        border: 2px dashed rgba(0, 90, 146, 0.2);
+        opacity: 0.5;
+        transform: scale(0.98);
+    }
+
+    .etapa-draggable-row.drag-over {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.12) 0%, 
+            rgba(0, 90, 146, 0.06) 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(0, 90, 146, 0.15);
+    }
+
+    /* Drop Indicator Line - Table */
+    .drop-indicator {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, 
+            var(--primary-color) 0%, 
+            rgba(0, 90, 146, 0.8) 50%, 
+            var(--primary-color) 100%);
+        border-radius: 2px;
+        z-index: 1000;
+        opacity: 0;
+        transform: scaleX(0);
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 90, 146, 0.4);
+        pointer-events: none;
+    }
+
+    .drop-indicator.show {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+
+    .drop-indicator::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: -3px;
+        width: 9px;
+        height: 9px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
+    }
+
+    .drop-indicator::after {
+        content: '';
+        position: absolute;
+        right: -6px;
+        top: -3px;
+        width: 9px;
+        height: 9px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
+    }
+
+    /* Mobile Cards Drag and Drop */
+    .etapa-card {
+        transition: all var(--transition-speed) ease;
+        /* cursor: grab; */ /* Removido para que apenas o handle seja 'grab' */
+        position: relative;
+    }
+
+    .etapa-card:active {
+        cursor: grabbing;
+    }
+
+    .etapa-card.dragging {
+        opacity: 0.5;
+        transform: scale(0.98);
+        pointer-events: none;
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.08) 0%, 
+            rgba(0, 90, 146, 0.03) 100%);
+    }
+
+    .etapa-card.drag-over {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.12) 0%, 
+            rgba(0, 90, 146, 0.06) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 90, 146, 0.15);
+    }
+
+    /* Drop Indicator Line - Mobile Cards */
+    .card-drop-indicator {
+        position: absolute;
+        left: 1rem;
+        right: 1rem;
+        height: 3px;
+        background: linear-gradient(90deg, 
+            var(--primary-color) 0%, 
+            rgba(0, 90, 146, 0.8) 50%, 
+            var(--primary-color) 100%);
+        border-radius: 2px;
+        z-index: 1000;
+        opacity: 0;
+        transform: scaleX(0);
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 90, 146, 0.4);
+        pointer-events: none;
+    }
+
+    .card-drop-indicator.show {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+
+    .card-drop-indicator::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: -3px;
+        width: 9px;
+        height: 9px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
+    }
+
+    .card-drop-indicator::after {
+        content: '';
+        position: absolute;
+        right: -6px;
+        top: -3px;
+        width: 9px;
+        height: 9px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
+    }
+
+    .drag-ghost-custom {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 8px 32px rgba(0, 90, 146, 0.2);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        color: var(--text-color);
+        opacity: 0.95;
+    }
+
+    /* ====================================
+       RESPONSIVE DESIGN
+       ==================================== */
+
+    @media (max-width: 768px) {
+        .project-header {
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .project-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .project-header p {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .info-card .card-header,
+        .info-card .card-body,
+        .info-card .card-footer {
+            padding: 1.5rem;
+        }
+
+        .details-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .section-divider h2 {
+            font-size: 1.25rem;
+            margin-right: 1rem;
+        }
+
+        .objective-section {
+            padding: 1.25rem;
+        }
+
+        .etapa-list .table-responsive {
+            display: none;
+        }
+
+        .etapa-list .mobile-etapas-view {
+            display: block;
+        }
+
+        .view-toggle {
+            display: flex;
+        }
+
+        .etapa-card {
+            padding: 1.25rem;
+        }
+
+        .btn-add-etapa {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    @media (min-width: 769px) {
+        .etapa-list .mobile-etapas-view {
+            display: none;
+        }
+
+        .etapa-list .table-responsive {
+            display: block;
+        }
+
+        .view-toggle {
+            display: none;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .project-header {
+            padding: 1rem;
+        }
+
+        .project-header h1 {
+            font-size: 1.25rem;
+        }
+
+        .info-card .card-header,
+        .info-card .card-body,
+        .info-card .card-footer {
+            padding: 1rem;
+        }
+
+        .objective-section {
+            padding: 1rem;
+        }
+
+        .etapa-card {
+            padding: 1rem;
+        }
+
+        .modal-header,
+        .modal-body,
+        .modal-footer {
+            padding: 1rem;
+        }
+    }
+
+    .editable-field:hover {
+        background-color: #e2e8f0;
+    }
+    .editable-field-input {
+        width: 100%;
+        border: 1px solid var(--primary-color) !important;
+        border-radius: 6px;
+        padding: 0.375rem 0.75rem;
+        font-size: inherit;
+        box-shadow: 0 0 5px rgba(0, 90, 146, 0.2);
+    }
+    .editable-field-textarea {
+        width: 100%;
+        min-height: 80px;
+        border: 1px solid var(--primary-color) !important;
+        border-radius: 6px;
+        padding: 0.375rem 0.75rem;
+        font-size: inherit;
+        box-shadow: 0 0 5px rgba(0, 90, 146, 0.2);
+    }
+
+    .custom-context-menu {
+        position: absolute;
+        z-index: 1050;
+        display: none;
+        background-color: white;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        padding: 0.5rem 0;
+        min-width: 150px;
+    }
+    .custom-context-menu ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .custom-context-menu li {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .custom-context-menu li:hover {
+        background-color: #f0f0f0;
+    }
+
+    /* Modal de Confirmação Customizado */
+    .confirm-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1060;
+    }
+    .confirm-modal {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        max-width: 400px;
+        text-align: center;
+    }
+    .confirm-modal-buttons {
+        margin-top: 1.5rem;
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 py-3">
+    <!-- Cabeçalho do projeto -->
+    <div class="project-header">
+        <!-- Mensagens flash dinâmicas para AJAX -->
+        <div id="ajax-flash-messages" class="mb-2" style="display:none;">
+            <div class="alert alert-info alert-dismissible fade show py-2 px-3" role="alert">
+                <span id="ajax-flash-message-text" class="small"></span>
+                <button type="button" class="btn-close p-1" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+        
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h1>{{ project.titulo }}</h1>
+            <a href="{{ url_for('main.list_projects') }}" class="btn btn-sm back-button">
+                <i class="fas fa-arrow-left me-1"></i>Voltar
+            </a>
+        </div>
+        <p class="mb-0">
+            <span class="me-3"><i class="far fa-calendar-alt me-1"></i> Início: {{ project.data_inicio_projeto.strftime('%d/%m/%Y') if project.data_inicio_projeto else 'Não definida' }}</span>
+            <span><i class="far fa-calendar-check me-1"></i> Fim: {{ project.data_fim_projeto.strftime('%d/%m/%Y') if project.data_fim_projeto else 'Não definida' }}</span>
+        </p>
+    </div>
+
+    <!-- Cartão de detalhes do projeto -->
+    <div class="info-card">
+        <div class="card-header">
+            <h4><i class="fas fa-info-circle"></i>Detalhes do Projeto</h4>
+        </div>
+        <div class="card-body">
+            <!-- Informações principais -->
+            <div class="details-grid mb-3">
+                <div class="detail-item">
+                    <strong>Prioridade</strong>
+                    {% if project.prioridade == 'urgente' %}
+                        <span class="priority-badge priority-urgente text-uppercase"><i class="fas fa-exclamation-triangle me-1"></i>Urgente</span>
+                    {% elif project.prioridade == 'alta' %}
+                        <span class="priority-badge priority-alta text-uppercase"><i class="fas fa-angle-double-up me-1"></i>Alta</span>
+                    {% elif project.prioridade == 'media' %}
+                        <span class="priority-badge priority-media text-uppercase"><i class="fas fa-minus me-1"></i>Média</span>
+                    {% elif project.prioridade == 'baixa' %}
+                        <span class="priority-badge priority-baixa text-uppercase"><i class="fas fa-angle-double-down me-1"></i>Baixa</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark">{{ project.prioridade if project.prioridade else 'Não definida' }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="detail-item">
+                    <strong>Status</strong>
+                    {% if project.status == 'Vigente' %}
+                        <span class="badge bg-success text-uppercase"><i class="fas fa-check-circle me-1"></i>Vigente</span>
+                    {% elif project.status == 'Finalizado' %}
+                        <span class="badge bg-secondary text-uppercase"><i class="fas fa-flag-checkered me-1"></i>Finalizado</span>
+                    {% elif project.status == 'Suspenso' %}
+                        <span class="badge bg-warning text-dark text-uppercase"><i class="fas fa-pause-circle me-1"></i>Suspenso</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark">{{ project.status if project.status else 'Não definido' }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="detail-item">
+                    <strong>Área Responsável</strong>
+                    {% if project.area_responsavel %}
+                        <div class="small"><i class="fas fa-users me-1 text-primary"></i> {{ project.area_responsavel }}</div>
+                    {% else %}
+                        <div class="text-muted small"><i class="fas fa-users me-1"></i> Não informada</div>
+                    {% endif %}
+                </div>
+                
+                <div class="detail-item">
+                    <strong>Órgão</strong>
+                    {% if project.orgao %}
+                        <div class="small"><i class="fas fa-building me-1 text-primary"></i> {{ project.orgao }}</div>
+                    {% else %}
+                        <div class="text-muted small"><i class="fas fa-building me-1"></i> Não informado</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            
+            <!-- Objetivos, Resultados e Indicadores -->
+            <div class="row g-2">
+                <h5 class="h6 text-uppercase fw-bold mb-2 small text-primary"><i class="fas fa-sitemap me-2"></i>EEGG</h5> <!-- text-primary adicionado ao invés de ícone no h5 -->
+                <div class="col-md-4">
+                    <div class="objective-section">
+                        <h5><i class="fas fa-bullseye me-1 text-primary"></i>Objetivo</h5> <!-- text-primary adicionado ao ícone -->
+                        {% if project.objetivo %}
+                            <p class="mb-0">{{ project.objetivo.descricao }}</p>
+                        {% else %}
+                            <p class="text-muted mb-0">Não definido</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="objective-section">
+                        <h5><i class="fas fa-chart-line me-1 text-primary"></i>Resultado esperado</h5> <!-- text-primary adicionado ao ícone -->
+                        {% if project.resultado_esperado %}
+                            <p class="mb-0">{{ project.resultado_esperado.descricao }}</p>
+                        {% else %}
+                            <p class="text-muted mb-0">Não definido</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="objective-section">
+                        <h5><i class="fas fa-tasks me-1 text-primary"></i>Indicadores</h5> <!-- text-primary adicionado ao ícone -->
+                        {% if project.indicadores %}
+                            <ul class="indicadores-list">
+                                {% for ip in project.indicadores %}
+                                    <li>{{ ip.indicador.descricao }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted mb-0">Nenhum indicador definido</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- Observações -->
+            <div class="mt-3 mb-3"> <!-- mt-3 adicionado para espaçamento -->
+                <h5 class="h6 text-uppercase fw-bold mb-2 small text-primary"><i class="fas fa-comment-alt me-2"></i>Observações</h5>
+                <div class="p-2 bg-light rounded small">
+                    {{ project.observacao if project.observacao else 'Nenhuma observação registrada.' }}
+                </div>
+            </div>
+        </div>
+        <div class="card-footer text-end">
+            {% if is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel) %}
+            <a href="{{ url_for('main.edit_project', project_id=project.id) }}" class="btn btn-warning btn-sm">
+                <i class="fas fa-edit me-1"></i>Editar Projeto
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Seção de etapas do projeto -->
+    <div class="section-divider">
+        <h2>Etapas do Projeto</h2>
+    </div>
+    
+    {% if is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel) %}
+    <div class="d-flex justify-content-end mb-3">
+        <button type="button" class="btn btn-add-etapa" data-bs-toggle="modal" data-bs-target="#addEtapaModal">
+            <i class="fas fa-plus-circle me-1"></i> Adicionar Nova Etapa
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Modal Adicionar Etapa - Design Minimalista -->
+    <div class="modal fade" id="addEtapaModal" tabindex="-1" aria-labelledby="addEtapaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content bg-white">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-semibold" id="addEtapaModalLabel">
+                        <i class="fas fa-tasks text-primary me-2"></i>
+                        Adicionar Nova Etapa
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body px-4 pt-2">
+                    <form id="addEtapaForm" action="{{ url_for('main.add_etapa', project_id=project.id) }}" method="POST">
+                        
+                        <!-- Descrição -->
+                        <div class="mb-3">
+                            <label for="etapa_descricao_modal" class="form-label fw-medium">
+                                Descrição da Etapa <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="etapa_descricao_modal" name="etapa_descricao" rows="3" required placeholder="Digite a descrição da etapa..." style="border: 1px solid #ced4da !important;"></textarea>
+                        </div>
+                        
+                        <!-- Comentários -->
+                        <div class="mb-3">
+                            <label for="etapa_comentarios_modal" class="form-label fw-medium">Comentários</label>
+                            <textarea class="form-control" id="etapa_comentarios_modal" name="etapa_comentarios" rows="2" placeholder="Comentários adicionais (opcional)" style="border: 1px solid #ced4da !important;"></textarea>
+                        </div>
+                        
+                        <!-- Data e Responsável -->
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="etapa_data_inicio_modal" class="form-label fw-medium">Data de Início</label>
+                                <input type="date" class="form-control" id="etapa_data_inicio_modal" name="etapa_data_inicio" style="border: 1px solid #ced4da !important;">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="etapa_data_fim_modal" class="form-label fw-medium">Data de Fim</label>
+                                <input type="date" class="form-control" id="etapa_data_fim_modal" name="etapa_data_fim" style="border: 1px solid #ced4da !important;">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="etapa_responsavel_modal" class="form-label fw-medium">Responsável</label>
+                                <input type="text" class="form-control" id="etapa_responsavel_modal" name="etapa_responsavel" placeholder="Nome do responsável" style="border: 1px solid #ced4da !important;">
+                            </div>
+                        </div>
+                        
+                        <!-- Status -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="etapa_iniciada_modal" name="etapa_iniciada">
+                                    <label class="form-check-label fw-medium" for="etapa_iniciada_modal">Marcar como Iniciada</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="etapa_done_modal" name="etapa_done">
+                                    <label class="form-check-label fw-medium" for="etapa_done_modal">Marcar como Concluída</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="modal-footer border-0 pt-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" form="addEtapaForm">
+                        <i class="fas fa-plus me-1"></i>
+                        Adicionar Etapa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="etapa-list">
+        {% if project.etapas %}
+            <!-- Toggle para alternar entre visualizações em mobile -->
+            <div class="view-toggle">
+                <button type="button" class="view-table active" data-view="table">
+                    <i class="fas fa-table"></i>Tabela
+                </button>
+                <button type="button" class="view-cards" data-view="cards">
+                    <i class="fas fa-th-large"></i>Cards
+                </button>
+            </div>
+            
+            <!-- Visualização de tabela (padrão para desktop) -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle table-etapas bg-white table-sm">
+                    <thead>
+                        <tr>
+                            <th style="width: 3%;"></th>
+                            <th style="width: 5%;">#</th>
+                            <th>Descrição</th>
+                            <th style="width: 12%;">Data Início</th>
+                            <th style="width: 12%;">Data Fim</th>
+                            <th style="width: 15%;">Responsável</th>
+                            <th style="width: 10%;" class="text-center">Iniciada</th>
+                            <th style="width: 10%;" class="text-center">Concluída</th>
+                            <th style="width: 12%;" class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="etapas-tbody">
+                        {% for etapa in project.etapas %}
+                            <tr class="{{ 'etapa-done' if etapa.done else ('etapa-iniciada' if etapa.iniciada else '') }} etapa-draggable-row"
+                                data-etapa-id="{{ etapa.id }}">
+                                <td class="drag-handle" draggable="true" style="cursor: grab; text-align: center; color: #a0aec0;"><i class="fas fa-grip-vertical"></i></td>
+                                <td>{{ project.id }}.{{ loop.index }}</td>
+                                <td class="etapa-descricao {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
+                                    <span class="editable-field" data-field="descricao" data-etapa-id="{{ etapa.id }}">{{ etapa.descricao }}</span>
+                                    {% if etapa.comentarios %}
+                                    <div class="small text-muted mt-1">
+                                        <i class="fas fa-comment-alt me-1"></i> {{ etapa.comentarios }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td class="{{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
+                                    <span class="editable-field" data-field="data_inicio" data-etapa-id="{{ etapa.id }}" data-original-value="{{ etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else '' }}">
+                                        {{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}
+                                    </span>
+                                </td>
+                                <td class="{{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
+                                    <span class="editable-field" data-field="data_fim" data-etapa-id="{{ etapa.id }}" data-original-value="{{ etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '' }}">
+                                        {{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}
+                                    </span>
+                                </td>
+                                <td class="{{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
+                                    <span class="editable-field" data-field="responsavel" data-etapa-id="{{ etapa.id }}">
+                                        {{ etapa.responsavel if etapa.responsavel else '-' }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-iniciada" 
+                                            data-etapa-id="{{ etapa.id }}"
+                                            title="{{ 'Marcar como não iniciada' if etapa.iniciada else 'Marcar como iniciada' }}"
+                                            {% if not (is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel)) %}disabled{% endif %}>
+                                        {% if etapa.iniciada %}
+                                            <span class="badge rounded-pill bg-success-light"><i class="fas fa-check-circle me-1"></i>Sim</span>
+                                        {% else %}
+                                            <span class="badge rounded-pill bg-secondary-light"><i class="far fa-circle me-1"></i>Não</span>
+                                        {% endif %}
+                                    </button>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-done"
+                                            data-etapa-id="{{ etapa.id }}"
+                                            {{ 'disabled' if (not etapa.iniciada and not etapa.done) or not (is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel)) else '' }}
+                                            title="{{ 'Marcar como pendente' if etapa.done else ('Marcar como concluída (necessário iniciar primeiro)' if not etapa.iniciada else 'Marcar como concluída') }}">
+                                        {% if etapa.done %}
+                                            <span class="badge rounded-pill bg-success-light"><i class="fas fa-check-square me-1"></i>Sim</span>
+                                        {% else %}
+                                            <span class="badge rounded-pill bg-danger-light"><i class="far fa-square me-1"></i>Não</span>
+                                        {% endif %}
+                                    </button>
+                                </td>
+                                <td class="actions text-center">
+                                    {% if is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel) %}
+                                    <a href="{{ url_for('main.edit_etapa', etapa_id=etapa.id) }}" class="btn btn-sm btn-outline-warning btn-floating me-1" title="Editar Etapa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger btn-floating" title="Excluir Etapa">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                        <span class="text-muted small">-
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Visualização de cards (para dispositivos móveis) -->
+            <div class="mobile-etapas-view" id="etapas-cards-container">
+                {% for etapa in project.etapas %}
+                    <div class="etapa-card {{ 'done' if etapa.done else ('iniciada' if etapa.iniciada else '') }}" data-etapa-id="{{ etapa.id }}">
+                        <div class="etapa-card-header d-flex justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <span class="card-drag-handle" draggable="true" style="cursor: grab; padding-right: 10px; color: #a0aec0;"><i class="fas fa-grip-vertical"></i></span>
+                                <div class="etapa-card-numero">{{ project.id }}.{{ loop.index }}</div>
+                            </div>
+                            <div class="etapa-card-badges">
+                                <!-- Os badges ficam apenas nos botões para evitar duplicação -->
+                            </div>
+                        </div>
+                        <div class="etapa-card-descricao">
+                            <span class="editable-field" data-field="descricao" data-etapa-id="{{ etapa.id }}">{{ etapa.descricao }}</span>
+                        </div>
+                        {% if etapa.comentarios %}
+                        <div class="etapa-card-comentarios small text-muted">
+                            <i class="fas fa-comment-alt me-1"></i> {{ etapa.comentarios }}
+                        </div>
+                        {% endif %}
+                        <div class="etapa-card-info">
+                            <span>
+                                <i class="far fa-calendar-alt"></i>Início: 
+                                <span class="editable-field" data-field="data_inicio" data-etapa-id="{{ etapa.id }}" data-original-value="{{ etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else '' }}">
+                                    {{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}
+                                </span>
+                            </span>
+                            <span>
+                                <i class="far fa-calendar-check"></i>Fim: 
+                                <span class="editable-field" data-field="data_fim" data-etapa-id="{{ etapa.id }}" data-original-value="{{ etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '' }}">
+                                    {{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}
+                                </span>
+                            </span>
+                            <span>
+                                <i class="fas fa-user"></i>
+                                <span class="editable-field" data-field="responsavel" data-etapa-id="{{ etapa.id }}">
+                                    {{ etapa.responsavel if etapa.responsavel else '-' }}
+                                </span>
+                            </span>
+                        </div>
+                        
+                        <div class="etapa-card-status">
+                            <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-iniciada" 
+                                    data-etapa-id="{{ etapa.id }}"
+                                    title="{{ 'Marcar como não iniciada' if etapa.iniciada else 'Marcar como iniciada' }}"
+                                    {% if not (is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel)) %}disabled{% endif %}>
+                                {% if etapa.iniciada %}
+                                    <span class="badge rounded-pill bg-success-light"><i class="fas fa-check-circle me-1"></i>Iniciada</span>
+                                {% else %}
+                                    <span class="badge rounded-pill bg-secondary-light"><i class="far fa-circle me-1"></i>Não iniciada</span>
+                                {% endif %}
+                            </button>
+                            
+                            <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-done"
+                                    data-etapa-id="{{ etapa.id }}"
+                                    {{ 'disabled' if (not etapa.iniciada and not etapa.done) or not (is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel)) else '' }}
+                                    title="{{ 'Marcar como pendente' if etapa.done else ('Marcar como concluída (necessário iniciar primeiro)' if not etapa.iniciada else 'Marcar como concluída') }}">
+                                {% if etapa.done %}
+                                    <span class="badge rounded-pill bg-success-light"><i class="fas fa-check-square me-1"></i>Concluída</span>
+                                {% else %}
+                                    <span class="badge rounded-pill bg-danger-light"><i class="far fa-square me-1"></i>Pendente</span>
+                                {% endif %}
+                            </button>
+                        </div>
+                        
+                        {% if is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel) %}
+                        <div class="etapa-card-actions">
+                            <a href="{{ url_for('main.edit_etapa', etapa_id=etapa.id) }}" class="btn btn-sm btn-outline-warning" title="Editar Etapa">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir Etapa">
+                                    <i class="fas fa-trash"></i> Excluir
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-etapas-message">
+                <i class="fas fa-stream"></i>
+                <p class="mb-2 small">Nenhuma etapa adicionada a este projeto ainda.</p>
+                <button type="button" class="btn btn-add-etapa" data-bs-toggle="modal" data-bs-target="#addEtapaModal">
+                    <i class="fas fa-plus-circle me-1"></i> Adicionar Primeira Etapa
+                </button>
+            </div>
+        {% endif %}
+    </section>
+</div>
+
+<!-- Menu de Contexto para Datas -->
+<div id="date-context-menu" class="custom-context-menu">
+    <ul>
+        <li data-days="7"><i class="fas fa-plus-circle text-success"></i>+ 7 dias</li>
+        <li data-days="14"><i class="fas fa-plus-circle text-success"></i>+ 14 dias</li>
+        <li data-days="21"><i class="fas fa-plus-circle text-success"></i>+ 21 dias</li>
+    </ul>
+</div>
+
+<!-- Modal de Confirmação para Cascata de Datas -->
+<div id="cascade-confirm-modal" class="confirm-modal-overlay">
+    <div class="confirm-modal">
+        <h5>Atualizar Datas Subsequentes?</h5>
+        <p>Deseja aplicar a mesma alteração de dias para as datas de início e fim de todas as etapas posteriores?</p>
+        <div class="confirm-modal-buttons">
+            <button id="cascade-cancel-btn" class="btn btn-secondary">Não</button>
+            <button id="cascade-confirm-btn" class="btn btn-primary">Sim, atualizar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // INÍCIO: Script de Drag and Drop para Etapas
+    const tbody = document.getElementById('etapas-tbody');
+    if (tbody) {
+        let draggedItem = null;
+        let originalIndex = -1;
+        let ghostElement = null;
+        let dropIndicator = null; // Indicador de drop
+
+        // Criar o indicador de drop
+        function createDropIndicator() {
+            if (!dropIndicator) {
+                dropIndicator = document.createElement('div');
+                dropIndicator.className = 'drop-indicator';
+                document.body.appendChild(dropIndicator);
+            }
+            return dropIndicator;
+        }
+
+        // Mostrar indicador de drop
+        function showDropIndicator(targetRow, position) {
+            const indicator = createDropIndicator();
+            const rect = targetRow.getBoundingClientRect();
+            const tableRect = tbody.getBoundingClientRect();
+            
+            indicator.style.position = 'fixed';
+            indicator.style.left = tableRect.left + 'px';
+            indicator.style.width = tableRect.width + 'px';
+            
+            if (position === 'top') {
+                indicator.style.top = (rect.top - 2) + 'px';
+            } else {
+                indicator.style.top = (rect.bottom - 1) + 'px';
+            }
+            
+            indicator.classList.add('show');
+        }
+
+        // Esconder indicador de drop
+        function hideDropIndicator() {
+            if (dropIndicator) {
+                dropIndicator.classList.remove('show');
+            }
+        }
+
+        tbody.addEventListener('dragstart', function(e) {
+            const handle = e.target.closest('.drag-handle');
+            if (handle) {
+                draggedItem = handle.closest('tr.etapa-draggable-row');
+                if (!draggedItem) return;
+
+                originalIndex = Array.from(draggedItem.parentNode.children).indexOf(draggedItem);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', draggedItem.dataset.etapaId);
+
+                // Criação do ghost element customizado
+                ghostElement = document.createElement('div');
+                ghostElement.classList.add('drag-ghost-custom');
+                const descricaoEtapa = draggedItem.querySelector('.etapa-descricao');
+                ghostElement.innerHTML = `<i class="fas fa-arrows-alt me-2"></i>${descricaoEtapa ? descricaoEtapa.innerText.trim().substring(0, 60) + (descricaoEtapa.innerText.trim().length > 60 ? '...' : '') : 'Movendo etapa...'}`;
+                document.body.appendChild(ghostElement);
+
+                e.dataTransfer.setDragImage(ghostElement, 20, 20); 
+
+                setTimeout(() => {
+                    if (draggedItem) draggedItem.classList.add('dragging');
+                    if (ghostElement && ghostElement.parentNode) {
+                        ghostElement.parentNode.removeChild(ghostElement);
+                        ghostElement = null;
+                    }
+                }, 0);
+            } else {
+                e.preventDefault(); // Impede o início do arraste se não for no handle
+            }
+        });
+
+        tbody.addEventListener('dragend', function(e) {
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+            }
+            if (ghostElement && ghostElement.parentNode) {
+                ghostElement.parentNode.removeChild(ghostElement);
+                ghostElement = null;
+            }
+            
+            hideDropIndicator();
+            tbody.querySelectorAll('tr.etapa-draggable-row.drag-over').forEach(r => r.classList.remove('drag-over'));
+
+            const rows = tbody.querySelectorAll('tr.etapa-draggable-row');
+            const projectId = "{{ project.id }}";
+            rows.forEach((row, index) => {
+                const numeroCelula = row.querySelector('td:nth-child(2)'); // Corrigido para a segunda célula
+                if (numeroCelula) {
+                    numeroCelula.textContent = projectId + '.' + (index + 1);
+                }
+            });
+        });
+
+        tbody.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            const targetRow = e.target.closest('tr.etapa-draggable-row');
+            
+            if (targetRow && targetRow !== draggedItem) {
+                const rect = targetRow.getBoundingClientRect();
+                const mouseY = e.clientY;
+                const rowMiddle = rect.top + rect.height / 2;
+                
+                // Determinar se deve inserir antes ou depois
+                const position = mouseY < rowMiddle ? 'top' : 'bottom';
+                
+                // Limpar classes anteriores
+                tbody.querySelectorAll('tr.etapa-draggable-row.drag-over').forEach(r => r.classList.remove('drag-over'));
+                
+                // Mostrar indicador na posição correta
+                showDropIndicator(targetRow, position);
+                
+                e.dataTransfer.dropEffect = 'move';
+            }
+        });
+
+        tbody.addEventListener('dragleave', function(e) {
+            const relatedTarget = e.relatedTarget;
+            
+            if (!tbody.contains(relatedTarget) && draggedItem) {
+                hideDropIndicator();
+                tbody.querySelectorAll('tr.etapa-draggable-row.drag-over').forEach(r => r.classList.remove('drag-over'));
+            }
+        });
+
+        tbody.addEventListener('drop', function(e) {
+            e.preventDefault();
+            const targetRow = e.target.closest('tr.etapa-draggable-row');
+            
+            hideDropIndicator();
+            tbody.querySelectorAll('tr.etapa-draggable-row.drag-over').forEach(r => r.classList.remove('drag-over'));
+
+            if (draggedItem && targetRow && targetRow !== draggedItem) {
+                const rect = targetRow.getBoundingClientRect();
+                const mouseY = e.clientY;
+                const rowMiddle = rect.top + rect.height / 2;
+                const insertBefore = mouseY < rowMiddle;
+
+                // Inserir na posição correta baseado na posição do mouse
+                if (insertBefore) {
+                    targetRow.parentNode.insertBefore(draggedItem, targetRow);
+                } else {
+                    targetRow.parentNode.insertBefore(draggedItem, targetRow.nextSibling);
+                }
+
+                const etapaRows = tbody.querySelectorAll('tr.etapa-draggable-row');
+                const etapaIdsOrdenadas = Array.from(etapaRows).map(row => row.dataset.etapaId);
+
+                fetch(`/project/{{ project.id }}/etapas/reordenar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                    },
+                    body: JSON.stringify({ etapa_ids: etapaIdsOrdenadas })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAjaxFlashMessage(data.message || 'Ordem das etapas atualizada com sucesso!', 'success');
+                    } else {
+                        showAjaxFlashMessage(data.message || 'Erro ao reordenar etapas.', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro na requisição de reordenar:', error);
+                    showAjaxFlashMessage('Erro de comunicação ao reordenar etapas.', 'danger');
+                });
+            }
+        });
+    }
+    // FIM: Script de Drag and Drop para Etapas
+
+    // INÍCIO: Script de Drag and Drop para Etapas (CARDS MOBILE)
+    const cardsContainer = document.getElementById('etapas-cards-container');
+    if (cardsContainer) {
+        let draggedCard = null;
+        let originalCardIndex = -1;
+        let localGhostElement = null;
+        let cardDropIndicator = null; // Indicador de drop para cards
+
+        // Criar o indicador de drop para cards
+        function createCardDropIndicator() {
+            if (!cardDropIndicator) {
+                cardDropIndicator = document.createElement('div');
+                cardDropIndicator.className = 'card-drop-indicator';
+                document.body.appendChild(cardDropIndicator);
+            }
+            return cardDropIndicator;
+        }
+
+        // Mostrar indicador de drop para cards
+        function showCardDropIndicator(targetCard, position) {
+            const indicator = createCardDropIndicator();
+            const rect = targetCard.getBoundingClientRect();
+            
+            indicator.style.position = 'fixed';
+            indicator.style.left = (rect.left + 16) + 'px';
+            indicator.style.width = (rect.width - 32) + 'px';
+            
+            if (position === 'top') {
+                indicator.style.top = (rect.top - 2) + 'px';
+            } else {
+                indicator.style.top = (rect.bottom - 1) + 'px';
+            }
+            
+            indicator.classList.add('show');
+        }
+
+        // Esconder indicador de drop para cards
+        function hideCardDropIndicator() {
+            if (cardDropIndicator) {
+                cardDropIndicator.classList.remove('show');
+            }
+        }
+
+        cardsContainer.addEventListener('dragstart', function(e) {
+            const handle = e.target.closest('.card-drag-handle');
+            if (handle) {
+                draggedCard = handle.closest('.etapa-card');
+                if (!draggedCard) return;
+
+                originalCardIndex = Array.from(draggedCard.parentNode.children).indexOf(draggedCard);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', draggedCard.dataset.etapaId);
+                
+                localGhostElement = document.createElement('div');
+                localGhostElement.classList.add('drag-ghost-custom');
+                const cardDescElement = draggedCard.querySelector('.etapa-card-descricao');
+                let cardText = 'Movendo etapa...';
+                if (cardDescElement) {
+                    const fullText = cardDescElement.innerText.trim();
+                    cardText = fullText.substring(0, 60) + (fullText.length > 60 ? '...' : '');
+                }
+                localGhostElement.innerHTML = `<i class="fas fa-arrows-alt me-2"></i>${cardText}`;
+                document.body.appendChild(localGhostElement);
+
+                e.dataTransfer.setDragImage(localGhostElement, 20, 20);
+
+                setTimeout(() => {
+                    if (draggedCard) draggedCard.classList.add('dragging');
+                    if (localGhostElement && localGhostElement.parentNode) {
+                        localGhostElement.parentNode.removeChild(localGhostElement);
+                        localGhostElement = null; 
+                    }
+                }, 0);
+            } else {
+                e.preventDefault(); // Impede o início do arraste se não for no handle
+            }
+        });
+
+        cardsContainer.addEventListener('dragend', function(e) {
+            if (draggedCard) {
+                draggedCard.classList.remove('dragging');
+                draggedCard = null;
+            }
+            if (localGhostElement && localGhostElement.parentNode) {
+                localGhostElement.parentNode.removeChild(localGhostElement);
+                localGhostElement = null;
+            }
+            
+            hideCardDropIndicator();
+            cardsContainer.querySelectorAll('.etapa-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+
+            const projectId = "{{ project.id }}";
+            const allCards = cardsContainer.querySelectorAll('.etapa-card');
+            allCards.forEach((card, index) => {
+                const cardNumeroElement = card.querySelector('.etapa-card-numero');
+                if (cardNumeroElement) {
+                    cardNumeroElement.textContent = projectId + '.' + (index + 1);
+                }
+            });
+        });
+
+        cardsContainer.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            const targetCard = e.target.closest('.etapa-card[draggable="true"]');
+            
+            if (targetCard && targetCard !== draggedCard) {
+                const rect = targetCard.getBoundingClientRect();
+                const mouseY = e.clientY;
+                const cardMiddle = rect.top + rect.height / 2;
+                
+                // Determinar se deve inserir antes ou depois
+                const position = mouseY < cardMiddle ? 'top' : 'bottom';
+                
+                // Limpar classes anteriores
+                cardsContainer.querySelectorAll('.etapa-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+                
+                // Mostrar indicador na posição correta
+                showCardDropIndicator(targetCard, position);
+                
+                e.dataTransfer.dropEffect = 'move';
+            }
+        });
+
+        cardsContainer.addEventListener('dragleave', function(e) {
+            const relatedTarget = e.relatedTarget;
+            
+            if (!cardsContainer.contains(relatedTarget) && draggedCard) {
+                hideCardDropIndicator();
+                cardsContainer.querySelectorAll('.etapa-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+            }
+        });
+
+        cardsContainer.addEventListener('drop', function(e) {
+            e.preventDefault();
+            const targetCard = e.target.closest('.etapa-card[draggable="true"]');
+            
+            hideCardDropIndicator();
+            cardsContainer.querySelectorAll('.etapa-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+
+            if (draggedCard && targetCard && targetCard !== draggedCard) {
+                const rect = targetCard.getBoundingClientRect();
+                const mouseY = e.clientY;
+                const cardMiddle = rect.top + rect.height / 2;
+                const insertBefore = mouseY < cardMiddle;
+
+                // Inserir na posição correta baseado na posição do mouse
+                if (insertBefore) {
+                    targetCard.parentNode.insertBefore(draggedCard, targetCard);
+                } else {
+                    targetCard.parentNode.insertBefore(draggedCard, targetCard.nextSibling);
+                }
+
+                const etapaCards = cardsContainer.querySelectorAll('.etapa-card');
+                const etapaIdsOrdenadas = Array.from(etapaCards).map(card => card.dataset.etapaId);
+
+                fetch(`/project/{{ project.id }}/etapas/reordenar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                    },
+                    body: JSON.stringify({ etapa_ids: etapaIdsOrdenadas })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAjaxFlashMessage(data.message || 'Ordem das etapas atualizada!', 'success');
+                    } else {
+                        showAjaxFlashMessage(data.message || 'Erro ao reordenar etapas.', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro na requisição de reordenar cards:', error);
+                    showAjaxFlashMessage('Erro de comunicação ao reordenar etapas.', 'danger');
+                });
+            }
+        });
+    }
+    // FIM: Script de Drag and Drop para Etapas (CARDS MOBILE)
+
+    // --- INÍCIO: Lógica de Edição Inline ---
+    const mainContent = document.querySelector('.etapa-list'); // Usar um container pai que engloba tabela e cards
+    const contextMenu = document.getElementById('date-context-menu');
+    let currentTargetElement = null;
+
+    if (mainContent) {
+        // --- Lógica do Menu de Contexto para Datas ---
+        mainContent.addEventListener('contextmenu', function(e) {
+            const target = e.target.closest('.editable-field[data-field*="data"]');
+
+            if (!target) {
+                hideContextMenu();
+                return;
+            }
+            
+            // Impede se a etapa estiver concluída
+            if (target.closest('tr.etapa-done, .etapa-card.done')) {
+                return;
+            }
+
+            e.preventDefault();
+            currentTargetElement = target; // Armazena o elemento alvo
+
+            // Verifica se há uma data válida para exibir o menu
+            const originalDate = currentTargetElement.dataset.originalValue;
+            if (!originalDate) {
+                showAjaxFlashMessage('Defina uma data inicial antes de adicionar dias.', 'warning');
+                return;
+            }
+
+            contextMenu.style.position = 'fixed';
+            contextMenu.style.top = `${e.clientY}px`;
+            contextMenu.style.left = `${e.clientX}px`;
+            contextMenu.style.display = 'block';
+        });
+
+        // --- Lógica de clique no menu de contexto ---
+        contextMenu.addEventListener('click', function(e) {
+            const selectedOption = e.target.closest('li[data-days]');
+            if (selectedOption && currentTargetElement) {
+                const elementToUpdate = currentTargetElement; // Guarda a referência antes de ser apagada
+                const daysToAdd = parseInt(selectedOption.dataset.days, 10);
+                const originalDateStr = elementToUpdate.dataset.originalValue;
+                const field = elementToUpdate.dataset.field;
+                const etapaId = elementToUpdate.dataset.etapaId;
+
+                // Calcula a nova data
+                const originalDate = new Date(originalDateStr + 'T00:00:00'); // Adiciona T00:00 para evitar problemas de fuso
+                originalDate.setDate(originalDate.getDate() + daysToAdd);
+                
+                const year = originalDate.getFullYear();
+                const month = String(originalDate.getMonth() + 1).padStart(2, '0');
+                const day = String(originalDate.getDate()).padStart(2, '0');
+                const newDateValue = `${year}-${month}-${day}`;
+
+                // Envia a atualização para o backend
+                fetch(`/etapa/${etapaId}/update_field`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                    },
+                    body: JSON.stringify({ field: field, value: newDateValue })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Atualiza o campo que foi clicado (data_inicio ou data_fim)
+                        elementToUpdate.textContent = data.displayValue;
+                        elementToUpdate.dataset.originalValue = data.newValue;
+
+                        // Se a data de início foi alterada, atualiza também a data de fim da mesma etapa
+                        if (field === 'data_inicio' && data.updatedEndDate) {
+                            const etapaRow = elementToUpdate.closest('tr, .etapa-card');
+                            const endDateElement = etapaRow.querySelector('.editable-field[data-field="data_fim"]');
+                            if (endDateElement) {
+                                endDateElement.textContent = data.updatedEndDateDisplay;
+                                endDateElement.dataset.originalValue = data.updatedEndDate;
+                            }
+                        }
+
+                        // Se a data de início foi alterada, pergunta sobre a cascata
+                        if (field === 'data_inicio' && daysToAdd !== 0) {
+                            showCascadeConfirmModal(etapaId, daysToAdd);
+                        } else {
+                            showAjaxFlashMessage(`Data atualizada: +${daysToAdd} dias`, 'success');
+                        }
+                    } else {
+                        showAjaxFlashMessage(data.message || 'Falha ao atualizar data.', 'danger');
+                    }
+                })
+                .catch(error => {
+                    showAjaxFlashMessage('Erro de comunicação.', 'danger');
+                    console.error('Error updating date field:', error);
+                });
+            }
+            hideContextMenu();
+        });
+
+        // Esconde o menu ao clicar em qualquer lugar
+        window.addEventListener('click', hideContextMenu);
+        
+        function hideContextMenu() {
+            if (contextMenu.style.display === 'block') {
+                contextMenu.style.display = 'none';
+                currentTargetElement = null;
+            }
+        }
+
+        mainContent.addEventListener('click', function(e) {
+            const target = e.target.closest('.editable-field');
+            
+            // Impede a edição se já houver um campo de edição aberto
+            if (document.querySelector('.editable-field-input, .editable-field-textarea')) {
+                return;
+            }
+
+            if (!target) return;
+            
+            // Impede a edição se a etapa estiver concluída
+            if (target.closest('tr.etapa-done, .etapa-card.done')) {
+                showAjaxFlashMessage('Não é possível editar uma etapa concluída.', 'warning');
+                return;
+            }
+
+            const field = target.dataset.field;
+            const etapaId = target.dataset.etapaId;
+            let originalValue = target.textContent.trim();
+            // Para datas, o valor do input precisa ser no formato YYYY-MM-DD
+            const originalDateValue = target.dataset.originalValue || '';
+
+            let input;
+
+            if (field === 'descricao') {
+                input = document.createElement('textarea');
+                input.className = 'editable-field-textarea';
+                input.value = originalValue;
+            } else {
+                input = document.createElement('input');
+                input.className = 'editable-field-input';
+                if (field.includes('data')) {
+                    input.type = 'date';
+                    input.value = originalDateValue;
+                } else {
+                    input.type = 'text';
+                    input.value = originalValue === '-' ? '' : originalValue;
+                }
+            }
+
+            target.style.display = 'none';
+            target.parentNode.appendChild(input);
+            input.focus();
+
+            function saveChanges() {
+                const newValue = input.value;
+                
+                input.remove();
+                target.style.display = '';
+
+                // Verifica se o valor mudou antes de enviar
+                const valueToCheck = field.includes('data') ? originalDateValue : (originalValue === '-' ? '' : originalValue);
+                if (newValue === valueToCheck) {
+                    return; // Nenhum valor alterado
+                }
+
+                fetch(`/etapa/${etapaId}/update_field`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                    },
+                    body: JSON.stringify({ field: field, value: newValue })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        target.textContent = data.displayValue;
+                        if (field.includes('data')) {
+                            target.dataset.originalValue = data.newValue;
+                        }
+
+                        // Lógica para data de fim e cascata
+                        if (field === 'data_inicio' && data.updatedEndDate) {
+                            const etapaRow = target.closest('tr, .etapa-card');
+                            const endDateElement = etapaRow.querySelector('.editable-field[data-field="data_fim"]');
+                            if (endDateElement) {
+                                endDateElement.textContent = data.updatedEndDateDisplay;
+                                endDateElement.dataset.originalValue = data.updatedEndDate;
+                            }
+                        }
+
+                        if (field === 'data_inicio' && data.daysDiff !== undefined && data.daysDiff !== 0) {
+                            showCascadeConfirmModal(etapaId, data.daysDiff);
+                        } else {
+                            showAjaxFlashMessage('Alteração salva com sucesso!', 'success');
+                        }
+
+                    } else {
+                        target.textContent = originalValue;
+                        showAjaxFlashMessage(data.message || 'Falha ao salvar.', 'danger');
+                    }
+                })
+                .catch(error => {
+                    target.textContent = originalValue;
+                    showAjaxFlashMessage('Erro de comunicação.', 'danger');
+                    console.error('Error updating field:', error);
+                });
+            }
+
+            input.addEventListener('blur', saveChanges);
+
+            input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && field !== 'descricao') {
+                    event.preventDefault();
+                    saveChanges();
+                } else if (event.key === 'Escape') {
+                    input.remove();
+                    target.style.display = '';
+                }
+            });
+        });
+    }
+    // --- FIM: Lógica de Edição Inline ---
+
+    // --- INÍCIO: Lógica de Cascata de Datas ---
+    const cascadeModal = document.getElementById('cascade-confirm-modal');
+    const cascadeConfirmBtn = document.getElementById('cascade-confirm-btn');
+    const cascadeCancelBtn = document.getElementById('cascade-cancel-btn');
+    let cascadeUpdateInfo = {};
+
+    function showCascadeConfirmModal(etapaId, daysDiff) {
+        cascadeUpdateInfo = { etapaId, daysDiff };
+        cascadeModal.style.display = 'flex';
+    }
+
+    function hideCascadeConfirmModal() {
+        cascadeModal.style.display = 'none';
+    }
+
+    cascadeCancelBtn.addEventListener('click', hideCascadeConfirmModal);
+
+    cascadeConfirmBtn.addEventListener('click', function() {
+        const { etapaId, daysDiff } = cascadeUpdateInfo;
+        const projectId = "{{ project.id }}";
+
+        fetch(`/project/${projectId}/cascade_update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+            },
+            body: JSON.stringify({ etapa_id: etapaId, days_diff: daysDiff })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAjaxFlashMessage(data.message, 'success');
+                // Forçar recarregamento da página para ver as mudanças em cascata
+                // Uma implementação mais avançada poderia atualizar o DOM, mas isso é mais seguro.
+                window.location.reload();
+            } else {
+                showAjaxFlashMessage(data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showAjaxFlashMessage('Erro de comunicação na atualização em cascata.', 'danger');
+            console.error('Cascade update error:', error);
+        });
+
+        hideCascadeConfirmModal();
+    });
+
+    // --- FIM: Lógica de Cascata de Datas ---
+
+
+    // INÍCIO: Scripts Originais Restaurados (toggle status, view toggle, etc.)
+    function showAjaxFlashMessage(message, type = 'info', duration = 5000) {
+        const containerId = 'ajax-flash-messages-container';
+        let flashContainer = document.getElementById(containerId);
+
+        if (!flashContainer) {
+            flashContainer = document.createElement('div');
+            flashContainer.id = containerId;
+            document.body.appendChild(flashContainer);
+        }
+        
+        if (!message) return;
+
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show m-0 mt-2`;
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+        
+        flashContainer.appendChild(alertDiv);
+
+        if (duration > 0) {
+            setTimeout(() => {
+                const bsAlert = bootstrap.Alert.getInstance(alertDiv);
+                if (bsAlert) {
+                    bsAlert.close();
+                } else {
+                    alertDiv.remove();
+                }
+            }, duration);
+        }
+    }
+    
+    function updateIniciadaButton(button, iniciada, isMobile = false) {
+        const badge = button.querySelector('.badge');
+        if (!badge) return;
+        if (iniciada) {
+            badge.className = 'badge rounded-pill bg-success-light';
+            badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>' + (isMobile ? 'Iniciada' : 'Sim');
+        button.title = 'Marcar como não iniciada';
+    } else {
+            badge.className = 'badge rounded-pill bg-secondary-light';
+            badge.innerHTML = '<i class="far fa-circle me-1"></i>' + (isMobile ? 'Não iniciada' : 'Não');
+        button.title = 'Marcar como iniciada';
+    }
+}
+
+    function updateDoneButton(button, done, iniciada, isMobile = false) {
+        const badge = button.querySelector('.badge');
+        if (!badge) return;
+        if (done) {
+            badge.className = 'badge rounded-pill bg-success-light';
+            badge.innerHTML = '<i class="fas fa-check-square me-1"></i>' + (isMobile ? 'Concluída' : 'Sim');
+        button.title = 'Marcar como pendente';
+    } else {
+            badge.className = 'badge rounded-pill bg-danger-light';
+            badge.innerHTML = '<i class="far fa-square me-1"></i>' + (isMobile ? 'Pendente' : 'Não');
+            button.title = iniciada ? 'Marcar como concluída' : 'Marcar como concluída (necessário iniciar primeiro)';
+        }
+        button.disabled = !iniciada && !done; 
+    }
+    
+    function updateRowAndCardAppearance(etapaId, iniciada, done) {
+        const tableRow = document.querySelector(`#etapas-tbody tr[data-etapa-id="${etapaId}"]`);
+        const mobileCard = document.querySelector(`.etapa-card[data-etapa-id="${etapaId}"]`);
+
+        if (tableRow) {
+            tableRow.classList.remove('etapa-done', 'etapa-iniciada');
+            // Corrigido para incluir a 6ª célula (Responsável)
+            const textElements = tableRow.querySelectorAll('.etapa-descricao, td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6)');
+            if (done) {
+                tableRow.classList.add('etapa-done');
+                textElements.forEach(el => el.classList.add('text-decoration-line-through', 'text-muted'));
+    } else {
+                textElements.forEach(el => el.classList.remove('text-decoration-line-through', 'text-muted'));
+                if (iniciada) {
+                    tableRow.classList.add('etapa-iniciada');
+                }
+            }
+        }
+        if (mobileCard) {
+            mobileCard.classList.remove('done', 'iniciada');
+            const descCard = mobileCard.querySelector('.etapa-card-descricao');
+            const badgesContainer = mobileCard.querySelector('.etapa-card-badges');
+
+            if (done) {
+                mobileCard.classList.add('done');
+                if (descCard) descCard.classList.add('text-decoration-line-through', 'text-muted');
+        } else {
+                if (descCard) descCard.classList.remove('text-decoration-line-through', 'text-muted');
+                if (iniciada) {
+                    mobileCard.classList.add('iniciada');
+                }
+            }
+            
+            // Atualiza a aparência do responsável no card também
+            const responsavelCard = mobileCard.querySelector('.editable-field[data-field="responsavel"]');
+            if (responsavelCard) {
+                if (done) {
+                    responsavelCard.classList.add('text-decoration-line-through', 'text-muted');
+                } else {
+                    responsavelCard.classList.remove('text-decoration-line-through', 'text-muted');
+                }
+            }
+            
+            // No mobile, os badges ficam apenas nos botões, não duplicamos no header
+            if (badgesContainer) {
+                badgesContainer.innerHTML = '';
+            }
+            
+
+        }
+    }
+
+    document.querySelectorAll('.toggle-iniciada').forEach(button => {
+        button.addEventListener('click', function() {
+            const etapaId = this.dataset.etapaId;
+            const isMobile = !!this.closest('.etapa-card');
+
+            fetch(`/etapa/${etapaId}/toggle_iniciada`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateIniciadaButton(this, data.iniciada, isMobile);
+                    
+                    const commonAncestor = this.closest('tr.etapa-draggable-row') || this.closest('.etapa-card');
+                    if (commonAncestor) {
+                         const doneButton = commonAncestor.querySelector(`.toggle-done[data-etapa-id="${etapaId}"]`);
+                         if (doneButton) {
+                            updateDoneButton(doneButton, data.done, data.iniciada, isMobile);
+                         }
+                    }
+                    updateRowAndCardAppearance(etapaId, data.iniciada, data.done);
+                    if (data.message) {
+                        showAjaxFlashMessage(data.message, 'info');
+                    } else {
+                        showAjaxFlashMessage(isMobile ? (data.iniciada ? 'Etapa marcada como iniciada.' : 'Etapa marcada como não iniciada.') : (data.iniciada ? 'Iniciada.' : 'Não iniciada.'), 'success');
+                    }
+                } else {
+                    showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao alternar iniciada:', error);
+                showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
+            });
+        });
+    });
+
+    document.querySelectorAll('.toggle-done').forEach(button => {
+        button.addEventListener('click', function() {
+            if (this.disabled) return;
+            const etapaId = this.dataset.etapaId;
+            const isMobile = !!this.closest('.etapa-card');
+
+            fetch(`/etapa/${etapaId}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateDoneButton(this, data.done, data.iniciada, isMobile);
+                    updateRowAndCardAppearance(etapaId, data.iniciada, data.done);
+                     if (data.message) {
+                        showAjaxFlashMessage(data.message, 'info');
+                    } else {
+                        showAjaxFlashMessage(isMobile ? (data.done ? 'Etapa marcada como concluída.' : 'Etapa marcada como pendente.') : (data.done ? 'Concluída.' : 'Pendente.'), 'success');
+                    }
+                } else {
+                    showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', data.success === false && data.message && data.message.includes("não foi iniciada") ? 'warning' : 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao alternar concluída:', error);
+                showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
+            });
+        });
+    });
+
+    const tableView = document.querySelector('.table-responsive');
+    const cardsView = document.querySelector('.mobile-etapas-view');
+    const viewToggleButtons = document.querySelectorAll('.view-toggle button');
+    
+    if (tableView && cardsView && viewToggleButtons.length > 0) {
+        function updateView(isMobile) {
+    if (isMobile) {
+                tableView.style.display = 'none';
+                cardsView.style.display = 'block';
+        document.querySelector('.view-cards').classList.add('active');
+        document.querySelector('.view-table').classList.remove('active');
+            } else {
+                tableView.style.display = 'block';
+                cardsView.style.display = 'none';
+                document.querySelector('.view-table').classList.add('active');
+                document.querySelector('.view-cards').classList.remove('active');
+            }
+        }
+
+        let isMobile = window.innerWidth < 768;
+        updateView(isMobile);
+
+        window.addEventListener('resize', () => {
+            let newIsMobile = window.innerWidth < 768;
+            if (newIsMobile !== isMobile) {
+                isMobile = newIsMobile;
+                if (document.activeElement && !document.activeElement.closest('.view-toggle')) {
+                    updateView(isMobile);
+                } else if (!document.activeElement || document.activeElement === document.body) {
+                     updateView(isMobile); 
+                }
+            }
+        });
+
+    viewToggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+                const viewType = this.dataset.view;
+            viewToggleButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            if (viewType === 'table') {
+                    tableView.style.display = 'block';
+                    cardsView.style.display = 'none';
+            } else {
+                    tableView.style.display = 'none';
+                    cardsView.style.display = 'block';
+            }
+        });
+    });
+    }
+    // FIM: Scripts Originais Restaurados
+});
+</script>
+{% endblock %} 

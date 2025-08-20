@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Login - ProjetosRJ{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="text-center mb-4">
+        <a href="{{ url_for('main.home') }}" class="d-inline-block">
+            <i class="fas fa-2x text-primary"></i>
+        </a>
+        <h2>ProjetosRJ</h2>
+    </div>
+    
+    {% if error %}
+        <div class="alert alert-danger py-2 mb-3 small" role="alert">
+            {{ error }}
+        </div>
+    {% endif %}
+    
+    <form action="{{ url_for('main.login_page') }}" method="POST" autocomplete="off" novalidate>
+        <div class="mb-3">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0">
+                    <i class="fas fa-user text-muted"></i>
+                </span>
+                <input type="text" name="username" class="form-control border-start-0" placeholder="Usuário" required>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0">
+                    <i class="fas fa-lock text-muted"></i>
+                </span>
+                <input type="password" name="password" class="form-control border-start-0" placeholder="Senha" required>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Entrar</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block page_specific_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const hasErrorVariableString = "{{ 'true' if error else 'false' }}";
+        const hasErrorVariable = JSON.parse(hasErrorVariableString);
+        const hasFlashError = document.querySelector('.alert-danger, .alert-error') !== null;
+
+        if (!hasErrorVariable && !hasFlashError) {
+            const usernameField = document.querySelector('input[name="username"]');
+            if (usernameField) {
+                usernameField.focus();
+            }
+        }
+    });
+</script>
+
+<style>
+    .card {
+        border-radius: 8px;
+    }
+    
+    .input-group-text, 
+    .form-control {
+        border-radius: 6px;
+    }
+    
+    .input-group .form-control {
+        box-shadow: none;
+    }
+    
+    .btn-primary {
+        border-radius: 6px;
+    }
+</style>
+{% endblock %} 

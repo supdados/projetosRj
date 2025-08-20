@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}{% if template %}Editar{% else %}Criar{% endif %} Modelo de Etapas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <!-- Glass Container -->
+            <div class="glass-form-container">
+                <!-- Header Glass -->
+                <div class="glass-form-header">
+                    <div class="header-content">
+                        <div class="header-icon-wrapper">
+                            <i class="fas fa-layer-group header-icon"></i>
+                        </div>
+                        <div class="header-text">
+                            <h4 class="form-title">{% if template %}Editar Modelo de Etapas{% else %}Criar Novo Modelo{% endif %}</h4>
+                            <p class="form-subtitle">Defina um nome, descrição e etapas que compõem este modelo</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Body Glass -->
+                <div class="glass-form-body">
+                    <form method="POST" action="" id="templateForm">
+                        
+                        <!-- Seção 1: Informações do Modelo -->
+                        <div class="glass-card mb-4">
+                            <div class="glass-card-header">
+                                <div class="card-header-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <h6 class="card-title">Informações do Modelo</h6>
+                            </div>
+                            <div class="glass-card-body">
+                                <div class="form-group-glass mb-4">
+                                    <label class="form-label-glass">
+                                        <i class="fas fa-tag label-icon"></i>
+                                        Nome do Modelo <span class="required-star">*</span>
+                                    </label>
+                                    <input type="text" name="name" class="form-control-glass form-control-glass-full" 
+                                           value="{{ template.name if template else '' }}" 
+                                           placeholder="Digite o nome do modelo" required>
+                                </div>
+                                
+                                <div class="form-group-glass">
+                                    <label class="form-label-glass">
+                                        <i class="fas fa-comment-alt label-icon"></i>
+                                        Descrição (Opcional)
+                                    </label>
+                                    <textarea name="description" class="form-control-glass textarea-glass textarea-glass-full" 
+                                              rows="3" placeholder="Digite uma descrição para o modelo...">{{ template.description if template else '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Seção 2: Etapas do Modelo -->
+                        <div class="glass-card mb-4">
+                            <div class="glass-card-header">
+                                <div class="card-header-icon">
+                                    <i class="fas fa-list-ol"></i>
+                                </div>
+                                <h6 class="card-title">Etapas do Modelo</h6>
+                                <button type="button" id="add-stage-item" class="btn-glass-add">
+                                    <i class="fas fa-plus"></i>
+                                    <span>Adicionar Etapa</span>
+                                </button>
+                            </div>
+                            <div class="glass-card-body">
+                                <div id="stage-items-container" class="stages-container-template">
+                                    {% if template and template.items %}
+                                        {% for item in template.items %}
+                                            <div class="glass-stage-item-template animate-in">
+                                                <div class="stage-drag-handle">
+                                                    <i class="fas fa-grip-vertical"></i>
+                                                </div>
+                                                <div class="stage-number">{{ loop.index }}</div>
+                                                <div class="stage-content-template">
+                                                    <div class="form-group-glass">
+                                                        <input type="text" name="stage_name" class="form-control-glass" 
+                                                               placeholder="Nome da etapa" value="{{ item.name }}" required>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn-glass-remove" onclick="removeStageItem(this)">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="stages-empty-state">
+                                            <i class="fas fa-list-ul"></i>
+                                            <p>Nenhuma etapa adicionada ainda</p>
+                                            <span>Clique em "Adicionar Etapa" para começar</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Footer Glass -->
+                <div class="glass-form-footer">
+                    <a href="{{ url_for('main.list_templates') }}" class="btn-glass btn-glass-secondary">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </a>
+                    <button type="submit" form="templateForm" class="btn-glass btn-glass-primary">
+                        <i class="fas fa-save me-2"></i>
+                        {% if template %}Atualizar Modelo{% else %}Salvar Modelo{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template para novos itens de etapa -->
+<template id="stage-item-template">
+    <div class="glass-stage-item-template">
+        <div class="stage-drag-handle">
+            <i class="fas fa-grip-vertical"></i>
+        </div>
+        <div class="stage-number">1</div>
+        <div class="stage-content-template">
+            <div class="form-group-glass">
+                <input type="text" name="stage_name" class="form-control-glass" 
+                       placeholder="Nome da etapa" required>
+            </div>
+        </div>
+        <button type="button" class="btn-glass-remove" onclick="removeStageItem(this)">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('stage-items-container');
+    const addButton = document.getElementById('add-stage-item');
+    const template = document.getElementById('stage-item-template');
+    let stageCounter = {{ template.items|length if template and template.items else 0 }} + 1;
+
+    // Remove empty state se existir
+    function removeEmptyState() {
+        const emptyState = container.querySelector('.stages-empty-state');
+        if (emptyState) {
+            emptyState.remove();
+        }
+    }
+
+    // Atualiza numeração das etapas
+    function updateStageNumbers() {
+        const stages = container.querySelectorAll('.glass-stage-item-template');
+        stages.forEach((stage, index) => {
+            const numberElement = stage.querySelector('.stage-number');
+            if (numberElement) {
+                numberElement.textContent = index + 1;
+            }
+        });
+    }
+
+    // Adiciona nova etapa
+    addButton.addEventListener('click', function() {
+        removeEmptyState();
+        
+        const clone = template.content.cloneNode(true);
+        const stageItem = clone.querySelector('.glass-stage-item-template');
+        
+        // Define número da etapa
+        const numberElement = clone.querySelector('.stage-number');
+        numberElement.textContent = stageCounter++;
+        
+        container.appendChild(clone);
+        
+        // Anima entrada
+        setTimeout(() => {
+            stageItem.classList.add('animate-in');
+        }, 50);
+        
+        updateStageNumbers();
+        
+        // Foca no input da nova etapa
+        const newInput = container.lastElementChild.querySelector('input[name="stage_name"]');
+        if (newInput) {
+            newInput.focus();
+        }
+    });
+
+    // Remove etapa
+    window.removeStageItem = function(button) {
+        const stageItem = button.closest('.glass-stage-item-template');
+        
+        // Anima saída
+        stageItem.style.transform = 'translateX(100px)';
+        stageItem.style.opacity = '0';
+        
+        setTimeout(() => {
+            stageItem.remove();
+            updateStageNumbers();
+            
+            // Se não há etapas, mostra empty state
+            if (container.children.length === 0) {
+                container.innerHTML = `
+                    <div class="stages-empty-state">
+                        <i class="fas fa-list-ul"></i>
+                        <p>Nenhuma etapa adicionada ainda</p>
+                        <span>Clique em "Adicionar Etapa" para começar</span>
+                    </div>
+                `;
+            }
+        }, 300);
+    }
+
+    // Adiciona interações de hover nos cards glass
+    document.querySelectorAll('.glass-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.classList.add('glass-card-hover');
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.classList.remove('glass-card-hover');
+        });
+    });
+
+    // Melhora a experiência dos campos de formulário
+    document.querySelectorAll('.form-control-glass, .textarea-glass').forEach(field => {
+        field.addEventListener('focus', function() {
+            this.closest('.form-group-glass').classList.add('field-focused');
+        });
+        
+        field.addEventListener('blur', function() {
+            this.closest('.form-group-glass').classList.remove('field-focused');
+        });
+    });
+
+    // Anima entrada inicial
+    setTimeout(() => {
+        document.querySelector('.glass-form-container').classList.add('form-animate-in');
+    }, 100);
+});
+</script>
+{% endblock %} 

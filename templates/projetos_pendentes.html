@@ -1,0 +1,877 @@
+{% extends "base.html" %}
+
+{% block title %}Projetos Pendentes - ProjetosRJ{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* ====================================
+       GLASS MORPHISM - PROJETOS PENDENTES
+       ==================================== */
+    
+    :root {
+        --primary-color: #005A92;
+        --primary-dark: #004b79;
+        --text-color: #2d3748;
+        --text-muted: #718096;
+        --success-color: #38a169;
+        --warning-color: #d69e2e;
+        --danger-color: #e53e3e;
+        --transition-speed: 0.3s;
+        --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%);
+        --glass-border: rgba(255, 255, 255, 0.18);
+        --glass-shadow: 0 8px 32px rgba(0, 90, 146, 0.08);
+    }
+
+    body {
+        background-color: #f7f9fc;
+        min-height: 100vh;
+        position: relative;
+    }
+
+    /* Main Container */
+    .main-container {
+        padding: 1.5rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Glass Page Header */
+    .page-header {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .page-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .page-header h1 i {
+        background: linear-gradient(135deg, var(--warning-color) 0%, #f6ad55 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 2px 4px rgba(214, 158, 46, 0.3));
+    }
+
+    /* Glass Project Cards */
+    .project-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        box-shadow: 
+            var(--glass-shadow),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        position: relative;
+        overflow: hidden;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .project-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .project-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+            0 12px 40px rgba(0, 90, 146, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Glass Project Card Header */
+    .project-card-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+    }
+
+    .project-card-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 2rem;
+        right: 2rem;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    }
+
+    .project-card-header h5 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .project-card-header a {
+        text-decoration: none;
+        color: var(--text-color);
+        transition: all var(--transition-speed) ease;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .project-card-header a:hover {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        transform: translateX(4px);
+    }
+
+    .project-card-header a i {
+        color: var(--primary-color);
+        transition: all var(--transition-speed) ease;
+    }
+
+    .project-card-header a:hover i {
+        transform: scale(1.1);
+        filter: drop-shadow(0 2px 4px rgba(0, 90, 146, 0.3));
+    }
+
+    /* Glass Badge */
+    .badge {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.9) 0%, 
+            rgba(0, 75, 121, 0.8) 100%) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white !important;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        box-shadow: 
+            0 4px 15px rgba(0, 90, 146, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        transition: all var(--transition-speed) ease;
+    }
+
+    .badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 
+            0 6px 20px rgba(0, 90, 146, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    /* Glass Table Container */
+    .table-responsive {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.15) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border-radius: 0 0 16px 16px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Glass Table */
+    .etapas-pendentes-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: transparent;
+        margin: 0;
+    }
+
+    .etapas-pendentes-table th {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.15) 0%, 
+            rgba(0, 75, 121, 0.1) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: var(--text-color);
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        position: relative;
+    }
+
+    .etapas-pendentes-table th:first-child {
+        border-top-left-radius: 0;
+    }
+
+    .etapas-pendentes-table th:last-child {
+        border-top-right-radius: 0;
+    }
+
+    .etapas-pendentes-table td {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--text-color);
+        font-size: 0.9rem;
+        vertical-align: middle;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .etapas-pendentes-table tr:hover td {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .etapas-pendentes-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Status Styles */
+    .date-overdue {
+        color: var(--danger-color);
+        font-weight: 600;
+        position: relative;
+    }
+
+    .date-overdue::before {
+        content: '⚠';
+        margin-right: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .etapa-done td {
+        opacity: 0.6;
+    }
+
+    .etapa-iniciada {
+        background: linear-gradient(135deg, 
+            rgba(56, 161, 105, 0.05) 0%, 
+            rgba(56, 161, 105, 0.02) 100%);
+    }
+
+    .text-decoration-line-through {
+        text-decoration: line-through;
+    }
+
+    .text-muted {
+        color: var(--text-muted) !important;
+    }
+
+    /* Glass Action Buttons */
+    .actions-cell-content {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .action-btn {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.18) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: var(--text-color) !important;
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: all var(--transition-speed) ease;
+        box-shadow: 
+            0 4px 12px rgba(0, 90, 146, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        text-decoration: none;
+        min-width: auto;
+        height: auto;
+        white-space: nowrap;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-1px);
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.25) 0%, 
+            rgba(255, 255, 255, 0.1) 100%);
+        box-shadow: 
+            0 6px 20px rgba(0, 90, 146, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.3) !important;
+        color: var(--primary-color) !important;
+    }
+
+    .action-btn i {
+        font-size: 0.9rem;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .action-btn:hover i {
+        transform: scale(1.1);
+    }
+
+    /* Specific Button States */
+    .action-btn.iniciada-active {
+        background: linear-gradient(135deg, 
+            rgba(56, 161, 105, 0.2) 0%, 
+            rgba(56, 161, 105, 0.1) 100%);
+        border-color: rgba(56, 161, 105, 0.3) !important;
+        color: var(--success-color) !important;
+    }
+
+    .action-btn.iniciada-active:hover {
+        background: linear-gradient(135deg, 
+            rgba(56, 161, 105, 0.3) 0%, 
+            rgba(56, 161, 105, 0.15) 100%);
+        border-color: rgba(56, 161, 105, 0.4) !important;
+    }
+
+    .action-btn:disabled {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.08) 0%, 
+            rgba(255, 255, 255, 0.02) 100%);
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: var(--text-muted) !important;
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .action-btn:disabled:hover {
+        transform: none;
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.08) 0%, 
+            rgba(255, 255, 255, 0.02) 100%);
+        box-shadow: 
+            0 4px 12px rgba(0, 90, 146, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    /* Edit and Delete Button Styles */
+    .btn-edit-etapa {
+        background: linear-gradient(135deg, 
+            rgba(214, 158, 46, 0.15) 0%, 
+            rgba(214, 158, 46, 0.05) 100%);
+        border-color: rgba(214, 158, 46, 0.2) !important;
+        color: var(--warning-color) !important;
+    }
+
+    .btn-edit-etapa:hover {
+        background: linear-gradient(135deg, 
+            rgba(214, 158, 46, 0.25) 0%, 
+            rgba(214, 158, 46, 0.1) 100%);
+        border-color: rgba(214, 158, 46, 0.3) !important;
+    }
+
+    .btn-delete-etapa {
+        background: linear-gradient(135deg, 
+            rgba(229, 62, 62, 0.15) 0%, 
+            rgba(229, 62, 62, 0.05) 100%);
+        border-color: rgba(229, 62, 62, 0.2) !important;
+        color: var(--danger-color) !important;
+    }
+
+    .btn-delete-etapa:hover {
+        background: linear-gradient(135deg, 
+            rgba(229, 62, 62, 0.25) 0%, 
+            rgba(229, 62, 62, 0.1) 100%);
+        border-color: rgba(229, 62, 62, 0.3) !important;
+    }
+
+    /* Glass No Pendencies State */
+    .no-pendencies {
+        background: var(--glass-bg);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 4rem 2rem;
+        text-align: center;
+        box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .no-pendencies::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .no-pendencies i {
+        color: var(--success-color);
+        margin-bottom: 1.5rem;
+        filter: drop-shadow(0 4px 8px rgba(56, 161, 105, 0.3));
+    }
+
+    .no-pendencies h4 {
+        color: var(--text-color);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, var(--success-color) 0%, #48bb78 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .no-pendencies p {
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    /* Glass AJAX Flash Messages */
+    #ajax-flash-messages-container {
+        position: fixed;
+        top: 90px;
+        right: 20px;
+        z-index: 1050;
+        width: auto;
+        max-width: 400px;
+    }
+
+    #ajax-flash-messages-container .alert {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        box-shadow: 
+            0 8px 32px rgba(0, 90, 146, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        color: var(--text-color);
+        padding: 1rem 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    #ajax-flash-messages-container .alert-info {
+        border-color: rgba(0, 90, 146, 0.3);
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.1) 0%, 
+            rgba(0, 90, 146, 0.05) 100%);
+    }
+
+    #ajax-flash-messages-container .alert-danger {
+        border-color: rgba(229, 62, 62, 0.3);
+        background: linear-gradient(135deg, 
+            rgba(229, 62, 62, 0.1) 0%, 
+            rgba(229, 62, 62, 0.05) 100%);
+    }
+
+    .btn-close {
+        background: none;
+        border: none;
+        color: var(--text-color);
+        opacity: 0.7;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .btn-close:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    /* ====================================
+       RESPONSIVE DESIGN
+       ==================================== */
+
+    @media (max-width: 1200px) {
+        .actions-cell-content {
+            gap: 0.3rem;
+        }
+        
+        .action-btn {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.75rem;
+        }
+        
+        .action-btn span {
+            display: none;
+        }
+        
+        .action-btn i {
+            margin-right: 0;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .main-container {
+            padding: 1rem;
+        }
+        
+        .page-header {
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .page-header h1 {
+            font-size: 1.4rem;
+        }
+        
+        .project-card-header {
+            padding: 1rem 1.5rem;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .project-card-header h5 {
+            font-size: 1.1rem;
+        }
+        
+        .etapas-pendentes-table th,
+        .etapas-pendentes-table td {
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+        }
+        
+        .etapas-pendentes-table th {
+            font-size: 0.75rem;
+        }
+        
+        .actions-cell-content {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.5rem;
+        }
+        
+        .action-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 0.5rem;
+        }
+        
+        .action-btn span {
+            display: inline;
+        }
+        
+        .no-pendencies {
+            padding: 2rem 1rem;
+        }
+        
+        .no-pendencies h4 {
+            font-size: 1.2rem;
+        }
+        
+        #ajax-flash-messages-container {
+            right: 10px;
+            left: 10px;
+            max-width: none;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .etapas-pendentes-table {
+            font-size: 0.75rem;
+        }
+        
+        .etapas-pendentes-table th,
+        .etapas-pendentes-table td {
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .project-card-header h5 {
+            font-size: 1rem;
+        }
+        
+        .badge {
+            font-size: 0.7rem;
+            padding: 0.4rem 0.8rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <!-- Container para mensagens flash AJAX -->
+    <div id="ajax-flash-messages-container" style="display: none;">
+        <div class="alert alert-dismissible fade show" role="alert">
+            <span id="ajax-flash-message-text"></span>
+            <button type="button" class="btn-close btn-sm" onclick="this.parentElement.style.display='none';" aria-label="Close"></button>
+        </div>
+    </div>
+
+    <div class="page-header">
+        <h1><i class="fas fa-exclamation-triangle mr-2 text-warning"></i>Projetos com Pendências</h1>
+    </div>
+
+    {% if is_admin_user and areas_options %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-body d-flex justify-content-start align-items-center">
+            <form method="GET" action="{{ url_for('main.list_projetos_pendentes') }}" class="d-flex align-items-center gap-2">
+                <label for="areaFilter" class="form-label mb-0 me-2">Filtrar por Área:</label>
+                <select class="form-select form-select-sm" name="area" id="areaFilter" onchange="this.form.submit()">
+                    <option value="">Todas as Áreas</option>
+                    {% for area in areas_options %}
+                        <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
+                    {% endfor %}
+                </select>
+                <a href="{{ url_for('main.list_projetos_pendentes') }}" class="btn btn-sm btn-outline-secondary" title="Limpar filtro">
+                    <i class="fas fa-times"></i>
+                </a>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if projetos_com_etapas %}
+        {% for item in projetos_com_etapas %}
+        <div class="project-card" id="project-card-{{ item.projeto.id }}">
+            <div class="project-card-header">
+                <h5>
+                    <a href="{{ url_for('main.project_detail', project_id=item.projeto.id) }}" title="Ver detalhes do projeto">
+                        <i class="fas fa-folder-open mr-2"></i>{{ item.projeto.titulo }}
+                    </a>
+                </h5>
+                <span class="badge badge-secondary">{{ item.projeto.area_responsavel }}</span>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="etapas-pendentes-table">
+                    <thead>
+                        <tr>
+                            <th>Etapa Atrasada</th>
+                            <th>Responsável</th>
+                            <th>Data Início Prev.</th>
+                            <th>Data Fim Prev. (Vencida)</th>
+                            <th style="width: 260px;">Ações</th> <!-- Ajustar largura para os botões -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for etapa in item.etapas_atrasadas %}
+                        <tr id="etapa-row-{{ etapa.id }}" class="etapa-row {% if etapa.done %}etapa-done{% elif etapa.iniciada %}etapa-iniciada{% endif %}">
+                            <td class="etapa-descricao {% if etapa.done %}text-decoration-line-through text-muted{% endif %}">{{ etapa.descricao }}</td>
+                            <td class="{% if etapa.done %}text-decoration-line-through text-muted{% endif %}">{{ etapa.responsavel if etapa.responsavel else 'N/A' }}</td>
+                            <td class="{% if etapa.done %}text-decoration-line-through text-muted{% endif %}">{{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else 'N/A' }}</td>
+                            <td class="date-overdue {% if etapa.done %}text-decoration-line-through{% endif %}">{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else 'N/A' }}</td>
+                            <td>
+                                <div class="actions-cell-content">
+                                    <!-- Marcar como Iniciada/Não Iniciada -->
+                                    <button type="button" class="btn btn-sm action-btn toggle-iniciada {% if etapa.iniciada and not etapa.done %}iniciada-active{% endif %}" 
+                                            data-etapa-id="{{ etapa.id }}"
+                                            title="{% if etapa.iniciada %}Marcar como Não Iniciada{% else %}Marcar como Iniciada{% endif %}"
+                                            {% if etapa.done %}disabled{% endif %}>
+                                        <i class="fas {% if etapa.iniciada %}fa-stop-circle{% else %}fa-play-circle{% endif %}"></i> 
+                                        <span>{% if etapa.iniciada %}Iniciada{% else %}Iniciar{% endif %}</span>
+                                    </button>
+                                    
+                                    <!-- Marcar como Concluída/Pendente -->
+                                    <button type="button" class="btn btn-sm action-btn toggle-done" 
+                                            data-etapa-id="{{ etapa.id }}"
+                                            title="{% if etapa.done %}Marcar como Pendente{% else %}Marcar como Concluída{% endif %}"
+                                            {% if not etapa.iniciada or etapa.done %}disabled{% endif %}>
+                                        <i class="fas {% if etapa.done %}fa-undo{% else %}fa-check-circle{% endif %}"></i>
+                                        <span>{% if etapa.done %}Desfazer{% else %}Concluir{% endif %}</span>
+                                    </button>
+                                    
+                                    <!-- Editar Etapa -->
+                                    <a href="{{ url_for('main.edit_etapa', etapa_id=etapa.id) }}" class="btn btn-sm action-btn btn-edit-etapa" title="Editar Etapa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <!-- Excluir Etapa -->
+                                    <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
+                                        <button type="submit" class="btn btn-sm action-btn btn-delete-etapa" title="Excluir Etapa">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {# {% include 'modals/edit_etapa_modal.html' with context %} #}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-pendencies">
+            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+            <h4>Nenhum projeto com pendências no momento!</h4>
+            <p>
+                {% if selected_area %}
+                    Não há projetos com etapas atrasadas na área de <strong>{{ selected_area }}</strong>.
+                {% else %}
+                    Todos os projetos vigentes estão em dia.
+                {% endif %}
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = "{{ csrf_token() if csrf_token else '' }}"; // Para Flask-WTF, se usado
+
+    function showAjaxFlashMessage(message, type = 'info') {
+        const container = document.getElementById('ajax-flash-messages-container');
+        const alertTextElement = document.getElementById('ajax-flash-message-text');
+        const alertElement = container.querySelector('.alert');
+
+        if (!message || !container || !alertTextElement || !alertElement) return;
+
+        alertTextElement.textContent = message;
+        alertElement.className = `alert alert-${type} alert-dismissible fade show`; // Reinicia classes
+        
+        container.style.display = 'block';
+        alertElement.classList.add('show'); // Garante que a animação 'show' ocorra
+
+        // Auto-hide
+        setTimeout(() => {
+            alertElement.classList.remove('show');
+            setTimeout(() => { container.style.display = 'none'; }, 150); // Tempo para fade out
+        }, 5000);
+    }
+
+    function updateButtonStates(etapaRow, iniciada, done) {
+        const etapaId = etapaRow.id.replace('etapa-row-', '');
+        const btnIniciada = etapaRow.querySelector(`.toggle-iniciada[data-etapa-id='${etapaId}']`);
+        const btnConcluida = etapaRow.querySelector(`.toggle-done[data-etapa-id='${etapaId}']`);
+        const descCells = etapaRow.querySelectorAll('.etapa-descricao, td:nth-child(2), td:nth-child(3), td:nth-child(4)'); // Inclui data de fim
+
+        if (!btnIniciada || !btnConcluida) return;
+
+        // Atualiza botão Iniciada
+        btnIniciada.querySelector('i').className = `fas ${iniciada ? 'fa-stop-circle' : 'fa-play-circle'}`;
+        btnIniciada.querySelector('span').textContent = iniciada ? 'Iniciada' : 'Iniciar';
+        btnIniciada.title = iniciada ? 'Marcar como Não Iniciada' : 'Marcar como Iniciada';
+        if (iniciada && !done) {
+            btnIniciada.classList.add('iniciada-active');
+        } else {
+            btnIniciada.classList.remove('iniciada-active');
+        }
+        btnIniciada.disabled = done; // Desabilita se concluída
+
+        // Atualiza botão Concluída
+        btnConcluida.querySelector('i').className = `fas ${done ? 'fa-undo' : 'fa-check-circle'}`;
+        btnConcluida.querySelector('span').textContent = done ? 'Desfazer' : 'Concluir';
+        btnConcluida.title = done ? 'Marcar como Pendente' : 'Marcar como Concluída';
+        if (done) { // Modo Desfazer
+            btnConcluida.disabled = false;
+        } else { // Modo Concluir
+            btnConcluida.disabled = !iniciada;
+        }
+
+
+        // Atualiza aparência da linha e células
+        etapaRow.classList.remove('etapa-iniciada', 'etapa-done');
+        descCells.forEach(cell => cell.classList.remove('text-decoration-line-through', 'text-muted'));
+        
+        if (done) {
+            etapaRow.classList.add('etapa-done');
+            descCells.forEach(cell => cell.classList.add('text-decoration-line-through', 'text-muted'));
+        } else if (iniciada) {
+            etapaRow.classList.add('etapa-iniciada');
+        }
+    }
+
+
+    document.querySelectorAll('.toggle-iniciada').forEach(button => {
+        button.addEventListener('click', function() {
+            if (this.disabled) return;
+            const etapaId = this.dataset.etapaId;
+            const etapaRow = document.getElementById(`etapa-row-${etapaId}`);
+
+            fetch(`/etapa/${etapaId}/toggle_iniciada`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    // 'X-CSRFToken': csrfToken // Descomente se CSRF_TOKEN for configurado e necessário
+                },
+                // body: new URLSearchParams({ 'csrf_token': csrfToken }) // Se CSRF em body
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateButtonStates(etapaRow, data.iniciada, data.done);
+                    if (data.message) {
+                         showAjaxFlashMessage(data.message, 'info');
+                    }
+                } else {
+                    showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao alternar iniciada:', error);
+                showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
+            });
+        });
+    });
+
+    document.querySelectorAll('.toggle-done').forEach(button => {
+        button.addEventListener('click', function() {
+            if (this.disabled) return;
+            const etapaId = this.dataset.etapaId;
+            const etapaRow = document.getElementById(`etapa-row-${etapaId}`);
+
+            fetch(`/etapa/${etapaId}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    // 'X-CSRFToken': csrfToken
+                },
+                // body: new URLSearchParams({ 'csrf_token': csrfToken })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateButtonStates(etapaRow, data.iniciada, data.done);
+                     if (data.message) { // Mesmo que success, pode haver uma mensagem informativa
+                        showAjaxFlashMessage(data.message, 'info');
+                    }
+                } else {
+                    showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao alternar concluída:', error);
+                showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
+            });
+        });
+    });
+});
+</script>
+{% endblock %} 

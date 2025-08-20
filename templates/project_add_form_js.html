@@ -1,0 +1,279 @@
+<script>
+    // Lógica Unificada para o Modal de Adicionar Projeto - Glass Design
+    document.addEventListener('DOMContentLoaded', function() {
+        const addProjectModal = document.getElementById('addProjectModal');
+        
+        const modalObjetivoSelect = document.getElementById('project_objetivo');
+        const modalResultadoSelect = document.getElementById('project_resultado');
+        const modalIndicadoresContainer = document.getElementById('indicadores-container');
+        const templateSelect = document.getElementById('template_select');
+        const stagesContainer = document.getElementById('dynamic-stages-container');
+
+        function loadResultados() {
+            const objetivoId = modalObjetivoSelect.value;
+            modalResultadoSelect.innerHTML = '<option value="" selected>Selecione um resultado esperado</option>';
+            modalIndicadoresContainer.innerHTML = `
+                <div class="indicator-placeholder">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Selecione um resultado esperado para ver os indicadores disponíveis</span>
+                </div>
+            `;
+            
+            if (!objetivoId) {
+                modalResultadoSelect.disabled = true;
+                return;
+            }
+            
+            modalResultadoSelect.disabled = false;
+            
+            // Adiciona loading state
+            modalResultadoSelect.innerHTML = '<option value="">Carregando resultados...</option>';
+            
+            fetch(`/api/resultados/${objetivoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    modalResultadoSelect.innerHTML = '<option value="" selected>Selecione um resultado esperado</option>';
+                    
+                    if(data && data.length > 0){
+                        data.forEach(resultado => {
+                            const option = document.createElement('option');
+                            option.value = resultado.id;
+                            option.textContent = resultado.descricao;
+                            modalResultadoSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar resultados:', error);
+                    modalResultadoSelect.innerHTML = '<option value="">Erro ao carregar resultados</option>';
+                });
+        }
+
+        function loadIndicadores() {
+            const resultadoId = modalResultadoSelect.value;
+            if (!resultadoId) {
+                modalIndicadoresContainer.innerHTML = `
+                    <div class="indicator-placeholder">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Selecione um resultado esperado para ver os indicadores disponíveis</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Adiciona loading state
+            modalIndicadoresContainer.innerHTML = `
+                <div class="indicator-placeholder loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Carregando indicadores...</span>
+                </div>
+            `;
+            
+            fetch(`/api/indicadores/${resultadoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    modalIndicadoresContainer.innerHTML = '';
+                    
+                    if(data && data.length > 0){
+                        data.forEach((indicador, index) => {
+                            const div = document.createElement('div');
+                            div.className = 'glass-checkbox-item';
+                            div.innerHTML = `
+                                <input class="glass-checkbox indicador-checkbox" type="checkbox" 
+                                       name="project_indicadores" value="${indicador.id}" 
+                                       id="indicador_${indicador.id}">
+                                <label class="glass-checkbox-label" for="indicador_${indicador.id}">
+                                    <span class="checkbox-custom"></span>
+                                    <span class="checkbox-text">${indicador.descricao}</span>
+                                </label>
+                            `;
+                            modalIndicadoresContainer.appendChild(div);
+                            
+                            // Adiciona animação escalonada
+                            setTimeout(() => {
+                                div.classList.add('animate-in');
+                            }, index * 100);
+                        });
+                        
+                        // Limitar seleção a 4 indicadores
+                        document.querySelectorAll('.indicador-checkbox').forEach(checkbox => {
+                            checkbox.addEventListener('change', function() {
+                                const checkedCount = document.querySelectorAll('.indicador-checkbox:checked').length;
+                                if (checkedCount > 4) {
+                                    this.checked = false;
+                                    showNotification('Você pode selecionar no máximo 4 indicadores', 'warning');
+                                }
+                            });
+                        });
+                    } else {
+                        modalIndicadoresContainer.innerHTML = `
+                            <div class="indicator-placeholder empty">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <span>Nenhum indicador disponível para este resultado esperado</span>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar indicadores:', error);
+                    modalIndicadoresContainer.innerHTML = `
+                        <div class="indicator-placeholder error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Erro ao carregar indicadores</span>
+                        </div>
+                    `;
+                });
+        }
+
+        function loadTemplates() {
+            templateSelect.innerHTML = '<option value="">Carregando modelos...</option>';
+            
+            fetch('/api/templates')
+                .then(response => response.json())
+                .then(data => {
+                    templateSelect.innerHTML = '<option value="">Não importar / Limpar etapas</option>';
+                    
+                    if(data && data.length > 0){
+                        data.forEach(template => {
+                            const option = document.createElement('option');
+                            option.value = template.id;
+                            option.textContent = template.name;
+                            templateSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar templates:', error);
+                    templateSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+                });
+        }
+
+        function loadTemplateStages() {
+            const templateId = templateSelect.value;
+            stagesContainer.innerHTML = '';
+            
+            if (!templateId) {
+                return;
+            }
+            
+            // Adiciona loading state
+            stagesContainer.innerHTML = `
+                <div class="stages-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Carregando etapas do modelo...</span>
+                </div>
+            `;
+            
+            fetch(`/api/templates/${templateId}`)
+                .then(response => response.json())
+                .then(data => {
+                    stagesContainer.innerHTML = '';
+                    
+                    if(data && data.length > 0){
+                        data.forEach((etapa, index) => {
+                            const stageDiv = document.createElement('div');
+                            stageDiv.className = 'glass-stage-item';
+                            stageDiv.innerHTML = `
+                                <div class="stage-number">${index + 1}</div>
+                                <div class="stage-content">
+                                    <label class="form-label-glass">
+                                        <i class="fas fa-tasks label-icon"></i>
+                                        Etapa ${index + 1}
+                                    </label>
+                                    <input type="text" class="form-control-glass" 
+                                           name="etapa_descricao" value="${etapa.name}" 
+                                           placeholder="Descrição da etapa">
+                                </div>
+                            `;
+                            stagesContainer.appendChild(stageDiv);
+                            
+                            // Animação escalonada
+                            setTimeout(() => {
+                                stageDiv.classList.add('animate-in');
+                            }, index * 150);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar etapas do template:', error);
+                    stagesContainer.innerHTML = `
+                        <div class="stages-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Erro ao carregar etapas do modelo</span>
+                        </div>
+                    `;
+                });
+        }
+
+        // Função para mostrar notificações
+        function showNotification(message, type = 'info') {
+            // Implementar sistema de notificação toast aqui
+            alert(message); // Temporário - pode ser substituído por um toast mais elegante
+        }
+
+        // Event listeners
+        if (modalObjetivoSelect) {
+            modalObjetivoSelect.addEventListener('change', loadResultados);
+        }
+        
+        if (modalResultadoSelect) {
+            modalResultadoSelect.addEventListener('change', loadIndicadores);
+        }
+        
+        if (templateSelect) {
+            templateSelect.addEventListener('change', loadTemplateStages);
+        }
+
+        // Carregar templates e adicionar animações quando o modal for aberto
+        if (addProjectModal) {
+            addProjectModal.addEventListener('show.bs.modal', function () {
+                loadTemplates();
+                
+                // Adiciona classe de animação ao modal
+                setTimeout(() => {
+                    addProjectModal.querySelector('.modal-content').classList.add('modal-animate-in');
+                }, 100);
+            });
+            
+            // Limpar formulário e remover animações quando modal for fechado
+            addProjectModal.addEventListener('hidden.bs.modal', function () {
+                const form = document.getElementById('addProjectFormModal');
+                form.reset();
+                
+                modalResultadoSelect.disabled = true;
+                modalIndicadoresContainer.innerHTML = `
+                    <div class="indicator-placeholder">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Selecione um resultado esperado para ver os indicadores disponíveis</span>
+                    </div>
+                `;
+                stagesContainer.innerHTML = '';
+                
+                // Remove classes de animação
+                addProjectModal.querySelector('.modal-content').classList.remove('modal-animate-in');
+            });
+        }
+
+        // Adiciona interações de hover nos cards glass
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.classList.add('glass-card-hover');
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.classList.remove('glass-card-hover');
+            });
+        });
+
+        // Melhora a experiência dos campos de formulário
+        document.querySelectorAll('.form-control-glass, .form-select-glass, .form-control-glass-enhanced, .form-select-glass-enhanced, .form-control-glass-full, .textarea-glass-full').forEach(field => {
+            field.addEventListener('focus', function() {
+                this.closest('.form-group-glass').classList.add('field-focused');
+            });
+            
+            field.addEventListener('blur', function() {
+                this.closest('.form-group-glass').classList.remove('field-focused');
+            });
+        });
+    });
+</script> 

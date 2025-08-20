@@ -1,0 +1,1007 @@
+{% extends "base.html" %}
+
+{% block title %}ProjetosRJ{% endblock %}
+
+{% block content %}
+<div class="container-fluid mobile-full">
+    <!-- Header / Título -->
+    <div class="row mobile-full">
+        <div class="col-12 px-3 py-2">
+            <header class="d-flex justify-content-between align-items-center mb-3 dashboard-header">
+                <div>
+                    <h1 class="h3 fw-bold mb-1 dashboard-title">Dashboard de {{ current_user_obj.name if current_user_obj.name else current_user_obj.username }}</h1>
+                    {% if current_user_obj.area_responsavel %}
+                    <p class="text-muted small mb-0 dashboard-subtitle">Área: {{ current_user_obj.area_responsavel }}</p>
+                    {% else %}
+                    <p class="text-muted small mb-0 dashboard-subtitle">Painel de gerenciamento de projetos</p>
+                    {% endif %}
+                </div>
+                <div class="d-flex">
+                    <button type="button" class="btn btn-primary glass-btn" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                        <i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">Novo Projeto</span>
+                    </button>
+                </div>
+            </header>
+        </div>
+    </div>
+
+    <!-- Cards informativos -->
+    <div class="row g-2 mb-3 px-2">
+        <div class="col-6 col-md-3">
+            <a href="{{ url_for('main.list_projects') }}" class="text-decoration-none">
+                <!-- Versão mobile (atual) - só aparece em telas pequenas -->
+                <div class="card border-0 h-100 glass-card d-md-none">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="text-muted small">Projetos</div>
+                            <div class="icon-shape glass-icon-shape text-primary rounded-circle p-1">
+                                <i class="fas fa-folder-open"></i>
+                            </div>
+                        </div>
+                        <h3 class="h5 fw-bold mb-0">{{ num_projects }}</h3>
+                    </div>
+                </div>
+                
+                <!-- Versão desktop (aprimorada) - só aparece em telas médias e grandes -->
+                <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="dashboard-icon-wrapper glass-icon-wrapper bg-primary-light text-primary">
+                                <i class="fas fa-folder-open fa-lg"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h3 class="h4 fw-bold mb-0">{{ num_projects }}</h3>
+                                <div class="text-muted fw-medium">Projetos</div>
+                                <div class="text-primary small mt-1">Todos os projetos cadastrados</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <a href="{{ url_for('main.list_projects', status='Finalizado') }}" class="text-decoration-none">
+                <!-- Versão mobile (atual) - só aparece em telas pequenas -->
+                <div class="card border-0 h-100 glass-card d-md-none">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="text-muted small">Concluídos</div>
+                            <div class="icon-shape glass-icon-shape text-success rounded-circle p-1">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        <h3 class="h5 fw-bold mb-0">{{ count_finalizado }}</h3>
+                    </div>
+                </div>
+                
+                <!-- Versão desktop (aprimorada) - só aparece em telas médias e grandes -->
+                <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="dashboard-icon-wrapper glass-icon-wrapper bg-success-light text-success">
+                                <i class="fas fa-check-circle fa-lg"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h3 class="h4 fw-bold mb-0">{{ count_finalizado }}</h3>
+                                <div class="text-muted fw-medium">Concluídos</div>
+                                <div class="text-success small mt-1">Projetos finalizados com sucesso</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <a href="{{ url_for('main.list_projects', status='Vigente') }}" class="text-decoration-none">
+                <!-- Versão mobile (atual) - só aparece em telas pequenas -->
+                <div class="card border-0 h-100 glass-card d-md-none">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="text-muted small">Vigentes</div>
+                            <div class="icon-shape glass-icon-shape text-info rounded-circle p-1">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                        <h3 class="h5 fw-bold mb-0">{{ count_vigente }}</h3>
+                    </div>
+                </div>
+                
+                <!-- Versão desktop (aprimorada) - só aparece em telas médias e grandes -->
+                <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="dashboard-icon-wrapper glass-icon-wrapper bg-info-light text-info">
+                                <i class="fas fa-clock fa-lg"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h3 class="h4 fw-bold mb-0">{{ count_vigente }}</h3>
+                                <div class="text-muted fw-medium">Vigentes</div>
+                                <div class="text-info small mt-1">Projetos em andamento</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <a href="{{ url_for('main.list_projects', atraso='atrasado') }}" class="text-decoration-none">
+                <!-- Versão mobile (atual) - só aparece em telas pequenas -->
+                <div class="card border-0 h-100 glass-card d-md-none">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="text-muted small">Em Atraso</div>
+                            <div class="icon-shape glass-icon-shape text-danger rounded-circle p-1">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <h3 class="h5 fw-bold mb-0">{{ projetos_em_atraso }}</h3>
+                    </div>
+                </div>
+                
+                <!-- Versão desktop (aprimorada) - só aparece em telas médias e grandes -->
+                <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="dashboard-icon-wrapper glass-icon-wrapper bg-danger-light text-danger">
+                                <i class="fas fa-exclamation-triangle fa-lg"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h3 class="h4 fw-bold mb-0">{{ projetos_em_atraso }}</h3>
+                                <div class="text-muted fw-medium">Em Atraso</div>
+                                <div class="text-danger small mt-1">Necessitam atenção imediata</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Conteúdo principal -->
+    <div class="row g-3 px-2">
+        <!-- Projetos Recentes -->
+        <div class="col-12 col-md-8">
+            <div class="card border-0 glass-card h-100 main-content-card">
+                <div class="card-header glass-card-header py-3">
+                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
+                        <i class="fas fa-clock me-2 text-primary"></i>Projetos Recentes
+                    </h5>
+                </div>
+                
+                <!-- Versão para desktop (tabela) - oculta em mobile -->
+                <div class="card-body p-0 d-none d-md-block glass-card-body">
+                    <div class="table-responsive glass-table-wrapper">
+                        <table class="table align-middle mb-0 glass-table">
+                            <thead class="glass-table-header">
+                                <tr>
+                                    <th class="ps-4">ID</th>
+                                    <th>Projeto</th>
+                                    <th>Área</th>
+                                    <th>Prioridade</th>
+                                    <th class="text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if recent_projects %}
+                                    {% for project in recent_projects %}
+                                    <tr class="glass-table-row">
+                                        <td class="ps-4">#{{ project.id }}</td>
+                                        <td>
+                                            <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="text-decoration-none fw-medium glass-link">
+                                                {{ project.titulo | truncate(35, True) }}
+                                            </a>
+                                        </td>
+                                        <td>{{ project.area_responsavel | default('N/A', True) }}</td>
+                                        <td>
+                                            <span class="badge glass-badge priority-{{ project.prioridade | lower }}">
+                                                {{ project.prioridade | capitalize }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="btn btn-sm btn-outline-primary glass-btn-sm py-0 px-2">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <div class="py-3 glass-empty-state">
+                                            <i class="fas fa-folder-open fa-2x text-muted mb-3"></i>
+                                            {% if num_projects > 0 %}
+                                                <p class="mb-0">Nenhum projeto recente para mostrar.</p>
+                                            {% else %}
+                                                <p class="mb-3">Nenhum projeto cadastrado ainda.</p>
+                                                <button type="button" class="btn btn-primary glass-btn" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                                                    <i class="fas fa-plus me-1"></i>Criar Primeiro Projeto
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Versão para mobile (cards) -->
+                <div class="card-body p-2 d-md-none">
+                    {% if recent_projects %}
+                        {% for project in recent_projects %}
+                        <div class="project-card glass-project-card">
+                            <div class="project-card-header">
+                                <span class="fw-bold">#{{ project.id }}</span>
+                                <span class="badge glass-badge priority-{{ project.prioridade | lower }}">
+                                    {{ project.prioridade | capitalize }}
+                                </span>
+                            </div>
+                            <div class="project-card-body">
+                                <h6 class="mb-2">
+                                    <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="text-decoration-none fw-medium glass-link">
+                                        {{ project.titulo | truncate(50, True) }}
+                                    </a>
+                                </h6>
+                                <div class="text-muted small">
+                                    <i class="fas fa-building me-1"></i> {{ project.area_responsavel | default('N/A', True) }}
+                                </div>
+                            </div>
+                            <div class="project-card-footer">
+                                <small class="text-muted">
+                                    {% if project.orgao %}{{ project.orgao }}{% else %}Org.: N/A{% endif %}
+                                </small>
+                                <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="btn btn-sm btn-outline-primary glass-btn-sm">
+                                    <i class="fas fa-eye me-1"></i>Ver
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3 glass-empty-state">
+                            <i class="fas fa-folder-open fa-2x text-muted mb-2"></i>
+                            {% if num_projects > 0 %}
+                                <p class="mb-0">Nenhum projeto recente para mostrar.</p>
+                            {% else %}
+                                <p class="mb-2">Nenhum projeto cadastrado ainda.</p>
+                                <button type="button" class="btn btn-primary glass-btn" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                                    <i class="fas fa-plus me-1"></i>Criar Projeto
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12 col-md-4">
+            <!-- Ações Rápidas -->
+            <div class="card border-0 glass-card mb-3 sidebar-content-card">
+                <div class="card-header glass-card-header py-3">
+                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
+                        <i class="fas fa-bolt me-2 text-warning"></i>Ações Rápidas
+                    </h5>
+                </div>
+                <div class="card-body py-2 px-3 glass-card-body">
+                    <div class="d-grid gap-2 mb-0">
+                        <a href="{{ url_for('main.list_projects') }}" class="btn btn-outline-primary glass-btn-outline">
+                            <i class="fas fa-list-alt me-2"></i>Todos os Projetos
+                        </a>
+                        <button class="btn btn-outline-secondary glass-btn-outline" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                            <i class="fas fa-plus-circle me-2"></i>Novo Projeto
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Projetos por Prioridade -->
+            <div class="card border-0 glass-card sidebar-content-card">
+                <div class="card-header glass-card-header py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
+                        <i class="fas fa-chart-pie me-2 text-info"></i>Projetos por Prioridade
+                    </h5>
+                    <span class="text-muted small glass-total-count">Total: {{ num_projects }}</span>
+                </div>
+                <div class="card-body px-3 py-2 glass-card-body">
+                    <div class="priority-grid-clean glass-priority-grid">
+                        <a href="{{ url_for('main.list_projects', prioridade='baixa') }}" class="priority-item-clean glass-priority-item">
+                            <div class="priority-dot priority-dot-baixa glass-priority-dot"></div>
+                            <div class="priority-info">
+                                <span class="priority-label-clean">Baixa</span>
+                                <div class="priority-bar-clean glass-priority-bar">
+                                    <div class="priority-progress-clean priority-progress-baixa" style="width: {% if num_projects > 0 %}{{ (count_baixa / num_projects * 100) }}{% else %}0{% endif %}%;"></div>
+                                </div>
+                            </div>
+                            <span class="priority-count-clean">{{ count_baixa }}</span>
+                        </a>
+                        
+                        <a href="{{ url_for('main.list_projects', prioridade='media') }}" class="priority-item-clean glass-priority-item">
+                            <div class="priority-dot priority-dot-media glass-priority-dot"></div>
+                            <div class="priority-info">
+                                <span class="priority-label-clean">Média</span>
+                                <div class="priority-bar-clean glass-priority-bar">
+                                    <div class="priority-progress-clean priority-progress-media" style="width: {% if num_projects > 0 %}{{ (count_media / num_projects * 100) }}{% else %}0{% endif %}%;"></div>
+                                </div>
+                            </div>
+                            <span class="priority-count-clean">{{ count_media }}</span>
+                        </a>
+                        
+                        <a href="{{ url_for('main.list_projects', prioridade='alta') }}" class="priority-item-clean glass-priority-item">
+                            <div class="priority-dot priority-dot-alta glass-priority-dot"></div>
+                            <div class="priority-info">
+                                <span class="priority-label-clean">Alta</span>
+                                <div class="priority-bar-clean glass-priority-bar">
+                                    <div class="priority-progress-clean priority-progress-alta" style="width: {% if num_projects > 0 %}{{ (count_alta / num_projects * 100) }}{% else %}0{% endif %}%;"></div>
+                                </div>
+                            </div>
+                            <span class="priority-count-clean">{{ count_alta }}</span>
+                        </a>
+                        
+                        <a href="{{ url_for('main.list_projects', prioridade='urgente') }}" class="priority-item-clean glass-priority-item">
+                            <div class="priority-dot priority-dot-urgente glass-priority-dot"></div>
+                            <div class="priority-info">
+                                <span class="priority-label-clean">Urgente</span>
+                                <div class="priority-bar-clean glass-priority-bar">
+                                    <div class="priority-progress-clean priority-progress-urgente" style="width: {% if num_projects > 0 %}{{ (count_urgente / num_projects * 100) }}{% else %}0{% endif %}%;"></div>
+                                </div>
+                            </div>
+                            <span class="priority-count-clean">{{ count_urgente }}</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "project_add_form.html" %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<style>
+    /* ====================================
+       GLASS MORPHISM DASHBOARD STYLES
+       ==================================== */
+
+    /* Dashboard Header */
+    .dashboard-header {
+        position: relative;
+        padding: 1rem;
+        border-radius: 12px;
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.25) 0%, 
+            rgba(255, 255, 255, 0.1) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 
+            0 8px 32px rgba(0, 90, 146, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        margin-bottom: 1rem !important;
+    }
+
+    .dashboard-title {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: none;
+        font-weight: 700;
+    }
+
+    .dashboard-subtitle {
+        color: rgba(0, 90, 146, 0.8) !important;
+        font-weight: 500;
+    }
+
+    /* Glass Cards Base */
+    .glass-card {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.25) 0%, 
+            rgba(255, 255, 255, 0.08) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        box-shadow: 
+            0 8px 32px rgba(0, 90, 146, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .glass-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            radial-gradient(circle at 20% 80%, rgba(0, 90, 146, 0.03) 1px, transparent 1px),
+            radial-gradient(circle at 80% 20%, rgba(0, 90, 146, 0.02) 1px, transparent 1px);
+        background-size: 50px 50px, 80px 80px;
+        pointer-events: none;
+        opacity: 0.6;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 
+            0 15px 40px rgba(0, 90, 146, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        border-color: rgba(0, 90, 146, 0.3) !important;
+    }
+
+    /* Dashboard Glass Cards */
+    .dashboard-glass-card {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.3) 0%, 
+            rgba(255, 255, 255, 0.1) 100%);
+        backdrop-filter: blur(25px);
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        border-radius: 16px !important;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .dashboard-glass-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.05) 0%, 
+            transparent 50%);
+        pointer-events: none;
+    }
+
+    .dashboard-glass-card:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 
+            0 20px 50px rgba(0, 90, 146, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        border-color: rgba(0, 90, 146, 0.4) !important;
+    }
+
+    /* Glass Icon Wrappers */
+    .glass-icon-shape {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.3) 0%, 
+            rgba(255, 255, 255, 0.1) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 
+            0 4px 15px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .glass-icon-wrapper {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.25) 0%, 
+            rgba(255, 255, 255, 0.1) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 
+            0 6px 20px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        transition: all var(--transition-speed) ease;
+    }
+
+    .glass-icon-wrapper:hover {
+        transform: scale(1.05);
+        box-shadow: 
+            0 8px 25px rgba(0, 0, 0, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    }
+
+    /* Main Content Cards */
+    .main-content-card {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.2) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(25px);
+        border-radius: 16px !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .sidebar-content-card {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.22) 0%, 
+            rgba(255, 255, 255, 0.08) 100%);
+        backdrop-filter: blur(20px);
+        border-radius: 14px !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    }
+
+    /* Glass Card Headers */
+    .glass-card-header {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.15) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+        position: relative;
+    }
+
+    .glass-card-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, 
+            transparent 0%, 
+            rgba(0, 90, 146, 0.3) 50%, 
+            transparent 100%);
+    }
+
+    .glass-card-title {
+        color: var(--primary-color);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+    }
+
+    .glass-card-body {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Glass Buttons */
+    .glass-btn {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.9) 0%, 
+            rgba(0, 75, 121, 0.8) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+        font-weight: 500;
+        transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 
+            0 4px 15px rgba(0, 90, 146, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .glass-btn:hover {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 1) 0%, 
+            rgba(0, 75, 121, 0.9) 100%);
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 
+            0 8px 25px rgba(0, 90, 146, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.3) !important;
+    }
+
+    .glass-btn-sm {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.1) 0%, 
+            rgba(0, 90, 146, 0.05) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 90, 146, 0.2) !important;
+        color: var(--primary-color) !important;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .glass-btn-sm:hover {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.15) 0%, 
+            rgba(0, 90, 146, 0.08) 100%);
+        transform: scale(1.02);
+        border-color: rgba(0, 90, 146, 0.3) !important;
+        color: var(--primary-dark) !important;
+    }
+
+    .glass-btn-outline {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.15) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(0, 90, 146, 0.3) !important;
+        color: var(--primary-color) !important;
+        font-weight: 500;
+        transition: all var(--transition-speed) ease;
+        box-shadow: 
+            0 4px 15px rgba(0, 90, 146, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .glass-btn-outline:hover {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.1) 0%, 
+            rgba(0, 90, 146, 0.05) 100%);
+        transform: translateY(-2px);
+        box-shadow: 
+            0 8px 25px rgba(0, 90, 146, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-color: rgba(0, 90, 146, 0.5) !important;
+        color: var(--primary-dark) !important;
+    }
+
+    /* Glass Table Styles */
+    .glass-table-wrapper {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.1) 0%, 
+            rgba(255, 255, 255, 0.02) 100%);
+        backdrop-filter: blur(10px);
+        border-radius: 0 0 16px 16px;
+    }
+
+    .glass-table {
+        background: transparent !important;
+    }
+
+    .glass-table-header {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.08) 0%, 
+            rgba(0, 90, 146, 0.03) 100%);
+        backdrop-filter: blur(10px);
+    }
+
+    .glass-table-header th {
+        border: none !important;
+        color: var(--primary-color);
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .glass-table-row {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.05) 0%, 
+            rgba(255, 255, 255, 0.01) 100%);
+        transition: all var(--transition-speed) ease;
+        border: none !important;
+    }
+
+    .glass-table-row:hover {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.08) 0%, 
+            rgba(0, 90, 146, 0.03) 100%);
+        transform: scale(1.01);
+    }
+
+    .glass-table-row td {
+        border: none !important;
+        padding: 0.75rem !important;
+        vertical-align: middle;
+    }
+
+    /* Glass Links */
+    .glass-link {
+        color: var(--primary-color) !important;
+        transition: all var(--transition-speed) ease;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .glass-link:hover {
+        color: var(--primary-dark) !important;
+        text-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
+        transform: scale(1.01);
+    }
+
+    /* Glass Badges */
+    .glass-badge {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.25) 0%, 
+            rgba(255, 255, 255, 0.1) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 
+            0 2px 8px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.5px;
+    }
+
+    /* Priority Glass Items */
+    .glass-priority-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .glass-priority-item {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.15) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 10px;
+        transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        color: inherit;
+        box-shadow: 
+            0 4px 12px rgba(0, 0, 0, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .glass-priority-item:hover {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.25) 0%, 
+            rgba(255, 255, 255, 0.08) 100%);
+        transform: translateX(3px) scale(1.01);
+        box-shadow: 
+            0 8px 25px rgba(0, 90, 146, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-color: rgba(0, 90, 146, 0.3) !important;
+        color: inherit;
+    }
+
+    .glass-priority-dot {
+        box-shadow: 
+            0 2px 8px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .glass-priority-bar {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.2) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .glass-total-count {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.1) 0%, 
+            rgba(0, 90, 146, 0.05) 100%);
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        border: 1px solid rgba(0, 90, 146, 0.2);
+        font-weight: 600;
+        color: var(--primary-color) !important;
+    }
+
+    /* Mobile Glass Project Cards */
+    .glass-project-card {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.2) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        padding: 0.75rem;
+        transition: all var(--transition-speed) ease;
+        box-shadow: 
+            0 4px 15px rgba(0, 90, 146, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .glass-project-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+            0 8px 25px rgba(0, 90, 146, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-color: rgba(0, 90, 146, 0.3);
+    }
+
+    /* Glass Empty State */
+    .glass-empty-state {
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.1) 0%, 
+            rgba(255, 255, 255, 0.02) 100%);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* ====================================
+       RESPONSIVE ADJUSTMENTS
+       ==================================== */
+
+    @media (min-width: 768px) {
+        .glass-card:hover {
+            transform: translateY(-2px) scale(1.01);
+        }
+        
+        .dashboard-glass-card:hover {
+            transform: translateY(-4px) scale(1.02);
+        }
+        
+        .glass-priority-grid {
+            gap: 15px;
+        }
+        
+        .glass-priority-item {
+            padding: 12px 15px;
+        }
+        
+        .dashboard-header {
+            padding: 1.5rem;
+            margin-bottom: 1.5rem !important;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .glass-card {
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.3) 0%, 
+                rgba(255, 255, 255, 0.1) 100%);
+            backdrop-filter: blur(15px);
+        }
+        
+        .dashboard-header {
+            padding: 0.75rem;
+            margin-bottom: 0.75rem !important;
+        }
+        
+        .glass-priority-grid {
+            gap: 10px;
+        }
+        
+        .glass-priority-item {
+            padding: 10px 12px;
+        }
+    }
+
+    /* Original Priority Styles (Enhanced with Glass Effect) */
+    .priority-badge {
+        display: inline-block;
+        padding: 0.25em 0.6em;
+        border-radius: 50rem;
+        font-size: 0.7em;
+        font-weight: 600;
+        text-transform: uppercase;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 
+            0 2px 8px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    
+    .priority-baixa {
+        background: linear-gradient(135deg, rgba(209, 231, 221, 0.8), rgba(209, 231, 221, 0.6));
+        color: #0f5132;
+    }
+    
+    .priority-media {
+        background: linear-gradient(135deg, rgba(255, 243, 205, 0.8), rgba(255, 243, 205, 0.6));
+        color: #664d03;
+    }
+    
+    .priority-alta {
+        background: linear-gradient(135deg, rgba(255, 229, 208, 0.8), rgba(255, 229, 208, 0.6));
+        color: #833c0c;
+    }
+    
+    .priority-urgente {
+        background: linear-gradient(135deg, rgba(248, 215, 218, 0.8), rgba(248, 215, 218, 0.6));
+        color: #842029;
+    }
+
+    /* Icon Shape Base */
+    .icon-shape {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        transition: all var(--transition-speed) ease;
+    }
+
+    /* Card Base Enhancements */
+    .card {
+        border-radius: 12px !important;
+        transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Existing Priority Styles Enhanced */
+    .priority-grid-clean {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .priority-item-clean {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        padding: 8px;
+        border-radius: 6px;
+        transition: all var(--transition-speed) ease;
+    }
+    
+    .priority-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+        flex-shrink: 0;
+        transition: all var(--transition-speed) ease;
+    }
+    
+    .priority-dot-baixa {
+        background-color: #427842;
+    }
+    
+    .priority-dot-media {
+        background-color: #BC9D32;
+    }
+    
+    .priority-dot-alta {
+        background-color: #f39c12;
+    }
+    
+    .priority-dot-urgente {
+        background-color: #e74c3c;
+    }
+    
+    .priority-info {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .priority-label-clean {
+        font-size: 12px;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .priority-bar-clean {
+        height: 4px;
+        width: 100%;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    
+    .priority-progress-clean {
+        height: 100%;
+        border-radius: 2px;
+        transition: all var(--transition-speed) ease;
+    }
+    
+    .priority-progress-baixa {
+        background-color: #427842;
+    }
+    
+    .priority-progress-media {
+        background-color: #BC9D32;
+    }
+    
+    .priority-progress-alta {
+        background-color: #f39c12;
+    }
+    
+    .priority-progress-urgente {
+        background-color: #e74c3c;
+    }
+    
+    .priority-count-clean {
+        font-size: 14px;
+        font-weight: 700;
+        color: #212529;
+        width: 24px;
+        text-align: right;
+    }
+</style>
+{% include "project_add_form_js.html" %}
+{% endblock %} 

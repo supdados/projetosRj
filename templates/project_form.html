@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Projeto - ProjetosRJ{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <header class="pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Editar Projeto: <span class="fw-normal">{{ project.titulo }}</span></h1>
+    </header>
+
+    <form method="post" action="{{ url_for('main.edit_project', project_id=project.id) }}" class="needs-validation" novalidate>
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="mb-3">
+                    <label for="project_titulo" class="form-label">Título do Projeto <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-lg" id="project_titulo" name="project_titulo" value="{{ project.titulo }}" required>
+                    <div class="invalid-feedback">Por favor, informe o título do projeto.</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="project_area_responsavel" class="form-label">Área Responsável:</label>
+                        <select class="form-select" id="project_area_responsavel" name="project_area_responsavel" {% if not is_admin_user %}disabled{% endif %}>
+                            <option value="" {% if not project.area_responsavel %}selected{% endif %} disabled>Selecione uma área</option>
+                            {% for area in areas_responsaveis %}
+                                <option value="{{ area }}" {% if area == project.area_responsavel %}selected{% endif %}>{{ area }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if not is_admin_user and project.area_responsavel %}
+                            <input type="hidden" name="project_area_responsavel" value="{{ project.area_responsavel }}">
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="project_orgao" class="form-label">Órgão:</label>
+                        <input type="text" class="form-control" id="project_orgao" name="project_orgao" value="{{ project.orgao if project.orgao }}">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="project_prioridade" class="form-label">Prioridade:</label>
+                        <select class="form-select" id="project_prioridade" name="project_prioridade">
+                            <option value="baixa" {{ 'selected' if project.prioridade == 'baixa' else '' }}>Baixa</option>
+                            <option value="media" {{ 'selected' if project.prioridade == 'media' else '' }}>Média</option>
+                            <option value="alta" {{ 'selected' if project.prioridade == 'alta' else '' }}>Alta</option>
+                            <option value="urgente" {{ 'selected' if project.prioridade == 'urgente' else '' }}>Urgente</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="project_status" class="form-label">Status:</label>
+                        <select class="form-select" id="project_status" name="project_status">
+                            <option value="Vigente" {{ 'selected' if project.status == 'Vigente' else '' }}>Vigente</option>
+                            <option value="Finalizado" {{ 'selected' if project.status == 'Finalizado' else '' }}>Finalizado</option>
+                            <option value="Suspenso" {{ 'selected' if project.status == 'Suspenso' else '' }}>Suspenso</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Novos campos para Objetivo, Resultado Esperado e Indicadores -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="project_objetivo" class="form-label">Objetivo:</label>
+                        <select class="form-select" id="project_objetivo" name="project_objetivo">
+                            <option value="" selected>Selecione um objetivo</option>
+                            {% for objetivo in objetivos %}
+                                <option value="{{ objetivo.id }}" {% if project.objetivo_id == objetivo.id %}selected{% endif %}>
+                                    {{ objetivo.descricao }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="project_resultado" class="form-label">Resultado Esperado:</label>
+                        <select class="form-select" id="project_resultado" name="project_resultado" {% if not project.objetivo_id %}disabled{% endif %}>
+                            <option value="" selected>Selecione um resultado esperado</option>
+                            {% if project.objetivo_id %}
+                                {% for resultado in resultados_por_objetivo[project.objetivo_id] %}
+                                    <option value="{{ resultado.id }}" {% if project.resultado_esperado_id == resultado.id %}selected{% endif %}>
+                                        {{ resultado.descricao }}
+                                    </option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Indicadores:</label>
+                    <div id="indicadores-container" class="border rounded p-3 bg-light">
+                        {% if project.resultado_esperado_id %}
+                            {% for indicador in indicadores_por_resultado[project.resultado_esperado_id] %}
+                                <div class="form-check">
+                                    <input class="form-check-input indicador-checkbox" type="checkbox" 
+                                           name="project_indicadores" value="{{ indicador.id }}" 
+                                           id="indicador_{{ indicador.id }}"
+                                           {% if indicador.id in indicadores_do_projeto %}checked{% endif %}>
+                                    <label class="form-check-label" for="indicador_{{ indicador.id }}">
+                                        {{ indicador.descricao }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">Selecione um resultado esperado para ver os indicadores disponíveis</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="project_observacao" class="form-label">Observação:</label>
+                    <textarea class="form-control" id="project_observacao" name="project_observacao" rows="5">{{ project.observacao if project.observacao }}</textarea>
+                </div>
+            </div>
+            <div class="card-footer bg-light text-end py-3">
+                <a href="{{ url_for('main.project_detail', project_id=project.id if project else url_for('main.list_projects')) }}" class="btn btn-outline-secondary me-2"><i class="fas fa-times me-1"></i>Cancelar</a>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Salvar Alterações</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+// Validação do formulário
+(function () {
+  'use strict'
+  var forms = document.querySelectorAll('.needs-validation')
+  Array.prototype.slice.call(forms)
+    .forEach(function (form) {
+      form.addEventListener('submit', function (event) {
+        if (!form.checkValidity()) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+        form.classList.add('was-validated')
+      }, false)
+    })
+})();
+
+// Carregar resultados esperados baseados no objetivo selecionado
+document.getElementById('project_objetivo').addEventListener('change', function() {
+    const objetivoId = this.value;
+    const resultadoSelect = document.getElementById('project_resultado');
+    const indicadoresContainer = document.getElementById('indicadores-container');
+    
+    // Limpar resultados e indicadores anteriores
+    resultadoSelect.innerHTML = '<option value="" selected>Selecione um resultado esperado</option>';
+    indicadoresContainer.innerHTML = '<p class="text-muted">Selecione um resultado esperado para ver os indicadores disponíveis</p>';
+    
+    if (!objetivoId) {
+        resultadoSelect.disabled = true;
+        return;
+    }
+    
+    // Habilitar o select de resultados
+    resultadoSelect.disabled = false;
+    
+    // Carregar os resultados via AJAX
+    fetch(`{{ url_for("main.get_resultados", objetivo_id=0) }}`.slice(0, -1) + objetivoId)
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(resultado => {
+                const option = document.createElement('option');
+                option.value = resultado.id;
+                option.textContent = resultado.descricao;
+                resultadoSelect.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Erro ao carregar resultados:', error));
+});
+
+// Carregar indicadores baseados no resultado esperado selecionado
+document.getElementById('project_resultado').addEventListener('change', function() {
+    const resultadoId = this.value;
+    const indicadoresContainer = document.getElementById('indicadores-container');
+    
+    indicadoresContainer.innerHTML = '<p class="text-muted">Carregando indicadores...</p>';
+
+    if (!resultadoId) {
+        indicadoresContainer.innerHTML = '<p class="text-muted">Selecione um resultado esperado para ver os indicadores disponíveis</p>';
+        return;
+    }
+    
+    // Obter os indicadores já selecionados antes de fazer a requisição AJAX
+    const indicadoresJaSelecionados = {{ indicadores_do_projeto | tojson }};
+    
+    // Carregar os indicadores via AJAX
+    fetch(`{{ url_for("main.get_indicadores", resultado_id=0) }}`.slice(0, -1) + resultadoId)
+        .then(response => response.json())
+        .then(data => {
+            indicadoresContainer.innerHTML = '';
+            if (!data || data.length === 0) {
+                indicadoresContainer.innerHTML = '<p class="text-muted">Nenhum indicador disponível para este resultado.</p>';
+                return;
+            }
+            data.forEach(indicador => {
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                
+                // Verificar se este indicador já estava selecionado
+                const jaEstavaSelecionado = indicadoresJaSelecionados.includes(indicador.id);
+                
+                div.innerHTML = `
+                    <input class="form-check-input indicador-checkbox" type="checkbox" 
+                           name="project_indicadores" value="${indicador.id}" 
+                           id="indicador_${indicador.id}"
+                           ${jaEstavaSelecionado ? 'checked' : ''}>
+                    <label class="form-check-label" for="indicador_${indicador.id}">
+                        ${indicador.descricao}
+                    </label>
+                `;
+                indicadoresContainer.appendChild(div);
+            });
+            
+            // Adicionar o controle de limite de 4 indicadores
+            setupIndicadoresLimit();
+        })
+        .catch(error => {
+            console.error('Erro ao carregar indicadores:', error)
+            indicadoresContainer.innerHTML = '<p class="text-danger font-weight-bold">Erro ao carregar indicadores.</p>';
+        });
+});
+
+// Configurar o limite de 4 indicadores
+function setupIndicadoresLimit() {
+    const checkboxes = document.querySelectorAll('.indicador-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checkedCount = document.querySelectorAll('.indicador-checkbox:checked').length;
+            if (checkedCount > 4) {
+                this.checked = false;
+                alert('Você pode selecionar no máximo 4 indicadores');
+            }
+        });
+    });
+}
+
+// Inicializar o controle de limite de indicadores quando a página carrega
+document.addEventListener('DOMContentLoaded', function() {
+    setupIndicadoresLimit();
+});
+</script>
+{% endblock %} 
