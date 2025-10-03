@@ -9,7 +9,7 @@ from sqlalchemy.orm import joinedload
 main_bp = Blueprint('main', __name__)
 
 # Constante para as opções de áreas (pode ser movida para um config ou detectada do DB no futuro)
-AREAS_RESPONSAVEIS_CHOICES = ["CHEGAB", "SUPDADOS", "SUBDGD", "SUPEST", "SUPIM", "SUPPAE", "PRODERJ", "ASSESP", "ECENTRAL", "SUBEDD", "VPD", "VPE", "VPT"]
+AREAS_RESPONSAVEIS_CHOICES = ["Auditoria", "CHEGAB", "SUPDADOS", "SUBDGD", "SUPEST", "SUPIM", "SUPPAE", "PRODERJ", "ASSESP", "ECENTRAL", "SUBEDD", "VPD", "VPE", "VPT"]
 
 
 # Rota específica para servir o favicon
