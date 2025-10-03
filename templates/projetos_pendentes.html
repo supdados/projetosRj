@@ -629,27 +629,44 @@
     </div>
 
     <div class="page-header">
-        <h1><i class="fas fa-exclamation-triangle mr-2 text-warning"></i>Projetos com Pendências</h1>
+        <h1>
+            <i class="fas {% if filtro_periodo == '7dias' or filtro_periodo == '14dias' %}fa-calendar-alt{% else %}fa-exclamation-triangle{% endif %} mr-2 {% if filtro_periodo == 'atrasados' or not filtro_periodo %}text-warning{% else %}text-info{% endif %}"></i>
+            {% if filtro_periodo == '7dias' %}
+                Projetos dos Próximos 7 Dias
+            {% elif filtro_periodo == '14dias' %}
+                Projetos dos Próximos 14 Dias
+            {% else %}
+                Projetos com Pendências (Atrasados)
+            {% endif %}
+        </h1>
     </div>
 
-    {% if is_admin_user and areas_options %}
+    <!-- Filtro de Período e Área -->
     <div class="card shadow-sm mb-4">
         <div class="card-body d-flex justify-content-start align-items-center">
-            <form method="GET" action="{{ url_for('main.list_projetos_pendentes') }}" class="d-flex align-items-center gap-2">
-                <label for="areaFilter" class="form-label mb-0 me-2">Filtrar por Área:</label>
-                <select class="form-select form-select-sm" name="area" id="areaFilter" onchange="this.form.submit()">
-                    <option value="">Todas as Áreas</option>
-                    {% for area in areas_options %}
-                        <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
-                    {% endfor %}
+            <form method="GET" action="{{ url_for('main.list_projetos_pendentes') }}" class="d-flex align-items-center gap-2 flex-wrap">
+                <label for="periodoFilter" class="form-label mb-0 me-2">Filtrar por Período:</label>
+                <select class="form-select form-select-sm" name="periodo" id="periodoFilter" style="width: auto;">
+                    <option value="atrasados" {% if filtro_periodo == 'atrasados' or not filtro_periodo %}selected{% endif %}>Projetos Atrasados</option>
+                    <option value="7dias" {% if filtro_periodo == '7dias' %}selected{% endif %}>Próximos 7 Dias</option>
+                    <option value="14dias" {% if filtro_periodo == '14dias' %}selected{% endif %}>Próximos 14 Dias</option>
                 </select>
-                <a href="{{ url_for('main.list_projetos_pendentes') }}" class="btn btn-sm btn-outline-secondary" title="Limpar filtro">
+                {% if is_admin_user and areas_options %}
+                    <label for="areaFilterInline" class="form-label mb-0 ms-3 me-2">Área:</label>
+                    <select class="form-select form-select-sm" name="area" id="areaFilterInline" style="width: auto;">
+                        <option value="">Todas as Áreas</option>
+                        {% for area in areas_options %}
+                            <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+                <button type="submit" class="btn btn-sm btn-primary ms-2">Filtrar</button>
+                <a href="{{ url_for('main.list_projetos_pendentes') }}" class="btn btn-sm btn-outline-secondary" title="Limpar filtros">
                     <i class="fas fa-times"></i>
                 </a>
             </form>
         </div>
     </div>
-    {% endif %}
 
     {% if projetos_com_etapas %}
         {% for item in projetos_com_etapas %}
@@ -667,10 +684,22 @@
                 <table class="etapas-pendentes-table">
                     <thead>
                         <tr>
-                            <th>Etapa Atrasada</th>
+                            <th>
+                                {% if filtro_periodo == 'atrasados' or not filtro_periodo %}
+                                    Etapa Atrasada
+                                {% else %}
+                                    Etapa Pendente
+                                {% endif %}
+                            </th>
                             <th>Responsável</th>
                             <th>Data Início Prev.</th>
-                            <th>Data Fim Prev. (Vencida)</th>
+                            <th>
+                                {% if filtro_periodo == 'atrasados' or not filtro_periodo %}
+                                    Data Fim Prev. (Vencida)
+                                {% else %}
+                                    Data Fim Prevista
+                                {% endif %}
+                            </th>
                             <th style="width: 260px;">Ações</th> <!-- Ajustar largura para os botões -->
                         </tr>
                     </thead>
@@ -680,7 +709,7 @@
                             <td class="etapa-descricao {% if etapa.done %}text-decoration-line-through text-muted{% endif %}">{{ etapa.descricao }}</td>
                             <td class="{% if etapa.done %}text-decoration-line-through text-muted{% endif %}">{{ etapa.responsavel if etapa.responsavel else 'N/A' }}</td>
                             <td class="{% if etapa.done %}text-decoration-line-through text-muted{% endif %}">{{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else 'N/A' }}</td>
-                            <td class="date-overdue {% if etapa.done %}text-decoration-line-through{% endif %}">{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else 'N/A' }}</td>
+                            <td class="{% if filtro_periodo == 'atrasados' or not filtro_periodo %}date-overdue{% endif %} {% if etapa.done %}text-decoration-line-through{% endif %}">{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else 'N/A' }}</td>
                             <td>
                                 <div class="actions-cell-content">
                                     <!-- Marcar como Iniciada/Não Iniciada -->
@@ -724,12 +753,32 @@
     {% else %}
         <div class="no-pendencies">
             <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-            <h4>Nenhum projeto com pendências no momento!</h4>
+            <h4>
+                {% if filtro_periodo == '7dias' %}
+                    Nenhum projeto com vencimento nos próximos 7 dias!
+                {% elif filtro_periodo == '14dias' %}
+                    Nenhum projeto com vencimento nos próximos 14 dias!
+                {% else %}
+                    Nenhum projeto com pendências no momento!
+                {% endif %}
+            </h4>
             <p>
                 {% if selected_area %}
-                    Não há projetos com etapas atrasadas na área de <strong>{{ selected_area }}</strong>.
+                    {% if filtro_periodo == '7dias' %}
+                        Não há projetos com etapas vencendo nos próximos 7 dias na área de <strong>{{ selected_area }}</strong>.
+                    {% elif filtro_periodo == '14dias' %}
+                        Não há projetos com etapas vencendo nos próximos 14 dias na área de <strong>{{ selected_area }}</strong>.
+                    {% else %}
+                        Não há projetos com etapas atrasadas na área de <strong>{{ selected_area }}</strong>.
+                    {% endif %}
                 {% else %}
-                    Todos os projetos vigentes estão em dia.
+                    {% if filtro_periodo == '7dias' %}
+                        Não há projetos vigentes com etapas vencendo nos próximos 7 dias.
+                    {% elif filtro_periodo == '14dias' %}
+                        Não há projetos vigentes com etapas vencendo nos próximos 14 dias.
+                    {% else %}
+                        Todos os projetos vigentes estão em dia.
+                    {% endif %}
                 {% endif %}
             </p>
         </div>

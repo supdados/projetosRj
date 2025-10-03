@@ -278,6 +278,7 @@ def list_projects():
 @login_required
 def list_projetos_pendentes():
     selected_area_filter = request.args.get('area')
+    filtro_periodo = request.args.get('periodo', 'atrasados')  # Novo parâmetro com default 'atrasados'
     data_atual = datetime.date.today()
     projetos_pendentes_com_etapas = []
 
@@ -296,16 +297,41 @@ def list_projetos_pendentes():
     projetos_vigentes = query_projetos_base.all()
 
     for projeto in projetos_vigentes:
-        etapas_atrasadas = Etapa.query.filter(
-            Etapa.project_id == projeto.id,
-            Etapa.done == False,
-            Etapa.data_fim < data_atual
-        ).order_by(Etapa.data_fim).all()
+        # Aplicar filtro de período nas etapas
+        if filtro_periodo == 'atrasados':
+            etapas_filtradas = Etapa.query.filter(
+                Etapa.project_id == projeto.id,
+                Etapa.done == False,
+                Etapa.data_fim < data_atual
+            ).order_by(Etapa.data_fim).all()
+        elif filtro_periodo == '7dias':
+            # Inclui atrasados + próximos 7 dias
+            data_limite = data_atual + datetime.timedelta(days=7)
+            etapas_filtradas = Etapa.query.filter(
+                Etapa.project_id == projeto.id,
+                Etapa.done == False,
+                Etapa.data_fim <= data_limite
+            ).order_by(Etapa.data_fim).all()
+        elif filtro_periodo == '14dias':
+            # Inclui atrasados + próximos 14 dias
+            data_limite = data_atual + datetime.timedelta(days=14)
+            etapas_filtradas = Etapa.query.filter(
+                Etapa.project_id == projeto.id,
+                Etapa.done == False,
+                Etapa.data_fim <= data_limite
+            ).order_by(Etapa.data_fim).all()
+        else:
+            # Fallback para atrasados se o valor for inválido
+            etapas_filtradas = Etapa.query.filter(
+                Etapa.project_id == projeto.id,
+                Etapa.done == False,
+                Etapa.data_fim < data_atual
+            ).order_by(Etapa.data_fim).all()
 
-        if etapas_atrasadas:
+        if etapas_filtradas:
             projetos_pendentes_com_etapas.append({
                 'projeto': projeto,
-                'etapas_atrasadas': etapas_atrasadas
+                'etapas_atrasadas': etapas_filtradas  # Nome mantido por compatibilidade com o template
             })
     
     # Opções de área para o dropdown (apenas para admin)
@@ -323,9 +349,10 @@ def list_projetos_pendentes():
         projetos_com_etapas=projetos_pendentes_com_etapas,
         objetivos=objetivos,
         AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES_local,
-        # Novas variáveis para o filtro
+        # Variáveis para os filtros
         areas_options=areas_options_for_dropdown,
-        selected_area=selected_area_filter
+        selected_area=selected_area_filter,
+        filtro_periodo=filtro_periodo  # Novo parâmetro
     )
 
 @main_bp.route('/add_project', methods=['POST'])
