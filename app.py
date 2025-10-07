@@ -14,7 +14,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', '***REMOVED***')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://"+os.getenv('DB_USER')+":"+os.getenv('DB_PASSWORD')+'@localhost/'+os.getenv('DB_NAME')
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://"+os.getenv('DB_USER')+":"+os.getenv('DB_PASSWORD')+'@'+os.getenv('DB_HOST')+'/'+os.getenv('DB_NAME')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa o rastreamento de modificações
 
 db.init_app(app)
