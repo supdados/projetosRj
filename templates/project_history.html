@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico - {{ project.titulo }} - ProjetosRJ{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="fas fa-history text-primary me-2"></i>
+                Histórico do Projeto
+            </h1>
+            <p class="text-muted mb-0">{{ project.titulo }}</p>
+        </div>
+        <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Voltar ao Projeto
+        </a>
+    </div>
+
+    <!-- Timeline de Histórico -->
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            {% if history %}
+                <div class="timeline">
+                    {% for entry in history %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker">
+                            {% if entry.action_type == 'create' %}
+                                <i class="fas fa-plus-circle text-success"></i>
+                            {% elif entry.action_type == 'edit' %}
+                                <i class="fas fa-edit text-warning"></i>
+                            {% elif entry.action_type == 'delete' %}
+                                <i class="fas fa-trash text-danger"></i>
+                            {% elif entry.action_type == 'add_etapa' %}
+                                <i class="fas fa-tasks text-info"></i>
+                            {% elif entry.action_type == 'edit_etapa' or entry.action_type == 'edit_etapa_inline' %}
+                                <i class="fas fa-pen text-warning"></i>
+                            {% elif entry.action_type == 'delete_etapa' %}
+                                <i class="fas fa-times-circle text-danger"></i>
+                            {% elif entry.action_type == 'toggle_iniciada' %}
+                                <i class="fas fa-play-circle text-primary"></i>
+                            {% elif entry.action_type == 'toggle_done' %}
+                                <i class="fas fa-check-circle text-success"></i>
+                            {% else %}
+                                <i class="fas fa-circle text-secondary"></i>
+                            {% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">{{ entry.action_description }}</h6>
+                                    <p class="text-muted small mb-0">
+                                        <i class="fas fa-user me-1"></i>{{ entry.user.name }}
+                                        <span class="mx-2">•</span>
+                                        <i class="fas fa-clock me-1"></i>{{ entry.timestamp.strftime('%d/%m/%Y às %H:%M') }}
+                                    </p>
+                                </div>
+                                <span class="badge bg-{{ 
+                                    'success' if entry.action_type == 'create' else
+                                    'warning' if entry.action_type in ['edit', 'edit_etapa', 'edit_etapa_inline'] else
+                                    'danger' if entry.action_type in ['delete', 'delete_etapa'] else
+                                    'info' if entry.action_type == 'add_etapa' else
+                                    'primary' if entry.action_type == 'toggle_iniciada' else
+                                    'success' if entry.action_type == 'toggle_done' else
+                                    'secondary'
+                                }}">
+                                    {% if entry.action_type == 'create' %}Criação
+                                    {% elif entry.action_type == 'edit' %}Edição Projeto
+                                    {% elif entry.action_type == 'delete' %}Exclusão
+                                    {% elif entry.action_type == 'add_etapa' %}Nova Etapa
+                                    {% elif entry.action_type == 'edit_etapa' %}Edição Etapa
+                                    {% elif entry.action_type == 'edit_etapa_inline' %}Edição Rápida
+                                    {% elif entry.action_type == 'delete_etapa' %}Exclusão Etapa
+                                    {% elif entry.action_type == 'toggle_iniciada' %}Status Etapa
+                                    {% elif entry.action_type == 'toggle_done' %}Conclusão Etapa
+                                    {% else %}Ação
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            {% if entry.old_value or entry.new_value %}
+                            <div class="change-details mt-2">
+                                <div class="row g-2">
+                                    {% if entry.old_value %}
+                                    <div class="col-md-6">
+                                        <div class="change-box old-value">
+                                            <small class="text-muted d-block mb-1">
+                                                <i class="fas fa-arrow-left me-1"></i>Valor Anterior
+                                            </small>
+                                            <strong>{{ entry.old_value }}</strong>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% if entry.new_value %}
+                                    <div class="col-md-6">
+                                        <div class="change-box new-value">
+                                            <small class="text-muted d-block mb-1">
+                                                <i class="fas fa-arrow-right me-1"></i>Valor Novo
+                                            </small>
+                                            <strong>{{ entry.new_value }}</strong>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Nenhuma ação registrada ainda</h5>
+                    <p class="text-muted">O histórico de ações aparecerá aqui conforme o projeto for modificado.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding: 0;
+    list-style: none;
+}
+
+.timeline:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+    left: 20px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 60px;
+    padding-bottom: 30px;
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    z-index: 1;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px 20px;
+    border-left: 3px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.timeline-content:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateX(5px);
+}
+
+.timeline-item:hover .timeline-marker {
+    transform: scale(1.1);
+    transition: transform 0.3s ease;
+}
+
+.change-details {
+    margin-top: 12px;
+}
+
+.change-box {
+    padding: 12px;
+    border-radius: 6px;
+    border: 2px solid;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.change-box.old-value {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+
+.change-box.new-value {
+    border-color: #28a745;
+    background: #f0fff4;
+}
+
+.change-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.change-box strong {
+    color: #212529;
+    font-size: 0.95rem;
+    word-break: break-word;
+}
+</style>
+{% endblock %}
+

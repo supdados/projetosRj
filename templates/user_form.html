@@ -50,18 +50,24 @@
                         <label for="orgao" class="form-label">Órgão:</label>
                         <input type="text" class="form-control" id="orgao" name="orgao" value="{{ user.orgao or request.form.orgao or '' }}">
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="area_responsavel" class="form-label">Área Responsável:</label>
-                        <select class="form-select" id="area_responsavel" name="area_responsavel">
-                            <option value="" {% if not (user.area_responsavel or request.form.area_responsavel) %}selected{% endif %}>Nenhuma / Todas (para Admin Geral)</option>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Áreas Responsáveis:</label>
+                        <div class="form-text mb-2">Selecione as áreas que o usuário pode acessar. Administradores sem áreas selecionadas veem todas.</div>
+                        <div class="row">
                             {% for area_choice in areas_responsaveis_choices %}
-                                <option value="{{ area_choice }}" 
-                                        {% if area_choice == (user.area_responsavel or request.form.area_responsavel) %}selected{% endif %}>
-                                    {{ area_choice }}
-                                </option>
+                            <div class="col-md-4 col-lg-3 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="areas_responsavel" value="{{ area_choice }}"
+                                           id="area_{{ loop.index }}"
+                                           {% if area_choice in user_areas %}checked{% endif %}>
+                                    <label class="form-check-label" for="area_{{ loop.index }}">
+                                        {{ area_choice }}
+                                    </label>
+                                </div>
+                            </div>
                             {% endfor %}
-                        </select>
-                        <div class="form-text">Selecione a área principal do usuário. Se for um administrador sem área específica, deixe "Nenhuma".</div>
+                        </div>
                     </div>
                 </div>
 

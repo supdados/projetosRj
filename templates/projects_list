@@ -1112,7 +1112,7 @@
                                         <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="btn action-btn" title="Ver Detalhes">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        {% if is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel) %}
+                                        {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
                                         <a href="{{ url_for('main.edit_project', project_id=project.id) }}" class="btn action-btn" title="Editar Projeto">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -1175,7 +1175,7 @@
                             <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2 me-1" title="Ver Detalhes">
                                 <i class="fas fa-eye"></i>Ver
                             </a>
-                            {% if is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel) %}
+                            {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
                             <a href="{{ url_for('main.edit_project', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1" title="Editar Projeto">
                                 <i class="fas fa-edit"></i>Editar
                             </a>

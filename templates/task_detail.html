@@ -1,0 +1,2986 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.titulo }} - Tarefas - ProjetosRJ{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Breadcrumb + Voltar (acima do card) -->
+            <div class="task-view-top-row">
+                <nav class="task-view-breadcrumb" aria-label="Navegação">
+                    <a href="{{ url_for('main.list_tasks') }}" class="task-breadcrumb-link">Tarefas</a>
+                    <span class="task-breadcrumb-sep">/</span>
+                    <span class="task-breadcrumb-current" aria-current="page">{{ task.titulo }}</span>
+                </nav>
+                <a href="{{ url_for('main.list_tasks') }}" class="btn-task-action btn-task-back btn-task-back-above"
+                    title="Voltar para Tarefas">
+                    <i class="fas fa-arrow-left"></i>
+                    <span class="btn-task-action-label">Voltar</span>
+                </a>
+            </div>
+
+            <!-- Task Header refinado (estilo ClickUp / Linear) -->
+            <div class="task-header-refined" id="taskHeaderRefined" data-task-id="{{ task.id }}"
+                data-edit-url="{{ url_for('main.edit_task', task_id=task.id) }}"
+                data-project-label="{% if task.project %}{{ task.project.titulo }}{% else %}Sem projeto{% endif %}"
+                data-project-id="{{ task.project_id or '' }}">
+                <div class="task-header-refined-inner">
+                    <div class="task-header-title-row">
+                        <div class="task-title-block">
+                            <span class="task-title-icon" aria-hidden="true">
+                                <i class="fas fa-clipboard-list"></i>
+                            </span>
+                            <div class="task-title-and-project" id="taskHeaderView">
+                                <h1 class="task-title-refined">{{ task.titulo }}</h1>
+                                {% if task.project %}
+                                <a href="{{ url_for('main.project_detail', project_id=task.project.id) }}"
+                                    class="task-project-badge-refined">
+                                    <i class="fas fa-link"></i>
+                                    <span>{{ task.project.titulo }}</span>
+                                </a>
+                                {% else %}
+                                <span class="task-project-badge-refined task-project-badge-neutral task-project-empty">
+                                    <i class="fas fa-inbox"></i>
+                                    <span class="no-project-label">Sem projeto</span>
+                                    <span class="no-project-label-hover">+ adicionar projeto referente</span>
+                                </span>
+                                {% endif %}
+                                <!-- Popover só para adicionar projeto (ao clicar em "Sem projeto") -->
+                                <div class="task-add-project-popover" id="taskAddProjectPopover" hidden>
+                                    <input type="text" class="form-control project-search-input"
+                                        id="taskAddProjectPopoverInput" placeholder="Digite para filtrar projetos..."
+                                        autocomplete="off">
+                                    <input type="hidden" id="taskAddProjectPopoverId">
+                                    <div class="project-search-dropdown" id="taskAddProjectPopoverDropdown"
+                                        role="listbox"></div>
+                                </div>
+                            </div>
+                            <div class="task-header-edit-form" id="taskHeaderEdit" hidden>
+                                <input type="text" class="task-edit-titulo-input" id="taskEditTitulo"
+                                    value="{{ task.titulo }}" placeholder="Título da tarefa">
+                                <div class="task-edit-project-wrap project-search-wrap task-header-project-search">
+                                    <div class="task-edit-project-chip-wrap" id="taskEditProjectChipWrap"></div>
+                                    <input type="text" class="form-control project-search-input task-edit-project-input"
+                                        id="taskEditProjectInput" placeholder="Digite para filtrar projetos..."
+                                        autocomplete="off" aria-haspopup="listbox">
+                                    <input type="hidden" id="taskEditProjectId" value="{{ task.project_id or '' }}">
+                                    <div class="project-search-dropdown" id="taskEditProjectDropdown" role="listbox"
+                                        hidden>
+                                        <div class="project-search-option" data-value="" data-label="Sem projeto">Sem
+                                            projeto</div>
+                                        {% for project in projects %}
+                                        <div class="project-search-option" data-value="{{ project.id }}"
+                                            data-label="{{ project.titulo }}">{{ project.titulo }}</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-task-action btn-task-save-edit" id="taskHeaderSave"
+                                    title="Salvar"><i class="fas fa-check"></i></button>
+                                <button type="button" class="btn-task-action btn-task-cancel-edit" id="taskHeaderCancel"
+                                    title="Cancelar"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="task-header-actions-refined">
+                            <button type="button" class="btn-task-action btn-task-edit-header" id="btnEditTaskHeader"
+                                title="Editar tarefa">
+                                <i class="fas fa-pen"></i>
+                                <span class="btn-task-action-label">Editar</span>
+                            </button>
+                            <button type="button" class="btn-task-action btn-task-danger" data-bs-toggle="modal"
+                                data-bs-target="#deleteTaskModal" title="Excluir tarefa">
+                                <i class="fas fa-trash-alt"></i>
+                                <span class="btn-task-action-label">Excluir</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="task-header-meta-refined">
+                        <span class="task-meta-pill task-meta-pill-neutral">
+                            <i class="fas fa-user"></i>
+                            <span>Criado por {{ task.created_by.name }}</span>
+                        </span>
+                        <span class="task-meta-pill task-meta-pill-neutral">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>{{ task.created_at|local_datetime }}</span>
+                        </span>
+                        <span class="task-meta-pill task-meta-pill-neutral">
+                            <i class="fas fa-list-ul"></i>
+                            <span>{{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items Header -->
+            <div class="items-header-clean mt-4">
+                <div class="header-info">
+                    <h5 class="items-title-clean">
+                        <i class="fas fa-list"></i>
+                        Itens da Tarefa
+                    </h5>
+                    <span class="header-count">{{ task.items|length }} item{{ 's' if task.items|length != 1 else ''
+                        }}</span>
+                </div>
+                <button type="button" class="btn-new-clean" id="btnFocusAddItem" title="Ir para adicionar item">
+                    <i class="fas fa-plus"></i>
+                    Novo Item
+                </button>
+            </div>
+
+            <!-- Items List (estilo ClickUp / lista compacta) -->
+            <div class="task-items-list" data-task-id="{{ task.id }}"
+                data-task-has-project="{{ '1' if task.project_id else '' }}"
+                data-add-item-url="{{ url_for('main.add_task_item', task_id=task.id) }}"
+                data-sugestoes-url="{{ url_for('main.get_task_assignable_users', task_id=task.id) }}">
+                <!-- Cabeçalho das colunas -->
+                <div class="task-item-header-row">
+                    <div class="task-item-bar task-item-bar-header"></div>
+                    <div class="task-item-main">
+                        <div class="task-item-line task-item-header">
+                            <span class="task-item-col-desc">Descrição</span>
+                            <span class="task-item-col-status">Status</span>
+                            <span class="task-item-col-responsavel">Responsável</span>
+                            <span class="task-item-col-comments" title="Comentários"><i
+                                    class="far fa-comment-alt"></i></span>
+                            <span class="task-item-col-actions" title="Ações"><i class="fas fa-ellipsis-v"></i></span>
+                        </div>
+                    </div>
+                </div>
+                {% for item in task.items %}
+                <div class="task-item-row" data-item-id="{{ item.id }}">
+                    <div class="task-item-bar status-{{ item.status }}"></div>
+                    <div class="task-item-main">
+                        <div class="task-item-line">
+                            <p class="task-item-desc task-item-desc-click" data-item-id="{{ item.id }}" role="button"
+                                tabindex="0" title="Clique para expandir ou recolher comentários">{{ item.descricao }}
+                            </p>
+                            <div class="task-item-meta">
+                                <select class="task-item-status status-{{ item.status }}"
+                                    onchange="updateItemStatus({{ item.id }}, this.value)" title="Status">
+                                    <option value="programado" {% if item.status=='programado' %}selected{% endif %}>
+                                        Programado</option>
+                                    <option value="em_andamento" {% if item.status=='em_andamento' %}selected{% endif
+                                        %}>Em andamento</option>
+                                    <option value="validacao" {% if item.status=='validacao' %}selected{% endif %}>
+                                        Validação</option>
+                                    <option value="finalizado" {% if item.status=='finalizado' %}selected{% endif %}>
+                                        Finalizado</option>
+                                </select>
+                                <span class="task-item-responsavel">{% if item.responsavel %}{{ item.responsavel }}{%
+                                    else %}&nbsp;{% endif %}</span>
+                                <button type="button" class="task-item-comments-btn" aria-expanded="false"
+                                    data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)">
+                                    <i class="far fa-comment-alt"></i>
+                                    <span class="task-item-comments-num">{{ item.comments|length }}</span>
+                                </button>
+                                <div class="task-item-actions">
+                                    <button type="button" class="task-item-btn task-item-edit"
+                                        onclick="editItem({{ item.id }}, '{{ item.descricao|replace("'", "\\'") }}', '{{ item.status }}', '{{ item.responsavel or '' }}')"
+                                        title="Editar"><i class="fas fa-pen"></i></button>
+                                    <button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal"
+                                        data-bs-target="#deleteItemModal-{{ item.id }}" title="Excluir"><i
+                                            class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="comments-body-{{ item.id }}" class="task-item-comments" hidden>
+                            <div class="task-item-comments-inner">
+                                {% for comment in item.comments %}
+                                <div class="task-comment task-comment-author-{{ comment.user_id % 5 }}"
+                                    id="comment-{{ comment.id }}">
+                                    <div class="task-comment-head">
+                                        <span class="task-comment-user">{{ comment.author.name }}</span>
+                                        <span class="task-comment-time">{{ comment.created_at|local_time }}{% if
+                                            comment.updated_at %} <em>(edit.)</em>{% endif %}</span>
+                                        {% if current_user_obj and current_user_obj.id == comment.user_id %}
+                                        <span class="task-comment-acts">
+                                            <button type="button" class="task-comment-btn btn-edit-comment"
+                                                data-comment-id="{{ comment.id }}"
+                                                data-comment-content="{{ comment.content|e }}" title="Editar"><i
+                                                    class="fas fa-pen"></i></button>
+                                            <form
+                                                action="{{ url_for('main.delete_task_item_comment', comment_id=comment.id) }}"
+                                                method="POST" class="d-inline"
+                                                onsubmit="return confirm('Excluir comentário?');">
+                                                <button type="submit" class="task-comment-btn task-comment-btn-del"
+                                                    title="Excluir"><i class="fas fa-trash-alt"></i></button>
+                                            </form>
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="task-comment-text">{{ comment.content }}</p>
+                                </div>
+                                {% endfor %}
+                                <form class="task-comment-form"
+                                    action="{{ url_for('main.add_task_item_comment', item_id=item.id) }}" method="POST"
+                                    data-item-id="{{ item.id }}">
+                                    <textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)"
+                                        required></textarea>
+                                    <button type="submit"><i class="fas fa-paper-plane"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal de Exclusão do Item -->
+                <div class="modal fade" id="deleteItemModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content modal-clean">
+                            <div class="modal-header-clean">
+                                <div class="modal-icon-clean">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                </div>
+                                <div>
+                                    <h5 class="modal-title-clean">Excluir Item</h5>
+                                    <p class="modal-subtitle-clean">Esta ação não pode ser desfeita</p>
+                                </div>
+                                <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="modal-body-clean">
+                                <p>Confirma a exclusão deste item?</p>
+                                <p class="text-muted small">{{ item.descricao[:100] }}{% if item.descricao|length > 100
+                                    %}...{% endif %}</p>
+                            </div>
+                            <div class="modal-footer-clean">
+                                <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
+                                    Cancelar
+                                </button>
+                                <form action="{{ url_for('main.delete_task_item', item_id=item.id) }}" method="POST"
+                                    style="display: inline;">
+                                    <button type="submit" class="btn-modal-clean btn-confirm-delete">
+                                        Excluir
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Empty State: só a linha "Adicionar novo item" -->
+                <div class="empty-state-items" id="emptyStateItems">
+                    <div class="task-item-add-row empty-state-add" id="addItemRow">
+                        <div class="task-item-add-placeholder" id="addItemPlaceholder">
+                            <span class="task-item-add-dashes">—</span>
+                            <span class="task-item-add-label">Adicionar novo item</span>
+                        </div>
+                        <div class="task-item-add-form" id="addItemFormWrap" hidden>
+                            <div class="task-item-add-bar"></div>
+                            <div class="task-item-add-main">
+                                <div class="task-item-add-line">
+                                    <input type="text" class="task-item-add-desc" id="addItemDesc"
+                                        placeholder="Descreva o item..." autocomplete="off">
+                                    <select class="task-item-add-status" id="addItemStatus">
+                                        <option value="programado">Programado</option>
+                                        <option value="em_andamento">Em andamento</option>
+                                        <option value="validacao">Validação</option>
+                                        <option value="finalizado">Finalizado</option>
+                                    </select>
+                                    <div class="responsavel-mention-wrap">
+                                        <div class="contenteditable-responsavel task-item-add-responsavel"
+                                            contenteditable="true" data-placeholder="Responsável (digite @ para marcar)"
+                                            id="addItemResponsavel"></div>
+                                        <div class="responsavel-suggestions" id="addItemResponsavelSuggestions"
+                                            role="listbox" hidden></div>
+                                    </div>
+                                    <button type="button" class="task-item-add-btn" id="addItemSubmit"
+                                        title="Adicionar"><i class="fas fa-check"></i></button>
+                                    <button type="button" class="task-item-add-cancel" id="addItemCancel"
+                                        title="Cancelar"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if task.items %}
+                <!-- Linha inline: Adicionar novo item (só quando já existem itens) -->
+                <div class="task-item-add-row" id="addItemRow">
+                    <div class="task-item-add-placeholder" id="addItemPlaceholder">
+                        <span class="task-item-add-dashes">—</span>
+                        <span class="task-item-add-label">Adicionar novo item</span>
+                    </div>
+                    <div class="task-item-add-form" id="addItemFormWrap" hidden>
+                        <div class="task-item-add-bar"></div>
+                        <div class="task-item-add-main">
+                            <div class="task-item-add-line">
+                                <input type="text" class="task-item-add-desc" id="addItemDesc"
+                                    placeholder="Descreva o item..." autocomplete="off">
+                                <select class="task-item-add-status" id="addItemStatus">
+                                    <option value="programado">Programado</option>
+                                    <option value="em_andamento">Em andamento</option>
+                                    <option value="validacao">Validação</option>
+                                    <option value="finalizado">Finalizado</option>
+                                </select>
+                                <div class="responsavel-mention-wrap">
+                                    <div class="contenteditable-responsavel task-item-add-responsavel"
+                                        contenteditable="true" data-placeholder="Responsável (digite @ para marcar)"
+                                        id="addItemResponsavel"></div>
+                                    <div class="responsavel-suggestions" id="addItemResponsavelSuggestions"
+                                        role="listbox" hidden></div>
+                                </div>
+                                <button type="button" class="task-item-add-btn" id="addItemSubmit" title="Adicionar"><i
+                                        class="fas fa-check"></i></button>
+                                <button type="button" class="task-item-add-cancel" id="addItemCancel"
+                                    title="Cancelar"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adicionar Item -->
+<div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-clean">
+            <form id="itemForm" action="{{ url_for('main.add_task_item', task_id=task.id) }}" method="POST">
+                <div class="modal-header-clean">
+                    <div class="modal-icon-clean" style="background: rgba(0, 90, 146, 0.15);">
+                        <i class="fas fa-list" style="color: var(--primary-color);"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title-clean" id="itemModalTitle">Novo Item</h5>
+                        <p class="modal-subtitle-clean">{{ task.titulo }}</p>
+                    </div>
+                    <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body-clean">
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="descricao" name="descricao" rows="4" required></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="programado">Programado</option>
+                                <option value="em_andamento">Em Andamento</option>
+                                <option value="validacao">Validação</option>
+                                <option value="finalizado">Finalizado</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="responsavel" class="form-label">Responsável</label>
+                            <input type="text" class="form-control" id="responsavel" name="responsavel">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer-clean">
+                    <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-modal-clean"
+                        style="background: var(--primary-color); color: white;">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Excluir Tarefa -->
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-clean">
+            <div class="modal-header-clean">
+                <div class="modal-icon-clean">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div>
+                    <h5 class="modal-title-clean">Excluir Tarefa</h5>
+                    <p class="modal-subtitle-clean">Esta ação não pode ser desfeita</p>
+                </div>
+                <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-clean">
+                <p>Confirma a exclusão da tarefa <strong>{{ task.titulo }}</strong>?</p>
+                {% if task.items %}
+                <p class="text-warning small">
+                    <i class="fas fa-warning"></i>
+                    Esta tarefa possui {{ task.items|length }} item(s) que também serão excluídos.
+                </p>
+                {% endif %}
+            </div>
+            <div class="modal-footer-clean">
+                <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST"
+                    style="display: inline;">
+                    <button type="submit" class="btn-modal-clean btn-confirm-delete">
+                        Excluir
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ----- Linha superior: Breadcrumb + Voltar ----- */
+    .task-view-top-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .task-view-top-row .task-view-breadcrumb {
+        margin-bottom: 0;
+    }
+
+    /* ----- Breadcrumb minimal (estilo ClickUp) ----- */
+    .task-view-breadcrumb {
+        font-size: 0.8125rem;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+    }
+
+    .task-breadcrumb-link {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.15s;
+    }
+
+    .task-breadcrumb-link:hover {
+        color: var(--primary-dark);
+        text-decoration: underline;
+    }
+
+    .task-breadcrumb-sep {
+        color: #cbd5e1;
+        user-select: none;
+    }
+
+    .task-breadcrumb-current {
+        color: #1e293b;
+        font-weight: 600;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ----- Task Header refinado (card clara, estilo ClickUp / Linear) ----- */
+    .task-header-refined {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        margin-bottom: 1.5rem;
+        overflow: visible;
+        position: relative;
+        z-index: 20;
+    }
+
+    .task-header-refined-inner {
+        padding: 1.5rem 1.75rem;
+    }
+
+    .task-header-title-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .task-title-block {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .task-title-icon {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(0, 90, 146, 0.12) 0%, rgba(0, 90, 146, 0.06) 100%);
+        color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    .task-title-and-project {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        min-width: 0;
+        position: relative;
+    }
+
+    .task-title-refined {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+        line-height: 1.35;
+        letter-spacing: -0.02em;
+    }
+
+    .task-project-badge-refined {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: 8px;
+        background: rgba(0, 90, 146, 0.1);
+        color: var(--primary-color);
+        text-decoration: none;
+        border: 1px solid rgba(0, 90, 146, 0.2);
+        transition: background 0.15s, border-color 0.15s;
+    }
+
+    .task-project-badge-refined:hover {
+        background: rgba(0, 90, 146, 0.16);
+        border-color: rgba(0, 90, 146, 0.3);
+        color: var(--primary-dark);
+    }
+
+    .task-project-badge-refined i {
+        font-size: 0.75rem;
+        opacity: 0.9;
+    }
+
+    .task-project-badge-neutral {
+        background: #f1f5f9;
+        color: #64748b;
+        border-color: #e2e8f0;
+        cursor: default;
+    }
+
+    .task-project-badge-neutral:hover {
+        background: #f1f5f9;
+        border-color: #e2e8f0;
+        color: #64748b;
+    }
+
+    .task-project-empty .no-project-label-hover {
+        display: none;
+    }
+
+    .task-project-empty:hover .no-project-label,
+    .task-project-empty.popover-open .no-project-label {
+        display: none;
+    }
+
+    .task-project-empty:hover .no-project-label-hover,
+    .task-project-empty.popover-open .no-project-label-hover {
+        display: inline;
+    }
+
+    .task-project-empty:hover>i,
+    .task-project-empty.popover-open>i {
+        display: none;
+    }
+
+    .task-project-empty {
+        cursor: pointer;
+    }
+
+    .task-add-project-popover {
+        position: absolute;
+        left: 0;
+        top: 100%;
+        margin-top: 6px;
+        min-width: 220px;
+        padding: 8px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+        z-index: 1100;
+    }
+
+    .task-add-project-popover[hidden] {
+        display: none !important;
+    }
+
+    .task-add-project-popover .project-search-input {
+        margin-bottom: 4px;
+    }
+
+    .task-add-project-popover .project-search-dropdown {
+        position: relative;
+        top: 0;
+        max-height: 200px;
+    }
+
+    /* Formulário de edição do header (título + projeto) */
+    .task-header-edit-form {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        flex: 1;
+        min-width: 0;
+        overflow: visible;
+    }
+
+    .task-header-edit-form[hidden] {
+        display: none !important;
+    }
+
+    .task-edit-titulo-input {
+        flex: 1;
+        min-width: 120px;
+        max-width: 400px;
+        padding: 0.5rem 0.75rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #0f172a;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        outline: none;
+    }
+
+    .task-edit-titulo-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(0, 90, 146, 0.15);
+    }
+
+    /* Dropdown de projeto (edição do header) */
+    .project-search-wrap {
+        position: relative;
+    }
+
+    .project-search-wrap .project-search-input {
+        width: 100%;
+    }
+
+    .project-search-dropdown {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 100%;
+        margin-top: 2px;
+        max-height: 220px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        z-index: 1100;
+    }
+
+    .project-search-dropdown[hidden] {
+        display: none !important;
+    }
+
+    .project-search-option {
+        padding: 8px 12px;
+        font-size: 0.95rem;
+        cursor: pointer;
+        color: #374151;
+    }
+
+    .project-search-option:hover,
+    .project-search-option.active {
+        background: rgba(0, 90, 146, 0.08);
+        color: var(--primary-color);
+    }
+
+    .project-search-option.hidden-by-filter {
+        display: none !important;
+    }
+
+    .task-header-project-search {
+        max-width: 220px;
+        overflow: visible;
+    }
+
+    .task-edit-project-wrap {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        min-height: 36px;
+    }
+
+    .task-edit-project-chip-wrap {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .task-edit-project-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: 8px;
+        background: rgba(0, 90, 146, 0.12);
+        color: var(--primary-color);
+        border: 1px solid rgba(0, 90, 146, 0.2);
+    }
+
+    .task-edit-project-chip-remove {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        border: none;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.15);
+        color: inherit;
+        font-size: 14px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .task-edit-project-chip-remove:hover {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .task-edit-project-wrap .task-edit-project-input {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .task-edit-project-wrap.has-chip .task-edit-project-input {
+        display: none;
+    }
+
+    .task-header-project-search .project-search-input {
+        font-size: 0.875rem;
+        padding: 0.45rem 0.65rem;
+    }
+
+    .btn-task-save-edit {
+        background: var(--primary-color);
+        color: #fff;
+        border-color: var(--primary-color);
+    }
+
+    .btn-task-save-edit:hover {
+        background: var(--primary-dark);
+        border-color: var(--primary-dark);
+        color: #fff;
+    }
+
+    .btn-task-cancel-edit:hover {
+        background: #f1f5f9;
+        border-color: #e2e8f0;
+        color: #475569;
+    }
+
+    .task-header-actions-refined {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .btn-task-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.5rem 0.9rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #475569;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .btn-task-action:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #334155;
+    }
+
+    .btn-task-action i {
+        font-size: 0.875rem;
+    }
+
+    .btn-task-back:hover {
+        color: var(--primary-color);
+        border-color: rgba(0, 90, 146, 0.3);
+        background: rgba(0, 90, 146, 0.04);
+    }
+
+    .btn-task-danger:hover {
+        border-color: #fecaca;
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .btn-task-action-label {
+        display: none;
+    }
+
+    @media (min-width: 576px) {
+        .btn-task-action-label {
+            display: inline;
+        }
+    }
+
+    /* Pills de metadados (projeto, criado por, data, itens) */
+    .task-header-meta-refined {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .task-meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        border-radius: 8px;
+        color: #475569;
+        background: #f1f5f9;
+        border: 1px solid transparent;
+    }
+
+    .task-meta-pill i {
+        font-size: 0.75rem;
+        color: #64748b;
+        opacity: 0.9;
+    }
+
+    .task-meta-pill-project {
+        background: rgba(0, 90, 146, 0.08);
+        color: var(--primary-color);
+        text-decoration: none;
+        border-color: rgba(0, 90, 146, 0.15);
+        transition: background 0.15s, border-color 0.15s;
+    }
+
+    .task-meta-pill-project:hover {
+        background: rgba(0, 90, 146, 0.14);
+        border-color: rgba(0, 90, 146, 0.25);
+        color: var(--primary-dark);
+    }
+
+    .task-meta-pill-project i {
+        color: var(--primary-color);
+    }
+
+    .task-meta-pill-neutral {
+        color: #64748b;
+    }
+
+    /* Items Header */
+    .items-header-clean {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.2rem 0;
+        border-bottom: 2px solid rgba(0, 90, 146, 0.1);
+        margin-bottom: 1rem;
+    }
+
+    .items-title-clean {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .header-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .header-count {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #6c757d;
+        padding: 0.3rem 0.8rem;
+        background: rgba(0, 90, 146, 0.08);
+        border-radius: 20px;
+    }
+
+    .btn-new-clean {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.2rem;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-new-clean:hover {
+        background: var(--primary-dark);
+    }
+
+    /* Items List - estilo ClickUp / lista compacta */
+    .task-items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    /* Cabeçalho das colunas (mesma grade das linhas) */
+    .task-item-header-row {
+        display: flex;
+        border-bottom: 2px solid rgba(0, 90, 146, 0.15);
+        background: rgba(0, 90, 146, 0.04);
+    }
+
+    .task-item-bar-header {
+        width: 3px;
+        flex-shrink: 0;
+        background: transparent;
+    }
+
+    .task-item-header-row .task-item-main {
+        padding: 8px 12px;
+    }
+
+    .task-item-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 115px 200px 40px 56px;
+        align-items: center;
+        gap: 10px 12px;
+        width: 100%;
+    }
+
+    .task-item-col-desc,
+    .task-item-col-status,
+    .task-item-col-responsavel,
+    .task-item-col-comments,
+    .task-item-col-actions {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #6b7280;
+    }
+
+    .task-item-col-comments,
+    .task-item-col-actions {
+        text-align: center;
+    }
+
+    .task-item-col-comments i,
+    .task-item-col-actions i {
+        font-size: 12px;
+    }
+
+    .task-item-row {
+        display: flex;
+        min-height: 0;
+        border-bottom: 1px solid #e5e7eb;
+        background: #fff;
+    }
+
+    .task-item-row:last-child {
+        border-bottom: none;
+    }
+
+    .task-item-row:hover {
+        background: #fafbfc;
+    }
+
+    .task-item-bar {
+        width: 3px;
+        flex-shrink: 0;
+    }
+
+    .task-item-bar.status-programado {
+        background: #9ca3af;
+    }
+
+    .task-item-bar.status-em_andamento {
+        background: #0ea5e9;
+    }
+
+    .task-item-bar.status-validacao {
+        background: #eab308;
+    }
+
+    .task-item-bar.status-finalizado {
+        background: #22c55e;
+    }
+
+    /* Linha inline: Adicionar novo item */
+    .task-item-add-row {
+        border-bottom: 1px solid #e5e7eb;
+        background: #fff;
+    }
+
+    .task-item-add-placeholder {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        color: #6b7280;
+        font-size: 13px;
+        transition: background 0.15s, color 0.15s;
+    }
+
+    .task-item-add-placeholder:hover {
+        background: #f9fafb;
+        color: var(--primary-color);
+    }
+
+    .task-item-add-dashes {
+        color: #9ca3af;
+        font-weight: 300;
+    }
+
+    .task-item-add-form {
+        display: none;
+        padding: 0;
+    }
+
+    .task-item-add-form[hidden] {
+        display: none !important;
+    }
+
+    .task-item-add-form:not([hidden]) {
+        display: flex;
+    }
+
+    .task-item-add-bar {
+        width: 3px;
+        flex-shrink: 0;
+        background: #d1d5db;
+    }
+
+    .task-item-add-main {
+        flex: 1;
+        padding: 8px 12px;
+    }
+
+    .task-item-add-line,
+    .task-item-line-edit {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 115px 200px 32px 32px;
+        align-items: start;
+        gap: 10px 12px;
+        width: 100%;
+    }
+
+    .task-item-line-edit .task-item-edit-desc,
+    .task-item-add-desc {
+        min-width: 0;
+    }
+
+    .task-item-add-desc {
+        padding: 6px 8px;
+        font-size: 13px;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .task-item-add-desc:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .task-item-add-status {
+        font-size: 11px;
+        padding: 4px 6px;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        background: #fff;
+        width: 100%;
+        max-width: 115px;
+        box-sizing: border-box;
+    }
+
+    .task-item-add-responsavel {
+        width: 100%;
+        max-width: 200px;
+        padding: 6px 8px;
+        font-size: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    .responsavel-mention-wrap {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+        max-width: 200px;
+        min-height: 36px;
+        align-self: start;
+    }
+
+    /* Campo responsável: contenteditable com chips (cresce para baixo ao não caber) */
+    .contenteditable-responsavel {
+        min-height: 28px;
+        max-width: 200px;
+        width: 100%;
+        padding: 4px 8px;
+        font-size: 12px;
+        line-height: 1.4;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        background: #fff;
+        outline: none;
+        overflow: visible;
+        white-space: normal;
+        word-wrap: break-word;
+        box-sizing: border-box;
+    }
+
+    .contenteditable-responsavel:focus {
+        border-color: var(--primary-color);
+    }
+
+    .contenteditable-responsavel:empty::before {
+        content: attr(data-placeholder);
+        color: #9ca3af;
+    }
+
+    .responsavel-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 4px 2px 6px;
+        border-radius: 4px;
+        font-weight: 500;
+        margin: 0 4px 4px 0;
+        -webkit-user-select: none;
+        user-select: none;
+        flex-shrink: 0;
+    }
+
+    .responsavel-chip[contenteditable="false"] {
+        cursor: default;
+    }
+
+    /* Cores diferentes por chip (múltiplos usuários) */
+    .responsavel-chip-0 {
+        background: rgba(14, 165, 233, 0.18);
+        color: #0369a1;
+    }
+
+    .responsavel-chip-1 {
+        background: rgba(139, 92, 246, 0.18);
+        color: #5b21b6;
+    }
+
+    .responsavel-chip-2 {
+        background: rgba(5, 150, 105, 0.18);
+        color: #047857;
+    }
+
+    .responsavel-chip-3 {
+        background: rgba(217, 119, 6, 0.18);
+        color: #b45309;
+    }
+
+    .responsavel-chip-4 {
+        background: rgba(220, 38, 38, 0.18);
+        color: #b91c1c;
+    }
+
+    .responsavel-chip-remove {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        padding: 0;
+        border: none;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.2);
+        color: inherit;
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .responsavel-chip-remove:hover {
+        background: rgba(0, 0, 0, 0.35);
+    }
+
+    /* Dropdown de sugestões @ (responsável) */
+    .responsavel-suggestions {
+        position: fixed;
+        z-index: 1050;
+        min-width: 160px;
+        max-height: 200px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 4px 0;
+    }
+
+    .responsavel-suggestions[hidden] {
+        display: none !important;
+    }
+
+    .responsavel-suggestion-item {
+        padding: 6px 12px;
+        font-size: 13px;
+        cursor: pointer;
+        color: #374151;
+    }
+
+    .responsavel-suggestion-item:hover,
+    .responsavel-suggestion-item.active {
+        background: rgba(0, 90, 146, 0.08);
+        color: var(--primary-color);
+    }
+
+    .responsavel-suggestions-empty {
+        padding: 8px 12px;
+        font-size: 12px;
+        color: #9ca3af;
+    }
+
+    .task-item-add-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--primary-color);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .task-item-add-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+    .task-item-add-cancel {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        border-radius: 4px;
+        color: #9ca3af;
+        cursor: pointer;
+        transition: color 0.15s, background 0.15s;
+    }
+
+    .task-item-add-cancel:hover {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .task-item-main {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 12px;
+    }
+
+    .task-item-line {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 115px 200px 40px 56px;
+        align-items: center;
+        gap: 10px 12px;
+        width: 100%;
+    }
+
+    .task-item-desc {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.45;
+        color: #374151;
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-width: 0;
+    }
+
+    .task-item-desc-click {
+        cursor: pointer;
+        border-radius: 3px;
+        transition: background 0.15s;
+    }
+
+    .task-item-desc-click:hover {
+        background: rgba(0, 90, 146, 0.04);
+    }
+
+    .task-item-desc-click:focus {
+        outline: none;
+        background: rgba(0, 90, 146, 0.06);
+    }
+
+    .task-item-meta {
+        display: contents;
+    }
+
+    .task-item-status {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 6px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        max-width: 115px;
+        box-sizing: border-box;
+    }
+
+    .task-item-status:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Cores por status */
+    .task-item-status.status-programado {
+        background: #9ca3af;
+        color: #fff;
+    }
+
+    .task-item-status.status-em_andamento {
+        background: #0ea5e9;
+        color: #fff;
+    }
+
+    .task-item-status.status-validacao {
+        background: #eab308;
+        color: #1a1a1a;
+    }
+
+    .task-item-status.status-finalizado {
+        background: #22c55e;
+        color: #fff;
+    }
+
+    .task-item-responsavel {
+        font-size: 11px;
+        color: #6b7280;
+        width: 100%;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+        box-sizing: border-box;
+    }
+
+    .task-item-comments-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 40px;
+        padding: 2px 6px;
+        background: none;
+        border: none;
+        border-radius: 4px;
+        color: #6b7280;
+        font-size: 12px;
+        cursor: pointer;
+        transition: color 0.15s, background 0.15s;
+        box-sizing: border-box;
+    }
+
+    .task-item-comments-btn:hover {
+        color: var(--primary-color);
+        background: rgba(0, 90, 146, 0.06);
+    }
+
+    .task-item-comments-btn[aria-expanded="true"] {
+        color: var(--primary-color);
+    }
+
+    .task-item-comments-num {
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .task-item-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 2px;
+        opacity: 0.6;
+        width: 56px;
+        box-sizing: border-box;
+    }
+
+    .task-item-row:hover .task-item-actions {
+        opacity: 1;
+    }
+
+    .task-item-btn {
+        width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        border-radius: 4px;
+        color: #6b7280;
+        font-size: 11px;
+        cursor: pointer;
+        transition: color 0.15s, background 0.15s;
+    }
+
+    .task-item-btn:hover {
+        color: #fff;
+    }
+
+    .task-item-edit:hover {
+        background: var(--primary-color);
+    }
+
+    .task-item-del:hover {
+        background: #dc2626;
+    }
+
+    /* Comentários expandidos (compactos) */
+    .task-item-comments {
+        border-top: 1px solid #e5e7eb;
+        background: #f9fafb;
+    }
+
+    .task-item-comments[hidden] {
+        display: none !important;
+    }
+
+    .task-item-comments-inner {
+        padding: 8px 12px 10px;
+    }
+
+    .task-comment {
+        padding: 8px 10px 8px 12px;
+        margin: 6px 0;
+        border-radius: 8px;
+        border-left: 4px solid transparent;
+    }
+
+    .task-comment:last-of-type {
+        margin-bottom: 0;
+    }
+
+    /* Diferenciação por autor: cores distintas na borda e fundo leve */
+    .task-comment-author-0 {
+        border-left-color: #0ea5e9;
+        background: rgba(14, 165, 233, 0.06);
+    }
+
+    .task-comment-author-1 {
+        border-left-color: #8b5cf6;
+        background: rgba(139, 92, 246, 0.06);
+    }
+
+    .task-comment-author-2 {
+        border-left-color: #059669;
+        background: rgba(5, 150, 105, 0.06);
+    }
+
+    .task-comment-author-3 {
+        border-left-color: #d97706;
+        background: rgba(217, 119, 6, 0.06);
+    }
+
+    .task-comment-author-4 {
+        border-left-color: #dc2626;
+        background: rgba(220, 38, 38, 0.06);
+    }
+
+    .task-comment-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 2px;
+    }
+
+    .task-comment-user {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .task-comment-time {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+
+    .task-comment-acts {
+        margin-left: auto;
+        display: flex;
+        gap: 2px;
+    }
+
+    .task-comment-btn {
+        width: 22px;
+        height: 22px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        border-radius: 3px;
+        color: #9ca3af;
+        font-size: 10px;
+        cursor: pointer;
+        padding: 0;
+        transition: color 0.15s, background 0.15s;
+    }
+
+    .task-comment-btn:hover {
+        color: #fff;
+        background: var(--primary-color);
+    }
+
+    .task-comment-btn-del:hover {
+        background: #dc2626 !important;
+    }
+
+    .task-comment-text {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #4b5563;
+        white-space: pre-wrap;
+        padding-left: 0;
+    }
+
+    /* Edição inline de comentário */
+    .task-comment-edit-wrap {
+        margin-top: 4px;
+    }
+
+    .task-comment-edit-input {
+        width: 100%;
+        min-height: 60px;
+        padding: 6px 8px;
+        font-size: 12px;
+        line-height: 1.5;
+        border: 1px solid var(--primary-color);
+        border-radius: 4px;
+        resize: vertical;
+        display: block;
+    }
+
+    .task-comment-edit-input:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 90, 146, 0.2);
+    }
+
+    .task-comment-edit-hint {
+        display: block;
+        font-size: 11px;
+        color: #9ca3af;
+        margin-top: 4px;
+    }
+
+    .task-comment-form {
+        display: flex;
+        align-items: flex-end;
+        gap: 6px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .task-comment-form textarea {
+        flex: 1;
+        min-height: 32px;
+        padding: 6px 8px;
+        font-size: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        resize: none;
+    }
+
+    .task-comment-form textarea:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .task-comment-form button {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary-color);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+
+    .task-comment-form button:hover {
+        background: var(--primary-dark);
+    }
+
+    /* Empty State: só "Adicionar novo item" na caixa */
+    .empty-state-items {
+        padding: 0.5rem 1rem;
+        background: rgba(0, 90, 146, 0.03);
+        border-radius: 8px;
+        border: 1px dashed rgba(0, 90, 146, 0.12);
+    }
+
+    .empty-state-items .task-item-add-row.empty-state-add {
+        width: 100%;
+        border: none;
+        background: transparent;
+        padding: 0;
+    }
+
+    .empty-state-items .task-item-add-placeholder {
+        padding: 0.4rem 0;
+        font-size: 0.9rem;
+    }
+
+    .empty-state-items .task-item-add-placeholder:hover {
+        background: rgba(0, 90, 146, 0.06);
+        border-radius: 6px;
+    }
+
+    /* Modal Styles */
+    .modal-clean .modal-content {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header-clean {
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .modal-icon-clean {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 193, 7, 0.15);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .modal-icon-clean i {
+        font-size: 1.3rem;
+        color: #ffc107;
+    }
+
+    .modal-title-clean {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0;
+    }
+
+    .modal-subtitle-clean {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin: 0.2rem 0 0 0;
+    }
+
+    .btn-close-clean {
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #6c757d;
+    }
+
+    .btn-close-clean:hover {
+        background: rgba(0, 0, 0, 0.05);
+    }
+
+    .modal-body-clean {
+        padding: 1.5rem;
+    }
+
+    .modal-footer-clean {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        display: flex;
+        gap: 0.8rem;
+        justify-content: flex-end;
+    }
+
+    .btn-modal-clean {
+        padding: 0.65rem 1.3rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-cancel-clean {
+        background: rgba(0, 0, 0, 0.05);
+        color: #495057;
+    }
+
+    .btn-cancel-clean:hover {
+        background: rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-confirm-delete {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-confirm-delete:hover {
+        background: #c82333;
+    }
+</style>
+
+<script>
+    // --- Editar tarefa (título e projeto) no header ---
+    (function () {
+        var header = document.getElementById('taskHeaderRefined');
+        var viewBlock = document.getElementById('taskHeaderView');
+        var editBlock = document.getElementById('taskHeaderEdit');
+        var btnEdit = document.getElementById('btnEditTaskHeader');
+        var btnSave = document.getElementById('taskHeaderSave');
+        var btnCancel = document.getElementById('taskHeaderCancel');
+        var inputTitulo = document.getElementById('taskEditTitulo');
+        var inputProject = document.getElementById('taskEditProjectInput');
+        var hiddenProjectId = document.getElementById('taskEditProjectId');
+        var dropdown = document.getElementById('taskEditProjectDropdown');
+
+        if (!header || !viewBlock || !editBlock || !btnEdit || !btnSave || !btnCancel || !inputTitulo || !inputProject || !hiddenProjectId || !dropdown) return;
+
+        var editUrl = header.getAttribute('data-edit-url');
+        if (!editUrl) return;
+
+        var options = dropdown.querySelectorAll('.project-search-option');
+        var chipWrap = document.getElementById('taskEditProjectChipWrap');
+        var projectWrap = chipWrap && chipWrap.closest('.task-edit-project-wrap');
+        var editInited = false;
+
+        function escapeHtml(s) {
+            var div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        function renderProjectChip(label) {
+            if (!chipWrap || !projectWrap) return;
+            chipWrap.innerHTML = '';
+            if (!label || label === 'Sem projeto') {
+                projectWrap.classList.remove('has-chip');
+                inputProject.style.display = '';
+                inputProject.value = '';
+                hiddenProjectId.value = '';
+                return;
+            }
+            var chip = document.createElement('span');
+            chip.className = 'task-edit-project-chip';
+            chip.innerHTML = '<span>' + escapeHtml(label || '') + '</span>';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'task-edit-project-chip-remove';
+            btn.setAttribute('aria-label', 'Remover projeto');
+            btn.innerHTML = '&times;';
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                renderProjectChip(null);
+                inputProject.focus();
+            });
+            chip.appendChild(btn);
+            chipWrap.appendChild(chip);
+            projectWrap.classList.add('has-chip');
+            inputProject.style.display = 'none';
+            inputProject.value = '';
+        }
+
+        function initProjectSearchEdit() {
+            if (editInited) return;
+            editInited = true;
+            function filterOptions() {
+                var q = (inputProject.value || '').trim().toLowerCase();
+                options.forEach(function (opt) {
+                    var label = (opt.getAttribute('data-label') || opt.textContent || '').toLowerCase();
+                    opt.classList.toggle('hidden-by-filter', q && label.indexOf(q) === -1);
+                });
+            }
+            function showDrop() {
+                filterOptions();
+                dropdown.removeAttribute('hidden');
+                inputProject.setAttribute('aria-expanded', 'true');
+            }
+            function hideDrop() {
+                dropdown.setAttribute('hidden', '');
+                inputProject.setAttribute('aria-expanded', 'false');
+            }
+            function selectOpt(opt) {
+                var val = opt.getAttribute('data-value') || '';
+                var label = opt.getAttribute('data-label') || opt.textContent || '';
+                hiddenProjectId.value = val;
+                hideDrop();
+                if (val === '') {
+                    renderProjectChip(null);
+                } else {
+                    renderProjectChip(label);
+                }
+            }
+            inputProject.addEventListener('focus', showDrop);
+            inputProject.addEventListener('input', filterOptions);
+            options.forEach(function (opt) {
+                opt.addEventListener('click', function () { selectOpt(opt); });
+            });
+            document.addEventListener('click', function (e) {
+                if (!header.contains(e.target)) hideDrop();
+            });
+            inputProject.addEventListener('blur', function () {
+                setTimeout(function () {
+                    if (!dropdown.contains(document.activeElement) && document.activeElement !== inputProject) hideDrop();
+                }, 150);
+            });
+        }
+
+        function showEdit() {
+            viewBlock.style.display = 'none';
+            editBlock.removeAttribute('hidden');
+            inputTitulo.value = (document.querySelector('.task-title-refined') && document.querySelector('.task-title-refined').textContent) || '';
+            hiddenProjectId.value = header.getAttribute('data-project-id') || '';
+            var projectLabel = header.getAttribute('data-project-label') || '';
+            if (projectLabel && projectLabel !== 'Sem projeto' && hiddenProjectId.value) {
+                renderProjectChip(projectLabel);
+            } else {
+                renderProjectChip(null);
+            }
+            initProjectSearchEdit();
+            setTimeout(function () { inputTitulo.focus(); }, 50);
+        }
+
+        function showView() {
+            editBlock.setAttribute('hidden', '');
+            viewBlock.style.display = '';
+        }
+
+        function updateView(titulo, projectId, projectTitulo) {
+            var h1 = viewBlock.querySelector('.task-title-refined');
+            if (h1) h1.textContent = titulo;
+            var breadcrumbCurrent = document.querySelector('.task-breadcrumb-current');
+            if (breadcrumbCurrent) breadcrumbCurrent.textContent = titulo;
+            header.setAttribute('data-project-label', projectTitulo || 'Sem projeto');
+            header.setAttribute('data-project-id', projectId || '');
+            var badgeContainer = viewBlock.querySelector('.task-project-badge-refined');
+            if (!badgeContainer) return;
+            var isLink = projectId && projectTitulo;
+            var projectDetailUrl = '{{ url_for("main.project_detail", project_id=0) }}'.replace('/0', '/' + (projectId || ''));
+            if (isLink) {
+                var link = document.createElement('a');
+                link.href = projectDetailUrl;
+                link.className = 'task-project-badge-refined';
+                link.innerHTML = '<i class="fas fa-link"></i><span>' + escapeHtml(projectTitulo || '') + '</span>';
+                badgeContainer.parentNode.replaceChild(link, badgeContainer);
+            } else {
+                var span = document.createElement('span');
+                span.className = 'task-project-badge-refined task-project-badge-neutral task-project-empty';
+                span.innerHTML = '<i class="fas fa-inbox"></i><span class="no-project-label">Sem projeto</span><span class="no-project-label-hover">+ adicionar projeto referente</span>';
+                badgeContainer.parentNode.replaceChild(span, badgeContainer);
+            }
+        }
+
+        var popover = document.getElementById('taskAddProjectPopover');
+        var popoverInput = document.getElementById('taskAddProjectPopoverInput');
+        var popoverId = document.getElementById('taskAddProjectPopoverId');
+        var popoverDropdown = document.getElementById('taskAddProjectPopoverDropdown');
+
+        function openAddProjectPopover() {
+            if (!popover || !popoverDropdown || !dropdown) return;
+            var badge = header.querySelector('.task-project-empty');
+            if (badge) badge.classList.add('popover-open');
+            popoverDropdown.innerHTML = '';
+            var opts = dropdown.querySelectorAll('.project-search-option');
+            for (var i = 0; i < opts.length; i++) {
+                var clone = opts[i].cloneNode(true);
+                popoverDropdown.appendChild(clone);
+            }
+            popoverInput.value = '';
+            popoverId.value = '';
+            popover.removeAttribute('hidden');
+            setTimeout(function () { if (popoverInput) popoverInput.focus(); }, 50);
+            var popOpts = popoverDropdown.querySelectorAll('.project-search-option');
+            popOpts.forEach(function (opt) {
+                opt.addEventListener('click', function () {
+                    var val = opt.getAttribute('data-value') || '';
+                    var titulo = (document.querySelector('.task-title-refined') && document.querySelector('.task-title-refined').textContent) || '';
+                    var formData = new FormData();
+                    formData.append('titulo', titulo);
+                    formData.append('project_id', val);
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', editUrl);
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.setRequestHeader('Accept', 'application/json');
+                    xhr.onload = function () {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            if (data.success && data.task) {
+                                var t = data.task;
+                                updateView(t.titulo, t.project_id ? String(t.project_id) : '', t.project_titulo || null);
+                                closeAddProjectPopover();
+                            } else {
+                                alert(data.message || 'Erro ao salvar.');
+                            }
+                        } catch (err) {
+                            if (xhr.status === 200) return;
+                            alert('Erro ao salvar.');
+                        }
+                    };
+                    xhr.onerror = function () { alert('Erro de conexão.'); };
+                    xhr.send(formData);
+                });
+            });
+        }
+
+        function closeAddProjectPopover() {
+            var badge = header.querySelector('.task-project-empty');
+            if (badge) badge.classList.remove('popover-open');
+            if (popover) popover.setAttribute('hidden', '');
+        }
+
+        function filterPopoverOptions() {
+            if (!popoverDropdown) return;
+            var q = (popoverInput && popoverInput.value || '').trim().toLowerCase();
+            var popOpts = popoverDropdown.querySelectorAll('.project-search-option');
+            popOpts.forEach(function (opt) {
+                var label = (opt.getAttribute('data-label') || opt.textContent || '').toLowerCase();
+                opt.classList.toggle('hidden-by-filter', q && label.indexOf(q) === -1);
+            });
+        }
+
+        if (popoverInput) {
+            popoverInput.addEventListener('input', filterPopoverOptions);
+        }
+        document.addEventListener('click', function (e) {
+            if (popover && !popover.contains(e.target) && !e.target.closest('.task-project-empty')) {
+                closeAddProjectPopover();
+            }
+        });
+
+        btnEdit.addEventListener('click', showEdit);
+        btnCancel.addEventListener('click', showView);
+
+        header.addEventListener('click', function (e) {
+            if (e.target.closest('.task-project-empty')) {
+                e.preventDefault();
+                openAddProjectPopover();
+            }
+        });
+
+        btnSave.addEventListener('click', function () {
+            var titulo = (inputTitulo.value || '').trim();
+            if (!titulo) {
+                inputTitulo.focus();
+                return;
+            }
+            var formData = new FormData();
+            formData.append('titulo', titulo);
+            formData.append('project_id', hiddenProjectId.value || '');
+            btnSave.disabled = true;
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', editUrl);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.onload = function () {
+                btnSave.disabled = false;
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.success && data.task) {
+                        var t = data.task;
+                        updateView(t.titulo, t.project_id ? String(t.project_id) : '', t.project_titulo || null);
+                        showView();
+                        if (document.title && document.title.indexOf(' - ') !== -1) {
+                            document.title = t.titulo + document.title.substring(document.title.indexOf(' - '));
+                        }
+                    } else {
+                        alert(data.message || 'Erro ao salvar.');
+                    }
+                } catch (err) {
+                    if (xhr.status === 200) return;
+                    alert('Erro ao salvar. Tente novamente.');
+                }
+            };
+            xhr.onerror = function () { btnSave.disabled = false; alert('Erro de conexão.'); };
+            xhr.send(formData);
+        });
+    })();
+
+    // --- Adicionar item inline (sem modal) ---
+    (function () {
+        var listEl = document.querySelector('.task-items-list');
+        var addRow = document.getElementById('addItemRow');
+        var placeholder = document.getElementById('addItemPlaceholder');
+        var formWrap = document.getElementById('addItemFormWrap');
+        var addDesc = document.getElementById('addItemDesc');
+        var addStatus = document.getElementById('addItemStatus');
+        var addResponsavel = document.getElementById('addItemResponsavel');
+        var addSubmit = document.getElementById('addItemSubmit');
+        var addCancel = document.getElementById('addItemCancel');
+        var emptyState = document.getElementById('emptyStateItems');
+
+        if (!listEl || !addRow || !placeholder || !formWrap) return;
+
+        var addUrl = listEl.getAttribute('data-add-item-url');
+        if (!addUrl) return;
+
+        function showAddForm() {
+            placeholder.style.display = 'none';
+            formWrap.removeAttribute('hidden');
+            addDesc.value = '';
+            addStatus.value = 'programado';
+            if (addResponsavel) addResponsavel.innerHTML = '';
+            setTimeout(function () { addDesc.focus(); }, 50);
+        }
+
+        function hideAddForm() {
+            formWrap.setAttribute('hidden', '');
+            placeholder.style.display = 'flex';
+        }
+
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeJsStr(s) {
+            if (!s) return '';
+            return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
+        }
+
+        function insertNewItem(data) {
+            var item = data.item;
+            var descEscaped = escapeJsStr(item.descricao);
+            var respEscaped = escapeJsStr(item.responsavel || '');
+            var rowHtml = '<div class="task-item-row" data-item-id="' + item.id + '">' +
+                '<div class="task-item-bar status-' + item.status + '"></div>' +
+                '<div class="task-item-main">' +
+                '<div class="task-item-line">' +
+                '<p class="task-item-desc task-item-desc-click" data-item-id="' + item.id + '" role="button" tabindex="0" title="Clique para expandir ou recolher comentários">' + escapeHtml(item.descricao) + '</p>' +
+                '<div class="task-item-meta">' +
+                '<select class="task-item-status status-' + item.status + '" onchange="updateItemStatus(' + item.id + ', this.value)" title="Status">' +
+                '<option value="programado"' + (item.status === 'programado' ? ' selected' : '') + '>Programado</option>' +
+                '<option value="em_andamento"' + (item.status === 'em_andamento' ? ' selected' : '') + '>Em andamento</option>' +
+                '<option value="validacao"' + (item.status === 'validacao' ? ' selected' : '') + '>Validação</option>' +
+                '<option value="finalizado"' + (item.status === 'finalizado' ? ' selected' : '') + '>Finalizado</option>' +
+                '</select>' +
+                '<span class="task-item-responsavel">' + (item.responsavel ? escapeHtml(item.responsavel) : '&nbsp;') + '</span>' +
+                '<button type="button" class="task-item-comments-btn" aria-expanded="false" data-target="comments-body-' + item.id + '" onclick="toggleComments(this)">' +
+                '<i class="far fa-comment-alt"></i><span class="task-item-comments-num">0</span></button>' +
+                '<div class="task-item-actions">' +
+                '<button type="button" class="task-item-btn task-item-edit" onclick="editItem(' + item.id + ', \'' + descEscaped + '\', \'' + item.status + '\', \'' + respEscaped + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +
+                '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt"></i></button>' +
+                '</div></div></div>' +
+                '<div id="comments-body-' + item.id + '" class="task-item-comments" hidden>' +
+                '<div class="task-item-comments-inner">' +
+                '<form class="task-comment-form" action="/tarefas/itens/' + item.id + '/comentarios/add" method="POST" data-item-id="' + item.id + '">' +
+                '<textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)" required></textarea>' +
+                '<button type="submit"><i class="fas fa-paper-plane"></i></button></form></div></div></div></div>';
+            var modalHtml = '<div class="modal fade" id="deleteItemModal-' + item.id + '" tabindex="-1" aria-hidden="true">' +
+                '<div class="modal-dialog modal-dialog-centered">' +
+                '<div class="modal-content modal-clean">' +
+                '<div class="modal-header-clean"><div class="modal-icon-clean"><i class="fas fa-exclamation-circle"></i></div>' +
+                '<div><h5 class="modal-title-clean">Excluir Item</h5><p class="modal-subtitle-clean">Esta ação não pode ser desfeita</p></div>' +
+                '<button type="button" class="btn-close-clean" data-bs-dismiss="modal"><i class="fas fa-times"></i></button></div>' +
+                '<div class="modal-body-clean"><p>Confirma a exclusão deste item?</p><p class="text-muted small">' + escapeHtml(item.descricao.substring(0, 100)) + (item.descricao.length > 100 ? '...' : '') + '</p></div>' +
+                '<div class="modal-footer-clean">' +
+                '<button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">Cancelar</button>' +
+                '<form action="/tarefas/itens/' + item.id + '/delete" method="POST" style="display: inline;">' +
+                '<button type="submit" class="btn-modal-clean btn-confirm-delete">Excluir</button></form></div></div></div></div>';
+            var wrap = document.createElement('div');
+            wrap.innerHTML = rowHtml + modalHtml;
+            addRow.parentNode.insertBefore(wrap.firstChild, addRow);
+            addRow.parentNode.insertBefore(wrap.firstChild, addRow);
+            if (emptyState && emptyState.contains(addRow)) {
+                var newRow = emptyState.querySelector('.task-item-row[data-item-id="' + item.id + '"]');
+                var newModal = document.getElementById('deleteItemModal-' + item.id);
+                if (newRow) listEl.appendChild(newRow);
+                if (newModal) listEl.appendChild(newModal);
+                listEl.appendChild(addRow);
+                if (emptyState.parentNode) emptyState.parentNode.removeChild(emptyState);
+            } else if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+            var countEl = document.querySelector('.items-header-clean .header-count');
+            if (countEl) {
+                var n = document.querySelectorAll('.task-item-row').length;
+                countEl.textContent = n + (n === 1 ? ' item' : ' itens');
+            }
+            var newDesc = document.querySelector('.task-item-row[data-item-id="' + item.id + '"] .task-item-desc-click');
+            if (newDesc) {
+                newDesc.addEventListener('click', function () {
+                    var row = this.closest('.task-item-row');
+                    if (row) {
+                        var btn = row.querySelector('.task-item-comments-btn');
+                        if (btn) toggleComments(btn);
+                    }
+                });
+                newDesc.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+                });
+            }
+        }
+
+        placeholder.addEventListener('click', showAddForm);
+        addCancel.addEventListener('click', hideAddForm);
+
+        addDesc.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') hideAddForm();
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addSubmit.click(); }
+        });
+
+        addSubmit.addEventListener('click', function () {
+            var desc = (addDesc && addDesc.value) ? addDesc.value.trim() : '';
+            if (!desc) { addDesc.focus(); return; }
+            var formData = new FormData();
+            formData.append('descricao', desc);
+            formData.append('status', addStatus ? addStatus.value : 'programado');
+            formData.append('responsavel', addResponsavel ? getResponsavelValueFromEditable(addResponsavel) : '');
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', addUrl);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.onload = function () {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.success && data.item) {
+                        insertNewItem(data);
+                        hideAddForm();
+                    } else {
+                        alert(data.message || 'Erro ao adicionar item.');
+                    }
+                } catch (err) {
+                    if (xhr.status === 200) return;
+                    alert('Erro ao adicionar item. Tente novamente.');
+                }
+            };
+            xhr.onerror = function () { alert('Erro de conexão. Tente novamente.'); };
+            xhr.send(formData);
+        });
+
+        document.getElementById('btnFocusAddItem').addEventListener('click', function () {
+            addRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            if (formWrap.hasAttribute('hidden')) placeholder.click();
+        });
+
+        // Inicializar @ no campo responsável (add form - o que estiver no DOM)
+        var sugestoesUrl = listEl.getAttribute('data-sugestoes-url');
+        var addRespInput = listEl.querySelector('.task-item-add-responsavel');
+        if (addRespInput && sugestoesUrl) {
+            initResponsavelMention(addRespInput, listEl.getAttribute('data-task-id'), sugestoesUrl);
+        }
+    })();
+
+    // --- Valor do campo responsável (contenteditable: chips + texto) ---
+    function getResponsavelValueFromEditable(editableEl) {
+        if (!editableEl) return '';
+        var chips = [];
+        var textParts = [];
+        function walk(node) {
+            if (node.nodeType === 3) {
+                textParts.push(node.textContent);
+            } else if (node.nodeType === 1) {
+                if (node.classList && node.classList.contains('responsavel-chip')) {
+                    chips.push(node.getAttribute('data-name') || node.textContent || '');
+                } else {
+                    for (var i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i]);
+                }
+            }
+        }
+        for (var i = 0; i < editableEl.childNodes.length; i++) walk(editableEl.childNodes[i]);
+        var text = textParts.join('').trim();
+        var chipStr = chips.join(', ');
+        return chipStr ? (text ? chipStr + ' ' + text : chipStr) : text;
+    }
+
+    // --- @ no campo responsável: sugestões + chip (unidade, cor de fundo, apaga inteiro) ---
+    var responsavelSuggestionsDropdown = null;
+
+    function initResponsavelMention(editableEl, taskId, sugestoesUrl) {
+        if (!editableEl || !sugestoesUrl) return;
+        if (!responsavelSuggestionsDropdown) {
+            responsavelSuggestionsDropdown = document.createElement('div');
+            responsavelSuggestionsDropdown.className = 'responsavel-suggestions';
+            responsavelSuggestionsDropdown.setAttribute('role', 'listbox');
+            responsavelSuggestionsDropdown.setAttribute('hidden', '');
+            document.body.appendChild(responsavelSuggestionsDropdown);
+        }
+        var dropdown = responsavelSuggestionsDropdown;
+        var activeEditable = null;
+        var savedRange = null;
+        var users = [];
+        var selectedIndex = 0;
+
+        function hideDropdown() {
+            dropdown.setAttribute('hidden', '');
+            activeEditable = null;
+            savedRange = null;
+        }
+
+        function showDropdownBelow(el) {
+            var rect = el.getBoundingClientRect();
+            dropdown.style.left = rect.left + 'px';
+            dropdown.style.top = (rect.bottom + 2) + 'px';
+            dropdown.style.minWidth = Math.max(rect.width, 160) + 'px';
+            dropdown.removeAttribute('hidden');
+        }
+
+        function getNodeAtOffset(editable, targetOffset) {
+            var current = 0;
+            function walk(n) {
+                if (n.nodeType === 3) {
+                    var len = n.length;
+                    if (current + len >= targetOffset) return { node: n, offset: targetOffset - current };
+                    current += len;
+                } else if (n.nodeType === 1 && (!n.classList || !n.classList.contains('responsavel-chip'))) {
+                    for (var i = 0; i < n.childNodes.length; i++) {
+                        var r = walk(n.childNodes[i]);
+                        if (r) return r;
+                    }
+                } else if (n.nodeType === 1 && n.classList && n.classList.contains('responsavel-chip')) {
+                    current += (n.textContent || '').length;
+                }
+                return null;
+            }
+            for (var i = 0; i < editable.childNodes.length; i++) {
+                var r = walk(editable.childNodes[i]);
+                if (r) return r;
+            }
+            return { node: editable, offset: editable.childNodes.length };
+        }
+
+        function getTextAndRange(editable) {
+            var sel = window.getSelection();
+            if (!sel.rangeCount) return { text: '', range: null };
+            var range = sel.getRangeAt(0);
+            if (!editable.contains(range.startContainer)) return { text: '', range: null };
+            var fromStart = document.createRange();
+            fromStart.setStart(editable, 0);
+            fromStart.setEnd(range.startContainer, range.startOffset);
+            var text = fromStart.toString();
+            var lastAt = text.lastIndexOf('@');
+            if (lastAt === -1) return { text: '', range: null, query: null };
+            var query = text.substring(lastAt + 1).toLowerCase();
+            var startPos = getNodeAtOffset(editable, lastAt);
+            if (!startPos) return { text: text, query: query, range: null };
+            var rangeAt = document.createRange();
+            rangeAt.setStart(startPos.node, startPos.offset);
+            rangeAt.setEnd(range.startContainer, range.startOffset);
+            return { text: text, query: query, range: rangeAt };
+        }
+
+        function getExistingChipNames(editable) {
+            var names = [];
+            if (!editable) return names;
+            editable.querySelectorAll('.responsavel-chip').forEach(function (ch) {
+                var n = (ch.getAttribute('data-name') || ch.textContent || '').trim();
+                if (n) names.push(n.toLowerCase());
+            });
+            return names;
+        }
+
+        function insertChip(editable, name) {
+            if (!savedRange) return;
+            var existingNames = getExistingChipNames(editable);
+            var nameNorm = (name || '').trim().toLowerCase();
+            if (nameNorm && existingNames.indexOf(nameNorm) !== -1) {
+                hideDropdown();
+                return;
+            }
+            var existingChips = editable.querySelectorAll('.responsavel-chip');
+            var colorIndex = existingChips.length % 5;
+            var chip = document.createElement('span');
+            chip.className = 'responsavel-chip responsavel-chip-' + colorIndex;
+            chip.setAttribute('contenteditable', 'false');
+            chip.setAttribute('data-name', name);
+            var nameSpan = document.createElement('span');
+            nameSpan.textContent = name;
+            chip.appendChild(nameSpan);
+            var removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'responsavel-chip-remove';
+            removeBtn.setAttribute('aria-label', 'Remover');
+            removeBtn.innerHTML = '&times;';
+            removeBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                chip.remove();
+                reindexChipColors(editable);
+            });
+            chip.appendChild(removeBtn);
+            savedRange.deleteContents();
+            savedRange.insertNode(chip);
+            savedRange.setStartAfter(chip);
+            savedRange.setEndAfter(chip);
+            var sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(savedRange);
+        }
+
+        function reindexChipColors(editable) {
+            var chips = editable.querySelectorAll('.responsavel-chip');
+            chips.forEach(function (chip, i) {
+                chip.className = 'responsavel-chip responsavel-chip-' + (i % 5);
+            });
+        }
+
+        function chipAtCursorOrInSelection(editable) {
+            var sel = window.getSelection();
+            if (!sel.rangeCount) return null;
+            var range = sel.getRangeAt(0);
+            var chips = editable.querySelectorAll('.responsavel-chip');
+            for (var i = 0; i < chips.length; i++) {
+                var chip = chips[i];
+                try {
+                    if (range.intersectsNode(chip)) return chip;
+                    if (range.startContainer === chip || chip.contains(range.startContainer)) return chip;
+                } catch (e) { }
+            }
+            return null;
+        }
+
+        function deleteChipBeforeCursor(editable) {
+            var chipInSel = chipAtCursorOrInSelection(editable);
+            if (chipInSel) {
+                chipInSel.remove();
+                return true;
+            }
+            var sel = window.getSelection();
+            if (!sel.rangeCount) return false;
+            var range = sel.getRangeAt(0);
+            var node = range.startContainer;
+            var offset = range.startOffset;
+            if (node.nodeType === 3) {
+                var prev = node.previousSibling;
+                if (prev && prev.classList && prev.classList.contains('responsavel-chip')) {
+                    prev.remove();
+                    return true;
+                }
+            } else if (node.nodeType === 1) {
+                var child = node.childNodes[offset - 1];
+                if (child && child.classList && child.classList.contains('responsavel-chip')) {
+                    child.remove();
+                    return true;
+                }
+                if (offset === 0 && node.previousSibling && node.previousSibling.classList && node.previousSibling.classList.contains('responsavel-chip')) {
+                    node.previousSibling.remove();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function deleteChipAfterCursor(editable) {
+            var chipInSel = chipAtCursorOrInSelection(editable);
+            if (chipInSel) {
+                chipInSel.remove();
+                return true;
+            }
+            var sel = window.getSelection();
+            if (!sel.rangeCount) return false;
+            var range = sel.getRangeAt(0);
+            var node = range.startContainer;
+            var offset = range.startOffset;
+            if (node.nodeType === 3) {
+                if (offset === node.length) {
+                    var next = node.nextSibling;
+                    if (next && next.classList && next.classList.contains('responsavel-chip')) {
+                        next.remove();
+                        return true;
+                    }
+                }
+            } else if (node.nodeType === 1) {
+                var nextChild = node.childNodes[offset];
+                if (nextChild && nextChild.classList && nextChild.classList.contains('responsavel-chip')) {
+                    nextChild.remove();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function renderList(filtered) {
+            var alreadyAdded = getExistingChipNames(activeEditable);
+            var available = filtered.filter(function (u) {
+                var n = (u.name || '').trim().toLowerCase();
+                return n && alreadyAdded.indexOf(n) === -1;
+            });
+            dropdown.innerHTML = '';
+            if (available.length === 0) {
+                var empty = document.createElement('div');
+                empty.className = 'responsavel-suggestions-empty';
+                empty.textContent = filtered.length === 0 ? 'Nenhuma pessoa encontrada' : 'Todos já adicionados';
+                dropdown.appendChild(empty);
+            } else {
+                available.forEach(function (u, i) {
+                    var div = document.createElement('div');
+                    div.className = 'responsavel-suggestion-item' + (i === 0 ? ' active' : '');
+                    div.setAttribute('role', 'option');
+                    div.textContent = u.name;
+                    div.dataset.name = u.name;
+                    div.addEventListener('click', function () {
+                        insertChip(activeEditable, u.name);
+                        hideDropdown();
+                        activeEditable.focus();
+                    });
+                    dropdown.appendChild(div);
+                });
+            }
+            selectedIndex = 0;
+        }
+
+        function updateSelection() {
+            var items = dropdown.querySelectorAll('.responsavel-suggestion-item');
+            items.forEach(function (el, i) {
+                el.classList.toggle('active', i === selectedIndex);
+            });
+        }
+
+        editableEl.addEventListener('input', function () {
+            var obj = getTextAndRange(this);
+            if (obj.query === null) {
+                hideDropdown();
+                return;
+            }
+            activeEditable = this;
+            savedRange = obj.range;
+            var q = (obj.query || '').trim();
+            fetch(sugestoesUrl + '?q=' + encodeURIComponent(q))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    users = data.users || [];
+                    var filtered = q ? users.filter(function (u) {
+                        return (u.name || '').toLowerCase().indexOf(q) !== -1;
+                    }) : users;
+                    renderList(filtered);
+                    showDropdownBelow(activeEditable);
+                })
+                .catch(function () { hideDropdown(); });
+        });
+
+        editableEl.addEventListener('keydown', function (e) {
+            if (!dropdown.hasAttribute('hidden') || activeEditable !== this) {
+                if (e.key === 'Backspace') {
+                    if (deleteChipBeforeCursor(this)) {
+                        e.preventDefault();
+                        return;
+                    }
+                } else if (e.key === 'Delete') {
+                    if (deleteChipAfterCursor(this)) {
+                        e.preventDefault();
+                        return;
+                    }
+                }
+            }
+            if (!dropdown.hasAttribute('hidden') && activeEditable === this) {
+                var items = dropdown.querySelectorAll('.responsavel-suggestion-item');
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                    updateSelection();
+                    if (items[selectedIndex]) items[selectedIndex].scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, 0);
+                    updateSelection();
+                    if (items[selectedIndex]) items[selectedIndex].scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'Enter' && items[selectedIndex]) {
+                    e.preventDefault();
+                    insertChip(activeEditable, items[selectedIndex].dataset.name);
+                    hideDropdown();
+                    activeEditable.focus();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    hideDropdown();
+                }
+            } else if (e.key === 'Backspace') {
+                if (deleteChipBeforeCursor(this)) e.preventDefault();
+            } else if (e.key === 'Delete') {
+                if (deleteChipAfterCursor(this)) e.preventDefault();
+            }
+        });
+
+        editableEl.addEventListener('blur', function () {
+            setTimeout(function () {
+                if (!dropdown.contains(document.activeElement)) hideDropdown();
+            }, 150);
+        });
+
+        editableEl.addEventListener('click', function (e) {
+            if (e.target.classList && e.target.classList.contains('responsavel-chip-remove')) {
+                e.preventDefault();
+                e.stopPropagation();
+                var chip = e.target.closest('.responsavel-chip');
+                if (chip) {
+                    chip.remove();
+                    reindexChipColors(editableEl);
+                }
+            }
+        });
+    }
+
+    // Atualizar status do item via AJAX (sem recarregar a página)
+    function updateItemStatus(itemId, status) {
+        fetch(`/tarefas/itens/${itemId}/update_status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: status })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    var row = document.querySelector('.task-item-row[data-item-id="' + itemId + '"]');
+                    if (row) {
+                        var bar = row.querySelector('.task-item-bar');
+                        if (bar) {
+                            bar.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+                            bar.classList.add('status-' + status);
+                        }
+                        var statusSelect = row.querySelector('.task-item-status');
+                        if (statusSelect) {
+                            statusSelect.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+                            statusSelect.classList.add('status-' + status);
+                        }
+                    }
+                } else {
+                    alert('Erro ao atualizar status: ' + (data.message || ''));
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao atualizar status');
+            });
+    }
+
+    // Editar item inline (sem modal)
+    function editItem(itemId, descricao, status, responsavel) {
+        var row = document.querySelector('.task-item-row[data-item-id="' + itemId + '"]');
+        if (!row) return;
+        var lineEl = row.querySelector('.task-item-main > .task-item-line:not(.task-item-line-edit)');
+        if (!lineEl) return;
+        // Evitar abrir dois edits ao mesmo tempo
+        if (row.querySelector('.task-item-line-edit')) return;
+
+        var savedHtml = lineEl.innerHTML;
+        var descEsc = (descricao || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        var respChipHtml = '';
+        if (responsavel) {
+            var names = (responsavel || '').split(/\s*,\s*/).map(function (n) { return n.trim(); }).filter(Boolean);
+            for (var i = 0; i < names.length; i++) {
+                var name = names[i];
+                var nameEsc = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                var nameHtml = (function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; })(name);
+                respChipHtml += '<span class="responsavel-chip responsavel-chip-' + (i % 5) + '" contenteditable="false" data-name="' + nameEsc + '">' + nameHtml + ' <button type="button" class="responsavel-chip-remove" aria-label="Remover">&times;</button></span>';
+            }
+        }
+        var editFormHtml = '<div class="task-item-line task-item-line-edit">' +
+            '<input type="text" class="task-item-add-desc task-item-edit-desc" placeholder="Descrição..." value="' + descEsc + '" data-item-id="' + itemId + '">' +
+            '<select class="task-item-add-status task-item-edit-status">' +
+            '<option value="programado"' + (status === 'programado' ? ' selected' : '') + '>Programado</option>' +
+            '<option value="em_andamento"' + (status === 'em_andamento' ? ' selected' : '') + '>Em andamento</option>' +
+            '<option value="validacao"' + (status === 'validacao' ? ' selected' : '') + '>Validação</option>' +
+            '<option value="finalizado"' + (status === 'finalizado' ? ' selected' : '') + '>Finalizado</option>' +
+            '</select>' +
+            '<div class="responsavel-mention-wrap"><div class="contenteditable-responsavel task-item-edit-responsavel" contenteditable="true" data-placeholder="Responsável (digite @ para marcar)">' + respChipHtml + '</div></div>' +
+            '<button type="button" class="task-item-add-btn task-item-edit-save" data-item-id="' + itemId + '" title="Salvar"><i class="fas fa-check"></i></button>' +
+            '<button type="button" class="task-item-add-cancel task-item-edit-cancel" data-item-id="' + itemId + '" title="Cancelar"><i class="fas fa-times"></i></button>' +
+            '</div>';
+        lineEl.outerHTML = editFormHtml;
+        var newLine = row.querySelector('.task-item-line-edit');
+        if (!newLine) return;
+        var descInput = newLine.querySelector('.task-item-edit-desc');
+        var saveBtn = newLine.querySelector('.task-item-edit-save');
+        var cancelBtn = newLine.querySelector('.task-item-edit-cancel');
+        if (descInput) setTimeout(function () { descInput.focus(); }, 50);
+
+        function restoreLine(html) {
+            var wrap = document.createElement('div');
+            wrap.className = 'task-item-line';
+            wrap.innerHTML = html;
+            newLine.replaceWith(wrap);
+        }
+
+        function buildLineFromItem(item) {
+            var d = (item.descricao || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
+            var r = (item.responsavel || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
+            var lineHtml = '<div class="task-item-line">' +
+                '<p class="task-item-desc task-item-desc-click" data-item-id="' + item.id + '" role="button" tabindex="0" title="Clique para expandir ou recolher comentários">' + (function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; })(item.descricao) + '</p>' +
+                '<div class="task-item-meta">' +
+                '<select class="task-item-status status-' + item.status + '" onchange="updateItemStatus(' + item.id + ', this.value)" title="Status">' +
+                '<option value="programado"' + (item.status === 'programado' ? ' selected' : '') + '>Programado</option>' +
+                '<option value="em_andamento"' + (item.status === 'em_andamento' ? ' selected' : '') + '>Em andamento</option>' +
+                '<option value="validacao"' + (item.status === 'validacao' ? ' selected' : '') + '>Validação</option>' +
+                '<option value="finalizado"' + (item.status === 'finalizado' ? ' selected' : '') + '>Finalizado</option>' +
+                '</select>' +
+                '<span class="task-item-responsavel">' + (item.responsavel ? (function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; })(item.responsavel) : '&nbsp;') + '</span>' +
+                '<button type="button" class="task-item-comments-btn" aria-expanded="false" data-target="comments-body-' + item.id + '" onclick="toggleComments(this)">' +
+                '<i class="far fa-comment-alt"></i><span class="task-item-comments-num">' + (row.querySelector('.task-item-comments') ? (row.querySelectorAll('.task-comment').length || 0) : 0) + '</span></button>' +
+                '<div class="task-item-actions">' +
+                '<button type="button" class="task-item-btn task-item-edit" onclick="editItem(' + item.id + ', \'' + d + '\', \'' + item.status + '\', \'' + r + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +
+                '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt"></i></button>' +
+                '</div></div></div>';
+            return lineHtml;
+        }
+
+        var listElForEdit = row.closest('.task-items-list');
+        if (listElForEdit) {
+            var sugestoesUrlEdit = listElForEdit.getAttribute('data-sugestoes-url');
+            var editRespInput = newLine.querySelector('.task-item-edit-responsavel');
+            if (editRespInput && sugestoesUrlEdit) {
+                initResponsavelMention(editRespInput, listElForEdit.getAttribute('data-task-id'), sugestoesUrlEdit);
+            }
+        }
+
+        cancelBtn.addEventListener('click', function () {
+            restoreLine(savedHtml);
+        });
+        newLine.querySelector('.task-item-edit-desc').addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { e.preventDefault(); restoreLine(savedHtml); return; }
+            if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
+        });
+        function doSaveItem() {
+            var desc = (newLine.querySelector('.task-item-edit-desc').value || '').trim();
+            if (!desc) { descInput.focus(); return; }
+            var statusVal = newLine.querySelector('.task-item-edit-status').value;
+            var editRespEl = newLine.querySelector('.task-item-edit-responsavel');
+            var respVal = editRespEl ? getResponsavelValueFromEditable(editRespEl).trim() : '';
+            var formData = new FormData();
+            formData.append('descricao', desc);
+            formData.append('status', statusVal);
+            formData.append('responsavel', respVal);
+            saveBtn.disabled = true;
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/tarefas/itens/' + itemId + '/edit');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.onload = function () {
+                saveBtn.disabled = false;
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.success && data.item) {
+                        var wrap = document.createElement('div');
+                        wrap.innerHTML = buildLineFromItem(data.item);
+                        newLine.replaceWith(wrap.firstChild);
+                        var bar = row.querySelector('.task-item-bar');
+                        if (bar) {
+                            bar.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+                            bar.classList.add('status-' + data.item.status);
+                        }
+                        // Recolher comentários após salvar (estado consistente: botão "false" e bloco oculto)
+                        var commentsBody = document.getElementById('comments-body-' + data.item.id);
+                        if (commentsBody) commentsBody.setAttribute('hidden', '');
+                    } else {
+                        alert(data.message || 'Erro ao salvar item.');
+                    }
+                } catch (err) {
+                    if (xhr.status === 200) return;
+                    alert('Erro ao salvar. Tente novamente.');
+                }
+            };
+            xhr.onerror = function () { saveBtn.disabled = false; alert('Erro de conexão.'); };
+            xhr.send(formData);
+        }
+        saveBtn.addEventListener('click', doSaveItem);
+    }
+
+    // Expandir/recolher comentários
+    function toggleComments(btn) {
+        var targetId = btn.getAttribute('data-target');
+        var body = document.getElementById(targetId);
+        var isExpanded = btn.getAttribute('aria-expanded') === 'true';
+
+        if (isExpanded) {
+            body.setAttribute('hidden', '');
+            btn.setAttribute('aria-expanded', 'false');
+        } else {
+            body.removeAttribute('hidden');
+            btn.setAttribute('aria-expanded', 'true');
+        }
+    }
+
+    // Clicar na descrição do item expande/recolhe comentários (delegação: funciona em itens inseridos depois, ex. após editar)
+    var taskItemsListEl = document.querySelector('.task-items-list');
+    if (taskItemsListEl) {
+        taskItemsListEl.addEventListener('click', function (e) {
+            var desc = e.target.closest('.task-item-desc-click');
+            if (!desc) return;
+            e.preventDefault();
+            var row = desc.closest('.task-item-row');
+            if (row) {
+                var btn = row.querySelector('.task-item-comments-btn');
+                if (btn) toggleComments(btn);
+            }
+        });
+        taskItemsListEl.addEventListener('keydown', function (e) {
+            var desc = e.target.closest('.task-item-desc-click');
+            if (!desc) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                var row = desc.closest('.task-item-row');
+                if (row) {
+                    var btn = row.querySelector('.task-item-comments-btn');
+                    if (btn) toggleComments(btn);
+                }
+            }
+        });
+    }
+
+    // Enviar comentário via AJAX (sem recarregar e sem recolher a seção)
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function handleCommentFormSubmit(form) {
+        var textarea = form.querySelector('textarea');
+        var content = (textarea && textarea.value) ? textarea.value.trim() : '';
+        if (!content) return;
+        var btn = form.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        var formData = new FormData(form);
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.onload = function () {
+            if (btn) btn.disabled = false;
+            try {
+                var data = JSON.parse(xhr.responseText);
+                if (data.success && data.comment) {
+                    var c = data.comment;
+                    var authorClass = 'task-comment-author-' + (c.user_id != null ? (c.user_id % 5) : 0);
+                    var commentHtml = '<div class="task-comment ' + authorClass + '" id="comment-' + c.id + '">' +
+                        '<div class="task-comment-head">' +
+                        '<span class="task-comment-user">' + escapeHtml(c.author_name) + '</span>' +
+                        '<span class="task-comment-time">' + escapeHtml(c.created_at) + '</span>';
+                    if (c.is_own) {
+                        commentHtml += '<span class="task-comment-acts">' +
+                            '<button type="button" class="task-comment-btn btn-edit-comment" data-comment-id="' + c.id + '" data-comment-content="' + escapeHtml(c.content) + '" title="Editar"><i class="fas fa-pen"></i></button>' +
+                            '<form action="/tarefas/comentarios/' + c.id + '/delete" method="POST" class="d-inline" onsubmit="return confirm(\'Excluir comentário?\');">' +
+                            '<button type="submit" class="task-comment-btn task-comment-btn-del" title="Excluir"><i class="fas fa-trash-alt"></i></button>' +
+                            '</form></span>';
+                    }
+                    commentHtml += '</div><p class="task-comment-text">' + escapeHtml(c.content) + '</p></div>';
+                    var wrap = form.closest('.task-item-comments-inner');
+                    if (wrap) {
+                        var frag = document.createElement('div');
+                        frag.innerHTML = commentHtml;
+                        form.parentNode.insertBefore(frag.firstChild, form);
+                    }
+                    if (textarea) textarea.value = '';
+                    var row = form.closest('.task-item-row');
+                    if (row) {
+                        var numEl = row.querySelector('.task-item-comments-num');
+                        if (numEl) numEl.textContent = parseInt(numEl.textContent || '0', 10) + 1;
+                    }
+                    var newCommentBtn = row && row.querySelector('.btn-edit-comment[data-comment-id="' + c.id + '"]');
+                    if (newCommentBtn) {
+                        newCommentBtn.addEventListener('click', function () {
+                            openEditComment(this.getAttribute('data-comment-id'), this.getAttribute('data-comment-content'));
+                        });
+                    }
+                } else {
+                    alert(data.message || 'Erro ao enviar comentário.');
+                }
+            } catch (err) {
+                if (xhr.status === 200) return;
+                alert('Erro ao enviar comentário. Tente novamente.');
+            }
+        };
+        xhr.onerror = function () {
+            if (btn) btn.disabled = false;
+            alert('Erro de conexão. Tente novamente.');
+        };
+        xhr.send(formData);
+    }
+
+    document.addEventListener('submit', function (e) {
+        if (!e.target || !e.target.classList || !e.target.classList.contains('task-comment-form')) return;
+        e.preventDefault();
+        handleCommentFormSubmit(e.target);
+    });
+
+    // Enter no textarea de comentário envia o formulário (Shift+Enter = nova linha). Delegação para funcionar em formulários adicionados depois.
+    (document.querySelector('.task-items-list') || document.body).addEventListener('keydown', function (e) {
+        if (e.target.matches && e.target.matches('.task-comment-form textarea')) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                var form = e.target.closest('form');
+                if (form) {
+                    if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                }
+            }
+        }
+    });
+
+    // Edição inline de comentário (sem modal). Enter = salvar, Esc = cancelar
+    function openEditComment(commentId, content) {
+        var commentEl = document.getElementById('comment-' + commentId);
+        if (!commentEl) return;
+        var textEl = commentEl.querySelector('.task-comment-text');
+        if (!textEl) return;
+        if (commentEl.querySelector('.task-comment-edit-wrap')) return;
+
+        var originalContent = content || '';
+        var wrap = document.createElement('div');
+        wrap.className = 'task-comment-edit-wrap';
+        var textarea = document.createElement('textarea');
+        textarea.className = 'task-comment-edit-input';
+        textarea.rows = 3;
+        textarea.placeholder = 'Editar comentário...';
+        textarea.setAttribute('data-comment-id', commentId);
+        var hint = document.createElement('span');
+        hint.className = 'task-comment-edit-hint';
+        hint.textContent = 'Enter para salvar, Esc para cancelar';
+        wrap.appendChild(textarea);
+        wrap.appendChild(hint);
+        textEl.parentNode.replaceChild(wrap, textEl);
+        textarea.value = originalContent;
+        textarea.focus();
+
+        function restoreText(text) {
+            var p = document.createElement('p');
+            p.className = 'task-comment-text';
+            p.textContent = text;
+            wrap.parentNode.replaceChild(p, wrap);
+        }
+
+        function saveComment() {
+            var newContent = (textarea.value || '').trim();
+            if (!newContent) return;
+            var formData = new FormData();
+            formData.append('content', newContent);
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]') ? document.querySelector('input[name="csrf_token"]').value : '');
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/tarefas/comentarios/' + commentId + '/edit');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.onload = function () {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.success && data.comment) {
+                        var c = data.comment;
+                        restoreText(c.content);
+                        var timeEl = commentEl.querySelector('.task-comment-time');
+                        if (timeEl && c.updated_at) {
+                            timeEl.innerHTML = c.updated_at + ' <em>(edit.)</em>';
+                        }
+                        var editBtn = commentEl.querySelector('.btn-edit-comment');
+                        if (editBtn) editBtn.setAttribute('data-comment-content', c.content);
+                    } else {
+                        alert(data.message || 'Erro ao atualizar comentário.');
+                    }
+                } catch (err) {
+                    if (xhr.status === 200) return;
+                    alert('Erro ao atualizar comentário. Tente novamente.');
+                }
+            };
+            xhr.onerror = function () { alert('Erro de conexão. Tente novamente.'); };
+            xhr.send(formData);
+        }
+
+        textarea.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                saveComment();
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                restoreText(originalContent);
+            }
+        });
+    }
+
+    // Botões de editar comentário (data attributes)
+    document.querySelectorAll('.btn-edit-comment').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var commentId = this.getAttribute('data-comment-id');
+            var content = this.getAttribute('data-comment-content');
+            openEditComment(commentId, content);
+        });
+    });
+
+    // Reset do form quando modal é fechado
+    document.getElementById('addItemModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('itemModalTitle').textContent = 'Novo Item';
+        document.getElementById('itemForm').action = '{{ url_for("main.add_task_item", task_id=task.id) }}';
+        document.getElementById('itemForm').reset();
+    });
+</script>
+{% endblock %}

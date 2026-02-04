@@ -3,6 +3,7 @@ from flask import Flask, session, g
 from flask_migrate import Migrate
 import os
 import pymysql
+from zoneinfo import ZoneInfo
 
 # Import db e User de models.py para inicialização
 from models import db, User # User é crucial aqui
@@ -14,7 +15,13 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', '***REMOVED***')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://"+os.getenv('DB_USER')+":"+os.getenv('DB_PASSWORD')+'@'+os.getenv('DB_HOST')+'/'+os.getenv('DB_NAME')
+# MySQL - para Linux/Produção (comentado para uso local no Mac)
+# app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://"+os.getenv('DB_USER')+":"+os.getenv('DB_PASSWORD')+'@localhost/'+os.getenv('DB_NAME')
+
+# SQLite - para desenvolvimento local no Mac
+import os
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'projetosrj.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa o rastreamento de modificações
 
@@ -35,6 +42,34 @@ def load_logged_in_user():
         g.user = User.query.get(user_id)
         if g.user is None: # Usuário na sessão não existe mais no DB
             session.clear()
+
+
+# Fuso horário do Brasil (Rio de Janeiro) para exibição de datas
+TIMEZONE_BR = ZoneInfo('America/Sao_Paulo')
+
+@app.template_filter('local_time')
+def local_time_filter(dt, fmt='%d/%m %H:%M'):
+    """Converte datetime UTC (naive) para horário do Brasil e formata."""
+    if dt is None:
+        return ''
+    if dt.tzinfo is None:
+        utc = dt.replace(tzinfo=ZoneInfo('UTC'))
+    else:
+        utc = dt
+    local = utc.astimezone(TIMEZONE_BR)
+    return local.strftime(fmt)
+
+@app.template_filter('local_datetime')
+def local_datetime_filter(dt, fmt='%d/%m/%Y às %H:%M'):
+    """Converte datetime UTC para Brasil, formato longo."""
+    if dt is None:
+        return ''
+    if dt.tzinfo is None:
+        utc = dt.replace(tzinfo=ZoneInfo('UTC'))
+    else:
+        utc = dt
+    local = utc.astimezone(TIMEZONE_BR)
+    return local.strftime(fmt)
 
 
 # Processador de contexto para injetar informações do usuário nos templates

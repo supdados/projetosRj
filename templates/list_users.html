@@ -36,7 +36,13 @@
                             <td>{{ user_item.name }}</td>
                             <td>{{ user_item.username }}</td>
                             <td>{{ user_item.orgao if user_item.orgao else '-' }}</td>
-                            <td>{{ user_item.area_responsavel if user_item.area_responsavel else '-' }}</td>
+                            <td>
+                                {% if user_item.get_areas() %}
+                                    {{ user_item.get_areas()|join(', ') }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
                             <td class="text-center">
                                 {% if user_item.is_admin %}
                                     <span class="badge bg-success rounded-pill"><i class="fas fa-user-shield me-1"></i>Sim</span>

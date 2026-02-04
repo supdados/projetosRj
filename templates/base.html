@@ -46,6 +46,11 @@
         <!-- Sidebar Menu Lateral - Visível apenas quando logado -->
         {% if current_user_obj %}
         <nav id="sidebar" class="sidebar">
+            <!-- Botão de toggle com seta (desktop) -->
+            <button id="sidebarToggleArrow" class="sidebar-toggle-arrow d-none d-md-block">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            
             <!-- Botão de fechar para mobile -->
             <button id="sidebarCloseBtn" class="sidebar-close-btn d-md-none">
                 <i class="fas fa-times"></i>
@@ -79,21 +84,30 @@
                             <span>Projetos Pendentes</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ url_for('main.list_tasks') }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.list_tasks' or request.endpoint == 'main.project_tasks' else '' }}" data-tooltip="Tarefas">
+                            <i class="fas fa-tasks"></i>
+                            <span>Tarefas</span>
+                        </a>
+                    </li>
                     
                     <!-- Separador de Áreas -->
                     <li class="mt-4 mb-2">
                         <div class="text-uppercase px-3 sidebar-heading">
-                            <span>{% if current_user_obj and current_user_obj.area_responsavel %}Minha Área{% else %}Áreas de Projeto{% endif %}</span>
+                            <span>{% if current_user_obj and current_user_obj.get_areas() %}{% if current_user_obj.get_areas()|length == 1 %}Minha Área{% else %}Minhas Áreas{% endif %}{% else %}Áreas de Projeto{% endif %}</span>
                         </div>
                     </li>
                     
-                    {% if current_user_obj and current_user_obj.area_responsavel %}
+                    {% if current_user_obj and current_user_obj.get_areas() %}
+                    <!-- Links das áreas do usuário -->
+                    {% for user_area in current_user_obj.get_areas() %}
                     <li>
-                        <a href="{{ url_for('main.list_projects', area=current_user_obj.area_responsavel) }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.list_projects' and request.args.get('area') == current_user_obj.area_responsavel else '' }}" data-tooltip="{{ current_user_obj.area_responsavel }}">
+                        <a href="{{ url_for('main.list_projects', area=user_area) }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.list_projects' and request.args.get('area') == user_area else '' }}" data-tooltip="{{ user_area }}">
                             <i class="fas fa-bullseye"></i>
-                            <span>{{ current_user_obj.area_responsavel }}</span>
+                            <span>{{ user_area }}</span>
                         </a>
                     </li>
+                    {% endfor %}
                     {% else %}
                     <!-- Links de Áreas (quando o usuário não tem área específica ou é admin sem área específica) -->
                     {% for area_choice in AREAS_RESPONSAVEIS_CHOICES %}
@@ -186,7 +200,7 @@
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid">
                     {% if current_user_obj %}
-                    <button id="sidebarToggle" class="toggle-sidebar-btn">
+                    <button id="sidebarToggle" class="toggle-sidebar-btn d-md-none">
                         <i class="fas fa-bars"></i>
                     </button>
                     
@@ -465,6 +479,7 @@
             const sidebar = document.getElementById('sidebar');
             const content = document.getElementById('content');
             const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebarToggleArrow = document.getElementById('sidebarToggleArrow');
             const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
             const mobileMenuOverlay = document.querySelector('.mobile-menu-overlay');
             const loadingOverlay = document.querySelector('.loading-overlay');
@@ -478,6 +493,29 @@
 
             // Adicionar classe para prevenir animações durante carregamento
             body.classList.add('loading-active');
+            
+            // Restaurar estado do menu do localStorage (apenas desktop)
+            if (sidebar && isUserLoggedIn && window.innerWidth >= 768) {
+                const sidebarState = localStorage.getItem('sidebarCollapsed');
+                console.log('Estado do menu carregado:', sidebarState);
+                if (sidebarState === 'true') {
+                    sidebar.classList.add('collapsed');
+                    content.classList.add('expanded');
+                    body.classList.add('sidebar-collapsed');
+                    console.log('Menu restaurado como COLAPSADO');
+                } else {
+                    console.log('Menu restaurado como EXPANDIDO (padrão)');
+                }
+            }
+            
+            // Função para salvar estado do menu
+            function saveSidebarState() {
+                if (window.innerWidth >= 768) {
+                    const isCollapsed = sidebar.classList.contains('collapsed');
+                    localStorage.setItem('sidebarCollapsed', isCollapsed.toString());
+                    console.log('Estado do menu salvo:', isCollapsed.toString());
+                }
+            }
             
             // Função para mostrar overlay de carregamento
             function showLoadingOverlay() {
@@ -525,6 +563,29 @@
                         } else {
                             body.classList.remove('sidebar-collapsed');
                         }
+                        
+                        // Salvar estado
+                        saveSidebarState();
+                    }
+                });
+            }
+            
+            // Evento de clique no botão de seta (desktop)
+            if (sidebarToggleArrow) {
+                sidebarToggleArrow.addEventListener('click', function() {
+                    if (window.innerWidth >= 768 && isUserLoggedIn) {
+                        sidebar.classList.toggle('collapsed');
+                        content.classList.toggle('expanded');
+                        
+                        // Adicionar/remover classe no body para controlar o skeleton
+                        if (sidebar.classList.contains('collapsed')) {
+                            body.classList.add('sidebar-collapsed');
+                        } else {
+                            body.classList.remove('sidebar-collapsed');
+                        }
+                        
+                        // Salvar estado
+                        saveSidebarState();
                     }
                 });
             }
@@ -600,11 +661,9 @@
                             sidebar.classList.add('collapsed');
                             content.classList.add('expanded');
                         }
-                    } else if (window.innerWidth > 992) {
-                        sidebar.classList.remove('collapsed');
-                        content.classList.remove('expanded');
-                        body.classList.remove('sidebar-collapsed'); // Remover classe do body
                     }
+                    // Removido o else if que forçava expansão em telas grandes
+                    // O estado agora é controlado apenas pelo localStorage
                 }
             }
             

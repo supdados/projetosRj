@@ -10,14 +10,37 @@ class User(db.Model):
     password_hash = db.Column(db.String(200), nullable=False) # Aumentado para acomodar hashes mais longos
     name = db.Column(db.String(120), nullable=False)
     orgao = db.Column(db.String(100), nullable=True)
-    area_responsavel = db.Column(db.String(100), nullable=True) # Pode ser nulo para admin geral
+    area_responsavel = db.Column(db.String(100), nullable=True) # DEPRECATED: mantido para compatibilidade durante migração
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Relacionamento com múltiplas áreas
+    areas = db.relationship('UserArea', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def get_areas(self):
+        """Retorna lista de strings com as áreas do usuário"""
+        return [ua.area for ua in self.areas]
+    
+    def has_access_to_area(self, area):
+        """Verifica se o usuário tem acesso a uma área específica"""
+        if self.is_admin:
+            return True
+        return area in self.get_areas()
+    
+    def set_areas(self, area_list):
+        """Define as áreas do usuário. Recebe uma lista de strings."""
+        # Remove áreas antigas
+        UserArea.query.filter_by(user_id=self.id).delete()
+        # Adiciona novas áreas
+        for area in area_list:
+            if area:  # Ignora strings vazias
+                user_area = UserArea(user_id=self.id, area=area)
+                db.session.add(user_area)
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -32,6 +55,15 @@ class Project(db.Model):
     observacao = db.Column(db.Text)
     objetivo_id = db.Column(db.Integer, db.ForeignKey('objetivo.id'), nullable=True)
     resultado_esperado_id = db.Column(db.Integer, db.ForeignKey('resultado_esperado.id'), nullable=True)
+    
+    # Novos campos
+    special_project = db.Column(db.String(20), nullable=True)  # 'ABEP' ou 'TCE'
+    sei_process = db.Column(db.String(50), nullable=True)  # Formato: SEI-000000/000000/0000
+    short_description = db.Column(db.Text, nullable=True)  # Descrição curta para Informações Básicas
+    delivery_type = db.Column(db.String(50), nullable=True)  # Sistema, Painel, Norma, etc.
+    github_link = db.Column(db.String(500), nullable=True)  # Link do Github
+    documentation_link = db.Column(db.String(500), nullable=True)  # Link da Documentação
+    
     etapas = db.relationship('Etapa', backref='project', lazy=True, cascade="all, delete-orphan", order_by="Etapa.ordem")
     objetivo = db.relationship('Objetivo', backref='projetos')
     resultado_esperado = db.relationship('ResultadoEsperado', backref='projetos')
@@ -54,6 +86,13 @@ class Project(db.Model):
             return None
         datas_fim_etapas = [etapa.data_fim for etapa in self.etapas if etapa.data_fim]
         return max(datas_fim_etapas) if datas_fim_etapas else None
+
+    @property
+    def todas_etapas_concluidas(self):
+        """Verifica se todas as etapas do projeto estão iniciadas e concluídas"""
+        if not self.etapas:  # Se não há etapas, retorna False
+            return False
+        return all(etapa.iniciada and etapa.done for etapa in self.etapas)
 
     def __repr__(self):
         return f'<Project {self.titulo}>'
@@ -122,8 +161,88 @@ class StageTemplateItem(db.Model):
     __tablename__ = 'StageTemplateItem'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
+    duration_days = db.Column(db.Integer, nullable=False, default=1)  # Duração em dias
     order = db.Column(db.Integer, nullable=False)
     templateId = db.Column(db.Integer, db.ForeignKey('StageTemplate.id'), nullable=False)
 
     def __repr__(self):
         return f'<StageTemplateItem {self.name}>'
+
+class UserArea(db.Model):
+    """Tabela de relacionamento para permitir múltiplas áreas por usuário"""
+    __tablename__ = 'user_areas'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    area = db.Column(db.String(100), nullable=False)
+
+    def __repr__(self):
+        return f'<UserArea user_id={self.user_id} area={self.area}>'
+
+class ProjectHistory(db.Model):
+    """Tabela de auditoria/histórico de ações em projetos"""
+    __tablename__ = 'project_history'
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    action_type = db.Column(db.String(50), nullable=False)  # 'create', 'edit', 'delete', 'add_etapa', etc
+    action_description = db.Column(db.Text, nullable=False)  # Descrição legível da ação
+    old_value = db.Column(db.Text, nullable=True)  # Valor anterior (JSON ou texto)
+    new_value = db.Column(db.Text, nullable=True)  # Novo valor (JSON ou texto)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    
+    # Relacionamentos
+    project = db.relationship('Project', backref=db.backref('history', cascade='all, delete-orphan'))
+    user = db.relationship('User', backref='project_actions')
+
+    def __repr__(self):
+        return f'<ProjectHistory {self.action_type} by user {self.user_id} at {self.timestamp}>'
+
+class Task(db.Model):
+    """Modelo para Tarefas - podem ou não estar associadas a projetos"""
+    __tablename__ = 'task'
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(200), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)  # Opcional
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    
+    # Relacionamentos
+    project = db.relationship('Project', backref=db.backref('tasks', lazy=True))
+    created_by = db.relationship('User', backref='created_tasks')
+    items = db.relationship('TaskItem', backref='task', lazy=True, cascade='all, delete-orphan', order_by='TaskItem.ordem')
+    
+    def __repr__(self):
+        return f'<Task {self.titulo}>'
+
+class TaskItem(db.Model):
+    """Modelo para Itens de Tarefa - cada tarefa pode ter vários itens"""
+    __tablename__ = 'task_item'
+    id = db.Column(db.Integer, primary_key=True)
+    descricao = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='programado')  # programado, em_andamento, validacao, finalizado
+    responsavel = db.Column(db.String(100), nullable=True)
+    ordem = db.Column(db.Integer, nullable=False, default=0)  # Para ordenação dos itens
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    
+    # Comentários do item (após criação do item)
+    comments = db.relationship('TaskItemComment', backref='task_item', lazy=True, cascade='all, delete-orphan', order_by='TaskItemComment.created_at')
+    
+    def __repr__(self):
+        return f'<TaskItem {self.descricao[:50]}>'
+
+
+class TaskItemComment(db.Model):
+    """Comentários sobre um item de tarefa - cada item pode ter vários comentários"""
+    __tablename__ = 'task_item_comment'
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    task_item_id = db.Column(db.Integer, db.ForeignKey('task_item.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.utcnow, nullable=True)  # Apenas preenchido quando o comentário for editado
+    
+    author = db.relationship('User', backref='task_item_comments')
+    
+    def __repr__(self):
+        return f'<TaskItemComment {self.id} by user {self.user_id}>'

@@ -2,14 +2,52 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 import datetime
 import os
 from functools import wraps
-from models import db, User, Project, Etapa, Objetivo, ResultadoEsperado, Indicador, IndicadorProjeto, StageTemplate, StageTemplateItem
+from zoneinfo import ZoneInfo
+from models import db, User, Project, Etapa, Objetivo, ResultadoEsperado, Indicador, IndicadorProjeto, StageTemplate, StageTemplateItem, UserArea, ProjectHistory, Task, TaskItem, TaskItemComment
 from werkzeug.security import generate_password_hash # Para editar senha de usuário
 from sqlalchemy.orm import joinedload
 
 main_bp = Blueprint('main', __name__)
 
+# Fuso Brasil para respostas JSON (comentários, etc.)
+TIMEZONE_BR = ZoneInfo('America/Sao_Paulo')
+
+def format_local_time(dt, fmt='%d/%m %H:%M'):
+    """Converte datetime UTC (naive) para horário do Brasil e retorna string."""
+    if dt is None:
+        return None
+    utc = dt.replace(tzinfo=ZoneInfo('UTC')) if dt.tzinfo is None else dt
+    return utc.astimezone(TIMEZONE_BR).strftime(fmt)
+
 # Constante para as opções de áreas (pode ser movida para um config ou detectada do DB no futuro)
 AREAS_RESPONSAVEIS_CHOICES = ["Auditoria", "CHEGAB", "SUPDADOS", "SUBDGD", "SUPEST", "SUPIM", "SUPPAE", "PRODERJ", "ASSESP", "ECENTRAL", "SUBEDD", "VPD", "VPE", "VPT"]
+
+# Função helper para registrar histórico de ações
+def log_project_action(project_id, action_type, description, old_value=None, new_value=None):
+    """
+    Registra uma ação no histórico do projeto
+    
+    Args:
+        project_id: ID do projeto
+        action_type: Tipo da ação ('create', 'edit', 'delete', 'add_etapa', etc)
+        description: Descrição legível da ação
+        old_value: Valor anterior (opcional)
+        new_value: Novo valor (opcional)
+    """
+    try:
+        history_entry = ProjectHistory(
+            project_id=project_id,
+            user_id=g.user.id,
+            action_type=action_type,
+            action_description=description,
+            old_value=old_value,
+            new_value=new_value
+        )
+        db.session.add(history_entry)
+        # Não fazemos commit aqui - será feito pela função que chamou
+    except Exception as e:
+        print(f"Erro ao registrar histórico: {e}")
+        # Não interrompe a operação principal se o log falhar
 
 
 # Rota específica para servir o favicon
@@ -136,15 +174,19 @@ def change_password():
 @login_required
 def dashboard():
     project_query_base = Project.query
-    if not g.user.is_admin and g.user.area_responsavel:
-        project_query_base = project_query_base.filter(Project.area_responsavel == g.user.area_responsavel)
+    if not g.user.is_admin:
+        user_areas = g.user.get_areas()
+        if user_areas:
+            project_query_base = project_query_base.filter(Project.area_responsavel.in_(user_areas))
 
     recent_projects = project_query_base.order_by(Project.id.desc()).limit(9).all()
     
     def count_projects_for_user(filter_expression=None):
         query = Project.query
-        if not g.user.is_admin and g.user.area_responsavel:
-            query = query.filter(Project.area_responsavel == g.user.area_responsavel)
+        if not g.user.is_admin:
+            user_areas = g.user.get_areas()
+            if user_areas:
+                query = query.filter(Project.area_responsavel.in_(user_areas))
         if filter_expression is not None: # Permite SQLAlchemy filter expressions
             query = query.filter(filter_expression)
         return query.count()
@@ -159,8 +201,10 @@ def dashboard():
     num_projects = count_projects_for_user()
 
     etapas_query_base = Etapa.query.join(Project, Etapa.project_id == Project.id)
-    if not g.user.is_admin and g.user.area_responsavel:
-        etapas_query_base = etapas_query_base.filter(Project.area_responsavel == g.user.area_responsavel)
+    if not g.user.is_admin:
+        user_areas = g.user.get_areas()
+        if user_areas:
+            etapas_query_base = etapas_query_base.filter(Project.area_responsavel.in_(user_areas))
     
     num_etapas = etapas_query_base.count()
     num_etapas_concluidas = etapas_query_base.filter(Etapa.done == True).count()
@@ -169,8 +213,10 @@ def dashboard():
     projetos_em_atraso = 0
     
     projetos_vigentes_query = Project.query.filter(Project.status == 'Vigente')
-    if not g.user.is_admin and g.user.area_responsavel:
-        projetos_vigentes_query = projetos_vigentes_query.filter(Project.area_responsavel == g.user.area_responsavel)
+    if not g.user.is_admin:
+        user_areas = g.user.get_areas()
+        if user_areas:
+            projetos_vigentes_query = projetos_vigentes_query.filter(Project.area_responsavel.in_(user_areas))
     
     for projeto in projetos_vigentes_query.all():
         if Etapa.query.filter(Etapa.project_id == projeto.id, Etapa.done == False, Etapa.data_fim < data_atual).count() > 0:
@@ -198,6 +244,14 @@ def list_projects():
     selected_status = request.args.get('status')
     selected_area_filter = request.args.get('area') # Filtro de área do formulário
     selected_atraso = request.args.get('atraso')
+    selected_special_project = request.args.get('special_project')  # Novo filtro
+    selected_delivery_type = request.args.get('delivery_type')  # Novo filtro
+    selected_objetivo = request.args.get('objetivo')  # Novo filtro
+    search_query = request.args.get('search', '').strip()  # Busca
+    
+    # Paginação
+    page = request.args.get('page', 1, type=int)
+    per_page = 40
 
     # Se nenhum status for especificado na URL, define 'Vigente' como padrão.
     # A verificação `is None` é importante para permitir que o usuário selecione
@@ -208,13 +262,15 @@ def list_projects():
     query = Project.query
 
     # Filtro de área baseado no perfil do usuário E no filtro do formulário
-    if not g.user.is_admin and g.user.area_responsavel:
-        query = query.filter(Project.area_responsavel == g.user.area_responsavel)
-        # Se o usuário não-admin aplicou um filtro de área, e esse filtro é diferente da sua área,
-        # o filtro da URL será ignorado, pois a query base já está restrita à área dele.
-        # Se o filtro da URL for igual à área dele, é redundante mas inofensivo.
-        # Atualizamos selected_area_filter para refletir a área efetivamente filtrada para o usuário.
-        selected_area_filter = g.user.area_responsavel
+    if not g.user.is_admin:
+        user_areas = g.user.get_areas()
+        if user_areas:
+            # Usuário não-admin com áreas: filtra pelas suas áreas
+            query = query.filter(Project.area_responsavel.in_(user_areas))
+            # Se o usuário aplicou um filtro de área e essa área está nas suas áreas, aplica o filtro
+            if selected_area_filter and selected_area_filter in user_areas:
+                query = query.filter(Project.area_responsavel == selected_area_filter)
+            # Se não, mostra todas as suas áreas (já filtrado acima)
     elif selected_area_filter and selected_area_filter != "": # Admin pode filtrar por qualquer área
         query = query.filter(Project.area_responsavel == selected_area_filter)
     # Se for admin e não houver filtro de área, mostra todas as áreas.
@@ -223,6 +279,23 @@ def list_projects():
         query = query.filter(Project.prioridade == selected_priority)
     if selected_status and selected_status != "":
         query = query.filter(Project.status == selected_status)
+    if selected_special_project and selected_special_project != "":
+        query = query.filter(Project.special_project == selected_special_project)
+    if selected_delivery_type and selected_delivery_type != "":
+        query = query.filter(Project.delivery_type == selected_delivery_type)
+    if selected_objetivo and selected_objetivo != "":
+        query = query.filter(Project.objetivo_id == int(selected_objetivo))
+    
+    # Filtro de busca (título, área, órgão)
+    if search_query:
+        search_pattern = f"%{search_query}%"
+        query = query.filter(
+            db.or_(
+                Project.titulo.ilike(search_pattern),
+                Project.area_responsavel.ilike(search_pattern),
+                Project.orgao.ilike(search_pattern)
+            )
+        )
         
     # Aplicar filtros de DB antes de filtrar por atraso (que é feito em Python)
     projects_after_db_filters = query.order_by(Project.id).all()
@@ -242,14 +315,26 @@ def list_projects():
                     filtered_by_delay.append(projeto)
                 elif selected_atraso == "no_prazo" and etapas_atrasadas_count == 0:
                     filtered_by_delay.append(projeto)
-        all_projects_to_display = filtered_by_delay
+        all_projects_filtered = filtered_by_delay
     else:
-        all_projects_to_display = projects_after_db_filters
+        all_projects_filtered = projects_after_db_filters
+    
+    # Aplicar paginação manualmente (já que alguns filtros são em Python)
+    total_projects = len(all_projects_filtered)
+    total_pages = (total_projects + per_page - 1) // per_page  # Ceiling division
+    
+    # Calcular índices para slice
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    
+    # Paginar os projetos
+    projects_paginated = all_projects_filtered[start_idx:end_idx]
     
     # Opções para os dropdowns de filtro
-    # Áreas: se não for admin, só sua área (se tiver). Se admin, todas as áreas com projetos + áreas padrão.
-    if not g.user.is_admin and g.user.area_responsavel:
-        areas_options_for_dropdown = [g.user.area_responsavel]
+    # Áreas: se não for admin, suas áreas (se tiver). Se admin, todas as áreas com projetos + áreas padrão.
+    if not g.user.is_admin:
+        user_areas = g.user.get_areas()
+        areas_options_for_dropdown = sorted(user_areas) if user_areas else []
     else:
         project_areas_in_db = set(p.area_responsavel for p in Project.query.all() if p.area_responsavel)
         areas_options_for_dropdown = sorted(list(project_areas_in_db.union(set(AREAS_RESPONSAVEIS_CHOICES))))
@@ -257,20 +342,54 @@ def list_projects():
     priorities_options = sorted(list(set(p.prioridade for p in Project.query.all() if p.prioridade)))
     statuses_options = sorted(list(set(p.status for p in Project.query.all() if p.status)))
     atrasos_options = [("no_prazo", "No prazo"), ("atrasado", "Atrasado")]
-    objetivos = Objetivo.query.all() # Para o modal de adicionar projeto
+    objetivos = Objetivo.query.all() # Para o modal de adicionar projeto e filtro
+    
+    # Novas opções para filtros
+    special_projects_options = ['ABEP', 'TCE']
+    delivery_types_options = ['Sistema', 'Painel', 'Norma', 'Instrumento de parceria', 'Fluxo Processual', 'Outro']
+
+    # Verificar se há filtros ativos (para mostrar botão "Limpar")
+    has_active_filters = False
+    if search_query:
+        has_active_filters = True
+    if selected_priority:
+        has_active_filters = True
+    if selected_status and selected_status != 'Vigente':  # Vigente é o padrão
+        has_active_filters = True
+    if selected_atraso:
+        has_active_filters = True
+    if selected_special_project:
+        has_active_filters = True
+    if selected_delivery_type:
+        has_active_filters = True
+    if selected_objetivo:
+        has_active_filters = True
+    # Área só conta como filtro ativo se o usuário for admin
+    if g.user.is_admin and selected_area_filter:
+        has_active_filters = True
 
     return render_template(
         'projects_list.html', 
-        projects=all_projects_to_display,
+        projects=projects_paginated,
+        page=page,
+        total_pages=total_pages,
+        total_projects=total_projects,
+        search_query=search_query,
         selected_priority=selected_priority,
         selected_status=selected_status,
         selected_area=selected_area_filter, 
-        selected_atraso=selected_atraso, 
+        selected_atraso=selected_atraso,
+        selected_special_project=selected_special_project,
+        selected_delivery_type=selected_delivery_type,
+        selected_objetivo=selected_objetivo,
         areas=areas_options_for_dropdown,
         priorities=priorities_options,
         statuses=statuses_options,
         atrasos_options=atrasos_options,
-        objetivos=objetivos, 
+        objetivos=objetivos,
+        special_projects_options=special_projects_options,
+        delivery_types_options=delivery_types_options,
+        has_active_filters=has_active_filters,
         AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES
     )
 
@@ -288,11 +407,12 @@ def list_projetos_pendentes():
     if g.user.is_admin:
         if selected_area_filter:
             query_projetos_base = query_projetos_base.filter(Project.area_responsavel == selected_area_filter)
-    elif g.user.area_responsavel: # Se não for admin, filtra pela sua própria área
-        query_projetos_base = query_projetos_base.filter(Project.area_responsavel == g.user.area_responsavel)
-        # Para não-admins, selected_area_filter não é usado, mas a query está correta
-    else: # Não-admin sem área não deve ver nenhum projeto
-        query_projetos_base = query_projetos_base.filter(Project.id == -1) 
+    else: # Se não for admin, filtra pelas suas áreas
+        user_areas = g.user.get_areas()
+        if user_areas:
+            query_projetos_base = query_projetos_base.filter(Project.area_responsavel.in_(user_areas))
+        else: # Não-admin sem área não deve ver nenhum projeto
+            query_projetos_base = query_projetos_base.filter(Project.id == -1) 
 
     projetos_vigentes = query_projetos_base.all()
 
@@ -366,6 +486,16 @@ def add_project():
             return redirect(request.referrer or url_for('main.dashboard'))
 
         area_responsavel = request.form.get('project_area_responsavel')
+        
+        # Verificação de permissão: usuário pode criar projeto apenas em suas áreas
+        if not g.user.is_admin:
+            if not area_responsavel:
+                flash('Você deve selecionar uma área para o projeto.', 'danger')
+                return redirect(request.referrer or url_for('main.dashboard'))
+            if not g.user.has_access_to_area(area_responsavel):
+                flash('Você não tem permissão para criar projetos nesta área.', 'danger')
+                return redirect(request.referrer or url_for('main.dashboard'))
+        
         orgao = request.form.get('project_orgao')
         prioridade = request.form.get('project_prioridade')
         objetivo_id = request.form.get('project_objetivo')
@@ -373,8 +503,18 @@ def add_project():
         observacao = request.form.get('project_observacao')
         indicador_ids = request.form.getlist('project_indicadores')
         
+        # Novos campos
+        special_project = request.form.get('project_special_project') or None
+        sei_process = request.form.get('project_sei_process') or None
+        short_description = request.form.get('project_short_description') or None
+        delivery_type = request.form.get('project_delivery_type') or None
+        github_link = request.form.get('project_github_link') or None
+        documentation_link = request.form.get('project_documentation_link') or None
+        
         # Etapas importadas do modelo
         etapa_descricoes = request.form.getlist('etapa_descricao')
+        etapa_durations = request.form.getlist('etapa_duration')  # Durações em dias
+        project_start_date = request.form.get('project_start_date')  # Data de início do projeto
 
         new_project = Project(
             titulo=titulo,
@@ -384,18 +524,48 @@ def add_project():
             objetivo_id=int(objetivo_id) if objetivo_id else None,
             resultado_esperado_id=int(resultado_esperado_id) if resultado_esperado_id else None,
             observacao=observacao,
-            status='Vigente'  # Definir status padrão
+            status='Vigente',  # Definir status padrão
+            special_project=special_project,
+            sei_process=sei_process,
+            short_description=short_description,
+            delivery_type=delivery_type,
+            github_link=github_link,
+            documentation_link=documentation_link
         )
         db.session.add(new_project)
         db.session.flush()  # Para obter o new_project.id para as etapas e indicadores
 
-        # Adicionar as etapas ao novo projeto
+        # Adicionar as etapas ao novo projeto com cálculo automático de datas
+        current_date = None
+        if project_start_date:
+            try:
+                from datetime import datetime, timedelta
+                current_date = datetime.strptime(project_start_date, '%Y-%m-%d').date()
+            except:
+                current_date = None
+        
         for i, descricao in enumerate(etapa_descricoes):
             if descricao.strip():  # Apenas adiciona se não estiver vazio
+                data_inicio = None
+                data_fim = None
+                
+                # Se há data de início e duração, calcular automaticamente
+                if current_date and i < len(etapa_durations) and etapa_durations[i]:
+                    try:
+                        from datetime import timedelta
+                        duration = int(etapa_durations[i])
+                        data_inicio = current_date
+                        data_fim = current_date + timedelta(days=duration - 1)  # -1 porque o início conta como dia 1
+                        current_date = data_fim + timedelta(days=1)  # Próxima etapa começa no dia seguinte
+                    except:
+                        pass
+                
                 nova_etapa = Etapa(
                     descricao=descricao,
                     project_id=new_project.id,
-                    ordem=i
+                    ordem=i,
+                    data_inicio=data_inicio,
+                    data_fim=data_fim
                 )
                 db.session.add(nova_etapa)
 
@@ -405,6 +575,13 @@ def add_project():
                 indicador_projeto = IndicadorProjeto(project_id=new_project.id, indicador_id=int(ind_id))
                 db.session.add(indicador_projeto)
 
+        # Registrar no histórico
+        log_project_action(
+            project_id=new_project.id,
+            action_type='create',
+            description=f'Criou o projeto "{titulo}"'
+        )
+        
         db.session.commit()
         
         flash('Projeto adicionado com sucesso!', 'success')
@@ -420,7 +597,7 @@ def add_project():
 @login_required
 def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
-    if not g.user.is_admin and g.user.area_responsavel and project.area_responsavel != g.user.area_responsavel:
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
         flash('Você não tem permissão para visualizar este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
 
@@ -434,7 +611,7 @@ def project_detail(project_id):
 @login_required
 def edit_project(project_id):
     project_to_edit = Project.query.get_or_404(project_id)
-    if not g.user.is_admin and g.user.area_responsavel and project_to_edit.area_responsavel != g.user.area_responsavel:
+    if not g.user.is_admin and not g.user.has_access_to_area(project_to_edit.area_responsavel):
         flash('Você não tem permissão para editar este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
 
@@ -450,20 +627,53 @@ def edit_project(project_id):
     indicadores_do_projeto_ids = [ip.indicador_id for ip in project_to_edit.indicadores]
 
     if request.method == 'POST':
-        project_to_edit.titulo = request.form.get('project_titulo')
+        # Capturar valores anteriores para o histórico
+        changes = []
+        old_titulo = project_to_edit.titulo
+        
+        new_titulo = request.form.get('project_titulo')
+        if old_titulo != new_titulo:
+            changes.append(f'título de "{old_titulo}" para "{new_titulo}"')
+        project_to_edit.titulo = new_titulo
         
         # Atualiza o órgão do projeto com o valor do formulário, independentemente do tipo de usuário.
-        project_to_edit.orgao = request.form.get('project_orgao')
+        old_orgao = project_to_edit.orgao
+        new_orgao = request.form.get('project_orgao')
+        if old_orgao != new_orgao:
+            changes.append(f'órgão de "{old_orgao or "vazio"}" para "{new_orgao or "vazio"}"')
+        project_to_edit.orgao = new_orgao
 
         # Apenas admin pode alterar área diretamente no formulário
         if g.user.is_admin:
-            project_to_edit.area_responsavel = request.form.get('project_area_responsavel')
+            old_area = project_to_edit.area_responsavel
+            new_area = request.form.get('project_area_responsavel')
+            if old_area != new_area:
+                changes.append(f'área responsável de "{old_area}" para "{new_area}"')
+            project_to_edit.area_responsavel = new_area
         # Se não for admin, a área não é alterada por este formulário (já viria desabilitada no HTML)
         # O órgão agora é atualizado para todos os usuários com permissão de edição.
 
-        project_to_edit.prioridade = request.form.get('project_prioridade')
-        project_to_edit.status = request.form.get('project_status')
+        old_prioridade = project_to_edit.prioridade
+        new_prioridade = request.form.get('project_prioridade')
+        if old_prioridade != new_prioridade:
+            changes.append(f'prioridade de "{old_prioridade}" para "{new_prioridade}"')
+        project_to_edit.prioridade = new_prioridade
+        
+        old_status = project_to_edit.status
+        new_status = request.form.get('project_status')
+        if old_status != new_status:
+            changes.append(f'status de "{old_status}" para "{new_status}"')
+        project_to_edit.status = new_status
+        
         project_to_edit.observacao = request.form.get('project_observacao')
+        
+        # Processar novos campos
+        project_to_edit.special_project = request.form.get('project_special_project') or None
+        project_to_edit.sei_process = request.form.get('project_sei_process') or None
+        project_to_edit.short_description = request.form.get('project_short_description') or None
+        project_to_edit.delivery_type = request.form.get('project_delivery_type') or None
+        project_to_edit.github_link = request.form.get('project_github_link') or None
+        project_to_edit.documentation_link = request.form.get('project_documentation_link') or None
         
         objetivo_id_form = request.form.get('project_objetivo')
         project_to_edit.objetivo_id = int(objetivo_id_form) if objetivo_id_form else None
@@ -478,6 +688,15 @@ def edit_project(project_id):
             if ind_id_str: # Garante que não seja string vazia
                 indicador_projeto_novo = IndicadorProjeto(project_id=project_id, indicador_id=int(ind_id_str))
                 db.session.add(indicador_projeto_novo)
+        
+        # Registrar no histórico
+        if changes:
+            change_desc = ', '.join(changes)
+            log_project_action(
+                project_id=project_id,
+                action_type='edit',
+                description=f'Editou o projeto: alterou {change_desc}'
+            )
         
         db.session.commit()
         flash(f'Projeto "{project_to_edit.titulo}" atualizado com sucesso!', 'success')
@@ -494,6 +713,140 @@ def edit_project(project_id):
         indicadores_do_projeto=indicadores_do_projeto_ids # Lista de IDs dos indicadores já associados
     )
 
+@main_bp.route('/project/<int:project_id>/edit_data', methods=['GET'])
+@login_required
+def get_project_edit_data(project_id):
+    """Endpoint AJAX para buscar dados necessários para edição"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Verificar permissão
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+        return jsonify({'success': False, 'message': 'Você não tem permissão para editar este projeto.'}), 403
+    
+    try:
+        objetivos = Objetivo.query.all()
+        resultados_por_objetivo = {}
+        indicadores_por_resultado = {}
+        
+        for obj in objetivos:
+            resultados_por_objetivo[obj.id] = [
+                {'id': r.id, 'descricao': r.descricao} for r in obj.resultados
+            ]
+        
+        todos_resultados_db = ResultadoEsperado.query.all()
+        for res in todos_resultados_db:
+            indicadores_por_resultado[res.id] = [
+                {'id': i.id, 'descricao': i.descricao} for i in res.indicadores
+            ]
+        
+        indicadores_do_projeto_ids = [ip.indicador_id for ip in project.indicadores]
+        
+        return jsonify({
+            'success': True,
+            'objetivos': [{'id': obj.id, 'descricao': obj.descricao} for obj in objetivos],
+            'resultados_por_objetivo': resultados_por_objetivo,
+            'indicadores_por_resultado': indicadores_por_resultado,
+            'indicadores_do_projeto': indicadores_do_projeto_ids,
+            'areas_responsaveis': AREAS_RESPONSAVEIS_CHOICES,
+            'is_admin': g.user.is_admin
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao buscar dados: {str(e)}'}), 500
+
+@main_bp.route('/project/<int:project_id>/update_inline', methods=['POST'])
+@login_required
+def update_project_inline(project_id):
+    """Endpoint AJAX para atualizar projeto inline"""
+    project_to_edit = Project.query.get_or_404(project_id)
+    
+    # Verificar permissão
+    if not g.user.is_admin and not g.user.has_access_to_area(project_to_edit.area_responsavel):
+        return jsonify({'success': False, 'message': 'Você não tem permissão para editar este projeto.'}), 403
+    
+    try:
+        data = request.get_json()
+        changes = []
+        
+        # Atualizar campos básicos
+        if 'titulo' in data and data['titulo'] != project_to_edit.titulo:
+            changes.append(f'título de "{project_to_edit.titulo}" para "{data["titulo"]}"')
+            project_to_edit.titulo = data['titulo']
+        
+        if 'status' in data and data['status'] != project_to_edit.status:
+            changes.append(f'status de "{project_to_edit.status}" para "{data["status"]}"')
+            project_to_edit.status = data['status']
+        
+        if 'prioridade' in data and data['prioridade'] != project_to_edit.prioridade:
+            changes.append(f'prioridade de "{project_to_edit.prioridade}" para "{data["prioridade"]}"')
+            project_to_edit.prioridade = data['prioridade']
+        
+        if 'orgao' in data:
+            old_orgao = project_to_edit.orgao or ""
+            new_orgao = data['orgao'] or ""
+            if old_orgao != new_orgao:
+                changes.append(f'órgão de "{old_orgao or "vazio"}" para "{new_orgao or "vazio"}"')
+            project_to_edit.orgao = data['orgao'] or None
+        
+        # Apenas admin pode alterar área
+        if g.user.is_admin and 'area_responsavel' in data:
+            if data['area_responsavel'] != project_to_edit.area_responsavel:
+                changes.append(f'área de "{project_to_edit.area_responsavel}" para "{data["area_responsavel"]}"')
+                project_to_edit.area_responsavel = data['area_responsavel']
+        
+        # Novos campos
+        if 'special_project' in data:
+            project_to_edit.special_project = data['special_project'] or None
+        
+        if 'sei_process' in data:
+            project_to_edit.sei_process = data['sei_process'] or None
+        
+        if 'short_description' in data:
+            project_to_edit.short_description = data['short_description'] or None
+        
+        if 'delivery_type' in data:
+            project_to_edit.delivery_type = data['delivery_type'] or None
+        
+        if 'github_link' in data:
+            project_to_edit.github_link = data['github_link'] or None
+        
+        if 'documentation_link' in data:
+            project_to_edit.documentation_link = data['documentation_link'] or None
+        
+        if 'observacao' in data:
+            project_to_edit.observacao = data['observacao'] or None
+        
+        # Objetivo, Resultado e Indicadores
+        if 'objetivo_id' in data:
+            project_to_edit.objetivo_id = int(data['objetivo_id']) if data['objetivo_id'] else None
+        
+        if 'resultado_esperado_id' in data:
+            project_to_edit.resultado_esperado_id = int(data['resultado_esperado_id']) if data['resultado_esperado_id'] else None
+        
+        if 'indicadores_ids' in data:
+            # Atualizar indicadores
+            IndicadorProjeto.query.filter_by(project_id=project_id).delete()
+            for ind_id in data['indicadores_ids'][:4]:  # Limita a 4
+                if ind_id:
+                    indicador_projeto_novo = IndicadorProjeto(project_id=project_id, indicador_id=int(ind_id))
+                    db.session.add(indicador_projeto_novo)
+        
+        # Registrar no histórico
+        if changes:
+            change_desc = ', '.join(changes)
+            log_project_action(
+                project_id=project_id,
+                action_type='edit',
+                description=f'Editou o projeto (inline): alterou {change_desc}'
+            )
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Projeto atualizado com sucesso!'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao atualizar projeto: {str(e)}'}), 500
+
 @main_bp.route('/project/<int:project_id>/delete', methods=['POST'])
 @login_required
 # @admin_required # Decida se apenas admin pode excluir. Se não, a lógica abaixo se aplica.
@@ -501,23 +854,64 @@ def delete_project(project_id):
     project_to_delete = Project.query.get_or_404(project_id)
 
     # Permissão para excluir: Admin pode excluir qualquer um.
-    # Usuário não-admin só pode excluir projetos de sua própria área.
-    if not g.user.is_admin:
-        if not g.user.area_responsavel or project_to_delete.area_responsavel != g.user.area_responsavel:
-            flash('Você não tem permissão para excluir este projeto.', 'danger')
-            return redirect(url_for('main.list_projects'))
-            
+    # Usuário não-admin só pode excluir projetos de suas áreas.
+    if not g.user.is_admin and not g.user.has_access_to_area(project_to_delete.area_responsavel):
+        flash('Você não tem permissão para excluir este projeto.', 'danger')
+        return redirect(url_for('main.list_projects'))
+    
+    # Registrar no histórico antes de excluir
+    project_titulo = project_to_delete.titulo
+    log_project_action(
+        project_id=project_to_delete.id,
+        action_type='delete',
+        description=f'Excluiu o projeto "{project_titulo}"'
+    )
+    
     db.session.delete(project_to_delete)
     db.session.commit()
-    flash(f'Projeto "{project_to_delete.titulo}" e suas etapas foram excluídos.', 'success')
+    flash(f'Projeto "{project_titulo}" e suas etapas foram excluídos.', 'success')
     return redirect(url_for('main.list_projects'))
+
+@main_bp.route('/project/<int:project_id>/concluir', methods=['POST'])
+@login_required
+def concluir_project(project_id):
+    project = Project.query.get_or_404(project_id)
+    
+    # Verificar permissão
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+        flash('Você não tem permissão para concluir este projeto.', 'danger')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+    
+    # Verificar se o projeto está Vigente
+    if project.status != 'Vigente':
+        flash('Apenas projetos com status "Vigente" podem ser concluídos.', 'warning')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+    
+    # Verificar se todas as etapas estão concluídas
+    if not project.todas_etapas_concluidas:
+        flash('Todas as etapas devem estar iniciadas e concluídas para finalizar o projeto.', 'warning')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+    
+    # Atualizar status
+    project.status = 'Finalizado'
+    
+    # Registrar no histórico
+    log_project_action(
+        project_id=project.id,
+        action_type='finalize',
+        description=f'Concluiu o projeto "{project.titulo}"'
+    )
+    
+    db.session.commit()
+    flash(f'Projeto "{project.titulo}" foi concluído com sucesso!', 'success')
+    return redirect(url_for('main.project_detail', project_id=project_id))
 
 # --- Rotas de Etapa (com verificação de permissão no projeto pai) ---
 @main_bp.route('/project/<int:project_id>/etapa/add', methods=['POST'])
 @login_required
 def add_etapa(project_id):
     project = Project.query.get_or_404(project_id)
-    if not g.user.is_admin and g.user.area_responsavel and project.area_responsavel != g.user.area_responsavel:
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
         flash('Você não tem permissão para adicionar etapas a este projeto.', 'danger')
         return redirect(url_for('main.project_detail', project_id=project_id)) # Ou para list_projects
 
@@ -550,8 +944,91 @@ def add_etapa(project_id):
         comentarios=comentarios, project_id=project.id, ordem=nova_ordem  # Adicionado ordem
     )
     db.session.add(new_etapa)
+    
+    # Registrar no histórico
+    log_project_action(
+        project_id=project.id,
+        action_type='add_etapa',
+        description=f'Adicionou a etapa "{descricao}"'
+    )
+    
     db.session.commit()
     flash('Etapa adicionada com sucesso!', 'success')
+    return redirect(url_for('main.project_detail', project_id=project_id))
+
+@main_bp.route('/project/<int:project_id>/import_model', methods=['POST'])
+@login_required
+def import_model_to_project(project_id):
+    """Importa etapas de um modelo para um projeto existente"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Verificar permissão
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+        flash('Você não tem permissão para importar modelos neste projeto.', 'danger')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+    
+    template_id = request.form.get('template_id')
+    start_date_str = request.form.get('start_date')
+    
+    if not template_id or not start_date_str:
+        flash('Selecione um modelo e defina a data de início.', 'warning')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+    
+    # Buscar o modelo
+    template = StageTemplate.query.get_or_404(template_id)
+    
+    if not template.items:
+        flash('Este modelo não possui etapas.', 'warning')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+    
+    try:
+        from datetime import datetime, timedelta
+        
+        # Converter data de início
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        current_date = start_date
+        
+        # Calcular a próxima ordem disponível
+        ultima_etapa = Etapa.query.with_parent(project).order_by(Etapa.ordem.desc()).first()
+        ordem_inicial = (ultima_etapa.ordem + 1) if ultima_etapa else 0
+        
+        # Criar etapas baseadas no modelo
+        etapas_criadas = 0
+        for index, item in enumerate(template.items):
+            # Calcular datas
+            data_inicio = current_date
+            data_fim = current_date + timedelta(days=item.duration_days - 1)
+            
+            # Criar etapa
+            nova_etapa = Etapa(
+                descricao=item.name,
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+                project_id=project.id,
+                ordem=ordem_inicial + index,
+                iniciada=False,
+                done=False
+            )
+            db.session.add(nova_etapa)
+            etapas_criadas += 1
+            
+            # Próxima etapa começa no dia seguinte ao fim desta
+            current_date = data_fim + timedelta(days=1)
+        
+        # Registrar no histórico
+        log_project_action(
+            project_id=project.id,
+            action_type='import_model',
+            description=f'Importou {etapas_criadas} etapa(s) do modelo "{template.name}"'
+        )
+        
+        db.session.commit()
+        flash(f'{etapas_criadas} etapa(s) importada(s) com sucesso do modelo "{template.name}"!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao importar modelo: {str(e)}', 'danger')
+    
     return redirect(url_for('main.project_detail', project_id=project_id))
 
 @main_bp.route('/etapa/<int:etapa_id>/edit', methods=['GET', 'POST'])
@@ -559,11 +1036,12 @@ def add_etapa(project_id):
 def edit_etapa(etapa_id):
     etapa = Etapa.query.get_or_404(etapa_id)
     project_of_etapa = etapa.project # Projeto pai da etapa
-    if not g.user.is_admin and g.user.area_responsavel and project_of_etapa.area_responsavel != g.user.area_responsavel:
+    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
         flash('Você não tem permissão para editar etapas deste projeto.', 'danger')
         return redirect(url_for('main.project_detail', project_id=project_of_etapa.id))
 
     if request.method == 'POST':
+        old_descricao = etapa.descricao
         etapa.descricao = request.form.get('etapa_descricao')
         etapa.responsavel = request.form.get('etapa_responsavel')
         etapa.comentarios = request.form.get('etapa_comentarios')
@@ -581,6 +1059,13 @@ def edit_etapa(etapa_id):
         data_fim_str = request.form.get('etapa_data_fim')
         etapa.data_fim = datetime.datetime.strptime(data_fim_str, '%Y-%m-%d').date() if data_fim_str else None
         
+        # Registrar no histórico
+        log_project_action(
+            project_id=etapa.project_id,
+            action_type='edit_etapa',
+            description=f'Editou a etapa "{old_descricao}"'
+        )
+        
         db.session.commit()
         flash('Etapa atualizada com sucesso!', 'success')
         return redirect(url_for('main.project_detail', project_id=etapa.project_id))
@@ -594,11 +1079,20 @@ def edit_etapa(etapa_id):
 def delete_etapa(etapa_id):
     etapa_to_delete = Etapa.query.get_or_404(etapa_id)
     project_of_etapa = etapa_to_delete.project
-    if not g.user.is_admin and g.user.area_responsavel and project_of_etapa.area_responsavel != g.user.area_responsavel:
+    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
         flash('Você não tem permissão para excluir etapas deste projeto.', 'danger')
         return redirect(url_for('main.project_detail', project_id=project_of_etapa.id))
 
     project_id_for_redirect = etapa_to_delete.project_id
+    etapa_descricao = etapa_to_delete.descricao
+    
+    # Registrar no histórico
+    log_project_action(
+        project_id=project_id_for_redirect,
+        action_type='delete_etapa',
+        description=f'Excluiu a etapa "{etapa_descricao}"'
+    )
+    
     db.session.delete(etapa_to_delete)
     db.session.commit()
     flash('Etapa excluída com sucesso.', 'success')
@@ -608,7 +1102,7 @@ def delete_etapa(etapa_id):
 @login_required
 def reorder_etapas(project_id):
     project = Project.query.get_or_404(project_id)
-    if not g.user.is_admin and g.user.area_responsavel and project.area_responsavel != g.user.area_responsavel:
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
         return jsonify({'success': False, 'message': 'Você não tem permissão para reordenar etapas deste projeto.'}), 403
 
     data = request.get_json()
@@ -642,11 +1136,20 @@ def reorder_etapas(project_id):
 def toggle_iniciada_etapa(etapa_id):
     etapa = Etapa.query.get_or_404(etapa_id)
     project_of_etapa = etapa.project
-    if not g.user.is_admin and g.user.area_responsavel and project_of_etapa.area_responsavel != g.user.area_responsavel:
+    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
         return jsonify({'success': False, 'message': 'Permissão negada para alterar esta etapa.'}), 403
 
     etapa.iniciada = not etapa.iniciada
     ajax_flash_message = None
+    
+    # Registrar no histórico
+    status_text = 'iniciada' if etapa.iniciada else 'não iniciada'
+    log_project_action(
+        project_id=etapa.project_id,
+        action_type='toggle_iniciada',
+        description=f'Marcou a etapa "{etapa.descricao}" como {status_text}'
+    )
+    
     if not etapa.iniciada and etapa.done: # Se desmarcou iniciada e estava concluída
         etapa.done = False
         ajax_flash_message = 'Etapa marcada como não iniciada e, consequentemente, como não concluída.'
@@ -661,7 +1164,7 @@ def toggle_iniciada_etapa(etapa_id):
 def toggle_etapa(etapa_id): # Renomeada para evitar conflito, mas a URL é a mesma
     etapa = Etapa.query.get_or_404(etapa_id)
     project_of_etapa = etapa.project
-    if not g.user.is_admin and g.user.area_responsavel and project_of_etapa.area_responsavel != g.user.area_responsavel:
+    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
         return jsonify({'success': False, 'message': 'Permissão negada para alterar esta etapa.'}), 403
 
     if not etapa.iniciada and not etapa.done: # Tentando marcar como 'done' sem estar 'iniciada'
@@ -671,6 +1174,15 @@ def toggle_etapa(etapa_id): # Renomeada para evitar conflito, mas a URL é a mes
         })
     
     etapa.done = not etapa.done
+    
+    # Registrar no histórico
+    status_text = 'concluída' if etapa.done else 'não concluída'
+    log_project_action(
+        project_id=etapa.project_id,
+        action_type='toggle_done',
+        description=f'Marcou a etapa "{etapa.descricao}" como {status_text}'
+    )
+    
     db.session.commit()
     return jsonify({
         'success': True, 'etapa_id': etapa.id, 'iniciada': etapa.iniciada, 
@@ -683,7 +1195,7 @@ def update_etapa_field(etapa_id):
     etapa = Etapa.query.get_or_404(etapa_id)
     project_of_etapa = etapa.project
     
-    if not g.user.is_admin and (not g.user.area_responsavel or project_of_etapa.area_responsavel != g.user.area_responsavel):
+    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
         return jsonify({'success': False, 'message': 'Permissão negada.'}), 403
 
     data = request.get_json()
@@ -696,9 +1208,29 @@ def update_etapa_field(etapa_id):
     try:
         response_data = {'success': True}
         
+        # Mapeamento de nomes de campos para exibição
+        field_names = {
+            'descricao': 'descrição',
+            'data_inicio': 'data de início',
+            'data_fim': 'data de fim',
+            'responsavel': 'responsável'
+        }
+        field_display = field_names.get(field, field)
+        
         if field == 'data_inicio':
             old_date = etapa.data_inicio
             new_date = datetime.datetime.strptime(value, '%Y-%m-%d').date() if value else None
+            
+            # Registrar no histórico
+            old_value_str = old_date.strftime('%d/%m/%Y') if old_date else 'vazio'
+            new_value_str = new_date.strftime('%d/%m/%Y') if new_date else 'vazio'
+            log_project_action(
+                project_id=etapa.project_id,
+                action_type='edit_etapa_inline',
+                description=f'Alterou {field_display} da etapa "{etapa.descricao}"',
+                old_value=old_value_str,
+                new_value=new_value_str
+            )
             
             etapa.data_inicio = new_date
             response_data['newValue'] = value
@@ -713,14 +1245,57 @@ def update_etapa_field(etapa_id):
                 response_data['daysDiff'] = delta.days
             
         elif field == 'data_fim':
+            old_date = etapa.data_fim
             new_date = datetime.datetime.strptime(value, '%Y-%m-%d').date() if value else None
+            
+            # Registrar no histórico
+            old_value_str = old_date.strftime('%d/%m/%Y') if old_date else 'vazio'
+            new_value_str = new_date.strftime('%d/%m/%Y') if new_date else 'vazio'
+            log_project_action(
+                project_id=etapa.project_id,
+                action_type='edit_etapa_inline',
+                description=f'Alterou {field_display} da etapa "{etapa.descricao}"',
+                old_value=old_value_str,
+                new_value=new_value_str
+            )
+            
             etapa.data_fim = new_date
             response_data['newValue'] = value
             response_data['displayValue'] = new_date.strftime('%d/%m/%Y') if new_date else '-'
-        else:
-            setattr(etapa, field, value)
-            response_data['newValue'] = value
-            response_data['displayValue'] = value if value else '-'
+            
+        elif field == 'descricao':
+            old_value = etapa.descricao
+            new_value = value
+            
+            # Registrar no histórico
+            log_project_action(
+                project_id=etapa.project_id,
+                action_type='edit_etapa_inline',
+                description=f'Alterou {field_display} da etapa',
+                old_value=old_value or 'vazio',
+                new_value=new_value or 'vazio'
+            )
+            
+            etapa.descricao = new_value
+            response_data['newValue'] = new_value
+            response_data['displayValue'] = new_value if new_value else '-'
+            
+        elif field == 'responsavel':
+            old_value = etapa.responsavel
+            new_value = value
+            
+            # Registrar no histórico
+            log_project_action(
+                project_id=etapa.project_id,
+                action_type='edit_etapa_inline',
+                description=f'Alterou {field_display} da etapa "{etapa.descricao}"',
+                old_value=old_value or 'vazio',
+                new_value=new_value or 'vazio'
+            )
+            
+            etapa.responsavel = new_value
+            response_data['newValue'] = new_value
+            response_data['displayValue'] = new_value if new_value else '-'
         
         db.session.commit()
         return jsonify(response_data)
@@ -729,11 +1304,53 @@ def update_etapa_field(etapa_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': 'Erro ao salvar a alteração.'}), 500
 
+@main_bp.route('/etapa/<int:etapa_id>/comentario', methods=['POST'])
+@login_required
+def update_etapa_comentario(etapa_id):
+    """Endpoint para adicionar/editar/remover comentário de uma etapa via modal."""
+    etapa = Etapa.query.get_or_404(etapa_id)
+    project_of_etapa = etapa.project
+    
+    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
+        return jsonify({'success': False, 'message': 'Permissão negada.'}), 403
+
+    data = request.get_json()
+    comentario = data.get('comentario', '').strip()
+    
+    try:
+        old_comentario = etapa.comentarios or 'vazio'
+        new_comentario = comentario if comentario else 'vazio'
+        
+        # Atualizar o comentário
+        etapa.comentarios = comentario if comentario else None
+        
+        # Registrar no histórico
+        action_description = 'Adicionou comentário' if comentario and old_comentario == 'vazio' else \
+                             'Removeu comentário' if not comentario and old_comentario != 'vazio' else \
+                             'Editou comentário'
+        
+        log_project_action(
+            project_id=etapa.project_id,
+            action_type='edit_etapa_comentario',
+            description=f'{action_description} da etapa "{etapa.descricao}"',
+            old_value=old_comentario,
+            new_value=new_comentario
+        )
+        
+        db.session.commit()
+        
+        message = 'Comentário salvo com sucesso!' if comentario else 'Comentário removido com sucesso!'
+        return jsonify({'success': True, 'message': message})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Erro ao salvar comentário.'}), 500
+
 @main_bp.route('/project/<int:project_id>/cascade_update', methods=['POST'])
 @login_required
 def cascade_date_update(project_id):
     project = Project.query.get_or_404(project_id)
-    if not g.user.is_admin and (not g.user.area_responsavel or project.area_responsavel != g.user.area_responsavel):
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
         return jsonify({'success': False, 'message': 'Permissão negada.'}), 403
 
     data = request.get_json()
@@ -787,7 +1404,7 @@ def add_user():
         name = request.form.get('name')
         password = request.form.get('password')
         orgao = request.form.get('orgao')
-        area_responsavel_form = request.form.get('area_responsavel') # Pode ser string vazia
+        areas_responsavel_form = request.form.getlist('areas_responsavel') # Lista de áreas
         is_admin_form = request.form.get('is_admin') == 'on'
 
         if not username or not name or not password:
@@ -799,21 +1416,28 @@ def add_user():
                 username=username, 
                 name=name, 
                 orgao=orgao if orgao else None, 
-                area_responsavel=area_responsavel_form if area_responsavel_form else None, 
                 is_admin=is_admin_form
             )
             new_user.set_password(password)
             db.session.add(new_user)
+            db.session.flush()  # Para obter o ID do usuário
+            
+            # Adicionar áreas selecionadas
+            for area in areas_responsavel_form:
+                if area:  # Ignora strings vazias
+                    user_area = UserArea(user_id=new_user.id, area=area)
+                    db.session.add(user_area)
+            
             db.session.commit()
             flash(f'Usuário "{name}" ({username}) criado com sucesso!', 'success')
             return redirect(url_for('main.list_users'))
         # Se caiu aqui, houve erro, então renderiza o form novamente com os dados (se o template suportar)
         # ou apenas renderiza o form vazio.
-        return render_template('user_form.html', user=request.form, action_verb="Adicionar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
+        return render_template('user_form.html', user=request.form, user_areas=areas_responsavel_form, action_verb="Adicionar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
 
 
     # Método GET: exibe o formulário para adicionar novo usuário
-    return render_template('user_form.html', user=User(), action_verb="Adicionar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
+    return render_template('user_form.html', user=User(), user_areas=[], action_verb="Adicionar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
 
 
 @main_bp.route('/admin/users/edit/<int:user_id>', methods=['GET', 'POST'])
@@ -825,8 +1449,7 @@ def edit_user(user_id):
         # Username geralmente não é editável ou requer cuidados especiais de unicidade
         user_to_edit.name = request.form.get('name')
         user_to_edit.orgao = request.form.get('orgao') if request.form.get('orgao') else None
-        area_form = request.form.get('area_responsavel')
-        user_to_edit.area_responsavel = area_form if area_form else None
+        areas_responsavel_form = request.form.getlist('areas_responsavel') # Lista de áreas
         
         is_admin_form_val = request.form.get('is_admin') == 'on'
 
@@ -836,9 +1459,12 @@ def edit_user(user_id):
             if admin_count <= 1:
                 flash('Não é possível remover o status de administrador do único administrador existente.', 'danger')
                 # Não altera user_to_edit.is_admin e recarrega o form
-                return render_template('user_form.html', user=user_to_edit, action_verb="Editar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
+                return render_template('user_form.html', user=user_to_edit, user_areas=user_to_edit.get_areas(), action_verb="Editar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
         
         user_to_edit.is_admin = is_admin_form_val
+
+        # Atualizar áreas do usuário
+        user_to_edit.set_areas(areas_responsavel_form)
 
         new_password = request.form.get('password')
         if new_password: # Só atualiza a senha se uma nova for fornecida
@@ -849,7 +1475,7 @@ def edit_user(user_id):
         return redirect(url_for('main.list_users'))
     
     # Método GET
-    return render_template('user_form.html', user=user_to_edit, action_verb="Editar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
+    return render_template('user_form.html', user=user_to_edit, user_areas=user_to_edit.get_areas(), action_verb="Editar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
 
 @main_bp.route('/admin/users/delete/<int:user_id>', methods=['POST'])
 @login_required
@@ -895,6 +1521,7 @@ def create_template():
         name = request.form.get('name')
         description = request.form.get('description')
         stage_names = request.form.getlist('stage_name')
+        stage_durations = request.form.getlist('stage_duration')
 
         if not name or not stage_names:
             flash('O nome do modelo e pelo menos uma etapa são obrigatórios.', 'danger')
@@ -907,8 +1534,10 @@ def create_template():
 
         for i, stage_name in enumerate(stage_names):
             if stage_name: # Ignorar campos de etapa vazios
+                duration = int(stage_durations[i]) if i < len(stage_durations) and stage_durations[i] else 1
                 item = StageTemplateItem(
                     name=stage_name,
+                    duration_days=duration,
                     order=i,
                     templateId=new_template.id
                 )
@@ -930,6 +1559,7 @@ def edit_template(template_id):
         name = request.form.get('name')
         description = request.form.get('description')
         stage_names = request.form.getlist('stage_name')
+        stage_durations = request.form.getlist('stage_duration')
 
         if not name or not stage_names:
             flash('O nome do modelo e pelo menos uma etapa são obrigatórios.', 'danger')
@@ -945,8 +1575,10 @@ def edit_template(template_id):
         # Adiciona os novos itens
         for i, stage_name in enumerate(stage_names):
             if stage_name:
+                duration = int(stage_durations[i]) if i < len(stage_durations) and stage_durations[i] else 1
                 item = StageTemplateItem(
                     name=stage_name,
+                    duration_days=duration,
                     order=i,
                     templateId=template.id
                 )
@@ -1005,8 +1637,26 @@ def get_templates():
 @login_required
 def get_template_stages(template_id):
     template = StageTemplate.query.get_or_404(template_id)
-    stages = [{'name': item.name, 'order': item.order} for item in template.items]
+    stages = [{'name': item.name, 'order': item.order, 'duration': item.duration_days} for item in template.items]
     return jsonify(stages)
+
+@main_bp.route('/project/<int:project_id>/history')
+@login_required
+def project_history(project_id):
+    """Visualizar histórico de ações de um projeto"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Verificar permissão
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+        flash('Você não tem permissão para visualizar este projeto.', 'danger')
+        return redirect(url_for('main.list_projects'))
+    
+    # Buscar histórico ordenado por data (mais recente primeiro)
+    history_entries = ProjectHistory.query.filter_by(project_id=project_id)\
+        .order_by(ProjectHistory.timestamp.desc())\
+        .all()
+    
+    return render_template('project_history.html', project=project, history=history_entries)
 
 @main_bp.route('/setup_db')
 # @login_required # Opcional: proteger esta rota
@@ -1073,3 +1723,633 @@ def setup_db():
         error_msg = f"Erro ao configurar banco de dados: {str(e)}"
         current_app.logger.error(f"Erro em /setup_db: {error_msg}", exc_info=True)
         return jsonify({"status": "error", "mensagem": error_msg}) if 'application/json' in request.headers.get('Accept', '') else error_msg
+
+
+# ===================================
+# ROTAS DE TAREFAS (TASKS)
+# ===================================
+
+@main_bp.route('/tarefas', methods=['GET', 'POST'])
+@login_required
+def list_tasks():
+    """Lista tarefas do usuário com filtros e paginação"""
+    # Filtros
+    status_filter = request.args.get('status', '')
+    project_filter = request.args.get('project', '')
+    search_query = request.args.get('search', '')
+    
+    # Query base
+    query = Task.query.options(joinedload(Task.items), joinedload(Task.project))
+    
+    # Aplicar permissões
+    if not g.user.is_admin:
+        # Usuário vê: tarefas de projetos de suas áreas + tarefas sem projeto criadas por ele
+        user_areas = g.user.get_areas()
+        query = query.outerjoin(Project).filter(
+            db.or_(
+                db.and_(Task.project_id.isnot(None), Project.area_responsavel.in_(user_areas)),
+                db.and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)
+            )
+        )
+    
+    # Aplicar filtros
+    if project_filter:
+        if project_filter == 'sem_projeto':
+            query = query.filter(Task.project_id.is_(None))
+        else:
+            query = query.filter(Task.project_id == project_filter)
+    
+    if search_query:
+        query = query.filter(Task.titulo.ilike(f'%{search_query}%'))
+    
+    # Ordenar por data de criação (mais recentes primeiro)
+    query = query.order_by(Task.created_at.desc())
+    
+    # Paginação
+    page = request.args.get('page', 1, type=int)
+    per_page = 40
+    tasks_pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    tasks = tasks_pagination.items
+    
+    # Obter lista de projetos do usuário para o filtro
+    if g.user.is_admin:
+        projects_for_filter = Project.query.order_by(Project.titulo).all()
+    else:
+        user_areas = g.user.get_areas()
+        projects_for_filter = Project.query.filter(Project.area_responsavel.in_(user_areas)).order_by(Project.titulo).all()
+    
+    return render_template('task_list.html', 
+                         tasks=tasks,
+                         pagination=tasks_pagination,
+                         projects=projects_for_filter,
+                         status_filter=status_filter,
+                         project_filter=project_filter,
+                         search_query=search_query)
+
+
+@main_bp.route('/tarefas/add', methods=['POST'])
+@login_required
+def add_task():
+    """Adiciona nova tarefa"""
+    titulo = request.form.get('titulo', '').strip()
+    project_id = request.form.get('project_id', '').strip()
+    
+    # Validações
+    if not titulo:
+        flash('Título é obrigatório.', 'danger')
+        return redirect(url_for('main.list_tasks'))
+    
+    # Validar project_id se fornecido
+    project = None
+    if project_id:
+        try:
+            project_id = int(project_id)
+            project = Project.query.get(project_id)
+            if not project:
+                flash('Projeto não encontrado.', 'danger')
+                return redirect(url_for('main.list_tasks'))
+            
+            # Verificar permissão de acesso ao projeto
+            if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+                flash('Você não tem permissão para associar tarefas a este projeto.', 'danger')
+                return redirect(url_for('main.list_tasks'))
+        except (ValueError, TypeError):
+            project_id = None
+    else:
+        project_id = None
+    
+    # Criar tarefa
+    task = Task(
+        titulo=titulo,
+        project_id=project_id,
+        created_by_id=g.user.id
+    )
+    
+    try:
+        db.session.add(task)
+        db.session.commit()
+        flash('Tarefa criada com sucesso!', 'success')
+        # Redirecionar para a página de detalhes da tarefa
+        return redirect(url_for('main.task_detail', task_id=task.id))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao criar tarefa: {str(e)}', 'danger')
+    
+    return redirect(url_for('main.list_tasks'))
+
+
+@main_bp.route('/tarefas/<int:task_id>', methods=['GET'])
+@login_required
+def task_detail(task_id):
+    """Detalhes da tarefa com seus itens e comentários"""
+    task = Task.query.options(
+        joinedload(Task.items).joinedload(TaskItem.comments).joinedload(TaskItemComment.author),
+        joinedload(Task.project)
+    ).get_or_404(task_id)
+    
+    # Verificar permissão
+    can_view = (
+        g.user.is_admin or 
+        task.created_by_id == g.user.id or
+        (task.project_id and task.project.area_responsavel in g.user.get_areas())
+    )
+    
+    if not can_view:
+        flash('Você não tem permissão para acessar esta tarefa.', 'danger')
+        return redirect(url_for('main.list_tasks'))
+    
+    # Projetos para dropdown de edição (mesma regra de list_tasks)
+    if g.user.is_admin:
+        projects = Project.query.order_by(Project.titulo).all()
+    else:
+        user_areas = g.user.get_areas()
+        projects = Project.query.filter(Project.area_responsavel.in_(user_areas)).order_by(Project.titulo).all()
+    
+    return render_template('task_detail.html', task=task, projects=projects)
+
+
+@main_bp.route('/tarefas/<int:task_id>/edit', methods=['POST'])
+@login_required
+def edit_task(task_id):
+    """Edita tarefa existente (título e projeto)"""
+    task = Task.query.get_or_404(task_id)
+    
+    # Verificar permissão
+    can_edit = (
+        g.user.is_admin or 
+        task.created_by_id == g.user.id or
+        (task.project_id and task.project.area_responsavel in g.user.get_areas())
+    )
+    
+    if not can_edit:
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+    
+    titulo = request.form.get('titulo', '').strip()
+    project_id = request.form.get('project_id', '').strip()
+    
+    # Validações
+    if not titulo:
+        return jsonify({'success': False, 'message': 'Título é obrigatório'}), 400
+    
+    # Validar project_id se fornecido
+    if project_id:
+        try:
+            project_id = int(project_id)
+            project = Project.query.get(project_id)
+            if not project:
+                return jsonify({'success': False, 'message': 'Projeto não encontrado'}), 404
+            
+            # Verificar permissão de acesso ao projeto
+            if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+                return jsonify({'success': False, 'message': 'Sem permissão para este projeto'}), 403
+        except (ValueError, TypeError):
+            project_id = None
+    else:
+        project_id = None
+    
+    # Atualizar tarefa
+    task.titulo = titulo
+    task.project_id = project_id
+    
+    try:
+        db.session.commit()
+        project_titulo = task.project.titulo if task.project else None
+        return jsonify({
+            'success': True,
+            'message': 'Tarefa atualizada',
+            'task': {
+                'titulo': task.titulo,
+                'project_id': task.project_id,
+                'project_titulo': project_titulo
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@main_bp.route('/tarefas/<int:task_id>/delete', methods=['POST'])
+@login_required
+def delete_task(task_id):
+    """Exclui tarefa"""
+    task = Task.query.get_or_404(task_id)
+    
+    # Verificar permissão
+    can_delete = (
+        g.user.is_admin or 
+        task.created_by_id == g.user.id or
+        (task.project_id and task.project.area_responsavel in g.user.get_areas())
+    )
+    
+    if not can_delete:
+        flash('Você não tem permissão para excluir esta tarefa.', 'danger')
+        return redirect(url_for('main.list_tasks'))
+    
+    try:
+        db.session.delete(task)
+        db.session.commit()
+        flash('Tarefa excluída com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir tarefa: {str(e)}', 'danger')
+    
+    return redirect(url_for('main.list_tasks'))
+
+
+# ===================================
+# ROTAS DE ITENS DE TAREFA (TASK ITEMS)
+# ===================================
+
+@main_bp.route('/tarefas/<int:task_id>/itens/add', methods=['POST'])
+@login_required
+def add_task_item(task_id):
+    """Adiciona item à tarefa"""
+    task = Task.query.get_or_404(task_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
+    
+    # Verificar permissão
+    can_edit = (
+        g.user.is_admin or 
+        task.created_by_id == g.user.id or
+        (task.project_id and task.project.area_responsavel in g.user.get_areas())
+    )
+    
+    if not can_edit:
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Sem permissão para adicionar itens.'}), 403
+        flash('Você não tem permissão para adicionar itens a esta tarefa.', 'danger')
+        return redirect(url_for('main.task_detail', task_id=task_id))
+    
+    descricao = request.form.get('descricao', '').strip()
+    status = request.form.get('status', 'programado')
+    responsavel = request.form.get('responsavel', '').strip()
+    
+    # Validações
+    if not descricao:
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Descrição é obrigatória.'}), 400
+        flash('Descrição é obrigatória.', 'danger')
+        return redirect(url_for('main.task_detail', task_id=task_id))
+    
+    # Calcular ordem
+    max_ordem = db.session.query(db.func.max(TaskItem.ordem)).filter_by(task_id=task_id).scalar() or 0
+    
+    # Criar item
+    item = TaskItem(
+        descricao=descricao,
+        status=status,
+        responsavel=responsavel if responsavel else None,
+        task_id=task_id,
+        ordem=max_ordem + 1
+    )
+    
+    try:
+        db.session.add(item)
+        db.session.commit()
+        if is_ajax:
+            return jsonify({
+                'success': True,
+                'item': {
+                    'id': item.id,
+                    'descricao': item.descricao,
+                    'status': item.status,
+                    'responsavel': item.responsavel or '',
+                    'comments_count': 0
+                }
+            })
+        flash('Item adicionado com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if is_ajax:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        flash(f'Erro ao adicionar item: {str(e)}', 'danger')
+    
+    return redirect(url_for('main.task_detail', task_id=task_id))
+
+
+@main_bp.route('/tarefas/itens/<int:item_id>/edit', methods=['POST'])
+@login_required
+def edit_task_item(item_id):
+    """Edita item da tarefa"""
+    item = TaskItem.query.get_or_404(item_id)
+    task = item.task
+    
+    # Verificar permissão
+    can_edit = (
+        g.user.is_admin or 
+        task.created_by_id == g.user.id or
+        (task.project_id and task.project.area_responsavel in g.user.get_areas())
+    )
+    
+    if not can_edit:
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+    
+    descricao = request.form.get('descricao', '').strip()
+    status = request.form.get('status', item.status)
+    responsavel = request.form.get('responsavel', '').strip()
+    
+    # Validações
+    if not descricao:
+        return jsonify({'success': False, 'message': 'Descrição é obrigatória'}), 400
+    
+    # Atualizar item
+    item.descricao = descricao
+    item.status = status
+    item.responsavel = responsavel if responsavel else None
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': 'Item atualizado',
+            'item': {
+                'id': item.id,
+                'descricao': item.descricao,
+                'status': item.status,
+                'responsavel': item.responsavel or ''
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@main_bp.route('/tarefas/itens/<int:item_id>/delete', methods=['POST'])
+@login_required
+def delete_task_item(item_id):
+    """Exclui item da tarefa"""
+    item = TaskItem.query.get_or_404(item_id)
+    task = item.task
+    task_id = task.id
+    
+    # Verificar permissão
+    can_delete = (
+        g.user.is_admin or 
+        task.created_by_id == g.user.id or
+        (task.project_id and task.project.area_responsavel in g.user.get_areas())
+    )
+    
+    if not can_delete:
+        flash('Você não tem permissão para excluir este item.', 'danger')
+        return redirect(url_for('main.task_detail', task_id=task_id))
+    
+    try:
+        db.session.delete(item)
+        db.session.commit()
+        flash('Item excluído com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir item: {str(e)}', 'danger')
+    
+    return redirect(url_for('main.task_detail', task_id=task_id))
+
+
+@main_bp.route('/tarefas/itens/<int:item_id>/update_status', methods=['POST'])
+@login_required
+def update_task_item_status(item_id):
+    """Atualiza status do item via AJAX"""
+    item = TaskItem.query.get_or_404(item_id)
+    task = item.task
+    
+    # Verificar permissão
+    can_edit = (
+        g.user.is_admin or 
+        task.created_by_id == g.user.id or
+        (task.project_id and task.project.area_responsavel in g.user.get_areas())
+    )
+    
+    if not can_edit:
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+    
+    status = request.json.get('status')
+    if status not in ['programado', 'em_andamento', 'validacao', 'finalizado']:
+        return jsonify({'success': False, 'message': 'Status inválido'}), 400
+    
+    item.status = status
+    
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Status atualizado'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@main_bp.route('/tarefas/<int:task_id>/itens/reordenar', methods=['POST'])
+@login_required
+def reorder_task_items(task_id):
+    """Reordena itens da tarefa"""
+    task = Task.query.get_or_404(task_id)
+    
+    # Verificar permissão
+    can_edit = (
+        g.user.is_admin or 
+        task.created_by_id == g.user.id or
+        (task.project_id and task.project.area_responsavel in g.user.get_areas())
+    )
+    
+    if not can_edit:
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+    
+    try:
+        ordem_items = request.json.get('ordem', [])
+        
+        for index, item_id in enumerate(ordem_items, start=1):
+            item = TaskItem.query.get(item_id)
+            if item and item.task_id == task_id:
+                item.ordem = index
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Ordem atualizada'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ===================================
+# COMENTÁRIOS EM ITENS DE TAREFA
+# ===================================
+
+def _can_comment_on_task(task):
+    """Verifica se o usuário pode comentar na tarefa (e portanto nos itens)."""
+    return (
+        g.user.is_admin or
+        task.created_by_id == g.user.id or
+        (task.project_id and task.project.area_responsavel in g.user.get_areas())
+    )
+
+
+@main_bp.route('/tarefas/itens/<int:item_id>/comentarios/add', methods=['POST'])
+@login_required
+def add_task_item_comment(item_id):
+    """Adiciona comentário a um item (apenas após o item existir)."""
+    item = TaskItem.query.get_or_404(item_id)
+    task = item.task
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
+    
+    if not _can_comment_on_task(task):
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Sem permissão para comentar.'}), 403
+        flash('Você não tem permissão para comentar neste item.', 'danger')
+        return redirect(url_for('main.task_detail', task_id=task.id))
+    
+    content = request.form.get('content', '').strip()
+    if not content:
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'O comentário não pode estar vazio.'}), 400
+        flash('O comentário não pode estar vazio.', 'warning')
+        return redirect(url_for('main.task_detail', task_id=task.id))
+    
+    comment = TaskItemComment(
+        content=content,
+        user_id=g.user.id,
+        task_item_id=item_id
+    )
+    try:
+        db.session.add(comment)
+        db.session.commit()
+        if is_ajax:
+            return jsonify({
+                'success': True,
+                'comment': {
+                    'id': comment.id,
+                    'content': comment.content,
+                    'author_name': g.user.name,
+                    'user_id': g.user.id,
+                    'created_at': format_local_time(comment.created_at),
+                    'is_own': True
+                }
+            })
+        flash('Comentário adicionado.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if is_ajax:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        flash(f'Erro ao adicionar comentário: {str(e)}', 'danger')
+    
+    return redirect(url_for('main.task_detail', task_id=task.id))
+
+
+@main_bp.route('/tarefas/comentarios/<int:comment_id>/edit', methods=['POST'])
+@login_required
+def edit_task_item_comment(comment_id):
+    """Edita comentário (apenas o próprio autor)."""
+    comment = TaskItemComment.query.get_or_404(comment_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
+    
+    if comment.user_id != g.user.id:
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Você só pode editar seus próprios comentários.'}), 403
+        flash('Você só pode editar seus próprios comentários.', 'danger')
+        return redirect(url_for('main.task_detail', task_id=comment.task_item.task_id))
+    
+    content = request.form.get('content', '').strip()
+    if not content:
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'O comentário não pode estar vazio.'}), 400
+        flash('O comentário não pode estar vazio.', 'warning')
+        return redirect(url_for('main.task_detail', task_id=comment.task_item.task_id))
+    
+    comment.content = content
+    comment.updated_at = datetime.datetime.utcnow()
+    try:
+        db.session.commit()
+        if is_ajax:
+            return jsonify({
+                'success': True,
+                'comment': {
+                    'id': comment.id,
+                    'content': comment.content,
+                    'updated_at': format_local_time(comment.updated_at) if comment.updated_at else None
+                }
+            })
+        flash('Comentário atualizado.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if is_ajax:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        flash(f'Erro ao atualizar comentário: {str(e)}', 'danger')
+    
+    return redirect(url_for('main.task_detail', task_id=comment.task_item.task_id))
+
+
+@main_bp.route('/tarefas/comentarios/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def delete_task_item_comment(comment_id):
+    """Exclui comentário (apenas o próprio autor)."""
+    comment = TaskItemComment.query.get_or_404(comment_id)
+    task_id = comment.task_item.task_id
+    
+    if comment.user_id != g.user.id:
+        flash('Você só pode excluir seus próprios comentários.', 'danger')
+        return redirect(url_for('main.task_detail', task_id=task_id))
+    
+    try:
+        db.session.delete(comment)
+        db.session.commit()
+        flash('Comentário excluído.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir comentário: {str(e)}', 'danger')
+    
+    return redirect(url_for('main.task_detail', task_id=task_id))
+
+
+@main_bp.route('/projeto/<int:project_id>/tarefas', methods=['GET'])
+@login_required
+def project_tasks(project_id):
+    """Lista tarefas de um projeto específico"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Verificar permissão de acesso ao projeto
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+        flash('Você não tem permissão para acessar este projeto.', 'danger')
+        return redirect(url_for('main.list_projects'))
+    
+    # Buscar tarefas do projeto
+    tasks = Task.query.options(joinedload(Task.items)).filter_by(project_id=project_id).order_by(Task.created_at.desc()).all()
+    
+    return render_template('project_tasks.html', project=project, tasks=tasks)
+
+
+@main_bp.route('/api/projetos_usuario', methods=['GET'])
+@login_required
+def get_user_projects_api():
+    """API para obter projetos do usuário para dropdown"""
+    if g.user.is_admin:
+        projects = Project.query.order_by(Project.titulo).all()
+    else:
+        user_areas = g.user.get_areas()
+        projects = Project.query.filter(Project.area_responsavel.in_(user_areas)).order_by(Project.titulo).all()
+    
+    return jsonify([
+        {
+            'id': p.id,
+            'titulo': p.titulo,
+            'area_responsavel': p.area_responsavel
+        }
+        for p in projects
+    ])
+
+
+@main_bp.route('/tarefas/<int:task_id>/sugestoes-responsavel', methods=['GET'])
+@login_required
+def get_task_assignable_users(task_id):
+    """API: usuários que podem ser marcados como responsável no item (pessoas do projeto). Se a tarefa não tem projeto, retorna lista vazia."""
+    task = Task.query.get_or_404(task_id)
+    if not task.project_id or not task.project:
+        return jsonify({'users': []})
+    area = task.project.area_responsavel
+    if not area:
+        return jsonify({'users': []})
+    # Usuários que têm essa área (UserArea ou area_responsavel legado)
+    user_ids_area = [ua.user_id for ua in UserArea.query.filter_by(area=area).all()]
+    if user_ids_area:
+        users_q = User.query.filter(User.id.in_(user_ids_area)).order_by(User.name)
+    else:
+        users_q = User.query.filter(User.area_responsavel == area).order_by(User.name)
+    users = [{'id': u.id, 'name': u.name} for u in users_q.all()]
+    q = (request.args.get('q') or '').strip().lower()
+    if q:
+        users = [u for u in users if q in (u['name'] or '').lower()]
+    return jsonify({'users': users})

@@ -9,16 +9,29 @@
     </header>
 
     <form method="post" action="{{ url_for('main.edit_project', project_id=project.id) }}" class="needs-validation" novalidate>
-        <div class="card shadow-sm">
+        <!-- SEÇÃO: Informações Básicas -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações Básicas</h5>
+            </div>
             <div class="card-body p-4">
+                <!-- Título -->
                 <div class="mb-3">
-                    <label for="project_titulo" class="form-label">Título do Projeto <span class="text-danger">*</span></label>
+                    <label for="project_titulo" class="form-label fw-bold">Título do Projeto <span class="text-danger">*</span></label>
                     <input type="text" class="form-control form-control-lg" id="project_titulo" name="project_titulo" value="{{ project.titulo }}" required>
                     <div class="invalid-feedback">Por favor, informe o título do projeto.</div>
                 </div>
+                
+                <!-- Descrição Curta (Nova) -->
+                <div class="mb-3">
+                    <label for="project_short_description" class="form-label fw-bold">Descrição</label>
+                    <textarea class="form-control" id="project_short_description" name="project_short_description" rows="2" placeholder="Breve descrição do projeto">{{ project.short_description if project.short_description }}</textarea>
+                </div>
+                
+                <!-- Linha: Área Responsável e Órgão -->
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="project_area_responsavel" class="form-label">Área Responsável:</label>
+                        <label for="project_area_responsavel" class="form-label fw-bold">Área Responsável:</label>
                         <select class="form-select" id="project_area_responsavel" name="project_area_responsavel" {% if not is_admin_user %}disabled{% endif %}>
                             <option value="" {% if not project.area_responsavel %}selected{% endif %} disabled>Selecione uma área</option>
                             {% for area in areas_responsaveis %}
@@ -30,13 +43,15 @@
                         {% endif %}
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="project_orgao" class="form-label">Órgão:</label>
+                        <label for="project_orgao" class="form-label fw-bold">Órgão:</label>
                         <input type="text" class="form-control" id="project_orgao" name="project_orgao" value="{{ project.orgao if project.orgao }}">
                     </div>
                 </div>
+                
+                <!-- Linha: Prioridade e Projetos Especiais (Nova) -->
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="project_prioridade" class="form-label">Prioridade:</label>
+                        <label for="project_prioridade" class="form-label fw-bold">Prioridade:</label>
                         <select class="form-select" id="project_prioridade" name="project_prioridade">
                             <option value="baixa" {{ 'selected' if project.prioridade == 'baixa' else '' }}>Baixa</option>
                             <option value="media" {{ 'selected' if project.prioridade == 'media' else '' }}>Média</option>
@@ -45,19 +60,62 @@
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="project_status" class="form-label">Status:</label>
+                        <label for="project_special_project" class="form-label fw-bold">Projetos Especiais:</label>
+                        <select class="form-select" id="project_special_project" name="project_special_project">
+                            <option value="">Nenhum</option>
+                            <option value="ABEP" {{ 'selected' if project.special_project == 'ABEP' else '' }}>ABEP</option>
+                            <option value="TCE" {{ 'selected' if project.special_project == 'TCE' else '' }}>TCE</option>
+                        </select>
+                        <small class="form-text text-muted">Selecione se este projeto faz parte de um programa especial</small>
+                    </div>
+                </div>
+                
+                <!-- Linha: Status e Processo SEI (Novo) -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="project_status" class="form-label fw-bold">Status:</label>
                         <select class="form-select" id="project_status" name="project_status">
                             <option value="Vigente" {{ 'selected' if project.status == 'Vigente' else '' }}>Vigente</option>
                             <option value="Finalizado" {{ 'selected' if project.status == 'Finalizado' else '' }}>Finalizado</option>
                             <option value="Suspenso" {{ 'selected' if project.status == 'Suspenso' else '' }}>Suspenso</option>
                         </select>
                     </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="project_sei_process" class="form-label fw-bold">Processo SEI:</label>
+                        <input type="text" class="form-control" id="project_sei_process" name="project_sei_process" 
+                               value="{{ project.sei_process if project.sei_process }}" 
+                               placeholder="SEI-000000/000000/0000"
+                               maxlength="25">
+                        <small class="form-text text-muted">Formato: SEI-000000/000000/0000</small>
+                    </div>
                 </div>
                 
-                <!-- Novos campos para Objetivo, Resultado Esperado e Indicadores -->
+                <!-- Tipo de Entrega (Novo) -->
+                <div class="mb-3">
+                    <label for="project_delivery_type" class="form-label fw-bold">Tipo de Entrega:</label>
+                    <select class="form-select" id="project_delivery_type" name="project_delivery_type">
+                        <option value="">Selecione o tipo de entrega</option>
+                        <option value="Sistema" {{ 'selected' if project.delivery_type == 'Sistema' else '' }}>Sistema</option>
+                        <option value="Painel" {{ 'selected' if project.delivery_type == 'Painel' else '' }}>Painel</option>
+                        <option value="Norma" {{ 'selected' if project.delivery_type == 'Norma' else '' }}>Norma</option>
+                        <option value="Instrumento de parceria" {{ 'selected' if project.delivery_type == 'Instrumento de parceria' else '' }}>Instrumento de parceria</option>
+                        <option value="Fluxo Processual" {{ 'selected' if project.delivery_type == 'Fluxo Processual' else '' }}>Fluxo Processual</option>
+                        <option value="Outro" {{ 'selected' if project.delivery_type == 'Outro' else '' }}>Outro</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEÇÃO: Objetivos e Indicadores -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-bullseye me-2"></i>Objetivos e Indicadores</h5>
+            </div>
+            <div class="card-body p-4">
+                <!-- Objetivo e Resultado Esperado -->
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="project_objetivo" class="form-label">Objetivo:</label>
+                        <label for="project_objetivo" class="form-label fw-bold">Objetivo:</label>
                         <select class="form-select" id="project_objetivo" name="project_objetivo">
                             <option value="" selected>Selecione um objetivo</option>
                             {% for objetivo in objetivos %}
@@ -68,7 +126,7 @@
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="project_resultado" class="form-label">Resultado Esperado:</label>
+                        <label for="project_resultado" class="form-label fw-bold">Resultado Esperado:</label>
                         <select class="form-select" id="project_resultado" name="project_resultado" {% if not project.objetivo_id %}disabled{% endif %}>
                             <option value="" selected>Selecione um resultado esperado</option>
                             {% if project.objetivo_id %}
@@ -82,8 +140,9 @@
                     </div>
                 </div>
                 
+                <!-- Indicadores -->
                 <div class="mb-3">
-                    <label class="form-label">Indicadores:</label>
+                    <label class="form-label fw-bold">Indicadores <span class="badge bg-info">Máximo 4</span>:</label>
                     <div id="indicadores-container" class="border rounded p-3 bg-light">
                         {% if project.resultado_esperado_id %}
                             {% for indicador in indicadores_por_resultado[project.resultado_esperado_id] %}
@@ -98,20 +157,57 @@
                                 </div>
                             {% endfor %}
                         {% else %}
-                            <p class="text-muted">Selecione um resultado esperado para ver os indicadores disponíveis</p>
+                            <p class="text-muted mb-0">Selecione um resultado esperado para ver os indicadores disponíveis</p>
                         {% endif %}
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- SEÇÃO: Detalhes Adicionais -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Detalhes Adicionais</h5>
+            </div>
+            <div class="card-body p-4">
+                <!-- Links (Novos) -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="project_github_link" class="form-label fw-bold">
+                            <i class="fab fa-github me-1"></i>Link Github:
+                        </label>
+                        <input type="text" class="form-control" id="project_github_link" name="project_github_link" 
+                               value="{{ project.github_link if project.github_link }}"
+                               placeholder="https://github.com/...">
+                        <small class="form-text text-muted">URL do repositório no Github</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="project_documentation_link" class="form-label fw-bold">
+                            <i class="fas fa-book me-1"></i>Link Documentação:
+                        </label>
+                        <input type="text" class="form-control" id="project_documentation_link" name="project_documentation_link" 
+                               value="{{ project.documentation_link if project.documentation_link }}"
+                               placeholder="https://...">
+                        <small class="form-text text-muted">URL da documentação do projeto</small>
+                    </div>
+                </div>
                 
+                <!-- Observação (Campo original de descrição detalhada) -->
                 <div class="mb-3">
-                    <label for="project_observacao" class="form-label">Observação:</label>
-                    <textarea class="form-control" id="project_observacao" name="project_observacao" rows="5">{{ project.observacao if project.observacao }}</textarea>
+                    <label for="project_observacao" class="form-label fw-bold">Observações / Descrição Detalhada:</label>
+                    <textarea class="form-control" id="project_observacao" name="project_observacao" rows="6" placeholder="Informações adicionais e observações sobre o projeto">{{ project.observacao if project.observacao }}</textarea>
                 </div>
             </div>
-            <div class="card-footer bg-light text-end py-3">
-                <a href="{{ url_for('main.project_detail', project_id=project.id if project else url_for('main.list_projects')) }}" class="btn btn-outline-secondary me-2"><i class="fas fa-times me-1"></i>Cancelar</a>
-                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Salvar Alterações</button>
-            </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <a href="{{ url_for('main.project_detail', project_id=project.id if project else url_for('main.list_projects')) }}" class="btn btn-outline-secondary btn-lg">
+                <i class="fas fa-times me-2"></i>Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save me-2"></i>Salvar Alterações
+            </button>
         </div>
     </form>
 </div>
@@ -136,6 +232,26 @@
     })
 })();
 
+// Máscara para o campo Processo SEI
+document.getElementById('project_sei_process').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/[^0-9]/g, ''); // Remove tudo exceto números
+    
+    if (value.length > 0) {
+        // Formato: SEI-000000/000000/0000
+        let formatted = 'SEI-';
+        
+        if (value.length <= 6) {
+            formatted += value;
+        } else if (value.length <= 12) {
+            formatted += value.substring(0, 6) + '/' + value.substring(6);
+        } else {
+            formatted += value.substring(0, 6) + '/' + value.substring(6, 12) + '/' + value.substring(12, 16);
+        }
+        
+        e.target.value = formatted;
+    }
+});
+
 // Carregar resultados esperados baseados no objetivo selecionado
 document.getElementById('project_objetivo').addEventListener('change', function() {
     const objetivoId = this.value;
@@ -144,7 +260,7 @@ document.getElementById('project_objetivo').addEventListener('change', function(
     
     // Limpar resultados e indicadores anteriores
     resultadoSelect.innerHTML = '<option value="" selected>Selecione um resultado esperado</option>';
-    indicadoresContainer.innerHTML = '<p class="text-muted">Selecione um resultado esperado para ver os indicadores disponíveis</p>';
+    indicadoresContainer.innerHTML = '<p class="text-muted mb-0">Selecione um resultado esperado para ver os indicadores disponíveis</p>';
     
     if (!objetivoId) {
         resultadoSelect.disabled = true;
@@ -173,10 +289,10 @@ document.getElementById('project_resultado').addEventListener('change', function
     const resultadoId = this.value;
     const indicadoresContainer = document.getElementById('indicadores-container');
     
-    indicadoresContainer.innerHTML = '<p class="text-muted">Carregando indicadores...</p>';
+    indicadoresContainer.innerHTML = '<p class="text-muted mb-0">Carregando indicadores...</p>';
 
     if (!resultadoId) {
-        indicadoresContainer.innerHTML = '<p class="text-muted">Selecione um resultado esperado para ver os indicadores disponíveis</p>';
+        indicadoresContainer.innerHTML = '<p class="text-muted mb-0">Selecione um resultado esperado para ver os indicadores disponíveis</p>';
         return;
     }
     
@@ -189,7 +305,7 @@ document.getElementById('project_resultado').addEventListener('change', function
         .then(data => {
             indicadoresContainer.innerHTML = '';
             if (!data || data.length === 0) {
-                indicadoresContainer.innerHTML = '<p class="text-muted">Nenhum indicador disponível para este resultado.</p>';
+                indicadoresContainer.innerHTML = '<p class="text-muted mb-0">Nenhum indicador disponível para este resultado.</p>';
                 return;
             }
             data.forEach(indicador => {
@@ -216,7 +332,7 @@ document.getElementById('project_resultado').addEventListener('change', function
         })
         .catch(error => {
             console.error('Erro ao carregar indicadores:', error)
-            indicadoresContainer.innerHTML = '<p class="text-danger font-weight-bold">Erro ao carregar indicadores.</p>';
+            indicadoresContainer.innerHTML = '<p class="text-danger mb-0"><strong>Erro ao carregar indicadores.</strong></p>';
         });
 });
 
@@ -239,4 +355,4 @@ document.addEventListener('DOMContentLoaded', function() {
     setupIndicadoresLimit();
 });
 </script>
-{% endblock %} 
+{% endblock %}

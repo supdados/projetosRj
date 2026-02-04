@@ -1,6 +1,6 @@
-<!-- Modal Adicionar Projeto - Design Glass Morphism -->
+<!-- Modal Adicionar Projeto - Design Glass Morphism Refinado -->
 <div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content glass-modal">
             <!-- Header com estilo glass -->
             <div class="modal-header glass-header">
@@ -23,7 +23,7 @@
                 <form action="{{ url_for('main.add_project') }}" method="POST" id="addProjectFormModal">
                     
                     <!-- Seção 1: Informações Básicas -->
-                    <div class="glass-card mb-4">
+                    <div class="glass-card mb-3">
                         <div class="glass-card-header">
                             <div class="card-header-icon">
                                 <i class="fas fa-info-circle"></i>
@@ -31,8 +31,8 @@
                             <h6 class="card-title">Informações Básicas</h6>
                         </div>
                         <div class="glass-card-body">
-                            <!-- Título do projeto - ocupando toda largura -->
-                            <div class="form-group-glass mb-4">
+                            <!-- Título do projeto -->
+                            <div class="form-group-glass mb-3">
                                 <label for="project_titulo" class="form-label-glass">
                                     <i class="fas fa-tag label-icon"></i>
                                     Título do Projeto <span class="required-star">*</span>
@@ -40,10 +40,19 @@
                                 <input type="text" class="form-control-glass form-control-glass-full" id="project_titulo" name="project_titulo" required placeholder="Digite o título do projeto">
                             </div>
                             
-                            <!-- Segunda linha: Área Responsável, Órgão e Prioridade -->
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group-glass mb-3">
+                            <!-- Descrição Curta -->
+                            <div class="form-group-glass mb-3">
+                                <label for="project_short_description" class="form-label-glass">
+                                    <i class="fas fa-align-left label-icon"></i>
+                                    Descrição
+                                </label>
+                                <textarea class="form-control-glass form-control-glass-full" id="project_short_description" name="project_short_description" rows="2" placeholder="Breve descrição do projeto"></textarea>
+                            </div>
+                            
+                            <!-- Área Responsável e Órgão -->
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-group-glass">
                                         <label for="project_area_responsavel" class="form-label-glass">
                                             <i class="fas fa-users label-icon"></i>
                                             Área Responsável
@@ -55,9 +64,18 @@
                                                     <option value="{{ area_item }}">{{ area_item }}</option>
                                                 {% endfor %}
                                             </select>
-                                        {% elif current_user_obj and current_user_obj.area_responsavel %}
-                                            <input type="text" class="form-control-glass form-control-glass-enhanced" value="{{ current_user_obj.area_responsavel }}" disabled>
-                                            <input type="hidden" name="project_area_responsavel" value="{{ current_user_obj.area_responsavel }}">
+                                        {% elif current_user_obj and current_user_obj.get_areas() %}
+                                            {% if current_user_obj.get_areas()|length == 1 %}
+                                                <input type="text" class="form-control-glass form-control-glass-enhanced" value="{{ current_user_obj.get_areas()[0] }}" disabled>
+                                                <input type="hidden" name="project_area_responsavel" value="{{ current_user_obj.get_areas()[0] }}">
+                                            {% else %}
+                                                <select class="form-select-glass form-select-glass-enhanced" id="project_area_responsavel" name="project_area_responsavel" required>
+                                                    <option value="" selected disabled>Selecione uma de suas áreas</option>
+                                                    {% for area_item in current_user_obj.get_areas() %}
+                                                        <option value="{{ area_item }}">{{ area_item }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% endif %}
                                         {% else %}
                                             <select class="form-select-glass form-select-glass-enhanced" id="project_area_responsavel" name="project_area_responsavel" disabled>
                                                 <option value="" selected disabled>Nenhuma área atribuída</option>
@@ -65,8 +83,8 @@
                                         {% endif %}
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="form-group-glass mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-group-glass">
                                         <label for="project_orgao" class="form-label-glass">
                                             <i class="fas fa-building label-icon"></i>
                                             Órgão
@@ -74,8 +92,12 @@
                                         <input type="text" class="form-control-glass form-control-glass-enhanced" id="project_orgao" name="project_orgao" placeholder="Digite o órgão responsável">
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="form-group-glass mb-3">
+                            </div>
+                            
+                            <!-- Prioridade e Projetos Especiais -->
+                            <div class="row g-3 mt-0">
+                                <div class="col-md-6">
+                                    <div class="form-group-glass">
                                         <label for="project_prioridade" class="form-label-glass">
                                             <i class="fas fa-flag label-icon"></i>
                                             Prioridade
@@ -88,12 +110,55 @@
                                         </select>
                                     </div>
                                 </div>
+                                <div class="col-md-6">
+                                    <div class="form-group-glass">
+                                        <label for="project_special_project" class="form-label-glass">
+                                            <i class="fas fa-star label-icon"></i>
+                                            Projetos Especiais
+                                        </label>
+                                        <select class="form-select-glass form-select-glass-enhanced" id="project_special_project" name="project_special_project">
+                                            <option value="">Nenhum</option>
+                                            <option value="ABEP">ABEP</option>
+                                            <option value="TCE">TCE</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Processo SEI e Tipo de Entrega -->
+                            <div class="row g-3 mt-0">
+                                <div class="col-md-6">
+                                    <div class="form-group-glass">
+                                        <label for="project_sei_process" class="form-label-glass">
+                                            <i class="fas fa-file-alt label-icon"></i>
+                                            Processo SEI
+                                        </label>
+                                        <input type="text" class="form-control-glass form-control-glass-enhanced" id="project_sei_process" name="project_sei_process" placeholder="SEI-000000/000000/0000" maxlength="25">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group-glass">
+                                        <label for="project_delivery_type" class="form-label-glass">
+                                            <i class="fas fa-box label-icon"></i>
+                                            Tipo de Entrega
+                                        </label>
+                                        <select class="form-select-glass form-select-glass-enhanced" id="project_delivery_type" name="project_delivery_type">
+                                            <option value="">Selecione o tipo</option>
+                                            <option value="Sistema">Sistema</option>
+                                            <option value="Painel">Painel</option>
+                                            <option value="Norma">Norma</option>
+                                            <option value="Instrumento de parceria">Instrumento de parceria</option>
+                                            <option value="Fluxo Processual">Fluxo Processual</option>
+                                            <option value="Outro">Outro</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Seção 2: Objetivos e Resultados -->
-                    <div class="glass-card mb-4">
+                    <div class="glass-card mb-3">
                         <div class="glass-card-header">
                             <div class="card-header-icon">
                                 <i class="fas fa-bullseye"></i>
@@ -101,9 +166,9 @@
                             <h6 class="card-title">Objetivos e Resultados</h6>
                         </div>
                         <div class="glass-card-body">
-                            <div class="row">
+                            <div class="row g-3">
                                 <div class="col-md-6">
-                                    <div class="form-group-glass mb-3">
+                                    <div class="form-group-glass">
                                         <label for="project_objetivo" class="form-label-glass">
                                             <i class="fas fa-target label-icon"></i>
                                             Objetivo
@@ -117,7 +182,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="form-group-glass mb-3">
+                                    <div class="form-group-glass">
                                         <label for="project_resultado" class="form-label-glass">
                                             <i class="fas fa-chart-line label-icon"></i>
                                             Resultado Esperado
@@ -129,7 +194,7 @@
                                 </div>
                             </div>
                             
-                            <div class="form-group-glass">
+                            <div class="form-group-glass mt-3">
                                 <label class="form-label-glass">
                                     <i class="fas fa-chart-bar label-icon"></i>
                                     Indicadores
@@ -145,7 +210,7 @@
                     </div>
 
                     <!-- Seção 3: Detalhes Adicionais -->
-                    <div class="glass-card mb-4">
+                    <div class="glass-card mb-3">
                         <div class="glass-card-header">
                             <div class="card-header-icon">
                                 <i class="fas fa-sticky-note"></i>
@@ -153,13 +218,35 @@
                             <h6 class="card-title">Detalhes Adicionais</h6>
                         </div>
                         <div class="glass-card-body">
-                            <!-- Observações - ocupando toda largura -->
+                            <!-- Links -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-group-glass">
+                                        <label for="project_github_link" class="form-label-glass">
+                                            <i class="fab fa-github label-icon"></i>
+                                            Link Github
+                                        </label>
+                                        <input type="text" class="form-control-glass form-control-glass-enhanced" id="project_github_link" name="project_github_link" placeholder="https://github.com/...">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group-glass">
+                                        <label for="project_documentation_link" class="form-label-glass">
+                                            <i class="fas fa-book label-icon"></i>
+                                            Link Documentação
+                                        </label>
+                                        <input type="text" class="form-control-glass form-control-glass-enhanced" id="project_documentation_link" name="project_documentation_link" placeholder="https://...">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Observações -->
                             <div class="form-group-glass">
                                 <label for="project_observacao" class="form-label-glass">
                                     <i class="fas fa-comment-alt label-icon"></i>
-                                    Observações
+                                    Observações / Descrição Detalhada
                                 </label>
-                                <textarea class="form-control-glass textarea-glass textarea-glass-full" id="project_observacao" name="project_observacao" rows="4" placeholder="Digite observações sobre o projeto..."></textarea>
+                                <textarea class="form-control-glass textarea-glass textarea-glass-full" id="project_observacao" name="project_observacao" rows="3" placeholder="Digite observações detalhadas sobre o projeto..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -173,9 +260,9 @@
                             <h6 class="card-title">Modelo de Etapas (Opcional)</h6>
                         </div>
                         <div class="glass-card-body">
-                            <div class="row">
+                            <div class="row g-3">
                                 <div class="col-md-8">
-                                    <div class="form-group-glass mb-3">
+                                    <div class="form-group-glass">
                                         <label for="template_select" class="form-label-glass">
                                             <i class="fas fa-copy label-icon"></i>
                                             Importar Modelo
@@ -186,9 +273,20 @@
                                         </select>
                                     </div>
                                 </div>
+                                <div class="col-md-4">
+                                    <div class="form-group-glass">
+                                        <label for="project_start_date" class="form-label-glass">
+                                            <i class="fas fa-calendar-day label-icon"></i>
+                                            Data de Início
+                                        </label>
+                                        <input type="date" class="form-control-glass form-control-glass-enhanced" 
+                                               id="project_start_date" name="project_start_date" 
+                                               title="Defina a data de início para calcular automaticamente as datas das etapas">
+                                    </div>
+                                </div>
                             </div>
 
-                            <div id="dynamic-stages-container" class="stages-container">
+                            <div id="dynamic-stages-container" class="stages-container mt-3">
                                 <!-- Etapas do modelo serão inseridas aqui -->
                             </div>
                         </div>

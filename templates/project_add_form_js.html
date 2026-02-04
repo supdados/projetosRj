@@ -8,6 +8,29 @@
         const modalIndicadoresContainer = document.getElementById('indicadores-container');
         const templateSelect = document.getElementById('template_select');
         const stagesContainer = document.getElementById('dynamic-stages-container');
+        
+        // Máscara para o campo Processo SEI
+        const seiProcessInput = document.getElementById('project_sei_process');
+        if (seiProcessInput) {
+            seiProcessInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/[^0-9]/g, ''); // Remove tudo exceto números
+                
+                if (value.length > 0) {
+                    // Formato: SEI-000000/000000/0000
+                    let formatted = 'SEI-';
+                    
+                    if (value.length <= 6) {
+                        formatted += value;
+                    } else if (value.length <= 12) {
+                        formatted += value.substring(0, 6) + '/' + value.substring(6);
+                    } else {
+                        formatted += value.substring(0, 6) + '/' + value.substring(6, 12) + '/' + value.substring(12, 16);
+                    }
+                    
+                    e.target.value = formatted;
+                }
+            });
+        }
 
         function loadResultados() {
             const objetivoId = modalObjetivoSelect.value;
@@ -178,11 +201,12 @@
                                 <div class="stage-content">
                                     <label class="form-label-glass">
                                         <i class="fas fa-tasks label-icon"></i>
-                                        Etapa ${index + 1}
+                                        Etapa ${index + 1} <span style="color: #6c757d; font-size: 0.85rem;">(${etapa.duration || 1} dias)</span>
                                     </label>
                                     <input type="text" class="form-control-glass" 
                                            name="etapa_descricao" value="${etapa.name}" 
                                            placeholder="Descrição da etapa">
+                                    <input type="hidden" name="etapa_duration" value="${etapa.duration || 1}">
                                 </div>
                             `;
                             stagesContainer.appendChild(stageDiv);

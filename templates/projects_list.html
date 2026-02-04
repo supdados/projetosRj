@@ -18,29 +18,28 @@
         margin: 0;
     }
     
-    /* Glass Projects Header */
-    .projects-header {
+    /* Glass Search and Filter Bar - Redesigned */
+    .search-filter-bar {
         background: linear-gradient(135deg, 
             rgba(255, 255, 255, 0.25) 0%, 
             rgba(255, 255, 255, 0.1) 100%);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         box-shadow: 
-            0 8px 32px rgba(0, 90, 146, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        padding: 1rem 1.5rem;
-        border-radius: 12px;
-        margin: 1rem;
-        margin-bottom: 1rem;
+            0 8px 32px rgba(0, 90, 146, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        padding: 1.5rem 2rem;
+        margin: 1.5rem;
+        border-radius: 16px;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column;
+        gap: 1.25rem;
         position: relative;
         overflow: hidden;
     }
     
-    .projects-header::before {
+    .search-filter-bar::before {
         content: '';
         position: absolute;
         top: 0;
@@ -55,114 +54,136 @@
         opacity: 0.6;
     }
     
-    .projects-header h1 {
-        font-size: 1.4rem;
+    /* Header with title and actions */
+    .bar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .bar-title {
+        font-size: 1.5rem;
         font-weight: 700;
         margin: 0;
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        position: relative;
-        z-index: 1;
+        display: flex;
+        align-items: center;
+        text-shadow: 0 2px 8px rgba(0, 90, 146, 0.1);
     }
     
-    /* Glass Add Project Button */
-    .btn-add-project {
+    .bar-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+    }
+    
+    /* Clear Filters Button */
+    .btn-clear-filters {
         background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.9) 0%, 
-            rgba(0, 75, 121, 0.8) 100%);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        color: white !important;
+            rgba(239, 68, 68, 0.1) 0%, 
+            rgba(220, 38, 38, 0.05) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #dc2626;
         font-weight: 500;
         padding: 0.5rem 1rem;
         border-radius: 8px;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 
-            0 4px 15px rgba(0, 90, 146, 0.3),
+            0 2px 8px rgba(239, 68, 68, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+    }
+    
+    .btn-clear-filters:hover {
+        background: linear-gradient(135deg, 
+            rgba(239, 68, 68, 0.9) 0%, 
+            rgba(220, 38, 38, 0.8) 100%);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 
+            0 4px 15px rgba(239, 68, 68, 0.3),
             inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        position: relative;
-        z-index: 1;
+        border-color: rgba(239, 68, 68, 0.5);
+    }
+    
+    .btn-clear-filters i {
+        font-size: 0.9rem;
+    }
+    
+    /* Add Project Button - Refined */
+    .btn-add-project {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.95) 0%, 
+            rgba(0, 75, 121, 0.85) 100%);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        color: white !important;
+        font-weight: 600;
+        padding: 0.5rem 1.25rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 
+            0 4px 15px rgba(0, 90, 146, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
     }
     
     .btn-add-project:hover {
         background: linear-gradient(135deg, 
             rgba(0, 90, 146, 1) 0%, 
-            rgba(0, 75, 121, 0.9) 100%);
+            rgba(0, 75, 121, 0.95) 100%);
         transform: translateY(-2px) scale(1.02);
         box-shadow: 
-            0 8px 25px rgba(0, 90, 146, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.3) !important;
+            0 6px 20px rgba(0, 90, 146, 0.45),
+            inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        border-color: rgba(255, 255, 255, 0.35) !important;
         color: white !important;
     }
     
-    /* Glass Search and Filter Bar */
-    .search-filter-bar {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.22) 0%, 
-            rgba(255, 255, 255, 0.08) 100%);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        box-shadow: 
-            0 6px 25px rgba(0, 90, 146, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.25);
-        padding: 1rem 1.5rem;
-        margin: 0 1rem 1rem;
-        border-radius: 12px;
+    .btn-add-project i {
+        font-size: 0.9rem;
+    }
+    
+    /* Unified form */
+    .unified-search-filter-form {
         display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        position: relative;
-        overflow: hidden;
+        flex-direction: column;
         gap: 1rem;
-        flex-wrap: wrap;
-    }
-    
-    .search-filter-bar::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.02) 0%, 
-            transparent 50%);
-        pointer-events: none;
-    }
-    
-    .projects-title {
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--primary-color);
-        margin: 0;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        position: relative;
+        width: 100%;
         z-index: 1;
     }
     
-    .controls-wrapper {
+    /* Search wrapper - full width */
+    .search-wrapper-full {
+        position: relative;
+        width: 100%;
+    }
+    
+    /* Filter row */
+    .filter-row {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        position: relative;
-        z-index: 1;
+        gap: 0.5rem;
         flex-wrap: wrap;
-        flex: 1;
-        min-width: 0;
-    }
-    
-    /* Glass Search Input */
-    .search-wrapper {
-        position: relative;
-        width: 200px;
-        min-width: 150px;
-        flex-shrink: 1;
+        width: 100%;
     }
     
     .search-input {
@@ -872,6 +893,96 @@
         margin-right: 0.3rem;
     }
     
+    /* Glass Pagination */
+    .pagination-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 1.5rem 1rem 1rem;
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.22) 0%, 
+            rgba(255, 255, 255, 0.08) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 12px;
+        box-shadow: 
+            0 6px 25px rgba(0, 90, 146, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .pagination-info {
+        font-size: 0.9rem;
+        color: var(--text-color);
+        font-weight: 500;
+    }
+    
+    .pagination {
+        display: flex;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        gap: 0.25rem;
+    }
+    
+    .page-item {
+        display: inline-block;
+    }
+    
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.5rem;
+        height: 2.5rem;
+        padding: 0.5rem;
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.18) 0%, 
+            rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 90, 146, 0.2);
+        border-radius: 6px;
+        color: var(--primary-color) !important;
+        font-weight: 500;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all var(--transition-speed) ease;
+        box-shadow: 
+            0 2px 8px rgba(0, 90, 146, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    
+    .page-link:hover {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.15) 0%, 
+            rgba(0, 90, 146, 0.08) 100%);
+        border-color: rgba(0, 90, 146, 0.3);
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 
+            0 4px 15px rgba(0, 90, 146, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    
+    .page-item.active .page-link {
+        background: linear-gradient(135deg, 
+            rgba(0, 90, 146, 0.9) 0%, 
+            rgba(0, 75, 121, 0.8) 100%);
+        color: white !important;
+        border-color: rgba(255, 255, 255, 0.3);
+        box-shadow: 
+            0 4px 15px rgba(0, 90, 146, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    
+    .page-item.active .page-link:hover {
+        transform: none;
+        cursor: default;
+    }
+    
     /* ====================================
        RESPONSIVE ADJUSTMENTS
        ==================================== */
@@ -896,72 +1007,104 @@
          }
      }
 
-     @media (max-width: 768px) {
-         .projects-header,
-         .search-filter-bar {
-             flex-direction: column;
-             align-items: flex-start;
-             gap: 1rem;
-             margin: 0.5rem;
-             padding: 1rem;
-         }
-         
-         .projects-title {
-             margin-bottom: 0.5rem;
-         }
-         
-         .controls-wrapper {
-             width: 100%;
-             flex-direction: column;
-             align-items: stretch;
-             gap: 1rem;
-         }
-         
-         .search-wrapper {
-             width: 100%;
-             min-width: auto;
-         }
-         
-         .filter-form {
-             width: 100%;
-             flex-direction: column;
-             align-items: stretch;
-             gap: 0.75rem;
-         }
-         
-         .filter-select {
-             width: 100%;
-             margin-bottom: 0;
-             min-width: auto;
-             max-width: none;
-             flex: none;
-         }
-         
-         .filter-btn {
-             width: 100%;
-         }
-         
-         .projects-table-container .table-scroll {
-             display: none;
-         }
-         
-         .mobile-projects-view {
-             display: block;
-         }
-         
-         .view-toggle {
-             display: flex;
-         }
-         
-         .projects-header h1 {
-             font-size: 1.2rem;
-         }
-         
-         .btn-add-project {
-             width: 100%;
-             justify-content: center;
-         }
-     }
+    @media (max-width: 768px) {
+        .search-filter-bar {
+            padding: 1.25rem;
+            margin: 1rem;
+            gap: 1rem;
+        }
+        
+        .bar-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+        }
+        
+        .bar-title {
+            font-size: 1.25rem;
+            justify-content: center;
+        }
+        
+        .bar-actions {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .btn-clear-filters,
+        .btn-add-project {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .unified-search-filter-form {
+            width: 100%;
+        }
+        
+        .search-wrapper-full {
+            width: 100%;
+        }
+        
+        .search-input {
+            width: 100%;
+        }
+        
+        .filter-row {
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+        }
+        
+        .filter-select {
+            width: 100%;
+            margin-bottom: 0;
+            min-width: auto;
+            max-width: none;
+            flex: none;
+        }
+        
+        .filter-btn {
+            width: 100%;
+        }
+        
+        .projects-table-container .table-scroll {
+            display: none;
+        }
+        
+        .mobile-projects-view {
+            display: block;
+        }
+        
+        .view-toggle {
+            display: flex;
+        }
+        
+        /* Paginação mobile */
+        .pagination-container {
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 1rem 0.5rem;
+            padding: 0.75rem;
+        }
+        
+        .pagination-info {
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        
+        .pagination {
+            gap: 0.15rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .page-link {
+            min-width: 2rem;
+            height: 2rem;
+            font-size: 0.8rem;
+        }
+    }
      
      @media (min-width: 992px) {
          .table-scroll {
@@ -1007,23 +1150,35 @@
 
 {% block content %}
 <div class="main-container">
-    <!-- Cabeçalho simples -->
-    <div class="projects-header">
-        <h1>Meus Projetos</h1>
-        <button type="button" class="btn btn-add-project" data-bs-toggle="modal" data-bs-target="#addProjectModal">
-            <i class="fas fa-plus me-1"></i>Novo Projeto
-        </button>
-    </div>
-
-    <!-- Barra de busca e filtros -->
+    <!-- Barra de busca, filtros e ações - Card único unificado -->
     <div class="search-filter-bar">
-        <span class="projects-title">Todos os Projetos</span>
-        <div class="controls-wrapper">
-            <div class="search-wrapper">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" class="search-input" placeholder="Buscar projeto..." id="searchProject">
+        <!-- Header com título e ações -->
+        <div class="bar-header">
+            <h1 class="bar-title">
+                <i class="fas fa-folder-open me-2"></i>Todos os Projetos
+            </h1>
+            <div class="bar-actions">
+                {% if has_active_filters %}
+                <button type="button" id="clearFiltersBtn" class="btn-clear-filters" title="Limpar todos os filtros">
+                    <i class="fas fa-times-circle me-1"></i>Limpar Filtros
+                </button>
+                {% endif %}
+                <button type="button" class="btn-add-project" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                    <i class="fas fa-plus me-1"></i>Novo Projeto
+                </button>
             </div>
-            <form method="GET" action="{{ url_for('main.list_projects') }}" class="filter-form">
+        </div>
+        
+        <!-- Formulário unificado - busca + filtros -->
+        <form method="GET" action="{{ url_for('main.list_projects') }}" class="unified-search-filter-form" id="filterForm">
+            <!-- Campo de busca - linha separada -->
+            <div class="search-wrapper-full">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" placeholder="Buscar projeto..." id="searchProject" name="search" value="{{ search_query }}">
+            </div>
+            
+            <!-- Filtros - linha abaixo -->
+            <div class="filter-row">
                 <select class="filter-select" name="prioridade" id="filterPrioridade">
                     <option value="">Todas as prioridades</option>
                     {% for prio in priorities %}
@@ -1050,9 +1205,27 @@
                         <option value="{{ atraso_val }}" {% if atraso_val == selected_atraso %}selected{% endif %}>{{ atraso_text }}</option>
                     {% endfor %}
                 </select>
+                <select class="filter-select" name="special_project" id="filterSpecialProject">
+                    <option value="">Todos os especiais</option>
+                    {% for special in special_projects_options %}
+                        <option value="{{ special }}" {% if special == selected_special_project %}selected{% endif %}>{{ special }}</option>
+                    {% endfor %}
+                </select>
+                <select class="filter-select" name="delivery_type" id="filterDeliveryType">
+                    <option value="">Todos os tipos</option>
+                    {% for delivery in delivery_types_options %}
+                        <option value="{{ delivery }}" {% if delivery == selected_delivery_type %}selected{% endif %}>{{ delivery }}</option>
+                    {% endfor %}
+                </select>
+                <select class="filter-select" name="objetivo" id="filterObjetivo">
+                    <option value="">Todos os objetivos</option>
+                    {% for obj in objetivos %}
+                        <option value="{{ obj.id }}" {% if obj.id|string == selected_objetivo %}selected{% endif %}>{{ obj.descricao }}</option>
+                    {% endfor %}
+                </select>
                 <button type="submit" class="filter-btn">Filtrar</button>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 
     <!-- Tabela de projetos -->
@@ -1074,13 +1247,14 @@
                     <thead>
                         <tr>
                             <th style="width: 3%;">#</th>
-                            <th style="width: 20%;">Título</th>
-                            <th style="width: 12%;">Área</th>
-                            <th style="width: 12%;">Órgão</th>
+                            <th style="width: 18%;">Título</th>
+                            <th style="width: 10%;">Área</th>
+                            <th style="width: 10%;">Órgão</th>
+                            <th style="width: 10%;">Tipo Entrega</th>
                             <th style="width: 8%;">Prioridade</th>
                             <th style="width: 8%;">Status</th>
-                            <th style="width: 10%;">Data Início</th>
-                            <th style="width: 10%;">Data Fim</th>
+                            <th style="width: 9%;">Data Início</th>
+                            <th style="width: 9%;">Data Fim</th>
                             <th style="width: 8%;" class="text-center">Ações</th>
                         </tr>
                     </thead>
@@ -1095,6 +1269,15 @@
                                 </td>
                                 <td>{{ project.area_responsavel if project.area_responsavel else '-' }}</td>
                                 <td>{{ project.orgao if project.orgao else '-' }}</td>
+                                <td>
+                                    {% if project.delivery_type %}
+                                        <span class="badge badge-delivery" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08)); color: #1e40af; border: 1px solid rgba(59, 130, 246, 0.2); font-size: 0.7rem; padding: 0.25rem 0.5rem; white-space: nowrap;">
+                                            {{ project.delivery_type }}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: #94a3b8;">-</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <span class="badge priority-{{ project.prioridade | lower }}">
                                         {{ project.prioridade | capitalize }}
@@ -1112,8 +1295,8 @@
                                         <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="btn action-btn" title="Ver Detalhes">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        {% if is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel) %}
-                                        <a href="{{ url_for('main.edit_project', project_id=project.id) }}" class="btn action-btn" title="Editar Projeto">
+                                        {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
+                                        <a href="{{ url_for('main.project_detail', project_id=project.id) }}?edit=true" class="btn action-btn" title="Editar Projeto">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <form action="{{ url_for('main.delete_project', project_id=project.id) }}" method="post" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir este projeto e todas as suas etapas?');">
@@ -1160,6 +1343,12 @@
                                 <i class="fas fa-building"></i>{{ project.orgao }}
                             </span>
                             {% endif %}
+                            
+                            {% if project.delivery_type %}
+                            <span class="project-card-detail">
+                                <i class="fas fa-box"></i>{{ project.delivery_type }}
+                            </span>
+                            {% endif %}
                         </div>
                         
                         <div class="project-card-date-group">
@@ -1175,8 +1364,8 @@
                             <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2 me-1" title="Ver Detalhes">
                                 <i class="fas fa-eye"></i>Ver
                             </a>
-                            {% if is_admin_user or (current_user_obj and current_user_obj.area_responsavel == project.area_responsavel) %}
-                            <a href="{{ url_for('main.edit_project', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1" title="Editar Projeto">
+                            {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
+                            <a href="{{ url_for('main.project_detail', project_id=project.id) }}?edit=true" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1" title="Editar Projeto">
                                 <i class="fas fa-edit"></i>Editar
                             </a>
                             <form action="{{ url_for('main.delete_project', project_id=project.id) }}" method="post" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir este projeto e todas as suas etapas? Esta ação não pode ser desfeita.');">
@@ -1190,6 +1379,63 @@
                 {% endfor %}
             </div>
         </div>
+        
+        <!-- Controles de Paginação -->
+        {% if total_pages > 1 %}
+        <div class="pagination-container">
+            <div class="pagination-info">
+                Mostrando {{ ((page - 1) * 40) + 1 }} - {{ [page * 40, total_projects]|min }} de {{ total_projects }} projetos
+            </div>
+            <nav aria-label="Navegação de páginas">
+                <ul class="pagination">
+                    <!-- Primeira página -->
+                    {% if page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.list_projects', page=1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, objetivo=selected_objetivo) }}" aria-label="Primeira">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- Página anterior -->
+                    {% if page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.list_projects', page=page-1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, objetivo=selected_objetivo) }}" aria-label="Anterior">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- Páginas numéricas -->
+                    {% for p in range([1, page - 2]|max, [total_pages + 1, page + 3]|min) %}
+                        <li class="page-item {% if p == page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('main.list_projects', page=p, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, objetivo=selected_objetivo) }}">
+                                {{ p }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                    
+                    <!-- Próxima página -->
+                    {% if page < total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.list_projects', page=page+1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, objetivo=selected_objetivo) }}" aria-label="Próxima">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- Última página -->
+                    {% if page < total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.list_projects', page=total_pages, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, objetivo=selected_objetivo) }}" aria-label="Última">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
     {% else %}
         <div class="empty-state">
             <i class="fas fa-folder-open"></i>
@@ -1210,26 +1456,16 @@
 {{ super() }}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- Lógica de busca e toggle de visualização ---
-        const searchInput = document.getElementById('searchProject');
-        if (searchInput) {
-            searchInput.addEventListener('keyup', function() {
-                const searchText = this.value.toLowerCase();
-                
-                // Filtrar tabela
-                document.querySelectorAll('.projects-table tbody tr').forEach(row => {
-                    const rowText = row.textContent.toLowerCase();
-                    row.style.display = rowText.includes(searchText) ? '' : 'none';
-                });
-                
-                // Filtrar cards
-                document.querySelectorAll('.mobile-projects-view .project-card').forEach(card => {
-                    const cardText = card.textContent.toLowerCase();
-                    card.style.display = cardText.includes(searchText) ? '' : 'none';
-                });
+        // --- Lógica de limpar filtros ---
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', function() {
+                // Redirecionar para a URL sem parâmetros (limpa tudo)
+                window.location.href = "{{ url_for('main.list_projects') }}";
             });
         }
         
+        // --- Lógica de toggle de visualização ---
         const viewTableBtn = document.querySelector('.view-toggle .view-table');
         const viewCardsBtn = document.querySelector('.view-toggle .view-cards');
         const tableContainer = document.querySelector('.table-scroll');
