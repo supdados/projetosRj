@@ -41,14 +41,14 @@ def print_info(message):
 def check_column_exists(cursor, table_name, column_name):
     """Verifica se uma coluna existe na tabela"""
     cursor.execute(f"""
-        SELECT COUNT(*) 
+        SELECT COUNT(*) as count 
         FROM information_schema.COLUMNS 
         WHERE TABLE_SCHEMA = '{DB_NAME}' 
         AND TABLE_NAME = '{table_name}' 
         AND COLUMN_NAME = '{column_name}'
     """)
     result = cursor.fetchone()
-    return result[0] > 0
+    return result['count'] > 0
 
 def migrate():
     """Função principal de migração"""

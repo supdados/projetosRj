@@ -1,3 +1,4 @@
+from urllib.parse import quote_plus
 from dotenv import load_dotenv
 from flask import Flask, session, g
 from flask_migrate import Migrate
@@ -16,12 +17,13 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', '***REMOVED***')
 
 # MySQL - para Linux/Produção (comentado para uso local no Mac)
-# app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://"+os.getenv('DB_USER')+":"+os.getenv('DB_PASSWORD')+'@localhost/'+os.getenv('DB_NAME')
+password = quote_plus(os.getenv('DB_PASSWORD'))
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{os.getenv('DB_USER')}:{password}@localhost/{os.getenv('DB_NAME')}"
 
 # SQLite - para desenvolvimento local no Mac
-import os
-basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'projetosrj.db')
+# import os
+# basedir = os.path.abspath(os.path.dirname(__file__))
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'projetosrj.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa o rastreamento de modificações
 
