@@ -2008,10 +2008,10 @@
             <div class="row g-2 mb-2">
                 <div class="col-md-4">
                     <div class="detail-item">
-                        <strong>Área Responsável{% if not is_admin_user %} <i class="fas fa-lock text-muted small"
-                                title="Somente administradores podem editar"></i>{% endif %}</strong>
+                        <strong>Área Responsável{% if not is_admin_user and current_user_obj and current_user_obj.get_areas()|length <= 1 %} <i class="fas fa-lock text-muted small"
+                                title="Você possui apenas uma área"></i>{% endif %}</strong>
                         <span data-field="area_responsavel" data-value="{{ project.area_responsavel or '' }}" {% if not
-                            is_admin_user %} style="cursor: default;" {% endif %}>
+                            is_admin_user and current_user_obj and current_user_obj.get_areas()|length <= 1 %} style="cursor: default;" {% endif %}>
                             {% if project.area_responsavel %}
                             <div class="small"><i class="fas fa-users me-1 text-primary"></i> {{
                                 project.area_responsavel }}</div>
@@ -2150,7 +2150,13 @@
                         </div>
                         <a href="{{ url_for('main.project_tasks', project_id=project.id) }}"
                             class="btn btn-sm btn-ver-tarefas-projeto flex-shrink-0">
-                            <i class="fas fa-tasks"></i> Ver Tarefas do Projeto
+                            {% if project.tasks|length == 0 %}
+                            <i class="fas fa-plus-circle"></i> Adicionar Tarefas ao Projeto
+                            {% elif project.tasks|length == 1 %}
+                            <i class="fas fa-tasks"></i> Ver Tarefa do Projeto
+                            {% else %}
+                            <i class="fas fa-tasks"></i> Ver Tarefas do Projeto ({{ project.tasks|length }})
+                            {% endif %}
                         </a>
                     </div>
                 </div>
@@ -3682,17 +3688,19 @@
             const indicadoresOriginal = document.querySelector('[data-field="indicadores_ids"]')?.dataset.value;
 
             // Tornar campos editáveis
-            for (const el of document.querySelectorAll('[data-field]')) {
+            for (const el of document.querySelectorAll('[data-field]:not([data-etapa-id])')) {
                 const field = el.dataset.field;
                 const currentValue = el.dataset.value || '';
                 const dataType = el.dataset.type;
 
-                // Área responsável - apenas admin pode editar
+                // Área responsável - admin ou usuário com múltiplas áreas pode editar
                 {% if not is_admin_user %}
+                {% if current_user_obj and current_user_obj.get_areas()|length <= 1 %}
                 if (field === 'area_responsavel') {
-                    // Usuário não-admin: não permite edição
+                    // Usuário com apenas uma área: não permite edição
                     continue;
                 }
+                {% endif %}
                 {% endif %}
 
                 let input;
@@ -3738,7 +3746,7 @@
                     input.style.cssText = `
                     font-size: 0.875rem;
                     line-height: 1.4;
-                    color: white;
+                    color: white; important!
                     background-color: rgba(255, 255, 255, 0.15);
                     border: 1px solid rgba(255, 255, 255, 0.3);
                     border-radius: 6px;
@@ -3751,7 +3759,7 @@
                 `;
                     input.rows = 2;
                     input.value = currentValue || '';
-                    input.placeholder = 'Não informado';
+                    input.placeholder = 'Adicione uma descrição...';
                 }
 
 
@@ -3813,8 +3821,12 @@
             select.dataset.field = 'area_responsavel';
             select.dataset.originalValue = currentValue;
 
-            // Áreas corretas do sistema
+            // Admin vê todas as áreas, não-admin vê apenas suas áreas
+            {% if is_admin_user %}
             const areas = ["Auditoria", "CHEGAB", "SUPDADOS", "SUBDGD", "SUPEST", "SUPIM", "SUPPAE", "PRODERJ", "ASSESP", "ECENTRAL", "SUBEDD", "VPD", "VPE", "VPT"];
+            {% else %}
+            const areas = {{ current_user_obj.get_areas()|tojson }};
+            {% endif %}
 
             areas.forEach(area => {
                 const option = document.createElement('option');
@@ -4113,7 +4125,7 @@
             const formData = {};
 
             // Coletar dados dos campos editáveis
-            document.querySelectorAll('[data-field]').forEach(el => {
+            document.querySelectorAll('[data-field]:not([data-etapa-id])').forEach(el => {
                 const field = el.dataset.field;
 
                 // Indicadores - coletar checkboxes marcados

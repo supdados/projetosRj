@@ -17,7 +17,8 @@ class User(db.Model):
     areas = db.relationship('UserArea', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        # pbkdf2:sha256 evita dependência de hashlib.scrypt (não disponível em alguns Python/OpenSSL)
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)

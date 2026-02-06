@@ -3,7 +3,7 @@
 {% block title %}{{ task.titulo }} - Tarefas - ProjetosRJ{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4" style="max-width: 1100px;">
     <div class="row">
         <div class="col-12">
             <!-- Breadcrumb + Voltar (acima do card) -->
@@ -151,9 +151,7 @@
                     <div class="task-item-bar status-{{ item.status }}"></div>
                     <div class="task-item-main">
                         <div class="task-item-line">
-                            <p class="task-item-desc task-item-desc-click" data-item-id="{{ item.id }}" role="button"
-                                tabindex="0" title="Clique para expandir ou recolher comentários">{{ item.descricao }}
-                            </p>
+                            <p class="task-item-desc" data-item-id="{{ item.id }}">{{ item.descricao }}</p>
                             <div class="task-item-meta">
                                 <select class="task-item-status status-{{ item.status }}"
                                     onchange="updateItemStatus({{ item.id }}, this.value)" title="Status">
@@ -166,17 +164,14 @@
                                     <option value="finalizado" {% if item.status=='finalizado' %}selected{% endif %}>
                                         Finalizado</option>
                                 </select>
-                                <span class="task-item-responsavel">{% if item.responsavel %}{{ item.responsavel }}{%
-                                    else %}&nbsp;{% endif %}</span>
+                                <span class="task-item-responsavel" data-item-id="{{ item.id }}">{% if item.responsavel %}{{ item.responsavel }}{%
+                                    else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
                                 <button type="button" class="task-item-comments-btn" aria-expanded="false"
                                     data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)">
                                     <i class="far fa-comment-alt"></i>
                                     <span class="task-item-comments-num">{{ item.comments|length }}</span>
                                 </button>
                                 <div class="task-item-actions">
-                                    <button type="button" class="task-item-btn task-item-edit"
-                                        onclick="editItem({{ item.id }}, '{{ item.descricao|replace("'", "\\'") }}', '{{ item.status }}', '{{ item.responsavel or '' }}')"
-                                        title="Editar"><i class="fas fa-pen"></i></button>
                                     <button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal"
                                         data-bs-target="#deleteItemModal-{{ item.id }}" title="Excluir"><i
                                             class="fas fa-trash-alt"></i></button>
@@ -285,10 +280,9 @@
                                         <div class="responsavel-suggestions" id="addItemResponsavelSuggestions"
                                             role="listbox" hidden></div>
                                     </div>
-                                    <button type="button" class="task-item-add-btn" id="addItemSubmit"
-                                        title="Adicionar"><i class="fas fa-check"></i></button>
-                                    <button type="button" class="task-item-add-cancel" id="addItemCancel"
-                                        title="Cancelar"><i class="fas fa-times"></i></button>
+                                </div>
+                                <div class="task-item-add-hint">
+                                    <kbd>Enter</kbd> para adicionar &nbsp;·&nbsp; <kbd>Esc</kbd> para cancelar
                                 </div>
                             </div>
                         </div>
@@ -321,10 +315,9 @@
                                     <div class="responsavel-suggestions" id="addItemResponsavelSuggestions"
                                         role="listbox" hidden></div>
                                 </div>
-                                <button type="button" class="task-item-add-btn" id="addItemSubmit" title="Adicionar"><i
-                                        class="fas fa-check"></i></button>
-                                <button type="button" class="task-item-add-cancel" id="addItemCancel"
-                                    title="Cancelar"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div class="task-item-add-hint">
+                                <kbd>Enter</kbd> para adicionar &nbsp;·&nbsp; <kbd>Esc</kbd> para cancelar
                             </div>
                         </div>
                     </div>
@@ -985,9 +978,9 @@
 
     .task-item-header {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 115px 200px 40px 56px;
+        grid-template-columns: minmax(0, 1fr) 100px 160px 36px 30px;
         align-items: center;
-        gap: 10px 12px;
+        gap: 10px 8px;
         width: 100%;
     }
 
@@ -1103,9 +1096,9 @@
     .task-item-add-line,
     .task-item-line-edit {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 115px 200px 32px 32px;
+        grid-template-columns: minmax(0, 1fr) 100px 160px;
         align-items: start;
-        gap: 10px 12px;
+        gap: 10px 8px;
         width: 100%;
     }
 
@@ -1135,13 +1128,13 @@
         border-radius: 4px;
         background: #fff;
         width: 100%;
-        max-width: 115px;
+        max-width: 100px;
         box-sizing: border-box;
     }
 
     .task-item-add-responsavel {
         width: 100%;
-        max-width: 200px;
+        max-width: 160px;
         padding: 6px 8px;
         font-size: 12px;
         border: 1px solid #e5e7eb;
@@ -1153,7 +1146,7 @@
         position: relative;
         display: inline-block;
         width: 100%;
-        max-width: 200px;
+        max-width: 160px;
         min-height: 36px;
         align-self: start;
     }
@@ -1161,7 +1154,7 @@
     /* Campo responsável: contenteditable com chips (cresce para baixo ao não caber) */
     .contenteditable-responsavel {
         min-height: 28px;
-        max-width: 200px;
+        max-width: 160px;
         width: 100%;
         padding: 4px 8px;
         font-size: 12px;
@@ -1286,45 +1279,23 @@
         color: #9ca3af;
     }
 
-    .task-item-add-btn {
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        font-size: 12px;
-        font-weight: 600;
-        background: var(--primary-color);
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .task-item-add-btn:hover {
-        background: var(--primary-dark);
-        color: #fff;
-    }
-
-    .task-item-add-cancel {
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: none;
-        border: none;
-        border-radius: 4px;
+    .task-item-add-hint {
+        margin-top: 6px;
+        font-size: 11px;
         color: #9ca3af;
-        cursor: pointer;
-        transition: color 0.15s, background 0.15s;
+        text-align: right;
     }
 
-    .task-item-add-cancel:hover {
-        background: #f3f4f6;
+    .task-item-add-hint kbd {
+        display: inline-block;
+        padding: 1px 5px;
+        font-size: 10px;
+        font-family: inherit;
         color: #6b7280;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 3px;
+        line-height: 1.4;
     }
 
     .task-item-main {
@@ -1335,9 +1306,9 @@
 
     .task-item-line {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 115px 200px 40px 56px;
+        grid-template-columns: minmax(0, 1fr) 100px 160px 36px 30px;
         align-items: center;
-        gap: 10px 12px;
+        gap: 10px 8px;
         width: 100%;
     }
 
@@ -1351,19 +1322,31 @@
         min-width: 0;
     }
 
-    .task-item-desc-click {
-        cursor: pointer;
+    .task-item-desc[data-item-id] {
+        cursor: text;
         border-radius: 3px;
+        padding: 2px 4px;
         transition: background 0.15s;
     }
 
-    .task-item-desc-click:hover {
+    .task-item-desc[data-item-id]:hover {
         background: rgba(0, 90, 146, 0.04);
     }
 
-    .task-item-desc-click:focus {
+    .task-item-desc-editing {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.45;
+        color: #374151;
+        min-width: 0;
+        padding: 4px 6px;
+        border: 1px solid var(--primary-color);
+        border-radius: 4px;
+        background: #fff;
+        width: 100%;
+        box-sizing: border-box;
         outline: none;
-        background: rgba(0, 90, 146, 0.06);
+        font-family: inherit;
     }
 
     .task-item-meta {
@@ -1378,7 +1361,7 @@
         border-radius: 4px;
         cursor: pointer;
         width: 100%;
-        max-width: 115px;
+        max-width: 100px;
         box-sizing: border-box;
     }
 
@@ -1412,7 +1395,7 @@
         font-size: 11px;
         color: #6b7280;
         width: 100%;
-        max-width: 200px;
+        max-width: 160px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -1420,12 +1403,30 @@
         box-sizing: border-box;
     }
 
+    .task-item-responsavel[data-item-id] {
+        cursor: text;
+        padding: 2px 4px;
+        border-radius: 3px;
+        transition: background 0.15s;
+    }
+
+    .task-item-responsavel[data-item-id]:hover {
+        background: rgba(0, 90, 146, 0.04);
+    }
+
+    .responsavel-placeholder {
+        font-style: italic;
+        color: #c4c9d1;
+        font-size: 11px;
+        font-weight: 400;
+    }
+
     .task-item-comments-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 4px;
-        width: 40px;
+        width: 36px;
         padding: 2px 6px;
         background: none;
         border: none;
@@ -1457,7 +1458,7 @@
         justify-content: flex-end;
         gap: 2px;
         opacity: 0.6;
-        width: 56px;
+        width: 30px;
         box-sizing: border-box;
     }
 
@@ -1482,10 +1483,6 @@
 
     .task-item-btn:hover {
         color: #fff;
-    }
-
-    .task-item-edit:hover {
-        background: var(--primary-color);
     }
 
     .task-item-del:hover {
@@ -2087,8 +2084,6 @@
         var addDesc = document.getElementById('addItemDesc');
         var addStatus = document.getElementById('addItemStatus');
         var addResponsavel = document.getElementById('addItemResponsavel');
-        var addSubmit = document.getElementById('addItemSubmit');
-        var addCancel = document.getElementById('addItemCancel');
         var emptyState = document.getElementById('emptyStateItems');
 
         if (!listEl || !addRow || !placeholder || !formWrap) return;
@@ -2123,13 +2118,11 @@
 
         function insertNewItem(data) {
             var item = data.item;
-            var descEscaped = escapeJsStr(item.descricao);
-            var respEscaped = escapeJsStr(item.responsavel || '');
             var rowHtml = '<div class="task-item-row" data-item-id="' + item.id + '">' +
                 '<div class="task-item-bar status-' + item.status + '"></div>' +
                 '<div class="task-item-main">' +
                 '<div class="task-item-line">' +
-                '<p class="task-item-desc task-item-desc-click" data-item-id="' + item.id + '" role="button" tabindex="0" title="Clique para expandir ou recolher comentários">' + escapeHtml(item.descricao) + '</p>' +
+                '<p class="task-item-desc" data-item-id="' + item.id + '">' + escapeHtml(item.descricao) + '</p>' +
                 '<div class="task-item-meta">' +
                 '<select class="task-item-status status-' + item.status + '" onchange="updateItemStatus(' + item.id + ', this.value)" title="Status">' +
                 '<option value="programado"' + (item.status === 'programado' ? ' selected' : '') + '>Programado</option>' +
@@ -2137,11 +2130,10 @@
                 '<option value="validacao"' + (item.status === 'validacao' ? ' selected' : '') + '>Validação</option>' +
                 '<option value="finalizado"' + (item.status === 'finalizado' ? ' selected' : '') + '>Finalizado</option>' +
                 '</select>' +
-                '<span class="task-item-responsavel">' + (item.responsavel ? escapeHtml(item.responsavel) : '&nbsp;') + '</span>' +
+                '<span class="task-item-responsavel" data-item-id="' + item.id + '">' + (item.responsavel ? escapeHtml(item.responsavel) : '<em class="responsavel-placeholder">Responsável não informado</em>') + '</span>' +
                 '<button type="button" class="task-item-comments-btn" aria-expanded="false" data-target="comments-body-' + item.id + '" onclick="toggleComments(this)">' +
                 '<i class="far fa-comment-alt"></i><span class="task-item-comments-num">0</span></button>' +
                 '<div class="task-item-actions">' +
-                '<button type="button" class="task-item-btn task-item-edit" onclick="editItem(' + item.id + ', \'' + descEscaped + '\', \'' + item.status + '\', \'' + respEscaped + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +
                 '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt"></i></button>' +
                 '</div></div></div>' +
                 '<div id="comments-body-' + item.id + '" class="task-item-comments" hidden>' +
@@ -2179,30 +2171,10 @@
                 var n = document.querySelectorAll('.task-item-row').length;
                 countEl.textContent = n + (n === 1 ? ' item' : ' itens');
             }
-            var newDesc = document.querySelector('.task-item-row[data-item-id="' + item.id + '"] .task-item-desc-click');
-            if (newDesc) {
-                newDesc.addEventListener('click', function () {
-                    var row = this.closest('.task-item-row');
-                    if (row) {
-                        var btn = row.querySelector('.task-item-comments-btn');
-                        if (btn) toggleComments(btn);
-                    }
-                });
-                newDesc.addEventListener('keydown', function (e) {
-                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
-                });
-            }
+            // Inline edit delegation handles new items automatically
         }
 
-        placeholder.addEventListener('click', showAddForm);
-        addCancel.addEventListener('click', hideAddForm);
-
-        addDesc.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') hideAddForm();
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addSubmit.click(); }
-        });
-
-        addSubmit.addEventListener('click', function () {
+        function submitAddItem() {
             var desc = (addDesc && addDesc.value) ? addDesc.value.trim() : '';
             if (!desc) { addDesc.focus(); return; }
             var formData = new FormData();
@@ -2229,7 +2201,27 @@
             };
             xhr.onerror = function () { alert('Erro de conexão. Tente novamente.'); };
             xhr.send(formData);
+        }
+
+        placeholder.addEventListener('click', showAddForm);
+
+        addDesc.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') hideAddForm();
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitAddItem(); }
         });
+
+        if (addStatus) {
+            addStatus.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') hideAddForm();
+            });
+        }
+
+        if (addResponsavel) {
+            addResponsavel.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') hideAddForm();
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitAddItem(); }
+            });
+        }
 
         document.getElementById('btnFocusAddItem').addEventListener('click', function () {
             addRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -2627,137 +2619,6 @@
             });
     }
 
-    // Editar item inline (sem modal)
-    function editItem(itemId, descricao, status, responsavel) {
-        var row = document.querySelector('.task-item-row[data-item-id="' + itemId + '"]');
-        if (!row) return;
-        var lineEl = row.querySelector('.task-item-main > .task-item-line:not(.task-item-line-edit)');
-        if (!lineEl) return;
-        // Evitar abrir dois edits ao mesmo tempo
-        if (row.querySelector('.task-item-line-edit')) return;
-
-        var savedHtml = lineEl.innerHTML;
-        var descEsc = (descricao || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        var respChipHtml = '';
-        if (responsavel) {
-            var names = (responsavel || '').split(/\s*,\s*/).map(function (n) { return n.trim(); }).filter(Boolean);
-            for (var i = 0; i < names.length; i++) {
-                var name = names[i];
-                var nameEsc = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-                var nameHtml = (function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; })(name);
-                respChipHtml += '<span class="responsavel-chip responsavel-chip-' + (i % 5) + '" contenteditable="false" data-name="' + nameEsc + '">' + nameHtml + ' <button type="button" class="responsavel-chip-remove" aria-label="Remover">&times;</button></span>';
-            }
-        }
-        var editFormHtml = '<div class="task-item-line task-item-line-edit">' +
-            '<input type="text" class="task-item-add-desc task-item-edit-desc" placeholder="Descrição..." value="' + descEsc + '" data-item-id="' + itemId + '">' +
-            '<select class="task-item-add-status task-item-edit-status">' +
-            '<option value="programado"' + (status === 'programado' ? ' selected' : '') + '>Programado</option>' +
-            '<option value="em_andamento"' + (status === 'em_andamento' ? ' selected' : '') + '>Em andamento</option>' +
-            '<option value="validacao"' + (status === 'validacao' ? ' selected' : '') + '>Validação</option>' +
-            '<option value="finalizado"' + (status === 'finalizado' ? ' selected' : '') + '>Finalizado</option>' +
-            '</select>' +
-            '<div class="responsavel-mention-wrap"><div class="contenteditable-responsavel task-item-edit-responsavel" contenteditable="true" data-placeholder="Responsável (digite @ para marcar)">' + respChipHtml + '</div></div>' +
-            '<button type="button" class="task-item-add-btn task-item-edit-save" data-item-id="' + itemId + '" title="Salvar"><i class="fas fa-check"></i></button>' +
-            '<button type="button" class="task-item-add-cancel task-item-edit-cancel" data-item-id="' + itemId + '" title="Cancelar"><i class="fas fa-times"></i></button>' +
-            '</div>';
-        lineEl.outerHTML = editFormHtml;
-        var newLine = row.querySelector('.task-item-line-edit');
-        if (!newLine) return;
-        var descInput = newLine.querySelector('.task-item-edit-desc');
-        var saveBtn = newLine.querySelector('.task-item-edit-save');
-        var cancelBtn = newLine.querySelector('.task-item-edit-cancel');
-        if (descInput) setTimeout(function () { descInput.focus(); }, 50);
-
-        function restoreLine(html) {
-            var wrap = document.createElement('div');
-            wrap.className = 'task-item-line';
-            wrap.innerHTML = html;
-            newLine.replaceWith(wrap);
-        }
-
-        function buildLineFromItem(item) {
-            var d = (item.descricao || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
-            var r = (item.responsavel || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
-            var lineHtml = '<div class="task-item-line">' +
-                '<p class="task-item-desc task-item-desc-click" data-item-id="' + item.id + '" role="button" tabindex="0" title="Clique para expandir ou recolher comentários">' + (function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; })(item.descricao) + '</p>' +
-                '<div class="task-item-meta">' +
-                '<select class="task-item-status status-' + item.status + '" onchange="updateItemStatus(' + item.id + ', this.value)" title="Status">' +
-                '<option value="programado"' + (item.status === 'programado' ? ' selected' : '') + '>Programado</option>' +
-                '<option value="em_andamento"' + (item.status === 'em_andamento' ? ' selected' : '') + '>Em andamento</option>' +
-                '<option value="validacao"' + (item.status === 'validacao' ? ' selected' : '') + '>Validação</option>' +
-                '<option value="finalizado"' + (item.status === 'finalizado' ? ' selected' : '') + '>Finalizado</option>' +
-                '</select>' +
-                '<span class="task-item-responsavel">' + (item.responsavel ? (function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; })(item.responsavel) : '&nbsp;') + '</span>' +
-                '<button type="button" class="task-item-comments-btn" aria-expanded="false" data-target="comments-body-' + item.id + '" onclick="toggleComments(this)">' +
-                '<i class="far fa-comment-alt"></i><span class="task-item-comments-num">' + (row.querySelector('.task-item-comments') ? (row.querySelectorAll('.task-comment').length || 0) : 0) + '</span></button>' +
-                '<div class="task-item-actions">' +
-                '<button type="button" class="task-item-btn task-item-edit" onclick="editItem(' + item.id + ', \'' + d + '\', \'' + item.status + '\', \'' + r + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +
-                '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt"></i></button>' +
-                '</div></div></div>';
-            return lineHtml;
-        }
-
-        var listElForEdit = row.closest('.task-items-list');
-        if (listElForEdit) {
-            var sugestoesUrlEdit = listElForEdit.getAttribute('data-sugestoes-url');
-            var editRespInput = newLine.querySelector('.task-item-edit-responsavel');
-            if (editRespInput && sugestoesUrlEdit) {
-                initResponsavelMention(editRespInput, listElForEdit.getAttribute('data-task-id'), sugestoesUrlEdit);
-            }
-        }
-
-        cancelBtn.addEventListener('click', function () {
-            restoreLine(savedHtml);
-        });
-        newLine.querySelector('.task-item-edit-desc').addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') { e.preventDefault(); restoreLine(savedHtml); return; }
-            if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
-        });
-        function doSaveItem() {
-            var desc = (newLine.querySelector('.task-item-edit-desc').value || '').trim();
-            if (!desc) { descInput.focus(); return; }
-            var statusVal = newLine.querySelector('.task-item-edit-status').value;
-            var editRespEl = newLine.querySelector('.task-item-edit-responsavel');
-            var respVal = editRespEl ? getResponsavelValueFromEditable(editRespEl).trim() : '';
-            var formData = new FormData();
-            formData.append('descricao', desc);
-            formData.append('status', statusVal);
-            formData.append('responsavel', respVal);
-            saveBtn.disabled = true;
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/tarefas/itens/' + itemId + '/edit');
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.setRequestHeader('Accept', 'application/json');
-            xhr.onload = function () {
-                saveBtn.disabled = false;
-                try {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data.success && data.item) {
-                        var wrap = document.createElement('div');
-                        wrap.innerHTML = buildLineFromItem(data.item);
-                        newLine.replaceWith(wrap.firstChild);
-                        var bar = row.querySelector('.task-item-bar');
-                        if (bar) {
-                            bar.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
-                            bar.classList.add('status-' + data.item.status);
-                        }
-                        // Recolher comentários após salvar (estado consistente: botão "false" e bloco oculto)
-                        var commentsBody = document.getElementById('comments-body-' + data.item.id);
-                        if (commentsBody) commentsBody.setAttribute('hidden', '');
-                    } else {
-                        alert(data.message || 'Erro ao salvar item.');
-                    }
-                } catch (err) {
-                    if (xhr.status === 200) return;
-                    alert('Erro ao salvar. Tente novamente.');
-                }
-            };
-            xhr.onerror = function () { saveBtn.disabled = false; alert('Erro de conexão.'); };
-            xhr.send(formData);
-        }
-        saveBtn.addEventListener('click', doSaveItem);
-    }
-
     // Expandir/recolher comentários
     function toggleComments(btn) {
         var targetId = btn.getAttribute('data-target');
@@ -2773,29 +2634,237 @@
         }
     }
 
-    // Clicar na descrição do item expande/recolhe comentários (delegação: funciona em itens inseridos depois, ex. após editar)
+    // ===== EDIÇÃO INLINE DA DESCRIÇÃO =====
+    function inlineEditDesc(descEl) {
+        var itemId = descEl.getAttribute('data-item-id');
+        if (!itemId) return;
+        var row = descEl.closest('.task-item-row');
+        if (!row) return;
+        if (descEl.classList.contains('task-item-desc-editing-active')) return;
+        descEl.classList.add('task-item-desc-editing-active');
+
+        var originalText = descEl.textContent.trim();
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'task-item-desc-editing';
+        input.value = originalText;
+
+        descEl.replaceWith(input);
+        input.focus();
+        input.select();
+
+        var saving = false;
+
+        function restore(text) {
+            var p = document.createElement('p');
+            p.className = 'task-item-desc';
+            p.setAttribute('data-item-id', itemId);
+            p.textContent = text;
+            input.replaceWith(p);
+        }
+
+        function saveDesc() {
+            if (saving) return;
+            var newText = (input.value || '').trim();
+            if (!newText) { input.focus(); return; }
+            if (newText === originalText) { restore(originalText); return; }
+
+            saving = true;
+            input.disabled = true;
+
+            var statusSelect = row.querySelector('.task-item-status');
+            var respSpan = row.querySelector('.task-item-responsavel');
+            var statusVal = statusSelect ? statusSelect.value : 'programado';
+            var respVal = respSpan ? respSpan.textContent.trim() : '';
+            if (respVal === '\u00a0') respVal = '';
+
+            var formData = new FormData();
+            formData.append('descricao', newText);
+            formData.append('status', statusVal);
+            formData.append('responsavel', respVal);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/tarefas/itens/' + itemId + '/edit');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.onload = function () {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.success && data.item) {
+                        restore(data.item.descricao);
+                    } else {
+                        alert(data.message || 'Erro ao salvar.');
+                        restore(originalText);
+                    }
+                } catch (err) {
+                    restore(originalText);
+                }
+            };
+            xhr.onerror = function () {
+                alert('Erro de conexão.');
+                restore(originalText);
+            };
+            xhr.send(formData);
+        }
+
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); saveDesc(); }
+            if (e.key === 'Escape') { e.preventDefault(); restore(originalText); }
+        });
+
+        input.addEventListener('blur', function () {
+            setTimeout(function () {
+                if (!saving && document.body.contains(input)) {
+                    restore(originalText);
+                }
+            }, 150);
+        });
+    }
+
+    // ===== EDIÇÃO INLINE DO RESPONSÁVEL =====
+    function inlineEditResponsavel(respSpan) {
+        var itemId = respSpan.getAttribute('data-item-id');
+        if (!itemId) return;
+        var row = respSpan.closest('.task-item-row');
+        if (!row) return;
+        if (respSpan.classList.contains('task-item-resp-editing-active')) return;
+        respSpan.classList.add('task-item-resp-editing-active');
+
+        var placeholderEl = respSpan.querySelector('.responsavel-placeholder');
+        var originalText = placeholderEl ? '' : respSpan.textContent.trim();
+        if (originalText === '\u00a0') originalText = '';
+
+        var chipHtml = '';
+        if (originalText) {
+            var names = originalText.split(/\s*,\s*/).map(function(n) { return n.trim(); }).filter(Boolean);
+            for (var i = 0; i < names.length; i++) {
+                var name = names[i];
+                var nameHtml = (function(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; })(name);
+                var nameAttr = name.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+                chipHtml += '<span class="responsavel-chip responsavel-chip-' + (i % 5) + '" contenteditable="false" data-name="' + nameAttr + '">' + nameHtml + ' <button type="button" class="responsavel-chip-remove" aria-label="Remover">&times;</button></span>';
+            }
+        }
+
+        var editWrap = document.createElement('div');
+        editWrap.className = 'responsavel-mention-wrap';
+        editWrap.style.maxWidth = '160px';
+        var editable = document.createElement('div');
+        editable.className = 'contenteditable-responsavel';
+        editable.contentEditable = 'true';
+        editable.setAttribute('data-placeholder', 'Responsável (@ para marcar)');
+        editable.innerHTML = chipHtml;
+        var suggestionsDiv = document.createElement('div');
+        suggestionsDiv.className = 'responsavel-suggestions';
+        suggestionsDiv.setAttribute('role', 'listbox');
+        suggestionsDiv.setAttribute('hidden', '');
+        editWrap.appendChild(editable);
+        editWrap.appendChild(suggestionsDiv);
+
+        respSpan.replaceWith(editWrap);
+        editable.focus();
+
+        var listEl = row.closest('.task-items-list');
+        if (listEl) {
+            var sugestoesUrl = listEl.getAttribute('data-sugestoes-url');
+            if (sugestoesUrl) {
+                initResponsavelMention(editable, listEl.getAttribute('data-task-id'), sugestoesUrl);
+            }
+        }
+
+        var saving = false;
+
+        function restore(text) {
+            var span = document.createElement('span');
+            span.className = 'task-item-responsavel';
+            span.setAttribute('data-item-id', itemId);
+            if (text) {
+                span.textContent = text;
+            } else {
+                span.innerHTML = '<em class="responsavel-placeholder">Responsável não informado</em>';
+            }
+            editWrap.replaceWith(span);
+        }
+
+        function saveResp() {
+            if (saving) return;
+            var newResp = getResponsavelValueFromEditable(editable).trim();
+            if (newResp === originalText) { restore(originalText); return; }
+
+            saving = true;
+
+            var descEl = row.querySelector('.task-item-desc');
+            var statusSelect = row.querySelector('.task-item-status');
+            var descVal = descEl ? descEl.textContent.trim() : '';
+            var statusVal = statusSelect ? statusSelect.value : 'programado';
+
+            var formData = new FormData();
+            formData.append('descricao', descVal);
+            formData.append('status', statusVal);
+            formData.append('responsavel', newResp);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/tarefas/itens/' + itemId + '/edit');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.onload = function () {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.success && data.item) {
+                        restore(data.item.responsavel || '');
+                    } else {
+                        alert(data.message || 'Erro ao salvar.');
+                        restore(originalText);
+                    }
+                } catch (err) {
+                    restore(originalText);
+                }
+            };
+            xhr.onerror = function () {
+                alert('Erro de conexão.');
+                restore(originalText);
+            };
+            xhr.send(formData);
+        }
+
+        editable.addEventListener('keydown', function (e) {
+            // Não salvar se o dropdown de sugestões está aberto (Enter seleciona a sugestão)
+            var dropdown = editWrap.querySelector('.responsavel-suggestions:not([hidden])');
+            if (e.key === 'Enter' && !e.shiftKey && !dropdown) { e.preventDefault(); saveResp(); }
+            if (e.key === 'Escape') {
+                if (dropdown) return; // Deixa o handler do mention fechar o dropdown
+                e.preventDefault(); restore(originalText);
+            }
+        });
+
+        editable.addEventListener('blur', function () {
+            setTimeout(function () {
+                if (!saving && document.body.contains(editWrap)) {
+                    var dropdown = document.querySelector('.responsavel-suggestions:not([hidden])');
+                    if (dropdown) return;
+                    restore(originalText);
+                }
+            }, 250);
+        });
+    }
+
+    // ===== DELEGAÇÃO DE EVENTOS PARA EDIÇÃO INLINE =====
     var taskItemsListEl = document.querySelector('.task-items-list');
     if (taskItemsListEl) {
         taskItemsListEl.addEventListener('click', function (e) {
-            var desc = e.target.closest('.task-item-desc-click');
-            if (!desc) return;
-            e.preventDefault();
-            var row = desc.closest('.task-item-row');
-            if (row) {
-                var btn = row.querySelector('.task-item-comments-btn');
-                if (btn) toggleComments(btn);
-            }
-        });
-        taskItemsListEl.addEventListener('keydown', function (e) {
-            var desc = e.target.closest('.task-item-desc-click');
-            if (!desc) return;
-            if (e.key === 'Enter' || e.key === ' ') {
+            // Edição inline da descrição
+            var desc = e.target.closest('.task-item-desc[data-item-id]');
+            if (desc && !desc.classList.contains('task-item-desc-editing-active')) {
                 e.preventDefault();
-                var row = desc.closest('.task-item-row');
-                if (row) {
-                    var btn = row.querySelector('.task-item-comments-btn');
-                    if (btn) toggleComments(btn);
-                }
+                inlineEditDesc(desc);
+                return;
+            }
+            // Edição inline do responsável
+            var resp = e.target.closest('.task-item-responsavel[data-item-id]');
+            if (resp && !resp.classList.contains('task-item-resp-editing-active')) {
+                e.preventDefault();
+                inlineEditResponsavel(resp);
+                return;
             }
         });
     }

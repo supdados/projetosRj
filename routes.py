@@ -643,15 +643,15 @@ def edit_project(project_id):
             changes.append(f'órgão de "{old_orgao or "vazio"}" para "{new_orgao or "vazio"}"')
         project_to_edit.orgao = new_orgao
 
-        # Apenas admin pode alterar área diretamente no formulário
-        if g.user.is_admin:
+        # Admin ou usuário com múltiplas áreas pode alterar área
+        new_area = request.form.get('project_area_responsavel')
+        if new_area:
             old_area = project_to_edit.area_responsavel
-            new_area = request.form.get('project_area_responsavel')
-            if old_area != new_area:
-                changes.append(f'área responsável de "{old_area}" para "{new_area}"')
-            project_to_edit.area_responsavel = new_area
-        # Se não for admin, a área não é alterada por este formulário (já viria desabilitada no HTML)
-        # O órgão agora é atualizado para todos os usuários com permissão de edição.
+            user_areas = g.user.get_areas()
+            if g.user.is_admin or (len(user_areas) > 1 and new_area in user_areas):
+                if old_area != new_area:
+                    changes.append(f'área responsável de "{old_area}" para "{new_area}"')
+                project_to_edit.area_responsavel = new_area
 
         old_prioridade = project_to_edit.prioridade
         new_prioridade = request.form.get('project_prioridade')
@@ -788,11 +788,14 @@ def update_project_inline(project_id):
                 changes.append(f'órgão de "{old_orgao or "vazio"}" para "{new_orgao or "vazio"}"')
             project_to_edit.orgao = data['orgao'] or None
         
-        # Apenas admin pode alterar área
-        if g.user.is_admin and 'area_responsavel' in data:
-            if data['area_responsavel'] != project_to_edit.area_responsavel:
-                changes.append(f'área de "{project_to_edit.area_responsavel}" para "{data["area_responsavel"]}"')
-                project_to_edit.area_responsavel = data['area_responsavel']
+        # Admin ou usuário com múltiplas áreas pode alterar área
+        if 'area_responsavel' in data:
+            new_area = data['area_responsavel']
+            if new_area != project_to_edit.area_responsavel:
+                user_areas = g.user.get_areas()
+                if g.user.is_admin or (len(user_areas) > 1 and new_area in user_areas):
+                    changes.append(f'área de "{project_to_edit.area_responsavel}" para "{new_area}"')
+                    project_to_edit.area_responsavel = new_area
         
         # Novos campos
         if 'special_project' in data:
