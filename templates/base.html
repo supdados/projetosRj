@@ -30,9 +30,7 @@
     
     {% block head_extra %}{% endblock %}
 </head>
-<body class="loading-active">
-    <!-- Overlay para o menu mobile -->
-    <div class="mobile-menu-overlay"></div>
+<body class="loading-active{% if current_user_obj %} is-authenticated{% endif %}">
     
     <!-- Overlay de carregamento -->
     <div class="loading-overlay">
@@ -43,172 +41,241 @@
     </div>
     
     <div class="wrapper">
-        <!-- Sidebar Menu Lateral - Visível apenas quando logado -->
-        {% if current_user_obj %}
-        <nav id="sidebar" class="sidebar">
-            <!-- Botão de toggle com seta (desktop) -->
-            <button id="sidebarToggleArrow" class="sidebar-toggle-arrow d-none d-md-block">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            
-            <!-- Botão de fechar para mobile -->
-            <button id="sidebarCloseBtn" class="sidebar-close-btn d-md-none">
-                <i class="fas fa-times"></i>
-            </button>
-            
-            <!-- Sidebar Header -->
-            <div class="sidebar-header">
-                <a href="{{ url_for('main.dashboard') }}" class="text-decoration-none text-white">
-                    <i class="fas fa-project-diagram logo-icon"></i>
-                    <span class="logo-text">ProjetosRJ</span>
-                </a>
-            </div>
+        <!-- Conteúdo Principal -->
+        <div id="content" class="content {% if not current_user_obj %}no-sidebar{% endif %}">
+            {% if current_user_obj %}
+            {% set endpoint = request.endpoint or '' %}
+            {% set user_areas = current_user_obj.get_areas() %}
+            {% if user_areas %}
+                {% set available_areas = user_areas %}
+            {% elif is_admin_user %}
+                {% set available_areas = AREAS_RESPONSAVEIS_CHOICES %}
+            {% else %}
+                {% set available_areas = [] %}
+            {% endif %}
+            {% set all_projects_label = 'Todos os projetos' %}
+            {% set show_all_projects_option = available_areas|length > 1 %}
+            {% set active_area_param = request.args.get('area') %}
+            {% if show_all_projects_option %}
+                {% if active_area_param in available_areas %}
+                    {% set active_area = active_area_param %}
+                    {% set active_area_href = url_for('main.list_projects', area=active_area_param) %}
+                {% else %}
+                    {% set active_area = all_projects_label %}
+                    {% set active_area_href = url_for('main.list_projects') %}
+                {% endif %}
+            {% elif available_areas %}
+                {% set active_area = available_areas[0] %}
+                {% set active_area_href = url_for('main.list_projects', area=available_areas[0]) %}
+            {% else %}
+                {% set active_area = None %}
+                {% set active_area_href = '#' %}
+            {% endif %}
 
-            <div class="sidebar-menu">
-                <ul>
-                    <li>
-                        <a href="{{ url_for('main.dashboard') }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.dashboard' else '' }}" data-tooltip="Início">
+            <nav class="navbar navbar-expand-lg app-topnav">
+                <div class="container-fluid app-topnav-container">
+                    <div class="app-topnav-left">
+                        <a href="{{ url_for('main.dashboard') }}" class="navbar-brand app-brand">
+                            <i class="fas fa-project-diagram app-brand-icon"></i>
+                            <span class="app-brand-text">ProjetosRJ</span>
+                        </a>
+
+                        <div class="app-nav-icons d-none d-lg-flex" role="navigation" aria-label="Navegação principal">
+                            <a
+                                href="{{ url_for('main.dashboard') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.dashboard' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                title="Início"
+                                aria-label="Início"
+                            >
+                                <i class="fas fa-home"></i>
+                            </a>
+                            <a
+                                href="{{ url_for('main.list_projetos_pendentes') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projetos_pendentes' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                title="Projetos pendentes"
+                                aria-label="Projetos pendentes"
+                            >
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </a>
+                            <a
+                                href="{{ url_for('main.list_tasks') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_tasks' or endpoint == 'main.project_tasks' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                title="Tarefas"
+                                aria-label="Tarefas"
+                            >
+                                <i class="fas fa-tasks"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="app-topnav-center d-none d-lg-flex">
+                        {% if available_areas|length == 1 %}
+                        <a href="{{ url_for('main.list_projects', area=available_areas[0]) }}" class="app-area-single-link app-nav-link">
+                            <i class="fas fa-layer-group"></i>
+                            <span>{{ available_areas[0] }}</span>
+                        </a>
+                        {% elif available_areas|length > 1 %}
+                        <div class="btn-group app-area-control" role="group" aria-label="Seleção de área do projeto">
+                            <a href="{{ active_area_href }}" class="btn app-area-main-btn app-nav-link">
+                                <i class="fas fa-layer-group"></i>
+                                <span>{{ active_area }}</span>
+                            </a>
+                            <button type="button" class="btn app-area-dropdown-btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" aria-label="Abrir lista de áreas">
+                                <span class="visually-hidden">Alternar áreas</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end app-area-dropdown-menu">
+                                <li>
+                                    <a href="{{ url_for('main.list_projects') }}" class="dropdown-item {{ 'active' if endpoint == 'main.list_projects' and not request.args.get('area') else '' }}">
+                                        {{ all_projects_label }}
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% for area_item in available_areas %}
+                                <li>
+                                    <a href="{{ url_for('main.list_projects', area=area_item) }}" class="dropdown-item {{ 'active' if area_item == active_area else '' }}">
+                                        {{ area_item }}
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% else %}
+                        <span class="app-area-empty" aria-disabled="true">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Sem área</span>
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="app-topnav-right">
+                        <div class="app-account-tooltip d-none d-lg-inline-flex">
+                            <div class="dropdown app-account-menu">
+                                <button
+                                    class="btn app-nav-icon-btn app-account-trigger dropdown-toggle {{ 'active' if endpoint == 'main.change_password' or endpoint == 'main.list_users' or endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') or endpoint == 'main.edit_user' else '' }}"
+                                    type="button"
+                                    id="appAccountMenuDesktop"
+                                    data-bs-toggle="dropdown"
+                                    data-bs-display="static"
+                                    title="Conta e administração"
+                                    aria-expanded="false"
+                                    aria-label="Conta e administração"
+                                >
+                                    <i class="fas fa-user-circle"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end app-account-dropdown" aria-labelledby="appAccountMenuDesktop">
+                                    {% if is_admin_user %}
+                                    <li>
+                                        <a href="{{ url_for('main.list_users') }}" class="dropdown-item {{ 'active' if endpoint == 'main.list_users' or (endpoint == 'main.edit_user' and request.args.get('user_id') != current_user_obj.id|string) else '' }}">
+                                            Gerenciar Usuários
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('main.list_templates') }}" class="dropdown-item {{ 'active' if endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') else '' }}">
+                                            Modelos de Etapas
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('main.edit_user', user_id=current_user_obj.id) }}" class="dropdown-item {{ 'active' if endpoint == 'main.edit_user' and request.args.get('user_id') == current_user_obj.id|string else '' }}">
+                                            Meu Perfil (Admin)
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    {% endif %}
+                                    <li>
+                                        <a href="{{ url_for('main.change_password') }}" class="dropdown-item {{ 'active' if endpoint == 'main.change_password' else '' }}">
+                                            Alterar Senha
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('main.logout') }}" class="dropdown-item">
+                                            Sair
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <button class="navbar-toggler app-topnav-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#appTopnavCollapse" aria-controls="appTopnavCollapse" aria-expanded="false" aria-label="Abrir menu">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="collapse app-topnav-collapse d-lg-none" id="appTopnavCollapse">
+                    <div class="app-mobile-nav">
+                        <a href="{{ url_for('main.dashboard') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.dashboard' else '' }}">
                             <i class="fas fa-home"></i>
                             <span>Início</span>
                         </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('main.list_projects') }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.list_projects' and not request.args.get('area') else '' }}" data-tooltip="Todos Projetos">
-                            <i class="fas fa-project-diagram"></i>
-                            <span>Todos Projetos</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('main.list_projetos_pendentes') }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.list_projetos_pendentes' else '' }}" data-tooltip="Projetos Pendentes">
+                        <a href="{{ url_for('main.list_projetos_pendentes') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_projetos_pendentes' else '' }}">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <span>Projetos Pendentes</span>
+                            <span>Projetos pendentes</span>
                         </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('main.list_tasks') }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.list_tasks' or request.endpoint == 'main.project_tasks' else '' }}" data-tooltip="Tarefas">
+                        <a href="{{ url_for('main.list_tasks') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_tasks' or endpoint == 'main.project_tasks' else '' }}">
                             <i class="fas fa-tasks"></i>
                             <span>Tarefas</span>
                         </a>
-                    </li>
-                    
-                    <!-- Separador de Áreas -->
-                    <li class="mt-4 mb-2">
-                        <div class="text-uppercase px-3 sidebar-heading">
-                            <span>{% if current_user_obj and current_user_obj.get_areas() %}{% if current_user_obj.get_areas()|length == 1 %}Minha Área{% else %}Minhas Áreas{% endif %}{% else %}Áreas de Projeto{% endif %}</span>
-                        </div>
-                    </li>
-                    
-                    {% if current_user_obj and current_user_obj.get_areas() %}
-                    <!-- Links das áreas do usuário -->
-                    {% for user_area in current_user_obj.get_areas() %}
-                    <li>
-                        <a href="{{ url_for('main.list_projects', area=user_area) }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.list_projects' and request.args.get('area') == user_area else '' }}" data-tooltip="{{ user_area }}">
-                            <i class="fas fa-bullseye"></i>
-                            <span>{{ user_area }}</span>
-                        </a>
-                    </li>
-                    {% endfor %}
-                    {% else %}
-                    <!-- Links de Áreas (quando o usuário não tem área específica ou é admin sem área específica) -->
-                    {% for area_choice in AREAS_RESPONSAVEIS_CHOICES %}
-                    <li>
-                        <a href="{{ url_for('main.list_projects', area=area_choice) }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.list_projects' and request.args.get('area') == area_choice else '' }}" data-tooltip="{{ area_choice }}">
-                            {% if area_choice == 'Desenvolvimento' %}
-                                <i class="fas fa-code"></i>
-                            {% elif area_choice == 'Design' %}
-                                <i class="fas fa-palette"></i>
-                            {% elif area_choice == 'Marketing' %}
-                                <i class="fas fa-bullhorn"></i>
-                            {% elif area_choice == 'Vendas' %}
-                                <i class="fas fa-chart-line"></i>
-                            {% elif area_choice == 'Recursos Humanos' %}
-                                <i class="fas fa-users"></i>
-                            {% elif area_choice == 'Financeiro' %}
-                                <i class="fas fa-dollar-sign"></i>
-                            {% elif area_choice == 'Jurídico' %}
-                                <i class="fas fa-balance-scale"></i>
-                            {% elif area_choice == 'Operações' %}
-                                <i class="fas fa-cogs"></i>
-                            {% elif area_choice == 'Qualidade' %}
-                                <i class="fas fa-award"></i>
-                            {% elif area_choice == 'Suporte' %}
-                                <i class="fas fa-headset"></i>
+
+                        <div class="app-mobile-section">
+                            <div class="app-mobile-section-title">Áreas do Projeto</div>
+                            {% if available_areas|length == 0 %}
+                            <span class="app-mobile-disabled">Sem área</span>
+                            {% elif available_areas|length == 1 %}
+                            <a href="{{ url_for('main.list_projects', area=available_areas[0]) }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_projects' and request.args.get('area') == available_areas[0] else '' }}">
+                                <i class="fas fa-layer-group"></i>
+                                <span>{{ available_areas[0] }}</span>
+                            </a>
                             {% else %}
-                                <i class="fas fa-folder"></i>
+                                <a href="{{ url_for('main.list_projects') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_projects' and not request.args.get('area') else '' }}">
+                                    <i class="fas fa-layer-group"></i>
+                                    <span>{{ all_projects_label }}</span>
+                                </a>
+                                {% for area_item in available_areas %}
+                                <a href="{{ url_for('main.list_projects', area=area_item) }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_projects' and request.args.get('area') == area_item else '' }}">
+                                    <i class="fas fa-layer-group"></i>
+                                    <span>{{ area_item }}</span>
+                                </a>
+                                {% endfor %}
                             {% endif %}
-                            <span>{{ area_choice }}</span>
-                        </a>
-                    </li>
-                    {% endfor %}
-                    {% endif %}
-
-                    <!-- Seção de Administração -->
-                    {% if is_admin_user %}
-                    <li class="mt-4 mb-2">
-                        <div class="text-uppercase px-3 sidebar-heading">
-                            <span>Administração</span>
                         </div>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('main.list_users') }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.list_users' or (request.endpoint == 'main.edit_user' and request.args.get('user_id') != current_user_obj.id|string) else '' }}" data-tooltip="Gerenciar Usuários">
-                            <i class="fas fa-users-cog"></i>
-                            <span>Gerenciar Usuários</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('main.list_templates') }}" class="mobile-menu-link {{ 'active' if request.endpoint.startswith('main.list_templates') or request.endpoint.startswith('main.create_template') or request.endpoint.startswith('main.edit_template') else '' }}" data-tooltip="Modelos de Etapas">
-                            <i class="fas fa-stream"></i>
-                            <span>Modelos de Etapas</span>
-                        </a>
-                    </li>
-                    {% endif %}
 
-                    <!-- Nova Seção Minha Conta -->
-                    <li class="mt-4 mb-2">
-                        <div class="text-uppercase px-3 sidebar-heading">
-                            <span>Minha Conta</span>
+                        <div class="app-mobile-section">
+                            <div class="app-mobile-section-title">Conta e Administração</div>
+                            {% if is_admin_user %}
+                            <a href="{{ url_for('main.list_users') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_users' or (endpoint == 'main.edit_user' and request.args.get('user_id') != current_user_obj.id|string) else '' }}">
+                                <i class="fas fa-users-cog"></i>
+                                <span>Gerenciar Usuários</span>
+                            </a>
+                            <a href="{{ url_for('main.list_templates') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') else '' }}">
+                                <i class="fas fa-stream"></i>
+                                <span>Modelos de Etapas</span>
+                            </a>
+                            <a href="{{ url_for('main.edit_user', user_id=current_user_obj.id) }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.edit_user' and request.args.get('user_id') == current_user_obj.id|string else '' }}">
+                                <i class="fas fa-user-edit"></i>
+                                <span>Meu Perfil (Admin)</span>
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('main.change_password') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.change_password' else '' }}">
+                                <i class="fas fa-key"></i>
+                                <span>Alterar Senha</span>
+                            </a>
+                            <a href="{{ url_for('main.logout') }}" class="app-nav-link app-mobile-link">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Sair</span>
+                            </a>
                         </div>
-                    </li>
-                    {% if is_admin_user %}
-                    <li>
-                        <a href="{{ url_for('main.edit_user', user_id=current_user_obj.id) }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.edit_user' and request.args.get('user_id') == current_user_obj.id|string else '' }}" data-tooltip="Meu Perfil (Admin)">
-                            <i class="fas fa-user-edit"></i> <!-- Ícone alterado para diferenciar de Gerenciar Usuários -->
-                            <span>Meu Perfil (Admin)</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    <li>
-                        <a href="{{ url_for('main.change_password') }}" class="mobile-menu-link {{ 'active' if request.endpoint == 'main.change_password' else '' }}" data-tooltip="Alterar Senha">
-                            <i class="fas fa-key"></i>
-                            <span>Alterar Senha</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="sidebar-footer">
-                <a href="{{ url_for('main.logout') }}" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-sign-out-alt me-1"></i><span>Logout</span>
-                </a>
-            </div>
-        </nav>
-        {% endif %}
-
-        <!-- Conteúdo Principal - Ajuste de margin conforme login -->
-        <div id="content" class="content {% if not current_user_obj %}no-sidebar{% endif %}">
-            <!-- Navbar Superior -->
+                    </div>
+                </div>
+            </nav>
+            {% else %}
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid">
-                    {% if current_user_obj %}
-                    <button id="sidebarToggle" class="toggle-sidebar-btn d-md-none">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    
-                    <a href="{{ url_for('main.dashboard') }}" class="navbar-brand navbar-title">
-                        <i class="fas me-2"></i>
-                        <span>ProjetosRJ</span>
-                    </a>
-                    {% else %}
                     <a href="{{ url_for('main.login_page') }}" class="navbar-brand ms-0">
                         <i class="fas me-2"></i>
                         <span>ProjetosRJ</span>
@@ -220,9 +287,9 @@
                             </a>
                         </li>
                     </ul>
-                    {% endif %}
                 </div>
             </nav>
+            {% endif %}
 
             <!-- Skeleton Screen (Esqueleto de carregamento) -->
             <div class="skeleton-container">
@@ -473,241 +540,119 @@
     <!-- Bootstrap Bundle JS (inclui Popper) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- JavaScript para toggle da sidebar com animação suave -->
+    <!-- JavaScript global de navegação e carregamento -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.getElementById('content');
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebarToggleArrow = document.getElementById('sidebarToggleArrow');
-            const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
-            const mobileMenuOverlay = document.querySelector('.mobile-menu-overlay');
-            const loadingOverlay = document.querySelector('.loading-overlay');
-            const mobileMenuLinks = document.querySelectorAll('.mobile-menu-link');
             const body = document.body;
-            
-            // Variável para verificar se o usuário está logado (baseado na existência da sidebar)
-            const isUserLoggedIn = !!sidebar;
+            const loadingOverlay = document.querySelector('.loading-overlay');
+            const topnavCollapseEl = document.getElementById('appTopnavCollapse');
+            const hasBootstrap = typeof window.bootstrap !== 'undefined';
+            const nonNavigationalToggles = ['dropdown', 'collapse', 'modal', 'offcanvas', 'tab', 'pill'];
+            let topnavCollapse = null;
 
-            // Adicionar classe para prevenir animações durante carregamento
             body.classList.add('loading-active');
-            
-            // Restaurar estado do menu do localStorage (apenas desktop)
-            if (sidebar && isUserLoggedIn && window.innerWidth >= 768) {
-                const sidebarState = localStorage.getItem('sidebarCollapsed');
-                if (sidebarState === 'true') {
-                    sidebar.classList.add('collapsed');
-                    content.classList.add('expanded');
-                    body.classList.add('sidebar-collapsed');
-                }
+
+            if (topnavCollapseEl && hasBootstrap && bootstrap.Collapse) {
+                topnavCollapse = new bootstrap.Collapse(topnavCollapseEl, { toggle: false });
             }
-            
-            // Função para salvar estado do menu
-            function saveSidebarState() {
-                if (window.innerWidth >= 768) {
-                    const isCollapsed = sidebar.classList.contains('collapsed');
-                    localStorage.setItem('sidebarCollapsed', isCollapsed.toString());
-                }
+
+            if (hasBootstrap && bootstrap.Tooltip) {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+                    new bootstrap.Tooltip(el);
+                });
             }
-            
-            // Função para mostrar overlay de carregamento
+
             function showLoadingOverlay() {
-                // Mostrar skeleton screen em vez do spinner tradicional
-                loadingOverlay.classList.remove('active');
+                if (loadingOverlay) {
+                    loadingOverlay.classList.remove('active');
+                }
                 body.classList.add('loading-active');
             }
-            
-            // Função para esconder overlay de carregamento
+
             function hideLoadingOverlay() {
-                loadingOverlay.classList.remove('active');
-                setTimeout(() => {
+                if (loadingOverlay) {
+                    loadingOverlay.classList.remove('active');
+                }
+                setTimeout(function() {
                     body.classList.add('page-ready');
                     body.classList.remove('loading-active');
                 }, 100);
             }
-            
-            // Função para controlar a abertura do menu
-            function openMobileMenu() {
-                sidebar.classList.remove('collapsed');
-                sidebar.classList.add('show');
-                mobileMenuOverlay.classList.add('active');
-                body.classList.add('menu-open');
-            }
-            
-            // Função para controlar o fechamento do menu
-            function closeMobileMenu() {
-                sidebar.classList.remove('show');
-                mobileMenuOverlay.classList.remove('active');
-                body.classList.remove('menu-open');
-            }
-            
-            // Evento de clique no botão de abrir o menu
-            if (sidebarToggle) {
-                sidebarToggle.addEventListener('click', function() {
-                    if (window.innerWidth < 768 && isUserLoggedIn) { // Apenas se logado
-                        openMobileMenu();
-                    } else if (isUserLoggedIn) { // Apenas se logado
-                        sidebar.classList.toggle('collapsed');
-                        content.classList.toggle('expanded');
-                        
-                        // Adicionar/remover classe no body para controlar o skeleton
-                        if (sidebar.classList.contains('collapsed')) {
-                            body.classList.add('sidebar-collapsed');
-                        } else {
-                            body.classList.remove('sidebar-collapsed');
-                        }
-                        
-                        // Salvar estado
-                        saveSidebarState();
-                    }
-                });
-            }
-            
-            // Evento de clique no botão de seta (desktop)
-            if (sidebarToggleArrow) {
-                sidebarToggleArrow.addEventListener('click', function() {
-                    if (window.innerWidth >= 768 && isUserLoggedIn) {
-                        sidebar.classList.toggle('collapsed');
-                        content.classList.toggle('expanded');
-                        
-                        // Adicionar/remover classe no body para controlar o skeleton
-                        if (sidebar.classList.contains('collapsed')) {
-                            body.classList.add('sidebar-collapsed');
-                        } else {
-                            body.classList.remove('sidebar-collapsed');
-                        }
-                        
-                        // Salvar estado
-                        saveSidebarState();
-                    }
-                });
-            }
-            
-            // Evento de clique no botão de fechar o menu (mobile)
-            if (sidebarCloseBtn) {
-                sidebarCloseBtn.addEventListener('click', closeMobileMenu);
-            }
-            
-            // Evento de clique no overlay para fechar o menu
-            if (mobileMenuOverlay) {
-                mobileMenuOverlay.addEventListener('click', closeMobileMenu);
-            }
-            
-            // Eventos de clique nos links do menu mobile
-            mobileMenuLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    if (window.innerWidth < 768 && isUserLoggedIn) { // Apenas se logado
-                        e.preventDefault(); // Prevenir navegação padrão
-                        const targetHref = this.getAttribute('href');
-                        
-                        // Adicionar classe para indicar link ativo durante a transição
-                        this.classList.add('transitioning');
-                        
-                        // Fechar o menu com animação
-                        sidebar.classList.remove('show');
-                        mobileMenuOverlay.classList.remove('active');
-                        body.classList.remove('menu-open');
-                        
-                        // Mostrar skeleton screen após menu fechar
-                        setTimeout(() => {
-                            showLoadingOverlay();
-                            
-                            // Navegar após a animação de fechamento
-                            setTimeout(() => {
-                                window.location.href = targetHref;
-                            }, 100);
-                        }, 300);
+
+            document.querySelectorAll('.app-mobile-link').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    if (topnavCollapseEl && topnavCollapseEl.classList.contains('show') && topnavCollapse) {
+                        topnavCollapse.hide();
+                    } else if (topnavCollapseEl && topnavCollapseEl.classList.contains('show')) {
+                        topnavCollapseEl.classList.remove('show');
                     }
                 });
             });
-            
-            // Adicionar evento para todos os links da página que usam navegação interna
-            document.querySelectorAll('a').forEach(link => {
-                // Verificar se é um link interno (mesmo domínio)
-                if (link.href.includes(window.location.origin) && 
-                    !link.classList.contains('mobile-menu-link') && 
-                    !link.getAttribute('target') === '_blank') {
-                    link.addEventListener('click', function(e) {
-                        if (this.getAttribute('href') !== '#' && 
-                            !this.getAttribute('href').startsWith('#') && 
-                            !this.getAttribute('href').includes('javascript:')) {
-                            
-                            // Não mostrar carregamento para links de modal
-                            if (!this.getAttribute('data-bs-toggle')) {
-                                e.preventDefault();
-                                showLoadingOverlay();
-                                
-                                setTimeout(() => {
-                                    window.location.href = this.getAttribute('href');
-                                }, 100);
-                            }
-                        }
-                    });
+
+            function shouldInterceptLink(link) {
+                const hrefAttr = link.getAttribute('href');
+                if (!hrefAttr || hrefAttr === '#' || hrefAttr.startsWith('#')) {
+                    return false;
                 }
-            });
-            
-            // Ajuste automático em telas pequenas
-            function checkWidth() {
-                if (sidebar && isUserLoggedIn) { // Apenas se logado
-                    if (window.innerWidth < 768) {
-                        if (!sidebar.classList.contains('show')) {
-                            sidebar.classList.add('collapsed');
-                            content.classList.add('expanded');
-                        }
-                    }
-                    // Removido o else if que forçava expansão em telas grandes
-                    // O estado agora é controlado apenas pelo localStorage
+
+                if (
+                    hrefAttr.startsWith('javascript:') ||
+                    hrefAttr.startsWith('mailto:') ||
+                    hrefAttr.startsWith('tel:')
+                ) {
+                    return false;
+                }
+
+                if (link.getAttribute('target') === '_blank' || link.hasAttribute('download')) {
+                    return false;
+                }
+
+                const toggleType = (link.getAttribute('data-bs-toggle') || '').toLowerCase();
+                if (nonNavigationalToggles.includes(toggleType)) {
+                    return false;
+                }
+
+                try {
+                    const parsedUrl = new URL(link.href, window.location.origin);
+                    return parsedUrl.origin === window.location.origin;
+                } catch (error) {
+                    return false;
                 }
             }
-            
-            // Esconder o overlay de carregamento quando a página estiver completamente carregada
+
+            document.querySelectorAll('a[href]').forEach(function(link) {
+                if (!shouldInterceptLink(link)) {
+                    return;
+                }
+
+                link.addEventListener('click', function(event) {
+                    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const currentPage = document.querySelector('.main-content');
+                    if (currentPage) {
+                        currentPage.classList.add('page-transition');
+                    }
+
+                    showLoadingOverlay();
+                    const destinationUrl = this.href;
+                    setTimeout(() => {
+                        window.location.href = destinationUrl;
+                    }, 100);
+                });
+            });
+
             window.addEventListener('load', function() {
-                // Esperar o conteúdo ser renderizado corretamente
                 setTimeout(() => {
                     hideLoadingOverlay();
-                }, 800); // Aumentamos para 800ms para dar tempo de visualizar o skeleton
+                }, 800);
             });
-            
-            // Verificar no carregamento e ao redimensionar
-            checkWidth();
-            window.addEventListener('resize', function() {
-                const wasIsMobile = window.innerWidth < 768;
-                checkWidth();
-                // Atualizar a flag de mobile
-                const nowIsMobile = window.innerWidth < 768;
-                
-                // Se mudou de mobile para desktop, reset do menu
-                if (wasIsMobile && !nowIsMobile) {
-                    closeMobileMenu();
-                }
-            });
-            
-            // Adicionar transição suave aos links com parâmetros
-            document.querySelectorAll('a[href*="?"]').forEach(link => {
-                if (link.href.includes('main.list_projects') || link.href.includes('area=')) {
-                    link.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        const currentPage = document.querySelector('.main-content');
-                        currentPage.classList.add('page-transition');
-                        
-                        // Mostrar skeleton screen de carregamento
-                        showLoadingOverlay();
-                        
-                        setTimeout(() => {
-                            window.location.href = this.href;
-                        }, 300);
-                    });
-                }
-            });
-            
-            // Mostrar inicialmente o skeleton screen
+
             showLoadingOverlay();
-            // Esconder o spinner tradicional
-            loadingOverlay.classList.remove('active');
-            
-            // Verificar no carregamento se a sidebar já está colapsada
-            if (sidebar && sidebar.classList.contains('collapsed') && isUserLoggedIn) { // Apenas se logado
-                body.classList.add('sidebar-collapsed');
+            if (loadingOverlay) {
+                loadingOverlay.classList.remove('active');
             }
         });
     </script>
