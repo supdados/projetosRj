@@ -154,6 +154,30 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Indicadores ABEP -->
+                            <div class="row g-3 mt-0">
+                                <div class="col-12">
+                                    <div class="form-group-glass">
+                                        <label for="project_abep_indicator_search" class="form-label-glass">
+                                            <i class="fas fa-list-ol label-icon"></i>
+                                            Indicadores ABEP
+                                        </label>
+                                        <input type="text"
+                                               class="form-control-glass form-control-glass-enhanced mb-2"
+                                               id="project_abep_indicator_search"
+                                               placeholder="Digite o número (ex: 1.1) ou o título para filtrar">
+                                        <select class="form-select-glass form-select-glass-enhanced"
+                                                id="project_abep_indicator"
+                                                name="project_abep_indicator">
+                                            <option value="">Selecione um indicador ABEP</option>
+                                            {% for item in ABEP_INDICADORES_OPTIONS %}
+                                                <option value="{{ item.value }}">{{ item.label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

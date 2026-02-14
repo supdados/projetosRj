@@ -3,11 +3,12 @@ from dotenv import load_dotenv
 from flask import Flask, session, g
 from flask_migrate import Migrate
 import os
-import pymysql
 from zoneinfo import ZoneInfo
+from sqlalchemy import inspect, text
 
 # Import db e User de models.py para inicialização
 from models import db, User # User é crucial aqui
+from objective_catalog import sync_goal_catalog_to_db
 # Importar o Blueprint das rotas e a função context_processor de routes.py
 from routes import main_bp, inject_current_year
 
@@ -16,14 +17,23 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', '***REMOVED***')
 
-# MySQL - para Linux/Produção (comentado para uso local no Mac)
-password = quote_plus(os.getenv('DB_PASSWORD'))
-app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{os.getenv('DB_USER')}:{password}@localhost/{os.getenv('DB_NAME')}"
+# Ordem de prioridade para configuração de banco:
+# 1) DATABASE_URL explícita
+# 2) MySQL via DB_USER/DB_PASSWORD/DB_NAME
+# 3) SQLite local (padrão para desenvolvimento)
+database_url = os.getenv('DATABASE_URL')
+db_user = os.getenv('DB_USER')
+db_password = os.getenv('DB_PASSWORD')
+db_name = os.getenv('DB_NAME')
 
-# SQLite - para desenvolvimento local no Mac
-# import os
-# basedir = os.path.abspath(os.path.dirname(__file__))
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'projetosrj.db')
+if database_url:
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+elif db_user and db_password and db_name:
+    password = quote_plus(db_password)
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{db_user}:{password}@localhost/{db_name}"
+else:
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'projetosrj.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa o rastreamento de modificações
 
@@ -87,17 +97,33 @@ def inject_user_info_to_templates():
     )
 
 
-# Bloco de db.create_all() - Opcional se todas as tabelas já existem
-# Como você já tem 'user' e 'project', etc., este bloco provavelmente não fará nada
-# a menos que você adicione NOVOS modelos no futuro.
+def ensure_project_abep_indicator_column():
+    """
+    Garante a coluna project.abep_indicator em bancos ja existentes.
+    """
+    inspector = inspect(db.engine)
+    table_names = inspector.get_table_names()
+    if 'project' not in table_names:
+        return False
+
+    column_names = {column["name"] for column in inspector.get_columns('project')}
+    if 'abep_indicator' in column_names:
+        return False
+
+    db.session.execute(text("ALTER TABLE project ADD COLUMN abep_indicator VARCHAR(255)"))
+    db.session.commit()
+    return True
+
+
 with app.app_context():
     try:
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        if not inspector.get_table_names(): # Só executa se NENHUMA tabela existir
-            print("Banco de dados parece estar vazio. Criando todas as tabelas definidas nos modelos...")
-            db.create_all() # Não recriará tabelas existentes como 'user' ou 'project'
-            print("Tabelas criadas com sucesso!")
+        # create_all e idempotente: cria apenas tabelas faltantes.
+        db.create_all()
+        column_added = ensure_project_abep_indicator_column()
+        if column_added:
+            print("Coluna project.abep_indicator criada com sucesso.")
+        sync_summary = sync_goal_catalog_to_db(commit=True)
+        print(f"Catalogo de objetivos sincronizado: {sync_summary}")
     except Exception as e:
         print(f"Erro durante a inicialização/verificação do banco de dados em app.py: {str(e)}")
 

@@ -488,11 +488,6 @@ body {
     transition: all var(--transition-speed) ease;
 }
 
-.navbar-toggler {
-    border: none;
-    padding: 0.4rem;
-}
-
 .nav-link {
     font-weight: 500;
     padding: 0.4rem 0.8rem !important;
@@ -509,15 +504,6 @@ body {
     font-weight: 600;
 }
 
-.navbar-dark .nav-link {
-    color: rgba(255,255,255,0.85) !important;
-}
-
-.navbar-dark .nav-link:hover,
-.navbar-dark .nav-link.active {
-    color: #ffffff !important;
-}
-
 .toggle-sidebar-btn {
     background: transparent;
     border: none;
@@ -526,17 +512,6 @@ body {
     cursor: pointer;
     padding: 0.3rem 0.5rem;
     margin-right: 1rem;
-}
-
-/* Container principal */
-.container-custom {
-    max-width: 1200px;
-    margin: 20px auto;
-    background-color: var(--background-color);
-    padding: 20px 25px;
-    box-shadow: var(--box-shadow);
-    border-radius: var(--border-radius);
-    flex: 1;
 }
 
 .main-content {
@@ -597,25 +572,6 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: var(--dark-gray);
-}
-
-/* Dashboard stats cards */
-.dashboard-stats .card {
-    margin-bottom: 1rem;
-    padding: 1rem 0;
-}
-
-.dashboard-stats .card-title {
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.dashboard-stats .card-text {
-    color: var(--primary-color);
-    margin-top: 0.5rem;
-    margin-bottom: 0;
 }
 
 /* Tabelas */
@@ -730,36 +686,6 @@ tr:hover td {
 .btn-warning {
     background-color: var(--warning-color);
     border-color: var(--warning-color);
-}
-
-.btn-danger {
-    background-color: var(--danger-color);
-    border-color: var(--danger-color);
-}
-
-/* Área selection */
-.area-selector {
-    margin-bottom: 1.5rem;
-}
-
-.area-selector .nav-pills {
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.area-selector .nav-link {
-    background-color: #f8f9fa;
-    border-radius: 30px;
-    padding: 0.4rem 1rem;
-    color: var(--dark-gray);
-    font-weight: 500;
-    font-size: 0.9rem;
-    transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
-}
-
-.area-selector .nav-link.active {
-    background-color: var(--primary-color);
-    color: white !important;
 }
 
 /* Formulários mais modernos */
@@ -976,11 +902,6 @@ footer p {
         padding: 1.5rem 0;
     }
     
-    .container-custom {
-        margin: 10px;
-        padding: 15px;
-    }
-    
     .navbar-brand span {
         font-size: 0.95rem;
     }
@@ -1034,18 +955,6 @@ footer p {
         display: inline-block !important;
     }
     
-    /* Não colapsar durante navegação */
-    .sidebar.navigating {
-        width: 260px !important;
-    }
-    
-    .sidebar.navigating .sidebar-menu li span,
-    .sidebar.navigating .logo-text {
-        opacity: 1 !important;
-        visibility: visible !important;
-        display: inline-block !important;
-    }
-    
     body.loading-active {
         position: fixed;
         width: 100%;
@@ -1084,16 +993,6 @@ body.menu-open {
     border-radius: 50%;
     width: 36px;
     height: 36px;
-}
-
-/* Melhorar estilo para os cards clicáveis */
-.card.clickable {
-    cursor: pointer;
-    transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-}
-
-.card.clickable:hover {
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
 }
 
 /* Comportamento do título baseado no estado do menu */
@@ -1166,48 +1065,6 @@ body.menu-open {
         padding: 0.75rem !important;
     }
     
-    /* Tabela como cards em mobile */
-    table.mobile-cards {
-        border-spacing: 0;
-        box-shadow: none;
-        width: 100% !important;
-    }
-    
-    table.mobile-cards thead {
-        display: none;
-    }
-    
-    table.mobile-cards tr {
-        display: block;
-        margin-bottom: 1rem;
-        border-radius: var(--border-radius);
-        box-shadow: var(--box-shadow);
-        background-color: var(--background-color);
-    }
-    
-    table.mobile-cards td {
-        display: block;
-        text-align: right;
-        position: relative;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-    
-    table.mobile-cards td:last-child {
-        border-bottom: none;
-    }
-    
-    table.mobile-cards td::before {
-        content: attr(data-label);
-        position: absolute;
-        left: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        font-weight: 600;
-        color: var(--primary-dark);
-        text-align: left;
-    }
-    
     /* Projeto card em tela cheia */
     .project-card {
         margin: 0 0 0.75rem 0 !important;
@@ -1272,11 +1129,6 @@ body.menu-open {
         --bs-gutter-y: 0.5rem !important;
     }
     
-    .g-4 {
-        --bs-gutter-x: 0.5rem !important;
-        --bs-gutter-y: 0.5rem !important;
-    }
-    
     /* Ajustes específicos para layout móvel */
     .mobile-full {
         width: 100% !important;
@@ -1295,22 +1147,6 @@ body.menu-open {
         padding-right: 0.5rem !important;
     }
 
-    /* Recentes cards - layout 100% */
-    .recent-projects-cards.mobile-view {
-        display: block;
-        padding: 0.5rem !important;
-    }
-}
-
-/* Media query para definir quando mostrar cards vs tabela */
-@media (min-width: 769px) {
-    .recent-projects-container.mobile-view {
-        display: block;
-    }
-    
-    .recent-projects-cards.mobile-view {
-        display: none;
-    }
 }
 
 /* Melhorias na transição do menu mobile */
@@ -1367,18 +1203,6 @@ body.menu-open {
         display: inline-block !important;
     }
     
-    /* Não colapsar durante navegação */
-    .sidebar.navigating {
-        width: 260px !important;
-    }
-    
-    .sidebar.navigating .sidebar-menu li span,
-    .sidebar.navigating .logo-text {
-        opacity: 1 !important;
-        visibility: visible !important;
-        display: inline-block !important;
-    }
-    
     /* Prevenindo scroll horizontal */
     body, html {
         overflow-x: hidden;
@@ -1425,48 +1249,6 @@ body.menu-open {
     
     .card-header {
         padding: 0.75rem !important;
-    }
-    
-    /* Tabela como cards em mobile */
-    table.mobile-cards {
-        border-spacing: 0;
-        box-shadow: none;
-        width: 100% !important;
-    }
-    
-    table.mobile-cards thead {
-        display: none;
-    }
-    
-    table.mobile-cards tr {
-        display: block;
-        margin-bottom: 1rem;
-        border-radius: var(--border-radius);
-        box-shadow: var(--box-shadow);
-        background-color: var(--background-color);
-    }
-    
-    table.mobile-cards td {
-        display: block;
-        text-align: right;
-        position: relative;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-    
-    table.mobile-cards td:last-child {
-        border-bottom: none;
-    }
-    
-    table.mobile-cards td::before {
-        content: attr(data-label);
-        position: absolute;
-        left: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        font-weight: 600;
-        color: var(--primary-dark);
-        text-align: left;
     }
     
     /* Projeto card em tela cheia */
@@ -1529,11 +1311,6 @@ body.menu-open {
         --bs-gutter-y: 0.5rem !important;
     }
     
-    .g-4 {
-        --bs-gutter-x: 0.5rem !important;
-        --bs-gutter-y: 0.5rem !important;
-    }
-    
     /* Ajustes específicos para layout móvel */
     .mobile-full {
         width: 100% !important;
@@ -1552,22 +1329,6 @@ body.menu-open {
         padding-right: 0.5rem !important;
     }
 
-    /* Recentes cards - layout 100% */
-    .recent-projects-cards.mobile-view {
-        display: block;
-        padding: 0.5rem !important;
-    }
-}
-
-/* Media query para definir quando mostrar cards vs tabela */
-@media (min-width: 769px) {
-    .recent-projects-container.mobile-view {
-        display: block;
-    }
-    
-    .recent-projects-cards.mobile-view {
-        display: none;
-    }
 }
 
 /* Overlay de carregamento */
@@ -1663,7 +1424,6 @@ html, body {
 .loading-active .skeleton-header,
 .loading-active .skeleton-avatar,
 .loading-active .skeleton-button,
-.loading-active .skeleton-image,
 .loading-active .skeleton-table-cell {
     background-size: 200% 100% !important;
     animation: skeleton-loading 1.5s infinite !important;
@@ -1757,16 +1517,6 @@ html, body {
     height: 36px;
     border-radius: 6px;
     background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
-}
-
-.skeleton-image {
-    width: 100%;
-    height: 200px;
-    border-radius: var(--border-radius);
-    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
-    margin-bottom: 1rem;
     background-size: 200% 100%;
     animation: skeleton-loading 1.5s infinite;
 }
@@ -1887,17 +1637,6 @@ html, body {
     }
 }
 
-/* Estilos para os novos cards da dashboard na versão desktop */
-.dashboard-card {
-    transition: all 0.3s ease;
-    border-radius: 10px !important;
-    overflow: hidden;
-}
-
-.dashboard-card:hover {
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08) !important;
-}
-
 .dashboard-icon-wrapper {
     display: flex;
     align-items: center;
@@ -1936,19 +1675,6 @@ html, body {
         padding: 0.25rem !important;
     }
     
-    /* Tamanho dos textos nos cards */
-    .dashboard-card .h4 {
-        font-size: 1.4rem;
-    }
-    
-    .dashboard-card .text-muted {
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-    
-    .dashboard-card .small {
-        font-size: 0.75rem;
-    }
 }
 
 /* Keyframes para animação do skeleton */

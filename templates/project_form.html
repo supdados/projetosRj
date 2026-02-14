@@ -103,6 +103,23 @@
                         <option value="Outro" {{ 'selected' if project.delivery_type == 'Outro' else '' }}>Outro</option>
                     </select>
                 </div>
+
+                <!-- Indicadores ABEP -->
+                <div class="mb-3">
+                    <label for="project_abep_indicator_search" class="form-label fw-bold">Indicadores ABEP:</label>
+                    <input type="text"
+                           class="form-control mb-2"
+                           id="project_abep_indicator_search"
+                           placeholder="Digite o número (ex: 1.1) ou o título para filtrar">
+                    <select class="form-select" id="project_abep_indicator" name="project_abep_indicator">
+                        <option value="">Selecione um indicador ABEP</option>
+                        {% for item in ABEP_INDICADORES_OPTIONS %}
+                            <option value="{{ item.value }}" {{ 'selected' if project.abep_indicator == item.value else '' }}>
+                                {{ item.label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -130,7 +147,7 @@
                         <select class="form-select" id="project_resultado" name="project_resultado" {% if not project.objetivo_id %}disabled{% endif %}>
                             <option value="" selected>Selecione um resultado esperado</option>
                             {% if project.objetivo_id %}
-                                {% for resultado in resultados_por_objetivo[project.objetivo_id] %}
+                                {% for resultado in resultados_por_objetivo.get(project.objetivo_id, []) %}
                                     <option value="{{ resultado.id }}" {% if project.resultado_esperado_id == resultado.id %}selected{% endif %}>
                                         {{ resultado.descricao }}
                                     </option>
@@ -145,7 +162,7 @@
                     <label class="form-label fw-bold">Indicadores <span class="badge bg-info">Máximo 4</span>:</label>
                     <div id="indicadores-container" class="border rounded p-3 bg-light">
                         {% if project.resultado_esperado_id %}
-                            {% for indicador in indicadores_por_resultado[project.resultado_esperado_id] %}
+                            {% for indicador in indicadores_por_resultado.get(project.resultado_esperado_id, []) %}
                                 <div class="form-check">
                                     <input class="form-check-input indicador-checkbox" type="checkbox" 
                                            name="project_indicadores" value="{{ indicador.id }}" 
@@ -353,6 +370,54 @@ function setupIndicadoresLimit() {
 // Inicializar o controle de limite de indicadores quando a página carrega
 document.addEventListener('DOMContentLoaded', function() {
     setupIndicadoresLimit();
+
+    // Busca no dropdown de indicadores ABEP
+    const abepSearchInput = document.getElementById('project_abep_indicator_search');
+    const abepSelect = document.getElementById('project_abep_indicator');
+
+    if (abepSearchInput && abepSelect) {
+        const allOptions = Array.from(abepSelect.options).map(option => ({
+            value: option.value,
+            text: option.textContent
+        }));
+
+        if (allOptions.length > 1) {
+            const placeholder = allOptions[0];
+            const selectableOptions = allOptions.slice(1);
+
+            const renderAbepOptions = function(filterText) {
+                const currentSelected = abepSelect.value;
+                const normalizedFilter = (filterText || '').trim().toLowerCase();
+
+                const filtered = selectableOptions.filter(item => {
+                    if (!normalizedFilter) return true;
+                    const haystack = `${item.text} ${item.value}`.toLowerCase();
+                    return haystack.includes(normalizedFilter);
+                });
+
+                abepSelect.innerHTML = '';
+                const placeholderOption = document.createElement('option');
+                placeholderOption.value = placeholder.value;
+                placeholderOption.textContent = placeholder.text;
+                abepSelect.appendChild(placeholderOption);
+
+                filtered.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.value;
+                    option.textContent = item.text;
+                    abepSelect.appendChild(option);
+                });
+
+                if (currentSelected && Array.from(abepSelect.options).some(opt => opt.value === currentSelected)) {
+                    abepSelect.value = currentSelected;
+                }
+            };
+
+            abepSearchInput.addEventListener('input', function() {
+                renderAbepOptions(abepSearchInput.value);
+            });
+        }
+    }
 });
 </script>
 {% endblock %}

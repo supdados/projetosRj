@@ -2004,9 +2004,9 @@
                 </div>
             </div>
 
-            <!-- Segunda linha: Área Responsável, Órgão, Processo SEI -->
+            <!-- Segunda linha: Área Responsável, Órgão, Processo SEI, Indicador ABEP -->
             <div class="row g-2 mb-2">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="detail-item">
                         <strong>Área Responsável{% if not is_admin_user and current_user_obj and current_user_obj.get_areas()|length <= 1 %} <i class="fas fa-lock text-muted small"
                                 title="Você possui apenas uma área"></i>{% endif %}</strong>
@@ -2022,7 +2022,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="detail-item">
                         <strong>Órgão</strong>
                         <span data-field="orgao" data-value="{{ project.orgao or '' }}">
@@ -2036,7 +2036,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="detail-item">
                         <strong>Processo SEI</strong>
                         <span data-field="sei_process" data-value="{{ project.sei_process or '' }}">
@@ -2045,6 +2045,19 @@
                                 }}</div>
                             {% else %}
                             <div class="text-muted small"><i class="fas fa-file-alt me-1"></i> Não informado</div>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="detail-item">
+                        <strong>Indicador ABEP</strong>
+                        <span data-field="abep_indicator" data-value="{{ project.abep_indicator or '' }}">
+                            {% if project.abep_indicator %}
+                            <div class="small"><i class="fas fa-list-ol me-1 text-primary"></i> {{ project.abep_indicator }}</div>
+                            {% else %}
+                            <div class="text-muted small"><i class="fas fa-list-ol me-1"></i> Não informado</div>
                             {% endif %}
                         </span>
                     </div>
@@ -3685,13 +3698,11 @@
             // Guardar valores EEGG antes de processar
             const objetivoOriginal = document.querySelector('[data-field="objetivo_id"]')?.dataset.value;
             const resultadoOriginal = document.querySelector('[data-field="resultado_esperado_id"]')?.dataset.value;
-            const indicadoresOriginal = document.querySelector('[data-field="indicadores_ids"]')?.dataset.value;
 
             // Tornar campos editáveis
             for (const el of document.querySelectorAll('[data-field]:not([data-etapa-id])')) {
                 const field = el.dataset.field;
                 const currentValue = el.dataset.value || '';
-                const dataType = el.dataset.type;
 
                 // Área responsável - admin ou usuário com múltiplas áreas pode editar
                 {% if not is_admin_user %}
@@ -3724,7 +3735,7 @@
                     input = await createIndicadoresContainer(ids, resultadoOriginal);
                 }
                 // Campos com select especial
-                else if (field === 'status' || field === 'prioridade' || field === 'special_project' || field === 'delivery_type') {
+                else if (field === 'status' || field === 'prioridade' || field === 'special_project' || field === 'delivery_type' || field === 'abep_indicator') {
                     input = createSelectForField(field, currentValue);
                 }
                 // Área responsável - dropdown com áreas
@@ -3843,6 +3854,7 @@
 
         // Variáveis globais para dados EEGG
         let editDataCache = null;
+        const ABEP_INDICADORES_OPTIONS = {{ ABEP_INDICADORES_OPTIONS | tojson }};
 
         async function loadEditData() {
             if (editDataCache) return editDataCache;
@@ -4106,6 +4118,11 @@
                     { value: 'Fluxo Processual', label: 'Fluxo Processual' },
                     { value: 'Outro', label: 'Outro' }
                 ];
+            } else if (field === 'abep_indicator') {
+                options = [{ value: '', label: 'Não informado' }];
+                ABEP_INDICADORES_OPTIONS.forEach(item => {
+                    options.push({ value: item.value, label: item.label });
+                });
             }
 
             options.forEach(opt => {

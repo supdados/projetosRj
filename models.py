@@ -62,6 +62,7 @@ class Project(db.Model):
     sei_process = db.Column(db.String(50), nullable=True)  # Formato: SEI-000000/000000/0000
     short_description = db.Column(db.Text, nullable=True)  # Descrição curta para Informações Básicas
     delivery_type = db.Column(db.String(50), nullable=True)  # Sistema, Painel, Norma, etc.
+    abep_indicator = db.Column(db.String(255), nullable=True)  # Indicador ABEP selecionado
     github_link = db.Column(db.String(500), nullable=True)  # Link do Github
     documentation_link = db.Column(db.String(500), nullable=True)  # Link da Documentação
     

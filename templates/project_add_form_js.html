@@ -6,6 +6,8 @@
         const modalObjetivoSelect = document.getElementById('project_objetivo');
         const modalResultadoSelect = document.getElementById('project_resultado');
         const modalIndicadoresContainer = document.getElementById('indicadores-container');
+        const abepIndicatorSearchInput = document.getElementById('project_abep_indicator_search');
+        const abepIndicatorSelect = document.getElementById('project_abep_indicator');
         const templateSelect = document.getElementById('template_select');
         const stagesContainer = document.getElementById('dynamic-stages-container');
         
@@ -235,6 +237,66 @@
             alert(message); // Temporário - pode ser substituído por um toast mais elegante
         }
 
+        function setupSearchableSelect(searchInput, select) {
+            if (!searchInput || !select) {
+                return { reset: function() {} };
+            }
+
+            const allOptions = Array.from(select.options).map(option => ({
+                value: option.value,
+                text: option.textContent
+            }));
+
+            if (allOptions.length === 0) {
+                return { reset: function() {} };
+            }
+
+            const placeholder = allOptions[0];
+            const selectableOptions = allOptions.slice(1);
+
+            function renderOptions(filterText) {
+                const currentSelected = select.value;
+                const normalizedFilter = (filterText || '').trim().toLowerCase();
+
+                const filtered = selectableOptions.filter(item => {
+                    if (!normalizedFilter) return true;
+                    const haystack = `${item.text} ${item.value}`.toLowerCase();
+                    return haystack.includes(normalizedFilter);
+                });
+
+                select.innerHTML = '';
+                const placeholderOption = document.createElement('option');
+                placeholderOption.value = placeholder.value;
+                placeholderOption.textContent = placeholder.text;
+                select.appendChild(placeholderOption);
+
+                filtered.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.value;
+                    option.textContent = item.text;
+                    select.appendChild(option);
+                });
+
+                if (currentSelected && Array.from(select.options).some(opt => opt.value === currentSelected)) {
+                    select.value = currentSelected;
+                }
+            }
+
+            searchInput.addEventListener('input', function() {
+                renderOptions(searchInput.value);
+            });
+
+            return {
+                reset: function() {
+                    searchInput.value = '';
+                    renderOptions('');
+                    select.value = '';
+                }
+            };
+        }
+
+        const abepSearchControl = setupSearchableSelect(abepIndicatorSearchInput, abepIndicatorSelect);
+
         // Event listeners
         if (modalObjetivoSelect) {
             modalObjetivoSelect.addEventListener('change', loadResultados);
@@ -272,6 +334,7 @@
                     </div>
                 `;
                 stagesContainer.innerHTML = '';
+                abepSearchControl.reset();
                 
                 // Remove classes de animação
                 addProjectModal.querySelector('.modal-content').classList.remove('modal-animate-in');

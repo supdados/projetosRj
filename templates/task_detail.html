@@ -151,7 +151,13 @@
                     <div class="task-item-bar status-{{ item.status }}"></div>
                     <div class="task-item-main">
                         <div class="task-item-line">
-                            <p class="task-item-desc" data-item-id="{{ item.id }}">{{ item.descricao }}</p>
+                            <div class="task-item-desc-wrap">
+                                <p class="task-item-desc" data-item-id="{{ item.id }}">{{ item.descricao }}</p>
+                                <button type="button" class="task-item-desc-edit-btn" data-item-id="{{ item.id }}"
+                                    title="Editar descrição">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
                             <div class="task-item-meta">
                                 <select class="task-item-status status-{{ item.status }}"
                                     onchange="updateItemStatus({{ item.id }}, this.value)" title="Status">
@@ -265,8 +271,8 @@
                             <div class="task-item-add-bar"></div>
                             <div class="task-item-add-main">
                                 <div class="task-item-add-line">
-                                    <input type="text" class="task-item-add-desc" id="addItemDesc"
-                                        placeholder="Descreva o item..." autocomplete="off">
+                                    <textarea class="task-item-add-desc" id="addItemDesc" rows="1"
+                                        placeholder="Descreva o item..."></textarea>
                                     <select class="task-item-add-status" id="addItemStatus">
                                         <option value="programado">Programado</option>
                                         <option value="em_andamento">Em andamento</option>
@@ -275,14 +281,11 @@
                                     </select>
                                     <div class="responsavel-mention-wrap">
                                         <div class="contenteditable-responsavel task-item-add-responsavel"
-                                            contenteditable="true" data-placeholder="Responsável (digite @ para marcar)"
+                                            contenteditable="true" data-placeholder="Responsável"
                                             id="addItemResponsavel"></div>
                                         <div class="responsavel-suggestions" id="addItemResponsavelSuggestions"
                                             role="listbox" hidden></div>
                                     </div>
-                                </div>
-                                <div class="task-item-add-hint">
-                                    <kbd>Enter</kbd> para adicionar &nbsp;·&nbsp; <kbd>Esc</kbd> para cancelar
                                 </div>
                             </div>
                         </div>
@@ -300,8 +303,8 @@
                         <div class="task-item-add-bar"></div>
                         <div class="task-item-add-main">
                             <div class="task-item-add-line">
-                                <input type="text" class="task-item-add-desc" id="addItemDesc"
-                                    placeholder="Descreva o item..." autocomplete="off">
+                                <textarea class="task-item-add-desc" id="addItemDesc" rows="1"
+                                    placeholder="Descreva o item..."></textarea>
                                 <select class="task-item-add-status" id="addItemStatus">
                                     <option value="programado">Programado</option>
                                     <option value="em_andamento">Em andamento</option>
@@ -310,14 +313,11 @@
                                 </select>
                                 <div class="responsavel-mention-wrap">
                                     <div class="contenteditable-responsavel task-item-add-responsavel"
-                                        contenteditable="true" data-placeholder="Responsável (digite @ para marcar)"
+                                        contenteditable="true" data-placeholder="Responsável"
                                         id="addItemResponsavel"></div>
                                     <div class="responsavel-suggestions" id="addItemResponsavelSuggestions"
                                         role="listbox" hidden></div>
                                 </div>
-                            </div>
-                            <div class="task-item-add-hint">
-                                <kbd>Enter</kbd> para adicionar &nbsp;·&nbsp; <kbd>Esc</kbd> para cancelar
                             </div>
                         </div>
                     </div>
@@ -1093,7 +1093,14 @@
         padding: 8px 12px;
     }
 
-    .task-item-add-line,
+    .task-item-add-line {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 100px 160px 36px 30px;
+        align-items: start;
+        gap: 10px 8px;
+        width: 100%;
+    }
+
     .task-item-line-edit {
         display: grid;
         grid-template-columns: minmax(0, 1fr) 100px 160px;
@@ -1110,9 +1117,15 @@
     .task-item-add-desc {
         padding: 6px 8px;
         font-size: 13px;
+        line-height: 1.45;
         border: 1px solid #e5e7eb;
         border-radius: 4px;
         width: 100%;
+        min-height: 32px;
+        resize: none;
+        overflow: hidden;
+        white-space: pre-wrap;
+        font-family: inherit;
         box-sizing: border-box;
     }
 
@@ -1139,6 +1152,9 @@
         font-size: 12px;
         border: 1px solid #e5e7eb;
         border-radius: 4px;
+        white-space: normal;
+        word-wrap: break-word;
+        overflow: visible;
         box-sizing: border-box;
     }
 
@@ -1167,6 +1183,30 @@
         white-space: normal;
         word-wrap: break-word;
         box-sizing: border-box;
+    }
+
+    .contenteditable-responsavel.task-item-add-responsavel {
+        width: 100%;
+        max-width: 160px;
+        min-width: 0;
+        white-space: normal;
+        word-wrap: break-word;
+        word-break: break-word;
+        overflow-x: hidden;
+        overflow-y: visible;
+    }
+
+    .contenteditable-responsavel.task-item-add-responsavel:empty::before {
+        white-space: nowrap;
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .task-item-add-line .responsavel-mention-wrap {
+        width: 100%;
+        min-width: 0;
+        max-width: 160px;
     }
 
     .contenteditable-responsavel:focus {
@@ -1312,6 +1352,15 @@
         width: 100%;
     }
 
+    .task-item-desc-wrap {
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 6px;
+        justify-self: start;
+        max-width: 100%;
+        min-width: 0;
+    }
+
     .task-item-desc {
         margin: 0;
         font-size: 13px;
@@ -1320,17 +1369,56 @@
         white-space: pre-wrap;
         word-break: break-word;
         min-width: 0;
+        max-width: 100%;
+        flex: 0 1 auto;
     }
 
-    .task-item-desc[data-item-id] {
-        cursor: text;
-        border-radius: 3px;
-        padding: 2px 4px;
-        transition: background 0.15s;
+    .task-item-desc-edit-btn {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: #6b7280;
+        font-size: 11px;
+        cursor: pointer;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: color 0.15s, background 0.15s;
     }
 
-    .task-item-desc[data-item-id]:hover {
-        background: rgba(0, 90, 146, 0.04);
+    .task-item-row:hover .task-item-desc-edit-btn,
+    .task-item-desc-wrap:focus-within .task-item-desc-edit-btn {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .task-item-desc-edit-btn:hover {
+        color: var(--primary-color);
+        background: rgba(0, 90, 146, 0.08);
+    }
+
+    .task-item-desc-wrap.editing .task-item-desc-edit-btn {
+        display: none;
+    }
+
+    .task-item-desc-wrap.editing {
+        display: flex;
+        width: 100%;
+        max-width: none;
+    }
+
+    .task-item-desc-wrap.editing .task-item-desc-editing {
+        flex: 1 1 auto;
+        min-width: 0;
     }
 
     .task-item-desc-editing {
@@ -1347,6 +1435,10 @@
         box-sizing: border-box;
         outline: none;
         font-family: inherit;
+        min-height: 32px;
+        resize: none;
+        overflow: hidden;
+        white-space: pre-wrap;
     }
 
     .task-item-meta {
@@ -2091,10 +2183,37 @@
         var addUrl = listEl.getAttribute('data-add-item-url');
         if (!addUrl) return;
 
+        function resizeAddDesc() {
+            if (!addDesc) return;
+            addDesc.style.height = 'auto';
+            addDesc.style.height = Math.max(32, addDesc.scrollHeight) + 'px';
+        }
+
+        function resetAddFormForNextItem() {
+            if (addDesc) {
+                addDesc.value = '';
+                resizeAddDesc();
+            }
+            if (addResponsavel) addResponsavel.innerHTML = '';
+            if (typeof responsavelSuggestionsDropdown !== 'undefined' && responsavelSuggestionsDropdown) {
+                responsavelSuggestionsDropdown.setAttribute('hidden', '');
+            }
+            setTimeout(function () {
+                if (addDesc && !formWrap.hasAttribute('hidden')) addDesc.focus();
+            }, 0);
+        }
+
+        function isAddFormEmpty() {
+            var descEmpty = !addDesc || !(addDesc.value || '').trim();
+            var respEmpty = !addResponsavel || !getResponsavelValueFromEditable(addResponsavel).trim();
+            return descEmpty && respEmpty;
+        }
+
         function showAddForm() {
             placeholder.style.display = 'none';
             formWrap.removeAttribute('hidden');
             addDesc.value = '';
+            resizeAddDesc();
             addStatus.value = 'programado';
             if (addResponsavel) addResponsavel.innerHTML = '';
             setTimeout(function () { addDesc.focus(); }, 50);
@@ -2111,18 +2230,16 @@
             return div.innerHTML;
         }
 
-        function escapeJsStr(s) {
-            if (!s) return '';
-            return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
-        }
-
         function insertNewItem(data) {
             var item = data.item;
             var rowHtml = '<div class="task-item-row" data-item-id="' + item.id + '">' +
                 '<div class="task-item-bar status-' + item.status + '"></div>' +
                 '<div class="task-item-main">' +
                 '<div class="task-item-line">' +
+                '<div class="task-item-desc-wrap">' +
                 '<p class="task-item-desc" data-item-id="' + item.id + '">' + escapeHtml(item.descricao) + '</p>' +
+                '<button type="button" class="task-item-desc-edit-btn" data-item-id="' + item.id + '" title="Editar descrição"><i class="fas fa-pen"></i></button>' +
+                '</div>' +
                 '<div class="task-item-meta">' +
                 '<select class="task-item-status status-' + item.status + '" onchange="updateItemStatus(' + item.id + ', this.value)" title="Status">' +
                 '<option value="programado"' + (item.status === 'programado' ? ' selected' : '') + '>Programado</option>' +
@@ -2190,7 +2307,7 @@
                     var data = JSON.parse(xhr.responseText);
                     if (data.success && data.item) {
                         insertNewItem(data);
-                        hideAddForm();
+                        resetAddFormForNextItem();
                     } else {
                         alert(data.message || 'Erro ao adicionar item.');
                     }
@@ -2209,6 +2326,7 @@
             if (e.key === 'Escape') hideAddForm();
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitAddItem(); }
         });
+        addDesc.addEventListener('input', resizeAddDesc);
 
         if (addStatus) {
             addStatus.addEventListener('keydown', function (e) {
@@ -2219,13 +2337,24 @@
         if (addResponsavel) {
             addResponsavel.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape') hideAddForm();
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitAddItem(); }
+                var mentionDropdown = document.querySelector('.responsavel-suggestions:not([hidden])');
+                if (e.key === 'Enter' && !e.shiftKey && !mentionDropdown) {
+                    e.preventDefault();
+                    submitAddItem();
+                }
             });
         }
 
         document.getElementById('btnFocusAddItem').addEventListener('click', function () {
             addRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             if (formWrap.hasAttribute('hidden')) placeholder.click();
+        });
+
+        document.addEventListener('mousedown', function (e) {
+            if (formWrap.hasAttribute('hidden')) return;
+            if (addRow.contains(e.target)) return;
+            if (e.target.closest('.responsavel-suggestions')) return;
+            if (isAddFormEmpty()) hideAddForm();
         });
 
         // Inicializar @ no campo responsável (add form - o que estiver no DOM)
@@ -2241,6 +2370,18 @@
         if (!editableEl) return '';
         var chips = [];
         var textParts = [];
+        var normalized = [];
+        var seen = {};
+
+        function addNormalizedName(name) {
+            var n = (name || '').replace(/^@+/, '').trim();
+            if (!n) return;
+            var key = n.toLowerCase();
+            if (seen[key]) return;
+            seen[key] = true;
+            normalized.push(n);
+        }
+
         function walk(node) {
             if (node.nodeType === 3) {
                 textParts.push(node.textContent);
@@ -2253,9 +2394,10 @@
             }
         }
         for (var i = 0; i < editableEl.childNodes.length; i++) walk(editableEl.childNodes[i]);
-        var text = textParts.join('').trim();
-        var chipStr = chips.join(', ');
-        return chipStr ? (text ? chipStr + ' ' + text : chipStr) : text;
+        chips.forEach(addNormalizedName);
+        var text = textParts.join(' ').replace(/\s+/g, ' ').trim();
+        if (text) text.split(/\s*,\s*|\s*;\s*|\n+/).forEach(addNormalizedName);
+        return normalized.join(', ');
     }
 
     // --- @ no campo responsável: sugestões + chip (unidade, cor de fundo, apaga inteiro) ---
@@ -2275,11 +2417,13 @@
         var savedRange = null;
         var users = [];
         var selectedIndex = 0;
+        var selectingSuggestion = false;
 
         function hideDropdown() {
             dropdown.setAttribute('hidden', '');
             activeEditable = null;
             savedRange = null;
+            selectingSuggestion = false;
         }
 
         function showDropdownBelow(el) {
@@ -2483,10 +2627,14 @@
                     div.setAttribute('role', 'option');
                     div.textContent = u.name;
                     div.dataset.name = u.name;
-                    div.addEventListener('click', function () {
-                        insertChip(activeEditable, u.name);
+                    div.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectingSuggestion = true;
+                        var targetEditable = activeEditable;
+                        insertChip(targetEditable, u.name);
                         hideDropdown();
-                        activeEditable.focus();
+                        if (targetEditable) targetEditable.focus();
                     });
                     dropdown.appendChild(div);
                 });
@@ -2551,9 +2699,10 @@
                     if (items[selectedIndex]) items[selectedIndex].scrollIntoView({ block: 'nearest' });
                 } else if (e.key === 'Enter' && items[selectedIndex]) {
                     e.preventDefault();
-                    insertChip(activeEditable, items[selectedIndex].dataset.name);
+                    var targetEditable = activeEditable;
+                    insertChip(targetEditable, items[selectedIndex].dataset.name);
                     hideDropdown();
-                    activeEditable.focus();
+                    if (targetEditable) targetEditable.focus();
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
                     hideDropdown();
@@ -2567,6 +2716,10 @@
 
         editableEl.addEventListener('blur', function () {
             setTimeout(function () {
+                if (selectingSuggestion) {
+                    selectingSuggestion = false;
+                    return;
+                }
                 if (!dropdown.contains(document.activeElement)) hideDropdown();
             }, 150);
         });
@@ -2640,35 +2793,53 @@
         if (!itemId) return;
         var row = descEl.closest('.task-item-row');
         if (!row) return;
-        if (descEl.classList.contains('task-item-desc-editing-active')) return;
+        var descWrap = descEl.closest('.task-item-desc-wrap');
+        if (!descWrap || descWrap.classList.contains('editing')) return;
+        descWrap.classList.add('editing');
         descEl.classList.add('task-item-desc-editing-active');
 
         var originalText = descEl.textContent.trim();
 
-        var input = document.createElement('input');
-        input.type = 'text';
+        var input = document.createElement('textarea');
+        input.rows = 1;
         input.className = 'task-item-desc-editing';
         input.value = originalText;
 
-        descEl.replaceWith(input);
+        function resizeEditor() {
+            input.style.height = 'auto';
+            input.style.height = Math.max(32, input.scrollHeight) + 'px';
+        }
+
+        descEl.setAttribute('hidden', '');
+        descWrap.insertBefore(input, descEl.nextSibling);
         input.focus();
-        input.select();
+        resizeEditor();
+        input.setSelectionRange(input.value.length, input.value.length);
 
         var saving = false;
+        var finished = false;
 
-        function restore(text) {
-            var p = document.createElement('p');
-            p.className = 'task-item-desc';
-            p.setAttribute('data-item-id', itemId);
-            p.textContent = text;
-            input.replaceWith(p);
+        function restoreUi(text) {
+            if (finished) return;
+            finished = true;
+            descEl.textContent = text;
+            descEl.removeAttribute('hidden');
+            descEl.classList.remove('task-item-desc-editing-active');
+            descWrap.classList.remove('editing');
+            if (input.parentNode) input.parentNode.removeChild(input);
         }
 
         function saveDesc() {
-            if (saving) return;
+            if (saving || finished) return;
             var newText = (input.value || '').trim();
-            if (!newText) { input.focus(); return; }
-            if (newText === originalText) { restore(originalText); return; }
+            if (!newText) {
+                restoreUi(originalText);
+                return;
+            }
+            if (newText === originalText) {
+                restoreUi(originalText);
+                return;
+            }
 
             saving = true;
             input.disabled = true;
@@ -2692,31 +2863,32 @@
                 try {
                     var data = JSON.parse(xhr.responseText);
                     if (data.success && data.item) {
-                        restore(data.item.descricao);
+                        restoreUi(data.item.descricao);
                     } else {
                         alert(data.message || 'Erro ao salvar.');
-                        restore(originalText);
+                        restoreUi(originalText);
                     }
                 } catch (err) {
-                    restore(originalText);
+                    restoreUi(originalText);
                 }
             };
             xhr.onerror = function () {
                 alert('Erro de conexão.');
-                restore(originalText);
+                restoreUi(originalText);
             };
             xhr.send(formData);
         }
 
         input.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') { e.preventDefault(); saveDesc(); }
-            if (e.key === 'Escape') { e.preventDefault(); restore(originalText); }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveDesc(); }
+            if (e.key === 'Escape') { e.preventDefault(); restoreUi(originalText); }
         });
+        input.addEventListener('input', resizeEditor);
 
         input.addEventListener('blur', function () {
             setTimeout(function () {
-                if (!saving && document.body.contains(input)) {
-                    restore(originalText);
+                if (!saving && !finished && document.body.contains(input)) {
+                    saveDesc();
                 }
             }, 150);
         });
@@ -2752,7 +2924,7 @@
         var editable = document.createElement('div');
         editable.className = 'contenteditable-responsavel';
         editable.contentEditable = 'true';
-        editable.setAttribute('data-placeholder', 'Responsável (@ para marcar)');
+        editable.setAttribute('data-placeholder', 'Responsável');
         editable.innerHTML = chipHtml;
         var suggestionsDiv = document.createElement('div');
         suggestionsDiv.className = 'responsavel-suggestions';
@@ -2829,7 +3001,7 @@
 
         editable.addEventListener('keydown', function (e) {
             // Não salvar se o dropdown de sugestões está aberto (Enter seleciona a sugestão)
-            var dropdown = editWrap.querySelector('.responsavel-suggestions:not([hidden])');
+            var dropdown = document.querySelector('.responsavel-suggestions:not([hidden])');
             if (e.key === 'Enter' && !e.shiftKey && !dropdown) { e.preventDefault(); saveResp(); }
             if (e.key === 'Escape') {
                 if (dropdown) return; // Deixa o handler do mention fechar o dropdown
@@ -2842,7 +3014,7 @@
                 if (!saving && document.body.contains(editWrap)) {
                     var dropdown = document.querySelector('.responsavel-suggestions:not([hidden])');
                     if (dropdown) return;
-                    restore(originalText);
+                    saveResp();
                 }
             }, 250);
         });
@@ -2852,11 +3024,15 @@
     var taskItemsListEl = document.querySelector('.task-items-list');
     if (taskItemsListEl) {
         taskItemsListEl.addEventListener('click', function (e) {
-            // Edição inline da descrição
-            var desc = e.target.closest('.task-item-desc[data-item-id]');
-            if (desc && !desc.classList.contains('task-item-desc-editing-active')) {
+            // Edição da descrição somente pelo botão de caneta
+            var editBtn = e.target.closest('.task-item-desc-edit-btn[data-item-id]');
+            if (editBtn) {
                 e.preventDefault();
-                inlineEditDesc(desc);
+                var row = editBtn.closest('.task-item-row');
+                var desc = row ? row.querySelector('.task-item-desc[data-item-id]') : null;
+                if (desc && !desc.classList.contains('task-item-desc-editing-active')) {
+                    inlineEditDesc(desc);
+                }
                 return;
             }
             // Edição inline do responsável

@@ -483,10 +483,8 @@
             const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
             const mobileMenuOverlay = document.querySelector('.mobile-menu-overlay');
             const loadingOverlay = document.querySelector('.loading-overlay');
-            const skeletonContainer = document.querySelector('.skeleton-container');
             const mobileMenuLinks = document.querySelectorAll('.mobile-menu-link');
             const body = document.body;
-            const isMobile = window.innerWidth < 768;
             
             // Variável para verificar se o usuário está logado (baseado na existência da sidebar)
             const isUserLoggedIn = !!sidebar;
@@ -497,14 +495,10 @@
             // Restaurar estado do menu do localStorage (apenas desktop)
             if (sidebar && isUserLoggedIn && window.innerWidth >= 768) {
                 const sidebarState = localStorage.getItem('sidebarCollapsed');
-                console.log('Estado do menu carregado:', sidebarState);
                 if (sidebarState === 'true') {
                     sidebar.classList.add('collapsed');
                     content.classList.add('expanded');
                     body.classList.add('sidebar-collapsed');
-                    console.log('Menu restaurado como COLAPSADO');
-                } else {
-                    console.log('Menu restaurado como EXPANDIDO (padrão)');
                 }
             }
             
@@ -513,7 +507,6 @@
                 if (window.innerWidth >= 768) {
                     const isCollapsed = sidebar.classList.contains('collapsed');
                     localStorage.setItem('sidebarCollapsed', isCollapsed.toString());
-                    console.log('Estado do menu salvo:', isCollapsed.toString());
                 }
             }
             

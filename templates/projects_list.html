@@ -1217,6 +1217,14 @@
                         <option value="{{ delivery }}" {% if delivery == selected_delivery_type %}selected{% endif %}>{{ delivery }}</option>
                     {% endfor %}
                 </select>
+                <select class="filter-select" name="abep_indicator" id="filterAbepIndicator">
+                    <option value="">Todos os indicadores ABEP</option>
+                    {% for item in ABEP_INDICADORES_OPTIONS %}
+                        <option value="{{ item.value }}" {% if item.value == selected_abep_indicator %}selected{% endif %}>
+                            {{ item.label }}
+                        </option>
+                    {% endfor %}
+                </select>
                 <select class="filter-select" name="objetivo" id="filterObjetivo">
                     <option value="">Todos os objetivos</option>
                     {% for obj in objetivos %}
@@ -1250,7 +1258,8 @@
                             <th style="width: 18%;">Título</th>
                             <th style="width: 10%;">Área</th>
                             <th style="width: 10%;">Órgão</th>
-                            <th style="width: 10%;">Tipo Entrega</th>
+                            <th style="width: 8%;">Tipo Entrega</th>
+                            <th style="width: 14%;">Indicador ABEP</th>
                             <th style="width: 8%;">Prioridade</th>
                             <th style="width: 8%;">Status</th>
                             <th style="width: 9%;">Data Início</th>
@@ -1274,6 +1283,13 @@
                                         <span class="badge badge-delivery" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08)); color: #1e40af; border: 1px solid rgba(59, 130, 246, 0.2); font-size: 0.7rem; padding: 0.25rem 0.5rem; white-space: nowrap;">
                                             {{ project.delivery_type }}
                                         </span>
+                                    {% else %}
+                                        <span style="color: #94a3b8;">-</span>
+                                    {% endif %}
+                                </td>
+                                <td style="font-size: 0.75rem;">
+                                    {% if project.abep_indicator %}
+                                        {{ project.abep_indicator }}
                                     {% else %}
                                         <span style="color: #94a3b8;">-</span>
                                     {% endif %}
@@ -1349,6 +1365,12 @@
                                 <i class="fas fa-box"></i>{{ project.delivery_type }}
                             </span>
                             {% endif %}
+
+                            {% if project.abep_indicator %}
+                            <span class="project-card-detail">
+                                <i class="fas fa-list-ol"></i>{{ project.abep_indicator }}
+                            </span>
+                            {% endif %}
                         </div>
                         
                         <div class="project-card-date-group">
@@ -1391,7 +1413,7 @@
                     <!-- Primeira página -->
                     {% if page > 1 %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.list_projects', page=1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, objetivo=selected_objetivo) }}" aria-label="Primeira">
+                        <a class="page-link" href="{{ url_for('main.list_projects', page=1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Primeira">
                             <i class="fas fa-angle-double-left"></i>
                         </a>
                     </li>
@@ -1400,7 +1422,7 @@
                     <!-- Página anterior -->
                     {% if page > 1 %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.list_projects', page=page-1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, objetivo=selected_objetivo) }}" aria-label="Anterior">
+                        <a class="page-link" href="{{ url_for('main.list_projects', page=page-1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Anterior">
                             <i class="fas fa-angle-left"></i>
                         </a>
                     </li>
@@ -1409,7 +1431,7 @@
                     <!-- Páginas numéricas -->
                     {% for p in range([1, page - 2]|max, [total_pages + 1, page + 3]|min) %}
                         <li class="page-item {% if p == page %}active{% endif %}">
-                            <a class="page-link" href="{{ url_for('main.list_projects', page=p, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, objetivo=selected_objetivo) }}">
+                            <a class="page-link" href="{{ url_for('main.list_projects', page=p, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}">
                                 {{ p }}
                             </a>
                         </li>
@@ -1418,7 +1440,7 @@
                     <!-- Próxima página -->
                     {% if page < total_pages %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.list_projects', page=page+1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, objetivo=selected_objetivo) }}" aria-label="Próxima">
+                        <a class="page-link" href="{{ url_for('main.list_projects', page=page+1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Próxima">
                             <i class="fas fa-angle-right"></i>
                         </a>
                     </li>
@@ -1427,7 +1449,7 @@
                     <!-- Última página -->
                     {% if page < total_pages %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.list_projects', page=total_pages, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, objetivo=selected_objetivo) }}" aria-label="Última">
+                        <a class="page-link" href="{{ url_for('main.list_projects', page=total_pages, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Última">
                             <i class="fas fa-angle-double-right"></i>
                         </a>
                     </li>

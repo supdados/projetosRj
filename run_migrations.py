@@ -5,22 +5,26 @@ Script Unificado de Migração de Banco de Dados
 Este script executa as seguintes migrações em sequência:
 1. Migra os dados do campo 'area_responsavel' (tabela User) para a nova tabela 'user_areas'.
 2. Cria a tabela 'project_history' para o rastreamento de ações em projetos.
+3. Sincroniza o catalogo canonico de objetivo/resultado/indicador.
+4. Garante a coluna 'abep_indicator' na tabela 'project'.
 
 Uso:
     python run_migrations.py
 """
 
 import datetime
+from sqlalchemy import inspect, text
 from app import app, db
 # Importe todos os modelos necessários de uma vez
 from models import User, UserArea, ProjectHistory, Project
+from objective_catalog import sync_goal_catalog_to_db
 
 def migrate_user_areas():
     """
     Migra dados de User.area_responsavel para a tabela UserArea.
     Retorna True em caso de sucesso, False em caso de erro.
     """
-    print("\n-- [1/2] Iniciando migração de áreas de usuários...")
+    print("\n-- [1/4] Iniciando migração de áreas de usuários...")
     try:
         # Garante que a tabela user_areas exista
         db.create_all()
@@ -53,7 +57,7 @@ def create_history_table():
     Cria e verifica a tabela project_history.
     Retorna True em caso de sucesso, False em caso de erro.
     """
-    print("\n-- [2/2] Iniciando criação da tabela de histórico de projetos...")
+    print("\n-- [2/4] Iniciando criação da tabela de histórico de projetos...")
     try:
         # Garante que a tabela project_history exista
         db.create_all()
@@ -82,6 +86,50 @@ def create_history_table():
         print(f"   ✗ ERRO na criação da tabela de histórico: {e}")
         return False
 
+
+def sync_goal_catalog():
+    """
+    Sincroniza o catalogo fixo de objetivo/resultado/indicador no banco.
+    """
+    print("\n-- [3/4] Sincronizando catalogo de objetivos/resultados/indicadores...")
+    try:
+        db.create_all()
+        summary = sync_goal_catalog_to_db(commit=True)
+        print(f"   ✓ Sucesso: {summary}")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"   ✗ ERRO na sincronizacao do catalogo: {e}")
+        return False
+
+
+def ensure_abep_indicator_column():
+    """
+    Garante a coluna project.abep_indicator em bancos existentes.
+    """
+    print("\n-- [4/4] Verificando coluna project.abep_indicator...")
+    try:
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+
+        if 'project' not in tables:
+            print("   ✓ Tabela 'project' ainda nao existe (sera criada pelo create_all quando necessario).")
+            return True
+
+        columns = {col["name"] for col in inspector.get_columns('project')}
+        if 'abep_indicator' in columns:
+            print("   ✓ Coluna 'abep_indicator' ja existe.")
+            return True
+
+        db.session.execute(text("ALTER TABLE project ADD COLUMN abep_indicator VARCHAR(255)"))
+        db.session.commit()
+        print("   ✓ Coluna 'abep_indicator' criada com sucesso.")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"   ✗ ERRO ao criar coluna abep_indicator: {e}")
+        return False
+
 if __name__ == '__main__':
     # Executa tudo dentro do contexto da aplicação Flask
     with app.app_context():
@@ -96,6 +144,16 @@ if __name__ == '__main__':
 
         # Etapa 2: Criar tabela de histórico
         if not create_history_table():
+            print("\n!! Migração interrompida devido a um erro.")
+            exit(1) # Sai com código de erro
+
+        # Etapa 3: Sincronizar catalogo fixo
+        if not sync_goal_catalog():
+            print("\n!! Migração interrompida devido a um erro.")
+            exit(1) # Sai com código de erro
+
+        # Etapa 4: Garantir coluna Indicador ABEP
+        if not ensure_abep_indicator_column():
             print("\n!! Migração interrompida devido a um erro.")
             exit(1) # Sai com código de erro
 

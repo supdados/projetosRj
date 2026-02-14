@@ -3,9 +3,21 @@ import datetime
 import os
 from functools import wraps
 from zoneinfo import ZoneInfo
-from models import db, User, Project, Etapa, Objetivo, ResultadoEsperado, Indicador, IndicadorProjeto, StageTemplate, StageTemplateItem, UserArea, ProjectHistory, Task, TaskItem, TaskItemComment
-from werkzeug.security import generate_password_hash # Para editar senha de usuário
+from models import db, User, Project, Etapa, IndicadorProjeto, StageTemplate, StageTemplateItem, UserArea, ProjectHistory, Task, TaskItem, TaskItemComment
 from sqlalchemy.orm import joinedload
+from sqlalchemy import text
+from objective_catalog import (
+    OBJETIVO_IDS,
+    RESULTADO_IDS,
+    get_objetivos_choices,
+    get_resultados_por_objetivo,
+    get_indicadores_por_resultado,
+    get_resultados_for_objetivo,
+    get_indicadores_for_resultado,
+    normalize_goal_selection,
+    sync_goal_catalog_to_db,
+)
+from abep_catalog import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
 
 main_bp = Blueprint('main', __name__)
 
@@ -50,6 +62,37 @@ def log_project_action(project_id, action_type, description, old_value=None, new
         # Não interrompe a operação principal se o log falhar
 
 
+def get_goal_catalog_context():
+    """Retorna estruturas de objetivo/resultado/indicador vindas do catalogo canonico."""
+    return (
+        get_objetivos_choices(),
+        get_resultados_por_objetivo(),
+        get_indicadores_por_resultado(),
+    )
+
+
+def parse_objetivo_filter(raw_value):
+    if not raw_value:
+        return None
+    try:
+        objetivo_id = int(raw_value)
+    except (TypeError, ValueError):
+        return None
+    if objetivo_id not in OBJETIVO_IDS:
+        return None
+    return objetivo_id
+
+
+def parse_abep_indicator_filter(raw_value):
+    if not raw_value:
+        return None
+    try:
+        normalized = normalize_abep_indicator(raw_value)
+    except ValueError:
+        return None
+    return normalized
+
+
 # Rota específica para servir o favicon
 @main_bp.route('/favicon.ico')
 def favicon():
@@ -86,7 +129,8 @@ def admin_required(f):
 def inject_current_year():
     return {
         'current_year': datetime.datetime.utcnow().year,
-        'AREAS_RESPONSAVEIS_CHOICES': AREAS_RESPONSAVEIS_CHOICES
+        'AREAS_RESPONSAVEIS_CHOICES': AREAS_RESPONSAVEIS_CHOICES,
+        'ABEP_INDICADORES_OPTIONS': ABEP_INDICADORES_OPTIONS
     }
 
 
@@ -197,17 +241,7 @@ def dashboard():
     count_baixa = count_projects_for_user(Project.prioridade == 'baixa')
     count_vigente = count_projects_for_user(Project.status == 'Vigente')
     count_finalizado = count_projects_for_user(Project.status == 'Finalizado')
-    count_suspenso = count_projects_for_user(Project.status == 'Suspenso')
     num_projects = count_projects_for_user()
-
-    etapas_query_base = Etapa.query.join(Project, Etapa.project_id == Project.id)
-    if not g.user.is_admin:
-        user_areas = g.user.get_areas()
-        if user_areas:
-            etapas_query_base = etapas_query_base.filter(Project.area_responsavel.in_(user_areas))
-    
-    num_etapas = etapas_query_base.count()
-    num_etapas_concluidas = etapas_query_base.filter(Etapa.done == True).count()
     
     data_atual = datetime.date.today() # Usar datetime.date.today() é mais simples
     projetos_em_atraso = 0
@@ -222,16 +256,14 @@ def dashboard():
         if Etapa.query.filter(Etapa.project_id == projeto.id, Etapa.done == False, Etapa.data_fim < data_atual).count() > 0:
             projetos_em_atraso += 1
             
-    objetivos = Objetivo.query.all()
+    objetivos, _, _ = get_goal_catalog_context()
     
     return render_template(
         'index.html', 
         recent_projects=recent_projects,
         count_urgente=count_urgente, count_alta=count_alta,
         count_media=count_media, count_baixa=count_baixa,
-        count_vigente=count_vigente, count_finalizado=count_finalizado,
-        count_suspenso=count_suspenso, num_projects=num_projects,
-        num_etapas=num_etapas, num_etapas_concluidas=num_etapas_concluidas,
+        count_vigente=count_vigente, count_finalizado=count_finalizado, num_projects=num_projects,
         projetos_em_atraso=projetos_em_atraso,
         objetivos=objetivos,
         AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES # Para o modal
@@ -246,6 +278,7 @@ def list_projects():
     selected_atraso = request.args.get('atraso')
     selected_special_project = request.args.get('special_project')  # Novo filtro
     selected_delivery_type = request.args.get('delivery_type')  # Novo filtro
+    selected_abep_indicator = request.args.get('abep_indicator')  # Novo filtro
     selected_objetivo = request.args.get('objetivo')  # Novo filtro
     search_query = request.args.get('search', '').strip()  # Busca
     
@@ -283,17 +316,24 @@ def list_projects():
         query = query.filter(Project.special_project == selected_special_project)
     if selected_delivery_type and selected_delivery_type != "":
         query = query.filter(Project.delivery_type == selected_delivery_type)
-    if selected_objetivo and selected_objetivo != "":
-        query = query.filter(Project.objetivo_id == int(selected_objetivo))
+    selected_abep_indicator = parse_abep_indicator_filter(selected_abep_indicator)
+    if selected_abep_indicator:
+        query = query.filter(Project.abep_indicator == selected_abep_indicator)
+    objetivo_filter_id = parse_objetivo_filter(selected_objetivo)
+    if selected_objetivo and objetivo_filter_id is None:
+        selected_objetivo = ""
+    if selected_objetivo and objetivo_filter_id is not None:
+        query = query.filter(Project.objetivo_id == objetivo_filter_id)
     
-    # Filtro de busca (título, área, órgão)
+    # Filtro de busca (título, área, órgão, indicador ABEP)
     if search_query:
         search_pattern = f"%{search_query}%"
         query = query.filter(
             db.or_(
                 Project.titulo.ilike(search_pattern),
                 Project.area_responsavel.ilike(search_pattern),
-                Project.orgao.ilike(search_pattern)
+                Project.orgao.ilike(search_pattern),
+                Project.abep_indicator.ilike(search_pattern)
             )
         )
         
@@ -342,7 +382,7 @@ def list_projects():
     priorities_options = sorted(list(set(p.prioridade for p in Project.query.all() if p.prioridade)))
     statuses_options = sorted(list(set(p.status for p in Project.query.all() if p.status)))
     atrasos_options = [("no_prazo", "No prazo"), ("atrasado", "Atrasado")]
-    objetivos = Objetivo.query.all() # Para o modal de adicionar projeto e filtro
+    objetivos, _, _ = get_goal_catalog_context()  # Para o modal de adicionar projeto e filtro
     
     # Novas opções para filtros
     special_projects_options = ['ABEP', 'TCE']
@@ -361,6 +401,8 @@ def list_projects():
     if selected_special_project:
         has_active_filters = True
     if selected_delivery_type:
+        has_active_filters = True
+    if selected_abep_indicator:
         has_active_filters = True
     if selected_objetivo:
         has_active_filters = True
@@ -381,6 +423,7 @@ def list_projects():
         selected_atraso=selected_atraso,
         selected_special_project=selected_special_project,
         selected_delivery_type=selected_delivery_type,
+        selected_abep_indicator=selected_abep_indicator,
         selected_objetivo=selected_objetivo,
         areas=areas_options_for_dropdown,
         priorities=priorities_options,
@@ -459,16 +502,16 @@ def list_projetos_pendentes():
     if g.user.is_admin:
         project_areas_in_db = set(p.area_responsavel for p in Project.query.all() if p.area_responsavel)
         areas_options_for_dropdown = sorted(list(project_areas_in_db.union(set(AREAS_RESPONSAVEIS_CHOICES))))
-    
-    # Manter as variáveis originais para não quebrar o template
-    objetivos = Objetivo.query.all()
-    AREAS_RESPONSAVEIS_CHOICES_local = AREAS_RESPONSAVEIS_CHOICES
+
+    # Necessário para o formulário de criação de projeto
+    # (objetivo -> resultado esperado -> indicadores)
+    objetivos, _, _ = get_goal_catalog_context()
 
     return render_template(
         'projetos_pendentes.html',
         projetos_com_etapas=projetos_pendentes_com_etapas,
         objetivos=objetivos,
-        AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES_local,
+        AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES,
         # Variáveis para os filtros
         areas_options=areas_options_for_dropdown,
         selected_area=selected_area_filter,
@@ -498,16 +541,23 @@ def add_project():
         
         orgao = request.form.get('project_orgao')
         prioridade = request.form.get('project_prioridade')
-        objetivo_id = request.form.get('project_objetivo')
-        resultado_esperado_id = request.form.get('project_resultado')
+        objetivo_id_raw = request.form.get('project_objetivo')
+        resultado_esperado_id_raw = request.form.get('project_resultado')
         observacao = request.form.get('project_observacao')
-        indicador_ids = request.form.getlist('project_indicadores')
+        indicador_ids_raw = request.form.getlist('project_indicadores')
+
+        objetivo_id, resultado_esperado_id, indicador_ids = normalize_goal_selection(
+            objetivo_id_raw,
+            resultado_esperado_id_raw,
+            indicador_ids_raw,
+        )
         
         # Novos campos
         special_project = request.form.get('project_special_project') or None
         sei_process = request.form.get('project_sei_process') or None
         short_description = request.form.get('project_short_description') or None
         delivery_type = request.form.get('project_delivery_type') or None
+        abep_indicator = normalize_abep_indicator(request.form.get('project_abep_indicator'))
         github_link = request.form.get('project_github_link') or None
         documentation_link = request.form.get('project_documentation_link') or None
         
@@ -521,14 +571,15 @@ def add_project():
             area_responsavel=area_responsavel,
             orgao=orgao,
             prioridade=prioridade,
-            objetivo_id=int(objetivo_id) if objetivo_id else None,
-            resultado_esperado_id=int(resultado_esperado_id) if resultado_esperado_id else None,
+            objetivo_id=objetivo_id,
+            resultado_esperado_id=resultado_esperado_id,
             observacao=observacao,
             status='Vigente',  # Definir status padrão
             special_project=special_project,
             sei_process=sei_process,
             short_description=short_description,
             delivery_type=delivery_type,
+            abep_indicator=abep_indicator,
             github_link=github_link,
             documentation_link=documentation_link
         )
@@ -572,7 +623,7 @@ def add_project():
         # Adicionar os indicadores
         if indicador_ids:
             for ind_id in indicador_ids:
-                indicador_projeto = IndicadorProjeto(project_id=new_project.id, indicador_id=int(ind_id))
+                indicador_projeto = IndicadorProjeto(project_id=new_project.id, indicador_id=ind_id)
                 db.session.add(indicador_projeto)
 
         # Registrar no histórico
@@ -587,6 +638,10 @@ def add_project():
         flash('Projeto adicionado com sucesso!', 'success')
         return redirect(url_for('main.project_detail', project_id=new_project.id))
 
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'warning')
+        return redirect(request.referrer or url_for('main.dashboard'))
     except Exception as e:
         db.session.rollback()
         flash(f'Ocorreu um erro ao adicionar o projeto: {e}', 'danger')
@@ -615,14 +670,7 @@ def edit_project(project_id):
         flash('Você não tem permissão para editar este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
 
-    objetivos = Objetivo.query.all()
-    # Cria dicionários para fácil acesso nos templates
-    resultados_por_objetivo = {obj.id: obj.resultados for obj in objetivos}
-    
-    indicadores_por_resultado = {}
-    todos_resultados_db = ResultadoEsperado.query.all() # Evita N+1 query
-    for res in todos_resultados_db:
-        indicadores_por_resultado[res.id] = res.indicadores
+    objetivos, resultados_por_objetivo, indicadores_por_resultado = get_goal_catalog_context()
 
     indicadores_do_projeto_ids = [ip.indicador_id for ip in project_to_edit.indicadores]
 
@@ -675,19 +723,32 @@ def edit_project(project_id):
         project_to_edit.github_link = request.form.get('project_github_link') or None
         project_to_edit.documentation_link = request.form.get('project_documentation_link') or None
         
-        objetivo_id_form = request.form.get('project_objetivo')
-        project_to_edit.objetivo_id = int(objetivo_id_form) if objetivo_id_form else None
-        
-        resultado_id_form = request.form.get('project_resultado')
-        project_to_edit.resultado_esperado_id = int(resultado_id_form) if resultado_id_form else None
-        
+        try:
+            old_abep_indicator = project_to_edit.abep_indicator
+            new_abep_indicator = normalize_abep_indicator(request.form.get('project_abep_indicator'))
+            if old_abep_indicator != new_abep_indicator:
+                changes.append(
+                    f'indicador ABEP de "{old_abep_indicator or "vazio"}" para "{new_abep_indicator or "vazio"}"'
+                )
+            project_to_edit.abep_indicator = new_abep_indicator
+
+            objetivo_id_norm, resultado_id_norm, indicadores_ids_norm = normalize_goal_selection(
+                request.form.get('project_objetivo'),
+                request.form.get('project_resultado'),
+                request.form.getlist('project_indicadores'),
+            )
+        except ValueError as e:
+            flash(str(e), 'warning')
+            return redirect(url_for('main.edit_project', project_id=project_id))
+
+        project_to_edit.objetivo_id = objetivo_id_norm
+        project_to_edit.resultado_esperado_id = resultado_id_norm
+
         # Atualizar Indicadores
         IndicadorProjeto.query.filter_by(project_id=project_id).delete() # Remove todos os antigos
-        indicadores_ids_form = request.form.getlist('project_indicadores')
-        for ind_id_str in indicadores_ids_form[:4]: # Limita a 4
-            if ind_id_str: # Garante que não seja string vazia
-                indicador_projeto_novo = IndicadorProjeto(project_id=project_id, indicador_id=int(ind_id_str))
-                db.session.add(indicador_projeto_novo)
+        for indicador_id in indicadores_ids_norm:
+            indicador_projeto_novo = IndicadorProjeto(project_id=project_id, indicador_id=indicador_id)
+            db.session.add(indicador_projeto_novo)
         
         # Registrar no histórico
         if changes:
@@ -705,7 +766,6 @@ def edit_project(project_id):
     return render_template(
         'project_form.html', 
         project=project_to_edit, 
-        action_url=url_for('main.edit_project', project_id=project_id), # Nome da var ajustado
         areas_responsaveis=AREAS_RESPONSAVEIS_CHOICES, # Lista de todas as áreas possíveis para o dropdown
         objetivos=objetivos,
         resultados_por_objetivo=resultados_por_objetivo,
@@ -724,26 +784,13 @@ def get_project_edit_data(project_id):
         return jsonify({'success': False, 'message': 'Você não tem permissão para editar este projeto.'}), 403
     
     try:
-        objetivos = Objetivo.query.all()
-        resultados_por_objetivo = {}
-        indicadores_por_resultado = {}
-        
-        for obj in objetivos:
-            resultados_por_objetivo[obj.id] = [
-                {'id': r.id, 'descricao': r.descricao} for r in obj.resultados
-            ]
-        
-        todos_resultados_db = ResultadoEsperado.query.all()
-        for res in todos_resultados_db:
-            indicadores_por_resultado[res.id] = [
-                {'id': i.id, 'descricao': i.descricao} for i in res.indicadores
-            ]
+        objetivos, resultados_por_objetivo, indicadores_por_resultado = get_goal_catalog_context()
         
         indicadores_do_projeto_ids = [ip.indicador_id for ip in project.indicadores]
         
         return jsonify({
             'success': True,
-            'objetivos': [{'id': obj.id, 'descricao': obj.descricao} for obj in objetivos],
+            'objetivos': objetivos,
             'resultados_por_objetivo': resultados_por_objetivo,
             'indicadores_por_resultado': indicadores_por_resultado,
             'indicadores_do_projeto': indicadores_do_projeto_ids,
@@ -809,6 +856,15 @@ def update_project_inline(project_id):
         
         if 'delivery_type' in data:
             project_to_edit.delivery_type = data['delivery_type'] or None
+
+        if 'abep_indicator' in data:
+            old_abep = project_to_edit.abep_indicator
+            new_abep = normalize_abep_indicator(data['abep_indicator'])
+            if old_abep != new_abep:
+                changes.append(
+                    f'indicador ABEP de "{old_abep or "vazio"}" para "{new_abep or "vazio"}"'
+                )
+            project_to_edit.abep_indicator = new_abep
         
         if 'github_link' in data:
             project_to_edit.github_link = data['github_link'] or None
@@ -820,19 +876,34 @@ def update_project_inline(project_id):
             project_to_edit.observacao = data['observacao'] or None
         
         # Objetivo, Resultado e Indicadores
-        if 'objetivo_id' in data:
-            project_to_edit.objetivo_id = int(data['objetivo_id']) if data['objetivo_id'] else None
-        
-        if 'resultado_esperado_id' in data:
-            project_to_edit.resultado_esperado_id = int(data['resultado_esperado_id']) if data['resultado_esperado_id'] else None
-        
-        if 'indicadores_ids' in data:
+        goal_fields_present = any(
+            field in data for field in ('objetivo_id', 'resultado_esperado_id', 'indicadores_ids')
+        )
+        if goal_fields_present:
+            objetivo_raw = data.get('objetivo_id', project_to_edit.objetivo_id)
+            resultado_raw = data.get('resultado_esperado_id', project_to_edit.resultado_esperado_id)
+            indicadores_raw = data.get(
+                'indicadores_ids',
+                [ip.indicador_id for ip in project_to_edit.indicadores],
+            )
+
+            objetivo_norm, resultado_norm, indicadores_norm = normalize_goal_selection(
+                objetivo_raw,
+                resultado_raw,
+                indicadores_raw,
+            )
+
+            project_to_edit.objetivo_id = objetivo_norm
+            project_to_edit.resultado_esperado_id = resultado_norm
+
             # Atualizar indicadores
             IndicadorProjeto.query.filter_by(project_id=project_id).delete()
-            for ind_id in data['indicadores_ids'][:4]:  # Limita a 4
-                if ind_id:
-                    indicador_projeto_novo = IndicadorProjeto(project_id=project_id, indicador_id=int(ind_id))
-                    db.session.add(indicador_projeto_novo)
+            for indicador_id in indicadores_norm:
+                indicador_projeto_novo = IndicadorProjeto(
+                    project_id=project_id,
+                    indicador_id=indicador_id,
+                )
+                db.session.add(indicador_projeto_novo)
         
         # Registrar no histórico
         if changes:
@@ -1396,7 +1467,7 @@ def list_users():
     page = request.args.get('page', 1, type=int)
     # Ordenar por nome ou ID, por exemplo
     users_pagination = User.query.order_by(User.name).paginate(page=page, per_page=10)
-    return render_template('list_users.html', users=users_pagination, areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
+    return render_template('list_users.html', users=users_pagination)
 
 @main_bp.route('/admin/users/add', methods=['GET', 'POST'])
 @login_required
@@ -1609,24 +1680,18 @@ def delete_template(template_id):
 @main_bp.route('/api/resultados/<int:objetivo_id>')
 @login_required
 def get_resultados(objetivo_id):
-    # Validação básica: Objetivo existe?
-    objetivo = Objetivo.query.get(objetivo_id)
-    if not objetivo:
+    if objetivo_id not in OBJETIVO_IDS:
         return jsonify({"error": "Objetivo não encontrado"}), 404
-        
-    resultados = ResultadoEsperado.query.filter_by(objetivo_id=objetivo_id).all()
-    return jsonify([{'id': res.id, 'descricao': res.descricao} for res in resultados])
+
+    return jsonify(get_resultados_for_objetivo(objetivo_id))
 
 @main_bp.route('/api/indicadores/<int:resultado_id>')
 @login_required
 def get_indicadores(resultado_id):
-    # Validação básica: Resultado Esperado existe?
-    resultado = ResultadoEsperado.query.get(resultado_id)
-    if not resultado:
+    if resultado_id not in RESULTADO_IDS:
         return jsonify({"error": "Resultado esperado não encontrado"}), 404
 
-    indicadores = Indicador.query.filter_by(resultado_esperado_id=resultado_id).all()
-    return jsonify([{'id': ind.id, 'descricao': ind.descricao} for ind in indicadores])
+    return jsonify(get_indicadores_for_resultado(resultado_id))
 
 # --- API para Modelos de Etapas ---
 
@@ -1702,6 +1767,20 @@ def setup_db():
         else:
             resultado["mensagem"] = "As tabelas principais já existem. Use ?force=true para tentar recriar tabelas faltantes (sem apagar dados existentes)."
             resultado["detalhes"]["tabelas_criadas"] = False
+
+        sync_summary = sync_goal_catalog_to_db(commit=True)
+        resultado["detalhes"]["catalogo_objetivos_sync"] = sync_summary
+
+        # Garantir coluna de Indicador ABEP em bancos existentes
+        inspector = inspect(db.engine)  # Recria para evitar cache de metadata antiga
+        table_names_after = inspector.get_table_names()
+        project_columns = {col["name"] for col in inspector.get_columns('project')} if 'project' in table_names_after else set()
+        if 'project' in table_names_after and 'abep_indicator' not in project_columns:
+            db.session.execute(text("ALTER TABLE project ADD COLUMN abep_indicator VARCHAR(255)"))
+            db.session.commit()
+            resultado["detalhes"]["abep_indicator_column"] = "created"
+        else:
+            resultado["detalhes"]["abep_indicator_column"] = "exists"
         
         accept_header = request.headers.get('Accept', '')
         if 'application/json' in accept_header:
@@ -1717,6 +1796,7 @@ def setup_db():
             <li><strong>Tabela 'project' Existe:</strong> {resultado['detalhes']['tabela_project_existe']}</li>
             <li><strong>Tabela 'user' Existe:</strong> {resultado['detalhes']['tabela_user_existe']}</li>
             <li><strong>Tabelas Existentes:</strong> {', '.join(resultado['detalhes']['tabelas_existentes'])}</li>
+            <li><strong>Sync Catálogo Objetivos:</strong> {resultado['detalhes'].get('catalogo_objetivos_sync', {})}</li>
         </ul>
         <p><a href="{url_for('main.home')}">Voltar</a> | <a href="{url_for('main.setup_db', force='true')}">Forçar criação de tabelas faltantes</a></p>
         """
@@ -1732,12 +1812,11 @@ def setup_db():
 # ROTAS DE TAREFAS (TASKS)
 # ===================================
 
-@main_bp.route('/tarefas', methods=['GET', 'POST'])
+@main_bp.route('/tarefas', methods=['GET'])
 @login_required
 def list_tasks():
     """Lista tarefas do usuário com filtros e paginação"""
     # Filtros
-    status_filter = request.args.get('status', '')
     project_filter = request.args.get('project', '')
     search_query = request.args.get('search', '')
     
@@ -1785,7 +1864,6 @@ def list_tasks():
                          tasks=tasks,
                          pagination=tasks_pagination,
                          projects=projects_for_filter,
-                         status_filter=status_filter,
                          project_filter=project_filter,
                          search_query=search_query)
 
