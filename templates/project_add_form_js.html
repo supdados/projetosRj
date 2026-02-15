@@ -1,16 +1,30 @@
 <script>
-    // Lógica Unificada para o Modal de Adicionar Projeto - Glass Design
+    // Lógica Unificada para o Modal de Adicionar Projeto - Quick Create
     document.addEventListener('DOMContentLoaded', function() {
         const addProjectModal = document.getElementById('addProjectModal');
-        
+        const addProjectForm = document.getElementById('addProjectFormModal');
+        const submitButton = document.getElementById('createProjectSubmitBtn');
+        const titleInput = document.getElementById('project_titulo');
         const modalObjetivoSelect = document.getElementById('project_objetivo');
         const modalResultadoSelect = document.getElementById('project_resultado');
         const modalIndicadoresContainer = document.getElementById('indicadores-container');
-        const abepIndicatorSearchInput = document.getElementById('project_abep_indicator_search');
+        const abepIndicatorGroupSelect = document.getElementById('project_abep_indicator_group');
         const abepIndicatorSelect = document.getElementById('project_abep_indicator');
         const templateSelect = document.getElementById('template_select');
         const stagesContainer = document.getElementById('dynamic-stages-container');
-        
+        const templateCollapseSection = document.getElementById('projectCreateSectionTemplate');
+        const accordionRoot = document.getElementById('projectCreateAccordion');
+        const defaultResultOption = '<option value="" selected>Selecione um resultado esperado</option>';
+        const defaultIndicatorPlaceholder = `
+            <div class="indicator-placeholder">
+                <i class="fas fa-info-circle"></i>
+                <span>Selecione um resultado esperado para ver os indicadores disponíveis</span>
+            </div>
+        `;
+
+        let templatesLoaded = false;
+        let templatesLoading = false;
+
         // Máscara para o campo Processo SEI
         const seiProcessInput = document.getElementById('project_sei_process');
         if (seiProcessInput) {
@@ -34,15 +48,48 @@
             });
         }
 
+        function getAreaFieldForValidation() {
+            if (!addProjectForm) return null;
+            const areaFields = Array.from(addProjectForm.querySelectorAll('[name="project_area_responsavel"]'));
+            if (!areaFields.length) return null;
+            return areaFields.find(field => !field.disabled) || areaFields[0];
+        }
+
+        function isAreaReady() {
+            const areaField = getAreaFieldForValidation();
+            if (!areaField) return true;
+            if (areaField.disabled) return false;
+
+            const value = (areaField.value || '').trim();
+            if (areaField.required || areaField.type === 'hidden') {
+                return value.length > 0;
+            }
+            return true;
+        }
+
+        function areEssentialsValid() {
+            if (!titleInput) return false;
+            return titleInput.value.trim().length > 0 && isAreaReady();
+        }
+
+        function updateSubmitState() {
+            if (!submitButton) return;
+            const isValid = areEssentialsValid();
+            submitButton.disabled = !isValid;
+            submitButton.classList.toggle('is-disabled', !isValid);
+        }
+
+        function resetResultadoEIndicadores() {
+            if (!modalResultadoSelect || !modalIndicadoresContainer) return;
+            modalResultadoSelect.innerHTML = defaultResultOption;
+            modalResultadoSelect.disabled = true;
+            modalIndicadoresContainer.innerHTML = defaultIndicatorPlaceholder;
+        }
+
         function loadResultados() {
             const objetivoId = modalObjetivoSelect.value;
-            modalResultadoSelect.innerHTML = '<option value="" selected>Selecione um resultado esperado</option>';
-            modalIndicadoresContainer.innerHTML = `
-                <div class="indicator-placeholder">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Selecione um resultado esperado para ver os indicadores disponíveis</span>
-                </div>
-            `;
+            modalResultadoSelect.innerHTML = defaultResultOption;
+            modalIndicadoresContainer.innerHTML = defaultIndicatorPlaceholder;
             
             if (!objetivoId) {
                 modalResultadoSelect.disabled = true;
@@ -57,7 +104,7 @@
             fetch(`/api/resultados/${objetivoId}`)
                 .then(response => response.json())
                 .then(data => {
-                    modalResultadoSelect.innerHTML = '<option value="" selected>Selecione um resultado esperado</option>';
+                    modalResultadoSelect.innerHTML = defaultResultOption;
                     
                     if(data && data.length > 0){
                         data.forEach(resultado => {
@@ -77,12 +124,7 @@
         function loadIndicadores() {
             const resultadoId = modalResultadoSelect.value;
             if (!resultadoId) {
-                modalIndicadoresContainer.innerHTML = `
-                    <div class="indicator-placeholder">
-                        <i class="fas fa-info-circle"></i>
-                        <span>Selecione um resultado esperado para ver os indicadores disponíveis</span>
-                    </div>
-                `;
+                modalIndicadoresContainer.innerHTML = defaultIndicatorPlaceholder;
                 return;
             }
             
@@ -151,9 +193,13 @@
         }
 
         function loadTemplates() {
+            if (!templateSelect) {
+                return Promise.resolve();
+            }
+
             templateSelect.innerHTML = '<option value="">Carregando modelos...</option>';
             
-            fetch('/api/templates')
+            return fetch('/api/templates')
                 .then(response => response.json())
                 .then(data => {
                     templateSelect.innerHTML = '<option value="">Não importar / Limpar etapas</option>';
@@ -166,11 +212,23 @@
                             templateSelect.appendChild(option);
                         });
                     }
+                    templatesLoaded = true;
+                    templatesLoading = false;
                 })
                 .catch(error => {
                     console.error('Erro ao carregar templates:', error);
                     templateSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+                    templatesLoaded = false;
+                    templatesLoading = false;
                 });
+        }
+
+        function ensureTemplatesLoaded() {
+            if (templatesLoaded || templatesLoading) {
+                return;
+            }
+            templatesLoading = true;
+            loadTemplates();
         }
 
         function loadTemplateStages() {
@@ -237,8 +295,8 @@
             alert(message); // Temporário - pode ser substituído por um toast mais elegante
         }
 
-        function setupSearchableSelect(searchInput, select) {
-            if (!searchInput || !select) {
+        function setupAbepGroupFilter(groupSelect, select) {
+            if (!groupSelect || !select) {
                 return { reset: function() {} };
             }
 
@@ -254,14 +312,14 @@
             const placeholder = allOptions[0];
             const selectableOptions = allOptions.slice(1);
 
-            function renderOptions(filterText) {
+            function renderOptions(groupValue) {
                 const currentSelected = select.value;
-                const normalizedFilter = (filterText || '').trim().toLowerCase();
+                const normalizedGroup = (groupValue || '').trim();
 
                 const filtered = selectableOptions.filter(item => {
-                    if (!normalizedFilter) return true;
-                    const haystack = `${item.text} ${item.value}`.toLowerCase();
-                    return haystack.includes(normalizedFilter);
+                    if (!normalizedGroup) return true;
+                    const rawValue = (item.value || '').trim();
+                    return rawValue.startsWith(`${normalizedGroup}.`) || rawValue === normalizedGroup;
                 });
 
                 select.innerHTML = '';
@@ -279,23 +337,25 @@
 
                 if (currentSelected && Array.from(select.options).some(opt => opt.value === currentSelected)) {
                     select.value = currentSelected;
+                } else {
+                    select.value = '';
                 }
             }
 
-            searchInput.addEventListener('input', function() {
-                renderOptions(searchInput.value);
+            groupSelect.addEventListener('change', function() {
+                renderOptions(groupSelect.value);
             });
 
             return {
                 reset: function() {
-                    searchInput.value = '';
+                    groupSelect.value = '';
                     renderOptions('');
                     select.value = '';
                 }
             };
         }
 
-        const abepSearchControl = setupSearchableSelect(abepIndicatorSearchInput, abepIndicatorSelect);
+        const abepGroupControl = setupAbepGroupFilter(abepIndicatorGroupSelect, abepIndicatorSelect);
 
         // Event listeners
         if (modalObjetivoSelect) {
@@ -310,34 +370,70 @@
             templateSelect.addEventListener('change', loadTemplateStages);
         }
 
-        // Carregar templates e adicionar animações quando o modal for aberto
+        if (titleInput) {
+            titleInput.addEventListener('input', updateSubmitState);
+        }
+
+        if (addProjectForm) {
+            const areaFields = Array.from(addProjectForm.querySelectorAll('[name="project_area_responsavel"]'));
+            areaFields.forEach(field => {
+                const eventName = field.tagName === 'SELECT' ? 'change' : 'input';
+                field.addEventListener(eventName, updateSubmitState);
+            });
+
+            addProjectForm.addEventListener('submit', function(event) {
+                if (!areEssentialsValid()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    updateSubmitState();
+                    if (titleInput && !titleInput.value.trim()) {
+                        titleInput.focus();
+                    }
+                }
+            });
+        }
+
+        if (templateCollapseSection) {
+            templateCollapseSection.addEventListener('shown.bs.collapse', ensureTemplatesLoaded);
+        }
+
+        // Inicialização do modal
         if (addProjectModal) {
-            addProjectModal.addEventListener('show.bs.modal', function () {
-                loadTemplates();
-                
-                // Adiciona classe de animação ao modal
+            addProjectModal.addEventListener('shown.bs.modal', function () {
+                updateSubmitState();
                 setTimeout(() => {
-                    addProjectModal.querySelector('.modal-content').classList.add('modal-animate-in');
-                }, 100);
+                    if (titleInput) {
+                        titleInput.focus();
+                    }
+                }, 120);
             });
             
-            // Limpar formulário e remover animações quando modal for fechado
+            // Limpar formulário quando modal for fechado
             addProjectModal.addEventListener('hidden.bs.modal', function () {
-                const form = document.getElementById('addProjectFormModal');
-                form.reset();
-                
-                modalResultadoSelect.disabled = true;
-                modalIndicadoresContainer.innerHTML = `
-                    <div class="indicator-placeholder">
-                        <i class="fas fa-info-circle"></i>
-                        <span>Selecione um resultado esperado para ver os indicadores disponíveis</span>
-                    </div>
-                `;
-                stagesContainer.innerHTML = '';
-                abepSearchControl.reset();
-                
-                // Remove classes de animação
-                addProjectModal.querySelector('.modal-content').classList.remove('modal-animate-in');
+                if (addProjectForm) {
+                    addProjectForm.reset();
+                }
+
+                if (accordionRoot && window.bootstrap && window.bootstrap.Collapse) {
+                    accordionRoot.querySelectorAll('.accordion-collapse.show').forEach(collapseEl => {
+                        const instance = window.bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
+                        instance.hide();
+                    });
+                }
+
+                resetResultadoEIndicadores();
+
+                if (stagesContainer) {
+                    stagesContainer.innerHTML = '';
+                }
+                if (templateSelect) {
+                    templateSelect.innerHTML = '<option value="">Não importar / Limpar etapas</option>';
+                }
+
+                templatesLoaded = false;
+                templatesLoading = false;
+                abepGroupControl.reset();
+                updateSubmitState();
             });
         }
 
@@ -355,12 +451,21 @@
         // Melhora a experiência dos campos de formulário
         document.querySelectorAll('.form-control-glass, .form-select-glass, .form-control-glass-enhanced, .form-select-glass-enhanced, .form-control-glass-full, .textarea-glass-full').forEach(field => {
             field.addEventListener('focus', function() {
-                this.closest('.form-group-glass').classList.add('field-focused');
+                const group = this.closest('.form-group-glass');
+                if (group) {
+                    group.classList.add('field-focused');
+                }
             });
             
             field.addEventListener('blur', function() {
-                this.closest('.form-group-glass').classList.remove('field-focused');
+                const group = this.closest('.form-group-glass');
+                if (group) {
+                    group.classList.remove('field-focused');
+                }
             });
         });
+
+        resetResultadoEIndicadores();
+        updateSubmitState();
     });
 </script> 

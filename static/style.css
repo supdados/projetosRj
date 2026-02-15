@@ -3997,3 +3997,337 @@ html, body {
 /* ====================================
    END GLASS TEMPLATE FORM STYLES
    ==================================== */
+
+/* ====================================
+   PROJECT CREATE MODAL (QUICK CREATE)
+   ==================================== */
+.project-create-dialog {
+    max-width: min(1080px, 94vw);
+}
+
+.project-create-modal {
+    background: #f7faff;
+    border: 1px solid rgba(41, 87, 138, 0.16);
+    border-radius: 16px;
+    box-shadow: 0 18px 46px rgba(15, 52, 94, 0.16);
+    overflow: hidden;
+}
+
+.project-create-header {
+    align-items: flex-start;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(180deg, #fdfefe 0%, #f3f8ff 100%);
+    border-bottom: 1px solid rgba(67, 112, 162, 0.2);
+}
+
+.project-create-header-copy {
+    min-width: 0;
+}
+
+.project-create-header .modal-title {
+    margin: 0;
+    color: #1e3b5e;
+    font-size: 1.12rem;
+    font-weight: 700;
+}
+
+.project-create-subtitle {
+    margin: 0.2rem 0 0;
+    color: #647a95;
+    font-size: 0.87rem;
+}
+
+.project-create-close {
+    margin: 0.05rem 0 0 auto !important;
+    opacity: 0.68;
+}
+
+.project-create-close:hover,
+.project-create-close:focus {
+    opacity: 1;
+}
+
+.project-create-body {
+    padding: 1rem 1.25rem;
+    max-height: min(72vh, 760px);
+    overflow-y: auto;
+    background: #f7faff;
+}
+
+.project-create-quick-card {
+    border: 1px solid rgba(54, 103, 157, 0.22);
+    border-radius: 13px;
+    background: #ffffff;
+    padding: 1rem;
+    margin-bottom: 0.9rem;
+}
+
+.project-create-quick-head {
+    margin-bottom: 0.7rem;
+}
+
+.project-create-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(0, 90, 146, 0.1);
+    color: #16548b;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.project-create-helper {
+    margin: 0.4rem 0 0;
+    color: #647a95;
+    font-size: 0.85rem;
+}
+
+.project-create-advanced-card {
+    border: 1px solid rgba(66, 110, 160, 0.16);
+    border-radius: 13px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.project-create-advanced-head {
+    padding: 0.9rem 1rem 0.65rem;
+    border-bottom: 1px solid rgba(66, 110, 160, 0.15);
+}
+
+.project-create-advanced-title {
+    margin: 0;
+    color: #294f79;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.project-create-advanced-subtitle {
+    margin: 0.25rem 0 0;
+    color: #6d839f;
+    font-size: 0.82rem;
+}
+
+.project-create-accordion {
+    --bs-accordion-border-width: 0;
+}
+
+.project-create-accordion-item {
+    border: 0;
+    border-bottom: 1px solid rgba(66, 110, 160, 0.12);
+    border-radius: 0;
+}
+
+.project-create-accordion-item:last-child {
+    border-bottom: 0;
+}
+
+.project-create-accordion-button {
+    font-weight: 600;
+    font-size: 0.91rem;
+    color: #2d4f77;
+    padding: 0.82rem 1rem;
+    background: #ffffff;
+    box-shadow: none !important;
+}
+
+.project-create-accordion-button:not(.collapsed) {
+    background: rgba(0, 90, 146, 0.06);
+    color: #1f4671;
+}
+
+.project-create-accordion-button:focus {
+    box-shadow: none;
+    border: 0;
+}
+
+.project-create-accordion-body {
+    padding: 0.95rem 1rem 1.05rem;
+    background: rgba(244, 249, 255, 0.52);
+}
+
+.project-create-modal .form-label-glass {
+    margin-bottom: 0.4rem;
+    font-size: 0.81rem;
+    font-weight: 700;
+    color: #405c7b;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.project-create-modal .label-icon {
+    color: #6a829f;
+}
+
+.project-create-modal .form-control-glass,
+.project-create-modal .form-select-glass,
+.project-create-modal .textarea-glass,
+.project-create-modal .form-control-glass-enhanced,
+.project-create-modal .form-select-glass-enhanced,
+.project-create-modal .form-control-glass-full,
+.project-create-modal .textarea-glass-full {
+    background: #ffffff;
+    border: 1px solid #cedcf0;
+    border-radius: 9px;
+    color: #24374f;
+    box-shadow: none;
+    transform: none;
+    min-height: 40px;
+}
+
+.project-create-modal .form-control-glass::placeholder,
+.project-create-modal .textarea-glass::placeholder,
+.project-create-modal .form-control-glass-full::placeholder,
+.project-create-modal .textarea-glass-full::placeholder {
+    color: #8a9bb1;
+    font-style: normal;
+}
+
+.project-create-modal .form-control-glass:hover,
+.project-create-modal .form-select-glass:hover,
+.project-create-modal .textarea-glass:hover,
+.project-create-modal .form-control-glass-enhanced:hover,
+.project-create-modal .form-select-glass-enhanced:hover,
+.project-create-modal .form-control-glass-full:hover,
+.project-create-modal .textarea-glass-full:hover {
+    border-color: #b4cae6;
+    box-shadow: none;
+    transform: none;
+}
+
+.project-create-modal .form-control-glass:focus,
+.project-create-modal .form-select-glass:focus,
+.project-create-modal .textarea-glass:focus,
+.project-create-modal .form-control-glass-enhanced:focus,
+.project-create-modal .form-select-glass-enhanced:focus,
+.project-create-modal .form-control-glass-full:focus,
+.project-create-modal .textarea-glass-full:focus {
+    border-color: #4a89c7;
+    box-shadow: 0 0 0 3px rgba(74, 137, 199, 0.18);
+    transform: none;
+}
+
+.project-create-modal .glass-indicators-container {
+    background: #ffffff;
+    border: 1px solid #d6e3f5;
+    border-radius: 10px;
+    padding: 0.85rem;
+    min-height: 78px;
+}
+
+.project-create-modal .indicator-placeholder {
+    color: #7389a5;
+    padding: 1rem 0.8rem;
+}
+
+.project-create-modal .glass-checkbox-label {
+    background: #fafdff;
+    border: 1px solid #d8e6f6;
+    border-radius: 9px;
+}
+
+.project-create-modal .glass-stage-item {
+    border-color: #d7e4f4;
+    background: #fcfeff;
+}
+
+.project-create-footer {
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid rgba(66, 110, 160, 0.15);
+    background: #f9fcff;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+}
+
+.project-create-btn {
+    border-radius: 9px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.52rem 0.9rem;
+    min-width: 126px;
+}
+
+.project-create-btn-secondary {
+    border: 1px solid #c8d8ed;
+    color: #305579;
+    background: #ffffff;
+}
+
+.project-create-btn-secondary:hover {
+    border-color: #afc7e3;
+    background: #f6fbff;
+    color: #27496b;
+}
+
+.project-create-btn-primary {
+    border: 1px solid #1969ad;
+    background: linear-gradient(180deg, #2b82c6 0%, #1f73b5 100%);
+    color: #ffffff;
+}
+
+.project-create-btn-primary:hover {
+    background: linear-gradient(180deg, #368ed2 0%, #1f73b5 100%);
+    border-color: #175e9b;
+    color: #ffffff;
+}
+
+.project-create-btn-primary:disabled,
+.project-create-btn-primary.is-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    filter: saturate(0.8);
+}
+
+@media (min-width: 992px) {
+    .project-create-col-70 {
+        flex: 0 0 70%;
+        max-width: 70%;
+    }
+
+    .project-create-col-30 {
+        flex: 0 0 30%;
+        max-width: 30%;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .project-create-dialog {
+        max-width: 96vw;
+    }
+
+    .project-create-body {
+        max-height: 68vh;
+    }
+
+    .project-create-footer {
+        flex-direction: column;
+    }
+
+    .project-create-btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .project-create-header {
+        padding: 0.85rem 0.95rem;
+    }
+
+    .project-create-body {
+        padding: 0.85rem;
+    }
+
+    .project-create-quick-card,
+    .project-create-advanced-head,
+    .project-create-accordion-body {
+        padding-left: 0.85rem;
+        padding-right: 0.85rem;
+    }
+
+    .project-create-footer {
+        padding: 0.75rem 0.85rem;
+    }
+}
