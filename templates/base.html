@@ -372,7 +372,7 @@
                             <div class="skeleton-button skeleton-dashboard-hero-button"></div>
                         </div>
 
-                        <div class="row g-2 mb-3">
+                        <div class="row g-2 mb-3 skeleton-dashboard-kpi-row">
                             {% for i in range(4) %}
                             <div class="col-6 col-md-3">
                                 <div class="skeleton-card skeleton-dashboard-stat-card">
@@ -388,7 +388,7 @@
                         </div>
 
                         <div class="row g-3">
-                            <div class="col-12 col-md-8">
+                            <div class="col-12 col-lg-7 skeleton-dashboard-recent-col">
                                 <div class="skeleton-card skeleton-dashboard-main-card">
                                     <div class="skeleton-dashboard-card-header">
                                         <div class="skeleton-text skeleton-dashboard-card-title"></div>
@@ -414,35 +414,49 @@
                                 </div>
                             </div>
 
-                            <div class="col-12 col-md-4">
-                                <div class="skeleton-card skeleton-dashboard-side-card mb-3">
-                                    <div class="skeleton-dashboard-card-header">
-                                        <div class="skeleton-text skeleton-dashboard-card-title"></div>
-                                    </div>
-                                    <div class="skeleton-dashboard-actions">
-                                        <div class="skeleton-button skeleton-dashboard-action-btn"></div>
-                                        <div class="skeleton-button skeleton-dashboard-action-btn"></div>
-                                    </div>
-                                </div>
-
-                                <div class="skeleton-card skeleton-dashboard-side-card">
+                            <div class="col-12 col-lg-5 skeleton-dashboard-side-col">
+                                <div class="skeleton-card skeleton-dashboard-side-card skeleton-dashboard-priority-compact mb-3">
                                     <div class="skeleton-dashboard-card-header skeleton-dashboard-priority-header">
                                         <div class="skeleton-text skeleton-dashboard-card-title"></div>
                                         <div class="skeleton-text short skeleton-dashboard-total-pill"></div>
                                     </div>
-                                    <div class="skeleton-dashboard-priority-list">
+                                    <div class="skeleton-dashboard-priority-compact-list">
                                         {% for i in range(4) %}
-                                        <div class="skeleton-dashboard-priority-item">
-                                            <div class="skeleton-dashboard-priority-row">
-                                                <div class="skeleton-dashboard-priority-dot"></div>
-                                                <div class="skeleton-text short skeleton-dashboard-priority-label"></div>
-                                                <div class="skeleton-text short skeleton-dashboard-priority-count"></div>
-                                            </div>
-                                            <div class="skeleton-dashboard-priority-bar">
-                                                <div class="skeleton-dashboard-priority-progress"></div>
-                                            </div>
+                                        <div class="skeleton-dashboard-priority-compact-item">
+                                            <div class="skeleton-dashboard-priority-dot"></div>
+                                            <div class="skeleton-text short skeleton-dashboard-priority-label"></div>
+                                            <div class="skeleton-text short skeleton-dashboard-priority-count"></div>
                                         </div>
                                         {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="skeleton-card skeleton-dashboard-side-card skeleton-dashboard-tasks-card">
+                                    <div class="skeleton-dashboard-card-header skeleton-dashboard-priority-header">
+                                        <div class="skeleton-text skeleton-dashboard-card-title"></div>
+                                        <div class="skeleton-text short skeleton-dashboard-total-pill"></div>
+                                    </div>
+                                    <div class="skeleton-dashboard-task-list-wrap">
+                                        <div class="skeleton-dashboard-task-list">
+                                            {% for i in range(4) %}
+                                            <div class="skeleton-dashboard-task-entry">
+                                                <div class="skeleton-dashboard-task-head">
+                                                    <div class="skeleton-text skeleton-dashboard-task-title"></div>
+                                                    <div class="skeleton-text short skeleton-dashboard-task-count"></div>
+                                                </div>
+                                                <div class="skeleton-text medium skeleton-dashboard-task-project"></div>
+                                                <div class="skeleton-dashboard-task-items">
+                                                    <div class="skeleton-text skeleton-dashboard-task-item"></div>
+                                                    <div class="skeleton-text skeleton-dashboard-task-item"></div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <div class="skeleton-dashboard-task-pagination">
+                                        <div class="skeleton-text short skeleton-dashboard-page-btn"></div>
+                                        <div class="skeleton-text short skeleton-dashboard-page-info"></div>
+                                        <div class="skeleton-text short skeleton-dashboard-page-btn"></div>
                                     </div>
                                 </div>
                             </div>

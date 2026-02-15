@@ -3,8 +3,8 @@
 {% block title %}ProjetosRJ{% endblock %}
 
 {% block content %}
-<div class="container-fluid mobile-full">
-    <!-- Header / Título -->
+{% set user_areas = current_user_obj.get_areas() if current_user_obj else [] %}
+<div class="container-fluid mobile-full dashboard-page-v2">
     <div class="row mobile-full">
         <div class="col-12 px-3 py-2">
             <header class="dashboard-welcome-strip mb-3">
@@ -15,11 +15,11 @@
                             <span id="dashboardWelcomeName">{{ current_user_obj.name if current_user_obj.name else current_user_obj.username }}</span>
                         </h1>
                         <p class="dashboard-welcome-context mb-0">
-                            {% if current_user_obj.get_areas() %}
-                                {% if current_user_obj.get_areas()|length == 1 %}
-                                    Área: {{ current_user_obj.get_areas()[0] }}
+                            {% if user_areas %}
+                                {% if user_areas|length == 1 %}
+                                    Área: {{ user_areas[0] }}
                                 {% else %}
-                                    Áreas: {{ current_user_obj.get_areas()|join(', ') }}
+                                    Áreas: {{ user_areas|join(', ') }}
                                 {% endif %}
                             {% else %}
                                 Sem área vinculada
@@ -46,11 +46,9 @@
         </div>
     </div>
 
-    <!-- Cards informativos -->
-    <div class="row g-2 mb-3 px-2">
+    <div class="row g-2 mb-3 px-2 dashboard-kpi-row">
         <div class="col-6 col-md-3">
             <a href="{{ url_for('main.list_projects') }}" class="text-decoration-none">
-                <!-- Versão mobile (atual) - só aparece em telas pequenas -->
                 <div class="card border-0 h-100 glass-card d-md-none">
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -62,8 +60,7 @@
                         <h3 class="h5 fw-bold mb-0">{{ num_projects }}</h3>
                     </div>
                 </div>
-                
-                <!-- Versão desktop (aprimorada) - só aparece em telas médias e grandes -->
+
                 <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
@@ -80,10 +77,9 @@
                 </div>
             </a>
         </div>
-        
+
         <div class="col-6 col-md-3">
             <a href="{{ url_for('main.list_projects', status='Finalizado') }}" class="text-decoration-none">
-                <!-- Versão mobile (atual) - só aparece em telas pequenas -->
                 <div class="card border-0 h-100 glass-card d-md-none">
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -95,8 +91,7 @@
                         <h3 class="h5 fw-bold mb-0">{{ count_finalizado }}</h3>
                     </div>
                 </div>
-                
-                <!-- Versão desktop (aprimorada) - só aparece em telas médias e grandes -->
+
                 <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
@@ -113,10 +108,9 @@
                 </div>
             </a>
         </div>
-        
+
         <div class="col-6 col-md-3">
             <a href="{{ url_for('main.list_projects', status='Vigente') }}" class="text-decoration-none">
-                <!-- Versão mobile (atual) - só aparece em telas pequenas -->
                 <div class="card border-0 h-100 glass-card d-md-none">
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -128,8 +122,7 @@
                         <h3 class="h5 fw-bold mb-0">{{ count_vigente }}</h3>
                     </div>
                 </div>
-                
-                <!-- Versão desktop (aprimorada) - só aparece em telas médias e grandes -->
+
                 <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
@@ -146,10 +139,9 @@
                 </div>
             </a>
         </div>
-        
+
         <div class="col-6 col-md-3">
             <a href="{{ url_for('main.list_projects', atraso='atrasado') }}" class="text-decoration-none">
-                <!-- Versão mobile (atual) - só aparece em telas pequenas -->
                 <div class="card border-0 h-100 glass-card d-md-none">
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -161,8 +153,7 @@
                         <h3 class="h5 fw-bold mb-0">{{ projetos_em_atraso }}</h3>
                     </div>
                 </div>
-                
-                <!-- Versão desktop (aprimorada) - só aparece em telas médias e grandes -->
+
                 <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
@@ -181,18 +172,15 @@
         </div>
     </div>
 
-    <!-- Conteúdo principal -->
-    <div class="row g-3 px-2">
-        <!-- Projetos Recentes -->
-        <div class="col-12 col-md-8">
+    <div class="row g-3 px-2 dashboard-main-grid">
+        <div class="col-12 col-lg-7 dashboard-recent-col">
             <div class="card border-0 glass-card h-100 main-content-card">
                 <div class="card-header glass-card-header py-3">
                     <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
                         <i class="fas fa-clock me-2 text-primary"></i>Projetos Recentes
                     </h5>
                 </div>
-                
-                <!-- Versão para desktop (tabela) - oculta em mobile -->
+
                 <div class="card-body p-0 d-none d-md-block glass-card-body">
                     <div class="table-responsive glass-table-wrapper">
                         <table class="table align-middle mb-0 glass-table">
@@ -249,8 +237,7 @@
                         </table>
                     </div>
                 </div>
-                
-                <!-- Versão para mobile (cards) -->
+
                 <div class="card-body p-2 d-md-none">
                     {% if recent_projects %}
                         {% for project in recent_projects %}
@@ -297,81 +284,138 @@
                 </div>
             </div>
         </div>
-        
-        <div class="col-12 col-md-4">
-            <!-- Ações Rápidas -->
-            <div class="card border-0 glass-card mb-3 sidebar-content-card">
-                <div class="card-header glass-card-header py-3">
-                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
-                        <i class="fas fa-bolt me-2 text-warning"></i>Ações Rápidas
-                    </h5>
-                </div>
-                <div class="card-body py-2 px-3 glass-card-body">
-                    <div class="d-grid gap-2 mb-0">
-                        <a href="{{ url_for('main.list_projects') }}" class="btn btn-outline-primary glass-btn-outline">
-                            <i class="fas fa-list-alt me-2"></i>Todos os Projetos
-                        </a>
-                        <button class="btn btn-outline-secondary glass-btn-outline" data-bs-toggle="modal" data-bs-target="#addProjectModal">
-                            <i class="fas fa-plus-circle me-2"></i>Novo Projeto
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Projetos por Prioridade -->
-            <div class="card border-0 glass-card sidebar-content-card">
-                <div class="card-header glass-card-header py-3 d-flex justify-content-between align-items-center">
+
+        <div class="col-12 col-lg-5 dashboard-side-col">
+            <div class="card border-0 glass-card sidebar-content-card dashboard-priority-compact-card mb-3">
+                <div class="card-header glass-card-header py-2 px-3 d-flex justify-content-between align-items-center">
                     <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
                         <i class="fas fa-chart-pie me-2 text-info"></i>Projetos por Prioridade
                     </h5>
-                    <span class="text-muted small glass-total-count">Total: {{ num_projects }}</span>
+                    <span class="dashboard-priority-total">{{ num_projects }}</span>
                 </div>
                 <div class="card-body px-3 py-2 glass-card-body">
-                    <div class="priority-grid-clean glass-priority-grid">
-                        <a href="{{ url_for('main.list_projects', prioridade='baixa') }}" class="priority-item-clean glass-priority-item">
-                            <div class="priority-dot priority-dot-baixa glass-priority-dot"></div>
-                            <div class="priority-info">
-                                <span class="priority-label-clean">Baixa</span>
-                                <div class="priority-bar-clean glass-priority-bar">
-                                    <div class="priority-progress-clean priority-progress-baixa" style="width: {% if num_projects > 0 %}{{ (count_baixa / num_projects * 100) }}{% else %}0{% endif %}%;"></div>
-                                </div>
-                            </div>
-                            <span class="priority-count-clean">{{ count_baixa }}</span>
+                    <div class="priority-compact-list">
+                        <a href="{{ url_for('main.list_projects', prioridade='urgente') }}" class="priority-mini-card priority-urgente-item">
+                            <span class="priority-mini-top">
+                                <span class="priority-dot priority-dot-urgente"></span>
+                                <span class="priority-mini-label">Urgente</span>
+                            </span>
+                            <span class="priority-mini-count">{{ count_urgente }}</span>
                         </a>
-                        
-                        <a href="{{ url_for('main.list_projects', prioridade='media') }}" class="priority-item-clean glass-priority-item">
-                            <div class="priority-dot priority-dot-media glass-priority-dot"></div>
-                            <div class="priority-info">
-                                <span class="priority-label-clean">Média</span>
-                                <div class="priority-bar-clean glass-priority-bar">
-                                    <div class="priority-progress-clean priority-progress-media" style="width: {% if num_projects > 0 %}{{ (count_media / num_projects * 100) }}{% else %}0{% endif %}%;"></div>
-                                </div>
-                            </div>
-                            <span class="priority-count-clean">{{ count_media }}</span>
+                        <a href="{{ url_for('main.list_projects', prioridade='alta') }}" class="priority-mini-card priority-alta-item">
+                            <span class="priority-mini-top">
+                                <span class="priority-dot priority-dot-alta"></span>
+                                <span class="priority-mini-label">Alta</span>
+                            </span>
+                            <span class="priority-mini-count">{{ count_alta }}</span>
                         </a>
-                        
-                        <a href="{{ url_for('main.list_projects', prioridade='alta') }}" class="priority-item-clean glass-priority-item">
-                            <div class="priority-dot priority-dot-alta glass-priority-dot"></div>
-                            <div class="priority-info">
-                                <span class="priority-label-clean">Alta</span>
-                                <div class="priority-bar-clean glass-priority-bar">
-                                    <div class="priority-progress-clean priority-progress-alta" style="width: {% if num_projects > 0 %}{{ (count_alta / num_projects * 100) }}{% else %}0{% endif %}%;"></div>
-                                </div>
-                            </div>
-                            <span class="priority-count-clean">{{ count_alta }}</span>
+                        <a href="{{ url_for('main.list_projects', prioridade='media') }}" class="priority-mini-card priority-media-item">
+                            <span class="priority-mini-top">
+                                <span class="priority-dot priority-dot-media"></span>
+                                <span class="priority-mini-label">Média</span>
+                            </span>
+                            <span class="priority-mini-count">{{ count_media }}</span>
                         </a>
-                        
-                        <a href="{{ url_for('main.list_projects', prioridade='urgente') }}" class="priority-item-clean glass-priority-item">
-                            <div class="priority-dot priority-dot-urgente glass-priority-dot"></div>
-                            <div class="priority-info">
-                                <span class="priority-label-clean">Urgente</span>
-                                <div class="priority-bar-clean glass-priority-bar">
-                                    <div class="priority-progress-clean priority-progress-urgente" style="width: {% if num_projects > 0 %}{{ (count_urgente / num_projects * 100) }}{% else %}0{% endif %}%;"></div>
-                                </div>
-                            </div>
-                            <span class="priority-count-clean">{{ count_urgente }}</span>
+                        <a href="{{ url_for('main.list_projects', prioridade='baixa') }}" class="priority-mini-card priority-baixa-item">
+                            <span class="priority-mini-top">
+                                <span class="priority-dot priority-dot-baixa"></span>
+                                <span class="priority-mini-label">Baixa</span>
+                            </span>
+                            <span class="priority-mini-count">{{ count_baixa }}</span>
                         </a>
                     </div>
+                </div>
+            </div>
+
+            <div class="card border-0 glass-card sidebar-content-card dashboard-tasks-card" data-dashboard-tasks-module>
+                <div class="card-header glass-card-header py-2 px-3 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
+                        <i class="fas fa-list-check me-2 text-primary"></i>Tarefas
+                    </h5>
+                    <span class="dashboard-tasks-total">
+                        {{ dashboard_open_tasks_count }} tarefa{% if dashboard_open_tasks_count != 1 %}s{% endif %} • {{ dashboard_open_items_count }} {% if dashboard_open_items_count == 1 %}item aberto{% else %}itens abertos{% endif %}
+                    </span>
+                </div>
+                <div class="card-body p-0 glass-card-body">
+                    {% if dashboard_tasks %}
+                    <div class="dashboard-task-list-wrap">
+                        <div class="dashboard-task-list">
+                            {% for task in dashboard_tasks %}
+                            <article class="dashboard-task-entry">
+                                <div class="dashboard-task-entry-head">
+                                    <a href="{{ url_for('main.task_detail', task_id=task.task_id) }}" class="dashboard-task-title">
+                                        {{ task.titulo | truncate(65, True) }}
+                                    </a>
+                                    <span class="dashboard-task-open-count">{{ task.open_items_count }}</span>
+                                </div>
+
+                                <div class="dashboard-task-meta">
+                                    {% if task.project_id %}
+                                    <a href="{{ url_for('main.project_detail', project_id=task.project_id) }}" class="dashboard-task-project">
+                                        <i class="fas fa-project-diagram"></i>
+                                        <span>{{ task.project_titulo | truncate(52, True) }}</span>
+                                    </a>
+                                    {% else %}
+                                    <span class="dashboard-task-project dashboard-task-project-empty">
+                                        <i class="fas fa-layer-group"></i>
+                                        <span>Sem projeto</span>
+                                    </span>
+                                    {% endif %}
+                                </div>
+
+                                {% if task.items_preview %}
+                                <ul class="dashboard-task-item-preview">
+                                    {% for item in task.items_preview %}
+                                    <li>
+                                        <a href="{{ url_for('main.task_detail', task_id=task.task_id, focus_item=item.item_id) }}" class="dashboard-task-item-link">
+                                            <span class="dashboard-task-item-text">{{ item.descricao | truncate(72, True) }}</span>
+                                            <span class="dashboard-task-item-meta">
+                                                <span
+                                                    class="dashboard-task-status-dot status-{{ (item.status or '')|lower|replace(' ', '_')|replace('-', '_') }}"
+                                                    data-bs-toggle="tooltip"
+                                                    data-bs-placement="top"
+                                                    title="{{ item.status_label }}"
+                                                    aria-label="Status: {{ item.status_label }}"
+                                                ></span>
+                                                {% if item.responsavel %}
+                                                <span class="dashboard-task-responsavel">{{ item.responsavel }}</span>
+                                                {% endif %}
+                                            </span>
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="dashboard-task-empty">
+                        <p class="mb-2">Nenhuma tarefa aberta relevante no momento.</p>
+                        <a href="{{ url_for('main.list_tasks') }}" class="dashboard-task-empty-link">Ir para Tarefas</a>
+                    </div>
+                    {% endif %}
+
+                    {% if dashboard_tasks_pagination.total_pages > 1 %}
+                    <div class="dashboard-task-pagination">
+                        {% if dashboard_tasks_pagination.has_prev %}
+                        <a href="{{ dashboard_tasks_pagination.prev_url }}" class="dashboard-task-page-link">Anterior</a>
+                        {% else %}
+                        <span class="dashboard-task-page-link dashboard-task-page-link-disabled">Anterior</span>
+                        {% endif %}
+
+                        <span class="dashboard-task-pagination-info">
+                            {{ dashboard_tasks_pagination.page }} / {{ dashboard_tasks_pagination.total_pages }}
+                        </span>
+
+                        {% if dashboard_tasks_pagination.has_next %}
+                        <a href="{{ dashboard_tasks_pagination.next_url }}" class="dashboard-task-page-link">Próxima</a>
+                        {% else %}
+                        <span class="dashboard-task-page-link dashboard-task-page-link-disabled">Próxima</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -384,25 +428,19 @@
 {% block scripts %}
 {{ super() }}
 <style>
-    /* ====================================
-       GLASS MORPHISM DASHBOARD STYLES
-       ==================================== */
-
-    /* Dashboard Welcome Strip */
-    .dashboard-welcome-strip {
+    .dashboard-page-v2 .dashboard-welcome-strip {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        padding: 0.9rem 1rem;
+        padding: 0.82rem 0.95rem;
         border-radius: 12px;
-        background: linear-gradient(160deg, rgba(255, 255, 255, 0.38) 0%, rgba(248, 252, 255, 0.6) 100%);
-        border: 1px solid rgba(171, 199, 228, 0.55);
-        box-shadow: 0 5px 18px rgba(16, 73, 124, 0.08);
-        margin-bottom: 0.85rem !important;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(249, 252, 255, 0.78) 100%);
+        border: 1px solid rgba(190, 208, 227, 0.45);
+        box-shadow: 0 4px 12px rgba(17, 71, 121, 0.06);
     }
 
-    .dashboard-welcome-main {
+    .dashboard-page-v2 .dashboard-welcome-main {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -411,737 +449,902 @@
         min-width: 0;
     }
 
-    .dashboard-welcome-copy {
+    .dashboard-page-v2 .dashboard-welcome-copy {
         min-width: 0;
         flex: 1;
     }
 
-    .dashboard-welcome-title {
-        font-size: 1.65rem;
-        line-height: 1.2;
+    .dashboard-page-v2 .dashboard-welcome-title {
+        font-size: 1.62rem;
+        line-height: 1.15;
         font-weight: 700;
-        color: #134f83;
+        color: #114a78;
+        margin-bottom: 0.22rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .dashboard-welcome-greeting {
-        color: #3a6e9e;
+    .dashboard-page-v2 .dashboard-welcome-greeting {
+        color: #3d6e98;
         margin-right: 0.35rem;
     }
 
-    .dashboard-welcome-context {
-        color: #617d9e;
-        font-size: 0.88rem;
+    .dashboard-page-v2 .dashboard-welcome-context {
+        color: #607e9f;
+        font-size: 0.86rem;
         font-weight: 500;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .dashboard-welcome-separator {
-        color: #89a4c1;
+    .dashboard-page-v2 .dashboard-welcome-separator {
+        color: #88a2bd;
         margin: 0 0.35rem;
     }
 
-    .dashboard-welcome-tools {
-        flex-shrink: 0;
-    }
-
-    .dashboard-welcome-date-wrap {
+    .dashboard-page-v2 .dashboard-welcome-date-wrap {
         display: flex;
         flex-direction: column;
         align-items: flex-end;
-        gap: 0.12rem;
+        gap: 0.08rem;
         text-align: right;
     }
 
-    .dashboard-welcome-date-label {
-        color: #7e95af;
-        font-size: 0.72rem;
+    .dashboard-page-v2 .dashboard-welcome-date-label {
+        color: #8198b1;
+        font-size: 0.68rem;
         font-weight: 700;
         letter-spacing: 0.04em;
         text-transform: uppercase;
     }
 
-    .dashboard-welcome-date {
+    .dashboard-page-v2 .dashboard-welcome-date {
         color: #2e5f8d;
-        font-size: 0.88rem;
+        font-size: 0.86rem;
         font-weight: 600;
     }
 
-    .dashboard-welcome-actions {
+    .dashboard-page-v2 .dashboard-welcome-actions {
         flex-shrink: 0;
     }
 
-    /* Glass Cards Base */
-    .glass-card {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.25) 0%, 
-            rgba(255, 255, 255, 0.08) 100%);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
+    .dashboard-page-v2 .glass-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.11) 100%);
+        backdrop-filter: blur(18px);
         border: 1px solid rgba(255, 255, 255, 0.18) !important;
-        box-shadow: 
-            0 8px 32px rgba(0, 90, 146, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 8px 28px rgba(0, 90, 146, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+        transition: box-shadow var(--transition-speed) ease, border-color var(--transition-speed) ease;
         position: relative;
         overflow: hidden;
     }
 
-    .glass-card::before {
+    .dashboard-page-v2 .glass-card::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-image: 
-            radial-gradient(circle at 20% 80%, rgba(0, 90, 146, 0.03) 1px, transparent 1px),
-            radial-gradient(circle at 80% 20%, rgba(0, 90, 146, 0.02) 1px, transparent 1px);
-        background-size: 50px 50px, 80px 80px;
+        inset: 0;
+        background-image: radial-gradient(circle at 20% 80%, rgba(0, 90, 146, 0.03) 1px, transparent 1px),
+                          radial-gradient(circle at 80% 20%, rgba(0, 90, 146, 0.02) 1px, transparent 1px);
+        background-size: 52px 52px, 82px 82px;
         pointer-events: none;
-        opacity: 0.6;
+        opacity: 0.56;
     }
 
-    .glass-card:hover {
-        box-shadow: 
-            0 15px 40px rgba(0, 90, 146, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.4);
-        border-color: rgba(0, 90, 146, 0.3) !important;
+    .dashboard-page-v2 .glass-card:hover {
+        box-shadow: 0 10px 24px rgba(0, 90, 146, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        border-color: rgba(0, 90, 146, 0.24) !important;
     }
 
-    /* Dashboard Glass Cards */
-    .dashboard-glass-card {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.3) 0%, 
-            rgba(255, 255, 255, 0.1) 100%);
-        backdrop-filter: blur(25px);
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-        border-radius: 16px !important;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .dashboard-glass-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.05) 0%, 
-            transparent 50%);
-        pointer-events: none;
-    }
-
-    .dashboard-glass-card:hover {
-        box-shadow: 
-            0 20px 50px rgba(0, 90, 146, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.5);
-        border-color: rgba(0, 90, 146, 0.4) !important;
-    }
-
-    /* Glass Icon Wrappers */
-    .glass-icon-shape {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.3) 0%, 
-            rgba(255, 255, 255, 0.1) 100%);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 
-            0 4px 15px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-
-    .glass-icon-wrapper {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.25) 0%, 
-            rgba(255, 255, 255, 0.1) 100%);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 
-            0 6px 20px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.4);
-        transition: all var(--transition-speed) ease;
-    }
-
-    .glass-icon-wrapper:hover {
-        transform: scale(1.05);
-        box-shadow: 
-            0 8px 25px rgba(0, 0, 0, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.5);
-    }
-
-    /* Main Content Cards */
-    .main-content-card {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.2) 0%, 
-            rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(25px);
-        border-radius: 16px !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    }
-
-    .sidebar-content-card {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.22) 0%, 
-            rgba(255, 255, 255, 0.08) 100%);
-        backdrop-filter: blur(20px);
-        border-radius: 14px !important;
-        border: 1px solid rgba(255, 255, 255, 0.18) !important;
-    }
-
-    /* Glass Card Headers */
-    .glass-card-header {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.15) 0%, 
-            rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
-        position: relative;
-    }
-
-    .glass-card-header::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, 
-            transparent 0%, 
-            rgba(0, 90, 146, 0.3) 50%, 
-            transparent 100%);
-    }
-
-    .glass-card-title {
-        color: var(--primary-color);
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-    }
-
-    .glass-card-body {
+    .dashboard-page-v2 .glass-card-body,
+    .dashboard-page-v2 .glass-card-header {
         position: relative;
         z-index: 1;
     }
 
-    /* Glass Buttons */
-    .glass-btn {
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.9) 0%, 
-            rgba(0, 75, 121, 0.8) 100%);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
+    .dashboard-page-v2 .dashboard-glass-card {
+        border-radius: 14px !important;
+    }
+
+    .dashboard-page-v2 .dashboard-icon-wrapper {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+
+    .dashboard-page-v2 .glass-icon-wrapper,
+    .dashboard-page-v2 .glass-icon-wrapper:hover,
+    .dashboard-page-v2 .dashboard-icon-wrapper,
+    .dashboard-page-v2 .dashboard-icon-wrapper:hover {
+        transform: none !important;
+    }
+
+    .dashboard-page-v2 .glass-icon-wrapper {
+        transition: box-shadow var(--transition-speed) ease, border-color var(--transition-speed) ease;
+    }
+
+    .dashboard-page-v2 .dashboard-glass-card .card-body {
+        padding: 0.82rem 0.85rem;
+    }
+
+    .dashboard-page-v2 .dashboard-glass-card .h4 {
+        font-size: 1.35rem;
+        line-height: 1.12;
+    }
+
+    .dashboard-page-v2 .dashboard-glass-card .fw-medium {
+        font-size: 0.97rem;
+    }
+
+    .dashboard-page-v2 .dashboard-glass-card .small {
+        font-size: 0.77rem;
+        margin-top: 0.16rem !important;
+    }
+
+    .dashboard-page-v2 .main-content-card,
+    .dashboard-page-v2 .sidebar-content-card {
+        border-radius: 14px !important;
+    }
+
+    .dashboard-page-v2 .glass-card-header {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 100%);
+        border-bottom: 1px solid rgba(198, 217, 235, 0.55) !important;
+    }
+
+    .dashboard-page-v2 .glass-card-title {
+        color: var(--primary-color);
+        text-shadow: none;
+        font-weight: 700;
+    }
+
+    .dashboard-page-v2 .glass-btn {
+        background: linear-gradient(135deg, rgba(0, 90, 146, 0.92) 0%, rgba(0, 75, 121, 0.85) 100%);
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         color: white !important;
-        font-weight: 500;
-        transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 
-            0 4px 15px rgba(0, 90, 146, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        font-weight: 600;
+        box-shadow: 0 5px 16px rgba(0, 90, 146, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     }
 
-    .glass-btn:hover {
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 1) 0%, 
-            rgba(0, 75, 121, 0.9) 100%);
-        box-shadow: 
-            0 8px 25px rgba(0, 90, 146, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.3) !important;
+    .dashboard-page-v2 .glass-btn:hover {
+        background: linear-gradient(135deg, rgba(0, 90, 146, 1) 0%, rgba(0, 75, 121, 0.9) 100%);
+        box-shadow: 0 7px 20px rgba(0, 90, 146, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.26);
     }
 
-    .glass-btn-sm {
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.1) 0%, 
-            rgba(0, 90, 146, 0.05) 100%);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(0, 90, 146, 0.2) !important;
+    .dashboard-page-v2 .glass-btn-sm {
+        background: linear-gradient(135deg, rgba(0, 90, 146, 0.1) 0%, rgba(0, 90, 146, 0.05) 100%);
+        border: 1px solid rgba(0, 90, 146, 0.22) !important;
         color: var(--primary-color) !important;
-        transition: all var(--transition-speed) ease;
+        transition: background var(--transition-speed) ease, border-color var(--transition-speed) ease;
     }
 
-    .glass-btn-sm:hover {
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.15) 0%, 
-            rgba(0, 90, 146, 0.08) 100%);
-        transform: scale(1.02);
-        border-color: rgba(0, 90, 146, 0.3) !important;
+    .dashboard-page-v2 .glass-btn-sm:hover {
+        background: linear-gradient(135deg, rgba(0, 90, 146, 0.16) 0%, rgba(0, 90, 146, 0.09) 100%);
+        border-color: rgba(0, 90, 146, 0.32) !important;
+        transform: none;
         color: var(--primary-dark) !important;
     }
 
-    .glass-btn-outline {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.15) 0%, 
-            rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border: 1px solid rgba(0, 90, 146, 0.3) !important;
-        color: var(--primary-color) !important;
-        font-weight: 500;
-        transition: all var(--transition-speed) ease;
-        box-shadow: 
-            0 4px 15px rgba(0, 90, 146, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    .dashboard-page-v2 .glass-table-wrapper {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+        border-radius: 0 0 14px 14px;
     }
 
-    .glass-btn-outline:hover {
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.1) 0%, 
-            rgba(0, 90, 146, 0.05) 100%);
-        box-shadow: 
-            0 8px 25px rgba(0, 90, 146, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        border-color: rgba(0, 90, 146, 0.5) !important;
-        color: var(--primary-dark) !important;
+    .dashboard-page-v2 .glass-table-header {
+        background: linear-gradient(135deg, rgba(0, 90, 146, 0.08) 0%, rgba(0, 90, 146, 0.03) 100%);
     }
 
-    /* Glass Table Styles */
-    .glass-table-wrapper {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.1) 0%, 
-            rgba(255, 255, 255, 0.02) 100%);
-        backdrop-filter: blur(10px);
-        border-radius: 0 0 16px 16px;
-    }
-
-    .glass-table {
-        background: transparent !important;
-    }
-
-    .glass-table-header {
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.08) 0%, 
-            rgba(0, 90, 146, 0.03) 100%);
-        backdrop-filter: blur(10px);
-    }
-
-    .glass-table-header th {
+    .dashboard-page-v2 .glass-table-header th {
         border: none !important;
         color: var(--primary-color);
+        font-weight: 700;
+        font-size: 0.84rem;
+    }
+
+    .dashboard-page-v2 .glass-table-row {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+        transition: background var(--transition-speed) ease;
+        border: none !important;
+    }
+
+    .dashboard-page-v2 .glass-table-row:hover {
+        background: linear-gradient(135deg, rgba(0, 90, 146, 0.07) 0%, rgba(0, 90, 146, 0.025) 100%);
+        transform: none;
+    }
+
+    .dashboard-page-v2 .glass-table-row td {
+        border: none !important;
+        padding: 0.72rem !important;
+        vertical-align: middle;
+        font-size: 0.95rem;
+    }
+
+    .dashboard-page-v2 .glass-link {
+        color: var(--primary-color) !important;
+        transition: color var(--transition-speed) ease;
+        text-shadow: none;
+        font-size: 0.95rem;
+    }
+
+    .dashboard-page-v2 .glass-link:hover {
+        color: var(--primary-dark) !important;
+        text-shadow: none;
+        transform: none;
+    }
+
+    .dashboard-page-v2 .glass-badge {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.11) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.68rem;
+        letter-spacing: 0.45px;
+    }
+
+    .dashboard-page-v2 .priority-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .dashboard-page-v2 .priority-dot-baixa {
+        background-color: #2f8f4e;
+    }
+
+    .dashboard-page-v2 .priority-dot-media {
+        background-color: #b88c17;
+    }
+
+    .dashboard-page-v2 .priority-dot-alta {
+        background-color: #df7d06;
+    }
+
+    .dashboard-page-v2 .priority-dot-urgente {
+        background-color: #d63b3b;
+    }
+
+    .dashboard-page-v2 .dashboard-priority-compact-card .card-body {
+        padding-bottom: 0.6rem !important;
+    }
+
+    .dashboard-page-v2 .dashboard-priority-total {
+        min-width: 34px;
+        height: 26px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 90, 146, 0.2);
+        background: rgba(0, 90, 146, 0.08);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #205d90;
+        padding: 0 0.5rem;
+    }
+
+    .dashboard-page-v2 .priority-compact-list {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.4rem;
+    }
+
+    .dashboard-page-v2 .priority-mini-card {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        min-height: 44px;
+        padding: 0.45rem 0.52rem;
+        border-radius: 9px;
+        text-decoration: none;
+        border: 1px solid #dce7f3;
+        background: rgba(255, 255, 255, 0.64);
+        transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease;
+        color: #2f567e;
+    }
+
+    .dashboard-page-v2 .priority-mini-card:hover {
+        border-color: #bdd2e8;
+        background: rgba(246, 251, 255, 0.96);
+        color: #1f4f7e;
+    }
+
+    .dashboard-page-v2 .priority-mini-top {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.38rem;
+        min-width: 0;
+    }
+
+    .dashboard-page-v2 .priority-mini-label {
+        font-size: 0.72rem;
         font-weight: 600;
+        color: #496b8f;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .dashboard-page-v2 .priority-mini-count {
+        font-size: 0.96rem;
+        font-weight: 700;
+        color: #214f79;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .dashboard-page-v2 .dashboard-tasks-card .card-body {
+        padding: 0 !important;
+    }
+
+    .dashboard-page-v2 .dashboard-tasks-card.is-loading {
+        opacity: 0.66;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+    }
+
+    .dashboard-page-v2 .dashboard-tasks-total {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #5d7694;
+        white-space: nowrap;
+        margin-left: 0.5rem;
+    }
+
+    .dashboard-page-v2 .dashboard-task-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dashboard-page-v2 .dashboard-task-list-wrap {
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .dashboard-page-v2 .dashboard-task-entry {
+        padding: 0.72rem 0.82rem;
+        border-bottom: 1px solid rgba(198, 217, 235, 0.5);
+    }
+
+    .dashboard-page-v2 .dashboard-task-entry:last-child {
+        border-bottom: 0;
+    }
+
+    .dashboard-page-v2 .dashboard-task-entry-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.38rem;
+    }
+
+    .dashboard-page-v2 .dashboard-task-title {
+        color: #184f7f;
+        font-size: 0.95rem;
+        font-weight: 700;
+        text-decoration: none;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dashboard-page-v2 .dashboard-task-title:hover {
+        color: #0f3f68;
+        text-decoration: underline;
+    }
+
+    .dashboard-page-v2 .dashboard-task-open-count {
+        min-width: 28px;
+        height: 24px;
+        border-radius: 999px;
+        border: 1px solid #c9dbef;
+        background: #f2f7fd;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #2b5d8a;
+        flex-shrink: 0;
+    }
+
+    .dashboard-page-v2 .dashboard-task-meta {
+        margin-bottom: 0.35rem;
+    }
+
+    .dashboard-page-v2 .dashboard-task-project {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.38rem;
+        color: #5e7b9a;
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .dashboard-page-v2 .dashboard-task-project:hover {
+        color: #2a5f90;
+        text-decoration: underline;
+    }
+
+    .dashboard-page-v2 .dashboard-task-project-empty {
+        color: #7e94ad;
+    }
+
+    .dashboard-page-v2 .dashboard-task-item-preview {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 0.32rem;
+    }
+
+    .dashboard-page-v2 .dashboard-task-item-link {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.56rem;
+        min-width: 0;
+        border: 1px solid #e4edf7;
+        background: rgba(255, 255, 255, 0.72);
+        border-radius: 8px;
+        padding: 0.38rem 0.48rem;
+        text-decoration: none;
+        color: #3b6289;
+        transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease;
+    }
+
+    .dashboard-page-v2 .dashboard-task-item-link:hover {
+        border-color: #bfd4e9;
+        background: #f8fbfe;
+    }
+
+    .dashboard-page-v2 .dashboard-task-item-text {
+        display: block;
+        flex: 1;
+        font-size: 0.8rem;
+        font-weight: 500;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dashboard-page-v2 .dashboard-task-item-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.36rem;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    .dashboard-page-v2 .dashboard-task-status-dot {
+        width: 10px;
+        height: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        border: 1px solid #5f7f9f;
+        background: #6f8dab;
+        flex-shrink: 0;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75);
+    }
+
+    .dashboard-page-v2 .dashboard-task-status-dot.status-programado {
+        background: #6f8dab;
+        border-color: #5f7f9f;
+    }
+
+    .dashboard-page-v2 .dashboard-task-status-dot.status-em_andamento {
+        background: #2f9b73;
+        border-color: #288664;
+    }
+
+    .dashboard-page-v2 .dashboard-task-status-dot.status-em-andamento {
+        background: #2f9b73;
+        border-color: #288664;
+    }
+
+    .dashboard-page-v2 .dashboard-task-status-dot.status-validacao {
+        background: #d59a3a;
+        border-color: #b8822f;
+    }
+
+    .dashboard-page-v2 .dashboard-task-status-dot.status-iniciado {
+        background: #2f9b73;
+        border-color: #288664;
+    }
+
+    .dashboard-page-v2 .dashboard-task-status-dot.status-finalizado {
+        background: #4a8f5e;
+        border-color: #3f7b50;
+    }
+
+    .dashboard-page-v2 .dashboard-task-responsavel {
+        color: #6883a1;
+        font-size: 0.7rem;
+        font-weight: 600;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dashboard-page-v2 .dashboard-task-empty {
+        padding: 1rem;
+        text-align: center;
+        color: #5e7b99;
         font-size: 0.85rem;
     }
 
-    .glass-table-row {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.05) 0%, 
-            rgba(255, 255, 255, 0.01) 100%);
-        transition: all var(--transition-speed) ease;
-        border: none !important;
-    }
-
-    .glass-table-row:hover {
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.08) 0%, 
-            rgba(0, 90, 146, 0.03) 100%);
-        transform: scale(1.01);
-    }
-
-    .glass-table-row td {
-        border: none !important;
-        padding: 0.75rem !important;
-        vertical-align: middle;
-    }
-
-    /* Glass Links */
-    .glass-link {
-        color: var(--primary-color) !important;
-        transition: all var(--transition-speed) ease;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-
-    .glass-link:hover {
-        color: var(--primary-dark) !important;
-        text-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
-        transform: scale(1.01);
-    }
-
-    /* Glass Badges */
-    .glass-badge {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.25) 0%, 
-            rgba(255, 255, 255, 0.1) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 
-            0 2px 8px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    .dashboard-page-v2 .dashboard-task-empty-link {
+        color: #205e91;
         font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.7rem;
-        letter-spacing: 0.5px;
-    }
-
-    /* Priority Glass Items */
-    .glass-priority-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .glass-priority-item {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.15) 0%, 
-            rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        border-radius: 10px;
-        transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
         text-decoration: none;
-        color: inherit;
-        box-shadow: 
-            0 4px 12px rgba(0, 0, 0, 0.05),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
     }
 
-    .glass-priority-item:hover {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.25) 0%, 
-            rgba(255, 255, 255, 0.08) 100%);
-        transform: translateX(3px) scale(1.01);
-        box-shadow: 
-            0 8px 25px rgba(0, 90, 146, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        border-color: rgba(0, 90, 146, 0.3) !important;
-        color: inherit;
+    .dashboard-page-v2 .dashboard-task-empty-link:hover {
+        text-decoration: underline;
     }
 
-    .glass-priority-dot {
-        box-shadow: 
-            0 2px 8px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+    .dashboard-page-v2 .dashboard-task-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.4rem;
+        padding: 0.3rem 0.55rem;
+        border-top: 1px solid rgba(198, 217, 235, 0.55);
+        background: rgba(250, 253, 255, 0.82);
     }
 
-    .glass-priority-bar {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.2) 0%, 
-            rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    .dashboard-page-v2 .dashboard-task-pagination-info {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #5e7896;
+        white-space: nowrap;
     }
 
-    .glass-total-count {
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.1) 0%, 
-            rgba(0, 90, 146, 0.05) 100%);
-        padding: 0.25rem 0.5rem;
-        border-radius: 6px;
-        border: 1px solid rgba(0, 90, 146, 0.2);
-        font-weight: 600;
-        color: var(--primary-color) !important;
+    .dashboard-page-v2 .dashboard-task-page-link {
+        min-width: 60px;
+        height: 24px;
+        padding: 0 0.48rem;
+        border-radius: 999px;
+        border: 1px solid #c2d7ec;
+        background: #f4f9fe;
+        color: #235c8b;
+        font-size: 0.71rem;
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    /* Mobile Glass Project Cards */
-    .glass-project-card {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.2) 0%, 
-            rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+    .dashboard-page-v2 .dashboard-task-page-link:hover {
+        background: #e8f2fc;
+        border-color: #accae5;
+        color: #1e4f79;
+    }
+
+    .dashboard-page-v2 .dashboard-task-page-link-disabled {
+        opacity: 0.55;
+        pointer-events: none;
+    }
+
+    .dashboard-page-v2 .glass-empty-state {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
         border-radius: 12px;
-        margin-bottom: 0.75rem;
+        padding: 1.2rem;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .dashboard-page-v2 .project-card {
+        border-radius: 10px;
+        margin-bottom: 0.7rem;
         padding: 0.75rem;
-        transition: all var(--transition-speed) ease;
-        box-shadow: 
-            0 4px 15px rgba(0, 90, 146, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(198, 217, 235, 0.55);
+        background: rgba(255, 255, 255, 0.74);
     }
 
-    .glass-project-card:hover {
-        box-shadow: 
-            0 8px 25px rgba(0, 90, 146, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        border-color: rgba(0, 90, 146, 0.3);
+    .dashboard-page-v2 .project-card-header,
+    .dashboard-page-v2 .project-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
     }
 
-    /* Glass Empty State */
-    .glass-empty-state {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.1) 0%, 
-            rgba(255, 255, 255, 0.02) 100%);
-        backdrop-filter: blur(10px);
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    .dashboard-page-v2 .project-card-body {
+        margin: 0.55rem 0;
     }
 
-    /* ====================================
-       RESPONSIVE ADJUSTMENTS
-       ==================================== */
-
-    @media (min-width: 768px) {
-        .glass-card:hover {
-            /* Hover effect without transform */
-        }
-        
-        .dashboard-glass-card:hover {
-            /* Hover effect without transform */
-        }
-        
-        .glass-priority-grid {
-            gap: 15px;
-        }
-        
-        .glass-priority-item {
-            padding: 12px 15px;
-        }
-        
-        .dashboard-welcome-strip {
-            padding: 1rem 1.1rem;
-            margin-bottom: 0.95rem !important;
+    @media (min-width: 992px) {
+        .dashboard-page-v2 .dashboard-kpi-row {
+            margin-bottom: 0.55rem !important;
         }
 
-        .dashboard-welcome-title {
-            font-size: 1.72rem;
+        .dashboard-page-v2 .dashboard-main-grid {
+            --bs-gutter-x: 0.95rem;
+        }
+
+        .dashboard-page-v2 .dashboard-main-grid > .dashboard-recent-col,
+        .dashboard-page-v2 .dashboard-main-grid > .dashboard-side-col {
+            display: flex;
+        }
+
+        .dashboard-page-v2 .dashboard-recent-col .main-content-card {
+            width: 100%;
+        }
+
+        .dashboard-page-v2 .dashboard-side-col {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            min-height: 0;
+        }
+
+        .dashboard-page-v2 .dashboard-side-col .dashboard-priority-compact-card {
+            flex: 0 0 auto;
+            margin-bottom: 0 !important;
+        }
+
+        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-card {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-card .card-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dashboard-page-v2 .dashboard-task-list-wrap {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .dashboard-page-v2 .dashboard-task-pagination {
+            margin-top: auto;
+            flex: 0 0 auto;
         }
     }
 
-    @media (max-width: 767px) {
-        .glass-card {
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.3) 0%, 
-                rgba(255, 255, 255, 0.1) 100%);
-            backdrop-filter: blur(15px);
+    @media (min-width: 1400px) {
+        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-card {
+            height: 430px;
         }
-        
-        .dashboard-welcome-strip {
+    }
+
+    @media (min-width: 1200px) and (max-width: 1399.98px) {
+        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-card {
+            height: 410px;
+        }
+    }
+
+    @media (min-width: 992px) and (max-width: 1199.98px) {
+        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-card {
+            height: 390px;
+        }
+    }
+
+    @media (max-width: 991.98px) {
+        .dashboard-page-v2 .dashboard-welcome-strip {
             flex-direction: column;
             align-items: stretch;
             gap: 0.7rem;
-            padding: 0.78rem;
-            margin-bottom: 0.7rem !important;
         }
 
-        .dashboard-welcome-main {
+        .dashboard-page-v2 .dashboard-welcome-main {
             align-items: flex-start;
-            gap: 0.55rem;
+            gap: 0.6rem;
         }
 
-        .dashboard-welcome-title {
-            font-size: 1.28rem;
+        .dashboard-page-v2 .dashboard-welcome-title {
+            font-size: 1.3rem;
             white-space: normal;
-            overflow: visible;
-            text-overflow: clip;
         }
 
-        .dashboard-welcome-context {
+        .dashboard-page-v2 .dashboard-welcome-context {
+            white-space: normal;
             font-size: 0.8rem;
-            white-space: normal;
-            overflow: visible;
-            text-overflow: clip;
         }
 
-        .dashboard-welcome-date-wrap {
+        .dashboard-page-v2 .dashboard-welcome-date-wrap {
             align-items: flex-start;
             text-align: left;
         }
 
-        .dashboard-welcome-actions .glass-btn {
+        .dashboard-page-v2 .dashboard-welcome-actions .glass-btn {
             width: 100%;
             justify-content: center;
         }
-        
-        .glass-priority-grid {
-            gap: 10px;
+
+        .dashboard-page-v2 .dashboard-priority-total,
+        .dashboard-page-v2 .dashboard-tasks-total {
+            white-space: normal;
         }
-        
-        .glass-priority-item {
-            padding: 10px 12px;
+
+        .dashboard-page-v2 .priority-compact-list {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .dashboard-page-v2 .dashboard-task-pagination {
+            padding: 0.38rem 0.58rem;
         }
     }
 
-    /* Original Priority Styles (Enhanced with Glass Effect) */
-    .priority-badge {
-        display: inline-block;
-        padding: 0.25em 0.6em;
-        border-radius: 50rem;
-        font-size: 0.7em;
-        font-weight: 600;
-        text-transform: uppercase;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 
-            0 2px 8px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-    
-    .priority-baixa {
-        background: linear-gradient(135deg, rgba(209, 231, 221, 0.8), rgba(209, 231, 221, 0.6));
-        color: #0f5132;
-    }
-    
-    .priority-media {
-        background: linear-gradient(135deg, rgba(255, 243, 205, 0.8), rgba(255, 243, 205, 0.6));
-        color: #664d03;
-    }
-    
-    .priority-alta {
-        background: linear-gradient(135deg, rgba(255, 229, 208, 0.8), rgba(255, 229, 208, 0.6));
-        color: #833c0c;
-    }
-    
-    .priority-urgente {
-        background: linear-gradient(135deg, rgba(248, 215, 218, 0.8), rgba(248, 215, 218, 0.6));
-        color: #842029;
-    }
+    @media (max-width: 767.98px) {
+        .dashboard-page-v2 .dashboard-task-item-link {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
 
-    /* Icon Shape Base */
-    .icon-shape {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 2rem;
-        height: 2rem;
-        border-radius: 50%;
-        transition: all var(--transition-speed) ease;
-    }
+        .dashboard-page-v2 .dashboard-task-item-meta {
+            width: 100%;
+            justify-content: flex-start;
+            margin-left: 0;
+        }
 
-    /* Card Base Enhancements */
-    .card {
-        border-radius: 12px !important;
-        transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-    }
+        .dashboard-page-v2 .dashboard-task-pagination-info {
+            font-size: 0.72rem;
+        }
 
-    /* Existing Priority Styles Enhanced */
-    .priority-grid-clean {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .priority-item-clean {
-        display: flex;
-        align-items: center;
-        text-decoration: none;
-        padding: 8px;
-        border-radius: 6px;
-        transition: all var(--transition-speed) ease;
-    }
-    
-    .priority-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 8px;
-        flex-shrink: 0;
-        transition: all var(--transition-speed) ease;
-    }
-    
-    .priority-dot-baixa {
-        background-color: #427842;
-    }
-    
-    .priority-dot-media {
-        background-color: #BC9D32;
-    }
-    
-    .priority-dot-alta {
-        background-color: #f39c12;
-    }
-    
-    .priority-dot-urgente {
-        background-color: #e74c3c;
-    }
-    
-    .priority-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        min-width: 0;
-        margin-right: 8px;
-    }
-    
-    .priority-label-clean {
-        font-size: 12px;
-        font-weight: 600;
-        color: #495057;
-    }
-    
-    .priority-bar-clean {
-        height: 4px;
-        width: 100%;
-        border-radius: 2px;
-        overflow: hidden;
-    }
-    
-    .priority-progress-clean {
-        height: 100%;
-        border-radius: 2px;
-        transition: all var(--transition-speed) ease;
-    }
-    
-    .priority-progress-baixa {
-        background-color: #427842;
-    }
-    
-    .priority-progress-media {
-        background-color: #BC9D32;
-    }
-    
-    .priority-progress-alta {
-        background-color: #f39c12;
-    }
-    
-    .priority-progress-urgente {
-        background-color: #e74c3c;
-    }
-    
-    .priority-count-clean {
-        font-size: 14px;
-        font-weight: 700;
-        color: #212529;
-        min-width: 40px;
-        text-align: right;
-        flex-shrink: 0;
-        white-space: nowrap;
+        .dashboard-page-v2 .priority-compact-list {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .dashboard-page-v2 .priority-mini-card {
+            min-height: 54px;
+            padding: 0.46rem 0.55rem;
+        }
     }
 </style>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const dateEl = document.getElementById('dashboardWelcomeDate');
-        if (!dateEl) return;
+        const tasksModuleSelector = '[data-dashboard-tasks-module]';
+        let taskPaginationController = null;
+        let taskPaginationLoading = false;
 
-        const now = new Date();
-
-        function formatFallback(date) {
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
+        function initBootstrapTooltips(scopeEl) {
+            if (!scopeEl || typeof window.bootstrap === 'undefined' || !bootstrap.Tooltip) {
+                return;
+            }
+            scopeEl.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+                bootstrap.Tooltip.getOrCreateInstance(el);
+            });
         }
 
-        try {
-            const formatter = new Intl.DateTimeFormat('pt-BR', {
-                weekday: 'long',
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric'
-            });
-            const raw = formatter.format(now);
-            dateEl.textContent = raw.charAt(0).toUpperCase() + raw.slice(1);
-        } catch (error) {
-            dateEl.textContent = formatFallback(now);
+        function syncTasksPageInUrl(targetUrl) {
+            try {
+                const destinationUrl = new URL(targetUrl, window.location.origin);
+                const currentUrl = new URL(window.location.href);
+                const tasksPageValue = destinationUrl.searchParams.get('tasks_page');
+
+                if (tasksPageValue && tasksPageValue !== '1') {
+                    currentUrl.searchParams.set('tasks_page', tasksPageValue);
+                } else {
+                    currentUrl.searchParams.delete('tasks_page');
+                }
+                window.history.replaceState({}, '', currentUrl.toString());
+            } catch (error) {
+                // Ignore URL parse/update failures without breaking pagination.
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            const paginationLink = event.target.closest('.dashboard-task-page-link[href]');
+            if (!paginationLink) {
+                return;
+            }
+            const currentTasksModule = document.querySelector(tasksModuleSelector);
+            if (!currentTasksModule) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof event.stopImmediatePropagation === 'function') {
+                event.stopImmediatePropagation();
+            }
+
+            if (taskPaginationLoading) {
+                return;
+            }
+
+            const destinationUrl = paginationLink.href;
+            taskPaginationLoading = true;
+            currentTasksModule.classList.add('is-loading');
+
+            if (taskPaginationController) {
+                taskPaginationController.abort();
+            }
+            taskPaginationController = new AbortController();
+            const activeController = taskPaginationController;
+
+            fetch(destinationUrl, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                signal: activeController.signal
+            })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(function(html) {
+                    const parsedDoc = new DOMParser().parseFromString(html, 'text/html');
+                    const nextTasksModule = parsedDoc.querySelector(tasksModuleSelector);
+                    const liveTasksModule = document.querySelector(tasksModuleSelector);
+
+                    if (!nextTasksModule || !liveTasksModule) {
+                        throw new Error('Modulo de tarefas nao encontrado na resposta.');
+                    }
+
+                    liveTasksModule.replaceWith(nextTasksModule);
+                    initBootstrapTooltips(nextTasksModule);
+                    syncTasksPageInUrl(destinationUrl);
+                })
+                .catch(function(error) {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+                    window.location.href = destinationUrl;
+                })
+                .finally(function() {
+                    if (taskPaginationController === activeController) {
+                        taskPaginationController = null;
+                    }
+                    taskPaginationLoading = false;
+                    const liveTasksModule = document.querySelector(tasksModuleSelector);
+                    if (liveTasksModule) {
+                        liveTasksModule.classList.remove('is-loading');
+                    }
+                });
+        }, true);
+
+        if (dateEl) {
+            const now = new Date();
+
+            function formatFallback(date) {
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+
+            try {
+                const formatter = new Intl.DateTimeFormat('pt-BR', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                const raw = formatter.format(now);
+                dateEl.textContent = raw.charAt(0).toUpperCase() + raw.slice(1);
+            } catch (error) {
+                dateEl.textContent = formatFallback(now);
+            }
         }
     });
 </script>
 {% include "project_add_form_js.html" %}
-{% endblock %} 
+{% endblock %}
