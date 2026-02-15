@@ -3,65 +3,103 @@
 {% block title %}{{ action_verb }} Usuário - ProjetosRJ{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <header class="pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2">{{ action_verb }} Usuário</h1>
-    </header>
+{% set is_own_profile = user.id and current_user_obj and user.id == current_user_obj.id %}
+{% set page_title = 'Meu Usuário' if is_own_profile else (action_verb ~ ' Usuário') %}
+{% set page_subtitle = 'Atualize seus dados de acesso e organização.' if is_own_profile else ('Configure os dados do usuário e permissões de acesso.' if action_verb == 'Adicionar' else 'Atualize os dados, áreas e permissões deste usuário.') %}
+{% set submit_label = 'Salvar Alterações' if user.id else 'Criar Usuário' %}
+{% set cancel_href = url_for('main.dashboard') if is_own_profile else url_for('main.list_users') %}
 
-    {# {% include '_messages.html' %} #} {# Removido pois base.html já trata disso #}
-
-    <div class="card shadow-sm">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">Dados do Usuário</h5>
+<div class="container-fluid px-3 px-md-4 py-2 account-page-shell">
+    <section class="account-page-header">
+        <div class="account-page-header-main">
+            <div class="account-page-icon">
+                <i class="fas {{ 'fa-user-circle' if is_own_profile else 'fa-user-cog' }}"></i>
+            </div>
+            <div class="account-page-header-copy">
+                <h1 class="account-page-title">{{ page_title }}</h1>
+                <p class="account-page-subtitle mb-0">{{ page_subtitle }}</p>
+            </div>
         </div>
-        <div class="card-body p-4">
-            <form method="POST" action="{{ url_for(request.endpoint, user_id=user.id) if user.id else url_for(request.endpoint) }}" class="needs-validation" novalidate>
-                {# Se for edição, o endpoint já tem user_id. Se for adição, não. #}
-                
-                <div class="mb-3">
-                    <label for="name" class="form-label">Nome Completo <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="name" name="name" value="{{ user.name or request.form.name or '' }}" required>
-                    <div class="invalid-feedback">Por favor, informe o nome completo.</div>
-                </div>
+    </section>
 
-                <div class="mb-3">
-                    <label for="username" class="form-label">Nome de Usuário (Login) <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="username" name="username" value="{{ user.username or request.form.username or '' }}" 
-                           {% if user.id %}readonly title="O nome de usuário não pode ser alterado."{% endif %} 
-                           {% if not user.id %}required{% endif %}>
-                    {% if user.id %}
-                    <div class="form-text">O nome de usuário não pode ser alterado após a criação.</div>
-                    {% else %}
-                    <div class="invalid-feedback">Por favor, informe o nome de usuário para login.</div>
-                    {% endif %}
-                </div>
-
-                <div class="mb-3">
-                    <label for="password" class="form-label">Senha {% if not user.id %}<span class="text-danger">*</span>{% endif %}</label>
-                    <input type="password" class="form-control" id="password" name="password" 
-                           placeholder="{{ 'Deixe em branco para não alterar a senha existente' if user.id else 'Crie uma senha forte' }}"
-                           {% if not user.id %}required minlength="6"{% else %}minlength="6"{% endif %}>
-                    <div class="form-text">Mínimo de 6 caracteres. {% if user.id %}Preencha apenas se desejar alterar.{% endif %}</div>
-                    <div class="invalid-feedback">A senha deve ter no mínimo 6 caracteres.</div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="orgao" class="form-label">Órgão:</label>
-                        <input type="text" class="form-control" id="orgao" name="orgao" value="{{ user.orgao or request.form.orgao or '' }}">
+    <form method="POST" action="{{ url_for(request.endpoint, user_id=user.id) if user.id else url_for(request.endpoint) }}" class="needs-validation" novalidate>
+        <section class="account-form-card">
+            <div class="account-section">
+                <h2 class="account-section-title">Identificação</h2>
+                <div class="row g-3">
+                    <div class="col-12 col-lg-8">
+                        <label for="name" class="account-label">Nome Completo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control account-input" id="name" name="name" value="{{ user.name or request.form.name or '' }}" required>
+                        <div class="invalid-feedback">Por favor, informe o nome completo.</div>
                     </div>
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label">Áreas Responsáveis:</label>
-                        <div class="form-text mb-2">Selecione as áreas que o usuário pode acessar. Administradores sem áreas selecionadas veem todas.</div>
-                        <div class="row">
+
+                    <div class="col-12 col-lg-4">
+                        <label for="orgao" class="account-label">Órgão</label>
+                        <input type="text" class="form-control account-input" id="orgao" name="orgao" value="{{ user.orgao or request.form.orgao or '' }}">
+                    </div>
+
+                    <div class="col-12">
+                        <label for="username" class="account-label">Nome de Usuário (Login) <span class="text-danger">*</span></label>
+                        <input
+                            type="text"
+                            class="form-control account-input {% if user.id %}account-input-readonly{% endif %}"
+                            id="username"
+                            name="username"
+                            value="{{ user.username or request.form.username or '' }}"
+                            {% if user.id %}readonly title="O nome de usuário não pode ser alterado."{% endif %}
+                            {% if not user.id %}required{% endif %}
+                        >
+                        {% if user.id %}
+                        <div class="account-help-text">O nome de usuário não pode ser alterado após a criação.</div>
+                        {% else %}
+                        <div class="invalid-feedback">Por favor, informe o nome de usuário para login.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if not is_own_profile %}
+            <div class="account-section">
+                <h2 class="account-section-title">Credenciais</h2>
+                <label for="password" class="account-label">Senha {% if not user.id %}<span class="text-danger">*</span>{% endif %}</label>
+                <div class="account-password-wrap">
+                    <input
+                        type="password"
+                        class="form-control account-input account-input-password"
+                        id="password"
+                        name="password"
+                        placeholder="{{ 'Deixe em branco para não alterar a senha existente' if user.id else 'Crie uma senha forte' }}"
+                        {% if not user.id %}required minlength="6"{% else %}minlength="6"{% endif %}
+                    >
+                    <button type="button" class="btn account-password-toggle" data-password-target="password" aria-label="Mostrar ou ocultar senha">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="account-help-text">Mínimo de 6 caracteres. {% if user.id %}Preencha apenas se desejar alterar.{% endif %}</div>
+                <div class="invalid-feedback">A senha deve ter no mínimo 6 caracteres.</div>
+            </div>
+            {% endif %}
+
+            <div class="account-section">
+                <h2 class="account-section-title">Vínculo e Permissões</h2>
+
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="account-label mb-1">Áreas Responsáveis</label>
+                        <div class="account-help-text mb-2">Selecione as áreas que o usuário pode acessar. Administradores sem áreas selecionadas visualizam todas.</div>
+                        <div class="row g-2">
                             {% for area_choice in areas_responsaveis_choices %}
-                            <div class="col-md-4 col-lg-3 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" 
-                                           name="areas_responsavel" value="{{ area_choice }}"
-                                           id="area_{{ loop.index }}"
-                                           {% if area_choice in user_areas %}checked{% endif %}>
-                                    <label class="form-check-label" for="area_{{ loop.index }}">
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="account-area-item">
+                                    <input
+                                        class="account-area-checkbox"
+                                        type="checkbox"
+                                        name="areas_responsavel"
+                                        value="{{ area_choice }}"
+                                        id="area_{{ loop.index }}"
+                                        {% if area_choice in user_areas %}checked{% endif %}
+                                    >
+                                    <label class="account-area-label" for="area_{{ loop.index }}">
                                         {{ area_choice }}
                                     </label>
                                 </div>
@@ -71,27 +109,32 @@
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch" id="is_admin" name="is_admin" 
-                               {% if user.is_admin or request.form.is_admin == 'on' %}checked{% endif %}>
-                        <label class="form-check-label" for="is_admin">Conceder Permissões de Administrador</label>
-                        <div class="form-text">Permite acesso total ao sistema, incluindo gerenciamento de usuários.</div>
+                <div class="account-admin-panel mt-3">
+                    <div class="form-check form-switch account-admin-switch">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            role="switch"
+                            id="is_admin"
+                            name="is_admin"
+                            {% if user.is_admin or request.form.is_admin == 'on' %}checked{% endif %}
+                        >
+                        <label class="form-check-label" for="is_admin">Conceder permissões de administrador</label>
                     </div>
+                    <p class="account-help-text mb-0">Permite acesso total ao sistema, incluindo gerenciamento de usuários.</p>
                 </div>
+            </div>
+        </section>
 
-                <hr>
-                <div class="text-end mt-4">
-                    <a href="{{ url_for('main.list_users') }}" class="btn btn-outline-secondary me-2">
-                        <i class="fas fa-times me-1"></i>Cancelar
-                    </a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-2"></i>Salvar {{ "Alterações" if user.id else "Usuário" }}
-                    </button>
-                </div>
-            </form>
+        <div class="account-actions">
+            <a href="{{ cancel_href }}" class="btn account-btn account-btn-secondary">
+                <i class="fas fa-times me-1"></i>Cancelar
+            </a>
+            <button type="submit" class="btn account-btn account-btn-primary">
+                <i class="fas fa-save me-2"></i>{{ submit_label }}
+            </button>
         </div>
-    </div>
+    </form>
 </div>
 {% endblock %}
 
@@ -100,18 +143,37 @@
 <script>
 // Validação Bootstrap
 (function () {
-  'use strict'
-  var forms = document.querySelectorAll('.needs-validation')
+  'use strict';
+  var forms = document.querySelectorAll('.needs-validation');
   Array.prototype.slice.call(forms)
     .forEach(function (form) {
       form.addEventListener('submit', function (event) {
         if (!form.checkValidity()) {
-          event.preventDefault()
-          event.stopPropagation()
+          event.preventDefault();
+          event.stopPropagation();
         }
-        form.classList.add('was-validated')
-      }, false)
-    })
-})()
+        form.classList.add('was-validated');
+      }, false);
+    });
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.account-password-toggle').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const targetId = button.getAttribute('data-password-target');
+            const input = document.getElementById(targetId);
+            if (!input) return;
+
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+
+            const icon = button.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-eye', !isPassword);
+                icon.classList.toggle('fa-eye-slash', isPassword);
+            }
+        });
+    });
+});
 </script>
 {% endblock %}

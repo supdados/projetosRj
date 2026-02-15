@@ -3,808 +3,364 @@
 {% block title %}Tarefas - ProjetosRJ{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12">
-            <!-- Header Clean -->
-            <div class="tasks-header-clean">
-                <div class="header-info">
-                    <h4 class="header-title-clean">
-                        <i class="fas fa-tasks"></i>
-                        Tarefas
-                    </h4>
-                    <span class="header-count">{{ pagination.total }} tarefa{{ 's' if pagination.total != 1 else ''
-                        }}</span>
+<div class="container-fluid px-3 px-md-4 py-2 admin-tasks-shell">
+    <section class="admin-tasks-header">
+        <div class="admin-tasks-header-main">
+            <div class="admin-tasks-header-icon">
+                <i class="fas fa-tasks"></i>
+            </div>
+            <div class="admin-tasks-header-copy">
+                <h1 class="admin-tasks-title">Tarefas</h1>
+                <p class="admin-tasks-subtitle mb-0">Acompanhe tarefas avulsas e vinculadas a projetos com foco operacional.</p>
+            </div>
+        </div>
+        <button type="button" class="btn admin-tasks-create-btn" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+            <i class="fas fa-plus me-2"></i>Nova Tarefa
+        </button>
+    </section>
+
+    <section class="admin-tasks-meta-row">
+        <span class="admin-tasks-meta-chip">
+            <i class="fas fa-list-check me-1"></i>{{ pagination.total }} tarefa{{ 's' if pagination.total != 1 else '' }}
+        </span>
+        <span class="admin-tasks-meta-chip">
+            <i class="fas fa-copy me-1"></i>Página {{ pagination.page }} de {{ pagination.pages if pagination.pages else 1 }}
+        </span>
+    </section>
+
+    <section class="admin-tasks-filters-card">
+        <form method="GET" action="{{ url_for('main.list_tasks') }}" class="row g-2 align-items-end admin-tasks-filters" id="filterTasksForm">
+            <div class="col-12 col-lg-4 col-xxl-3">
+                <label for="task_search" class="admin-tasks-label">Título da tarefa</label>
+                <input
+                    type="text"
+                    id="task_search"
+                    name="search"
+                    class="form-control admin-tasks-input"
+                    placeholder="Buscar por título..."
+                    value="{{ search_query }}">
+            </div>
+
+            <div class="col-12 col-lg-4 col-xxl-3">
+                <label for="filter_project_input" class="admin-tasks-label">Projeto</label>
+                <div class="project-search-wrap project-search-wrap-sm">
+                    <input
+                        type="text"
+                        class="form-control admin-tasks-input project-search-input"
+                        id="filter_project_input"
+                        placeholder="Digite para filtrar projetos..."
+                        autocomplete="off"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        value="{% if project_filter == 'sem_projeto' %}Sem Projeto{% elif project_filter %}{% for p in projects %}{% if p.id|string == project_filter %}{{ p.titulo }}{% endif %}{% endfor %}{% endif %}">
+                    <input type="hidden" name="project" id="filter_project" value="{{ project_filter or '' }}">
+                    <div class="project-search-dropdown" id="filterProjectDropdown" role="listbox" hidden>
+                        <div class="project-search-option" data-value="" data-label="Todos os Projetos">Todos os Projetos</div>
+                        <div class="project-search-option" data-value="sem_projeto" data-label="Sem Projeto">Sem Projeto</div>
+                        {% for project in projects %}
+                        <div class="project-search-option" data-value="{{ project.id }}" data-label="{{ project.titulo }}">{{ project.titulo }}</div>
+                        {% endfor %}
+                    </div>
                 </div>
-                <button type="button" class="btn-new-clean" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-                    <i class="fas fa-plus"></i>
-                    Nova Tarefa
+            </div>
+
+            <div class="col-12 col-lg-4 col-xxl-3">
+                <div class="admin-tasks-filter-actions">
+                    <button type="submit" class="btn admin-tasks-filter-btn">
+                        <i class="fas fa-filter me-1"></i>Filtrar
+                    </button>
+                    <a href="{{ url_for('main.list_tasks') }}" class="btn admin-tasks-reset-btn">Limpar</a>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    {% if tasks %}
+    <section class="admin-tasks-list-card">
+        {% for task in tasks %}
+        {% set finalizados = task.items|selectattr('status', 'equalto', 'finalizado')|list|length %}
+        <article class="admin-tasks-row" data-task-url="{{ url_for('main.task_detail', task_id=task.id) }}">
+            <div class="admin-tasks-row-icon">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+
+            <div class="admin-tasks-row-content">
+                <div class="admin-tasks-row-title-wrap">
+                    <h2 class="admin-tasks-row-title">{{ task.titulo }}</h2>
+                    <span class="admin-tasks-items-chip">
+                        <i class="fas fa-list-ol me-1"></i>{{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}
+                    </span>
+                </div>
+
+                <div class="admin-tasks-row-meta">
+                    {% if task.project %}
+                    <a href="{{ url_for('main.project_detail', project_id=task.project.id) }}" class="admin-tasks-project-link" data-stop-row-click="1">
+                        <i class="fas fa-project-diagram me-1"></i>{{ task.project.titulo }}
+                    </a>
+                    {% else %}
+                    <span class="admin-tasks-meta-chip-inline is-muted">
+                        <i class="fas fa-inbox me-1"></i>Sem projeto
+                    </span>
+                    {% endif %}
+
+                    <span class="admin-tasks-meta-chip-inline is-muted">
+                        <i class="fas fa-calendar-alt me-1"></i>{{ task.created_at.strftime('%d/%m/%Y') }}
+                    </span>
+
+                    <span class="admin-tasks-meta-chip-inline">
+                        <i class="fas fa-check-circle me-1"></i>{{ finalizados }}/{{ task.items|length }} finalizados
+                    </span>
+                </div>
+            </div>
+
+            <div class="admin-tasks-actions" data-stop-row-click="1">
+                <a href="{{ url_for('main.task_detail', task_id=task.id) }}" class="btn admin-tasks-action-btn is-view" title="Ver Detalhes">
+                    <i class="fas fa-eye"></i>
+                </a>
+                <button type="button" class="btn admin-tasks-action-btn is-delete" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ task.id }}" title="Excluir">
+                    <i class="fas fa-trash"></i>
                 </button>
             </div>
+        </article>
 
-            <!-- Filtros Clean -->
-            <div class="filters-clean mb-4">
-                <form method="GET" action="{{ url_for('main.list_tasks') }}" class="row g-3" id="filterTasksForm">
-                    <div class="col-md-4">
-                        <input type="text" name="search" class="form-control form-control-sm"
-                            placeholder="Buscar por título..." value="{{ search_query }}">
-                    </div>
-                    <div class="col-md-4">
-                        <div class="project-search-wrap project-search-wrap-sm">
-                            <input type="text" class="form-control form-control-sm project-search-input"
-                                id="filter_project_input" placeholder="Digite para filtrar projetos..."
-                                autocomplete="off" aria-haspopup="listbox" aria-expanded="false"
-                                value="{% if project_filter == 'sem_projeto' %}Sem Projeto{% elif project_filter %}{% for p in projects %}{% if p.id|string == project_filter %}{{ p.titulo }}{% endif %}{% endfor %}{% endif %}">
-                            <input type="hidden" name="project" id="filter_project" value="{{ project_filter or '' }}">
-                            <div class="project-search-dropdown" id="filterProjectDropdown" role="listbox" hidden>
-                                <div class="project-search-option" data-value="" data-label="Todos os Projetos">Todos os
-                                    Projetos</div>
-                                <div class="project-search-option" data-value="sem_projeto" data-label="Sem Projeto">Sem
-                                    Projeto</div>
-                                {% for project in projects %}
-                                <div class="project-search-option" data-value="{{ project.id }}"
-                                    data-label="{{ project.titulo }}">{{ project.titulo }}</div>
-                                {% endfor %}
-                            </div>
+        <div class="modal fade admin-tasks-modal" id="deleteModal-{{ task.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content admin-tasks-modal-content">
+                    <div class="admin-tasks-modal-header">
+                        <div class="admin-tasks-modal-icon is-warning">
+                            <i class="fas fa-exclamation-circle"></i>
                         </div>
-                    </div>
-                    <div class="col-md-4">
-                        <button type="submit" class="btn btn-sm btn-primary w-100">
-                            <i class="fas fa-filter"></i> Filtrar
+                        <div>
+                            <h5 class="admin-tasks-modal-title">Excluir Tarefa</h5>
+                            <p class="admin-tasks-modal-subtitle mb-0">Esta ação não pode ser desfeita</p>
+                        </div>
+                        <button type="button" class="admin-tasks-modal-close" data-bs-dismiss="modal" aria-label="Fechar">
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
-                </form>
+                    <div class="admin-tasks-modal-body">
+                        <p class="mb-2">Confirma a exclusão da tarefa <strong>{{ task.titulo }}</strong>?</p>
+                        {% if task.items %}
+                        <p class="admin-tasks-modal-warning mb-0">
+                            <i class="fas fa-triangle-exclamation me-1"></i>
+                            Esta tarefa possui {{ task.items|length }} item(ns) que também serão excluídos.
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="admin-tasks-modal-footer">
+                        <button type="button" class="btn admin-tasks-modal-cancel" data-bs-dismiss="modal">Cancelar</button>
+                        <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn admin-tasks-modal-confirm-delete">Excluir</button>
+                        </form>
+                    </div>
+                </div>
             </div>
-
-            <!-- Tasks List Clean -->
-            <div class="tasks-list-clean">
-                {% for task in tasks %}
-                <div class="task-item-clean"
-                    onclick="window.location='{{ url_for('main.task_detail', task_id=task.id) }}'"
-                    style="cursor: pointer;">
-                    <div class="task-icon-clean">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-
-                    <div class="task-content-clean">
-                        <div class="task-main-info">
-                            <h5 class="task-name-clean">{{ task.titulo }}</h5>
-                            <span class="task-items-count">
-                                <i class="fas fa-list-ol"></i>
-                                {{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}
-                            </span>
-                        </div>
-
-                        <div class="task-meta-clean">
-                            {% if task.project %}
-                            <a href="{{ url_for('main.project_detail', project_id=task.project.id) }}"
-                                class="task-project-link" onclick="event.stopPropagation();">
-                                <i class="fas fa-project-diagram"></i>
-                                {{ task.project.titulo }}
-                            </a>
-                            {% else %}
-                            <span class="task-meta-item text-muted">
-                                <i class="fas fa-inbox"></i>
-                                Sem projeto
-                            </span>
-                            {% endif %}
-
-                            <span class="task-meta-item text-muted">
-                                <i class="fas fa-clock"></i>
-                                {{ task.created_at.strftime('%d/%m/%Y') }}
-                            </span>
-
-                            {% if task.items %}
-                            <span class="task-meta-item">
-                                <i class="fas fa-chart-pie"></i>
-                                {% set finalizados = task.items|selectattr('status', 'equalto',
-                                'finalizado')|list|length %}
-                                {{ finalizados }}/{{ task.items|length }} finalizados
-                            </span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="task-actions-clean" onclick="event.stopPropagation();">
-                        <a href="{{ url_for('main.task_detail', task_id=task.id) }}"
-                            class="btn-action-clean btn-view-clean" title="Ver Detalhes">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <button type="button" class="btn-action-clean btn-delete-clean" data-bs-toggle="modal"
-                            data-bs-target="#deleteModal-{{ task.id }}" title="Excluir">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Modal de Exclusão Clean -->
-                <div class="modal fade" id="deleteModal-{{ task.id }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content modal-clean">
-                            <div class="modal-header-clean">
-                                <div class="modal-icon-clean">
-                                    <i class="fas fa-exclamation-circle"></i>
-                                </div>
-                                <div>
-                                    <h5 class="modal-title-clean">Excluir Tarefa</h5>
-                                    <p class="modal-subtitle-clean">Esta ação não pode ser desfeita</p>
-                                </div>
-                                <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="modal-body-clean">
-                                <p>Confirma a exclusão da tarefa <strong>{{ task.titulo }}</strong>?</p>
-                                {% if task.items %}
-                                <p class="text-warning small">
-                                    <i class="fas fa-warning"></i>
-                                    Esta tarefa possui {{ task.items|length }} item(s) que também serão excluídos.
-                                </p>
-                                {% endif %}
-                            </div>
-                            <div class="modal-footer-clean">
-                                <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
-                                    Cancelar
-                                </button>
-                                <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST"
-                                    style="display: inline;">
-                                    <button type="submit" class="btn-modal-clean btn-confirm-delete">
-                                        Excluir
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <!-- Empty State Clean -->
-                <div class="empty-state-clean">
-                    <i class="fas fa-tasks"></i>
-                    <h5>Nenhuma tarefa encontrada</h5>
-                    <p>Crie sua primeira tarefa para começar</p>
-                    <button type="button" class="btn-new-clean" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-                        <i class="fas fa-plus"></i>
-                        Criar Primeira Tarefa
-                    </button>
-                </div>
-                {% endfor %}
-            </div>
-
-            <!-- Paginação -->
-            {% if pagination.pages > 1 %}
-            <nav aria-label="Paginação de tarefas" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if pagination.has_prev %}
-                    <li class="page-item">
-                        <a class="page-link"
-                            href="{{ url_for('main.list_tasks', page=pagination.prev_num, project=project_filter, search=search_query) }}">Anterior</a>
-                    </li>
-                    {% endif %}
-
-                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2)
-                    %}
-                    {% if page_num %}
-                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                        <a class="page-link"
-                            href="{{ url_for('main.list_tasks', page=page_num, project=project_filter, search=search_query) }}">{{
-                            page_num }}</a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                    {% endif %}
-                    {% endfor %}
-
-                    {% if pagination.has_next %}
-                    <li class="page-item">
-                        <a class="page-link"
-                            href="{{ url_for('main.list_tasks', page=pagination.next_num, project=project_filter, search=search_query) }}">Próximo</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
         </div>
-    </div>
+        {% endfor %}
+    </section>
+
+    {% if pagination.pages > 1 %}
+    <nav aria-label="Paginação de tarefas" class="admin-tasks-pagination-wrap">
+        <ul class="pagination admin-tasks-pagination mb-0">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('main.list_tasks', page=pagination.prev_num, project=project_filter, search=search_query) if pagination.has_prev else '#' }}" aria-label="Página anterior">
+                    <span aria-hidden="true">«</span>
+                </a>
+            </li>
+
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.list_tasks', page=page_num, project=project_filter, search=search_query) }}">{{ page_num }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('main.list_tasks', page=pagination.next_num, project=project_filter, search=search_query) if pagination.has_next else '#' }}" aria-label="Próxima página">
+                    <span aria-hidden="true">»</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <section class="admin-tasks-empty-state">
+        <div class="admin-tasks-empty-icon">
+            <i class="fas fa-tasks"></i>
+        </div>
+        <h2 class="admin-tasks-empty-title">Nenhuma tarefa encontrada</h2>
+        <p class="admin-tasks-empty-text">Crie sua primeira tarefa para começar a acompanhar as entregas.</p>
+        <button type="button" class="btn admin-tasks-create-btn" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+            <i class="fas fa-plus me-2"></i>Criar Primeira Tarefa
+        </button>
+    </section>
+    {% endif %}
 </div>
 
-<!-- Modal Adicionar Tarefa -->
-<div class="modal fade" id="addTaskModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content modal-clean">
+<div class="modal fade admin-tasks-modal" id="addTaskModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content admin-tasks-modal-content">
             <form action="{{ url_for('main.add_task') }}" method="POST">
-                <div class="modal-header-clean">
-                    <div class="modal-icon-clean" style="background: rgba(0, 90, 146, 0.15);">
-                        <i class="fas fa-tasks" style="color: var(--primary-color);"></i>
+                <div class="admin-tasks-modal-header">
+                    <div class="admin-tasks-modal-icon is-primary">
+                        <i class="fas fa-tasks"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title-clean">Nova Tarefa</h5>
-                        <p class="modal-subtitle-clean">Crie uma nova tarefa e adicione itens depois</p>
+                        <h5 class="admin-tasks-modal-title">Nova Tarefa</h5>
+                        <p class="admin-tasks-modal-subtitle mb-0">Crie uma nova tarefa e adicione itens depois.</p>
                     </div>
-                    <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
+                    <button type="button" class="admin-tasks-modal-close" data-bs-dismiss="modal" aria-label="Fechar">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body-clean">
+
+                <div class="admin-tasks-modal-body">
                     <div class="mb-3">
-                        <label for="titulo" class="form-label">Título da Tarefa <span
-                                class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="titulo" name="titulo" required>
+                        <label for="titulo" class="admin-tasks-label">Título da Tarefa <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control admin-tasks-input" id="titulo" name="titulo" required>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="project_id_input" class="form-label">Projeto (Opcional)</label>
+                    <div class="mb-0">
+                        <label for="project_id_input" class="admin-tasks-label">Projeto (Opcional)</label>
                         <div class="project-search-wrap">
-                            <input type="text" class="form-control project-search-input" id="project_id_input"
-                                placeholder="Digite para filtrar projetos..." autocomplete="off" aria-haspopup="listbox"
+                            <input
+                                type="text"
+                                class="form-control admin-tasks-input project-search-input"
+                                id="project_id_input"
+                                placeholder="Digite para filtrar projetos..."
+                                autocomplete="off"
+                                aria-haspopup="listbox"
                                 aria-expanded="false">
                             <input type="hidden" name="project_id" id="project_id" value="">
                             <div class="project-search-dropdown" id="addTaskProjectDropdown" role="listbox" hidden>
-                                <div class="project-search-option" data-value="" data-label="Sem projeto">Sem projeto
-                                </div>
+                                <div class="project-search-option" data-value="" data-label="Sem projeto">Sem projeto</div>
                                 {% for project in projects %}
-                                <div class="project-search-option" data-value="{{ project.id }}"
-                                    data-label="{{ project.titulo }}">{{ project.titulo }}</div>
+                                <div class="project-search-option" data-value="{{ project.id }}" data-label="{{ project.titulo }}">{{ project.titulo }}</div>
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="form-text">Associe esta tarefa a um projeto ou deixe sem projeto</div>
+                        <div class="admin-tasks-help-text">Associe esta tarefa a um projeto ou mantenha como tarefa avulsa.</div>
                     </div>
                 </div>
-                <div class="modal-footer-clean">
-                    <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn-modal-clean"
-                        style="background: var(--primary-color); color: white;">
-                        <i class="fas fa-save"></i> Criar Tarefa
+
+                <div class="admin-tasks-modal-footer">
+                    <button type="button" class="btn admin-tasks-modal-cancel" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn admin-tasks-modal-confirm">
+                        <i class="fas fa-save me-1"></i>Criar Tarefa
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-    /* ====================================
-   TASKS - CLEAN MINIMAL DESIGN
-   ==================================== */
-
-    /* Header Clean */
-    .tasks-header-clean {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1.5rem 0;
-        margin-bottom: 1.5rem;
-        border-bottom: 2px solid rgba(0, 90, 146, 0.1);
-    }
-
-    .header-info {
-        display: flex;
-        align-items: baseline;
-        gap: 1rem;
-    }
-
-    .header-title-clean {
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.7rem;
-        letter-spacing: -0.3px;
-    }
-
-    .header-title-clean i {
-        font-size: 1.4rem;
-        color: var(--primary-color);
-    }
-
-    .header-count {
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: #6c757d;
-        padding: 0.3rem 0.8rem;
-        background: rgba(0, 90, 146, 0.08);
-        border-radius: 20px;
-    }
-
-    .btn-new-clean {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.7rem 1.3rem;
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-
-    .btn-new-clean:hover {
-        background: var(--primary-dark);
-        color: white;
-    }
-
-    /* Filtros */
-    .filters-clean {
-        background: white;
-        padding: 1.2rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-
-    /* Tasks List Clean */
-    .tasks-list-clean {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-    }
-
-    .task-item-clean {
-        display: flex;
-        align-items: center;
-        gap: 1.2rem;
-        padding: 1.3rem 1.5rem;
-        background: white;
-        border-bottom: 1px solid rgba(0, 90, 146, 0.08);
-        transition: all 0.2s ease;
-    }
-
-    .task-item-clean:first-child {
-        border-top: 1px solid rgba(0, 90, 146, 0.08);
-    }
-
-    .task-item-clean:hover {
-        background: rgba(0, 90, 146, 0.02);
-        border-left: 3px solid var(--primary-color);
-        padding-left: calc(1.5rem - 3px);
-    }
-
-    .task-icon-clean {
-        width: 44px;
-        height: 44px;
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.1) 0%,
-                rgba(0, 90, 146, 0.05) 100%);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .task-icon-clean i {
-        font-size: 1.2rem;
-        color: var(--primary-color);
-    }
-
-    .task-content-clean {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .task-main-info {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 0.4rem;
-    }
-
-    .task-name-clean {
-        font-size: 1.05rem;
-        font-weight: 600;
-        color: #1a1a1a;
-        margin: 0;
-        letter-spacing: -0.2px;
-    }
-
-    .task-items-count {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--primary-color);
-        padding: 0.25rem 0.6rem;
-        background: rgba(0, 90, 146, 0.08);
-        border-radius: 6px;
-    }
-
-    .task-items-count i {
-        font-size: 0.75rem;
-    }
-
-    .task-meta-clean {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .task-meta-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.8rem;
-        color: #6c757d;
-    }
-
-    .task-meta-item i {
-        font-size: 0.75rem;
-    }
-
-    .task-project-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.8rem;
-        color: var(--primary-color);
-        text-decoration: none;
-        font-weight: 500;
-    }
-
-    .task-project-link:hover {
-        color: var(--primary-dark);
-        text-decoration: underline;
-    }
-
-    .task-actions-clean {
-        display: flex;
-        gap: 0.5rem;
-        flex-shrink: 0;
-    }
-
-    .btn-action-clean {
-        width: 38px;
-        height: 38px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: transparent;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        color: #6c757d;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-decoration: none;
-    }
-
-    .btn-action-clean:hover {
-        border-color: transparent;
-    }
-
-    .btn-view-clean:hover {
-        background: var(--primary-color);
-        color: white;
-    }
-
-    .btn-delete-clean:hover {
-        background: #dc3545;
-        color: white;
-    }
-
-    /* Empty State */
-    .empty-state-clean {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 4rem 2rem;
-        text-align: center;
-    }
-
-    .empty-state-clean i {
-        font-size: 3.5rem;
-        color: rgba(0, 90, 146, 0.2);
-        margin-bottom: 1.5rem;
-    }
-
-    .empty-state-clean h5 {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin-bottom: 0.5rem;
-    }
-
-    .empty-state-clean p {
-        font-size: 1rem;
-        color: #6c757d;
-        margin-bottom: 2rem;
-    }
-
-    /* Modal Clean */
-    .modal-clean .modal-content {
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    }
-
-    .modal-header-clean {
-        padding: 1.5rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .modal-icon-clean {
-        width: 44px;
-        height: 44px;
-        background: rgba(255, 193, 7, 0.15);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .modal-icon-clean i {
-        font-size: 1.3rem;
-        color: #ffc107;
-    }
-
-    .modal-title-clean {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin: 0;
-    }
-
-    .modal-subtitle-clean {
-        font-size: 0.8rem;
-        color: #6c757d;
-        margin: 0.2rem 0 0 0;
-    }
-
-    .btn-close-clean {
-        width: 32px;
-        height: 32px;
-        background: transparent;
-        border: none;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-left: auto;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        color: #6c757d;
-    }
-
-    .btn-close-clean:hover {
-        background: rgba(0, 0, 0, 0.05);
-    }
-
-    .modal-body-clean {
-        padding: 1.5rem;
-    }
-
-    .modal-footer-clean {
-        padding: 1rem 1.5rem;
-        border-top: 1px solid rgba(0, 0, 0, 0.08);
-        display: flex;
-        gap: 0.8rem;
-        justify-content: flex-end;
-    }
-
-    .btn-modal-clean {
-        padding: 0.65rem 1.3rem;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .btn-cancel-clean {
-        background: rgba(0, 0, 0, 0.05);
-        color: #495057;
-    }
-
-    .btn-cancel-clean:hover {
-        background: rgba(0, 0, 0, 0.1);
-    }
-
-    .btn-confirm-delete {
-        background: #dc3545;
-        color: white;
-    }
-
-    .btn-confirm-delete:hover {
-        background: #c82333;
-    }
-
-    /* Project searchable dropdown */
-    .project-search-wrap {
-        position: relative;
-    }
-
-    .project-search-wrap .project-search-input {
-        width: 100%;
-    }
-
-    .project-search-dropdown {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 100%;
-        margin-top: 2px;
-        max-height: 220px;
-        overflow-y: auto;
-        background: #fff;
-        border: 1px solid rgba(0, 0, 0, 0.12);
-        border-radius: 8px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-        z-index: 1050;
-    }
-
-    .project-search-dropdown[hidden] {
-        display: none !important;
-    }
-
-    .project-search-option {
-        padding: 8px 12px;
-        font-size: 0.95rem;
-        cursor: pointer;
-        color: #374151;
-    }
-
-    .project-search-option:hover,
-    .project-search-option.active {
-        background: rgba(0, 90, 146, 0.08);
-        color: var(--primary-color);
-    }
-
-    .project-search-option.hidden-by-filter {
-        display: none !important;
-    }
-
-    .project-search-wrap-sm .project-search-dropdown {
-        max-height: 180px;
-    }
-
-    .project-search-wrap-sm .project-search-option {
-        padding: 6px 10px;
-        font-size: 0.875rem;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .tasks-header-clean {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-
-        .btn-new-clean {
-            width: 100%;
-            justify-content: center;
-        }
-
-        .task-item-clean {
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .task-content-clean {
-            flex-basis: 100%;
-        }
-
-        .task-actions-clean {
-            width: 100%;
-            justify-content: flex-end;
-        }
-    }
-</style>
-
+{% block scripts %}
+{{ super() }}
 <script>
-    (function () {
-        function initProjectSearch(wrap, hiddenInputId, dropdownId, onSelect) {
-            var wrapEl = document.querySelector(wrap);
-            if (!wrapEl) return;
-            var input = wrapEl.querySelector('.project-search-input');
-            var hidden = document.getElementById(hiddenInputId);
-            var dropdown = document.getElementById(dropdownId);
-            if (!input || !hidden || !dropdown) return;
+(function () {
+    function initProjectSearch(wrap, hiddenInputId, dropdownId, onSelect) {
+        var wrapEl = document.querySelector(wrap);
+        if (!wrapEl) return;
+        var input = wrapEl.querySelector('.project-search-input');
+        var hidden = document.getElementById(hiddenInputId);
+        var dropdown = document.getElementById(dropdownId);
+        if (!input || !hidden || !dropdown) return;
 
-            var options = dropdown.querySelectorAll('.project-search-option');
+        var options = dropdown.querySelectorAll('.project-search-option');
 
-            function filterOptions() {
-                var q = (input.value || '').trim().toLowerCase();
-                options.forEach(function (opt) {
-                    var label = (opt.getAttribute('data-label') || opt.textContent || '').toLowerCase();
-                    if (!q || label.indexOf(q) !== -1) {
-                        opt.classList.remove('hidden-by-filter');
-                    } else {
-                        opt.classList.add('hidden-by-filter');
-                    }
-                });
-            }
-
-            function showDropdown() {
-                filterOptions();
-                dropdown.removeAttribute('hidden');
-                input.setAttribute('aria-expanded', 'true');
-            }
-
-            function hideDropdown() {
-                dropdown.setAttribute('hidden', '');
-                input.setAttribute('aria-expanded', 'false');
-            }
-
-            function selectOption(opt) {
-                var val = opt.getAttribute('data-value');
-                var label = opt.getAttribute('data-label') || opt.textContent || '';
-                hidden.value = val || '';
-                input.value = label;
-                hideDropdown();
-                if (onSelect) onSelect(val, label);
-            }
-
-            input.addEventListener('focus', function () {
-                showDropdown();
-            });
-
-            input.addEventListener('input', function () {
-                showDropdown();
-            });
-
-            input.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') {
-                    hideDropdown();
-                    return;
-                }
-                var visible = Array.prototype.filter.call(options, function (o) { return !o.classList.contains('hidden-by-filter'); });
-                if (e.key === 'ArrowDown' && visible.length) {
-                    e.preventDefault();
-                    var idx = visible.indexOf(dropdown.querySelector('.project-search-option.active'));
-                    idx = idx < 0 ? 0 : Math.min(idx + 1, visible.length - 1);
-                    visible.forEach(function (o, i) { o.classList.toggle('active', i === idx); });
-                    visible[idx].scrollIntoView({ block: 'nearest' });
-                } else if (e.key === 'ArrowUp' && visible.length) {
-                    e.preventDefault();
-                    var idx = visible.indexOf(dropdown.querySelector('.project-search-option.active'));
-                    idx = idx < 0 ? visible.length - 1 : Math.max(idx - 1, 0);
-                    visible.forEach(function (o, i) { o.classList.toggle('active', i === idx); });
-                    visible[idx].scrollIntoView({ block: 'nearest' });
-                } else if (e.key === 'Enter') {
-                    var active = dropdown.querySelector('.project-search-option.active');
-                    if (active && !active.classList.contains('hidden-by-filter')) {
-                        e.preventDefault();
-                        selectOption(active);
-                    }
-                }
-            });
-
+        function filterOptions() {
+            var q = (input.value || '').trim().toLowerCase();
             options.forEach(function (opt) {
-                opt.addEventListener('click', function () {
-                    selectOption(opt);
-                });
-            });
-
-            document.addEventListener('click', function (e) {
-                if (!wrapEl.contains(e.target)) hideDropdown();
-            });
-
-            input.addEventListener('blur', function () {
-                setTimeout(function () {
-                    if (!dropdown.contains(document.activeElement) && document.activeElement !== input) hideDropdown();
-                }, 150);
+                var label = (opt.getAttribute('data-label') || opt.textContent || '').toLowerCase();
+                if (!q || label.indexOf(q) !== -1) {
+                    opt.classList.remove('hidden-by-filter');
+                } else {
+                    opt.classList.add('hidden-by-filter');
+                }
             });
         }
 
-        initProjectSearch('#addTaskModal .project-search-wrap', 'project_id', 'addTaskProjectDropdown');
+        function showDropdown() {
+            filterOptions();
+            dropdown.removeAttribute('hidden');
+            input.setAttribute('aria-expanded', 'true');
+        }
 
-        initProjectSearch('.filters-clean .project-search-wrap', 'filter_project', 'filterProjectDropdown');
+        function hideDropdown() {
+            dropdown.setAttribute('hidden', '');
+            input.setAttribute('aria-expanded', 'false');
+        }
 
-        document.getElementById('addTaskModal').addEventListener('show.bs.modal', function () {
+        function selectOption(opt) {
+            var val = opt.getAttribute('data-value');
+            var label = opt.getAttribute('data-label') || opt.textContent || '';
+            hidden.value = val || '';
+            input.value = label;
+            hideDropdown();
+            if (onSelect) onSelect(val, label);
+        }
+
+        input.addEventListener('focus', function () { showDropdown(); });
+        input.addEventListener('input', function () { showDropdown(); });
+
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                hideDropdown();
+                return;
+            }
+
+            var visible = Array.prototype.filter.call(options, function (o) {
+                return !o.classList.contains('hidden-by-filter');
+            });
+
+            if (e.key === 'ArrowDown' && visible.length) {
+                e.preventDefault();
+                var idxDown = visible.indexOf(dropdown.querySelector('.project-search-option.active'));
+                idxDown = idxDown < 0 ? 0 : Math.min(idxDown + 1, visible.length - 1);
+                visible.forEach(function (o, i) { o.classList.toggle('active', i === idxDown); });
+                visible[idxDown].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'ArrowUp' && visible.length) {
+                e.preventDefault();
+                var idxUp = visible.indexOf(dropdown.querySelector('.project-search-option.active'));
+                idxUp = idxUp < 0 ? visible.length - 1 : Math.max(idxUp - 1, 0);
+                visible.forEach(function (o, i) { o.classList.toggle('active', i === idxUp); });
+                visible[idxUp].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter') {
+                var active = dropdown.querySelector('.project-search-option.active');
+                if (active && !active.classList.contains('hidden-by-filter')) {
+                    e.preventDefault();
+                    selectOption(active);
+                }
+            }
+        });
+
+        options.forEach(function (opt) {
+            opt.addEventListener('click', function () {
+                selectOption(opt);
+            });
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!wrapEl.contains(e.target)) hideDropdown();
+        });
+
+        input.addEventListener('blur', function () {
+            setTimeout(function () {
+                if (!dropdown.contains(document.activeElement) && document.activeElement !== input) hideDropdown();
+            }, 150);
+        });
+    }
+
+    initProjectSearch('#addTaskModal .project-search-wrap', 'project_id', 'addTaskProjectDropdown');
+    initProjectSearch('.admin-tasks-filters-card .project-search-wrap', 'filter_project', 'filterProjectDropdown');
+
+    var addModal = document.getElementById('addTaskModal');
+    if (addModal) {
+        addModal.addEventListener('show.bs.modal', function () {
             var pid = document.getElementById('project_id');
             var inp = document.querySelector('#addTaskModal .project-search-input');
             if (pid && inp) {
@@ -812,6 +368,19 @@
                 inp.value = '';
             }
         });
-    })();
+    }
+
+    document.querySelectorAll('.admin-tasks-row[data-task-url]').forEach(function (row) {
+        row.addEventListener('click', function (event) {
+            if (event.target.closest('[data-stop-row-click="1"], a, button, form, .modal')) {
+                return;
+            }
+            var url = row.getAttribute('data-task-url');
+            if (url) {
+                window.location = url;
+            }
+        });
+    });
+})();
 </script>
 {% endblock %}

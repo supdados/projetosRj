@@ -3,135 +3,140 @@
 {% block title %}{{ task.titulo }} - Tarefas - ProjetosRJ{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4" style="max-width: 1100px;">
+<div class="container-fluid py-4 task-detail-v2">
     <div class="row">
         <div class="col-12">
-            <!-- Breadcrumb + Voltar (acima do card) -->
-            <div class="task-view-top-row">
-                <nav class="task-view-breadcrumb" aria-label="Navegação">
-                    <a href="{{ url_for('main.list_tasks') }}" class="task-breadcrumb-link">Tarefas</a>
-                    <span class="task-breadcrumb-sep">/</span>
-                    <span class="task-breadcrumb-current" aria-current="page">{{ task.titulo }}</span>
-                </nav>
-                <a href="{{ url_for('main.list_tasks') }}" class="btn-task-action btn-task-back btn-task-back-above"
-                    title="Voltar para Tarefas">
-                    <i class="fas fa-arrow-left"></i>
-                    <span class="btn-task-action-label">Voltar</span>
-                </a>
-            </div>
+            <section class="task-detail-v2-top">
+                <!-- Breadcrumb + Voltar (acima do card) -->
+                <div class="task-view-top-row">
+                    <nav class="task-view-breadcrumb" aria-label="Navegação">
+                        <a href="{{ url_for('main.list_tasks') }}" class="task-breadcrumb-link">Tarefas</a>
+                        <span class="task-breadcrumb-sep">/</span>
+                        <span class="task-breadcrumb-current" aria-current="page">{{ task.titulo }}</span>
+                    </nav>
+                    <a href="{{ url_for('main.list_tasks') }}" class="btn-task-action btn-task-back btn-task-back-above"
+                        title="Voltar para Tarefas">
+                        <i class="fas fa-arrow-left"></i>
+                        <span class="btn-task-action-label">Voltar</span>
+                    </a>
+                </div>
+            </section>
 
-            <!-- Task Header refinado (estilo ClickUp / Linear) -->
-            <div class="task-header-refined" id="taskHeaderRefined" data-task-id="{{ task.id }}"
-                data-edit-url="{{ url_for('main.edit_task', task_id=task.id) }}"
-                data-project-label="{% if task.project %}{{ task.project.titulo }}{% else %}Sem projeto{% endif %}"
-                data-project-id="{{ task.project_id or '' }}">
-                <div class="task-header-refined-inner">
-                    <div class="task-header-title-row">
-                        <div class="task-title-block">
-                            <span class="task-title-icon" aria-hidden="true">
-                                <i class="fas fa-clipboard-list"></i>
-                            </span>
-                            <div class="task-title-and-project" id="taskHeaderView">
-                                <h1 class="task-title-refined">{{ task.titulo }}</h1>
-                                {% if task.project %}
-                                <a href="{{ url_for('main.project_detail', project_id=task.project.id) }}"
-                                    class="task-project-badge-refined">
-                                    <i class="fas fa-link"></i>
-                                    <span>{{ task.project.titulo }}</span>
-                                </a>
-                                {% else %}
-                                <span class="task-project-badge-refined task-project-badge-neutral task-project-empty">
-                                    <i class="fas fa-inbox"></i>
-                                    <span class="no-project-label">Sem projeto</span>
-                                    <span class="no-project-label-hover">+ adicionar projeto referente</span>
+            <section class="task-detail-v2-header">
+                <!-- Task Header refinado (estilo ClickUp / Linear) -->
+                <div class="task-header-refined" id="taskHeaderRefined" data-task-id="{{ task.id }}"
+                    data-edit-url="{{ url_for('main.edit_task', task_id=task.id) }}"
+                    data-project-label="{% if task.project %}{{ task.project.titulo }}{% else %}Sem projeto{% endif %}"
+                    data-project-id="{{ task.project_id or '' }}">
+                    <div class="task-header-refined-inner">
+                        <div class="task-header-title-row">
+                            <div class="task-title-block">
+                                <span class="task-title-icon" aria-hidden="true">
+                                    <i class="fas fa-clipboard-list"></i>
                                 </span>
-                                {% endif %}
-                                <!-- Popover só para adicionar projeto (ao clicar em "Sem projeto") -->
-                                <div class="task-add-project-popover" id="taskAddProjectPopover" hidden>
-                                    <input type="text" class="form-control project-search-input"
-                                        id="taskAddProjectPopoverInput" placeholder="Digite para filtrar projetos..."
-                                        autocomplete="off">
-                                    <input type="hidden" id="taskAddProjectPopoverId">
-                                    <div class="project-search-dropdown" id="taskAddProjectPopoverDropdown"
-                                        role="listbox"></div>
-                                </div>
-                            </div>
-                            <div class="task-header-edit-form" id="taskHeaderEdit" hidden>
-                                <input type="text" class="task-edit-titulo-input" id="taskEditTitulo"
-                                    value="{{ task.titulo }}" placeholder="Título da tarefa">
-                                <div class="task-edit-project-wrap project-search-wrap task-header-project-search">
-                                    <div class="task-edit-project-chip-wrap" id="taskEditProjectChipWrap"></div>
-                                    <input type="text" class="form-control project-search-input task-edit-project-input"
-                                        id="taskEditProjectInput" placeholder="Digite para filtrar projetos..."
-                                        autocomplete="off" aria-haspopup="listbox">
-                                    <input type="hidden" id="taskEditProjectId" value="{{ task.project_id or '' }}">
-                                    <div class="project-search-dropdown" id="taskEditProjectDropdown" role="listbox"
-                                        hidden>
-                                        <div class="project-search-option" data-value="" data-label="Sem projeto">Sem
-                                            projeto</div>
-                                        {% for project in projects %}
-                                        <div class="project-search-option" data-value="{{ project.id }}"
-                                            data-label="{{ project.titulo }}">{{ project.titulo }}</div>
-                                        {% endfor %}
+                                <div class="task-title-and-project" id="taskHeaderView">
+                                    <h1 class="task-title-refined">{{ task.titulo }}</h1>
+                                    {% if task.project %}
+                                    <a href="{{ url_for('main.project_detail', project_id=task.project.id) }}"
+                                        class="task-project-badge-refined">
+                                        <i class="fas fa-link"></i>
+                                        <span>{{ task.project.titulo }}</span>
+                                    </a>
+                                    {% else %}
+                                    <span class="task-project-badge-refined task-project-badge-neutral task-project-empty">
+                                        <i class="fas fa-inbox"></i>
+                                        <span class="no-project-label">Sem projeto</span>
+                                        <span class="no-project-label-hover">+ adicionar projeto referente</span>
+                                    </span>
+                                    {% endif %}
+                                    <!-- Popover só para adicionar projeto (ao clicar em "Sem projeto") -->
+                                    <div class="task-add-project-popover" id="taskAddProjectPopover" hidden>
+                                        <input type="text" class="form-control project-search-input"
+                                            id="taskAddProjectPopoverInput" placeholder="Digite para filtrar projetos..."
+                                            autocomplete="off">
+                                        <input type="hidden" id="taskAddProjectPopoverId">
+                                        <div class="project-search-dropdown" id="taskAddProjectPopoverDropdown"
+                                            role="listbox"></div>
                                     </div>
                                 </div>
-                                <button type="button" class="btn-task-action btn-task-save-edit" id="taskHeaderSave"
-                                    title="Salvar"><i class="fas fa-check"></i></button>
-                                <button type="button" class="btn-task-action btn-task-cancel-edit" id="taskHeaderCancel"
-                                    title="Cancelar"><i class="fas fa-times"></i></button>
+                                <div class="task-header-edit-form" id="taskHeaderEdit" hidden>
+                                    <input type="text" class="task-edit-titulo-input" id="taskEditTitulo"
+                                        value="{{ task.titulo }}" placeholder="Título da tarefa">
+                                    <div class="task-edit-project-wrap project-search-wrap task-header-project-search">
+                                        <div class="task-edit-project-chip-wrap" id="taskEditProjectChipWrap"></div>
+                                        <input type="text" class="form-control project-search-input task-edit-project-input"
+                                            id="taskEditProjectInput" placeholder="Digite para filtrar projetos..."
+                                            autocomplete="off" aria-haspopup="listbox">
+                                        <input type="hidden" id="taskEditProjectId" value="{{ task.project_id or '' }}">
+                                        <div class="project-search-dropdown" id="taskEditProjectDropdown" role="listbox"
+                                            hidden>
+                                            <div class="project-search-option" data-value="" data-label="Sem projeto">Sem
+                                                projeto</div>
+                                            {% for project in projects %}
+                                            <div class="project-search-option" data-value="{{ project.id }}"
+                                                data-label="{{ project.titulo }}">{{ project.titulo }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-task-action btn-task-save-edit" id="taskHeaderSave"
+                                        title="Salvar"><i class="fas fa-check"></i></button>
+                                    <button type="button" class="btn-task-action btn-task-cancel-edit" id="taskHeaderCancel"
+                                        title="Cancelar"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                            <div class="task-header-actions-refined">
+                                <button type="button" class="btn-task-action btn-task-edit-header" id="btnEditTaskHeader"
+                                    title="Editar tarefa">
+                                    <i class="fas fa-pen"></i>
+                                    <span class="btn-task-action-label">Editar</span>
+                                </button>
+                                <button type="button" class="btn-task-action btn-task-danger" data-bs-toggle="modal"
+                                    data-bs-target="#deleteTaskModal" title="Excluir tarefa">
+                                    <i class="fas fa-trash-alt"></i>
+                                    <span class="btn-task-action-label">Excluir</span>
+                                </button>
                             </div>
                         </div>
-                        <div class="task-header-actions-refined">
-                            <button type="button" class="btn-task-action btn-task-edit-header" id="btnEditTaskHeader"
-                                title="Editar tarefa">
-                                <i class="fas fa-pen"></i>
-                                <span class="btn-task-action-label">Editar</span>
-                            </button>
-                            <button type="button" class="btn-task-action btn-task-danger" data-bs-toggle="modal"
-                                data-bs-target="#deleteTaskModal" title="Excluir tarefa">
-                                <i class="fas fa-trash-alt"></i>
-                                <span class="btn-task-action-label">Excluir</span>
-                            </button>
+                        <div class="task-header-meta-refined">
+                            <span class="task-meta-pill task-meta-pill-neutral">
+                                <i class="fas fa-user"></i>
+                                <span>Criado por {{ task.created_by.name }}</span>
+                            </span>
+                            <span class="task-meta-pill task-meta-pill-neutral">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>{{ task.created_at|local_datetime }}</span>
+                            </span>
+                            <span class="task-meta-pill task-meta-pill-neutral">
+                                <i class="fas fa-list-ul"></i>
+                                <span>{{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}</span>
+                            </span>
                         </div>
                     </div>
-                    <div class="task-header-meta-refined">
-                        <span class="task-meta-pill task-meta-pill-neutral">
-                            <i class="fas fa-user"></i>
-                            <span>Criado por {{ task.created_by.name }}</span>
-                        </span>
-                        <span class="task-meta-pill task-meta-pill-neutral">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>{{ task.created_at|local_datetime }}</span>
-                        </span>
-                        <span class="task-meta-pill task-meta-pill-neutral">
-                            <i class="fas fa-list-ul"></i>
-                            <span>{{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}</span>
-                        </span>
+                </div>
+            </section>
+
+            <section class="task-detail-v2-items">
+                <!-- Items Header -->
+                <div class="items-header-clean mt-4">
+                    <div class="header-info">
+                        <h5 class="items-title-clean">
+                            <i class="fas fa-list"></i>
+                            Itens da Tarefa
+                        </h5>
+                        <span class="header-count">{{ task.items|length }} item{{ 's' if task.items|length != 1 else ''
+                            }}</span>
                     </div>
+                    <button type="button" class="btn-new-clean" id="btnFocusAddItem" title="Ir para adicionar item">
+                        <i class="fas fa-plus"></i>
+                        Novo Item
+                    </button>
                 </div>
-            </div>
 
-            <!-- Items Header -->
-            <div class="items-header-clean mt-4">
-                <div class="header-info">
-                    <h5 class="items-title-clean">
-                        <i class="fas fa-list"></i>
-                        Itens da Tarefa
-                    </h5>
-                    <span class="header-count">{{ task.items|length }} item{{ 's' if task.items|length != 1 else ''
-                        }}</span>
-                </div>
-                <button type="button" class="btn-new-clean" id="btnFocusAddItem" title="Ir para adicionar item">
-                    <i class="fas fa-plus"></i>
-                    Novo Item
-                </button>
-            </div>
-
-            <!-- Items List (estilo ClickUp / lista compacta) -->
-            <div class="task-items-list" data-task-id="{{ task.id }}"
-                data-task-has-project="{{ '1' if task.project_id else '' }}"
-                data-add-item-url="{{ url_for('main.add_task_item', task_id=task.id) }}"
-                data-sugestoes-url="{{ url_for('main.get_task_assignable_users', task_id=task.id) }}">
+                <!-- Items List (estilo ClickUp / lista compacta) -->
+                <div class="task-items-list" data-task-id="{{ task.id }}"
+                    data-task-has-project="{{ '1' if task.project_id else '' }}"
+                    data-add-item-url="{{ url_for('main.add_task_item', task_id=task.id) }}"
+                    data-sugestoes-url="{{ url_for('main.get_task_assignable_users', task_id=task.id) }}">
                 <!-- Cabeçalho das colunas -->
                 <div class="task-item-header-row">
                     <div class="task-item-bar task-item-bar-header"></div>
@@ -225,7 +230,7 @@
                 </div>
 
                 <!-- Modal de Exclusão do Item -->
-                <div class="modal fade" id="deleteItemModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal fade task-detail-v2-modal" id="deleteItemModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content modal-clean">
                             <div class="modal-header-clean">
@@ -324,12 +329,13 @@
                 </div>
                 {% endif %}
             </div>
+            </section>
         </div>
     </div>
 </div>
 
 <!-- Modal Adicionar Item -->
-<div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade task-detail-v2-modal" id="addItemModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content modal-clean">
             <form id="itemForm" action="{{ url_for('main.add_task_item', task_id=task.id) }}" method="POST">
@@ -383,7 +389,7 @@
 </div>
 
 <!-- Modal Excluir Tarefa -->
-<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade task-detail-v2-modal" id="deleteTaskModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-clean">
             <div class="modal-header-clean">
@@ -422,1474 +428,6 @@
     </div>
 </div>
 
-<style>
-    /* ----- Linha superior: Breadcrumb + Voltar ----- */
-    .task-view-top-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-bottom: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .task-view-top-row .task-view-breadcrumb {
-        margin-bottom: 0;
-    }
-
-    /* ----- Breadcrumb minimal (estilo ClickUp) ----- */
-    .task-view-breadcrumb {
-        font-size: 0.8125rem;
-        color: #64748b;
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-        flex-wrap: wrap;
-    }
-
-    .task-breadcrumb-link {
-        color: var(--primary-color);
-        text-decoration: none;
-        font-weight: 500;
-        transition: color 0.15s;
-    }
-
-    .task-breadcrumb-link:hover {
-        color: var(--primary-dark);
-        text-decoration: underline;
-    }
-
-    .task-breadcrumb-sep {
-        color: #cbd5e1;
-        user-select: none;
-    }
-
-    .task-breadcrumb-current {
-        color: #1e293b;
-        font-weight: 600;
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    /* ----- Task Header refinado (card clara, estilo ClickUp / Linear) ----- */
-    .task-header-refined {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        margin-bottom: 1.5rem;
-        overflow: visible;
-        position: relative;
-        z-index: 20;
-    }
-
-    .task-header-refined-inner {
-        padding: 1.5rem 1.75rem;
-    }
-
-    .task-header-title-row {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 1.25rem;
-        margin-bottom: 1.25rem;
-    }
-
-    .task-title-block {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.75rem;
-        min-width: 0;
-        flex: 1;
-    }
-
-    .task-title-icon {
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
-        border-radius: 10px;
-        background: linear-gradient(135deg, rgba(0, 90, 146, 0.12) 0%, rgba(0, 90, 146, 0.06) 100%);
-        color: var(--primary-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
-    }
-
-    .task-title-and-project {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        min-width: 0;
-        position: relative;
-    }
-
-    .task-title-refined {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #0f172a;
-        margin: 0;
-        line-height: 1.35;
-        letter-spacing: -0.02em;
-    }
-
-    .task-project-badge-refined {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.35rem 0.75rem;
-        font-size: 0.8125rem;
-        font-weight: 600;
-        border-radius: 8px;
-        background: rgba(0, 90, 146, 0.1);
-        color: var(--primary-color);
-        text-decoration: none;
-        border: 1px solid rgba(0, 90, 146, 0.2);
-        transition: background 0.15s, border-color 0.15s;
-    }
-
-    .task-project-badge-refined:hover {
-        background: rgba(0, 90, 146, 0.16);
-        border-color: rgba(0, 90, 146, 0.3);
-        color: var(--primary-dark);
-    }
-
-    .task-project-badge-refined i {
-        font-size: 0.75rem;
-        opacity: 0.9;
-    }
-
-    .task-project-badge-neutral {
-        background: #f1f5f9;
-        color: #64748b;
-        border-color: #e2e8f0;
-        cursor: default;
-    }
-
-    .task-project-badge-neutral:hover {
-        background: #f1f5f9;
-        border-color: #e2e8f0;
-        color: #64748b;
-    }
-
-    .task-project-empty .no-project-label-hover {
-        display: none;
-    }
-
-    .task-project-empty:hover .no-project-label,
-    .task-project-empty.popover-open .no-project-label {
-        display: none;
-    }
-
-    .task-project-empty:hover .no-project-label-hover,
-    .task-project-empty.popover-open .no-project-label-hover {
-        display: inline;
-    }
-
-    .task-project-empty:hover>i,
-    .task-project-empty.popover-open>i {
-        display: none;
-    }
-
-    .task-project-empty {
-        cursor: pointer;
-    }
-
-    .task-add-project-popover {
-        position: absolute;
-        left: 0;
-        top: 100%;
-        margin-top: 6px;
-        min-width: 220px;
-        padding: 8px;
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
-        z-index: 1100;
-    }
-
-    .task-add-project-popover[hidden] {
-        display: none !important;
-    }
-
-    .task-add-project-popover .project-search-input {
-        margin-bottom: 4px;
-    }
-
-    .task-add-project-popover .project-search-dropdown {
-        position: relative;
-        top: 0;
-        max-height: 200px;
-    }
-
-    /* Formulário de edição do header (título + projeto) */
-    .task-header-edit-form {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        flex: 1;
-        min-width: 0;
-        overflow: visible;
-    }
-
-    .task-header-edit-form[hidden] {
-        display: none !important;
-    }
-
-    .task-edit-titulo-input {
-        flex: 1;
-        min-width: 120px;
-        max-width: 400px;
-        padding: 0.5rem 0.75rem;
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #0f172a;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        outline: none;
-    }
-
-    .task-edit-titulo-input:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px rgba(0, 90, 146, 0.15);
-    }
-
-    /* Dropdown de projeto (edição do header) */
-    .project-search-wrap {
-        position: relative;
-    }
-
-    .project-search-wrap .project-search-input {
-        width: 100%;
-    }
-
-    .project-search-dropdown {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 100%;
-        margin-top: 2px;
-        max-height: 220px;
-        overflow-y: auto;
-        background: #fff;
-        border: 1px solid rgba(0, 0, 0, 0.12);
-        border-radius: 8px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-        z-index: 1100;
-    }
-
-    .project-search-dropdown[hidden] {
-        display: none !important;
-    }
-
-    .project-search-option {
-        padding: 8px 12px;
-        font-size: 0.95rem;
-        cursor: pointer;
-        color: #374151;
-    }
-
-    .project-search-option:hover,
-    .project-search-option.active {
-        background: rgba(0, 90, 146, 0.08);
-        color: var(--primary-color);
-    }
-
-    .project-search-option.hidden-by-filter {
-        display: none !important;
-    }
-
-    .task-header-project-search {
-        max-width: 220px;
-        overflow: visible;
-    }
-
-    .task-edit-project-wrap {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 6px;
-        min-height: 36px;
-    }
-
-    .task-edit-project-chip-wrap {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 4px;
-    }
-
-    .task-edit-project-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 8px;
-        font-size: 0.8125rem;
-        font-weight: 600;
-        border-radius: 8px;
-        background: rgba(0, 90, 146, 0.12);
-        color: var(--primary-color);
-        border: 1px solid rgba(0, 90, 146, 0.2);
-    }
-
-    .task-edit-project-chip-remove {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 16px;
-        height: 16px;
-        padding: 0;
-        border: none;
-        border-radius: 50%;
-        background: rgba(0, 0, 0, 0.15);
-        color: inherit;
-        font-size: 14px;
-        line-height: 1;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
-
-    .task-edit-project-chip-remove:hover {
-        background: rgba(0, 0, 0, 0.3);
-    }
-
-    .task-edit-project-wrap .task-edit-project-input {
-        flex: 1;
-        min-width: 120px;
-    }
-
-    .task-edit-project-wrap.has-chip .task-edit-project-input {
-        display: none;
-    }
-
-    .task-header-project-search .project-search-input {
-        font-size: 0.875rem;
-        padding: 0.45rem 0.65rem;
-    }
-
-    .btn-task-save-edit {
-        background: var(--primary-color);
-        color: #fff;
-        border-color: var(--primary-color);
-    }
-
-    .btn-task-save-edit:hover {
-        background: var(--primary-dark);
-        border-color: var(--primary-dark);
-        color: #fff;
-    }
-
-    .btn-task-cancel-edit:hover {
-        background: #f1f5f9;
-        border-color: #e2e8f0;
-        color: #475569;
-    }
-
-    .task-header-actions-refined {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-shrink: 0;
-    }
-
-    .btn-task-action {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        padding: 0.5rem 0.9rem;
-        font-size: 0.8125rem;
-        font-weight: 600;
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
-        color: #475569;
-        text-decoration: none;
-        cursor: pointer;
-        transition: background 0.15s, border-color 0.15s, color 0.15s;
-    }
-
-    .btn-task-action:hover {
-        background: #f8fafc;
-        border-color: #cbd5e1;
-        color: #334155;
-    }
-
-    .btn-task-action i {
-        font-size: 0.875rem;
-    }
-
-    .btn-task-back:hover {
-        color: var(--primary-color);
-        border-color: rgba(0, 90, 146, 0.3);
-        background: rgba(0, 90, 146, 0.04);
-    }
-
-    .btn-task-danger:hover {
-        border-color: #fecaca;
-        background: #fef2f2;
-        color: #dc2626;
-    }
-
-    .btn-task-action-label {
-        display: none;
-    }
-
-    @media (min-width: 576px) {
-        .btn-task-action-label {
-            display: inline;
-        }
-    }
-
-    /* Pills de metadados (projeto, criado por, data, itens) */
-    .task-header-meta-refined {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .task-meta-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.35rem 0.75rem;
-        font-size: 0.8125rem;
-        font-weight: 500;
-        border-radius: 8px;
-        color: #475569;
-        background: #f1f5f9;
-        border: 1px solid transparent;
-    }
-
-    .task-meta-pill i {
-        font-size: 0.75rem;
-        color: #64748b;
-        opacity: 0.9;
-    }
-
-    .task-meta-pill-project {
-        background: rgba(0, 90, 146, 0.08);
-        color: var(--primary-color);
-        text-decoration: none;
-        border-color: rgba(0, 90, 146, 0.15);
-        transition: background 0.15s, border-color 0.15s;
-    }
-
-    .task-meta-pill-project:hover {
-        background: rgba(0, 90, 146, 0.14);
-        border-color: rgba(0, 90, 146, 0.25);
-        color: var(--primary-dark);
-    }
-
-    .task-meta-pill-project i {
-        color: var(--primary-color);
-    }
-
-    .task-meta-pill-neutral {
-        color: #64748b;
-    }
-
-    /* Items Header */
-    .items-header-clean {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1.2rem 0;
-        border-bottom: 2px solid rgba(0, 90, 146, 0.1);
-        margin-bottom: 1rem;
-    }
-
-    .items-title-clean {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #1a1a1a;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-    }
-
-    .header-info {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .header-count {
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: #6c757d;
-        padding: 0.3rem 0.8rem;
-        background: rgba(0, 90, 146, 0.08);
-        border-radius: 20px;
-    }
-
-    .btn-new-clean {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.6rem 1.2rem;
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.85rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-new-clean:hover {
-        background: var(--primary-dark);
-    }
-
-    /* Items List - estilo ClickUp / lista compacta */
-    .task-items-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
-        overflow: hidden;
-    }
-
-    /* Cabeçalho das colunas (mesma grade das linhas) */
-    .task-item-header-row {
-        display: flex;
-        border-bottom: 2px solid rgba(0, 90, 146, 0.15);
-        background: rgba(0, 90, 146, 0.04);
-    }
-
-    .task-item-bar-header {
-        width: 3px;
-        flex-shrink: 0;
-        background: transparent;
-    }
-
-    .task-item-header-row .task-item-main {
-        padding: 8px 12px;
-    }
-
-    .task-item-header {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 100px 160px 36px 30px;
-        align-items: center;
-        gap: 10px 8px;
-        width: 100%;
-    }
-
-    .task-item-col-desc,
-    .task-item-col-status,
-    .task-item-col-responsavel,
-    .task-item-col-comments,
-    .task-item-col-actions {
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #6b7280;
-    }
-
-    .task-item-col-comments,
-    .task-item-col-actions {
-        text-align: center;
-    }
-
-    .task-item-col-comments i,
-    .task-item-col-actions i {
-        font-size: 12px;
-    }
-
-    .task-item-row {
-        display: flex;
-        min-height: 0;
-        border-bottom: 1px solid #e5e7eb;
-        background: #fff;
-    }
-
-    .task-item-row:last-child {
-        border-bottom: none;
-    }
-
-    .task-item-row:hover {
-        background: #fafbfc;
-    }
-
-    .task-item-bar {
-        width: 3px;
-        flex-shrink: 0;
-    }
-
-    .task-item-bar.status-programado {
-        background: #9ca3af;
-    }
-
-    .task-item-bar.status-em_andamento {
-        background: #0ea5e9;
-    }
-
-    .task-item-bar.status-validacao {
-        background: #eab308;
-    }
-
-    .task-item-bar.status-finalizado {
-        background: #22c55e;
-    }
-
-    /* Linha inline: Adicionar novo item */
-    .task-item-add-row {
-        border-bottom: 1px solid #e5e7eb;
-        background: #fff;
-    }
-
-    .task-item-add-placeholder {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        cursor: pointer;
-        color: #6b7280;
-        font-size: 13px;
-        transition: background 0.15s, color 0.15s;
-    }
-
-    .task-item-add-placeholder:hover {
-        background: #f9fafb;
-        color: var(--primary-color);
-    }
-
-    .task-item-add-dashes {
-        color: #9ca3af;
-        font-weight: 300;
-    }
-
-    .task-item-add-form {
-        display: none;
-        padding: 0;
-    }
-
-    .task-item-add-form[hidden] {
-        display: none !important;
-    }
-
-    .task-item-add-form:not([hidden]) {
-        display: flex;
-    }
-
-    .task-item-add-bar {
-        width: 3px;
-        flex-shrink: 0;
-        background: #d1d5db;
-    }
-
-    .task-item-add-main {
-        flex: 1;
-        padding: 8px 12px;
-    }
-
-    .task-item-add-line {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 100px 160px 36px 30px;
-        align-items: start;
-        gap: 10px 8px;
-        width: 100%;
-    }
-
-    .task-item-line-edit {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 100px 160px;
-        align-items: start;
-        gap: 10px 8px;
-        width: 100%;
-    }
-
-    .task-item-line-edit .task-item-edit-desc,
-    .task-item-add-desc {
-        min-width: 0;
-    }
-
-    .task-item-add-desc {
-        padding: 6px 8px;
-        font-size: 13px;
-        line-height: 1.45;
-        border: 1px solid #e5e7eb;
-        border-radius: 4px;
-        width: 100%;
-        min-height: 32px;
-        resize: none;
-        overflow: hidden;
-        white-space: pre-wrap;
-        font-family: inherit;
-        box-sizing: border-box;
-    }
-
-    .task-item-add-desc:focus {
-        outline: none;
-        border-color: var(--primary-color);
-    }
-
-    .task-item-add-status {
-        font-size: 11px;
-        padding: 4px 6px;
-        border: 1px solid #e5e7eb;
-        border-radius: 4px;
-        background: #fff;
-        width: 100%;
-        max-width: 100px;
-        box-sizing: border-box;
-    }
-
-    .task-item-add-responsavel {
-        width: 100%;
-        max-width: 160px;
-        padding: 6px 8px;
-        font-size: 12px;
-        border: 1px solid #e5e7eb;
-        border-radius: 4px;
-        white-space: normal;
-        word-wrap: break-word;
-        overflow: visible;
-        box-sizing: border-box;
-    }
-
-    .responsavel-mention-wrap {
-        position: relative;
-        display: inline-block;
-        width: 100%;
-        max-width: 160px;
-        min-height: 36px;
-        align-self: start;
-    }
-
-    /* Campo responsável: contenteditable com chips (cresce para baixo ao não caber) */
-    .contenteditable-responsavel {
-        min-height: 28px;
-        max-width: 160px;
-        width: 100%;
-        padding: 4px 8px;
-        font-size: 12px;
-        line-height: 1.4;
-        border: 1px solid #e5e7eb;
-        border-radius: 4px;
-        background: #fff;
-        outline: none;
-        overflow: visible;
-        white-space: normal;
-        word-wrap: break-word;
-        box-sizing: border-box;
-    }
-
-    .contenteditable-responsavel.task-item-add-responsavel {
-        width: 100%;
-        max-width: 160px;
-        min-width: 0;
-        white-space: normal;
-        word-wrap: break-word;
-        word-break: break-word;
-        overflow-x: hidden;
-        overflow-y: visible;
-    }
-
-    .contenteditable-responsavel.task-item-add-responsavel:empty::before {
-        white-space: nowrap;
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .task-item-add-line .responsavel-mention-wrap {
-        width: 100%;
-        min-width: 0;
-        max-width: 160px;
-    }
-
-    .contenteditable-responsavel:focus {
-        border-color: var(--primary-color);
-    }
-
-    .contenteditable-responsavel:empty::before {
-        content: attr(data-placeholder);
-        color: #9ca3af;
-    }
-
-    .responsavel-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 2px 4px 2px 6px;
-        border-radius: 4px;
-        font-weight: 500;
-        margin: 0 4px 4px 0;
-        -webkit-user-select: none;
-        user-select: none;
-        flex-shrink: 0;
-    }
-
-    .responsavel-chip[contenteditable="false"] {
-        cursor: default;
-    }
-
-    /* Cores diferentes por chip (múltiplos usuários) */
-    .responsavel-chip-0 {
-        background: rgba(14, 165, 233, 0.18);
-        color: #0369a1;
-    }
-
-    .responsavel-chip-1 {
-        background: rgba(139, 92, 246, 0.18);
-        color: #5b21b6;
-    }
-
-    .responsavel-chip-2 {
-        background: rgba(5, 150, 105, 0.18);
-        color: #047857;
-    }
-
-    .responsavel-chip-3 {
-        background: rgba(217, 119, 6, 0.18);
-        color: #b45309;
-    }
-
-    .responsavel-chip-4 {
-        background: rgba(220, 38, 38, 0.18);
-        color: #b91c1c;
-    }
-
-    .responsavel-chip-remove {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 14px;
-        height: 14px;
-        padding: 0;
-        border: none;
-        border-radius: 50%;
-        background: rgba(0, 0, 0, 0.2);
-        color: inherit;
-        font-size: 12px;
-        line-height: 1;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
-
-    .responsavel-chip-remove:hover {
-        background: rgba(0, 0, 0, 0.35);
-    }
-
-    /* Dropdown de sugestões @ (responsável) */
-    .responsavel-suggestions {
-        position: fixed;
-        z-index: 1050;
-        min-width: 160px;
-        max-height: 200px;
-        overflow-y: auto;
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        padding: 4px 0;
-    }
-
-    .responsavel-suggestions[hidden] {
-        display: none !important;
-    }
-
-    .responsavel-suggestion-item {
-        padding: 6px 12px;
-        font-size: 13px;
-        cursor: pointer;
-        color: #374151;
-    }
-
-    .responsavel-suggestion-item:hover,
-    .responsavel-suggestion-item.active {
-        background: rgba(0, 90, 146, 0.08);
-        color: var(--primary-color);
-    }
-
-    .responsavel-suggestions-empty {
-        padding: 8px 12px;
-        font-size: 12px;
-        color: #9ca3af;
-    }
-
-    .task-item-add-hint {
-        margin-top: 6px;
-        font-size: 11px;
-        color: #9ca3af;
-        text-align: right;
-    }
-
-    .task-item-add-hint kbd {
-        display: inline-block;
-        padding: 1px 5px;
-        font-size: 10px;
-        font-family: inherit;
-        color: #6b7280;
-        background: #f3f4f6;
-        border: 1px solid #e5e7eb;
-        border-radius: 3px;
-        line-height: 1.4;
-    }
-
-    .task-item-main {
-        flex: 1;
-        min-width: 0;
-        padding: 8px 12px;
-    }
-
-    .task-item-line {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 100px 160px 36px 30px;
-        align-items: center;
-        gap: 10px 8px;
-        width: 100%;
-    }
-
-    .task-item-desc-wrap {
-        display: inline-flex;
-        align-items: flex-start;
-        gap: 6px;
-        justify-self: start;
-        max-width: 100%;
-        min-width: 0;
-    }
-
-    .task-item-desc {
-        margin: 0;
-        font-size: 13px;
-        line-height: 1.45;
-        color: #374151;
-        white-space: pre-wrap;
-        word-break: break-word;
-        min-width: 0;
-        max-width: 100%;
-        flex: 0 1 auto;
-    }
-
-    .task-item-desc-edit-btn {
-        width: 24px;
-        height: 24px;
-        min-width: 24px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        margin-top: 1px;
-        padding: 0;
-        border: none;
-        border-radius: 4px;
-        background: transparent;
-        color: #6b7280;
-        font-size: 11px;
-        cursor: pointer;
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transition: color 0.15s, background 0.15s;
-    }
-
-    .task-item-row:hover .task-item-desc-edit-btn,
-    .task-item-desc-wrap:focus-within .task-item-desc-edit-btn {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-    }
-
-    .task-item-desc-edit-btn:hover {
-        color: var(--primary-color);
-        background: rgba(0, 90, 146, 0.08);
-    }
-
-    .task-item-desc-wrap.editing .task-item-desc-edit-btn {
-        display: none;
-    }
-
-    .task-item-desc-wrap.editing {
-        display: flex;
-        width: 100%;
-        max-width: none;
-    }
-
-    .task-item-desc-wrap.editing .task-item-desc-editing {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
-
-    .task-item-desc-editing {
-        margin: 0;
-        font-size: 13px;
-        line-height: 1.45;
-        color: #374151;
-        min-width: 0;
-        padding: 4px 6px;
-        border: 1px solid var(--primary-color);
-        border-radius: 4px;
-        background: #fff;
-        width: 100%;
-        box-sizing: border-box;
-        outline: none;
-        font-family: inherit;
-        min-height: 32px;
-        resize: none;
-        overflow: hidden;
-        white-space: pre-wrap;
-    }
-
-    .task-item-meta {
-        display: contents;
-    }
-
-    .task-item-status {
-        font-size: 11px;
-        font-weight: 600;
-        padding: 4px 6px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        width: 100%;
-        max-width: 100px;
-        box-sizing: border-box;
-    }
-
-    .task-item-status:focus {
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Cores por status */
-    .task-item-status.status-programado {
-        background: #9ca3af;
-        color: #fff;
-    }
-
-    .task-item-status.status-em_andamento {
-        background: #0ea5e9;
-        color: #fff;
-    }
-
-    .task-item-status.status-validacao {
-        background: #eab308;
-        color: #1a1a1a;
-    }
-
-    .task-item-status.status-finalizado {
-        background: #22c55e;
-        color: #fff;
-    }
-
-    .task-item-responsavel {
-        font-size: 11px;
-        color: #6b7280;
-        width: 100%;
-        max-width: 160px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: block;
-        box-sizing: border-box;
-    }
-
-    .task-item-responsavel[data-item-id] {
-        cursor: text;
-        padding: 2px 4px;
-        border-radius: 3px;
-        transition: background 0.15s;
-    }
-
-    .task-item-responsavel[data-item-id]:hover {
-        background: rgba(0, 90, 146, 0.04);
-    }
-
-    .responsavel-placeholder {
-        font-style: italic;
-        color: #c4c9d1;
-        font-size: 11px;
-        font-weight: 400;
-    }
-
-    .task-item-comments-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        width: 36px;
-        padding: 2px 6px;
-        background: none;
-        border: none;
-        border-radius: 4px;
-        color: #6b7280;
-        font-size: 12px;
-        cursor: pointer;
-        transition: color 0.15s, background 0.15s;
-        box-sizing: border-box;
-    }
-
-    .task-item-comments-btn:hover {
-        color: var(--primary-color);
-        background: rgba(0, 90, 146, 0.06);
-    }
-
-    .task-item-comments-btn[aria-expanded="true"] {
-        color: var(--primary-color);
-    }
-
-    .task-item-comments-num {
-        font-size: 11px;
-        font-weight: 600;
-    }
-
-    .task-item-actions {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 2px;
-        opacity: 0.6;
-        width: 30px;
-        box-sizing: border-box;
-    }
-
-    .task-item-row:hover .task-item-actions {
-        opacity: 1;
-    }
-
-    .task-item-btn {
-        width: 26px;
-        height: 26px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: none;
-        border: none;
-        border-radius: 4px;
-        color: #6b7280;
-        font-size: 11px;
-        cursor: pointer;
-        transition: color 0.15s, background 0.15s;
-    }
-
-    .task-item-btn:hover {
-        color: #fff;
-    }
-
-    .task-item-del:hover {
-        background: #dc2626;
-    }
-
-    /* Comentários expandidos (compactos) */
-    .task-item-comments {
-        border-top: 1px solid #e5e7eb;
-        background: #f9fafb;
-    }
-
-    .task-item-comments[hidden] {
-        display: none !important;
-    }
-
-    .task-item-comments-inner {
-        padding: 8px 12px 10px;
-    }
-
-    .task-comment {
-        padding: 8px 10px 8px 12px;
-        margin: 6px 0;
-        border-radius: 8px;
-        border-left: 4px solid transparent;
-    }
-
-    .task-comment:last-of-type {
-        margin-bottom: 0;
-    }
-
-    /* Diferenciação por autor: cores distintas na borda e fundo leve */
-    .task-comment-author-0 {
-        border-left-color: #0ea5e9;
-        background: rgba(14, 165, 233, 0.06);
-    }
-
-    .task-comment-author-1 {
-        border-left-color: #8b5cf6;
-        background: rgba(139, 92, 246, 0.06);
-    }
-
-    .task-comment-author-2 {
-        border-left-color: #059669;
-        background: rgba(5, 150, 105, 0.06);
-    }
-
-    .task-comment-author-3 {
-        border-left-color: #d97706;
-        background: rgba(217, 119, 6, 0.06);
-    }
-
-    .task-comment-author-4 {
-        border-left-color: #dc2626;
-        background: rgba(220, 38, 38, 0.06);
-    }
-
-    .task-comment-head {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 2px;
-    }
-
-    .task-comment-user {
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--primary-color);
-    }
-
-    .task-comment-time {
-        font-size: 11px;
-        color: #9ca3af;
-    }
-
-    .task-comment-acts {
-        margin-left: auto;
-        display: flex;
-        gap: 2px;
-    }
-
-    .task-comment-btn {
-        width: 22px;
-        height: 22px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: none;
-        border: none;
-        border-radius: 3px;
-        color: #9ca3af;
-        font-size: 10px;
-        cursor: pointer;
-        padding: 0;
-        transition: color 0.15s, background 0.15s;
-    }
-
-    .task-comment-btn:hover {
-        color: #fff;
-        background: var(--primary-color);
-    }
-
-    .task-comment-btn-del:hover {
-        background: #dc2626 !important;
-    }
-
-    .task-comment-text {
-        margin: 0;
-        font-size: 12px;
-        line-height: 1.5;
-        color: #4b5563;
-        white-space: pre-wrap;
-        padding-left: 0;
-    }
-
-    /* Edição inline de comentário */
-    .task-comment-edit-wrap {
-        margin-top: 4px;
-    }
-
-    .task-comment-edit-input {
-        width: 100%;
-        min-height: 60px;
-        padding: 6px 8px;
-        font-size: 12px;
-        line-height: 1.5;
-        border: 1px solid var(--primary-color);
-        border-radius: 4px;
-        resize: vertical;
-        display: block;
-    }
-
-    .task-comment-edit-input:focus {
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(0, 90, 146, 0.2);
-    }
-
-    .task-comment-edit-hint {
-        display: block;
-        font-size: 11px;
-        color: #9ca3af;
-        margin-top: 4px;
-    }
-
-    .task-comment-form {
-        display: flex;
-        align-items: flex-end;
-        gap: 6px;
-        margin-top: 8px;
-        padding-top: 8px;
-        border-top: 1px solid #e5e7eb;
-    }
-
-    .task-comment-form textarea {
-        flex: 1;
-        min-height: 32px;
-        padding: 6px 8px;
-        font-size: 12px;
-        border: 1px solid #e5e7eb;
-        border-radius: 4px;
-        resize: none;
-    }
-
-    .task-comment-form textarea:focus {
-        outline: none;
-        border-color: var(--primary-color);
-    }
-
-    .task-comment-form button {
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--primary-color);
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        flex-shrink: 0;
-    }
-
-    .task-comment-form button:hover {
-        background: var(--primary-dark);
-    }
-
-    /* Empty State: só "Adicionar novo item" na caixa */
-    .empty-state-items {
-        padding: 0.5rem 1rem;
-        background: rgba(0, 90, 146, 0.03);
-        border-radius: 8px;
-        border: 1px dashed rgba(0, 90, 146, 0.12);
-    }
-
-    .empty-state-items .task-item-add-row.empty-state-add {
-        width: 100%;
-        border: none;
-        background: transparent;
-        padding: 0;
-    }
-
-    .empty-state-items .task-item-add-placeholder {
-        padding: 0.4rem 0;
-        font-size: 0.9rem;
-    }
-
-    .empty-state-items .task-item-add-placeholder:hover {
-        background: rgba(0, 90, 146, 0.06);
-        border-radius: 6px;
-    }
-
-    /* Modal Styles */
-    .modal-clean .modal-content {
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    }
-
-    .modal-header-clean {
-        padding: 1.5rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .modal-icon-clean {
-        width: 44px;
-        height: 44px;
-        background: rgba(255, 193, 7, 0.15);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .modal-icon-clean i {
-        font-size: 1.3rem;
-        color: #ffc107;
-    }
-
-    .modal-title-clean {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin: 0;
-    }
-
-    .modal-subtitle-clean {
-        font-size: 0.8rem;
-        color: #6c757d;
-        margin: 0.2rem 0 0 0;
-    }
-
-    .btn-close-clean {
-        width: 32px;
-        height: 32px;
-        background: transparent;
-        border: none;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-left: auto;
-        cursor: pointer;
-        transition: all 0.2s;
-        color: #6c757d;
-    }
-
-    .btn-close-clean:hover {
-        background: rgba(0, 0, 0, 0.05);
-    }
-
-    .modal-body-clean {
-        padding: 1.5rem;
-    }
-
-    .modal-footer-clean {
-        padding: 1rem 1.5rem;
-        border-top: 1px solid rgba(0, 0, 0, 0.08);
-        display: flex;
-        gap: 0.8rem;
-        justify-content: flex-end;
-    }
-
-    .btn-modal-clean {
-        padding: 0.65rem 1.3rem;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-cancel-clean {
-        background: rgba(0, 0, 0, 0.05);
-        color: #495057;
-    }
-
-    .btn-cancel-clean:hover {
-        background: rgba(0, 0, 0, 0.1);
-    }
-
-    .btn-confirm-delete {
-        background: #dc3545;
-        color: white;
-    }
-
-    .btn-confirm-delete:hover {
-        background: #c82333;
-    }
-</style>
 
 <script>
     // --- Editar tarefa (título e projeto) no header ---
@@ -2177,8 +715,10 @@
         var addStatus = document.getElementById('addItemStatus');
         var addResponsavel = document.getElementById('addItemResponsavel');
         var emptyState = document.getElementById('emptyStateItems');
+        var btnFocusAddItem = document.getElementById('btnFocusAddItem');
 
         if (!listEl || !addRow || !placeholder || !formWrap) return;
+        if (!addDesc || !addStatus || !addResponsavel) return;
 
         var addUrl = listEl.getAttribute('data-add-item-url');
         if (!addUrl) return;
@@ -2258,7 +798,7 @@
                 '<form class="task-comment-form" action="/tarefas/itens/' + item.id + '/comentarios/add" method="POST" data-item-id="' + item.id + '">' +
                 '<textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)" required></textarea>' +
                 '<button type="submit"><i class="fas fa-paper-plane"></i></button></form></div></div></div></div>';
-            var modalHtml = '<div class="modal fade" id="deleteItemModal-' + item.id + '" tabindex="-1" aria-hidden="true">' +
+            var modalHtml = '<div class="modal fade task-detail-v2-modal" id="deleteItemModal-' + item.id + '" tabindex="-1" aria-hidden="true">' +
                 '<div class="modal-dialog modal-dialog-centered">' +
                 '<div class="modal-content modal-clean">' +
                 '<div class="modal-header-clean"><div class="modal-icon-clean"><i class="fas fa-exclamation-circle"></i></div>' +
@@ -2345,10 +885,12 @@
             });
         }
 
-        document.getElementById('btnFocusAddItem').addEventListener('click', function () {
-            addRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            if (formWrap.hasAttribute('hidden')) placeholder.click();
-        });
+        if (btnFocusAddItem) {
+            btnFocusAddItem.addEventListener('click', function () {
+                addRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                if (formWrap.hasAttribute('hidden')) placeholder.click();
+            });
+        }
 
         document.addEventListener('mousedown', function (e) {
             if (formWrap.hasAttribute('hidden')) return;
@@ -2405,12 +947,15 @@
 
     function initResponsavelMention(editableEl, taskId, sugestoesUrl) {
         if (!editableEl || !sugestoesUrl) return;
+        var mentionRoot = editableEl.closest('.task-detail-v2') || document.body;
         if (!responsavelSuggestionsDropdown) {
             responsavelSuggestionsDropdown = document.createElement('div');
             responsavelSuggestionsDropdown.className = 'responsavel-suggestions';
             responsavelSuggestionsDropdown.setAttribute('role', 'listbox');
             responsavelSuggestionsDropdown.setAttribute('hidden', '');
-            document.body.appendChild(responsavelSuggestionsDropdown);
+            mentionRoot.appendChild(responsavelSuggestionsDropdown);
+        } else if (responsavelSuggestionsDropdown.parentNode !== mentionRoot && mentionRoot) {
+            mentionRoot.appendChild(responsavelSuggestionsDropdown);
         }
         var dropdown = responsavelSuggestionsDropdown;
         var activeEditable = null;
@@ -3222,11 +1767,18 @@
     });
 
     // Reset do form quando modal é fechado
-    document.getElementById('addItemModal').addEventListener('hidden.bs.modal', function () {
-        document.getElementById('itemModalTitle').textContent = 'Novo Item';
-        document.getElementById('itemForm').action = '{{ url_for("main.add_task_item", task_id=task.id) }}';
-        document.getElementById('itemForm').reset();
-    });
+    var addItemModalEl = document.getElementById('addItemModal');
+    if (addItemModalEl) {
+        addItemModalEl.addEventListener('hidden.bs.modal', function () {
+            var itemModalTitle = document.getElementById('itemModalTitle');
+            var itemForm = document.getElementById('itemForm');
+            if (itemModalTitle) itemModalTitle.textContent = 'Novo Item';
+            if (itemForm) {
+                itemForm.action = '{{ url_for("main.add_task_item", task_id=task.id) }}';
+                itemForm.reset();
+            }
+        });
+    }
 
     (function applyFocusItemFromUrl() {
         var focusItemId = new URLSearchParams(window.location.search).get('focus_item');
