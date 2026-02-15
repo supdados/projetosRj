@@ -4,923 +4,1197 @@
 
 {% block head_extra %}
 <style>
-    /* ====================================
-       GLASS MORPHISM - PROJETOS PENDENTES
-       ==================================== */
-    
     :root {
-        --primary-color: #005A92;
-        --primary-dark: #004b79;
-        --text-color: #2d3748;
-        --text-muted: #718096;
-        --success-color: #38a169;
-        --warning-color: #d69e2e;
-        --danger-color: #e53e3e;
-        --transition-speed: 0.3s;
-        --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%);
-        --glass-border: rgba(255, 255, 255, 0.18);
-        --glass-shadow: 0 8px 32px rgba(0, 90, 146, 0.08);
+        --pending-bg: #f4f7fb;
+        --pending-border: #dfe8f2;
+        --pending-text: #1f2d3d;
+        --pending-muted: #6c7f95;
+        --pending-card: #ffffff;
+        --pending-shadow: 0 8px 24px rgba(20, 45, 78, 0.06);
+        --pending-primary: #005a92;
+        --pending-overdue: #d32f2f;
+        --pending-short: #b46c00;
+        --pending-mid: #1f5ca8;
+        --pending-no-date: #6b7280;
+        --pending-open: #2a7f62;
     }
 
-    body {
-        background-color: #f7f9fc;
-        min-height: 100vh;
-        position: relative;
-    }
-
-    /* Main Container */
-    .main-container {
-        padding: 1.5rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    /* Glass Page Header */
-    .page-header {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 16px;
-        padding: 1.5rem 2rem;
-        margin-bottom: 2rem;
-        box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .page-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-    }
-
-    .page-header h1 {
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin: 0;
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+    .pending-page {
+        padding: 1.25rem;
         display: flex;
-        align-items: center;
-        gap: 0.75rem;
+        flex-direction: column;
+        gap: 1rem;
     }
 
-    .page-header h1 i {
-        background: linear-gradient(135deg, var(--warning-color) 0%, #f6ad55 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        filter: drop-shadow(0 2px 4px rgba(214, 158, 46, 0.3));
-    }
-
-    /* Glass Project Cards */
-    .project-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(25px);
-        -webkit-backdrop-filter: blur(25px);
-        border: 1px solid var(--glass-border);
-        border-radius: 16px;
-        margin-bottom: 2rem;
-        box-shadow: 
-            var(--glass-shadow),
-            inset 0 1px 0 rgba(255, 255, 255, 0.25);
-        position: relative;
-        overflow: hidden;
-        transition: all var(--transition-speed) ease;
-    }
-
-    .project-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-    }
-
-    .project-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 
-            0 12px 40px rgba(0, 90, 146, 0.12),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.25);
-    }
-
-    /* Glass Project Card Header */
-    .project-card-header {
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    .pending-header {
+        background: var(--pending-card);
+        border: 1px solid var(--pending-border);
+        border-radius: 14px;
+        box-shadow: var(--pending-shadow);
+        padding: 1rem 1.2rem;
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        position: relative;
+        align-items: flex-start;
+        gap: 1rem;
     }
 
-    .project-card-header::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 2rem;
-        right: 2rem;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    }
-
-    .project-card-header h5 {
+    .pending-header h1 {
         margin: 0;
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--text-color);
+        font-size: 1.35rem;
+        color: var(--pending-primary);
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
     }
 
-    .project-card-header a {
-        text-decoration: none;
-        color: var(--text-color);
-        transition: all var(--transition-speed) ease;
+    .pending-header p {
+        margin: 0.3rem 0 0;
+        color: var(--pending-muted);
+        font-size: 0.92rem;
+    }
+
+    .pending-total-pill {
+        border: 1px solid #d6e4f3;
+        background: #edf5fe;
+        color: #1a4f85;
+        border-radius: 999px;
+        padding: 0.35rem 0.7rem;
+        font-weight: 600;
+        white-space: nowrap;
+        font-size: 0.82rem;
+    }
+
+    .pending-filters {
+        background: var(--pending-card);
+        border: 1px solid var(--pending-border);
+        border-radius: 12px;
+        box-shadow: var(--pending-shadow);
+        padding: 0.85rem 1rem;
         display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: end;
+    }
+
+    .pending-filter-form {
+        display: flex;
+        gap: 0.65rem;
+        flex-wrap: wrap;
+        align-items: end;
+        flex: 1;
+    }
+
+    .pending-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        min-width: 170px;
+    }
+
+    .pending-field label {
+        margin: 0;
+        font-size: 0.75rem;
+        color: var(--pending-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .pending-field select {
+        height: 36px;
+        border: 1px solid #cfdeed;
+        border-radius: 8px;
+        font-size: 0.86rem;
+        color: #2b3d52;
+        background: #fff;
+        padding: 0.35rem 0.55rem;
+    }
+
+    .pending-filter-actions {
+        display: inline-flex;
+        gap: 0.4rem;
         align-items: center;
+        padding-bottom: 1px;
+    }
+
+    .pending-tools {
+        display: inline-flex;
+        gap: 0.4rem;
+    }
+
+    .btn-pending {
+        height: 36px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        border: 1px solid #ccdeef;
+        padding: 0 0.7rem;
+        background: #fff;
+        color: #34526e;
+        transition: all 0.16s ease;
+    }
+
+    .btn-pending:hover {
+        border-color: #b5cde4;
+        background: #f4f9ff;
+        color: #17497a;
+    }
+
+    .btn-pending-primary {
+        background: linear-gradient(135deg, #0067a8 0%, #005a92 100%);
+        border-color: #005a92;
+        color: #fff;
+    }
+
+    .btn-pending-primary:hover {
+        background: linear-gradient(135deg, #0073ba 0%, #00619a 100%);
+        color: #fff;
+        border-color: #00558a;
+    }
+
+    .pending-project-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+    }
+
+    .pending-project-card {
+        background: var(--pending-card);
+        border: 1px solid var(--pending-border);
+        border-radius: 14px;
+        box-shadow: var(--pending-shadow);
+        overflow: hidden;
+    }
+
+    .pending-project-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e8eef6;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
         gap: 0.75rem;
     }
 
-    .project-card-header a:hover {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        transform: translateX(4px);
-    }
-
-    .project-card-header a i {
-        color: var(--primary-color);
-        transition: all var(--transition-speed) ease;
-    }
-
-    .project-card-header a:hover i {
-        transform: scale(1.1);
-        filter: drop-shadow(0 2px 4px rgba(0, 90, 146, 0.3));
-    }
-
-    /* Glass Badge */
-    .badge {
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.9) 0%, 
-            rgba(0, 75, 121, 0.8) 100%) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: white !important;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        box-shadow: 
-            0 4px 15px rgba(0, 90, 146, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        transition: all var(--transition-speed) ease;
-    }
-
-    .badge:hover {
-        transform: translateY(-1px);
-        box-shadow: 
-            0 6px 20px rgba(0, 90, 146, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-
-    /* Glass Table Container */
-    .table-responsive {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.15) 0%, 
-            rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border-radius: 0 0 16px 16px;
-        overflow: hidden;
-        position: relative;
-    }
-
-    /* Glass Table */
-    .etapas-pendentes-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        background: transparent;
-        margin: 0;
-    }
-
-    .etapas-pendentes-table th {
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.15) 0%, 
-            rgba(0, 75, 121, 0.1) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: var(--text-color);
-        font-weight: 600;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-        position: relative;
-    }
-
-    .etapas-pendentes-table th:first-child {
-        border-top-left-radius: 0;
-    }
-
-    .etapas-pendentes-table th:last-child {
-        border-top-right-radius: 0;
-    }
-
-    .etapas-pendentes-table td {
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        color: var(--text-color);
-        font-size: 0.9rem;
-        vertical-align: middle;
-        transition: all var(--transition-speed) ease;
-    }
-
-    .etapas-pendentes-table tr:hover td {
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    .etapas-pendentes-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    /* Status Styles */
-    .date-overdue {
-        color: var(--danger-color);
-        font-weight: 600;
-        position: relative;
-    }
-
-    .date-overdue::before {
-        content: '⚠';
-        margin-right: 0.5rem;
-        font-size: 0.8rem;
-    }
-
-    .etapa-done td {
-        opacity: 0.6;
-    }
-
-    .etapa-iniciada {
-        background: linear-gradient(135deg, 
-            rgba(56, 161, 105, 0.05) 0%, 
-            rgba(56, 161, 105, 0.02) 100%);
-    }
-
-    .text-decoration-line-through {
-        text-decoration: line-through;
-    }
-
-    .text-muted {
-        color: var(--text-muted) !important;
-    }
-
-    /* Glass Action Buttons */
-    .actions-cell-content {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-    }
-
-    .action-btn {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.18) 0%, 
-            rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        color: var(--text-color) !important;
-        padding: 0.4rem 0.8rem;
-        border-radius: 8px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        transition: all var(--transition-speed) ease;
-        box-shadow: 
-            0 4px 12px rgba(0, 90, 146, 0.05),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    .pending-project-title {
+        text-decoration: none;
+        color: var(--pending-text);
+        font-weight: 700;
         display: inline-flex;
         align-items: center;
-        gap: 0.4rem;
-        text-decoration: none;
-        min-width: auto;
-        height: auto;
+        gap: 0.45rem;
+    }
+
+    .pending-project-title:hover {
+        color: var(--pending-primary);
+    }
+
+    .pending-project-meta {
+        margin: 0.2rem 0 0;
+        color: var(--pending-muted);
+        font-size: 0.78rem;
+    }
+
+    .pending-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        justify-content: flex-end;
+    }
+
+    .pending-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        border-radius: 999px;
+        padding: 0.2rem 0.48rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        border: 1px solid transparent;
         white-space: nowrap;
     }
 
-    .action-btn:hover {
-        transform: translateY(-1px);
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.25) 0%, 
-            rgba(255, 255, 255, 0.1) 100%);
-        box-shadow: 
-            0 6px 20px rgba(0, 90, 146, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.3) !important;
-        color: var(--primary-color) !important;
+    .pending-chip-value { font-weight: 700; }
+
+    .pending-chip-atrasada {
+        color: #9b1c1c;
+        background: #fdecec;
+        border-color: #f7c8c8;
     }
 
-    .action-btn i {
-        font-size: 0.9rem;
-        transition: all var(--transition-speed) ease;
+    .pending-chip-7dias {
+        color: #8a4f00;
+        background: #fff3df;
+        border-color: #f4dfb8;
     }
 
-    .action-btn:hover i {
-        transform: scale(1.1);
+    .pending-chip-14dias,
+    .pending-chip-21dias {
+        color: #214d81;
+        background: #eaf2fe;
+        border-color: #cfe0f7;
     }
 
-    /* Specific Button States */
-    .action-btn.iniciada-active {
-        background: linear-gradient(135deg, 
-            rgba(56, 161, 105, 0.2) 0%, 
-            rgba(56, 161, 105, 0.1) 100%);
-        border-color: rgba(56, 161, 105, 0.3) !important;
-        color: var(--success-color) !important;
+    .pending-chip-sem_data,
+    .pending-chip-outras {
+        color: #4c5563;
+        background: #edf0f4;
+        border-color: #d8dee7;
     }
 
-    .action-btn.iniciada-active:hover {
-        background: linear-gradient(135deg, 
-            rgba(56, 161, 105, 0.3) 0%, 
-            rgba(56, 161, 105, 0.15) 100%);
-        border-color: rgba(56, 161, 105, 0.4) !important;
+    .pending-table-wrap {
+        overflow-x: auto;
     }
 
-    .action-btn:disabled {
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.08) 0%, 
-            rgba(255, 255, 255, 0.02) 100%);
-        border-color: rgba(255, 255, 255, 0.1) !important;
-        color: var(--text-muted) !important;
-        opacity: 0.5;
-        cursor: not-allowed;
-        transform: none;
+    .pending-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 900px;
     }
 
-    .action-btn:disabled:hover {
-        transform: none;
-        background: linear-gradient(135deg, 
-            rgba(255, 255, 255, 0.08) 0%, 
-            rgba(255, 255, 255, 0.02) 100%);
-        box-shadow: 
-            0 4px 12px rgba(0, 90, 146, 0.05),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    .pending-table th {
+        background: #f4f8fc;
+        color: #5a6d84;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.045em;
+        font-weight: 700;
+        padding: 0.58rem 0.7rem;
+        border-bottom: 1px solid #dfe7f1;
     }
 
-    /* Edit and Delete Button Styles */
-    .btn-edit-etapa {
-        background: linear-gradient(135deg, 
-            rgba(214, 158, 46, 0.15) 0%, 
-            rgba(214, 158, 46, 0.05) 100%);
-        border-color: rgba(214, 158, 46, 0.2) !important;
-        color: var(--warning-color) !important;
+    .pending-table td {
+        border-bottom: 1px solid #edf2f8;
+        padding: 0.6rem 0.7rem;
+        vertical-align: middle;
+        color: #223247;
+        font-size: 0.84rem;
     }
 
-    .btn-edit-etapa:hover {
-        background: linear-gradient(135deg, 
-            rgba(214, 158, 46, 0.25) 0%, 
-            rgba(214, 158, 46, 0.1) 100%);
-        border-color: rgba(214, 158, 46, 0.3) !important;
+    .pending-table tbody tr:hover td {
+        background: #f8fbff;
     }
 
-    .btn-delete-etapa {
-        background: linear-gradient(135deg, 
-            rgba(229, 62, 62, 0.15) 0%, 
-            rgba(229, 62, 62, 0.05) 100%);
-        border-color: rgba(229, 62, 62, 0.2) !important;
-        color: var(--danger-color) !important;
+    .pending-cell-text.is-done {
+        text-decoration: line-through;
+        color: #8a98ab;
     }
 
-    .btn-delete-etapa:hover {
-        background: linear-gradient(135deg, 
-            rgba(229, 62, 62, 0.25) 0%, 
-            rgba(229, 62, 62, 0.1) 100%);
-        border-color: rgba(229, 62, 62, 0.3) !important;
+    .pending-status-badge {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 0.13rem 0.46rem;
+        font-size: 0.67rem;
+        font-weight: 700;
+        border: 1px solid transparent;
     }
 
-    /* Glass No Pendencies State */
-    .no-pendencies {
-        background: var(--glass-bg);
-        backdrop-filter: blur(25px);
-        -webkit-backdrop-filter: blur(25px);
-        border: 1px solid var(--glass-border);
-        border-radius: 16px;
-        padding: 4rem 2rem;
-        text-align: center;
-        box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-        position: relative;
-        overflow: hidden;
+    .pending-status-open {
+        background: #eaf7f1;
+        border-color: #cbe9dc;
+        color: #186244;
     }
 
-    .no-pendencies::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    .pending-status-started {
+        background: #e6f2ff;
+        border-color: #cddff5;
+        color: #215488;
     }
 
-    .no-pendencies i {
-        color: var(--success-color);
-        margin-bottom: 1.5rem;
-        filter: drop-shadow(0 4px 8px rgba(56, 161, 105, 0.3));
+    .pending-actions {
+        display: inline-flex;
+        gap: 0.35rem;
     }
 
-    .no-pendencies h4 {
-        color: var(--text-color);
+    .pending-action-btn {
+        height: 30px;
+        border-radius: 7px;
+        border: 1px solid #cbdcf0;
+        padding: 0 0.58rem;
+        background: #fff;
+        color: #2b4d6f;
         font-weight: 600;
-        margin-bottom: 1rem;
-        background: linear-gradient(135deg, var(--success-color) 0%, #48bb78 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        font-size: 0.74rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        transition: all 0.16s ease;
     }
 
-    .no-pendencies p {
-        color: var(--text-muted);
-        font-size: 1.1rem;
-        margin: 0;
+    .pending-action-btn:hover:not(:disabled) {
+        background: #f1f7ff;
+        border-color: #b7cee5;
     }
 
-    /* Glass AJAX Flash Messages */
-    #ajax-flash-messages-container {
+    .pending-action-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    .pending-action-btn.started {
+        background: #eaf7f1;
+        border-color: #b9dfca;
+        color: #1d714e;
+    }
+
+    .pending-action-btn.complete {
+        background: #edf5ff;
+        border-color: #c5d8ee;
+        color: #255585;
+    }
+
+    .pending-expand-row td {
+        background: #f9fbfe;
+        border-bottom: 1px solid #e8eff7;
+        padding: 0.44rem 0.7rem;
+    }
+
+    .pending-expand-btn {
+        border: none;
+        background: none;
+        color: #386291;
+        font-weight: 600;
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.1rem 0;
+    }
+
+    .pending-expand-btn:hover {
+        color: #174a7d;
+    }
+
+    .pending-other-panel {
+        border-top: 1px dashed transparent;
+        background: #fbfdff;
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transform: translateY(-4px);
+        transition: max-height 0.34s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
+    }
+
+    .pending-other-panel.is-open {
+        border-top-color: #d8e3ef;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .pending-other-header {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.76rem;
+        color: #5b6f87;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .pending-visible-empty td {
+        text-align: center;
+        color: var(--pending-muted);
+        font-style: italic;
+        background: #fafcff;
+    }
+
+    .pending-empty-state {
+        border: 1px dashed #cfe0f1;
+        border-radius: 12px;
+        background: #f9fcff;
+        padding: 2rem 1rem;
+        text-align: center;
+        color: #617890;
+    }
+
+    .pending-empty-state i {
+        font-size: 2.1rem;
+        color: #6aa0cf;
+        margin-bottom: 0.6rem;
+    }
+
+    #pending-ajax-toast {
         position: fixed;
         top: 90px;
-        right: 20px;
-        z-index: 1050;
-        width: auto;
-        max-width: 400px;
+        right: 16px;
+        z-index: 1088;
+        min-width: 240px;
+        max-width: 360px;
+        background: #ffffff;
+        border: 1px solid #d7e4f1;
+        border-left: 4px solid #2e6da4;
+        border-radius: 9px;
+        padding: 0.58rem 0.72rem;
+        box-shadow: 0 10px 28px rgba(16, 33, 53, 0.16);
+        color: #22374f;
+        font-size: 0.84rem;
+        opacity: 0;
+        transform: translateY(-8px);
+        pointer-events: none;
+        transition: opacity 0.18s ease, transform 0.18s ease;
     }
 
-    #ajax-flash-messages-container .alert {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 12px;
-        box-shadow: 
-            0 8px 32px rgba(0, 90, 146, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.25);
-        color: var(--text-color);
-        padding: 1rem 1.5rem;
-        margin-bottom: 1rem;
-    }
-
-    #ajax-flash-messages-container .alert-info {
-        border-color: rgba(0, 90, 146, 0.3);
-        background: linear-gradient(135deg, 
-            rgba(0, 90, 146, 0.1) 0%, 
-            rgba(0, 90, 146, 0.05) 100%);
-    }
-
-    #ajax-flash-messages-container .alert-danger {
-        border-color: rgba(229, 62, 62, 0.3);
-        background: linear-gradient(135deg, 
-            rgba(229, 62, 62, 0.1) 0%, 
-            rgba(229, 62, 62, 0.05) 100%);
-    }
-
-    .btn-close {
-        background: none;
-        border: none;
-        color: var(--text-color);
-        opacity: 0.7;
-        transition: all var(--transition-speed) ease;
-    }
-
-    .btn-close:hover {
+    #pending-ajax-toast.show {
         opacity: 1;
-        transform: scale(1.1);
+        transform: translateY(0);
     }
 
-    /* ====================================
-       RESPONSIVE DESIGN
-       ==================================== */
+    #pending-ajax-toast.danger {
+        border-left-color: #c62828;
+    }
 
-    @media (max-width: 1200px) {
-        .actions-cell-content {
-            gap: 0.3rem;
+    @media (max-width: 991.98px) {
+        .pending-page {
+            padding: 0.9rem;
         }
-        
-        .action-btn {
-            padding: 0.3rem 0.6rem;
-            font-size: 0.75rem;
+
+        .pending-header {
+            flex-direction: column;
         }
-        
-        .action-btn span {
-            display: none;
-        }
-        
-        .action-btn i {
-            margin-right: 0;
+
+        .pending-tools {
+            width: 100%;
+            justify-content: flex-start;
         }
     }
 
-    @media (max-width: 768px) {
-        .main-container {
-            padding: 1rem;
-        }
-        
-        .page-header {
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .page-header h1 {
-            font-size: 1.4rem;
-        }
-        
-        .project-card-header {
-            padding: 1rem 1.5rem;
+    @media (max-width: 767.98px) {
+        .pending-project-header {
             flex-direction: column;
             align-items: flex-start;
-            gap: 1rem;
         }
-        
-        .project-card-header h5 {
-            font-size: 1.1rem;
+
+        .pending-chip-row {
+            justify-content: flex-start;
         }
-        
-        .etapas-pendentes-table th,
-        .etapas-pendentes-table td {
-            padding: 0.75rem 1rem;
-            font-size: 0.8rem;
-        }
-        
-        .etapas-pendentes-table th {
-            font-size: 0.75rem;
-        }
-        
-        .actions-cell-content {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 0.5rem;
-        }
-        
-        .action-btn {
+
+        .pending-filter-form {
             width: 100%;
+        }
+
+        .pending-field {
+            min-width: 100%;
+        }
+
+        .pending-filter-actions {
+            width: 100%;
+        }
+
+        .btn-pending {
+            flex: 1;
             justify-content: center;
-            padding: 0.5rem;
         }
-        
-        .action-btn span {
-            display: inline;
-        }
-        
-        .no-pendencies {
-            padding: 2rem 1rem;
-        }
-        
-        .no-pendencies h4 {
-            font-size: 1.2rem;
-        }
-        
-        #ajax-flash-messages-container {
+
+        #pending-ajax-toast {
             right: 10px;
             left: 10px;
             max-width: none;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .etapas-pendentes-table {
-            font-size: 0.75rem;
-        }
-        
-        .etapas-pendentes-table th,
-        .etapas-pendentes-table td {
-            padding: 0.5rem 0.75rem;
-        }
-        
-        .project-card-header h5 {
-            font-size: 1rem;
-        }
-        
-        .badge {
-            font-size: 0.7rem;
-            padding: 0.4rem 0.8rem;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="main-container">
-    <!-- Container para mensagens flash AJAX -->
-    <div id="ajax-flash-messages-container" style="display: none;">
-        <div class="alert alert-dismissible fade show" role="alert">
-            <span id="ajax-flash-message-text"></span>
-            <button type="button" class="btn-close btn-sm" onclick="this.parentElement.style.display='none';" aria-label="Close"></button>
+<div class="pending-page" id="pendingPageRoot">
+    <header class="pending-header">
+        <div>
+            <h1>
+                Projetos Pendentes
+            </h1>
+            <p>
+                Janela ativa: <strong>{{ period_label_map.get(filtro_periodo, 'Atrasados') }}</strong>
+                {% if selected_responsavel %} · Responsável contém: <strong>{{ selected_responsavel }}</strong>{% endif %}
+                {% if selected_area %} · Área: <strong>{{ selected_area }}</strong>{% endif %}
+            </p>
         </div>
-    </div>
+        <div class="pending-total-pill">
+            Projetos no foco: <span id="summary-total-projects">{{ summary_counts.total_projects }}</span>
+        </div>
+    </header>
 
-    <div class="page-header">
-        <h1>
-            <i class="fas {% if filtro_periodo == '7dias' or filtro_periodo == '14dias' %}fa-calendar-alt{% else %}fa-exclamation-triangle{% endif %} mr-2 {% if filtro_periodo == 'atrasados' or not filtro_periodo %}text-warning{% else %}text-info{% endif %}"></i>
-            {% if filtro_periodo == '7dias' %}
-                Projetos dos Próximos 7 Dias
-            {% elif filtro_periodo == '14dias' %}
-                Projetos dos Próximos 14 Dias
-            {% else %}
-                Projetos com Pendências (Atrasados)
-            {% endif %}
-        </h1>
-    </div>
-
-    <!-- Filtro de Período e Área -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body d-flex justify-content-start align-items-center">
-            <form method="GET" action="{{ url_for('main.list_projetos_pendentes') }}" class="d-flex align-items-center gap-2 flex-wrap">
-                <label for="periodoFilter" class="form-label mb-0 me-2">Filtrar por Período:</label>
-                <select class="form-select form-select-sm" name="periodo" id="periodoFilter" style="width: auto;">
-                    <option value="atrasados" {% if filtro_periodo == 'atrasados' or not filtro_periodo %}selected{% endif %}>Projetos Atrasados</option>
-                    <option value="7dias" {% if filtro_periodo == '7dias' %}selected{% endif %}>Próximos 7 Dias</option>
-                    <option value="14dias" {% if filtro_periodo == '14dias' %}selected{% endif %}>Próximos 14 Dias</option>
+    <section class="pending-filters">
+        <form method="GET" action="{{ url_for('main.list_projetos_pendentes') }}" class="pending-filter-form">
+            <div class="pending-field">
+                <label for="periodoFilter">Período</label>
+                <select name="periodo" id="periodoFilter">
+                    {% for key, label in period_options %}
+                    <option value="{{ key }}" {% if key == filtro_periodo %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
                 </select>
-                {% if is_admin_user and areas_options %}
-                    <label for="areaFilterInline" class="form-label mb-0 ms-3 me-2">Área:</label>
-                    <select class="form-select form-select-sm" name="area" id="areaFilterInline" style="width: auto;">
-                        <option value="">Todas as Áreas</option>
-                        {% for area in areas_options %}
-                            <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
-                        {% endfor %}
-                    </select>
-                {% endif %}
-                <button type="submit" class="btn btn-sm btn-primary ms-2">Filtrar</button>
-                <a href="{{ url_for('main.list_projetos_pendentes') }}" class="btn btn-sm btn-outline-secondary" title="Limpar filtros">
-                    <i class="fas fa-times"></i>
+            </div>
+
+            {% if is_admin_user and areas_options %}
+            <div class="pending-field">
+                <label for="areaFilter">Área</label>
+                <select name="area" id="areaFilter">
+                    <option value="">Todas as áreas</option>
+                    {% for area in areas_options %}
+                    <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="pending-field">
+                <label for="responsavelFilter">Responsável</label>
+                <select name="responsavel" id="responsavelFilter">
+                    <option value="">Todos</option>
+                    {% for responsavel in responsaveis_options %}
+                    <option value="{{ responsavel }}" {% if responsavel == selected_responsavel %}selected{% endif %}>{{ responsavel }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="pending-filter-actions">
+                <button type="submit" class="btn-pending btn-pending-primary">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+                <a href="{{ url_for('main.list_projetos_pendentes') }}" class="btn-pending text-decoration-none d-inline-flex align-items-center">
+                    <i class="fas fa-rotate-left"></i> Limpar
                 </a>
-            </form>
+            </div>
+        </form>
+
+        <div class="pending-tools">
+            <button type="button" id="expandAllProjects" class="btn-pending">
+                <i class="fas fa-plus-square"></i> Expandir todas
+            </button>
+            <button type="button" id="collapseAllProjects" class="btn-pending">
+                <i class="fas fa-minus-square"></i> Recolher todas
+            </button>
         </div>
-    </div>
+    </section>
 
     {% if projetos_com_etapas %}
+    <section class="pending-project-list" id="pendingProjectList">
         {% for item in projetos_com_etapas %}
-        <div class="project-card" id="project-card-{{ item.projeto.id }}">
-            <div class="project-card-header">
-                <h5>
-                    <a href="{{ url_for('main.project_detail', project_id=item.projeto.id) }}" title="Ver detalhes do projeto">
-                        <i class="fas fa-folder-open mr-2"></i>{{ item.projeto.titulo }}
+        <article
+            class="pending-project-card"
+            id="project-card-{{ item.projeto.id }}"
+            data-project-id="{{ item.projeto.id }}"
+            data-has-visible="1"
+            data-count-visiveis="{{ item.qtd_visiveis }}"
+            data-count-outras="{{ item.qtd_outras }}"
+            data-count-atrasadas="{{ item.qtd_atrasadas }}"
+            data-count-7dias="{{ item.qtd_7dias }}"
+            data-count-14dias="{{ item.qtd_14dias }}"
+            data-count-21dias="{{ item.qtd_21dias }}"
+            data-count-sem-data="{{ item.qtd_sem_data }}"
+        >
+            <header class="pending-project-header">
+                <div>
+                    <a href="{{ url_for('main.project_detail', project_id=item.projeto.id) }}" class="pending-project-title" title="Abrir projeto">
+                        <i class="fas fa-folder-open"></i>
+                        <span>{{ item.projeto.titulo }}</span>
                     </a>
-                </h5>
-                <span class="badge badge-secondary">{{ item.projeto.area_responsavel }}</span>
-            </div>
-            
-            <div class="table-responsive">
-                <table class="etapas-pendentes-table">
+                    <p class="pending-project-meta">
+                        Área: <strong>{{ item.projeto.area_responsavel or 'Não informada' }}</strong>
+                        {% if item.max_overdue_days > 0 %}
+                        · Maior atraso: <strong>{{ item.max_overdue_days }} dia(s)</strong>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="pending-chip-row">
+                    <span class="pending-chip pending-chip-atrasada" data-chip="atrasadas" {% if item.qtd_atrasadas == 0 %}hidden{% endif %}>
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span class="pending-chip-value">{{ item.qtd_atrasadas }}</span> atrasadas
+                    </span>
+                    <span class="pending-chip pending-chip-7dias" data-chip="7dias" {% if item.qtd_7dias == 0 %}hidden{% endif %}>
+                        <span class="pending-chip-value">{{ item.qtd_7dias }}</span> 7d
+                    </span>
+                    <span class="pending-chip pending-chip-14dias" data-chip="14dias" {% if item.qtd_14dias == 0 %}hidden{% endif %}>
+                        <span class="pending-chip-value">{{ item.qtd_14dias }}</span> 14d
+                    </span>
+                    <span class="pending-chip pending-chip-21dias" data-chip="21dias" {% if item.qtd_21dias == 0 %}hidden{% endif %}>
+                        <span class="pending-chip-value">{{ item.qtd_21dias }}</span> 21d
+                    </span>
+                    <span class="pending-chip pending-chip-sem_data" data-chip="sem_data" {% if item.qtd_sem_data == 0 %}hidden{% endif %}>
+                        <span class="pending-chip-value">{{ item.qtd_sem_data }}</span> sem data
+                    </span>
+                </div>
+            </header>
+
+            <div class="pending-table-wrap">
+                <table class="pending-table">
                     <thead>
                         <tr>
-                            <th>
-                                {% if filtro_periodo == 'atrasados' or not filtro_periodo %}
-                                    Etapa Atrasada
-                                {% else %}
-                                    Etapa Pendente
-                                {% endif %}
-                            </th>
+                            <th>Etapa</th>
                             <th>Responsável</th>
-                            <th>Data Início Prev.</th>
-                            <th>
-                                {% if filtro_periodo == 'atrasados' or not filtro_periodo %}
-                                    Data Fim Prev. (Vencida)
-                                {% else %}
-                                    Data Fim Prevista
-                                {% endif %}
-                            </th>
-                            <th style="width: 260px;">Ações</th> <!-- Ajustar largura para os botões -->
+                            <th>Início Prev.</th>
+                            <th>Fim Prev.</th>
+                            <th>Status</th>
+                            <th style="width: 190px;">Ações</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for etapa in item.etapas_atrasadas %}
-                        <tr id="etapa-row-{{ etapa.id }}" class="etapa-row {% if etapa.done %}etapa-done{% elif etapa.iniciada %}etapa-iniciada{% endif %}">
-                            <td class="etapa-descricao {% if etapa.done %}text-decoration-line-through text-muted{% endif %}">{{ etapa.descricao }}</td>
-                            <td class="{% if etapa.done %}text-decoration-line-through text-muted{% endif %}">{{ etapa.responsavel if etapa.responsavel else 'N/A' }}</td>
-                            <td class="{% if etapa.done %}text-decoration-line-through text-muted{% endif %}">{{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else 'N/A' }}</td>
-                            <td class="{% if filtro_periodo == 'atrasados' or not filtro_periodo %}date-overdue{% endif %} {% if etapa.done %}text-decoration-line-through{% endif %}">{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else 'N/A' }}</td>
+                    <tbody class="pending-visible-body">
+                        {% for etapa in item.etapas_visiveis %}
+                        {% set bucket = etapa_bucket_map.get(etapa.id, 'futuro') %}
+                        <tr
+                            id="etapa-row-{{ etapa.id }}"
+                            class="etapa-row {% if etapa.iniciada and not etapa.done %}etapa-iniciada{% elif etapa.done %}etapa-done{% endif %}"
+                            data-project-id="{{ item.projeto.id }}"
+                            data-bucket="{{ bucket }}"
+                            data-section="visible"
+                        >
+                            <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">
+                                <div>{{ etapa.descricao }}</div>
+                            </td>
+                            <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.responsavel or 'Não informado' }}</td>
+                            <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}</td>
+                            <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}</td>
                             <td>
-                                <div class="actions-cell-content">
-                                    <!-- Marcar como Iniciada/Não Iniciada -->
-                                    <button type="button" class="btn btn-sm action-btn toggle-iniciada {% if etapa.iniciada and not etapa.done %}iniciada-active{% endif %}" 
-                                            data-etapa-id="{{ etapa.id }}"
-                                            title="{% if etapa.iniciada %}Marcar como Não Iniciada{% else %}Marcar como Iniciada{% endif %}"
-                                            {% if etapa.done %}disabled{% endif %}>
-                                        <i class="fas {% if etapa.iniciada %}fa-stop-circle{% else %}fa-play-circle{% endif %}"></i> 
+                                <span class="pending-status-badge {% if etapa.iniciada and not etapa.done %}pending-status-started{% else %}pending-status-open{% endif %}">
+                                    {% if etapa.iniciada and not etapa.done %}Iniciada{% else %}Aberta{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="pending-actions">
+                                    <button
+                                        type="button"
+                                        class="pending-action-btn toggle-iniciada {% if etapa.iniciada and not etapa.done %}started{% endif %}"
+                                        data-etapa-id="{{ etapa.id }}"
+                                        title="{% if etapa.iniciada %}Marcar como Não Iniciada{% else %}Marcar como Iniciada{% endif %}"
+                                        {% if etapa.done %}disabled{% endif %}
+                                    >
+                                        <i class="fas {% if etapa.iniciada %}fa-stop-circle{% else %}fa-play-circle{% endif %}"></i>
                                         <span>{% if etapa.iniciada %}Iniciada{% else %}Iniciar{% endif %}</span>
                                     </button>
-                                    
-                                    <!-- Marcar como Concluída/Pendente -->
-                                    <button type="button" class="btn btn-sm action-btn toggle-done" 
-                                            data-etapa-id="{{ etapa.id }}"
-                                            title="{% if etapa.done %}Marcar como Pendente{% else %}Marcar como Concluída{% endif %}"
-                                            {% if not etapa.iniciada or etapa.done %}disabled{% endif %}>
-                                        <i class="fas {% if etapa.done %}fa-undo{% else %}fa-check-circle{% endif %}"></i>
-                                        <span>{% if etapa.done %}Desfazer{% else %}Concluir{% endif %}</span>
+                                    <button
+                                        type="button"
+                                        class="pending-action-btn toggle-done complete"
+                                        data-etapa-id="{{ etapa.id }}"
+                                        title="Concluir etapa"
+                                        {% if not etapa.iniciada or etapa.done %}disabled{% endif %}
+                                    >
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Concluir</span>
                                     </button>
-                                    
-                                    <!-- Editar Etapa -->
-                                    <a href="{{ url_for('main.edit_etapa', etapa_id=etapa.id) }}" class="btn btn-sm action-btn btn-edit-etapa" title="Editar Etapa">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <!-- Excluir Etapa -->
-                                    <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
-                                        <button type="submit" class="btn btn-sm action-btn btn-delete-etapa" title="Excluir Etapa">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </form>
                                 </div>
-                                {# {% include 'modals/edit_etapa_modal.html' with context %} #}
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
+
+                    {% if item.qtd_outras > 0 %}
+                    <tfoot>
+                        <tr class="pending-expand-row">
+                            <td colspan="6">
+                                <button
+                                    type="button"
+                                    class="pending-expand-btn toggle-outras-btn"
+                                    data-target="outras-etapas-{{ item.projeto.id }}"
+                                    data-project-id="{{ item.projeto.id }}"
+                                    aria-expanded="false"
+                                >
+                                    <i class="fas fa-plus"></i>
+                                    <span>+ <span class="pending-expand-count">{{ item.qtd_outras }}</span> outras etapas</span>
+                                </button>
+                            </td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
                 </table>
             </div>
-        </div>
+
+            {% if item.qtd_outras > 0 %}
+            <div class="pending-other-panel" id="outras-etapas-{{ item.projeto.id }}">
+                <div class="pending-other-header">Outras etapas</div>
+                <div class="pending-table-wrap">
+                    <table class="pending-table">
+                        <thead>
+                            <tr>
+                                <th>Etapa</th>
+                                <th>Responsável</th>
+                                <th>Início Prev.</th>
+                                <th>Fim Prev.</th>
+                                <th>Status</th>
+                                <th style="width: 190px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody class="pending-other-body">
+                            {% for etapa in item.etapas_outras %}
+                            {% set bucket = etapa_bucket_map.get(etapa.id, 'futuro') %}
+                            <tr
+                                id="etapa-row-{{ etapa.id }}"
+                                class="etapa-row {% if etapa.iniciada and not etapa.done %}etapa-iniciada{% elif etapa.done %}etapa-done{% endif %}"
+                                data-project-id="{{ item.projeto.id }}"
+                                data-bucket="{{ bucket }}"
+                                data-section="other"
+                            >
+                                <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">
+                                    <div>{{ etapa.descricao }}</div>
+                                </td>
+                                <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.responsavel or 'Não informado' }}</td>
+                                <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}</td>
+                                <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}</td>
+                                <td>
+                                    <span class="pending-status-badge {% if etapa.iniciada and not etapa.done %}pending-status-started{% else %}pending-status-open{% endif %}">
+                                        {% if etapa.iniciada and not etapa.done %}Iniciada{% else %}Aberta{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="pending-actions">
+                                        <button
+                                            type="button"
+                                            class="pending-action-btn toggle-iniciada {% if etapa.iniciada and not etapa.done %}started{% endif %}"
+                                            data-etapa-id="{{ etapa.id }}"
+                                            title="{% if etapa.iniciada %}Marcar como Não Iniciada{% else %}Marcar como Iniciada{% endif %}"
+                                            {% if etapa.done %}disabled{% endif %}
+                                        >
+                                            <i class="fas {% if etapa.iniciada %}fa-stop-circle{% else %}fa-play-circle{% endif %}"></i>
+                                            <span>{% if etapa.iniciada %}Iniciada{% else %}Iniciar{% endif %}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="pending-action-btn toggle-done complete"
+                                            data-etapa-id="{{ etapa.id }}"
+                                            title="Concluir etapa"
+                                            {% if not etapa.iniciada or etapa.done %}disabled{% endif %}
+                                        >
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Concluir</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </article>
         {% endfor %}
-    {% else %}
-        <div class="no-pendencies">
-            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-            <h4>
-                {% if filtro_periodo == '7dias' %}
-                    Nenhum projeto com vencimento nos próximos 7 dias!
-                {% elif filtro_periodo == '14dias' %}
-                    Nenhum projeto com vencimento nos próximos 14 dias!
-                {% else %}
-                    Nenhum projeto com pendências no momento!
-                {% endif %}
-            </h4>
-            <p>
-                {% if selected_area %}
-                    {% if filtro_periodo == '7dias' %}
-                        Não há projetos com etapas vencendo nos próximos 7 dias na área de <strong>{{ selected_area }}</strong>.
-                    {% elif filtro_periodo == '14dias' %}
-                        Não há projetos com etapas vencendo nos próximos 14 dias na área de <strong>{{ selected_area }}</strong>.
-                    {% else %}
-                        Não há projetos com etapas atrasadas na área de <strong>{{ selected_area }}</strong>.
-                    {% endif %}
-                {% else %}
-                    {% if filtro_periodo == '7dias' %}
-                        Não há projetos vigentes com etapas vencendo nos próximos 7 dias.
-                    {% elif filtro_periodo == '14dias' %}
-                        Não há projetos vigentes com etapas vencendo nos próximos 14 dias.
-                    {% else %}
-                        Todos os projetos vigentes estão em dia.
-                    {% endif %}
-                {% endif %}
-            </p>
-        </div>
+    </section>
     {% endif %}
+
+    <div class="pending-empty-state" id="pendingEmptyState" {% if projetos_com_etapas %}style="display:none"{% endif %}>
+        <i class="fas fa-check-circle"></i>
+        <h5 class="mb-2">
+            {% if filtro_periodo == '7dias' %}
+            Nenhum projeto com pendências até 7 dias.
+            {% elif filtro_periodo == '14dias' %}
+            Nenhum projeto com pendências até 14 dias.
+            {% elif filtro_periodo == '21dias' %}
+            Nenhum projeto com pendências até 21 dias.
+            {% else %}
+            Nenhum projeto com etapas atrasadas.
+            {% endif %}
+        </h5>
+        <p class="mb-0">Ajuste os filtros para explorar outras frentes de acompanhamento.</p>
+    </div>
 </div>
 
+<div id="pending-ajax-toast" role="status" aria-live="polite" aria-atomic="true"></div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const csrfToken = "{{ csrf_token() if csrf_token else '' }}"; // Para Flask-WTF, se usado
+    const storageKey = 'pendingExpandedProjects';
+    const projectList = document.getElementById('pendingProjectList');
+    const emptyState = document.getElementById('pendingEmptyState');
+    const toast = document.getElementById('pending-ajax-toast');
 
-    function showAjaxFlashMessage(message, type = 'info') {
-        const container = document.getElementById('ajax-flash-messages-container');
-        const alertTextElement = document.getElementById('ajax-flash-message-text');
-        const alertElement = container.querySelector('.alert');
+    const summaryElements = {
+        total_projects: document.getElementById('summary-total-projects')
+    };
 
-        if (!message || !container || !alertTextElement || !alertElement) return;
+    function readExpandedSet() {
+        try {
+            const parsed = JSON.parse(sessionStorage.getItem(storageKey) || '[]');
+            return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+        } catch (error) {
+            return new Set();
+        }
+    }
 
-        alertTextElement.textContent = message;
-        alertElement.className = `alert alert-${type} alert-dismissible fade show`; // Reinicia classes
-        
-        container.style.display = 'block';
-        alertElement.classList.add('show'); // Garante que a animação 'show' ocorra
+    function saveExpandedSet(setData) {
+        sessionStorage.setItem(storageKey, JSON.stringify(Array.from(setData)));
+    }
 
-        // Auto-hide
-        setTimeout(() => {
-            alertElement.classList.remove('show');
-            setTimeout(() => { container.style.display = 'none'; }, 150); // Tempo para fade out
-        }, 5000);
+    function showToast(message, type) {
+        if (!toast || !message) {
+            return;
+        }
+        toast.textContent = message;
+        toast.classList.remove('danger');
+        if (type === 'danger') {
+            toast.classList.add('danger');
+        }
+        toast.classList.add('show');
+        window.clearTimeout(showToast._timer);
+        showToast._timer = window.setTimeout(function() {
+            toast.classList.remove('show');
+        }, 2600);
+    }
+
+    function getIntValue(value) {
+        const parsed = parseInt(value || '0', 10);
+        return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    function adjustSummaryValue(key, delta) {
+        const element = summaryElements[key];
+        if (!element) {
+            return;
+        }
+        const nextValue = Math.max(0, getIntValue(element.textContent) + delta);
+        element.textContent = String(nextValue);
+    }
+
+    function getCardCount(card, attrName) {
+        return getIntValue(card.getAttribute(attrName));
+    }
+
+    function setCardCount(card, attrName, value) {
+        card.setAttribute(attrName, String(Math.max(0, value)));
+    }
+
+    function decrementCardCount(card, attrName) {
+        setCardCount(card, attrName, getCardCount(card, attrName) - 1);
+    }
+
+    function decrementBucketCounters(card, bucket) {
+        if (bucket === 'atrasada') {
+            decrementCardCount(card, 'data-count-atrasadas');
+            return;
+        }
+        if (bucket === '7dias') {
+            decrementCardCount(card, 'data-count-7dias');
+            decrementCardCount(card, 'data-count-14dias');
+            decrementCardCount(card, 'data-count-21dias');
+            return;
+        }
+        if (bucket === '14dias') {
+            decrementCardCount(card, 'data-count-14dias');
+            decrementCardCount(card, 'data-count-21dias');
+            return;
+        }
+        if (bucket === '21dias') {
+            decrementCardCount(card, 'data-count-21dias');
+            return;
+        }
+        if (bucket === 'sem_data') {
+            decrementCardCount(card, 'data-count-sem-data');
+        }
+    }
+
+    function refreshChip(card, chipName, attrName) {
+        const chip = card.querySelector('[data-chip="' + chipName + '"]');
+        if (!chip) {
+            return;
+        }
+        const value = getCardCount(card, attrName);
+        const valueNode = chip.querySelector('.pending-chip-value');
+        if (valueNode) {
+            valueNode.textContent = String(value);
+        }
+        chip.hidden = value <= 0;
+    }
+
+    function refreshProjectChips(card) {
+        refreshChip(card, 'atrasadas', 'data-count-atrasadas');
+        refreshChip(card, '7dias', 'data-count-7dias');
+        refreshChip(card, '14dias', 'data-count-14dias');
+        refreshChip(card, '21dias', 'data-count-21dias');
+        refreshChip(card, 'sem_data', 'data-count-sem-data');
+        refreshChip(card, 'outras', 'data-count-outras');
+    }
+
+    function refreshExpandButton(card) {
+        const countOutras = getCardCount(card, 'data-count-outras');
+        const expandRow = card.querySelector('.pending-expand-row');
+        const expandButton = card.querySelector('.toggle-outras-btn');
+
+        if (!expandRow || !expandButton) {
+            return;
+        }
+
+        if (countOutras <= 0) {
+            const targetId = expandButton.getAttribute('data-target');
+            const panel = targetId ? document.getElementById(targetId) : null;
+            if (panel) {
+                panel.classList.remove('is-open');
+                panel.style.maxHeight = '0px';
+            }
+            expandRow.remove();
+            return;
+        }
+
+        const countLabel = expandButton.querySelector('.pending-expand-count');
+        if (countLabel) {
+            countLabel.textContent = String(countOutras);
+        }
+    }
+
+    function updateVisibleEmptyRow(card) {
+        const body = card.querySelector('.pending-visible-body');
+        if (!body) {
+            return;
+        }
+        const rows = body.querySelectorAll('.etapa-row[data-section="visible"]');
+        let placeholder = body.querySelector('.pending-visible-empty');
+
+        if (rows.length === 0) {
+            if (!placeholder) {
+                placeholder = document.createElement('tr');
+                placeholder.className = 'pending-visible-empty';
+                placeholder.innerHTML = '<td colspan="6">Sem etapas urgentes na janela atual.</td>';
+                body.appendChild(placeholder);
+            }
+        } else if (placeholder) {
+            placeholder.remove();
+        }
+    }
+
+    function updateEmptyStateVisibility() {
+        if (!projectList || !emptyState) {
+            return;
+        }
+        const remainingCards = projectList.querySelectorAll('.pending-project-card').length;
+        emptyState.style.display = remainingCards > 0 ? 'none' : '';
+    }
+
+    function maybeAdjustProjectCountByVisibility(card) {
+        const visibleCount = getCardCount(card, 'data-count-visiveis');
+        const wasVisible = card.getAttribute('data-has-visible') === '1';
+
+        if (visibleCount <= 0 && wasVisible) {
+            card.setAttribute('data-has-visible', '0');
+            adjustSummaryValue('total_projects', -1);
+        }
+    }
+
+    function maybeRemoveProjectCard(card) {
+        const visibleCount = getCardCount(card, 'data-count-visiveis');
+        const otherCount = getCardCount(card, 'data-count-outras');
+        if (visibleCount > 0 || otherCount > 0) {
+            return;
+        }
+        const projectId = card.getAttribute('data-project-id');
+        const expanded = readExpandedSet();
+        expanded.delete(String(projectId));
+        saveExpandedSet(expanded);
+        card.remove();
+        updateEmptyStateVisibility();
+    }
+
+    function setPanelExpanded(button, expanded) {
+        if (!button) {
+            return;
+        }
+        const targetId = button.getAttribute('data-target');
+        const panel = targetId ? document.getElementById(targetId) : null;
+        const icon = button.querySelector('i');
+
+        button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        if (icon) {
+            icon.className = expanded ? 'fas fa-minus' : 'fas fa-plus';
+        }
+        if (panel) {
+            if (expanded) {
+                panel.classList.add('is-open');
+                panel.style.maxHeight = panel.scrollHeight + 'px';
+                window.clearTimeout(panel._expandTimer);
+                panel._expandTimer = window.setTimeout(function() {
+                    if (panel.classList.contains('is-open')) {
+                        panel.style.maxHeight = 'none';
+                    }
+                }, 360);
+            } else {
+                if (panel.style.maxHeight === 'none' || !panel.style.maxHeight) {
+                    panel.style.maxHeight = panel.scrollHeight + 'px';
+                }
+                panel.offsetHeight;
+                panel.classList.remove('is-open');
+                panel.style.maxHeight = '0px';
+            }
+        }
+
+        const projectId = button.getAttribute('data-project-id');
+        const expandedSet = readExpandedSet();
+        if (expanded) {
+            expandedSet.add(String(projectId));
+        } else {
+            expandedSet.delete(String(projectId));
+        }
+        saveExpandedSet(expandedSet);
     }
 
     function updateButtonStates(etapaRow, iniciada, done) {
-        const etapaId = etapaRow.id.replace('etapa-row-', '');
-        const btnIniciada = etapaRow.querySelector(`.toggle-iniciada[data-etapa-id='${etapaId}']`);
-        const btnConcluida = etapaRow.querySelector(`.toggle-done[data-etapa-id='${etapaId}']`);
-        const descCells = etapaRow.querySelectorAll('.etapa-descricao, td:nth-child(2), td:nth-child(3), td:nth-child(4)'); // Inclui data de fim
+        const btnIniciada = etapaRow.querySelector('.toggle-iniciada');
+        const btnDone = etapaRow.querySelector('.toggle-done');
+        const statusBadge = etapaRow.querySelector('.pending-status-badge');
 
-        if (!btnIniciada || !btnConcluida) return;
-
-        // Atualiza botão Iniciada
-        btnIniciada.querySelector('i').className = `fas ${iniciada ? 'fa-stop-circle' : 'fa-play-circle'}`;
-        btnIniciada.querySelector('span').textContent = iniciada ? 'Iniciada' : 'Iniciar';
-        btnIniciada.title = iniciada ? 'Marcar como Não Iniciada' : 'Marcar como Iniciada';
-        if (iniciada && !done) {
-            btnIniciada.classList.add('iniciada-active');
-        } else {
-            btnIniciada.classList.remove('iniciada-active');
-        }
-        btnIniciada.disabled = done; // Desabilita se concluída
-
-        // Atualiza botão Concluída
-        btnConcluida.querySelector('i').className = `fas ${done ? 'fa-undo' : 'fa-check-circle'}`;
-        btnConcluida.querySelector('span').textContent = done ? 'Desfazer' : 'Concluir';
-        btnConcluida.title = done ? 'Marcar como Pendente' : 'Marcar como Concluída';
-        if (done) { // Modo Desfazer
-            btnConcluida.disabled = false;
-        } else { // Modo Concluir
-            btnConcluida.disabled = !iniciada;
+        if (btnIniciada) {
+            const iconIniciada = btnIniciada.querySelector('i');
+            const textIniciada = btnIniciada.querySelector('span');
+            if (iconIniciada) {
+                iconIniciada.className = 'fas ' + (iniciada ? 'fa-stop-circle' : 'fa-play-circle');
+            }
+            if (textIniciada) {
+                textIniciada.textContent = iniciada ? 'Iniciada' : 'Iniciar';
+            }
+            btnIniciada.classList.toggle('started', iniciada && !done);
+            btnIniciada.disabled = !!done;
         }
 
-
-        // Atualiza aparência da linha e células
-        etapaRow.classList.remove('etapa-iniciada', 'etapa-done');
-        descCells.forEach(cell => cell.classList.remove('text-decoration-line-through', 'text-muted'));
-        
-        if (done) {
-            etapaRow.classList.add('etapa-done');
-            descCells.forEach(cell => cell.classList.add('text-decoration-line-through', 'text-muted'));
-        } else if (iniciada) {
-            etapaRow.classList.add('etapa-iniciada');
+        if (btnDone) {
+            btnDone.disabled = !!done || !iniciada;
         }
+
+        if (statusBadge) {
+            statusBadge.textContent = iniciada && !done ? 'Iniciada' : 'Aberta';
+            statusBadge.classList.toggle('pending-status-started', iniciada && !done);
+            statusBadge.classList.toggle('pending-status-open', !(iniciada && !done));
+        }
+
+        etapaRow.classList.toggle('etapa-iniciada', iniciada && !done);
+        etapaRow.classList.toggle('etapa-done', !!done);
+        etapaRow.querySelectorAll('.pending-cell-text').forEach(function(cell) {
+            cell.classList.toggle('is-done', !!done);
+        });
     }
 
+    function removeRowFromPending(etapaRow) {
+        const card = etapaRow.closest('.pending-project-card');
+        if (!card) {
+            etapaRow.remove();
+            return;
+        }
 
-    document.querySelectorAll('.toggle-iniciada').forEach(button => {
-        button.addEventListener('click', function() {
-            if (this.disabled) return;
-            const etapaId = this.dataset.etapaId;
-            const etapaRow = document.getElementById(`etapa-row-${etapaId}`);
+        const bucket = etapaRow.getAttribute('data-bucket') || '';
+        const section = etapaRow.getAttribute('data-section') || 'visible';
 
-            fetch(`/etapa/${etapaId}/toggle_iniciada`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    // 'X-CSRFToken': csrfToken // Descomente se CSRF_TOKEN for configurado e necessário
-                },
-                // body: new URLSearchParams({ 'csrf_token': csrfToken }) // Se CSRF em body
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateButtonStates(etapaRow, data.iniciada, data.done);
-                    if (data.message) {
-                         showAjaxFlashMessage(data.message, 'info');
-                    }
-                } else {
-                    showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao alternar iniciada:', error);
-                showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
-            });
+        etapaRow.remove();
+
+        if (section === 'visible') {
+            decrementCardCount(card, 'data-count-visiveis');
+            updateVisibleEmptyRow(card);
+        } else {
+            decrementCardCount(card, 'data-count-outras');
+        }
+
+        decrementBucketCounters(card, bucket);
+
+        refreshProjectChips(card);
+        refreshExpandButton(card);
+        maybeAdjustProjectCountByVisibility(card);
+        maybeRemoveProjectCard(card);
+    }
+
+    async function postToggle(url) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
+        return response.json();
+    }
+
+    document.addEventListener('click', async function(event) {
+        const expandBtn = event.target.closest('.toggle-outras-btn');
+        if (expandBtn) {
+            const isExpanded = expandBtn.getAttribute('aria-expanded') === 'true';
+            setPanelExpanded(expandBtn, !isExpanded);
+            return;
+        }
+
+        const iniciadaBtn = event.target.closest('.toggle-iniciada');
+        if (iniciadaBtn) {
+            if (iniciadaBtn.disabled) {
+                return;
+            }
+            const etapaId = iniciadaBtn.getAttribute('data-etapa-id');
+            const row = document.getElementById('etapa-row-' + etapaId);
+            if (!etapaId || !row) {
+                return;
+            }
+
+            try {
+                const data = await postToggle('/etapa/' + etapaId + '/toggle_iniciada');
+                if (!data.success) {
+                    showToast(data.message || 'Nao foi possivel atualizar a etapa.', 'danger');
+                    return;
+                }
+                updateButtonStates(row, data.iniciada, data.done);
+                if (data.message) {
+                    showToast(data.message, 'info');
+                }
+            } catch (error) {
+                showToast('Erro de comunicacao com o servidor.', 'danger');
+            }
+            return;
+        }
+
+        const doneBtn = event.target.closest('.toggle-done');
+        if (doneBtn) {
+            if (doneBtn.disabled) {
+                return;
+            }
+            const etapaId = doneBtn.getAttribute('data-etapa-id');
+            const row = document.getElementById('etapa-row-' + etapaId);
+            if (!etapaId || !row) {
+                return;
+            }
+
+            try {
+                const data = await postToggle('/etapa/' + etapaId + '/toggle');
+                if (!data.success) {
+                    showToast(data.message || 'Nao foi possivel concluir a etapa.', 'danger');
+                    return;
+                }
+
+                if (data.done) {
+                    removeRowFromPending(row);
+                    showToast('Etapa concluida e removida da triagem.', 'info');
+                } else {
+                    updateButtonStates(row, data.iniciada, data.done);
+                }
+            } catch (error) {
+                showToast('Erro de comunicacao com o servidor.', 'danger');
+            }
+            return;
+        }
     });
 
-    document.querySelectorAll('.toggle-done').forEach(button => {
-        button.addEventListener('click', function() {
-            if (this.disabled) return;
-            const etapaId = this.dataset.etapaId;
-            const etapaRow = document.getElementById(`etapa-row-${etapaId}`);
+    const expandAllBtn = document.getElementById('expandAllProjects');
+    const collapseAllBtn = document.getElementById('collapseAllProjects');
 
-            fetch(`/etapa/${etapaId}/toggle`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    // 'X-CSRFToken': csrfToken
-                },
-                // body: new URLSearchParams({ 'csrf_token': csrfToken })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateButtonStates(etapaRow, data.iniciada, data.done);
-                     if (data.message) { // Mesmo que success, pode haver uma mensagem informativa
-                        showAjaxFlashMessage(data.message, 'info');
-                    }
-                } else {
-                    showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao alternar concluída:', error);
-                showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
+    if (expandAllBtn) {
+        expandAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.toggle-outras-btn').forEach(function(btn) {
+                setPanelExpanded(btn, true);
             });
         });
+    }
+
+    if (collapseAllBtn) {
+        collapseAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.toggle-outras-btn').forEach(function(btn) {
+                setPanelExpanded(btn, false);
+            });
+        });
+    }
+
+    const expandedOnLoad = readExpandedSet();
+    document.querySelectorAll('.toggle-outras-btn').forEach(function(btn) {
+        const projectId = btn.getAttribute('data-project-id');
+        if (expandedOnLoad.has(String(projectId))) {
+            setPanelExpanded(btn, true);
+        }
     });
+
+    document.querySelectorAll('.pending-project-card').forEach(function(card) {
+        updateVisibleEmptyRow(card);
+    });
+    updateEmptyStateVisibility();
 });
 </script>
-{% endblock %} 
+{% endblock %}

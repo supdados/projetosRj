@@ -45,7 +45,6 @@
         <div id="content" class="content {% if not current_user_obj %}no-sidebar{% endif %}">
             {% if current_user_obj %}
             {% set endpoint = request.endpoint or '' %}
-            {% set show_dashboard_search = endpoint == 'main.dashboard' %}
             {% set user_areas = current_user_obj.get_areas() %}
             {% if user_areas %}
                 {% set available_areas = user_areas %}
@@ -73,7 +72,7 @@
                 {% set active_area_href = '#' %}
             {% endif %}
 
-            <nav class="navbar navbar-expand-lg app-topnav {{ 'has-dashboard-search' if show_dashboard_search else '' }}">
+            <nav class="navbar navbar-expand-lg app-topnav">
                 <div class="container-fluid app-topnav-container">
                     <div class="app-topnav-left">
                         <a href="{{ url_for('main.dashboard') }}" class="navbar-brand app-brand">
@@ -155,7 +154,6 @@
                     </div>
 
                     <div class="app-topnav-right">
-                        {% if show_dashboard_search %}
                         <div class="app-global-search d-none d-lg-flex" data-global-search data-search-url="{{ url_for('main.global_search_api') }}">
                             <form
                                 class="app-global-search-form"
@@ -183,7 +181,6 @@
                                 <div class="app-global-search-results" data-role="results"></div>
                             </div>
                         </div>
-                        {% endif %}
 
                         <div class="app-account-tooltip d-none d-lg-inline-flex">
                             <div class="dropdown app-account-menu">
@@ -328,63 +325,89 @@
                 <div class="skeleton-content">
                     {% if request.endpoint == 'main.dashboard' %}
                     <!-- Skeleton para Dashboard -->
-                    <div class="skeleton-header"></div>
-                    
-                    <!-- Cards de Estatísticas -->
-                    <div class="row mb-4">
-                        <div class="col-sm-6 col-lg-3 mb-3">
-                            <div class="skeleton-card d-flex" style="height: 100px; align-items: center; justify-content: space-between;">
-                                <div style="width: 70%;">
-                                    <div class="skeleton-text short" style="margin-bottom: 8px;"></div>
-                                    <div class="skeleton-text" style="height: 30px;"></div>
-                                </div>
-                                <div class="skeleton-avatar" style="background: var(--primary-light);"></div>
+                    <div class="skeleton-dashboard">
+                        <div class="skeleton-card skeleton-dashboard-hero">
+                            <div class="skeleton-dashboard-hero-copy">
+                                <div class="skeleton-header skeleton-dashboard-hero-title"></div>
+                                <div class="skeleton-text skeleton-dashboard-hero-subtitle"></div>
                             </div>
+                            <div class="skeleton-button skeleton-dashboard-hero-button"></div>
                         </div>
-                        <div class="col-sm-6 col-lg-3 mb-3">
-                            <div class="skeleton-card d-flex" style="height: 100px; align-items: center; justify-content: space-between;">
-                                <div style="width: 70%;">
-                                    <div class="skeleton-text short" style="margin-bottom: 8px;"></div>
-                                    <div class="skeleton-text" style="height: 30px;"></div>
+
+                        <div class="row g-2 mb-3">
+                            {% for i in range(4) %}
+                            <div class="col-6 col-md-3">
+                                <div class="skeleton-card skeleton-dashboard-stat-card">
+                                    <div class="skeleton-avatar skeleton-dashboard-stat-icon"></div>
+                                    <div class="skeleton-dashboard-stat-copy">
+                                        <div class="skeleton-text short skeleton-dashboard-stat-number"></div>
+                                        <div class="skeleton-text short"></div>
+                                        <div class="skeleton-text medium skeleton-dashboard-stat-helper"></div>
+                                    </div>
                                 </div>
-                                <div class="skeleton-avatar" style="background: var(--warning-color); opacity: 0.1;"></div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6 col-lg-3 mb-3">
-                            <div class="skeleton-card d-flex" style="height: 100px; align-items: center; justify-content: space-between;">
-                                <div style="width: 70%;">
-                                    <div class="skeleton-text short" style="margin-bottom: 8px;"></div>
-                                    <div class="skeleton-text" style="height: 30px;"></div>
-                                </div>
-                                <div class="skeleton-avatar" style="background: var(--success-color); opacity: 0.1;"></div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6 col-lg-3 mb-3">
-                            <div class="skeleton-card d-flex" style="height: 100px; align-items: center; justify-content: space-between;">
-                                <div style="width: 70%;">
-                                    <div class="skeleton-text short" style="margin-bottom: 8px;"></div>
-                                    <div class="skeleton-text" style="height: 30px;"></div>
-                                </div>
-                                <div class="skeleton-avatar" style="background: var(--danger-color); opacity: 0.1;"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Projetos Recentes -->
-                    <div class="skeleton-card mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="skeleton-header" style="margin-bottom: 0;"></div>
-                            <div class="skeleton-button"></div>
-                        </div>
-                        <div class="skeleton-table">
-                            {% for i in range(5) %}
-                            <div class="skeleton-table-row">
-                                <div class="skeleton-table-cell" style="flex: 0.3;"></div>
-                                <div class="skeleton-table-cell"></div>
-                                <div class="skeleton-table-cell"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.5;"></div>
                             </div>
                             {% endfor %}
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-8">
+                                <div class="skeleton-card skeleton-dashboard-main-card">
+                                    <div class="skeleton-dashboard-card-header">
+                                        <div class="skeleton-text skeleton-dashboard-card-title"></div>
+                                    </div>
+                                    <div class="skeleton-dashboard-table-head">
+                                        <div class="skeleton-table-cell" style="flex: 0.6;"></div>
+                                        <div class="skeleton-table-cell" style="flex: 2;"></div>
+                                        <div class="skeleton-table-cell" style="flex: 1.2;"></div>
+                                        <div class="skeleton-table-cell" style="flex: 1.1;"></div>
+                                        <div class="skeleton-table-cell" style="flex: 0.8; margin-right: 0;"></div>
+                                    </div>
+                                    <div class="skeleton-table skeleton-dashboard-table">
+                                        {% for i in range(6) %}
+                                        <div class="skeleton-table-row">
+                                            <div class="skeleton-table-cell" style="flex: 0.6;"></div>
+                                            <div class="skeleton-table-cell" style="flex: 2;"></div>
+                                            <div class="skeleton-table-cell" style="flex: 1.2;"></div>
+                                            <div class="skeleton-table-cell" style="flex: 1.1;"></div>
+                                            <div class="skeleton-table-cell" style="flex: 0.8; margin-right: 0;"></div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-4">
+                                <div class="skeleton-card skeleton-dashboard-side-card mb-3">
+                                    <div class="skeleton-dashboard-card-header">
+                                        <div class="skeleton-text skeleton-dashboard-card-title"></div>
+                                    </div>
+                                    <div class="skeleton-dashboard-actions">
+                                        <div class="skeleton-button skeleton-dashboard-action-btn"></div>
+                                        <div class="skeleton-button skeleton-dashboard-action-btn"></div>
+                                    </div>
+                                </div>
+
+                                <div class="skeleton-card skeleton-dashboard-side-card">
+                                    <div class="skeleton-dashboard-card-header skeleton-dashboard-priority-header">
+                                        <div class="skeleton-text skeleton-dashboard-card-title"></div>
+                                        <div class="skeleton-text short skeleton-dashboard-total-pill"></div>
+                                    </div>
+                                    <div class="skeleton-dashboard-priority-list">
+                                        {% for i in range(4) %}
+                                        <div class="skeleton-dashboard-priority-item">
+                                            <div class="skeleton-dashboard-priority-row">
+                                                <div class="skeleton-dashboard-priority-dot"></div>
+                                                <div class="skeleton-text short skeleton-dashboard-priority-label"></div>
+                                                <div class="skeleton-text short skeleton-dashboard-priority-count"></div>
+                                            </div>
+                                            <div class="skeleton-dashboard-priority-bar">
+                                                <div class="skeleton-dashboard-priority-progress"></div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -622,6 +645,7 @@
                 if (loadingOverlay) {
                     loadingOverlay.classList.remove('active');
                 }
+                body.classList.remove('page-ready');
                 body.classList.add('loading-active');
             }
 
@@ -629,10 +653,12 @@
                 if (loadingOverlay) {
                     loadingOverlay.classList.remove('active');
                 }
-                setTimeout(function() {
-                    body.classList.add('page-ready');
-                    body.classList.remove('loading-active');
-                }, 100);
+                body.classList.add('page-ready');
+                body.classList.remove('loading-active');
+                const currentPage = document.querySelector('.main-content');
+                if (currentPage) {
+                    currentPage.classList.remove('page-transition');
+                }
             }
 
             document.querySelectorAll('.app-mobile-link').forEach(function(link) {
@@ -997,6 +1023,14 @@
                 setTimeout(() => {
                     hideLoadingOverlay();
                 }, 800);
+            });
+
+            // Corrige retorno via histórico do navegador (BFCache):
+            // garante que a página não fique presa em estado "loading-active".
+            window.addEventListener('pageshow', function(event) {
+                if (event.persisted || body.classList.contains('loading-active')) {
+                    hideLoadingOverlay();
+                }
             });
 
             showLoadingOverlay();

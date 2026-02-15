@@ -1,4 +1,5 @@
 import datetime
+from collections import defaultdict
 
 from flask import flash, g, jsonify, redirect, render_template, request, url_for
 
@@ -184,83 +185,245 @@ def list_projects():
 @main_bp.route('/projetos_pendentes')
 @login_required
 def list_projetos_pendentes():
-    selected_area_filter = request.args.get('area')
-    filtro_periodo = request.args.get('periodo', 'atrasados')  # Novo parâmetro com default 'atrasados'
+    selected_area_filter = (request.args.get('area') or '').strip()
+    filtro_periodo = (request.args.get('periodo') or 'atrasados').strip()
+    selected_responsavel = (request.args.get('responsavel') or '').strip()
+
+    valid_periods = {'atrasados', '7dias', '14dias', '21dias'}
+    if filtro_periodo not in valid_periods:
+        filtro_periodo = 'atrasados'
+
     data_atual = datetime.date.today()
-    projetos_pendentes_com_etapas = []
+    data_7_dias = data_atual + datetime.timedelta(days=7)
+    data_14_dias = data_atual + datetime.timedelta(days=14)
+    data_21_dias = data_atual + datetime.timedelta(days=21)
+
+    def classify_bucket(data_fim):
+        if not data_fim:
+            return 'sem_data'
+        if data_fim < data_atual:
+            return 'atrasada'
+        if data_fim <= data_7_dias:
+            return '7dias'
+        if data_fim <= data_14_dias:
+            return '14dias'
+        if data_fim <= data_21_dias:
+            return '21dias'
+        return 'futuro'
+
+    visible_buckets_by_period = {
+        'atrasados': {'atrasada'},
+        '7dias': {'atrasada', '7dias'},
+        '14dias': {'atrasada', '7dias', '14dias'},
+        '21dias': {'atrasada', '7dias', '14dias', '21dias'},
+    }
+    visible_buckets = visible_buckets_by_period[filtro_periodo]
 
     query_projetos_base = Project.query.filter(Project.status == 'Vigente')
 
-    # Filtro de área
     if g.user.is_admin:
         if selected_area_filter:
             query_projetos_base = query_projetos_base.filter(Project.area_responsavel == selected_area_filter)
-    else: # Se não for admin, filtra pelas suas áreas
+    else:
         user_areas = g.user.get_areas()
         if user_areas:
             query_projetos_base = query_projetos_base.filter(Project.area_responsavel.in_(user_areas))
-        else: # Não-admin sem área não deve ver nenhum projeto
-            query_projetos_base = query_projetos_base.filter(Project.id == -1) 
-
-    projetos_vigentes = query_projetos_base.all()
-
-    for projeto in projetos_vigentes:
-        # Aplicar filtro de período nas etapas
-        if filtro_periodo == 'atrasados':
-            etapas_filtradas = Etapa.query.filter(
-                Etapa.project_id == projeto.id,
-                Etapa.done == False,
-                Etapa.data_fim < data_atual
-            ).order_by(Etapa.data_fim).all()
-        elif filtro_periodo == '7dias':
-            # Inclui atrasados + próximos 7 dias
-            data_limite = data_atual + datetime.timedelta(days=7)
-            etapas_filtradas = Etapa.query.filter(
-                Etapa.project_id == projeto.id,
-                Etapa.done == False,
-                Etapa.data_fim <= data_limite
-            ).order_by(Etapa.data_fim).all()
-        elif filtro_periodo == '14dias':
-            # Inclui atrasados + próximos 14 dias
-            data_limite = data_atual + datetime.timedelta(days=14)
-            etapas_filtradas = Etapa.query.filter(
-                Etapa.project_id == projeto.id,
-                Etapa.done == False,
-                Etapa.data_fim <= data_limite
-            ).order_by(Etapa.data_fim).all()
         else:
-            # Fallback para atrasados se o valor for inválido
-            etapas_filtradas = Etapa.query.filter(
-                Etapa.project_id == projeto.id,
-                Etapa.done == False,
-                Etapa.data_fim < data_atual
-            ).order_by(Etapa.data_fim).all()
+            query_projetos_base = query_projetos_base.filter(Project.id == -1)
 
-        if etapas_filtradas:
-            projetos_pendentes_com_etapas.append({
-                'projeto': projeto,
-                'etapas_atrasadas': etapas_filtradas  # Nome mantido por compatibilidade com o template
-            })
-    
-    # Opções de área para o dropdown (apenas para admin)
+    projetos_vigentes = query_projetos_base.order_by(Project.titulo.asc()).all()
+    project_ids = [p.id for p in projetos_vigentes]
+
     areas_options_for_dropdown = []
     if g.user.is_admin:
         project_areas_in_db = set(p.area_responsavel for p in Project.query.all() if p.area_responsavel)
         areas_options_for_dropdown = sorted(list(project_areas_in_db.union(set(AREAS_RESPONSAVEIS_CHOICES))))
 
-    # Necessário para o formulário de criação de projeto
-    # (objetivo -> resultado esperado -> indicadores)
     objetivos, _, _ = get_goal_catalog_context()
+
+    if not project_ids:
+        return render_template(
+            'projetos_pendentes.html',
+            projetos_com_etapas=[],
+            objetivos=objetivos,
+            AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES,
+            areas_options=areas_options_for_dropdown,
+            selected_area=selected_area_filter,
+            filtro_periodo=filtro_periodo,
+            selected_responsavel=selected_responsavel,
+            responsaveis_options=[],
+            period_options=[
+                ('atrasados', 'Projetos Atrasados'),
+                ('7dias', 'Próximos 7 Dias'),
+                ('14dias', 'Próximos 14 Dias'),
+                ('21dias', 'Próximos 21 Dias'),
+            ],
+            period_label_map={
+                'atrasados': 'Atrasados',
+                '7dias': 'Próximos 7 Dias',
+                '14dias': 'Próximos 14 Dias',
+                '21dias': 'Próximos 21 Dias',
+            },
+            etapa_bucket_map={},
+            summary_counts={
+                'total_projects': 0,
+                'atrasada': 0,
+                '7dias': 0,
+                '14dias': 0,
+                '21dias': 0,
+                'sem_data': 0,
+            },
+        )
+
+    responsaveis_query = Etapa.query.filter(
+        Etapa.project_id.in_(project_ids),
+        Etapa.done.is_(False),
+        Etapa.responsavel.isnot(None),
+    ).with_entities(Etapa.responsavel).distinct().all()
+    responsaveis_options = sorted(
+        [r[0].strip() for r in responsaveis_query if r[0] and r[0].strip()],
+        key=lambda value: value.casefold(),
+    )
+
+    etapas_query = Etapa.query.filter(
+        Etapa.project_id.in_(project_ids),
+        Etapa.done.is_(False),
+    )
+    if selected_responsavel:
+        etapas_query = etapas_query.filter(Etapa.responsavel.ilike(f"%{selected_responsavel}%"))
+
+    etapas_abertas = etapas_query.order_by(
+        Etapa.project_id.asc(),
+        Etapa.ordem.asc(),
+        Etapa.id.asc(),
+    ).all()
+
+    etapas_por_projeto = defaultdict(list)
+    etapa_bucket_map = {}
+    summary_counts = {
+        'total_projects': 0,
+        'atrasada': 0,
+        '7dias': 0,
+        '14dias': 0,
+        '21dias': 0,
+        'sem_data': 0,
+    }
+
+    for etapa in etapas_abertas:
+        bucket = classify_bucket(etapa.data_fim)
+        etapa_bucket_map[etapa.id] = bucket
+        etapas_por_projeto[etapa.project_id].append(etapa)
+        if bucket in summary_counts:
+            summary_counts[bucket] += 1
+
+    projetos_pendentes_com_etapas = []
+    project_by_id = {p.id: p for p in projetos_vigentes}
+
+    for project_id, etapas_project in etapas_por_projeto.items():
+        projeto = project_by_id.get(project_id)
+        if not projeto:
+            continue
+
+        etapas_project_sorted = sorted(
+            etapas_project,
+            key=lambda etapa: (
+                etapa.data_fim is None,
+                etapa.data_fim or datetime.date.max,
+                etapa.data_inicio is None,
+                etapa.data_inicio or datetime.date.max,
+                etapa.ordem if etapa.ordem is not None else 10**9,
+                etapa.id,
+            ),
+        )
+
+        etapas_visiveis = []
+        etapas_outras = []
+        counts = {
+            'qtd_atrasadas': 0,
+            'bucket_7dias': 0,
+            'bucket_14dias': 0,
+            'bucket_21dias': 0,
+            'qtd_sem_data': 0,
+        }
+        max_overdue_days = 0
+
+        for etapa in etapas_project_sorted:
+            bucket = etapa_bucket_map.get(etapa.id, 'futuro')
+
+            if bucket == 'atrasada':
+                counts['qtd_atrasadas'] += 1
+                if etapa.data_fim:
+                    overdue_days = (data_atual - etapa.data_fim).days
+                    if overdue_days > max_overdue_days:
+                        max_overdue_days = overdue_days
+            elif bucket == '7dias':
+                counts['bucket_7dias'] += 1
+            elif bucket == '14dias':
+                counts['bucket_14dias'] += 1
+            elif bucket == '21dias':
+                counts['bucket_21dias'] += 1
+            elif bucket == 'sem_data':
+                counts['qtd_sem_data'] += 1
+
+            if bucket in visible_buckets:
+                etapas_visiveis.append(etapa)
+            else:
+                etapas_outras.append(etapa)
+
+        if not etapas_visiveis:
+            continue
+
+        qtd_7dias = counts['bucket_7dias']
+        qtd_14dias = counts['bucket_7dias'] + counts['bucket_14dias']
+        qtd_21dias = counts['bucket_7dias'] + counts['bucket_14dias'] + counts['bucket_21dias']
+
+        projetos_pendentes_com_etapas.append({
+            'projeto': projeto,
+            'etapas_visiveis': etapas_visiveis,
+            'etapas_outras': etapas_outras,
+            'qtd_visiveis': len(etapas_visiveis),
+            'qtd_outras': len(etapas_outras),
+            'qtd_atrasadas': counts['qtd_atrasadas'],
+            'qtd_7dias': qtd_7dias,
+            'qtd_14dias': qtd_14dias,
+            'qtd_21dias': qtd_21dias,
+            'qtd_sem_data': counts['qtd_sem_data'],
+            'max_overdue_days': max_overdue_days,
+        })
+
+    projetos_pendentes_com_etapas.sort(
+        key=lambda item: (
+            -item['max_overdue_days'],
+            -item['qtd_visiveis'],
+            (item['projeto'].titulo or '').casefold(),
+        )
+    )
+    summary_counts['total_projects'] = len(projetos_pendentes_com_etapas)
 
     return render_template(
         'projetos_pendentes.html',
         projetos_com_etapas=projetos_pendentes_com_etapas,
         objetivos=objetivos,
         AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES,
-        # Variáveis para os filtros
         areas_options=areas_options_for_dropdown,
         selected_area=selected_area_filter,
-        filtro_periodo=filtro_periodo  # Novo parâmetro
+        filtro_periodo=filtro_periodo,
+        selected_responsavel=selected_responsavel,
+        responsaveis_options=responsaveis_options,
+        period_options=[
+            ('atrasados', 'Projetos Atrasados'),
+            ('7dias', 'Próximos 7 Dias'),
+            ('14dias', 'Próximos 14 Dias'),
+            ('21dias', 'Próximos 21 Dias'),
+        ],
+        period_label_map={
+            'atrasados': 'Atrasados',
+            '7dias': 'Próximos 7 Dias',
+            '14dias': 'Próximos 14 Dias',
+            '21dias': 'Próximos 21 Dias',
+        },
+        etapa_bucket_map=etapa_bucket_map,
+        summary_counts=summary_counts,
     )
 @main_bp.route('/add_project', methods=['POST'])
 @login_required
