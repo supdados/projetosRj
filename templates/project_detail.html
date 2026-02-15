@@ -592,37 +592,49 @@
 
     /* Estilos especiais para campos no header (fundo azul) */
     .project-header [data-field] input.form-control,
-    .project-header [data-field] textarea.form-control {
+    .project-header [data-field] textarea.form-control,
+    .project-header input.form-control[data-field],
+    .project-header textarea.form-control[data-field] {
         background: rgba(255, 255, 255, 0.2);
         color: #fff !important;
         border: 1px solid rgba(255, 255, 255, 0.3);
     }
 
     .project-header [data-field] input.form-control::placeholder,
-    .project-header [data-field] textarea.form-control::placeholder {
+    .project-header [data-field] textarea.form-control::placeholder,
+    .project-header input.form-control[data-field]::placeholder,
+    .project-header textarea.form-control[data-field]::placeholder {
         color: rgba(255, 255, 255, 0.85) !important;
         opacity: 1;
     }
 
     .project-header [data-field] input.form-control::-webkit-input-placeholder,
-    .project-header [data-field] textarea.form-control::-webkit-input-placeholder {
+    .project-header [data-field] textarea.form-control::-webkit-input-placeholder,
+    .project-header input.form-control[data-field]::-webkit-input-placeholder,
+    .project-header textarea.form-control[data-field]::-webkit-input-placeholder {
         color: rgba(255, 255, 255, 0.85) !important;
         opacity: 1;
     }
 
     .project-header [data-field] input.form-control::-moz-placeholder,
-    .project-header [data-field] textarea.form-control::-moz-placeholder {
+    .project-header [data-field] textarea.form-control::-moz-placeholder,
+    .project-header input.form-control[data-field]::-moz-placeholder,
+    .project-header textarea.form-control[data-field]::-moz-placeholder {
         color: rgba(255, 255, 255, 0.85) !important;
         opacity: 1;
     }
 
     .project-header [data-field] input.form-control:-ms-input-placeholder,
-    .project-header [data-field] textarea.form-control:-ms-input-placeholder {
+    .project-header [data-field] textarea.form-control:-ms-input-placeholder,
+    .project-header input.form-control[data-field]:-ms-input-placeholder,
+    .project-header textarea.form-control[data-field]:-ms-input-placeholder {
         color: rgba(255, 255, 255, 0.85) !important;
     }
 
     .project-header [data-field] input.form-control:focus,
-    .project-header [data-field] textarea.form-control:focus {
+    .project-header [data-field] textarea.form-control:focus,
+    .project-header input.form-control[data-field]:focus,
+    .project-header textarea.form-control[data-field]:focus {
         background: rgba(255, 255, 255, 0.3);
         border-color: rgba(255, 255, 255, 0.5);
         box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1);
@@ -4153,7 +4165,8 @@
                     input.style.cssText = `
                     font-size: 0.875rem;
                     line-height: 1.4;
-                    color: white; important!
+                    color: #ffffff;
+                    -webkit-text-fill-color: #ffffff;
                     background-color: rgba(255, 255, 255, 0.15);
                     border: 1px solid rgba(255, 255, 255, 0.3);
                     border-radius: 6px;

@@ -69,3 +69,30 @@ Migracao para bancos existentes:
 - Script dedicado: `python3 migrate_add_abep_indicator.py`
 - `run_migrations.py` tambem inclui esta etapa.
 - O startup da app garante automaticamente a coluna quando ela nao existe.
+
+## Organizacao de rotas (modular)
+
+As rotas foram refatoradas para um pacote dedicado:
+- `/Users/juniorguimaraes/Downloads/projetosRj/routes/`
+
+Estrutura principal:
+- `routes/blueprint.py`: blueprint unico `main_bp` (mantem endpoints `main.*`).
+- `routes/decorators.py`: `login_required`, `admin_required`.
+- `routes/shared.py`: helpers/constantes compartilhadas e `inject_current_year`.
+- `routes/auth.py`: login/logout/home/senha.
+- `routes/dashboard.py`: dashboard.
+- `routes/search.py`: busca global (`/api/busca-global`, `/busca`) e helpers de busca.
+- `routes/projects.py`: projetos e historico de projeto.
+- `routes/etapas.py`: etapas e operacoes relacionadas.
+- `routes/tasks.py`: tarefas, itens e comentarios.
+- `routes/admin_users.py`: administracao de usuarios.
+- `routes/admin_templates.py`: modelos de etapas.
+- `routes/api.py`: APIs auxiliares (objetivo/resultado/indicador/templates/projetos usuario).
+- `routes/maintenance.py`: rotas operacionais (`/setup_db`, favicon).
+
+Ponto de entrada:
+- `routes/__init__.py` exporta `main_bp` e `inject_current_year` e importa os modulos para registrar as rotas.
+
+Compatibilidade:
+- URLs e endpoint names foram preservados.
+- `url_for('main.*')` continua igual.

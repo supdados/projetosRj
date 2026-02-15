@@ -9,7 +9,7 @@ from sqlalchemy import inspect, text
 # Import db e User de models.py para inicialização
 from models import db, User # User é crucial aqui
 from objective_catalog import sync_goal_catalog_to_db
-# Importar o Blueprint das rotas e a função context_processor de routes.py
+# Importar o Blueprint das rotas e a função context_processor do pacote routes/
 from routes import main_bp, inject_current_year
 
 load_dotenv()
