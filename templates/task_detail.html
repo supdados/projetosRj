@@ -3227,5 +3227,20 @@
         document.getElementById('itemForm').action = '{{ url_for("main.add_task_item", task_id=task.id) }}';
         document.getElementById('itemForm').reset();
     });
+
+    (function applyFocusItemFromUrl() {
+        var focusItemId = new URLSearchParams(window.location.search).get('focus_item');
+        if (!focusItemId) return;
+        var targetRow = document.querySelector('.task-item-row[data-item-id="' + focusItemId + '"]');
+        if (!targetRow) return;
+
+        setTimeout(function () {
+            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetRow.classList.add('search-focus-highlight');
+            setTimeout(function () {
+                targetRow.classList.remove('search-focus-highlight');
+            }, 2300);
+        }, 180);
+    })();
 </script>
 {% endblock %}

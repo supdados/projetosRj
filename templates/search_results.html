@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block title %}Busca Global - ProjetosRJ{% endblock %}
+
+{% block head_extra %}
+<style>
+    .search-results-page {
+        max-width: 1220px;
+        margin: 0 auto;
+    }
+
+    .search-results-header {
+        border: 1px solid #dde7f2;
+        border-radius: 14px;
+        background: #ffffff;
+        box-shadow: 0 10px 24px rgba(22, 36, 58, 0.06);
+        padding: 1.15rem 1.25rem;
+    }
+
+    .search-results-title {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin: 0;
+        font-size: 1.18rem;
+        font-weight: 700;
+        color: #1f2c40;
+    }
+
+    .search-results-title i {
+        color: var(--primary-color);
+    }
+
+    .search-results-subtitle {
+        margin: 0.45rem 0 0;
+        color: #66758b;
+        font-size: 0.9rem;
+    }
+
+    .search-results-form {
+        margin-top: 0.95rem;
+        display: flex;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+    }
+
+    .search-results-input {
+        flex: 1 1 360px;
+        min-width: 0;
+        border-radius: 999px;
+        border: 1px solid #d8e3ef;
+        padding: 0.58rem 0.95rem;
+        font-size: 0.96rem;
+        color: #203047;
+        background: #fbfdff;
+    }
+
+    .search-results-input:focus {
+        border-color: #bdd4ea;
+        box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.12);
+        outline: none;
+    }
+
+    .search-results-submit {
+        border: none;
+        border-radius: 999px;
+        padding: 0.58rem 1.05rem;
+        background: var(--primary-color);
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .search-results-grid {
+        margin-top: 1rem;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+    }
+
+    .search-results-section {
+        border: 1px solid #e0e8f2;
+        border-radius: 12px;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .search-results-section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.65rem;
+        padding: 0.75rem 0.95rem;
+        border-bottom: 1px solid #edf2f8;
+        background: #fbfdff;
+    }
+
+    .search-results-section-title {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.96rem;
+        font-weight: 700;
+        color: #203047;
+    }
+
+    .search-results-section-title i {
+        color: #607186;
+        font-size: 0.88rem;
+    }
+
+    .search-results-count {
+        border-radius: 999px;
+        padding: 0.2rem 0.55rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: #eef4fb;
+        color: #49617f;
+    }
+
+    .search-result-item {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.85rem;
+        padding: 0.75rem 0.95rem;
+        text-decoration: none;
+        border-bottom: 1px solid #f0f4f9;
+        color: #1f2f45;
+        transition: background 0.15s ease;
+    }
+
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+
+    .search-result-item:hover {
+        background: #f7fbff;
+    }
+
+    .search-result-content {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .search-result-head {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .search-result-badge {
+        border-radius: 999px;
+        padding: 0.15rem 0.52rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+
+    .search-result-badge-project {
+        color: #03598f;
+        background: #e2f0fc;
+    }
+
+    .search-result-badge-stage {
+        color: #6b4d00;
+        background: #fdf2d4;
+    }
+
+    .search-result-badge-task {
+        color: #24581f;
+        background: #e0f6de;
+    }
+
+    .search-result-badge-task-item {
+        color: #5f3f8a;
+        background: #ede3ff;
+    }
+
+    .search-result-title {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #1f2f45;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .search-result-subtitle,
+    .search-result-meta {
+        margin: 0;
+        color: #67778d;
+        font-size: 0.82rem;
+        line-height: 1.35;
+    }
+
+    .search-result-match {
+        margin-top: 0.28rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.12rem;
+        min-width: 0;
+    }
+
+    .search-result-match-badge {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        border-radius: 999px;
+        padding: 0.09rem 0.46rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        background: #eef2f7;
+        color: #4d6280;
+    }
+
+    .search-result-match-text {
+        margin: 0;
+        color: #67778d;
+        font-size: 0.8rem;
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .search-result-chevron {
+        color: #9aa8bb;
+        font-size: 0.82rem;
+        margin-top: 0.15rem;
+    }
+
+    .search-results-empty {
+        margin-top: 1rem;
+        border: 1px dashed #cfdae7;
+        border-radius: 12px;
+        background: #fafcff;
+        color: #5f7289;
+        padding: 1rem 1.1rem;
+    }
+
+    @media (max-width: 767.98px) {
+        .search-results-form {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .search-results-input {
+            flex-basis: auto;
+        }
+
+        .search-results-submit {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% macro render_section(title, icon_class, items, badge_class) -%}
+<section class="search-results-section">
+    <div class="search-results-section-head">
+        <h3 class="search-results-section-title">
+            <i class="fas {{ icon_class }}"></i>
+            {{ title }}
+        </h3>
+        <span class="search-results-count">{{ items|length }}</span>
+    </div>
+    {% for item in items %}
+    <a href="{{ item.url }}" class="search-result-item">
+        <div class="search-result-content">
+            <div class="search-result-head">
+                <span class="search-result-badge {{ badge_class }}">{{ item.type_label }}</span>
+                <p class="search-result-title">{{ item.title }}</p>
+            </div>
+            {% if item.subtitle %}
+            <p class="search-result-subtitle">{{ item.subtitle }}</p>
+            {% endif %}
+            {% if item.meta %}
+            <p class="search-result-meta">{{ item.meta }}</p>
+            {% endif %}
+            {% if item.match_field == 'comentarios' and (item.match_label or item.match_excerpt) %}
+            <div class="search-result-match">
+                {% if item.match_label %}
+                <span class="search-result-match-badge">Encontrado em: {{ item.match_label }}</span>
+                {% endif %}
+                {% if item.match_excerpt %}
+                <p class="search-result-match-text">{{ item.match_excerpt }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        <i class="fas fa-chevron-right search-result-chevron"></i>
+    </a>
+    {% endfor %}
+</section>
+{%- endmacro %}
+
+{% block content %}
+<div class="container-fluid py-4 search-results-page">
+    <section class="search-results-header">
+        <h1 class="search-results-title">
+            <i class="fas fa-search"></i>
+            Busca Global
+        </h1>
+        {% if search_query %}
+        <p class="search-results-subtitle">
+            {{ search_payload.counts.total }} referencia{{ 's' if search_payload.counts.total != 1 else '' }} para
+            "<strong>{{ search_query }}</strong>".
+        </p>
+        {% else %}
+        <p class="search-results-subtitle">Busque por projetos, etapas, tarefas e itens de tarefa.</p>
+        {% endif %}
+
+        <form method="GET" action="{{ url_for('main.global_search_page') }}" class="search-results-form">
+            <input
+                type="search"
+                name="q"
+                class="search-results-input"
+                placeholder="Buscar projetos, etapas, tarefas e itens..."
+                value="{{ search_query }}"
+                autocomplete="off"
+            >
+            <button type="submit" class="search-results-submit">Buscar</button>
+        </form>
+    </section>
+
+    {% if not search_query %}
+    <div class="search-results-empty">
+        Digite um termo para iniciar a busca.
+    </div>
+    {% elif search_payload.counts.total == 0 %}
+    <div class="search-results-empty">
+        Nenhuma referencia encontrada para "<strong>{{ search_query }}</strong>".
+    </div>
+    {% else %}
+    <div class="search-results-grid">
+        {% if search_payload.results.projects %}
+        {{ render_section('Projetos', 'fa-folder-open', search_payload.results.projects, 'search-result-badge-project') }}
+        {% endif %}
+
+        {% if search_payload.results.stages %}
+        {{ render_section('Etapas', 'fa-list-check', search_payload.results.stages, 'search-result-badge-stage') }}
+        {% endif %}
+
+        {% if search_payload.results.tasks %}
+        {{ render_section('Tarefas', 'fa-clipboard-list', search_payload.results.tasks, 'search-result-badge-task') }}
+        {% endif %}
+
+        {% if search_payload.results.task_items %}
+        {{ render_section('Itens de Tarefa', 'fa-list', search_payload.results.task_items, 'search-result-badge-task-item') }}
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

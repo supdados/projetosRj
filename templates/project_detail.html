@@ -1886,13 +1886,154 @@
         min-height: 24px;
         /* Altura mínima para o parágrafo da descrição */
     }
+
+    .project-header-main-row {
+        gap: 0.75rem;
+    }
+
+    .project-header-main-content {
+        flex: 1;
+        min-width: 0;
+        max-width: calc(100% - 120px);
+    }
+
+    .project-header-description {
+        max-height: none;
+        overflow: visible;
+    }
+
+    .project-compact-header {
+        position: fixed;
+        top: var(--project-compact-top, 74px);
+        left: 1rem;
+        right: 1rem;
+        z-index: 1035;
+        opacity: 0;
+        transform: translateY(-10px) scale(0.985);
+        pointer-events: none;
+        transition:
+            opacity 0.22s ease,
+            transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: opacity, transform;
+    }
+
+    .project-compact-header.is-visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+    }
+
+    .project-compact-inner {
+        width: min(1080px, calc((100vw - 2rem) * 0.7));
+        margin: 0 auto;
+        border-radius: 12px;
+        border: 1px solid rgba(183, 213, 242, 0.9);
+        background: rgba(233, 244, 255, 0.96);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 10px 24px rgba(37, 87, 138, 0.18);
+        padding: 0.55rem 0.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+    }
+
+    .project-compact-main {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .project-compact-title {
+        margin: 0;
+        font-size: 0.98rem;
+        font-weight: 700;
+        color: #1f2f45;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .project-compact-description {
+        margin: 0.3rem 0 0;
+        font-size: 0.8rem;
+        color: #4f6680;
+        line-height: 1.35;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .project-compact-dates {
+        margin-top: 0.32rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .project-compact-dates span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.28rem;
+        border: 1px solid #d8e6f4;
+        background: #f4f9ff;
+        color: #45617f;
+        border-radius: 999px;
+        padding: 0.18rem 0.52rem;
+        font-size: 0.74rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .project-compact-dates span i {
+        color: #5d7693;
+        font-size: 0.67rem;
+    }
+
+    .project-compact-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 8px;
+        padding: 0.38rem 0.74rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        border: 1px solid #d7e4f1 !important;
+        background: #ffffff;
+        color: #415970 !important;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    }
+
+    .project-compact-back:hover {
+        background: #f4f8fc;
+        border-color: #c6d9ec !important;
+        color: #2f455d !important;
+    }
+
+    .project-compact-header.is-hidden-by-edit {
+        display: none !important;
+    }
+
+    .project-header-sentinel {
+        width: 100%;
+        height: 1px;
+        pointer-events: none;
+    }
+
+    @media (max-width: 991.98px) {
+        .project-compact-header {
+            display: none !important;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid px-3 py-3">
     <!-- Cabeçalho do projeto -->
-    <div class="project-header">
+    <div class="project-header" id="projectMainHeader">
         <!-- Mensagens flash dinâmicas para AJAX -->
         <div id="ajax-flash-messages" class="mb-2" style="display:none;">
             <div class="alert alert-info alert-dismissible fade show py-2 px-3" role="alert">
@@ -1901,10 +2042,10 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-between align-items-start mb-2">
-            <div style="flex: 1; max-width: calc(100% - 120px);">
+        <div class="d-flex justify-content-between align-items-start mb-2 project-header-main-row">
+            <div class="project-header-main-content">
                 <h1 class="mb-2" data-field="titulo" data-value="{{ project.titulo }}">{{ project.titulo }}</h1>
-                <p class="mb-2" style="opacity: 0.92; font-size: 0.875rem; line-height: 1.4;"
+                <p class="mb-2 project-header-description" style="opacity: 0.92; font-size: 0.875rem; line-height: 1.4;"
                     data-field="short_description" data-value="{{ project.short_description or '' }}">
                     {{ project.short_description if project.short_description else '' }}
                 </p>
@@ -1913,13 +2054,37 @@
                 <i class="fas fa-arrow-left me-1"></i>Voltar
             </a>
         </div>
-        <p class="mb-0">
+        <p class="mb-0 project-header-dates">
             <span class="me-3"><i class="far fa-calendar-alt me-1"></i> Início: {{
                 project.data_inicio_projeto.strftime('%d/%m/%Y') if project.data_inicio_projeto else 'Não definida'
                 }}</span>
             <span><i class="far fa-calendar-check me-1"></i> Fim: {{ project.data_fim_projeto.strftime('%d/%m/%Y') if
                 project.data_fim_projeto else 'Não definida' }}</span>
         </p>
+    </div>
+    <div id="projectHeaderSentinel" class="project-header-sentinel" aria-hidden="true"></div>
+
+    <div class="project-compact-header" id="projectCompactHeader" aria-hidden="true">
+        <div class="project-compact-inner">
+            <div class="project-compact-main">
+                <h2 class="project-compact-title">{{ project.titulo }}</h2>
+                {% if project.short_description %}
+                <p class="project-compact-description">{{ project.short_description }}</p>
+                {% endif %}
+                <div class="project-compact-dates">
+                    <span><i class="far fa-calendar-alt"></i> Início: {{
+                        project.data_inicio_projeto.strftime('%d/%m/%Y') if project.data_inicio_projeto else 'Não definida'
+                        }}</span>
+                    <span><i class="far fa-calendar-check"></i> Fim: {{
+                        project.data_fim_projeto.strftime('%d/%m/%Y') if project.data_fim_projeto else 'Não definida'
+                        }}</span>
+                </div>
+            </div>
+            <a href="{{ url_for('main.list_projects') }}" class="project-compact-back">
+                <i class="fas fa-arrow-left"></i>
+                <span>Voltar</span>
+            </a>
+        </div>
     </div>
 
     <!-- Cartão de detalhes do projeto -->
@@ -3647,6 +3812,232 @@
         const cancelButton = document.querySelector('.btn-cancel-edit');
         const historyButton = document.querySelector('.btn-history');
         const concludeButton = document.querySelector('.btn-conclude-project');
+        const projectMainHeader = document.getElementById('projectMainHeader');
+        const projectCompactHeader = document.getElementById('projectCompactHeader');
+        const projectHeaderSentinel = document.getElementById('projectHeaderSentinel');
+
+        let compactHeaderObserver = null;
+        let compactHeaderFallbackRaf = null;
+        let compactHeaderPageReadyObserver = null;
+        let compactHeaderTopnavResizeObserver = null;
+        let compactHeaderTrackingStarted = false;
+        let compactHeaderUsesFallback = false;
+        let compactHeaderFallbackBound = false;
+
+        function getTopNavOffset() {
+            const topNav = document.querySelector('.app-topnav');
+            if (!topNav) {
+                return 74;
+            }
+            const navHeight = topNav.getBoundingClientRect().height || 64;
+            return Math.round(navHeight + 8);
+        }
+
+        function syncCompactHeaderOffset() {
+            const compactTop = getTopNavOffset();
+            document.documentElement.style.setProperty('--project-compact-top', `${compactTop}px`);
+            return compactTop;
+        }
+
+        function canUseCompactHeader() {
+            if (!projectMainHeader || !projectCompactHeader || !projectHeaderSentinel) {
+                return false;
+            }
+            if (window.innerWidth <= 991.98) {
+                return false;
+            }
+            if (projectCompactHeader.classList.contains('is-hidden-by-edit')) {
+                return false;
+            }
+            return true;
+        }
+
+        function forceCompactHeaderHidden() {
+            if (!projectCompactHeader) {
+                return;
+            }
+            projectCompactHeader.classList.remove('is-visible');
+            projectCompactHeader.setAttribute('aria-hidden', 'true');
+        }
+
+        function setCompactHeaderVisible(shouldShow) {
+            if (!projectCompactHeader) {
+                return;
+            }
+            const visible = Boolean(shouldShow && canUseCompactHeader());
+            projectCompactHeader.classList.toggle('is-visible', visible);
+            projectCompactHeader.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        }
+
+        function applyCompactHeaderVisibilityBySentinelState(sentinelIsIntersecting, compactTop) {
+            if (typeof compactTop !== 'number') {
+                syncCompactHeaderOffset();
+            }
+            setCompactHeaderVisible(!sentinelIsIntersecting);
+        }
+
+        function updateCompactHeaderBySentinelFallback() {
+            if (!projectHeaderSentinel) {
+                setCompactHeaderVisible(false);
+                return;
+            }
+            const compactTop = syncCompactHeaderOffset();
+            const sentinelRect = projectHeaderSentinel.getBoundingClientRect();
+            const sentinelIsIntersecting = sentinelRect.bottom > compactTop && sentinelRect.top < window.innerHeight;
+            applyCompactHeaderVisibilityBySentinelState(sentinelIsIntersecting, compactTop);
+        }
+
+        function requestFallbackUpdate() {
+            if (compactHeaderFallbackRaf) {
+                return;
+            }
+            compactHeaderFallbackRaf = window.requestAnimationFrame(() => {
+                compactHeaderFallbackRaf = null;
+                updateCompactHeaderBySentinelFallback();
+            });
+        }
+
+        function bindFallbackScrollListener() {
+            if (compactHeaderFallbackBound) {
+                return;
+            }
+            window.addEventListener('scroll', requestFallbackUpdate, { passive: true });
+            compactHeaderFallbackBound = true;
+        }
+
+        function unbindFallbackScrollListener() {
+            if (!compactHeaderFallbackBound) {
+                return;
+            }
+            window.removeEventListener('scroll', requestFallbackUpdate);
+            compactHeaderFallbackBound = false;
+        }
+
+        function createIntersectionObserverTracking() {
+            if (!('IntersectionObserver' in window) || !projectHeaderSentinel) {
+                return false;
+            }
+            const compactTop = syncCompactHeaderOffset();
+            compactHeaderObserver = new IntersectionObserver(
+                (entries) => {
+                    const entry = entries && entries[0];
+                    if (!entry) {
+                        return;
+                    }
+                    const offset = syncCompactHeaderOffset();
+                    applyCompactHeaderVisibilityBySentinelState(entry.isIntersecting, offset);
+                },
+                {
+                    root: null,
+                    threshold: 0,
+                    rootMargin: `-${compactTop}px 0px 0px 0px`,
+                }
+            );
+            compactHeaderObserver.observe(projectHeaderSentinel);
+            return true;
+        }
+
+        function destroyCompactHeaderTracking() {
+            if (compactHeaderObserver) {
+                compactHeaderObserver.disconnect();
+                compactHeaderObserver = null;
+            }
+            unbindFallbackScrollListener();
+            if (compactHeaderFallbackRaf) {
+                window.cancelAnimationFrame(compactHeaderFallbackRaf);
+                compactHeaderFallbackRaf = null;
+            }
+            if (compactHeaderTopnavResizeObserver) {
+                compactHeaderTopnavResizeObserver.disconnect();
+                compactHeaderTopnavResizeObserver = null;
+            }
+        }
+
+        function refreshCompactHeaderTracking() {
+            if (!compactHeaderTrackingStarted) {
+                return;
+            }
+            destroyCompactHeaderTracking();
+            compactHeaderUsesFallback = !createIntersectionObserverTracking();
+            if (compactHeaderUsesFallback) {
+                bindFallbackScrollListener();
+                requestFallbackUpdate();
+                return;
+            }
+            // Garantir estado correto sem aguardar o primeiro callback do observer.
+            updateCompactHeaderBySentinelFallback();
+        }
+
+        function onViewportChanged() {
+            if (!compactHeaderTrackingStarted) {
+                return;
+            }
+            refreshCompactHeaderTracking();
+        }
+
+        function startCompactHeaderTracking() {
+            if (compactHeaderTrackingStarted) {
+                return;
+            }
+            compactHeaderTrackingStarted = true;
+            setCompactHeaderVisible(false);
+            refreshCompactHeaderTracking();
+            window.addEventListener('resize', onViewportChanged);
+            window.addEventListener('orientationchange', onViewportChanged);
+
+            if ('ResizeObserver' in window) {
+                const topNav = document.querySelector('.app-topnav');
+                if (topNav) {
+                    compactHeaderTopnavResizeObserver = new ResizeObserver(() => {
+                        onViewportChanged();
+                    });
+                    compactHeaderTopnavResizeObserver.observe(topNav);
+                }
+            }
+        }
+
+        function waitForPageReadyAndStartCompactHeader() {
+            forceCompactHeaderHidden();
+            if (document.body.classList.contains('page-ready')) {
+                window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                        startCompactHeaderTracking();
+                    });
+                });
+                return;
+            }
+
+            compactHeaderPageReadyObserver = new MutationObserver(() => {
+                if (!document.body.classList.contains('page-ready')) {
+                    return;
+                }
+                if (compactHeaderPageReadyObserver) {
+                    compactHeaderPageReadyObserver.disconnect();
+                    compactHeaderPageReadyObserver = null;
+                }
+                window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                        startCompactHeaderTracking();
+                    });
+                });
+            });
+            compactHeaderPageReadyObserver.observe(document.body, {
+                attributes: true,
+                attributeFilter: ['class'],
+            });
+        }
+
+        waitForPageReadyAndStartCompactHeader();
+
+        window.addEventListener('pageshow', function (event) {
+            if (!compactHeaderTrackingStarted) {
+                return;
+            }
+            if (event.persisted) {
+                forceCompactHeaderHidden();
+                refreshCompactHeaderTracking();
+            }
+        });
 
         if (editButton) {
             editButton.addEventListener('click', function (e) {
@@ -3681,6 +4072,11 @@
         }
 
         async function enterEditMode() {
+            if (projectCompactHeader) {
+                projectCompactHeader.classList.add('is-hidden-by-edit');
+                setCompactHeaderVisible(false);
+            }
+
             // Mudar botões
             editButton.style.display = 'none';
             if (historyButton) historyButton.style.display = 'none';
@@ -4456,6 +4852,37 @@
                 }
             }
         }
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const focusEtapaId = new URLSearchParams(window.location.search).get('focus_etapa');
+        if (!focusEtapaId) {
+            return;
+        }
+
+        const prefersCards = window.matchMedia('(max-width: 991.98px)').matches;
+        let target = null;
+
+        if (prefersCards) {
+            target = document.querySelector(`.etapa-card[data-etapa-id="${focusEtapaId}"]`);
+        }
+        if (!target) {
+            target = document.querySelector(`#etapas-tbody tr[data-etapa-id="${focusEtapaId}"]`);
+        }
+        if (!target) {
+            target = document.querySelector(`.etapa-card[data-etapa-id="${focusEtapaId}"]`);
+        }
+        if (!target) {
+            return;
+        }
+
+        setTimeout(function () {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.add('search-focus-highlight');
+            setTimeout(function () {
+                target.classList.remove('search-focus-highlight');
+            }, 2300);
+        }, 180);
     });
 </script>
 {% endblock %}

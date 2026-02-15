@@ -2,46 +2,195 @@
 
 {% block title %}Login - ProjetosRJ{% endblock %}
 
+{% block head_extra %}
+<style>
+    .login-page {
+        min-height: calc(100vh - 220px);
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+    }
+
+    .login-card {
+        width: 100%;
+        max-width: 430px;
+        background: #ffffff;
+        border: 1px solid #e6edf5;
+        border-radius: 16px;
+        box-shadow: 0 20px 45px rgba(0, 45, 80, 0.08);
+        padding: 2rem 1.75rem;
+    }
+
+    .login-brand {
+        text-align: center;
+        margin-bottom: 1.4rem;
+    }
+
+    .login-brand-icon {
+        width: 52px;
+        height: 52px;
+        margin: 0 auto 0.9rem;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #005a92;
+        background: linear-gradient(145deg, #e9f3fc 0%, #f6fbff 100%);
+        border: 1px solid #dceaf8;
+        font-size: 1.2rem;
+    }
+
+    .login-title {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #223246;
+    }
+
+    .login-subtitle {
+        margin: 0.35rem 0 0;
+        color: #728196;
+        font-size: 0.94rem;
+    }
+
+    .login-field {
+        margin-bottom: 0.95rem;
+    }
+
+    .login-field-label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #6e7d91;
+        margin-bottom: 0.45rem;
+    }
+
+    .login-input-group {
+        position: relative;
+        display: flex;
+        align-items: center;
+        border: 1px solid #d9e3ef;
+        border-radius: 12px;
+        background: #fbfdff;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .login-input-group:focus-within {
+        border-color: #2f7bb6;
+        background: #ffffff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.14);
+    }
+
+    .login-input-icon {
+        width: 42px;
+        text-align: center;
+        color: #8091a8;
+        font-size: 0.95rem;
+        flex: 0 0 auto;
+    }
+
+    .login-input {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        height: 46px;
+        padding: 0 0.9rem 0 0.2rem;
+        font-size: 0.95rem;
+        color: #1f2d40;
+    }
+
+    .login-input::placeholder {
+        color: #94a3b8;
+    }
+
+    .login-submit {
+        width: 100%;
+        height: 46px;
+        border-radius: 12px;
+        border: 1px solid #0a6bac;
+        background: linear-gradient(180deg, #1180c8 0%, #0565a3 100%);
+        color: #ffffff !important;
+        font-weight: 600;
+        font-size: 0.97rem;
+        letter-spacing: 0.01em;
+        margin-top: 0.55rem;
+        transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    }
+
+    .login-submit:hover {
+        background: linear-gradient(180deg, #2490d6 0%, #0d72b2 100%);
+        color: #ffffff !important;
+        filter: brightness(1.03);
+        box-shadow: 0 10px 20px rgba(0, 90, 146, 0.24);
+    }
+
+    .login-submit:active {
+        transform: translateY(1px);
+        color: #ffffff !important;
+    }
+
+    .login-submit:focus,
+    .login-submit:focus-visible {
+        color: #ffffff !important;
+    }
+
+    @media (max-width: 576px) {
+        .login-page {
+            padding: 0.5rem;
+            min-height: calc(100vh - 200px);
+        }
+
+        .login-card {
+            padding: 1.45rem 1.1rem;
+            border-radius: 14px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="login-container">
-    <div class="text-center mb-4">
-        <a href="{{ url_for('main.home') }}" class="d-inline-block">
-            <i class="fas fa-2x text-primary"></i>
-        </a>
-        <h2>ProjetosRJ</h2>
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-brand">
+            <div class="login-brand-icon">
+                <i class="fas fa-project-diagram"></i>
+            </div>
+            <h1 class="login-title">ProjetosRJ</h1>
+            <p class="login-subtitle">Acesse com seu usuário e senha</p>
+        </div>
+
+        {% if error %}
+            <div class="alert alert-danger py-2 mb-3 small" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form action="{{ url_for('main.login_page') }}" method="POST" autocomplete="off" novalidate>
+            <div class="login-field">
+                <label class="login-field-label" for="login-username">Usuário</label>
+                <div class="login-input-group">
+                    <span class="login-input-icon"><i class="fas fa-user"></i></span>
+                    <input id="login-username" type="text" name="username" class="form-control login-input" placeholder="Usuário" required>
+                </div>
+            </div>
+
+            <div class="login-field">
+                <label class="login-field-label" for="login-password">Senha</label>
+                <div class="login-input-group">
+                    <span class="login-input-icon"><i class="fas fa-lock"></i></span>
+                    <input id="login-password" type="password" name="password" class="form-control login-input" placeholder="Senha" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn login-submit">Entrar</button>
+        </form>
     </div>
-    
-    {% if error %}
-        <div class="alert alert-danger py-2 mb-3 small" role="alert">
-            {{ error }}
-        </div>
-    {% endif %}
-    
-    <form action="{{ url_for('main.login_page') }}" method="POST" autocomplete="off" novalidate>
-        <div class="mb-3">
-            <div class="input-group">
-                <span class="input-group-text bg-light border-end-0">
-                    <i class="fas fa-user text-muted"></i>
-                </span>
-                <input type="text" name="username" class="form-control border-start-0" placeholder="Usuário" required>
-            </div>
-        </div>
-        
-        <div class="mb-3">
-            <div class="input-group">
-                <span class="input-group-text bg-light border-end-0">
-                    <i class="fas fa-lock text-muted"></i>
-                </span>
-                <input type="password" name="password" class="form-control border-start-0" placeholder="Senha" required>
-            </div>
-        </div>
-        
-        <button type="submit" class="btn btn-primary">Entrar</button>
-    </form>
 </div>
 {% endblock %}
 
-{% block page_specific_js %}
+{% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const hasErrorVariableString = "{{ 'true' if error else 'false' }}";
@@ -56,23 +205,4 @@
         }
     });
 </script>
-
-<style>
-    .card {
-        border-radius: 8px;
-    }
-    
-    .input-group-text, 
-    .form-control {
-        border-radius: 6px;
-    }
-    
-    .input-group .form-control {
-        box-shadow: none;
-    }
-    
-    .btn-primary {
-        border-radius: 6px;
-    }
-</style>
 {% endblock %} 
