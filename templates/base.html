@@ -356,218 +356,367 @@
             </nav>
             {% endif %}
 
-            <!-- Skeleton Screen (Esqueleto de carregamento) -->
-            <div class="skeleton-container">
-                <!-- Skeleton Content baseado na página atual -->
-                <div class="skeleton-content">
-                    {% if request.endpoint == 'main.dashboard' %}
-                    <!-- Skeleton para Dashboard -->
-                    <div class="skeleton-dashboard">
-                        <div class="skeleton-card skeleton-dashboard-hero">
-                            <div class="skeleton-dashboard-hero-copy">
-                                <div class="skeleton-header skeleton-dashboard-hero-title"></div>
-                                <div class="skeleton-text short skeleton-dashboard-hero-date"></div>
-                                <div class="skeleton-text skeleton-dashboard-hero-subtitle"></div>
-                            </div>
-                            <div class="skeleton-button skeleton-dashboard-hero-button"></div>
-                        </div>
+            {% set skeleton_endpoint = request.endpoint or '' %}
+            {% if skeleton_endpoint == 'main.dashboard' %}
+                {% set skeleton_type = 'dashboard' %}
+            {% elif skeleton_endpoint == 'main.list_projects' %}
+                {% set skeleton_type = 'projects' %}
+            {% elif skeleton_endpoint == 'main.list_projetos_pendentes' %}
+                {% set skeleton_type = 'pending' %}
+            {% elif skeleton_endpoint == 'main.list_tasks' or skeleton_endpoint == 'main.project_tasks' %}
+                {% set skeleton_type = 'tasks' %}
+            {% elif skeleton_endpoint == 'main.project_detail' %}
+                {% set skeleton_type = 'project_detail' %}
+            {% elif skeleton_endpoint == 'main.task_detail' %}
+                {% set skeleton_type = 'task_detail' %}
+            {% else %}
+                {% set skeleton_type = 'generic' %}
+            {% endif %}
 
-                        <div class="row g-2 mb-3 skeleton-dashboard-kpi-row">
-                            {% for i in range(4) %}
-                            <div class="col-6 col-md-3">
-                                <div class="skeleton-card skeleton-dashboard-stat-card">
-                                    <div class="skeleton-avatar skeleton-dashboard-stat-icon"></div>
-                                    <div class="skeleton-dashboard-stat-copy">
-                                        <div class="skeleton-text short skeleton-dashboard-stat-number"></div>
-                                        <div class="skeleton-text short"></div>
-                                        <div class="skeleton-text medium skeleton-dashboard-stat-helper"></div>
-                                    </div>
+            {% macro render_skeleton(kind) %}
+                {% if kind == 'dashboard' %}
+                <div class="skeleton-page skeleton-dashboard">
+                    <div class="skeleton-card skeleton-dashboard-hero">
+                        <div class="skeleton-dashboard-hero-copy">
+                            <div class="skeleton-header skeleton-dashboard-hero-title"></div>
+                            <div class="skeleton-text short skeleton-dashboard-hero-date"></div>
+                            <div class="skeleton-text skeleton-dashboard-hero-subtitle"></div>
+                        </div>
+                        <div class="skeleton-button skeleton-dashboard-hero-button"></div>
+                    </div>
+
+                    <div class="row g-2 mb-3 skeleton-dashboard-kpi-row">
+                        {% for i in range(4) %}
+                        <div class="col-6 col-md-3">
+                            <div class="skeleton-card skeleton-dashboard-stat-card">
+                                <div class="skeleton-avatar skeleton-dashboard-stat-icon"></div>
+                                <div class="skeleton-dashboard-stat-copy">
+                                    <div class="skeleton-text short skeleton-dashboard-stat-number"></div>
+                                    <div class="skeleton-text short"></div>
+                                    <div class="skeleton-text medium skeleton-dashboard-stat-helper"></div>
                                 </div>
                             </div>
-                            {% endfor %}
                         </div>
+                        {% endfor %}
+                    </div>
 
-                        <div class="row g-3">
-                            <div class="col-12 col-lg-7 skeleton-dashboard-recent-col">
-                                <div class="skeleton-card skeleton-dashboard-main-card">
-                                    <div class="skeleton-dashboard-card-header">
-                                        <div class="skeleton-text skeleton-dashboard-card-title"></div>
-                                    </div>
-                                    <div class="skeleton-dashboard-table-head">
+                    <div class="row g-3">
+                        <div class="col-12 col-lg-7 skeleton-dashboard-recent-col">
+                            <div class="skeleton-card skeleton-dashboard-main-card">
+                                <div class="skeleton-dashboard-card-header">
+                                    <div class="skeleton-text skeleton-dashboard-card-title"></div>
+                                </div>
+                                <div class="skeleton-dashboard-table-head">
+                                    <div class="skeleton-table-cell" style="flex: 0.6;"></div>
+                                    <div class="skeleton-table-cell" style="flex: 2;"></div>
+                                    <div class="skeleton-table-cell" style="flex: 1.2;"></div>
+                                    <div class="skeleton-table-cell" style="flex: 1.1;"></div>
+                                    <div class="skeleton-table-cell" style="flex: 0.8; margin-right: 0;"></div>
+                                </div>
+                                <div class="skeleton-table skeleton-dashboard-table">
+                                    {% for i in range(7) %}
+                                    <div class="skeleton-table-row">
                                         <div class="skeleton-table-cell" style="flex: 0.6;"></div>
                                         <div class="skeleton-table-cell" style="flex: 2;"></div>
                                         <div class="skeleton-table-cell" style="flex: 1.2;"></div>
                                         <div class="skeleton-table-cell" style="flex: 1.1;"></div>
                                         <div class="skeleton-table-cell" style="flex: 0.8; margin-right: 0;"></div>
                                     </div>
-                                    <div class="skeleton-table skeleton-dashboard-table">
-                                        {% for i in range(6) %}
-                                        <div class="skeleton-table-row">
-                                            <div class="skeleton-table-cell" style="flex: 0.6;"></div>
-                                            <div class="skeleton-table-cell" style="flex: 2;"></div>
-                                            <div class="skeleton-table-cell" style="flex: 1.2;"></div>
-                                            <div class="skeleton-table-cell" style="flex: 1.1;"></div>
-                                            <div class="skeleton-table-cell" style="flex: 0.8; margin-right: 0;"></div>
-                                        </div>
-                                        {% endfor %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-5 skeleton-dashboard-side-col">
+                            <div class="skeleton-card skeleton-dashboard-side-card skeleton-dashboard-priority-compact mb-3">
+                                <div class="skeleton-dashboard-card-header skeleton-dashboard-priority-header">
+                                    <div class="skeleton-text skeleton-dashboard-card-title"></div>
+                                    <div class="skeleton-text short skeleton-dashboard-total-pill"></div>
+                                </div>
+                                <div class="skeleton-dashboard-priority-compact-list">
+                                    {% for i in range(4) %}
+                                    <div class="skeleton-dashboard-priority-compact-item">
+                                        <div class="skeleton-dashboard-priority-dot"></div>
+                                        <div class="skeleton-text short skeleton-dashboard-priority-label"></div>
+                                        <div class="skeleton-text short skeleton-dashboard-priority-count"></div>
                                     </div>
+                                    {% endfor %}
                                 </div>
                             </div>
 
-                            <div class="col-12 col-lg-5 skeleton-dashboard-side-col">
-                                <div class="skeleton-card skeleton-dashboard-side-card skeleton-dashboard-priority-compact mb-3">
-                                    <div class="skeleton-dashboard-card-header skeleton-dashboard-priority-header">
-                                        <div class="skeleton-text skeleton-dashboard-card-title"></div>
-                                        <div class="skeleton-text short skeleton-dashboard-total-pill"></div>
-                                    </div>
-                                    <div class="skeleton-dashboard-priority-compact-list">
-                                        {% for i in range(4) %}
-                                        <div class="skeleton-dashboard-priority-compact-item">
-                                            <div class="skeleton-dashboard-priority-dot"></div>
-                                            <div class="skeleton-text short skeleton-dashboard-priority-label"></div>
-                                            <div class="skeleton-text short skeleton-dashboard-priority-count"></div>
+                            <div class="skeleton-card skeleton-dashboard-side-card skeleton-dashboard-tasks-card">
+                                <div class="skeleton-dashboard-card-header skeleton-dashboard-priority-header">
+                                    <div class="skeleton-text skeleton-dashboard-card-title"></div>
+                                    <div class="skeleton-text short skeleton-dashboard-total-pill"></div>
+                                </div>
+                                <div class="skeleton-dashboard-task-list-wrap">
+                                    <div class="skeleton-dashboard-task-list">
+                                        {% for i in range(2) %}
+                                        <div class="skeleton-dashboard-task-entry">
+                                            <div class="skeleton-dashboard-task-head">
+                                                <div class="skeleton-text skeleton-dashboard-task-title"></div>
+                                                <div class="skeleton-text short skeleton-dashboard-task-count"></div>
+                                            </div>
+                                            <div class="skeleton-text medium skeleton-dashboard-task-project"></div>
+                                            <div class="skeleton-dashboard-task-items">
+                                                <div class="skeleton-text skeleton-dashboard-task-item"></div>
+                                                <div class="skeleton-text skeleton-dashboard-task-item"></div>
+                                                <div class="skeleton-text skeleton-dashboard-task-item"></div>
+                                            </div>
                                         </div>
                                         {% endfor %}
                                     </div>
                                 </div>
-
-                                <div class="skeleton-card skeleton-dashboard-side-card skeleton-dashboard-tasks-card">
-                                    <div class="skeleton-dashboard-card-header skeleton-dashboard-priority-header">
-                                        <div class="skeleton-text skeleton-dashboard-card-title"></div>
-                                        <div class="skeleton-text short skeleton-dashboard-total-pill"></div>
-                                    </div>
-                                    <div class="skeleton-dashboard-task-list-wrap">
-                                        <div class="skeleton-dashboard-task-list">
-                                            {% for i in range(4) %}
-                                            <div class="skeleton-dashboard-task-entry">
-                                                <div class="skeleton-dashboard-task-head">
-                                                    <div class="skeleton-text skeleton-dashboard-task-title"></div>
-                                                    <div class="skeleton-text short skeleton-dashboard-task-count"></div>
-                                                </div>
-                                                <div class="skeleton-text medium skeleton-dashboard-task-project"></div>
-                                                <div class="skeleton-dashboard-task-items">
-                                                    <div class="skeleton-text skeleton-dashboard-task-item"></div>
-                                                    <div class="skeleton-text skeleton-dashboard-task-item"></div>
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                    <div class="skeleton-dashboard-task-pagination">
-                                        <div class="skeleton-text short skeleton-dashboard-page-btn"></div>
-                                        <div class="skeleton-text short skeleton-dashboard-page-info"></div>
-                                        <div class="skeleton-text short skeleton-dashboard-page-btn"></div>
-                                    </div>
+                                <div class="skeleton-dashboard-task-pagination">
+                                    <div class="skeleton-text short skeleton-dashboard-page-btn"></div>
+                                    <div class="skeleton-text short skeleton-dashboard-page-info"></div>
+                                    <div class="skeleton-text short skeleton-dashboard-page-btn"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    {% elif request.endpoint == 'main.list_projects' %}
-                    <!-- Skeleton para Lista de Projetos -->
-                    <!-- Cabeçalho e Botão -->
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div class="skeleton-header" style="margin-bottom: 0;"></div>
-                        <div class="skeleton-button"></div>
+                </div>
+                {% elif kind == 'projects' %}
+                <div class="skeleton-page skeleton-projects-page">
+                    <div class="skeleton-card skeleton-projects-toolbar">
+                        <div class="skeleton-projects-toolbar-head">
+                            <div class="skeleton-header skeleton-projects-title"></div>
+                            <div class="skeleton-projects-toolbar-actions">
+                                <div class="skeleton-button skeleton-projects-action-sm"></div>
+                                <div class="skeleton-button skeleton-projects-action-lg"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-text skeleton-projects-search"></div>
+                        <div class="skeleton-projects-filter-row">
+                            {% for i in range(7) %}
+                            <div class="skeleton-button skeleton-projects-filter-pill"></div>
+                            {% endfor %}
+                            <div class="skeleton-button skeleton-projects-filter-btn"></div>
+                        </div>
                     </div>
-                    
-                    <!-- Filtros -->
-                    <div class="skeleton-card mb-4" style="padding: 10px;">
-                        <div class="d-flex flex-wrap gap-2">
-                            {% for i in range(5) %}
-                            <div class="skeleton-button" style="width: 80px; height: 30px; border-radius: 30px;"></div>
+
+                    <div class="skeleton-card skeleton-projects-table-card">
+                        <div class="skeleton-dashboard-table-head skeleton-projects-table-head">
+                            <div class="skeleton-table-cell" style="flex: 0.35;"></div>
+                            <div class="skeleton-table-cell" style="flex: 1.8;"></div>
+                            <div class="skeleton-table-cell" style="flex: 1;"></div>
+                            <div class="skeleton-table-cell" style="flex: 0.9;"></div>
+                            <div class="skeleton-table-cell" style="flex: 0.8;"></div>
+                            <div class="skeleton-table-cell" style="flex: 0.75; margin-right: 0;"></div>
+                        </div>
+                        <div class="skeleton-table skeleton-projects-table">
+                            {% for i in range(8) %}
+                            <div class="skeleton-table-row">
+                                <div class="skeleton-table-cell" style="flex: 0.35;"></div>
+                                <div class="skeleton-table-cell" style="flex: 1.8;"></div>
+                                <div class="skeleton-table-cell" style="flex: 1;"></div>
+                                <div class="skeleton-table-cell" style="flex: 0.9;"></div>
+                                <div class="skeleton-table-cell" style="flex: 0.8;"></div>
+                                <div class="skeleton-table-cell" style="flex: 0.75; margin-right: 0;"></div>
+                            </div>
                             {% endfor %}
                         </div>
                     </div>
-                    
-                    <!-- Grid de Projetos -->
-                    <div class="skeleton-grid">
-                        {% for i in range(6) %}
-                        <div class="skeleton-card">
-                            <div class="skeleton-header"></div>
-                            <div class="skeleton-text"></div>
-                            <div class="skeleton-text"></div>
-                            <div class="d-flex justify-content-between mt-3">
-                                <div class="skeleton-text short"></div>
-                                <div class="skeleton-button" style="width: 80px;"></div>
+                </div>
+                {% elif kind == 'pending' %}
+                <div class="skeleton-page skeleton-pending-page">
+                    <div class="skeleton-card skeleton-pending-header">
+                        <div>
+                            <div class="skeleton-header skeleton-pending-title"></div>
+                            <div class="skeleton-text skeleton-pending-subtitle"></div>
+                        </div>
+                        <div class="skeleton-button skeleton-pending-total"></div>
+                    </div>
+
+                    <div class="skeleton-card skeleton-pending-filters">
+                        <div class="skeleton-pending-filter-row">
+                            <div class="skeleton-text skeleton-pending-filter"></div>
+                            <div class="skeleton-text skeleton-pending-filter"></div>
+                            <div class="skeleton-text skeleton-pending-filter"></div>
+                            <div class="skeleton-button skeleton-pending-filter-btn"></div>
+                        </div>
+                    </div>
+
+                    {% for i in range(2) %}
+                    <div class="skeleton-card skeleton-pending-project-card">
+                        <div class="skeleton-pending-project-head">
+                            <div>
+                                <div class="skeleton-text skeleton-pending-project-title"></div>
+                                <div class="skeleton-text skeleton-pending-project-meta"></div>
+                            </div>
+                            <div class="skeleton-pending-chip-row">
+                                <div class="skeleton-button skeleton-pending-chip"></div>
+                                <div class="skeleton-button skeleton-pending-chip"></div>
+                                <div class="skeleton-button skeleton-pending-chip"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-dashboard-table-head skeleton-pending-table-head">
+                            <div class="skeleton-table-cell" style="flex: 1.8;"></div>
+                            <div class="skeleton-table-cell" style="flex: 1;"></div>
+                            <div class="skeleton-table-cell" style="flex: 0.9;"></div>
+                            <div class="skeleton-table-cell" style="flex: 0.9;"></div>
+                            <div class="skeleton-table-cell" style="flex: 0.75; margin-right: 0;"></div>
+                        </div>
+                        <div class="skeleton-table skeleton-pending-table">
+                            {% for j in range(3) %}
+                            <div class="skeleton-table-row">
+                                <div class="skeleton-table-cell" style="flex: 1.8;"></div>
+                                <div class="skeleton-table-cell" style="flex: 1;"></div>
+                                <div class="skeleton-table-cell" style="flex: 0.9;"></div>
+                                <div class="skeleton-table-cell" style="flex: 0.9;"></div>
+                                <div class="skeleton-table-cell" style="flex: 0.75; margin-right: 0;"></div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% elif kind == 'tasks' %}
+                <div class="skeleton-page skeleton-tasks-page">
+                    <div class="skeleton-card skeleton-tasks-header">
+                        <div class="skeleton-tasks-header-main">
+                            <div class="skeleton-avatar skeleton-tasks-header-icon"></div>
+                            <div>
+                                <div class="skeleton-header skeleton-tasks-title"></div>
+                                <div class="skeleton-text skeleton-tasks-subtitle"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-button skeleton-tasks-add-btn"></div>
+                    </div>
+
+                    <div class="skeleton-tasks-meta-row">
+                        <div class="skeleton-button skeleton-tasks-meta-pill"></div>
+                        <div class="skeleton-button skeleton-tasks-meta-pill"></div>
+                    </div>
+
+                    <div class="skeleton-card skeleton-tasks-filters">
+                        <div class="skeleton-text skeleton-tasks-filter-field"></div>
+                        <div class="skeleton-text skeleton-tasks-filter-field"></div>
+                        <div class="skeleton-button skeleton-tasks-filter-btn"></div>
+                    </div>
+
+                    <div class="skeleton-card skeleton-tasks-list-card">
+                        {% for i in range(5) %}
+                        <div class="skeleton-tasks-row">
+                            <div class="skeleton-avatar skeleton-tasks-row-icon"></div>
+                            <div class="skeleton-tasks-row-content">
+                                <div class="skeleton-text skeleton-tasks-row-title"></div>
+                                <div class="skeleton-tasks-row-meta">
+                                    <div class="skeleton-button skeleton-tasks-row-chip"></div>
+                                    <div class="skeleton-button skeleton-tasks-row-chip"></div>
+                                    <div class="skeleton-button skeleton-tasks-row-chip"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-tasks-row-actions">
+                                <div class="skeleton-button skeleton-tasks-row-btn"></div>
+                                <div class="skeleton-button skeleton-tasks-row-btn"></div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
-                    
-                    {% elif request.endpoint == 'main.project_detail' %}
-                    <!-- Skeleton para Detalhes do Projeto -->
-                    <!-- Breadcrumb -->
-                    <div class="skeleton-text short mb-3" style="height: 20px;"></div>
-                    
-                    <!-- Cabeçalho do Projeto -->
-                    <div class="skeleton-card mb-4">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
+                </div>
+                {% elif kind == 'project_detail' %}
+                <div class="skeleton-page skeleton-project-detail-page">
+                    <div class="skeleton-card skeleton-project-detail-header">
+                        <div class="skeleton-project-detail-header-top">
                             <div>
-                                <div class="skeleton-header"></div>
+                                <div class="skeleton-header skeleton-project-detail-title"></div>
+                                <div class="skeleton-text skeleton-project-detail-description"></div>
+                            </div>
+                            <div class="skeleton-button skeleton-project-detail-back"></div>
+                        </div>
+                        <div class="skeleton-project-detail-dates">
+                            <div class="skeleton-button skeleton-project-detail-date"></div>
+                            <div class="skeleton-button skeleton-project-detail-date"></div>
+                        </div>
+                    </div>
+
+                    <div class="skeleton-card skeleton-project-detail-info">
+                        <div class="skeleton-dashboard-card-header">
+                            <div class="skeleton-text skeleton-dashboard-card-title"></div>
+                        </div>
+                        <div class="skeleton-project-detail-info-grid">
+                            {% for i in range(8) %}
+                            <div class="skeleton-project-detail-info-item">
                                 <div class="skeleton-text short"></div>
+                                <div class="skeleton-text medium"></div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <div class="skeleton-button" style="width: 40px; height: 40px; border-radius: 50%;"></div>
-                                <div class="skeleton-button" style="width: 40px; height: 40px; border-radius: 50%;"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="skeleton-text mb-2"></div>
-                        <div class="skeleton-text medium mb-2"></div>
-                        <div class="skeleton-text short mb-4"></div>
-                        
-                        <!-- Status do Projeto -->
-                        <div class="d-flex gap-3 flex-wrap">
-                            <div class="skeleton-button" style="width: 120px; height: 30px; border-radius: 30px;"></div>
-                            <div class="skeleton-button" style="width: 120px; height: 30px; border-radius: 30px;"></div>
-                            <div class="skeleton-button" style="width: 120px; height: 30px; border-radius: 30px;"></div>
+                            {% endfor %}
                         </div>
                     </div>
-                    
-                    <!-- Etapas -->
-                    <div class="skeleton-header mb-3"></div>
-                    
-                    {% for i in range(3) %}
-                    <div class="skeleton-card mb-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <div class="skeleton-text medium"></div>
-                            <div class="skeleton-button" style="width: 40px; height: 30px;"></div>
+
+                    <div class="skeleton-card skeleton-project-detail-stages">
+                        <div class="skeleton-dashboard-card-header">
+                            <div class="skeleton-text skeleton-dashboard-card-title"></div>
                         </div>
-                        <div class="skeleton-text"></div>
-                        <div class="skeleton-text medium mb-3"></div>
-                        
-                        <div class="d-flex justify-content-between">
-                            <div class="skeleton-text short"></div>
-                            <div class="skeleton-text short"></div>
+                        {% for i in range(4) %}
+                        <div class="skeleton-project-stage-row">
+                            <div class="skeleton-text skeleton-project-stage-title"></div>
+                            <div class="skeleton-text skeleton-project-stage-text"></div>
+                            <div class="skeleton-project-stage-meta">
+                                <div class="skeleton-button skeleton-project-stage-chip"></div>
+                                <div class="skeleton-button skeleton-project-stage-chip"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% elif kind == 'task_detail' %}
+                <div class="skeleton-page skeleton-task-detail-page">
+                    <div class="skeleton-task-detail-top">
+                        <div class="skeleton-text skeleton-task-detail-breadcrumb"></div>
+                        <div class="skeleton-button skeleton-task-detail-back"></div>
+                    </div>
+
+                    <div class="skeleton-card skeleton-task-detail-header">
+                        <div class="skeleton-task-detail-header-main">
+                            <div class="skeleton-text skeleton-task-detail-title"></div>
+                            <div class="skeleton-button skeleton-task-detail-project"></div>
+                        </div>
+                        <div class="skeleton-task-detail-header-meta">
+                            <div class="skeleton-button skeleton-task-detail-meta-pill"></div>
+                            <div class="skeleton-button skeleton-task-detail-meta-pill"></div>
+                            <div class="skeleton-button skeleton-task-detail-meta-pill"></div>
                         </div>
                     </div>
-                    {% endfor %}
-                    
-                    {% else %}
-                    <!-- Skeleton genérico para outras páginas -->
-                    <!-- Título da Página -->
+
+                    <div class="skeleton-card skeleton-task-detail-items">
+                        <div class="skeleton-dashboard-card-header">
+                            <div class="skeleton-text skeleton-dashboard-card-title"></div>
+                            <div class="skeleton-button skeleton-task-detail-add-item"></div>
+                        </div>
+                        <div class="skeleton-task-detail-columns">
+                            <div class="skeleton-table-cell" style="flex: 2.5;"></div>
+                            <div class="skeleton-table-cell" style="flex: 1;"></div>
+                            <div class="skeleton-table-cell" style="flex: 1;"></div>
+                            <div class="skeleton-table-cell" style="flex: 0.4; margin-right: 0;"></div>
+                        </div>
+                        {% for i in range(6) %}
+                        <div class="skeleton-task-detail-item-row">
+                            <div class="skeleton-text skeleton-task-detail-item-desc"></div>
+                            <div class="skeleton-button skeleton-task-detail-item-status"></div>
+                            <div class="skeleton-text skeleton-task-detail-item-owner"></div>
+                            <div class="skeleton-button skeleton-task-detail-item-action"></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="skeleton-page skeleton-generic-page">
                     <div class="skeleton-header"></div>
-                    
-                    <!-- Cards Principais -->
                     <div class="skeleton-grid">
-                        <!-- Card 1 -->
                         <div class="skeleton-card">
                             <div class="skeleton-header"></div>
                             <div class="skeleton-text"></div>
                             <div class="skeleton-text"></div>
                             <div class="skeleton-text medium"></div>
                         </div>
-                        
-                        <!-- Card 2 -->
                         <div class="skeleton-card">
                             <div class="skeleton-header"></div>
                             <div class="skeleton-text"></div>
                             <div class="skeleton-text"></div>
                             <div class="skeleton-text medium"></div>
                         </div>
-                        
-                        <!-- Card 3 -->
                         <div class="skeleton-card">
                             <div class="skeleton-header"></div>
                             <div class="skeleton-text"></div>
@@ -575,38 +724,34 @@
                             <div class="skeleton-text medium"></div>
                         </div>
                     </div>
-                    
-                    <!-- Simulação de Tabela -->
                     <div class="skeleton-card">
                         <div class="skeleton-header"></div>
                         <div class="skeleton-table">
+                            {% for i in range(4) %}
                             <div class="skeleton-table-row">
-                                <div class="skeleton-table-cell" style="flex: 0.3;"></div>
+                                <div class="skeleton-table-cell" style="flex: 0.4;"></div>
                                 <div class="skeleton-table-cell"></div>
                                 <div class="skeleton-table-cell"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.5;"></div>
+                                <div class="skeleton-table-cell" style="flex: 0.8; margin-right: 0;"></div>
                             </div>
-                            <div class="skeleton-table-row">
-                                <div class="skeleton-table-cell" style="flex: 0.3;"></div>
-                                <div class="skeleton-table-cell"></div>
-                                <div class="skeleton-table-cell"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.5;"></div>
-                            </div>
-                            <div class="skeleton-table-row">
-                                <div class="skeleton-table-cell" style="flex: 0.3;"></div>
-                                <div class="skeleton-table-cell"></div>
-                                <div class="skeleton-table-cell"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.5;"></div>
-                            </div>
-                            <div class="skeleton-table-row">
-                                <div class="skeleton-table-cell" style="flex: 0.3;"></div>
-                                <div class="skeleton-table-cell"></div>
-                                <div class="skeleton-table-cell"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.5;"></div>
-                            </div>
+                            {% endfor %}
                         </div>
                     </div>
-                    {% endif %}
+                </div>
+                {% endif %}
+            {% endmacro %}
+
+            <!-- Skeleton Screen (Esqueleto de carregamento) -->
+            <div class="skeleton-container">
+                <div class="skeleton-content" data-skeleton-active="{{ skeleton_type }}">
+                    {{ render_skeleton(skeleton_type) }}
+                </div>
+                <div id="skeleton-template-store" hidden aria-hidden="true">
+                    {% for kind in ['dashboard', 'projects', 'pending', 'tasks', 'project_detail', 'task_detail', 'generic'] %}
+                    <template data-skeleton-template="{{ kind }}">
+                        {{ render_skeleton(kind) }}
+                    </template>
+                    {% endfor %}
                 </div>
             </div>
 
@@ -663,14 +808,26 @@
             const body = document.body;
             const loadingOverlay = document.querySelector('.loading-overlay');
             const topnavCollapseEl = document.getElementById('appTopnavCollapse');
+            const skeletonContent = document.querySelector('.skeleton-content');
+            const skeletonTemplateStore = document.getElementById('skeleton-template-store');
             const hasBootstrap = typeof window.bootstrap !== 'undefined';
             const nonNavigationalToggles = ['dropdown', 'collapse', 'modal', 'offcanvas', 'tab', 'pill'];
+            const skeletonTemplates = {};
             let topnavCollapse = null;
 
             body.classList.add('loading-active');
 
             if (topnavCollapseEl && hasBootstrap && bootstrap.Collapse) {
                 topnavCollapse = new bootstrap.Collapse(topnavCollapseEl, { toggle: false });
+            }
+
+            if (skeletonTemplateStore) {
+                skeletonTemplateStore.querySelectorAll('template[data-skeleton-template]').forEach(function(templateEl) {
+                    const templateType = templateEl.dataset.skeletonTemplate;
+                    if (templateType) {
+                        skeletonTemplates[templateType] = templateEl.innerHTML.trim();
+                    }
+                });
             }
 
             if (hasBootstrap && bootstrap.Tooltip) {
@@ -711,6 +868,75 @@
                 if (currentPage) {
                     currentPage.classList.remove('page-transition');
                 }
+            }
+
+            function normalizePath(pathname) {
+                if (!pathname) {
+                    return '/';
+                }
+                const normalized = pathname.replace(/\/+$/, '');
+                return normalized || '/';
+            }
+
+            function resolveSkeletonTypeForUrl(targetUrl) {
+                let pathname = '/';
+                try {
+                    const parsedUrl = new URL(targetUrl, window.location.origin);
+                    pathname = normalizePath(parsedUrl.pathname);
+                } catch (error) {
+                    return 'generic';
+                }
+
+                if (pathname === '/dashboard') {
+                    return 'dashboard';
+                }
+                if (pathname === '/projects') {
+                    return 'projects';
+                }
+                if (pathname === '/projetos_pendentes') {
+                    return 'pending';
+                }
+                if (pathname === '/tarefas' || /^\/projeto\/\d+\/tarefas$/.test(pathname)) {
+                    return 'tasks';
+                }
+                if (/^\/tarefas\/\d+$/.test(pathname)) {
+                    return 'task_detail';
+                }
+                if (/^\/project\/\d+$/.test(pathname)) {
+                    return 'project_detail';
+                }
+                return 'generic';
+            }
+
+            function setSkeletonType(type) {
+                if (!skeletonContent) {
+                    return;
+                }
+                const targetType = skeletonTemplates[type] ? type : 'generic';
+                if (skeletonContent.dataset.skeletonActive === targetType) {
+                    return;
+                }
+                const nextMarkup = skeletonTemplates[targetType];
+                if (!nextMarkup) {
+                    return;
+                }
+                skeletonContent.innerHTML = nextMarkup;
+                skeletonContent.dataset.skeletonActive = targetType;
+            }
+
+            function navigateWithSkeleton(destinationUrl, skipTransition) {
+                if (!destinationUrl) {
+                    return;
+                }
+                const currentPage = document.querySelector('.main-content');
+                if (currentPage && !skipTransition) {
+                    currentPage.classList.add('page-transition');
+                }
+                setSkeletonType(resolveSkeletonTypeForUrl(destinationUrl));
+                showLoadingOverlay();
+                window.setTimeout(function() {
+                    window.location.href = destinationUrl;
+                }, 100);
             }
 
             document.querySelectorAll('.app-mobile-link').forEach(function(link) {
@@ -962,7 +1188,7 @@
                         event.preventDefault();
                         const url = currentResultLinks[selectedIndex].getAttribute('href');
                         if (url) {
-                            window.location.href = url;
+                            navigateWithSkeleton(url);
                         }
                     }
                 });
@@ -979,7 +1205,7 @@
                         event.preventDefault();
                         const selectedUrl = currentResultLinks[selectedIndex].getAttribute('href');
                         if (selectedUrl) {
-                            window.location.href = selectedUrl;
+                            navigateWithSkeleton(selectedUrl);
                         }
                     }
                 });
@@ -1005,7 +1231,7 @@
                     event.preventDefault();
                     const clickedUrl = clickedLink.getAttribute('href');
                     if (clickedUrl) {
-                        window.location.href = clickedUrl;
+                        navigateWithSkeleton(clickedUrl);
                     }
                 });
 
@@ -1058,16 +1284,8 @@
                     }
 
                     event.preventDefault();
-                    const currentPage = document.querySelector('.main-content');
-                    if (currentPage) {
-                        currentPage.classList.add('page-transition');
-                    }
-
-                    showLoadingOverlay();
                     const destinationUrl = this.href;
-                    setTimeout(() => {
-                        window.location.href = destinationUrl;
-                    }, 100);
+                    navigateWithSkeleton(destinationUrl);
                 });
             });
 

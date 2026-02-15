@@ -2561,6 +2561,7 @@ html, body {
 
 .skeleton-dashboard-priority-compact-list {
     display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.45rem;
     padding: 0.72rem 0.85rem 0.82rem;
 }
@@ -2679,9 +2680,8 @@ html, body {
         margin-bottom: 0.55rem !important;
     }
 
-    .skeleton-dashboard-recent-col,
-    .skeleton-dashboard-side-col {
-        display: flex;
+    .skeleton-dashboard-recent-col {
+        display: block;
     }
 
     .skeleton-dashboard-side-col {
@@ -2705,6 +2705,12 @@ html, body {
 
     .skeleton-dashboard-side-col .skeleton-dashboard-task-list-wrap {
         overflow: hidden;
+    }
+
+    .skeleton-dashboard-main-card {
+        width: 100%;
+        height: auto;
+        align-self: flex-start;
     }
 }
 
@@ -2775,6 +2781,586 @@ html, body {
 
     .skeleton-dashboard-table .skeleton-table-row {
         padding: 0.85rem 0.85rem;
+    }
+}
+
+/* Skeletons dedicados por tela */
+.skeleton-page {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.skeleton-projects-page .skeleton-projects-toolbar {
+    padding: 0.9rem 1rem;
+}
+
+.skeleton-projects-toolbar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.7rem;
+}
+
+.skeleton-projects-title {
+    width: min(320px, 58%);
+    height: 26px;
+    margin-bottom: 0;
+}
+
+.skeleton-projects-toolbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+}
+
+.skeleton-projects-action-sm {
+    width: 108px;
+    height: 32px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-projects-action-lg {
+    width: 136px;
+    height: 34px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-projects-search {
+    height: 40px;
+    border-radius: 12px;
+    margin-bottom: 0.55rem;
+}
+
+.skeleton-projects-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+}
+
+.skeleton-projects-filter-pill {
+    width: 120px;
+    height: 30px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-projects-filter-btn {
+    width: 86px;
+    height: 30px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-projects-table-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-projects-table-head {
+    padding: 0.68rem 0.95rem;
+}
+
+.skeleton-projects-table {
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.skeleton-projects-table .skeleton-table-row {
+    padding: 0.78rem 0.95rem;
+}
+
+.skeleton-pending-page .skeleton-pending-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.9rem 1rem;
+}
+
+.skeleton-pending-title {
+    width: min(250px, 72%);
+    height: 24px;
+    margin-bottom: 0.38rem;
+}
+
+.skeleton-pending-subtitle {
+    width: min(460px, 84%);
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-total {
+    width: 140px;
+    height: 32px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-filters {
+    padding: 0.75rem 1rem;
+}
+
+.skeleton-pending-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: center;
+}
+
+.skeleton-pending-filter {
+    width: 176px;
+    height: 34px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-filter-btn {
+    width: 84px;
+    height: 34px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-project-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-pending-project-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.74rem 0.92rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-pending-project-title {
+    width: min(280px, 78%);
+    height: 20px;
+    margin-bottom: 0.34rem;
+}
+
+.skeleton-pending-project-meta {
+    width: min(360px, 88%);
+    height: 13px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-chip-row {
+    display: inline-flex;
+    gap: 0.36rem;
+}
+
+.skeleton-pending-chip {
+    width: 68px;
+    height: 28px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-table-head {
+    padding: 0.63rem 0.92rem;
+}
+
+.skeleton-pending-table {
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.skeleton-pending-table .skeleton-table-row {
+    padding: 0.7rem 0.92rem;
+}
+
+.skeleton-tasks-page .skeleton-tasks-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.9rem 1rem;
+}
+
+.skeleton-tasks-header-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.skeleton-tasks-header-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+}
+
+.skeleton-tasks-title {
+    width: min(180px, 68%);
+    height: 24px;
+    margin-bottom: 0.34rem;
+}
+
+.skeleton-tasks-subtitle {
+    width: min(360px, 92%);
+    height: 13px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-add-btn {
+    width: 132px;
+    height: 36px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.skeleton-tasks-meta-pill {
+    width: 124px;
+    height: 28px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    padding: 0.74rem 0.94rem;
+}
+
+.skeleton-tasks-filter-field {
+    width: 230px;
+    height: 36px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-filter-btn {
+    width: 88px;
+    height: 36px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-list-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-tasks-row {
+    display: flex;
+    align-items: center;
+    gap: 0.66rem;
+    padding: 0.78rem 0.95rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-tasks-row:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-tasks-row-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.skeleton-tasks-row-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.skeleton-tasks-row-title {
+    width: min(280px, 78%);
+    height: 17px;
+    margin-bottom: 0.42rem;
+}
+
+.skeleton-tasks-row-meta {
+    display: inline-flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.skeleton-tasks-row-chip {
+    width: 96px;
+    height: 24px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-row-actions {
+    display: inline-flex;
+    gap: 0.36rem;
+    flex-shrink: 0;
+}
+
+.skeleton-tasks-row-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-detail-header {
+    padding: 0.95rem 1rem;
+}
+
+.skeleton-project-detail-header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
+    margin-bottom: 0.58rem;
+}
+
+.skeleton-project-detail-title {
+    width: min(340px, 70%);
+    height: 26px;
+    margin-bottom: 0.36rem;
+}
+
+.skeleton-project-detail-description {
+    width: min(500px, 88%);
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-detail-back {
+    width: 92px;
+    height: 34px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-detail-dates {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.skeleton-project-detail-date {
+    width: 132px;
+    height: 30px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-detail-info {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-project-detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding: 0.78rem 0.95rem 0.9rem;
+}
+
+.skeleton-project-detail-info-item {
+    border: 1px solid #edf2f8;
+    border-radius: 10px;
+    padding: 0.55rem 0.6rem;
+}
+
+.skeleton-project-detail-info-item .skeleton-text:last-child {
+    margin-bottom: 0;
+}
+
+.skeleton-project-detail-stages {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-project-stage-row {
+    padding: 0.78rem 0.95rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-project-stage-row:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-project-stage-title {
+    width: min(220px, 68%);
+    height: 16px;
+    margin-bottom: 0.42rem;
+}
+
+.skeleton-project-stage-text {
+    width: min(460px, 92%);
+    height: 13px;
+    margin-bottom: 0.45rem;
+}
+
+.skeleton-project-stage-meta {
+    display: inline-flex;
+    gap: 0.36rem;
+}
+
+.skeleton-project-stage-chip {
+    width: 92px;
+    height: 24px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.skeleton-task-detail-breadcrumb {
+    width: min(260px, 68%);
+    height: 18px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-back {
+    width: 86px;
+    height: 32px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-header {
+    padding: 0.85rem 0.95rem;
+}
+
+.skeleton-task-detail-header-main {
+    margin-bottom: 0.52rem;
+}
+
+.skeleton-task-detail-title {
+    width: min(360px, 82%);
+    height: 24px;
+    margin-bottom: 0.35rem;
+}
+
+.skeleton-task-detail-project {
+    width: 162px;
+    height: 30px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-header-meta {
+    display: inline-flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.skeleton-task-detail-meta-pill {
+    width: 114px;
+    height: 24px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-items {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-task-detail-items .skeleton-dashboard-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.skeleton-task-detail-add-item {
+    width: 112px;
+    height: 30px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-columns {
+    display: flex;
+    gap: 0;
+    padding: 0.64rem 0.95rem;
+    background: #f7f9fc;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-task-detail-columns .skeleton-table-cell {
+    height: 13px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-item-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.95rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-task-detail-item-row:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-task-detail-item-desc {
+    flex: 2.5;
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-item-status {
+    width: 102px;
+    height: 28px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-item-owner {
+    flex: 1;
+    height: 13px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-item-action {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+@media (max-width: 991.98px) {
+    .skeleton-dashboard-priority-compact-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .skeleton-project-detail-info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .skeleton-projects-toolbar-head,
+    .skeleton-pending-header,
+    .skeleton-tasks-header,
+    .skeleton-task-detail-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .skeleton-projects-toolbar-actions,
+    .skeleton-tasks-row-actions {
+        width: 100%;
     }
 }
 
