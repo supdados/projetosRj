@@ -2,216 +2,605 @@
 
 {% block title %}Histórico - {{ project.titulo }} - ProjetosRJ{% endblock %}
 
-{% block content %}
-<div class="container-fluid px-4 py-3">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1">
-                <i class="fas fa-history text-primary me-2"></i>
-                Histórico do Projeto
-            </h1>
-            <p class="text-muted mb-0">{{ project.titulo }}</p>
-        </div>
-        <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i>Voltar ao Projeto
-        </a>
-    </div>
-
-    <!-- Timeline de Histórico -->
-    <div class="card shadow-sm">
-        <div class="card-body p-4">
-            {% if history %}
-                <div class="timeline">
-                    {% for entry in history %}
-                    <div class="timeline-item">
-                        <div class="timeline-marker">
-                            {% if entry.action_type == 'create' %}
-                                <i class="fas fa-plus-circle text-success"></i>
-                            {% elif entry.action_type == 'edit' %}
-                                <i class="fas fa-edit text-warning"></i>
-                            {% elif entry.action_type == 'delete' %}
-                                <i class="fas fa-trash text-danger"></i>
-                            {% elif entry.action_type == 'add_etapa' %}
-                                <i class="fas fa-tasks text-info"></i>
-                            {% elif entry.action_type == 'edit_etapa' or entry.action_type == 'edit_etapa_inline' %}
-                                <i class="fas fa-pen text-warning"></i>
-                            {% elif entry.action_type == 'delete_etapa' %}
-                                <i class="fas fa-times-circle text-danger"></i>
-                            {% elif entry.action_type == 'toggle_iniciada' %}
-                                <i class="fas fa-play-circle text-primary"></i>
-                            {% elif entry.action_type == 'toggle_done' %}
-                                <i class="fas fa-check-circle text-success"></i>
-                            {% else %}
-                                <i class="fas fa-circle text-secondary"></i>
-                            {% endif %}
-                        </div>
-                        <div class="timeline-content">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <h6 class="mb-1">{{ entry.action_description }}</h6>
-                                    <p class="text-muted small mb-0">
-                                        <i class="fas fa-user me-1"></i>{{ entry.user.name }}
-                                        <span class="mx-2">•</span>
-                                        <i class="fas fa-clock me-1"></i>{{ entry.timestamp.strftime('%d/%m/%Y às %H:%M') }}
-                                    </p>
-                                </div>
-                                <span class="badge bg-{{ 
-                                    'success' if entry.action_type == 'create' else
-                                    'warning' if entry.action_type in ['edit', 'edit_etapa', 'edit_etapa_inline'] else
-                                    'danger' if entry.action_type in ['delete', 'delete_etapa'] else
-                                    'info' if entry.action_type == 'add_etapa' else
-                                    'primary' if entry.action_type == 'toggle_iniciada' else
-                                    'success' if entry.action_type == 'toggle_done' else
-                                    'secondary'
-                                }}">
-                                    {% if entry.action_type == 'create' %}Criação
-                                    {% elif entry.action_type == 'edit' %}Edição Projeto
-                                    {% elif entry.action_type == 'delete' %}Exclusão
-                                    {% elif entry.action_type == 'add_etapa' %}Nova Etapa
-                                    {% elif entry.action_type == 'edit_etapa' %}Edição Etapa
-                                    {% elif entry.action_type == 'edit_etapa_inline' %}Edição Rápida
-                                    {% elif entry.action_type == 'delete_etapa' %}Exclusão Etapa
-                                    {% elif entry.action_type == 'toggle_iniciada' %}Status Etapa
-                                    {% elif entry.action_type == 'toggle_done' %}Conclusão Etapa
-                                    {% else %}Ação
-                                    {% endif %}
-                                </span>
-                            </div>
-                            
-                            {% if entry.old_value or entry.new_value %}
-                            <div class="change-details mt-2">
-                                <div class="row g-2">
-                                    {% if entry.old_value %}
-                                    <div class="col-md-6">
-                                        <div class="change-box old-value">
-                                            <small class="text-muted d-block mb-1">
-                                                <i class="fas fa-arrow-left me-1"></i>Valor Anterior
-                                            </small>
-                                            <strong>{{ entry.old_value }}</strong>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-                                    {% if entry.new_value %}
-                                    <div class="col-md-6">
-                                        <div class="change-box new-value">
-                                            <small class="text-muted d-block mb-1">
-                                                <i class="fas fa-arrow-right me-1"></i>Valor Novo
-                                            </small>
-                                            <strong>{{ entry.new_value }}</strong>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">Nenhuma ação registrada ainda</h5>
-                    <p class="text-muted">O histórico de ações aparecerá aqui conforme o projeto for modificado.</p>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-</div>
-
+{% block head_extra %}
 <style>
-.timeline {
-    position: relative;
-    padding: 0;
-    list-style: none;
-}
+    :root {
+        --history-bg: #f5f8fc;
+        --history-card: #ffffff;
+        --history-border: #dde6f0;
+        --history-muted: #667b94;
+        --history-text: #23384f;
+        --history-primary: #0f4c81;
+    }
 
-.timeline:before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #e9ecef;
-    left: 20px;
-}
+    .history-page {
+        padding: 1.2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
 
-.timeline-item {
-    position: relative;
-    padding-left: 60px;
-    padding-bottom: 30px;
-}
+    .history-header {
+        background: var(--history-card);
+        border: 1px solid var(--history-border);
+        border-radius: 14px;
+        padding: 1rem 1.1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.8rem;
+    }
 
-.timeline-item:last-child {
-    padding-bottom: 0;
-}
+    .history-header h1 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: var(--history-primary);
+        font-weight: 700;
+    }
 
-.timeline-marker {
-    position: absolute;
-    left: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: white;
-    border: 3px solid #e9ecef;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    z-index: 1;
-}
+    .history-header p {
+        margin: 0.35rem 0 0;
+        color: var(--history-muted);
+        font-size: 0.9rem;
+    }
 
-.timeline-content {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 15px 20px;
-    border-left: 3px solid #dee2e6;
-    transition: all 0.3s ease;
-}
+    .history-back-btn {
+        border: 1px solid #cfdbeb;
+        background: #fff;
+        color: #355574;
+        border-radius: 8px;
+        padding: 0.45rem 0.72rem;
+        font-size: 0.82rem;
+        text-decoration: none;
+        white-space: nowrap;
+        font-weight: 600;
+    }
 
-.timeline-content:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    transform: translateX(5px);
-}
+    .history-back-btn:hover {
+        border-color: #bfd0e4;
+        background: #f6faff;
+        color: #1f476d;
+    }
 
-.timeline-item:hover .timeline-marker {
-    transform: scale(1.1);
-    transition: transform 0.3s ease;
-}
+    .history-tools {
+        background: var(--history-card);
+        border: 1px solid var(--history-border);
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+    }
 
-.change-details {
-    margin-top: 12px;
-}
+    .history-tool-grid {
+        display: grid;
+        grid-template-columns: minmax(260px, 1fr) minmax(170px, 220px) minmax(170px, 220px);
+        gap: 0.7rem;
+    }
 
-.change-box {
-    padding: 12px;
-    border-radius: 6px;
-    border: 2px solid;
-    background: white;
-    transition: all 0.3s ease;
-}
+    .history-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
 
-.change-box.old-value {
-    border-color: #dc3545;
-    background: #fff5f5;
-}
+    .history-field label {
+        margin: 0;
+        font-size: 0.74rem;
+        color: var(--history-muted);
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
 
-.change-box.new-value {
-    border-color: #28a745;
-    background: #f0fff4;
-}
+    .history-field input,
+    .history-field select {
+        height: 36px;
+        border: 1px solid #cedced;
+        border-radius: 8px;
+        padding: 0.4rem 0.55rem;
+        color: #28425c;
+        background: #fff;
+        font-size: 0.86rem;
+    }
 
-.change-box:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
+    .history-field input:focus,
+    .history-field select:focus {
+        outline: none;
+        border-color: #8eb0d3;
+        box-shadow: 0 0 0 0.15rem rgba(15, 76, 129, 0.14);
+    }
 
-.change-box strong {
-    color: #212529;
-    font-size: 0.95rem;
-    word-break: break-word;
-}
+    .history-counters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .history-counter {
+        border: 1px solid #d2deec;
+        border-radius: 999px;
+        background: #f4f8fd;
+        color: #305271;
+        padding: 0.28rem 0.65rem;
+        font-size: 0.76rem;
+        font-weight: 600;
+    }
+
+    .history-counter strong {
+        color: #103f67;
+        margin-right: 0.25rem;
+    }
+
+    .history-list-card {
+        background: var(--history-card);
+        border: 1px solid var(--history-border);
+        border-radius: 14px;
+        overflow: hidden;
+    }
+
+    .history-list-header {
+        border-bottom: 1px solid #e5edf6;
+        padding: 0.75rem 1rem;
+        color: #4d6480;
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+
+    .history-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .history-entry {
+        padding: 0.85rem 1rem 0.95rem;
+        border-bottom: 1px solid #edf2f8;
+        background: #fff;
+    }
+
+    .history-entry:last-child {
+        border-bottom: none;
+    }
+
+    .history-entry-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.6rem;
+        margin-bottom: 0.45rem;
+    }
+
+    .history-action-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0.2rem 0.52rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+    }
+
+    .history-action-pill.tone-primary {
+        color: #1f4d7a;
+        background: #e9f2fb;
+        border-color: #d3e2f1;
+    }
+
+    .history-action-pill.tone-success {
+        color: #216046;
+        background: #eaf7f0;
+        border-color: #cde6da;
+    }
+
+    .history-action-pill.tone-danger {
+        color: #8f2a2a;
+        background: #fbeeee;
+        border-color: #f1d1d1;
+    }
+
+    .history-action-pill.tone-info {
+        color: #2f5577;
+        background: #eff5fb;
+        border-color: #d7e4f2;
+    }
+
+    .history-action-pill.tone-neutral {
+        color: #4c5e72;
+        background: #f1f4f8;
+        border-color: #dfe6ef;
+    }
+
+    .history-entry-time {
+        font-size: 0.78rem;
+        color: #6a7f97;
+        white-space: nowrap;
+    }
+
+    .history-entry-title {
+        margin: 0;
+        font-size: 0.94rem;
+        color: var(--history-text);
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .history-entry-meta {
+        margin-top: 0.35rem;
+        color: #647a93;
+        font-size: 0.8rem;
+    }
+
+    .history-diff-grid {
+        margin-top: 0.62rem;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.55rem;
+    }
+
+    .history-diff-box {
+        border-radius: 8px;
+        border: 1px solid #dce7f3;
+        background: #f8fbff;
+        padding: 0.55rem 0.62rem;
+    }
+
+    .history-diff-box h6 {
+        margin: 0 0 0.3rem;
+        font-size: 0.72rem;
+        color: #516a85;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    .history-diff-box pre {
+        margin: 0;
+        font-family: inherit;
+        font-size: 0.8rem;
+        line-height: 1.35;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #2a4058;
+    }
+
+    .history-diff-box.old {
+        border-color: #ecd7d7;
+        background: #fdf5f5;
+    }
+
+    .history-diff-box.new {
+        border-color: #d4e7d8;
+        background: #f3faf5;
+    }
+
+    .history-no-results {
+        display: none;
+        border-top: 1px solid #edf2f8;
+        padding: 1.1rem;
+        text-align: center;
+        color: #607894;
+        font-size: 0.9rem;
+    }
+
+    .history-empty-state {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: #617c99;
+    }
+
+    @media (max-width: 991.98px) {
+        .history-page {
+            padding: 0.9rem;
+        }
+
+        .history-header {
+            flex-direction: column;
+        }
+
+        .history-tool-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .history-entry-top {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .history-entry-time {
+            white-space: normal;
+        }
+
+        .history-diff-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 {% endblock %}
 
+{% block content %}
+<div class="history-page">
+    <section class="history-header">
+        <div>
+            <h1>Histórico do Projeto</h1>
+            <p>{{ project.titulo }}</p>
+        </div>
+        <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="history-back-btn">
+            Voltar ao projeto
+        </a>
+    </section>
+
+    {% if history %}
+    <section class="history-tools">
+        <div class="history-tool-grid">
+            <div class="history-field">
+                <label for="historySearch">Buscar no histórico</label>
+                <input type="search" id="historySearch" placeholder="Descrição, usuário, antes/depois">
+            </div>
+            <div class="history-field">
+                <label for="historyTypeFilter">Tipo de evento</label>
+                <select id="historyTypeFilter">
+                    <option value="all">Todos</option>
+                    <option value="project">Projeto</option>
+                    <option value="stage">Etapas</option>
+                    <option value="system">Sistema</option>
+                </select>
+            </div>
+            <div class="history-field">
+                <label for="historyPeriodFilter">Período</label>
+                <select id="historyPeriodFilter">
+                    <option value="all" selected>Todo período</option>
+                    <option value="7d">Últimos 7 dias</option>
+                    <option value="30d">Últimos 30 dias</option>
+                    <option value="90d">Últimos 90 dias</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="history-counters">
+            <span class="history-counter"><strong id="counterTotal">0</strong>eventos</span>
+            <span class="history-counter"><strong id="counterProject">0</strong>projeto</span>
+            <span class="history-counter"><strong id="counterStage">0</strong>etapas</span>
+            <span class="history-counter"><strong id="counterSystem">0</strong>sistema</span>
+        </div>
+    </section>
+
+    <section class="history-list-card">
+        <div class="history-list-header">
+            Registro consolidado de ações no projeto.
+        </div>
+
+        <div class="history-list" id="historyEntriesList">
+            {% for entry in history %}
+                {% set action_type = entry.action_type %}
+                {% set category = 'system' %}
+                {% set action_label = 'Evento' %}
+                {% set tone = 'neutral' %}
+
+                {% if action_type in ['create', 'edit', 'delete', 'finalize'] %}
+                    {% set category = 'project' %}
+                    {% if action_type == 'create' %}
+                        {% set action_label = 'Criação de projeto' %}
+                        {% set tone = 'success' %}
+                    {% elif action_type == 'edit' %}
+                        {% set action_label = 'Edição de projeto' %}
+                        {% set tone = 'primary' %}
+                    {% elif action_type == 'delete' %}
+                        {% set action_label = 'Exclusão de projeto' %}
+                        {% set tone = 'danger' %}
+                    {% elif action_type == 'finalize' %}
+                        {% set action_label = 'Conclusão de projeto' %}
+                        {% set tone = 'success' %}
+                    {% endif %}
+                {% elif action_type in ['add_etapa', 'edit_etapa', 'edit_etapa_inline', 'delete_etapa', 'toggle_iniciada', 'toggle_done', 'import_model', 'edit_etapa_comentario', 'reorder_etapas', 'cascade_update'] %}
+                    {% set category = 'stage' %}
+                    {% set tone = 'info' %}
+                    {% if action_type == 'add_etapa' %}
+                        {% set action_label = 'Nova etapa' %}
+                    {% elif action_type == 'edit_etapa' %}
+                        {% set action_label = 'Edição de etapa' %}
+                    {% elif action_type == 'edit_etapa_inline' %}
+                        {% set action_label = 'Edição rápida de etapa' %}
+                    {% elif action_type == 'delete_etapa' %}
+                        {% set action_label = 'Exclusão de etapa' %}
+                        {% set tone = 'danger' %}
+                    {% elif action_type == 'toggle_iniciada' %}
+                        {% set action_label = 'Mudança de início da etapa' %}
+                    {% elif action_type == 'toggle_done' %}
+                        {% set action_label = 'Mudança de conclusão da etapa' %}
+                        {% set tone = 'success' %}
+                    {% elif action_type == 'import_model' %}
+                        {% set action_label = 'Importação de modelo' %}
+                    {% elif action_type == 'edit_etapa_comentario' %}
+                        {% set action_label = 'Comentário de etapa' %}
+                    {% elif action_type == 'reorder_etapas' %}
+                        {% set action_label = 'Reordenação de etapas' %}
+                    {% elif action_type == 'cascade_update' %}
+                        {% set action_label = 'Cascata de datas' %}
+                    {% endif %}
+                {% elif action_type == 'migration' %}
+                    {% set category = 'system' %}
+                    {% set action_label = 'Evento de sistema' %}
+                {% endif %}
+
+                {% set actor_name = entry.user.name if entry.user else ('Usuário #' ~ entry.user_id if entry.user_id else 'Sistema') %}
+
+                <article
+                    class="history-entry"
+                    data-category="{{ category }}"
+                    data-description="{{ (entry.action_description or '')|lower }}"
+                    data-user="{{ actor_name|lower }}"
+                    data-old="{{ (entry.old_value or '')|lower }}"
+                    data-new="{{ (entry.new_value or '')|lower }}"
+                    data-timestamp="{{ entry.timestamp.isoformat() if entry.timestamp else '' }}"
+                >
+                    <div class="history-entry-top">
+                        <span class="history-action-pill tone-{{ tone }}">{{ action_label }}</span>
+                        <span class="history-entry-time">{{ entry.timestamp|local_datetime('%d/%m/%Y às %H:%M') }}</span>
+                    </div>
+                    <h3 class="history-entry-title">{{ entry.action_description }}</h3>
+                    <div class="history-entry-meta">Responsável: {{ actor_name }}</div>
+
+                    {% if entry.old_value or entry.new_value %}
+                    <div class="history-diff-grid">
+                        {% if entry.old_value %}
+                        <div class="history-diff-box old">
+                            <h6>Antes</h6>
+                            <pre>{{ entry.old_value }}</pre>
+                        </div>
+                        {% endif %}
+                        {% if entry.new_value %}
+                        <div class="history-diff-box new">
+                            <h6>Depois</h6>
+                            <pre>{{ entry.new_value }}</pre>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </article>
+            {% endfor %}
+        </div>
+
+        <div class="history-no-results" id="historyNoResults">
+            Nenhum evento encontrado para os filtros selecionados.
+        </div>
+    </section>
+    {% else %}
+    <section class="history-list-card">
+        <div class="history-empty-state">
+            <h5 class="mb-2">Nenhuma ação registrada ainda</h5>
+            <p class="mb-0">O histórico será exibido aqui à medida que o projeto for atualizado.</p>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const list = document.getElementById('historyEntriesList');
+    if (!list) {
+        return;
+    }
+
+    const searchInput = document.getElementById('historySearch');
+    const typeFilter = document.getElementById('historyTypeFilter');
+    const periodFilter = document.getElementById('historyPeriodFilter');
+    const noResults = document.getElementById('historyNoResults');
+
+    const counterTotal = document.getElementById('counterTotal');
+    const counterProject = document.getElementById('counterProject');
+    const counterStage = document.getElementById('counterStage');
+    const counterSystem = document.getElementById('counterSystem');
+
+    const entries = Array.from(list.querySelectorAll('.history-entry'));
+
+    function setCounter(node, value) {
+        if (node) {
+            node.textContent = String(value);
+        }
+    }
+
+    function parseEntryDate(entry) {
+        const value = entry.getAttribute('data-timestamp');
+        if (!value) {
+            return null;
+        }
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+            return null;
+        }
+        return parsed;
+    }
+
+    function inPeriod(entryDate, periodValue) {
+        if (!entryDate || periodValue === 'all') {
+            return true;
+        }
+        const now = new Date();
+        let days = 0;
+        if (periodValue === '7d') {
+            days = 7;
+        } else if (periodValue === '30d') {
+            days = 30;
+        } else if (periodValue === '90d') {
+            days = 90;
+        } else {
+            return true;
+        }
+        const threshold = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+        return entryDate >= threshold;
+    }
+
+    function entryTextBlob(entry) {
+        return [
+            entry.getAttribute('data-description') || '',
+            entry.getAttribute('data-user') || '',
+            entry.getAttribute('data-old') || '',
+            entry.getAttribute('data-new') || ''
+        ].join(' ');
+    }
+
+    function applyFilters() {
+        const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
+        const selectedType = typeFilter ? typeFilter.value : 'all';
+        const selectedPeriod = periodFilter ? periodFilter.value : 'all';
+
+        let visibleCount = 0;
+        let projectCount = 0;
+        let stageCount = 0;
+        let systemCount = 0;
+
+        entries.forEach(function(entry) {
+            const category = entry.getAttribute('data-category') || 'system';
+            const textBlob = entryTextBlob(entry);
+            const entryDate = parseEntryDate(entry);
+
+            const typeOk = selectedType === 'all' || category === selectedType;
+            const searchOk = !searchTerm || textBlob.includes(searchTerm);
+            const periodOk = inPeriod(entryDate, selectedPeriod);
+            const visible = typeOk && searchOk && periodOk;
+
+            entry.style.display = visible ? '' : 'none';
+
+            if (visible) {
+                visibleCount += 1;
+                if (category === 'project') {
+                    projectCount += 1;
+                } else if (category === 'stage') {
+                    stageCount += 1;
+                } else {
+                    systemCount += 1;
+                }
+            }
+        });
+
+        setCounter(counterTotal, visibleCount);
+        setCounter(counterProject, projectCount);
+        setCounter(counterStage, stageCount);
+        setCounter(counterSystem, systemCount);
+
+        if (noResults) {
+            noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+    }
+    if (typeFilter) {
+        typeFilter.addEventListener('change', applyFilters);
+    }
+    if (periodFilter) {
+        periodFilter.addEventListener('change', applyFilters);
+    }
+
+    applyFilters();
+});
+</script>
+{% endblock %}
