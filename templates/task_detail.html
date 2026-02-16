@@ -119,7 +119,7 @@
                 <!-- Items Header -->
                 <div class="items-header-clean mt-4">
                     <div class="header-info">
-                        <h5 class="items-title-clean">
+                        <h5 class="items-title-clean ds-type-section-title">
                             <i class="fas fa-list"></i>
                             Itens da Tarefa
                         </h5>
@@ -238,8 +238,8 @@
                                     <i class="fas fa-exclamation-circle"></i>
                                 </div>
                                 <div>
-                                    <h5 class="modal-title-clean">Excluir Item</h5>
-                                    <p class="modal-subtitle-clean">Esta ação não pode ser desfeita</p>
+                                    <h5 class="modal-title-clean ds-type-section-title">Excluir Item</h5>
+                                    <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
                                 </div>
                                 <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
                                     <i class="fas fa-times"></i>
@@ -344,8 +344,8 @@
                         <i class="fas fa-list task-modal-icon-symbol"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title-clean" id="itemModalTitle">Novo Item</h5>
-                        <p class="modal-subtitle-clean">{{ task.titulo }}</p>
+                        <h5 class="modal-title-clean ds-type-section-title" id="itemModalTitle">Novo Item</h5>
+                        <p class="modal-subtitle-clean ds-type-body-sm">{{ task.titulo }}</p>
                     </div>
                     <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
                         <i class="fas fa-times"></i>
@@ -396,8 +396,8 @@
                     <i class="fas fa-exclamation-circle"></i>
                 </div>
                 <div>
-                    <h5 class="modal-title-clean">Excluir Tarefa</h5>
-                    <p class="modal-subtitle-clean">Esta ação não pode ser desfeita</p>
+                    <h5 class="modal-title-clean ds-type-section-title">Excluir Tarefa</h5>
+                    <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
                 </div>
                 <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i>
@@ -801,7 +801,7 @@
                 '<div class="modal-dialog modal-dialog-centered">' +
                 '<div class="modal-content modal-clean">' +
                 '<div class="modal-header-clean"><div class="modal-icon-clean"><i class="fas fa-exclamation-circle"></i></div>' +
-                '<div><h5 class="modal-title-clean">Excluir Item</h5><p class="modal-subtitle-clean">Esta ação não pode ser desfeita</p></div>' +
+                '<div><h5 class="modal-title-clean ds-type-section-title">Excluir Item</h5><p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p></div>' +
                 '<button type="button" class="btn-close-clean" data-bs-dismiss="modal"><i class="fas fa-times"></i></button></div>' +
                 '<div class="modal-body-clean"><p>Confirma a exclusão deste item?</p><p class="text-muted small">' + escapeHtml(item.descricao.substring(0, 100)) + (item.descricao.length > 100 ? '...' : '') + '</p></div>' +
                 '<div class="modal-footer-clean">' +

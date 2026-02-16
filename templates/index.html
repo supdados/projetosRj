@@ -14,7 +14,7 @@
             <header class="dashboard-welcome-strip mb-3">
                 <div class="dashboard-welcome-main">
                     <div class="dashboard-welcome-copy">
-                        <h1 class="dashboard-welcome-title mb-1">
+                        <h1 class="dashboard-welcome-title mb-1 ds-type-page-title">
                             <span class="dashboard-welcome-greeting">Olá,</span>
                             <span id="dashboardWelcomeName">{{ current_user_obj.name if current_user_obj.name else current_user_obj.username }}</span>
                         </h1>
@@ -132,7 +132,7 @@
         <div class="col-12 col-lg-8 dashboard-recent-col">
             <div class="card border-0 glass-card h-100 main-content-card">
                 <div class="card-header glass-card-header py-3">
-                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
+                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title">
                         <i class="fas fa-clock me-2 text-primary"></i>Projetos Recentes
                     </h5>
                 </div>
@@ -200,7 +200,7 @@
         <div class="col-12 col-lg-4 dashboard-side-col">
             <div class="card border-0 glass-card sidebar-content-card dashboard-priority-compact-card mb-3">
                 <div class="card-header glass-card-header py-2 px-3 d-flex justify-content-between align-items-center">
-                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
+                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title">
                         <i class="fas fa-chart-pie me-2 text-info"></i>Projetos por Prioridade
                     </h5>
                     <span class="dashboard-priority-total">{{ num_projects }}</span>
@@ -241,7 +241,7 @@
 
             <div class="card border-0 glass-card sidebar-content-card dashboard-tasks-kpi-card">
                 <div class="card-header glass-card-header py-2 px-3 d-flex justify-content-between align-items-center">
-                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
+                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title">
                         <i class="fas fa-list-check me-2 text-primary"></i>Tarefas
                     </h5>
                     <a href="{{ url_for('main.list_tasks') }}" class="dashboard-tasks-view-all">Ver todas <i class="fas fa-arrow-right ms-1"></i></a>

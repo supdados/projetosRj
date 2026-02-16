@@ -9,7 +9,7 @@
 {% macro render_section(title, icon_class, items, badge_class) -%}
 <section class="search-results-section">
     <div class="search-results-section-head">
-        <h3 class="search-results-section-title">
+        <h3 class="search-results-section-title ds-type-section-title">
             <i class="fas {{ icon_class }}"></i>
             {{ title }}
         </h3>
@@ -23,7 +23,7 @@
                 <p class="search-result-title">{{ item.title }}</p>
             </div>
             {% if item.subtitle %}
-            <p class="search-result-subtitle">{{ item.subtitle }}</p>
+            <p class="search-result-subtitle ds-type-body-sm">{{ item.subtitle }}</p>
             {% endif %}
             {% if item.meta %}
             <p class="search-result-meta">{{ item.meta }}</p>
@@ -48,17 +48,17 @@
 {% block content %}
 <div class="container-fluid py-4 search-results-page">
     <section class="search-results-header">
-        <h1 class="search-results-title">
+        <h1 class="search-results-title ds-type-page-title">
             <i class="fas fa-search"></i>
             Busca Global
         </h1>
         {% if search_query %}
-        <p class="search-results-subtitle">
+        <p class="search-results-subtitle ds-type-body-sm">
             {{ search_payload.counts.total }} referencia{{ 's' if search_payload.counts.total != 1 else '' }} para
             "<strong>{{ search_query }}</strong>".
         </p>
         {% else %}
-        <p class="search-results-subtitle">Busque por projetos, etapas, tarefas e itens de tarefa.</p>
+        <p class="search-results-subtitle ds-type-body-sm">Busque por projetos, etapas, tarefas e itens de tarefa.</p>
         {% endif %}
 
         <form method="GET" action="{{ url_for('main.global_search_page') }}" class="search-results-form">

@@ -16,8 +16,8 @@
         align-items: center;
         gap: 0.55rem;
         margin: 0;
-        font-size: 1.18rem;
-        font-weight: 700;
+        font-size: var(--ds-font-size-xl);
+        font-weight: var(--ds-font-weight-bold);
         color: #1f2c40;
     }
 
@@ -28,7 +28,7 @@
     .search-results-subtitle {
         margin: 0.45rem 0 0;
         color: #66758b;
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
     }
 
     .search-results-form {
@@ -44,7 +44,7 @@
         border-radius: 999px;
         border: 1px solid #d8e3ef;
         padding: 0.58rem 0.95rem;
-        font-size: 0.96rem;
+        font-size: var(--ds-font-size-base);
         color: #203047;
         background: #fbfdff;
     }
@@ -61,7 +61,7 @@
         padding: 0.58rem 1.05rem;
         background: var(--primary-color);
         color: #fff;
-        font-weight: 600;
+        font-weight: var(--ds-font-weight-semibold);
     }
 
     .search-results-grid {
@@ -93,21 +93,21 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        font-size: 0.96rem;
-        font-weight: 700;
+        font-size: var(--ds-font-size-base);
+        font-weight: var(--ds-font-weight-bold);
         color: #203047;
     }
 
     .search-results-section-title i {
         color: #607186;
-        font-size: 0.88rem;
+        font-size: var(--ds-font-size-md);
     }
 
     .search-results-count {
         border-radius: 999px;
         padding: 0.2rem 0.55rem;
-        font-size: 0.75rem;
-        font-weight: 700;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-bold);
         background: #eef4fb;
         color: #49617f;
     }
@@ -147,9 +147,9 @@
     .search-result-badge {
         border-radius: 999px;
         padding: 0.15rem 0.52rem;
-        font-size: 0.68rem;
-        font-weight: 700;
-        letter-spacing: 0.02em;
+        font-size: var(--ds-font-size-2xs);
+        font-weight: var(--ds-font-weight-bold);
+        letter-spacing: var(--ds-letter-spacing-wide);
         text-transform: uppercase;
     }
 
@@ -175,8 +175,8 @@
 
     .search-result-title {
         margin: 0;
-        font-size: 0.95rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-base);
+        font-weight: var(--ds-font-weight-semibold);
         color: #1f2f45;
         white-space: nowrap;
         overflow: hidden;
@@ -187,8 +187,8 @@
     .search-result-meta {
         margin: 0;
         color: #67778d;
-        font-size: 0.82rem;
-        line-height: 1.35;
+        font-size: var(--ds-font-size-sm);
+        line-height: var(--ds-line-height-normal);
     }
 
     .search-result-match {
@@ -205,9 +205,9 @@
         width: fit-content;
         border-radius: 999px;
         padding: 0.09rem 0.46rem;
-        font-size: 0.68rem;
-        font-weight: 700;
-        letter-spacing: 0.01em;
+        font-size: var(--ds-font-size-2xs);
+        font-weight: var(--ds-font-weight-bold);
+        letter-spacing: var(--ds-letter-spacing-normal);
         background: #eef2f7;
         color: #4d6280;
     }
@@ -215,8 +215,8 @@
     .search-result-match-text {
         margin: 0;
         color: #67778d;
-        font-size: 0.8rem;
-        line-height: 1.3;
+        font-size: var(--ds-font-size-sm);
+        line-height: var(--ds-line-height-snug);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -224,7 +224,7 @@
 
     .search-result-chevron {
         color: #9aa8bb;
-        font-size: 0.82rem;
+        font-size: var(--ds-font-size-sm);
         margin-top: 0.15rem;
     }
 

@@ -25,9 +25,9 @@
     }
 
     .dashboard-page-v2 .dashboard-welcome-title {
-        font-size: 1.62rem;
-        line-height: 1.15;
-        font-weight: 700;
+        font-size: var(--ds-font-size-3xl);
+        line-height: var(--ds-line-height-tight);
+        font-weight: var(--ds-font-weight-bold);
         color: #114a78;
         margin-bottom: 0.22rem;
         white-space: nowrap;
@@ -42,8 +42,8 @@
 
     .dashboard-page-v2 .dashboard-welcome-context {
         color: #607e9f;
-        font-size: 0.86rem;
-        font-weight: 500;
+        font-size: var(--ds-font-size-md);
+        font-weight: var(--ds-font-weight-medium);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -64,16 +64,16 @@
 
     .dashboard-page-v2 .dashboard-welcome-date-label {
         color: #8198b1;
-        font-size: 0.68rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
+        font-size: var(--ds-font-size-2xs);
+        font-weight: var(--ds-font-weight-bold);
+        letter-spacing: var(--ds-letter-spacing-caps);
         text-transform: uppercase;
     }
 
     .dashboard-page-v2 .dashboard-welcome-date {
         color: #2e5f8d;
-        font-size: 0.86rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-md);
+        font-weight: var(--ds-font-weight-semibold);
     }
 
     .dashboard-page-v2 .dashboard-welcome-actions {
@@ -142,16 +142,16 @@
     }
 
     .dashboard-page-v2 .dashboard-glass-card .h4 {
-        font-size: 1.35rem;
-        line-height: 1.12;
+        font-size: var(--ds-font-size-2xl);
+        line-height: var(--ds-line-height-tight);
     }
 
     .dashboard-page-v2 .dashboard-glass-card .fw-medium {
-        font-size: 0.97rem;
+        font-size: var(--ds-font-size-base);
     }
 
     .dashboard-page-v2 .dashboard-glass-card .small {
-        font-size: 0.77rem;
+        font-size: var(--ds-font-size-xs);
         margin-top: 0.16rem !important;
     }
 
@@ -168,14 +168,14 @@
     .dashboard-page-v2 .glass-card-title {
         color: var(--primary-color);
         text-shadow: none;
-        font-weight: 700;
+        font-weight: var(--ds-font-weight-bold);
     }
 
     .dashboard-page-v2 .glass-btn {
         background: linear-gradient(135deg, rgba(0, 90, 146, 0.92) 0%, rgba(0, 75, 121, 0.85) 100%);
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         color: white !important;
-        font-weight: 600;
+        font-weight: var(--ds-font-weight-semibold);
         box-shadow: 0 5px 16px rgba(0, 90, 146, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     }
 
@@ -210,8 +210,8 @@
     .dashboard-page-v2 .glass-table-header th {
         border: none !important;
         color: var(--primary-color);
-        font-weight: 700;
-        font-size: 0.84rem;
+        font-weight: var(--ds-font-weight-bold);
+        font-size: var(--ds-font-size-sm);
     }
 
     .dashboard-page-v2 .glass-table-row {
@@ -229,14 +229,14 @@
         border: none !important;
         padding: 0.72rem !important;
         vertical-align: middle;
-        font-size: 0.95rem;
+        font-size: var(--ds-font-size-base);
     }
 
     .dashboard-page-v2 .glass-link {
         color: var(--primary-color) !important;
         transition: color var(--transition-speed) ease;
         text-shadow: none;
-        font-size: 0.95rem;
+        font-size: var(--ds-font-size-base);
     }
 
     .dashboard-page-v2 .glass-link:hover {
@@ -248,10 +248,10 @@
     .dashboard-page-v2 .glass-badge {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.11) 100%);
         border: 1px solid rgba(255, 255, 255, 0.22);
-        font-weight: 700;
+        font-weight: var(--ds-font-weight-bold);
         text-transform: uppercase;
-        font-size: 0.68rem;
-        letter-spacing: 0.45px;
+        font-size: var(--ds-font-size-2xs);
+        letter-spacing: var(--ds-letter-spacing-wide);
     }
 
     .dashboard-page-v2 .priority-dot {
@@ -290,8 +290,8 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.82rem;
-        font-weight: 700;
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-bold);
         color: #205d90;
         padding: 0 0.5rem;
     }
@@ -332,8 +332,8 @@
     }
 
     .dashboard-page-v2 .priority-mini-label {
-        font-size: 0.72rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-semibold);
         color: #496b8f;
         white-space: nowrap;
         overflow: hidden;
@@ -341,10 +341,10 @@
     }
 
     .dashboard-page-v2 .priority-mini-count {
-        font-size: 0.96rem;
-        font-weight: 700;
+        font-size: var(--ds-font-size-base);
+        font-weight: var(--ds-font-weight-bold);
         color: #214f79;
-        line-height: 1;
+        line-height: var(--ds-line-height-tight);
         flex-shrink: 0;
     }
 
@@ -379,8 +379,8 @@
     }
 
     .dashboard-page-v2 .dashboard-tasks-view-all {
-        font-size: 0.75rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-semibold);
         color: #205e91;
         text-decoration: none;
         white-space: nowrap;
@@ -415,10 +415,10 @@
     }
 
     .dashboard-page-v2 .tasks-kpi-big-number {
-        font-size: 1.15rem;
-        font-weight: 800;
+        font-size: var(--ds-font-size-xl);
+        font-weight: var(--ds-font-weight-extrabold);
         color: #1a4d7a;
-        line-height: 1;
+        line-height: var(--ds-line-height-tight);
     }
 
     .dashboard-page-v2 .tasks-kpi-done-card .tasks-kpi-big-number {
@@ -426,11 +426,11 @@
     }
 
     .dashboard-page-v2 .tasks-kpi-big-label {
-        font-size: 0.58rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-2xs);
+        font-weight: var(--ds-font-weight-semibold);
         color: #6a869f;
         text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: var(--ds-letter-spacing-wide);
         text-align: center;
     }
 
@@ -448,14 +448,14 @@
     }
 
     .dashboard-page-v2 .tasks-kpi-progress-title {
-        font-size: 0.78rem;
-        font-weight: 700;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-bold);
         color: #2a5070;
     }
 
     .dashboard-page-v2 .tasks-kpi-progress-total {
-        font-size: 0.72rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-semibold);
         color: #6a869f;
     }
 
@@ -493,13 +493,13 @@
         display: inline-flex;
         align-items: center;
         gap: 0.3rem;
-        font-size: 0.7rem;
-        font-weight: 500;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-medium);
         color: #4a6a8a;
     }
 
     .dashboard-page-v2 .tasks-kpi-legend-item strong {
-        font-weight: 700;
+        font-weight: var(--ds-font-weight-bold);
         color: #2a5070;
     }
 
@@ -562,18 +562,18 @@
     }
 
     .dashboard-page-v2 .tasks-kpi-donut-center-number {
-        font-size: 1.4rem;
-        font-weight: 800;
+        font-size: var(--ds-font-size-2xl);
+        font-weight: var(--ds-font-weight-extrabold);
         color: #1a4d7a;
-        line-height: 1;
+        line-height: var(--ds-line-height-tight);
     }
 
     .dashboard-page-v2 .tasks-kpi-donut-center-label {
-        font-size: 0.65rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-2xs);
+        font-weight: var(--ds-font-weight-semibold);
         color: #6a869f;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: var(--ds-letter-spacing-caps);
     }
 
     .dashboard-page-v2 .project-card {

@@ -62,7 +62,7 @@
 }
 
 .template-form-page .glass-form-header .header-icon {
-    font-size: 1.1rem;
+    font-size: var(--ds-font-size-lg);
     color: var(--tf-accent);
     text-shadow: none;
 }
@@ -70,15 +70,15 @@
 .template-form-page .glass-form-header .form-title {
     margin: 0;
     color: var(--tf-text);
-    font-size: 1.2rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xl);
+    font-weight: var(--ds-font-weight-bold);
     text-shadow: none;
 }
 
 .template-form-page .glass-form-header .form-subtitle {
     margin: 0.2rem 0 0;
     color: var(--tf-muted);
-    font-size: 0.9rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .template-form-page .glass-form-body {
@@ -123,13 +123,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .template-form-page .glass-card-header .card-title {
     margin: 0;
-    font-size: 0.95rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-base);
+    font-weight: var(--ds-font-weight-bold);
     color: #334155;
 }
 
@@ -144,8 +144,8 @@
     color: #005a92;
     border-radius: 8px;
     padding: 0.45rem 0.75rem;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-semibold);
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
@@ -168,8 +168,8 @@
 
 .template-form-page .form-label-glass {
     margin: 0;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-md);
+    font-weight: var(--ds-font-weight-semibold);
     color: #475569;
     display: inline-flex;
     align-items: center;
@@ -178,7 +178,7 @@
 
 .template-form-page .label-icon {
     color: #64748b;
-    font-size: 0.8rem;
+    font-size: var(--ds-font-size-sm);
 }
 
 .template-form-page .required-star {
@@ -254,7 +254,7 @@
     background: #0b5f98;
     color: #fff;
     box-shadow: none;
-    font-size: 0.8rem;
+    font-size: var(--ds-font-size-sm);
 }
 
 .template-form-page .stage-content-template {
@@ -281,9 +281,9 @@
 
 .template-form-page .duration-label {
     margin-left: 0.35rem;
-    font-size: 0.78rem;
+    font-size: var(--ds-font-size-xs);
     color: #64748b;
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
 }
 
 .template-form-page .btn-glass-remove {
@@ -312,20 +312,20 @@
 }
 
 .template-form-page .stages-empty-state i {
-    font-size: 1.8rem;
+    font-size: var(--ds-font-size-4xl);
     margin-bottom: 0.65rem;
     color: #8aa5bf;
 }
 
 .template-form-page .stages-empty-state p {
     margin: 0;
-    font-size: 0.95rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-base);
+    font-weight: var(--ds-font-weight-semibold);
     color: #334155;
 }
 
 .template-form-page .stages-empty-state span {
-    font-size: 0.82rem;
+    font-size: var(--ds-font-size-sm);
     color: #64748b;
 }
 

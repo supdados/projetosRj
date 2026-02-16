@@ -10,8 +10,8 @@
                 <i class="fas fa-tasks"></i>
             </div>
             <div class="admin-tasks-header-copy">
-                <h1 class="admin-tasks-title">Tarefas</h1>
-                <p class="admin-tasks-subtitle mb-0">Acompanhe tarefas avulsas e vinculadas a projetos com foco operacional.</p>
+                <h1 class="admin-tasks-title ds-type-page-title">Tarefas</h1>
+                <p class="admin-tasks-subtitle mb-0 ds-type-body-sm">Acompanhe tarefas avulsas e vinculadas a projetos com foco operacional.</p>
             </div>
         </div>
         <button type="button" class="btn admin-tasks-create-btn" data-bs-toggle="modal" data-bs-target="#addTaskModal">
@@ -31,7 +31,7 @@
     <section class="admin-tasks-filters-card">
         <form method="GET" action="{{ url_for('main.list_tasks') }}" class="row g-2 align-items-end admin-tasks-filters" id="filterTasksForm">
             <div class="col-12 col-lg-4 col-xxl-3">
-                <label for="task_search" class="admin-tasks-label">Título da tarefa</label>
+                <label for="task_search" class="admin-tasks-label ds-type-label">Título da tarefa</label>
                 <input
                     type="text"
                     id="task_search"
@@ -42,7 +42,7 @@
             </div>
 
             <div class="col-12 col-lg-4 col-xxl-3">
-                <label for="filter_project_input" class="admin-tasks-label">Projeto</label>
+                <label for="filter_project_input" class="admin-tasks-label ds-type-label">Projeto</label>
                 <div class="project-search-wrap project-search-wrap-sm">
                     <input
                         type="text"
@@ -219,12 +219,12 @@
 
                 <div class="admin-tasks-modal-body">
                     <div class="mb-3">
-                        <label for="titulo" class="admin-tasks-label">Título da Tarefa <span class="text-danger">*</span></label>
+                        <label for="titulo" class="admin-tasks-label ds-type-label">Título da Tarefa <span class="text-danger">*</span></label>
                         <input type="text" class="form-control admin-tasks-input" id="titulo" name="titulo" required>
                     </div>
 
                     <div class="mb-0">
-                        <label for="project_id_input" class="admin-tasks-label">Projeto (Opcional)</label>
+                        <label for="project_id_input" class="admin-tasks-label ds-type-label">Projeto (Opcional)</label>
                         <div class="project-search-wrap">
                             <input
                                 type="text"

@@ -10,7 +10,7 @@
 <div class="history-page">
     <section class="history-header">
         <div>
-            <h1>Histórico do Projeto</h1>
+            <h1 class="ds-type-page-title">Histórico do Projeto</h1>
             <p>{{ project.titulo }}</p>
         </div>
         <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="history-back-btn">
@@ -126,7 +126,7 @@
                         <span class="history-action-pill tone-{{ tone }}">{{ action_label }}</span>
                         <span class="history-entry-time">{{ entry.timestamp|local_datetime('%d/%m/%Y às %H:%M') }}</span>
                     </div>
-                    <h3 class="history-entry-title">{{ entry.action_description }}</h3>
+                    <h3 class="history-entry-title ds-type-card-title">{{ entry.action_description }}</h3>
                     <div class="history-entry-meta">Responsável: {{ actor_name }}</div>
 
                     {% if entry.old_value or entry.new_value %}

@@ -43,7 +43,7 @@
     <div class="project-compact-header" id="projectCompactHeader" aria-hidden="true">
         <div class="project-compact-inner">
             <div class="project-compact-main">
-                <h2 class="project-compact-title">{{ project.titulo }}</h2>
+                <h2 class="project-compact-title ds-type-page-title">{{ project.titulo }}</h2>
                 {% if project.short_description %}
                 <p class="project-compact-description">{{ project.short_description }}</p>
                 {% endif %}
@@ -206,7 +206,7 @@
 
             <!-- EEGG (Objetivos, Resultados e Indicadores) -->
             <div class="mb-2">
-                <div class="section-title">
+                <div class="section-title ds-type-section-title">
                     <i class="fas fa-sitemap"></i>EEGG
                 </div>
                 <div class="row g-2">
@@ -259,7 +259,7 @@
 
             <!-- Informações Adicionais -->
             <div class="mb-2">
-                <div class="section-title">
+                <div class="section-title ds-type-section-title">
                     <i class="fas fa-info-circle"></i>Informações Adicionais
                 </div>
                 <div class="additional-info-box">
@@ -348,7 +348,7 @@
 
     <!-- Seção de etapas do projeto -->
     <div class="section-divider">
-        <h2>Etapas do Projeto</h2>
+        <h2 class="ds-type-section-title">Etapas do Projeto</h2>
     </div>
 
     {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
@@ -460,8 +460,8 @@
                         <i class="fas fa-file-import header-icon-import"></i>
                     </div>
                     <div class="header-text-import">
-                        <h5 class="modal-title-import">Importar Modelo de Etapas</h5>
-                        <p class="modal-subtitle-import">Selecione um modelo e a data de início para criar as etapas
+                        <h5 class="modal-title-import ds-type-section-title">Importar Modelo de Etapas</h5>
+                        <p class="modal-subtitle-import ds-type-body-sm">Selecione um modelo e a data de início para criar as etapas
                             automaticamente</p>
                     </div>
                     <button type="button" class="btn-close-glass-import" data-bs-dismiss="modal" aria-label="Close">
@@ -480,7 +480,7 @@
                                 <div class="card-header-icon-import">
                                     <i class="fas fa-layer-group"></i>
                                 </div>
-                                <h6 class="card-title-import">Modelo de Etapas</h6>
+                                <h6 class="card-title-import ds-type-card-title">Modelo de Etapas</h6>
                             </div>
                             <div class="glass-card-body-import">
                                 <div class="form-group-glass-import">
@@ -503,7 +503,7 @@
                                 <div class="card-header-icon-import">
                                     <i class="fas fa-calendar-day"></i>
                                 </div>
-                                <h6 class="card-title-import">Data de Início</h6>
+                                <h6 class="card-title-import ds-type-card-title">Data de Início</h6>
                             </div>
                             <div class="glass-card-body-import">
                                 <div class="form-group-glass-import">
@@ -527,7 +527,7 @@
                                 <div class="card-header-icon-import">
                                     <i class="fas fa-eye"></i>
                                 </div>
-                                <h6 class="card-title-import">Preview das Etapas</h6>
+                                <h6 class="card-title-import ds-type-card-title">Preview das Etapas</h6>
                             </div>
                             <div class="glass-card-body-import">
                                 <div id="model-preview-list" class="preview-list-import">

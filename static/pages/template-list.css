@@ -19,24 +19,24 @@
 }
 
 .header-title-clean {
-    font-size: 1.6rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-3xl);
+    font-weight: var(--ds-font-weight-bold);
     color: #1a1a1a;
     margin: 0;
     display: flex;
     align-items: center;
     gap: 0.7rem;
-    letter-spacing: -0.3px;
+    letter-spacing: var(--ds-letter-spacing-tight);
 }
 
 .header-title-clean i {
-    font-size: 1.4rem;
+    font-size: var(--ds-font-size-2xl);
     color: var(--primary-color);
 }
 
 .header-count {
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: var(--ds-font-size-md);
+    font-weight: var(--ds-font-weight-medium);
     color: #6c757d;
     padding: 0.3rem 0.8rem;
     background: rgba(0, 90, 146, 0.08);
@@ -52,8 +52,8 @@
     color: white;
     border: none;
     border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-md);
     text-decoration: none;
     transition: all 0.2s ease;
 }
@@ -64,7 +64,7 @@
 }
 
 .btn-new-clean i {
-    font-size: 0.95rem;
+    font-size: var(--ds-font-size-base);
 }
 
 /* Templates List Clean */
@@ -108,7 +108,7 @@
 }
 
 .template-icon-clean i {
-    font-size: 1.2rem;
+    font-size: var(--ds-font-size-xl);
     color: var(--primary-color);
 }
 
@@ -125,19 +125,19 @@
 }
 
 .template-name-clean {
-    font-size: 1.05rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-lg);
+    font-weight: var(--ds-font-weight-semibold);
     color: #1a1a1a;
     margin: 0;
-    letter-spacing: -0.2px;
+    letter-spacing: var(--ds-letter-spacing-tight);
 }
 
 .template-stages-count {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-semibold);
     color: var(--primary-color);
     padding: 0.25rem 0.6rem;
     background: rgba(0, 90, 146, 0.08);
@@ -145,14 +145,14 @@
 }
 
 .template-stages-count i {
-    font-size: 0.75rem;
+    font-size: var(--ds-font-size-xs);
 }
 
 .template-desc-clean {
-    font-size: 0.875rem;
+    font-size: var(--ds-font-size-md);
     color: #6c757d;
     margin: 0;
-    line-height: 1.4;
+    line-height: var(--ds-line-height-normal);
 }
 
 .template-actions-clean {
@@ -181,7 +181,7 @@
 }
 
 .btn-action-clean i {
-    font-size: 0.95rem;
+    font-size: var(--ds-font-size-base);
 }
 
 .btn-edit-clean:hover {
@@ -205,20 +205,20 @@
 }
 
 .empty-state-clean i {
-    font-size: 3.5rem;
+    font-size: var(--ds-font-size-7xl);
     color: rgba(0, 90, 146, 0.2);
     margin-bottom: 1.5rem;
 }
 
 .empty-state-clean h5 {
-    font-size: 1.3rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xl);
+    font-weight: var(--ds-font-weight-bold);
     color: #1a1a1a;
     margin-bottom: 0.5rem;
 }
 
 .empty-state-clean p {
-    font-size: 1rem;
+    font-size: var(--ds-font-size-base);
     color: #6c757d;
     margin-bottom: 2rem;
 }
@@ -250,19 +250,19 @@
 }
 
 .modal-icon-clean i {
-    font-size: 1.3rem;
+    font-size: var(--ds-font-size-xl);
     color: #ffc107;
 }
 
 .modal-title-clean {
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-lg);
+    font-weight: var(--ds-font-weight-bold);
     color: #1a1a1a;
     margin: 0;
 }
 
 .modal-subtitle-clean {
-    font-size: 0.8rem;
+    font-size: var(--ds-font-size-sm);
     color: #6c757d;
     margin: 0.2rem 0 0 0;
 }
@@ -291,14 +291,14 @@
 }
 
 .modal-body-clean p {
-    font-size: 0.95rem;
+    font-size: var(--ds-font-size-base);
     color: #495057;
     margin: 0;
 }
 
 .modal-body-clean strong {
     color: #1a1a1a;
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
 }
 
 .modal-footer-clean {
@@ -313,8 +313,8 @@
     padding: 0.65rem 1.3rem;
     border: none;
     border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-md);
     cursor: pointer;
     transition: all 0.2s ease;
 }

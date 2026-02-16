@@ -15,7 +15,7 @@
     --border-color: #dee2e6;
     --border-radius: 8px;
     --box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    --font-family-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-family-sans-serif: var(--ds-font-family-body);
     --transition-speed: 0.35s;
     
     /* Cores de fundo para os cards da dashboard */
@@ -26,10 +26,10 @@
 }
 
 body {
-    font-family: var(--font-family-sans-serif);
+    font-family: var(--ds-font-family-body);
     background-color: #f7f9fc;
     color: var(--text-color);
-    line-height: 1.5;
+    line-height: var(--ds-line-height-relaxed);
     margin: 0;
     min-height: 100vh;
     width: 100%;
@@ -87,9 +87,9 @@ body {
 
 .sidebar-heading {
     color: rgba(255, 255, 255, 0.7);
-    font-weight: 600;
-    font-size: 0.6rem;
-    letter-spacing: 1px;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-2xs);
+    letter-spacing: var(--ds-letter-spacing-caps);
     padding: 1.2rem 1.2rem 0.6rem 1.2rem;
     margin-bottom: 0.3rem;
     position: relative;
@@ -140,7 +140,7 @@ body {
 }
 
 .logo-icon {
-    font-size: 1.1rem;
+    font-size: var(--ds-font-size-lg);
     color: rgba(255, 255, 255, 0.95);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
@@ -151,8 +151,8 @@ body {
 }
 
 .logo-text {
-    font-size: 1.05rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-lg);
+    font-weight: var(--ds-font-weight-semibold);
     margin-left: 10px;
     white-space: nowrap;
     overflow: hidden;
@@ -161,7 +161,7 @@ body {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    letter-spacing: 0.3px;
+    letter-spacing: var(--ds-letter-spacing-wide);
     transition: opacity 0.2s ease-in-out;
     opacity: 1;
 }
@@ -202,7 +202,7 @@ body {
 }
 
 .sidebar-toggle-arrow i {
-    font-size: 0.75rem;
+    font-size: var(--ds-font-size-xs);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -259,11 +259,11 @@ body {
     text-decoration: none;
     color: rgba(255, 255, 255, 0.88);
     transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
-    font-weight: 500;
+    font-weight: var(--ds-font-weight-medium);
     border-radius: 8px;
     position: relative;
     backdrop-filter: blur(10px);
-    font-size: 0.875rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .sidebar-menu li a:hover {
@@ -284,7 +284,7 @@ body {
         rgba(255, 255, 255, 0.08) 100%);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.25);
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
     box-shadow: 
         0 4px 12px rgba(0, 0, 0, 0.1);
     position: relative;
@@ -325,7 +325,7 @@ body {
     width: 18px;
     text-align: center;
     transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 0.95rem;
+    font-size: var(--ds-font-size-base);
     color: rgba(255, 255, 255, 0.82);
 }
 
@@ -358,7 +358,7 @@ body {
     color: white;
     padding: 0.5rem 0.8rem;
     border-radius: 6px;
-    font-size: 0.85rem;
+    font-size: var(--ds-font-size-md);
     white-space: nowrap;
     z-index: 1000;
     backdrop-filter: blur(10px);
@@ -367,7 +367,7 @@ body {
 
 .sidebar.collapsed .sidebar-menu li i {
     margin-right: 0;
-    font-size: 1.3rem;
+    font-size: var(--ds-font-size-xl);
     transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
@@ -411,9 +411,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 500;
-    font-size: 0.875rem;
-    letter-spacing: 0.2px;
+    font-weight: var(--ds-font-weight-medium);
+    font-size: var(--ds-font-size-md);
+    letter-spacing: var(--ds-letter-spacing-normal);
 }
 
 .sidebar-footer .btn:hover {
@@ -428,7 +428,7 @@ body {
 
 .sidebar-footer .btn i {
     margin-right: 0.45rem;
-    font-size: 0.875rem;
+    font-size: var(--ds-font-size-md);
     transition: margin-right var(--transition-speed) ease;
 }
 
@@ -492,15 +492,15 @@ body.is-authenticated .content.expanded {
 }
 
 .navbar-brand {
-    font-weight: 600;
-    font-size: 1.1rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-lg);
     display: flex;
     align-items: center;
     transition: all var(--transition-speed) ease;
 }
 
 .nav-link {
-    font-weight: 500;
+    font-weight: var(--ds-font-weight-medium);
     padding: 0.4rem 0.8rem !important;
     transition: all 0.2s ease;
     color: var(--dark-gray) !important;
@@ -512,7 +512,7 @@ body.is-authenticated .content.expanded {
 
 .nav-link.active {
     color: var(--primary-color) !important;
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
 }
 
 .app-topnav {
@@ -587,13 +587,13 @@ body.is-authenticated .content.expanded {
 
 .app-brand-icon {
     color: var(--primary-color);
-    font-size: 1rem;
+    font-size: var(--ds-font-size-base);
 }
 
 .app-brand-text {
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: 0.2px;
+    font-size: var(--ds-font-size-base);
+    font-weight: var(--ds-font-weight-semibold);
+    letter-spacing: var(--ds-letter-spacing-normal);
 }
 
 .app-nav-icons {
@@ -620,7 +620,7 @@ body.is-authenticated .content.expanded {
 }
 
 .app-nav-icon-btn i {
-    font-size: 0.95rem;
+    font-size: var(--ds-font-size-base);
 }
 
 .app-nav-icon-btn:hover {
@@ -697,17 +697,17 @@ body.is-authenticated .content.expanded {
 }
 
 .app-dropdown-title {
-    font-size: 0.83rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-bold);
     color: #2f4e70;
-    line-height: 1.2;
+    line-height: var(--ds-line-height-tight);
 }
 
 .app-dropdown-subtitle {
-    font-size: 0.71rem;
-    font-weight: 500;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-medium);
     color: #6f849e;
-    line-height: 1.25;
+    line-height: var(--ds-line-height-snug);
 }
 
 .app-account-dropdown-header .app-dropdown-title {
@@ -736,7 +736,7 @@ body.is-authenticated .content.expanded {
     border: 1px solid transparent;
     border-radius: 9px;
     padding: 0.5rem 0.58rem;
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
     color: #3d5572;
     transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
@@ -765,7 +765,7 @@ body.is-authenticated .content.expanded {
     width: 0.95rem;
     text-align: center;
     color: #7085a0;
-    font-size: 0.8rem;
+    font-size: var(--ds-font-size-sm);
     flex-shrink: 0;
 }
 
@@ -787,7 +787,7 @@ body.is-authenticated .content.expanded {
     align-items: center;
     justify-content: center;
     color: #2f76ae;
-    font-size: 0.7rem;
+    font-size: var(--ds-font-size-xs);
     opacity: 0;
     transition: opacity 0.16s ease;
 }
@@ -847,7 +847,7 @@ body.is-authenticated .content.expanded {
 
 .app-global-search-icon {
     color: #77859a;
-    font-size: 0.84rem;
+    font-size: var(--ds-font-size-sm);
 }
 
 .app-global-search-input {
@@ -857,8 +857,8 @@ body.is-authenticated .content.expanded {
     outline: none;
     background: transparent;
     color: #22344e;
-    font-size: 0.9rem;
-    line-height: 1.25;
+    font-size: var(--ds-font-size-md);
+    line-height: var(--ds-line-height-snug);
 }
 
 .app-global-search-input::placeholder {
@@ -883,7 +883,7 @@ body.is-authenticated .content.expanded {
 .app-global-search-state {
     padding: 0.62rem 0.72rem;
     color: #6c7e94;
-    font-size: 0.86rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .app-global-search-results {
@@ -905,15 +905,15 @@ body.is-authenticated .content.expanded {
     gap: 0.42rem;
     padding: 0.42rem 0.6rem;
     border-bottom: 1px solid #edf2f8;
-    font-size: 0.74rem;
+    font-size: var(--ds-font-size-xs);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 700;
+    letter-spacing: var(--ds-letter-spacing-caps);
+    font-weight: var(--ds-font-weight-bold);
     color: #64768d;
 }
 
 .app-global-search-group-title i {
-    font-size: 0.72rem;
+    font-size: var(--ds-font-size-xs);
 }
 
 .app-global-search-group-count {
@@ -922,8 +922,8 @@ body.is-authenticated .content.expanded {
     padding: 0.1rem 0.46rem;
     background: #e9f2fc;
     color: #38618a;
-    font-size: 0.68rem;
-    letter-spacing: 0;
+    font-size: var(--ds-font-size-2xs);
+    letter-spacing: var(--ds-letter-spacing-normal);
 }
 
 .app-global-search-item {
@@ -963,9 +963,9 @@ body.is-authenticated .content.expanded {
 .app-global-search-item-type {
     border-radius: 999px;
     padding: 0.14rem 0.48rem;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
+    font-size: var(--ds-font-size-2xs);
+    font-weight: var(--ds-font-weight-bold);
+    letter-spacing: var(--ds-letter-spacing-normal);
     text-transform: uppercase;
     white-space: nowrap;
 }
@@ -991,8 +991,8 @@ body.is-authenticated .content.expanded {
 }
 
 .app-global-search-item-title {
-    font-size: 0.83rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-semibold);
     color: #1e3047;
     white-space: nowrap;
     overflow: hidden;
@@ -1001,9 +1001,9 @@ body.is-authenticated .content.expanded {
 
 .app-global-search-item-subtitle,
 .app-global-search-item-meta {
-    font-size: 0.76rem;
+    font-size: var(--ds-font-size-xs);
     color: #697c93;
-    line-height: 1.32;
+    line-height: var(--ds-line-height-snug);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1023,17 +1023,17 @@ body.is-authenticated .content.expanded {
     width: fit-content;
     border-radius: 999px;
     padding: 0.08rem 0.42rem;
-    font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
+    font-size: var(--ds-font-size-2xs);
+    font-weight: var(--ds-font-weight-bold);
+    letter-spacing: var(--ds-letter-spacing-normal);
     background: #eef2f7;
     color: #4d6280;
 }
 
 .app-global-search-match-text {
-    font-size: 0.74rem;
+    font-size: var(--ds-font-size-xs);
     color: #6a7a91;
-    line-height: 1.28;
+    line-height: var(--ds-line-height-snug);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1041,7 +1041,7 @@ body.is-authenticated .content.expanded {
 
 .app-global-search-item-arrow {
     color: #97a6ba;
-    font-size: 0.74rem;
+    font-size: var(--ds-font-size-xs);
     margin-top: 0.16rem;
 }
 
@@ -1058,7 +1058,7 @@ body.is-authenticated .content.expanded {
     border: none;
     background: transparent;
     color: #47556b;
-    font-weight: 500;
+    font-weight: var(--ds-font-weight-medium);
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
@@ -1090,7 +1090,7 @@ body.is-authenticated .content.expanded {
 .app-area-dropdown-btn.dropdown-toggle::after {
     margin-left: 0;
     color: #6f8095;
-    font-size: 0.76rem;
+    font-size: var(--ds-font-size-xs);
 }
 
 .app-area-dropdown-btn.show,
@@ -1105,7 +1105,7 @@ body.is-authenticated .content.expanded {
     align-items: center;
     gap: 0.45rem;
     border-radius: 999px;
-    font-weight: 500;
+    font-weight: var(--ds-font-weight-medium);
     padding: 0.45rem 0.85rem;
     max-width: 340px;
 }
@@ -1196,8 +1196,8 @@ body.is-authenticated .content.expanded {
 /* Títulos */
 h1, h2, h3, h4, h5, h6 {
     color: var(--dark-gray);
-    font-weight: 600;
-    letter-spacing: -0.5px;
+    font-weight: var(--ds-font-weight-semibold);
+    letter-spacing: var(--ds-letter-spacing-tight);
     margin-top: 0;
     margin-bottom: 0.75rem;
 }
@@ -1218,12 +1218,12 @@ h1, h2, h3, h4, h5, h6 {
 .card-header {
     background-color: rgba(0, 0, 0, 0.02);
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
     padding: 0.75rem 1rem;
 }
 
 .card-title {
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
     margin-bottom: 0.5rem;
     color: var(--dark-gray);
 }
@@ -1249,16 +1249,16 @@ th, td {
 
 .table-sm th, .table-sm td {
     padding: 0.5rem 0.75rem;
-    font-size: 0.9rem;
+    font-size: var(--ds-font-size-md);
 }
 
 th {
     background-color: var(--primary-light);
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
     color: var(--primary-dark);
     text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.5px;
+    font-size: var(--ds-font-size-sm);
+    letter-spacing: var(--ds-letter-spacing-wide);
 }
 
 tr:last-child td {
@@ -1271,7 +1271,7 @@ tr:hover td {
 
 /* Botões mais modernos */
 .btn {
-    font-weight: 500;
+    font-weight: var(--ds-font-weight-medium);
     border-radius: 6px;
     padding: 0.5rem 1rem;
     transition: all 0.2s ease;
@@ -1280,7 +1280,7 @@ tr:hover td {
 
 .btn-sm {
     padding: 0.25rem 0.6rem;
-    font-size: 0.85rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .btn:hover {
@@ -1352,7 +1352,7 @@ tr:hover td {
 
 .form-control-sm, .form-select-sm {
     padding: 0.3rem 0.6rem;
-    font-size: 0.85rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .form-control:focus, .form-select:focus {
@@ -1361,7 +1361,7 @@ tr:hover td {
 }
 
 .form-label {
-    font-weight: 500;
+    font-weight: var(--ds-font-weight-medium);
     margin-bottom: 0.4rem;
     color: var(--dark-gray);
 }
@@ -1379,12 +1379,12 @@ tr:hover td {
 
 .login-container h2 {
     margin-bottom: 1.25rem;
-    font-weight: 700;
+    font-weight: var(--ds-font-weight-bold);
     color: var(--primary-color);
 }
 
 .login-container .form-control {
-    font-size: 0.95rem;
+    font-size: var(--ds-font-size-base);
     padding: 0.65rem 0.8rem;
 }
 
@@ -1393,18 +1393,18 @@ tr:hover td {
     width: 100%;
     padding: 0.65rem;
     margin-top: 1.25rem;
-    font-size: 0.95rem;
+    font-size: var(--ds-font-size-base);
 }
 
 /* Badges de prioridade */
 .priority-badge {
     display: inline-block;
     padding: 0.25rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-semibold);
     border-radius: 20px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: var(--ds-letter-spacing-wide);
 }
 
 .priority-baixa {
@@ -1432,7 +1432,7 @@ footer {
     color: rgba(255, 255, 255, 0.8);
     text-align: center;
     padding: 1rem;
-    font-size: 0.9rem;
+    font-size: var(--ds-font-size-md);
     margin-top: auto;
 }
 
@@ -1443,7 +1443,7 @@ footer p {
 .alert {
     border: none;
     border-radius: var(--border-radius);
-    font-weight: 500;
+    font-weight: var(--ds-font-weight-medium);
 }
 
 .app-flash-stack {
@@ -1464,8 +1464,8 @@ footer p {
     border: 1px solid #d7e4f1;
     border-radius: 10px;
     box-shadow: 0 8px 22px rgba(21, 34, 55, 0.14);
-    font-size: 0.86rem;
-    line-height: 1.32;
+    font-size: var(--ds-font-size-md);
+    line-height: var(--ds-line-height-snug);
     pointer-events: auto;
 }
 
@@ -1475,7 +1475,7 @@ footer p {
 
 .app-flash-icon {
     margin-top: 0.12rem;
-    font-size: 0.86rem;
+    font-size: var(--ds-font-size-md);
     flex: 0 0 auto;
 }
 
@@ -1537,13 +1537,13 @@ footer p {
 }
 
 .loading-spinner i {
-    font-size: 3rem;
+    font-size: var(--ds-font-size-6xl);
     margin-bottom: 1rem;
 }
 
 .loading-spinner span {
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-xl);
+    font-weight: var(--ds-font-weight-semibold);
 }
 
 /* Correção para evitar redimensionamento durante carregamento */
@@ -2616,7 +2616,7 @@ html, body {
     /* Tornar a tabela de projetos recentes mais compacta */
     .col-md-8 .table th, .col-md-8 .table td {
         padding: 0.4rem 0.75rem;
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
     }
     
     /* Definir altura máxima para a tabela de projetos recentes com scroll interno - aumentada */
@@ -2647,7 +2647,7 @@ html, body {
     /* Cards de ações rápidas ajustados */
     .btn-outline-primary, .btn-outline-secondary {
         padding: 0.35rem 0.75rem;
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
     }
 }
 
@@ -2780,24 +2780,24 @@ html, body {
 }
 
 .header-icon {
-    font-size: 1rem;
+    font-size: var(--ds-font-size-base);
     color: rgba(255, 255, 255, 0.95);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .header-text h5 {
     margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-lg);
+    font-weight: var(--ds-font-weight-semibold);
     color: white;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .modal-subtitle {
     margin: 0.15rem 0 0 0;
-    font-size: 0.8rem;
+    font-size: var(--ds-font-size-sm);
     color: rgba(255, 255, 255, 0.75);
-    font-weight: 400;
+    font-weight: var(--ds-font-weight-regular);
 }
 
 .glass-close-btn {
@@ -2932,15 +2932,15 @@ html, body {
     justify-content: center;
     margin-right: 0.7rem;
     color: var(--primary-color);
-    font-size: 0.9rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .card-title {
     margin: 0;
-    font-size: 0.925rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-base);
+    font-weight: var(--ds-font-weight-semibold);
     color: var(--primary-color);
-    letter-spacing: 0.2px;
+    letter-spacing: var(--ds-letter-spacing-normal);
 }
 
 .glass-card-body {
@@ -2963,10 +2963,10 @@ html, body {
     display: flex;
     align-items: center;
     margin-bottom: 0.5rem;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-md);
+    font-weight: var(--ds-font-weight-semibold);
     color: var(--primary-color);
-    letter-spacing: 0.2px;
+    letter-spacing: var(--ds-letter-spacing-normal);
 }
 
 .label-icon {
@@ -2975,13 +2975,13 @@ html, body {
     text-align: center;
     color: var(--primary-color);
     opacity: 0.75;
-    font-size: 0.85rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .required-star {
     color: #e74c3c;
     margin-left: 0.2rem;
-    font-weight: 700;
+    font-weight: var(--ds-font-weight-bold);
 }
 
 .form-control-glass,
@@ -2995,7 +2995,7 @@ html, body {
     border: 1px solid rgba(0, 90, 146, 0.18);
     border-radius: 8px;
     padding: 0.65rem 0.9rem;
-    font-size: 0.9rem;
+    font-size: var(--ds-font-size-md);
     color: var(--text-color);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 
@@ -3007,9 +3007,9 @@ html, body {
 .form-control-glass-enhanced,
 .form-select-glass-enhanced {
     padding: 0.75rem 1rem;
-    font-size: 0.9rem;
+    font-size: var(--ds-font-size-md);
     min-height: 42px;
-    font-weight: 500;
+    font-weight: var(--ds-font-weight-medium);
 }
 
 /* Campos Full Width - Título e Observações */
@@ -3021,15 +3021,15 @@ html, body {
 
 .form-control-glass-full {
     padding: 0.8rem 1rem;
-    font-size: 0.95rem;
-    font-weight: 500;
+    font-size: var(--ds-font-size-base);
+    font-weight: var(--ds-font-weight-medium);
     min-height: 44px;
 }
 
 .textarea-glass-full {
     padding: 0.9rem 1rem;
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: var(--ds-font-size-md);
+    line-height: var(--ds-line-height-relaxed);
     resize: vertical;
     min-height: 80px;
 }
@@ -3160,7 +3160,7 @@ html, body {
     justify-content: center;
     text-align: center;
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: var(--ds-font-size-md);
     padding: 1.5rem;
     gap: 0.5rem;
 }
@@ -3238,13 +3238,13 @@ html, body {
 .glass-checkbox:checked + .glass-checkbox-label .checkbox-custom::after {
     content: '\f00c';
     font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
+    font-weight: var(--ds-font-weight-extrabold);
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     color: white;
-    font-size: 0.7rem;
+    font-size: var(--ds-font-size-xs);
 }
 
 .glass-checkbox:checked + .glass-checkbox-label {
@@ -3255,9 +3255,9 @@ html, body {
 }
 
 .checkbox-text {
-    font-size: 0.9rem;
+    font-size: var(--ds-font-size-md);
     color: var(--text-color);
-    font-weight: 500;
+    font-weight: var(--ds-font-weight-medium);
 }
 
 /* Stages Container */
@@ -3274,7 +3274,7 @@ html, body {
     justify-content: center;
     padding: 2rem;
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: var(--ds-font-size-md);
     gap: 0.5rem;
 }
 
@@ -3314,8 +3314,8 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
-    font-size: 0.9rem;
+    font-weight: var(--ds-font-weight-bold);
+    font-size: var(--ds-font-size-md);
     flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(0, 90, 146, 0.3);
 }
@@ -3360,8 +3360,8 @@ html, body {
 .btn-glass {
     padding: 0.6rem 1.2rem;
     border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-md);
+    font-weight: var(--ds-font-weight-semibold);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3369,7 +3369,7 @@ html, body {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid;
-    letter-spacing: 0.2px;
+    letter-spacing: var(--ds-letter-spacing-normal);
     position: relative;
     overflow: hidden;
 }
@@ -3554,24 +3554,24 @@ html, body {
 }
 
 .glass-form-header .header-icon {
-    font-size: 1.5rem;
+    font-size: var(--ds-font-size-2xl);
     color: rgba(255, 255, 255, 0.95);
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .glass-form-header .form-title {
     margin: 0;
-    font-size: 1.6rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-3xl);
+    font-weight: var(--ds-font-weight-bold);
     color: white;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .glass-form-header .form-subtitle {
     margin: 0.5rem 0 0 0;
-    font-size: 1rem;
+    font-size: var(--ds-font-size-base);
     color: rgba(255, 255, 255, 0.8);
-    font-weight: 400;
+    font-weight: var(--ds-font-weight-regular);
 }
 
 /* Form Body Glass */
@@ -3674,8 +3674,8 @@ html, body {
     border-radius: 10px;
     padding: 0.6rem 1rem;
     color: var(--primary-color);
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-md);
+    font-weight: var(--ds-font-weight-semibold);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -3703,7 +3703,7 @@ html, body {
     border-radius: 8px;
     padding: 0.6rem;
     color: #dc3545;
-    font-size: 0.8rem;
+    font-size: var(--ds-font-size-sm);
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
@@ -3740,20 +3740,20 @@ html, body {
 }
 
 .stages-empty-state i {
-    font-size: 3rem;
+    font-size: var(--ds-font-size-6xl);
     color: rgba(0, 90, 146, 0.3);
     margin-bottom: 1rem;
 }
 
 .stages-empty-state p {
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-lg);
+    font-weight: var(--ds-font-weight-semibold);
     margin-bottom: 0.5rem;
     color: var(--text-color);
 }
 
 .stages-empty-state span {
-    font-size: 0.9rem;
+    font-size: var(--ds-font-size-md);
     color: var(--text-muted);
 }
 
@@ -3838,14 +3838,14 @@ html, body {
 .project-create-header .modal-title {
     margin: 0;
     color: #1e3b5e;
-    font-size: 1.12rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-lg);
+    font-weight: var(--ds-font-weight-bold);
 }
 
 .project-create-subtitle {
     margin: 0.2rem 0 0;
     color: #647a95;
-    font-size: 0.87rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .project-create-close {
@@ -3884,16 +3884,16 @@ html, body {
     border-radius: 999px;
     background: rgba(0, 90, 146, 0.1);
     color: #16548b;
-    font-size: 0.74rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-bold);
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: var(--ds-letter-spacing-wide);
 }
 
 .project-create-helper {
     margin: 0.4rem 0 0;
     color: #647a95;
-    font-size: 0.85rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .project-create-advanced-card {
@@ -3911,14 +3911,14 @@ html, body {
 .project-create-advanced-title {
     margin: 0;
     color: #294f79;
-    font-size: 0.95rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-base);
+    font-weight: var(--ds-font-weight-bold);
 }
 
 .project-create-advanced-subtitle {
     margin: 0.25rem 0 0;
     color: #6d839f;
-    font-size: 0.82rem;
+    font-size: var(--ds-font-size-sm);
 }
 
 .project-create-accordion {
@@ -3936,8 +3936,8 @@ html, body {
 }
 
 .project-create-accordion-button {
-    font-weight: 600;
-    font-size: 0.91rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-md);
     color: #2d4f77;
     padding: 0.82rem 1rem;
     background: #ffffff;
@@ -3961,11 +3961,11 @@ html, body {
 
 .project-create-modal .form-label-glass {
     margin-bottom: 0.4rem;
-    font-size: 0.81rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-bold);
     color: #405c7b;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: var(--ds-letter-spacing-wide);
 }
 
 .project-create-modal .label-icon {
@@ -4055,8 +4055,8 @@ html, body {
 
 .project-create-btn {
     border-radius: 9px;
-    font-weight: 600;
-    font-size: 0.88rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-md);
     padding: 0.52rem 0.9rem;
     min-width: 126px;
 }
@@ -4140,7 +4140,7 @@ html, body {
 }
 
 .account-page-icon i {
-    font-size: 1.08rem;
+    font-size: var(--ds-font-size-lg);
 }
 
 .account-page-header-copy {
@@ -4149,16 +4149,16 @@ html, body {
 
 .account-page-title {
     margin: 0;
-    font-size: 1.56rem;
-    line-height: 1.2;
-    font-weight: 700;
+    font-size: var(--ds-font-size-3xl);
+    line-height: var(--ds-line-height-tight);
+    font-weight: var(--ds-font-weight-bold);
     color: #134f83;
 }
 
 .account-page-subtitle {
     color: #6280a2;
-    font-size: 0.89rem;
-    font-weight: 500;
+    font-size: var(--ds-font-size-md);
+    font-weight: var(--ds-font-weight-medium);
 }
 
 .account-form-card {
@@ -4177,19 +4177,19 @@ html, body {
 
 .account-section-title {
     margin: 0 0 0.8rem;
-    font-size: 0.94rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-base);
+    font-weight: var(--ds-font-weight-bold);
     color: #2e567f;
-    letter-spacing: 0.03em;
+    letter-spacing: var(--ds-letter-spacing-wide);
     text-transform: uppercase;
 }
 
 .account-label {
     margin-bottom: 0.36rem;
-    font-size: 0.8rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-bold);
     color: #3f5f82;
-    letter-spacing: 0.02em;
+    letter-spacing: var(--ds-letter-spacing-wide);
     text-transform: uppercase;
 }
 
@@ -4218,8 +4218,8 @@ html, body {
 
 .account-help-text {
     color: #6f86a2;
-    font-size: 0.78rem;
-    line-height: 1.45;
+    font-size: var(--ds-font-size-xs);
+    line-height: var(--ds-line-height-normal);
 }
 
 .account-password-wrap {
@@ -4239,7 +4239,7 @@ html, body {
     background: transparent;
     color: #6a819d;
     padding: 0.2rem 0.35rem;
-    line-height: 1;
+    line-height: var(--ds-line-height-tight);
 }
 
 .account-password-toggle:hover,
@@ -4280,11 +4280,11 @@ html, body {
 }
 
 .account-area-label {
-    font-size: 0.86rem;
+    font-size: var(--ds-font-size-md);
     color: #355577;
-    font-weight: 500;
+    font-weight: var(--ds-font-weight-medium);
     margin: 0;
-    line-height: 1.3;
+    line-height: var(--ds-line-height-snug);
     cursor: pointer;
 }
 
@@ -4303,7 +4303,7 @@ html, body {
 
 .account-admin-switch .form-check-label {
     color: #2f557d;
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
 }
 
 .account-actions {
@@ -4315,8 +4315,8 @@ html, body {
 
 .account-btn {
     border-radius: 9px;
-    font-weight: 600;
-    font-size: 0.88rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-md);
     padding: 0.5rem 0.92rem;
     min-width: 138px;
 }
@@ -4386,7 +4386,7 @@ html, body {
 }
 
 .admin-users-header-icon i {
-    font-size: 1.03rem;
+    font-size: var(--ds-font-size-lg);
 }
 
 .admin-users-header-copy {
@@ -4395,16 +4395,16 @@ html, body {
 
 .admin-users-title {
     margin: 0;
-    font-size: 1.46rem;
-    line-height: 1.2;
-    font-weight: 700;
+    font-size: var(--ds-font-size-2xl);
+    line-height: var(--ds-line-height-tight);
+    font-weight: var(--ds-font-weight-bold);
     color: #134f83;
 }
 
 .admin-users-subtitle {
     color: #6280a2;
-    font-size: 0.88rem;
-    font-weight: 500;
+    font-size: var(--ds-font-size-md);
+    font-weight: var(--ds-font-weight-medium);
 }
 
 .admin-users-create-btn {
@@ -4412,8 +4412,8 @@ html, body {
     border: 1px solid #1969ad;
     background: linear-gradient(180deg, #2b82c6 0%, #1f73b5 100%);
     color: #ffffff;
-    font-weight: 600;
-    font-size: 0.87rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-md);
     padding: 0.5rem 0.88rem;
     white-space: nowrap;
 }
@@ -4440,8 +4440,8 @@ html, body {
     border: 1px solid rgba(172, 199, 226, 0.78);
     background: rgba(249, 252, 255, 0.86);
     color: #4f6d8f;
-    font-size: 0.79rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-semibold);
     padding: 0.28rem 0.66rem;
 }
 
@@ -4464,10 +4464,10 @@ html, body {
     border-bottom: 1px solid rgba(180, 205, 230, 0.68);
     background: rgba(241, 248, 255, 0.75);
     color: #5a7390;
-    font-size: 0.76rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-bold);
     text-transform: uppercase;
-    letter-spacing: 0.045em;
+    letter-spacing: var(--ds-letter-spacing-caps);
     padding: 0.66rem 0.74rem;
     white-space: nowrap;
 }
@@ -4486,8 +4486,8 @@ html, body {
     border: 1px solid rgba(173, 200, 226, 0.72);
     background: rgba(245, 250, 255, 0.88);
     color: #517092;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-bold);
     padding: 0.12rem 0.48rem;
 }
 
@@ -4499,7 +4499,7 @@ html, body {
 }
 
 .admin-users-name {
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
     color: #1f3f62;
 }
 
@@ -4510,22 +4510,22 @@ html, body {
     border: 1px solid rgba(23, 116, 185, 0.28);
     background: rgba(23, 116, 185, 0.1);
     color: #1f67a4;
-    font-size: 0.72rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-bold);
     padding: 0.1rem 0.48rem;
 }
 
 .admin-users-username {
-    font-weight: 600;
+    font-weight: var(--ds-font-weight-semibold);
     color: #365877;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-    font-size: 0.82rem;
+    font-family: var(--ds-font-family-mono);
+    font-size: var(--ds-font-size-sm);
 }
 
 .admin-users-orgao {
     color: #406283;
-    font-weight: 500;
-    font-size: 0.84rem;
+    font-weight: var(--ds-font-weight-medium);
+    font-size: var(--ds-font-size-sm);
 }
 
 .admin-users-areas-wrap {
@@ -4541,15 +4541,15 @@ html, body {
     border: 1px solid rgba(166, 195, 223, 0.75);
     background: rgba(243, 249, 255, 0.92);
     color: #486c8f;
-    font-size: 0.73rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-semibold);
     padding: 0.1rem 0.5rem;
-    line-height: 1.3;
+    line-height: var(--ds-line-height-snug);
 }
 
 .admin-users-muted {
     color: #6d849f;
-    font-size: 0.82rem;
+    font-size: var(--ds-font-size-sm);
     font-style: italic;
 }
 
@@ -4558,10 +4558,10 @@ html, body {
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    font-size: 0.74rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-bold);
     padding: 0.2rem 0.58rem;
-    line-height: 1.2;
+    line-height: var(--ds-line-height-tight);
     white-space: nowrap;
 }
 
@@ -4592,7 +4592,7 @@ html, body {
     justify-content: center;
     padding: 0;
     border: 1px solid transparent;
-    font-size: 0.8rem;
+    font-size: var(--ds-font-size-sm);
 }
 
 .admin-users-action-btn.is-edit {
@@ -4637,8 +4637,8 @@ html, body {
     border-color: rgba(173, 199, 225, 0.75);
     color: #3d6388;
     background: rgba(255, 255, 255, 0.86);
-    font-size: 0.82rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-semibold);
     min-width: 35px;
     text-align: center;
 }
@@ -4679,14 +4679,14 @@ html, body {
 .admin-users-empty-title {
     margin: 0 0 0.3rem;
     color: #254e74;
-    font-size: 1.15rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xl);
+    font-weight: var(--ds-font-weight-bold);
 }
 
 .admin-users-empty-text {
     margin: 0 0 0.82rem;
     color: #66829f;
-    font-size: 0.86rem;
+    font-size: var(--ds-font-size-md);
 }
 
 /* ====================================
@@ -4730,7 +4730,7 @@ html, body {
 }
 
 .admin-tasks-header-icon i {
-    font-size: 1.02rem;
+    font-size: var(--ds-font-size-lg);
 }
 
 .admin-tasks-header-copy {
@@ -4739,16 +4739,16 @@ html, body {
 
 .admin-tasks-title {
     margin: 0;
-    font-size: 1.46rem;
-    line-height: 1.2;
-    font-weight: 700;
+    font-size: var(--ds-font-size-2xl);
+    line-height: var(--ds-line-height-tight);
+    font-weight: var(--ds-font-weight-bold);
     color: #134f83;
 }
 
 .admin-tasks-subtitle {
     color: #6280a2;
-    font-size: 0.88rem;
-    font-weight: 500;
+    font-size: var(--ds-font-size-md);
+    font-weight: var(--ds-font-weight-medium);
 }
 
 .admin-tasks-create-btn {
@@ -4756,8 +4756,8 @@ html, body {
     border: 1px solid #1969ad;
     background: linear-gradient(180deg, #2b82c6 0%, #1f73b5 100%);
     color: #ffffff;
-    font-weight: 600;
-    font-size: 0.87rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-md);
     padding: 0.5rem 0.88rem;
     white-space: nowrap;
 }
@@ -4784,8 +4784,8 @@ html, body {
     border: 1px solid rgba(172, 199, 226, 0.78);
     background: rgba(249, 252, 255, 0.86);
     color: #4f6d8f;
-    font-size: 0.79rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-semibold);
     padding: 0.28rem 0.66rem;
 }
 
@@ -4800,10 +4800,10 @@ html, body {
 
 .admin-tasks-label {
     margin-bottom: 0.3rem;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-bold);
     color: #3f5f82;
-    letter-spacing: 0.03em;
+    letter-spacing: var(--ds-letter-spacing-wide);
     text-transform: uppercase;
 }
 
@@ -4813,7 +4813,7 @@ html, body {
     background: #ffffff;
     color: #243a53;
     min-height: 40px;
-    font-size: 1rem;
+    font-size: var(--ds-font-size-base);
     box-shadow: none;
 }
 
@@ -4834,8 +4834,8 @@ html, body {
     border: 1px solid #1969ad;
     background: linear-gradient(180deg, #2b82c6 0%, #1f73b5 100%);
     color: #ffffff;
-    font-weight: 600;
-    font-size: 0.86rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-md);
     min-height: 40px;
     min-width: 124px;
     padding: 0.44rem 0.88rem;
@@ -4853,8 +4853,8 @@ html, body {
     border: 1px solid #c8d8ed;
     color: #305579;
     background: #ffffff;
-    font-weight: 600;
-    font-size: 0.86rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-md);
     min-height: 40px;
     min-width: 88px;
     padding: 0.44rem 0.82rem;
@@ -4907,7 +4907,7 @@ html, body {
 }
 
 .admin-tasks-row-icon i {
-    font-size: 1.02rem;
+    font-size: var(--ds-font-size-lg);
 }
 
 .admin-tasks-row-content {
@@ -4929,10 +4929,10 @@ html, body {
 
 .admin-tasks-row-title {
     margin: 0;
-    font-size: 1.08rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-lg);
+    font-weight: var(--ds-font-weight-semibold);
     color: #1f3f62;
-    line-height: 1.25;
+    line-height: var(--ds-line-height-snug);
 }
 
 .admin-tasks-items-chip {
@@ -4942,10 +4942,10 @@ html, body {
     border: 1px solid rgba(171, 198, 224, 0.75);
     background: rgba(242, 248, 255, 0.9);
     color: #486c8f;
-    font-size: 0.78rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-semibold);
     padding: 0.22rem 0.7rem;
-    line-height: 1.25;
+    line-height: var(--ds-line-height-snug);
 }
 
 .admin-tasks-row-meta {
@@ -4964,10 +4964,10 @@ html, body {
     border: 1px solid rgba(176, 203, 228, 0.72);
     background: rgba(245, 250, 255, 0.86);
     color: #4f6d8f;
-    font-size: 0.78rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-semibold);
     padding: 0.22rem 0.7rem;
-    line-height: 1.25;
+    line-height: var(--ds-line-height-snug);
 }
 
 .admin-tasks-meta-chip-inline.is-muted {
@@ -4983,11 +4983,11 @@ html, body {
     border: 1px solid rgba(130, 181, 222, 0.8);
     background: rgba(229, 242, 255, 0.9);
     color: #296aa3;
-    font-size: 0.78rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-bold);
     padding: 0.22rem 0.7rem;
     text-decoration: none;
-    line-height: 1.2;
+    line-height: var(--ds-line-height-tight);
 }
 
 .admin-tasks-project-link:hover,
@@ -5014,7 +5014,7 @@ html, body {
     justify-content: center;
     padding: 0;
     border: 1px solid transparent;
-    font-size: 0.92rem;
+    font-size: var(--ds-font-size-base);
 }
 
 .admin-tasks-row a,
@@ -5056,8 +5056,8 @@ html, body {
     border-color: rgba(173, 199, 225, 0.75);
     color: #3d6388;
     background: rgba(255, 255, 255, 0.86);
-    font-size: 0.82rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-semibold);
     min-width: 35px;
     text-align: center;
 }
@@ -5098,19 +5098,19 @@ html, body {
 .admin-tasks-empty-title {
     margin: 0 0 0.3rem;
     color: #254e74;
-    font-size: 1.15rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-xl);
+    font-weight: var(--ds-font-weight-bold);
 }
 
 .admin-tasks-empty-text {
     margin: 0 0 0.82rem;
     color: #66829f;
-    font-size: 0.86rem;
+    font-size: var(--ds-font-size-md);
 }
 
 .admin-tasks-help-text {
     color: #6f86a2;
-    font-size: 0.78rem;
+    font-size: var(--ds-font-size-xs);
     margin-top: 0.36rem;
 }
 
@@ -5140,7 +5140,7 @@ html, body {
 }
 
 .admin-tasks-modal-icon i {
-    font-size: 1rem;
+    font-size: var(--ds-font-size-base);
 }
 
 .admin-tasks-modal-icon.is-primary {
@@ -5158,13 +5158,13 @@ html, body {
 .admin-tasks-modal-title {
     margin: 0;
     color: #244d74;
-    font-size: 1.04rem;
-    font-weight: 700;
+    font-size: var(--ds-font-size-lg);
+    font-weight: var(--ds-font-weight-bold);
 }
 
 .admin-tasks-modal-subtitle {
     color: #67839f;
-    font-size: 0.79rem;
+    font-size: var(--ds-font-size-xs);
     margin-top: 0.1rem;
 }
 
@@ -5195,8 +5195,8 @@ html, body {
 
 .admin-tasks-modal-warning {
     color: #9a6300;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-semibold);
 }
 
 .admin-tasks-modal-footer {
@@ -5212,8 +5212,8 @@ html, body {
 .admin-tasks-modal-confirm,
 .admin-tasks-modal-confirm-delete {
     border-radius: 9px;
-    font-weight: 600;
-    font-size: 0.84rem;
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-sm);
     padding: 0.42rem 0.8rem;
 }
 
@@ -5282,7 +5282,7 @@ html, body {
 
 .admin-tasks-shell .project-search-option {
     padding: 0.42rem 0.62rem;
-    font-size: 0.84rem;
+    font-size: var(--ds-font-size-sm);
     cursor: pointer;
     color: #374151;
 }
@@ -5323,7 +5323,7 @@ html, body {
 
     /* ----- Breadcrumb minimal (estilo ClickUp) ----- */
     .task-detail-v2 .task-view-breadcrumb {
-        font-size: 0.8125rem;
+        font-size: var(--ds-font-size-sm);
         color: #64748b;
         display: flex;
         align-items: center;
@@ -5334,7 +5334,7 @@ html, body {
     .task-detail-v2 .task-breadcrumb-link {
         color: var(--primary-color);
         text-decoration: none;
-        font-weight: 500;
+        font-weight: var(--ds-font-weight-medium);
         transition: color 0.15s;
     }
 
@@ -5350,7 +5350,7 @@ html, body {
 
     .task-detail-v2 .task-breadcrumb-current {
         color: #1e293b;
-        font-weight: 600;
+        font-weight: var(--ds-font-weight-semibold);
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -5399,7 +5399,7 @@ html, body {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.1rem;
+        font-size: var(--ds-font-size-lg);
     }
 
     .task-detail-v2 .task-title-and-project {
@@ -5412,12 +5412,12 @@ html, body {
     }
 
     .task-detail-v2 .task-title-refined {
-        font-size: 1.5rem;
-        font-weight: 700;
+        font-size: var(--ds-font-size-2xl);
+        font-weight: var(--ds-font-weight-bold);
         color: #0f172a;
         margin: 0;
-        line-height: 1.35;
-        letter-spacing: -0.02em;
+        line-height: var(--ds-line-height-normal);
+        letter-spacing: var(--ds-letter-spacing-tight);
     }
 
     .task-detail-v2 .task-project-badge-refined {
@@ -5425,8 +5425,8 @@ html, body {
         align-items: center;
         gap: 0.4rem;
         padding: 0.35rem 0.75rem;
-        font-size: 0.8125rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-semibold);
         border-radius: 8px;
         background: rgba(0, 90, 146, 0.1);
         color: var(--primary-color);
@@ -5442,7 +5442,7 @@ html, body {
     }
 
     .task-detail-v2 .task-project-badge-refined i {
-        font-size: 0.75rem;
+        font-size: var(--ds-font-size-xs);
         opacity: 0.9;
     }
 
@@ -5530,8 +5530,8 @@ html, body {
         min-width: 120px;
         max-width: 400px;
         padding: 0.5rem 0.75rem;
-        font-size: 1.25rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-xl);
+        font-weight: var(--ds-font-weight-semibold);
         color: #0f172a;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
@@ -5573,7 +5573,7 @@ html, body {
 
     .task-detail-v2 .project-search-option {
         padding: 8px 12px;
-        font-size: 0.95rem;
+        font-size: var(--ds-font-size-base);
         cursor: pointer;
         color: #374151;
     }
@@ -5613,8 +5613,8 @@ html, body {
         align-items: center;
         gap: 4px;
         padding: 4px 8px;
-        font-size: 0.8125rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-semibold);
         border-radius: 8px;
         background: rgba(0, 90, 146, 0.12);
         color: var(--primary-color);
@@ -5632,8 +5632,8 @@ html, body {
         border-radius: 50%;
         background: rgba(0, 0, 0, 0.15);
         color: inherit;
-        font-size: 14px;
-        line-height: 1;
+        font-size: var(--ds-font-size-md);
+        line-height: var(--ds-line-height-tight);
         cursor: pointer;
         transition: background 0.15s;
     }
@@ -5652,7 +5652,7 @@ html, body {
     }
 
     .task-detail-v2 .task-header-project-search .project-search-input {
-        font-size: 0.875rem;
+        font-size: var(--ds-font-size-md);
         padding: 0.45rem 0.65rem;
     }
 
@@ -5686,8 +5686,8 @@ html, body {
         align-items: center;
         gap: 0.45rem;
         padding: 0.5rem 0.9rem;
-        font-size: 0.8125rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-semibold);
         border-radius: 8px;
         border: 1px solid #e2e8f0;
         background: #fff;
@@ -5704,7 +5704,7 @@ html, body {
     }
 
     .task-detail-v2 .btn-task-action i {
-        font-size: 0.875rem;
+        font-size: var(--ds-font-size-md);
     }
 
     .task-detail-v2 .btn-task-back:hover {
@@ -5742,8 +5742,8 @@ html, body {
         align-items: center;
         gap: 0.4rem;
         padding: 0.35rem 0.75rem;
-        font-size: 0.8125rem;
-        font-weight: 500;
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-medium);
         border-radius: 8px;
         color: #475569;
         background: #f1f5f9;
@@ -5751,7 +5751,7 @@ html, body {
     }
 
     .task-detail-v2 .task-meta-pill i {
-        font-size: 0.75rem;
+        font-size: var(--ds-font-size-xs);
         color: #64748b;
         opacity: 0.9;
     }
@@ -5789,8 +5789,8 @@ html, body {
     }
 
     .task-detail-v2 .items-title-clean {
-        font-size: 1.2rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-xl);
+        font-weight: var(--ds-font-weight-semibold);
         color: #1a1a1a;
         margin: 0;
         display: flex;
@@ -5805,8 +5805,8 @@ html, body {
     }
 
     .task-detail-v2 .header-count {
-        font-size: 0.85rem;
-        font-weight: 500;
+        font-size: var(--ds-font-size-md);
+        font-weight: var(--ds-font-weight-medium);
         color: #6c757d;
         padding: 0.3rem 0.8rem;
         background: rgba(0, 90, 146, 0.08);
@@ -5822,8 +5822,8 @@ html, body {
         color: white;
         border: none;
         border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.85rem;
+        font-weight: var(--ds-font-weight-semibold);
+        font-size: var(--ds-font-size-md);
         cursor: pointer;
         transition: all 0.2s;
     }
@@ -5873,10 +5873,10 @@ html, body {
     .task-detail-v2 .task-item-col-responsavel,
     .task-detail-v2 .task-item-col-comments,
     .task-detail-v2 .task-item-col-actions {
-        font-size: 11px;
-        font-weight: 700;
+        font-size: var(--ds-font-size-2xs);
+        font-weight: var(--ds-font-weight-bold);
         text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: var(--ds-letter-spacing-wide);
         color: #6b7280;
     }
 
@@ -5887,7 +5887,7 @@ html, body {
 
     .task-detail-v2 .task-item-col-comments i,
     .task-detail-v2 .task-item-col-actions i {
-        font-size: 12px;
+        font-size: var(--ds-font-size-xs);
     }
 
     .task-detail-v2 .task-item-row {
@@ -5939,7 +5939,7 @@ html, body {
         padding: 8px 12px;
         cursor: pointer;
         color: #6b7280;
-        font-size: 13px;
+        font-size: var(--ds-font-size-sm);
         transition: background 0.15s, color 0.15s;
     }
 
@@ -5950,7 +5950,7 @@ html, body {
 
     .task-detail-v2 .task-item-add-dashes {
         color: #9ca3af;
-        font-weight: 300;
+        font-weight: var(--ds-font-weight-regular);
     }
 
     .task-detail-v2 .task-item-add-form {
@@ -6000,8 +6000,8 @@ html, body {
 
     .task-detail-v2 .task-item-add-desc {
         padding: 6px 8px;
-        font-size: 13px;
-        line-height: 1.45;
+        font-size: var(--ds-font-size-sm);
+        line-height: var(--ds-line-height-normal);
         border: 1px solid #e5e7eb;
         border-radius: 4px;
         width: 100%;
@@ -6019,7 +6019,7 @@ html, body {
     }
 
     .task-detail-v2 .task-item-add-status {
-        font-size: 11px;
+        font-size: var(--ds-font-size-2xs);
         padding: 4px 6px;
         border: 1px solid #e5e7eb;
         border-radius: 4px;
@@ -6033,7 +6033,7 @@ html, body {
         width: 100%;
         max-width: 160px;
         padding: 6px 8px;
-        font-size: 12px;
+        font-size: var(--ds-font-size-xs);
         border: 1px solid #e5e7eb;
         border-radius: 4px;
         white-space: normal;
@@ -6057,8 +6057,8 @@ html, body {
         max-width: 160px;
         width: 100%;
         padding: 4px 8px;
-        font-size: 12px;
-        line-height: 1.4;
+        font-size: var(--ds-font-size-xs);
+        line-height: var(--ds-line-height-normal);
         border: 1px solid #e5e7eb;
         border-radius: 4px;
         background: #fff;
@@ -6108,7 +6108,7 @@ html, body {
         gap: 4px;
         padding: 2px 4px 2px 6px;
         border-radius: 4px;
-        font-weight: 500;
+        font-weight: var(--ds-font-weight-medium);
         margin: 0 4px 4px 0;
         -webkit-user-select: none;
         user-select: none;
@@ -6156,8 +6156,8 @@ html, body {
         border-radius: 50%;
         background: rgba(0, 0, 0, 0.2);
         color: inherit;
-        font-size: 12px;
-        line-height: 1;
+        font-size: var(--ds-font-size-xs);
+        line-height: var(--ds-line-height-tight);
         cursor: pointer;
         transition: background 0.15s;
     }
@@ -6186,7 +6186,7 @@ html, body {
 
     .task-detail-v2 .responsavel-suggestion-item {
         padding: 6px 12px;
-        font-size: 13px;
+        font-size: var(--ds-font-size-sm);
         cursor: pointer;
         color: #374151;
     }
@@ -6199,13 +6199,13 @@ html, body {
 
     .task-detail-v2 .responsavel-suggestions-empty {
         padding: 8px 12px;
-        font-size: 12px;
+        font-size: var(--ds-font-size-xs);
         color: #9ca3af;
     }
 
     .task-detail-v2 .task-item-add-hint {
         margin-top: 6px;
-        font-size: 11px;
+        font-size: var(--ds-font-size-2xs);
         color: #9ca3af;
         text-align: right;
     }
@@ -6213,13 +6213,13 @@ html, body {
     .task-detail-v2 .task-item-add-hint kbd {
         display: inline-block;
         padding: 1px 5px;
-        font-size: 10px;
+        font-size: var(--ds-font-size-2xs);
         font-family: inherit;
         color: #6b7280;
         background: #f3f4f6;
         border: 1px solid #e5e7eb;
         border-radius: 3px;
-        line-height: 1.4;
+        line-height: var(--ds-line-height-normal);
     }
 
     .task-detail-v2 .task-item-main {
@@ -6247,8 +6247,8 @@ html, body {
 
     .task-detail-v2 .task-item-desc {
         margin: 0;
-        font-size: 13px;
-        line-height: 1.45;
+        font-size: var(--ds-font-size-sm);
+        line-height: var(--ds-line-height-normal);
         color: #374151;
         white-space: pre-wrap;
         word-break: break-word;
@@ -6270,7 +6270,7 @@ html, body {
         border-radius: 4px;
         background: transparent;
         color: #6b7280;
-        font-size: 11px;
+        font-size: var(--ds-font-size-2xs);
         cursor: pointer;
         opacity: 0;
         visibility: hidden;
@@ -6307,8 +6307,8 @@ html, body {
 
     .task-detail-v2 .task-item-desc-editing {
         margin: 0;
-        font-size: 13px;
-        line-height: 1.45;
+        font-size: var(--ds-font-size-sm);
+        line-height: var(--ds-line-height-normal);
         color: #374151;
         min-width: 0;
         padding: 4px 6px;
@@ -6330,8 +6330,8 @@ html, body {
     }
 
     .task-detail-v2 .task-item-status {
-        font-size: 11px;
-        font-weight: 600;
+        font-size: var(--ds-font-size-2xs);
+        font-weight: var(--ds-font-weight-semibold);
         padding: 4px 6px;
         border: none;
         border-radius: 4px;
@@ -6368,7 +6368,7 @@ html, body {
     }
 
     .task-detail-v2 .task-item-responsavel {
-        font-size: 11px;
+        font-size: var(--ds-font-size-2xs);
         color: #6b7280;
         width: 100%;
         max-width: 160px;
@@ -6393,8 +6393,8 @@ html, body {
     .task-detail-v2 .responsavel-placeholder {
         font-style: italic;
         color: #c4c9d1;
-        font-size: 11px;
-        font-weight: 400;
+        font-size: var(--ds-font-size-2xs);
+        font-weight: var(--ds-font-weight-regular);
     }
 
     .task-detail-v2 .task-item-comments-btn {
@@ -6408,7 +6408,7 @@ html, body {
         border: none;
         border-radius: 4px;
         color: #6b7280;
-        font-size: 12px;
+        font-size: var(--ds-font-size-xs);
         cursor: pointer;
         transition: color 0.15s, background 0.15s;
         box-sizing: border-box;
@@ -6424,8 +6424,8 @@ html, body {
     }
 
     .task-detail-v2 .task-item-comments-num {
-        font-size: 11px;
-        font-weight: 600;
+        font-size: var(--ds-font-size-2xs);
+        font-weight: var(--ds-font-weight-semibold);
     }
 
     .task-detail-v2 .task-item-actions {
@@ -6452,7 +6452,7 @@ html, body {
         border: none;
         border-radius: 4px;
         color: #6b7280;
-        font-size: 11px;
+        font-size: var(--ds-font-size-2xs);
         cursor: pointer;
         transition: color 0.15s, background 0.15s;
     }
@@ -6524,13 +6524,13 @@ html, body {
     }
 
     .task-detail-v2 .task-comment-user {
-        font-size: 12px;
-        font-weight: 600;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-semibold);
         color: var(--primary-color);
     }
 
     .task-detail-v2 .task-comment-time {
-        font-size: 11px;
+        font-size: var(--ds-font-size-2xs);
         color: #9ca3af;
     }
 
@@ -6550,7 +6550,7 @@ html, body {
         border: none;
         border-radius: 3px;
         color: #9ca3af;
-        font-size: 10px;
+        font-size: var(--ds-font-size-2xs);
         cursor: pointer;
         padding: 0;
         transition: color 0.15s, background 0.15s;
@@ -6567,8 +6567,8 @@ html, body {
 
     .task-detail-v2 .task-comment-text {
         margin: 0;
-        font-size: 12px;
-        line-height: 1.5;
+        font-size: var(--ds-font-size-xs);
+        line-height: var(--ds-line-height-relaxed);
         color: #4b5563;
         white-space: pre-wrap;
         padding-left: 0;
@@ -6583,8 +6583,8 @@ html, body {
         width: 100%;
         min-height: 60px;
         padding: 6px 8px;
-        font-size: 12px;
-        line-height: 1.5;
+        font-size: var(--ds-font-size-xs);
+        line-height: var(--ds-line-height-relaxed);
         border: 1px solid var(--primary-color);
         border-radius: 4px;
         resize: vertical;
@@ -6598,7 +6598,7 @@ html, body {
 
     .task-detail-v2 .task-comment-edit-hint {
         display: block;
-        font-size: 11px;
+        font-size: var(--ds-font-size-2xs);
         color: #9ca3af;
         margin-top: 4px;
     }
@@ -6616,7 +6616,7 @@ html, body {
         flex: 1;
         min-height: 32px;
         padding: 6px 8px;
-        font-size: 12px;
+        font-size: var(--ds-font-size-xs);
         border: 1px solid #e5e7eb;
         border-radius: 4px;
         resize: none;
@@ -6638,7 +6638,7 @@ html, body {
         border: none;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 12px;
+        font-size: var(--ds-font-size-xs);
         flex-shrink: 0;
     }
 
@@ -6663,7 +6663,7 @@ html, body {
 
     .task-detail-v2 .empty-state-items .task-item-add-placeholder {
         padding: 0.4rem 0;
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
     }
 
     .task-detail-v2 .empty-state-items .task-item-add-placeholder:hover {
@@ -6698,19 +6698,19 @@ html, body {
     }
 
     .task-detail-v2-modal .modal-icon-clean i {
-        font-size: 1.3rem;
+        font-size: var(--ds-font-size-xl);
         color: #ffc107;
     }
 
     .task-detail-v2-modal .modal-title-clean {
-        font-size: 1.1rem;
-        font-weight: 700;
+        font-size: var(--ds-font-size-lg);
+        font-weight: var(--ds-font-weight-bold);
         color: #1a1a1a;
         margin: 0;
     }
 
     .task-detail-v2-modal .modal-subtitle-clean {
-        font-size: 0.8rem;
+        font-size: var(--ds-font-size-sm);
         color: #6c757d;
         margin: 0.2rem 0 0 0;
     }
@@ -6750,8 +6750,8 @@ html, body {
         padding: 0.65rem 1.3rem;
         border: none;
         border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
+        font-weight: var(--ds-font-weight-semibold);
+        font-size: var(--ds-font-size-md);
         cursor: pointer;
         transition: all 0.2s;
     }

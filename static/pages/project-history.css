@@ -27,15 +27,15 @@
 
     .history-header h1 {
         margin: 0;
-        font-size: 1.25rem;
+        font-size: var(--ds-font-size-xl);
         color: var(--history-primary);
-        font-weight: 700;
+        font-weight: var(--ds-font-weight-bold);
     }
 
     .history-header p {
         margin: 0.35rem 0 0;
         color: var(--history-muted);
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
     }
 
     .history-back-btn {
@@ -44,10 +44,10 @@
         color: #355574;
         border-radius: 8px;
         padding: 0.45rem 0.72rem;
-        font-size: 0.82rem;
+        font-size: var(--ds-font-size-sm);
         text-decoration: none;
         white-space: nowrap;
-        font-weight: 600;
+        font-weight: var(--ds-font-weight-semibold);
     }
 
     .history-back-btn:hover {
@@ -80,10 +80,10 @@
 
     .history-field label {
         margin: 0;
-        font-size: 0.74rem;
+        font-size: var(--ds-font-size-xs);
         color: var(--history-muted);
-        font-weight: 700;
-        letter-spacing: 0.03em;
+        font-weight: var(--ds-font-weight-bold);
+        letter-spacing: var(--ds-letter-spacing-wide);
         text-transform: uppercase;
     }
 
@@ -95,7 +95,7 @@
         padding: 0.4rem 0.55rem;
         color: #28425c;
         background: #fff;
-        font-size: 0.86rem;
+        font-size: var(--ds-font-size-md);
     }
 
     .history-field input:focus,
@@ -117,8 +117,8 @@
         background: #f4f8fd;
         color: #305271;
         padding: 0.28rem 0.65rem;
-        font-size: 0.76rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-semibold);
     }
 
     .history-counter strong {
@@ -137,8 +137,8 @@
         border-bottom: 1px solid #e5edf6;
         padding: 0.75rem 1rem;
         color: #4d6480;
-        font-size: 0.82rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-semibold);
     }
 
     .history-list {
@@ -169,9 +169,9 @@
         align-items: center;
         border-radius: 999px;
         padding: 0.2rem 0.52rem;
-        font-size: 0.7rem;
-        font-weight: 700;
-        letter-spacing: 0.03em;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-bold);
+        letter-spacing: var(--ds-letter-spacing-wide);
         text-transform: uppercase;
         border: 1px solid transparent;
     }
@@ -207,23 +207,23 @@
     }
 
     .history-entry-time {
-        font-size: 0.78rem;
+        font-size: var(--ds-font-size-xs);
         color: #6a7f97;
         white-space: nowrap;
     }
 
     .history-entry-title {
         margin: 0;
-        font-size: 0.94rem;
+        font-size: var(--ds-font-size-base);
         color: var(--history-text);
-        font-weight: 600;
-        line-height: 1.35;
+        font-weight: var(--ds-font-weight-semibold);
+        line-height: var(--ds-line-height-normal);
     }
 
     .history-entry-meta {
         margin-top: 0.35rem;
         color: #647a93;
-        font-size: 0.8rem;
+        font-size: var(--ds-font-size-sm);
     }
 
     .history-diff-grid {
@@ -242,18 +242,18 @@
 
     .history-diff-box h6 {
         margin: 0 0 0.3rem;
-        font-size: 0.72rem;
+        font-size: var(--ds-font-size-xs);
         color: #516a85;
-        font-weight: 700;
-        letter-spacing: 0.03em;
+        font-weight: var(--ds-font-weight-bold);
+        letter-spacing: var(--ds-letter-spacing-wide);
         text-transform: uppercase;
     }
 
     .history-diff-box pre {
         margin: 0;
         font-family: inherit;
-        font-size: 0.8rem;
-        line-height: 1.35;
+        font-size: var(--ds-font-size-sm);
+        line-height: var(--ds-line-height-normal);
         white-space: pre-wrap;
         word-break: break-word;
         color: #2a4058;
@@ -275,7 +275,7 @@
         padding: 1.1rem;
         text-align: center;
         color: #607894;
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
     }
 
     .history-empty-state {

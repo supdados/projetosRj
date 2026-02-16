@@ -60,8 +60,8 @@
     }
     
     .bar-title {
-        font-size: 1.5rem;
-        font-weight: 700;
+        font-size: var(--ds-font-size-2xl);
+        font-weight: var(--ds-font-weight-bold);
         margin: 0;
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
         -webkit-background-clip: text;
@@ -87,10 +87,10 @@
         -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(239, 68, 68, 0.3);
         color: #dc2626;
-        font-weight: 500;
+        font-weight: var(--ds-font-weight-medium);
         padding: 0.5rem 1rem;
         border-radius: 8px;
-        font-size: 0.85rem;
+        font-size: var(--ds-font-size-md);
         transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 
             0 2px 8px rgba(239, 68, 68, 0.15),
@@ -114,7 +114,7 @@
     }
     
     .btn-clear-filters i {
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
     }
     
     /* Add Project Button - Refined */
@@ -126,10 +126,10 @@
         -webkit-backdrop-filter: blur(15px);
         border: 1px solid rgba(255, 255, 255, 0.25) !important;
         color: white !important;
-        font-weight: 600;
+        font-weight: var(--ds-font-weight-semibold);
         padding: 0.5rem 1.25rem;
         border-radius: 8px;
-        font-size: 0.85rem;
+        font-size: var(--ds-font-size-md);
         transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 
             0 4px 15px rgba(0, 90, 146, 0.35),
@@ -153,7 +153,7 @@
     }
     
     .btn-add-project i {
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
     }
     
     /* Unified form */
@@ -189,7 +189,7 @@
         border: 1px solid rgba(0, 90, 146, 0.2) !important;
         border-radius: 8px;
         padding: 0.5rem 0.75rem 0.5rem 2.5rem;
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
         width: 100%;
         color: var(--text-color);
         transition: all var(--transition-speed) ease;
@@ -220,7 +220,7 @@
         top: 50%;
         transform: translateY(-50%);
         color: var(--primary-color);
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
         z-index: 1;
     }
     
@@ -243,7 +243,7 @@
         border: 1px solid rgba(0, 90, 146, 0.2) !important;
         border-radius: 8px;
         padding: 0.5rem 1.5rem 0.5rem 0.75rem;
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
         color: var(--text-color);
         min-width: 120px;
         max-width: 160px;
@@ -276,8 +276,8 @@
         color: white !important;
         padding: 0.5rem 0.75rem;
         border-radius: 8px;
-        font-size: 0.9rem;
-        font-weight: 500;
+        font-size: var(--ds-font-size-md);
+        font-weight: var(--ds-font-weight-medium);
         transition: all var(--transition-speed) ease;
         box-shadow: 
             0 4px 15px rgba(0, 90, 146, 0.3),
@@ -348,13 +348,13 @@
             rgba(0, 90, 146, 0.05) 100%);
         backdrop-filter: blur(15px);
         color: var(--primary-color);
-        font-weight: 600;
-        font-size: 0.85rem;
+        font-weight: var(--ds-font-weight-semibold);
+        font-size: var(--ds-font-size-md);
         text-align: left;
         padding: 1rem 0.75rem;
         border: none;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: var(--ds-letter-spacing-wide);
         position: relative;
     }
     
@@ -374,7 +374,7 @@
     .projects-table td {
         padding: 1rem 0.75rem;
         border: none;
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
         color: var(--text-color);
         vertical-align: middle;
         background: linear-gradient(135deg, 
@@ -399,7 +399,7 @@
     /* Glass Project Title Link */
     .project-title {
         color: var(--primary-color) !important;
-        font-weight: 500;
+        font-weight: var(--ds-font-weight-medium);
         text-decoration: none;
         transition: all var(--transition-speed) ease;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -416,9 +416,9 @@
         display: inline-block;
         padding: 0.3rem 0.6rem;
         border-radius: 6px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        line-height: 1;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-semibold);
+        line-height: var(--ds-line-height-tight);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -426,7 +426,7 @@
             0 2px 8px rgba(0, 0, 0, 0.1),
             inset 0 1px 0 rgba(255, 255, 255, 0.3);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: var(--ds-letter-spacing-wide);
     }
     
     .priority-urgente {
@@ -485,9 +485,9 @@
     }
     
     .date-cell {
-        font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-family: var(--ds-font-family-mono);
         color: var(--text-muted);
-        font-weight: 500;
+        font-weight: var(--ds-font-weight-medium);
     }
     
     .actions-cell {
@@ -517,7 +517,7 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         color: var(--primary-color) !important;
-        font-size: 0.8rem;
+        font-size: var(--ds-font-size-sm);
         transition: all var(--transition-speed) ease;
         box-shadow: 
             0 2px 8px rgba(0, 90, 146, 0.1),
@@ -581,7 +581,7 @@
     }
     
     .empty-state i {
-        font-size: 3rem;
+        font-size: var(--ds-font-size-6xl);
         color: rgba(0, 90, 146, 0.4);
         margin-bottom: 1.5rem;
         position: relative;
@@ -589,8 +589,8 @@
     }
     
     .empty-state h4 {
-        font-size: 1.25rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-xl);
+        font-weight: var(--ds-font-weight-semibold);
         margin-bottom: 0.75rem;
         color: var(--primary-color);
         position: relative;
@@ -600,7 +600,7 @@
     .empty-state p {
         color: var(--text-muted);
         margin-bottom: 2rem;
-        font-size: 1rem;
+        font-size: var(--ds-font-size-base);
         position: relative;
         z-index: 1;
     }
@@ -615,8 +615,8 @@
         color: white !important;
         padding: 0.75rem 1.5rem;
         border-radius: 8px;
-        font-size: 0.9rem;
-        font-weight: 500;
+        font-size: var(--ds-font-size-md);
+        font-weight: var(--ds-font-weight-medium);
         transition: all var(--transition-speed) ease;
         box-shadow: 
             0 4px 15px rgba(0, 90, 146, 0.3),
@@ -686,8 +686,8 @@
     }
     
     .project-card-title {
-        font-size: 1rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-base);
+        font-weight: var(--ds-font-weight-semibold);
         color: var(--primary-color) !important;
         text-decoration: none;
         margin-right: 0.5rem;
@@ -702,7 +702,7 @@
     }
     
     .project-card-number {
-        font-weight: 700;
+        font-weight: var(--ds-font-weight-bold);
         background: linear-gradient(135deg, 
             rgba(255, 255, 255, 0.3) 0%, 
             rgba(255, 255, 255, 0.1) 100%);
@@ -714,7 +714,7 @@
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        font-size: 0.75rem;
+        font-size: var(--ds-font-size-xs);
         flex-shrink: 0;
         margin-right: 0.5rem;
         border: 1px solid rgba(0, 90, 146, 0.2);
@@ -755,7 +755,7 @@
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.15);
         border-radius: 6px;
-        font-size: 0.75rem;
+        font-size: var(--ds-font-size-xs);
         color: var(--text-color);
         box-shadow: 
             0 2px 6px rgba(0, 90, 146, 0.05),
@@ -783,7 +783,7 @@
     
     .project-card-actions .btn {
         padding: 0.3rem 0.6rem;
-        font-size: 0.75rem;
+        font-size: var(--ds-font-size-xs);
         display: flex;
         align-items: center;
         backdrop-filter: blur(10px);
@@ -845,9 +845,9 @@
     }
     
     .pagination-info {
-        font-size: 0.9rem;
+        font-size: var(--ds-font-size-md);
         color: var(--text-color);
-        font-weight: 500;
+        font-weight: var(--ds-font-weight-medium);
     }
     
     .pagination {
@@ -877,8 +877,8 @@
         border: 1px solid rgba(0, 90, 146, 0.2);
         border-radius: 6px;
         color: var(--primary-color) !important;
-        font-weight: 500;
-        font-size: 0.9rem;
+        font-weight: var(--ds-font-weight-medium);
+        font-size: var(--ds-font-size-md);
         text-decoration: none;
         transition: all var(--transition-speed) ease;
         box-shadow: 

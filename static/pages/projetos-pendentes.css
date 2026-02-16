@@ -34,9 +34,9 @@
 
     .pending-header h1 {
         margin: 0;
-        font-size: 1.35rem;
+        font-size: var(--ds-font-size-2xl);
         color: var(--pending-primary);
-        font-weight: 700;
+        font-weight: var(--ds-font-weight-bold);
         display: inline-flex;
         align-items: center;
         gap: 0.55rem;
@@ -45,7 +45,7 @@
     .pending-header p {
         margin: 0.3rem 0 0;
         color: var(--pending-muted);
-        font-size: 0.92rem;
+        font-size: var(--ds-font-size-base);
     }
 
     .pending-total-pill {
@@ -54,9 +54,9 @@
         color: #1a4f85;
         border-radius: 999px;
         padding: 0.35rem 0.7rem;
-        font-weight: 600;
+        font-weight: var(--ds-font-weight-semibold);
         white-space: nowrap;
-        font-size: 0.82rem;
+        font-size: var(--ds-font-size-sm);
     }
 
     .pending-filters {
@@ -89,18 +89,18 @@
 
     .pending-field label {
         margin: 0;
-        font-size: 0.75rem;
+        font-size: var(--ds-font-size-xs);
         color: var(--pending-muted);
-        font-weight: 600;
+        font-weight: var(--ds-font-weight-semibold);
         text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: var(--ds-letter-spacing-wide);
     }
 
     .pending-field select {
         height: 36px;
         border: 1px solid #cfdeed;
         border-radius: 8px;
-        font-size: 0.86rem;
+        font-size: var(--ds-font-size-md);
         color: #2b3d52;
         background: #fff;
         padding: 0.35rem 0.55rem;
@@ -121,8 +121,8 @@
     .btn-pending {
         height: 36px;
         border-radius: 8px;
-        font-size: 0.82rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-semibold);
         border: 1px solid #ccdeef;
         padding: 0 0.7rem;
         background: #fff;
@@ -174,7 +174,7 @@
     .pending-project-title {
         text-decoration: none;
         color: var(--pending-text);
-        font-weight: 700;
+        font-weight: var(--ds-font-weight-bold);
         display: inline-flex;
         align-items: center;
         gap: 0.45rem;
@@ -187,7 +187,7 @@
     .pending-project-meta {
         margin: 0.2rem 0 0;
         color: var(--pending-muted);
-        font-size: 0.78rem;
+        font-size: var(--ds-font-size-xs);
     }
 
     .pending-chip-row {
@@ -203,13 +203,13 @@
         gap: 0.25rem;
         border-radius: 999px;
         padding: 0.2rem 0.48rem;
-        font-size: 0.72rem;
-        font-weight: 600;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-semibold);
         border: 1px solid transparent;
         white-space: nowrap;
     }
 
-    .pending-chip-value { font-weight: 700; }
+    .pending-chip-value { font-weight: var(--ds-font-weight-bold); }
 
     .pending-chip-atrasada {
         color: #9b1c1c;
@@ -251,10 +251,10 @@
     .pending-table th {
         background: #f4f8fc;
         color: #5a6d84;
-        font-size: 0.72rem;
+        font-size: var(--ds-font-size-xs);
         text-transform: uppercase;
-        letter-spacing: 0.045em;
-        font-weight: 700;
+        letter-spacing: var(--ds-letter-spacing-caps);
+        font-weight: var(--ds-font-weight-bold);
         padding: 0.58rem 0.7rem;
         border-bottom: 1px solid #dfe7f1;
     }
@@ -264,7 +264,7 @@
         padding: 0.6rem 0.7rem;
         vertical-align: middle;
         color: #223247;
-        font-size: 0.84rem;
+        font-size: var(--ds-font-size-sm);
     }
 
     .pending-table tbody tr:hover td {
@@ -280,8 +280,8 @@
         display: inline-flex;
         border-radius: 999px;
         padding: 0.13rem 0.46rem;
-        font-size: 0.67rem;
-        font-weight: 700;
+        font-size: var(--ds-font-size-2xs);
+        font-weight: var(--ds-font-weight-bold);
         border: 1px solid transparent;
     }
 
@@ -309,8 +309,8 @@
         padding: 0 0.58rem;
         background: #fff;
         color: #2b4d6f;
-        font-weight: 600;
-        font-size: 0.74rem;
+        font-weight: var(--ds-font-weight-semibold);
+        font-size: var(--ds-font-size-xs);
         display: inline-flex;
         align-items: center;
         gap: 0.3rem;
@@ -349,8 +349,8 @@
         border: none;
         background: none;
         color: #386291;
-        font-weight: 600;
-        font-size: 0.8rem;
+        font-weight: var(--ds-font-weight-semibold);
+        font-size: var(--ds-font-size-sm);
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
@@ -379,11 +379,11 @@
 
     .pending-other-header {
         padding: 0.5rem 0.8rem;
-        font-size: 0.76rem;
+        font-size: var(--ds-font-size-xs);
         color: #5b6f87;
-        font-weight: 600;
+        font-weight: var(--ds-font-weight-semibold);
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: var(--ds-letter-spacing-caps);
     }
 
     .pending-visible-empty td {
@@ -403,7 +403,7 @@
     }
 
     .pending-empty-state i {
-        font-size: 2.1rem;
+        font-size: var(--ds-font-size-4xl);
         color: #6aa0cf;
         margin-bottom: 0.6rem;
     }
@@ -422,7 +422,7 @@
         padding: 0.58rem 0.72rem;
         box-shadow: 0 10px 28px rgba(16, 33, 53, 0.16);
         color: #22374f;
-        font-size: 0.84rem;
+        font-size: var(--ds-font-size-sm);
         opacity: 0;
         transform: translateY(-8px);
         pointer-events: none;
