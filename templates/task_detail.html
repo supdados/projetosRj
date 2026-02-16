@@ -255,7 +255,7 @@
                                     Cancelar
                                 </button>
                                 <form action="{{ url_for('main.delete_task_item', item_id=item.id) }}" method="POST"
-                                    style="display: inline;">
+                                    class="inline-form">
                                     <button type="submit" class="btn-modal-clean btn-confirm-delete">
                                         Excluir
                                     </button>
@@ -340,8 +340,8 @@
         <div class="modal-content modal-clean">
             <form id="itemForm" action="{{ url_for('main.add_task_item', task_id=task.id) }}" method="POST">
                 <div class="modal-header-clean">
-                    <div class="modal-icon-clean" style="background: rgba(0, 90, 146, 0.15);">
-                        <i class="fas fa-list" style="color: var(--primary-color);"></i>
+                    <div class="modal-icon-clean task-modal-icon-primary">
+                        <i class="fas fa-list task-modal-icon-symbol"></i>
                     </div>
                     <div>
                         <h5 class="modal-title-clean" id="itemModalTitle">Novo Item</h5>
@@ -378,8 +378,7 @@
                     <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
                         Cancelar
                     </button>
-                    <button type="submit" class="btn-modal-clean"
-                        style="background: var(--primary-color); color: white;">
+                    <button type="submit" class="btn-modal-clean task-modal-submit-primary">
                         <i class="fas fa-save"></i> Salvar
                     </button>
                 </div>
@@ -418,7 +417,7 @@
                     Cancelar
                 </button>
                 <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST"
-                    style="display: inline;">
+                                    class="inline-form">
                     <button type="submit" class="btn-modal-clean btn-confirm-delete">
                         Excluir
                     </button>
@@ -807,7 +806,7 @@
                 '<div class="modal-body-clean"><p>Confirma a exclusão deste item?</p><p class="text-muted small">' + escapeHtml(item.descricao.substring(0, 100)) + (item.descricao.length > 100 ? '...' : '') + '</p></div>' +
                 '<div class="modal-footer-clean">' +
                 '<button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">Cancelar</button>' +
-                '<form action="/tarefas/itens/' + item.id + '/delete" method="POST" style="display: inline;">' +
+                '<form action="/tarefas/itens/' + item.id + '/delete" method="POST" class="inline-form">' +
                 '<button type="submit" class="btn-modal-clean btn-confirm-delete">Excluir</button></form></div></div></div></div>';
             var wrap = document.createElement('div');
             wrap.innerHTML = rowHtml + modalHtml;

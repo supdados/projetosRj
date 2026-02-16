@@ -1,0 +1,374 @@
+/*
+ * ProjetosRJ Design System
+ * Foundation + components + utilities.
+ * Loaded after static/style.css to enable gradual migration with compatibility.
+ */
+
+:root {
+    /* Foundation tokens */
+    --ds-font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+    --ds-color-primary-700: #004b79;
+    --ds-color-primary-600: #005a92;
+    --ds-color-primary-500: #1f73b5;
+    --ds-color-primary-100: #e6f0f6;
+
+    --ds-color-secondary-600: #bc9d32;
+
+    --ds-color-success-600: #16a34a;
+    --ds-color-warning-600: #ca8a04;
+    --ds-color-danger-600: #dc2626;
+    --ds-color-info-600: #0ea5e9;
+
+    --ds-color-bg-canvas: #f7f9fc;
+    --ds-color-bg-surface: #ffffff;
+    --ds-color-bg-muted: #f8fafc;
+
+    --ds-color-text-primary: #212529;
+    --ds-color-text-secondary: #475569;
+    --ds-color-text-muted: #6c757d;
+
+    --ds-color-border-subtle: #dee2e6;
+    --ds-color-border-strong: #cbd5e1;
+
+    --ds-radius-sm: 6px;
+    --ds-radius-md: 8px;
+    --ds-radius-lg: 12px;
+    --ds-radius-xl: 16px;
+
+    --ds-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+    --ds-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+    --ds-shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.12);
+
+    --ds-space-1: 0.25rem;
+    --ds-space-2: 0.5rem;
+    --ds-space-3: 0.75rem;
+    --ds-space-4: 1rem;
+    --ds-space-5: 1.25rem;
+    --ds-space-6: 1.5rem;
+    --ds-space-8: 2rem;
+
+    --ds-transition-fast: 0.15s;
+    --ds-transition-base: 0.25s;
+    --ds-transition-slow: 0.35s;
+
+    --ds-z-dropdown: 1000;
+    --ds-z-sticky: 1020;
+    --ds-z-fixed: 1030;
+    --ds-z-modal-backdrop: 1040;
+    --ds-z-modal: 1050;
+    --ds-z-toast: 1080;
+
+    /* Legacy aliases for compatibility */
+    --primary-color: var(--ds-color-primary-600);
+    --primary-light: var(--ds-color-primary-100);
+    --primary-dark: var(--ds-color-primary-700);
+    --secondary-color: var(--ds-color-secondary-600);
+    --success-color: var(--ds-color-success-600);
+    --warning-color: var(--ds-color-warning-600);
+    --danger-color: var(--ds-color-danger-600);
+    --text-color: var(--ds-color-text-primary);
+    --text-muted: var(--ds-color-text-muted);
+    --background-color: var(--ds-color-bg-surface);
+    --border-color: var(--ds-color-border-subtle);
+    --border-radius: var(--ds-radius-md);
+    --box-shadow: var(--ds-shadow-md);
+    --font-family-sans-serif: var(--ds-font-family-sans);
+    --transition-speed: var(--ds-transition-slow);
+}
+
+body {
+    font-family: var(--ds-font-family-sans);
+    color: var(--ds-color-text-primary);
+    background: var(--ds-color-bg-canvas);
+}
+
+/* Components */
+.ds-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ds-space-2);
+    border-radius: var(--ds-radius-md);
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    padding: 0.55rem 0.9rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--ds-transition-base) ease, border-color var(--ds-transition-base) ease,
+        color var(--ds-transition-base) ease, box-shadow var(--ds-transition-base) ease,
+        transform var(--ds-transition-fast) ease;
+}
+
+.ds-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.16);
+}
+
+.ds-btn:disabled,
+.ds-btn.is-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.ds-btn-primary {
+    background: var(--ds-color-primary-600);
+    color: #fff;
+    border-color: var(--ds-color-primary-600);
+}
+
+.ds-btn-primary:hover {
+    background: var(--ds-color-primary-700);
+    border-color: var(--ds-color-primary-700);
+    color: #fff;
+}
+
+.ds-btn-secondary {
+    background: #fff;
+    color: var(--ds-color-primary-600);
+    border-color: #c8d8ed;
+}
+
+.ds-btn-secondary:hover {
+    background: #f6fbff;
+    color: var(--ds-color-primary-700);
+    border-color: #afc7e3;
+}
+
+.ds-btn-danger {
+    background: #fff1f1;
+    color: var(--ds-color-danger-600);
+    border-color: #fecaca;
+}
+
+.ds-btn-danger:hover {
+    background: #fef2f2;
+    color: #972d2d;
+    border-color: #f1c0c6;
+}
+
+.ds-field,
+.ds-input,
+.ds-select,
+.ds-textarea {
+    width: 100%;
+    border: 1px solid var(--ds-color-border-subtle);
+    border-radius: var(--ds-radius-md);
+    color: var(--ds-color-text-primary);
+    background: #fff;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.92rem;
+    transition: border-color var(--ds-transition-base) ease, box-shadow var(--ds-transition-base) ease;
+}
+
+.ds-input:focus,
+.ds-select:focus,
+.ds-textarea:focus,
+.ds-field:focus {
+    border-color: var(--ds-color-primary-500);
+    box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.12);
+    outline: none;
+}
+
+.ds-card {
+    background: var(--ds-color-bg-surface);
+    border: 1px solid var(--ds-color-border-subtle);
+    border-radius: var(--ds-radius-lg);
+    box-shadow: var(--ds-shadow-sm);
+}
+
+.ds-badge,
+.ds-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.ds-badge-success {
+    color: #1f629a;
+    background: #e2f0fc;
+}
+
+.ds-badge-warning {
+    color: #6b4d00;
+    background: #fdf2d4;
+}
+
+.ds-badge-danger {
+    color: #972d2d;
+    background: #fef2f2;
+}
+
+.ds-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ds-table th,
+.ds-table td {
+    border-bottom: 1px solid var(--ds-color-border-subtle);
+    vertical-align: middle;
+}
+
+.ds-empty-state {
+    border: 1px dashed #cbd5e1;
+    border-radius: var(--ds-radius-lg);
+    background: var(--ds-color-bg-muted);
+    color: var(--ds-color-text-secondary);
+    padding: var(--ds-space-6);
+    text-align: center;
+}
+
+/* Bridge (temporary/deprecated): keep old classes visually consistent while migration is in progress */
+.glass-card,
+.pending-card,
+.admin-tasks-list-card,
+.task-header-refined {
+    border-radius: var(--ds-radius-lg);
+}
+
+.app-flash-alert {
+    border-radius: var(--ds-radius-md);
+}
+
+/* Utilities */
+.ds-hidden {
+    display: none !important;
+}
+
+.inline-form {
+    display: inline;
+}
+
+.ds-cursor-pointer {
+    cursor: pointer;
+}
+
+.ds-cursor-default {
+    cursor: default;
+}
+
+.ds-text-muted-soft {
+    color: #94a3b8;
+}
+
+.ds-inline-flex-center {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ds-flex-row-center {
+    display: flex;
+    align-items: center;
+}
+
+.ds-border-top-soft {
+    border-top: 1px solid rgba(0, 90, 146, 0.1);
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+/* Generic width helpers used in migrated tables */
+.col-w-3 { width: 3%; }
+.col-w-5 { width: 5%; }
+.col-w-8 { width: 8%; }
+.col-w-9 { width: 9%; }
+.col-w-10 { width: 10%; }
+.col-w-12 { width: 12%; }
+.col-w-14 { width: 14%; }
+.col-w-15 { width: 15%; }
+.col-w-18 { width: 18%; }
+.col-min-w-35 { min-width: 35%; }
+
+/* Skeleton utilities migrated from inline styles */
+.skeleton-flex-035 { flex: 0.35; }
+.skeleton-flex-04 { flex: 0.4; }
+.skeleton-flex-06 { flex: 0.6; }
+.skeleton-flex-075 { flex: 0.75; }
+.skeleton-flex-08 { flex: 0.8; }
+.skeleton-flex-09 { flex: 0.9; }
+.skeleton-flex-1 { flex: 1; }
+.skeleton-flex-11 { flex: 1.1; }
+.skeleton-flex-12 { flex: 1.2; }
+.skeleton-flex-18 { flex: 1.8; }
+.skeleton-flex-2 { flex: 2; }
+.skeleton-flex-25 { flex: 2.5; }
+.skeleton-cell-last { margin-right: 0 !important; }
+
+/* Phase-1 migration helpers */
+.projects-delivery-badge {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08));
+    color: #1e40af;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    white-space: nowrap;
+}
+
+.projects-abep-cell {
+    font-size: 0.75rem;
+}
+
+.project-header-description-muted {
+    opacity: 0.92;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.project-observacao-divider {
+    border-top: 1px solid rgba(0, 90, 146, 0.1);
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+.project-modal-input {
+    border: 1px solid #ced4da !important;
+}
+
+.preview-item-main {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.pending-actions-col {
+    width: 190px;
+}
+
+.pending-empty-state-hidden {
+    display: none !important;
+}
+
+.etapa-drag-handle {
+    cursor: grab;
+    color: #a0aec0;
+}
+
+td.etapa-drag-handle {
+    text-align: center;
+}
+
+.task-modal-icon-primary {
+    background: rgba(0, 90, 146, 0.15);
+}
+
+.task-modal-icon-symbol {
+    color: var(--primary-color);
+}
+
+.task-modal-submit-primary {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.task-modal-submit-primary:hover,
+.task-modal-submit-primary:focus-visible {
+    color: #fff;
+}

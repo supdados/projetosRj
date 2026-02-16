@@ -27,6 +27,7 @@
     
     <!-- CSS Customizado -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='design-system.css') }}">
     
     {% block head_extra %}{% endblock %}
 </head>
@@ -80,7 +81,7 @@
                             <span class="app-brand-text">ProjetosRJ</span>
                         </a>
 
-                        <div class="app-nav-icons d-none d-lg-flex" role="navigation" aria-label="Navegação principal">
+                        <div class="app-nav-icons" role="navigation" aria-label="Navegação principal">
                             <a
                                 href="{{ url_for('main.dashboard') }}"
                                 class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.dashboard' else '' }}"
@@ -114,7 +115,7 @@
                         </div>
                     </div>
 
-                    <div class="app-topnav-center d-none d-lg-flex">
+                    <div class="app-topnav-center">
                         {% if available_areas|length == 1 %}
                         <a href="{{ url_for('main.list_projects', area=available_areas[0]) }}" class="app-area-single-link app-nav-link">
                             <i class="fas fa-layer-group"></i>
@@ -167,7 +168,7 @@
                     </div>
 
                     <div class="app-topnav-right">
-                        <div class="app-global-search d-none d-lg-flex" data-global-search data-search-url="{{ url_for('main.global_search_api') }}">
+                        <div class="app-global-search" data-global-search data-search-url="{{ url_for('main.global_search_api') }}">
                             <form
                                 class="app-global-search-form"
                                 id="appGlobalSearchForm"
@@ -195,7 +196,7 @@
                             </div>
                         </div>
 
-                        <div class="app-account-tooltip d-none d-lg-inline-flex">
+                        <div class="app-account-tooltip">
                             <div class="dropdown app-account-menu">
                                 <button
                                     class="btn app-nav-icon-btn app-account-trigger dropdown-toggle {{ 'active' if endpoint == 'main.change_password' or endpoint == 'main.list_users' or endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') or endpoint == 'main.edit_user' else '' }}"
@@ -266,75 +267,6 @@
                             </div>
                         </div>
 
-                        <button class="navbar-toggler app-topnav-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#appTopnavCollapse" aria-controls="appTopnavCollapse" aria-expanded="false" aria-label="Abrir menu">
-                            <i class="fas fa-bars"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="collapse app-topnav-collapse d-lg-none" id="appTopnavCollapse">
-                    <div class="app-mobile-nav">
-                        <a href="{{ url_for('main.dashboard') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.dashboard' else '' }}">
-                            <i class="fas fa-home"></i>
-                            <span>Início</span>
-                        </a>
-                        <a href="{{ url_for('main.list_projetos_pendentes') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_projetos_pendentes' else '' }}">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <span>Projetos pendentes</span>
-                        </a>
-                        <a href="{{ url_for('main.list_tasks') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_tasks' or endpoint == 'main.project_tasks' else '' }}">
-                            <i class="fas fa-tasks"></i>
-                            <span>Tarefas</span>
-                        </a>
-
-                        <div class="app-mobile-section">
-                            <div class="app-mobile-section-title">Áreas do Projeto</div>
-                            {% if available_areas|length == 0 %}
-                            <span class="app-mobile-disabled">Sem área</span>
-                            {% elif available_areas|length == 1 %}
-                            <a href="{{ url_for('main.list_projects', area=available_areas[0]) }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_projects' and request.args.get('area') == available_areas[0] else '' }}">
-                                <i class="fas fa-layer-group"></i>
-                                <span>{{ available_areas[0] }}</span>
-                            </a>
-                            {% else %}
-                                <a href="{{ url_for('main.list_projects') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_projects' and not request.args.get('area') else '' }}">
-                                    <i class="fas fa-layer-group"></i>
-                                    <span>{{ all_projects_label }}</span>
-                                </a>
-                                {% for area_item in available_areas %}
-                                <a href="{{ url_for('main.list_projects', area=area_item) }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_projects' and request.args.get('area') == area_item else '' }}">
-                                    <i class="fas fa-layer-group"></i>
-                                    <span>{{ area_item }}</span>
-                                </a>
-                                {% endfor %}
-                            {% endif %}
-                        </div>
-
-                        <div class="app-mobile-section">
-                            <div class="app-mobile-section-title">Conta e Administração</div>
-                            {% if is_admin_user %}
-                            <a href="{{ url_for('main.list_users') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.list_users' or (endpoint == 'main.edit_user' and request.args.get('user_id') != current_user_obj.id|string) else '' }}">
-                                <i class="fas fa-users-cog"></i>
-                                <span>Gerenciar Usuários</span>
-                            </a>
-                            <a href="{{ url_for('main.list_templates') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') else '' }}">
-                                <i class="fas fa-stream"></i>
-                                <span>Modelos de Etapas</span>
-                            </a>
-                            <a href="{{ url_for('main.edit_user', user_id=current_user_obj.id) }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.edit_user' and request.args.get('user_id') == current_user_obj.id|string else '' }}">
-                                <i class="fas fa-user-edit"></i>
-                                <span>Meu Perfil (Admin)</span>
-                            </a>
-                            {% endif %}
-                            <a href="{{ url_for('main.change_password') }}" class="app-nav-link app-mobile-link {{ 'active' if endpoint == 'main.change_password' else '' }}">
-                                <i class="fas fa-key"></i>
-                                <span>Alterar Senha</span>
-                            </a>
-                            <a href="{{ url_for('main.logout') }}" class="app-nav-link app-mobile-link">
-                                <i class="fas fa-sign-out-alt"></i>
-                                <span>Sair</span>
-                            </a>
-                        </div>
                     </div>
                 </div>
             </nav>
@@ -407,20 +339,20 @@
                                     <div class="skeleton-text skeleton-dashboard-card-title"></div>
                                 </div>
                                 <div class="skeleton-dashboard-table-head">
-                                    <div class="skeleton-table-cell" style="flex: 0.6;"></div>
-                                    <div class="skeleton-table-cell" style="flex: 2;"></div>
-                                    <div class="skeleton-table-cell" style="flex: 1.2;"></div>
-                                    <div class="skeleton-table-cell" style="flex: 1.1;"></div>
-                                    <div class="skeleton-table-cell" style="flex: 0.8; margin-right: 0;"></div>
+                                    <div class="skeleton-table-cell skeleton-flex-06"></div>
+                                    <div class="skeleton-table-cell skeleton-flex-2"></div>
+                                    <div class="skeleton-table-cell skeleton-flex-12"></div>
+                                    <div class="skeleton-table-cell skeleton-flex-11"></div>
+                                    <div class="skeleton-table-cell skeleton-flex-08 skeleton-cell-last"></div>
                                 </div>
                                 <div class="skeleton-table skeleton-dashboard-table">
                                     {% for i in range(7) %}
                                     <div class="skeleton-table-row">
-                                        <div class="skeleton-table-cell" style="flex: 0.6;"></div>
-                                        <div class="skeleton-table-cell" style="flex: 2;"></div>
-                                        <div class="skeleton-table-cell" style="flex: 1.2;"></div>
-                                        <div class="skeleton-table-cell" style="flex: 1.1;"></div>
-                                        <div class="skeleton-table-cell" style="flex: 0.8; margin-right: 0;"></div>
+                                        <div class="skeleton-table-cell skeleton-flex-06"></div>
+                                        <div class="skeleton-table-cell skeleton-flex-2"></div>
+                                        <div class="skeleton-table-cell skeleton-flex-12"></div>
+                                        <div class="skeleton-table-cell skeleton-flex-11"></div>
+                                        <div class="skeleton-table-cell skeleton-flex-08 skeleton-cell-last"></div>
                                     </div>
                                     {% endfor %}
                                 </div>
@@ -497,22 +429,22 @@
 
                     <div class="skeleton-card skeleton-projects-table-card">
                         <div class="skeleton-dashboard-table-head skeleton-projects-table-head">
-                            <div class="skeleton-table-cell" style="flex: 0.35;"></div>
-                            <div class="skeleton-table-cell" style="flex: 1.8;"></div>
-                            <div class="skeleton-table-cell" style="flex: 1;"></div>
-                            <div class="skeleton-table-cell" style="flex: 0.9;"></div>
-                            <div class="skeleton-table-cell" style="flex: 0.8;"></div>
-                            <div class="skeleton-table-cell" style="flex: 0.75; margin-right: 0;"></div>
+                            <div class="skeleton-table-cell skeleton-flex-035"></div>
+                            <div class="skeleton-table-cell skeleton-flex-18"></div>
+                            <div class="skeleton-table-cell skeleton-flex-1"></div>
+                            <div class="skeleton-table-cell skeleton-flex-09"></div>
+                            <div class="skeleton-table-cell skeleton-flex-08"></div>
+                            <div class="skeleton-table-cell skeleton-flex-075 skeleton-cell-last"></div>
                         </div>
                         <div class="skeleton-table skeleton-projects-table">
                             {% for i in range(8) %}
                             <div class="skeleton-table-row">
-                                <div class="skeleton-table-cell" style="flex: 0.35;"></div>
-                                <div class="skeleton-table-cell" style="flex: 1.8;"></div>
-                                <div class="skeleton-table-cell" style="flex: 1;"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.9;"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.8;"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.75; margin-right: 0;"></div>
+                                <div class="skeleton-table-cell skeleton-flex-035"></div>
+                                <div class="skeleton-table-cell skeleton-flex-18"></div>
+                                <div class="skeleton-table-cell skeleton-flex-1"></div>
+                                <div class="skeleton-table-cell skeleton-flex-09"></div>
+                                <div class="skeleton-table-cell skeleton-flex-08"></div>
+                                <div class="skeleton-table-cell skeleton-flex-075 skeleton-cell-last"></div>
                             </div>
                             {% endfor %}
                         </div>
@@ -551,20 +483,20 @@
                             </div>
                         </div>
                         <div class="skeleton-dashboard-table-head skeleton-pending-table-head">
-                            <div class="skeleton-table-cell" style="flex: 1.8;"></div>
-                            <div class="skeleton-table-cell" style="flex: 1;"></div>
-                            <div class="skeleton-table-cell" style="flex: 0.9;"></div>
-                            <div class="skeleton-table-cell" style="flex: 0.9;"></div>
-                            <div class="skeleton-table-cell" style="flex: 0.75; margin-right: 0;"></div>
+                            <div class="skeleton-table-cell skeleton-flex-18"></div>
+                            <div class="skeleton-table-cell skeleton-flex-1"></div>
+                            <div class="skeleton-table-cell skeleton-flex-09"></div>
+                            <div class="skeleton-table-cell skeleton-flex-09"></div>
+                            <div class="skeleton-table-cell skeleton-flex-075 skeleton-cell-last"></div>
                         </div>
                         <div class="skeleton-table skeleton-pending-table">
                             {% for j in range(3) %}
                             <div class="skeleton-table-row">
-                                <div class="skeleton-table-cell" style="flex: 1.8;"></div>
-                                <div class="skeleton-table-cell" style="flex: 1;"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.9;"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.9;"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.75; margin-right: 0;"></div>
+                                <div class="skeleton-table-cell skeleton-flex-18"></div>
+                                <div class="skeleton-table-cell skeleton-flex-1"></div>
+                                <div class="skeleton-table-cell skeleton-flex-09"></div>
+                                <div class="skeleton-table-cell skeleton-flex-09"></div>
+                                <div class="skeleton-table-cell skeleton-flex-075 skeleton-cell-last"></div>
                             </div>
                             {% endfor %}
                         </div>
@@ -686,10 +618,10 @@
                             <div class="skeleton-button skeleton-task-detail-add-item"></div>
                         </div>
                         <div class="skeleton-task-detail-columns">
-                            <div class="skeleton-table-cell" style="flex: 2.5;"></div>
-                            <div class="skeleton-table-cell" style="flex: 1;"></div>
-                            <div class="skeleton-table-cell" style="flex: 1;"></div>
-                            <div class="skeleton-table-cell" style="flex: 0.4; margin-right: 0;"></div>
+                            <div class="skeleton-table-cell skeleton-flex-25"></div>
+                            <div class="skeleton-table-cell skeleton-flex-1"></div>
+                            <div class="skeleton-table-cell skeleton-flex-1"></div>
+                            <div class="skeleton-table-cell skeleton-flex-04 skeleton-cell-last"></div>
                         </div>
                         {% for i in range(6) %}
                         <div class="skeleton-task-detail-item-row">
@@ -729,10 +661,10 @@
                         <div class="skeleton-table">
                             {% for i in range(4) %}
                             <div class="skeleton-table-row">
-                                <div class="skeleton-table-cell" style="flex: 0.4;"></div>
+                                <div class="skeleton-table-cell skeleton-flex-04"></div>
                                 <div class="skeleton-table-cell"></div>
                                 <div class="skeleton-table-cell"></div>
-                                <div class="skeleton-table-cell" style="flex: 0.8; margin-right: 0;"></div>
+                                <div class="skeleton-table-cell skeleton-flex-08 skeleton-cell-last"></div>
                             </div>
                             {% endfor %}
                         </div>
@@ -807,19 +739,13 @@
         document.addEventListener('DOMContentLoaded', function() {
             const body = document.body;
             const loadingOverlay = document.querySelector('.loading-overlay');
-            const topnavCollapseEl = document.getElementById('appTopnavCollapse');
             const skeletonContent = document.querySelector('.skeleton-content');
             const skeletonTemplateStore = document.getElementById('skeleton-template-store');
             const hasBootstrap = typeof window.bootstrap !== 'undefined';
             const nonNavigationalToggles = ['dropdown', 'collapse', 'modal', 'offcanvas', 'tab', 'pill'];
             const skeletonTemplates = {};
-            let topnavCollapse = null;
 
             body.classList.add('loading-active');
-
-            if (topnavCollapseEl && hasBootstrap && bootstrap.Collapse) {
-                topnavCollapse = new bootstrap.Collapse(topnavCollapseEl, { toggle: false });
-            }
 
             if (skeletonTemplateStore) {
                 skeletonTemplateStore.querySelectorAll('template[data-skeleton-template]').forEach(function(templateEl) {
@@ -938,16 +864,6 @@
                     window.location.href = destinationUrl;
                 }, 100);
             }
-
-            document.querySelectorAll('.app-mobile-link').forEach(function(link) {
-                link.addEventListener('click', function() {
-                    if (topnavCollapseEl && topnavCollapseEl.classList.contains('show') && topnavCollapse) {
-                        topnavCollapse.hide();
-                    } else if (topnavCollapseEl && topnavCollapseEl.classList.contains('show')) {
-                        topnavCollapseEl.classList.remove('show');
-                    }
-                });
-            });
 
             const globalSearchWidget = document.querySelector('[data-global-search]');
             if (globalSearchWidget) {

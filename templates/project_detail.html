@@ -3,2043 +3,7 @@
 {% block title %}Detalhes: {{ project.titulo }}{% endblock %}
 
 {% block head_extra %}
-<style>
-    /* ====================================
-       GLASS MORPHISM - PROJECT DETAIL
-       ==================================== */
-
-    :root {
-        --primary-color: #005A92;
-        --primary-dark: #004b79;
-        --text-color: #2d3748;
-        --text-muted: #718096;
-        --success-color: #16a34a;
-        --warning-color: #ca8a04;
-        --danger-color: #dc2626;
-        --info-color: #005A92;
-        --transition-speed: 0.3s;
-        --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%);
-        --glass-border: rgba(255, 255, 255, 0.18);
-        --glass-shadow: 0 8px 32px rgba(0, 90, 146, 0.08);
-    }
-
-    body {
-        background-color: #f7f9fc;
-        min-height: 100vh;
-        position: relative;
-    }
-
-    /* Glass Project Header */
-    .project-header {
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.95) 0%,
-                rgba(0, 75, 121, 0.92) 50%,
-                rgba(0, 90, 146, 0.88) 100%);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: white;
-        border-radius: 12px;
-        padding: 1.25rem 1.5rem;
-        margin-bottom: 1.25rem;
-        box-shadow:
-            0 8px 32px rgba(0, 90, 146, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .project-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-image:
-            radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-            radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-        background-size: 50px 50px, 80px 80px;
-        pointer-events: none;
-        opacity: 0.7;
-    }
-
-    .project-header h1 {
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        font-size: 1.5rem;
-        color: white;
-        background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        position: relative;
-        z-index: 1;
-        line-height: 1.3;
-    }
-
-    .project-header p {
-        opacity: 0.9;
-        margin-bottom: 0;
-        font-size: 0.875rem;
-        position: relative;
-        z-index: 1;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    .project-header p span {
-        display: flex;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 0.375rem 0.75rem;
-        border-radius: 16px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        font-size: 0.8125rem;
-    }
-
-    .project-header p span i {
-        margin-right: 0.375rem;
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 0.75rem;
-    }
-
-    /* Glass Back Button */
-    .back-button {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.2) 0%,
-                rgba(255, 255, 255, 0.1) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        transition: all var(--transition-speed) ease;
-        padding: 0.5rem 1rem;
-        font-size: 0.9rem;
-        border-radius: 10px;
-        position: relative;
-        z-index: 1;
-    }
-
-    .back-button:hover {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.3) 0%,
-                rgba(255, 255, 255, 0.15) 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
-        color: white !important;
-    }
-
-    /* Glass Info Card */
-    .info-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(25px);
-        -webkit-backdrop-filter: blur(25px);
-        border: 1px solid var(--glass-border);
-        border-radius: 16px;
-        margin-bottom: 2rem;
-        box-shadow:
-            var(--glass-shadow),
-            inset 0 1px 0 rgba(255, 255, 255, 0.25);
-        position: relative;
-        overflow: hidden;
-        transition: all var(--transition-speed) ease;
-    }
-
-    .info-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-    }
-
-    .info-card:hover {
-        box-shadow:
-            0 12px 40px rgba(0, 90, 146, 0.12),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-
-    .info-card .card-header {
-        background: rgba(248, 250, 252, 0.8);
-        border-bottom: 1px solid rgba(0, 90, 146, 0.1);
-        padding: 0.75rem 1.25rem;
-    }
-
-    .info-card .card-header h4 {
-        font-weight: 600;
-        color: #1e293b;
-        display: flex;
-        align-items: center;
-        font-size: 0.9375rem;
-        margin-bottom: 0;
-    }
-
-    .info-card .card-header h4 i {
-        color: #005A92;
-        margin-right: 0.5rem;
-        font-size: 0.875rem;
-    }
-
-    .info-card .card-body {
-        padding: 1.125rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .info-card .card-footer {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.1) 0%,
-                rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(10px);
-        border-top: 1px solid rgba(255, 255, 255, 0.15);
-        padding: 1.5rem 2rem;
-        position: relative;
-    }
-
-    .info-card .card-footer::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 2rem;
-        right: 2rem;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    }
-
-    /* Refined Details Grid */
-    .details-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-    }
-
-    .detail-item {
-        background: rgba(255, 255, 255, 0.65);
-        border: 1px solid rgba(0, 90, 146, 0.08);
-        border-radius: 6px;
-        padding: 0.625rem 0.875rem;
-        transition: all 0.2s ease;
-        position: relative;
-        height: 70px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-
-    .detail-item:hover {
-        background: rgba(255, 255, 255, 0.85);
-        border-color: rgba(0, 90, 146, 0.15);
-    }
-
-    .detail-item strong {
-        color: #64748b;
-        font-size: 0.65rem;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        display: block;
-        margin-bottom: 0.375rem;
-        font-weight: 600;
-    }
-
-    .detail-item .small {
-        font-size: 0.8125rem;
-        color: #1e293b;
-        line-height: 1.3;
-    }
-
-    /* Refined Priority Badges */
-    .priority-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-weight: 500;
-        font-size: 0.7rem;
-        border: 1px solid;
-        transition: all 0.2s ease;
-        align-self: flex-start;
-        width: fit-content;
-        min-width: 65px;
-        max-width: 100%;
-        text-align: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .priority-badge i {
-        font-size: 0.65rem;
-        margin-right: 0.25rem;
-    }
-
-    .priority-urgente {
-        background: rgba(220, 38, 38, 0.10);
-        color: #dc2626 !important;
-        border-color: rgba(220, 38, 38, 0.20);
-    }
-
-    .priority-alta {
-        background: rgba(234, 88, 12, 0.10);
-        color: #ea580c !important;
-        border-color: rgba(234, 88, 12, 0.20);
-    }
-
-    .priority-media {
-        background: rgba(202, 138, 4, 0.10);
-        color: #ca8a04 !important;
-        border-color: rgba(202, 138, 4, 0.20);
-    }
-
-    .priority-baixa {
-        background: rgba(22, 163, 74, 0.10);
-        color: #16a34a !important;
-        border-color: rgba(22, 163, 74, 0.20);
-    }
-
-    /* Refined Status Badges */
-    .badge {
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-weight: 500;
-        font-size: 0.7rem;
-        border: 1px solid;
-        transition: all 0.2s ease;
-        align-self: flex-start;
-        width: fit-content;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 65px;
-        max-width: 100%;
-        text-align: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .badge i {
-        font-size: 0.65rem;
-        margin-right: 0.25rem;
-    }
-
-    .badge.bg-success {
-        background: #16a34a !important;
-        color: white !important;
-        border-color: #15803d;
-    }
-
-    .badge.bg-secondary {
-        background: #64748b !important;
-        color: white !important;
-        border-color: #475569;
-    }
-
-    .badge.bg-warning {
-        background: #f59e0b !important;
-        color: white !important;
-        border-color: #d97706;
-    }
-
-    .badge.bg-info {
-        background: #0ea5e9 !important;
-        color: white !important;
-        border-color: #0284c7;
-    }
-
-    .badge.bg-light {
-        background: #f1f5f9 !important;
-        color: #475569 !important;
-        border-color: #e2e8f0;
-    }
-
-    /* Status Badge Styles - Glass Morphism */
-    .bg-success-light {
-        background: linear-gradient(135deg,
-                rgba(34, 197, 94, 0.9) 0%,
-                rgba(22, 163, 74, 0.95) 100%) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-        box-shadow: 0 4px 15px rgba(34, 197, 94, 0.25);
-        font-weight: 600;
-        transition: all var(--transition-speed) ease;
-    }
-
-    .bg-success-light:hover {
-        background: linear-gradient(135deg,
-                rgba(34, 197, 94, 1) 0%,
-                rgba(22, 163, 74, 1) 100%) !important;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
-    }
-
-    .bg-secondary-light {
-        background: linear-gradient(135deg,
-                rgba(107, 114, 128, 0.85) 0%,
-                rgba(75, 85, 99, 0.9) 100%) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-        box-shadow: 0 4px 15px rgba(107, 114, 128, 0.25);
-        font-weight: 600;
-        transition: all var(--transition-speed) ease;
-    }
-
-    .bg-secondary-light:hover {
-        background: linear-gradient(135deg,
-                rgba(107, 114, 128, 0.95) 0%,
-                rgba(75, 85, 99, 1) 100%) !important;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(107, 114, 128, 0.35);
-    }
-
-    .bg-danger-light {
-        background: linear-gradient(135deg,
-                rgba(239, 68, 68, 0.9) 0%,
-                rgba(220, 38, 38, 0.95) 100%) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
-        font-weight: 600;
-        transition: all var(--transition-speed) ease;
-    }
-
-    .bg-danger-light:hover {
-        background: linear-gradient(135deg,
-                rgba(239, 68, 68, 1) 0%,
-                rgba(220, 38, 38, 1) 100%) !important;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
-    }
-
-    /* Glass Section Divider */
-    .section-divider {
-        display: flex;
-        align-items: center;
-        margin: 2.5rem 0 2rem 0;
-        position: relative;
-    }
-
-    .section-divider h2 {
-        margin-bottom: 0;
-        margin-right: 2rem;
-        font-weight: 700;
-        font-size: 1.5rem;
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        position: relative;
-        z-index: 1;
-    }
-
-    .section-divider::after {
-        content: '';
-        flex: 1;
-        height: 2px;
-        background: linear-gradient(90deg,
-                var(--primary-color) 0%,
-                rgba(0, 90, 146, 0.3) 50%,
-                transparent 100%);
-        border-radius: 1px;
-    }
-
-    /* Refined Objective Sections */
-    .objective-section {
-        background: rgba(255, 255, 255, 0.6);
-        border: 1px solid rgba(0, 90, 146, 0.08);
-        border-radius: 6px;
-        padding: 0.75rem;
-        margin-bottom: 0;
-        height: 100%;
-        transition: all 0.2s ease;
-    }
-
-    .objective-section:hover {
-        background: rgba(255, 255, 255, 0.8);
-        border-color: rgba(0, 90, 146, 0.15);
-    }
-
-    .objective-section h5 {
-        color: #1e293b;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid rgba(0, 90, 146, 0.1);
-        font-size: 0.8125rem;
-        display: flex;
-        align-items: center;
-    }
-
-    .objective-section h5 i {
-        margin-right: 0.375rem;
-        font-size: 0.8125rem;
-    }
-
-    .objective-section p {
-        font-size: 0.8125rem;
-        color: #475569;
-        line-height: 1.4;
-        margin-bottom: 0;
-    }
-
-    /* Refined Indicators List */
-    .indicadores-list {
-        list-style-type: none;
-        padding-left: 0;
-        margin-bottom: 0;
-    }
-
-    .indicadores-list li {
-        position: relative;
-        padding-left: 1rem;
-        margin-bottom: 0.375rem;
-        color: #475569;
-        font-size: 0.8125rem;
-        line-height: 1.4;
-    }
-
-    .indicadores-list li::before {
-        content: '●';
-        color: #005A92;
-        font-size: 0.5rem;
-        position: absolute;
-        left: 0.5rem;
-        top: 0;
-    }
-
-    /* Section Titles */
-    .section-title {
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        color: #64748b;
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-    }
-
-    .section-title i {
-        margin-right: 0.375rem;
-        font-size: 0.8125rem;
-        color: #005A92;
-    }
-
-    /* Additional Info Section */
-    .additional-info-box {
-        background: rgba(248, 250, 252, 0.6);
-        border: 1px solid rgba(0, 90, 146, 0.08);
-        border-radius: 6px;
-        padding: 0.75rem;
-    }
-
-    .additional-info-box .info-row {
-        margin-bottom: 0.5rem;
-        font-size: 0.8125rem;
-        line-height: 1.4;
-    }
-
-    .additional-info-box .info-row:last-child {
-        margin-bottom: 0;
-    }
-
-    .additional-info-box .info-row strong {
-        color: #475569;
-        font-weight: 500;
-        font-size: 0.8125rem;
-    }
-
-    .additional-info-box .info-row a {
-        color: #005A92;
-        word-break: break-all;
-        font-size: 0.8125rem;
-    }
-
-    .additional-info-box .info-row a:hover {
-        color: #004b79;
-    }
-
-    /* Inline Edit Mode Styles */
-    [data-field] input.form-control,
-    [data-field] select.form-select,
-    [data-field] textarea.form-control {
-        font-size: 0.8125rem;
-        padding: 0.25rem 0.5rem;
-        border: 1px solid #005A92;
-        border-radius: 4px;
-        transition: all 0.2s ease;
-    }
-
-    [data-field] input.form-control:focus,
-    [data-field] select.form-select:focus,
-    [data-field] textarea.form-control:focus {
-        border-color: #004b79;
-        box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.1);
-        outline: none;
-    }
-
-    /* Estilos especiais para campos no header (fundo azul) */
-    .project-header [data-field] input.form-control,
-    .project-header [data-field] textarea.form-control,
-    .project-header input.form-control[data-field],
-    .project-header textarea.form-control[data-field] {
-        background: rgba(255, 255, 255, 0.2);
-        color: #fff !important;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .project-header [data-field] input.form-control::placeholder,
-    .project-header [data-field] textarea.form-control::placeholder,
-    .project-header input.form-control[data-field]::placeholder,
-    .project-header textarea.form-control[data-field]::placeholder {
-        color: rgba(255, 255, 255, 0.85) !important;
-        opacity: 1;
-    }
-
-    .project-header [data-field] input.form-control::-webkit-input-placeholder,
-    .project-header [data-field] textarea.form-control::-webkit-input-placeholder,
-    .project-header input.form-control[data-field]::-webkit-input-placeholder,
-    .project-header textarea.form-control[data-field]::-webkit-input-placeholder {
-        color: rgba(255, 255, 255, 0.85) !important;
-        opacity: 1;
-    }
-
-    .project-header [data-field] input.form-control::-moz-placeholder,
-    .project-header [data-field] textarea.form-control::-moz-placeholder,
-    .project-header input.form-control[data-field]::-moz-placeholder,
-    .project-header textarea.form-control[data-field]::-moz-placeholder {
-        color: rgba(255, 255, 255, 0.85) !important;
-        opacity: 1;
-    }
-
-    .project-header [data-field] input.form-control:-ms-input-placeholder,
-    .project-header [data-field] textarea.form-control:-ms-input-placeholder,
-    .project-header input.form-control[data-field]:-ms-input-placeholder,
-    .project-header textarea.form-control[data-field]:-ms-input-placeholder {
-        color: rgba(255, 255, 255, 0.85) !important;
-    }
-
-    .project-header [data-field] input.form-control:focus,
-    .project-header [data-field] textarea.form-control:focus,
-    .project-header input.form-control[data-field]:focus,
-    .project-header textarea.form-control[data-field]:focus {
-        background: rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.5);
-        box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1);
-    }
-
-    .btn-save-project,
-    .btn-cancel-edit {
-        font-size: 0.8125rem;
-        padding: 0.5rem 1rem;
-    }
-
-    /* Refined Add Button */
-    .btn-add-etapa {
-        background: #005A92;
-        border: 1px solid #004b79 !important;
-        color: white !important;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        font-weight: 500;
-        font-size: 0.8125rem;
-        transition: all 0.2s ease;
-        box-shadow: none;
-    }
-
-    .btn-add-etapa:hover {
-        background: #004b79;
-        color: white !important;
-        box-shadow: 0 2px 8px rgba(0, 90, 146, 0.15);
-    }
-
-    /* Import Model Button */
-    .btn-import-model {
-        background: white;
-        border: 1px solid #005A92 !important;
-        color: #005A92 !important;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        font-weight: 500;
-        font-size: 0.8125rem;
-        transition: all 0.2s ease;
-        box-shadow: none;
-    }
-
-    .btn-import-model:hover {
-        background: #f8f9fa;
-        color: #004b79 !important;
-        border-color: #004b79 !important;
-        box-shadow: 0 2px 8px rgba(0, 90, 146, 0.15);
-    }
-
-    /* Ver Tarefas do Projeto - hover simples */
-    .btn-ver-tarefas-projeto {
-        background: transparent;
-        border: 1px solid #e2e8f0;
-        color: #475569;
-        padding: 0.45rem 0.9rem;
-        border-radius: 6px;
-        font-weight: 500;
-        font-size: 0.8125rem;
-        text-decoration: none;
-        transition: background 0.15s, border-color 0.15s, color 0.15s;
-    }
-
-    .btn-ver-tarefas-projeto:hover {
-        background: #f8fafc;
-        border-color: #cbd5e1;
-        color: #334155;
-    }
-
-    /* Ver Histórico - fundo suave */
-    .btn-history {
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        color: #475569;
-        padding: 0.45rem 0.9rem;
-        border-radius: 6px;
-        font-weight: 500;
-        font-size: 0.8125rem;
-        text-decoration: none;
-        transition: background 0.15s, border-color 0.15s, color 0.15s;
-    }
-
-    .btn-history:hover {
-        background: #e2e8f0;
-        border-color: #cbd5e1;
-        color: #334155;
-    }
-
-    /* ==========================================
-       COMENTÁRIOS NAS ETAPAS
-       ========================================== */
-
-    .etapa-comentario-display {
-        transition: background 0.2s ease;
-        padding: 0.25rem;
-        border-radius: 4px;
-    }
-
-    .etapa-comentario-display:hover {
-        background: rgba(13, 110, 253, 0.05);
-    }
-
-    .etapa-comentario-placeholder {
-        opacity: 0;
-        color: #adb5bd !important;
-        font-style: italic;
-        transition: all 0.2s ease;
-        padding: 0.25rem;
-        border-radius: 4px;
-    }
-
-    .etapa-hover-container:hover .etapa-comentario-placeholder,
-    .etapa-card:hover .etapa-comentario-placeholder {
-        opacity: 1;
-    }
-
-    .etapa-comentario-placeholder:hover {
-        background: rgba(13, 110, 253, 0.05);
-        color: #6c757d !important;
-    }
-
-    .etapa-comentario-placeholder i {
-        font-size: 0.85rem;
-    }
-
-    .btn-comment-data {
-        display: none;
-    }
-
-    /* ==========================================
-       EDIÇÃO INLINE DE COMENTÁRIOS
-       ========================================== */
-
-    .comentario-textarea-inline {
-        width: 100%;
-        padding: 0.5rem 0.7rem;
-        border: 1px solid #0d6efd;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        color: #495057;
-        resize: vertical;
-        min-height: 50px;
-        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
-        font-family: inherit;
-        margin-top: 0.25rem;
-    }
-
-    .comentario-textarea-inline:focus {
-        outline: none;
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
-    }
-
-    .comentario-textarea-inline::placeholder {
-        color: #adb5bd;
-        font-style: italic;
-    }
-
-    /* ==========================================
-       MODAL IMPORTAR MODELO - GLASS DESIGN
-       ========================================== */
-
-    /* Glass Modal Container */
-    #importModelModal .modal-content {
-        background: #ffffff !important;
-        border: 1px solid rgba(0, 90, 146, 0.15);
-        border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-        overflow: hidden;
-    }
-
-    /* Header Glass */
-    .glass-header-import {
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.08) 0%,
-                rgba(0, 90, 146, 0.04) 100%);
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid rgba(0, 90, 146, 0.1);
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .header-icon-wrapper-import {
-        width: 48px;
-        height: 48px;
-        background: linear-gradient(135deg,
-                var(--primary-color) 0%,
-                var(--primary-dark) 100%);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        box-shadow: 0 4px 12px rgba(0, 90, 146, 0.25);
-    }
-
-    .header-icon-import {
-        font-size: 1.3rem;
-        color: white;
-    }
-
-    .header-text-import {
-        flex: 1;
-    }
-
-    .modal-title-import {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin: 0;
-        letter-spacing: -0.2px;
-    }
-
-    .modal-subtitle-import {
-        font-size: 0.85rem;
-        color: #6c757d;
-        margin: 0.25rem 0 0 0;
-        font-weight: 500;
-    }
-
-    .btn-close-glass-import {
-        width: 36px;
-        height: 36px;
-        background: rgba(0, 0, 0, 0.05);
-        border: none;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        flex-shrink: 0;
-    }
-
-    .btn-close-glass-import:hover {
-        background: rgba(0, 0, 0, 0.1);
-    }
-
-    .btn-close-glass-import i {
-        font-size: 1rem;
-        color: #495057;
-    }
-
-    /* Body Glass */
-    .glass-body-import {
-        padding: 2rem;
-        max-height: 60vh;
-        overflow-y: auto;
-    }
-
-    .glass-body-import::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .glass-body-import::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.03);
-        border-radius: 4px;
-    }
-
-    .glass-body-import::-webkit-scrollbar-thumb {
-        background: rgba(0, 90, 146, 0.3);
-        border-radius: 4px;
-    }
-
-    /* Glass Cards */
-    .glass-card-import {
-        background: #ffffff;
-        border: 1px solid rgba(0, 90, 146, 0.12);
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 16px rgba(0, 90, 146, 0.06);
-    }
-
-    .glass-card-header-import {
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.06) 0%,
-                rgba(0, 90, 146, 0.03) 100%);
-        padding: 0.9rem 1.2rem;
-        border-bottom: 1px solid rgba(0, 90, 146, 0.1);
-        display: flex;
-        align-items: center;
-        gap: 0.7rem;
-    }
-
-    .card-header-icon-import {
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg,
-                var(--primary-color) 0%,
-                var(--primary-dark) 100%);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .card-header-icon-import i {
-        font-size: 0.95rem;
-        color: white;
-    }
-
-    .card-title-import {
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: #1a1a1a;
-        margin: 0;
-        letter-spacing: -0.1px;
-    }
-
-    .glass-card-body-import {
-        padding: 1.2rem;
-    }
-
-    /* Form Elements */
-    .form-group-glass-import {
-        margin-bottom: 0;
-    }
-
-    .form-label-glass-import {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #495057;
-        margin-bottom: 0.6rem;
-        letter-spacing: 0.2px;
-    }
-
-    .label-icon-import {
-        font-size: 0.8rem;
-        color: var(--primary-color);
-        opacity: 0.8;
-    }
-
-    .required-star {
-        color: #dc3545;
-        font-weight: 700;
-    }
-
-    .form-select-glass-import,
-    .form-control-glass-import {
-        width: 100%;
-        padding: 0.7rem 1rem;
-        background: #ffffff;
-        border: 1px solid rgba(0, 90, 146, 0.25);
-        border-radius: 8px;
-        font-size: 0.9rem;
-        color: #212529;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 8px rgba(0, 90, 146, 0.08);
-    }
-
-    .form-select-glass-import:focus,
-    .form-control-glass-import:focus {
-        outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 4px 12px rgba(0, 90, 146, 0.15);
-        background: #ffffff;
-    }
-
-    .form-text-import {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-size: 0.8rem;
-        color: #6c757d;
-        margin-top: 0.5rem;
-        font-weight: 500;
-    }
-
-    .form-text-import i {
-        font-size: 0.75rem;
-        color: var(--primary-color);
-    }
-
-    /* Preview List */
-    .preview-list-import {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .preview-item-import {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.7rem 1rem;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border: 1px solid #dee2e6;
-        transition: all 0.2s ease;
-    }
-
-    .preview-item-import:hover {
-        background: #e9ecef;
-    }
-
-    .preview-item-number {
-        width: 28px;
-        height: 28px;
-        background: var(--primary-color);
-        color: white;
-        border-radius: 7px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
-        font-weight: 700;
-        flex-shrink: 0;
-        margin-right: 0.7rem;
-    }
-
-    .preview-item-name {
-        flex: 1;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #212529;
-    }
-
-    .preview-item-duration {
-        background: #e9ecef;
-        padding: 0.3rem 0.7rem;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: #495057;
-        white-space: nowrap;
-    }
-
-    .preview-summary-import {
-        margin-top: 0.8rem;
-        padding: 0.8rem 1rem;
-        background: #d1ecf1;
-        border-left: 3px solid #0dcaf0;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        font-size: 0.85rem;
-        color: #212529;
-        font-weight: 500;
-    }
-
-    .preview-summary-import i {
-        color: #0dcaf0;
-        font-size: 1rem;
-    }
-
-    /* Footer Glass */
-    .glass-footer-import {
-        padding: 1.2rem 2rem;
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.04) 0%,
-                rgba(0, 90, 146, 0.02) 100%);
-        border-top: 1px solid rgba(0, 90, 146, 0.1);
-        display: flex;
-        gap: 1rem;
-        justify-content: flex-end;
-    }
-
-    .btn-glass-import {
-        padding: 0.7rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .btn-glass-secondary-import {
-        background: #f8f9fa;
-        color: #495057;
-        border: 1px solid #dee2e6;
-    }
-
-    .btn-glass-secondary-import:hover {
-        background: #e9ecef;
-        color: #212529;
-    }
-
-    .btn-glass-primary-import {
-        background: linear-gradient(135deg,
-                var(--primary-color) 0%,
-                var(--primary-dark) 100%);
-        color: white;
-        box-shadow: 0 4px 12px rgba(0, 90, 146, 0.25);
-    }
-
-    .btn-glass-primary-import:hover {
-        background: linear-gradient(135deg,
-                var(--primary-dark) 0%,
-                var(--primary-color) 100%);
-        box-shadow: 0 6px 16px rgba(0, 90, 146, 0.35);
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .glass-header-import {
-            padding: 1.2rem 1.5rem;
-        }
-
-        .header-icon-wrapper-import {
-            width: 40px;
-            height: 40px;
-        }
-
-        .glass-body-import {
-            padding: 1.5rem;
-        }
-
-        .glass-footer-import {
-            flex-direction: column;
-            padding: 1rem 1.5rem;
-        }
-
-        .btn-glass-import {
-            width: 100%;
-            justify-content: center;
-        }
-    }
-
-    /* Glass Edit Button */
-    .btn-warning {
-        background: linear-gradient(135deg,
-                rgba(214, 158, 46, 0.9) 0%,
-                rgba(214, 158, 46, 0.8) 100%) !important;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        color: white !important;
-        transition: all var(--transition-speed) ease;
-    }
-
-    .btn-warning:hover {
-        background: linear-gradient(135deg,
-                rgba(214, 158, 46, 1) 0%,
-                rgba(214, 158, 46, 0.9) 100%) !important;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(214, 158, 46, 0.3);
-        color: white !important;
-    }
-
-    /* Botão Concluir Projeto - Estilos desabilitado */
-    #btn-concluir-projeto:disabled {
-        background: linear-gradient(135deg,
-                rgba(108, 117, 125, 0.6) 0%,
-                rgba(108, 117, 125, 0.5) 100%) !important;
-        border-color: rgba(108, 117, 125, 0.3) !important;
-        color: rgba(255, 255, 255, 0.6) !important;
-        cursor: not-allowed !important;
-        opacity: 0.65;
-        transform: none !important;
-        box-shadow: none !important;
-    }
-
-    #btn-concluir-projeto:disabled:hover {
-        transform: none !important;
-        box-shadow: none !important;
-    }
-
-    /* Glass Table Container */
-    .etapa-list .table-responsive {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.15) 0%,
-                rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: var(--glass-shadow);
-        position: relative;
-    }
-
-    .etapa-list .table {
-        margin: 0;
-        background: transparent;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .etapa-list .table thead th {
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.15) 0%,
-                rgba(0, 75, 121, 0.1) 100%);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-        color: var(--text-color);
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 1px;
-        padding: 1.25rem 1.5rem;
-        position: relative;
-    }
-
-    .etapa-list .table tbody tr {
-        transition: all var(--transition-speed) ease;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .etapa-list .table tbody tr:hover {
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    .etapa-list .table tbody td {
-        padding: 1.25rem 1.5rem;
-        vertical-align: middle;
-        border: none;
-        color: var(--text-color);
-        font-size: 0.9rem;
-    }
-
-    .etapa-descricao {
-        font-weight: 500;
-        color: var(--text-color) !important;
-    }
-
-    /* Glass Action Buttons */
-    .btn-floating {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.18) 0%,
-                rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 50%;
-        width: 2.5rem;
-        height: 2.5rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 15px rgba(0, 90, 146, 0.1);
-        transition: all var(--transition-speed) ease;
-        color: var(--text-color) !important;
-    }
-
-    .btn-floating:hover {
-        transform: translateY(-2px);
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.25) 0%,
-                rgba(255, 255, 255, 0.1) 100%);
-        box-shadow: 0 8px 25px rgba(0, 90, 146, 0.15);
-        color: var(--primary-color) !important;
-    }
-
-    /* Glass Modal */
-    .modal-content {
-        background: var(--glass-bg);
-        backdrop-filter: blur(25px);
-        -webkit-backdrop-filter: blur(25px);
-        border: 1px solid var(--glass-border);
-        border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0, 90, 146, 0.15);
-        overflow: hidden;
-    }
-
-    .modal-header.bg-primary {
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.95) 0%,
-                rgba(0, 75, 121, 0.9) 100%) !important;
-        backdrop-filter: blur(15px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-        color: white;
-        padding: 1.5rem 2rem;
-    }
-
-    .modal-body {
-        padding: 2rem;
-        background: transparent;
-    }
-
-    .modal-footer {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.1) 0%,
-                rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(10px);
-        border-top: 1px solid rgba(255, 255, 255, 0.15);
-        padding: 1.5rem 2rem;
-    }
-
-    /* Glass Form Controls */
-    .form-control,
-    .form-select {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.15) 0%,
-                rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 8px;
-        color: var(--text-color);
-        transition: all var(--transition-speed) ease;
-    }
-
-    .form-control:focus,
-    .form-select:focus {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.2) 0%,
-                rgba(255, 255, 255, 0.1) 100%);
-        border-color: rgba(0, 90, 146, 0.4) !important;
-        box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.1);
-    }
-
-    .form-label {
-        color: var(--text-color);
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-    }
-
-    /* Glass Mobile Cards */
-    .etapa-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 12px;
-        box-shadow: var(--glass-shadow);
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        border-left: 4px solid var(--primary-color);
-        position: relative;
-        overflow: hidden;
-        transition: all var(--transition-speed) ease;
-    }
-
-    .etapa-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-    }
-
-    .etapa-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 40px rgba(0, 90, 146, 0.12);
-    }
-
-    .etapa-card.iniciada:not(.done) {
-        border-left-color: var(--warning-color);
-    }
-
-    .etapa-card.done {
-        border-left-color: var(--success-color);
-        opacity: 0.8;
-    }
-
-    /* Glass View Toggle */
-    .view-toggle {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 1.5rem;
-    }
-
-    .view-toggle button {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.15) 0%,
-                rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: var(--text-color);
-        padding: 0.5rem 1rem;
-        font-size: 0.8rem;
-        display: flex;
-        align-items: center;
-        transition: all var(--transition-speed) ease;
-    }
-
-    .view-toggle button.active {
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.9) 0%,
-                rgba(0, 75, 121, 0.8) 100%);
-        color: white;
-        border-color: rgba(0, 90, 146, 0.3);
-    }
-
-    .view-toggle button:first-child {
-        border-radius: 8px 0 0 8px;
-    }
-
-    .view-toggle button:last-child {
-        border-radius: 0 8px 8px 0;
-    }
-
-    .view-toggle button i {
-        margin-right: 0.5rem;
-    }
-
-    /* Refined No Etapas Message */
-    .no-etapas-message {
-        background: rgba(248, 250, 252, 0.6);
-        border: 1px solid rgba(0, 90, 146, 0.1);
-        border-radius: 8px;
-        padding: 1.5rem;
-        text-align: center;
-    }
-
-    .no-etapas-message i {
-        font-size: 1.5rem;
-        color: #94a3b8;
-        margin-bottom: 0.5rem;
-        display: block;
-    }
-
-    .no-etapas-message p {
-        color: #64748b;
-        font-size: 0.875rem;
-        margin-bottom: 0;
-    }
-
-    /* Glass AJAX Flash Messages */
-    #ajax-flash-messages-container {
-        position: fixed;
-        top: 90px;
-        right: 20px;
-        z-index: 1056;
-        min-width: 300px;
-        max-width: 450px;
-    }
-
-    #ajax-flash-messages-container .alert {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 90, 146, 0.15);
-        color: var(--text-color);
-        animation: slideInRight 0.3s ease-out;
-    }
-
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    #ajax-flash-messages-container .alert.fade-out {
-        animation: slideOutRight 0.3s ease-in forwards;
-    }
-
-    @keyframes slideOutRight {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-
-    /* Drag and Drop Glass Effects */
-    .etapa-draggable-row {
-        /* cursor: grab !important; */
-        /* Removido para que apenas o handle seja 'grab' */
-        transition: all var(--transition-speed) ease;
-        position: relative;
-    }
-
-    .etapa-draggable-row.dragging {
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.08) 0%,
-                rgba(0, 90, 146, 0.03) 100%);
-        border: 2px dashed rgba(0, 90, 146, 0.2);
-        opacity: 0.5;
-        transform: scale(0.98);
-    }
-
-    .etapa-draggable-row.drag-over {
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.12) 0%,
-                rgba(0, 90, 146, 0.06) 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 15px rgba(0, 90, 146, 0.15);
-    }
-
-    /* Drop Indicator Line - Table */
-    .drop-indicator {
-        position: absolute;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg,
-                var(--primary-color) 0%,
-                rgba(0, 90, 146, 0.8) 50%,
-                var(--primary-color) 100%);
-        border-radius: 2px;
-        z-index: 1000;
-        opacity: 0;
-        transform: scaleX(0);
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 8px rgba(0, 90, 146, 0.4);
-        pointer-events: none;
-    }
-
-    .drop-indicator.show {
-        opacity: 1;
-        transform: scaleX(1);
-    }
-
-    .drop-indicator::before {
-        content: '';
-        position: absolute;
-        left: -6px;
-        top: -3px;
-        width: 9px;
-        height: 9px;
-        background: var(--primary-color);
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
-    }
-
-    .drop-indicator::after {
-        content: '';
-        position: absolute;
-        right: -6px;
-        top: -3px;
-        width: 9px;
-        height: 9px;
-        background: var(--primary-color);
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
-    }
-
-    /* Mobile Cards Drag and Drop */
-    .etapa-card {
-        transition: all var(--transition-speed) ease;
-        /* cursor: grab; */
-        /* Removido para que apenas o handle seja 'grab' */
-        position: relative;
-    }
-
-    .etapa-card:active {
-        cursor: grabbing;
-    }
-
-    .etapa-card.dragging {
-        opacity: 0.5;
-        transform: scale(0.98);
-        pointer-events: none;
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.08) 0%,
-                rgba(0, 90, 146, 0.03) 100%);
-    }
-
-    .etapa-card.drag-over {
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.12) 0%,
-                rgba(0, 90, 146, 0.06) 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 90, 146, 0.15);
-    }
-
-    /* Drop Indicator Line - Mobile Cards */
-    .card-drop-indicator {
-        position: absolute;
-        left: 1rem;
-        right: 1rem;
-        height: 3px;
-        background: linear-gradient(90deg,
-                var(--primary-color) 0%,
-                rgba(0, 90, 146, 0.8) 50%,
-                var(--primary-color) 100%);
-        border-radius: 2px;
-        z-index: 1000;
-        opacity: 0;
-        transform: scaleX(0);
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 8px rgba(0, 90, 146, 0.4);
-        pointer-events: none;
-    }
-
-    .card-drop-indicator.show {
-        opacity: 1;
-        transform: scaleX(1);
-    }
-
-    .card-drop-indicator::before {
-        content: '';
-        position: absolute;
-        left: -6px;
-        top: -3px;
-        width: 9px;
-        height: 9px;
-        background: var(--primary-color);
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
-    }
-
-    .card-drop-indicator::after {
-        content: '';
-        position: absolute;
-        right: -6px;
-        top: -3px;
-        width: 9px;
-        height: 9px;
-        background: var(--primary-color);
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
-    }
-
-    .drag-ghost-custom {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        box-shadow: 0 8px 32px rgba(0, 90, 146, 0.2);
-        border-radius: 12px;
-        padding: 1rem 1.5rem;
-        color: var(--text-color);
-        opacity: 0.95;
-    }
-
-    /* ====================================
-       RESPONSIVE DESIGN
-       ==================================== */
-
-    @media (max-width: 768px) {
-        .project-header {
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .project-header h1 {
-            font-size: 1.5rem;
-        }
-
-        .project-header p {
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .info-card .card-header,
-        .info-card .card-body,
-        .info-card .card-footer {
-            padding: 1.5rem;
-        }
-
-        .details-grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-
-        .section-divider h2 {
-            font-size: 1.25rem;
-            margin-right: 1rem;
-        }
-
-        .objective-section {
-            padding: 1.25rem;
-        }
-
-        .etapa-list .table-responsive {
-            display: none;
-        }
-
-        .etapa-list .mobile-etapas-view {
-            display: block;
-        }
-
-        .view-toggle {
-            display: flex;
-        }
-
-        .etapa-card {
-            padding: 1.25rem;
-        }
-
-        .btn-add-etapa {
-            width: 100%;
-            justify-content: center;
-        }
-    }
-
-    @media (min-width: 769px) {
-        .etapa-list .mobile-etapas-view {
-            display: none;
-        }
-
-        .etapa-list .table-responsive {
-            display: block;
-        }
-
-        .view-toggle {
-            display: none;
-        }
-    }
-
-    @media (max-width: 576px) {
-        .project-header {
-            padding: 1rem;
-        }
-
-        .project-header h1 {
-            font-size: 1.25rem;
-        }
-
-        .info-card .card-header,
-        .info-card .card-body,
-        .info-card .card-footer {
-            padding: 1rem;
-        }
-
-        .objective-section {
-            padding: 1rem;
-        }
-
-        .etapa-card {
-            padding: 1rem;
-        }
-
-        .modal-header,
-        .modal-body,
-        .modal-footer {
-            padding: 1rem;
-        }
-    }
-
-    .editable-field:hover {
-        background-color: #e2e8f0;
-    }
-
-    .editable-field-input {
-        width: 100%;
-        border: 1px solid var(--primary-color) !important;
-        border-radius: 6px;
-        padding: 0.375rem 0.75rem;
-        font-size: inherit;
-        box-shadow: 0 0 5px rgba(0, 90, 146, 0.2);
-    }
-
-    .editable-field-textarea {
-        width: 100%;
-        min-height: 80px;
-        border: 1px solid var(--primary-color) !important;
-        border-radius: 6px;
-        padding: 0.375rem 0.75rem;
-        font-size: inherit;
-        box-shadow: 0 0 5px rgba(0, 90, 146, 0.2);
-    }
-
-    .custom-context-menu {
-        position: absolute;
-        z-index: 1050;
-        display: none;
-        background-color: white;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        padding: 0.5rem 0;
-        min-width: 150px;
-    }
-
-    .custom-context-menu ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-
-    .custom-context-menu li {
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-        font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .custom-context-menu li:hover {
-        background-color: #f0f0f0;
-    }
-
-    /* Modal de Confirmação Customizado */
-    .confirm-modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.4);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 1060;
-    }
-
-    .confirm-modal {
-        background: white;
-        padding: 2rem;
-        border-radius: 8px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-        max-width: 400px;
-        text-align: center;
-    }
-
-    .confirm-modal-buttons {
-        margin-top: 1.5rem;
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-    }
-
-    /* Estilos para campos editáveis no header */
-    .project-header [data-field="titulo"] input,
-    .project-header [data-field="short_description"] textarea {
-        font-family: inherit;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-
-    .project-header [data-field="titulo"] input:focus,
-    .project-header [data-field="short_description"] textarea:focus {
-        outline: none;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
-    }
-
-    .project-header [data-field="short_description"] textarea {
-        scrollbar-width: thin;
-        scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-    }
-
-    .project-header [data-field="short_description"] textarea::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .project-header [data-field="short_description"] textarea::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .project-header [data-field="short_description"] textarea::-webkit-scrollbar-thumb {
-        background-color: rgba(255, 255, 255, 0.3);
-        border-radius: 3px;
-    }
-
-    .project-header [data-field="short_description"] textarea::-webkit-scrollbar-thumb:hover {
-        background-color: rgba(255, 255, 255, 0.5);
-    }
-
-    /* Prevenir que campos editáveis empurrem elementos abaixo */
-    .project-header {
-        position: relative;
-    }
-
-    .project-header .mb-2 {
-        min-height: 24px;
-        /* Altura mínima para o parágrafo da descrição */
-    }
-
-    .project-header-main-row {
-        gap: 0.75rem;
-    }
-
-    .project-header-main-content {
-        flex: 1;
-        min-width: 0;
-        max-width: calc(100% - 120px);
-    }
-
-    .project-header-description {
-        max-height: none;
-        overflow: visible;
-    }
-
-    .project-compact-header {
-        position: fixed;
-        top: var(--project-compact-top, 74px);
-        left: 1rem;
-        right: 1rem;
-        z-index: 1035;
-        opacity: 0;
-        transform: translateY(-10px) scale(0.985);
-        pointer-events: none;
-        transition:
-            opacity 0.22s ease,
-            transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
-        will-change: opacity, transform;
-    }
-
-    .project-compact-header.is-visible {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        pointer-events: auto;
-    }
-
-    .project-compact-inner {
-        width: min(1080px, calc((100vw - 2rem) * 0.7));
-        margin: 0 auto;
-        border-radius: 12px;
-        border: 1px solid rgba(183, 213, 242, 0.9);
-        background: rgba(233, 244, 255, 0.96);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        box-shadow: 0 10px 24px rgba(37, 87, 138, 0.18);
-        padding: 0.55rem 0.8rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.85rem;
-    }
-
-    .project-compact-main {
-        min-width: 0;
-        flex: 1;
-    }
-
-    .project-compact-title {
-        margin: 0;
-        font-size: 0.98rem;
-        font-weight: 700;
-        color: #1f2f45;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .project-compact-description {
-        margin: 0.3rem 0 0;
-        font-size: 0.8rem;
-        color: #4f6680;
-        line-height: 1.35;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .project-compact-dates {
-        margin-top: 0.32rem;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.45rem;
-    }
-
-    .project-compact-dates span {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.28rem;
-        border: 1px solid #d8e6f4;
-        background: #f4f9ff;
-        color: #45617f;
-        border-radius: 999px;
-        padding: 0.18rem 0.52rem;
-        font-size: 0.74rem;
-        font-weight: 600;
-        line-height: 1.2;
-    }
-
-    .project-compact-dates span i {
-        color: #5d7693;
-        font-size: 0.67rem;
-    }
-
-    .project-compact-back {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        border-radius: 8px;
-        padding: 0.38rem 0.74rem;
-        font-size: 0.78rem;
-        font-weight: 600;
-        border: 1px solid #d7e4f1 !important;
-        background: #ffffff;
-        color: #415970 !important;
-        text-decoration: none;
-        white-space: nowrap;
-        transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
-    }
-
-    .project-compact-back:hover {
-        background: #f4f8fc;
-        border-color: #c6d9ec !important;
-        color: #2f455d !important;
-    }
-
-    .project-compact-header.is-hidden-by-edit {
-        display: none !important;
-    }
-
-    .project-header-sentinel {
-        width: 100%;
-        height: 1px;
-        pointer-events: none;
-    }
-
-    @media (max-width: 991.98px) {
-        .project-compact-header {
-            display: none !important;
-        }
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='pages/project-detail.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -2047,7 +11,7 @@
     <!-- Cabeçalho do projeto -->
     <div class="project-header" id="projectMainHeader">
         <!-- Mensagens flash dinâmicas para AJAX -->
-        <div id="ajax-flash-messages" class="mb-2" style="display:none;">
+        <div id="ajax-flash-messages" class="mb-2 ds-hidden">
             <div class="alert alert-info alert-dismissible fade show py-2 px-3" role="alert">
                 <span id="ajax-flash-message-text" class="small"></span>
                 <button type="button" class="btn-close p-1" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -2057,7 +21,7 @@
         <div class="d-flex justify-content-between align-items-start mb-2 project-header-main-row">
             <div class="project-header-main-content">
                 <h1 class="mb-2" data-field="titulo" data-value="{{ project.titulo }}">{{ project.titulo }}</h1>
-                <p class="mb-2 project-header-description" style="opacity: 0.92; font-size: 0.875rem; line-height: 1.4;"
+                <p class="mb-2 project-header-description project-header-description-muted"
                     data-field="short_description" data-value="{{ project.short_description or '' }}">
                     {{ project.short_description if project.short_description else '' }}
                 </p>
@@ -2187,8 +151,7 @@
                     <div class="detail-item">
                         <strong>Área Responsável{% if not is_admin_user and current_user_obj and current_user_obj.get_areas()|length <= 1 %} <i class="fas fa-lock text-muted small"
                                 title="Você possui apenas uma área"></i>{% endif %}</strong>
-                        <span data-field="area_responsavel" data-value="{{ project.area_responsavel or '' }}" {% if not
-                            is_admin_user and current_user_obj and current_user_obj.get_areas()|length <= 1 %} style="cursor: default;" {% endif %}>
+                        <span class="project-area-value{% if not is_admin_user and current_user_obj and current_user_obj.get_areas()|length <= 1 %} ds-cursor-default{% endif %}" data-field="area_responsavel" data-value="{{ project.area_responsavel or '' }}">
                             {% if project.area_responsavel %}
                             <div class="small"><i class="fas fa-users me-1 text-primary"></i> {{
                                 project.area_responsavel }}</div>
@@ -2328,8 +291,7 @@
                     </div>
 
                     <!-- Observação + Ver Tarefas (mesma linha) -->
-                    <div class="info-row info-row-observacao-tarefas d-flex justify-content-between align-items-start gap-3"
-                        style="border-top: 1px solid rgba(0, 90, 146, 0.1); padding-top: 1rem; margin-top: 1rem;">
+                    <div class="info-row info-row-observacao-tarefas d-flex justify-content-between align-items-start gap-3 project-observacao-divider">
                         <div class="flex-grow-1 min-w-0">
                             <i class="fas fa-comment-alt me-2 text-secondary"></i>
                             <strong>Observação:</strong>
@@ -2361,16 +323,16 @@
             <button type="button" class="btn btn-warning btn-sm btn-edit-project">
                 <i class="fas fa-edit me-1"></i>Editar Projeto
             </button>
-            <button type="button" class="btn btn-success btn-sm btn-save-project" style="display: none;">
+            <button type="button" class="btn btn-success btn-sm btn-save-project ds-hidden">
                 <i class="fas fa-save me-1"></i>Salvar
             </button>
-            <button type="button" class="btn btn-secondary btn-sm btn-cancel-edit" style="display: none;">
+            <button type="button" class="btn btn-secondary btn-sm btn-cancel-edit ds-hidden">
                 <i class="fas fa-times me-1"></i>Cancelar
             </button>
 
             {% if project.status == 'Vigente' %}
             <form method="POST" action="{{ url_for('main.concluir_project', project_id=project.id) }}"
-                style="display: inline;">
+                class="inline-form">
                 <button type="submit" id="btn-concluir-projeto" class="btn btn-success btn-sm btn-conclude-project" {%
                     if not project.todas_etapas_concluidas %}disabled{% endif %}
                     data-total-etapas="{{ project.etapas|length }}"
@@ -2423,36 +385,32 @@
                             <label for="etapa_descricao_modal" class="form-label fw-medium">
                                 Descrição da Etapa <span class="text-danger">*</span>
                             </label>
-                            <textarea class="form-control" id="etapa_descricao_modal" name="etapa_descricao" rows="3"
-                                required placeholder="Digite a descrição da etapa..."
-                                style="border: 1px solid #ced4da !important;"></textarea>
+                            <textarea class="form-control project-modal-input" id="etapa_descricao_modal" name="etapa_descricao" rows="3"
+                                required placeholder="Digite a descrição da etapa..."></textarea>
                         </div>
 
                         <!-- Comentários -->
                         <div class="mb-3">
                             <label for="etapa_comentarios_modal" class="form-label fw-medium">Comentários</label>
-                            <textarea class="form-control" id="etapa_comentarios_modal" name="etapa_comentarios"
-                                rows="2" placeholder="Comentários adicionais (opcional)"
-                                style="border: 1px solid #ced4da !important;"></textarea>
+                            <textarea class="form-control project-modal-input" id="etapa_comentarios_modal" name="etapa_comentarios"
+                                rows="2" placeholder="Comentários adicionais (opcional)"></textarea>
                         </div>
 
                         <!-- Data e Responsável -->
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label for="etapa_data_inicio_modal" class="form-label fw-medium">Data de Início</label>
-                                <input type="date" class="form-control" id="etapa_data_inicio_modal"
-                                    name="etapa_data_inicio" style="border: 1px solid #ced4da !important;">
+                                <input type="date" class="form-control project-modal-input" id="etapa_data_inicio_modal"
+                                    name="etapa_data_inicio">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label for="etapa_data_fim_modal" class="form-label fw-medium">Data de Fim</label>
-                                <input type="date" class="form-control" id="etapa_data_fim_modal" name="etapa_data_fim"
-                                    style="border: 1px solid #ced4da !important;">
+                                <input type="date" class="form-control project-modal-input" id="etapa_data_fim_modal" name="etapa_data_fim">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label for="etapa_responsavel_modal" class="form-label fw-medium">Responsável</label>
-                                <input type="text" class="form-control" id="etapa_responsavel_modal"
-                                    name="etapa_responsavel" placeholder="Nome do responsável"
-                                    style="border: 1px solid #ced4da !important;">
+                                <input type="text" class="form-control project-modal-input" id="etapa_responsavel_modal"
+                                    name="etapa_responsavel" placeholder="Nome do responsável">
                             </div>
                         </div>
 
@@ -2564,7 +522,7 @@
                         </div>
 
                         <!-- Card: Preview das Etapas -->
-                        <div id="model-preview-container" class="glass-card-import" style="display: none;">
+                        <div id="model-preview-container" class="glass-card-import ds-hidden">
                             <div class="glass-card-header-import">
                                 <div class="card-header-icon-import">
                                     <i class="fas fa-eye"></i>
@@ -2599,38 +557,26 @@
 
     <section class="etapa-list">
         {% if project.etapas %}
-        <!-- Toggle para alternar entre visualizações em mobile -->
-        <div class="view-toggle">
-            <button type="button" class="view-table active" data-view="table">
-                <i class="fas fa-table"></i>Tabela
-            </button>
-            <button type="button" class="view-cards" data-view="cards">
-                <i class="fas fa-th-large"></i>Cards
-            </button>
-        </div>
-
-        <!-- Visualização de tabela (padrão para desktop) -->
         <div class="table-responsive">
             <table class="table table-hover align-middle table-etapas bg-white table-sm">
                 <thead>
                     <tr>
-                        <th style="width: 3%;"></th>
-                        <th style="width: 5%;">#</th>
-                        <th style="min-width: 35%;">Descrição</th>
-                        <th style="width: 12%;">Data Início</th>
-                        <th style="width: 12%;">Data Fim</th>
-                        <th style="width: 15%;">Responsável</th>
-                        <th style="width: 10%;" class="text-center">Iniciada</th>
-                        <th style="width: 10%;" class="text-center">Concluída</th>
-                        <th style="width: 5%;" class="text-center">Ações</th>
+                        <th class="col-w-3"></th>
+                        <th class="col-w-5">#</th>
+                        <th class="col-min-w-35">Descrição</th>
+                        <th class="col-w-12">Data Início</th>
+                        <th class="col-w-12">Data Fim</th>
+                        <th class="col-w-15">Responsável</th>
+                        <th class="col-w-10 text-center">Iniciada</th>
+                        <th class="col-w-10 text-center">Concluída</th>
+                        <th class="col-w-5 text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="etapas-tbody">
                     {% for etapa in project.etapas %}
                     <tr class="{{ 'etapa-done' if etapa.done else ('etapa-iniciada' if etapa.iniciada else '') }} etapa-draggable-row"
                         data-etapa-id="{{ etapa.id }}">
-                        <td class="drag-handle" draggable="true"
-                            style="cursor: grab; text-align: center; color: #a0aec0;"><i
+                        <td class="drag-handle etapa-drag-handle" draggable="true"><i
                                 class="fas fa-grip-vertical"></i></td>
                         <td>{{ project.id }}.{{ loop.index }}</td>
                         <td
@@ -2638,22 +584,22 @@
                             <span class="editable-field" data-field="descricao" data-etapa-id="{{ etapa.id }}">{{
                                 etapa.descricao }}</span>
                             {% if etapa.comentarios %}
-                            <div class="small text-muted mt-1 etapa-comentario-display" data-etapa-id="{{ etapa.id }}"
-                                style="cursor: pointer;" title="Clique para editar">
+                            <div class="small text-muted mt-1 etapa-comentario-display ds-cursor-pointer" data-etapa-id="{{ etapa.id }}"
+                                title="Clique para editar">
                                 <i class="fas fa-comment-alt me-1"></i> {{ etapa.comentarios }}
                             </div>
                             {% else %}
                             {% if is_admin_user or (current_user_obj and
                             current_user_obj.has_access_to_area(project.area_responsavel)) %}
-                            <div class="small text-muted mt-1 etapa-comentario-placeholder"
-                                data-etapa-id="{{ etapa.id }}" data-comentario="" style="cursor: pointer;">
+                            <div class="small text-muted mt-1 etapa-comentario-placeholder ds-cursor-pointer"
+                                data-etapa-id="{{ etapa.id }}" data-comentario="">
                                 <i class="fas fa-comment-medical me-1"></i> adicionar comentário
                             </div>
                             {% endif %}
                             {% endif %}
                             <!-- Hidden button to store comment data -->
-                            <button class="btn-comment-data" data-etapa-id="{{ etapa.id }}"
-                                data-comentario="{{ etapa.comentarios or '' }}" style="display: none;"></button>
+                            <button class="btn-comment-data ds-hidden" data-etapa-id="{{ etapa.id }}"
+                                data-comentario="{{ etapa.comentarios or '' }}"></button>
                         </td>
                         <td class="{{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
                             <span class="editable-field" data-field="data_inicio" data-etapa-id="{{ etapa.id }}"
@@ -2721,111 +667,6 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </div>
-
-        <!-- Visualização de cards (para dispositivos móveis) -->
-        <div class="mobile-etapas-view" id="etapas-cards-container">
-            {% for etapa in project.etapas %}
-            <div class="etapa-card {{ 'done' if etapa.done else ('iniciada' if etapa.iniciada else '') }}"
-                data-etapa-id="{{ etapa.id }}">
-                <div class="etapa-card-header d-flex justify-content-between">
-                    <div class="d-flex align-items-center">
-                        <span class="card-drag-handle" draggable="true"
-                            style="cursor: grab; padding-right: 10px; color: #a0aec0;"><i
-                                class="fas fa-grip-vertical"></i></span>
-                        <div class="etapa-card-numero">{{ project.id }}.{{ loop.index }}</div>
-                    </div>
-                    <div class="etapa-card-badges">
-                        <!-- Os badges ficam apenas nos botões para evitar duplicação -->
-                    </div>
-                </div>
-                <div class="etapa-card-descricao">
-                    <span class="editable-field" data-field="descricao" data-etapa-id="{{ etapa.id }}">{{
-                        etapa.descricao }}</span>
-                </div>
-                {% if etapa.comentarios %}
-                <div class="etapa-card-comentarios small text-muted etapa-comentario-display"
-                    data-etapa-id="{{ etapa.id }}" style="cursor: pointer;" title="Clique para editar">
-                    <i class="fas fa-comment-alt me-1"></i> {{ etapa.comentarios }}
-                </div>
-                {% else %}
-                {% if is_admin_user or (current_user_obj and
-                current_user_obj.has_access_to_area(project.area_responsavel)) %}
-                <div class="etapa-card-comentarios small text-muted etapa-comentario-placeholder"
-                    data-etapa-id="{{ etapa.id }}" data-comentario="" style="cursor: pointer;">
-                    <i class="fas fa-comment-medical me-1"></i> adicionar comentário
-                </div>
-                {% endif %}
-                {% endif %}
-                <!-- Hidden button to store comment data -->
-                <button class="btn-comment-data" data-etapa-id="{{ etapa.id }}"
-                    data-comentario="{{ etapa.comentarios or '' }}" style="display: none;"></button>
-                <div class="etapa-card-info">
-                    <span>
-                        <i class="far fa-calendar-alt"></i>Início:
-                        <span class="editable-field" data-field="data_inicio" data-etapa-id="{{ etapa.id }}"
-                            data-original-value="{{ etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else '' }}">
-                            {{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}
-                        </span>
-                    </span>
-                    <span>
-                        <i class="far fa-calendar-check"></i>Fim:
-                        <span class="editable-field" data-field="data_fim" data-etapa-id="{{ etapa.id }}"
-                            data-original-value="{{ etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '' }}">
-                            {{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}
-                        </span>
-                    </span>
-                    <span>
-                        <i class="fas fa-user"></i>
-                        <span class="editable-field" data-field="responsavel" data-etapa-id="{{ etapa.id }}">
-                            {{ etapa.responsavel if etapa.responsavel else '-' }}
-                        </span>
-                    </span>
-                </div>
-
-                <div class="etapa-card-status">
-                    <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-iniciada"
-                        data-etapa-id="{{ etapa.id }}"
-                        title="{{ 'Marcar como não iniciada' if etapa.iniciada else 'Marcar como iniciada' }}" {% if not
-                        (is_admin_user or (current_user_obj and
-                        current_user_obj.has_access_to_area(project.area_responsavel))) %}disabled{% endif %}>
-                        {% if etapa.iniciada %}
-                        <span class="badge rounded-pill bg-success-light"><i
-                                class="fas fa-check-circle me-1"></i>Iniciada</span>
-                        {% else %}
-                        <span class="badge rounded-pill bg-secondary-light"><i class="far fa-circle me-1"></i>Não
-                            iniciada</span>
-                        {% endif %}
-                    </button>
-
-                    <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-done"
-                        data-etapa-id="{{ etapa.id }}" {{ 'disabled' if (not etapa.iniciada and not etapa.done) or not
-                        (is_admin_user or (current_user_obj and
-                        current_user_obj.has_access_to_area(project.area_responsavel))) else '' }}
-                        title="{{ 'Marcar como pendente' if etapa.done else ('Marcar como concluída (necessário iniciar primeiro)' if not etapa.iniciada else 'Marcar como concluída') }}">
-                        {% if etapa.done %}
-                        <span class="badge rounded-pill bg-success-light"><i
-                                class="fas fa-check-square me-1"></i>Concluída</span>
-                        {% else %}
-                        <span class="badge rounded-pill bg-danger-light"><i
-                                class="far fa-square me-1"></i>Pendente</span>
-                        {% endif %}
-                    </button>
-                </div>
-
-                {% if is_admin_user or (current_user_obj and
-                current_user_obj.has_access_to_area(project.area_responsavel)) %}
-                <div class="etapa-card-actions">
-                    <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post" class="d-inline"
-                        onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
-                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir Etapa">
-                            <i class="fas fa-trash"></i> Excluir
-                        </button>
-                    </form>
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
         </div>
         {% else %}
         <div class="no-etapas-message">
@@ -3040,189 +881,8 @@
         }
         // FIM: Script de Drag and Drop para Etapas
 
-        // INÍCIO: Script de Drag and Drop para Etapas (CARDS MOBILE)
-        const cardsContainer = document.getElementById('etapas-cards-container');
-        if (cardsContainer) {
-            let draggedCard = null;
-            let originalCardIndex = -1;
-            let localGhostElement = null;
-            let cardDropIndicator = null; // Indicador de drop para cards
-
-            // Criar o indicador de drop para cards
-            function createCardDropIndicator() {
-                if (!cardDropIndicator) {
-                    cardDropIndicator = document.createElement('div');
-                    cardDropIndicator.className = 'card-drop-indicator';
-                    document.body.appendChild(cardDropIndicator);
-                }
-                return cardDropIndicator;
-            }
-
-            // Mostrar indicador de drop para cards
-            function showCardDropIndicator(targetCard, position) {
-                const indicator = createCardDropIndicator();
-                const rect = targetCard.getBoundingClientRect();
-
-                indicator.style.position = 'fixed';
-                indicator.style.left = (rect.left + 16) + 'px';
-                indicator.style.width = (rect.width - 32) + 'px';
-
-                if (position === 'top') {
-                    indicator.style.top = (rect.top - 2) + 'px';
-                } else {
-                    indicator.style.top = (rect.bottom - 1) + 'px';
-                }
-
-                indicator.classList.add('show');
-            }
-
-            // Esconder indicador de drop para cards
-            function hideCardDropIndicator() {
-                if (cardDropIndicator) {
-                    cardDropIndicator.classList.remove('show');
-                }
-            }
-
-            cardsContainer.addEventListener('dragstart', function (e) {
-                const handle = e.target.closest('.card-drag-handle');
-                if (handle) {
-                    draggedCard = handle.closest('.etapa-card');
-                    if (!draggedCard) return;
-
-                    originalCardIndex = Array.from(draggedCard.parentNode.children).indexOf(draggedCard);
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', draggedCard.dataset.etapaId);
-
-                    localGhostElement = document.createElement('div');
-                    localGhostElement.classList.add('drag-ghost-custom');
-                    const cardDescElement = draggedCard.querySelector('.etapa-card-descricao');
-                    let cardText = 'Movendo etapa...';
-                    if (cardDescElement) {
-                        const fullText = cardDescElement.innerText.trim();
-                        cardText = fullText.substring(0, 60) + (fullText.length > 60 ? '...' : '');
-                    }
-                    localGhostElement.innerHTML = `<i class="fas fa-arrows-alt me-2"></i>${cardText}`;
-                    document.body.appendChild(localGhostElement);
-
-                    e.dataTransfer.setDragImage(localGhostElement, 20, 20);
-
-                    setTimeout(() => {
-                        if (draggedCard) draggedCard.classList.add('dragging');
-                        if (localGhostElement && localGhostElement.parentNode) {
-                            localGhostElement.parentNode.removeChild(localGhostElement);
-                            localGhostElement = null;
-                        }
-                    }, 0);
-                } else {
-                    e.preventDefault(); // Impede o início do arraste se não for no handle
-                }
-            });
-
-            cardsContainer.addEventListener('dragend', function (e) {
-                if (draggedCard) {
-                    draggedCard.classList.remove('dragging');
-                    draggedCard = null;
-                }
-                if (localGhostElement && localGhostElement.parentNode) {
-                    localGhostElement.parentNode.removeChild(localGhostElement);
-                    localGhostElement = null;
-                }
-
-                hideCardDropIndicator();
-                cardsContainer.querySelectorAll('.etapa-card.drag-over').forEach(c => c.classList.remove('drag-over'));
-
-                const projectId = "{{ project.id }}";
-                const allCards = cardsContainer.querySelectorAll('.etapa-card');
-                allCards.forEach((card, index) => {
-                    const cardNumeroElement = card.querySelector('.etapa-card-numero');
-                    if (cardNumeroElement) {
-                        cardNumeroElement.textContent = projectId + '.' + (index + 1);
-                    }
-                });
-            });
-
-            cardsContainer.addEventListener('dragover', function (e) {
-                e.preventDefault();
-                const targetCard = e.target.closest('.etapa-card[draggable="true"]');
-
-                if (targetCard && targetCard !== draggedCard) {
-                    const rect = targetCard.getBoundingClientRect();
-                    const mouseY = e.clientY;
-                    const cardMiddle = rect.top + rect.height / 2;
-
-                    // Determinar se deve inserir antes ou depois
-                    const position = mouseY < cardMiddle ? 'top' : 'bottom';
-
-                    // Limpar classes anteriores
-                    cardsContainer.querySelectorAll('.etapa-card.drag-over').forEach(c => c.classList.remove('drag-over'));
-
-                    // Mostrar indicador na posição correta
-                    showCardDropIndicator(targetCard, position);
-
-                    e.dataTransfer.dropEffect = 'move';
-                }
-            });
-
-            cardsContainer.addEventListener('dragleave', function (e) {
-                const relatedTarget = e.relatedTarget;
-
-                if (!cardsContainer.contains(relatedTarget) && draggedCard) {
-                    hideCardDropIndicator();
-                    cardsContainer.querySelectorAll('.etapa-card.drag-over').forEach(c => c.classList.remove('drag-over'));
-                }
-            });
-
-            cardsContainer.addEventListener('drop', function (e) {
-                e.preventDefault();
-                const targetCard = e.target.closest('.etapa-card[draggable="true"]');
-
-                hideCardDropIndicator();
-                cardsContainer.querySelectorAll('.etapa-card.drag-over').forEach(c => c.classList.remove('drag-over'));
-
-                if (draggedCard && targetCard && targetCard !== draggedCard) {
-                    const rect = targetCard.getBoundingClientRect();
-                    const mouseY = e.clientY;
-                    const cardMiddle = rect.top + rect.height / 2;
-                    const insertBefore = mouseY < cardMiddle;
-
-                    // Inserir na posição correta baseado na posição do mouse
-                    if (insertBefore) {
-                        targetCard.parentNode.insertBefore(draggedCard, targetCard);
-                    } else {
-                        targetCard.parentNode.insertBefore(draggedCard, targetCard.nextSibling);
-                    }
-
-                    const etapaCards = cardsContainer.querySelectorAll('.etapa-card');
-                    const etapaIdsOrdenadas = Array.from(etapaCards).map(card => card.dataset.etapaId);
-
-                    fetch(`/project/{{ project.id }}/etapas/reordenar`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
-                        },
-                        body: JSON.stringify({ etapa_ids: etapaIdsOrdenadas })
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                showAjaxFlashMessage(data.message || 'Ordem das etapas atualizada!', 'success');
-                            } else {
-                                showAjaxFlashMessage(data.message || 'Erro ao reordenar etapas.', 'danger');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erro na requisição de reordenar cards:', error);
-                            showAjaxFlashMessage('Erro de comunicação ao reordenar etapas.', 'danger');
-                        });
-                }
-            });
-        }
-        // FIM: Script de Drag and Drop para Etapas (CARDS MOBILE)
-
         // --- INÍCIO: Lógica de Edição Inline ---
-        const mainContent = document.querySelector('.etapa-list'); // Usar um container pai que engloba tabela e cards
+        const mainContent = document.querySelector('.etapa-list');
         const contextMenu = document.getElementById('date-context-menu');
         let currentTargetElement = null;
 
@@ -3237,7 +897,7 @@
                 }
 
                 // Impede se a etapa estiver concluída
-                if (target.closest('tr.etapa-done, .etapa-card.done')) {
+                if (target.closest('tr.etapa-done')) {
                     return;
                 }
 
@@ -3295,7 +955,7 @@
 
                                 // Se a data de início foi alterada, atualiza também a data de fim da mesma etapa
                                 if (field === 'data_inicio' && data.updatedEndDate) {
-                                    const etapaRow = elementToUpdate.closest('tr, .etapa-card');
+                                    const etapaRow = elementToUpdate.closest('tr');
                                     const endDateElement = etapaRow.querySelector('.editable-field[data-field="data_fim"]');
                                     if (endDateElement) {
                                         endDateElement.textContent = data.updatedEndDateDisplay;
@@ -3342,7 +1002,7 @@
                 if (!target) return;
 
                 // Impede a edição se a etapa estiver concluída
-                if (target.closest('tr.etapa-done, .etapa-card.done')) {
+                if (target.closest('tr.etapa-done')) {
                     showAjaxFlashMessage('Não é possível editar uma etapa concluída.', 'warning');
                     return;
                 }
@@ -3406,7 +1066,7 @@
 
                                 // Lógica para data de fim e cascata
                                 if (field === 'data_inicio' && data.updatedEndDate) {
-                                    const etapaRow = target.closest('tr, .etapa-card');
+                                    const etapaRow = target.closest('tr');
                                     const endDateElement = etapaRow.querySelector('.editable-field[data-field="data_fim"]');
                                     if (endDateElement) {
                                         endDateElement.textContent = data.updatedEndDateDisplay;
@@ -3553,39 +1213,37 @@
             }
         }
 
-        function updateIniciadaButton(button, iniciada, isMobile = false) {
+        function updateIniciadaButton(button, iniciada) {
             const badge = button.querySelector('.badge');
             if (!badge) return;
             if (iniciada) {
                 badge.className = 'badge rounded-pill bg-success-light';
-                badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>' + (isMobile ? 'Iniciada' : 'Sim');
+                badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>Sim';
                 button.title = 'Marcar como não iniciada';
             } else {
                 badge.className = 'badge rounded-pill bg-secondary-light';
-                badge.innerHTML = '<i class="far fa-circle me-1"></i>' + (isMobile ? 'Não iniciada' : 'Não');
+                badge.innerHTML = '<i class="far fa-circle me-1"></i>Não';
                 button.title = 'Marcar como iniciada';
             }
         }
 
-        function updateDoneButton(button, done, iniciada, isMobile = false) {
+        function updateDoneButton(button, done, iniciada) {
             const badge = button.querySelector('.badge');
             if (!badge) return;
             if (done) {
                 badge.className = 'badge rounded-pill bg-success-light';
-                badge.innerHTML = '<i class="fas fa-check-square me-1"></i>' + (isMobile ? 'Concluída' : 'Sim');
+                badge.innerHTML = '<i class="fas fa-check-square me-1"></i>Sim';
                 button.title = 'Marcar como pendente';
             } else {
                 badge.className = 'badge rounded-pill bg-danger-light';
-                badge.innerHTML = '<i class="far fa-square me-1"></i>' + (isMobile ? 'Pendente' : 'Não');
+                badge.innerHTML = '<i class="far fa-square me-1"></i>Não';
                 button.title = iniciada ? 'Marcar como concluída' : 'Marcar como concluída (necessário iniciar primeiro)';
             }
             button.disabled = !iniciada && !done;
         }
 
-        function updateRowAndCardAppearance(etapaId, iniciada, done) {
+        function updateRowAppearance(etapaId, iniciada, done) {
             const tableRow = document.querySelector(`#etapas-tbody tr[data-etapa-id="${etapaId}"]`);
-            const mobileCard = document.querySelector(`.etapa-card[data-etapa-id="${etapaId}"]`);
-
             if (tableRow) {
                 tableRow.classList.remove('etapa-done', 'etapa-iniciada');
                 // Corrigido para incluir a 6ª célula (Responsável)
@@ -3600,38 +1258,6 @@
                     }
                 }
             }
-            if (mobileCard) {
-                mobileCard.classList.remove('done', 'iniciada');
-                const descCard = mobileCard.querySelector('.etapa-card-descricao');
-                const badgesContainer = mobileCard.querySelector('.etapa-card-badges');
-
-                if (done) {
-                    mobileCard.classList.add('done');
-                    if (descCard) descCard.classList.add('text-decoration-line-through', 'text-muted');
-                } else {
-                    if (descCard) descCard.classList.remove('text-decoration-line-through', 'text-muted');
-                    if (iniciada) {
-                        mobileCard.classList.add('iniciada');
-                    }
-                }
-
-                // Atualiza a aparência do responsável no card também
-                const responsavelCard = mobileCard.querySelector('.editable-field[data-field="responsavel"]');
-                if (responsavelCard) {
-                    if (done) {
-                        responsavelCard.classList.add('text-decoration-line-through', 'text-muted');
-                    } else {
-                        responsavelCard.classList.remove('text-decoration-line-through', 'text-muted');
-                    }
-                }
-
-                // No mobile, os badges ficam apenas nos botões, não duplicamos no header
-                if (badgesContainer) {
-                    badgesContainer.innerHTML = '';
-                }
-
-
-            }
         }
 
         // Função para verificar se todas as etapas estão iniciadas e concluídas
@@ -3639,7 +1265,7 @@
             const btnConcluir = document.getElementById('btn-concluir-projeto');
             if (!btnConcluir) return; // Se o botão não existe, não faz nada
 
-            // Pega todas as etapas (tabela e cards)
+            // Pega todas as etapas da tabela
             const todasEtapas = document.querySelectorAll('.toggle-iniciada');
             const totalEtapas = parseInt(btnConcluir.dataset.totalEtapas) || todasEtapas.length;
 
@@ -3663,7 +1289,7 @@
                     const isIniciada = btn.querySelector('.bg-success-light') !== null;
 
                     // Encontra o botão de concluída correspondente
-                    const btnDone = btn.closest('tr, .etapa-card')?.querySelector(`.toggle-done[data-etapa-id="${etapaId}"]`);
+                    const btnDone = btn.closest('tr')?.querySelector(`.toggle-done[data-etapa-id="${etapaId}"]`);
                     const isDone = btnDone?.querySelector('.bg-success-light') !== null;
 
                     if (!isIniciada || !isDone) {
@@ -3685,7 +1311,6 @@
         document.querySelectorAll('.toggle-iniciada').forEach(button => {
             button.addEventListener('click', function () {
                 const etapaId = this.dataset.etapaId;
-                const isMobile = !!this.closest('.etapa-card');
 
                 fetch(`/etapa/${etapaId}/toggle_iniciada`, {
                     method: 'POST',
@@ -3698,20 +1323,20 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            updateIniciadaButton(this, data.iniciada, isMobile);
+                            updateIniciadaButton(this, data.iniciada);
 
-                            const commonAncestor = this.closest('tr.etapa-draggable-row') || this.closest('.etapa-card');
+                            const commonAncestor = this.closest('tr.etapa-draggable-row');
                             if (commonAncestor) {
                                 const doneButton = commonAncestor.querySelector(`.toggle-done[data-etapa-id="${etapaId}"]`);
                                 if (doneButton) {
-                                    updateDoneButton(doneButton, data.done, data.iniciada, isMobile);
+                                    updateDoneButton(doneButton, data.done, data.iniciada);
                                 }
                             }
-                            updateRowAndCardAppearance(etapaId, data.iniciada, data.done);
+                            updateRowAppearance(etapaId, data.iniciada, data.done);
                             if (data.message) {
                                 showAjaxFlashMessage(data.message, 'info');
                             } else {
-                                showAjaxFlashMessage(isMobile ? (data.iniciada ? 'Etapa marcada como iniciada.' : 'Etapa marcada como não iniciada.') : (data.iniciada ? 'Iniciada.' : 'Não iniciada.'), 'success');
+                                showAjaxFlashMessage(data.iniciada ? 'Iniciada.' : 'Não iniciada.', 'success');
                             }
                             // Atualizar estado do botão de concluir projeto
                             verificarEAtualizarBotaoConcluir();
@@ -3730,7 +1355,6 @@
             button.addEventListener('click', function () {
                 if (this.disabled) return;
                 const etapaId = this.dataset.etapaId;
-                const isMobile = !!this.closest('.etapa-card');
 
                 fetch(`/etapa/${etapaId}/toggle`, {
                     method: 'POST',
@@ -3743,12 +1367,12 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            updateDoneButton(this, data.done, data.iniciada, isMobile);
-                            updateRowAndCardAppearance(etapaId, data.iniciada, data.done);
+                            updateDoneButton(this, data.done, data.iniciada);
+                            updateRowAppearance(etapaId, data.iniciada, data.done);
                             if (data.message) {
                                 showAjaxFlashMessage(data.message, 'info');
                             } else {
-                                showAjaxFlashMessage(isMobile ? (data.done ? 'Etapa marcada como concluída.' : 'Etapa marcada como pendente.') : (data.done ? 'Concluída.' : 'Pendente.'), 'success');
+                                showAjaxFlashMessage(data.done ? 'Concluída.' : 'Pendente.', 'success');
                             }
                             // Atualizar estado do botão de concluir projeto
                             verificarEAtualizarBotaoConcluir();
@@ -3762,58 +1386,6 @@
                     });
             });
         });
-
-        const tableView = document.querySelector('.table-responsive');
-        const cardsView = document.querySelector('.mobile-etapas-view');
-        const viewToggleButtons = document.querySelectorAll('.view-toggle button');
-
-        if (tableView && cardsView && viewToggleButtons.length > 0) {
-            function updateView(isMobile) {
-                if (isMobile) {
-                    tableView.style.display = 'none';
-                    cardsView.style.display = 'block';
-                    document.querySelector('.view-cards').classList.add('active');
-                    document.querySelector('.view-table').classList.remove('active');
-                } else {
-                    tableView.style.display = 'block';
-                    cardsView.style.display = 'none';
-                    document.querySelector('.view-table').classList.add('active');
-                    document.querySelector('.view-cards').classList.remove('active');
-                }
-            }
-
-            let isMobile = window.innerWidth < 768;
-            updateView(isMobile);
-
-            window.addEventListener('resize', () => {
-                let newIsMobile = window.innerWidth < 768;
-                if (newIsMobile !== isMobile) {
-                    isMobile = newIsMobile;
-                    if (document.activeElement && !document.activeElement.closest('.view-toggle')) {
-                        updateView(isMobile);
-                    } else if (!document.activeElement || document.activeElement === document.body) {
-                        updateView(isMobile);
-                    }
-                }
-            });
-
-            viewToggleButtons.forEach(button => {
-                button.addEventListener('click', function () {
-                    const viewType = this.dataset.view;
-                    viewToggleButtons.forEach(btn => btn.classList.remove('active'));
-                    this.classList.add('active');
-
-                    if (viewType === 'table') {
-                        tableView.style.display = 'block';
-                        cardsView.style.display = 'none';
-                    } else {
-                        tableView.style.display = 'none';
-                        cardsView.style.display = 'block';
-                    }
-                });
-            });
-        }
-        // FIM: Scripts Originais Restaurados
 
         // Verificar estado inicial do botão de concluir ao carregar a página
         verificarEAtualizarBotaoConcluir();
@@ -4670,7 +2242,7 @@
                         const plural = duration > 1 ? 's' : '';
                         html += `
                         <div class="preview-item-import">
-                            <div style="display: flex; align-items: center; flex: 1;">
+                            <div class="preview-item-main">
                                 <div class="preview-item-number">${index + 1}</div>
                                 <div class="preview-item-name">${stage.name}</div>
                             </div>
@@ -4873,18 +2445,7 @@
             return;
         }
 
-        const prefersCards = window.matchMedia('(max-width: 991.98px)').matches;
-        let target = null;
-
-        if (prefersCards) {
-            target = document.querySelector(`.etapa-card[data-etapa-id="${focusEtapaId}"]`);
-        }
-        if (!target) {
-            target = document.querySelector(`#etapas-tbody tr[data-etapa-id="${focusEtapaId}"]`);
-        }
-        if (!target) {
-            target = document.querySelector(`.etapa-card[data-etapa-id="${focusEtapaId}"]`);
-        }
+        const target = document.querySelector(`#etapas-tbody tr[data-etapa-id="${focusEtapaId}"]`);
         if (!target) {
             return;
         }

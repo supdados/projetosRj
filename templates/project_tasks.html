@@ -2,6 +2,10 @@
 
 {% block title %}Tarefas do Projeto - {{ project.titulo }} - ProjetosRJ{% endblock %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='pages/project-tasks.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <div class="row">
@@ -54,9 +58,8 @@
             <!-- Tasks List -->
             <div class="tasks-list-clean">
                 {% for task in tasks %}
-                <div class="task-item-clean"
-                    onclick="window.location='{{ url_for('main.task_detail', task_id=task.id) }}'"
-                    style="cursor: pointer;">
+                <div class="task-item-clean project-task-clickable"
+                    onclick="window.location='{{ url_for('main.task_detail', task_id=task.id) }}'">
                     <div class="task-icon-clean">
                         <i class="fas fa-clipboard-list"></i>
                     </div>
@@ -134,7 +137,7 @@
                                     Cancelar
                                 </button>
                                 <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST"
-                                    style="display: inline;">
+                                    class="inline-form">
                                     <button type="submit" class="btn-modal-clean btn-confirm-delete">
                                         Excluir
                                     </button>
@@ -168,8 +171,8 @@
                 <input type="hidden" name="project_id" value="{{ project.id }}">
 
                 <div class="modal-header-clean">
-                    <div class="modal-icon-clean" style="background: rgba(0, 90, 146, 0.15);">
-                        <i class="fas fa-tasks" style="color: var(--primary-color);"></i>
+                    <div class="modal-icon-clean task-modal-icon-primary">
+                        <i class="fas fa-tasks task-modal-icon-symbol"></i>
                     </div>
                     <div>
                         <h5 class="modal-title-clean">Nova Tarefa</h5>
@@ -190,8 +193,7 @@
                     <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
                         Cancelar
                     </button>
-                    <button type="submit" class="btn-modal-clean"
-                        style="background: var(--primary-color); color: white;">
+                    <button type="submit" class="btn-modal-clean task-modal-submit-primary">
                         <i class="fas fa-save"></i> Criar Tarefa
                     </button>
                 </div>
@@ -200,356 +202,4 @@
     </div>
 </div>
 
-<style>
-    /* Reutilizar estilos do task_list.html */
-    .tasks-header-clean {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1.5rem 0;
-        margin-bottom: 1.5rem;
-        border-bottom: 2px solid rgba(0, 90, 146, 0.1);
-    }
-
-    .header-info {
-        display: flex;
-        align-items: baseline;
-        gap: 1rem;
-    }
-
-    .header-title-clean {
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.7rem;
-    }
-
-    .header-title-clean i {
-        font-size: 1.4rem;
-        color: var(--primary-color);
-    }
-
-    .header-count {
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: #6c757d;
-        padding: 0.3rem 0.8rem;
-        background: rgba(0, 90, 146, 0.08);
-        border-radius: 20px;
-    }
-
-    .btn-new-clean {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.7rem 1.3rem;
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        cursor: pointer;
-    }
-
-    .btn-new-clean:hover {
-        background: var(--primary-dark);
-    }
-
-    /* Project Info Card */
-    .project-info-card {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1.2rem 1.5rem;
-        background: linear-gradient(135deg, rgba(0, 90, 146, 0.05) 0%, rgba(0, 90, 146, 0.02) 100%);
-        border-left: 4px solid var(--primary-color);
-        border-radius: 8px;
-    }
-
-    .project-info-content {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .project-info-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #1a1a1a;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .project-info-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.8rem;
-        font-weight: 600;
-        padding: 0.3rem 0.7rem;
-        background: rgba(0, 90, 146, 0.1);
-        color: var(--primary-color);
-        border-radius: 6px;
-    }
-
-    .tasks-list-clean {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-    }
-
-    .task-item-clean {
-        display: flex;
-        align-items: center;
-        gap: 1.2rem;
-        padding: 1.3rem 1.5rem;
-        background: white;
-        border-bottom: 1px solid rgba(0, 90, 146, 0.08);
-        transition: all 0.2s ease;
-    }
-
-    .task-item-clean:first-child {
-        border-top: 1px solid rgba(0, 90, 146, 0.08);
-    }
-
-    .task-item-clean:hover {
-        background: rgba(0, 90, 146, 0.02);
-        border-left: 3px solid var(--primary-color);
-        padding-left: calc(1.5rem - 3px);
-    }
-
-    .task-icon-clean {
-        width: 44px;
-        height: 44px;
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.1) 0%,
-                rgba(0, 90, 146, 0.05) 100%);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .task-icon-clean i {
-        font-size: 1.2rem;
-        color: var(--primary-color);
-    }
-
-    .task-content-clean {
-        flex: 1;
-    }
-
-    .task-main-info {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 0.4rem;
-    }
-
-    .task-name-clean {
-        font-size: 1.05rem;
-        font-weight: 600;
-        color: #1a1a1a;
-        margin: 0;
-    }
-
-    .task-items-count {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--primary-color);
-        padding: 0.25rem 0.6rem;
-        background: rgba(0, 90, 146, 0.08);
-        border-radius: 6px;
-    }
-
-    .task-meta-clean {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .task-meta-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.8rem;
-        color: #6c757d;
-    }
-
-    .task-actions-clean {
-        display: flex;
-        gap: 0.5rem;
-        flex-shrink: 0;
-    }
-
-    .btn-action-clean {
-        width: 38px;
-        height: 38px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: transparent;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        color: #6c757d;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-decoration: none;
-    }
-
-    .btn-action-clean:hover {
-        border-color: transparent;
-    }
-
-    .btn-view-clean:hover {
-        background: var(--primary-color);
-        color: white;
-    }
-
-    .btn-delete-clean:hover {
-        background: #dc3545;
-        color: white;
-    }
-
-    .empty-state-clean {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 4rem 2rem;
-        text-align: center;
-    }
-
-    .empty-state-clean i {
-        font-size: 3.5rem;
-        color: rgba(0, 90, 146, 0.2);
-        margin-bottom: 1.5rem;
-    }
-
-    .empty-state-clean h5 {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin-bottom: 0.5rem;
-    }
-
-    .empty-state-clean p {
-        font-size: 1rem;
-        color: #6c757d;
-        margin-bottom: 2rem;
-    }
-
-    .modal-clean .modal-content {
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    }
-
-    .modal-header-clean {
-        padding: 1.5rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .modal-icon-clean {
-        width: 44px;
-        height: 44px;
-        background: rgba(255, 193, 7, 0.15);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .modal-icon-clean i {
-        font-size: 1.3rem;
-        color: #ffc107;
-    }
-
-    .modal-title-clean {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin: 0;
-    }
-
-    .modal-subtitle-clean {
-        font-size: 0.8rem;
-        color: #6c757d;
-        margin: 0.2rem 0 0 0;
-    }
-
-    .btn-close-clean {
-        width: 32px;
-        height: 32px;
-        background: transparent;
-        border: none;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-left: auto;
-        cursor: pointer;
-        transition: all 0.2s;
-        color: #6c757d;
-    }
-
-    .btn-close-clean:hover {
-        background: rgba(0, 0, 0, 0.05);
-    }
-
-    .modal-body-clean {
-        padding: 1.5rem;
-    }
-
-    .modal-footer-clean {
-        padding: 1rem 1.5rem;
-        border-top: 1px solid rgba(0, 0, 0, 0.08);
-        display: flex;
-        gap: 0.8rem;
-        justify-content: flex-end;
-    }
-
-    .btn-modal-clean {
-        padding: 0.65rem 1.3rem;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-cancel-clean {
-        background: rgba(0, 0, 0, 0.05);
-        color: #495057;
-    }
-
-    .btn-cancel-clean:hover {
-        background: rgba(0, 0, 0, 0.1);
-    }
-
-    .btn-confirm-delete {
-        background: #dc3545;
-        color: white;
-    }
-
-    .btn-confirm-delete:hover {
-        background: #c82333;
-    }
-</style>
 {% endblock %}
