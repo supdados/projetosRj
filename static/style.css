@@ -3,9 +3,9 @@
     --primary-light: #e6f0f6;
     --primary-dark: #004b79;
     --secondary-color: #BC9D32; /* PANTONE 117 C */
-    --success-color: #427842; /* PANTONE 3415 C */
-    --warning-color: #BC9D32; /* PANTONE 117 C (amarelo dourado) */
-    --danger-color: #d9534f;
+    --success-color: #16a34a;
+    --warning-color: #ca8a04;
+    --danger-color: #dc2626;
     --light-gray: #f8f9fa;
     --medium-gray: #A0A0A0; /* PANTONE COOL GRAY 7C */
     --dark-gray: #343a40;
@@ -20,9 +20,9 @@
     
     /* Cores de fundo para os cards da dashboard */
     --primary-light-bg: rgba(0, 90, 146, 0.08);
-    --success-light-bg: rgba(66, 120, 66, 0.08);
-    --info-light-bg: rgba(32, 156, 238, 0.08);
-    --danger-light-bg: rgba(217, 83, 79, 0.08);
+    --success-light-bg: rgba(22, 163, 74, 0.08);
+    --info-light-bg: rgba(202, 138, 4, 0.08);
+    --danger-light-bg: rgba(220, 38, 38, 0.08);
 }
 
 body {
@@ -1554,23 +1554,23 @@ tr:hover td {
 }
 
 .priority-baixa {
-    background-color: rgba(66, 120, 66, 0.1);
-    color: var(--success-color);
+    background-color: rgba(22, 163, 74, 0.10);
+    color: #16a34a;
 }
 
 .priority-media {
-    background-color: rgba(188, 157, 50, 0.1);
-    color: var(--warning-color);
+    background-color: rgba(202, 138, 4, 0.10);
+    color: #ca8a04;
 }
 
 .priority-alta {
-    background-color: rgba(229, 83, 83, 0.1);
-    color: #e55353;
+    background-color: rgba(234, 88, 12, 0.10);
+    color: #ea580c;
 }
 
 .priority-urgente {
-    background-color: rgba(214, 41, 62, 0.1);
-    color: #d6293e;
+    background-color: rgba(220, 38, 38, 0.10);
+    color: #dc2626;
 }
 
 footer {

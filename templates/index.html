@@ -4,9 +4,9 @@
 
 {% block content %}
 {% set user_areas = current_user_obj.get_areas() if current_user_obj else [] %}
-<div class="container-fluid mobile-full dashboard-page-v2">
+<div class="container-fluid mobile-full dashboard-page-v2 dashboard-page-breathe">
     <div class="row mobile-full">
-        <div class="col-12 px-3 py-2">
+        <div class="col-12 py-2">
             <header class="dashboard-welcome-strip mb-3">
                 <div class="dashboard-welcome-main">
                     <div class="dashboard-welcome-copy">
@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <div class="row g-2 mb-3 px-2 dashboard-kpi-row">
+    <div class="row g-2 mb-3 dashboard-kpi-row">
         <div class="col-6 col-md-3">
             <a href="{{ url_for('main.list_projects') }}" class="text-decoration-none">
                 <div class="card border-0 h-100 glass-card d-md-none">
@@ -84,7 +84,7 @@
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div class="text-muted small">Concluídos</div>
-                            <div class="icon-shape glass-icon-shape text-success rounded-circle p-1">
+                            <div class="icon-shape glass-icon-shape dash-kpi-green rounded-circle p-1">
                                 <i class="fas fa-check-circle"></i>
                             </div>
                         </div>
@@ -95,13 +95,13 @@
                 <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
-                            <div class="dashboard-icon-wrapper glass-icon-wrapper bg-success-light text-success">
+                            <div class="dashboard-icon-wrapper glass-icon-wrapper dash-kpi-green-bg dash-kpi-green">
                                 <i class="fas fa-check-circle fa-lg"></i>
                             </div>
                             <div class="ms-3">
                                 <h3 class="h4 fw-bold mb-0">{{ count_finalizado }}</h3>
                                 <div class="text-muted fw-medium">Concluídos</div>
-                                <div class="text-success small mt-1">Projetos finalizados com sucesso</div>
+                                <div class="dash-kpi-green small mt-1">Projetos finalizados com sucesso</div>
                             </div>
                         </div>
                     </div>
@@ -115,7 +115,7 @@
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div class="text-muted small">Vigentes</div>
-                            <div class="icon-shape glass-icon-shape text-info rounded-circle p-1">
+                            <div class="icon-shape glass-icon-shape dash-kpi-amber rounded-circle p-1">
                                 <i class="fas fa-clock"></i>
                             </div>
                         </div>
@@ -126,13 +126,13 @@
                 <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
-                            <div class="dashboard-icon-wrapper glass-icon-wrapper bg-info-light text-info">
+                            <div class="dashboard-icon-wrapper glass-icon-wrapper dash-kpi-amber-bg dash-kpi-amber">
                                 <i class="fas fa-clock fa-lg"></i>
                             </div>
                             <div class="ms-3">
                                 <h3 class="h4 fw-bold mb-0">{{ count_vigente }}</h3>
                                 <div class="text-muted fw-medium">Vigentes</div>
-                                <div class="text-info small mt-1">Projetos em andamento</div>
+                                <div class="dash-kpi-amber small mt-1">Projetos em andamento</div>
                             </div>
                         </div>
                     </div>
@@ -146,7 +146,7 @@
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div class="text-muted small">Em Atraso</div>
-                            <div class="icon-shape glass-icon-shape text-danger rounded-circle p-1">
+                            <div class="icon-shape glass-icon-shape dash-kpi-red rounded-circle p-1">
                                 <i class="fas fa-exclamation-triangle"></i>
                             </div>
                         </div>
@@ -157,13 +157,13 @@
                 <div class="card border-0 h-100 glass-card d-none d-md-block dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
-                            <div class="dashboard-icon-wrapper glass-icon-wrapper bg-danger-light text-danger">
+                            <div class="dashboard-icon-wrapper glass-icon-wrapper dash-kpi-red-bg dash-kpi-red">
                                 <i class="fas fa-exclamation-triangle fa-lg"></i>
                             </div>
                             <div class="ms-3">
                                 <h3 class="h4 fw-bold mb-0">{{ projetos_em_atraso }}</h3>
                                 <div class="text-muted fw-medium">Em Atraso</div>
-                                <div class="text-danger small mt-1">Necessitam atenção imediata</div>
+                                <div class="dash-kpi-red small mt-1">Necessitam atenção imediata</div>
                             </div>
                         </div>
                     </div>
@@ -172,8 +172,8 @@
         </div>
     </div>
 
-    <div class="row g-3 px-2 dashboard-main-grid">
-        <div class="col-12 col-lg-7 dashboard-recent-col">
+    <div class="row g-3 dashboard-main-grid">
+        <div class="col-12 col-lg-8 dashboard-recent-col">
             <div class="card border-0 glass-card h-100 main-content-card">
                 <div class="card-header glass-card-header py-3">
                     <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
@@ -285,7 +285,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-lg-5 dashboard-side-col">
+        <div class="col-12 col-lg-4 dashboard-side-col">
             <div class="card border-0 glass-card sidebar-content-card dashboard-priority-compact-card mb-3">
                 <div class="card-header glass-card-header py-2 px-3 d-flex justify-content-between align-items-center">
                     <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
@@ -327,93 +327,82 @@
                 </div>
             </div>
 
-            <div class="card border-0 glass-card sidebar-content-card dashboard-tasks-card" data-dashboard-tasks-module>
+            <div class="card border-0 glass-card sidebar-content-card dashboard-tasks-kpi-card">
                 <div class="card-header glass-card-header py-2 px-3 d-flex justify-content-between align-items-center">
                     <h5 class="card-title h6 mb-0 fw-bold glass-card-title">
                         <i class="fas fa-list-check me-2 text-primary"></i>Tarefas
                     </h5>
-                    <span class="dashboard-tasks-total">
-                        {{ dashboard_open_tasks_count }} tarefa{% if dashboard_open_tasks_count != 1 %}s{% endif %} • {{ dashboard_open_items_count }} {% if dashboard_open_items_count == 1 %}item aberto{% else %}itens abertos{% endif %}
-                    </span>
+                    <a href="{{ url_for('main.list_tasks') }}" class="dashboard-tasks-view-all">Ver todas <i class="fas fa-arrow-right ms-1"></i></a>
                 </div>
-                <div class="card-body p-0 glass-card-body">
-                    {% if dashboard_tasks %}
-                    <div class="dashboard-task-list-wrap">
-                        <div class="dashboard-task-list">
-                            {% for task in dashboard_tasks %}
-                            <article class="dashboard-task-entry">
-                                <div class="dashboard-task-entry-head">
-                                    <a href="{{ url_for('main.task_detail', task_id=task.task_id) }}" class="dashboard-task-title">
-                                        {{ task.titulo | truncate(65, True) }}
-                                    </a>
-                                    <span class="dashboard-task-open-count">{{ task.open_items_count }}</span>
-                                </div>
-
-                                <div class="dashboard-task-meta">
-                                    {% if task.project_id %}
-                                    <a href="{{ url_for('main.project_detail', project_id=task.project_id) }}" class="dashboard-task-project">
-                                        <i class="fas fa-project-diagram"></i>
-                                        <span>{{ task.project_titulo | truncate(52, True) }}</span>
-                                    </a>
-                                    {% else %}
-                                    <span class="dashboard-task-project dashboard-task-project-empty">
-                                        <i class="fas fa-layer-group"></i>
-                                        <span>Sem projeto</span>
-                                    </span>
-                                    {% endif %}
-                                </div>
-
-                                {% if task.items_preview %}
-                                <ul class="dashboard-task-item-preview">
-                                    {% for item in task.items_preview %}
-                                    <li>
-                                        <a href="{{ url_for('main.task_detail', task_id=task.task_id, focus_item=item.item_id) }}" class="dashboard-task-item-link">
-                                            <span class="dashboard-task-item-text">{{ item.descricao | truncate(72, True) }}</span>
-                                            <span class="dashboard-task-item-meta">
-                                                <span
-                                                    class="dashboard-task-status-dot status-{{ (item.status or '')|lower|replace(' ', '_')|replace('-', '_') }}"
-                                                    data-bs-toggle="tooltip"
-                                                    data-bs-placement="top"
-                                                    title="{{ item.status_label }}"
-                                                    aria-label="Status: {{ item.status_label }}"
-                                                ></span>
-                                                {% if item.responsavel %}
-                                                <span class="dashboard-task-responsavel">{{ item.responsavel }}</span>
-                                                {% endif %}
-                                            </span>
-                                        </a>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                                {% endif %}
-                            </article>
-                            {% endfor %}
+                <div class="card-body px-3 py-3 glass-card-body">
+                    <!-- KPI summary row -->
+                    <div class="tasks-kpi-summary">
+                        <div class="tasks-kpi-number-card">
+                            <span class="tasks-kpi-big-number">{{ dashboard_open_tasks_count }}</span>
+                            <span class="tasks-kpi-big-label">Tarefas Abertas</span>
+                        </div>
+                        <div class="tasks-kpi-number-card">
+                            <span class="tasks-kpi-big-number">{{ dashboard_open_items_count }}</span>
+                            <span class="tasks-kpi-big-label">Itens Abertos</span>
+                        </div>
+                        <div class="tasks-kpi-number-card tasks-kpi-done-card">
+                            <span class="tasks-kpi-big-number">{{ task_items_finalizado }}</span>
+                            <span class="tasks-kpi-big-label">Concluídos</span>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="dashboard-task-empty">
-                        <p class="mb-2">Nenhuma tarefa aberta relevante no momento.</p>
-                        <a href="{{ url_for('main.list_tasks') }}" class="dashboard-task-empty-link">Ir para Tarefas</a>
+
+                    <!-- Progress bar chart -->
+                    <div class="tasks-kpi-progress-section">
+                        <div class="tasks-kpi-progress-header">
+                            <span class="tasks-kpi-progress-title">Itens por Status</span>
+                            <span class="tasks-kpi-progress-total">{{ task_items_total }} total</span>
+                        </div>
+                        <div class="tasks-kpi-stacked-bar">
+                            {% if task_items_total > 0 %}
+                            <div class="tasks-kpi-bar-segment bar-finalizado" style="width: {{ (task_items_finalizado / task_items_total * 100) | round(1) }}%" data-bs-toggle="tooltip" title="Finalizado: {{ task_items_finalizado }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-em-andamento" style="width: {{ (task_items_em_andamento / task_items_total * 100) | round(1) }}%" data-bs-toggle="tooltip" title="Em andamento: {{ task_items_em_andamento }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-validacao" style="width: {{ (task_items_validacao / task_items_total * 100) | round(1) }}%" data-bs-toggle="tooltip" title="Validação: {{ task_items_validacao }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-programado" style="width: {{ (task_items_programado / task_items_total * 100) | round(1) }}%" data-bs-toggle="tooltip" title="Programado: {{ task_items_programado }}"></div>
+                            {% else %}
+                            <div class="tasks-kpi-bar-segment bar-empty" style="width: 100%"></div>
+                            {% endif %}
+                        </div>
+                        <div class="tasks-kpi-legend">
+                            <span class="tasks-kpi-legend-item"><span class="tasks-kpi-legend-dot bg-kpi-finalizado"></span> Finalizado <strong>{{ task_items_finalizado }}</strong></span>
+                            <span class="tasks-kpi-legend-item"><span class="tasks-kpi-legend-dot bg-kpi-em-andamento"></span> Em andamento <strong>{{ task_items_em_andamento }}</strong></span>
+                            <span class="tasks-kpi-legend-item"><span class="tasks-kpi-legend-dot bg-kpi-validacao"></span> Validação <strong>{{ task_items_validacao }}</strong></span>
+                            <span class="tasks-kpi-legend-item"><span class="tasks-kpi-legend-dot bg-kpi-programado"></span> Programado <strong>{{ task_items_programado }}</strong></span>
+                        </div>
                     </div>
-                    {% endif %}
 
-                    {% if dashboard_tasks_pagination.total_pages > 1 %}
-                    <div class="dashboard-task-pagination">
-                        {% if dashboard_tasks_pagination.has_prev %}
-                        <a href="{{ dashboard_tasks_pagination.prev_url }}" class="dashboard-task-page-link">Anterior</a>
-                        {% else %}
-                        <span class="dashboard-task-page-link dashboard-task-page-link-disabled">Anterior</span>
-                        {% endif %}
-
-                        <span class="dashboard-task-pagination-info">
-                            {{ dashboard_tasks_pagination.page }} / {{ dashboard_tasks_pagination.total_pages }}
-                        </span>
-
-                        {% if dashboard_tasks_pagination.has_next %}
-                        <a href="{{ dashboard_tasks_pagination.next_url }}" class="dashboard-task-page-link">Próxima</a>
-                        {% else %}
-                        <span class="dashboard-task-page-link dashboard-task-page-link-disabled">Próxima</span>
-                        {% endif %}
+                    <!-- Donut chart via SVG -->
+                    {% if task_items_total > 0 %}
+                    <div class="tasks-kpi-donut-section">
+                        <div class="tasks-kpi-donut-wrap">
+                            <svg viewBox="0 0 36 36" class="tasks-kpi-donut-svg">
+                                {% set finalized_pct = (task_items_finalizado / task_items_total * 100) | round(1) %}
+                                {% set andamento_pct = (task_items_em_andamento / task_items_total * 100) | round(1) %}
+                                {% set validacao_pct = (task_items_validacao / task_items_total * 100) | round(1) %}
+                                {% set programado_pct = (100 - finalized_pct - andamento_pct - validacao_pct) | round(1) %}
+                                <circle class="tasks-kpi-donut-ring" cx="18" cy="18" r="15.915"></circle>
+                                <circle class="tasks-kpi-donut-seg seg-finalizado" cx="18" cy="18" r="15.915"
+                                    stroke-dasharray="{{ finalized_pct }} {{ 100 - finalized_pct }}"
+                                    stroke-dashoffset="25"></circle>
+                                <circle class="tasks-kpi-donut-seg seg-em-andamento" cx="18" cy="18" r="15.915"
+                                    stroke-dasharray="{{ andamento_pct }} {{ 100 - andamento_pct }}"
+                                    stroke-dashoffset="{{ 25 - finalized_pct }}"></circle>
+                                <circle class="tasks-kpi-donut-seg seg-validacao" cx="18" cy="18" r="15.915"
+                                    stroke-dasharray="{{ validacao_pct }} {{ 100 - validacao_pct }}"
+                                    stroke-dashoffset="{{ 25 - finalized_pct - andamento_pct }}"></circle>
+                                <circle class="tasks-kpi-donut-seg seg-programado" cx="18" cy="18" r="15.915"
+                                    stroke-dasharray="{{ programado_pct }} {{ 100 - programado_pct }}"
+                                    stroke-dashoffset="{{ 25 - finalized_pct - andamento_pct - validacao_pct }}"></circle>
+                            </svg>
+                            <div class="tasks-kpi-donut-center">
+                                <span class="tasks-kpi-donut-center-number">{{ ((task_items_finalizado / task_items_total) * 100) | round(0) | int }}%</span>
+                                <span class="tasks-kpi-donut-center-label">concluído</span>
+                            </div>
+                        </div>
                     </div>
                     {% endif %}
                 </div>
@@ -692,19 +681,19 @@
     }
 
     .dashboard-page-v2 .priority-dot-baixa {
-        background-color: #2f8f4e;
+        background-color: #16a34a;
     }
 
     .dashboard-page-v2 .priority-dot-media {
-        background-color: #b88c17;
+        background-color: #ca8a04;
     }
 
     .dashboard-page-v2 .priority-dot-alta {
-        background-color: #df7d06;
+        background-color: #ea580c;
     }
 
     .dashboard-page-v2 .priority-dot-urgente {
-        background-color: #d63b3b;
+        background-color: #dc2626;
     }
 
     .dashboard-page-v2 .dashboard-priority-compact-card .card-body {
@@ -778,265 +767,19 @@
         flex-shrink: 0;
     }
 
-    .dashboard-page-v2 .dashboard-tasks-card .card-body {
-        padding: 0 !important;
-    }
 
-    .dashboard-page-v2 .dashboard-tasks-card.is-loading {
-        opacity: 0.66;
-        pointer-events: none;
-        transition: opacity 0.2s ease;
-    }
+    /* Unified dashboard color utilities */
+    .dashboard-page-v2 .dash-kpi-green { color: #16a34a !important; }
+    .dashboard-page-v2 .dash-kpi-green-bg { background-color: rgba(22, 163, 74, 0.08) !important; }
+    .dashboard-page-v2 .dash-kpi-amber { color: #ca8a04 !important; }
+    .dashboard-page-v2 .dash-kpi-amber-bg { background-color: rgba(202, 138, 4, 0.08) !important; }
+    .dashboard-page-v2 .dash-kpi-red { color: #dc2626 !important; }
+    .dashboard-page-v2 .dash-kpi-red-bg { background-color: rgba(220, 38, 38, 0.08) !important; }
 
-    .dashboard-page-v2 .dashboard-tasks-total {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #5d7694;
-        white-space: nowrap;
-        margin-left: 0.5rem;
-    }
-
-    .dashboard-page-v2 .dashboard-task-list {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .dashboard-page-v2 .dashboard-task-list-wrap {
-        min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-    }
-
-    .dashboard-page-v2 .dashboard-task-entry {
-        padding: 0.72rem 0.82rem;
-        border-bottom: 1px solid rgba(198, 217, 235, 0.5);
-    }
-
-    .dashboard-page-v2 .dashboard-task-entry:last-child {
-        border-bottom: 0;
-    }
-
-    .dashboard-page-v2 .dashboard-task-entry-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        margin-bottom: 0.38rem;
-    }
-
-    .dashboard-page-v2 .dashboard-task-title {
-        color: #184f7f;
-        font-size: 0.95rem;
-        font-weight: 700;
-        text-decoration: none;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .dashboard-page-v2 .dashboard-task-title:hover {
-        color: #0f3f68;
-        text-decoration: underline;
-    }
-
-    .dashboard-page-v2 .dashboard-task-open-count {
-        min-width: 28px;
-        height: 24px;
-        border-radius: 999px;
-        border: 1px solid #c9dbef;
-        background: #f2f7fd;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.76rem;
-        font-weight: 700;
-        color: #2b5d8a;
-        flex-shrink: 0;
-    }
-
-    .dashboard-page-v2 .dashboard-task-meta {
-        margin-bottom: 0.35rem;
-    }
-
-    .dashboard-page-v2 .dashboard-task-project {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.38rem;
-        color: #5e7b9a;
-        font-size: 0.78rem;
-        font-weight: 600;
-        text-decoration: none;
-    }
-
-    .dashboard-page-v2 .dashboard-task-project:hover {
-        color: #2a5f90;
-        text-decoration: underline;
-    }
-
-    .dashboard-page-v2 .dashboard-task-project-empty {
-        color: #7e94ad;
-    }
-
-    .dashboard-page-v2 .dashboard-task-item-preview {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: grid;
-        gap: 0.32rem;
-    }
-
-    .dashboard-page-v2 .dashboard-task-item-link {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 0.56rem;
-        min-width: 0;
-        border: 1px solid #e4edf7;
-        background: rgba(255, 255, 255, 0.72);
-        border-radius: 8px;
-        padding: 0.38rem 0.48rem;
-        text-decoration: none;
-        color: #3b6289;
-        transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease;
-    }
-
-    .dashboard-page-v2 .dashboard-task-item-link:hover {
-        border-color: #bfd4e9;
-        background: #f8fbfe;
-    }
-
-    .dashboard-page-v2 .dashboard-task-item-text {
-        display: block;
-        flex: 1;
-        font-size: 0.8rem;
-        font-weight: 500;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .dashboard-page-v2 .dashboard-task-item-meta {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.36rem;
-        flex-shrink: 0;
-        margin-left: auto;
-    }
-
-    .dashboard-page-v2 .dashboard-task-status-dot {
-        width: 10px;
-        height: 10px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        border: 1px solid #5f7f9f;
-        background: #6f8dab;
-        flex-shrink: 0;
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75);
-    }
-
-    .dashboard-page-v2 .dashboard-task-status-dot.status-programado {
-        background: #6f8dab;
-        border-color: #5f7f9f;
-    }
-
-    .dashboard-page-v2 .dashboard-task-status-dot.status-em_andamento {
-        background: #2f9b73;
-        border-color: #288664;
-    }
-
-    .dashboard-page-v2 .dashboard-task-status-dot.status-em-andamento {
-        background: #2f9b73;
-        border-color: #288664;
-    }
-
-    .dashboard-page-v2 .dashboard-task-status-dot.status-validacao {
-        background: #d59a3a;
-        border-color: #b8822f;
-    }
-
-    .dashboard-page-v2 .dashboard-task-status-dot.status-iniciado {
-        background: #2f9b73;
-        border-color: #288664;
-    }
-
-    .dashboard-page-v2 .dashboard-task-status-dot.status-finalizado {
-        background: #4a8f5e;
-        border-color: #3f7b50;
-    }
-
-    .dashboard-page-v2 .dashboard-task-responsavel {
-        color: #6883a1;
-        font-size: 0.7rem;
-        font-weight: 600;
-        max-width: 100px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .dashboard-page-v2 .dashboard-task-empty {
-        padding: 1rem;
-        text-align: center;
-        color: #5e7b99;
-        font-size: 0.85rem;
-    }
-
-    .dashboard-page-v2 .dashboard-task-empty-link {
-        color: #205e91;
-        font-weight: 600;
-        text-decoration: none;
-    }
-
-    .dashboard-page-v2 .dashboard-task-empty-link:hover {
-        text-decoration: underline;
-    }
-
-    .dashboard-page-v2 .dashboard-task-pagination {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.4rem;
-        padding: 0.3rem 0.55rem;
-        border-top: 1px solid rgba(198, 217, 235, 0.55);
-        background: rgba(250, 253, 255, 0.82);
-    }
-
-    .dashboard-page-v2 .dashboard-task-pagination-info {
-        font-size: 0.76rem;
-        font-weight: 700;
-        color: #5e7896;
-        white-space: nowrap;
-    }
-
-    .dashboard-page-v2 .dashboard-task-page-link {
-        min-width: 60px;
-        height: 24px;
-        padding: 0 0.48rem;
-        border-radius: 999px;
-        border: 1px solid #c2d7ec;
-        background: #f4f9fe;
-        color: #235c8b;
-        font-size: 0.71rem;
-        font-weight: 700;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .dashboard-page-v2 .dashboard-task-page-link:hover {
-        background: #e8f2fc;
-        border-color: #accae5;
-        color: #1e4f79;
-    }
-
-    .dashboard-page-v2 .dashboard-task-page-link-disabled {
-        opacity: 0.55;
-        pointer-events: none;
+    /* Page breathing room */
+    .dashboard-page-breathe {
+        padding-left: 2.5rem !important;
+        padding-right: 2.5rem !important;
     }
 
     .dashboard-page-v2 .glass-empty-state {
@@ -1044,6 +787,208 @@
         border-radius: 12px;
         padding: 1.2rem;
         border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    /* Tasks KPI Card */
+    .dashboard-page-v2 .dashboard-tasks-kpi-card .card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        flex: 1 1 auto;
+    }
+
+    .dashboard-page-v2 .dashboard-tasks-view-all {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #205e91;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .dashboard-page-v2 .dashboard-tasks-view-all:hover {
+        color: #0f3f68;
+        text-decoration: underline;
+    }
+
+    /* KPI summary numbers row */
+    .dashboard-page-v2 .tasks-kpi-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-number-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0.4rem 0.25rem;
+        border-radius: 8px;
+        border: 1px solid #dce7f3;
+        background: rgba(255, 255, 255, 0.64);
+        gap: 0.1rem;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-number-card.tasks-kpi-done-card {
+        border-color: rgba(22, 163, 74, 0.25);
+        background: rgba(22, 163, 74, 0.06);
+    }
+
+    .dashboard-page-v2 .tasks-kpi-big-number {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #1a4d7a;
+        line-height: 1;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-done-card .tasks-kpi-big-number {
+        color: #16a34a;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-big-label {
+        font-size: 0.58rem;
+        font-weight: 600;
+        color: #6a869f;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        text-align: center;
+    }
+
+    /* Stacked progress bar */
+    .dashboard-page-v2 .tasks-kpi-progress-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-progress-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #2a5070;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-progress-total {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #6a869f;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-stacked-bar {
+        display: flex;
+        height: 12px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: #e8eff6;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-bar-segment {
+        height: 100%;
+        min-width: 2px;
+        transition: width 0.4s ease;
+    }
+
+    .dashboard-page-v2 .bar-finalizado { background: #16a34a; }
+    .dashboard-page-v2 .bar-em-andamento { background: #005A92; }
+    .dashboard-page-v2 .bar-validacao { background: #ca8a04; }
+    .dashboard-page-v2 .bar-programado { background: #8198b1; }
+    .dashboard-page-v2 .bar-empty { background: #e0e8f0; }
+
+    .dashboard-page-v2 .tasks-kpi-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 0.85rem;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: #4a6a8a;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-legend-item strong {
+        font-weight: 700;
+        color: #2a5070;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .dashboard-page-v2 .bg-kpi-finalizado { background: #16a34a; }
+    .dashboard-page-v2 .bg-kpi-em-andamento { background: #005A92; }
+    .dashboard-page-v2 .bg-kpi-validacao { background: #ca8a04; }
+    .dashboard-page-v2 .bg-kpi-programado { background: #8198b1; }
+
+    /* Donut chart */
+    .dashboard-page-v2 .tasks-kpi-donut-section {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 0.3rem;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-donut-wrap {
+        position: relative;
+        width: 130px;
+        height: 130px;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-donut-svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+
+    .dashboard-page-v2 .tasks-kpi-donut-ring {
+        fill: none;
+        stroke: #e8eff6;
+        stroke-width: 3;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-donut-seg {
+        fill: none;
+        stroke-width: 3;
+        stroke-linecap: round;
+    }
+
+    .dashboard-page-v2 .seg-finalizado { stroke: #16a34a; }
+    .dashboard-page-v2 .seg-em-andamento { stroke: #005A92; }
+    .dashboard-page-v2 .seg-validacao { stroke: #ca8a04; }
+    .dashboard-page-v2 .seg-programado { stroke: #8198b1; }
+
+    .dashboard-page-v2 .tasks-kpi-donut-center {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-donut-center-number {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #1a4d7a;
+        line-height: 1;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-donut-center-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: #6a869f;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
     }
 
     .dashboard-page-v2 .project-card {
@@ -1096,52 +1041,25 @@
             margin-bottom: 0 !important;
         }
 
-        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-card {
-            flex: 0 0 auto;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-card .card-body {
+        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-kpi-card {
             flex: 1 1 auto;
             min-height: 0;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .dashboard-page-v2 .dashboard-task-list-wrap {
-            flex: 1 1 auto;
-            min-height: 0;
-            overflow-y: auto;
-            overflow-x: hidden;
-        }
-
-        .dashboard-page-v2 .dashboard-task-pagination {
-            margin-top: auto;
-            flex: 0 0 auto;
         }
     }
 
     @media (min-width: 1400px) {
-        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-card {
-            height: 430px;
-        }
-    }
-
-    @media (min-width: 1200px) and (max-width: 1399.98px) {
-        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-card {
-            height: 410px;
-        }
-    }
-
-    @media (min-width: 992px) and (max-width: 1199.98px) {
-        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-card {
-            height: 390px;
+        .dashboard-page-breathe {
+            padding-left: 3rem !important;
+            padding-right: 3rem !important;
         }
     }
 
     @media (max-width: 991.98px) {
+        .dashboard-page-breathe {
+            padding-left: 1.2rem !important;
+            padding-right: 1.2rem !important;
+        }
+
         .dashboard-page-v2 .dashboard-welcome-strip {
             flex-direction: column;
             align-items: stretch;
@@ -1173,35 +1091,32 @@
             justify-content: center;
         }
 
-        .dashboard-page-v2 .dashboard-priority-total,
-        .dashboard-page-v2 .dashboard-tasks-total {
+        .dashboard-page-v2 .dashboard-priority-total {
             white-space: normal;
         }
 
         .dashboard-page-v2 .priority-compact-list {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-
-        .dashboard-page-v2 .dashboard-task-pagination {
-            padding: 0.38rem 0.58rem;
-        }
     }
 
     @media (max-width: 767.98px) {
-        .dashboard-page-v2 .dashboard-task-item-link {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+        .dashboard-page-breathe {
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
         }
 
-        .dashboard-page-v2 .dashboard-task-item-meta {
-            width: 100%;
-            justify-content: flex-start;
-            margin-left: 0;
+        .dashboard-page-v2 .tasks-kpi-summary {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.35rem;
         }
 
-        .dashboard-page-v2 .dashboard-task-pagination-info {
-            font-size: 0.72rem;
+        .dashboard-page-v2 .tasks-kpi-big-number {
+            font-size: 1.1rem;
+        }
+
+        .dashboard-page-v2 .tasks-kpi-legend {
+            gap: 0.35rem 0.6rem;
         }
 
         .dashboard-page-v2 .priority-compact-list {
@@ -1217,109 +1132,13 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const dateEl = document.getElementById('dashboardWelcomeDate');
-        const tasksModuleSelector = '[data-dashboard-tasks-module]';
-        let taskPaginationController = null;
-        let taskPaginationLoading = false;
 
-        function initBootstrapTooltips(scopeEl) {
-            if (!scopeEl || typeof window.bootstrap === 'undefined' || !bootstrap.Tooltip) {
-                return;
-            }
-            scopeEl.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+        // Init tooltips for KPI bar segments
+        if (typeof window.bootstrap !== 'undefined' && bootstrap.Tooltip) {
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
                 bootstrap.Tooltip.getOrCreateInstance(el);
             });
         }
-
-        function syncTasksPageInUrl(targetUrl) {
-            try {
-                const destinationUrl = new URL(targetUrl, window.location.origin);
-                const currentUrl = new URL(window.location.href);
-                const tasksPageValue = destinationUrl.searchParams.get('tasks_page');
-
-                if (tasksPageValue && tasksPageValue !== '1') {
-                    currentUrl.searchParams.set('tasks_page', tasksPageValue);
-                } else {
-                    currentUrl.searchParams.delete('tasks_page');
-                }
-                window.history.replaceState({}, '', currentUrl.toString());
-            } catch (error) {
-                // Ignore URL parse/update failures without breaking pagination.
-            }
-        }
-
-        document.addEventListener('click', function(event) {
-            const paginationLink = event.target.closest('.dashboard-task-page-link[href]');
-            if (!paginationLink) {
-                return;
-            }
-            const currentTasksModule = document.querySelector(tasksModuleSelector);
-            if (!currentTasksModule) {
-                return;
-            }
-
-            event.preventDefault();
-            event.stopPropagation();
-            if (typeof event.stopImmediatePropagation === 'function') {
-                event.stopImmediatePropagation();
-            }
-
-            if (taskPaginationLoading) {
-                return;
-            }
-
-            const destinationUrl = paginationLink.href;
-            taskPaginationLoading = true;
-            currentTasksModule.classList.add('is-loading');
-
-            if (taskPaginationController) {
-                taskPaginationController.abort();
-            }
-            taskPaginationController = new AbortController();
-            const activeController = taskPaginationController;
-
-            fetch(destinationUrl, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                signal: activeController.signal
-            })
-                .then(function(response) {
-                    if (!response.ok) {
-                        throw new Error(`Erro HTTP ${response.status}`);
-                    }
-                    return response.text();
-                })
-                .then(function(html) {
-                    const parsedDoc = new DOMParser().parseFromString(html, 'text/html');
-                    const nextTasksModule = parsedDoc.querySelector(tasksModuleSelector);
-                    const liveTasksModule = document.querySelector(tasksModuleSelector);
-
-                    if (!nextTasksModule || !liveTasksModule) {
-                        throw new Error('Modulo de tarefas nao encontrado na resposta.');
-                    }
-
-                    liveTasksModule.replaceWith(nextTasksModule);
-                    initBootstrapTooltips(nextTasksModule);
-                    syncTasksPageInUrl(destinationUrl);
-                })
-                .catch(function(error) {
-                    if (error.name === 'AbortError') {
-                        return;
-                    }
-                    window.location.href = destinationUrl;
-                })
-                .finally(function() {
-                    if (taskPaginationController === activeController) {
-                        taskPaginationController = null;
-                    }
-                    taskPaginationLoading = false;
-                    const liveTasksModule = document.querySelector(tasksModuleSelector);
-                    if (liveTasksModule) {
-                        liveTasksModule.classList.remove('is-loading');
-                    }
-                });
-        }, true);
 
         if (dateEl) {
             const now = new Date();

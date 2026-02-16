@@ -18,7 +18,7 @@ def dashboard():
         if user_areas:
             project_query_base = project_query_base.filter(Project.area_responsavel.in_(user_areas))
 
-    recent_projects = project_query_base.order_by(Project.id.desc()).limit(10).all()
+    recent_projects = project_query_base.order_by(Project.id.desc()).limit(9).all()
     
     def count_projects_for_user(filter_expression=None):
         query = Project.query
@@ -97,6 +97,20 @@ def dashboard():
     )
     open_items_count_query = apply_task_visibility_rules(open_items_count_query)
     dashboard_open_items_count = int(open_items_count_query.scalar() or 0)
+
+    # Task items count by status for KPI dashboard
+    def count_task_items_by_status(status_value):
+        q = db.session.query(db.func.count(TaskItem.id)).select_from(TaskItem).join(
+            Task, TaskItem.task_id == Task.id
+        ).filter(TaskItem.status == status_value)
+        q = apply_task_visibility_rules(q)
+        return int(q.scalar() or 0)
+
+    task_items_programado = count_task_items_by_status('programado')
+    task_items_em_andamento = count_task_items_by_status('em_andamento')
+    task_items_validacao = count_task_items_by_status('validacao')
+    task_items_finalizado = count_task_items_by_status('finalizado')
+    task_items_total = task_items_programado + task_items_em_andamento + task_items_validacao + task_items_finalizado
 
     tasks_page = request.args.get('tasks_page', 1, type=int) or 1
     if tasks_page < 1:
@@ -223,6 +237,11 @@ def dashboard():
         dashboard_open_tasks_count=dashboard_open_tasks_count,
         dashboard_open_items_count=dashboard_open_items_count,
         dashboard_tasks_pagination=dashboard_tasks_pagination,
+        task_items_programado=task_items_programado,
+        task_items_em_andamento=task_items_em_andamento,
+        task_items_validacao=task_items_validacao,
+        task_items_finalizado=task_items_finalizado,
+        task_items_total=task_items_total,
         objetivos=objetivos,
         AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES # Para o modal
     )
