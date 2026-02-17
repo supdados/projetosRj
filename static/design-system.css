@@ -420,7 +420,6 @@ h6 {
 /* Bridge (temporary/deprecated): keep old classes visually consistent while migration is in progress */
 .glass-card,
 .pending-card,
-.admin-tasks-list-card,
 .task-header-refined {
     border-radius: var(--ds-radius-lg);
 }

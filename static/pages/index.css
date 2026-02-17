@@ -357,11 +357,6 @@
     .dashboard-page-v2 .dash-kpi-red { color: #dc2626 !important; }
     .dashboard-page-v2 .dash-kpi-red-bg { background-color: rgba(220, 38, 38, 0.08) !important; }
 
-    /* Page breathing room */
-    .dashboard-page-breathe {
-        padding-left: 2.5rem !important;
-        padding-right: 2.5rem !important;
-    }
 
     .dashboard-page-v2 .glass-empty-state {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
@@ -629,12 +624,5 @@
         .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-kpi-card {
             flex: 1 1 auto;
             min-height: 0;
-        }
-    }
-
-    @media (min-width: 1400px) {
-        .dashboard-page-breathe {
-            padding-left: 3rem !important;
-            padding-right: 3rem !important;
         }
     }

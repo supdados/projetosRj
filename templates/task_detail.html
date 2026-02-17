@@ -2,6 +2,10 @@
 
 {% block title %}{{ task.titulo }} - Tarefas - ProjetosRJ{% endblock %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='pages/task-detail.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4 task-detail-v2">
     <div class="row">
@@ -16,7 +20,6 @@
                     </nav>
                     <a href="{{ url_for('main.list_tasks') }}" class="btn-task-action btn-task-back btn-task-back-above"
                         title="Voltar para Tarefas">
-                        <i class="fas fa-arrow-left"></i>
                         <span class="btn-task-action-label">Voltar</span>
                     </a>
                 </div>
@@ -31,20 +34,15 @@
                     <div class="task-header-refined-inner">
                         <div class="task-header-title-row">
                             <div class="task-title-block">
-                                <span class="task-title-icon" aria-hidden="true">
-                                    <i class="fas fa-clipboard-list"></i>
-                                </span>
                                 <div class="task-title-and-project" id="taskHeaderView">
                                     <h1 class="task-title-refined">{{ task.titulo }}</h1>
                                     {% if task.project %}
                                     <a href="{{ url_for('main.project_detail', project_id=task.project.id) }}"
                                         class="task-project-badge-refined">
-                                        <i class="fas fa-link"></i>
                                         <span>{{ task.project.titulo }}</span>
                                     </a>
                                     {% else %}
                                     <span class="task-project-badge-refined task-project-badge-neutral task-project-empty">
-                                        <i class="fas fa-inbox"></i>
                                         <span class="no-project-label">Sem projeto</span>
                                         <span class="no-project-label-hover">+ adicionar projeto referente</span>
                                     </span>
@@ -79,35 +77,30 @@
                                         </div>
                                     </div>
                                     <button type="button" class="btn-task-action btn-task-save-edit" id="taskHeaderSave"
-                                        title="Salvar"><i class="fas fa-check"></i></button>
+                                        title="Salvar">Salvar</button>
                                     <button type="button" class="btn-task-action btn-task-cancel-edit" id="taskHeaderCancel"
-                                        title="Cancelar"><i class="fas fa-times"></i></button>
+                                        title="Cancelar">Cancelar</button>
                                 </div>
                             </div>
                             <div class="task-header-actions-refined">
                                 <button type="button" class="btn-task-action btn-task-edit-header" id="btnEditTaskHeader"
                                     title="Editar tarefa">
-                                    <i class="fas fa-pen"></i>
                                     <span class="btn-task-action-label">Editar</span>
                                 </button>
                                 <button type="button" class="btn-task-action btn-task-danger" data-bs-toggle="modal"
                                     data-bs-target="#deleteTaskModal" title="Excluir tarefa">
-                                    <i class="fas fa-trash-alt"></i>
                                     <span class="btn-task-action-label">Excluir</span>
                                 </button>
                             </div>
                         </div>
                         <div class="task-header-meta-refined">
                             <span class="task-meta-pill task-meta-pill-neutral">
-                                <i class="fas fa-user"></i>
                                 <span>Criado por {{ task.created_by.name }}</span>
                             </span>
                             <span class="task-meta-pill task-meta-pill-neutral">
-                                <i class="fas fa-calendar-alt"></i>
                                 <span>{{ task.created_at|local_datetime }}</span>
                             </span>
                             <span class="task-meta-pill task-meta-pill-neutral">
-                                <i class="fas fa-list-ul"></i>
                                 <span>{{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}</span>
                             </span>
                         </div>
@@ -119,16 +112,12 @@
                 <!-- Items Header -->
                 <div class="items-header-clean mt-4">
                     <div class="header-info">
-                        <h5 class="items-title-clean ds-type-section-title">
-                            <i class="fas fa-list"></i>
-                            Itens da Tarefa
-                        </h5>
+                        <h5 class="items-title-clean ds-type-section-title">Itens da tarefa</h5>
                         <span class="header-count">{{ task.items|length }} item{{ 's' if task.items|length != 1 else ''
                             }}</span>
                     </div>
                     <button type="button" class="btn-new-clean" id="btnFocusAddItem" title="Ir para adicionar item">
-                        <i class="fas fa-plus"></i>
-                        Novo Item
+                        Novo item
                     </button>
                 </div>
 
@@ -145,9 +134,11 @@
                             <span class="task-item-col-desc">Descrição</span>
                             <span class="task-item-col-status">Status</span>
                             <span class="task-item-col-responsavel">Responsável</span>
-                            <span class="task-item-col-comments" title="Comentários"><i
-                                    class="far fa-comment-alt"></i></span>
-                            <span class="task-item-col-actions" title="Ações"><i class="fas fa-ellipsis-v"></i></span>
+                            <span class="task-item-col-comments" title="Comentários">
+                                <i class="far fa-comment-alt" aria-hidden="true"></i>
+                                <span class="visually-hidden">Comentários</span>
+                            </span>
+                            <span class="task-item-col-actions" title="Ações">Ações</span>
                         </div>
                     </div>
                 </div>
@@ -160,7 +151,8 @@
                                 <p class="task-item-desc" data-item-id="{{ item.id }}">{{ item.descricao }}</p>
                                 <button type="button" class="task-item-desc-edit-btn" data-item-id="{{ item.id }}"
                                     title="Editar descrição">
-                                    <i class="fas fa-pen"></i>
+                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Editar</span>
                                 </button>
                             </div>
                             <div class="task-item-meta">
@@ -179,13 +171,16 @@
                                     else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
                                 <button type="button" class="task-item-comments-btn" aria-expanded="false"
                                     data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)">
-                                    <i class="far fa-comment-alt"></i>
+                                    <i class="far fa-comment-alt" aria-hidden="true"></i>
+                                    <span class="task-item-comments-label visually-hidden">Comentários</span>
                                     <span class="task-item-comments-num">{{ item.comments|length }}</span>
                                 </button>
                                 <div class="task-item-actions">
                                     <button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal"
-                                        data-bs-target="#deleteItemModal-{{ item.id }}" title="Excluir"><i
-                                            class="fas fa-trash-alt"></i></button>
+                                        data-bs-target="#deleteItemModal-{{ item.id }}" title="Excluir">
+                                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                        <span class="visually-hidden">Excluir</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -202,14 +197,13 @@
                                         <span class="task-comment-acts">
                                             <button type="button" class="task-comment-btn btn-edit-comment"
                                                 data-comment-id="{{ comment.id }}"
-                                                data-comment-content="{{ comment.content|e }}" title="Editar"><i
-                                                    class="fas fa-pen"></i></button>
+                                                data-comment-content="{{ comment.content|e }}" title="Editar">Editar</button>
                                             <form
                                                 action="{{ url_for('main.delete_task_item_comment', comment_id=comment.id) }}"
                                                 method="POST" class="d-inline"
                                                 onsubmit="return confirm('Excluir comentário?');">
                                                 <button type="submit" class="task-comment-btn task-comment-btn-del"
-                                                    title="Excluir"><i class="fas fa-trash-alt"></i></button>
+                                                    title="Excluir">Excluir</button>
                                             </form>
                                         </span>
                                         {% endif %}
@@ -222,7 +216,10 @@
                                     data-item-id="{{ item.id }}">
                                     <textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)"
                                         required></textarea>
-                                    <button type="submit"><i class="fas fa-paper-plane"></i></button>
+                                    <button type="submit" title="Enviar comentário">
+                                        <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                                        <span class="visually-hidden">Enviar</span>
+                                    </button>
                                 </form>
                             </div>
                         </div>
@@ -234,15 +231,12 @@
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content modal-clean">
                             <div class="modal-header-clean">
-                                <div class="modal-icon-clean">
-                                    <i class="fas fa-exclamation-circle"></i>
-                                </div>
                                 <div>
                                     <h5 class="modal-title-clean ds-type-section-title">Excluir Item</h5>
                                     <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
                                 </div>
                                 <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
-                                    <i class="fas fa-times"></i>
+                                    &times;
                                 </button>
                             </div>
                             <div class="modal-body-clean">
@@ -340,15 +334,12 @@
         <div class="modal-content modal-clean">
             <form id="itemForm" action="{{ url_for('main.add_task_item', task_id=task.id) }}" method="POST">
                 <div class="modal-header-clean">
-                    <div class="modal-icon-clean task-modal-icon-primary">
-                        <i class="fas fa-list task-modal-icon-symbol"></i>
-                    </div>
                     <div>
                         <h5 class="modal-title-clean ds-type-section-title" id="itemModalTitle">Novo Item</h5>
                         <p class="modal-subtitle-clean ds-type-body-sm">{{ task.titulo }}</p>
                     </div>
                     <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
-                        <i class="fas fa-times"></i>
+                        &times;
                     </button>
                 </div>
                 <div class="modal-body-clean">
@@ -379,7 +370,7 @@
                         Cancelar
                     </button>
                     <button type="submit" class="btn-modal-clean task-modal-submit-primary">
-                        <i class="fas fa-save"></i> Salvar
+                        Salvar
                     </button>
                 </div>
             </form>
@@ -392,22 +383,18 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-clean">
             <div class="modal-header-clean">
-                <div class="modal-icon-clean">
-                    <i class="fas fa-exclamation-circle"></i>
-                </div>
                 <div>
                     <h5 class="modal-title-clean ds-type-section-title">Excluir Tarefa</h5>
                     <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
                 </div>
                 <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
-                    <i class="fas fa-times"></i>
+                    &times;
                 </button>
             </div>
             <div class="modal-body-clean">
                 <p>Confirma a exclusão da tarefa <strong>{{ task.titulo }}</strong>?</p>
                 {% if task.items %}
                 <p class="text-warning small">
-                    <i class="fas fa-warning"></i>
                     Esta tarefa possui {{ task.items|length }} item(s) que também serão excluídos.
                 </p>
                 {% endif %}
@@ -569,12 +556,12 @@
                 var link = document.createElement('a');
                 link.href = projectDetailUrl;
                 link.className = 'task-project-badge-refined';
-                link.innerHTML = '<i class="fas fa-link"></i><span>' + escapeHtml(projectTitulo || '') + '</span>';
+                link.innerHTML = '<span>' + escapeHtml(projectTitulo || '') + '</span>';
                 badgeContainer.parentNode.replaceChild(link, badgeContainer);
             } else {
                 var span = document.createElement('span');
                 span.className = 'task-project-badge-refined task-project-badge-neutral task-project-empty';
-                span.innerHTML = '<i class="fas fa-inbox"></i><span class="no-project-label">Sem projeto</span><span class="no-project-label-hover">+ adicionar projeto referente</span>';
+                span.innerHTML = '<span class="no-project-label">Sem projeto</span><span class="no-project-label-hover">+ adicionar projeto referente</span>';
                 badgeContainer.parentNode.replaceChild(span, badgeContainer);
             }
         }
@@ -777,7 +764,7 @@
                 '<div class="task-item-line">' +
                 '<div class="task-item-desc-wrap">' +
                 '<p class="task-item-desc" data-item-id="' + item.id + '">' + escapeHtml(item.descricao) + '</p>' +
-                '<button type="button" class="task-item-desc-edit-btn" data-item-id="' + item.id + '" title="Editar descrição"><i class="fas fa-pen"></i></button>' +
+                '<button type="button" class="task-item-desc-edit-btn" data-item-id="' + item.id + '" title="Editar descrição"><i class="fas fa-pen" aria-hidden="true"></i><span class="visually-hidden">Editar</span></button>' +
                 '</div>' +
                 '<div class="task-item-meta">' +
                 '<select class="task-item-status status-' + item.status + '" onchange="updateItemStatus(' + item.id + ', this.value)" title="Status">' +
@@ -788,21 +775,21 @@
                 '</select>' +
                 '<span class="task-item-responsavel" data-item-id="' + item.id + '">' + (item.responsavel ? escapeHtml(item.responsavel) : '<em class="responsavel-placeholder">Responsável não informado</em>') + '</span>' +
                 '<button type="button" class="task-item-comments-btn" aria-expanded="false" data-target="comments-body-' + item.id + '" onclick="toggleComments(this)">' +
-                '<i class="far fa-comment-alt"></i><span class="task-item-comments-num">0</span></button>' +
+                '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-item-comments-label visually-hidden">Comentários</span><span class="task-item-comments-num">0</span></button>' +
                 '<div class="task-item-actions">' +
-                '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt"></i></button>' +
+                '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt" aria-hidden="true"></i><span class="visually-hidden">Excluir</span></button>' +
                 '</div></div></div>' +
                 '<div id="comments-body-' + item.id + '" class="task-item-comments" hidden>' +
                 '<div class="task-item-comments-inner">' +
                 '<form class="task-comment-form" action="/tarefas/itens/' + item.id + '/comentarios/add" method="POST" data-item-id="' + item.id + '">' +
                 '<textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)" required></textarea>' +
-                '<button type="submit"><i class="fas fa-paper-plane"></i></button></form></div></div></div></div>';
+                '<button type="submit" title="Enviar comentário"><i class="fas fa-paper-plane" aria-hidden="true"></i><span class="visually-hidden">Enviar</span></button></form></div></div></div></div>';
             var modalHtml = '<div class="modal fade task-detail-v2-modal" id="deleteItemModal-' + item.id + '" tabindex="-1" aria-hidden="true">' +
                 '<div class="modal-dialog modal-dialog-centered">' +
                 '<div class="modal-content modal-clean">' +
-                '<div class="modal-header-clean"><div class="modal-icon-clean"><i class="fas fa-exclamation-circle"></i></div>' +
+                '<div class="modal-header-clean">' +
                 '<div><h5 class="modal-title-clean ds-type-section-title">Excluir Item</h5><p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p></div>' +
-                '<button type="button" class="btn-close-clean" data-bs-dismiss="modal"><i class="fas fa-times"></i></button></div>' +
+                '<button type="button" class="btn-close-clean" data-bs-dismiss="modal">&times;</button></div>' +
                 '<div class="modal-body-clean"><p>Confirma a exclusão deste item?</p><p class="text-muted small">' + escapeHtml(item.descricao.substring(0, 100)) + (item.descricao.length > 100 ? '...' : '') + '</p></div>' +
                 '<div class="modal-footer-clean">' +
                 '<button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">Cancelar</button>' +
@@ -1620,9 +1607,9 @@
                         '<span class="task-comment-time">' + escapeHtml(c.created_at) + '</span>';
                     if (c.is_own) {
                         commentHtml += '<span class="task-comment-acts">' +
-                            '<button type="button" class="task-comment-btn btn-edit-comment" data-comment-id="' + c.id + '" data-comment-content="' + escapeHtml(c.content) + '" title="Editar"><i class="fas fa-pen"></i></button>' +
+                            '<button type="button" class="task-comment-btn btn-edit-comment" data-comment-id="' + c.id + '" data-comment-content="' + escapeHtml(c.content) + '" title="Editar">Editar</button>' +
                             '<form action="/tarefas/comentarios/' + c.id + '/delete" method="POST" class="d-inline" onsubmit="return confirm(\'Excluir comentário?\');">' +
-                            '<button type="submit" class="task-comment-btn task-comment-btn-del" title="Excluir"><i class="fas fa-trash-alt"></i></button>' +
+                            '<button type="submit" class="task-comment-btn task-comment-btn-del" title="Excluir">Excluir</button>' +
                             '</form></span>';
                     }
                     commentHtml += '</div><p class="task-comment-text">' + escapeHtml(c.content) + '</p></div>';

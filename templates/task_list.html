@@ -2,51 +2,52 @@
 
 {% block title %}Tarefas - ProjetosRJ{% endblock %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='pages/tarefas.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid px-3 px-md-4 py-2 admin-tasks-shell">
-    <section class="admin-tasks-header">
-        <div class="admin-tasks-header-main">
-            <div class="admin-tasks-header-icon">
-                <i class="fas fa-tasks"></i>
-            </div>
-            <div class="admin-tasks-header-copy">
-                <h1 class="admin-tasks-title ds-type-page-title">Tarefas</h1>
-                <p class="admin-tasks-subtitle mb-0 ds-type-body-sm">Acompanhe tarefas avulsas e vinculadas a projetos com foco operacional.</p>
-            </div>
+<div class="tasks-page" id="tasksPageRoot">
+    <header class="tasks-header">
+        <div class="tasks-header-main">
+            <h1 class="tasks-title ds-type-page-title">Tarefas</h1>
+            <p class="tasks-subtitle mb-0 ds-type-body-sm">Acompanhe tarefas avulsas e vinculadas a projetos com foco operacional.</p>
         </div>
-        <button type="button" class="btn admin-tasks-create-btn" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-            <i class="fas fa-plus me-2"></i>Nova Tarefa
-        </button>
+        <div class="tasks-header-actions">
+            <span class="tasks-total-pill">
+                {{ pagination.total }} tarefa{{ 's' if pagination.total != 1 else '' }}
+            </span>
+            <button type="button" class="btn-task btn-task-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                Nova tarefa
+            </button>
+        </div>
+    </header>
+
+    <section class="tasks-meta-row">
+        <span class="tasks-chip">
+            Página {{ pagination.page }} de {{ pagination.pages if pagination.pages else 1 }}
+        </span>
     </section>
 
-    <section class="admin-tasks-meta-row">
-        <span class="admin-tasks-meta-chip">
-            <i class="fas fa-list-check me-1"></i>{{ pagination.total }} tarefa{{ 's' if pagination.total != 1 else '' }}
-        </span>
-        <span class="admin-tasks-meta-chip">
-            <i class="fas fa-copy me-1"></i>Página {{ pagination.page }} de {{ pagination.pages if pagination.pages else 1 }}
-        </span>
-    </section>
-
-    <section class="admin-tasks-filters-card">
-        <form method="GET" action="{{ url_for('main.list_tasks') }}" class="row g-2 align-items-end admin-tasks-filters" id="filterTasksForm">
-            <div class="col-12 col-lg-4 col-xxl-3">
-                <label for="task_search" class="admin-tasks-label ds-type-label">Título da tarefa</label>
+    <section class="tasks-filters">
+        <form method="GET" action="{{ url_for('main.list_tasks') }}" class="tasks-filter-form" id="filterTasksForm">
+            <div class="tasks-field tasks-field-search">
+                <label for="task_search" class="tasks-label ds-type-label">Título da tarefa</label>
                 <input
                     type="text"
                     id="task_search"
                     name="search"
-                    class="form-control admin-tasks-input"
+                    class="form-control tasks-input"
                     placeholder="Buscar por título..."
                     value="{{ search_query }}">
             </div>
 
-            <div class="col-12 col-lg-4 col-xxl-3">
-                <label for="filter_project_input" class="admin-tasks-label ds-type-label">Projeto</label>
+            <div class="tasks-field tasks-field-project">
+                <label for="filter_project_input" class="tasks-label ds-type-label">Projeto</label>
                 <div class="project-search-wrap project-search-wrap-sm">
                     <input
                         type="text"
-                        class="form-control admin-tasks-input project-search-input"
+                        class="form-control tasks-input project-search-input"
                         id="filter_project_input"
                         placeholder="Digite para filtrar projetos..."
                         autocomplete="off"
@@ -64,93 +65,83 @@
                 </div>
             </div>
 
-            <div class="col-12 col-lg-4 col-xxl-3">
-                <div class="admin-tasks-filter-actions">
-                    <button type="submit" class="btn admin-tasks-filter-btn">
-                        <i class="fas fa-filter me-1"></i>Filtrar
+            <div class="tasks-filter-actions">
+                <button type="submit" class="btn-task btn-task-primary">
+                    Filtrar
                     </button>
-                    <a href="{{ url_for('main.list_tasks') }}" class="btn admin-tasks-reset-btn">Limpar</a>
-                </div>
+                <a href="{{ url_for('main.list_tasks') }}" class="btn-task btn-task-secondary">Limpar</a>
             </div>
         </form>
     </section>
 
     {% if tasks %}
-    <section class="admin-tasks-list-card">
+    <section class="tasks-list">
         {% for task in tasks %}
         {% set finalizados = task.items|selectattr('status', 'equalto', 'finalizado')|list|length %}
-        <article class="admin-tasks-row" data-task-url="{{ url_for('main.task_detail', task_id=task.id) }}">
-            <div class="admin-tasks-row-icon">
-                <i class="fas fa-clipboard-list"></i>
-            </div>
-
-            <div class="admin-tasks-row-content">
-                <div class="admin-tasks-row-title-wrap">
-                    <h2 class="admin-tasks-row-title">{{ task.titulo }}</h2>
-                    <span class="admin-tasks-items-chip">
-                        <i class="fas fa-list-ol me-1"></i>{{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}
+        <article class="tasks-row" data-task-url="{{ url_for('main.task_detail', task_id=task.id) }}">
+            <div class="tasks-row-content">
+                <div class="tasks-row-title-wrap">
+                    <h2 class="tasks-row-title">{{ task.titulo }}</h2>
+                    <span class="tasks-chip">
+                        {{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}
                     </span>
                 </div>
 
-                <div class="admin-tasks-row-meta">
+                <div class="tasks-row-meta">
                     {% if task.project %}
-                    <a href="{{ url_for('main.project_detail', project_id=task.project.id) }}" class="admin-tasks-project-link" data-stop-row-click="1">
-                        <i class="fas fa-project-diagram me-1"></i>{{ task.project.titulo }}
+                    <a href="{{ url_for('main.project_detail', project_id=task.project.id) }}" class="tasks-project-link" data-stop-row-click="1">
+                        {{ task.project.titulo }}
                     </a>
                     {% else %}
-                    <span class="admin-tasks-meta-chip-inline is-muted">
-                        <i class="fas fa-inbox me-1"></i>Sem projeto
+                    <span class="tasks-meta-chip is-muted">
+                        Sem projeto
                     </span>
                     {% endif %}
 
-                    <span class="admin-tasks-meta-chip-inline is-muted">
-                        <i class="fas fa-calendar-alt me-1"></i>{{ task.created_at.strftime('%d/%m/%Y') }}
+                    <span class="tasks-meta-chip is-muted">
+                        {{ task.created_at.strftime('%d/%m/%Y') }}
                     </span>
 
-                    <span class="admin-tasks-meta-chip-inline">
-                        <i class="fas fa-check-circle me-1"></i>{{ finalizados }}/{{ task.items|length }} finalizados
+                    <span class="tasks-status-chip">
+                        {{ finalizados }}/{{ task.items|length }} finalizados
                     </span>
                 </div>
             </div>
 
-            <div class="admin-tasks-actions" data-stop-row-click="1">
-                <a href="{{ url_for('main.task_detail', task_id=task.id) }}" class="btn admin-tasks-action-btn is-view" title="Ver Detalhes">
-                    <i class="fas fa-eye"></i>
+            <div class="tasks-actions" data-stop-row-click="1">
+                <a href="{{ url_for('main.task_detail', task_id=task.id) }}" class="tasks-action-btn is-view" title="Ver detalhes">
+                    Abrir
                 </a>
-                <button type="button" class="btn admin-tasks-action-btn is-delete" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ task.id }}" title="Excluir">
-                    <i class="fas fa-trash"></i>
+                <button type="button" class="tasks-action-btn is-delete" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ task.id }}" title="Excluir">
+                    Excluir
                 </button>
             </div>
         </article>
 
-        <div class="modal fade admin-tasks-modal" id="deleteModal-{{ task.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal fade tasks-modal" id="deleteModal-{{ task.id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content admin-tasks-modal-content">
-                    <div class="admin-tasks-modal-header">
-                        <div class="admin-tasks-modal-icon is-warning">
-                            <i class="fas fa-exclamation-circle"></i>
-                        </div>
+                <div class="modal-content tasks-modal-content">
+                    <div class="tasks-modal-header">
                         <div>
-                            <h5 class="admin-tasks-modal-title">Excluir Tarefa</h5>
-                            <p class="admin-tasks-modal-subtitle mb-0">Esta ação não pode ser desfeita</p>
+                            <h5 class="tasks-modal-title">Excluir tarefa</h5>
+                            <p class="tasks-modal-subtitle mb-0">Esta ação não pode ser desfeita.</p>
                         </div>
-                        <button type="button" class="admin-tasks-modal-close" data-bs-dismiss="modal" aria-label="Fechar">
-                            <i class="fas fa-times"></i>
+                        <button type="button" class="tasks-modal-close" data-bs-dismiss="modal" aria-label="Fechar">
+                            &times;
                         </button>
                     </div>
-                    <div class="admin-tasks-modal-body">
+                    <div class="tasks-modal-body">
                         <p class="mb-2">Confirma a exclusão da tarefa <strong>{{ task.titulo }}</strong>?</p>
                         {% if task.items %}
-                        <p class="admin-tasks-modal-warning mb-0">
-                            <i class="fas fa-triangle-exclamation me-1"></i>
+                        <p class="tasks-modal-warning mb-0">
                             Esta tarefa possui {{ task.items|length }} item(ns) que também serão excluídos.
                         </p>
                         {% endif %}
                     </div>
-                    <div class="admin-tasks-modal-footer">
-                        <button type="button" class="btn admin-tasks-modal-cancel" data-bs-dismiss="modal">Cancelar</button>
+                    <div class="tasks-modal-footer">
+                        <button type="button" class="btn-task btn-task-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" class="d-inline">
-                            <button type="submit" class="btn admin-tasks-modal-confirm-delete">Excluir</button>
+                            <button type="submit" class="btn-task btn-task-danger">Excluir</button>
                         </form>
                     </div>
                 </div>
@@ -160,8 +151,8 @@
     </section>
 
     {% if pagination.pages > 1 %}
-    <nav aria-label="Paginação de tarefas" class="admin-tasks-pagination-wrap">
-        <ul class="pagination admin-tasks-pagination mb-0">
+    <nav aria-label="Paginação de tarefas" class="tasks-pagination-wrap">
+        <ul class="pagination tasks-pagination mb-0">
             <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
                 <a class="page-link" href="{{ url_for('main.list_tasks', page=pagination.prev_num, project=project_filter, search=search_query) if pagination.has_prev else '#' }}" aria-label="Página anterior">
                     <span aria-hidden="true">«</span>
@@ -187,48 +178,42 @@
     </nav>
     {% endif %}
     {% else %}
-    <section class="admin-tasks-empty-state">
-        <div class="admin-tasks-empty-icon">
-            <i class="fas fa-tasks"></i>
-        </div>
-        <h2 class="admin-tasks-empty-title">Nenhuma tarefa encontrada</h2>
-        <p class="admin-tasks-empty-text">Crie sua primeira tarefa para começar a acompanhar as entregas.</p>
-        <button type="button" class="btn admin-tasks-create-btn" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-            <i class="fas fa-plus me-2"></i>Criar Primeira Tarefa
+    <section class="tasks-empty-state">
+        <h2 class="tasks-empty-title">Nenhuma tarefa encontrada</h2>
+        <p class="tasks-empty-text">Crie sua primeira tarefa para começar a acompanhar as entregas.</p>
+        <button type="button" class="btn-task btn-task-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+            Criar primeira tarefa
         </button>
     </section>
     {% endif %}
 </div>
 
-<div class="modal fade admin-tasks-modal" id="addTaskModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade tasks-modal" id="addTaskModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content admin-tasks-modal-content">
+        <div class="modal-content tasks-modal-content">
             <form action="{{ url_for('main.add_task') }}" method="POST">
-                <div class="admin-tasks-modal-header">
-                    <div class="admin-tasks-modal-icon is-primary">
-                        <i class="fas fa-tasks"></i>
-                    </div>
+                <div class="tasks-modal-header">
                     <div>
-                        <h5 class="admin-tasks-modal-title">Nova Tarefa</h5>
-                        <p class="admin-tasks-modal-subtitle mb-0">Crie uma nova tarefa e adicione itens depois.</p>
+                        <h5 class="tasks-modal-title">Nova tarefa</h5>
+                        <p class="tasks-modal-subtitle mb-0">Crie uma nova tarefa e adicione itens depois.</p>
                     </div>
-                    <button type="button" class="admin-tasks-modal-close" data-bs-dismiss="modal" aria-label="Fechar">
-                        <i class="fas fa-times"></i>
+                    <button type="button" class="tasks-modal-close" data-bs-dismiss="modal" aria-label="Fechar">
+                        &times;
                     </button>
                 </div>
 
-                <div class="admin-tasks-modal-body">
+                <div class="tasks-modal-body">
                     <div class="mb-3">
-                        <label for="titulo" class="admin-tasks-label ds-type-label">Título da Tarefa <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control admin-tasks-input" id="titulo" name="titulo" required>
+                        <label for="titulo" class="tasks-label ds-type-label">Título da tarefa <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control tasks-input" id="titulo" name="titulo" required>
                     </div>
 
                     <div class="mb-0">
-                        <label for="project_id_input" class="admin-tasks-label ds-type-label">Projeto (Opcional)</label>
+                        <label for="project_id_input" class="tasks-label ds-type-label">Projeto (opcional)</label>
                         <div class="project-search-wrap">
                             <input
                                 type="text"
-                                class="form-control admin-tasks-input project-search-input"
+                                class="form-control tasks-input project-search-input"
                                 id="project_id_input"
                                 placeholder="Digite para filtrar projetos..."
                                 autocomplete="off"
@@ -242,14 +227,14 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="admin-tasks-help-text">Associe esta tarefa a um projeto ou mantenha como tarefa avulsa.</div>
+                        <div class="tasks-help-text">Associe esta tarefa a um projeto ou mantenha como tarefa avulsa.</div>
                     </div>
                 </div>
 
-                <div class="admin-tasks-modal-footer">
-                    <button type="button" class="btn admin-tasks-modal-cancel" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn admin-tasks-modal-confirm">
-                        <i class="fas fa-save me-1"></i>Criar Tarefa
+                <div class="tasks-modal-footer">
+                    <button type="button" class="btn-task btn-task-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-task btn-task-primary">
+                        Criar tarefa
                     </button>
                 </div>
             </form>
@@ -356,7 +341,7 @@
     }
 
     initProjectSearch('#addTaskModal .project-search-wrap', 'project_id', 'addTaskProjectDropdown');
-    initProjectSearch('.admin-tasks-filters-card .project-search-wrap', 'filter_project', 'filterProjectDropdown');
+    initProjectSearch('.tasks-filters .project-search-wrap', 'filter_project', 'filterProjectDropdown');
 
     var addModal = document.getElementById('addTaskModal');
     if (addModal) {
@@ -370,7 +355,7 @@
         });
     }
 
-    document.querySelectorAll('.admin-tasks-row[data-task-url]').forEach(function (row) {
+    document.querySelectorAll('.tasks-row[data-task-url]').forEach(function (row) {
         row.addEventListener('click', function (event) {
             if (event.target.closest('[data-stop-row-click="1"], a, button, form, .modal')) {
                 return;

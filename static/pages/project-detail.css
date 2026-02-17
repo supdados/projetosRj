@@ -740,7 +740,13 @@
         border-radius: 4px;
     }
 
+    .etapa-hover-container:hover .etapa-comentario-placeholder,
+    .etapa-draggable-row:hover .etapa-comentario-placeholder {
+        opacity: 1;
+    }
+
     .etapa-comentario-placeholder:hover {
+        opacity: 1;
         background: rgba(13, 110, 253, 0.05);
         color: #6c757d !important;
     }

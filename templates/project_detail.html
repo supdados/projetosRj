@@ -1665,8 +1665,14 @@
             editButton.style.display = 'none';
             if (historyButton) historyButton.style.display = 'none';
             if (concludeButton) concludeButton.style.display = 'none';
-            saveButton.style.display = 'inline-block';
-            cancelButton.style.display = 'inline-block';
+            if (saveButton) {
+                saveButton.classList.remove('ds-hidden');
+                saveButton.style.display = 'inline-block';
+            }
+            if (cancelButton) {
+                cancelButton.classList.remove('ds-hidden');
+                cancelButton.style.display = 'inline-block';
+            }
 
             // Esconder botão de voltar durante edição
             const backButton = document.querySelector('.btn-back-to-list');
@@ -2191,9 +2197,27 @@
         const previewContainer = document.getElementById('model-preview-container');
         const previewList = document.getElementById('model-preview-list');
 
+        function setPreviewVisible(visible) {
+            if (!previewContainer) {
+                return;
+            }
+
+            if (visible) {
+                previewContainer.classList.remove('ds-hidden');
+                previewContainer.style.display = 'block';
+            } else {
+                previewContainer.classList.add('ds-hidden');
+                previewContainer.style.display = 'none';
+            }
+        }
+
         // Carregar templates quando o modal abre
         importModal.addEventListener('show.bs.modal', function () {
             loadTemplatesForImport();
+            if (previewList) {
+                previewList.innerHTML = '';
+            }
+            setPreviewVisible(false);
         });
 
         // Mostrar preview quando selecionar template
@@ -2202,7 +2226,10 @@
                 if (this.value) {
                     loadTemplatePreview(this.value);
                 } else {
-                    previewContainer.style.display = 'none';
+                    if (previewList) {
+                        previewList.innerHTML = '';
+                    }
+                    setPreviewVisible(false);
                 }
             });
         }
@@ -2260,11 +2287,22 @@
                 `;
 
                     previewList.innerHTML = html;
-                    previewContainer.style.display = 'block';
+                    setPreviewVisible(true);
+                } else {
+                    previewList.innerHTML = `
+                    <div class="preview-summary-import">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Modelo sem etapas cadastradas.</strong>
+                    </div>
+                `;
+                    setPreviewVisible(true);
                 }
             } catch (error) {
                 console.error('Erro ao carregar preview:', error);
-                previewContainer.style.display = 'none';
+                if (previewList) {
+                    previewList.innerHTML = '';
+                }
+                setPreviewVisible(false);
             }
         }
     });
@@ -2402,7 +2440,7 @@
             if (novoComentario) {
                 // Atualizar para comentário com conteúdo
                 if (elementoOriginal) {
-                    elementoOriginal.className = 'small text-muted mt-1 etapa-comentario-display';
+                    elementoOriginal.className = 'small text-muted mt-1 etapa-comentario-display ds-cursor-pointer';
                     elementoOriginal.innerHTML = `<i class="fas fa-comment-alt me-1"></i> ${novoComentario}`;
                     elementoOriginal.title = 'Clique para editar';
                     elementoOriginal.style.display = '';
@@ -2420,7 +2458,7 @@
             } else {
                 // Remover comentário e mostrar placeholder
                 if (elementoOriginal) {
-                    elementoOriginal.className = 'small text-muted mt-1 etapa-comentario-placeholder';
+                    elementoOriginal.className = 'small text-muted mt-1 etapa-comentario-placeholder ds-cursor-pointer';
                     elementoOriginal.innerHTML = '<i class="fas fa-comment-medical me-1"></i> adicionar comentário';
                     elementoOriginal.title = '';
                     elementoOriginal.style.display = '';
