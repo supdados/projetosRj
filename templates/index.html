@@ -28,8 +28,6 @@
                             {% else %}
                                 Sem área vinculada
                             {% endif %}
-                            <span class="dashboard-welcome-separator">•</span>
-                            Organize as prioridades do dia.
                         </p>
                     </div>
 
@@ -42,8 +40,8 @@
                 </div>
 
                 <div class="dashboard-welcome-actions">
-                    <button type="button" class="btn btn-primary glass-btn" data-bs-toggle="modal" data-bs-target="#addProjectModal">
-                        <i class="fas fa-plus me-1"></i><span class="d-none d-sm-inline">Novo Projeto</span>
+                    <button type="button" class="btn btn-primary glass-btn dashboard-new-project-btn" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                        <i class="fas fa-plus dashboard-new-project-icon"></i><span class="d-none d-sm-inline">Novo Projeto</span>
                     </button>
                 </div>
             </header>
@@ -131,8 +129,8 @@
     <div class="row g-3 dashboard-main-grid">
         <div class="col-12 col-lg-8 dashboard-recent-col">
             <div class="card border-0 glass-card h-100 main-content-card">
-                <div class="card-header glass-card-header py-3">
-                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title">
+                <div class="card-header glass-card-header dashboard-section-header px-3">
+                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title dashboard-section-title">
                         <i class="fas fa-clock me-2 text-primary"></i>Projetos Recentes
                     </h5>
                 </div>
@@ -142,39 +140,33 @@
                         <table class="table align-middle mb-0 glass-table">
                             <thead class="glass-table-header">
                                 <tr>
-                                    <th class="ps-4">ID</th>
-                                    <th>Projeto</th>
-                                    <th>Área</th>
-                                    <th>Prioridade</th>
-                                    <th class="text-center">Ações</th>
+                                    <th class="text-center dashboard-col-id">ID</th>
+                                    <th class="dashboard-col-projeto">Projeto</th>
+                                    <th class="text-center dashboard-col-area">Área</th>
+                                    <th class="text-center dashboard-col-prioridade">Prioridade</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% if recent_projects %}
                                     {% for project in recent_projects %}
                                     <tr class="glass-table-row">
-                                        <td class="ps-4">#{{ project.id }}</td>
-                                        <td>
+                                        <td class="text-center dashboard-col-id">{{ project.id }}</td>
+                                        <td class="dashboard-col-projeto">
                                             <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="text-decoration-none fw-medium glass-link">
-                                                {{ project.titulo | truncate(35, True) }}
+                                                <span class="dashboard-project-title">{{ project.titulo }}</span>
                                             </a>
                                         </td>
-                                        <td>{{ project.area_responsavel | default('N/A', True) }}</td>
-                                        <td>
+                                        <td class="text-center dashboard-col-area">{{ project.area_responsavel | default('N/A', True) }}</td>
+                                        <td class="text-center dashboard-col-prioridade">
                                             <span class="badge glass-badge priority-{{ project.prioridade | lower }}">
                                                 {{ project.prioridade | capitalize }}
                                             </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="btn btn-sm btn-outline-primary glass-btn-sm py-0 px-2">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
                                         </td>
                                     </tr>
                                     {% endfor %}
                                 {% else %}
                                 <tr>
-                                    <td colspan="5" class="text-center py-4">
+                                    <td colspan="4" class="text-center py-4">
                                         <div class="py-3 glass-empty-state">
                                             <i class="fas fa-folder-open fa-2x text-muted mb-3"></i>
                                             {% if num_projects > 0 %}
@@ -198,55 +190,26 @@
         </div>
 
         <div class="col-12 col-lg-4 dashboard-side-col">
-            <div class="card border-0 glass-card sidebar-content-card dashboard-priority-compact-card mb-3">
-                <div class="card-header glass-card-header py-2 px-3 d-flex justify-content-between align-items-center">
-                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title">
-                        <i class="fas fa-chart-pie me-2 text-info"></i>Projetos por Prioridade
-                    </h5>
-                    <span class="dashboard-priority-total">{{ num_projects }}</span>
-                </div>
-                <div class="card-body px-3 py-2 glass-card-body">
-                    <div class="priority-compact-list">
-                        <a href="{{ url_for('main.list_projects', prioridade='urgente') }}" class="priority-mini-card priority-urgente-item">
-                            <span class="priority-mini-top">
-                                <span class="priority-dot priority-dot-urgente"></span>
-                                <span class="priority-mini-label">Urgente</span>
-                            </span>
-                            <span class="priority-mini-count">{{ count_urgente }}</span>
-                        </a>
-                        <a href="{{ url_for('main.list_projects', prioridade='alta') }}" class="priority-mini-card priority-alta-item">
-                            <span class="priority-mini-top">
-                                <span class="priority-dot priority-dot-alta"></span>
-                                <span class="priority-mini-label">Alta</span>
-                            </span>
-                            <span class="priority-mini-count">{{ count_alta }}</span>
-                        </a>
-                        <a href="{{ url_for('main.list_projects', prioridade='media') }}" class="priority-mini-card priority-media-item">
-                            <span class="priority-mini-top">
-                                <span class="priority-dot priority-dot-media"></span>
-                                <span class="priority-mini-label">Média</span>
-                            </span>
-                            <span class="priority-mini-count">{{ count_media }}</span>
-                        </a>
-                        <a href="{{ url_for('main.list_projects', prioridade='baixa') }}" class="priority-mini-card priority-baixa-item">
-                            <span class="priority-mini-top">
-                                <span class="priority-dot priority-dot-baixa"></span>
-                                <span class="priority-mini-label">Baixa</span>
-                            </span>
-                            <span class="priority-mini-count">{{ count_baixa }}</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
             <div class="card border-0 glass-card sidebar-content-card dashboard-tasks-kpi-card">
-                <div class="card-header glass-card-header py-2 px-3 d-flex justify-content-between align-items-center">
-                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title">
+                <div class="card-header glass-card-header dashboard-section-header px-3 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title dashboard-section-title">
                         <i class="fas fa-list-check me-2 text-primary"></i>Tarefas
                     </h5>
                     <a href="{{ url_for('main.list_tasks') }}" class="dashboard-tasks-view-all">Ver todas <i class="fas fa-arrow-right ms-1"></i></a>
                 </div>
                 <div class="card-body px-3 py-3 glass-card-body">
+                    {% if task_items_total > 0 %}
+                    {% set finalized_pct = ((task_items_finalizado / task_items_total) * 100) | round(1) %}
+                    {% set andamento_pct = ((task_items_em_andamento / task_items_total) * 100) | round(1) %}
+                    {% set validacao_pct = ((task_items_validacao / task_items_total) * 100) | round(1) %}
+                    {% set programado_pct = (100 - finalized_pct - andamento_pct - validacao_pct) | round(1) %}
+                    {% else %}
+                    {% set finalized_pct = 0 %}
+                    {% set andamento_pct = 0 %}
+                    {% set validacao_pct = 0 %}
+                    {% set programado_pct = 0 %}
+                    {% endif %}
+
                     <!-- KPI summary row -->
                     <div class="tasks-kpi-summary">
                         <div class="tasks-kpi-number-card">
@@ -271,19 +234,19 @@
                         </div>
                         <div class="tasks-kpi-stacked-bar">
                             {% if task_items_total > 0 %}
-                            <div class="tasks-kpi-bar-segment bar-finalizado" style="width: {{ (task_items_finalizado / task_items_total * 100) | round(1) }}%" data-bs-toggle="tooltip" title="Finalizado: {{ task_items_finalizado }}"></div>
-                            <div class="tasks-kpi-bar-segment bar-em-andamento" style="width: {{ (task_items_em_andamento / task_items_total * 100) | round(1) }}%" data-bs-toggle="tooltip" title="Em andamento: {{ task_items_em_andamento }}"></div>
-                            <div class="tasks-kpi-bar-segment bar-validacao" style="width: {{ (task_items_validacao / task_items_total * 100) | round(1) }}%" data-bs-toggle="tooltip" title="Validação: {{ task_items_validacao }}"></div>
-                            <div class="tasks-kpi-bar-segment bar-programado" style="width: {{ (task_items_programado / task_items_total * 100) | round(1) }}%" data-bs-toggle="tooltip" title="Programado: {{ task_items_programado }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-finalizado" style="width: {{ finalized_pct }}%" data-bs-toggle="tooltip" title="Finalizado: {{ task_items_finalizado }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-em-andamento" style="width: {{ andamento_pct }}%" data-bs-toggle="tooltip" title="Em andamento: {{ task_items_em_andamento }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-validacao" style="width: {{ validacao_pct }}%" data-bs-toggle="tooltip" title="Validação: {{ task_items_validacao }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-programado" style="width: {{ programado_pct }}%" data-bs-toggle="tooltip" title="Programado: {{ task_items_programado }}"></div>
                             {% else %}
                             <div class="tasks-kpi-bar-segment bar-empty tasks-kpi-bar-full"></div>
                             {% endif %}
                         </div>
-                        <div class="tasks-kpi-legend">
-                            <span class="tasks-kpi-legend-item"><span class="tasks-kpi-legend-dot bg-kpi-finalizado"></span> Finalizado <strong>{{ task_items_finalizado }}</strong></span>
-                            <span class="tasks-kpi-legend-item"><span class="tasks-kpi-legend-dot bg-kpi-em-andamento"></span> Em andamento <strong>{{ task_items_em_andamento }}</strong></span>
-                            <span class="tasks-kpi-legend-item"><span class="tasks-kpi-legend-dot bg-kpi-validacao"></span> Validação <strong>{{ task_items_validacao }}</strong></span>
-                            <span class="tasks-kpi-legend-item"><span class="tasks-kpi-legend-dot bg-kpi-programado"></span> Programado <strong>{{ task_items_programado }}</strong></span>
+                        <div class="tasks-kpi-simple-legend" aria-label="Legenda dos itens por status">
+                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-finalizado"></span>Finalizado</span>
+                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-em-andamento"></span>Em andamento</span>
+                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-validacao"></span>Validação</span>
+                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-programado"></span>Programado</span>
                         </div>
                     </div>
 
@@ -292,10 +255,6 @@
                     <div class="tasks-kpi-donut-section">
                         <div class="tasks-kpi-donut-wrap">
                             <svg viewBox="0 0 36 36" class="tasks-kpi-donut-svg">
-                                {% set finalized_pct = (task_items_finalizado / task_items_total * 100) | round(1) %}
-                                {% set andamento_pct = (task_items_em_andamento / task_items_total * 100) | round(1) %}
-                                {% set validacao_pct = (task_items_validacao / task_items_total * 100) | round(1) %}
-                                {% set programado_pct = (100 - finalized_pct - andamento_pct - validacao_pct) | round(1) %}
                                 <circle class="tasks-kpi-donut-ring" cx="18" cy="18" r="15.915"></circle>
                                 <circle class="tasks-kpi-donut-seg seg-finalizado" cx="18" cy="18" r="15.915"
                                     stroke-dasharray="{{ finalized_pct }} {{ 100 - finalized_pct }}"
@@ -311,7 +270,7 @@
                                     stroke-dashoffset="{{ 25 - finalized_pct - andamento_pct - validacao_pct }}"></circle>
                             </svg>
                             <div class="tasks-kpi-donut-center">
-                                <span class="tasks-kpi-donut-center-number">{{ ((task_items_finalizado / task_items_total) * 100) | round(0) | int }}%</span>
+                                <span class="tasks-kpi-donut-center-number">{{ finalized_pct | round(0) | int }}%</span>
                                 <span class="tasks-kpi-donut-center-label">concluído</span>
                             </div>
                         </div>
