@@ -93,3 +93,53 @@ Ponto de entrada:
 Compatibilidade:
 - URLs e endpoint names foram preservados.
 - `url_for('main.*')` continua igual.
+
+## Testes automatizados
+
+Dependencias de desenvolvimento:
+
+```bash
+./.venv/bin/pip install -r requirements-dev.txt
+```
+
+Executar a suite de testes:
+
+```bash
+./.venv/bin/python -m pytest /Users/juniorguimaraes/Downloads/projetosRj/tests -q
+```
+
+A cobertura de rotas fica em:
+- `tests/routes/route_cases.py`: matriz unica com metodo+URL.
+- `tests/routes/test_routes_smoke.py`: smoke test por rota.
+- `tests/routes/test_routes_permissions.py`: cenarios de permissao.
+- `tests/routes/test_route_inventory.py`: garante 100% das rotas registradas cobertas na matriz.
+
+## Seed fake (dados para visualizacao)
+
+Script:
+- `/Users/juniorguimaraes/Downloads/projetosRj/scripts/seed_fake_data.py`
+
+Execucao padrao (reseta e recria o banco atual):
+
+```bash
+./.venv/bin/python /Users/juniorguimaraes/Downloads/projetosRj/scripts/seed_fake_data.py --yes
+```
+
+Padrao de volume:
+- 100 projetos
+- 5 etapas por projeto
+- 2 tarefas por projeto
+- 4 itens por tarefa
+- 1 comentario por item
+
+Exemplo com volume customizado:
+
+```bash
+./.venv/bin/python /Users/juniorguimaraes/Downloads/projetosRj/scripts/seed_fake_data.py \
+  --yes \
+  --projects 150 \
+  --stages-per-project 6 \
+  --tasks-per-project 3 \
+  --items-per-task 4 \
+  --comments-per-item 1
+```
