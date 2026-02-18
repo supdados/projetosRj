@@ -7,263 +7,353 @@
 {% endblock %}
 
 {% block content %}
-<div class="main-container">
-    <!-- Barra de busca, filtros e ações - Card único unificado -->
-    <div class="search-filter-bar">
-        <!-- Header com título e ações -->
-        <div class="bar-header">
-            <h1 class="bar-title ds-type-page-title">
-                <i class="fas fa-folder-open me-2"></i>Todos os Projetos
+<div class="projects-v4-page" id="projectsV4Page">
+    <header class="projects-v4-header">
+        <div class="projects-v4-header-main">
+            <h1 class="projects-v4-title ds-type-page-title">
+                <i class="fas fa-folder-open" aria-hidden="true"></i>
+                Todos os Projetos
             </h1>
-            <div class="bar-actions">
-                {% if has_active_filters %}
-                <button type="button" id="clearFiltersBtn" class="btn-clear-filters" title="Limpar todos os filtros">
-                    <i class="fas fa-times-circle me-1"></i>Limpar Filtros
-                </button>
-                {% endif %}
-                <button type="button" class="btn-add-project" data-bs-toggle="modal" data-bs-target="#addProjectModal">
-                    <i class="fas fa-plus me-1"></i>Novo Projeto
-                </button>
-            </div>
+            <p class="projects-v4-subtitle ds-type-body-sm">Visualize, filtre e acompanhe seus projetos.</p>
         </div>
-        
-        <!-- Formulário unificado - busca + filtros -->
-        <form method="GET" action="{{ url_for('main.list_projects') }}" class="unified-search-filter-form" id="filterForm">
-            <!-- Campo de busca - linha separada -->
-            <div class="search-wrapper-full">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" class="search-input" placeholder="Buscar projeto..." id="searchProject" name="search" value="{{ search_query }}">
-            </div>
-            
-            <!-- Filtros - linha abaixo -->
-            <div class="filter-row">
-                <select class="filter-select" name="prioridade" id="filterPrioridade">
-                    <option value="">Todas as prioridades</option>
-                    {% for prio in priorities %}
-                        <option value="{{ prio }}" {% if prio == selected_priority %}selected{% endif %}>{{ prio | capitalize }}</option>
-                    {% endfor %}
-                </select>
-                <select class="filter-select" name="status" id="filterStatus">
-                    <option value="">Todos os status</option>
-                    {% for status in statuses %}
-                        <option value="{{ status }}" {% if status == selected_status %}selected{% endif %}>{{ status }}</option>
-                    {% endfor %}
-                </select>
-                {% if is_admin_user %}
-                <select class="filter-select" name="area" id="filterArea">
-                    <option value="">Todas as áreas</option>
-                    {% for area in areas %}
-                        <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
-                    {% endfor %}
-                </select>
-                {% endif %}
-                <select class="filter-select" name="atraso" id="filterAtraso">
-                    <option value="">Todos os prazos</option>
-                    {% for atraso_val, atraso_text in atrasos_options %}
-                        <option value="{{ atraso_val }}" {% if atraso_val == selected_atraso %}selected{% endif %}>{{ atraso_text }}</option>
-                    {% endfor %}
-                </select>
-                <select class="filter-select" name="special_project" id="filterSpecialProject">
-                    <option value="">Todos os especiais</option>
-                    {% for special in special_projects_options %}
-                        <option value="{{ special }}" {% if special == selected_special_project %}selected{% endif %}>{{ special }}</option>
-                    {% endfor %}
-                </select>
-                <select class="filter-select" name="delivery_type" id="filterDeliveryType">
-                    <option value="">Todos os tipos</option>
-                    {% for delivery in delivery_types_options %}
-                        <option value="{{ delivery }}" {% if delivery == selected_delivery_type %}selected{% endif %}>{{ delivery }}</option>
-                    {% endfor %}
-                </select>
-                <select class="filter-select" name="abep_indicator" id="filterAbepIndicator">
-                    <option value="">Todos os indicadores ABEP</option>
-                    {% for item in ABEP_INDICADORES_OPTIONS %}
-                        <option value="{{ item.value }}" {% if item.value == selected_abep_indicator %}selected{% endif %}>
-                            {{ item.label }}
-                        </option>
-                    {% endfor %}
-                </select>
-                <select class="filter-select" name="objetivo" id="filterObjetivo">
-                    <option value="">Todos os objetivos</option>
-                    {% for obj in objetivos %}
-                        <option value="{{ obj.id }}" {% if obj.id|string == selected_objetivo %}selected{% endif %}>{{ obj.descricao }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="filter-btn">Filtrar</button>
-            </div>
-        </form>
-    </div>
 
-    <!-- Tabela de projetos -->
-    {% if projects %}
-        <div class="projects-table-container px-3">
-            <div class="table-scroll">
-                <table class="projects-table">
-                    <thead>
-                        <tr>
-                            <th class="col-w-3">#</th>
-                            <th class="col-w-18">Título</th>
-                            <th class="col-w-10">Área</th>
-                            <th class="col-w-10">Órgão</th>
-                            <th class="col-w-8">Tipo Entrega</th>
-                            <th class="col-w-14">Indicador ABEP</th>
-                            <th class="col-w-8">Prioridade</th>
-                            <th class="col-w-8">Status</th>
-                            <th class="col-w-9">Data Início</th>
-                            <th class="col-w-9">Data Fim</th>
-                            <th class="col-w-8 text-center">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for project in projects %}
-                            <tr>
-                                <td>{{ project.id }}</td>
-                                <td>
-                                    <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="project-title">
-                                        {{ project.titulo }}
-                                    </a>
-                                </td>
-                                <td>{{ project.area_responsavel if project.area_responsavel else '-' }}</td>
-                                <td>{{ project.orgao if project.orgao else '-' }}</td>
-                                <td>
-                                    {% if project.delivery_type %}
-                                        <span class="badge badge-delivery projects-delivery-badge">
-                                            {{ project.delivery_type }}
-                                        </span>
-                                    {% else %}
-                                        <span class="ds-text-muted-soft">-</span>
-                                    {% endif %}
-                                </td>
-                                <td class="projects-abep-cell">
-                                    {% if project.abep_indicator %}
-                                        {{ project.abep_indicator }}
-                                    {% else %}
-                                        <span class="ds-text-muted-soft">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <span class="badge priority-{{ project.prioridade | lower }}">
-                                        {{ project.prioridade | capitalize }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge status-{{ project.status | lower }}">
-                                        {{ project.status }}
-                                    </span>
-                                </td>
-                                <td class="date-cell">{{ project.data_inicio_projeto.strftime('%d/%m/%Y') if project.data_inicio_projeto else '-' }}</td>
-                                <td class="date-cell">{{ project.data_fim_projeto.strftime('%d/%m/%Y') if project.data_fim_projeto else '-' }}</td>
-                                <td class="actions-cell">
-                                    <div class="actions-cell-content">
-                                        <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="btn action-btn" title="Ver Detalhes">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
-                                        <a href="{{ url_for('main.project_detail', project_id=project.id) }}?edit=true" class="btn action-btn" title="Editar Projeto">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <form action="{{ url_for('main.delete_project', project_id=project.id) }}" method="post" class="inline-form" onsubmit="return confirm('Tem certeza que deseja excluir este projeto e todas as suas etapas?');">
-                                            <button type="submit" class="btn action-btn delete-btn" title="Excluir Projeto">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <!-- Controles de Paginação -->
-        {% if total_pages > 1 %}
-        <div class="pagination-container">
-            <div class="pagination-info">
-                Mostrando {{ ((page - 1) * 40) + 1 }} - {{ [page * 40, total_projects]|min }} de {{ total_projects }} projetos
-            </div>
-            <nav aria-label="Navegação de páginas">
-                <ul class="pagination">
-                    <!-- Primeira página -->
-                    {% if page > 1 %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.list_projects', page=1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Primeira">
-                            <i class="fas fa-angle-double-left"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    <!-- Página anterior -->
-                    {% if page > 1 %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.list_projects', page=page-1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Anterior">
-                            <i class="fas fa-angle-left"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    <!-- Páginas numéricas -->
-                    {% for p in range([1, page - 2]|max, [total_pages + 1, page + 3]|min) %}
-                        <li class="page-item {% if p == page %}active{% endif %}">
-                            <a class="page-link" href="{{ url_for('main.list_projects', page=p, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}">
-                                {{ p }}
-                            </a>
-                        </li>
-                    {% endfor %}
-                    
-                    <!-- Próxima página -->
-                    {% if page < total_pages %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.list_projects', page=page+1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Próxima">
-                            <i class="fas fa-angle-right"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    <!-- Última página -->
-                    {% if page < total_pages %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.list_projects', page=total_pages, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Última">
-                            <i class="fas fa-angle-double-right"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
-        {% endif %}
-    {% else %}
-        <div class="empty-state">
-            <i class="fas fa-folder-open"></i>
-            <h4>Nenhum projeto encontrado</h4>
-            <p>Os filtros aplicados não retornaram resultados. Tente outros filtros ou crie um novo projeto.</p>
-            <button type="button" class="btn btn-create-project" data-bs-toggle="modal" data-bs-target="#addProjectModal">
-                <i class="fas fa-plus me-1"></i>Criar Projeto
+        <div class="projects-v4-header-actions">
+            <span class="projects-v4-meta-pill">
+                {{ total_projects }} projeto{{ 's' if total_projects != 1 else '' }}
+            </span>
+            {% if has_active_filters %}
+            <button type="button" id="clearFiltersBtn" class="btn-projects-v4 btn-projects-v4-secondary" title="Limpar todos os filtros">
+                <i class="fas fa-rotate-left" aria-hidden="true"></i>
+                Limpar filtros
+            </button>
+            {% endif %}
+            <button type="button" class="btn-projects-v4 btn-projects-v4-primary" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                <i class="fas fa-plus" aria-hidden="true"></i>
+                Novo projeto
             </button>
         </div>
+    </header>
+
+    <section class="projects-v4-filters">
+        <form method="GET" action="{{ url_for('main.list_projects') }}" class="projects-v4-filter-form" id="filterForm">
+            <div class="projects-v4-filter-essential">
+                <div class="projects-v4-field projects-v4-field-search">
+                    <label for="searchProject" class="projects-v4-label ds-type-label">Busca livre</label>
+                    <div class="projects-v4-search-wrap">
+                        <i class="fas fa-search projects-v4-search-icon" aria-hidden="true"></i>
+                        <input
+                            type="text"
+                            class="projects-v4-input"
+                            placeholder="Digite título, área ou órgão..."
+                            id="searchProject"
+                            name="search"
+                            value="{{ search_query }}">
+                    </div>
+                </div>
+
+                {% if is_admin_user %}
+                <div class="projects-v4-field">
+                    <label for="filterArea" class="projects-v4-label ds-type-label">Área</label>
+                    <select class="projects-v4-input" name="area" id="filterArea">
+                        <option value="">Todas as áreas</option>
+                        {% for area in areas %}
+                        <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <div class="projects-v4-field">
+                    <label for="filterStatus" class="projects-v4-label ds-type-label">Status</label>
+                    <select class="projects-v4-input" name="status" id="filterStatus">
+                        <option value="">Todos os status</option>
+                        {% for status in statuses %}
+                        <option value="{{ status }}" {% if status == selected_status %}selected{% endif %}>{{ status }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="projects-v4-field">
+                    <label for="filterPrioridade" class="projects-v4-label ds-type-label">Prioridade</label>
+                    <select class="projects-v4-input" name="prioridade" id="filterPrioridade">
+                        <option value="">Todas as prioridades</option>
+                        {% for prio in priorities %}
+                        <option value="{{ prio }}" {% if prio == selected_priority %}selected{% endif %}>{{ prio | capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="projects-v4-filter-actions">
+                    <button
+                        type="button"
+                        id="toggleAdvancedFiltersBtn"
+                        class="btn-projects-v4 btn-projects-v4-secondary btn-projects-v4-toggle"
+                        aria-expanded="{{ 'true' if has_advanced_filters_active else 'false' }}"
+                        aria-controls="advancedFiltersPanel">
+                        <i class="fas fa-sliders-h" aria-hidden="true"></i>
+                        <span class="projects-v4-toggle-label">
+                            {{ 'Ocultar filtros' if has_advanced_filters_active else 'Mais filtros' }}
+                        </span>
+                    </button>
+                    <button type="submit" class="btn-projects-v4 btn-projects-v4-primary">
+                        <i class="fas fa-filter" aria-hidden="true"></i>
+                        Filtrar
+                    </button>
+                    <a href="{{ url_for('main.list_projects') }}" class="btn-projects-v4 btn-projects-v4-secondary text-decoration-none">
+                        <i class="fas fa-rotate-left" aria-hidden="true"></i>
+                        Resetar
+                    </a>
+                </div>
+            </div>
+
+            <div
+                class="projects-v4-filter-advanced{% if has_advanced_filters_active %} is-open{% endif %}"
+                id="advancedFiltersPanel"
+                aria-hidden="{{ 'false' if has_advanced_filters_active else 'true' }}"
+                {% if not has_advanced_filters_active %}inert{% endif %}>
+                <div class="projects-v4-filter-advanced-grid">
+                    <div class="projects-v4-field">
+                        <label for="filterDeliveryType" class="projects-v4-label ds-type-label">Tipo de entrega</label>
+                        <select class="projects-v4-input" name="delivery_type" id="filterDeliveryType">
+                            <option value="">Todos os tipos</option>
+                            {% for delivery in delivery_types_options %}
+                            <option value="{{ delivery }}" {% if delivery == selected_delivery_type %}selected{% endif %}>{{ delivery }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="projects-v4-field">
+                        <label for="filterAtraso" class="projects-v4-label ds-type-label">Prazo</label>
+                        <select class="projects-v4-input" name="atraso" id="filterAtraso">
+                            <option value="">Todos os prazos</option>
+                            {% for atraso_val, atraso_text in atrasos_options %}
+                            <option value="{{ atraso_val }}" {% if atraso_val == selected_atraso %}selected{% endif %}>{{ atraso_text }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="projects-v4-field">
+                        <label for="filterSpecialProject" class="projects-v4-label ds-type-label">Especial</label>
+                        <select class="projects-v4-input" name="special_project" id="filterSpecialProject">
+                            <option value="">Todos os especiais</option>
+                            {% for special in special_projects_options %}
+                            <option value="{{ special }}" {% if special == selected_special_project %}selected{% endif %}>{{ special }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="projects-v4-field projects-v4-field-wide">
+                        <label for="filterObjetivo" class="projects-v4-label ds-type-label">Objetivo EEGD</label>
+                        <select class="projects-v4-input" name="objetivo" id="filterObjetivo">
+                            <option value="">Todos os objetivos</option>
+                            {% for obj in objetivos %}
+                            <option value="{{ obj.id }}" {% if obj.id|string == selected_objetivo %}selected{% endif %}>{{ obj.descricao }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="projects-v4-field projects-v4-field-abep">
+                        <label for="filterAbepIndicator" class="projects-v4-label ds-type-label">Indicador ABEP</label>
+                        <select class="projects-v4-input" name="abep_indicator" id="filterAbepIndicator">
+                            <option value="">Todos os indicadores ABEP</option>
+                            {% for item in ABEP_INDICADORES_OPTIONS %}
+                            <option value="{{ item.value }}" {% if item.value == selected_abep_indicator %}selected{% endif %}>{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    {% if projects %}
+    <section class="projects-v4-table-card">
+        <div class="projects-v4-table-wrap">
+            <table class="projects-v4-table">
+                <thead>
+                    <tr>
+                        <th class="projects-v4-col-id">#</th>
+                        <th class="projects-v4-col-title">Título</th>
+                        <th class="projects-v4-col-area">Área</th>
+                        <th class="projects-v4-col-orgao">Órgão</th>
+                        <th class="projects-v4-col-delivery">Tipo Entrega</th>
+                        <th class="projects-v4-col-priority">Prioridade</th>
+                        <th class="projects-v4-col-status">Status</th>
+                        <th class="projects-v4-col-date">Data Início</th>
+                        <th class="projects-v4-col-date">Data Fim</th>
+                        <th class="projects-v4-col-actions text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                    <tr>
+                        <td>
+                            <span class="projects-v4-id-chip">#{{ project.id }}</span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="projects-v4-project-link">
+                                {{ project.titulo }}
+                            </a>
+                        </td>
+                        <td>{{ project.area_responsavel if project.area_responsavel else '-' }}</td>
+                        <td>{{ project.orgao if project.orgao else '-' }}</td>
+                        <td class="projects-v4-cell-delivery">
+                            {% if project.delivery_type %}
+                            <span class="projects-v4-badge projects-v4-badge-delivery">{{ project.delivery_type }}</span>
+                            {% else %}
+                            <span class="projects-v4-text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="projects-v4-cell-priority">
+                            {% if project.prioridade %}
+                            <span class="projects-v4-badge projects-v4-priority-{{ project.prioridade | lower }}">{{ project.prioridade | capitalize }}</span>
+                            {% else %}
+                            <span class="projects-v4-text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="projects-v4-cell-status">
+                            {% if project.status %}
+                            <span class="projects-v4-badge projects-v4-status-{{ project.status | lower | replace(' ', '_') }}">{{ project.status }}</span>
+                            {% else %}
+                            <span class="projects-v4-text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="projects-v4-date-cell">{{ project.data_inicio_projeto.strftime('%d/%m/%Y') if project.data_inicio_projeto else '-' }}</td>
+                        <td class="projects-v4-date-cell">{{ project.data_fim_projeto.strftime('%d/%m/%Y') if project.data_fim_projeto else '-' }}</td>
+                        <td class="projects-v4-actions-cell text-center">
+                            {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
+                            <div class="projects-v4-actions">
+                                <a href="{{ url_for('main.project_detail', project_id=project.id) }}?edit=true" class="projects-v4-action-btn is-edit" title="Editar projeto">
+                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Editar projeto</span>
+                                </a>
+                                <form action="{{ url_for('main.delete_project', project_id=project.id) }}" method="post" class="inline-form" onsubmit="return confirm('Tem certeza que deseja excluir este projeto e todas as suas etapas?');">
+                                    <button type="submit" class="projects-v4-action-btn is-delete" title="Excluir projeto">
+                                        <i class="fas fa-trash" aria-hidden="true"></i>
+                                        <span class="visually-hidden">Excluir projeto</span>
+                                    </button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <span class="projects-v4-text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% if total_pages > 1 %}
+    <section class="projects-v4-pagination-wrap">
+        <div class="projects-v4-pagination-info">
+            Mostrando {{ ((page - 1) * 40) + 1 }} - {{ [page * 40, total_projects]|min }} de {{ total_projects }} projetos
+        </div>
+        <nav aria-label="Navegação de páginas">
+            <ul class="pagination projects-v4-pagination mb-0">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.list_projects', page=1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Primeira">
+                        <span aria-hidden="true">««</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.list_projects', page=page-1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Anterior">
+                        <span aria-hidden="true">«</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for p in range([1, page - 2]|max, [total_pages + 1, page + 3]|min) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.list_projects', page=p, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.list_projects', page=page+1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Próxima">
+                        <span aria-hidden="true">»</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.list_projects', page=total_pages, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Última">
+                        <span aria-hidden="true">»»</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </section>
+    {% endif %}
+    {% else %}
+    <section class="projects-v4-empty-state">
+        <div class="projects-v4-empty-icon">
+            <i class="fas fa-folder-open" aria-hidden="true"></i>
+        </div>
+        <h2 class="projects-v4-empty-title">Nenhum projeto encontrado</h2>
+        <p class="projects-v4-empty-text">Os filtros aplicados não retornaram resultados. Ajuste os filtros ou crie um novo projeto.</p>
+        <button type="button" class="btn-projects-v4 btn-projects-v4-primary" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            Criar projeto
+        </button>
+    </section>
     {% endif %}
 </div>
 
 {% include "project_add_form.html" %}
-
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // --- Lógica de limpar filtros ---
-        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    document.addEventListener('DOMContentLoaded', function () {
+        var clearFiltersBtn = document.getElementById('clearFiltersBtn');
         if (clearFiltersBtn) {
-            clearFiltersBtn.addEventListener('click', function() {
-                // Redirecionar para a URL sem parâmetros (limpa tudo)
+            clearFiltersBtn.addEventListener('click', function () {
                 window.location.href = "{{ url_for('main.list_projects') }}";
             });
         }
-        
-        // --- Lógica do Modal de Adicionar Projeto (Incluída via arquivo separado) ---
+
+        var advancedFiltersPanel = document.getElementById('advancedFiltersPanel');
+        var toggleAdvancedFiltersBtn = document.getElementById('toggleAdvancedFiltersBtn');
+        var toggleAdvancedFiltersLabel = toggleAdvancedFiltersBtn
+            ? toggleAdvancedFiltersBtn.querySelector('.projects-v4-toggle-label')
+            : null;
+
+        function syncAdvancedFiltersState(isOpen) {
+            if (!advancedFiltersPanel || !toggleAdvancedFiltersBtn) {
+                return;
+            }
+
+            advancedFiltersPanel.classList.toggle('is-open', isOpen);
+            advancedFiltersPanel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+            toggleAdvancedFiltersBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            if (isOpen) {
+                advancedFiltersPanel.removeAttribute('inert');
+            } else {
+                advancedFiltersPanel.setAttribute('inert', '');
+            }
+
+            if (toggleAdvancedFiltersLabel) {
+                toggleAdvancedFiltersLabel.textContent = isOpen ? 'Ocultar filtros' : 'Mais filtros';
+            }
+        }
+
+        if (advancedFiltersPanel && toggleAdvancedFiltersBtn) {
+            syncAdvancedFiltersState(advancedFiltersPanel.classList.contains('is-open'));
+            toggleAdvancedFiltersBtn.addEventListener('click', function () {
+                syncAdvancedFiltersState(!advancedFiltersPanel.classList.contains('is-open'));
+            });
+        }
     });
 </script>
 {% include "project_add_form_js.html" %}
-{% endblock %} 
+{% endblock %}

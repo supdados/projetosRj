@@ -134,6 +134,13 @@ def list_projects():
     # Novas opções para filtros
     special_projects_options = ['ABEP', 'TCE']
     delivery_types_options = ['Sistema', 'Painel', 'Norma', 'Instrumento de parceria', 'Fluxo Processual', 'Outro']
+    has_advanced_filters_active = any([
+        selected_atraso,
+        selected_special_project,
+        selected_delivery_type,
+        selected_abep_indicator,
+        selected_objetivo,
+    ])
 
     # Verificar se há filtros ativos (para mostrar botão "Limpar")
     has_active_filters = False
@@ -143,15 +150,7 @@ def list_projects():
         has_active_filters = True
     if selected_status and selected_status != 'Vigente':  # Vigente é o padrão
         has_active_filters = True
-    if selected_atraso:
-        has_active_filters = True
-    if selected_special_project:
-        has_active_filters = True
-    if selected_delivery_type:
-        has_active_filters = True
-    if selected_abep_indicator:
-        has_active_filters = True
-    if selected_objetivo:
+    if has_advanced_filters_active:
         has_active_filters = True
     # Área só conta como filtro ativo se o usuário for admin
     if g.user.is_admin and selected_area_filter:
@@ -180,6 +179,7 @@ def list_projects():
         special_projects_options=special_projects_options,
         delivery_types_options=delivery_types_options,
         has_active_filters=has_active_filters,
+        has_advanced_filters_active=has_advanced_filters_active,
         AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES
     )
 @main_bp.route('/projetos_pendentes')

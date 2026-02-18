@@ -836,10 +836,28 @@
 .task-detail-v2 .task-item-comments {
     border-top: 1px solid #e3ebf4;
     background: #fbfdff;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: max-height 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, transform 0.2s ease;
+    will-change: max-height, opacity, transform;
+}
+
+.task-detail-v2 .task-item-comments.is-open {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .task-detail-v2 .task-item-comments[hidden] {
     display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .task-detail-v2 .task-item-comments {
+        transition: none;
+        transform: none;
+    }
 }
 
 .task-detail-v2 .task-item-comments-inner {
@@ -902,6 +920,17 @@
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
+    opacity: 0;
+    transform: translateY(-2px);
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.task-detail-v2 .task-comment:hover .task-comment-acts,
+.task-detail-v2 .task-comment-acts:focus-within {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
 }
 
 .task-detail-v2 .task-comment-btn {

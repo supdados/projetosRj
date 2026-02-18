@@ -1348,18 +1348,83 @@
             });
     }
 
-    // Expandir/recolher comentários
+    // Expandir/recolher comentários com animação suave
+    function clearCommentsTransition(body) {
+        if (body && body._commentsTransitionEndHandler) {
+            body.removeEventListener('transitionend', body._commentsTransitionEndHandler);
+            body._commentsTransitionEndHandler = null;
+        }
+    }
+
+    function isReducedMotionPreferred() {
+        return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    }
+
+    function expandComments(body) {
+        if (!body) return;
+
+        if (isReducedMotionPreferred()) {
+            body.removeAttribute('hidden');
+            body.classList.add('is-open');
+            body.style.maxHeight = '';
+            return;
+        }
+
+        clearCommentsTransition(body);
+        body.removeAttribute('hidden');
+        body.classList.add('is-open');
+        body.style.maxHeight = '0px';
+        body.offsetHeight; // força reflow para garantir início da transição
+        body.style.maxHeight = body.scrollHeight + 'px';
+
+        body._commentsTransitionEndHandler = function (event) {
+            if (event.target !== body || event.propertyName !== 'max-height') return;
+            body.style.maxHeight = 'none';
+            clearCommentsTransition(body);
+        };
+        body.addEventListener('transitionend', body._commentsTransitionEndHandler);
+    }
+
+    function collapseComments(body) {
+        if (!body) return;
+
+        if (isReducedMotionPreferred()) {
+            body.classList.remove('is-open');
+            body.setAttribute('hidden', '');
+            body.style.maxHeight = '';
+            return;
+        }
+
+        clearCommentsTransition(body);
+        if (body.hasAttribute('hidden')) return;
+
+        body.style.maxHeight = body.scrollHeight + 'px';
+        body.offsetHeight; // fixa altura atual antes de recolher
+        body.classList.remove('is-open');
+        body.style.maxHeight = '0px';
+
+        body._commentsTransitionEndHandler = function (event) {
+            if (event.target !== body || event.propertyName !== 'max-height') return;
+            body.setAttribute('hidden', '');
+            body.style.maxHeight = '';
+            clearCommentsTransition(body);
+        };
+        body.addEventListener('transitionend', body._commentsTransitionEndHandler);
+    }
+
     function toggleComments(btn) {
         var targetId = btn.getAttribute('data-target');
         var body = document.getElementById(targetId);
+        if (!body) return;
+
         var isExpanded = btn.getAttribute('aria-expanded') === 'true';
 
         if (isExpanded) {
-            body.setAttribute('hidden', '');
             btn.setAttribute('aria-expanded', 'false');
+            collapseComments(body);
         } else {
-            body.removeAttribute('hidden');
             btn.setAttribute('aria-expanded', 'true');
+            expandComments(body);
         }
     }
 

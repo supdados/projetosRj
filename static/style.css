@@ -2089,7 +2089,7 @@ html, body {
 }
 
 .skeleton-projects-page .skeleton-projects-toolbar {
-    padding: 0.9rem 1rem;
+    padding: 1rem 1.1rem;
 }
 
 .skeleton-projects-toolbar-head {
@@ -2097,11 +2097,11 @@ html, body {
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    margin-bottom: 0.7rem;
+    margin-bottom: 0.62rem;
 }
 
 .skeleton-projects-title {
-    width: min(320px, 58%);
+    width: min(300px, 58%);
     height: 26px;
     margin-bottom: 0;
 }
@@ -2114,41 +2114,42 @@ html, body {
 }
 
 .skeleton-projects-action-sm {
-    width: 108px;
-    height: 32px;
-    border-radius: 10px;
-    margin-bottom: 0;
-}
-
-.skeleton-projects-action-lg {
-    width: 136px;
+    width: 122px;
     height: 34px;
     border-radius: 10px;
     margin-bottom: 0;
 }
 
+.skeleton-projects-action-lg {
+    width: 148px;
+    height: 36px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
 .skeleton-projects-search {
-    height: 40px;
+    height: 36px;
     border-radius: 12px;
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.5rem;
 }
 
 .skeleton-projects-filter-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.42rem;
+    gap: 0.5rem;
+    align-items: center;
 }
 
 .skeleton-projects-filter-pill {
-    width: 120px;
-    height: 30px;
-    border-radius: 999px;
+    width: 132px;
+    height: 34px;
+    border-radius: 8px;
     margin-bottom: 0;
 }
 
 .skeleton-projects-filter-btn {
-    width: 86px;
-    height: 30px;
+    width: 94px;
+    height: 34px;
     border-radius: 8px;
     margin-bottom: 0;
 }
@@ -2159,7 +2160,7 @@ html, body {
 }
 
 .skeleton-projects-table-head {
-    padding: 0.68rem 0.95rem;
+    padding: 0.62rem 0.85rem;
 }
 
 .skeleton-projects-table {
@@ -2169,7 +2170,7 @@ html, body {
 }
 
 .skeleton-projects-table .skeleton-table-row {
-    padding: 0.78rem 0.95rem;
+    padding: 0.68rem 0.85rem;
 }
 
 .skeleton-pending-page .skeleton-pending-header {
@@ -3937,6 +3938,17 @@ html, body {
     margin: 0.4rem 0 0;
     color: #647a95;
     font-size: var(--ds-font-size-md);
+}
+
+/* Normaliza o espaçamento dos campos da criação rápida (inclui Prioridade). */
+.project-create-quick-card .row.g-3 > [class*="col-"] > .form-group-glass {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.project-create-quick-card .row.g-3 > [class*="col-"] > .form-group-glass .form-label-glass {
+    margin-bottom: 0;
 }
 
 .project-create-advanced-card {
