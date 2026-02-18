@@ -14,6 +14,7 @@
         const stagesContainer = document.getElementById('dynamic-stages-container');
         const templateCollapseSection = document.getElementById('projectCreateSectionTemplate');
         const accordionRoot = document.getElementById('projectCreateAccordion');
+        const modalScrollContainer = addProjectModal?.querySelector('.project-create-body');
         const defaultResultOption = '<option value="" selected>Selecione um resultado esperado</option>';
         const defaultIndicatorPlaceholder = `
             <div class="indicator-placeholder">
@@ -24,6 +25,7 @@
 
         let templatesLoaded = false;
         let templatesLoading = false;
+        let activeAccordionScrollFrame = null;
 
         // Máscara para o campo Processo SEI
         const seiProcessInput = document.getElementById('project_sei_process');
@@ -231,6 +233,99 @@
             loadTemplates();
         }
 
+        function getScrollBehavior() {
+            const prefersReducedMotion = window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            return prefersReducedMotion ? 'auto' : 'smooth';
+        }
+
+        function stopAccordionScrollAnimation() {
+            if (activeAccordionScrollFrame !== null) {
+                cancelAnimationFrame(activeAccordionScrollFrame);
+                activeAccordionScrollFrame = null;
+            }
+        }
+
+        function animateAccordionScroll(targetTop) {
+            if (!modalScrollContainer) {
+                return;
+            }
+
+            const behavior = getScrollBehavior();
+            if (behavior === 'auto') {
+                stopAccordionScrollAnimation();
+                modalScrollContainer.scrollTop = targetTop;
+                return;
+            }
+
+            const startTop = modalScrollContainer.scrollTop;
+            const distance = targetTop - startTop;
+            if (Math.abs(distance) < 1) {
+                return;
+            }
+
+            stopAccordionScrollAnimation();
+            const duration = Math.min(620, Math.max(320, Math.abs(distance) * 0.5));
+            const startTime = performance.now();
+
+            function easeInOutCubic(t) {
+                return t < 0.5
+                    ? 4 * t * t * t
+                    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+
+            function step(now) {
+                const progress = Math.min(1, (now - startTime) / duration);
+                const eased = easeInOutCubic(progress);
+                modalScrollContainer.scrollTop = startTop + (distance * eased);
+
+                if (progress < 1) {
+                    activeAccordionScrollFrame = requestAnimationFrame(step);
+                    return;
+                }
+
+                activeAccordionScrollFrame = null;
+                modalScrollContainer.scrollTop = targetTop;
+            }
+
+            activeAccordionScrollFrame = requestAnimationFrame(step);
+        }
+
+        function centerAccordionItemInModal(itemElement) {
+            if (!itemElement || !modalScrollContainer) {
+                return;
+            }
+
+            const containerRect = modalScrollContainer.getBoundingClientRect();
+            const itemRect = itemElement.getBoundingClientRect();
+            const itemHeight = itemRect.height;
+            const visibleHeight = modalScrollContainer.clientHeight;
+            const boundedItemHeight = Math.min(itemHeight, visibleHeight);
+
+            const itemTopWithinContainer = itemRect.top - containerRect.top + modalScrollContainer.scrollTop;
+            const targetTop = itemTopWithinContainer - ((visibleHeight - boundedItemHeight) / 2);
+            const maxTop = Math.max(0, modalScrollContainer.scrollHeight - visibleHeight);
+            const clampedTop = Math.min(maxTop, Math.max(0, targetTop));
+            animateAccordionScroll(clampedTop);
+        }
+
+        function centerAccordionItemAfterLayout(collapseElement) {
+            if (!collapseElement) {
+                return;
+            }
+
+            const accordionItem = collapseElement.closest('.accordion-item');
+            if (!accordionItem) {
+                return;
+            }
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    centerAccordionItemInModal(accordionItem);
+                });
+            });
+        }
+
         function loadTemplateStages() {
             const templateId = templateSelect.value;
             stagesContainer.innerHTML = '';
@@ -395,6 +490,14 @@
 
         if (templateCollapseSection) {
             templateCollapseSection.addEventListener('shown.bs.collapse', ensureTemplatesLoaded);
+        }
+
+        if (accordionRoot) {
+            accordionRoot.querySelectorAll('.accordion-collapse').forEach(collapseEl => {
+                collapseEl.addEventListener('shown.bs.collapse', function() {
+                    centerAccordionItemAfterLayout(collapseEl);
+                });
+            });
         }
 
         // Inicialização do modal

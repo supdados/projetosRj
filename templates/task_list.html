@@ -23,12 +23,6 @@
         </div>
     </header>
 
-    <section class="tasks-meta-row">
-        <span class="tasks-chip">
-            Página {{ pagination.page }} de {{ pagination.pages if pagination.pages else 1 }}
-        </span>
-    </section>
-
     <section class="tasks-filters">
         <form method="GET" action="{{ url_for('main.list_tasks') }}" class="tasks-filter-form" id="filterTasksForm">
             <div class="tasks-field tasks-field-search">
@@ -78,13 +72,11 @@
     <section class="tasks-list">
         {% for task in tasks %}
         {% set finalizados = task.items|selectattr('status', 'equalto', 'finalizado')|list|length %}
-        <article class="tasks-row" data-task-url="{{ url_for('main.task_detail', task_id=task.id) }}">
+        <article class="tasks-row{% if task.items|length > 0 and finalizados == task.items|length %} is-complete{% endif %}" data-task-url="{{ url_for('main.task_detail', task_id=task.id) }}">
             <div class="tasks-row-content">
                 <div class="tasks-row-title-wrap">
+                    <span class="tasks-row-index" aria-hidden="true">{{ loop.index }}-</span>
                     <h2 class="tasks-row-title">{{ task.titulo }}</h2>
-                    <span class="tasks-chip">
-                        {{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}
-                    </span>
                 </div>
 
                 <div class="tasks-row-meta">
@@ -98,10 +90,6 @@
                     </span>
                     {% endif %}
 
-                    <span class="tasks-meta-chip is-muted">
-                        {{ task.created_at.strftime('%d/%m/%Y') }}
-                    </span>
-
                     <span class="tasks-status-chip">
                         {{ finalizados }}/{{ task.items|length }} finalizados
                     </span>
@@ -109,11 +97,9 @@
             </div>
 
             <div class="tasks-actions" data-stop-row-click="1">
-                <a href="{{ url_for('main.task_detail', task_id=task.id) }}" class="tasks-action-btn is-view" title="Ver detalhes">
-                    Abrir
-                </a>
                 <button type="button" class="tasks-action-btn is-delete" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ task.id }}" title="Excluir">
-                    Excluir
+                    <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                    <span class="visually-hidden">Excluir</span>
                 </button>
             </div>
         </article>
@@ -184,6 +170,14 @@
         <button type="button" class="btn-task btn-task-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
             Criar primeira tarefa
         </button>
+    </section>
+    {% endif %}
+
+    {% if pagination.pages > 1 %}
+    <section class="tasks-meta-row tasks-meta-row-bottom">
+        <span class="tasks-chip">
+            Página {{ pagination.page }} de {{ pagination.pages if pagination.pages else 1 }}
+        </span>
     </section>
     {% endif %}
 </div>

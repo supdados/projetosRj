@@ -1,4 +1,5 @@
 import datetime
+import re
 
 from flask import flash, g, jsonify, redirect, render_template, request, url_for
 from sqlalchemy.orm import joinedload
@@ -8,6 +9,129 @@ from models import Project, Task, TaskItem, TaskItemComment, User, UserArea, db
 from .blueprint import main_bp
 from .decorators import login_required
 from .shared import format_local_time
+
+
+def _can_view_task(user, task):
+    """Regra unificada de visualização/edição da tarefa."""
+    return (
+        user.is_admin or
+        task.created_by_id == user.id or
+        (task.project_id and task.project and task.project.area_responsavel in user.get_areas())
+    )
+
+
+def _normalize_person_name(name):
+    """Normaliza nome para comparação (trim + colapso de espaços)."""
+    return ' '.join((name or '').strip().split())
+
+
+def _split_responsavel_names(raw_value):
+    """Quebra string de responsáveis em nomes únicos preservando ordem."""
+    raw_value = (raw_value or '').replace('\r', '\n').strip()
+    if not raw_value:
+        return []
+
+    names = []
+    seen = set()
+
+    for part in re.split(r'[,\n;]+', raw_value):
+        normalized = _normalize_person_name(part.lstrip('@'))
+        if not normalized:
+            continue
+
+        key = normalized.casefold()
+        if key in seen:
+            continue
+
+        seen.add(key)
+        names.append(normalized)
+
+    return names
+
+
+def _normalize_responsavel_value(raw_value):
+    """Normaliza valor completo para comparação semântica."""
+    return ', '.join(_split_responsavel_names(raw_value))
+
+
+def _get_task_assignable_users(task):
+    """Retorna usuários elegíveis para o campo responsável com base na regra de visualização."""
+    candidate_ids = set()
+
+    if task.created_by_id:
+        candidate_ids.add(task.created_by_id)
+
+    admin_ids = [user_id for (user_id,) in User.query.with_entities(User.id).filter(User.is_admin.is_(True)).all()]
+    candidate_ids.update(admin_ids)
+
+    area = task.project.area_responsavel if task.project_id and task.project else None
+    if area:
+        area_user_ids = [user_id for (user_id,) in UserArea.query.with_entities(UserArea.user_id).filter_by(area=area).all()]
+        candidate_ids.update(area_user_ids)
+
+        legacy_area_ids = [user_id for (user_id,) in User.query.with_entities(User.id).filter(User.area_responsavel == area).all()]
+        candidate_ids.update(legacy_area_ids)
+
+    if not candidate_ids:
+        return []
+
+    return User.query.filter(User.id.in_(candidate_ids)).order_by(User.name.asc()).all()
+
+
+def _validate_task_item_responsavel(task, raw_value):
+    """Valida responsáveis contra usuários elegíveis e retorna nomes canônicos."""
+    parsed_names = _split_responsavel_names(raw_value)
+    if not parsed_names:
+        return True, '', []
+
+    allowed_users = _get_task_assignable_users(task)
+    allowed_by_key = {}
+
+    for user in allowed_users:
+        canonical_name = _normalize_person_name(user.name)
+        if canonical_name:
+            allowed_by_key[canonical_name.casefold()] = canonical_name
+
+    canonical_names = []
+    invalid_names = []
+    seen_canonical = set()
+
+    for name in parsed_names:
+        canonical = allowed_by_key.get(name.casefold())
+        if not canonical:
+            invalid_names.append(name)
+            continue
+
+        canonical_key = canonical.casefold()
+        if canonical_key in seen_canonical:
+            continue
+
+        seen_canonical.add(canonical_key)
+        canonical_names.append(canonical)
+
+    return len(invalid_names) == 0, ', '.join(canonical_names), invalid_names
+
+
+def _format_invalid_responsavel_message(invalid_names):
+    invalid_str = ', '.join(invalid_names)
+    return f'Responsável inválido: {invalid_str}. Selecione somente usuários com permissão de visualização.'
+
+
+def _resolve_responsavel_for_item_edit(item, incoming_raw_value):
+    """
+    Compatibilidade de legado:
+    - Se valor semântico não mudou, mantém valor atual mesmo que legado inválido.
+    - Se mudou, aplica validação estrita.
+    """
+    current_normalized = _normalize_responsavel_value(item.responsavel or '')
+    incoming_normalized = _normalize_responsavel_value(incoming_raw_value)
+
+    if incoming_normalized == current_normalized:
+        return True, (item.responsavel or ''), []
+
+    return _validate_task_item_responsavel(item.task, incoming_raw_value)
+
+
 @main_bp.route('/tarefas', methods=['GET'])
 @login_required
 def list_tasks():
@@ -125,11 +249,7 @@ def task_detail(task_id):
     ).get_or_404(task_id)
     
     # Verificar permissão
-    can_view = (
-        g.user.is_admin or 
-        task.created_by_id == g.user.id or
-        (task.project_id and task.project.area_responsavel in g.user.get_areas())
-    )
+    can_view = _can_view_task(g.user, task)
     
     if not can_view:
         flash('Você não tem permissão para acessar esta tarefa.', 'danger')
@@ -152,11 +272,7 @@ def edit_task(task_id):
     task = Task.query.get_or_404(task_id)
     
     # Verificar permissão
-    can_edit = (
-        g.user.is_admin or 
-        task.created_by_id == g.user.id or
-        (task.project_id and task.project.area_responsavel in g.user.get_areas())
-    )
+    can_edit = _can_view_task(g.user, task)
     
     if not can_edit:
         return jsonify({'success': False, 'message': 'Sem permissão'}), 403
@@ -212,11 +328,7 @@ def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
     
     # Verificar permissão
-    can_delete = (
-        g.user.is_admin or 
-        task.created_by_id == g.user.id or
-        (task.project_id and task.project.area_responsavel in g.user.get_areas())
-    )
+    can_delete = _can_view_task(g.user, task)
     
     if not can_delete:
         flash('Você não tem permissão para excluir esta tarefa.', 'danger')
@@ -245,11 +357,7 @@ def add_task_item(task_id):
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
     
     # Verificar permissão
-    can_edit = (
-        g.user.is_admin or 
-        task.created_by_id == g.user.id or
-        (task.project_id and task.project.area_responsavel in g.user.get_areas())
-    )
+    can_edit = _can_view_task(g.user, task)
     
     if not can_edit:
         if is_ajax:
@@ -267,6 +375,14 @@ def add_task_item(task_id):
             return jsonify({'success': False, 'message': 'Descrição é obrigatória.'}), 400
         flash('Descrição é obrigatória.', 'danger')
         return redirect(url_for('main.task_detail', task_id=task_id))
+
+    is_valid_responsavel, canonical_responsavel, invalid_names = _validate_task_item_responsavel(task, responsavel)
+    if not is_valid_responsavel:
+        message = _format_invalid_responsavel_message(invalid_names)
+        if is_ajax:
+            return jsonify({'success': False, 'message': message}), 400
+        flash(message, 'danger')
+        return redirect(url_for('main.task_detail', task_id=task_id))
     
     # Calcular ordem
     max_ordem = db.session.query(db.func.max(TaskItem.ordem)).filter_by(task_id=task_id).scalar() or 0
@@ -275,7 +391,7 @@ def add_task_item(task_id):
     item = TaskItem(
         descricao=descricao,
         status=status,
-        responsavel=responsavel if responsavel else None,
+        responsavel=canonical_responsavel if canonical_responsavel else None,
         task_id=task_id,
         ordem=max_ordem + 1
     )
@@ -312,11 +428,7 @@ def edit_task_item(item_id):
     task = item.task
     
     # Verificar permissão
-    can_edit = (
-        g.user.is_admin or 
-        task.created_by_id == g.user.id or
-        (task.project_id and task.project.area_responsavel in g.user.get_areas())
-    )
+    can_edit = _can_view_task(g.user, task)
     
     if not can_edit:
         return jsonify({'success': False, 'message': 'Sem permissão'}), 403
@@ -328,11 +440,15 @@ def edit_task_item(item_id):
     # Validações
     if not descricao:
         return jsonify({'success': False, 'message': 'Descrição é obrigatória'}), 400
+
+    is_valid_responsavel, resolved_responsavel, invalid_names = _resolve_responsavel_for_item_edit(item, responsavel)
+    if not is_valid_responsavel:
+        return jsonify({'success': False, 'message': _format_invalid_responsavel_message(invalid_names)}), 400
     
     # Atualizar item
     item.descricao = descricao
     item.status = status
-    item.responsavel = responsavel if responsavel else None
+    item.responsavel = resolved_responsavel if resolved_responsavel else None
     
     try:
         db.session.commit()
@@ -360,11 +476,7 @@ def delete_task_item(item_id):
     task_id = task.id
     
     # Verificar permissão
-    can_delete = (
-        g.user.is_admin or 
-        task.created_by_id == g.user.id or
-        (task.project_id and task.project.area_responsavel in g.user.get_areas())
-    )
+    can_delete = _can_view_task(g.user, task)
     
     if not can_delete:
         flash('Você não tem permissão para excluir este item.', 'danger')
@@ -389,11 +501,7 @@ def update_task_item_status(item_id):
     task = item.task
     
     # Verificar permissão
-    can_edit = (
-        g.user.is_admin or 
-        task.created_by_id == g.user.id or
-        (task.project_id and task.project.area_responsavel in g.user.get_areas())
-    )
+    can_edit = _can_view_task(g.user, task)
     
     if not can_edit:
         return jsonify({'success': False, 'message': 'Sem permissão'}), 403
@@ -419,11 +527,7 @@ def reorder_task_items(task_id):
     task = Task.query.get_or_404(task_id)
     
     # Verificar permissão
-    can_edit = (
-        g.user.is_admin or 
-        task.created_by_id == g.user.id or
-        (task.project_id and task.project.area_responsavel in g.user.get_areas())
-    )
+    can_edit = _can_view_task(g.user, task)
     
     if not can_edit:
         return jsonify({'success': False, 'message': 'Sem permissão'}), 403
@@ -449,11 +553,7 @@ def reorder_task_items(task_id):
 
 def _can_comment_on_task(task):
     """Verifica se o usuário pode comentar na tarefa (e portanto nos itens)."""
-    return (
-        g.user.is_admin or
-        task.created_by_id == g.user.id or
-        (task.project_id and task.project.area_responsavel in g.user.get_areas())
-    )
+    return _can_view_task(g.user, task)
 
 
 @main_bp.route('/tarefas/itens/<int:item_id>/comentarios/add', methods=['POST'])
@@ -591,21 +691,17 @@ def project_tasks(project_id):
 @main_bp.route('/tarefas/<int:task_id>/sugestoes-responsavel', methods=['GET'])
 @login_required
 def get_task_assignable_users(task_id):
-    """API: usuários que podem ser marcados como responsável no item (pessoas do projeto). Se a tarefa não tem projeto, retorna lista vazia."""
+    """API: usuários elegíveis para responsável conforme regra de visualização da tarefa."""
     task = Task.query.get_or_404(task_id)
-    if not task.project_id or not task.project:
-        return jsonify({'users': []})
-    area = task.project.area_responsavel
-    if not area:
-        return jsonify({'users': []})
-    # Usuários que têm essa área (UserArea ou area_responsavel legado)
-    user_ids_area = [ua.user_id for ua in UserArea.query.filter_by(area=area).all()]
-    if user_ids_area:
-        users_q = User.query.filter(User.id.in_(user_ids_area)).order_by(User.name)
-    else:
-        users_q = User.query.filter(User.area_responsavel == area).order_by(User.name)
-    users = [{'id': u.id, 'name': u.name} for u in users_q.all()]
+
+    if not _can_view_task(g.user, task):
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+
+    assignable_users = _get_task_assignable_users(task)
+    users = [{'id': u.id, 'name': u.name} for u in assignable_users]
+
     q = (request.args.get('q') or '').strip().lower()
     if q:
         users = [u for u in users if q in (u['name'] or '').lower()]
+
     return jsonify({'users': users})

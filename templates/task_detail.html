@@ -278,12 +278,15 @@
                                         <option value="validacao">Validação</option>
                                         <option value="finalizado">Finalizado</option>
                                     </select>
-                                    <div class="responsavel-mention-wrap">
-                                        <div class="contenteditable-responsavel task-item-add-responsavel"
-                                            contenteditable="true" data-placeholder="Responsável"
-                                            id="addItemResponsavel"></div>
-                                        <div class="responsavel-suggestions" id="addItemResponsavelSuggestions"
-                                            role="listbox" hidden></div>
+                                    <div class="responsavel-picker task-item-add-responsavel-picker"
+                                        id="addItemResponsavelPicker">
+                                        <button type="button" class="responsavel-picker-trigger"
+                                            id="addItemResponsavelTrigger" aria-haspopup="dialog" aria-expanded="false">
+                                            <span class="responsavel-picker-trigger-content">
+                                                <em class="responsavel-placeholder">Responsável</em>
+                                            </span>
+                                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -310,12 +313,15 @@
                                     <option value="validacao">Validação</option>
                                     <option value="finalizado">Finalizado</option>
                                 </select>
-                                <div class="responsavel-mention-wrap">
-                                    <div class="contenteditable-responsavel task-item-add-responsavel"
-                                        contenteditable="true" data-placeholder="Responsável"
-                                        id="addItemResponsavel"></div>
-                                    <div class="responsavel-suggestions" id="addItemResponsavelSuggestions"
-                                        role="listbox" hidden></div>
+                                <div class="responsavel-picker task-item-add-responsavel-picker"
+                                    id="addItemResponsavelPicker">
+                                    <button type="button" class="responsavel-picker-trigger"
+                                        id="addItemResponsavelTrigger" aria-haspopup="dialog" aria-expanded="false">
+                                        <span class="responsavel-picker-trigger-content">
+                                            <em class="responsavel-placeholder">Responsável</em>
+                                        </span>
+                                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -691,6 +697,416 @@
         });
     })();
 
+    // --- Responsável (picker multi-seleção) ---
+    var responsavelAssignableUsersCache = {};
+
+    function escapeResponsavelHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    function normalizeResponsavelName(name) {
+        return (name || '').trim().replace(/\s+/g, ' ');
+    }
+
+    function splitResponsavelNames(rawValue) {
+        var raw = (rawValue || '').replace(/\r/g, '\n');
+        var seen = {};
+        var names = [];
+        raw.split(/[,\n;]+/).forEach(function (part) {
+            var normalized = normalizeResponsavelName((part || '').replace(/^@+/, ''));
+            if (!normalized) return;
+            var key = normalized.toLowerCase();
+            if (seen[key]) return;
+            seen[key] = true;
+            names.push(normalized);
+        });
+        return names;
+    }
+
+    function formatResponsavelLabel(selectedNames, placeholderText) {
+        var names = Array.isArray(selectedNames) ? selectedNames : [];
+        if (!names.length) {
+            return '<em class="responsavel-placeholder">' + escapeResponsavelHtml(placeholderText || 'Responsável') + '</em>';
+        }
+
+        var visibleCount = 2;
+        var parts = [];
+        for (var i = 0; i < names.length && i < visibleCount; i++) {
+            parts.push(
+                '<span class="responsavel-picker-chip responsavel-picker-chip-' + (i % 5) + '">' +
+                escapeResponsavelHtml(names[i]) +
+                '</span>'
+            );
+        }
+        if (names.length > visibleCount) {
+            parts.push('<span class="responsavel-picker-more">+' + (names.length - visibleCount) + '</span>');
+        }
+        return parts.join('');
+    }
+
+    function renderResponsavelPickerTrigger(triggerEl, selectedNames, placeholderText) {
+        if (!triggerEl) return;
+        var contentEl = triggerEl.querySelector('.responsavel-picker-trigger-content');
+        if (!contentEl) return;
+        contentEl.innerHTML = formatResponsavelLabel(selectedNames, placeholderText || 'Responsável');
+        triggerEl.setAttribute('data-selected-count', String((selectedNames || []).length || 0));
+    }
+
+    function fetchAssignableUsers(taskId, sugestoesUrl) {
+        if (!taskId || !sugestoesUrl) return Promise.resolve([]);
+        var cacheKey = String(taskId) + '::' + String(sugestoesUrl);
+        if (responsavelAssignableUsersCache[cacheKey]) {
+            return responsavelAssignableUsersCache[cacheKey];
+        }
+        responsavelAssignableUsersCache[cacheKey] = fetch(sugestoesUrl, { headers: { 'Accept': 'application/json' } })
+            .then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                    if (!response.ok) {
+                        throw new Error((data && data.message) || 'Erro ao carregar responsáveis.');
+                    }
+                    var users = Array.isArray(data.users) ? data.users : [];
+                    return users
+                        .map(function (u) {
+                            return {
+                                id: u.id,
+                                name: normalizeResponsavelName(u.name || ''),
+                            };
+                        })
+                        .filter(function (u) { return !!u.name; })
+                        .sort(function (a, b) {
+                            return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+                        });
+                });
+            })
+            .catch(function (error) {
+                delete responsavelAssignableUsersCache[cacheKey];
+                throw error;
+            });
+        return responsavelAssignableUsersCache[cacheKey];
+    }
+
+    var responsavelPickerManager = (function () {
+        var root = document.createElement('div');
+        root.className = 'responsavel-picker-popover';
+        root.setAttribute('hidden', '');
+        root.innerHTML =
+            '<div class="responsavel-picker-head">' +
+            '<input type="text" class="responsavel-picker-search" placeholder="Buscar usuário..." autocomplete="off">' +
+            '</div>' +
+            '<div class="responsavel-picker-list" role="listbox" aria-multiselectable="true"></div>' +
+            '<div class="responsavel-picker-status" hidden></div>' +
+            '<div class="responsavel-picker-footer">' +
+            '<button type="button" class="responsavel-picker-btn" data-action="cancel">Cancelar</button>' +
+            '<button type="button" class="responsavel-picker-btn" data-action="clear">Limpar</button>' +
+            '<button type="button" class="responsavel-picker-btn responsavel-picker-btn-primary" data-action="apply">Aplicar</button>' +
+            '</div>';
+        document.body.appendChild(root);
+
+        var searchInput = root.querySelector('.responsavel-picker-search');
+        var listEl = root.querySelector('.responsavel-picker-list');
+        var statusEl = root.querySelector('.responsavel-picker-status');
+        var btnCancel = root.querySelector('[data-action="cancel"]');
+        var btnClear = root.querySelector('[data-action="clear"]');
+        var btnApply = root.querySelector('[data-action="apply"]');
+
+        var state = null;
+        var openToken = 0;
+
+        function cloneKeySet(keySet) {
+            var clone = {};
+            Object.keys(keySet || {}).forEach(function (key) {
+                clone[key] = true;
+            });
+            return clone;
+        }
+
+        function keySetsEqual(a, b) {
+            var keysA = Object.keys(a || {});
+            var keysB = Object.keys(b || {});
+            if (keysA.length !== keysB.length) return false;
+            for (var i = 0; i < keysA.length; i++) {
+                if (!b[keysA[i]]) return false;
+            }
+            return true;
+        }
+
+        function currentSelectedNames() {
+            if (!state) return [];
+            var names = [];
+            state.users.forEach(function (u) {
+                if (state.draftKeys[u.key]) names.push(u.name);
+            });
+            return names;
+        }
+
+        function setLoading(isLoading, message, isError) {
+            root.classList.toggle('is-loading', !!isLoading);
+            if (message) {
+                statusEl.textContent = message;
+                statusEl.removeAttribute('hidden');
+                statusEl.classList.toggle('is-error', !!isError);
+            } else {
+                statusEl.textContent = '';
+                statusEl.setAttribute('hidden', '');
+                statusEl.classList.remove('is-error');
+            }
+            if (isLoading) {
+                listEl.innerHTML = '';
+            }
+        }
+
+        function setApplying(isApplying) {
+            root.classList.toggle('is-applying', !!isApplying);
+            [searchInput, btnCancel, btnClear, btnApply].forEach(function (el) {
+                if (!el) return;
+                el.disabled = !!isApplying;
+            });
+            listEl.querySelectorAll('input[type="checkbox"]').forEach(function (chk) {
+                chk.disabled = !!isApplying;
+            });
+        }
+
+        function positionPopover() {
+            if (!state || !state.anchorEl || !document.body.contains(state.anchorEl)) return;
+            var rect = state.anchorEl.getBoundingClientRect();
+            var viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1200;
+            var viewportHeight = window.innerHeight || document.documentElement.clientHeight || 900;
+            var width = Math.min(Math.max(rect.width, 280), Math.max(280, viewportWidth - 24));
+            root.style.width = width + 'px';
+            root.style.minWidth = '280px';
+            root.style.maxWidth = '460px';
+            var left = Math.max(12, Math.min(rect.left, viewportWidth - width - 12));
+            root.style.left = left + 'px';
+
+            var defaultTop = rect.bottom + 8;
+            var popoverHeight = root.offsetHeight || 320;
+            var top = defaultTop;
+            if (defaultTop + popoverHeight > viewportHeight - 12 && rect.top - popoverHeight - 8 >= 12) {
+                top = rect.top - popoverHeight - 8;
+            }
+            root.style.top = Math.max(12, top) + 'px';
+        }
+
+        function close(committed) {
+            if (!state) return;
+            var previous = state;
+            state = null;
+            root.setAttribute('hidden', '');
+            root.classList.remove('is-loading', 'is-applying');
+            searchInput.value = '';
+            listEl.innerHTML = '';
+            statusEl.textContent = '';
+            statusEl.setAttribute('hidden', '');
+            statusEl.classList.remove('is-error');
+            if (previous.anchorEl) {
+                previous.anchorEl.classList.remove('is-open');
+                previous.anchorEl.setAttribute('aria-expanded', 'false');
+            }
+            if (!committed && typeof previous.onCancel === 'function') {
+                previous.onCancel();
+            }
+        }
+
+        function renderList() {
+            if (!state) return;
+            var query = (searchInput.value || '').trim().toLowerCase();
+            var filteredUsers = state.users.filter(function (u) {
+                return !query || u.name.toLowerCase().indexOf(query) !== -1;
+            });
+
+            listEl.innerHTML = '';
+            if (!filteredUsers.length) {
+                setLoading(false, 'Nenhum usuário encontrado.', false);
+                return;
+            }
+
+            setLoading(false, '', false);
+            filteredUsers.forEach(function (user) {
+                var option = document.createElement('label');
+                option.className = 'responsavel-picker-option';
+                var checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'responsavel-picker-option-checkbox';
+                checkbox.checked = !!state.draftKeys[user.key];
+                checkbox.dataset.userKey = user.key;
+                var nameEl = document.createElement('span');
+                nameEl.className = 'responsavel-picker-option-name';
+                nameEl.textContent = user.name;
+                option.appendChild(checkbox);
+                option.appendChild(nameEl);
+                if (checkbox.checked) option.classList.add('selected');
+                checkbox.addEventListener('change', function () {
+                    if (!state) return;
+                    if (checkbox.checked) state.draftKeys[user.key] = true;
+                    else delete state.draftKeys[user.key];
+                    state.dirty = !keySetsEqual(state.initialKeys, state.draftKeys);
+                    renderList();
+                });
+                listEl.appendChild(option);
+            });
+        }
+
+        function open(options) {
+            if (!options || !options.anchorEl) return;
+            close(false);
+            openToken += 1;
+            var token = openToken;
+
+            state = {
+                anchorEl: options.anchorEl,
+                onApply: options.onApply,
+                onCancel: options.onCancel,
+                users: [],
+                userByKey: {},
+                initialKeys: {},
+                draftKeys: {},
+                dirty: false,
+            };
+
+            root.removeAttribute('hidden');
+            state.anchorEl.classList.add('is-open');
+            state.anchorEl.setAttribute('aria-expanded', 'true');
+            setLoading(true, 'Carregando usuários...', false);
+            positionPopover();
+
+            fetchAssignableUsers(options.taskId, options.sugestoesUrl)
+                .then(function (users) {
+                    if (!state || token !== openToken) return;
+
+                    state.users = users.map(function (u) {
+                        return {
+                            id: u.id,
+                            name: u.name,
+                            key: u.name.toLowerCase(),
+                        };
+                    });
+                    state.userByKey = {};
+                    state.users.forEach(function (u) {
+                        state.userByKey[u.key] = u.name;
+                    });
+
+                    var initialNames = splitResponsavelNames(options.initialRawValue || '');
+                    initialNames.forEach(function (name) {
+                        var key = name.toLowerCase();
+                        if (state.userByKey[key]) state.initialKeys[key] = true;
+                    });
+                    state.draftKeys = cloneKeySet(state.initialKeys);
+                    state.dirty = false;
+
+                    searchInput.value = '';
+                    renderList();
+                    setApplying(false);
+                    positionPopover();
+                    searchInput.focus();
+                })
+                .catch(function (error) {
+                    if (!state || token !== openToken) return;
+                    setLoading(false, (error && error.message) || 'Erro ao carregar usuários.', true);
+                    setApplying(false);
+                });
+        }
+
+        function apply() {
+            if (!state || root.classList.contains('is-loading') || root.classList.contains('is-applying')) return;
+            var payload = {
+                names: currentSelectedNames(),
+                value: currentSelectedNames().join(', '),
+                dirty: !keySetsEqual(state.initialKeys, state.draftKeys),
+            };
+            var result = true;
+            if (typeof state.onApply === 'function') {
+                try {
+                    result = state.onApply(payload);
+                } catch (error) {
+                    alert((error && error.message) || 'Erro ao salvar.');
+                    close(false);
+                    return;
+                }
+            }
+
+            if (result && typeof result.then === 'function') {
+                setApplying(true);
+                result.then(function (accepted) {
+                    setApplying(false);
+                    if (accepted === false) return;
+                    close(true);
+                }).catch(function (error) {
+                    setApplying(false);
+                    alert((error && error.message) || 'Erro ao salvar.');
+                    close(false);
+                });
+                return;
+            }
+            if (result === false) return;
+            close(true);
+        }
+
+        btnCancel.addEventListener('click', function () {
+            close(false);
+        });
+        btnClear.addEventListener('click', function () {
+            if (!state || root.classList.contains('is-loading') || root.classList.contains('is-applying')) return;
+            state.draftKeys = {};
+            state.dirty = !keySetsEqual(state.initialKeys, state.draftKeys);
+            renderList();
+        });
+        btnApply.addEventListener('click', apply);
+
+        searchInput.addEventListener('input', function () {
+            if (!state || root.classList.contains('is-loading')) return;
+            renderList();
+            positionPopover();
+        });
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                close(false);
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                apply();
+            }
+        });
+
+        document.addEventListener('mousedown', function (e) {
+            if (!state) return;
+            if (root.classList.contains('is-applying')) return;
+            if (root.contains(e.target)) return;
+            if (state.anchorEl && state.anchorEl.contains(e.target)) return;
+            close(false);
+        });
+        document.addEventListener('keydown', function (e) {
+            if (!state) return;
+            if (root.classList.contains('is-applying')) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                close(false);
+            }
+        });
+        window.addEventListener('resize', function () {
+            if (!state) return;
+            positionPopover();
+        });
+        window.addEventListener('scroll', function () {
+            if (!state) return;
+            positionPopover();
+        }, true);
+
+        return {
+            open: open,
+            close: close,
+            closeIfAnchor: function (anchorEl) {
+                if (!state || !anchorEl) return;
+                if (state.anchorEl === anchorEl) close(false);
+            },
+            isEventInsidePopover: function (targetEl) {
+                return !!(targetEl && root.contains(targetEl));
+            },
+        };
+    })();
+
     // --- Adicionar item inline (sem modal) ---
     (function () {
         var listEl = document.querySelector('.task-items-list');
@@ -699,15 +1115,20 @@
         var formWrap = document.getElementById('addItemFormWrap');
         var addDesc = document.getElementById('addItemDesc');
         var addStatus = document.getElementById('addItemStatus');
-        var addResponsavel = document.getElementById('addItemResponsavel');
+        var addResponsavelTrigger = document.getElementById('addItemResponsavelTrigger');
         var emptyState = document.getElementById('emptyStateItems');
         var btnFocusAddItem = document.getElementById('btnFocusAddItem');
 
         if (!listEl || !addRow || !placeholder || !formWrap) return;
-        if (!addDesc || !addStatus || !addResponsavel) return;
+        if (!addDesc || !addStatus || !addResponsavelTrigger) return;
 
         var addUrl = listEl.getAttribute('data-add-item-url');
+        var sugestoesUrl = listEl.getAttribute('data-sugestoes-url');
+        var taskId = listEl.getAttribute('data-task-id');
         if (!addUrl) return;
+
+        var addResponsavelNames = [];
+        renderResponsavelPickerTrigger(addResponsavelTrigger, addResponsavelNames, 'Responsável');
 
         function resizeAddDesc() {
             if (!addDesc) return;
@@ -720,10 +1141,9 @@
                 addDesc.value = '';
                 resizeAddDesc();
             }
-            if (addResponsavel) addResponsavel.innerHTML = '';
-            if (typeof responsavelSuggestionsDropdown !== 'undefined' && responsavelSuggestionsDropdown) {
-                responsavelSuggestionsDropdown.setAttribute('hidden', '');
-            }
+            addResponsavelNames = [];
+            renderResponsavelPickerTrigger(addResponsavelTrigger, addResponsavelNames, 'Responsável');
+            responsavelPickerManager.closeIfAnchor(addResponsavelTrigger);
             setTimeout(function () {
                 if (addDesc && !formWrap.hasAttribute('hidden')) addDesc.focus();
             }, 0);
@@ -731,7 +1151,7 @@
 
         function isAddFormEmpty() {
             var descEmpty = !addDesc || !(addDesc.value || '').trim();
-            var respEmpty = !addResponsavel || !getResponsavelValueFromEditable(addResponsavel).trim();
+            var respEmpty = !addResponsavelNames.length;
             return descEmpty && respEmpty;
         }
 
@@ -741,13 +1161,15 @@
             addDesc.value = '';
             resizeAddDesc();
             addStatus.value = 'programado';
-            if (addResponsavel) addResponsavel.innerHTML = '';
+            addResponsavelNames = [];
+            renderResponsavelPickerTrigger(addResponsavelTrigger, addResponsavelNames, 'Responsável');
             setTimeout(function () { addDesc.focus(); }, 50);
         }
 
         function hideAddForm() {
             formWrap.setAttribute('hidden', '');
             placeholder.style.display = 'flex';
+            responsavelPickerManager.closeIfAnchor(addResponsavelTrigger);
         }
 
         function escapeHtml(text) {
@@ -814,16 +1236,16 @@
                 var n = document.querySelectorAll('.task-item-row').length;
                 countEl.textContent = n + (n === 1 ? ' item' : ' itens');
             }
-            // Inline edit delegation handles new items automatically
         }
 
         function submitAddItem() {
             var desc = (addDesc && addDesc.value) ? addDesc.value.trim() : '';
             if (!desc) { addDesc.focus(); return; }
+
             var formData = new FormData();
             formData.append('descricao', desc);
             formData.append('status', addStatus ? addStatus.value : 'programado');
-            formData.append('responsavel', addResponsavel ? getResponsavelValueFromEditable(addResponsavel) : '');
+            formData.append('responsavel', addResponsavelNames.join(', '));
             var xhr = new XMLHttpRequest();
             xhr.open('POST', addUrl);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
@@ -860,16 +1282,21 @@
             });
         }
 
-        if (addResponsavel) {
-            addResponsavel.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') hideAddForm();
-                var mentionDropdown = document.querySelector('.responsavel-suggestions:not([hidden])');
-                if (e.key === 'Enter' && !e.shiftKey && !mentionDropdown) {
-                    e.preventDefault();
-                    submitAddItem();
-                }
+        addResponsavelTrigger.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            responsavelPickerManager.open({
+                anchorEl: addResponsavelTrigger,
+                taskId: taskId,
+                sugestoesUrl: sugestoesUrl,
+                initialRawValue: addResponsavelNames.join(', '),
+                onApply: function (payload) {
+                    addResponsavelNames = payload.names.slice();
+                    renderResponsavelPickerTrigger(addResponsavelTrigger, addResponsavelNames, 'Responsável');
+                    return true;
+                },
             });
-        }
+        });
 
         if (btnFocusAddItem) {
             btnFocusAddItem.addEventListener('click', function () {
@@ -881,392 +1308,10 @@
         document.addEventListener('mousedown', function (e) {
             if (formWrap.hasAttribute('hidden')) return;
             if (addRow.contains(e.target)) return;
-            if (e.target.closest('.responsavel-suggestions')) return;
+            if (responsavelPickerManager.isEventInsidePopover(e.target)) return;
             if (isAddFormEmpty()) hideAddForm();
         });
-
-        // Inicializar @ no campo responsável (add form - o que estiver no DOM)
-        var sugestoesUrl = listEl.getAttribute('data-sugestoes-url');
-        var addRespInput = listEl.querySelector('.task-item-add-responsavel');
-        if (addRespInput && sugestoesUrl) {
-            initResponsavelMention(addRespInput, listEl.getAttribute('data-task-id'), sugestoesUrl);
-        }
     })();
-
-    // --- Valor do campo responsável (contenteditable: chips + texto) ---
-    function getResponsavelValueFromEditable(editableEl) {
-        if (!editableEl) return '';
-        var chips = [];
-        var textParts = [];
-        var normalized = [];
-        var seen = {};
-
-        function addNormalizedName(name) {
-            var n = (name || '').replace(/^@+/, '').trim();
-            if (!n) return;
-            var key = n.toLowerCase();
-            if (seen[key]) return;
-            seen[key] = true;
-            normalized.push(n);
-        }
-
-        function walk(node) {
-            if (node.nodeType === 3) {
-                textParts.push(node.textContent);
-            } else if (node.nodeType === 1) {
-                if (node.classList && node.classList.contains('responsavel-chip')) {
-                    chips.push(node.getAttribute('data-name') || node.textContent || '');
-                } else {
-                    for (var i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i]);
-                }
-            }
-        }
-        for (var i = 0; i < editableEl.childNodes.length; i++) walk(editableEl.childNodes[i]);
-        chips.forEach(addNormalizedName);
-        var text = textParts.join(' ').replace(/\s+/g, ' ').trim();
-        if (text) text.split(/\s*,\s*|\s*;\s*|\n+/).forEach(addNormalizedName);
-        return normalized.join(', ');
-    }
-
-    // --- @ no campo responsável: sugestões + chip (unidade, cor de fundo, apaga inteiro) ---
-    var responsavelSuggestionsDropdown = null;
-
-    function initResponsavelMention(editableEl, taskId, sugestoesUrl) {
-        if (!editableEl || !sugestoesUrl) return;
-        var mentionRoot = editableEl.closest('.task-detail-v2') || document.body;
-        if (!responsavelSuggestionsDropdown) {
-            responsavelSuggestionsDropdown = document.createElement('div');
-            responsavelSuggestionsDropdown.className = 'responsavel-suggestions';
-            responsavelSuggestionsDropdown.setAttribute('role', 'listbox');
-            responsavelSuggestionsDropdown.setAttribute('hidden', '');
-            mentionRoot.appendChild(responsavelSuggestionsDropdown);
-        } else if (responsavelSuggestionsDropdown.parentNode !== mentionRoot && mentionRoot) {
-            mentionRoot.appendChild(responsavelSuggestionsDropdown);
-        }
-        var dropdown = responsavelSuggestionsDropdown;
-        var activeEditable = null;
-        var savedRange = null;
-        var users = [];
-        var selectedIndex = 0;
-        var selectingSuggestion = false;
-
-        function hideDropdown() {
-            dropdown.setAttribute('hidden', '');
-            activeEditable = null;
-            savedRange = null;
-            selectingSuggestion = false;
-        }
-
-        function showDropdownBelow(el) {
-            var rect = el.getBoundingClientRect();
-            dropdown.style.left = rect.left + 'px';
-            dropdown.style.top = (rect.bottom + 2) + 'px';
-            dropdown.style.minWidth = Math.max(rect.width, 160) + 'px';
-            dropdown.removeAttribute('hidden');
-        }
-
-        function getNodeAtOffset(editable, targetOffset) {
-            var current = 0;
-            function walk(n) {
-                if (n.nodeType === 3) {
-                    var len = n.length;
-                    if (current + len >= targetOffset) return { node: n, offset: targetOffset - current };
-                    current += len;
-                } else if (n.nodeType === 1 && (!n.classList || !n.classList.contains('responsavel-chip'))) {
-                    for (var i = 0; i < n.childNodes.length; i++) {
-                        var r = walk(n.childNodes[i]);
-                        if (r) return r;
-                    }
-                } else if (n.nodeType === 1 && n.classList && n.classList.contains('responsavel-chip')) {
-                    current += (n.textContent || '').length;
-                }
-                return null;
-            }
-            for (var i = 0; i < editable.childNodes.length; i++) {
-                var r = walk(editable.childNodes[i]);
-                if (r) return r;
-            }
-            return { node: editable, offset: editable.childNodes.length };
-        }
-
-        function getTextAndRange(editable) {
-            var sel = window.getSelection();
-            if (!sel.rangeCount) return { text: '', range: null };
-            var range = sel.getRangeAt(0);
-            if (!editable.contains(range.startContainer)) return { text: '', range: null };
-            var fromStart = document.createRange();
-            fromStart.setStart(editable, 0);
-            fromStart.setEnd(range.startContainer, range.startOffset);
-            var text = fromStart.toString();
-            var lastAt = text.lastIndexOf('@');
-            if (lastAt === -1) return { text: '', range: null, query: null };
-            var query = text.substring(lastAt + 1).toLowerCase();
-            var startPos = getNodeAtOffset(editable, lastAt);
-            if (!startPos) return { text: text, query: query, range: null };
-            var rangeAt = document.createRange();
-            rangeAt.setStart(startPos.node, startPos.offset);
-            rangeAt.setEnd(range.startContainer, range.startOffset);
-            return { text: text, query: query, range: rangeAt };
-        }
-
-        function getExistingChipNames(editable) {
-            var names = [];
-            if (!editable) return names;
-            editable.querySelectorAll('.responsavel-chip').forEach(function (ch) {
-                var n = (ch.getAttribute('data-name') || ch.textContent || '').trim();
-                if (n) names.push(n.toLowerCase());
-            });
-            return names;
-        }
-
-        function insertChip(editable, name) {
-            if (!savedRange) return;
-            var existingNames = getExistingChipNames(editable);
-            var nameNorm = (name || '').trim().toLowerCase();
-            if (nameNorm && existingNames.indexOf(nameNorm) !== -1) {
-                hideDropdown();
-                return;
-            }
-            var existingChips = editable.querySelectorAll('.responsavel-chip');
-            var colorIndex = existingChips.length % 5;
-            var chip = document.createElement('span');
-            chip.className = 'responsavel-chip responsavel-chip-' + colorIndex;
-            chip.setAttribute('contenteditable', 'false');
-            chip.setAttribute('data-name', name);
-            var nameSpan = document.createElement('span');
-            nameSpan.textContent = name;
-            chip.appendChild(nameSpan);
-            var removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'responsavel-chip-remove';
-            removeBtn.setAttribute('aria-label', 'Remover');
-            removeBtn.innerHTML = '&times;';
-            removeBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                chip.remove();
-                reindexChipColors(editable);
-            });
-            chip.appendChild(removeBtn);
-            savedRange.deleteContents();
-            savedRange.insertNode(chip);
-            savedRange.setStartAfter(chip);
-            savedRange.setEndAfter(chip);
-            var sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(savedRange);
-        }
-
-        function reindexChipColors(editable) {
-            var chips = editable.querySelectorAll('.responsavel-chip');
-            chips.forEach(function (chip, i) {
-                chip.className = 'responsavel-chip responsavel-chip-' + (i % 5);
-            });
-        }
-
-        function chipAtCursorOrInSelection(editable) {
-            var sel = window.getSelection();
-            if (!sel.rangeCount) return null;
-            var range = sel.getRangeAt(0);
-            var chips = editable.querySelectorAll('.responsavel-chip');
-            for (var i = 0; i < chips.length; i++) {
-                var chip = chips[i];
-                try {
-                    if (range.intersectsNode(chip)) return chip;
-                    if (range.startContainer === chip || chip.contains(range.startContainer)) return chip;
-                } catch (e) { }
-            }
-            return null;
-        }
-
-        function deleteChipBeforeCursor(editable) {
-            var chipInSel = chipAtCursorOrInSelection(editable);
-            if (chipInSel) {
-                chipInSel.remove();
-                return true;
-            }
-            var sel = window.getSelection();
-            if (!sel.rangeCount) return false;
-            var range = sel.getRangeAt(0);
-            var node = range.startContainer;
-            var offset = range.startOffset;
-            if (node.nodeType === 3) {
-                var prev = node.previousSibling;
-                if (prev && prev.classList && prev.classList.contains('responsavel-chip')) {
-                    prev.remove();
-                    return true;
-                }
-            } else if (node.nodeType === 1) {
-                var child = node.childNodes[offset - 1];
-                if (child && child.classList && child.classList.contains('responsavel-chip')) {
-                    child.remove();
-                    return true;
-                }
-                if (offset === 0 && node.previousSibling && node.previousSibling.classList && node.previousSibling.classList.contains('responsavel-chip')) {
-                    node.previousSibling.remove();
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        function deleteChipAfterCursor(editable) {
-            var chipInSel = chipAtCursorOrInSelection(editable);
-            if (chipInSel) {
-                chipInSel.remove();
-                return true;
-            }
-            var sel = window.getSelection();
-            if (!sel.rangeCount) return false;
-            var range = sel.getRangeAt(0);
-            var node = range.startContainer;
-            var offset = range.startOffset;
-            if (node.nodeType === 3) {
-                if (offset === node.length) {
-                    var next = node.nextSibling;
-                    if (next && next.classList && next.classList.contains('responsavel-chip')) {
-                        next.remove();
-                        return true;
-                    }
-                }
-            } else if (node.nodeType === 1) {
-                var nextChild = node.childNodes[offset];
-                if (nextChild && nextChild.classList && nextChild.classList.contains('responsavel-chip')) {
-                    nextChild.remove();
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        function renderList(filtered) {
-            var alreadyAdded = getExistingChipNames(activeEditable);
-            var available = filtered.filter(function (u) {
-                var n = (u.name || '').trim().toLowerCase();
-                return n && alreadyAdded.indexOf(n) === -1;
-            });
-            dropdown.innerHTML = '';
-            if (available.length === 0) {
-                var empty = document.createElement('div');
-                empty.className = 'responsavel-suggestions-empty';
-                empty.textContent = filtered.length === 0 ? 'Nenhuma pessoa encontrada' : 'Todos já adicionados';
-                dropdown.appendChild(empty);
-            } else {
-                available.forEach(function (u, i) {
-                    var div = document.createElement('div');
-                    div.className = 'responsavel-suggestion-item' + (i === 0 ? ' active' : '');
-                    div.setAttribute('role', 'option');
-                    div.textContent = u.name;
-                    div.dataset.name = u.name;
-                    div.addEventListener('mousedown', function (e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        selectingSuggestion = true;
-                        var targetEditable = activeEditable;
-                        insertChip(targetEditable, u.name);
-                        hideDropdown();
-                        if (targetEditable) targetEditable.focus();
-                    });
-                    dropdown.appendChild(div);
-                });
-            }
-            selectedIndex = 0;
-        }
-
-        function updateSelection() {
-            var items = dropdown.querySelectorAll('.responsavel-suggestion-item');
-            items.forEach(function (el, i) {
-                el.classList.toggle('active', i === selectedIndex);
-            });
-        }
-
-        editableEl.addEventListener('input', function () {
-            var obj = getTextAndRange(this);
-            if (obj.query === null) {
-                hideDropdown();
-                return;
-            }
-            activeEditable = this;
-            savedRange = obj.range;
-            var q = (obj.query || '').trim();
-            fetch(sugestoesUrl + '?q=' + encodeURIComponent(q))
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    users = data.users || [];
-                    var filtered = q ? users.filter(function (u) {
-                        return (u.name || '').toLowerCase().indexOf(q) !== -1;
-                    }) : users;
-                    renderList(filtered);
-                    showDropdownBelow(activeEditable);
-                })
-                .catch(function () { hideDropdown(); });
-        });
-
-        editableEl.addEventListener('keydown', function (e) {
-            if (!dropdown.hasAttribute('hidden') || activeEditable !== this) {
-                if (e.key === 'Backspace') {
-                    if (deleteChipBeforeCursor(this)) {
-                        e.preventDefault();
-                        return;
-                    }
-                } else if (e.key === 'Delete') {
-                    if (deleteChipAfterCursor(this)) {
-                        e.preventDefault();
-                        return;
-                    }
-                }
-            }
-            if (!dropdown.hasAttribute('hidden') && activeEditable === this) {
-                var items = dropdown.querySelectorAll('.responsavel-suggestion-item');
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-                    updateSelection();
-                    if (items[selectedIndex]) items[selectedIndex].scrollIntoView({ block: 'nearest' });
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    selectedIndex = Math.max(selectedIndex - 1, 0);
-                    updateSelection();
-                    if (items[selectedIndex]) items[selectedIndex].scrollIntoView({ block: 'nearest' });
-                } else if (e.key === 'Enter' && items[selectedIndex]) {
-                    e.preventDefault();
-                    var targetEditable = activeEditable;
-                    insertChip(targetEditable, items[selectedIndex].dataset.name);
-                    hideDropdown();
-                    if (targetEditable) targetEditable.focus();
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    hideDropdown();
-                }
-            } else if (e.key === 'Backspace') {
-                if (deleteChipBeforeCursor(this)) e.preventDefault();
-            } else if (e.key === 'Delete') {
-                if (deleteChipAfterCursor(this)) e.preventDefault();
-            }
-        });
-
-        editableEl.addEventListener('blur', function () {
-            setTimeout(function () {
-                if (selectingSuggestion) {
-                    selectingSuggestion = false;
-                    return;
-                }
-                if (!dropdown.contains(document.activeElement)) hideDropdown();
-            }, 150);
-        });
-
-        editableEl.addEventListener('click', function (e) {
-            if (e.target.classList && e.target.classList.contains('responsavel-chip-remove')) {
-                e.preventDefault();
-                e.stopPropagation();
-                var chip = e.target.closest('.responsavel-chip');
-                if (chip) {
-                    chip.remove();
-                    reindexChipColors(editableEl);
-                }
-            }
-        });
-    }
 
     // Atualizar status do item via AJAX (sem recarregar a página)
     function updateItemStatus(itemId, status) {
@@ -1378,7 +1423,8 @@
             var statusSelect = row.querySelector('.task-item-status');
             var respSpan = row.querySelector('.task-item-responsavel');
             var statusVal = statusSelect ? statusSelect.value : 'programado';
-            var respVal = respSpan ? respSpan.textContent.trim() : '';
+            var respPlaceholderEl = respSpan ? respSpan.querySelector('.responsavel-placeholder') : null;
+            var respVal = respPlaceholderEl ? '' : (respSpan ? respSpan.textContent.trim() : '');
             if (respVal === '\u00a0') respVal = '';
 
             var formData = new FormData();
@@ -1425,6 +1471,16 @@
         });
     }
 
+    function setResponsavelCellText(respSpan, text) {
+        if (!respSpan) return;
+        var value = normalizeResponsavelName(text || '');
+        if (value) {
+            respSpan.textContent = value;
+        } else {
+            respSpan.innerHTML = '<em class="responsavel-placeholder">Responsável não informado</em>';
+        }
+    }
+
     // ===== EDIÇÃO INLINE DO RESPONSÁVEL =====
     function inlineEditResponsavel(respSpan) {
         var itemId = respSpan.getAttribute('data-item-id');
@@ -1432,122 +1488,72 @@
         var row = respSpan.closest('.task-item-row');
         if (!row) return;
         if (respSpan.classList.contains('task-item-resp-editing-active')) return;
-        respSpan.classList.add('task-item-resp-editing-active');
+
+        var listEl = row.closest('.task-items-list');
+        if (!listEl) return;
+        var sugestoesUrl = listEl.getAttribute('data-sugestoes-url');
+        var taskId = listEl.getAttribute('data-task-id');
+        if (!sugestoesUrl || !taskId) return;
 
         var placeholderEl = respSpan.querySelector('.responsavel-placeholder');
         var originalText = placeholderEl ? '' : respSpan.textContent.trim();
         if (originalText === '\u00a0') originalText = '';
 
-        var chipHtml = '';
-        if (originalText) {
-            var names = originalText.split(/\s*,\s*/).map(function(n) { return n.trim(); }).filter(Boolean);
-            for (var i = 0; i < names.length; i++) {
-                var name = names[i];
-                var nameHtml = (function(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; })(name);
-                var nameAttr = name.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-                chipHtml += '<span class="responsavel-chip responsavel-chip-' + (i % 5) + '" contenteditable="false" data-name="' + nameAttr + '">' + nameHtml + ' <button type="button" class="responsavel-chip-remove" aria-label="Remover">&times;</button></span>';
-            }
-        }
+        respSpan.classList.add('task-item-resp-editing-active');
 
-        var editWrap = document.createElement('div');
-        editWrap.className = 'responsavel-mention-wrap';
-        editWrap.style.maxWidth = '160px';
-        var editable = document.createElement('div');
-        editable.className = 'contenteditable-responsavel';
-        editable.contentEditable = 'true';
-        editable.setAttribute('data-placeholder', 'Responsável');
-        editable.innerHTML = chipHtml;
-        var suggestionsDiv = document.createElement('div');
-        suggestionsDiv.className = 'responsavel-suggestions';
-        suggestionsDiv.setAttribute('role', 'listbox');
-        suggestionsDiv.setAttribute('hidden', '');
-        editWrap.appendChild(editable);
-        editWrap.appendChild(suggestionsDiv);
-
-        respSpan.replaceWith(editWrap);
-        editable.focus();
-
-        var listEl = row.closest('.task-items-list');
-        if (listEl) {
-            var sugestoesUrl = listEl.getAttribute('data-sugestoes-url');
-            if (sugestoesUrl) {
-                initResponsavelMention(editable, listEl.getAttribute('data-task-id'), sugestoesUrl);
-            }
-        }
-
-        var saving = false;
-
-        function restore(text) {
-            var span = document.createElement('span');
-            span.className = 'task-item-responsavel';
-            span.setAttribute('data-item-id', itemId);
-            if (text) {
-                span.textContent = text;
-            } else {
-                span.innerHTML = '<em class="responsavel-placeholder">Responsável não informado</em>';
-            }
-            editWrap.replaceWith(span);
-        }
-
-        function saveResp() {
-            if (saving) return;
-            var newResp = getResponsavelValueFromEditable(editable).trim();
-            if (newResp === originalText) { restore(originalText); return; }
-
-            saving = true;
-
-            var descEl = row.querySelector('.task-item-desc');
-            var statusSelect = row.querySelector('.task-item-status');
-            var descVal = descEl ? descEl.textContent.trim() : '';
-            var statusVal = statusSelect ? statusSelect.value : 'programado';
-
-            var formData = new FormData();
-            formData.append('descricao', descVal);
-            formData.append('status', statusVal);
-            formData.append('responsavel', newResp);
-
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/tarefas/itens/' + itemId + '/edit');
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.setRequestHeader('Accept', 'application/json');
-            xhr.onload = function () {
-                try {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data.success && data.item) {
-                        restore(data.item.responsavel || '');
-                    } else {
-                        alert(data.message || 'Erro ao salvar.');
-                        restore(originalText);
-                    }
-                } catch (err) {
-                    restore(originalText);
+        responsavelPickerManager.open({
+            anchorEl: respSpan,
+            taskId: taskId,
+            sugestoesUrl: sugestoesUrl,
+            initialRawValue: originalText,
+            onCancel: function () {
+                respSpan.classList.remove('task-item-resp-editing-active');
+            },
+            onApply: function (payload) {
+                if (!payload.dirty) {
+                    respSpan.classList.remove('task-item-resp-editing-active');
+                    return true;
                 }
-            };
-            xhr.onerror = function () {
-                alert('Erro de conexão.');
-                restore(originalText);
-            };
-            xhr.send(formData);
-        }
 
-        editable.addEventListener('keydown', function (e) {
-            // Não salvar se o dropdown de sugestões está aberto (Enter seleciona a sugestão)
-            var dropdown = document.querySelector('.responsavel-suggestions:not([hidden])');
-            if (e.key === 'Enter' && !e.shiftKey && !dropdown) { e.preventDefault(); saveResp(); }
-            if (e.key === 'Escape') {
-                if (dropdown) return; // Deixa o handler do mention fechar o dropdown
-                e.preventDefault(); restore(originalText);
-            }
-        });
+                var descEl = row.querySelector('.task-item-desc');
+                var statusSelect = row.querySelector('.task-item-status');
+                var descVal = descEl ? descEl.textContent.trim() : '';
+                var statusVal = statusSelect ? statusSelect.value : 'programado';
+                var responsavelVal = payload.value || '';
 
-        editable.addEventListener('blur', function () {
-            setTimeout(function () {
-                if (!saving && document.body.contains(editWrap)) {
-                    var dropdown = document.querySelector('.responsavel-suggestions:not([hidden])');
-                    if (dropdown) return;
-                    saveResp();
-                }
-            }, 250);
+                return new Promise(function (resolve, reject) {
+                    var formData = new FormData();
+                    formData.append('descricao', descVal);
+                    formData.append('status', statusVal);
+                    formData.append('responsavel', responsavelVal);
+
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/tarefas/itens/' + itemId + '/edit');
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.setRequestHeader('Accept', 'application/json');
+                    xhr.onload = function () {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            if (data.success && data.item) {
+                                setResponsavelCellText(respSpan, data.item.responsavel || '');
+                                respSpan.classList.remove('task-item-resp-editing-active');
+                                resolve(true);
+                            } else {
+                                respSpan.classList.remove('task-item-resp-editing-active');
+                                reject(new Error((data && data.message) || 'Erro ao salvar.'));
+                            }
+                        } catch (err) {
+                            respSpan.classList.remove('task-item-resp-editing-active');
+                            reject(new Error('Erro ao salvar.'));
+                        }
+                    };
+                    xhr.onerror = function () {
+                        respSpan.classList.remove('task-item-resp-editing-active');
+                        reject(new Error('Erro de conexão.'));
+                    };
+                    xhr.send(formData);
+                });
+            },
         });
     }
 
