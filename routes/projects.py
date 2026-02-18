@@ -857,35 +857,57 @@ def delete_project(project_id):
 @login_required
 def concluir_project(project_id):
     project = Project.query.get_or_404(project_id)
+    redirect_url = url_for('main.project_detail', project_id=project_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
+
+    def respond_error(message, category='warning', status_code=400):
+        if is_ajax:
+            return jsonify({
+                'success': False,
+                'message': message,
+                'category': category,
+                'redirect_url': redirect_url
+            }), status_code
+        flash(message, category)
+        return redirect(redirect_url)
     
     # Verificar permissão
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
-        flash('Você não tem permissão para concluir este projeto.', 'danger')
-        return redirect(url_for('main.project_detail', project_id=project_id))
+        return respond_error('Você não tem permissão para concluir este projeto.', category='danger', status_code=403)
     
     # Verificar se o projeto está Vigente
     if project.status != 'Vigente':
-        flash('Apenas projetos com status "Vigente" podem ser concluídos.', 'warning')
-        return redirect(url_for('main.project_detail', project_id=project_id))
+        return respond_error('Apenas projetos com status "Vigente" podem ser concluídos.', category='warning', status_code=400)
     
     # Verificar se todas as etapas estão concluídas
     if not project.todas_etapas_concluidas:
-        flash('Todas as etapas devem estar iniciadas e concluídas para finalizar o projeto.', 'warning')
-        return redirect(url_for('main.project_detail', project_id=project_id))
-    
-    # Atualizar status
-    project.status = 'Finalizado'
-    
-    # Registrar no histórico
-    log_project_action(
-        project_id=project.id,
-        action_type='finalize',
-        description=f'Concluiu o projeto "{project.titulo}"'
-    )
-    
-    db.session.commit()
-    flash(f'Projeto "{project.titulo}" foi concluído com sucesso!', 'success')
-    return redirect(url_for('main.project_detail', project_id=project_id))
+        return respond_error('Todas as etapas devem estar iniciadas e concluídas para finalizar o projeto.', category='warning', status_code=400)
+
+    try:
+        # Atualizar status
+        project.status = 'Finalizado'
+
+        # Registrar no histórico
+        log_project_action(
+            project_id=project.id,
+            action_type='finalize',
+            description=f'Concluiu o projeto "{project.titulo}"'
+        )
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return respond_error(f'Erro ao concluir projeto: {str(e)}', category='danger', status_code=500)
+
+    success_message = f'Projeto "{project.titulo}" foi concluído com sucesso!'
+    if is_ajax:
+        return jsonify({
+            'success': True,
+            'message': success_message,
+            'redirect_url': redirect_url
+        })
+    flash(success_message, 'success')
+    return redirect(redirect_url)
 
 @main_bp.route('/project/<int:project_id>/history')
 @login_required

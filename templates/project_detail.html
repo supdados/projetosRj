@@ -332,12 +332,12 @@
 
             {% if project.status == 'Vigente' %}
             <form method="POST" action="{{ url_for('main.concluir_project', project_id=project.id) }}"
-                class="inline-form">
+                class="inline-form" id="concludeProjectForm">
                 <button type="submit" id="btn-concluir-projeto" class="btn btn-success btn-sm btn-conclude-project" {%
                     if not project.todas_etapas_concluidas %}disabled{% endif %}
                     data-total-etapas="{{ project.etapas|length }}"
-                    title="{% if project.todas_etapas_concluidas %}Concluir projeto{% else %}Todas as etapas devem estar iniciadas e concluídas{% endif %}"
-                    onclick="return confirm('Tem certeza que deseja concluir este projeto? Esta ação mudará o status para Finalizado.');">
+                    data-project-title="{{ project.titulo }}"
+                    title="{% if project.todas_etapas_concluidas %}Concluir projeto{% else %}Todas as etapas devem estar iniciadas e concluídas{% endif %}">
                     <i class="fas fa-check-circle me-1"></i>Concluir Projeto
                 </button>
             </form>
@@ -694,6 +694,29 @@
         <div class="confirm-modal-buttons">
             <button id="cascade-cancel-btn" class="btn btn-secondary">Não</button>
             <button id="cascade-confirm-btn" class="btn btn-primary">Sim, atualizar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Celebração visual da conclusão -->
+<div class="project-conclude-celebration" id="projectConcludeCelebration" aria-hidden="true">
+    <div class="project-conclude-celebration__backdrop"></div>
+    <div class="project-conclude-celebration__card" role="status" aria-live="polite">
+        <div class="project-conclude-celebration__check">
+            <i class="fas fa-check"></i>
+        </div>
+        <div class="project-conclude-celebration__ring" aria-hidden="true"></div>
+        <h3 class="project-conclude-celebration__title" data-celebration-title>Objetivo concluído</h3>
+        <p class="project-conclude-celebration__message" data-celebration-message>
+            Projeto finalizado com sucesso.
+        </p>
+        <div class="project-conclude-celebration__particles" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
         </div>
     </div>
 </div>
@@ -1211,6 +1234,328 @@
                     }
                 }, duration);
             }
+        }
+
+        const concludeProjectForm = document.getElementById('concludeProjectForm');
+        const concludeProjectButton = document.getElementById('btn-concluir-projeto');
+        const concludeCelebrationEl = document.getElementById('projectConcludeCelebration');
+        const concludeCelebrationTitleEl = concludeCelebrationEl
+            ? concludeCelebrationEl.querySelector('[data-celebration-title]')
+            : null;
+        const concludeCelebrationMessageEl = concludeCelebrationEl
+            ? concludeCelebrationEl.querySelector('[data-celebration-message]')
+            : null;
+        const reduceMotionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+
+        let concludeRequestInFlight = false;
+        let concludeAudioContext = null;
+        let concludeCelebrationTimeoutId = null;
+        const concludeButtonDefaultHtml = concludeProjectButton ? concludeProjectButton.innerHTML : '';
+
+        function getConcludeAudioContext() {
+            if (concludeAudioContext) {
+                return concludeAudioContext;
+            }
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) {
+                return null;
+            }
+            concludeAudioContext = new AudioContextClass();
+            return concludeAudioContext;
+        }
+
+        async function primeConcludeAudioContext() {
+            try {
+                const context = getConcludeAudioContext();
+                if (!context) {
+                    return;
+                }
+                if (context.state === 'suspended') {
+                    await context.resume();
+                }
+            } catch (error) {
+                console.warn('Não foi possível preparar o áudio de conclusão.', error);
+            }
+        }
+
+        function playConcludeSuccessChime() {
+            const context = getConcludeAudioContext();
+            if (!context) {
+                return;
+            }
+            if (context.state === 'suspended') {
+                context.resume().catch(() => { });
+            }
+
+            try {
+                const now = context.currentTime + 0.012;
+
+                // ===== Master =====
+                const masterGain = context.createGain();
+                masterGain.gain.setValueAtTime(0.75, now);
+
+                // Lowpass principal (som "polido", nao espalhafatoso)
+                const toneFilter = context.createBiquadFilter();
+                toneFilter.type = "lowpass";
+                toneFilter.frequency.setValueAtTime(2200, now);
+                toneFilter.Q.value = 0.7;
+
+                masterGain.connect(toneFilter);
+                toneFilter.connect(context.destination);
+
+                // ===== Sparkle Bus (so pro final ficar mais brilhante/feliz) =====
+                // E um bus paralelo, bem baixo, filtrado pra nao "apitar".
+                const sparkleGain = context.createGain();
+                sparkleGain.gain.setValueAtTime(0.18, now); // 0.12..0.22 (ajuste fino)
+
+                const sparkleHP = context.createBiquadFilter();
+                sparkleHP.type = "highpass";
+                sparkleHP.frequency.setValueAtTime(1400, now);
+
+                const sparkleShelf = context.createBiquadFilter();
+                sparkleShelf.type = "highshelf";
+                sparkleShelf.frequency.setValueAtTime(2800, now);
+                sparkleShelf.gain.setValueAtTime(3.5, now); // 2..5 (ajuste fino)
+
+                sparkleGain.connect(sparkleHP);
+                sparkleHP.connect(sparkleShelf);
+                sparkleShelf.connect(context.destination);
+
+                // ===== Helper =====
+                function playNote(freq, start, duration, gain, opts = {}) {
+                    const startAt = now + start;
+                    const endAt = startAt + duration;
+
+                    // Camada principal
+                    const oscBody = context.createOscillator();
+                    const oscTexture = context.createOscillator();
+                    const gainBody = context.createGain();
+                    const gainTexture = context.createGain();
+
+                    oscBody.type = "sine";
+                    oscBody.frequency.setValueAtTime(freq, startAt);
+
+                    // Textura em oitava acima (fala mais sem ficar alta)
+                    oscTexture.type = "triangle";
+                    oscTexture.frequency.setValueAtTime(freq * 2, startAt);
+
+                    // Envelope (rapido e satisfatorio)
+                    gainBody.gain.setValueAtTime(0.0001, startAt);
+                    gainBody.gain.exponentialRampToValueAtTime(gain, startAt + 0.010);
+                    gainBody.gain.exponentialRampToValueAtTime(gain * 0.55, startAt + duration * 0.55);
+                    gainBody.gain.exponentialRampToValueAtTime(0.0001, endAt + 0.03);
+
+                    gainTexture.gain.setValueAtTime(0.0001, startAt);
+                    gainTexture.gain.exponentialRampToValueAtTime(gain * 0.28, startAt + 0.008);
+                    gainTexture.gain.exponentialRampToValueAtTime(0.0001, endAt + 0.02);
+
+                    oscBody.connect(gainBody);
+                    oscTexture.connect(gainTexture);
+                    gainBody.connect(masterGain);
+                    gainTexture.connect(masterGain);
+
+                    // ===== Sparkle so no final da ultima nota (bem sutil) =====
+                    // Oitava + "quinta" acima (freq*2 e freq*3) da sensacao mais "feliz".
+                    if (opts.sparkle) {
+                        const sparkleStart = startAt + duration * 0.55;
+                        const sparkleEnd = endAt + 0.08;
+
+                        const sp1 = context.createOscillator();
+                        const sp2 = context.createOscillator();
+                        const spGain = context.createGain();
+
+                        sp1.type = "sine";
+                        sp2.type = "triangle";
+
+                        sp1.frequency.setValueAtTime(freq * 2, sparkleStart); // oitava acima
+                        sp2.frequency.setValueAtTime(freq * 3, sparkleStart); // oitava + quinta (bem "happy")
+
+                        spGain.gain.setValueAtTime(0.0001, sparkleStart);
+                        spGain.gain.exponentialRampToValueAtTime(gain * 0.075, sparkleStart + 0.012); // 0.055..0.09
+                        spGain.gain.exponentialRampToValueAtTime(0.0001, sparkleEnd);
+
+                        sp1.connect(spGain);
+                        sp2.connect(spGain);
+                        spGain.connect(sparkleGain);
+
+                        sp1.start(sparkleStart);
+                        sp2.start(sparkleStart);
+                        sp1.stop(sparkleEnd + 0.02);
+                        sp2.stop(sparkleEnd + 0.02);
+                    }
+                    // =========================================================
+
+                    oscBody.start(startAt);
+                    oscTexture.start(startAt);
+                    oscBody.stop(endAt + 0.06);
+                    oscTexture.stop(endAt + 0.06);
+                }
+
+                // Leve sensacao de "subiu e concluiu"
+                const notes = [
+                    { freq: 196.0, start: 0.00, duration: 0.18, gain: 0.095, sparkle: false },
+                    { freq: 246.94, start: 0.14, duration: 0.20, gain: 0.088, sparkle: false },
+                    { freq: 329.63, start: 0.28, duration: 0.22, gain: 0.082, sparkle: true }, // brilho so aqui
+                ];
+
+                notes.forEach(n => playNote(n.freq, n.start, n.duration, n.gain, { sparkle: n.sparkle }));
+
+                // Sub/impact (curto, perceptivel, sem virar kick)
+                const subOsc = context.createOscillator();
+                const subGain = context.createGain();
+                subOsc.type = "sine";
+                subOsc.frequency.setValueAtTime(110, now);
+                subOsc.frequency.exponentialRampToValueAtTime(65, now + 0.11);
+
+                subGain.gain.setValueAtTime(0.0001, now);
+                subGain.gain.exponentialRampToValueAtTime(0.040, now + 0.010);
+                subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+
+                subOsc.connect(subGain);
+                subGain.connect(masterGain);
+                subOsc.start(now);
+                subOsc.stop(now + 0.13);
+
+                // Cleanup
+                setTimeout(() => {
+                    masterGain.disconnect();
+                    toneFilter.disconnect();
+                    sparkleGain.disconnect();
+                    sparkleHP.disconnect();
+                    sparkleShelf.disconnect();
+                }, 1100);
+            } catch (error) {
+                console.error("Sound error:", error);
+            }
+        }
+
+        function showConcludeCelebration(title, message, autoHideMs = 0) {
+            if (!concludeCelebrationEl) {
+                return;
+            }
+
+            if (concludeCelebrationTimeoutId) {
+                window.clearTimeout(concludeCelebrationTimeoutId);
+                concludeCelebrationTimeoutId = null;
+            }
+
+            if (concludeCelebrationTitleEl && title) {
+                concludeCelebrationTitleEl.textContent = title;
+            }
+            if (concludeCelebrationMessageEl && message) {
+                concludeCelebrationMessageEl.textContent = message;
+            }
+
+            concludeCelebrationEl.classList.add('is-active');
+            concludeCelebrationEl.setAttribute('aria-hidden', 'false');
+
+            if (autoHideMs > 0) {
+                concludeCelebrationTimeoutId = window.setTimeout(() => {
+                    hideConcludeCelebration();
+                }, autoHideMs);
+            }
+        }
+
+        function hideConcludeCelebration() {
+            if (!concludeCelebrationEl) {
+                return;
+            }
+            if (concludeCelebrationTimeoutId) {
+                window.clearTimeout(concludeCelebrationTimeoutId);
+                concludeCelebrationTimeoutId = null;
+            }
+            concludeCelebrationEl.classList.remove('is-active');
+            concludeCelebrationEl.setAttribute('aria-hidden', 'true');
+        }
+
+        function setConcludeLoadingState(isLoading) {
+            if (!concludeProjectButton) {
+                return;
+            }
+
+            if (isLoading) {
+                concludeProjectButton.disabled = true;
+                concludeProjectButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Concluindo...';
+                return;
+            }
+
+            concludeProjectButton.innerHTML = concludeButtonDefaultHtml;
+            verificarEAtualizarBotaoConcluir();
+        }
+
+        function waitMs(duration) {
+            return new Promise(resolve => window.setTimeout(resolve, duration));
+        }
+
+        async function submitConcludeProjectWithCelebration() {
+            if (!concludeProjectForm || concludeRequestInFlight) {
+                return;
+            }
+
+            concludeRequestInFlight = true;
+            setConcludeLoadingState(true);
+            showConcludeCelebration('Concluindo projeto...', 'Aguarde um instante.');
+
+            try {
+                const response = await fetch(concludeProjectForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                    }
+                });
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (error) {
+                    data = null;
+                }
+
+                if (!response.ok || !data || !data.success) {
+                    hideConcludeCelebration();
+                    showAjaxFlashMessage(
+                        data?.message || 'Não foi possível concluir o projeto.',
+                        data?.category || (response.status === 403 ? 'danger' : 'warning')
+                    );
+                    setConcludeLoadingState(false);
+                    concludeRequestInFlight = false;
+                    return;
+                }
+
+                showConcludeCelebration('Objetivo concluído', data.message || 'Projeto finalizado com sucesso.');
+                playConcludeSuccessChime();
+
+                const celebrationDelay = reduceMotionQuery && reduceMotionQuery.matches ? 450 : 1250;
+                await waitMs(celebrationDelay);
+                window.location.href = data.redirect_url || concludeProjectForm.action;
+            } catch (error) {
+                console.error('Erro ao concluir projeto:', error);
+                hideConcludeCelebration();
+                showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
+                setConcludeLoadingState(false);
+                concludeRequestInFlight = false;
+            }
+        }
+
+        if (concludeProjectButton) {
+            concludeProjectButton.addEventListener('pointerdown', function () {
+                primeConcludeAudioContext();
+            }, { passive: true });
+        }
+
+        if (concludeProjectForm && concludeProjectButton) {
+            concludeProjectForm.addEventListener('submit', function (event) {
+                if (concludeRequestInFlight || concludeProjectButton.disabled) {
+                    event.preventDefault();
+                    return;
+                }
+
+                event.preventDefault();
+                primeConcludeAudioContext();
+                submitConcludeProjectWithCelebration();
+            });
         }
 
         function updateIniciadaButton(button, iniciada) {
