@@ -1,5 +1,5 @@
 # projetosRj
-código fonte para o gerênciador de projetos do estado do rio de janeiro.
+código fonte para o gerenciador de projetos do estado do rio de janeiro.
 
 ## Catalogo de Objetivos, Resultados e Indicadores
 
@@ -7,9 +7,6 @@ Este projeto agora usa um **catalogo canonico em codigo** para:
 - Objetivo
 - Resultado esperado
 - Indicadores
-
-Arquivo-fonte do catalogo:
-- `/Users/juniorguimaraes/Downloads/projetosRj/objective_catalog.py`
 
 ### O que mudou
 
@@ -32,7 +29,7 @@ Tambem existe sincronizacao na rota operacional:
 ### Script para producao (MySQL) e local (SQLite)
 
 Arquivo:
-- `/Users/juniorguimaraes/Downloads/projetosRj/sync_objectives_catalog.py`
+- `/projetosRj/sync_objectives_catalog.py`
 
 Exemplos:
 ```bash
@@ -63,7 +60,7 @@ Foi adicionado o campo `project.abep_indicator`:
 4. Aparece como filtro na listagem de todos os projetos.
 
 Catalogo fixo:
-- `/Users/juniorguimaraes/Downloads/projetosRj/abep_catalog.py`
+- `/projetosRj/abep_catalog.py`
 
 Migracao para bancos existentes:
 - Script dedicado: `python3 migrate_add_abep_indicator.py`
@@ -73,7 +70,7 @@ Migracao para bancos existentes:
 ## Organizacao de rotas (modular)
 
 As rotas foram refatoradas para um pacote dedicado:
-- `/Users/juniorguimaraes/Downloads/projetosRj/routes/`
+- `/projetosRj/routes/`
 
 Estrutura principal:
 - `routes/blueprint.py`: blueprint unico `main_bp` (mantem endpoints `main.*`).
