@@ -533,12 +533,36 @@ def reorder_task_items(task_id):
         return jsonify({'success': False, 'message': 'Sem permissão'}), 403
     
     try:
-        ordem_items = request.json.get('ordem', [])
-        
-        for index, item_id in enumerate(ordem_items, start=1):
-            item = TaskItem.query.get(item_id)
-            if item and item.task_id == task_id:
-                item.ordem = index
+        payload = request.get_json(silent=True) or {}
+        ordem_items_raw = payload.get('ordem', [])
+        if not isinstance(ordem_items_raw, list):
+            ordem_items_raw = []
+
+        # Sanitiza entrada: ignora inválidos e ids duplicados preservando ordem
+        ordem_items = []
+        seen_ids = set()
+        for raw_id in ordem_items_raw:
+            try:
+                item_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+
+            if item_id in seen_ids:
+                continue
+
+            seen_ids.add(item_id)
+            ordem_items.append(item_id)
+
+        task_items = TaskItem.query.filter_by(task_id=task_id).order_by(TaskItem.ordem.asc(), TaskItem.id.asc()).all()
+        task_items_by_id = {item.id: item for item in task_items}
+
+        ordered_items = [task_items_by_id[item_id] for item_id in ordem_items if item_id in task_items_by_id]
+        ordered_item_ids = {item.id for item in ordered_items}
+        remaining_items = [item for item in task_items if item.id not in ordered_item_ids]
+        final_order = ordered_items + remaining_items
+
+        for index, item in enumerate(final_order, start=1):
+            item.ordem = index
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Ordem atualizada'})

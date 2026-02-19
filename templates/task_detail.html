@@ -109,6 +109,12 @@
             </section>
 
             <section class="task-detail-v2-items">
+                {% set task_item_statuses = [
+                    ('programado', 'Programado'),
+                    ('em_andamento', 'Em andamento'),
+                    ('validacao', 'Validação'),
+                    ('finalizado', 'Finalizado')
+                ] %}
                 <!-- Items Header -->
                 <div class="items-header-clean mt-4">
                     <div class="header-info">
@@ -116,219 +122,249 @@
                         <span class="header-count">{{ task.items|length }} item{{ 's' if task.items|length != 1 else ''
                             }}</span>
                     </div>
-                    <button type="button" class="btn-new-clean" id="btnFocusAddItem" title="Ir para adicionar item">
-                        Novo item
-                    </button>
-                </div>
-
-                <!-- Items List (estilo ClickUp / lista compacta) -->
-                <div class="task-items-list" data-task-id="{{ task.id }}"
-                    data-task-has-project="{{ '1' if task.project_id else '' }}"
-                    data-add-item-url="{{ url_for('main.add_task_item', task_id=task.id) }}"
-                    data-sugestoes-url="{{ url_for('main.get_task_assignable_users', task_id=task.id) }}">
-                <!-- Cabeçalho das colunas -->
-                <div class="task-item-header-row">
-                    <div class="task-item-bar task-item-bar-header"></div>
-                    <div class="task-item-main">
-                        <div class="task-item-line task-item-header">
-                            <span class="task-item-col-desc">Descrição</span>
-                            <span class="task-item-col-status">Status</span>
-                            <span class="task-item-col-responsavel">Responsável</span>
-                            <span class="task-item-col-comments" title="Comentários">
-                                <i class="far fa-comment-alt" aria-hidden="true"></i>
-                                <span class="visually-hidden">Comentários</span>
-                            </span>
-                            <span class="task-item-col-actions" title="Ações">Ações</span>
+                    <div class="items-header-actions">
+                        <div class="task-items-view-toggle" id="taskItemsViewToggle" role="group"
+                            aria-label="Alternar visualização de itens">
+                            <button type="button" class="task-items-view-btn is-active" data-view="list"
+                                aria-pressed="true">Lista</button>
+                            <button type="button" class="task-items-view-btn" data-view="kanban"
+                                aria-pressed="false">Kanban</button>
                         </div>
-                    </div>
-                </div>
-                {% for item in task.items %}
-                <div class="task-item-row" data-item-id="{{ item.id }}">
-                    <div class="task-item-bar status-{{ item.status }}"></div>
-                    <div class="task-item-main">
-                        <div class="task-item-line">
-                            <div class="task-item-desc-wrap">
-                                <p class="task-item-desc" data-item-id="{{ item.id }}">{{ item.descricao }}</p>
-                                <button type="button" class="task-item-desc-edit-btn" data-item-id="{{ item.id }}"
-                                    title="Editar descrição">
-                                    <i class="fas fa-pen" aria-hidden="true"></i>
-                                    <span class="visually-hidden">Editar</span>
-                                </button>
-                            </div>
-                            <div class="task-item-meta">
-                                <select class="task-item-status status-{{ item.status }}"
-                                    onchange="updateItemStatus({{ item.id }}, this.value)" title="Status">
-                                    <option value="programado" {% if item.status=='programado' %}selected{% endif %}>
-                                        Programado</option>
-                                    <option value="em_andamento" {% if item.status=='em_andamento' %}selected{% endif
-                                        %}>Em andamento</option>
-                                    <option value="validacao" {% if item.status=='validacao' %}selected{% endif %}>
-                                        Validação</option>
-                                    <option value="finalizado" {% if item.status=='finalizado' %}selected{% endif %}>
-                                        Finalizado</option>
-                                </select>
-                                <span class="task-item-responsavel" data-item-id="{{ item.id }}">{% if item.responsavel %}{{ item.responsavel }}{%
-                                    else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
-                                <button type="button" class="task-item-comments-btn" aria-expanded="false"
-                                    data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)">
-                                    <i class="far fa-comment-alt" aria-hidden="true"></i>
-                                    <span class="task-item-comments-label visually-hidden">Comentários</span>
-                                    <span class="task-item-comments-num">{{ item.comments|length }}</span>
-                                </button>
-                                <div class="task-item-actions">
-                                    <button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal"
-                                        data-bs-target="#deleteItemModal-{{ item.id }}" title="Excluir">
-                                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
-                                        <span class="visually-hidden">Excluir</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="comments-body-{{ item.id }}" class="task-item-comments" hidden>
-                            <div class="task-item-comments-inner">
-                                {% for comment in item.comments %}
-                                <div class="task-comment task-comment-author-{{ comment.user_id % 5 }}"
-                                    id="comment-{{ comment.id }}">
-                                    <div class="task-comment-head">
-                                        <span class="task-comment-user">{{ comment.author.name }}</span>
-                                        <span class="task-comment-time">{{ comment.created_at|local_time }}{% if
-                                            comment.updated_at %} <em>(edit.)</em>{% endif %}</span>
-                                        {% if current_user_obj and current_user_obj.id == comment.user_id %}
-                                        <span class="task-comment-acts">
-                                            <button type="button" class="task-comment-btn btn-edit-comment"
-                                                data-comment-id="{{ comment.id }}"
-                                                data-comment-content="{{ comment.content|e }}" title="Editar">Editar</button>
-                                            <form
-                                                action="{{ url_for('main.delete_task_item_comment', comment_id=comment.id) }}"
-                                                method="POST" class="d-inline"
-                                                onsubmit="return confirm('Excluir comentário?');">
-                                                <button type="submit" class="task-comment-btn task-comment-btn-del"
-                                                    title="Excluir">Excluir</button>
-                                            </form>
-                                        </span>
-                                        {% endif %}
-                                    </div>
-                                    <p class="task-comment-text">{{ comment.content }}</p>
-                                </div>
-                                {% endfor %}
-                                <form class="task-comment-form"
-                                    action="{{ url_for('main.add_task_item_comment', item_id=item.id) }}" method="POST"
-                                    data-item-id="{{ item.id }}">
-                                    <textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)"
-                                        required></textarea>
-                                    <button type="submit" title="Enviar comentário">
-                                        <i class="fas fa-paper-plane" aria-hidden="true"></i>
-                                        <span class="visually-hidden">Enviar</span>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                        <button type="button" class="btn-new-clean" id="btnFocusAddItem" title="Ir para adicionar item">
+                            Novo item
+                        </button>
                     </div>
                 </div>
 
-                <!-- Modal de Exclusão do Item -->
-                <div class="modal fade task-detail-v2-modal" id="deleteItemModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content modal-clean">
-                            <div class="modal-header-clean">
-                                <div>
-                                    <h5 class="modal-title-clean ds-type-section-title">Excluir Item</h5>
-                                    <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
+                <div class="task-items-view-panels">
+                    <div class="task-items-view-panel is-active" id="taskItemsListView" data-view-panel="list">
+                        <!-- Items List (estilo ClickUp / lista compacta) -->
+                        <div class="task-items-list" data-task-id="{{ task.id }}"
+                            data-task-has-project="{{ '1' if task.project_id else '' }}"
+                            data-add-item-url="{{ url_for('main.add_task_item', task_id=task.id) }}"
+                            data-sugestoes-url="{{ url_for('main.get_task_assignable_users', task_id=task.id) }}"
+                            data-reorder-url="{{ url_for('main.reorder_task_items', task_id=task.id) }}">
+                        <!-- Cabeçalho das colunas -->
+                        <div class="task-item-header-row">
+                            <div class="task-item-bar task-item-bar-header"></div>
+                            <div class="task-item-main">
+                                <div class="task-item-line task-item-header">
+                                    <span class="task-item-col-desc">Descrição</span>
+                                    <span class="task-item-col-status">Status</span>
+                                    <span class="task-item-col-responsavel">Responsável</span>
+                                    <span class="task-item-col-comments" title="Comentários">
+                                        <i class="far fa-comment-alt" aria-hidden="true"></i>
+                                        <span class="visually-hidden">Comentários</span>
+                                    </span>
+                                    <span class="task-item-col-actions" title="Ações">Ações</span>
                                 </div>
-                                <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
-                                    &times;
-                                </button>
-                            </div>
-                            <div class="modal-body-clean">
-                                <p>Confirma a exclusão deste item?</p>
-                                <p class="text-muted small">{{ item.descricao[:100] }}{% if item.descricao|length > 100
-                                    %}...{% endif %}</p>
-                            </div>
-                            <div class="modal-footer-clean">
-                                <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
-                                    Cancelar
-                                </button>
-                                <form action="{{ url_for('main.delete_task_item', item_id=item.id) }}" method="POST"
-                                    class="inline-form">
-                                    <button type="submit" class="btn-modal-clean btn-confirm-delete">
-                                        Excluir
-                                    </button>
-                                </form>
                             </div>
                         </div>
-                    </div>
-                </div>
-                {% else %}
-                <!-- Empty State: só a linha "Adicionar novo item" -->
-                <div class="empty-state-items" id="emptyStateItems">
-                    <div class="task-item-add-row empty-state-add" id="addItemRow">
-                        <div class="task-item-add-placeholder" id="addItemPlaceholder">
-                            <span class="task-item-add-dashes">—</span>
-                            <span class="task-item-add-label">Adicionar novo item</span>
-                        </div>
-                        <div class="task-item-add-form" id="addItemFormWrap" hidden>
-                            <div class="task-item-add-bar"></div>
-                            <div class="task-item-add-main">
-                                <div class="task-item-add-line">
-                                    <textarea class="task-item-add-desc" id="addItemDesc" rows="1"
-                                        placeholder="Descreva o item..."></textarea>
-                                    <select class="task-item-add-status" id="addItemStatus">
-                                        <option value="programado">Programado</option>
-                                        <option value="em_andamento">Em andamento</option>
-                                        <option value="validacao">Validação</option>
-                                        <option value="finalizado">Finalizado</option>
-                                    </select>
-                                    <div class="responsavel-picker task-item-add-responsavel-picker"
-                                        id="addItemResponsavelPicker">
-                                        <button type="button" class="responsavel-picker-trigger"
-                                            id="addItemResponsavelTrigger" aria-haspopup="dialog" aria-expanded="false">
-                                            <span class="responsavel-picker-trigger-content">
-                                                <em class="responsavel-placeholder">Responsável</em>
-                                            </span>
-                                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        {% for item in task.items %}
+                        <div class="task-item-row" data-item-id="{{ item.id }}" data-item-status="{{ item.status }}"
+                            data-comments-count="{{ item.comments|length }}">
+                            <div class="task-item-bar status-{{ item.status }}"></div>
+                            <div class="task-item-main">
+                                <div class="task-item-line">
+                                    <div class="task-item-desc-wrap">
+                                        <p class="task-item-desc" data-item-id="{{ item.id }}">{{ item.descricao }}</p>
+                                        <button type="button" class="task-item-desc-edit-btn" data-item-id="{{ item.id }}"
+                                            title="Editar descrição">
+                                            <i class="fas fa-pen" aria-hidden="true"></i>
+                                            <span class="visually-hidden">Editar</span>
                                         </button>
                                     </div>
+                                    <div class="task-item-meta">
+                                        <select class="task-item-status status-{{ item.status }}"
+                                            onchange="updateItemStatus({{ item.id }}, this.value)" title="Status">
+                                            <option value="programado" {% if item.status=='programado' %}selected{% endif %}>
+                                                Programado</option>
+                                            <option value="em_andamento" {% if item.status=='em_andamento' %}selected{% endif
+                                                %}>Em andamento</option>
+                                            <option value="validacao" {% if item.status=='validacao' %}selected{% endif %}>
+                                                Validação</option>
+                                            <option value="finalizado" {% if item.status=='finalizado' %}selected{% endif %}>
+                                                Finalizado</option>
+                                        </select>
+                                        <span class="task-item-responsavel" data-item-id="{{ item.id }}">{% if item.responsavel %}{{ item.responsavel }}{%
+                                            else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
+                                        <button type="button" class="task-item-comments-btn" aria-expanded="false"
+                                            data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)">
+                                            <i class="far fa-comment-alt" aria-hidden="true"></i>
+                                            <span class="task-item-comments-label visually-hidden">Comentários</span>
+                                            <span class="task-item-comments-num">{{ item.comments|length }}</span>
+                                        </button>
+                                        <div class="task-item-actions">
+                                            <button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal"
+                                                data-bs-target="#deleteItemModal-{{ item.id }}" title="Excluir">
+                                                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Excluir</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="comments-body-{{ item.id }}" class="task-item-comments" hidden>
+                                    <div class="task-item-comments-inner">
+                                        {% for comment in item.comments %}
+                                        <div class="task-comment task-comment-author-{{ comment.user_id % 5 }}"
+                                            id="comment-{{ comment.id }}">
+                                            <div class="task-comment-head">
+                                                <span class="task-comment-user">{{ comment.author.name }}</span>
+                                                <span class="task-comment-time">{{ comment.created_at|local_time }}{% if
+                                                    comment.updated_at %} <em>(edit.)</em>{% endif %}</span>
+                                                {% if current_user_obj and current_user_obj.id == comment.user_id %}
+                                                <span class="task-comment-acts">
+                                                    <button type="button" class="task-comment-btn btn-edit-comment"
+                                                        data-comment-id="{{ comment.id }}"
+                                                        data-comment-content="{{ comment.content|e }}" title="Editar">Editar</button>
+                                                    <form
+                                                        action="{{ url_for('main.delete_task_item_comment', comment_id=comment.id) }}"
+                                                        method="POST" class="d-inline"
+                                                        onsubmit="return confirm('Excluir comentário?');">
+                                                        <button type="submit" class="task-comment-btn task-comment-btn-del"
+                                                            title="Excluir">Excluir</button>
+                                                    </form>
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                            <p class="task-comment-text">{{ comment.content }}</p>
+                                        </div>
+                                        {% endfor %}
+                                        <form class="task-comment-form"
+                                            action="{{ url_for('main.add_task_item_comment', item_id=item.id) }}" method="POST"
+                                            data-item-id="{{ item.id }}">
+                                            <textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)"
+                                                required></textarea>
+                                            <button type="submit" title="Enviar comentário">
+                                                <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Enviar</span>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                {% endfor %}
-                {% if task.items %}
-                <!-- Linha inline: Adicionar novo item (só quando já existem itens) -->
-                <div class="task-item-add-row" id="addItemRow">
-                    <div class="task-item-add-placeholder" id="addItemPlaceholder">
-                        <span class="task-item-add-dashes">—</span>
-                        <span class="task-item-add-label">Adicionar novo item</span>
-                    </div>
-                    <div class="task-item-add-form" id="addItemFormWrap" hidden>
-                        <div class="task-item-add-bar"></div>
-                        <div class="task-item-add-main">
-                            <div class="task-item-add-line">
-                                <textarea class="task-item-add-desc" id="addItemDesc" rows="1"
-                                    placeholder="Descreva o item..."></textarea>
-                                <select class="task-item-add-status" id="addItemStatus">
-                                    <option value="programado">Programado</option>
-                                    <option value="em_andamento">Em andamento</option>
-                                    <option value="validacao">Validação</option>
-                                    <option value="finalizado">Finalizado</option>
-                                </select>
-                                <div class="responsavel-picker task-item-add-responsavel-picker"
-                                    id="addItemResponsavelPicker">
-                                    <button type="button" class="responsavel-picker-trigger"
-                                        id="addItemResponsavelTrigger" aria-haspopup="dialog" aria-expanded="false">
-                                        <span class="responsavel-picker-trigger-content">
-                                            <em class="responsavel-placeholder">Responsável</em>
-                                        </span>
-                                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                                    </button>
+
+                        <!-- Modal de Exclusão do Item -->
+                        <div class="modal fade task-detail-v2-modal" id="deleteItemModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content modal-clean">
+                                    <div class="modal-header-clean">
+                                        <div>
+                                            <h5 class="modal-title-clean ds-type-section-title">Excluir Item</h5>
+                                            <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
+                                        </div>
+                                        <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
+                                            &times;
+                                        </button>
+                                    </div>
+                                    <div class="modal-body-clean">
+                                        <p>Confirma a exclusão deste item?</p>
+                                        <p class="text-muted small">{{ item.descricao[:100] }}{% if item.descricao|length > 100
+                                            %}...{% endif %}</p>
+                                    </div>
+                                    <div class="modal-footer-clean">
+                                        <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
+                                            Cancelar
+                                        </button>
+                                        <form action="{{ url_for('main.delete_task_item', item_id=item.id) }}" method="POST"
+                                            class="inline-form">
+                                            <button type="submit" class="btn-modal-clean btn-confirm-delete">
+                                                Excluir
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        {% else %}
+                        <!-- Empty State: só a linha "Adicionar novo item" -->
+                        <div class="empty-state-items" id="emptyStateItems">
+                            <div class="task-item-add-row empty-state-add" id="addItemRow">
+                                <div class="task-item-add-placeholder" id="addItemPlaceholder">
+                                    <span class="task-item-add-dashes">—</span>
+                                    <span class="task-item-add-label">Adicionar novo item</span>
+                                </div>
+                                <div class="task-item-add-form" id="addItemFormWrap" hidden>
+                                    <div class="task-item-add-bar"></div>
+                                    <div class="task-item-add-main">
+                                        <div class="task-item-add-line">
+                                            <textarea class="task-item-add-desc" id="addItemDesc" rows="1"
+                                                placeholder="Descreva o item..."></textarea>
+                                            <select class="task-item-add-status" id="addItemStatus">
+                                                <option value="programado">Programado</option>
+                                                <option value="em_andamento">Em andamento</option>
+                                                <option value="validacao">Validação</option>
+                                                <option value="finalizado">Finalizado</option>
+                                            </select>
+                                            <div class="responsavel-picker task-item-add-responsavel-picker"
+                                                id="addItemResponsavelPicker">
+                                                <button type="button" class="responsavel-picker-trigger"
+                                                    id="addItemResponsavelTrigger" aria-haspopup="dialog" aria-expanded="false">
+                                                    <span class="responsavel-picker-trigger-content">
+                                                        <em class="responsavel-placeholder">Responsável</em>
+                                                    </span>
+                                                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if task.items %}
+                        <!-- Linha inline: Adicionar novo item (só quando já existem itens) -->
+                        <div class="task-item-add-row" id="addItemRow">
+                            <div class="task-item-add-placeholder" id="addItemPlaceholder">
+                                <span class="task-item-add-dashes">—</span>
+                                <span class="task-item-add-label">Adicionar novo item</span>
+                            </div>
+                            <div class="task-item-add-form" id="addItemFormWrap" hidden>
+                                <div class="task-item-add-bar"></div>
+                                <div class="task-item-add-main">
+                                    <div class="task-item-add-line">
+                                        <textarea class="task-item-add-desc" id="addItemDesc" rows="1"
+                                            placeholder="Descreva o item..."></textarea>
+                                        <select class="task-item-add-status" id="addItemStatus">
+                                            <option value="programado">Programado</option>
+                                            <option value="em_andamento">Em andamento</option>
+                                            <option value="validacao">Validação</option>
+                                            <option value="finalizado">Finalizado</option>
+                                        </select>
+                                        <div class="responsavel-picker task-item-add-responsavel-picker"
+                                            id="addItemResponsavelPicker">
+                                            <button type="button" class="responsavel-picker-trigger"
+                                                id="addItemResponsavelTrigger" aria-haspopup="dialog" aria-expanded="false">
+                                                <span class="responsavel-picker-trigger-content">
+                                                    <em class="responsavel-placeholder">Responsável</em>
+                                                </span>
+                                                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
-                {% endif %}
-            </div>
+
+                    <div class="task-items-view-panel" id="taskItemsKanbanView" data-view-panel="kanban" hidden>
+                        <div class="task-items-kanban-board" id="taskItemsKanbanBoard">
+                            {% for status_key, status_label in task_item_statuses %}
+                            <section class="task-items-kanban-column status-{{ status_key }}" data-status="{{ status_key }}">
+                                <header class="task-items-kanban-col-head">
+                                    <h6 class="task-items-kanban-col-title">{{ status_label }}</h6>
+                                    <span class="task-items-kanban-count" data-role="count">0</span>
+                                </header>
+                                <div class="task-items-kanban-dropzone" data-status="{{ status_key }}"
+                                    aria-label="Coluna {{ status_label }}"></div>
+                            </section>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </section>
         </div>
     </div>
@@ -1180,7 +1216,7 @@
 
         function insertNewItem(data) {
             var item = data.item;
-            var rowHtml = '<div class="task-item-row" data-item-id="' + item.id + '">' +
+            var rowHtml = '<div class="task-item-row" data-item-id="' + item.id + '" data-item-status="' + item.status + '" data-comments-count="0">' +
                 '<div class="task-item-bar status-' + item.status + '"></div>' +
                 '<div class="task-item-main">' +
                 '<div class="task-item-line">' +
@@ -1235,6 +1271,9 @@
             if (countEl) {
                 var n = document.querySelectorAll('.task-item-row').length;
                 countEl.textContent = n + (n === 1 ? ' item' : ' itens');
+            }
+            if (window.taskItemsKanban && typeof window.taskItemsKanban.rebuildFromList === 'function') {
+                window.taskItemsKanban.rebuildFromList();
             }
         }
 
@@ -1300,6 +1339,11 @@
 
         if (btnFocusAddItem) {
             btnFocusAddItem.addEventListener('click', function () {
+                if (window.taskItemsKanban && typeof window.taskItemsKanban.getCurrentView === 'function' &&
+                    window.taskItemsKanban.getCurrentView() === 'kanban' &&
+                    typeof window.taskItemsKanban.applyView === 'function') {
+                    window.taskItemsKanban.applyView('list');
+                }
                 addRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 if (formWrap.hasAttribute('hidden')) placeholder.click();
             });
@@ -1313,40 +1357,582 @@
         });
     })();
 
+    function getTaskItemRowById(itemId) {
+        return document.querySelector('.task-item-row[data-item-id="' + itemId + '"]');
+    }
+
+    function setTaskItemRowStatus(row, status) {
+        if (!row) return;
+        row.setAttribute('data-item-status', status);
+
+        var bar = row.querySelector('.task-item-bar');
+        if (bar) {
+            bar.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+            bar.classList.add('status-' + status);
+        }
+
+        var statusSelect = row.querySelector('.task-item-status');
+        if (statusSelect) {
+            statusSelect.value = status;
+            statusSelect.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+            statusSelect.classList.add('status-' + status);
+        }
+    }
+
+    function syncTaskItemRowMetadata(row) {
+        if (!row) return;
+        var statusSelect = row.querySelector('.task-item-status');
+        if (statusSelect && statusSelect.value) {
+            row.setAttribute('data-item-status', statusSelect.value);
+        }
+        var commentsNum = row.querySelector('.task-item-comments-num');
+        if (commentsNum) {
+            row.setAttribute('data-comments-count', String(parseInt(commentsNum.textContent || '0', 10) || 0));
+        }
+    }
+
+    function focusTaskItemRow(itemId, options) {
+        var opts = options || {};
+        var targetRow = getTaskItemRowById(itemId);
+        if (!targetRow) return false;
+
+        var scrollDelay = typeof opts.scrollDelay === 'number' ? opts.scrollDelay : 180;
+        var shouldHighlight = opts.highlight !== false;
+
+        setTimeout(function () {
+            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (!shouldHighlight) return;
+            targetRow.classList.add('search-focus-highlight');
+            setTimeout(function () {
+                targetRow.classList.remove('search-focus-highlight');
+            }, 2300);
+        }, scrollDelay);
+        return true;
+    }
+
     // Atualizar status do item via AJAX (sem recarregar a página)
-    function updateItemStatus(itemId, status) {
-        fetch(`/tarefas/itens/${itemId}/update_status`, {
+    function updateItemStatus(itemId, status, options) {
+        var opts = options || {};
+        var showAlert = opts.showAlert !== false;
+
+        return fetch('/tarefas/itens/' + itemId + '/update_status', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ status: status })
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    var row = document.querySelector('.task-item-row[data-item-id="' + itemId + '"]');
-                    if (row) {
-                        var bar = row.querySelector('.task-item-bar');
-                        if (bar) {
-                            bar.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
-                            bar.classList.add('status-' + status);
-                        }
-                        var statusSelect = row.querySelector('.task-item-status');
-                        if (statusSelect) {
-                            statusSelect.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
-                            statusSelect.classList.add('status-' + status);
-                        }
-                    }
-                } else {
-                    alert('Erro ao atualizar status: ' + (data.message || ''));
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.success) {
+                    throw new Error(data.message || 'Erro ao atualizar status.');
                 }
+
+                var row = getTaskItemRowById(itemId);
+                if (row) {
+                    setTaskItemRowStatus(row, status);
+                    syncTaskItemRowMetadata(row);
+                }
+
+                if (!opts.skipKanbanSync && window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                    window.taskItemsKanban.syncItemFromRow(String(itemId));
+                }
+
+                return data;
             })
-            .catch(error => {
+            .catch(function (error) {
                 console.error('Erro:', error);
-                alert('Erro ao atualizar status');
+                if (showAlert) {
+                    alert(error && error.message ? error.message : 'Erro ao atualizar status');
+                }
+                throw error;
             });
     }
+
+    var taskItemsKanbanManager = (function () {
+        var statusOrder = ['programado', 'em_andamento', 'validacao', 'finalizado'];
+        var statusLabels = {
+            programado: 'Programado',
+            em_andamento: 'Em andamento',
+            validacao: 'Validação',
+            finalizado: 'Finalizado',
+        };
+        var toggleRoot = document.getElementById('taskItemsViewToggle');
+        var listView = document.getElementById('taskItemsListView');
+        var kanbanView = document.getElementById('taskItemsKanbanView');
+        var board = document.getElementById('taskItemsKanbanBoard');
+        var listEl = document.querySelector('.task-items-list');
+        var toggleButtons = toggleRoot ? toggleRoot.querySelectorAll('.task-items-view-btn[data-view]') : [];
+        var reorderUrl = listEl ? (listEl.getAttribute('data-reorder-url') || '') : '';
+        var taskId = listEl ? (listEl.getAttribute('data-task-id') || '') : '';
+        var storageKey = taskId ? ('task-items-view:' + taskId) : null;
+        var currentView = 'list';
+        var dragContext = null;
+        var isPersisting = false;
+
+        function noop() {}
+        var fallbackApi = {
+            applyView: noop,
+            getCurrentView: function () { return 'list'; },
+            rebuildFromList: noop,
+            syncItemFromRow: noop,
+        };
+
+        if (!toggleRoot || !listView || !kanbanView || !board || !listEl) {
+            return fallbackApi;
+        }
+
+        function normalizeStatus(status) {
+            return statusOrder.indexOf(status) !== -1 ? status : 'programado';
+        }
+
+        function getStatusLabel(status) {
+            return statusLabels[normalizeStatus(status)] || 'Programado';
+        }
+
+        function getDropzone(status) {
+            return board.querySelector('.task-items-kanban-dropzone[data-status="' + normalizeStatus(status) + '"]');
+        }
+
+        function readStoredView() {
+            if (!storageKey) return 'list';
+            try {
+                var raw = localStorage.getItem(storageKey);
+                return raw === 'kanban' ? 'kanban' : 'list';
+            } catch (error) {
+                return 'list';
+            }
+        }
+
+        function saveStoredView(mode) {
+            if (!storageKey) return;
+            try {
+                localStorage.setItem(storageKey, mode);
+            } catch (error) {}
+        }
+
+        function readRowItem(row) {
+            if (!row) return null;
+            syncTaskItemRowMetadata(row);
+
+            var itemId = row.getAttribute('data-item-id');
+            if (!itemId) return null;
+
+            var status = normalizeStatus(row.getAttribute('data-item-status') || '');
+            var descEl = row.querySelector('.task-item-desc');
+            var responsavelEl = row.querySelector('.task-item-responsavel');
+            var commentsEl = row.querySelector('.task-item-comments-num');
+
+            var descricao = descEl ? (descEl.textContent || '').trim() : '';
+            var responsavel = '';
+            if (responsavelEl) {
+                var placeholder = responsavelEl.querySelector('.responsavel-placeholder');
+                responsavel = placeholder ? '' : (responsavelEl.textContent || '').trim();
+            }
+            if (responsavel === '\u00a0') responsavel = '';
+
+            var commentsCount = parseInt((commentsEl && commentsEl.textContent) || '0', 10);
+            if (!Number.isFinite(commentsCount) || commentsCount < 0) commentsCount = 0;
+
+            return {
+                id: String(itemId),
+                status: status,
+                descricao: descricao,
+                responsavel: responsavel,
+                commentsCount: commentsCount,
+            };
+        }
+
+        function collectListItems() {
+            return Array.prototype.map.call(
+                listEl.querySelectorAll('.task-item-row[data-item-id]'),
+                function (row) { return readRowItem(row); }
+            ).filter(function (item) { return !!item; });
+        }
+
+        function buildStatusSelect(item) {
+            var select = document.createElement('select');
+            select.className = 'task-items-kanban-status-select';
+            select.setAttribute('aria-label', 'Alterar status');
+            select.setAttribute('data-item-id', item.id);
+
+            statusOrder.forEach(function (status) {
+                var option = document.createElement('option');
+                option.value = status;
+                option.textContent = getStatusLabel(status);
+                if (status === item.status) option.selected = true;
+                select.appendChild(option);
+            });
+
+            return select;
+        }
+
+        function buildKanbanCard(item) {
+            var card = document.createElement('article');
+            card.className = 'task-items-kanban-card';
+            card.setAttribute('draggable', 'true');
+            card.setAttribute('data-item-id', item.id);
+            card.setAttribute('data-status', item.status);
+
+            var top = document.createElement('div');
+            top.className = 'task-items-kanban-card-top';
+
+            var badge = document.createElement('span');
+            badge.className = 'task-items-kanban-badge status-' + item.status;
+            badge.textContent = getStatusLabel(item.status);
+            top.appendChild(badge);
+
+            var openBtn = document.createElement('button');
+            openBtn.type = 'button';
+            openBtn.className = 'task-items-kanban-open-list';
+            openBtn.setAttribute('data-item-id', item.id);
+            openBtn.textContent = 'Abrir na lista';
+            top.appendChild(openBtn);
+
+            var desc = document.createElement('p');
+            desc.className = 'task-items-kanban-desc';
+            desc.textContent = item.descricao || 'Sem descrição';
+
+            var meta = document.createElement('div');
+            meta.className = 'task-items-kanban-meta';
+
+            var owner = document.createElement('span');
+            owner.className = 'task-items-kanban-owner' + (item.responsavel ? '' : ' is-empty');
+            owner.textContent = item.responsavel || 'Responsável não informado';
+            meta.appendChild(owner);
+
+            var comments = document.createElement('span');
+            comments.className = 'task-items-kanban-comments';
+            comments.innerHTML = '<i class="far fa-comment-alt" aria-hidden="true"></i><span>' + item.commentsCount + '</span>';
+            meta.appendChild(comments);
+
+            var footer = document.createElement('div');
+            footer.className = 'task-items-kanban-card-footer';
+            footer.appendChild(buildStatusSelect(item));
+
+            card.appendChild(top);
+            card.appendChild(desc);
+            card.appendChild(meta);
+            card.appendChild(footer);
+
+            return card;
+        }
+
+        function updateColumnMeta() {
+            var columns = board.querySelectorAll('.task-items-kanban-column[data-status]');
+            columns.forEach(function (column) {
+                var status = normalizeStatus(column.getAttribute('data-status'));
+                var dropzone = column.querySelector('.task-items-kanban-dropzone[data-status]');
+                var count = dropzone ? dropzone.querySelectorAll('.task-items-kanban-card[data-item-id]').length : 0;
+                var countEl = column.querySelector('.task-items-kanban-count[data-role="count"]');
+                if (countEl) countEl.textContent = String(count);
+                column.classList.toggle('is-empty', count === 0);
+                column.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+                column.classList.add('status-' + status);
+            });
+        }
+
+        function renderKanbanFromList() {
+            if (!board) return;
+            var items = collectListItems();
+
+            statusOrder.forEach(function (status) {
+                var dropzone = getDropzone(status);
+                if (dropzone) dropzone.innerHTML = '';
+            });
+
+            items.forEach(function (item) {
+                var dropzone = getDropzone(item.status);
+                if (!dropzone) return;
+                dropzone.appendChild(buildKanbanCard(item));
+            });
+
+            updateColumnMeta();
+        }
+
+        function serializeKanbanOrder() {
+            var order = [];
+            statusOrder.forEach(function (status) {
+                var dropzone = getDropzone(status);
+                if (!dropzone) return;
+                var cards = dropzone.querySelectorAll('.task-items-kanban-card[data-item-id]');
+                cards.forEach(function (card) {
+                    var id = parseInt(card.getAttribute('data-item-id'), 10);
+                    if (Number.isFinite(id)) order.push(id);
+                });
+            });
+            return order;
+        }
+
+        function syncListOrderFromKanban() {
+            var orderIds = serializeKanbanOrder();
+            if (!orderIds.length) return;
+
+            var addRow = listEl.querySelector('#addItemRow');
+            var fragment = document.createDocumentFragment();
+
+            orderIds.forEach(function (id) {
+                var row = listEl.querySelector('.task-item-row[data-item-id="' + id + '"]');
+                if (row) fragment.appendChild(row);
+
+                var modal = listEl.querySelector('#deleteItemModal-' + id);
+                if (modal) fragment.appendChild(modal);
+            });
+
+            if (addRow && addRow.parentNode === listEl) {
+                listEl.insertBefore(fragment, addRow);
+            } else {
+                listEl.appendChild(fragment);
+            }
+        }
+
+        function persistKanbanOrder() {
+            if (!reorderUrl) return Promise.resolve();
+            var order = serializeKanbanOrder();
+            return fetch(reorderUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ordem: order }),
+            }).then(function (response) {
+                return response.json();
+            }).then(function (data) {
+                if (!data.success) {
+                    throw new Error((data && data.message) || 'Erro ao reordenar itens.');
+                }
+                return data;
+            });
+        }
+
+        function setCardStatus(card, status) {
+            if (!card) return;
+            var normalized = normalizeStatus(status);
+            card.setAttribute('data-status', normalized);
+
+            var badge = card.querySelector('.task-items-kanban-badge');
+            if (badge) {
+                badge.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+                badge.classList.add('status-' + normalized);
+                badge.textContent = getStatusLabel(normalized);
+            }
+
+            var select = card.querySelector('.task-items-kanban-status-select');
+            if (select) select.value = normalized;
+        }
+
+        function getDragAfterElement(dropzone, y) {
+            var cards = Array.prototype.slice.call(
+                dropzone.querySelectorAll('.task-items-kanban-card:not(.is-dragging)')
+            );
+            return cards.reduce(function (closest, child) {
+                var box = child.getBoundingClientRect();
+                var offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                }
+                return closest;
+            }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+        }
+
+        function clearDropzoneHover() {
+            board.querySelectorAll('.task-items-kanban-dropzone.is-drag-over').forEach(function (zone) {
+                zone.classList.remove('is-drag-over');
+            });
+        }
+
+        function persistKanbanChange(itemId, previousStatus) {
+            if (isPersisting) return;
+            isPersisting = true;
+            board.classList.add('is-persisting');
+
+            var card = board.querySelector('.task-items-kanban-card[data-item-id="' + itemId + '"]');
+            if (!card) {
+                isPersisting = false;
+                board.classList.remove('is-persisting');
+                renderKanbanFromList();
+                return;
+            }
+
+            var nextStatus = normalizeStatus(card.getAttribute('data-status'));
+            var statusChanged = normalizeStatus(previousStatus) !== nextStatus;
+
+            var statusPromise = statusChanged
+                ? updateItemStatus(itemId, nextStatus, { skipKanbanSync: true, showAlert: false })
+                : Promise.resolve();
+
+            statusPromise
+                .then(function () {
+                    return persistKanbanOrder();
+                })
+                .then(function () {
+                    syncListOrderFromKanban();
+                    renderKanbanFromList();
+                })
+                .catch(function (error) {
+                    console.error('Erro ao persistir kanban:', error);
+                    renderKanbanFromList();
+                    alert('Nao foi possivel persistir a movimentacao no Kanban.');
+                })
+                .finally(function () {
+                    isPersisting = false;
+                    board.classList.remove('is-persisting');
+                });
+        }
+
+        function bindDropzones() {
+            var dropzones = board.querySelectorAll('.task-items-kanban-dropzone[data-status]');
+            dropzones.forEach(function (dropzone) {
+                dropzone.addEventListener('dragenter', function (event) {
+                    if (!dragContext || isPersisting) return;
+                    event.preventDefault();
+                    dropzone.classList.add('is-drag-over');
+                });
+
+                dropzone.addEventListener('dragover', function (event) {
+                    if (!dragContext || isPersisting) return;
+                    event.preventDefault();
+                    dropzone.classList.add('is-drag-over');
+
+                    var dragging = board.querySelector('.task-items-kanban-card.is-dragging');
+                    if (!dragging) return;
+                    var afterElement = getDragAfterElement(dropzone, event.clientY);
+                    if (afterElement) {
+                        dropzone.insertBefore(dragging, afterElement);
+                    } else {
+                        dropzone.appendChild(dragging);
+                    }
+
+                    setCardStatus(dragging, dropzone.getAttribute('data-status') || 'programado');
+                });
+
+                dropzone.addEventListener('dragleave', function (event) {
+                    if (!dropzone.contains(event.relatedTarget)) {
+                        dropzone.classList.remove('is-drag-over');
+                    }
+                });
+
+                dropzone.addEventListener('drop', function (event) {
+                    if (!dragContext || isPersisting) return;
+                    event.preventDefault();
+                    dropzone.classList.remove('is-drag-over');
+
+                    var itemId = dragContext.itemId;
+                    var previousStatus = dragContext.previousStatus;
+                    dragContext = null;
+                    persistKanbanChange(itemId, previousStatus);
+                    updateColumnMeta();
+                });
+            });
+        }
+
+        function bindBoardEvents() {
+            board.addEventListener('click', function (event) {
+                var openBtn = event.target.closest('.task-items-kanban-open-list[data-item-id]');
+                if (!openBtn) return;
+                event.preventDefault();
+                applyView('list');
+                focusTaskItemRow(openBtn.getAttribute('data-item-id'));
+            });
+
+            board.addEventListener('change', function (event) {
+                var select = event.target.closest('.task-items-kanban-status-select[data-item-id]');
+                if (!select || isPersisting) return;
+
+                var itemId = select.getAttribute('data-item-id');
+                var card = select.closest('.task-items-kanban-card[data-item-id]');
+                if (!itemId || !card) return;
+
+                var previousStatus = card.getAttribute('data-status') || 'programado';
+                var nextStatus = normalizeStatus(select.value || previousStatus);
+                var dropzone = getDropzone(nextStatus);
+                if (!dropzone) return;
+
+                dropzone.appendChild(card);
+                setCardStatus(card, nextStatus);
+                updateColumnMeta();
+                persistKanbanChange(itemId, previousStatus);
+            });
+
+            board.addEventListener('dragstart', function (event) {
+                var card = event.target.closest('.task-items-kanban-card[data-item-id]');
+                if (!card || isPersisting) return;
+
+                dragContext = {
+                    itemId: card.getAttribute('data-item-id'),
+                    previousStatus: card.getAttribute('data-status') || 'programado',
+                };
+
+                card.classList.add('is-dragging');
+                if (event.dataTransfer) {
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', dragContext.itemId || '');
+                }
+            });
+
+            board.addEventListener('dragend', function () {
+                var dragging = board.querySelector('.task-items-kanban-card.is-dragging');
+                if (dragging) dragging.classList.remove('is-dragging');
+                clearDropzoneHover();
+                updateColumnMeta();
+            });
+        }
+
+        function applyView(mode, opts) {
+            var targetMode = mode === 'kanban' ? 'kanban' : 'list';
+            var options = opts || {};
+
+            currentView = targetMode;
+            listView.hidden = targetMode !== 'list';
+            kanbanView.hidden = targetMode !== 'kanban';
+            listView.classList.toggle('is-active', targetMode === 'list');
+            kanbanView.classList.toggle('is-active', targetMode === 'kanban');
+
+            toggleButtons.forEach(function (button) {
+                var isActive = button.getAttribute('data-view') === targetMode;
+                button.classList.toggle('is-active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+
+            if (targetMode === 'kanban') {
+                renderKanbanFromList();
+            }
+
+            if (options.persist !== false) {
+                saveStoredView(targetMode);
+            }
+        }
+
+        function handleToggleClick(event) {
+            var button = event.target.closest('.task-items-view-btn[data-view]');
+            if (!button) return;
+            event.preventDefault();
+            applyView(button.getAttribute('data-view'));
+        }
+
+        function init() {
+            toggleRoot.addEventListener('click', handleToggleClick);
+            bindBoardEvents();
+            bindDropzones();
+            renderKanbanFromList();
+            applyView(readStoredView(), { persist: false });
+        }
+
+        init();
+
+        return {
+            applyView: applyView,
+            getCurrentView: function () { return currentView; },
+            rebuildFromList: renderKanbanFromList,
+            syncItemFromRow: function () {
+                if (currentView === 'kanban') {
+                    renderKanbanFromList();
+                }
+            },
+        };
+    })();
+
+    window.taskItemsKanban = taskItemsKanbanManager;
 
     // Expandir/recolher comentários com animação suave
     function clearCommentsTransition(body) {
@@ -1506,6 +2092,10 @@
                     var data = JSON.parse(xhr.responseText);
                     if (data.success && data.item) {
                         restoreUi(data.item.descricao);
+                        syncTaskItemRowMetadata(row);
+                        if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                            window.taskItemsKanban.syncItemFromRow(itemId);
+                        }
                     } else {
                         alert(data.message || 'Erro ao salvar.');
                         restoreUi(originalText);
@@ -1601,6 +2191,10 @@
                             var data = JSON.parse(xhr.responseText);
                             if (data.success && data.item) {
                                 setResponsavelCellText(respSpan, data.item.responsavel || '');
+                                syncTaskItemRowMetadata(row);
+                                if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                                    window.taskItemsKanban.syncItemFromRow(itemId);
+                                }
                                 respSpan.classList.remove('task-item-resp-editing-active');
                                 resolve(true);
                             } else {
@@ -1695,6 +2289,10 @@
                     if (row) {
                         var numEl = row.querySelector('.task-item-comments-num');
                         if (numEl) numEl.textContent = parseInt(numEl.textContent || '0', 10) + 1;
+                        syncTaskItemRowMetadata(row);
+                        if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                            window.taskItemsKanban.syncItemFromRow(row.getAttribute('data-item-id'));
+                        }
                     }
                     var newCommentBtn = row && row.querySelector('.btn-edit-comment[data-comment-id="' + c.id + '"]');
                     if (newCommentBtn) {
@@ -1840,16 +2438,10 @@
     (function applyFocusItemFromUrl() {
         var focusItemId = new URLSearchParams(window.location.search).get('focus_item');
         if (!focusItemId) return;
-        var targetRow = document.querySelector('.task-item-row[data-item-id="' + focusItemId + '"]');
-        if (!targetRow) return;
-
-        setTimeout(function () {
-            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            targetRow.classList.add('search-focus-highlight');
-            setTimeout(function () {
-                targetRow.classList.remove('search-focus-highlight');
-            }, 2300);
-        }, 180);
+        if (window.taskItemsKanban && typeof window.taskItemsKanban.applyView === 'function') {
+            window.taskItemsKanban.applyView('list');
+        }
+        focusTaskItemRow(focusItemId);
     })();
 </script>
 {% endblock %}
