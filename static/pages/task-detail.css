@@ -18,6 +18,10 @@
     --td-col-owner: 228px;
     --td-col-comments: 136px;
     --td-col-actions: 112px;
+    --td-view-toggle-btn-width: 106px;
+    --td-kanban-card-slot-height: 126px;
+    --td-kanban-drop-gap: 0.5rem;
+    --td-drawer-comments-body-max-height: 760px;
 }
 
 .task-detail-v2 {
@@ -501,29 +505,61 @@
     background: #eef4fb;
     padding: 3px;
     gap: 3px;
+    position: relative;
+    isolation: isolate;
+}
+
+.task-detail-v2 .task-items-view-toggle::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: calc((100% - 9px) / 2);
+    height: calc(100% - 6px);
+    border-radius: 999px;
+    border: 1px solid #b9cfe6;
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(19, 63, 101, 0.12);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s ease;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.task-detail-v2 .task-items-view-toggle[data-active-view="kanban"]::before {
+    transform: translateX(calc(100% + 3px));
 }
 
 .task-detail-v2 .task-items-view-btn {
+    flex: 0 0 var(--td-view-toggle-btn-width);
+    width: var(--td-view-toggle-btn-width);
     height: 30px;
     border-radius: 999px;
     border: 1px solid transparent;
     background: transparent;
-    color: #4f6d8f;
+    color: #557392;
     font-size: var(--ds-font-size-xs);
     font-weight: var(--ds-font-weight-semibold);
     padding: 0 0.78rem;
-    transition: all 0.16s ease;
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.24s ease, text-shadow 0.24s ease;
 }
 
 .task-detail-v2 .task-items-view-btn:hover {
-    color: #255585;
+    color: #2a5a8a;
 }
 
 .task-detail-v2 .task-items-view-btn.is-active {
-    background: #fff;
     color: #1d4f83;
-    border-color: #b9cfe6;
-    box-shadow: 0 4px 10px rgba(19, 63, 101, 0.12);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+
+.task-detail-v2 .task-items-view-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.14);
 }
 
 .task-detail-v2 .task-items-view-panels {
@@ -532,8 +568,8 @@
 
 .task-detail-v2 .task-items-view-panel {
     opacity: 1;
-    transform: translateY(0);
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: none;
+    transition: none;
 }
 
 .task-detail-v2 .task-items-view-panel[hidden] {
@@ -541,13 +577,13 @@
 }
 
 .task-detail-v2 .task-items-view-panel.is-active {
-    animation: td-items-panel-enter 0.2s ease;
+    animation: none;
 }
 
-@keyframes td-items-panel-enter {
+@keyframes td-kanban-delete-confirm-in {
     from {
         opacity: 0;
-        transform: translateY(5px);
+        transform: translateY(-3px);
     }
     to {
         opacity: 1;
@@ -608,14 +644,20 @@
 .task-detail-v2 .task-items-kanban-dropzone {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--td-kanban-drop-gap);
     padding: 0.56rem;
-    min-height: 280px;
+    min-height: calc((var(--td-kanban-card-slot-height) * 3) + (var(--td-kanban-drop-gap) * 2) + 1.12rem);
+    position: relative;
     transition: background-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .task-detail-v2 .task-items-kanban-column.is-empty .task-items-kanban-dropzone::after {
     content: "Sem itens nesta etapa";
+    position: absolute;
+    inset: 0.56rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: 1px dashed #c9d9eb;
     border-radius: 10px;
     color: #7b93ae;
@@ -623,6 +665,7 @@
     text-align: center;
     padding: 0.74rem 0.5rem;
     background: rgba(255, 255, 255, 0.82);
+    pointer-events: none;
 }
 
 .task-detail-v2 .task-items-kanban-dropzone.is-drag-over {
@@ -635,6 +678,8 @@
     border: 1px solid #d8e4f0;
     background: #fff;
     box-shadow: 0 6px 16px rgba(18, 56, 91, 0.08);
+    height: var(--td-kanban-card-slot-height);
+    min-height: var(--td-kanban-card-slot-height);
     padding: 0.56rem 0.6rem 0.6rem;
     display: flex;
     flex-direction: column;
@@ -642,6 +687,7 @@
     cursor: grab;
     transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
     outline: none;
+    overflow: hidden;
 }
 
 .task-detail-v2 .task-items-kanban-card:hover {
@@ -704,27 +750,42 @@
     color: #186244;
 }
 
-.task-detail-v2 .task-items-kanban-open-list {
-    border: 1px solid #ccdced;
-    background: #fff;
-    color: #456785;
+.task-detail-v2 .task-items-kanban-delete-btn {
+    width: 28px;
+    height: 28px;
     border-radius: 8px;
-    font-size: var(--ds-font-size-2xs);
-    font-weight: var(--ds-font-weight-semibold);
-    padding: 0.15rem 0.4rem;
-    transition: all 0.16s ease;
+    border: 1px solid #e5c9c9;
+    background: #fff;
+    color: #9b1c1c;
+    font-size: var(--ds-font-size-xs);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-1px);
+    transition: opacity 0.16s ease, transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
 }
 
-.task-detail-v2 .task-items-kanban-open-list:hover {
-    border-color: #b6cee6;
-    color: #1f4f82;
-    background: #f3f8ff;
+.task-detail-v2 .task-items-kanban-card:hover .task-items-kanban-delete-btn,
+.task-detail-v2 .task-items-kanban-card:focus-within .task-items-kanban-delete-btn,
+.task-detail-v2 .task-items-kanban-card.is-delete-confirming .task-items-kanban-delete-btn {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
 }
 
-.task-detail-v2 .task-items-kanban-open-list:focus-visible {
+.task-detail-v2 .task-items-kanban-delete-btn:hover {
+    background: #fdecec;
+    border-color: #f2bcbc;
+    color: #861515;
+}
+
+.task-detail-v2 .task-items-kanban-delete-btn:focus-visible {
     outline: none;
-    border-color: #8bb0d7;
-    box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
+    border-color: #d89494;
+    box-shadow: 0 0 0 3px rgba(180, 35, 35, 0.14);
+    opacity: 1;
 }
 
 .task-detail-v2 .task-items-kanban-desc {
@@ -733,10 +794,11 @@
     font-size: var(--ds-font-size-sm);
     line-height: var(--ds-line-height-normal);
     display: -webkit-box;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    min-height: 52px;
+    min-height: 0;
+    flex: 1 1 auto;
 }
 
 .task-detail-v2 .task-items-kanban-meta {
@@ -744,6 +806,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 0.5rem;
+    margin-top: auto;
 }
 
 .task-detail-v2 .task-items-kanban-owner {
@@ -767,6 +830,64 @@
     color: #4b6888;
     font-size: var(--ds-font-size-xs);
     font-weight: var(--ds-font-weight-semibold);
+}
+
+.task-detail-v2 .task-items-kanban-delete-confirm {
+    margin-top: 0.12rem;
+    border: 1px solid #f0d2d2;
+    border-radius: 9px;
+    background: #fff8f8;
+    padding: 0.42rem 0.46rem;
+    animation: td-kanban-delete-confirm-in 0.16s ease;
+}
+
+.task-detail-v2 .task-items-kanban-delete-confirm p {
+    margin: 0 0 0.34rem;
+    font-size: var(--ds-font-size-xs);
+    color: #7f1d1d;
+    font-weight: var(--ds-font-weight-semibold);
+}
+
+.task-detail-v2 .task-items-kanban-delete-confirm-actions {
+    display: inline-flex;
+    gap: 0.24rem;
+    width: 100%;
+    justify-content: flex-end;
+}
+
+.task-detail-v2 .task-items-kanban-delete-cancel,
+.task-detail-v2 .task-items-kanban-delete-confirm-btn {
+    height: 26px;
+    border-radius: 7px;
+    border: 1px solid #cfdceb;
+    background: #fff;
+    color: #315678;
+    font-size: var(--ds-font-size-2xs);
+    font-weight: var(--ds-font-weight-semibold);
+    padding: 0 0.44rem;
+}
+
+.task-detail-v2 .task-items-kanban-delete-cancel:hover {
+    border-color: #b7cee5;
+    background: #f3f8ff;
+    color: #1f4f82;
+}
+
+.task-detail-v2 .task-items-kanban-delete-confirm-btn {
+    border-color: #e6bcbc;
+    background: #fdecec;
+    color: #861515;
+}
+
+.task-detail-v2 .task-items-kanban-delete-confirm-btn:hover {
+    border-color: #d99a9a;
+    background: #f9dede;
+}
+
+.task-detail-v2 .task-items-kanban-delete-cancel:focus-visible,
+.task-detail-v2 .task-items-kanban-delete-confirm-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
 }
 
 .task-detail-v2 .task-items-kanban-composer {
@@ -878,9 +999,19 @@
     opacity: 0.82;
 }
 
+.task-detail-v2 .task-items-kanban-board.is-deleting .task-items-kanban-card {
+    pointer-events: none;
+    opacity: 0.74;
+}
+
 .task-detail-v2 .task-items-kanban-board.is-persisting .task-items-kanban-composer {
     pointer-events: none;
     opacity: 0.72;
+}
+
+.task-detail-v2 .task-items-kanban-board.is-deleting .task-items-kanban-composer {
+    pointer-events: none;
+    opacity: 0.64;
 }
 
 body.task-item-drawer-open {
@@ -921,6 +1052,10 @@ body.task-item-drawer-open {
     transform: translateX(0);
 }
 
+.task-detail-v2 .task-item-drawer.is-deleting {
+    pointer-events: none;
+}
+
 .task-detail-v2 .task-item-drawer-header {
     padding: 0.86rem 0.92rem 0.76rem;
     border-bottom: 1px solid #d9e6f3;
@@ -949,6 +1084,47 @@ body.task-item-drawer-open {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.task-detail-v2 .task-item-drawer-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.34rem;
+}
+
+.task-detail-v2 .task-item-drawer-delete-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid #e5c9c9;
+    background: #fff;
+    color: #9b1c1c;
+    font-size: var(--ds-font-size-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.16s ease;
+}
+
+.task-detail-v2 .task-item-drawer-delete-icon:hover,
+.task-detail-v2 .task-item-drawer-delete-icon.is-active {
+    background: #fdecec;
+    border-color: #f2bcbc;
+    color: #861515;
+}
+
+.task-detail-v2 .task-item-drawer-delete-icon:focus-visible {
+    outline: none;
+    border-color: #d89494;
+    box-shadow: 0 0 0 3px rgba(180, 35, 35, 0.14);
+}
+
+.task-detail-v2 .task-item-drawer-delete-icon:disabled {
+    cursor: not-allowed;
+    color: #9fb0c1;
+    border-color: #d6e2ef;
+    background: #f4f8fc;
+    box-shadow: none;
 }
 
 .task-detail-v2 .task-item-drawer-close {
@@ -1023,53 +1199,139 @@ body.task-item-drawer-open {
     justify-content: space-between;
 }
 
-.task-detail-v2 .task-item-drawer-detail-actions {
-    display: flex;
-    justify-content: flex-end;
+.task-detail-v2 .task-item-drawer-autosave-status {
+    margin: -0.12rem 0 0.08rem;
+    min-height: 1.1rem;
+    font-size: var(--ds-font-size-2xs);
+    font-weight: var(--ds-font-weight-semibold);
+    color: #5a7592;
+    letter-spacing: 0.01em;
+    transition: color 0.18s ease, opacity 0.18s ease;
 }
 
-.task-detail-v2 .task-item-drawer-save {
-    height: 32px;
-    border-radius: 9px;
-    border: 1px solid #8cb2d8;
-    background: #e9f3ff;
-    color: #1d4f83;
+.task-detail-v2 .task-item-drawer-autosave-status.is-saving {
+    color: #1f4f82;
+}
+
+.task-detail-v2 .task-item-drawer-autosave-status.is-saved {
+    color: #2d6a4d;
+}
+
+.task-detail-v2 .task-item-drawer-autosave-status.is-error {
+    color: #8a1b1b;
+}
+
+.task-detail-v2 .task-item-drawer-autosave-status.is-invalid {
+    color: #8a4f00;
+}
+
+.task-detail-v2 .task-item-drawer-delete-confirm {
+    border: 1px solid #f0d2d2;
+    border-radius: 10px;
+    background: #fff8f8;
+    padding: 0.48rem 0.54rem;
+    animation: td-kanban-delete-confirm-in 0.16s ease;
+}
+
+.task-detail-v2 .task-item-drawer-delete-confirm p {
+    margin: 0 0 0.38rem;
+    color: #7f1d1d;
     font-size: var(--ds-font-size-xs);
     font-weight: var(--ds-font-weight-semibold);
-    padding: 0 0.72rem;
-    transition: all 0.16s ease;
 }
 
-.task-detail-v2 .task-item-drawer-save:hover {
-    background: #dcecff;
-    border-color: #7fa7cf;
+.task-detail-v2 .task-item-drawer-delete-confirm-actions {
+    display: inline-flex;
+    justify-content: flex-end;
+    gap: 0.28rem;
+    width: 100%;
 }
 
-.task-detail-v2 .task-item-drawer-save:focus-visible {
+.task-detail-v2 .task-item-drawer-delete-cancel,
+.task-detail-v2 .task-item-drawer-delete-confirm-btn {
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid #cfdceb;
+    background: #fff;
+    color: #35597e;
+    font-size: var(--ds-font-size-2xs);
+    font-weight: var(--ds-font-weight-semibold);
+    padding: 0 0.5rem;
+}
+
+.task-detail-v2 .task-item-drawer-delete-cancel:hover {
+    border-color: #b7cee5;
+    background: #f3f8ff;
+    color: #1f4f82;
+}
+
+.task-detail-v2 .task-item-drawer-delete-confirm-btn {
+    border-color: #e1aeae;
+    background: #fdecec;
+    color: #861515;
+}
+
+.task-detail-v2 .task-item-drawer-delete-confirm-btn:hover {
+    border-color: #cf8d8d;
+    background: #f8dede;
+}
+
+.task-detail-v2 .task-item-drawer-delete-cancel:focus-visible,
+.task-detail-v2 .task-item-drawer-delete-confirm-btn:focus-visible {
     outline: none;
-    border-color: #6794c2;
     box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
 }
 
 .task-detail-v2 .task-item-drawer-comments {
-    border-top: 1px solid #d9e5f2;
-    margin-top: 0.18rem;
-    padding-top: 0.62rem;
+    border: 1px solid #d4e2f1;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #f9fcff 0%, #f2f8ff 100%);
+    margin-top: 0.14rem;
+    padding: 0.44rem 0.48rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.24rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
-.task-detail-v2 .task-item-drawer-comments-head {
+.task-detail-v2 .task-item-drawer-comments.is-busy {
+    opacity: 0.92;
+}
+
+.task-detail-v2 .task-item-drawer-comments-toggle {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 0.14rem 0.1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.44rem;
-    margin-bottom: 0.44rem;
+    color: #2b4d6f;
+    border-radius: 8px;
+    transition: background-color 0.16s ease, color 0.16s ease;
 }
 
-.task-detail-v2 .task-item-drawer-comments-head h6 {
-    margin: 0;
+.task-detail-v2 .task-item-drawer-comments-toggle:hover {
+    background: rgba(226, 239, 252, 0.64);
+}
+
+.task-detail-v2 .task-item-drawer-comments-toggle:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.14);
+}
+
+.task-detail-v2 .task-item-drawer-comments-toggle-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    min-width: 0;
+}
+
+.task-detail-v2 .task-item-drawer-comments-title {
     font-size: var(--ds-font-size-sm);
-    color: #2b4d6f;
     font-weight: var(--ds-font-weight-bold);
+    color: #2b4d6f;
 }
 
 .task-detail-v2 .task-item-drawer-comments-count {
@@ -1087,30 +1349,136 @@ body.task-item-drawer-open {
     font-weight: var(--ds-font-weight-semibold);
 }
 
+.task-detail-v2 .task-item-drawer-comments-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    color: #567493;
+    transition: transform 0.22s ease, background-color 0.16s ease, color 0.16s ease;
+}
+
+.task-detail-v2 .task-item-drawer-comments.is-expanded .task-item-drawer-comments-toggle-icon {
+    transform: rotate(180deg);
+    color: #245382;
+    background: rgba(221, 236, 251, 0.7);
+}
+
+.task-detail-v2 .task-item-drawer-comments-body {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-5px);
+    pointer-events: none;
+    transition: max-height 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, transform 0.2s ease;
+}
+
+.task-detail-v2 .task-item-drawer-comments-body.is-expanded {
+    max-height: var(--td-drawer-comments-body-max-height);
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.task-detail-v2 .task-item-drawer-comments-status {
+    margin: 0 0 0.24rem;
+    padding: 0.28rem 0.46rem;
+    border-radius: 8px;
+    font-size: var(--ds-font-size-2xs);
+    font-weight: var(--ds-font-weight-semibold);
+}
+
+.task-detail-v2 .task-item-drawer-comments-status.is-info {
+    background: #eaf4ff;
+    color: #1f4f82;
+}
+
+.task-detail-v2 .task-item-drawer-comments-status.is-success {
+    background: #ebf8f2;
+    color: #1f6a48;
+}
+
+.task-detail-v2 .task-item-drawer-comments-status.is-error {
+    background: #fff1f1;
+    color: #8a1b1b;
+}
+
 .task-detail-v2 .task-item-drawer-comments-list {
     display: flex;
     flex-direction: column;
-    gap: 0.44rem;
-    max-height: 38vh;
+    gap: 0.5rem;
+    max-height: 40vh;
     overflow-y: auto;
-    margin-bottom: 0.48rem;
-    padding-right: 0.12rem;
+    margin-bottom: 0.08rem;
+    padding: 0.08rem 0.22rem 0.12rem 0.08rem;
+    scrollbar-gutter: stable;
+}
+
+.task-detail-v2 .task-item-drawer-comments-list.is-busy {
+    pointer-events: none;
 }
 
 .task-detail-v2 .task-item-drawer-comments-empty {
     border: 1px dashed #c7d8ea;
     border-radius: 10px;
-    padding: 0.56rem;
+    padding: 0.62rem;
     font-size: var(--ds-font-size-xs);
-    color: #6f89a3;
+    color: #5d7996;
     background: #fff;
+    text-align: center;
 }
 
 .task-detail-v2 .task-item-drawer-comment {
-    border: 1px solid #d4e1ee;
-    border-radius: 10px;
+    border: 1px solid #d8e5f2;
+    border-left-width: 4px;
+    border-radius: 12px;
     background: #fff;
-    padding: 0.5rem 0.54rem;
+    padding: 0.52rem 0.56rem;
+    box-shadow: 0 4px 10px rgba(19, 63, 101, 0.06);
+    transition: box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.task-detail-v2 .task-item-drawer-comment:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(19, 63, 101, 0.1);
+}
+
+.task-detail-v2 .task-item-drawer-comment.author-tone-0 {
+    border-color: #c7daf0;
+    border-left-color: #2d6fb0;
+    background: #f6faff;
+}
+
+.task-detail-v2 .task-item-drawer-comment.author-tone-1 {
+    border-color: #d4d7f3;
+    border-left-color: #5c6ac4;
+    background: #f8f8ff;
+}
+
+.task-detail-v2 .task-item-drawer-comment.author-tone-2 {
+    border-color: #c9e7dd;
+    border-left-color: #1e8a62;
+    background: #f5fcf8;
+}
+
+.task-detail-v2 .task-item-drawer-comment.author-tone-3 {
+    border-color: #f0dcc4;
+    border-left-color: #a56722;
+    background: #fffaf3;
+}
+
+.task-detail-v2 .task-item-drawer-comment.author-tone-4 {
+    border-color: #f0cfd8;
+    border-left-color: #b2476a;
+    background: #fff7fa;
+}
+
+.task-detail-v2 .task-item-drawer-comment.author-tone-5 {
+    border-color: #d6d9de;
+    border-left-color: #4f6478;
+    background: #f8fafc;
 }
 
 .task-detail-v2 .task-item-drawer-comment-head {
@@ -1136,10 +1504,17 @@ body.task-item-drawer-open {
     display: inline-flex;
     align-items: center;
     gap: 0.2rem;
+    opacity: 0.82;
+    transition: opacity 0.16s ease;
+}
+
+.task-detail-v2 .task-item-drawer-comment:hover .task-item-drawer-comment-actions,
+.task-detail-v2 .task-item-drawer-comment:focus-within .task-item-drawer-comment-actions {
+    opacity: 1;
 }
 
 .task-detail-v2 .task-item-drawer-comment-action {
-    height: 24px;
+    height: 25px;
     border-radius: 7px;
     border: 1px solid #c8d9ea;
     background: #fff;
@@ -1179,7 +1554,7 @@ body.task-item-drawer-open {
     margin-top: 0.36rem;
     display: flex;
     flex-direction: column;
-    gap: 0.34rem;
+    gap: 0.38rem;
 }
 
 .task-detail-v2 .task-item-drawer-comment-editor-input {
@@ -1227,18 +1602,25 @@ body.task-item-drawer-open {
 .task-detail-v2 .task-item-drawer-comment-form {
     display: flex;
     flex-direction: column;
-    gap: 0.36rem;
+    gap: 0.42rem;
+    border: 1px solid #ccdeef;
+    border-radius: 12px;
+    background: #fff;
+    padding: 0.5rem;
+    box-shadow: 0 6px 14px rgba(19, 63, 101, 0.08);
 }
 
 .task-detail-v2 .task-item-drawer-comment-form textarea {
     width: 100%;
     min-height: 70px;
+    max-height: 180px;
     border: 1px solid #c8d9ea;
     border-radius: 9px;
     padding: 0.42rem 0.5rem;
     font-size: var(--ds-font-size-sm);
     color: #2b3d52;
-    resize: vertical;
+    resize: none;
+    overflow-y: auto;
 }
 
 .task-detail-v2 .task-item-drawer-comment-form textarea:focus {
@@ -1247,8 +1629,19 @@ body.task-item-drawer-open {
     box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
 }
 
+.task-detail-v2 .task-item-drawer-comment-form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.42rem;
+}
+
+.task-detail-v2 .task-item-drawer-comment-hint {
+    font-size: var(--ds-font-size-2xs);
+    color: #6b849d;
+}
+
 .task-detail-v2 .task-item-drawer-comment-form button[type="submit"] {
-    align-self: flex-end;
     height: 30px;
     border-radius: 8px;
     border: 1px solid #8cb2d8;
@@ -1256,11 +1649,22 @@ body.task-item-drawer-open {
     color: #1e4f83;
     font-size: var(--ds-font-size-xs);
     font-weight: var(--ds-font-weight-semibold);
-    padding: 0 0.64rem;
+    padding: 0 0.62rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
 }
 
 .task-detail-v2 .task-item-drawer-comment-form button[type="submit"]:hover {
     background: #deedff;
+}
+
+.task-detail-v2 .task-item-drawer-comment-form button[type="submit"]:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: #eff4fa;
+    border-color: #cfdaea;
+    color: #6d849d;
 }
 
 .task-detail-v2 .task-items-kanban-column.status-programado .task-items-kanban-col-head {
@@ -1657,12 +2061,20 @@ body.task-item-drawer-open {
     }
 
     .task-detail-v2 .task-items-view-panel,
+    .task-detail-v2 .task-items-view-toggle::before,
+    .task-detail-v2 .task-items-view-btn,
     .task-detail-v2 .task-items-kanban-card,
     .task-detail-v2 .task-items-kanban-dropzone,
     .task-detail-v2 .task-item-drawer,
     .task-detail-v2 .task-item-drawer-backdrop,
     .task-detail-v2 .task-items-kanban-add-btn,
-    .task-detail-v2 .task-items-kanban-open-list {
+    .task-detail-v2 .task-items-kanban-delete-btn,
+    .task-detail-v2 .task-items-kanban-delete-confirm,
+    .task-detail-v2 .task-item-drawer-delete-confirm,
+    .task-detail-v2 .task-item-drawer-delete-icon,
+    .task-detail-v2 .task-item-drawer-autosave-status,
+    .task-detail-v2 .task-item-drawer-comments-body,
+    .task-detail-v2 .task-item-drawer-comments-toggle-icon {
         transition: none;
         animation: none;
         transform: none;
@@ -2368,6 +2780,7 @@ body.task-item-drawer-open {
         --td-col-owner: 200px;
         --td-col-comments: 124px;
         --td-col-actions: 104px;
+        --td-kanban-card-slot-height: 122px;
     }
 
     .task-detail-v2 .task-title-refined {
@@ -2429,6 +2842,7 @@ body.task-item-drawer-open {
         --td-col-owner: 188px;
         --td-col-comments: 116px;
         --td-col-actions: 98px;
+        --td-kanban-card-slot-height: 118px;
     }
 
     .task-detail-v2 .task-item-header-row,
@@ -2481,6 +2895,7 @@ body.task-item-drawer-open {
     }
 
     .task-detail-v2 .task-items-view-btn {
+        width: auto;
         flex: 1;
     }
 
@@ -2505,6 +2920,16 @@ body.task-item-drawer-open {
 
     .task-detail-v2 .task-items-kanban-column {
         min-width: min(88vw, 252px);
+    }
+
+    .task-detail-v2 .task-item-drawer-comment-form-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .task-detail-v2 .task-item-drawer-comment-form button[type="submit"] {
+        justify-content: center;
+        width: 100%;
     }
 
     .task-detail-v2 .task-item-drawer-header,

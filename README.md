@@ -105,7 +105,7 @@ Dependencias de desenvolvimento:
 Executar a suite de testes:
 
 ```bash
-./.venv/bin/python -m pytest /Users/juniorguimaraes/Downloads/projetosRj/tests -q
+./projetosRj/tests -q
 ```
 
 A cobertura de rotas fica em:
@@ -117,12 +117,12 @@ A cobertura de rotas fica em:
 ## Seed fake (dados para visualizacao)
 
 Script:
-- `/Users/juniorguimaraes/Downloads/projetosRj/scripts/seed_fake_data.py`
+- `/projetosRj/scripts/seed_fake_data.py`
 
 Execucao padrao (reseta e recria o banco atual):
 
 ```bash
-./.venv/bin/python /Users/juniorguimaraes/Downloads/projetosRj/scripts/seed_fake_data.py --yes
+./projetosRj/scripts/seed_fake_data.py --yes
 ```
 
 Padrao de volume:
@@ -135,7 +135,7 @@ Padrao de volume:
 Exemplo com volume customizado:
 
 ```bash
-./.venv/bin/python /Users/juniorguimaraes/Downloads/projetosRj/scripts/seed_fake_data.py \
+./projetosRj/scripts/seed_fake_data.py \
   --yes \
   --projects 150 \
   --stages-per-project 6 \

@@ -474,20 +474,27 @@ def delete_task_item(item_id):
     item = TaskItem.query.get_or_404(item_id)
     task = item.task
     task_id = task.id
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
     
     # Verificar permissão
     can_delete = _can_view_task(g.user, task)
     
     if not can_delete:
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Sem permissão para excluir este item.', 'item_id': item_id}), 403
         flash('Você não tem permissão para excluir este item.', 'danger')
         return redirect(url_for('main.task_detail', task_id=task_id))
     
     try:
         db.session.delete(item)
         db.session.commit()
+        if is_ajax:
+            return jsonify({'success': True, 'message': 'Item excluído com sucesso!', 'item_id': item_id})
         flash('Item excluído com sucesso!', 'success')
     except Exception as e:
         db.session.rollback()
+        if is_ajax:
+            return jsonify({'success': False, 'message': str(e), 'item_id': item_id}), 500
         flash(f'Erro ao excluir item: {str(e)}', 'danger')
     
     return redirect(url_for('main.task_detail', task_id=task_id))

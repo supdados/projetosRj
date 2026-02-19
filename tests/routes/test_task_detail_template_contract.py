@@ -16,13 +16,25 @@ def test_task_detail_template_contains_view_toggle_hooks(client_user, seed_data)
         'id="taskItemDrawer"',
         'id="taskItemDrawerBackdrop"',
         'id="taskItemDrawerDesc"',
+        'id="taskItemDrawerAutosaveStatus"',
         'id="taskItemDrawerResponsavelTrigger"',
         'id="taskItemDrawerCommentsList"',
         'id="taskItemDrawerCommentForm"',
+        'id="taskItemDrawerCommentsToggle"',
+        'id="taskItemDrawerCommentsBody"',
+        'id="taskItemDrawerDeleteIcon"',
+        'id="taskItemDrawerCommentsStatus"',
+        'id="taskItemDrawerDeleteConfirmBtn"',
+        'task-items-kanban-delete-btn',
     ]
 
     for hook in required_hooks:
         assert hook in html
+
+    assert 'task-items-kanban-open-list' not in html
+    assert 'Abrir na lista' not in html
+    assert 'id="taskItemDrawerSave"' not in html
+    assert 'id="taskItemDrawerDeleteTrigger"' not in html
 
 
 def test_task_detail_template_contains_kanban_status_columns(client_user, seed_data):
