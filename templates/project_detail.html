@@ -364,87 +364,87 @@
     </div>
     {% endif %}
 
-    <!-- Modal Adicionar Etapa - Design Minimalista -->
+    <!-- Modal Adicionar Etapa - Padrão Clean -->
     <div class="modal fade" id="addEtapaModal" tabindex="-1" aria-labelledby="addEtapaModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content bg-white">
-                <div class="modal-header border-0 pb-2">
-                    <h5 class="modal-title fw-semibold" id="addEtapaModalLabel">
-                        <i class="fas fa-tasks text-primary me-2"></i>
-                        Adicionar Nova Etapa
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+            <div class="modal-content modal-clean etapa-modal-clean">
+                <form id="addEtapaForm" action="{{ url_for('main.add_etapa', project_id=project.id) }}" method="POST">
+                    <div class="modal-header-clean etapa-modal-header">
+                        <div class="modal-icon-clean etapa-modal-icon">
+                            <i class="fas fa-list-check"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title-clean ds-type-section-title" id="addEtapaModalLabel">Nova Etapa</h5>
+                            <p class="modal-subtitle-clean ds-type-body-sm">Adicione uma etapa ao projeto {{
+                                project.titulo }}</p>
+                        </div>
+                        <button type="button" class="btn-close-clean" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
 
-                <div class="modal-body px-4 pt-2">
-                    <form id="addEtapaForm" action="{{ url_for('main.add_etapa', project_id=project.id) }}"
-                        method="POST">
-
-                        <!-- Descrição -->
+                    <div class="modal-body-clean etapa-modal-body">
                         <div class="mb-3">
                             <label for="etapa_descricao_modal" class="form-label fw-medium">
                                 Descrição da Etapa <span class="text-danger">*</span>
                             </label>
-                            <textarea class="form-control project-modal-input" id="etapa_descricao_modal" name="etapa_descricao" rows="3"
-                                required placeholder="Digite a descrição da etapa..."></textarea>
+                            <textarea class="form-control project-modal-input" id="etapa_descricao_modal" name="etapa_descricao"
+                                rows="3" required placeholder="Digite a descrição da etapa..."></textarea>
                         </div>
 
-                        <!-- Comentários -->
                         <div class="mb-3">
                             <label for="etapa_comentarios_modal" class="form-label fw-medium">Comentários</label>
                             <textarea class="form-control project-modal-input" id="etapa_comentarios_modal" name="etapa_comentarios"
                                 rows="2" placeholder="Comentários adicionais (opcional)"></textarea>
                         </div>
 
-                        <!-- Data e Responsável -->
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-4">
                                 <label for="etapa_data_inicio_modal" class="form-label fw-medium">Data de Início</label>
                                 <input type="date" class="form-control project-modal-input" id="etapa_data_inicio_modal"
                                     name="etapa_data_inicio">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-4">
                                 <label for="etapa_data_fim_modal" class="form-label fw-medium">Data de Fim</label>
-                                <input type="date" class="form-control project-modal-input" id="etapa_data_fim_modal" name="etapa_data_fim">
+                                <input type="date" class="form-control project-modal-input" id="etapa_data_fim_modal"
+                                    name="etapa_data_fim">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-4">
                                 <label for="etapa_responsavel_modal" class="form-label fw-medium">Responsável</label>
                                 <input type="text" class="form-control project-modal-input" id="etapa_responsavel_modal"
                                     name="etapa_responsavel" placeholder="Nome do responsável">
                             </div>
                         </div>
 
-                        <!-- Status -->
-                        <div class="row">
+                        <div class="row g-3 mt-1">
                             <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch"
-                                        id="etapa_iniciada_modal" name="etapa_iniciada">
+                                <div class="form-check form-switch etapa-modal-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="etapa_iniciada_modal"
+                                        name="etapa_iniciada">
                                     <label class="form-check-label fw-medium" for="etapa_iniciada_modal">Marcar como
-                                        Iniciada</label>
+                                        iniciada</label>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-check form-switch">
+                                <div class="form-check form-switch etapa-modal-switch">
                                     <input class="form-check-input" type="checkbox" role="switch" id="etapa_done_modal"
                                         name="etapa_done">
                                     <label class="form-check-label fw-medium" for="etapa_done_modal">Marcar como
-                                        Concluída</label>
+                                        concluída</label>
                                 </div>
                             </div>
                         </div>
-                    </form>
-                </div>
+                    </div>
 
-                <div class="modal-footer border-0 pt-2">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-primary" form="addEtapaForm">
-                        <i class="fas fa-plus me-1"></i>
-                        Adicionar Etapa
-                    </button>
-                </div>
+                    <div class="modal-footer-clean etapa-modal-footer">
+                        <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn-modal-clean etapa-modal-submit">
+                            <i class="fas fa-plus me-1"></i>Adicionar Etapa
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -557,32 +557,36 @@
 
     <section class="etapa-list">
         {% if project.etapas %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle table-etapas bg-white table-sm">
+        <div class="etapa-v4-table-card">
+            <div class="etapa-v4-table-wrap">
+                <table class="etapa-v4-table table-etapas">
                 <thead>
                     <tr>
-                        <th class="col-w-3"></th>
-                        <th class="col-w-5">#</th>
-                        <th class="col-min-w-35">Descrição</th>
-                        <th class="col-w-12">Data Início</th>
-                        <th class="col-w-12">Data Fim</th>
-                        <th class="col-w-15">Responsável</th>
-                        <th class="col-w-10 text-center">Iniciada</th>
-                        <th class="col-w-10 text-center">Concluída</th>
-                        <th class="col-w-5 text-center">Ações</th>
+                        <th class="etapa-v4-col-drag"></th>
+                        <th class="etapa-v4-col-number">#</th>
+                        <th class="etapa-v4-col-desc">Descrição</th>
+                        <th class="etapa-v4-col-date">Data Início</th>
+                        <th class="etapa-v4-col-date">Data Fim</th>
+                        <th class="etapa-v4-col-responsavel">Responsável</th>
+                        <th class="etapa-v4-col-status text-center">Iniciada</th>
+                        <th class="etapa-v4-col-status text-center">Concluída</th>
+                        <th class="etapa-v4-col-actions text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="etapas-tbody">
                     {% for etapa in project.etapas %}
                     <tr class="{{ 'etapa-done' if etapa.done else ('etapa-iniciada' if etapa.iniciada else '') }} etapa-draggable-row"
                         data-etapa-id="{{ etapa.id }}">
-                        <td class="drag-handle etapa-drag-handle" draggable="true"><i
+                        <td class="drag-handle etapa-drag-handle etapa-v4-cell-drag" draggable="true"><i
                                 class="fas fa-grip-vertical"></i></td>
-                        <td>{{ project.id }}.{{ loop.index }}</td>
+                        <td class="etapa-order-cell etapa-v4-cell-number">{{ project.id }}.{{ loop.index }}</td>
                         <td
-                            class="etapa-descricao {{ 'text-decoration-line-through text-muted' if etapa.done else '' }} etapa-hover-container">
-                            <span class="editable-field" data-field="descricao" data-etapa-id="{{ etapa.id }}">{{
-                                etapa.descricao }}</span>
+                            class="etapa-descricao etapa-row-text etapa-v4-cell-description {{ 'text-decoration-line-through text-muted' if etapa.done else '' }} etapa-hover-container">
+                            <div class="etapa-descricao-main">
+                                <span class="editable-field" data-field="descricao" data-etapa-id="{{ etapa.id }}">{{
+                                    etapa.descricao }}</span>
+                            </div>
+                            <div class="etapa-descricao-comment">
                             {% if etapa.comentarios %}
                             <div class="small text-muted mt-1 etapa-comentario-display ds-cursor-pointer" data-etapa-id="{{ etapa.id }}"
                                 title="Clique para editar">
@@ -597,28 +601,29 @@
                             </div>
                             {% endif %}
                             {% endif %}
+                            </div>
                             <!-- Hidden button to store comment data -->
                             <button class="btn-comment-data ds-hidden" data-etapa-id="{{ etapa.id }}"
                                 data-comentario="{{ etapa.comentarios or '' }}"></button>
                         </td>
-                        <td class="{{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
+                        <td class="etapa-row-text etapa-v4-cell-date {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
                             <span class="editable-field" data-field="data_inicio" data-etapa-id="{{ etapa.id }}"
                                 data-original-value="{{ etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else '' }}">
                                 {{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}
                             </span>
                         </td>
-                        <td class="{{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
+                        <td class="etapa-row-text etapa-v4-cell-date {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
                             <span class="editable-field" data-field="data_fim" data-etapa-id="{{ etapa.id }}"
                                 data-original-value="{{ etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '' }}">
                                 {{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}
                             </span>
                         </td>
-                        <td class="{{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
+                        <td class="etapa-row-text etapa-v4-cell-responsavel {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
                             <span class="editable-field" data-field="responsavel" data-etapa-id="{{ etapa.id }}">
                                 {{ etapa.responsavel if etapa.responsavel else '-' }}
                             </span>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center etapa-v4-cell-status">
                             <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-iniciada"
                                 data-etapa-id="{{ etapa.id }}"
                                 title="{{ 'Marcar como não iniciada' if etapa.iniciada else 'Marcar como iniciada' }}"
@@ -633,7 +638,7 @@
                                 {% endif %}
                             </button>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center etapa-v4-cell-status">
                             <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-done"
                                 data-etapa-id="{{ etapa.id }}" {{ 'disabled' if (not etapa.iniciada and not etapa.done)
                                 or not (is_admin_user or (current_user_obj and
@@ -648,25 +653,26 @@
                                 {% endif %}
                             </button>
                         </td>
-                        <td class="actions text-center">
+                        <td class="actions text-center etapa-v4-actions-cell">
                             {% if is_admin_user or (current_user_obj and
                             current_user_obj.has_access_to_area(project.area_responsavel)) %}
                             <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post"
-                                class="d-inline"
+                                class="inline-form"
                                 onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger btn-floating"
+                                <button type="submit" class="btn btn-sm btn-floating"
                                     title="Excluir Etapa">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </form>
                             {% else %}
-                            <span class="text-muted small">-
-                                {% endif %}
+                            <span class="text-muted small">-</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         {% else %}
         <div class="no-etapas-message">
@@ -817,7 +823,7 @@
                 const rows = tbody.querySelectorAll('tr.etapa-draggable-row');
                 const projectId = "{{ project.id }}";
                 rows.forEach((row, index) => {
-                    const numeroCelula = row.querySelector('td:nth-child(2)'); // Corrigido para a segunda célula
+                    const numeroCelula = row.querySelector('.etapa-order-cell');
                     if (numeroCelula) {
                         numeroCelula.textContent = projectId + '.' + (index + 1);
                     }
@@ -1055,7 +1061,7 @@
                 }
 
                 target.style.display = 'none';
-                target.parentNode.appendChild(input);
+                target.insertAdjacentElement('afterend', input);
                 input.focus();
 
                 function saveChanges() {
@@ -1591,8 +1597,7 @@
             const tableRow = document.querySelector(`#etapas-tbody tr[data-etapa-id="${etapaId}"]`);
             if (tableRow) {
                 tableRow.classList.remove('etapa-done', 'etapa-iniciada');
-                // Corrigido para incluir a 6ª célula (Responsável)
-                const textElements = tableRow.querySelectorAll('.etapa-descricao, td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6)');
+                const textElements = tableRow.querySelectorAll('.etapa-row-text');
                 if (done) {
                     tableRow.classList.add('etapa-done');
                     textElements.forEach(el => el.classList.add('text-decoration-line-through', 'text-muted'));

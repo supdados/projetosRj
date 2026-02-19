@@ -353,68 +353,53 @@
         border-color: #e2e8f0;
     }
 
-    /* Status Badge Styles - Glass Morphism */
+    /* Status badges das etapas no padrão v4 */
     .bg-success-light {
-        background: linear-gradient(135deg,
-                rgba(34, 197, 94, 0.9) 0%,
-                rgba(22, 163, 74, 0.95) 100%) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-        box-shadow: 0 4px 15px rgba(34, 197, 94, 0.25);
+        background: #eaf7f1 !important;
+        border: 1px solid #cbe9dc !important;
+        color: #186244 !important;
         font-weight: var(--ds-font-weight-semibold);
-        transition: all var(--transition-speed) ease;
+        box-shadow: none;
+        transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
     }
 
     .bg-success-light:hover {
-        background: linear-gradient(135deg,
-                rgba(34, 197, 94, 1) 0%,
-                rgba(22, 163, 74, 1) 100%) !important;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+        background: #dff2e9 !important;
+        border-color: #b8dbc9 !important;
+        transform: none;
+        box-shadow: none;
     }
 
     .bg-secondary-light {
-        background: linear-gradient(135deg,
-                rgba(107, 114, 128, 0.85) 0%,
-                rgba(75, 85, 99, 0.9) 100%) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-        box-shadow: 0 4px 15px rgba(107, 114, 128, 0.25);
+        background: #edf2f7 !important;
+        border: 1px solid #d8e1eb !important;
+        color: #475569 !important;
         font-weight: var(--ds-font-weight-semibold);
-        transition: all var(--transition-speed) ease;
+        box-shadow: none;
+        transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
     }
 
     .bg-secondary-light:hover {
-        background: linear-gradient(135deg,
-                rgba(107, 114, 128, 0.95) 0%,
-                rgba(75, 85, 99, 1) 100%) !important;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(107, 114, 128, 0.35);
+        background: #e4ebf3 !important;
+        border-color: #c9d4e1 !important;
+        transform: none;
+        box-shadow: none;
     }
 
     .bg-danger-light {
-        background: linear-gradient(135deg,
-                rgba(239, 68, 68, 0.9) 0%,
-                rgba(220, 38, 38, 0.95) 100%) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
+        background: #fdecec !important;
+        border: 1px solid #f7c8c8 !important;
+        color: #9b1c1c !important;
         font-weight: var(--ds-font-weight-semibold);
-        transition: all var(--transition-speed) ease;
+        box-shadow: none;
+        transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
     }
 
     .bg-danger-light:hover {
-        background: linear-gradient(135deg,
-                rgba(239, 68, 68, 1) 0%,
-                rgba(220, 38, 38, 1) 100%) !important;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+        background: #fbdede !important;
+        border-color: #f2b6b6 !important;
+        transform: none;
+        box-shadow: none;
     }
 
     /* Glass Section Divider */
@@ -657,6 +642,127 @@
         background: #004b79;
         color: white !important;
         box-shadow: 0 2px 8px rgba(0, 90, 146, 0.15);
+    }
+
+    /* Modal Nova Etapa - padrão clean */
+    #addEtapaModal .modal-content {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        background: #ffffff;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    #addEtapaModal .modal-header-clean {
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    #addEtapaModal .modal-icon-clean {
+        width: 44px;
+        height: 44px;
+        background: rgba(0, 90, 146, 0.15);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    #addEtapaModal .modal-icon-clean i {
+        font-size: var(--ds-font-size-xl);
+        color: var(--primary-color);
+    }
+
+    #addEtapaModal .modal-title-clean {
+        margin: 0;
+        color: #1a1a1a;
+    }
+
+    #addEtapaModal .modal-subtitle-clean {
+        margin: 0.2rem 0 0;
+        color: #6c757d;
+    }
+
+    #addEtapaModal .btn-close-clean {
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #6c757d;
+    }
+
+    #addEtapaModal .btn-close-clean:hover {
+        background: rgba(0, 0, 0, 0.05);
+    }
+
+    #addEtapaModal .modal-body-clean {
+        padding: 1.5rem;
+    }
+
+    #addEtapaModal .project-modal-input {
+        background: #ffffff;
+        border: 1px solid #cfdeed !important;
+        color: #2b3d52;
+        box-shadow: none;
+    }
+
+    #addEtapaModal .project-modal-input:focus {
+        background: #ffffff;
+        border-color: #8bb0d7 !important;
+        box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
+    }
+
+    #addEtapaModal .etapa-modal-switch {
+        margin-top: 0.15rem;
+    }
+
+    #addEtapaModal .modal-footer-clean {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.8rem;
+    }
+
+    #addEtapaModal .btn-modal-clean {
+        padding: 0.65rem 1.3rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: var(--ds-font-weight-semibold);
+        font-size: var(--ds-font-size-md);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    #addEtapaModal .btn-cancel-clean {
+        background: rgba(0, 0, 0, 0.05);
+        color: #495057;
+    }
+
+    #addEtapaModal .btn-cancel-clean:hover {
+        background: rgba(0, 0, 0, 0.1);
+    }
+
+    #addEtapaModal .etapa-modal-submit {
+        background: var(--primary-color);
+        color: #ffffff;
+    }
+
+    #addEtapaModal .etapa-modal-submit:hover {
+        background: var(--primary-dark);
+        color: #ffffff;
     }
 
     /* Import Model Button */
@@ -1170,90 +1276,147 @@
         box-shadow: none !important;
     }
 
-    /* Glass Table Container */
-    .etapa-list .table-responsive {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.15) 0%,
-                rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 16px;
+    /* Tabela de etapas no padrão visual v4 */
+    .etapa-v4-table-card {
+        background: #ffffff;
+        border: 1px solid #dfe8f2;
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(20, 45, 78, 0.06);
         overflow: hidden;
-        box-shadow: var(--glass-shadow);
-        position: relative;
     }
 
-    .etapa-list .table {
-        margin: 0;
-        background: transparent;
+    .etapa-v4-table-wrap {
+        overflow-x: auto;
+    }
+
+    .etapa-v4-table {
+        width: 100%;
+        min-width: 1100px;
         border-collapse: separate;
         border-spacing: 0;
+        margin: 0;
+        background: #ffffff;
     }
 
-    .etapa-list .table thead th {
-        background: linear-gradient(135deg,
-                rgba(0, 90, 146, 0.15) 0%,
-                rgba(0, 75, 121, 0.1) 100%);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-        color: var(--text-color);
-        font-weight: var(--ds-font-weight-semibold);
+    .etapa-v4-table thead th {
+        border-bottom: 1px solid #dfe7f1;
+        background: #f4f8fc;
+        color: #5a6d84;
+        font-size: var(--ds-font-size-xs);
         text-transform: uppercase;
-        font-size: var(--ds-font-size-sm);
         letter-spacing: var(--ds-letter-spacing-caps);
-        padding: 1.25rem 1.5rem;
-        position: relative;
+        font-weight: var(--ds-font-weight-bold);
+        padding: 0.58rem 0.7rem;
+        white-space: nowrap;
     }
 
-    .etapa-list .table tbody tr {
-        transition: all var(--transition-speed) ease;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .etapa-list .table tbody tr:hover {
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    .etapa-list .table tbody td {
-        padding: 1.25rem 1.5rem;
+    .etapa-v4-table tbody td {
+        border-top: 1px solid #edf2f8;
+        padding: 0.62rem 0.7rem;
         vertical-align: middle;
-        border: none;
-        color: var(--text-color);
-        font-size: var(--ds-font-size-md);
+        color: #223247;
+        font-size: var(--ds-font-size-sm);
+    }
+
+    .etapa-v4-table tbody tr:hover td {
+        background: #f8fbff;
+    }
+
+    .etapa-v4-col-drag {
+        width: 44px;
+    }
+
+    .etapa-v4-col-number {
+        width: 84px;
+    }
+
+    .etapa-v4-col-desc {
+        min-width: 340px;
+    }
+
+    .etapa-v4-col-date {
+        width: 130px;
+    }
+
+    .etapa-v4-col-responsavel {
+        width: 170px;
+    }
+
+    .etapa-v4-col-status {
+        width: 110px;
+    }
+
+    .etapa-v4-col-actions {
+        width: 92px;
+    }
+
+    .etapa-v4-cell-drag {
+        color: #9fb1c6;
+    }
+
+    .etapa-v4-cell-number,
+    .etapa-v4-cell-date {
+        font-family: var(--ds-font-family-mono);
+        color: #5f7691;
+        font-weight: var(--ds-font-weight-medium);
+        white-space: nowrap;
     }
 
     .etapa-descricao {
-        font-weight: var(--ds-font-weight-medium);
-        color: var(--text-color) !important;
+        font-weight: var(--ds-font-weight-semibold);
+        color: inherit !important;
     }
 
-    /* Glass Action Buttons */
+    .etapa-v4-cell-description {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.2rem;
+    }
+
+    .etapa-descricao-main {
+        display: flex;
+        align-items: center;
+        min-height: 1.35rem;
+    }
+
+    .etapa-descricao-main .editable-field {
+        width: 100%;
+        display: inline-block;
+    }
+
+    .etapa-descricao-comment {
+        display: block;
+    }
+
+    .etapa-v4-cell-status .toggle-iniciada,
+    .etapa-v4-cell-status .toggle-done {
+        line-height: 1;
+    }
+
+    /* Ação de excluir no padrão v4 */
     .btn-floating {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.18) 0%,
-                rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 50%;
-        width: 2.5rem;
-        height: 2.5rem;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 15px rgba(0, 90, 146, 0.1);
-        transition: all var(--transition-speed) ease;
-        color: var(--text-color) !important;
+        padding: 0;
+        border: 1px solid transparent !important;
+        font-size: var(--ds-font-size-sm);
+        background: transparent;
+        color: #768ba2 !important;
+        box-shadow: none;
+        transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
     }
 
     .btn-floating:hover {
-        transform: translateY(-2px);
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.25) 0%,
-                rgba(255, 255, 255, 0.1) 100%);
-        box-shadow: 0 8px 25px rgba(0, 90, 146, 0.15);
-        color: var(--primary-color) !important;
+        border-color: rgba(184, 63, 63, 0.5) !important;
+        color: #972d2d !important;
+        background: rgba(169, 59, 59, 0.14);
+        transform: none;
+        box-shadow: none;
     }
 
     /* Glass Modal */
@@ -1478,7 +1641,7 @@
 
     @media (min-width: 769px) {
 
-        .etapa-list .table-responsive {
+        .etapa-v4-table-wrap {
             display: block;
         }
     }
