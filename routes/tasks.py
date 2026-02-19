@@ -680,17 +680,25 @@ def delete_task_item_comment(comment_id):
     """Exclui comentário (apenas o próprio autor)."""
     comment = TaskItemComment.query.get_or_404(comment_id)
     task_id = comment.task_item.task_id
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
     
     if comment.user_id != g.user.id:
-        flash('Você só pode excluir seus próprios comentários.', 'danger')
+        message = 'Você só pode excluir seus próprios comentários.'
+        if is_ajax:
+            return jsonify({'success': False, 'message': message, 'comment_id': comment_id}), 403
+        flash(message, 'danger')
         return redirect(url_for('main.task_detail', task_id=task_id))
     
     try:
         db.session.delete(comment)
         db.session.commit()
+        if is_ajax:
+            return jsonify({'success': True, 'message': 'Comentário excluído.', 'comment_id': comment_id})
         flash('Comentário excluído.', 'success')
     except Exception as e:
         db.session.rollback()
+        if is_ajax:
+            return jsonify({'success': False, 'message': str(e), 'comment_id': comment_id}), 500
         flash(f'Erro ao excluir comentário: {str(e)}', 'danger')
     
     return redirect(url_for('main.task_detail', task_id=task_id))

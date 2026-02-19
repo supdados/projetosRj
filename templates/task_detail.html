@@ -7,7 +7,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4 task-detail-v2">
+<div class="container-fluid py-4 task-detail-v2"
+    data-current-user-id="{{ current_user_obj.id if current_user_obj else '' }}">
     <div class="row">
         <div class="col-12">
             <section class="task-detail-v2-top">
@@ -360,11 +361,87 @@
                                 </header>
                                 <div class="task-items-kanban-dropzone" data-status="{{ status_key }}"
                                     aria-label="Coluna {{ status_label }}"></div>
+                                <div class="task-items-kanban-composer" data-status="{{ status_key }}">
+                                    <button type="button" class="task-items-kanban-add-btn"
+                                        data-status="{{ status_key }}">
+                                        + Adicionar item
+                                    </button>
+                                    <form class="task-items-kanban-add-form" data-status="{{ status_key }}" hidden>
+                                        <textarea class="task-items-kanban-add-desc" rows="2"
+                                            placeholder="Descreva o item..." required></textarea>
+                                        <button type="button" class="responsavel-picker-trigger task-items-kanban-add-owner"
+                                            data-role="responsavel-trigger" aria-haspopup="dialog" aria-expanded="false">
+                                            <span class="responsavel-picker-trigger-content">
+                                                <em class="responsavel-placeholder">Responsável</em>
+                                            </span>
+                                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="task-items-kanban-add-actions">
+                                            <button type="submit" class="task-items-kanban-add-submit">Salvar</button>
+                                            <button type="button"
+                                                class="task-items-kanban-add-cancel">Cancelar</button>
+                                        </div>
+                                    </form>
+                                </div>
                             </section>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
+
+                <div class="task-item-drawer-backdrop" id="taskItemDrawerBackdrop" hidden></div>
+                <aside class="task-item-drawer" id="taskItemDrawer" aria-hidden="true" hidden>
+                    <header class="task-item-drawer-header">
+                        <div>
+                            <p class="task-item-drawer-kicker">Detalhes do item</p>
+                            <h6 class="task-item-drawer-title" id="taskItemDrawerTitle">Item</h6>
+                        </div>
+                        <button type="button" class="task-item-drawer-close" id="taskItemDrawerClose"
+                            aria-label="Fechar detalhes">&times;</button>
+                    </header>
+                    <div class="task-item-drawer-body">
+                        <div class="task-item-drawer-status-row">
+                            <span class="task-items-kanban-badge status-programado" id="taskItemDrawerStatusBadge">
+                                Programado
+                            </span>
+                            <button type="button" class="task-items-kanban-open-list" id="taskItemDrawerOpenListBtn">
+                                Abrir na lista
+                            </button>
+                        </div>
+
+                        <label class="task-item-drawer-label" for="taskItemDrawerDesc">Descrição</label>
+                        <textarea id="taskItemDrawerDesc" rows="5" class="task-item-drawer-textarea"
+                            placeholder="Descreva o item..."></textarea>
+
+                        <label class="task-item-drawer-label">Responsável</label>
+                        <button type="button" class="responsavel-picker-trigger task-item-drawer-responsavel-trigger"
+                            id="taskItemDrawerResponsavelTrigger" aria-haspopup="dialog" aria-expanded="false">
+                            <span class="responsavel-picker-trigger-content">
+                                <em class="responsavel-placeholder">Responsável</em>
+                            </span>
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+
+                        <div class="task-item-drawer-detail-actions">
+                            <button type="button" class="task-item-drawer-save" id="taskItemDrawerSave">
+                                Salvar alterações
+                            </button>
+                        </div>
+
+                        <div class="task-item-drawer-comments">
+                            <div class="task-item-drawer-comments-head">
+                                <h6>Comentários</h6>
+                                <span class="task-item-drawer-comments-count" id="taskItemDrawerCommentsCount">0</span>
+                            </div>
+                            <div class="task-item-drawer-comments-list" id="taskItemDrawerCommentsList"></div>
+                            <form id="taskItemDrawerCommentForm" class="task-item-drawer-comment-form">
+                                <textarea name="content" rows="2"
+                                    placeholder="Escreva um comentário... (Enter para enviar)" required></textarea>
+                                <button type="submit">Comentar</button>
+                            </form>
+                        </div>
+                    </div>
+                </aside>
             </section>
         </div>
     </div>
@@ -1277,34 +1354,59 @@
             }
         }
 
+        function requestAddItem(payload) {
+            return new Promise(function (resolve, reject) {
+                var dataPayload = payload || {};
+                var descricao = (dataPayload.descricao || '').trim();
+                if (!descricao) {
+                    reject(new Error('Descrição é obrigatória.'));
+                    return;
+                }
+
+                var formData = new FormData();
+                formData.append('descricao', descricao);
+                formData.append('status', dataPayload.status || 'programado');
+                formData.append('responsavel', (dataPayload.responsavel || '').trim());
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', addUrl);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.setRequestHeader('Accept', 'application/json');
+                xhr.onload = function () {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        if (data.success && data.item) {
+                            resolve(data);
+                        } else {
+                            reject(new Error((data && data.message) || 'Erro ao adicionar item.'));
+                        }
+                    } catch (err) {
+                        reject(new Error('Erro ao adicionar item. Tente novamente.'));
+                    }
+                };
+                xhr.onerror = function () {
+                    reject(new Error('Erro de conexão. Tente novamente.'));
+                };
+                xhr.send(formData);
+            });
+        }
+
         function submitAddItem() {
             var desc = (addDesc && addDesc.value) ? addDesc.value.trim() : '';
             if (!desc) { addDesc.focus(); return; }
 
-            var formData = new FormData();
-            formData.append('descricao', desc);
-            formData.append('status', addStatus ? addStatus.value : 'programado');
-            formData.append('responsavel', addResponsavelNames.join(', '));
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', addUrl);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.setRequestHeader('Accept', 'application/json');
-            xhr.onload = function () {
-                try {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data.success && data.item) {
-                        insertNewItem(data);
-                        resetAddFormForNextItem();
-                    } else {
-                        alert(data.message || 'Erro ao adicionar item.');
-                    }
-                } catch (err) {
-                    if (xhr.status === 200) return;
-                    alert('Erro ao adicionar item. Tente novamente.');
-                }
-            };
-            xhr.onerror = function () { alert('Erro de conexão. Tente novamente.'); };
-            xhr.send(formData);
+            requestAddItem({
+                descricao: desc,
+                status: addStatus ? addStatus.value : 'programado',
+                responsavel: addResponsavelNames.join(', '),
+            })
+                .then(function (data) {
+                    insertNewItem(data);
+                    resetAddFormForNextItem();
+                })
+                .catch(function (error) {
+                    alert((error && error.message) || 'Erro ao adicionar item.');
+                });
         }
 
         placeholder.addEventListener('click', showAddForm);
@@ -1355,6 +1457,20 @@
             if (responsavelPickerManager.isEventInsidePopover(e.target)) return;
             if (isAddFormEmpty()) hideAddForm();
         });
+
+        window.taskItemsListBridge = {
+            listEl: listEl,
+            taskId: taskId,
+            sugestoesUrl: sugestoesUrl,
+            addItemUrl: addUrl,
+            insertItemFromPayload: insertNewItem,
+            requestAddItem: requestAddItem,
+            focusInlineAdd: function () {
+                addRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                if (formWrap.hasAttribute('hidden')) showAddForm();
+                if (addDesc) addDesc.focus();
+            },
+        };
     })();
 
     function getTaskItemRowById(itemId) {
@@ -1389,6 +1505,214 @@
         if (commentsNum) {
             row.setAttribute('data-comments-count', String(parseInt(commentsNum.textContent || '0', 10) || 0));
         }
+    }
+
+    function escapeTaskItemHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    function getTaskItemStatus(row) {
+        if (!row) return 'programado';
+        var status = row.getAttribute('data-item-status') || '';
+        if (status) return status;
+        var statusSelect = row.querySelector('.task-item-status');
+        return statusSelect && statusSelect.value ? statusSelect.value : 'programado';
+    }
+
+    function getTaskItemDescricao(row) {
+        if (!row) return '';
+        var descEl = row.querySelector('.task-item-desc');
+        return descEl ? (descEl.textContent || '').trim() : '';
+    }
+
+    function getTaskItemResponsavel(row) {
+        if (!row) return '';
+        var responsavelEl = row.querySelector('.task-item-responsavel');
+        if (!responsavelEl) return '';
+        if (responsavelEl.querySelector('.responsavel-placeholder')) return '';
+        var value = (responsavelEl.textContent || '').trim();
+        return value === '\u00a0' ? '' : value;
+    }
+
+    function getTaskItemCommentsCount(row) {
+        if (!row) return 0;
+        var count = parseInt(row.getAttribute('data-comments-count') || '0', 10);
+        if (!Number.isFinite(count) || count < 0) count = 0;
+        return count;
+    }
+
+    function setTaskItemCommentsCount(row, count) {
+        if (!row) return;
+        var safeCount = parseInt(count, 10);
+        if (!Number.isFinite(safeCount) || safeCount < 0) safeCount = 0;
+        var numEl = row.querySelector('.task-item-comments-num');
+        if (numEl) numEl.textContent = String(safeCount);
+        row.setAttribute('data-comments-count', String(safeCount));
+    }
+
+    function getTaskItemCommentsInner(row) {
+        if (!row) return null;
+        return row.querySelector('.task-item-comments-inner');
+    }
+
+    function findTaskCommentElementById(commentId) {
+        if (!commentId) return null;
+        return document.getElementById('comment-' + commentId);
+    }
+
+    function extractTaskCommentData(commentEl) {
+        if (!commentEl) return null;
+        var idAttr = commentEl.id || '';
+        var id = parseInt(idAttr.replace('comment-', ''), 10);
+        if (!Number.isFinite(id)) return null;
+
+        var authorEl = commentEl.querySelector('.task-comment-user');
+        var timeEl = commentEl.querySelector('.task-comment-time');
+        var textEl = commentEl.querySelector('.task-comment-text');
+        var editBtn = commentEl.querySelector('.btn-edit-comment[data-comment-id]');
+        var hasDelete = !!commentEl.querySelector('form[action*="/tarefas/comentarios/"][action$="/delete"]');
+
+        return {
+            id: id,
+            author_name: authorEl ? (authorEl.textContent || '').trim() : '',
+            created_at: timeEl ? (timeEl.textContent || '').trim() : '',
+            content: textEl ? (textEl.textContent || '').trim() : '',
+            is_own: !!editBtn && hasDelete,
+            user_id: null,
+            updated_at: null,
+        };
+    }
+
+    function buildTaskCommentMarkup(comment) {
+        var item = comment || {};
+        var commentId = item.id;
+        var authorClass = 'task-comment-author-' + ((item.user_id != null ? item.user_id : commentId || 0) % 5);
+        var createdAt = item.updated_at
+            ? (item.updated_at + ' (edit.)')
+            : (item.created_at || '');
+
+        var html = '<div class="task-comment ' + authorClass + '" id="comment-' + commentId + '">' +
+            '<div class="task-comment-head">' +
+            '<span class="task-comment-user">' + escapeTaskItemHtml(item.author_name || '') + '</span>' +
+            '<span class="task-comment-time">' + escapeTaskItemHtml(createdAt) + '</span>';
+
+        if (item.is_own) {
+            html += '<span class="task-comment-acts">' +
+                '<button type="button" class="task-comment-btn btn-edit-comment" data-comment-id="' + commentId +
+                '" data-comment-content="' + escapeTaskItemHtml(item.content || '') + '" title="Editar">Editar</button>' +
+                '<form action="/tarefas/comentarios/' + commentId + '/delete" method="POST" class="d-inline" onsubmit="return confirm(\'Excluir comentário?\');">' +
+                '<button type="submit" class="task-comment-btn task-comment-btn-del" title="Excluir">Excluir</button>' +
+                '</form></span>';
+        }
+
+        html += '</div><p class="task-comment-text">' + escapeTaskItemHtml(item.content || '') + '</p></div>';
+        return html;
+    }
+
+    function appendCommentToTaskItemRow(row, comment) {
+        if (!row || !comment || !comment.id) return null;
+        var wrap = getTaskItemCommentsInner(row);
+        if (!wrap) return null;
+        var form = wrap.querySelector('.task-comment-form');
+        if (!form) return null;
+
+        var temp = document.createElement('div');
+        temp.innerHTML = buildTaskCommentMarkup(comment);
+        var commentEl = temp.firstChild;
+        if (!commentEl) return null;
+        wrap.insertBefore(commentEl, form);
+        setTaskItemCommentsCount(row, getTaskItemCommentsCount(row) + 1);
+        syncTaskItemRowMetadata(row);
+        return commentEl;
+    }
+
+    function updateTaskCommentInRow(commentId, content, updatedAt) {
+        var commentEl = findTaskCommentElementById(commentId);
+        if (!commentEl) return;
+        var textEl = commentEl.querySelector('.task-comment-text');
+        if (textEl) textEl.textContent = content;
+        var timeEl = commentEl.querySelector('.task-comment-time');
+        if (timeEl && updatedAt) {
+            timeEl.textContent = updatedAt + ' (edit.)';
+        }
+        var editBtn = commentEl.querySelector('.btn-edit-comment[data-comment-id]');
+        if (editBtn) editBtn.setAttribute('data-comment-content', content);
+    }
+
+    function deleteTaskCommentFromRow(commentId) {
+        var commentEl = findTaskCommentElementById(commentId);
+        if (!commentEl) return null;
+        var row = commentEl.closest('.task-item-row');
+        if (commentEl.parentNode) commentEl.parentNode.removeChild(commentEl);
+        if (row) {
+            setTaskItemCommentsCount(row, Math.max(0, getTaskItemCommentsCount(row) - 1));
+            syncTaskItemRowMetadata(row);
+        }
+        return row;
+    }
+
+    function collectTaskItemCommentsFromRow(row) {
+        var wrap = getTaskItemCommentsInner(row);
+        if (!wrap) return [];
+        return Array.prototype.map.call(
+            wrap.querySelectorAll('.task-comment[id^="comment-"]'),
+            function (commentEl) { return extractTaskCommentData(commentEl); }
+        ).filter(function (item) { return !!item; });
+    }
+
+    function updateTaskItemRowFromPayload(item) {
+        if (!item || !item.id) return null;
+        var row = getTaskItemRowById(item.id);
+        if (!row) return null;
+
+        if (typeof item.descricao === 'string') {
+            var descEl = row.querySelector('.task-item-desc');
+            if (descEl) descEl.textContent = item.descricao;
+        }
+
+        if (typeof item.status === 'string') {
+            setTaskItemRowStatus(row, item.status);
+        }
+
+        if (typeof item.responsavel === 'string') {
+            var respEl = row.querySelector('.task-item-responsavel');
+            if (respEl) {
+                setResponsavelCellText(respEl, item.responsavel);
+            }
+        }
+
+        if (typeof item.comments_count === 'number') {
+            setTaskItemCommentsCount(row, item.comments_count);
+        }
+
+        syncTaskItemRowMetadata(row);
+        return row;
+    }
+
+    function persistTaskItemDetails(itemId, payload) {
+        var formData = new FormData();
+        formData.append('descricao', (payload && payload.descricao) || '');
+        formData.append('status', (payload && payload.status) || 'programado');
+        formData.append('responsavel', (payload && payload.responsavel) || '');
+
+        return fetch('/tarefas/itens/' + itemId + '/edit', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: formData,
+        })
+            .then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                    if (!response.ok || !data.success) {
+                        throw new Error((data && data.message) || 'Erro ao salvar item.');
+                    }
+                    return data;
+                });
+            });
     }
 
     function focusTaskItemRow(itemId, options) {
@@ -1457,6 +1781,7 @@
             validacao: 'Validação',
             finalizado: 'Finalizado',
         };
+        var pageRoot = document.querySelector('.task-detail-v2');
         var toggleRoot = document.getElementById('taskItemsViewToggle');
         var listView = document.getElementById('taskItemsListView');
         var kanbanView = document.getElementById('taskItemsKanbanView');
@@ -1466,9 +1791,33 @@
         var reorderUrl = listEl ? (listEl.getAttribute('data-reorder-url') || '') : '';
         var taskId = listEl ? (listEl.getAttribute('data-task-id') || '') : '';
         var storageKey = taskId ? ('task-items-view:' + taskId) : null;
+        var currentUserIdRaw = pageRoot ? (pageRoot.getAttribute('data-current-user-id') || '') : '';
+        var currentUserId = parseInt(currentUserIdRaw, 10);
+        if (!Number.isFinite(currentUserId)) currentUserId = null;
+
+        var drawer = document.getElementById('taskItemDrawer');
+        var drawerBackdrop = document.getElementById('taskItemDrawerBackdrop');
+        var drawerClose = document.getElementById('taskItemDrawerClose');
+        var drawerTitle = document.getElementById('taskItemDrawerTitle');
+        var drawerStatusBadge = document.getElementById('taskItemDrawerStatusBadge');
+        var drawerDesc = document.getElementById('taskItemDrawerDesc');
+        var drawerResponsavelTrigger = document.getElementById('taskItemDrawerResponsavelTrigger');
+        var drawerSave = document.getElementById('taskItemDrawerSave');
+        var drawerOpenListBtn = document.getElementById('taskItemDrawerOpenListBtn');
+        var drawerCommentsList = document.getElementById('taskItemDrawerCommentsList');
+        var drawerCommentsCount = document.getElementById('taskItemDrawerCommentsCount');
+        var drawerCommentForm = document.getElementById('taskItemDrawerCommentForm');
+
         var currentView = 'list';
         var dragContext = null;
         var isPersisting = false;
+        var suppressCardClickUntil = 0;
+        var drawerState = {
+            itemId: null,
+            responsavelNames: [],
+            isSaving: false,
+            isCommentBusy: false,
+        };
 
         function noop() {}
         var fallbackApi = {
@@ -1480,6 +1829,20 @@
 
         if (!toggleRoot || !listView || !kanbanView || !board || !listEl) {
             return fallbackApi;
+        }
+
+        function hasDrawer() {
+            return !!(
+                drawer &&
+                drawerBackdrop &&
+                drawerDesc &&
+                drawerResponsavelTrigger &&
+                drawerCommentsList &&
+                drawerCommentForm &&
+                drawerSave &&
+                drawerStatusBadge &&
+                drawerOpenListBtn
+            );
         }
 
         function normalizeStatus(status) {
@@ -1518,28 +1881,12 @@
             var itemId = row.getAttribute('data-item-id');
             if (!itemId) return null;
 
-            var status = normalizeStatus(row.getAttribute('data-item-status') || '');
-            var descEl = row.querySelector('.task-item-desc');
-            var responsavelEl = row.querySelector('.task-item-responsavel');
-            var commentsEl = row.querySelector('.task-item-comments-num');
-
-            var descricao = descEl ? (descEl.textContent || '').trim() : '';
-            var responsavel = '';
-            if (responsavelEl) {
-                var placeholder = responsavelEl.querySelector('.responsavel-placeholder');
-                responsavel = placeholder ? '' : (responsavelEl.textContent || '').trim();
-            }
-            if (responsavel === '\u00a0') responsavel = '';
-
-            var commentsCount = parseInt((commentsEl && commentsEl.textContent) || '0', 10);
-            if (!Number.isFinite(commentsCount) || commentsCount < 0) commentsCount = 0;
-
             return {
                 id: String(itemId),
-                status: status,
-                descricao: descricao,
-                responsavel: responsavel,
-                commentsCount: commentsCount,
+                status: normalizeStatus(getTaskItemStatus(row)),
+                descricao: getTaskItemDescricao(row),
+                responsavel: getTaskItemResponsavel(row),
+                commentsCount: getTaskItemCommentsCount(row),
             };
         }
 
@@ -1550,21 +1897,37 @@
             ).filter(function (item) { return !!item; });
         }
 
-        function buildStatusSelect(item) {
-            var select = document.createElement('select');
-            select.className = 'task-items-kanban-status-select';
-            select.setAttribute('aria-label', 'Alterar status');
-            select.setAttribute('data-item-id', item.id);
+        function setCardStatus(card, status) {
+            if (!card) return;
+            var normalized = normalizeStatus(status);
+            card.setAttribute('data-status', normalized);
+            var badge = card.querySelector('.task-items-kanban-badge');
+            if (badge) {
+                badge.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+                badge.classList.add('status-' + normalized);
+                badge.textContent = getStatusLabel(normalized);
+            }
+        }
 
-            statusOrder.forEach(function (status) {
-                var option = document.createElement('option');
-                option.value = status;
-                option.textContent = getStatusLabel(status);
-                if (status === item.status) option.selected = true;
-                select.appendChild(option);
-            });
+        function fillKanbanCardContent(card, item) {
+            if (!card || !item) return;
+            card.setAttribute('data-item-id', item.id);
+            setCardStatus(card, item.status);
 
-            return select;
+            var desc = card.querySelector('.task-items-kanban-desc');
+            if (desc) desc.textContent = item.descricao || 'Sem descrição';
+
+            var owner = card.querySelector('.task-items-kanban-owner');
+            if (owner) {
+                owner.textContent = item.responsavel || 'Responsável não informado';
+                owner.classList.toggle('is-empty', !item.responsavel);
+            }
+
+            var commentsValue = card.querySelector('.task-items-kanban-comments-count');
+            if (commentsValue) commentsValue.textContent = String(item.commentsCount || 0);
+
+            var openBtn = card.querySelector('.task-items-kanban-open-list[data-item-id]');
+            if (openBtn) openBtn.setAttribute('data-item-id', item.id);
         }
 
         function buildKanbanCard(item) {
@@ -1573,13 +1936,13 @@
             card.setAttribute('draggable', 'true');
             card.setAttribute('data-item-id', item.id);
             card.setAttribute('data-status', item.status);
+            card.tabIndex = 0;
 
             var top = document.createElement('div');
             top.className = 'task-items-kanban-card-top';
 
             var badge = document.createElement('span');
-            badge.className = 'task-items-kanban-badge status-' + item.status;
-            badge.textContent = getStatusLabel(item.status);
+            badge.className = 'task-items-kanban-badge';
             top.appendChild(badge);
 
             var openBtn = document.createElement('button');
@@ -1591,30 +1954,24 @@
 
             var desc = document.createElement('p');
             desc.className = 'task-items-kanban-desc';
-            desc.textContent = item.descricao || 'Sem descrição';
 
             var meta = document.createElement('div');
             meta.className = 'task-items-kanban-meta';
 
             var owner = document.createElement('span');
-            owner.className = 'task-items-kanban-owner' + (item.responsavel ? '' : ' is-empty');
-            owner.textContent = item.responsavel || 'Responsável não informado';
+            owner.className = 'task-items-kanban-owner';
             meta.appendChild(owner);
 
             var comments = document.createElement('span');
             comments.className = 'task-items-kanban-comments';
-            comments.innerHTML = '<i class="far fa-comment-alt" aria-hidden="true"></i><span>' + item.commentsCount + '</span>';
+            comments.innerHTML = '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-items-kanban-comments-count">0</span>';
             meta.appendChild(comments);
-
-            var footer = document.createElement('div');
-            footer.className = 'task-items-kanban-card-footer';
-            footer.appendChild(buildStatusSelect(item));
 
             card.appendChild(top);
             card.appendChild(desc);
             card.appendChild(meta);
-            card.appendChild(footer);
 
+            fillKanbanCardContent(card, item);
             return card;
         }
 
@@ -1633,9 +1990,7 @@
         }
 
         function renderKanbanFromList() {
-            if (!board) return;
             var items = collectListItems();
-
             statusOrder.forEach(function (status) {
                 var dropzone = getDropzone(status);
                 if (dropzone) dropzone.innerHTML = '';
@@ -1648,6 +2003,37 @@
             });
 
             updateColumnMeta();
+
+            if (drawerState.itemId && !getTaskItemRowById(drawerState.itemId)) {
+                closeDrawer();
+            } else if (drawerState.itemId) {
+                syncDrawerFromCurrentRow();
+            }
+        }
+
+        function syncCardFromRow(itemId) {
+            if (!itemId) return;
+            var row = getTaskItemRowById(itemId);
+            if (!row) {
+                renderKanbanFromList();
+                return;
+            }
+
+            var item = readRowItem(row);
+            if (!item) return;
+
+            var card = board.querySelector('.task-items-kanban-card[data-item-id="' + item.id + '"]');
+            if (!card) {
+                if (currentView === 'kanban') renderKanbanFromList();
+                return;
+            }
+
+            fillKanbanCardContent(card, item);
+            var dropzone = getDropzone(item.status);
+            if (dropzone && card.parentNode !== dropzone) {
+                dropzone.appendChild(card);
+            }
+            updateColumnMeta();
         }
 
         function serializeKanbanOrder() {
@@ -1655,8 +2041,7 @@
             statusOrder.forEach(function (status) {
                 var dropzone = getDropzone(status);
                 if (!dropzone) return;
-                var cards = dropzone.querySelectorAll('.task-items-kanban-card[data-item-id]');
-                cards.forEach(function (card) {
+                dropzone.querySelectorAll('.task-items-kanban-card[data-item-id]').forEach(function (card) {
                     var id = parseInt(card.getAttribute('data-item-id'), 10);
                     if (Number.isFinite(id)) order.push(id);
                 });
@@ -1688,37 +2073,408 @@
 
         function persistKanbanOrder() {
             if (!reorderUrl) return Promise.resolve();
-            var order = serializeKanbanOrder();
             return fetch(reorderUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ ordem: order }),
+                body: JSON.stringify({ ordem: serializeKanbanOrder() }),
             }).then(function (response) {
-                return response.json();
-            }).then(function (data) {
-                if (!data.success) {
-                    throw new Error((data && data.message) || 'Erro ao reordenar itens.');
-                }
-                return data;
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                    if (!response.ok || !data.success) {
+                        throw new Error((data && data.message) || 'Erro ao reordenar itens.');
+                    }
+                    return data;
+                });
             });
         }
 
-        function setCardStatus(card, status) {
-            if (!card) return;
-            var normalized = normalizeStatus(status);
-            card.setAttribute('data-status', normalized);
+        function setDrawerSaving(isSaving) {
+            drawerState.isSaving = !!isSaving;
+            if (!hasDrawer()) return;
+            drawer.classList.toggle('is-saving', drawerState.isSaving);
+            drawerSave.disabled = drawerState.isSaving;
+            drawerDesc.disabled = drawerState.isSaving;
+            drawerResponsavelTrigger.disabled = drawerState.isSaving;
+            drawerOpenListBtn.disabled = drawerState.isSaving;
+        }
 
-            var badge = card.querySelector('.task-items-kanban-badge');
-            if (badge) {
-                badge.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
-                badge.classList.add('status-' + normalized);
-                badge.textContent = getStatusLabel(normalized);
+        function setDrawerCommentsBusy(isBusy) {
+            drawerState.isCommentBusy = !!isBusy;
+            if (!hasDrawer()) return;
+            drawer.classList.toggle('is-comments-busy', drawerState.isCommentBusy);
+            var textarea = drawerCommentForm.querySelector('textarea[name="content"]');
+            var submitBtn = drawerCommentForm.querySelector('button[type="submit"]');
+            if (textarea) textarea.disabled = drawerState.isCommentBusy;
+            if (submitBtn) submitBtn.disabled = drawerState.isCommentBusy;
+            drawerCommentsList.querySelectorAll('button').forEach(function (btn) {
+                btn.disabled = drawerState.isCommentBusy;
+            });
+        }
+
+        function setDrawerStatus(status) {
+            if (!hasDrawer()) return;
+            var normalized = normalizeStatus(status);
+            drawerStatusBadge.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+            drawerStatusBadge.classList.add('status-' + normalized);
+            drawerStatusBadge.textContent = getStatusLabel(normalized);
+        }
+
+        function setDrawerResponsavel(names) {
+            drawerState.responsavelNames = (names || []).slice();
+            if (!hasDrawer()) return;
+            renderResponsavelPickerTrigger(drawerResponsavelTrigger, drawerState.responsavelNames, 'Responsável');
+        }
+
+        function renderDrawerCommentsFromRow(row) {
+            if (!hasDrawer() || !row) return;
+            var comments = collectTaskItemCommentsFromRow(row);
+            drawerCommentsList.innerHTML = '';
+
+            if (!comments.length) {
+                var empty = document.createElement('div');
+                empty.className = 'task-item-drawer-comments-empty';
+                empty.textContent = 'Sem comentários neste item.';
+                drawerCommentsList.appendChild(empty);
+            } else {
+                comments.forEach(function (comment) {
+                    var node = document.createElement('article');
+                    node.className = 'task-item-drawer-comment';
+                    node.setAttribute('data-comment-id', String(comment.id));
+
+                    var head = document.createElement('div');
+                    head.className = 'task-item-drawer-comment-head';
+
+                    var author = document.createElement('span');
+                    author.className = 'task-item-drawer-comment-author';
+                    author.textContent = comment.author_name || 'Usuário';
+                    head.appendChild(author);
+
+                    var time = document.createElement('span');
+                    time.className = 'task-item-drawer-comment-time';
+                    time.textContent = comment.created_at || '';
+                    head.appendChild(time);
+
+                    if (comment.is_own || (currentUserId && comment.user_id === currentUserId)) {
+                        var actions = document.createElement('span');
+                        actions.className = 'task-item-drawer-comment-actions';
+
+                        var editBtn = document.createElement('button');
+                        editBtn.type = 'button';
+                        editBtn.className = 'task-item-drawer-comment-action';
+                        editBtn.setAttribute('data-action', 'edit-comment');
+                        editBtn.setAttribute('data-comment-id', String(comment.id));
+                        editBtn.textContent = 'Editar';
+                        actions.appendChild(editBtn);
+
+                        var delBtn = document.createElement('button');
+                        delBtn.type = 'button';
+                        delBtn.className = 'task-item-drawer-comment-action is-danger';
+                        delBtn.setAttribute('data-action', 'delete-comment');
+                        delBtn.setAttribute('data-comment-id', String(comment.id));
+                        delBtn.textContent = 'Excluir';
+                        actions.appendChild(delBtn);
+
+                        head.appendChild(actions);
+                    }
+
+                    var text = document.createElement('p');
+                    text.className = 'task-item-drawer-comment-text';
+                    text.textContent = comment.content || '';
+                    node.appendChild(head);
+                    node.appendChild(text);
+                    drawerCommentsList.appendChild(node);
+                });
             }
 
-            var select = card.querySelector('.task-items-kanban-status-select');
-            if (select) select.value = normalized;
+            var commentsCount = comments.length;
+            drawerCommentsCount.textContent = String(commentsCount);
+        }
+
+        function syncDrawerFromCurrentRow() {
+            if (!hasDrawer() || !drawerState.itemId) return;
+            var row = getTaskItemRowById(drawerState.itemId);
+            if (!row) {
+                closeDrawer();
+                return;
+            }
+
+            var descricao = getTaskItemDescricao(row);
+            var responsavel = getTaskItemResponsavel(row);
+            var status = getTaskItemStatus(row);
+
+            if (!drawerState.isSaving) {
+                drawerDesc.value = descricao;
+                setDrawerResponsavel(splitResponsavelNames(responsavel));
+            }
+            setDrawerStatus(status);
+            drawerTitle.textContent = descricao || 'Item sem descrição';
+            renderDrawerCommentsFromRow(row);
+        }
+
+        function openDrawer(itemId) {
+            if (!hasDrawer()) return;
+            var row = getTaskItemRowById(itemId);
+            if (!row) return;
+            drawerState.itemId = String(itemId);
+            syncDrawerFromCurrentRow();
+            setDrawerSaving(false);
+            setDrawerCommentsBusy(false);
+            drawerCommentForm.reset();
+
+            drawer.removeAttribute('hidden');
+            drawerBackdrop.removeAttribute('hidden');
+            drawer.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('task-item-drawer-open');
+            requestAnimationFrame(function () {
+                drawer.classList.add('is-open');
+                drawerBackdrop.classList.add('is-open');
+            });
+        }
+
+        function closeDrawer() {
+            if (!hasDrawer()) return;
+            drawerState.itemId = null;
+            drawer.classList.remove('is-open');
+            drawerBackdrop.classList.remove('is-open');
+            drawer.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('task-item-drawer-open');
+            setTimeout(function () {
+                if (drawerState.itemId) return;
+                drawer.setAttribute('hidden', '');
+                drawerBackdrop.setAttribute('hidden', '');
+                drawerCommentsList.innerHTML = '';
+                drawerTitle.textContent = 'Item';
+                drawerCommentForm.reset();
+            }, 160);
+        }
+
+        function saveDrawerDetails() {
+            if (!hasDrawer() || !drawerState.itemId || drawerState.isSaving) return;
+
+            var itemId = drawerState.itemId;
+            var row = getTaskItemRowById(itemId);
+            if (!row) {
+                closeDrawer();
+                return;
+            }
+
+            var descricao = (drawerDesc.value || '').trim();
+            if (!descricao) {
+                drawerDesc.focus();
+                alert('Descrição é obrigatória.');
+                return;
+            }
+
+            setDrawerSaving(true);
+            persistTaskItemDetails(itemId, {
+                descricao: descricao,
+                status: getTaskItemStatus(row),
+                responsavel: drawerState.responsavelNames.join(', '),
+            })
+                .then(function (data) {
+                    if (!data || !data.item) {
+                        throw new Error('Erro ao salvar item.');
+                    }
+                    updateTaskItemRowFromPayload(data.item);
+                    syncCardFromRow(itemId);
+                    syncDrawerFromCurrentRow();
+                })
+                .catch(function (error) {
+                    alert((error && error.message) || 'Erro ao salvar item.');
+                    syncDrawerFromCurrentRow();
+                })
+                .finally(function () {
+                    setDrawerSaving(false);
+                });
+        }
+
+        function postCommentAdd(itemId, content) {
+            var formData = new FormData();
+            formData.append('content', content);
+            return fetch('/tarefas/itens/' + itemId + '/comentarios/add', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: formData,
+            }).then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                    if (!response.ok || !data.success) {
+                        throw new Error((data && data.message) || 'Erro ao adicionar comentário.');
+                    }
+                    return data;
+                });
+            });
+        }
+
+        function postCommentEdit(commentId, content) {
+            var formData = new FormData();
+            formData.append('content', content);
+            return fetch('/tarefas/comentarios/' + commentId + '/edit', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: formData,
+            }).then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                    if (!response.ok || !data.success) {
+                        throw new Error((data && data.message) || 'Erro ao editar comentário.');
+                    }
+                    return data;
+                });
+            });
+        }
+
+        function postCommentDelete(commentId) {
+            return fetch('/tarefas/comentarios/' + commentId + '/delete', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+            }).then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                    if (!response.ok || !data.success) {
+                        throw new Error((data && data.message) || 'Erro ao excluir comentário.');
+                    }
+                    return data;
+                });
+            });
+        }
+
+        function handleDrawerAddComment(event) {
+            if (!hasDrawer() || !drawerState.itemId) return;
+            event.preventDefault();
+            if (drawerState.isCommentBusy) return;
+
+            var textarea = drawerCommentForm.querySelector('textarea[name="content"]');
+            var content = (textarea && textarea.value ? textarea.value : '').trim();
+            if (!content) {
+                if (textarea) textarea.focus();
+                return;
+            }
+
+            setDrawerCommentsBusy(true);
+            postCommentAdd(drawerState.itemId, content)
+                .then(function (data) {
+                    var row = getTaskItemRowById(drawerState.itemId);
+                    if (!row) return;
+                    appendCommentToTaskItemRow(row, data.comment);
+                    syncTaskItemRowMetadata(row);
+                    syncCardFromRow(drawerState.itemId);
+                    syncDrawerFromCurrentRow();
+                    if (textarea) textarea.value = '';
+                })
+                .catch(function (error) {
+                    alert((error && error.message) || 'Erro ao adicionar comentário.');
+                })
+                .finally(function () {
+                    setDrawerCommentsBusy(false);
+                    if (textarea) textarea.focus();
+                });
+        }
+
+        function startDrawerCommentEdit(commentId) {
+            if (!hasDrawer() || !drawerState.itemId || drawerState.isCommentBusy) return;
+            var commentEl = drawerCommentsList.querySelector('.task-item-drawer-comment[data-comment-id="' + commentId + '"]');
+            if (!commentEl || commentEl.querySelector('.task-item-drawer-comment-editor')) return;
+
+            var textEl = commentEl.querySelector('.task-item-drawer-comment-text');
+            if (!textEl) return;
+            var originalText = (textEl.textContent || '').trim();
+
+            textEl.setAttribute('hidden', '');
+            var editor = document.createElement('div');
+            editor.className = 'task-item-drawer-comment-editor';
+            editor.innerHTML =
+                '<textarea rows="3" class="task-item-drawer-comment-editor-input"></textarea>' +
+                '<div class="task-item-drawer-comment-editor-actions">' +
+                '<button type="button" class="task-item-drawer-comment-editor-save">Salvar</button>' +
+                '<button type="button" class="task-item-drawer-comment-editor-cancel">Cancelar</button>' +
+                '</div>';
+            commentEl.appendChild(editor);
+
+            var input = editor.querySelector('.task-item-drawer-comment-editor-input');
+            var saveBtn = editor.querySelector('.task-item-drawer-comment-editor-save');
+            var cancelBtn = editor.querySelector('.task-item-drawer-comment-editor-cancel');
+            input.value = originalText;
+            input.focus();
+
+            function closeEditor() {
+                if (editor.parentNode) editor.parentNode.removeChild(editor);
+                textEl.removeAttribute('hidden');
+            }
+
+            function saveEdit() {
+                var nextContent = (input.value || '').trim();
+                if (!nextContent) {
+                    input.focus();
+                    return;
+                }
+                if (nextContent === originalText) {
+                    closeEditor();
+                    return;
+                }
+
+                setDrawerCommentsBusy(true);
+                postCommentEdit(commentId, nextContent)
+                    .then(function (data) {
+                        if (!data || !data.comment) {
+                            throw new Error('Erro ao editar comentário.');
+                        }
+                        updateTaskCommentInRow(commentId, data.comment.content, data.comment.updated_at);
+                        syncCardFromRow(drawerState.itemId);
+                        syncDrawerFromCurrentRow();
+                    })
+                    .catch(function (error) {
+                        alert((error && error.message) || 'Erro ao editar comentário.');
+                    })
+                    .finally(function () {
+                        setDrawerCommentsBusy(false);
+                    });
+            }
+
+            saveBtn.addEventListener('click', saveEdit);
+            cancelBtn.addEventListener('click', closeEditor);
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeEditor();
+                    return;
+                }
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    saveEdit();
+                }
+            });
+        }
+
+        function handleDrawerDeleteComment(commentId) {
+            if (!hasDrawer() || !drawerState.itemId || drawerState.isCommentBusy) return;
+            if (!confirm('Excluir comentário?')) return;
+
+            setDrawerCommentsBusy(true);
+            postCommentDelete(commentId)
+                .then(function () {
+                    var row = deleteTaskCommentFromRow(commentId);
+                    if (row) {
+                        syncTaskItemRowMetadata(row);
+                        syncCardFromRow(row.getAttribute('data-item-id'));
+                    } else {
+                        syncCardFromRow(drawerState.itemId);
+                    }
+                    syncDrawerFromCurrentRow();
+                })
+                .catch(function (error) {
+                    alert((error && error.message) || 'Erro ao excluir comentário.');
+                })
+                .finally(function () {
+                    setDrawerCommentsBusy(false);
+                });
         }
 
         function getDragAfterElement(dropzone, y) {
@@ -1802,7 +2558,6 @@
                     } else {
                         dropzone.appendChild(dragging);
                     }
-
                     setCardStatus(dragging, dropzone.getAttribute('data-status') || 'programado');
                 });
 
@@ -1816,6 +2571,7 @@
                     if (!dragContext || isPersisting) return;
                     event.preventDefault();
                     dropzone.classList.remove('is-drag-over');
+                    suppressCardClickUntil = Date.now() + 220;
 
                     var itemId = dragContext.itemId;
                     var previousStatus = dragContext.previousStatus;
@@ -1826,32 +2582,196 @@
             });
         }
 
+        function bindKanbanComposers() {
+            var composers = kanbanView.querySelectorAll('.task-items-kanban-composer[data-status]');
+            composers.forEach(function (composer) {
+                var status = normalizeStatus(composer.getAttribute('data-status') || 'programado');
+                var addBtn = composer.querySelector('.task-items-kanban-add-btn[data-status]');
+                var form = composer.querySelector('.task-items-kanban-add-form[data-status]');
+                var desc = form ? form.querySelector('.task-items-kanban-add-desc') : null;
+                var ownerTrigger = form ? form.querySelector('.task-items-kanban-add-owner[data-role="responsavel-trigger"]') : null;
+                var cancelBtn = form ? form.querySelector('.task-items-kanban-add-cancel') : null;
+                if (!addBtn || !form || !desc || !ownerTrigger || !cancelBtn) return;
+
+                var selectedNames = [];
+                var isSaving = false;
+                renderResponsavelPickerTrigger(ownerTrigger, selectedNames, 'Responsável');
+
+                function openComposer() {
+                    addBtn.setAttribute('hidden', '');
+                    form.removeAttribute('hidden');
+                    setTimeout(function () { desc.focus(); }, 30);
+                }
+
+                function closeComposer(resetValues) {
+                    form.setAttribute('hidden', '');
+                    addBtn.removeAttribute('hidden');
+                    responsavelPickerManager.closeIfAnchor(ownerTrigger);
+                    if (resetValues) {
+                        desc.value = '';
+                        selectedNames = [];
+                        renderResponsavelPickerTrigger(ownerTrigger, selectedNames, 'Responsável');
+                    }
+                }
+
+                function submitComposer(event) {
+                    event.preventDefault();
+                    if (isSaving) return;
+                    if (!window.taskItemsListBridge || typeof window.taskItemsListBridge.requestAddItem !== 'function') {
+                        alert('Fluxo de adição indisponível.');
+                        return;
+                    }
+
+                    var descricao = (desc.value || '').trim();
+                    if (!descricao) {
+                        desc.focus();
+                        return;
+                    }
+
+                    isSaving = true;
+                    composer.classList.add('is-saving');
+                    window.taskItemsListBridge.requestAddItem({
+                        descricao: descricao,
+                        status: status,
+                        responsavel: selectedNames.join(', '),
+                    })
+                        .then(function (data) {
+                            window.taskItemsListBridge.insertItemFromPayload(data);
+                            closeComposer(true);
+                            if (currentView === 'kanban') renderKanbanFromList();
+                        })
+                        .catch(function (error) {
+                            alert((error && error.message) || 'Erro ao adicionar item.');
+                        })
+                        .finally(function () {
+                            isSaving = false;
+                            composer.classList.remove('is-saving');
+                        });
+                }
+
+                addBtn.addEventListener('click', function () {
+                    openComposer();
+                });
+                cancelBtn.addEventListener('click', function () {
+                    closeComposer(true);
+                });
+                form.addEventListener('submit', submitComposer);
+                desc.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        closeComposer(true);
+                        return;
+                    }
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        submitComposer(event);
+                    }
+                });
+                ownerTrigger.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (isSaving) return;
+                    responsavelPickerManager.open({
+                        anchorEl: ownerTrigger,
+                        taskId: taskId,
+                        sugestoesUrl: listEl.getAttribute('data-sugestoes-url') || '',
+                        initialRawValue: selectedNames.join(', '),
+                        onApply: function (payload) {
+                            selectedNames = payload.names.slice();
+                            renderResponsavelPickerTrigger(ownerTrigger, selectedNames, 'Responsável');
+                            return true;
+                        },
+                    });
+                });
+            });
+        }
+
+        function bindDrawerEvents() {
+            if (!hasDrawer()) return;
+
+            drawerClose.addEventListener('click', closeDrawer);
+            drawerBackdrop.addEventListener('click', closeDrawer);
+            drawerSave.addEventListener('click', saveDrawerDetails);
+            drawerOpenListBtn.addEventListener('click', function () {
+                if (!drawerState.itemId) return;
+                applyView('list');
+                closeDrawer();
+                focusTaskItemRow(drawerState.itemId);
+            });
+
+            drawerResponsavelTrigger.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (!drawerState.itemId || drawerState.isSaving) return;
+
+                responsavelPickerManager.open({
+                    anchorEl: drawerResponsavelTrigger,
+                    taskId: taskId,
+                    sugestoesUrl: listEl.getAttribute('data-sugestoes-url') || '',
+                    initialRawValue: drawerState.responsavelNames.join(', '),
+                    onApply: function (payload) {
+                        setDrawerResponsavel(payload.names.slice());
+                        return true;
+                    },
+                });
+            });
+
+            drawerCommentForm.addEventListener('submit', handleDrawerAddComment);
+            drawerCommentForm.addEventListener('keydown', function (event) {
+                if (!(event.target && event.target.matches('textarea[name="content"]'))) return;
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    if (drawerCommentForm.requestSubmit) drawerCommentForm.requestSubmit();
+                    else drawerCommentForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                }
+            });
+
+            drawerCommentsList.addEventListener('click', function (event) {
+                var editBtn = event.target.closest('[data-action="edit-comment"][data-comment-id]');
+                if (editBtn) {
+                    event.preventDefault();
+                    startDrawerCommentEdit(editBtn.getAttribute('data-comment-id'));
+                    return;
+                }
+
+                var delBtn = event.target.closest('[data-action="delete-comment"][data-comment-id]');
+                if (delBtn) {
+                    event.preventDefault();
+                    handleDrawerDeleteComment(delBtn.getAttribute('data-comment-id'));
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && drawerState.itemId) {
+                    closeDrawer();
+                }
+            });
+        }
+
         function bindBoardEvents() {
             board.addEventListener('click', function (event) {
                 var openBtn = event.target.closest('.task-items-kanban-open-list[data-item-id]');
-                if (!openBtn) return;
-                event.preventDefault();
-                applyView('list');
-                focusTaskItemRow(openBtn.getAttribute('data-item-id'));
+                if (openBtn) {
+                    event.preventDefault();
+                    applyView('list');
+                    focusTaskItemRow(openBtn.getAttribute('data-item-id'));
+                    return;
+                }
+
+                var card = event.target.closest('.task-items-kanban-card[data-item-id]');
+                if (!card || Date.now() < suppressCardClickUntil) return;
+                openDrawer(card.getAttribute('data-item-id'));
             });
 
-            board.addEventListener('change', function (event) {
-                var select = event.target.closest('.task-items-kanban-status-select[data-item-id]');
-                if (!select || isPersisting) return;
-
-                var itemId = select.getAttribute('data-item-id');
-                var card = select.closest('.task-items-kanban-card[data-item-id]');
-                if (!itemId || !card) return;
-
-                var previousStatus = card.getAttribute('data-status') || 'programado';
-                var nextStatus = normalizeStatus(select.value || previousStatus);
-                var dropzone = getDropzone(nextStatus);
-                if (!dropzone) return;
-
-                dropzone.appendChild(card);
-                setCardStatus(card, nextStatus);
-                updateColumnMeta();
-                persistKanbanChange(itemId, previousStatus);
+            board.addEventListener('keydown', function (event) {
+                var card = event.target.closest('.task-items-kanban-card[data-item-id]');
+                if (!card) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    if (Date.now() >= suppressCardClickUntil) {
+                        openDrawer(card.getAttribute('data-item-id'));
+                    }
+                }
             });
 
             board.addEventListener('dragstart', function (event) {
@@ -1862,7 +2782,6 @@
                     itemId: card.getAttribute('data-item-id'),
                     previousStatus: card.getAttribute('data-status') || 'programado',
                 };
-
                 card.classList.add('is-dragging');
                 if (event.dataTransfer) {
                     event.dataTransfer.effectAllowed = 'move';
@@ -1873,6 +2792,7 @@
             board.addEventListener('dragend', function () {
                 var dragging = board.querySelector('.task-items-kanban-card.is-dragging');
                 if (dragging) dragging.classList.remove('is-dragging');
+                suppressCardClickUntil = Date.now() + 140;
                 clearDropzoneHover();
                 updateColumnMeta();
             });
@@ -1896,6 +2816,8 @@
 
             if (targetMode === 'kanban') {
                 renderKanbanFromList();
+            } else {
+                closeDrawer();
             }
 
             if (options.persist !== false) {
@@ -1914,6 +2836,8 @@
             toggleRoot.addEventListener('click', handleToggleClick);
             bindBoardEvents();
             bindDropzones();
+            bindKanbanComposers();
+            bindDrawerEvents();
             renderKanbanFromList();
             applyView(readStoredView(), { persist: false });
         }
@@ -1924,9 +2848,20 @@
             applyView: applyView,
             getCurrentView: function () { return currentView; },
             rebuildFromList: renderKanbanFromList,
-            syncItemFromRow: function () {
+            syncItemFromRow: function (itemId) {
+                if (itemId) {
+                    syncCardFromRow(String(itemId));
+                    if (drawerState.itemId && drawerState.itemId === String(itemId)) {
+                        syncDrawerFromCurrentRow();
+                    }
+                    return;
+                }
+
                 if (currentView === 'kanban') {
                     renderKanbanFromList();
+                }
+                if (drawerState.itemId) {
+                    syncDrawerFromCurrentRow();
                 }
             },
         };
@@ -2071,44 +3006,27 @@
             saving = true;
             input.disabled = true;
 
-            var statusSelect = row.querySelector('.task-item-status');
-            var respSpan = row.querySelector('.task-item-responsavel');
-            var statusVal = statusSelect ? statusSelect.value : 'programado';
-            var respPlaceholderEl = respSpan ? respSpan.querySelector('.responsavel-placeholder') : null;
-            var respVal = respPlaceholderEl ? '' : (respSpan ? respSpan.textContent.trim() : '');
-            if (respVal === '\u00a0') respVal = '';
+            var payload = {
+                descricao: newText,
+                status: getTaskItemStatus(row),
+                responsavel: getTaskItemResponsavel(row),
+            };
 
-            var formData = new FormData();
-            formData.append('descricao', newText);
-            formData.append('status', statusVal);
-            formData.append('responsavel', respVal);
-
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/tarefas/itens/' + itemId + '/edit');
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.setRequestHeader('Accept', 'application/json');
-            xhr.onload = function () {
-                try {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data.success && data.item) {
-                        restoreUi(data.item.descricao);
-                        syncTaskItemRowMetadata(row);
-                        if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
-                            window.taskItemsKanban.syncItemFromRow(itemId);
-                        }
-                    } else {
-                        alert(data.message || 'Erro ao salvar.');
-                        restoreUi(originalText);
+            persistTaskItemDetails(itemId, payload)
+                .then(function (data) {
+                    if (!data || !data.item) {
+                        throw new Error('Erro ao salvar.');
                     }
-                } catch (err) {
+                    updateTaskItemRowFromPayload(data.item);
+                    restoreUi(data.item.descricao);
+                    if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                        window.taskItemsKanban.syncItemFromRow(itemId);
+                    }
+                })
+                .catch(function (error) {
+                    alert((error && error.message) || 'Erro ao salvar.');
                     restoreUi(originalText);
-                }
-            };
-            xhr.onerror = function () {
-                alert('Erro de conexão.');
-                restoreUi(originalText);
-            };
-            xhr.send(formData);
+                });
         }
 
         input.addEventListener('keydown', function (e) {
@@ -2170,48 +3088,26 @@
                     return true;
                 }
 
-                var descEl = row.querySelector('.task-item-desc');
-                var statusSelect = row.querySelector('.task-item-status');
-                var descVal = descEl ? descEl.textContent.trim() : '';
-                var statusVal = statusSelect ? statusSelect.value : 'programado';
-                var responsavelVal = payload.value || '';
-
-                return new Promise(function (resolve, reject) {
-                    var formData = new FormData();
-                    formData.append('descricao', descVal);
-                    formData.append('status', statusVal);
-                    formData.append('responsavel', responsavelVal);
-
-                    var xhr = new XMLHttpRequest();
-                    xhr.open('POST', '/tarefas/itens/' + itemId + '/edit');
-                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                    xhr.setRequestHeader('Accept', 'application/json');
-                    xhr.onload = function () {
-                        try {
-                            var data = JSON.parse(xhr.responseText);
-                            if (data.success && data.item) {
-                                setResponsavelCellText(respSpan, data.item.responsavel || '');
-                                syncTaskItemRowMetadata(row);
-                                if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
-                                    window.taskItemsKanban.syncItemFromRow(itemId);
-                                }
-                                respSpan.classList.remove('task-item-resp-editing-active');
-                                resolve(true);
-                            } else {
-                                respSpan.classList.remove('task-item-resp-editing-active');
-                                reject(new Error((data && data.message) || 'Erro ao salvar.'));
-                            }
-                        } catch (err) {
-                            respSpan.classList.remove('task-item-resp-editing-active');
-                            reject(new Error('Erro ao salvar.'));
+                return persistTaskItemDetails(itemId, {
+                    descricao: getTaskItemDescricao(row),
+                    status: getTaskItemStatus(row),
+                    responsavel: payload.value || '',
+                })
+                    .then(function (data) {
+                        if (!data || !data.item) {
+                            throw new Error('Erro ao salvar.');
                         }
-                    };
-                    xhr.onerror = function () {
+                        updateTaskItemRowFromPayload(data.item);
+                        if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                            window.taskItemsKanban.syncItemFromRow(itemId);
+                        }
                         respSpan.classList.remove('task-item-resp-editing-active');
-                        reject(new Error('Erro de conexão.'));
-                    };
-                    xhr.send(formData);
-                });
+                        return true;
+                    })
+                    .catch(function (error) {
+                        respSpan.classList.remove('task-item-resp-editing-active');
+                        throw error;
+                    });
             },
         });
     }
@@ -2242,77 +3138,47 @@
     }
 
     // Enviar comentário via AJAX (sem recarregar e sem recolher a seção)
-    function escapeHtml(text) {
-        var div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
     function handleCommentFormSubmit(form) {
         var textarea = form.querySelector('textarea');
         var content = (textarea && textarea.value) ? textarea.value.trim() : '';
         if (!content) return;
+
         var btn = form.querySelector('button[type="submit"]');
         if (btn) btn.disabled = true;
         var formData = new FormData(form);
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', form.action);
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.onload = function () {
-            if (btn) btn.disabled = false;
-            try {
-                var data = JSON.parse(xhr.responseText);
-                if (data.success && data.comment) {
-                    var c = data.comment;
-                    var authorClass = 'task-comment-author-' + (c.user_id != null ? (c.user_id % 5) : 0);
-                    var commentHtml = '<div class="task-comment ' + authorClass + '" id="comment-' + c.id + '">' +
-                        '<div class="task-comment-head">' +
-                        '<span class="task-comment-user">' + escapeHtml(c.author_name) + '</span>' +
-                        '<span class="task-comment-time">' + escapeHtml(c.created_at) + '</span>';
-                    if (c.is_own) {
-                        commentHtml += '<span class="task-comment-acts">' +
-                            '<button type="button" class="task-comment-btn btn-edit-comment" data-comment-id="' + c.id + '" data-comment-content="' + escapeHtml(c.content) + '" title="Editar">Editar</button>' +
-                            '<form action="/tarefas/comentarios/' + c.id + '/delete" method="POST" class="d-inline" onsubmit="return confirm(\'Excluir comentário?\');">' +
-                            '<button type="submit" class="task-comment-btn task-comment-btn-del" title="Excluir">Excluir</button>' +
-                            '</form></span>';
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: formData,
+        })
+            .then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                    if (!response.ok || !data.success) {
+                        throw new Error((data && data.message) || 'Erro ao enviar comentário.');
                     }
-                    commentHtml += '</div><p class="task-comment-text">' + escapeHtml(c.content) + '</p></div>';
-                    var wrap = form.closest('.task-item-comments-inner');
-                    if (wrap) {
-                        var frag = document.createElement('div');
-                        frag.innerHTML = commentHtml;
-                        form.parentNode.insertBefore(frag.firstChild, form);
-                    }
-                    if (textarea) textarea.value = '';
-                    var row = form.closest('.task-item-row');
-                    if (row) {
-                        var numEl = row.querySelector('.task-item-comments-num');
-                        if (numEl) numEl.textContent = parseInt(numEl.textContent || '0', 10) + 1;
-                        syncTaskItemRowMetadata(row);
-                        if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
-                            window.taskItemsKanban.syncItemFromRow(row.getAttribute('data-item-id'));
-                        }
-                    }
-                    var newCommentBtn = row && row.querySelector('.btn-edit-comment[data-comment-id="' + c.id + '"]');
-                    if (newCommentBtn) {
-                        newCommentBtn.addEventListener('click', function () {
-                            openEditComment(this.getAttribute('data-comment-id'), this.getAttribute('data-comment-content'));
-                        });
-                    }
-                } else {
-                    alert(data.message || 'Erro ao enviar comentário.');
+                    return data;
+                });
+            })
+            .then(function (data) {
+                var row = form.closest('.task-item-row');
+                if (!row) return;
+                appendCommentToTaskItemRow(row, data.comment);
+                syncTaskItemRowMetadata(row);
+                if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                    window.taskItemsKanban.syncItemFromRow(row.getAttribute('data-item-id'));
                 }
-            } catch (err) {
-                if (xhr.status === 200) return;
-                alert('Erro ao enviar comentário. Tente novamente.');
-            }
-        };
-        xhr.onerror = function () {
-            if (btn) btn.disabled = false;
-            alert('Erro de conexão. Tente novamente.');
-        };
-        xhr.send(formData);
+                if (textarea) textarea.value = '';
+            })
+            .catch(function (error) {
+                alert((error && error.message) || 'Erro ao enviar comentário. Tente novamente.');
+            })
+            .finally(function () {
+                if (btn) btn.disabled = false;
+            });
     }
 
     document.addEventListener('submit', function (e) {
@@ -2371,33 +3237,38 @@
             if (!newContent) return;
             var formData = new FormData();
             formData.append('content', newContent);
-            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]') ? document.querySelector('input[name="csrf_token"]').value : '');
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/tarefas/comentarios/' + commentId + '/edit');
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.setRequestHeader('Accept', 'application/json');
-            xhr.onload = function () {
-                try {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data.success && data.comment) {
-                        var c = data.comment;
-                        restoreText(c.content);
-                        var timeEl = commentEl.querySelector('.task-comment-time');
-                        if (timeEl && c.updated_at) {
-                            timeEl.innerHTML = c.updated_at + ' <em>(edit.)</em>';
+
+            fetch('/tarefas/comentarios/' + commentId + '/edit', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: formData,
+            })
+                .then(function (response) {
+                    return response.json().catch(function () { return {}; }).then(function (data) {
+                        if (!response.ok || !data.success) {
+                            throw new Error((data && data.message) || 'Erro ao atualizar comentário.');
                         }
-                        var editBtn = commentEl.querySelector('.btn-edit-comment');
-                        if (editBtn) editBtn.setAttribute('data-comment-content', c.content);
-                    } else {
-                        alert(data.message || 'Erro ao atualizar comentário.');
+                        return data;
+                    });
+                })
+                .then(function (data) {
+                    if (!data || !data.comment) return;
+                    updateTaskCommentInRow(commentId, data.comment.content, data.comment.updated_at);
+                    restoreText(data.comment.content);
+                    var row = commentEl.closest('.task-item-row');
+                    if (row) {
+                        syncTaskItemRowMetadata(row);
+                        if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                            window.taskItemsKanban.syncItemFromRow(row.getAttribute('data-item-id'));
+                        }
                     }
-                } catch (err) {
-                    if (xhr.status === 200) return;
-                    alert('Erro ao atualizar comentário. Tente novamente.');
-                }
-            };
-            xhr.onerror = function () { alert('Erro de conexão. Tente novamente.'); };
-            xhr.send(formData);
+                })
+                .catch(function (error) {
+                    alert((error && error.message) || 'Erro ao atualizar comentário.');
+                });
         }
 
         textarea.addEventListener('keydown', function (e) {
@@ -2412,13 +3283,12 @@
         });
     }
 
-    // Botões de editar comentário (data attributes)
-    document.querySelectorAll('.btn-edit-comment').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var commentId = this.getAttribute('data-comment-id');
-            var content = this.getAttribute('data-comment-content');
-            openEditComment(commentId, content);
-        });
+    // Botões de editar comentário (delegado para também cobrir comentários criados via AJAX)
+    document.addEventListener('click', function (event) {
+        var btn = event.target.closest('.btn-edit-comment[data-comment-id]');
+        if (!btn) return;
+        event.preventDefault();
+        openEditComment(btn.getAttribute('data-comment-id'), btn.getAttribute('data-comment-content'));
     });
 
     // Reset do form quando modal é fechado
