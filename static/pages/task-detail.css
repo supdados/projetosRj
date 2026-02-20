@@ -1151,6 +1151,12 @@ body.task-item-drawer-open {
     align-items: flex-start;
     justify-content: space-between;
     gap: 0.54rem;
+    min-width: 0;
+}
+
+.task-detail-v2 .task-item-drawer-header > div:first-child {
+    min-width: 0;
+    flex: 1 1 0;
 }
 
 .task-detail-v2 .task-item-drawer-kicker {
