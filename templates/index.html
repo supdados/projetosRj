@@ -254,20 +254,32 @@
                     {% if task_items_total > 0 %}
                     <div class="tasks-kpi-donut-section">
                         <div class="tasks-kpi-donut-wrap">
-                            <svg viewBox="0 0 36 36" class="tasks-kpi-donut-svg">
+                            <svg
+                                viewBox="0 0 36 36"
+                                class="tasks-kpi-donut-svg"
+                                role="img"
+                                aria-label="Itens por status: {{ finalized_pct | round(0) | int }}% finalizado, {{ andamento_pct | round(0) | int }}% em andamento, {{ validacao_pct | round(0) | int }}% em validação e {{ programado_pct | round(0) | int }}% programado.">
                                 <circle class="tasks-kpi-donut-ring" cx="18" cy="18" r="15.915"></circle>
                                 <circle class="tasks-kpi-donut-seg seg-finalizado" cx="18" cy="18" r="15.915"
                                     stroke-dasharray="{{ finalized_pct }} {{ 100 - finalized_pct }}"
-                                    stroke-dashoffset="25"></circle>
+                                    stroke-dashoffset="25"
+                                    data-bs-toggle="tooltip"
+                                    title="Finalizado: {{ task_items_finalizado }} ({{ finalized_pct }}%)"></circle>
                                 <circle class="tasks-kpi-donut-seg seg-em-andamento" cx="18" cy="18" r="15.915"
                                     stroke-dasharray="{{ andamento_pct }} {{ 100 - andamento_pct }}"
-                                    stroke-dashoffset="{{ 25 - finalized_pct }}"></circle>
+                                    stroke-dashoffset="{{ 25 - finalized_pct }}"
+                                    data-bs-toggle="tooltip"
+                                    title="Em andamento: {{ task_items_em_andamento }} ({{ andamento_pct }}%)"></circle>
                                 <circle class="tasks-kpi-donut-seg seg-validacao" cx="18" cy="18" r="15.915"
                                     stroke-dasharray="{{ validacao_pct }} {{ 100 - validacao_pct }}"
-                                    stroke-dashoffset="{{ 25 - finalized_pct - andamento_pct }}"></circle>
+                                    stroke-dashoffset="{{ 25 - finalized_pct - andamento_pct }}"
+                                    data-bs-toggle="tooltip"
+                                    title="Validação: {{ task_items_validacao }} ({{ validacao_pct }}%)"></circle>
                                 <circle class="tasks-kpi-donut-seg seg-programado" cx="18" cy="18" r="15.915"
                                     stroke-dasharray="{{ programado_pct }} {{ 100 - programado_pct }}"
-                                    stroke-dashoffset="{{ 25 - finalized_pct - andamento_pct - validacao_pct }}"></circle>
+                                    stroke-dashoffset="{{ 25 - finalized_pct - andamento_pct - validacao_pct }}"
+                                    data-bs-toggle="tooltip"
+                                    title="Programado: {{ task_items_programado }} ({{ programado_pct }}%)"></circle>
                             </svg>
                             <div class="tasks-kpi-donut-center">
                                 <span class="tasks-kpi-donut-center-number">{{ finalized_pct | round(0) | int }}%</span>
