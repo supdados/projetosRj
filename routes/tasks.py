@@ -1,14 +1,32 @@
 import datetime
+import os
 import re
+import uuid
 
-from flask import flash, g, jsonify, redirect, render_template, request, url_for
+from flask import flash, g, jsonify, redirect, render_template, request, send_file, url_for
+from werkzeug.utils import secure_filename
 from sqlalchemy.orm import joinedload
 
-from models import Project, Task, TaskItem, TaskItemComment, User, UserArea, db
+from models import Project, Task, TaskItem, TaskItemAnexo, TaskItemComment, User, UserArea, db
 
 from .blueprint import main_bp
 from .decorators import login_required
 from .shared import format_local_time
+
+VALID_PRIORIDADES = {'baixa', 'media', 'alta', 'urgente'}
+VALID_TIPOS = {'implementacao', 'bug', 'melhoria', 'duvida', 'outros'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'}
+
+
+def _get_upload_folder():
+    basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    folder = os.path.join(basedir, 'instance', 'uploads', 'task_items')
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+def _allowed_attachment(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def _can_view_task(user, task):
@@ -368,7 +386,14 @@ def add_task_item(task_id):
     descricao = request.form.get('descricao', '').strip()
     status = request.form.get('status', 'programado')
     responsavel = request.form.get('responsavel', '').strip()
-    
+    prioridade = request.form.get('prioridade', '').strip() or None
+    tipo_pedido = request.form.get('tipo_pedido', '').strip() or None
+
+    if prioridade not in VALID_PRIORIDADES:
+        prioridade = None
+    if tipo_pedido not in VALID_TIPOS:
+        tipo_pedido = None
+
     # Validações
     if not descricao:
         if is_ajax:
@@ -383,19 +408,21 @@ def add_task_item(task_id):
             return jsonify({'success': False, 'message': message}), 400
         flash(message, 'danger')
         return redirect(url_for('main.task_detail', task_id=task_id))
-    
+
     # Calcular ordem
     max_ordem = db.session.query(db.func.max(TaskItem.ordem)).filter_by(task_id=task_id).scalar() or 0
-    
+
     # Criar item
     item = TaskItem(
         descricao=descricao,
         status=status,
         responsavel=canonical_responsavel if canonical_responsavel else None,
+        prioridade=prioridade,
+        tipo_pedido=tipo_pedido,
         task_id=task_id,
         ordem=max_ordem + 1
     )
-    
+
     try:
         db.session.add(item)
         db.session.commit()
@@ -407,7 +434,10 @@ def add_task_item(task_id):
                     'descricao': item.descricao,
                     'status': item.status,
                     'responsavel': item.responsavel or '',
-                    'comments_count': 0
+                    'prioridade': item.prioridade or '',
+                    'tipo_pedido': item.tipo_pedido or '',
+                    'comments_count': 0,
+                    'anexos_count': 0,
                 }
             })
         flash('Item adicionado com sucesso!', 'success')
@@ -436,7 +466,14 @@ def edit_task_item(item_id):
     descricao = request.form.get('descricao', '').strip()
     status = request.form.get('status', item.status)
     responsavel = request.form.get('responsavel', '').strip()
-    
+    prioridade = request.form.get('prioridade', '').strip() or None
+    tipo_pedido = request.form.get('tipo_pedido', '').strip() or None
+
+    if prioridade not in VALID_PRIORIDADES:
+        prioridade = None
+    if tipo_pedido not in VALID_TIPOS:
+        tipo_pedido = None
+
     # Validações
     if not descricao:
         return jsonify({'success': False, 'message': 'Descrição é obrigatória'}), 400
@@ -444,12 +481,14 @@ def edit_task_item(item_id):
     is_valid_responsavel, resolved_responsavel, invalid_names = _resolve_responsavel_for_item_edit(item, responsavel)
     if not is_valid_responsavel:
         return jsonify({'success': False, 'message': _format_invalid_responsavel_message(invalid_names)}), 400
-    
+
     # Atualizar item
     item.descricao = descricao
     item.status = status
     item.responsavel = resolved_responsavel if resolved_responsavel else None
-    
+    item.prioridade = prioridade
+    item.tipo_pedido = tipo_pedido
+
     try:
         db.session.commit()
         return jsonify({
@@ -459,7 +498,10 @@ def edit_task_item(item_id):
                 'id': item.id,
                 'descricao': item.descricao,
                 'status': item.status,
-                'responsavel': item.responsavel or ''
+                'responsavel': item.responsavel or '',
+                'prioridade': item.prioridade or '',
+                'tipo_pedido': item.tipo_pedido or '',
+                'anexos_count': len(item.anexos),
             }
         })
     except Exception as e:
@@ -522,6 +564,44 @@ def update_task_item_status(item_id):
     try:
         db.session.commit()
         return jsonify({'success': True, 'message': 'Status atualizado'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@main_bp.route('/tarefas/itens/<int:item_id>/update_prioridade', methods=['POST'])
+@login_required
+def update_task_item_prioridade(item_id):
+    """Atualiza prioridade do item via AJAX"""
+    item = TaskItem.query.get_or_404(item_id)
+    if not _can_view_task(g.user, item.task):
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+    prioridade = request.json.get('prioridade', '') or None
+    if prioridade and prioridade not in VALID_PRIORIDADES:
+        return jsonify({'success': False, 'message': 'Prioridade inválida'}), 400
+    item.prioridade = prioridade
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'prioridade': item.prioridade or ''})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@main_bp.route('/tarefas/itens/<int:item_id>/update_tipo', methods=['POST'])
+@login_required
+def update_task_item_tipo(item_id):
+    """Atualiza tipo_pedido do item via AJAX"""
+    item = TaskItem.query.get_or_404(item_id)
+    if not _can_view_task(g.user, item.task):
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+    tipo = request.json.get('tipo_pedido', '') or None
+    if tipo and tipo not in VALID_TIPOS:
+        return jsonify({'success': False, 'message': 'Tipo inválido'}), 400
+    item.tipo_pedido = tipo
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'tipo_pedido': item.tipo_pedido or ''})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -726,6 +806,146 @@ def project_tasks(project_id):
     tasks = Task.query.options(joinedload(Task.items)).filter_by(project_id=project_id).order_by(Task.created_at.desc()).all()
     
     return render_template('project_tasks.html', project=project, tasks=tasks)
+
+# ===================================
+# ANEXOS DE ITENS DE TAREFA
+# ===================================
+
+@main_bp.route('/tarefas/itens/<int:item_id>/anexos', methods=['GET'])
+@login_required
+def list_task_item_anexos(item_id):
+    """Lista anexos de um item (retorna JSON)."""
+    item = TaskItem.query.get_or_404(item_id)
+    if not _can_view_task(g.user, item.task):
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+
+    return jsonify({
+        'success': True,
+        'anexos': [
+            {
+                'id': a.id,
+                'filename': a.filename,
+                'content_type': a.content_type or '',
+                'uploaded_by': a.uploaded_by.name,
+                'created_at': format_local_time(a.created_at),
+                'is_image': (a.content_type or '').startswith('image/'),
+                'url': url_for('main.view_task_item_anexo', anexo_id=a.id),
+            }
+            for a in item.anexos
+        ],
+        'count': len(item.anexos),
+    })
+
+
+@main_bp.route('/tarefas/itens/<int:item_id>/anexos/add', methods=['POST'])
+@login_required
+def add_task_item_anexo(item_id):
+    """Faz upload de um anexo para o item."""
+    item = TaskItem.query.get_or_404(item_id)
+    if not _can_view_task(g.user, item.task):
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'Nenhum arquivo enviado.'}), 400
+
+    file = request.files['file']
+    if not file or not file.filename:
+        return jsonify({'success': False, 'message': 'Arquivo inválido.'}), 400
+
+    if not _allowed_attachment(file.filename):
+        return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido.'}), 400
+
+    original_name = file.filename[:255]
+    safe_name = secure_filename(file.filename)
+    ext = safe_name.rsplit('.', 1)[1].lower() if '.' in safe_name else ''
+    stored_name = str(uuid.uuid4()) + ('.' + ext if ext else '')
+    content_type = file.content_type or 'application/octet-stream'
+
+    upload_folder = _get_upload_folder()
+    file_path = os.path.join(upload_folder, stored_name)
+
+    try:
+        file.save(file_path)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao salvar arquivo: {str(e)}'}), 500
+
+    anexo = TaskItemAnexo(
+        task_item_id=item_id,
+        filename=original_name,
+        stored_filename=stored_name,
+        content_type=content_type,
+        uploaded_by_id=g.user.id,
+    )
+    try:
+        db.session.add(anexo)
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'anexo': {
+                'id': anexo.id,
+                'filename': anexo.filename,
+                'content_type': content_type,
+                'uploaded_by': g.user.name,
+                'created_at': format_local_time(anexo.created_at),
+                'is_image': content_type.startswith('image/'),
+                'url': url_for('main.view_task_item_anexo', anexo_id=anexo.id),
+            },
+            'anexos_count': len(item.anexos),
+        })
+    except Exception as e:
+        db.session.rollback()
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@main_bp.route('/tarefas/anexos/<int:anexo_id>', methods=['GET'])
+@login_required
+def view_task_item_anexo(anexo_id):
+    """Serve o arquivo de um anexo."""
+    anexo = TaskItemAnexo.query.get_or_404(anexo_id)
+    if not _can_view_task(g.user, anexo.task_item.task):
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+
+    upload_folder = _get_upload_folder()
+    file_path = os.path.join(upload_folder, anexo.stored_filename)
+
+    if not os.path.exists(file_path):
+        return jsonify({'success': False, 'message': 'Arquivo não encontrado.'}), 404
+
+    return send_file(file_path, download_name=anexo.filename, as_attachment=False)
+
+
+@main_bp.route('/tarefas/anexos/<int:anexo_id>/delete', methods=['POST'])
+@login_required
+def delete_task_item_anexo(anexo_id):
+    """Exclui um anexo."""
+    anexo = TaskItemAnexo.query.get_or_404(anexo_id)
+    item = anexo.task_item
+    if not _can_view_task(g.user, item.task):
+        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+
+    upload_folder = _get_upload_folder()
+    file_path = os.path.join(upload_folder, anexo.stored_filename)
+
+    try:
+        db.session.delete(anexo)
+        db.session.commit()
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
+        return jsonify({
+            'success': True,
+            'message': 'Anexo excluído.',
+            'anexos_count': len(item.anexos),
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @main_bp.route('/tarefas/<int:task_id>/sugestoes-responsavel', methods=['GET'])
 @login_required

@@ -60,18 +60,41 @@ def ensure_project_abep_indicator_column():
     return True
 
 
+def ensure_task_item_new_columns():
+    """Garante as colunas prioridade, tipo_pedido na task_item e cria task_item_anexo."""
+    inspector = inspect(db.engine)
+    table_names = inspector.get_table_names()
+    added = []
+
+    if 'task_item' in table_names:
+        columns = {col["name"] for col in inspector.get_columns('task_item')}
+        if 'prioridade' not in columns:
+            db.session.execute(text("ALTER TABLE task_item ADD COLUMN prioridade VARCHAR(20)"))
+            added.append('task_item.prioridade')
+        if 'tipo_pedido' not in columns:
+            db.session.execute(text("ALTER TABLE task_item ADD COLUMN tipo_pedido VARCHAR(30)"))
+            added.append('task_item.tipo_pedido')
+        if added:
+            db.session.commit()
+
+    return added
+
+
 def initialize_database():
     """
     Inicializa estrutura mínima do banco:
     - cria tabelas faltantes;
     - garante coluna ABEP em bancos legados;
+    - garante novas colunas de task_item;
     - sincroniza catálogo de objetivo/resultado/indicador.
     """
     db.create_all()
     column_added = ensure_project_abep_indicator_column()
+    new_cols = ensure_task_item_new_columns()
     sync_summary = sync_goal_catalog_to_db(commit=True)
     return {
         'column_added': column_added,
+        'new_task_item_cols': new_cols,
         'sync_summary': sync_summary,
     }
 

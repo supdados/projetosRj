@@ -226,12 +226,33 @@ class TaskItem(db.Model):
     ordem = db.Column(db.Integer, nullable=False, default=0)  # Para ordenação dos itens
     task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
-    
+    prioridade = db.Column(db.String(20), nullable=True)  # baixa, media, alta, urgente
+    tipo_pedido = db.Column(db.String(30), nullable=True)  # implementacao, bug, melhoria, duvida, outros
+
     # Comentários do item (após criação do item)
     comments = db.relationship('TaskItemComment', backref='task_item', lazy=True, cascade='all, delete-orphan', order_by='TaskItemComment.created_at')
-    
+    # Anexos do item
+    anexos = db.relationship('TaskItemAnexo', backref='task_item', lazy=True, cascade='all, delete-orphan', order_by='TaskItemAnexo.created_at')
+
     def __repr__(self):
         return f'<TaskItem {self.descricao[:50]}>'
+
+
+class TaskItemAnexo(db.Model):
+    """Anexos de um item de tarefa"""
+    __tablename__ = 'task_item_anexo'
+    id = db.Column(db.Integer, primary_key=True)
+    task_item_id = db.Column(db.Integer, db.ForeignKey('task_item.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)       # nome original do arquivo
+    stored_filename = db.Column(db.String(255), nullable=False)  # nome no disco (uuid)
+    content_type = db.Column(db.String(100), nullable=True)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+    uploaded_by = db.relationship('User', backref='task_item_anexos')
+
+    def __repr__(self):
+        return f'<TaskItemAnexo {self.filename}>'
 
 
 class TaskItemComment(db.Model):

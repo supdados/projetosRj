@@ -102,7 +102,7 @@
                                 <span>{{ task.created_at|local_datetime }}</span>
                             </span>
                             <span class="task-meta-pill task-meta-pill-neutral">
-                                <span>{{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}</span>
+                                <span>{{ task.items|length }} {{ 'itens' if task.items|length != 1 else 'item' }}</span>
                             </span>
                         </div>
                     </div>
@@ -120,8 +120,7 @@
                 <div class="items-header-clean mt-4">
                     <div class="header-info">
                         <h5 class="items-title-clean ds-type-section-title">Itens da tarefa</h5>
-                        <span class="header-count">{{ task.items|length }} item{{ 's' if task.items|length != 1 else ''
-                            }}</span>
+                        <span class="header-count">{{ task.items|length }} {{ 'itens' if task.items|length != 1 else 'item' }}</span>
                     </div>
                     <div class="items-header-actions">
                         <div class="task-items-view-toggle" id="taskItemsViewToggle" role="group"
@@ -152,31 +151,55 @@
                             <div class="task-item-main">
                                 <div class="task-item-line task-item-header">
                                     <span class="task-item-col-desc">Descrição</span>
+                                    <span class="task-item-col-prioridade" style="text-align:center">Prioridade</span>
+                                    <span class="task-item-col-tipo" style="text-align:center">Tipo</span>
                                     <span class="task-item-col-status">Status</span>
                                     <span class="task-item-col-responsavel">Responsável</span>
-                                    <span class="task-item-col-comments" title="Comentários">
-                                        <i class="far fa-comment-alt" aria-hidden="true"></i>
-                                        <span class="visually-hidden">Comentários</span>
-                                    </span>
                                     <span class="task-item-col-actions" title="Ações">Ações</span>
                                 </div>
                             </div>
                         </div>
+                        {% set prioridade_labels = {'baixa': 'Baixa', 'media': 'Média', 'alta': 'Alta', 'urgente': 'Urgente'} %}
+                        {% set tipo_labels = {'implementacao': 'Implementação', 'bug': 'Bug', 'melhoria': 'Melhoria', 'duvida': 'Dúvida', 'outros': 'Outros'} %}
                         {% for item in task.items %}
                         <div class="task-item-row" data-item-id="{{ item.id }}" data-item-status="{{ item.status }}"
-                            data-comments-count="{{ item.comments|length }}">
+                            data-comments-count="{{ item.comments|length }}"
+                            data-item-prioridade="{{ item.prioridade or '' }}"
+                            data-item-tipo="{{ item.tipo_pedido or '' }}"
+                            data-anexos-count="{{ item.anexos|length }}">
                             <div class="task-item-bar status-{{ item.status }}"></div>
                             <div class="task-item-main">
                                 <div class="task-item-line">
                                     <div class="task-item-desc-wrap">
-                                        <p class="task-item-desc" data-item-id="{{ item.id }}">{{ item.descricao }}</p>
-                                        <button type="button" class="task-item-desc-edit-btn" data-item-id="{{ item.id }}"
-                                            title="Editar descrição">
-                                            <i class="fas fa-pen" aria-hidden="true"></i>
-                                            <span class="visually-hidden">Editar</span>
-                                        </button>
+                                        <div class="task-item-desc-row">
+                                            <p class="task-item-desc" data-item-id="{{ item.id }}">{{ item.descricao }}</p>
+                                            <button type="button" class="task-item-desc-edit-btn" data-item-id="{{ item.id }}"
+                                                title="Editar descrição">
+                                                <i class="fas fa-pen" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Editar</span>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="task-item-meta">
+                                        <select class="task-item-prioridade-select prioridade-{{ item.prioridade or 'none' }}"
+                                            data-item-id="{{ item.id }}" title="Prioridade"
+                                            onchange="updateItemPrioridade({{ item.id }}, this.value, this)">
+                                            <option value="">—</option>
+                                            <option value="baixa" {% if item.prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
+                                            <option value="media" {% if item.prioridade == 'media' %}selected{% endif %}>Média</option>
+                                            <option value="alta" {% if item.prioridade == 'alta' %}selected{% endif %}>Alta</option>
+                                            <option value="urgente" {% if item.prioridade == 'urgente' %}selected{% endif %}>Urgente</option>
+                                        </select>
+                                        <select class="task-item-tipo-select"
+                                            data-item-id="{{ item.id }}" title="Tipo"
+                                            onchange="updateItemTipo({{ item.id }}, this.value)">
+                                            <option value="">—</option>
+                                            <option value="implementacao" {% if item.tipo_pedido == 'implementacao' %}selected{% endif %}>Implementação</option>
+                                            <option value="bug" {% if item.tipo_pedido == 'bug' %}selected{% endif %}>Bug</option>
+                                            <option value="melhoria" {% if item.tipo_pedido == 'melhoria' %}selected{% endif %}>Melhoria</option>
+                                            <option value="duvida" {% if item.tipo_pedido == 'duvida' %}selected{% endif %}>Dúvida</option>
+                                            <option value="outros" {% if item.tipo_pedido == 'outros' %}selected{% endif %}>Outros</option>
+                                        </select>
                                         <select class="task-item-status status-{{ item.status }}"
                                             onchange="updateItemStatus({{ item.id }}, this.value)" title="Status">
                                             <option value="programado" {% if item.status=='programado' %}selected{% endif %}>
@@ -190,17 +213,20 @@
                                         </select>
                                         <span class="task-item-responsavel" data-item-id="{{ item.id }}">{% if item.responsavel %}{{ item.responsavel }}{%
                                             else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
-                                        <button type="button" class="task-item-comments-btn" aria-expanded="false"
-                                            data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)">
-                                            <i class="far fa-comment-alt" aria-hidden="true"></i>
-                                            <span class="task-item-comments-label visually-hidden">Comentários</span>
-                                            <span class="task-item-comments-num">{{ item.comments|length }}</span>
-                                        </button>
                                         <div class="task-item-actions">
+                                            <button type="button" class="task-item-comments-btn" aria-expanded="false"
+                                                data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)"
+                                                title="Comentários">
+                                                <i class="far fa-comment-alt" aria-hidden="true"></i>
+                                                <span class="task-item-comments-num">{{ item.comments|length }}</span>
+                                            </button>
+                                            <button type="button" class="task-item-anexos-btn" title="Anexos" data-item-id="{{ item.id }}">
+                                                <i class="fas fa-paperclip" aria-hidden="true"></i>
+                                                <span class="task-item-anexos-num">{{ item.anexos|length }}</span>
+                                            </button>
                                             <button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal"
                                                 data-bs-target="#deleteItemModal-{{ item.id }}" title="Excluir">
                                                 <i class="fas fa-trash-alt" aria-hidden="true"></i>
-                                                <span class="visually-hidden">Excluir</span>
                                             </button>
                                         </div>
                                     </div>
@@ -293,6 +319,21 @@
                                         <div class="task-item-add-line">
                                             <textarea class="task-item-add-desc" id="addItemDesc" rows="1"
                                                 placeholder="Descreva o item..."></textarea>
+                                            <select class="task-item-add-prioridade" id="addItemPrioridade">
+                                                <option value="">Prioridade</option>
+                                                <option value="baixa">Baixa</option>
+                                                <option value="media">Média</option>
+                                                <option value="alta">Alta</option>
+                                                <option value="urgente">Urgente</option>
+                                            </select>
+                                            <select class="task-item-add-tipo" id="addItemTipo">
+                                                <option value="">Tipo</option>
+                                                <option value="implementacao">Implementação</option>
+                                                <option value="bug">Bug</option>
+                                                <option value="melhoria">Melhoria</option>
+                                                <option value="duvida">Dúvida</option>
+                                                <option value="outros">Outros</option>
+                                            </select>
                                             <select class="task-item-add-status" id="addItemStatus">
                                                 <option value="programado">Programado</option>
                                                 <option value="em_andamento">Em andamento</option>
@@ -328,6 +369,21 @@
                                     <div class="task-item-add-line">
                                         <textarea class="task-item-add-desc" id="addItemDesc" rows="1"
                                             placeholder="Descreva o item..."></textarea>
+                                        <select class="task-item-add-prioridade" id="addItemPrioridade">
+                                            <option value="">Prioridade</option>
+                                            <option value="baixa">Baixa</option>
+                                            <option value="media">Média</option>
+                                            <option value="alta">Alta</option>
+                                            <option value="urgente">Urgente</option>
+                                        </select>
+                                        <select class="task-item-add-tipo" id="addItemTipo">
+                                            <option value="">Tipo</option>
+                                            <option value="implementacao">Implementação</option>
+                                            <option value="bug">Bug</option>
+                                            <option value="melhoria">Melhoria</option>
+                                            <option value="duvida">Dúvida</option>
+                                            <option value="outros">Outros</option>
+                                        </select>
                                         <select class="task-item-add-status" id="addItemStatus">
                                             <option value="programado">Programado</option>
                                             <option value="em_andamento">Em andamento</option>
@@ -377,6 +433,23 @@
                                             </span>
                                             <i class="fas fa-chevron-down" aria-hidden="true"></i>
                                         </button>
+                                        <div class="task-items-kanban-add-extra">
+                                            <select class="task-items-kanban-add-prioridade">
+                                                <option value="">Prioridade</option>
+                                                <option value="baixa">Baixa</option>
+                                                <option value="media">Média</option>
+                                                <option value="alta">Alta</option>
+                                                <option value="urgente">Urgente</option>
+                                            </select>
+                                            <select class="task-items-kanban-add-tipo">
+                                                <option value="">Tipo</option>
+                                                <option value="implementacao">Implementação</option>
+                                                <option value="bug">Bug</option>
+                                                <option value="melhoria">Melhoria</option>
+                                                <option value="duvida">Dúvida</option>
+                                                <option value="outros">Outros</option>
+                                            </select>
+                                        </div>
                                         <div class="task-items-kanban-add-actions">
                                             <button type="submit" class="task-items-kanban-add-submit">Salvar</button>
                                             <button type="button"
@@ -419,6 +492,30 @@
                                     id="taskItemDrawerDeleteCancel">Cancelar</button>
                                 <button type="button" class="task-item-drawer-delete-confirm-btn"
                                     id="taskItemDrawerDeleteConfirmBtn">Excluir item</button>
+                            </div>
+                        </div>
+
+                        <div class="task-item-drawer-props">
+                            <div class="task-item-drawer-prop-group">
+                                <label class="task-item-drawer-label" for="taskItemDrawerPrioridade">Prioridade</label>
+                                <select id="taskItemDrawerPrioridade" class="task-item-drawer-select task-item-drawer-prioridade-select">
+                                    <option value="">— Nenhuma —</option>
+                                    <option value="baixa">Baixa</option>
+                                    <option value="media">Média</option>
+                                    <option value="alta">Alta</option>
+                                    <option value="urgente">Urgente</option>
+                                </select>
+                            </div>
+                            <div class="task-item-drawer-prop-group">
+                                <label class="task-item-drawer-label" for="taskItemDrawerTipoPedido">Tipo</label>
+                                <select id="taskItemDrawerTipoPedido" class="task-item-drawer-select task-item-drawer-tipo-select">
+                                    <option value="">— Nenhum —</option>
+                                    <option value="implementacao">Implementação</option>
+                                    <option value="bug">Bug</option>
+                                    <option value="melhoria">Melhoria</option>
+                                    <option value="duvida">Dúvida</option>
+                                    <option value="outros">Outros</option>
+                                </select>
                             </div>
                         </div>
 
@@ -468,6 +565,30 @@
                                         </button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+
+                        <div class="task-item-drawer-anexos" id="taskItemDrawerAnexosSection">
+                            <button type="button" class="task-item-drawer-anexos-toggle" id="taskItemDrawerAnexosToggle"
+                                aria-expanded="false" aria-controls="taskItemDrawerAnexosBody">
+                                <span class="task-item-drawer-anexos-toggle-main">
+                                    <i class="fas fa-paperclip" aria-hidden="true"></i>
+                                    <span class="task-item-drawer-anexos-title">Anexos</span>
+                                    <span class="task-item-drawer-anexos-count" id="taskItemDrawerAnexosCount">0</span>
+                                </span>
+                                <span class="task-item-drawer-anexos-toggle-icon" aria-hidden="true">
+                                    <i class="fas fa-chevron-down"></i>
+                                </span>
+                            </button>
+                            <div class="task-item-drawer-anexos-body" id="taskItemDrawerAnexosBody" hidden>
+                                <div class="task-item-drawer-anexos-list" id="taskItemDrawerAnexosList"></div>
+                                <label class="task-item-drawer-anexos-upload-btn" title="Adicionar anexo">
+                                    <i class="fas fa-plus" aria-hidden="true"></i>
+                                    <span>Adicionar anexo</span>
+                                    <input type="file" id="taskItemDrawerAnexoInput"
+                                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                                        style="display:none;">
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -1257,6 +1378,8 @@
         var placeholder = document.getElementById('addItemPlaceholder');
         var formWrap = document.getElementById('addItemFormWrap');
         var addDesc = document.getElementById('addItemDesc');
+        var addPrioridade = document.getElementById('addItemPrioridade');
+        var addTipo = document.getElementById('addItemTipo');
         var addStatus = document.getElementById('addItemStatus');
         var addResponsavelTrigger = document.getElementById('addItemResponsavelTrigger');
         var emptyState = document.getElementById('emptyStateItems');
@@ -1284,6 +1407,8 @@
                 addDesc.value = '';
                 resizeAddDesc();
             }
+            if (addPrioridade) addPrioridade.value = '';
+            if (addTipo) addTipo.value = '';
             addResponsavelNames = [];
             renderResponsavelPickerTrigger(addResponsavelTrigger, addResponsavelNames, 'Responsável');
             responsavelPickerManager.closeIfAnchor(addResponsavelTrigger);
@@ -1303,6 +1428,8 @@
             formWrap.removeAttribute('hidden');
             addDesc.value = '';
             resizeAddDesc();
+            if (addPrioridade) addPrioridade.value = '';
+            if (addTipo) addTipo.value = '';
             addStatus.value = 'programado';
             addResponsavelNames = [];
             renderResponsavelPickerTrigger(addResponsavelTrigger, addResponsavelNames, 'Responsável');
@@ -1323,26 +1450,47 @@
 
         function insertNewItem(data) {
             var item = data.item;
-            var rowHtml = '<div class="task-item-row" data-item-id="' + item.id + '" data-item-status="' + item.status + '" data-comments-count="0">' +
+            var prioridade = item.prioridade || '';
+            var tipoPedido = item.tipo_pedido || '';
+
+            var pOptions = '<option value="">—</option>' +
+                '<option value="baixa"' + (prioridade === 'baixa' ? ' selected' : '') + '>Baixa</option>' +
+                '<option value="media"' + (prioridade === 'media' ? ' selected' : '') + '>Média</option>' +
+                '<option value="alta"' + (prioridade === 'alta' ? ' selected' : '') + '>Alta</option>' +
+                '<option value="urgente"' + (prioridade === 'urgente' ? ' selected' : '') + '>Urgente</option>';
+            var tOptions = '<option value="">—</option>' +
+                '<option value="implementacao"' + (tipoPedido === 'implementacao' ? ' selected' : '') + '>Implementação</option>' +
+                '<option value="bug"' + (tipoPedido === 'bug' ? ' selected' : '') + '>Bug</option>' +
+                '<option value="melhoria"' + (tipoPedido === 'melhoria' ? ' selected' : '') + '>Melhoria</option>' +
+                '<option value="duvida"' + (tipoPedido === 'duvida' ? ' selected' : '') + '>Dúvida</option>' +
+                '<option value="outros"' + (tipoPedido === 'outros' ? ' selected' : '') + '>Outros</option>';
+
+            var rowHtml = '<div class="task-item-row" data-item-id="' + item.id + '" data-item-status="' + item.status + '" data-comments-count="0" data-item-prioridade="' + (prioridade || '') + '" data-item-tipo="' + (tipoPedido || '') + '" data-anexos-count="0">' +
                 '<div class="task-item-bar status-' + item.status + '"></div>' +
                 '<div class="task-item-main">' +
                 '<div class="task-item-line">' +
                 '<div class="task-item-desc-wrap">' +
-                '<p class="task-item-desc" data-item-id="' + item.id + '">' + escapeHtml(item.descricao) + '</p>' +
+                '<div class="task-item-desc-row">' +
+                '<p class="task-item-desc" data-item-id="' + item.id + '">' + htmlEncode(item.descricao) + '</p>' +
                 '<button type="button" class="task-item-desc-edit-btn" data-item-id="' + item.id + '" title="Editar descrição"><i class="fas fa-pen" aria-hidden="true"></i><span class="visually-hidden">Editar</span></button>' +
                 '</div>' +
+                '</div>' +
                 '<div class="task-item-meta">' +
+                '<select class="task-item-prioridade-select prioridade-' + (prioridade || 'none') + '" data-item-id="' + item.id + '" title="Prioridade" onchange="updateItemPrioridade(' + item.id + ', this.value, this)">' + pOptions + '</select>' +
+                '<select class="task-item-tipo-select" data-item-id="' + item.id + '" title="Tipo" onchange="updateItemTipo(' + item.id + ', this.value)">' + tOptions + '</select>' +
                 '<select class="task-item-status status-' + item.status + '" onchange="updateItemStatus(' + item.id + ', this.value)" title="Status">' +
                 '<option value="programado"' + (item.status === 'programado' ? ' selected' : '') + '>Programado</option>' +
                 '<option value="em_andamento"' + (item.status === 'em_andamento' ? ' selected' : '') + '>Em andamento</option>' +
                 '<option value="validacao"' + (item.status === 'validacao' ? ' selected' : '') + '>Validação</option>' +
                 '<option value="finalizado"' + (item.status === 'finalizado' ? ' selected' : '') + '>Finalizado</option>' +
                 '</select>' +
-                '<span class="task-item-responsavel" data-item-id="' + item.id + '">' + (item.responsavel ? escapeHtml(item.responsavel) : '<em class="responsavel-placeholder">Responsável não informado</em>') + '</span>' +
-                '<button type="button" class="task-item-comments-btn" aria-expanded="false" data-target="comments-body-' + item.id + '" onclick="toggleComments(this)">' +
-                '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-item-comments-label visually-hidden">Comentários</span><span class="task-item-comments-num">0</span></button>' +
+                '<span class="task-item-responsavel" data-item-id="' + item.id + '">' + (item.responsavel ? htmlEncode(item.responsavel) : '<em class="responsavel-placeholder">Responsável não informado</em>') + '</span>' +
                 '<div class="task-item-actions">' +
-                '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt" aria-hidden="true"></i><span class="visually-hidden">Excluir</span></button>' +
+                '<button type="button" class="task-item-comments-btn" aria-expanded="false" data-target="comments-body-' + item.id + '" onclick="toggleComments(this)" title="Comentários">' +
+                '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-item-comments-num">0</span></button>' +
+                '<button type="button" class="task-item-anexos-btn" title="Anexos" data-item-id="' + item.id + '">' +
+                '<i class="fas fa-paperclip" aria-hidden="true"></i><span class="task-item-anexos-num">0</span></button>' +
+                '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>' +
                 '</div></div></div>' +
                 '<div id="comments-body-' + item.id + '" class="task-item-comments" hidden>' +
                 '<div class="task-item-comments-inner">' +
@@ -1393,6 +1541,8 @@
                 formData.append('descricao', descricao);
                 formData.append('status', dataPayload.status || 'programado');
                 formData.append('responsavel', (dataPayload.responsavel || '').trim());
+                formData.append('prioridade', (dataPayload.prioridade || '').trim());
+                formData.append('tipo_pedido', (dataPayload.tipo_pedido || '').trim());
 
                 var xhr = new XMLHttpRequest();
                 xhr.open('POST', addUrl);
@@ -1425,6 +1575,8 @@
                 descricao: desc,
                 status: addStatus ? addStatus.value : 'programado',
                 responsavel: addResponsavelNames.join(', '),
+                prioridade: addPrioridade ? addPrioridade.value : '',
+                tipo_pedido: addTipo ? addTipo.value : '',
             })
                 .then(function (data) {
                     insertNewItem(data);
@@ -1501,6 +1653,13 @@
         };
     })();
 
+    // Utilidade global de escape HTML (usada fora de IIFEs)
+    function htmlEncode(s) {
+        var d = document.createElement('div');
+        d.textContent = String(s == null ? '' : s);
+        return d.innerHTML;
+    }
+
     function getTaskItemRowById(itemId) {
         return document.querySelector('.task-item-row[data-item-id="' + itemId + '"]');
     }
@@ -1532,6 +1691,10 @@
         var commentsNum = row.querySelector('.task-item-comments-num');
         if (commentsNum) {
             row.setAttribute('data-comments-count', String(parseInt(commentsNum.textContent || '0', 10) || 0));
+        }
+        var anexosNum = row.querySelector('.task-item-anexos-num');
+        if (anexosNum) {
+            row.setAttribute('data-anexos-count', String(parseInt(anexosNum.textContent || '0', 10) || 0));
         }
     }
 
@@ -1603,6 +1766,57 @@
         var numEl = row.querySelector('.task-item-comments-num');
         if (numEl) numEl.textContent = String(safeCount);
         row.setAttribute('data-comments-count', String(safeCount));
+    }
+
+    function getTaskItemPrioridade(row) {
+        if (!row) return '';
+        return row.getAttribute('data-item-prioridade') || '';
+    }
+
+    function getTaskItemTipoPedido(row) {
+        if (!row) return '';
+        return row.getAttribute('data-item-tipo') || '';
+    }
+
+    function getTaskItemAnexosCount(row) {
+        if (!row) return 0;
+        var count = parseInt(row.getAttribute('data-anexos-count') || '0', 10);
+        if (!Number.isFinite(count) || count < 0) count = 0;
+        return count;
+    }
+
+    function setTaskItemAnexosCount(row, count) {
+        if (!row) return;
+        var safeCount = parseInt(count, 10);
+        if (!Number.isFinite(safeCount) || safeCount < 0) safeCount = 0;
+        var numEl = row.querySelector('.task-item-anexos-num');
+        if (numEl) numEl.textContent = String(safeCount);
+        row.setAttribute('data-anexos-count', String(safeCount));
+    }
+
+    var PRIORIDADE_LABELS = { baixa: 'Baixa', media: 'Média', alta: 'Alta', urgente: 'Urgente' };
+    var TIPO_LABELS = { implementacao: 'Implementação', bug: 'Bug', melhoria: 'Melhoria', duvida: 'Dúvida', outros: 'Outros' };
+
+    function setTaskItemChips(row, prioridade, tipo) {
+        if (!row) return;
+        row.setAttribute('data-item-prioridade', prioridade || '');
+        row.setAttribute('data-item-tipo', tipo || '');
+
+        var prioSel = row.querySelector('.task-item-prioridade-select');
+        if (prioSel) {
+            prioSel.value = prioridade || '';
+            _applyPrioridadeClass(prioSel, prioridade || '');
+        }
+
+        var tipoSel = row.querySelector('.task-item-tipo-select');
+        if (tipoSel) {
+            tipoSel.value = tipo || '';
+        }
+    }
+
+    function _applyPrioridadeClass(sel, prioridade) {
+        sel.classList.remove('prioridade-baixa', 'prioridade-media', 'prioridade-alta', 'prioridade-urgente', 'prioridade-none');
+        sel.classList.add(prioridade ? 'prioridade-' + prioridade : 'prioridade-none');
     }
 
     function getTaskItemCommentsInner(row) {
@@ -1740,6 +1954,16 @@
             setTaskItemCommentsCount(row, item.comments_count);
         }
 
+        if (typeof item.anexos_count === 'number') {
+            setTaskItemAnexosCount(row, item.anexos_count);
+        }
+
+        if (typeof item.prioridade === 'string' || typeof item.tipo_pedido === 'string') {
+            var newPrioridade = typeof item.prioridade === 'string' ? item.prioridade : getTaskItemPrioridade(row);
+            var newTipo = typeof item.tipo_pedido === 'string' ? item.tipo_pedido : getTaskItemTipoPedido(row);
+            setTaskItemChips(row, newPrioridade, newTipo);
+        }
+
         syncTaskItemRowMetadata(row);
         return row;
     }
@@ -1749,6 +1973,8 @@
         formData.append('descricao', (payload && payload.descricao) || '');
         formData.append('status', (payload && payload.status) || 'programado');
         formData.append('responsavel', (payload && payload.responsavel) || '');
+        formData.append('prioridade', (payload && payload.prioridade) || '');
+        formData.append('tipo_pedido', (payload && payload.tipo_pedido) || '');
 
         return fetch('/tarefas/itens/' + itemId + '/edit', {
             method: 'POST',
@@ -1826,6 +2052,64 @@
             });
     }
 
+    function updateItemPrioridade(itemId, prioridade, selectEl) {
+        var prev = selectEl ? selectEl.getAttribute('data-prev-value') || '' : '';
+        if (selectEl) selectEl.setAttribute('data-prev-value', prioridade);
+
+        return fetch('/tarefas/itens/' + itemId + '/update_prioridade', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prioridade: prioridade || null })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.message || 'Erro ao atualizar prioridade.');
+                var row = getTaskItemRowById(itemId);
+                if (row) {
+                    row.setAttribute('data-item-prioridade', prioridade || '');
+                    if (selectEl) _applyPrioridadeClass(selectEl, prioridade);
+                    syncTaskItemRowMetadata(row);
+                }
+                if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                    window.taskItemsKanban.syncItemFromRow(String(itemId));
+                }
+                return data;
+            })
+            .catch(function (error) {
+                console.error('Erro:', error);
+                if (selectEl) {
+                    selectEl.value = prev;
+                    _applyPrioridadeClass(selectEl, prev);
+                }
+                alert(error && error.message ? error.message : 'Erro ao atualizar prioridade');
+            });
+    }
+
+    function updateItemTipo(itemId, tipo) {
+        return fetch('/tarefas/itens/' + itemId + '/update_tipo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo_pedido: tipo || null })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.message || 'Erro ao atualizar tipo.');
+                var row = getTaskItemRowById(itemId);
+                if (row) {
+                    row.setAttribute('data-item-tipo', tipo || '');
+                    syncTaskItemRowMetadata(row);
+                }
+                if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                    window.taskItemsKanban.syncItemFromRow(String(itemId));
+                }
+                return data;
+            })
+            .catch(function (error) {
+                console.error('Erro:', error);
+                alert(error && error.message ? error.message : 'Erro ao atualizar tipo');
+            });
+    }
+
     var taskItemsKanbanManager = (function () {
         var statusOrder = ['programado', 'em_andamento', 'validacao', 'finalizado'];
         var statusLabels = {
@@ -1867,6 +2151,13 @@
         var drawerCommentForm = document.getElementById('taskItemDrawerCommentForm');
         var drawerCommentsToggle = document.getElementById('taskItemDrawerCommentsToggle');
         var drawerCommentsBody = document.getElementById('taskItemDrawerCommentsBody');
+        var drawerPrioridade = document.getElementById('taskItemDrawerPrioridade');
+        var drawerTipoPedido = document.getElementById('taskItemDrawerTipoPedido');
+        var drawerAnexosToggle = document.getElementById('taskItemDrawerAnexosToggle');
+        var drawerAnexosBody = document.getElementById('taskItemDrawerAnexosBody');
+        var drawerAnexosList = document.getElementById('taskItemDrawerAnexosList');
+        var drawerAnexosCount = document.getElementById('taskItemDrawerAnexosCount');
+        var drawerAnexoInput = document.getElementById('taskItemDrawerAnexoInput');
 
         var currentView = 'list';
         var dragContext = null;
@@ -1940,7 +2231,9 @@
             var descricao = (data.descricao || '').trim();
             var status = normalizeStatus(data.status || 'programado');
             var responsavel = (data.responsavel || '').trim();
-            return [descricao, status, responsavel].join('\u001f');
+            var prioridade = (data.prioridade || '').trim();
+            var tipoPedido = (data.tipo_pedido || '').trim();
+            return [descricao, status, responsavel, prioridade, tipoPedido].join('\u001f');
         }
 
         function setToggleActiveState(mode) {
@@ -1995,6 +2288,9 @@
                 descricao: getTaskItemDescricao(row),
                 responsavel: getTaskItemResponsavel(row),
                 commentsCount: getTaskItemCommentsCount(row),
+                prioridade: getTaskItemPrioridade(row),
+                tipoPedido: getTaskItemTipoPedido(row),
+                anexosCount: getTaskItemAnexosCount(row),
             };
         }
 
@@ -2033,6 +2329,26 @@
 
             var commentsValue = card.querySelector('.task-items-kanban-comments-count');
             if (commentsValue) commentsValue.textContent = String(item.commentsCount || 0);
+
+            var anexosValue = card.querySelector('.task-items-kanban-anexos-count');
+            if (anexosValue) {
+                var anexosCount = item.anexosCount || 0;
+                anexosValue.textContent = anexosCount > 0 ? String(anexosCount) : '';
+                anexosValue.classList.toggle('is-hidden', anexosCount === 0);
+            }
+
+            var pChip = card.querySelector('.task-items-kanban-priority');
+            if (pChip) {
+                pChip.textContent = (item.prioridade && PRIORIDADE_LABELS[item.prioridade]) ? PRIORIDADE_LABELS[item.prioridade] : '';
+                pChip.className = 'task-items-kanban-priority' + (item.prioridade ? ' priority-' + item.prioridade : ' is-empty');
+            }
+
+            var tChip = card.querySelector('.task-items-kanban-tipo');
+            if (tChip) {
+                tChip.textContent = (item.tipoPedido && TIPO_LABELS[item.tipoPedido]) ? TIPO_LABELS[item.tipoPedido] : '';
+                tChip.className = 'task-items-kanban-tipo' + (item.tipoPedido ? '' : ' is-empty');
+            }
+
             var deleteBtn = card.querySelector('.task-items-kanban-delete-btn[data-action="kanban-delete"]');
             if (deleteBtn) deleteBtn.setAttribute('data-item-id', item.id);
             var confirmBox = card.querySelector('.task-items-kanban-delete-confirm[data-role="delete-confirm"]');
@@ -2073,10 +2389,33 @@
             owner.className = 'task-items-kanban-owner';
             meta.appendChild(owner);
 
+            var metaIcons = document.createElement('div');
+            metaIcons.className = 'task-items-kanban-meta-icons';
+
             var comments = document.createElement('span');
             comments.className = 'task-items-kanban-comments';
             comments.innerHTML = '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-items-kanban-comments-count">0</span>';
-            meta.appendChild(comments);
+            metaIcons.appendChild(comments);
+
+            var anexos = document.createElement('span');
+            anexos.className = 'task-items-kanban-anexos';
+            anexos.innerHTML = '<i class="fas fa-paperclip" aria-hidden="true"></i><span class="task-items-kanban-anexos-count is-hidden"></span>';
+            metaIcons.appendChild(anexos);
+
+            meta.appendChild(metaIcons);
+
+            var chipsGroup = document.createElement('div');
+            chipsGroup.className = 'task-items-kanban-chips';
+
+            var priority = document.createElement('span');
+            priority.className = 'task-items-kanban-priority is-empty';
+            chipsGroup.appendChild(priority);
+
+            var tipo = document.createElement('span');
+            tipo.className = 'task-items-kanban-tipo is-empty';
+            chipsGroup.appendChild(tipo);
+
+            top.insertBefore(chipsGroup, deleteBtn);
 
             card.appendChild(top);
             card.appendChild(desc);
@@ -2495,6 +2834,8 @@
                 descricao: (drawerDesc.value || '').trim(),
                 status: getTaskItemStatus(row),
                 responsavel: drawerState.responsavelNames.join(', '),
+                prioridade: drawerPrioridade ? drawerPrioridade.value : '',
+                tipo_pedido: drawerTipoPedido ? drawerTipoPedido.value : '',
             };
         }
 
@@ -2573,6 +2914,8 @@
                         descricao: data.item.descricao || payload.descricao,
                         status: data.item.status || payload.status,
                         responsavel: typeof data.item.responsavel === 'string' ? data.item.responsavel : payload.responsavel,
+                        prioridade: typeof data.item.prioridade === 'string' ? data.item.prioridade : payload.prioridade,
+                        tipo_pedido: typeof data.item.tipo_pedido === 'string' ? data.item.tipo_pedido : payload.tipo_pedido,
                     });
                     drawerState.hasUnsavedChanges = false;
                     setDrawerAutosaveStatus('saved', saveReason === 'blur' ? 'Salvo' : '');
@@ -2686,17 +3029,25 @@
             var descricao = getTaskItemDescricao(row);
             var responsavel = getTaskItemResponsavel(row);
             var status = getTaskItemStatus(row);
+            var prioridade = getTaskItemPrioridade(row);
+            var tipoPedido = getTaskItemTipoPedido(row);
+            var anexosCount = getTaskItemAnexosCount(row);
 
             if (!drawerState.isSaving && !drawerState.hasUnsavedChanges) {
                 drawerDesc.value = descricao;
                 setDrawerResponsavel(splitResponsavelNames(responsavel));
+                if (drawerPrioridade) drawerPrioridade.value = prioridade || '';
+                if (drawerTipoPedido) drawerTipoPedido.value = tipoPedido || '';
                 drawerState.lastSavedSnapshot = payloadSnapshot({
                     descricao: descricao,
                     status: status,
                     responsavel: responsavel,
+                    prioridade: prioridade,
+                    tipo_pedido: tipoPedido,
                 });
             }
             setDrawerStatus(status);
+            if (drawerAnexosCount) drawerAnexosCount.textContent = String(anexosCount);
             drawerTitle.textContent = (drawerDesc.value || '').trim() || descricao || 'Item sem descrição';
             renderDrawerCommentsFromRow(row, { forceBottom: drawerState.forceCommentsBottom });
             drawerState.forceCommentsBottom = false;
@@ -3082,6 +3433,8 @@
 
                 var selectedNames = [];
                 var isSaving = false;
+                var prioSelect = form.querySelector('.task-items-kanban-add-prioridade');
+                var tipoSelect = form.querySelector('.task-items-kanban-add-tipo');
                 renderResponsavelPickerTrigger(ownerTrigger, selectedNames, 'Responsável');
 
                 function openComposer() {
@@ -3101,6 +3454,8 @@
                     responsavelPickerManager.closeIfAnchor(ownerTrigger);
                     if (resetValues) {
                         desc.value = '';
+                        if (prioSelect) prioSelect.value = '';
+                        if (tipoSelect) tipoSelect.value = '';
                         selectedNames = [];
                         renderResponsavelPickerTrigger(ownerTrigger, selectedNames, 'Responsável');
                     }
@@ -3126,6 +3481,8 @@
                         descricao: descricao,
                         status: status,
                         responsavel: selectedNames.join(', '),
+                        prioridade: prioSelect ? prioSelect.value : '',
+                        tipo_pedido: tipoSelect ? tipoSelect.value : '',
                     })
                         .then(function (data) {
                             window.taskItemsListBridge.insertItemFromPayload(data);
@@ -3200,6 +3557,132 @@
             return true;
         }
 
+        function escapeAnexoHtml(s) {
+            var d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        function renderDrawerAnexoItem(anexo) {
+            var el = document.createElement('div');
+            el.className = 'task-item-drawer-anexo-item';
+            el.setAttribute('data-anexo-id', anexo.id);
+
+            var isImg = !!anexo.is_image;
+            var preview = '';
+            if (isImg) {
+                preview = '<img class="task-item-drawer-anexo-thumb" src="' + escapeAnexoHtml(anexo.url) + '" alt="' + escapeAnexoHtml(anexo.filename) + '" loading="lazy">';
+            } else {
+                preview = '<span class="task-item-drawer-anexo-icon"><i class="fas fa-file" aria-hidden="true"></i></span>';
+            }
+
+            el.innerHTML =
+                '<a class="task-item-drawer-anexo-link" href="' + escapeAnexoHtml(anexo.url) + '" target="_blank" rel="noopener">' +
+                preview +
+                '<span class="task-item-drawer-anexo-name">' + escapeAnexoHtml(anexo.filename) + '</span>' +
+                '</a>' +
+                '<button type="button" class="task-item-drawer-anexo-del" data-action="delete-anexo" data-anexo-id="' + anexo.id + '" title="Remover anexo">' +
+                '<i class="fas fa-times" aria-hidden="true"></i>' +
+                '</button>';
+            return el;
+        }
+
+        function loadDrawerAnexos(itemId) {
+            if (!drawerAnexosList) return;
+            drawerAnexosList.innerHTML = '<span class="task-item-drawer-anexos-loading">Carregando...</span>';
+
+            fetch('/tarefas/itens/' + itemId + '/anexos', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.message || 'Erro ao carregar anexos.');
+                    drawerAnexosList.innerHTML = '';
+                    if (!data.anexos.length) {
+                        var empty = document.createElement('p');
+                        empty.className = 'task-item-drawer-anexos-empty';
+                        empty.textContent = 'Nenhum anexo neste item.';
+                        drawerAnexosList.appendChild(empty);
+                    } else {
+                        data.anexos.forEach(function (a) {
+                            drawerAnexosList.appendChild(renderDrawerAnexoItem(a));
+                        });
+                    }
+                    var row = getTaskItemRowById(itemId);
+                    if (row) setTaskItemAnexosCount(row, data.count);
+                    if (drawerAnexosCount) drawerAnexosCount.textContent = String(data.count);
+                })
+                .catch(function (e) {
+                    if (drawerAnexosList) drawerAnexosList.innerHTML = '<p class="task-item-drawer-anexos-error">' + (e && e.message || 'Erro') + '</p>';
+                });
+        }
+
+        function uploadDrawerAnexo(itemId, file) {
+            if (!file || !itemId) return;
+            var formData = new FormData();
+            formData.append('file', file);
+
+            var uploadingEl = document.createElement('div');
+            uploadingEl.className = 'task-item-drawer-anexo-uploading';
+            uploadingEl.textContent = 'Enviando ' + file.name + '...';
+            if (drawerAnexosList) drawerAnexosList.appendChild(uploadingEl);
+
+            fetch('/tarefas/itens/' + itemId + '/anexos/add', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body: formData,
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.message || 'Erro ao enviar.');
+                    if (uploadingEl.parentNode) uploadingEl.parentNode.removeChild(uploadingEl);
+                    var emptyEl = drawerAnexosList ? drawerAnexosList.querySelector('.task-item-drawer-anexos-empty') : null;
+                    if (emptyEl) emptyEl.parentNode.removeChild(emptyEl);
+                    if (drawerAnexosList) drawerAnexosList.appendChild(renderDrawerAnexoItem(data.anexo));
+                    var row = getTaskItemRowById(itemId);
+                    if (row) setTaskItemAnexosCount(row, data.anexos_count);
+                    if (drawerAnexosCount) drawerAnexosCount.textContent = String(data.anexos_count);
+                    if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                        window.taskItemsKanban.syncItemFromRow(itemId);
+                    }
+                })
+                .catch(function (e) {
+                    if (uploadingEl.parentNode) uploadingEl.parentNode.removeChild(uploadingEl);
+                    alert((e && e.message) || 'Erro ao enviar anexo.');
+                });
+        }
+
+        function handleDrawerAnexoDelete(anexoId) {
+            if (!anexoId || !drawerState.itemId) return;
+            if (!confirm('Remover este anexo?')) return;
+
+            fetch('/tarefas/anexos/' + anexoId + '/delete', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.message || 'Erro ao excluir.');
+                    var itemEl = drawerAnexosList ? drawerAnexosList.querySelector('[data-anexo-id="' + anexoId + '"]') : null;
+                    if (itemEl) itemEl.parentNode.removeChild(itemEl);
+                    var row = getTaskItemRowById(drawerState.itemId);
+                    if (row) setTaskItemAnexosCount(row, data.anexos_count);
+                    if (drawerAnexosCount) drawerAnexosCount.textContent = String(data.anexos_count);
+                    if (drawerAnexosList && !drawerAnexosList.querySelector('.task-item-drawer-anexo-item')) {
+                        var empty = document.createElement('p');
+                        empty.className = 'task-item-drawer-anexos-empty';
+                        empty.textContent = 'Nenhum anexo neste item.';
+                        drawerAnexosList.appendChild(empty);
+                    }
+                    if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
+                        window.taskItemsKanban.syncItemFromRow(drawerState.itemId);
+                    }
+                })
+                .catch(function (e) {
+                    alert((e && e.message) || 'Erro ao remover anexo.');
+                });
+        }
+
         function bindDrawerEvents() {
             if (!hasDrawer()) return;
 
@@ -3257,6 +3740,45 @@
                 flushDrawerAutosave('blur');
             });
 
+            if (drawerPrioridade) {
+                drawerPrioridade.addEventListener('change', function () {
+                    if (!drawerState.itemId || isDeleting) return;
+                    scheduleDrawerAutosave({ immediate: true });
+                });
+            }
+            if (drawerTipoPedido) {
+                drawerTipoPedido.addEventListener('change', function () {
+                    if (!drawerState.itemId || isDeleting) return;
+                    scheduleDrawerAutosave({ immediate: true });
+                });
+            }
+
+            if (drawerAnexosToggle) {
+                drawerAnexosToggle.addEventListener('click', function () {
+                    if (!drawerState.itemId) return;
+                    var expanded = drawerAnexosToggle.getAttribute('aria-expanded') === 'true';
+                    drawerAnexosToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+                    drawerAnexosToggle.classList.toggle('is-expanded', !expanded);
+                    if (drawerAnexosBody) {
+                        if (expanded) {
+                            drawerAnexosBody.setAttribute('hidden', '');
+                        } else {
+                            drawerAnexosBody.removeAttribute('hidden');
+                            loadDrawerAnexos(drawerState.itemId);
+                        }
+                    }
+                });
+            }
+
+            if (drawerAnexoInput) {
+                drawerAnexoInput.addEventListener('change', function () {
+                    if (!drawerState.itemId || !drawerAnexoInput.files || !drawerAnexoInput.files.length) return;
+                    var file = drawerAnexoInput.files[0];
+                    uploadDrawerAnexo(drawerState.itemId, file);
+                    drawerAnexoInput.value = '';
+                });
+            }
+
             var commentTextarea = getDrawerCommentTextarea();
             if (commentTextarea) {
                 commentTextarea.addEventListener('input', function () {
@@ -3292,6 +3814,16 @@
                     handleDrawerDeleteComment(delBtn.getAttribute('data-comment-id'));
                 }
             });
+
+            if (drawerAnexosList) {
+                drawerAnexosList.addEventListener('click', function (event) {
+                    var delBtn = event.target.closest('[data-action="delete-anexo"][data-anexo-id]');
+                    if (delBtn) {
+                        event.preventDefault();
+                        handleDrawerAnexoDelete(delBtn.getAttribute('data-anexo-id'));
+                    }
+                });
+            }
 
             document.addEventListener('keydown', function (event) {
                 if (event.key === 'Escape' && drawerState.itemId) {
@@ -3470,6 +4002,15 @@
                     syncDrawerFromCurrentRow();
                 }
             },
+            openDrawerAnexos: function (itemId) {
+                openDrawer(itemId);
+                // expand the anexos section after drawer opens
+                setTimeout(function () {
+                    if (drawerAnexosToggle && drawerAnexosToggle.getAttribute('aria-expanded') !== 'true') {
+                        drawerAnexosToggle.click();
+                    }
+                }, 80);
+            },
         };
     })();
 
@@ -3579,7 +4120,7 @@
         }
 
         descEl.setAttribute('hidden', '');
-        descWrap.insertBefore(input, descEl.nextSibling);
+        descEl.parentNode.insertBefore(input, descEl.nextSibling);
         input.focus();
         resizeEditor();
         input.setSelectionRange(input.value.length, input.value.length);
@@ -3738,6 +4279,18 @@
             if (resp && !resp.classList.contains('task-item-resp-editing-active')) {
                 e.preventDefault();
                 inlineEditResponsavel(resp);
+                return;
+            }
+            // Botão de anexos - abre o drawer com a seção de anexos expandida
+            var anexosBtn = e.target.closest('.task-item-anexos-btn[data-item-id]');
+            if (anexosBtn) {
+                e.preventDefault();
+                var itemId = anexosBtn.getAttribute('data-item-id');
+                if (itemId && window.taskItemsKanban) {
+                    if (typeof window.taskItemsKanban.openDrawerAnexos === 'function') {
+                        window.taskItemsKanban.openDrawerAnexos(itemId);
+                    }
+                }
                 return;
             }
         });
