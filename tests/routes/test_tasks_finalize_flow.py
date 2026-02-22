@@ -92,7 +92,33 @@ def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(app, client_u
     project_tasks_page = client_user.get(f'/projeto/{project_id}/tarefas')
     assert project_tasks_page.status_code == 200
     assert task_title not in project_tasks_page.data
+    assert f'/tarefas/finalizadas?project={project_id}'.encode() in project_tasks_page.data
 
     dashboard_page = client_user.get('/dashboard')
     assert dashboard_page.status_code == 200
     assert task_title not in dashboard_page.data
+
+
+def test_project_tasks_template_contract_has_modal_project_locked_and_no_view_button(client_user, seed_data):
+    response = client_user.get(f"/projeto/{seed_data['project_id']}/tarefas")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert f'/tarefas/finalizadas?project={seed_data["project_id"]}' in html
+    assert f'/tarefas/{seed_data["task_id"]}/finalizar' in html
+    assert 'btn-view-clean' not in html
+    assert 'class="project-view-breadcrumb"' in html
+    assert 'breadcrumb-item' not in html
+    assert 'id="project_locked"' in html
+    assert 'readonly' in html
+    assert f'<input type="hidden" name="project_id" value="{seed_data["project_id"]}">' in html
+
+
+def test_project_tasks_empty_state_has_no_create_first_button(client_user, seed_data):
+    response = client_user.get(f"/projeto/{seed_data['project_complete_id']}/tarefas")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert 'Nenhuma tarefa neste projeto' in html
+    assert 'Crie a primeira tarefa para este projeto' not in html
+    assert 'Criar Primeira Tarefa' not in html

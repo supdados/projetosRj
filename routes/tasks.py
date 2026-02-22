@@ -934,8 +934,22 @@ def project_tasks(project_id):
         .order_by(Task.created_at.desc())
         .all()
     )
+
+    finalized_count = (
+        Task.query
+        .filter_by(project_id=project_id, is_finalized=True)
+        .count()
+    )
+
+    finalized_tasks_url = url_for('main.list_tasks_finalized', project=project_id)
     
-    return render_template('project_tasks.html', project=project, tasks=tasks)
+    return render_template(
+        'project_tasks.html',
+        project=project,
+        tasks=tasks,
+        finalized_count=finalized_count,
+        finalized_tasks_url=finalized_tasks_url,
+    )
 
 # ===================================
 # ANEXOS DE ITENS DE TAREFA

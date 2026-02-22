@@ -8,14 +8,15 @@
 
 {% block content %}
 <div class="app-page-shell app-page-shell--raised project-tasks-page">
+            {% set current_url = request.full_path.rstrip('?') %}
             <!-- Breadcrumb -->
-            <nav aria-label="breadcrumb" class="project-tasks-breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('main.list_projects') }}">Projetos</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('main.project_detail', project_id=project.id) }}">{{
-                            project.titulo }}</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Tarefas</li>
-                </ol>
+            <nav aria-label="Navegação" class="project-view-breadcrumb">
+                <a href="{{ url_for('main.list_projects') }}" class="project-breadcrumb-link">Projetos</a>
+                <span class="project-breadcrumb-sep">/</span>
+                <a href="{{ url_for('main.project_detail', project_id=project.id) }}"
+                    class="project-breadcrumb-link">{{ project.titulo }}</a>
+                <span class="project-breadcrumb-sep">/</span>
+                <span class="project-breadcrumb-current" aria-current="page">Tarefas</span>
             </nav>
 
             <!-- Project Info Card -->
@@ -47,10 +48,20 @@
                     </h4>
                     <span class="header-count">{{ tasks|length }} tarefa{{ 's' if tasks|length != 1 else '' }} ativa{{ 's' if tasks|length != 1 else '' }}</span>
                 </div>
-                <button type="button" class="btn-new-clean" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-                    <i class="fas fa-plus"></i>
-                    Nova Tarefa
-                </button>
+                <div class="tasks-header-actions">
+                    <a href="{{ finalized_tasks_url }}"
+                        class="btn-task-archive-clean"
+                        title="Ver tarefas finalizadas"
+                        aria-label="Ver tarefas finalizadas">
+                        <i class="fas fa-box-archive" aria-hidden="true"></i>
+                        <span>Finalizadas</span>
+                        <span class="tasks-archive-count-clean">{{ finalized_count }}</span>
+                    </a>
+                    <button type="button" class="btn-new-clean" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                        <i class="fas fa-plus"></i>
+                        Nova Tarefa
+                    </button>
+                </div>
             </div>
 
             <!-- Tasks List -->
@@ -67,7 +78,7 @@
                             <h5 class="task-name-clean">{{ task.titulo }}</h5>
                             <span class="task-items-count">
                                 <i class="fas fa-list-ol"></i>
-                                {{ task.items|length }} item{{ 's' if task.items|length != 1 else '' }}
+                                {{ task.items|length }} {{ 'item' if task.items|length == 1 else 'itens' }}
                             </span>
                         </div>
 
@@ -94,10 +105,14 @@
                     </div>
 
                     <div class="task-actions-clean" onclick="event.stopPropagation();">
-                        <a href="{{ url_for('main.task_detail', task_id=task.id) }}"
-                            class="btn-action-clean btn-view-clean" title="Ver Detalhes">
-                            <i class="fas fa-eye"></i>
-                        </a>
+                        <form action="{{ url_for('main.finalize_task', task_id=task.id) }}" method="POST" class="d-inline"
+                            onsubmit="return confirm('Deseja finalizar esta tarefa?');">
+                            <input type="hidden" name="next" value="{{ current_url }}">
+                            <button type="submit" class="btn-action-clean btn-finalize-clean" title="Finalizar tarefa">
+                                <i class="fas fa-box-archive" aria-hidden="true"></i>
+                                <span>Finalizar</span>
+                            </button>
+                        </form>
                         <button type="button" class="btn-action-clean btn-delete-clean" data-bs-toggle="modal"
                             data-bs-target="#deleteModal-{{ task.id }}" title="Excluir">
                             <i class="fas fa-trash-alt"></i>
@@ -126,7 +141,7 @@
                                 {% if task.items %}
                                 <p class="text-warning small">
                                     <i class="fas fa-warning"></i>
-                                    Esta tarefa possui {{ task.items|length }} item(s) que também serão excluídos.
+                                    Esta tarefa possui {{ task.items|length }} {{ 'item' if task.items|length == 1 else 'itens' }} que também serão excluídos.
                                 </p>
                                 {% endif %}
                             </div>
@@ -149,49 +164,51 @@
                 <div class="empty-state-clean">
                     <i class="fas fa-tasks"></i>
                     <h5>Nenhuma tarefa neste projeto</h5>
-                    <p>Crie a primeira tarefa para este projeto</p>
-                    <button type="button" class="btn-new-clean" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-                        <i class="fas fa-plus"></i>
-                        Criar Primeira Tarefa
-                    </button>
+                    <p>Ainda não há tarefas ativas para este projeto.</p>
                 </div>
                 {% endfor %}
             </div>
 </div>
 
 <!-- Modal Adicionar Tarefa -->
-<div class="modal fade" id="addTaskModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content modal-clean">
+<div class="modal fade tasks-modal" id="addTaskModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content tasks-modal-content">
             <form action="{{ url_for('main.add_task') }}" method="POST">
                 <input type="hidden" name="project_id" value="{{ project.id }}">
 
-                <div class="modal-header-clean">
-                    <div class="modal-icon-clean task-modal-icon-primary">
-                        <i class="fas fa-tasks task-modal-icon-symbol"></i>
-                    </div>
+                <div class="tasks-modal-header">
                     <div>
-                        <h5 class="modal-title-clean ds-type-section-title">Nova Tarefa</h5>
-                        <p class="modal-subtitle-clean ds-type-body-sm">Tarefa para: {{ project.titulo }}</p>
+                        <h5 class="tasks-modal-title">Nova tarefa</h5>
+                        <p class="tasks-modal-subtitle mb-0">Crie uma nova tarefa e adicione itens depois.</p>
                     </div>
-                    <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
-                        <i class="fas fa-times"></i>
+                    <button type="button" class="tasks-modal-close" data-bs-dismiss="modal" aria-label="Fechar">
+                        &times;
                     </button>
                 </div>
-                <div class="modal-body-clean">
+
+                <div class="tasks-modal-body">
                     <div class="mb-3">
-                        <label for="titulo" class="form-label">Título da Tarefa <span
-                                class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="titulo" name="titulo" required>
+                        <label for="titulo" class="tasks-label ds-type-label">Título da tarefa <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control tasks-input" id="titulo" name="titulo" required>
+                    </div>
+
+                    <div class="mb-0">
+                        <label for="project_locked" class="tasks-label ds-type-label">Projeto</label>
+                        <input
+                            type="text"
+                            class="form-control tasks-input tasks-input-locked"
+                            id="project_locked"
+                            value="{{ project.titulo }}"
+                            readonly
+                            aria-readonly="true">
+                        <div class="tasks-help-text">Projeto já selecionado para esta criação.</div>
                     </div>
                 </div>
-                <div class="modal-footer-clean">
-                    <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn-modal-clean task-modal-submit-primary">
-                        <i class="fas fa-save"></i> Criar Tarefa
-                    </button>
+
+                <div class="tasks-modal-footer">
+                    <button type="button" class="btn-task-clean btn-task-secondary-clean" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-task-clean btn-task-primary-clean">Criar tarefa</button>
                 </div>
             </form>
         </div>
