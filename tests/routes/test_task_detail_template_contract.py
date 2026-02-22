@@ -25,7 +25,12 @@ def test_task_detail_template_contains_view_toggle_hooks(client_user, seed_data)
         'id="taskItemDrawerDeleteIcon"',
         'id="taskItemDrawerCommentsStatus"',
         'id="taskItemDrawerDeleteConfirmBtn"',
+        'id="taskQuickAnexoInput"',
+        'id="taskAnexoPreviewModal"',
+        'id="taskAnexoPreviewBackdrop"',
         'task-items-kanban-delete-btn',
+        'kanban-open-comments',
+        'kanban-open-anexos',
     ]
 
     for hook in required_hooks:
@@ -33,6 +38,8 @@ def test_task_detail_template_contains_view_toggle_hooks(client_user, seed_data)
 
     assert 'task-items-kanban-open-list' not in html
     assert 'Abrir na lista' not in html
+    assert 'id="taskHeaderSave"' not in html
+    assert 'id="taskHeaderCancel"' not in html
     assert 'id="taskItemDrawerSave"' not in html
     assert 'id="taskItemDrawerDeleteTrigger"' not in html
 

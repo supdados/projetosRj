@@ -261,14 +261,13 @@
     justify-content: space-between;
     align-items: flex-start;
     cursor: pointer;
-    transition: box-shadow 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+    transition: box-shadow 0.16s ease, border-color 0.16s ease;
 }
 
 .task-card:hover,
 .task-card:focus-within {
     border-color: #c8dbef;
     box-shadow: 0 14px 28px rgba(15, 56, 93, 0.12);
-    transform: translateY(-1px);
 }
 
 .task-card-main {
