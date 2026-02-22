@@ -7,7 +7,7 @@ from flask import Flask, g, session
 from flask_migrate import Migrate
 from sqlalchemy import inspect, text
 
-from models import User, db
+from models import User, UserNotification, db
 from objective_catalog import sync_goal_catalog_to_db
 from routes import inject_current_year, main_bp
 
@@ -168,9 +168,20 @@ def _register_context_processors(app):
     def inject_user_info_to_templates():
         current_user_obj = g.user if hasattr(g, 'user') else None
         is_admin = bool(current_user_obj and current_user_obj.is_admin)
+        unread_notifications_count = 0
+        if current_user_obj:
+            unread_notifications_count = (
+                UserNotification.query
+                .filter(
+                    UserNotification.recipient_user_id == current_user_obj.id,
+                    UserNotification.is_read.is_(False),
+                )
+                .count()
+            )
         return {
             'current_user_obj': current_user_obj,
             'is_admin_user': is_admin,
+            'unread_notifications_count': unread_notifications_count,
         }
 
 

@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy.orm import joinedload
 
 from models import Project, Task, TaskItem, TaskItemAnexo, TaskItemComment, User, UserArea, db
+from services.notifications import notify_task_assignment_change, notify_task_event
 
 from .blueprint import main_bp
 from .decorators import login_required
@@ -37,6 +38,23 @@ def _can_view_task(user, task):
         task.created_by_id == user.id or
         (task.project_id and task.project and task.project.area_responsavel in user.get_areas())
     )
+
+
+def _task_item_status_label(status):
+    status_labels = {
+        'programado': 'Programado',
+        'em_andamento': 'Em andamento',
+        'validacao': 'Validacao',
+        'finalizado': 'Finalizado',
+    }
+    return status_labels.get(status, status or '')
+
+
+def _preview_text(value, max_length=90):
+    text_value = ' '.join((value or '').split())
+    if len(text_value) <= max_length:
+        return text_value
+    return text_value[: max_length - 3].rstrip() + '...'
 
 
 def _normalize_person_name(name):
@@ -393,10 +411,20 @@ def edit_task(task_id):
         project_id = None
     
     # Atualizar tarefa
+    old_titulo = task.titulo
+    old_project_id = task.project_id
     task.titulo = titulo
     task.project_id = project_id
     
     try:
+        if old_titulo != task.titulo or old_project_id != task.project_id:
+            notify_task_event(
+                task,
+                actor_user_id=g.user.id,
+                event_type='task_updated',
+                title=f'Tarefa atualizada: "{task.titulo}"',
+                message=f'{g.user.name} atualizou os dados da tarefa.',
+            )
         db.session.commit()
         project_titulo = task.project.titulo if task.project else None
         return jsonify({
@@ -427,6 +455,14 @@ def delete_task(task_id):
         return _redirect_back_or('main.list_tasks')
     
     try:
+        notify_task_event(
+            task,
+            actor_user_id=g.user.id,
+            event_type='task_deleted',
+            title=f'Tarefa excluida: "{task.titulo}"',
+            message=f'{g.user.name} excluiu a tarefa.',
+            target_url=url_for('main.list_tasks'),
+        )
         db.session.delete(task)
         db.session.commit()
         flash('Tarefa excluída com sucesso!', 'success')
@@ -453,6 +489,14 @@ def finalize_task(task_id):
     try:
         task.is_finalized = True
         task.finalized_at = datetime.datetime.utcnow()
+        notify_task_event(
+            task,
+            actor_user_id=g.user.id,
+            event_type='task_finalized',
+            title=f'Tarefa finalizada: "{task.titulo}"',
+            message=f'{g.user.name} finalizou a tarefa.',
+            target_url=url_for('main.list_tasks_finalized'),
+        )
         db.session.commit()
         flash('Tarefa finalizada com sucesso!', 'success')
     except Exception as e:
@@ -478,6 +522,13 @@ def reactivate_task(task_id):
     try:
         task.is_finalized = False
         task.finalized_at = None
+        notify_task_event(
+            task,
+            actor_user_id=g.user.id,
+            event_type='task_reactivated',
+            title=f'Tarefa reativada: "{task.titulo}"',
+            message=f'{g.user.name} reativou a tarefa.',
+        )
         db.session.commit()
         flash('Tarefa reativada com sucesso!', 'success')
     except Exception as e:
@@ -549,6 +600,17 @@ def add_task_item(task_id):
 
     try:
         db.session.add(item)
+        db.session.flush()
+        notify_task_event(
+            task,
+            actor_user_id=g.user.id,
+            event_type='task_item_created',
+            title=f'Novo item em "{task.titulo}"',
+            message=f'{g.user.name} criou o item "{_preview_text(item.descricao, 90)}" com status {_task_item_status_label(item.status)}.',
+            item_id=item.id,
+        )
+        if item.responsavel:
+            notify_task_assignment_change(task, item, g.user.id, old_responsavel=None, new_responsavel=item.responsavel)
         db.session.commit()
         if is_ajax:
             return jsonify({
@@ -606,6 +668,12 @@ def edit_task_item(item_id):
     if not is_valid_responsavel:
         return jsonify({'success': False, 'message': _format_invalid_responsavel_message(invalid_names)}), 400
 
+    old_descricao = item.descricao
+    old_status = item.status
+    old_responsavel = item.responsavel
+    old_prioridade = item.prioridade
+    old_tipo_pedido = item.tipo_pedido
+
     # Atualizar item
     item.descricao = descricao
     item.status = status
@@ -614,6 +682,35 @@ def edit_task_item(item_id):
     item.tipo_pedido = tipo_pedido
 
     try:
+        changes = []
+        if old_descricao != item.descricao:
+            changes.append('descricao')
+        if old_status != item.status:
+            changes.append(f'status para {_task_item_status_label(item.status)}')
+        if old_prioridade != item.prioridade:
+            changes.append(f'prioridade para "{item.prioridade or "vazio"}"')
+        if old_tipo_pedido != item.tipo_pedido:
+            changes.append(f'tipo para "{item.tipo_pedido or "vazio"}"')
+
+        if changes:
+            notify_task_event(
+                task,
+                actor_user_id=g.user.id,
+                event_type='task_item_updated',
+                title=f'Item atualizado em "{task.titulo}"',
+                message=f'{g.user.name} atualizou o item "{_preview_text(item.descricao, 90)}": {", ".join(changes)}.',
+                item_id=item.id,
+            )
+
+        if (old_responsavel or '') != (item.responsavel or ''):
+            notify_task_assignment_change(
+                task,
+                item,
+                g.user.id,
+                old_responsavel=old_responsavel,
+                new_responsavel=item.responsavel,
+            )
+
         db.session.commit()
         return jsonify({
             'success': True,
@@ -652,6 +749,15 @@ def delete_task_item(item_id):
         return redirect(url_for('main.task_detail', task_id=task_id))
     
     try:
+        notify_task_event(
+            task,
+            actor_user_id=g.user.id,
+            event_type='task_item_deleted',
+            title=f'Item excluido em "{task.titulo}"',
+            message=f'{g.user.name} excluiu o item "{_preview_text(item.descricao, 90)}".',
+            item_id=item.id,
+            target_url=url_for('main.task_detail', task_id=task.id),
+        )
         db.session.delete(item)
         db.session.commit()
         if is_ajax:
@@ -683,9 +789,22 @@ def update_task_item_status(item_id):
     if status not in ['programado', 'em_andamento', 'validacao', 'finalizado']:
         return jsonify({'success': False, 'message': 'Status inválido'}), 400
     
+    old_status = item.status
     item.status = status
     
     try:
+        if old_status != item.status:
+            notify_task_event(
+                task,
+                actor_user_id=g.user.id,
+                event_type='task_item_status_updated',
+                title=f'Status atualizado em "{task.titulo}"',
+                message=(
+                    f'{g.user.name} alterou o status do item "{_preview_text(item.descricao, 90)}" '
+                    f'de {_task_item_status_label(old_status)} para {_task_item_status_label(item.status)}.'
+                ),
+                item_id=item.id,
+            )
         db.session.commit()
         return jsonify({'success': True, 'message': 'Status atualizado'})
     except Exception as e:
@@ -703,8 +822,21 @@ def update_task_item_prioridade(item_id):
     prioridade = request.json.get('prioridade', '') or None
     if prioridade and prioridade not in VALID_PRIORIDADES:
         return jsonify({'success': False, 'message': 'Prioridade inválida'}), 400
+    old_prioridade = item.prioridade
     item.prioridade = prioridade
     try:
+        if old_prioridade != item.prioridade:
+            notify_task_event(
+                item.task,
+                actor_user_id=g.user.id,
+                event_type='task_item_priority_updated',
+                title=f'Prioridade atualizada em "{item.task.titulo}"',
+                message=(
+                    f'{g.user.name} alterou a prioridade do item "{_preview_text(item.descricao, 90)}" '
+                    f'de "{old_prioridade or "vazio"}" para "{item.prioridade or "vazio"}".'
+                ),
+                item_id=item.id,
+            )
         db.session.commit()
         return jsonify({'success': True, 'prioridade': item.prioridade or ''})
     except Exception as e:
@@ -722,8 +854,21 @@ def update_task_item_tipo(item_id):
     tipo = request.json.get('tipo_pedido', '') or None
     if tipo and tipo not in VALID_TIPOS:
         return jsonify({'success': False, 'message': 'Tipo inválido'}), 400
+    old_tipo = item.tipo_pedido
     item.tipo_pedido = tipo
     try:
+        if old_tipo != item.tipo_pedido:
+            notify_task_event(
+                item.task,
+                actor_user_id=g.user.id,
+                event_type='task_item_type_updated',
+                title=f'Tipo atualizado em "{item.task.titulo}"',
+                message=(
+                    f'{g.user.name} alterou o tipo do item "{_preview_text(item.descricao, 90)}" '
+                    f'de "{old_tipo or "vazio"}" para "{item.tipo_pedido or "vazio"}".'
+                ),
+                item_id=item.id,
+            )
         db.session.commit()
         return jsonify({'success': True, 'tipo_pedido': item.tipo_pedido or ''})
     except Exception as e:
@@ -819,6 +964,15 @@ def add_task_item_comment(item_id):
     )
     try:
         db.session.add(comment)
+        db.session.flush()
+        notify_task_event(
+            task,
+            actor_user_id=g.user.id,
+            event_type='task_item_comment_added',
+            title=f'Novo comentario em "{task.titulo}"',
+            message=f'{g.user.name} comentou: "{_preview_text(comment.content, 120)}".',
+            item_id=item.id,
+        )
         db.session.commit()
         if is_ajax:
             return jsonify({
@@ -862,9 +1016,21 @@ def edit_task_item_comment(comment_id):
         flash('O comentário não pode estar vazio.', 'warning')
         return redirect(url_for('main.task_detail', task_id=comment.task_item.task_id))
     
+    old_content = comment.content
     comment.content = content
     comment.updated_at = datetime.datetime.utcnow()
     try:
+        notify_task_event(
+            comment.task_item.task,
+            actor_user_id=g.user.id,
+            event_type='task_item_comment_updated',
+            title=f'Comentario editado em "{comment.task_item.task.titulo}"',
+            message=(
+                f'{g.user.name} editou um comentario no item "{_preview_text(comment.task_item.descricao, 90)}": '
+                f'"{_preview_text(old_content, 70)}" -> "{_preview_text(comment.content, 70)}".'
+            ),
+            item_id=comment.task_item_id,
+        )
         db.session.commit()
         if is_ajax:
             return jsonify({
@@ -901,6 +1067,17 @@ def delete_task_item_comment(comment_id):
         return redirect(url_for('main.task_detail', task_id=task_id))
     
     try:
+        notify_task_event(
+            comment.task_item.task,
+            actor_user_id=g.user.id,
+            event_type='task_item_comment_deleted',
+            title=f'Comentario removido em "{comment.task_item.task.titulo}"',
+            message=(
+                f'{g.user.name} removeu um comentario no item '
+                f'"{_preview_text(comment.task_item.descricao, 90)}".'
+            ),
+            item_id=comment.task_item_id,
+        )
         db.session.delete(comment)
         db.session.commit()
         if is_ajax:
@@ -1022,6 +1199,15 @@ def add_task_item_anexo(item_id):
     )
     try:
         db.session.add(anexo)
+        db.session.flush()
+        notify_task_event(
+            item.task,
+            actor_user_id=g.user.id,
+            event_type='task_item_attachment_added',
+            title=f'Novo anexo em "{item.task.titulo}"',
+            message=f'{g.user.name} anexou "{_preview_text(anexo.filename, 90)}" ao item "{_preview_text(item.descricao, 90)}".',
+            item_id=item.id,
+        )
         db.session.commit()
         return jsonify({
             'success': True,
@@ -1075,6 +1261,14 @@ def delete_task_item_anexo(anexo_id):
     file_path = os.path.join(upload_folder, anexo.stored_filename)
 
     try:
+        notify_task_event(
+            item.task,
+            actor_user_id=g.user.id,
+            event_type='task_item_attachment_deleted',
+            title=f'Anexo removido em "{item.task.titulo}"',
+            message=f'{g.user.name} removeu o anexo "{_preview_text(anexo.filename, 90)}" do item "{_preview_text(item.descricao, 90)}".',
+            item_id=item.id,
+        )
         db.session.delete(anexo)
         db.session.commit()
         try:

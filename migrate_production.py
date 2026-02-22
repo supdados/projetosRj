@@ -287,6 +287,93 @@ def run_migrations(engine):
         else:
             log.append("  [--] Tabela `task_item_anexo` já existe.")
 
+        # ── 11. Tabela `user_notification` ───────────────────────────────────
+        log.append("\n[user_notification]:")
+        if not table_exists(inspector, 'user_notification'):
+            conn.execute(text("""
+                CREATE TABLE `user_notification` (
+                    `id`                INT AUTO_INCREMENT PRIMARY KEY,
+                    `recipient_user_id` INT          NOT NULL,
+                    `actor_user_id`     INT          NULL,
+                    `event_type`        VARCHAR(80)  NOT NULL,
+                    `title`             VARCHAR(200) NOT NULL,
+                    `message`           TEXT         NOT NULL,
+                    `target_url`        VARCHAR(500) NOT NULL,
+                    `is_read`           BOOLEAN      NOT NULL DEFAULT 0,
+                    `created_at`        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `read_at`           DATETIME     NULL,
+                    CONSTRAINT `fk_un_recipient`
+                        FOREIGN KEY (`recipient_user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE,
+                    CONSTRAINT `fk_un_actor`
+                        FOREIGN KEY (`actor_user_id`) REFERENCES `user`(`id`) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """))
+            conn.execute(text("CREATE INDEX `ix_user_notification_recipient_user_id` ON `user_notification` (`recipient_user_id`)"))
+            conn.execute(text("CREATE INDEX `ix_user_notification_actor_user_id` ON `user_notification` (`actor_user_id`)"))
+            conn.execute(text("CREATE INDEX `ix_user_notification_event_type` ON `user_notification` (`event_type`)"))
+            conn.execute(text("CREATE INDEX `ix_user_notification_is_read` ON `user_notification` (`is_read`)"))
+            conn.execute(text(
+                "CREATE INDEX `ix_user_notification_recipient_read_created` "
+                "ON `user_notification` (`recipient_user_id`, `is_read`, `created_at`)"
+            ))
+            conn.commit()
+            log.append("  [OK] Tabela `user_notification` criada.")
+        else:
+            ensure_column(inspector, conn, 'user_notification', 'recipient_user_id', 'INT NOT NULL', log)
+            ensure_column(inspector, conn, 'user_notification', 'actor_user_id', 'INT NULL', log)
+            ensure_column(inspector, conn, 'user_notification', 'event_type', 'VARCHAR(80) NOT NULL', log)
+            ensure_column(inspector, conn, 'user_notification', 'title', 'VARCHAR(200) NOT NULL', log)
+            ensure_column(inspector, conn, 'user_notification', 'message', 'TEXT NOT NULL', log)
+            ensure_column(inspector, conn, 'user_notification', 'target_url', 'VARCHAR(500) NOT NULL', log)
+            ensure_column(inspector, conn, 'user_notification', 'is_read', 'BOOLEAN NOT NULL DEFAULT 0', log)
+            ensure_column(inspector, conn, 'user_notification', 'created_at', 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP', log)
+            ensure_column(inspector, conn, 'user_notification', 'read_at', 'DATETIME NULL', log)
+
+            try:
+                user_notification_indexes = {
+                    idx['name'] for idx in inspect(engine).get_indexes('user_notification')
+                }
+            except Exception:
+                user_notification_indexes = set()
+
+            if 'ix_user_notification_recipient_user_id' not in user_notification_indexes:
+                conn.execute(text("CREATE INDEX `ix_user_notification_recipient_user_id` ON `user_notification` (`recipient_user_id`)"))
+                conn.commit()
+                log.append("  [OK] Índice user_notification.recipient_user_id criado.")
+            else:
+                log.append("  [--] Índice user_notification.recipient_user_id já existe.")
+
+            if 'ix_user_notification_actor_user_id' not in user_notification_indexes:
+                conn.execute(text("CREATE INDEX `ix_user_notification_actor_user_id` ON `user_notification` (`actor_user_id`)"))
+                conn.commit()
+                log.append("  [OK] Índice user_notification.actor_user_id criado.")
+            else:
+                log.append("  [--] Índice user_notification.actor_user_id já existe.")
+
+            if 'ix_user_notification_event_type' not in user_notification_indexes:
+                conn.execute(text("CREATE INDEX `ix_user_notification_event_type` ON `user_notification` (`event_type`)"))
+                conn.commit()
+                log.append("  [OK] Índice user_notification.event_type criado.")
+            else:
+                log.append("  [--] Índice user_notification.event_type já existe.")
+
+            if 'ix_user_notification_is_read' not in user_notification_indexes:
+                conn.execute(text("CREATE INDEX `ix_user_notification_is_read` ON `user_notification` (`is_read`)"))
+                conn.commit()
+                log.append("  [OK] Índice user_notification.is_read criado.")
+            else:
+                log.append("  [--] Índice user_notification.is_read já existe.")
+
+            if 'ix_user_notification_recipient_read_created' not in user_notification_indexes:
+                conn.execute(text(
+                    "CREATE INDEX `ix_user_notification_recipient_read_created` "
+                    "ON `user_notification` (`recipient_user_id`, `is_read`, `created_at`)"
+                ))
+                conn.commit()
+                log.append("  [OK] Índice user_notification.recipient_read_created criado.")
+            else:
+                log.append("  [--] Índice user_notification.recipient_read_created já existe.")
+
     return log
 
 

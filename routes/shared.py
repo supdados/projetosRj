@@ -11,6 +11,7 @@ from objective_catalog import (
     get_objetivos_choices,
     get_resultados_por_objetivo,
 )
+from services.notifications import notify_project_history_action
 
 TIMEZONE_BR = ZoneInfo('America/Sao_Paulo')
 AREAS_RESPONSAVEIS_CHOICES = [
@@ -44,6 +45,9 @@ def log_project_action(project_id, action_type, description, old_value=None, new
     Registra uma ação no histórico do projeto.
     """
     try:
+        if not getattr(g, 'user', None):
+            return
+
         history_entry = ProjectHistory(
             project_id=project_id,
             user_id=g.user.id,
@@ -53,6 +57,18 @@ def log_project_action(project_id, action_type, description, old_value=None, new
             new_value=new_value,
         )
         db.session.add(history_entry)
+
+        try:
+            notify_project_history_action(
+                project_id=project_id,
+                actor_user_id=g.user.id,
+                action_type=action_type,
+                action_description=description,
+                old_value=old_value,
+                new_value=new_value,
+            )
+        except Exception as notification_error:
+            print(f'Erro ao registrar notificacao de projeto: {notification_error}')
     except Exception as e:
         print(f'Erro ao registrar histórico: {e}')
 

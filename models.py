@@ -199,6 +199,38 @@ class ProjectHistory(db.Model):
     def __repr__(self):
         return f'<ProjectHistory {self.action_type} by user {self.user_id} at {self.timestamp}>'
 
+
+class UserNotification(db.Model):
+    """Notificações in-app por usuário."""
+    __tablename__ = 'user_notification'
+
+    id = db.Column(db.Integer, primary_key=True)
+    recipient_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    actor_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    event_type = db.Column(db.String(80), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    target_url = db.Column(db.String(500), nullable=False)
+    is_read = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    read_at = db.Column(db.DateTime, nullable=True)
+
+    recipient = db.relationship('User', foreign_keys=[recipient_user_id], backref='received_notifications')
+    actor = db.relationship('User', foreign_keys=[actor_user_id], backref='sent_notifications')
+
+    __table_args__ = (
+        db.Index(
+            'ix_user_notification_recipient_read_created',
+            'recipient_user_id',
+            'is_read',
+            'created_at',
+        ),
+    )
+
+    def __repr__(self):
+        return f'<UserNotification {self.event_type} to user {self.recipient_user_id}>'
+
+
 class Task(db.Model):
     """Modelo para Tarefas - podem ou não estar associadas a projetos"""
     __tablename__ = 'task'

@@ -9,6 +9,7 @@ from . import auth  # noqa: F401,E402
 from . import dashboard  # noqa: F401,E402
 from . import etapas  # noqa: F401,E402
 from . import maintenance  # noqa: F401,E402
+from . import notifications  # noqa: F401,E402
 from . import projects  # noqa: F401,E402
 from . import search  # noqa: F401,E402
 from . import tasks  # noqa: F401,E402

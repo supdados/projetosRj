@@ -207,6 +207,35 @@
                             </div>
                         </div>
 
+                        {% set unread_notifications_display = '99+' if unread_notifications_count > 99 else unread_notifications_count %}
+                        <div class="dropdown app-notifications-menu">
+                            <button
+                                class="btn app-nav-icon-btn app-notifications-trigger dropdown-toggle"
+                                type="button"
+                                id="appNotificationsDesktop"
+                                data-bs-toggle="dropdown"
+                                data-bs-display="static"
+                                title="Notificações"
+                                aria-expanded="false"
+                                aria-label="Notificações"
+                            >
+                                <i class="fas fa-bell"></i>
+                                <span
+                                    class="app-notifications-badge {% if unread_notifications_count == 0 %}is-hidden{% endif %}"
+                                    id="appNotificationsBadge"
+                                >{{ unread_notifications_display }}</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end app-notifications-dropdown" aria-labelledby="appNotificationsDesktop">
+                                <div class="app-dropdown-header app-notifications-dropdown-header" aria-hidden="true">
+                                    <span class="app-dropdown-title">Notificações</span>
+                                    <span class="app-dropdown-subtitle" id="appNotificationsUnreadCount">{{ unread_notifications_count }} não lida(s)</span>
+                                </div>
+                                <div class="app-notifications-list" id="appNotificationsList">
+                                    <div class="app-notifications-state" id="appNotificationsState">Abra o painel para carregar as notificações.</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="app-account-tooltip">
                             <div class="dropdown app-account-menu">
                                 <button
@@ -1358,6 +1387,121 @@
                 document.addEventListener('click', function(event) {
                     if (!globalSearchWidget.contains(event.target)) {
                         closeSearchDropdown();
+                    }
+                });
+            }
+
+            const notificationsMenu = document.querySelector('.app-notifications-menu');
+            if (notificationsMenu) {
+                const notificationsTrigger = document.getElementById('appNotificationsDesktop');
+                const notificationsBadge = document.getElementById('appNotificationsBadge');
+                const notificationsUnreadCounter = document.getElementById('appNotificationsUnreadCount');
+                const notificationsList = document.getElementById('appNotificationsList');
+                const notificationsState = document.getElementById('appNotificationsState');
+                const notificationsApiUrl = '{{ url_for("main.notifications_dropdown_api") }}';
+                let isLoadingNotifications = false;
+
+                function escapeNotificationHtml(value) {
+                    const helper = document.createElement('div');
+                    helper.textContent = value == null ? '' : String(value);
+                    return helper.innerHTML;
+                }
+
+                function updateNotificationsBadge(count) {
+                    if (!notificationsBadge) {
+                        return;
+                    }
+                    const safeCount = Number.isFinite(count) ? Math.max(0, count) : 0;
+                    notificationsBadge.textContent = safeCount > 99 ? '99+' : String(safeCount);
+                    notificationsBadge.classList.toggle('is-hidden', safeCount === 0);
+                }
+
+                function updateNotificationsCounter(count) {
+                    if (!notificationsUnreadCounter) {
+                        return;
+                    }
+                    const safeCount = Number.isFinite(count) ? Math.max(0, count) : 0;
+                    notificationsUnreadCounter.textContent = `${safeCount} não lida(s)`;
+                }
+
+                function renderNotificationsState(message) {
+                    notificationsList.innerHTML = `<div class="app-notifications-state">${escapeNotificationHtml(message)}</div>`;
+                }
+
+                function renderNotificationsItems(items) {
+                    if (!Array.isArray(items) || !items.length) {
+                        renderNotificationsState('Sem notificações no momento.');
+                        return;
+                    }
+
+                    const html = items.map(function(item) {
+                        const targetUrl = item && item.target_url ? item.target_url : '#';
+                        const actorText = item && item.actor_name ? ` · ${escapeNotificationHtml(item.actor_name)}` : '';
+                        const createdAt = item && item.created_at ? escapeNotificationHtml(item.created_at) : '';
+                        return `
+                            <a href="${escapeNotificationHtml(targetUrl)}" class="app-notification-item" data-notification-url="${escapeNotificationHtml(targetUrl)}">
+                                <span class="app-notification-title">${escapeNotificationHtml(item.title || '')}</span>
+                                <span class="app-notification-message">${escapeNotificationHtml(item.message || '')}</span>
+                                <span class="app-notification-meta">${createdAt}${actorText}</span>
+                            </a>
+                        `;
+                    }).join('');
+                    notificationsList.innerHTML = html;
+                }
+
+                function loadNotifications() {
+                    if (isLoadingNotifications) {
+                        return;
+                    }
+                    isLoadingNotifications = true;
+                    renderNotificationsState('Carregando notificações...');
+
+                    fetch(notificationsApiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    })
+                    .then(function(response) {
+                        if (!response.ok) {
+                            throw new Error(`Erro HTTP ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(function(payload) {
+                        const unreadBefore = Number(payload && payload.unread_before);
+                        const unreadAfter = Number(payload && payload.unread_after);
+                        updateNotificationsCounter(Number.isFinite(unreadAfter) ? unreadAfter : 0);
+                        updateNotificationsBadge(Number.isFinite(unreadAfter) ? unreadAfter : 0);
+                        renderNotificationsItems(payload && payload.items ? payload.items : []);
+
+                        // Em caso de resposta inesperada, mantém UI coerente com "lidas ao abrir".
+                        if (!Number.isFinite(unreadBefore)) {
+                            updateNotificationsCounter(0);
+                        }
+                    })
+                    .catch(function() {
+                        renderNotificationsState('Não foi possível carregar as notificações.');
+                    })
+                    .finally(function() {
+                        isLoadingNotifications = false;
+                    });
+                }
+
+                if (notificationsTrigger) {
+                    notificationsTrigger.addEventListener('show.bs.dropdown', loadNotifications);
+                }
+
+                notificationsList.addEventListener('mousedown', function(event) {
+                    const itemLink = event.target.closest('.app-notification-item[data-notification-url]');
+                    if (!itemLink) {
+                        return;
+                    }
+                    event.preventDefault();
+                    const targetUrl = itemLink.getAttribute('data-notification-url');
+                    if (targetUrl) {
+                        navigateWithSkeleton(targetUrl);
                     }
                 });
             }
