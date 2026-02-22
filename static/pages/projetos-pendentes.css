@@ -1,8 +1,8 @@
     :root {
         --pending-bg: #f4f7fb;
         --pending-border: #dfe8f2;
-        --pending-text: #1f2d3d;
-        --pending-muted: #6c7f95;
+        --pending-text: #2d4f77;
+        --pending-muted: #5f7691;
         --pending-card: #ffffff;
         --pending-shadow: 0 8px 24px rgba(20, 45, 78, 0.06);
         --pending-primary: #005a92;
@@ -14,7 +14,7 @@
     }
 
     .pending-page {
-        padding: 1.25rem;
+        padding: 1.05rem 1rem 1.15rem;
         display: flex;
         flex-direction: column;
         gap: 1rem;
@@ -263,7 +263,7 @@
         border-bottom: 1px solid #edf2f8;
         padding: 0.6rem 0.7rem;
         vertical-align: middle;
-        color: #223247;
+        color: var(--pending-text);
         font-size: var(--ds-font-size-sm);
     }
 
@@ -408,6 +408,57 @@
         margin-bottom: 0.6rem;
     }
 
+    .pending-empty-state h5 {
+        color: #254e74;
+        font-size: var(--ds-font-size-xl);
+        font-weight: var(--ds-font-weight-bold);
+    }
+
+    .pending-empty-state p {
+        color: #66829f;
+        font-size: var(--ds-font-size-md);
+    }
+
+    .pending-pagination-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+        background: var(--pending-card);
+        border: 1px solid var(--pending-border);
+        border-radius: 12px;
+        box-shadow: var(--pending-shadow);
+        padding: 0.72rem 0.9rem;
+    }
+
+    .pending-pagination-info {
+        font-size: var(--ds-font-size-sm);
+        color: #4c6683;
+        font-weight: var(--ds-font-weight-medium);
+    }
+
+    .pending-pagination .page-link {
+        border-color: rgba(173, 199, 225, 0.75);
+        color: #3d6388;
+        background: rgba(255, 255, 255, 0.92);
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-semibold);
+        min-width: 35px;
+        text-align: center;
+    }
+
+    .pending-pagination .page-item.active .page-link {
+        color: #fff;
+        border-color: #1f73b5;
+        background: linear-gradient(180deg, #2b82c6 0%, #1f73b5 100%);
+    }
+
+    .pending-pagination .page-item.disabled .page-link {
+        color: #97acc2;
+        background: rgba(247, 251, 255, 0.8);
+    }
+
     #pending-ajax-toast {
         position: fixed;
         top: 90px;
@@ -436,4 +487,25 @@
 
     #pending-ajax-toast.danger {
         border-left-color: #c62828;
+    }
+
+    @media (max-width: 768px) {
+        .pending-page {
+            padding: 0.9rem 0.82rem 1rem;
+        }
+
+        .pending-pagination-wrap {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .pending-page {
+            padding: 0.76rem 0.62rem 0.88rem;
+        }
+
+        .pending-pagination-wrap {
+            border-radius: 10px;
+        }
     }

@@ -2,14 +2,25 @@
    TEMPLATES - CLEAN MINIMAL DESIGN
    ==================================== */
 
+.templates-page {
+    background: #f4f7fb;
+    padding: 1.05rem 1rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
 /* Header Clean */
 .templates-header-clean {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 0;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid rgba(0, 90, 146, 0.1);
+    align-items: flex-start;
+    padding: 1rem 1.2rem;
+    border: 1px solid #dfe8f2;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(20, 45, 78, 0.06);
+    gap: 0.75rem;
 }
 
 .header-info {
@@ -35,31 +46,36 @@
 }
 
 .header-count {
-    font-size: var(--ds-font-size-md);
-    font-weight: var(--ds-font-weight-medium);
-    color: #6c757d;
-    padding: 0.3rem 0.8rem;
-    background: rgba(0, 90, 146, 0.08);
-    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid #d6e4f3;
+    background: #edf5fe;
+    color: #1a4f85;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-semibold);
+    padding: 0.34rem 0.72rem;
+    white-space: nowrap;
 }
 
 .btn-new-clean {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.7rem 1.3rem;
-    background: var(--primary-color);
+    padding: 0.55rem 0.92rem;
+    background: linear-gradient(135deg, #0067a8 0%, #005a92 100%);
     color: white;
-    border: none;
+    border: 1px solid #005a92;
     border-radius: 8px;
     font-weight: var(--ds-font-weight-semibold);
-    font-size: var(--ds-font-size-md);
+    font-size: var(--ds-font-size-sm);
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition: all 0.16s ease;
 }
 
 .btn-new-clean:hover {
-    background: var(--primary-dark);
+    background: linear-gradient(135deg, #0073ba 0%, #00619a 100%);
+    border-color: #00558a;
     color: white;
 }
 
@@ -69,6 +85,11 @@
 
 /* Templates List Clean */
 .templates-list-clean {
+    background: #ffffff;
+    border: 1px solid #dfe8f2;
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(20, 45, 78, 0.06);
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -78,20 +99,18 @@
     display: flex;
     align-items: center;
     gap: 1.2rem;
-    padding: 1.3rem 1.5rem;
-    background: white;
-    border-bottom: 1px solid rgba(0, 90, 146, 0.08);
-    transition: all 0.2s ease;
-}
-
-.template-item-clean:first-child {
-    border-top: 1px solid rgba(0, 90, 146, 0.08);
+    padding: 0.9rem 1rem;
+    background: #ffffff;
+    border-bottom: 1px solid #edf2f8;
+    transition: all 0.16s ease;
 }
 
 .template-item-clean:hover {
-    background: rgba(0, 90, 146, 0.02);
-    border-left: 3px solid var(--primary-color);
-    padding-left: calc(1.5rem - 3px);
+    background: #f8fbff;
+}
+
+.template-item-clean:last-child {
+    border-bottom: 0;
 }
 
 .template-icon-clean {
@@ -149,8 +168,8 @@
 }
 
 .template-desc-clean {
-    font-size: var(--ds-font-size-md);
-    color: #6c757d;
+    font-size: var(--ds-font-size-sm);
+    color: #6c7f95;
     margin: 0;
     line-height: var(--ds-line-height-normal);
 }
@@ -200,8 +219,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4rem 2rem;
+    padding: 2rem 1rem;
     text-align: center;
+    border: 1px dashed #cfe0f1;
+    border-radius: 12px;
+    background: #f9fcff;
+    margin: 0.95rem;
 }
 
 .empty-state-clean i {
@@ -218,9 +241,9 @@
 }
 
 .empty-state-clean p {
-    font-size: var(--ds-font-size-base);
-    color: #6c757d;
-    margin-bottom: 2rem;
+    font-size: var(--ds-font-size-md);
+    color: #617890;
+    margin-bottom: 1rem;
 }
 
 /* Modal Clean */
@@ -335,4 +358,34 @@
 
 .btn-confirm-delete:hover {
     background: #c82333;
+}
+
+@media (max-width: 991px) {
+    .templates-header-clean {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 768px) {
+    .templates-page {
+        padding: 0.9rem 0.82rem 1rem;
+    }
+
+    .template-item-clean {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.72rem;
+    }
+
+    .template-actions-clean {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 576px) {
+    .templates-page {
+        padding: 0.76rem 0.62rem 0.88rem;
+    }
 }

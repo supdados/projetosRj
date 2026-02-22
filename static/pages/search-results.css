@@ -1,6 +1,6 @@
     .search-results-page {
-        max-width: 1220px;
-        margin: 0 auto;
+        background: #f4f7fb;
+        padding: 1.05rem 1rem 1.15rem;
     }
 
     .search-results-header {
@@ -235,4 +235,16 @@
         background: #fafcff;
         color: #5f7289;
         padding: 1rem 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+        .search-results-page {
+            padding: 0.9rem 0.82rem 1rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .search-results-page {
+            padding: 0.76rem 0.62rem 0.88rem;
+        }
     }

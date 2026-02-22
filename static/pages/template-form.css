@@ -8,11 +8,13 @@
     --tf-text: #1e293b;
     --tf-bg: #f4f7fb;
     --tf-accent: #005a92;
+    background: var(--tf-bg);
+    padding: 1.05rem 1rem 1.15rem;
 }
 
 .template-form-page .template-form-shell {
     width: 100%;
-    max-width: 1440px;
+    max-width: none;
     margin: 0 auto;
 }
 
@@ -370,6 +372,18 @@
 .template-form-page .btn-glass-primary:hover {
     background: #084d7c;
     border-color: #084d7c;
+}
+
+@media (max-width: 768px) {
+    .template-form-page {
+        padding: 0.9rem 0.82rem 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .template-form-page {
+        padding: 0.76rem 0.62rem 0.88rem;
+    }
 }
 
 @keyframes stageItemFadeIn {

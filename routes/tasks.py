@@ -2,6 +2,7 @@ import datetime
 import os
 import re
 import uuid
+from urllib.parse import urlparse
 
 from flask import flash, g, jsonify, redirect, render_template, request, send_file, url_for
 from werkzeug.utils import secure_filename
@@ -150,60 +151,133 @@ def _resolve_responsavel_for_item_edit(item, incoming_raw_value):
     return _validate_task_item_responsavel(item.task, incoming_raw_value)
 
 
-@main_bp.route('/tarefas', methods=['GET'])
-@login_required
-def list_tasks():
-    """Lista tarefas do usuário com filtros e paginação"""
-    # Filtros
-    project_filter = request.args.get('project', '')
-    search_query = request.args.get('search', '')
-    
-    # Query base
-    query = Task.query.options(joinedload(Task.items), joinedload(Task.project))
-    
-    # Aplicar permissões
+def _build_task_visibility_query(show_finalized, include_relations=True):
+    """Monta query base de tarefas visíveis ao usuário para estado ativo/finalizado."""
+    query = Task.query
+    if include_relations:
+        query = query.options(joinedload(Task.items), joinedload(Task.project))
+
     if not g.user.is_admin:
-        # Usuário vê: tarefas de projetos de suas áreas + tarefas sem projeto criadas por ele
         user_areas = g.user.get_areas()
-        query = query.outerjoin(Project).filter(
-            db.or_(
-                db.and_(Task.project_id.isnot(None), Project.area_responsavel.in_(user_areas)),
-                db.and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)
+        visibility_filters = [db.and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)]
+        if user_areas:
+            visibility_filters.insert(
+                0,
+                db.and_(Task.project_id.isnot(None), Project.area_responsavel.in_(user_areas))
             )
-        )
-    
-    # Aplicar filtros
+        query = query.outerjoin(Project).filter(db.or_(*visibility_filters))
+
+    return query.filter(Task.is_finalized.is_(show_finalized))
+
+
+def _get_projects_for_task_filter():
+    if g.user.is_admin:
+        return Project.query.order_by(Project.titulo).all()
+    user_areas = g.user.get_areas()
+    return Project.query.filter(Project.area_responsavel.in_(user_areas)).order_by(Project.titulo).all()
+
+
+def _get_safe_next_url():
+    raw_next = (
+        request.form.get('next')
+        or request.args.get('next')
+        or request.headers.get('Referer')
+        or request.referrer
+    )
+    if not raw_next:
+        return None
+
+    parsed = urlparse(raw_next)
+
+    # Relative internal URL
+    if not parsed.netloc and parsed.path.startswith('/'):
+        target = parsed.path
+        if parsed.query:
+            target = f'{target}?{parsed.query}'
+        return target
+
+    # Absolute URL only if same host
+    if parsed.netloc and parsed.netloc == request.host:
+        target = parsed.path or '/'
+        if parsed.query:
+            target = f'{target}?{parsed.query}'
+        return target
+
+    return None
+
+
+def _redirect_back_or(default_endpoint):
+    next_url = _get_safe_next_url()
+    if next_url:
+        return redirect(next_url)
+    return redirect(url_for(default_endpoint))
+
+
+def _render_tasks_listing(show_finalized):
+    """Renderiza listagem de tarefas (ativas ou finalizadas) com filtros e paginação."""
+    project_filter = request.args.get('project', '')
+    search_query = (request.args.get('search', '') or '').strip()
+    page = request.args.get('page', 1, type=int) or 1
+    if page < 1:
+        page = 1
+
+    query = _build_task_visibility_query(show_finalized=show_finalized)
+
     if project_filter:
         if project_filter == 'sem_projeto':
             query = query.filter(Task.project_id.is_(None))
         else:
             query = query.filter(Task.project_id == project_filter)
-    
+
     if search_query:
         query = query.filter(Task.titulo.ilike(f'%{search_query}%'))
-    
-    # Ordenar por data de criação (mais recentes primeiro)
-    query = query.order_by(Task.created_at.desc())
-    
-    # Paginação
-    page = request.args.get('page', 1, type=int)
-    per_page = 40
-    tasks_pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    tasks = tasks_pagination.items
-    
-    # Obter lista de projetos do usuário para o filtro
-    if g.user.is_admin:
-        projects_for_filter = Project.query.order_by(Project.titulo).all()
+
+    if show_finalized:
+        query = query.order_by(Task.finalized_at.desc(), Task.created_at.desc())
     else:
-        user_areas = g.user.get_areas()
-        projects_for_filter = Project.query.filter(Project.area_responsavel.in_(user_areas)).order_by(Project.titulo).all()
-    
-    return render_template('task_list.html', 
-                         tasks=tasks,
-                         pagination=tasks_pagination,
-                         projects=projects_for_filter,
-                         project_filter=project_filter,
-                         search_query=search_query)
+        query = query.order_by(Task.created_at.desc())
+
+    pagination = query.paginate(page=page, per_page=20, error_out=False)
+    tasks = pagination.items
+
+    active_count = _build_task_visibility_query(show_finalized=False, include_relations=False).count()
+    finalized_count = _build_task_visibility_query(show_finalized=True, include_relations=False).count()
+    index_offset = (pagination.page - 1) * pagination.per_page
+    page_total = pagination.pages if pagination.pages else 1
+    page_info_text = f'Página {pagination.page} de {page_total}'
+    start_index = index_offset + 1 if pagination.total else 0
+    end_index = min(index_offset + len(tasks), pagination.total) if pagination.total else 0
+
+    return render_template(
+        'task_list.html',
+        tasks=tasks,
+        pagination=pagination,
+        projects=_get_projects_for_task_filter(),
+        project_filter=project_filter,
+        search_query=search_query,
+        show_finalized=show_finalized,
+        list_endpoint='main.list_tasks_finalized' if show_finalized else 'main.list_tasks',
+        index_offset=index_offset,
+        page_info_text=page_info_text,
+        start_index=start_index,
+        end_index=end_index,
+        active_count=active_count,
+        finalized_count=finalized_count,
+    )
+
+
+@main_bp.route('/tarefas', methods=['GET'])
+@login_required
+def list_tasks():
+    """Lista tarefas ativas do usuário com filtros e paginação."""
+    return _render_tasks_listing(show_finalized=False)
+
+
+@main_bp.route('/tarefas/finalizadas', methods=['GET'])
+@login_required
+def list_tasks_finalized():
+    """Lista tarefas finalizadas do usuário com filtros e paginação."""
+    return _render_tasks_listing(show_finalized=True)
 
 
 @main_bp.route('/tarefas/add', methods=['POST'])
@@ -350,7 +424,7 @@ def delete_task(task_id):
     
     if not can_delete:
         flash('Você não tem permissão para excluir esta tarefa.', 'danger')
-        return redirect(url_for('main.list_tasks'))
+        return _redirect_back_or('main.list_tasks')
     
     try:
         db.session.delete(task)
@@ -359,8 +433,58 @@ def delete_task(task_id):
     except Exception as e:
         db.session.rollback()
         flash(f'Erro ao excluir tarefa: {str(e)}', 'danger')
-    
-    return redirect(url_for('main.list_tasks'))
+
+    return _redirect_back_or('main.list_tasks_finalized' if task.is_finalized else 'main.list_tasks')
+
+
+@main_bp.route('/tarefas/<int:task_id>/finalizar', methods=['POST'])
+@login_required
+def finalize_task(task_id):
+    """Marca tarefa como finalizada."""
+    task = Task.query.get_or_404(task_id)
+    if not _can_view_task(g.user, task):
+        flash('Você não tem permissão para finalizar esta tarefa.', 'danger')
+        return _redirect_back_or('main.list_tasks')
+
+    if task.is_finalized:
+        flash('Esta tarefa já está finalizada.', 'info')
+        return _redirect_back_or('main.list_tasks_finalized')
+
+    try:
+        task.is_finalized = True
+        task.finalized_at = datetime.datetime.utcnow()
+        db.session.commit()
+        flash('Tarefa finalizada com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao finalizar tarefa: {str(e)}', 'danger')
+
+    return _redirect_back_or('main.list_tasks_finalized')
+
+
+@main_bp.route('/tarefas/<int:task_id>/reativar', methods=['POST'])
+@login_required
+def reactivate_task(task_id):
+    """Reativa tarefa finalizada."""
+    task = Task.query.get_or_404(task_id)
+    if not _can_view_task(g.user, task):
+        flash('Você não tem permissão para reativar esta tarefa.', 'danger')
+        return _redirect_back_or('main.list_tasks')
+
+    if not task.is_finalized:
+        flash('Esta tarefa já está ativa.', 'info')
+        return _redirect_back_or('main.list_tasks')
+
+    try:
+        task.is_finalized = False
+        task.finalized_at = None
+        db.session.commit()
+        flash('Tarefa reativada com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao reativar tarefa: {str(e)}', 'danger')
+
+    return _redirect_back_or('main.list_tasks')
 
 
 # ===================================
@@ -802,8 +926,14 @@ def project_tasks(project_id):
         flash('Você não tem permissão para acessar este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
     
-    # Buscar tarefas do projeto
-    tasks = Task.query.options(joinedload(Task.items)).filter_by(project_id=project_id).order_by(Task.created_at.desc()).all()
+    # Buscar apenas tarefas ativas do projeto (escopo global de arquivamento)
+    tasks = (
+        Task.query
+        .options(joinedload(Task.items), joinedload(Task.created_by))
+        .filter_by(project_id=project_id, is_finalized=False)
+        .order_by(Task.created_at.desc())
+        .all()
+    )
     
     return render_template('project_tasks.html', project=project, tasks=tasks)
 

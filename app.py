@@ -80,6 +80,34 @@ def ensure_task_item_new_columns():
     return added
 
 
+def ensure_task_finalize_columns():
+    """Garante as colunas de arquivamento/finalização na tabela task."""
+    inspector = inspect(db.engine)
+    table_names = inspector.get_table_names()
+    added = []
+
+    if 'task' in table_names:
+        columns = {col["name"] for col in inspector.get_columns('task')}
+        if 'is_finalized' not in columns:
+            db.session.execute(text("ALTER TABLE task ADD COLUMN is_finalized BOOLEAN NOT NULL DEFAULT 0"))
+            added.append('task.is_finalized')
+        if 'finalized_at' not in columns:
+            db.session.execute(text("ALTER TABLE task ADD COLUMN finalized_at DATETIME NULL"))
+            added.append('task.finalized_at')
+        if added:
+            db.session.commit()
+
+        # Índice para acelerar listagens de ativas/finalizadas
+        inspector = inspect(db.engine)
+        indexes = {idx['name'] for idx in inspector.get_indexes('task')}
+        if 'ix_task_is_finalized' not in indexes:
+            db.session.execute(text("CREATE INDEX ix_task_is_finalized ON task (is_finalized)"))
+            db.session.commit()
+            added.append('task.ix_task_is_finalized')
+
+    return added
+
+
 def initialize_database():
     """
     Inicializa estrutura mínima do banco:
@@ -91,10 +119,12 @@ def initialize_database():
     db.create_all()
     column_added = ensure_project_abep_indicator_column()
     new_cols = ensure_task_item_new_columns()
+    task_finalize_cols = ensure_task_finalize_columns()
     sync_summary = sync_goal_catalog_to_db(commit=True)
     return {
         'column_added': column_added,
         'new_task_item_cols': new_cols,
+        'task_finalize_cols': task_finalize_cols,
         'sync_summary': sync_summary,
     }
 

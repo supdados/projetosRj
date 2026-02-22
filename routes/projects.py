@@ -4,7 +4,7 @@ from collections import defaultdict
 from flask import flash, g, jsonify, redirect, render_template, request, url_for
 
 from abep_catalog import normalize_abep_indicator
-from models import Etapa, IndicadorProjeto, Project, ProjectHistory, db
+from models import Etapa, IndicadorProjeto, Project, ProjectHistory, Task, db
 from objective_catalog import normalize_goal_selection
 
 from .blueprint import main_bp
@@ -188,6 +188,8 @@ def list_projetos_pendentes():
     selected_area_filter = (request.args.get('area') or '').strip()
     filtro_periodo = (request.args.get('periodo') or 'atrasados').strip()
     selected_responsavel = (request.args.get('responsavel') or '').strip()
+    pending_page = request.args.get('page', 1, type=int)
+    pending_per_page = 15
 
     valid_periods = {'atrasados', '7dias', '14dias', '21dias'}
     if filtro_periodo not in valid_periods:
@@ -198,16 +200,20 @@ def list_projetos_pendentes():
     data_14_dias = data_atual + datetime.timedelta(days=14)
     data_21_dias = data_atual + datetime.timedelta(days=21)
 
-    def classify_bucket(data_fim):
-        if not data_fim:
+    def resolve_reference_date(etapa):
+        return etapa.data_inicio if etapa.data_inicio else etapa.data_fim
+
+    def classify_bucket(etapa):
+        reference_date = resolve_reference_date(etapa)
+        if not reference_date:
             return 'sem_data'
-        if data_fim < data_atual:
+        if reference_date < data_atual:
             return 'atrasada'
-        if data_fim <= data_7_dias:
+        if reference_date <= data_7_dias:
             return '7dias'
-        if data_fim <= data_14_dias:
+        if reference_date <= data_14_dias:
             return '14dias'
-        if data_fim <= data_21_dias:
+        if reference_date <= data_21_dias:
             return '21dias'
         return 'futuro'
 
@@ -273,6 +279,10 @@ def list_projetos_pendentes():
                 '21dias': 0,
                 'sem_data': 0,
             },
+            pending_page=1,
+            pending_total_pages=0,
+            pending_per_page=pending_per_page,
+            pending_total_projects=0,
         )
 
     responsaveis_query = Etapa.query.filter(
@@ -310,7 +320,7 @@ def list_projetos_pendentes():
     }
 
     for etapa in etapas_abertas:
-        bucket = classify_bucket(etapa.data_fim)
+        bucket = classify_bucket(etapa)
         etapa_bucket_map[etapa.id] = bucket
         etapas_por_projeto[etapa.project_id].append(etapa)
         if bucket in summary_counts:
@@ -352,8 +362,9 @@ def list_projetos_pendentes():
 
             if bucket == 'atrasada':
                 counts['qtd_atrasadas'] += 1
-                if etapa.data_fim:
-                    overdue_days = (data_atual - etapa.data_fim).days
+                reference_date = resolve_reference_date(etapa)
+                if reference_date:
+                    overdue_days = (data_atual - reference_date).days
                     if overdue_days > max_overdue_days:
                         max_overdue_days = overdue_days
             elif bucket == '7dias':
@@ -398,11 +409,25 @@ def list_projetos_pendentes():
             (item['projeto'].titulo or '').casefold(),
         )
     )
-    summary_counts['total_projects'] = len(projetos_pendentes_com_etapas)
+    pending_total_projects = len(projetos_pendentes_com_etapas)
+    summary_counts['total_projects'] = pending_total_projects
+
+    pending_total_pages = (
+        (pending_total_projects + pending_per_page - 1) // pending_per_page
+        if pending_total_projects > 0 else 0
+    )
+    if pending_total_pages == 0:
+        pending_page = 1
+    else:
+        pending_page = max(1, min(pending_page or 1, pending_total_pages))
+
+    start_idx = (pending_page - 1) * pending_per_page
+    end_idx = start_idx + pending_per_page
+    projetos_pendentes_paginated = projetos_pendentes_com_etapas[start_idx:end_idx]
 
     return render_template(
         'projetos_pendentes.html',
-        projetos_com_etapas=projetos_pendentes_com_etapas,
+        projetos_com_etapas=projetos_pendentes_paginated,
         objetivos=objetivos,
         AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES,
         areas_options=areas_options_for_dropdown,
@@ -424,6 +449,10 @@ def list_projetos_pendentes():
         },
         etapa_bucket_map=etapa_bucket_map,
         summary_counts=summary_counts,
+        pending_page=pending_page,
+        pending_total_pages=pending_total_pages,
+        pending_per_page=pending_per_page,
+        pending_total_projects=pending_total_projects,
     )
 @main_bp.route('/add_project', methods=['POST'])
 @login_required
@@ -565,8 +594,10 @@ def project_detail(project_id):
 
     # O cálculo do índice de exibição dinâmico foi removido.
     # O ID real do projeto (project.id) será usado diretamente no template.
-            
-    return render_template('project_detail.html', project=project)
+
+    active_task_count = Task.query.filter_by(project_id=project.id, is_finalized=False).count()
+
+    return render_template('project_detail.html', project=project, active_task_count=active_task_count)
 
 
 @main_bp.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])

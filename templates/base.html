@@ -93,6 +93,26 @@
                                 <i class="fas fa-home"></i>
                             </a>
                             <a
+                                href="{{ url_for('main.list_projects') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projects' or endpoint == 'main.project_detail' or endpoint == 'main.project_history' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                title="Todos os projetos"
+                                aria-label="Todos os projetos"
+                            >
+                                <i class="fas fa-folder-open"></i>
+                            </a>
+                            <a
+                                href="{{ url_for('main.list_tasks') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_tasks' or endpoint == 'main.list_tasks_finalized' or endpoint == 'main.project_tasks' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                title="Tarefas"
+                                aria-label="Tarefas"
+                            >
+                                <i class="fas fa-tasks"></i>
+                            </a>
+                            <a
                                 href="{{ url_for('main.list_projetos_pendentes') }}"
                                 class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projetos_pendentes' else '' }}"
                                 data-bs-toggle="tooltip"
@@ -101,16 +121,6 @@
                                 aria-label="Projetos pendentes"
                             >
                                 <i class="fas fa-exclamation-triangle"></i>
-                            </a>
-                            <a
-                                href="{{ url_for('main.list_tasks') }}"
-                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_tasks' or endpoint == 'main.project_tasks' else '' }}"
-                                data-bs-toggle="tooltip"
-                                data-bs-placement="bottom"
-                                title="Tarefas"
-                                aria-label="Tarefas"
-                            >
-                                <i class="fas fa-tasks"></i>
                             </a>
                         </div>
                     </div>
@@ -193,6 +203,7 @@
                             <div class="app-global-search-dropdown" id="appGlobalSearchDropdown" hidden>
                                 <div class="app-global-search-state" data-role="state">Digite ao menos 2 caracteres.</div>
                                 <div class="app-global-search-results" data-role="results"></div>
+                                <div class="app-global-search-footer" data-role="footer" hidden></div>
                             </div>
                         </div>
 
@@ -295,8 +306,16 @@
                 {% set skeleton_type = 'projects' %}
             {% elif skeleton_endpoint == 'main.list_projetos_pendentes' %}
                 {% set skeleton_type = 'pending' %}
-            {% elif skeleton_endpoint == 'main.list_tasks' or skeleton_endpoint == 'main.project_tasks' %}
+            {% elif skeleton_endpoint == 'main.list_tasks' or skeleton_endpoint == 'main.list_tasks_finalized' %}
                 {% set skeleton_type = 'tasks' %}
+            {% elif skeleton_endpoint == 'main.project_tasks' %}
+                {% set skeleton_type = 'project_tasks' %}
+            {% elif skeleton_endpoint == 'main.global_search_page' %}
+                {% set skeleton_type = 'search' %}
+            {% elif skeleton_endpoint == 'main.list_templates' %}
+                {% set skeleton_type = 'templates_list' %}
+            {% elif skeleton_endpoint == 'main.create_template' or skeleton_endpoint == 'main.edit_template' %}
+                {% set skeleton_type = 'templates_form' %}
             {% elif skeleton_endpoint == 'main.project_detail' %}
                 {% set skeleton_type = 'project_detail' %}
             {% elif skeleton_endpoint == 'main.task_detail' %}
@@ -549,6 +568,118 @@
                         {% endfor %}
                     </div>
                 </div>
+                {% elif kind == 'project_tasks' %}
+                <div class="skeleton-page skeleton-project-tasks-page">
+                    <div class="skeleton-text skeleton-project-tasks-breadcrumb"></div>
+                    <div class="skeleton-card skeleton-project-tasks-project-card">
+                        <div class="skeleton-project-tasks-project-head">
+                            <div class="skeleton-text skeleton-project-tasks-project-title"></div>
+                            <div class="skeleton-button skeleton-project-tasks-project-back"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-card skeleton-project-tasks-header">
+                        <div class="skeleton-project-tasks-header-main">
+                            <div class="skeleton-header skeleton-project-tasks-title"></div>
+                            <div class="skeleton-button skeleton-project-tasks-count"></div>
+                        </div>
+                        <div class="skeleton-button skeleton-project-tasks-add-btn"></div>
+                    </div>
+                    <div class="skeleton-card skeleton-project-tasks-list-card">
+                        {% for i in range(4) %}
+                        <div class="skeleton-project-tasks-row">
+                            <div class="skeleton-avatar skeleton-project-tasks-row-icon"></div>
+                            <div class="skeleton-project-tasks-row-content">
+                                <div class="skeleton-text skeleton-project-tasks-row-title"></div>
+                                <div class="skeleton-project-tasks-row-meta">
+                                    <div class="skeleton-button skeleton-project-tasks-row-chip"></div>
+                                    <div class="skeleton-button skeleton-project-tasks-row-chip"></div>
+                                    <div class="skeleton-button skeleton-project-tasks-row-chip"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-project-tasks-row-actions">
+                                <div class="skeleton-button skeleton-project-tasks-row-btn"></div>
+                                <div class="skeleton-button skeleton-project-tasks-row-btn"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% elif kind == 'search' %}
+                <div class="skeleton-page skeleton-search-page">
+                    <div class="skeleton-card skeleton-search-header">
+                        <div class="skeleton-header skeleton-search-title"></div>
+                        <div class="skeleton-text skeleton-search-subtitle"></div>
+                        <div class="skeleton-search-form">
+                            <div class="skeleton-text skeleton-search-input"></div>
+                            <div class="skeleton-button skeleton-search-submit"></div>
+                        </div>
+                    </div>
+                    {% for i in range(3) %}
+                    <div class="skeleton-card skeleton-search-section">
+                        <div class="skeleton-search-section-head">
+                            <div class="skeleton-text skeleton-search-section-title"></div>
+                            <div class="skeleton-text short"></div>
+                        </div>
+                        {% for j in range(2) %}
+                        <div class="skeleton-search-result-row">
+                            <div class="skeleton-text skeleton-search-result-title"></div>
+                            <div class="skeleton-text medium skeleton-search-result-subtitle"></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% elif kind == 'templates_list' %}
+                <div class="skeleton-page skeleton-templates-list-page">
+                    <div class="skeleton-card skeleton-templates-list-header">
+                        <div class="skeleton-header skeleton-templates-list-title"></div>
+                        <div class="skeleton-button skeleton-templates-list-add-btn"></div>
+                    </div>
+                    <div class="skeleton-card skeleton-templates-list-card">
+                        {% for i in range(4) %}
+                        <div class="skeleton-templates-list-row">
+                            <div class="skeleton-avatar skeleton-templates-list-row-icon"></div>
+                            <div class="skeleton-templates-list-row-content">
+                                <div class="skeleton-text skeleton-templates-list-row-title"></div>
+                                <div class="skeleton-text medium skeleton-templates-list-row-subtitle"></div>
+                            </div>
+                            <div class="skeleton-templates-list-row-actions">
+                                <div class="skeleton-button skeleton-templates-list-row-btn"></div>
+                                <div class="skeleton-button skeleton-templates-list-row-btn"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% elif kind == 'templates_form' %}
+                <div class="skeleton-page skeleton-templates-form-page">
+                    <div class="skeleton-card skeleton-templates-form-header">
+                        <div class="skeleton-header skeleton-templates-form-title"></div>
+                        <div class="skeleton-text skeleton-templates-form-subtitle"></div>
+                    </div>
+                    <div class="skeleton-card skeleton-templates-form-section">
+                        <div class="skeleton-text skeleton-templates-form-field"></div>
+                        <div class="skeleton-text skeleton-templates-form-field"></div>
+                        <div class="skeleton-text skeleton-templates-form-field-lg"></div>
+                    </div>
+                    <div class="skeleton-card skeleton-templates-form-section">
+                        <div class="skeleton-templates-form-section-head">
+                            <div class="skeleton-text skeleton-templates-form-section-title"></div>
+                            <div class="skeleton-button skeleton-templates-form-add-stage"></div>
+                        </div>
+                        {% for i in range(3) %}
+                        <div class="skeleton-templates-form-stage-row">
+                            <div class="skeleton-text skeleton-templates-form-stage-name"></div>
+                            <div class="skeleton-text skeleton-templates-form-stage-days"></div>
+                            <div class="skeleton-button skeleton-templates-form-stage-remove"></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="skeleton-templates-form-footer">
+                        <div class="skeleton-button skeleton-templates-form-footer-btn"></div>
+                        <div class="skeleton-button skeleton-templates-form-footer-btn"></div>
+                    </div>
+                </div>
                 {% elif kind == 'project_detail' %}
                 <div class="skeleton-page skeleton-project-detail-page">
                     <div class="skeleton-card skeleton-project-detail-header">
@@ -681,7 +812,7 @@
                     {{ render_skeleton(skeleton_type) }}
                 </div>
                 <div id="skeleton-template-store" hidden aria-hidden="true">
-                    {% for kind in ['dashboard', 'projects', 'pending', 'tasks', 'project_detail', 'task_detail', 'generic'] %}
+                    {% for kind in ['dashboard', 'projects', 'pending', 'tasks', 'project_tasks', 'search', 'templates_list', 'templates_form', 'project_detail', 'task_detail', 'generic'] %}
                     <template data-skeleton-template="{{ kind }}">
                         {{ render_skeleton(kind) }}
                     </template>
@@ -824,8 +955,23 @@
                 if (pathname === '/projetos_pendentes') {
                     return 'pending';
                 }
-                if (pathname === '/tarefas' || /^\/projeto\/\d+\/tarefas$/.test(pathname)) {
+                if (pathname === '/tarefas') {
                     return 'tasks';
+                }
+                if (pathname === '/tarefas/finalizadas') {
+                    return 'tasks';
+                }
+                if (/^\/projeto\/\d+\/tarefas$/.test(pathname)) {
+                    return 'project_tasks';
+                }
+                if (pathname === '/busca') {
+                    return 'search';
+                }
+                if (pathname === '/admin/templates') {
+                    return 'templates_list';
+                }
+                if (pathname === '/admin/templates/new' || /^\/admin\/templates\/\d+\/edit$/.test(pathname)) {
+                    return 'templates_form';
                 }
                 if (/^\/tarefas\/\d+$/.test(pathname)) {
                     return 'task_detail';
@@ -874,6 +1020,7 @@
                 const searchDropdown = globalSearchWidget.querySelector('.app-global-search-dropdown');
                 const searchState = globalSearchWidget.querySelector('[data-role="state"]');
                 const searchResultsContainer = globalSearchWidget.querySelector('[data-role="results"]');
+                const searchFooter = globalSearchWidget.querySelector('[data-role="footer"]');
                 const searchApiUrl = globalSearchWidget.dataset.searchUrl;
                 const groupConfig = [
                     { key: 'projects', label: 'Projetos', icon: 'fa-folder-open', badgeClass: 'type-project' },
@@ -907,16 +1054,54 @@
                     }
                     searchDropdown.hidden = true;
                     searchInput.setAttribute('aria-expanded', 'false');
+                    clearSearchFooter();
                     selectedIndex = -1;
                     currentResultLinks.forEach(function(link) {
                         link.classList.remove('active');
                     });
                 }
 
+                function getSearchPageDestination(query) {
+                    const searchPageUrl = searchForm.getAttribute('action') || window.location.pathname;
+                    const trimmed = (query || '').trim();
+                    return trimmed
+                        ? `${searchPageUrl}?q=${encodeURIComponent(trimmed)}`
+                        : searchPageUrl;
+                }
+
+                function clearSearchFooter() {
+                    if (!searchFooter) {
+                        return;
+                    }
+                    searchFooter.innerHTML = '';
+                    searchFooter.hidden = true;
+                }
+
+                function renderSearchFooter(query, hasMoreResults) {
+                    if (!searchFooter) {
+                        return;
+                    }
+                    const trimmedQuery = (query || '').trim();
+                    if (trimmedQuery.length < 2) {
+                        clearSearchFooter();
+                        return;
+                    }
+                    const destinationUrl = getSearchPageDestination(trimmedQuery);
+                    const footerLabel = hasMoreResults ? 'Ver tudo' : 'Ir para a página de busca';
+                    searchFooter.innerHTML = `
+                        <a href="${escapeHtml(destinationUrl)}" class="app-global-search-footer-link" data-search-url="${escapeHtml(destinationUrl)}">
+                            <span>${footerLabel}</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    `;
+                    searchFooter.hidden = false;
+                }
+
                 function renderSearchState(message) {
                     searchState.textContent = message;
                     searchState.style.display = 'block';
                     searchResultsContainer.innerHTML = '';
+                    clearSearchFooter();
                     currentResultLinks = [];
                     selectedIndex = -1;
                 }
@@ -945,6 +1130,9 @@
 
                 function renderSearchResults(payload) {
                     const groupedResults = payload && payload.results ? payload.results : {};
+                    const hasMoreByType = payload && payload.meta && payload.meta.has_more ? payload.meta.has_more : {};
+                    const hasMoreResults = Boolean(hasMoreByType.any);
+                    const currentQuery = payload && payload.query ? payload.query : searchInput.value;
                     let hasAnyResult = false;
                     let html = '';
 
@@ -1004,12 +1192,14 @@
 
                     if (!hasAnyResult) {
                         renderSearchState('Nenhuma referencia encontrada.');
+                        renderSearchFooter(currentQuery, false);
                         openSearchDropdown();
                         return;
                     }
 
                     searchState.style.display = 'none';
                     searchResultsContainer.innerHTML = html;
+                    renderSearchFooter(currentQuery, hasMoreResults);
                     currentResultLinks = Array.from(searchResultsContainer.querySelectorAll('.app-global-search-item'));
                     selectedIndex = -1;
                     updateSelectedLink();
@@ -1114,18 +1304,18 @@
                 searchForm.addEventListener('submit', function(event) {
                     const trimmed = searchInput.value.trim();
                     searchInput.value = trimmed;
-                    if (!trimmed) {
-                        event.preventDefault();
-                        closeSearchDropdown();
-                        return;
-                    }
                     if (selectedIndex >= 0 && currentResultLinks[selectedIndex]) {
                         event.preventDefault();
                         const selectedUrl = currentResultLinks[selectedIndex].getAttribute('href');
                         if (selectedUrl) {
                             navigateWithSkeleton(selectedUrl);
                         }
+                        return;
                     }
+
+                    event.preventDefault();
+                    const destinationUrl = getSearchPageDestination(trimmed);
+                    navigateWithSkeleton(destinationUrl);
                 });
 
                 searchResultsContainer.addEventListener('mousemove', function(event) {
@@ -1150,6 +1340,18 @@
                     const clickedUrl = clickedLink.getAttribute('href');
                     if (clickedUrl) {
                         navigateWithSkeleton(clickedUrl);
+                    }
+                });
+
+                searchDropdown.addEventListener('click', function(event) {
+                    const footerLink = event.target.closest('.app-global-search-footer-link');
+                    if (!footerLink) {
+                        return;
+                    }
+                    event.preventDefault();
+                    const footerUrl = footerLink.getAttribute('href');
+                    if (footerUrl) {
+                        navigateWithSkeleton(footerUrl);
                     }
                 });
 

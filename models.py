@@ -207,6 +207,8 @@ class Task(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)  # Opcional
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    is_finalized = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    finalized_at = db.Column(db.DateTime, nullable=True)
     
     # Relacionamentos
     project = db.relationship('Project', backref=db.backref('tasks', lazy=True))

@@ -63,7 +63,10 @@ def dashboard():
         .subquery()
     )
 
-    def apply_task_visibility_rules(query):
+    def apply_task_visibility_rules(query, include_finalized=False):
+        if not include_finalized:
+            query = query.filter(Task.is_finalized.is_(False))
+
         if g.user.is_admin:
             return query
 

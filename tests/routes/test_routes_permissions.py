@@ -133,6 +133,20 @@ AREA_PROTECTED_CASES = [
         'path': '/tarefas/{task_id}/sugestoes-responsavel',
         'expected_status': 403,
     },
+    {
+        'id': 'outsider_task_finalize',
+        'method': 'POST',
+        'path': '/tarefas/{task_id}/finalizar',
+        'expected_status': 302,
+        'redirect_contains': '/tarefas',
+    },
+    {
+        'id': 'outsider_task_reactivate',
+        'method': 'POST',
+        'path': '/tarefas/{task_id}/reativar',
+        'expected_status': 302,
+        'redirect_contains': '/tarefas',
+    },
 ]
 
 

@@ -75,6 +75,16 @@ def _empty_global_search_payload(term):
     normalized = (term or "").strip()
     return {
         "query": normalized,
+        "meta": {
+            "limit_per_type": None,
+            "has_more": {
+                "projects": False,
+                "stages": False,
+                "tasks": False,
+                "task_items": False,
+                "any": False,
+            },
+        },
         "counts": {
             "projects": 0,
             "stages": 0,
@@ -101,7 +111,7 @@ def _normalize_global_search_limit(raw_limit, default_limit=GLOBAL_SEARCH_DEFAUL
     return max(1, min(parsed, max_limit))
 
 
-def build_global_search_results(term, user, limit_per_type=None):
+def build_global_search_results(term, user, limit_per_type=None, include_has_more=False):
     normalized_term = (term or "").strip()
     if not normalized_term:
         return _empty_global_search_payload(normalized_term)
@@ -117,10 +127,21 @@ def build_global_search_results(term, user, limit_per_type=None):
 
     user_areas = user.get_areas() if (user and not user.is_admin) else []
 
+    effective_limit = limit_per_type
+    if include_has_more and limit_per_type is not None:
+        effective_limit = limit_per_type + 1
+
     def apply_optional_limit(query):
-        if limit_per_type is not None:
-            return query.limit(limit_per_type)
+        if effective_limit is not None:
+            return query.limit(effective_limit)
         return query
+
+    def trim_limited_rows(rows):
+        if not include_has_more or limit_per_type is None:
+            return rows, False
+        if len(rows) > limit_per_type:
+            return rows[:limit_per_type], True
+        return rows, False
 
     def prefix_order_for(column):
         return case(
@@ -146,6 +167,7 @@ def build_global_search_results(term, user, limit_per_type=None):
         project_query.order_by(prefix_order_for(Project.titulo), Project.id.desc())
     )
     projects = project_query.all()
+    projects, projects_has_more = trim_limited_rows(projects)
 
     stage_query = Etapa.query.join(Project, Etapa.project_id == Project.id).options(joinedload(Etapa.project)).filter(
         or_(
@@ -163,6 +185,7 @@ def build_global_search_results(term, user, limit_per_type=None):
         stage_query.order_by(prefix_order_for(Etapa.descricao), Etapa.id.desc())
     )
     stages = stage_query.all()
+    stages, stages_has_more = trim_limited_rows(stages)
 
     task_query = Task.query.outerjoin(Project, Task.project_id == Project.id).options(joinedload(Task.project)).filter(
         Task.titulo.ilike(search_pattern)
@@ -178,6 +201,7 @@ def build_global_search_results(term, user, limit_per_type=None):
         task_query.order_by(prefix_order_for(Task.titulo), Task.id.desc())
     )
     tasks = task_query.all()
+    tasks, tasks_has_more = trim_limited_rows(tasks)
 
     task_item_query = TaskItem.query.join(Task, TaskItem.task_id == Task.id).outerjoin(
         Project, Task.project_id == Project.id
@@ -200,6 +224,7 @@ def build_global_search_results(term, user, limit_per_type=None):
         task_item_query.order_by(prefix_order_for(TaskItem.descricao), TaskItem.id.desc())
     )
     task_items = task_item_query.all()
+    task_items, task_items_has_more = trim_limited_rows(task_items)
 
     project_results = [
         {
@@ -295,9 +320,23 @@ def build_global_search_results(term, user, limit_per_type=None):
         "task_items": len(task_item_results),
     }
     counts["total"] = counts["projects"] + counts["stages"] + counts["tasks"] + counts["task_items"]
+    has_more = {
+        "projects": projects_has_more,
+        "stages": stages_has_more,
+        "tasks": tasks_has_more,
+        "task_items": task_items_has_more,
+    }
+    has_more_any = any(has_more.values())
 
     return {
         "query": normalized_term,
+        "meta": {
+            "limit_per_type": limit_per_type,
+            "has_more": {
+                **has_more,
+                "any": has_more_any,
+            },
+        },
         "counts": counts,
         "results": {
             "projects": project_results,
@@ -306,6 +345,8 @@ def build_global_search_results(term, user, limit_per_type=None):
             "task_items": task_item_results,
         }
     }
+
+
 @main_bp.route('/api/busca-global', methods=['GET'])
 @login_required
 def global_search_api():
@@ -319,7 +360,12 @@ def global_search_api():
     if len(search_term) < 2:
         return jsonify(_empty_global_search_payload(search_term))
 
-    payload = build_global_search_results(search_term, g.user, limit_per_type=limit_per_type)
+    payload = build_global_search_results(
+        search_term,
+        g.user,
+        limit_per_type=limit_per_type,
+        include_has_more=True
+    )
     return jsonify(payload)
 
 

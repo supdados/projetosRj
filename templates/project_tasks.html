@@ -7,11 +7,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12">
+<div class="app-page-shell app-page-shell--raised project-tasks-page">
             <!-- Breadcrumb -->
-            <nav aria-label="breadcrumb" class="mb-3">
+            <nav aria-label="breadcrumb" class="project-tasks-breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('main.list_projects') }}">Projetos</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('main.project_detail', project_id=project.id) }}">{{
@@ -21,7 +19,7 @@
             </nav>
 
             <!-- Project Info Card -->
-            <div class="project-info-card mb-4">
+            <div class="project-info-card">
                 <div class="project-info-content">
                     <h5 class="project-info-title ds-type-section-title">
                         <i class="fas fa-project-diagram"></i>
@@ -35,7 +33,7 @@
                     {% endif %}
                 </div>
                 <a href="{{ url_for('main.project_detail', project_id=project.id) }}"
-                    class="btn btn-sm btn-outline-primary">
+                    class="project-info-back-link">
                     <i class="fas fa-arrow-left"></i> Voltar ao Projeto
                 </a>
             </div>
@@ -47,7 +45,7 @@
                         <i class="fas fa-tasks"></i>
                         Tarefas do Projeto
                     </h4>
-                    <span class="header-count">{{ tasks|length }} tarefa{{ 's' if tasks|length != 1 else '' }}</span>
+                    <span class="header-count">{{ tasks|length }} tarefa{{ 's' if tasks|length != 1 else '' }} ativa{{ 's' if tasks|length != 1 else '' }}</span>
                 </div>
                 <button type="button" class="btn-new-clean" data-bs-toggle="modal" data-bs-target="#addTaskModal">
                     <i class="fas fa-plus"></i>
@@ -159,8 +157,6 @@
                 </div>
                 {% endfor %}
             </div>
-        </div>
-    </div>
 </div>
 
 <!-- Modal Adicionar Tarefa -->

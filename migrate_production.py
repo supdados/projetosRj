@@ -192,16 +192,30 @@ def run_migrations(engine):
                     `project_id`    INT,
                     `created_by_id` INT          NOT NULL,
                     `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `is_finalized`  BOOLEAN      NOT NULL DEFAULT 0,
+                    `finalized_at`  DATETIME     NULL,
                     CONSTRAINT `fk_task_project`
                         FOREIGN KEY (`project_id`) REFERENCES `project`(`id`) ON DELETE SET NULL,
                     CONSTRAINT `fk_task_user`
                         FOREIGN KEY (`created_by_id`) REFERENCES `user`(`id`) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """))
+            conn.execute(text("CREATE INDEX `ix_task_is_finalized` ON `task` (`is_finalized`)"))
             conn.commit()
             log.append("  [OK] Tabela `task` criada.")
         else:
-            log.append("  [--] Tabela `task` já existe.")
+            ensure_column(inspector, conn, 'task', 'is_finalized', 'BOOLEAN NOT NULL DEFAULT 0', log)
+            ensure_column(inspector, conn, 'task', 'finalized_at', 'DATETIME NULL', log)
+            try:
+                indexes = {idx['name'] for idx in inspector.get_indexes('task')}
+            except Exception:
+                indexes = set()
+            if 'ix_task_is_finalized' not in indexes:
+                conn.execute(text("CREATE INDEX `ix_task_is_finalized` ON `task` (`is_finalized`)"))
+                conn.commit()
+                log.append("  [OK] Índice task.ix_task_is_finalized criado.")
+            else:
+                log.append("  [--] Índice task.ix_task_is_finalized já existe.")
 
         # ── 8. Tabela `task_item` ─────────────────────────────────────────────
         log.append("\n[task_item]:")

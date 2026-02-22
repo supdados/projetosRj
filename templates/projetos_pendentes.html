@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="pending-page" id="pendingPageRoot">
+<div class="app-page-shell app-page-shell--raised pending-page" id="pendingPageRoot">
     <header class="pending-header">
         <div>
             <h1>
@@ -279,6 +279,74 @@
         </article>
         {% endfor %}
     </section>
+
+    {% if pending_total_pages > 1 %}
+    <section class="pending-pagination-wrap">
+        {% set pending_start = ((pending_page - 1) * pending_per_page) + 1 %}
+        {% set pending_end = [pending_page * pending_per_page, pending_total_projects]|min %}
+        <div class="pending-pagination-info">
+            Mostrando {{ pending_start }} - {{ pending_end }} de {{ pending_total_projects }} projetos
+        </div>
+        <nav aria-label="Paginação de projetos pendentes">
+            <ul class="pagination pending-pagination mb-0">
+                {% if pending_page > 1 %}
+                <li class="page-item">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('main.list_projetos_pendentes', page=1, periodo=filtro_periodo, area=selected_area, responsavel=selected_responsavel) }}"
+                        aria-label="Primeira página"
+                    >
+                        <span aria-hidden="true">««</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('main.list_projetos_pendentes', page=pending_page - 1, periodo=filtro_periodo, area=selected_area, responsavel=selected_responsavel) }}"
+                        aria-label="Página anterior"
+                    >
+                        <span aria-hidden="true">«</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% set pending_range_start = [1, pending_page - 2]|max %}
+                {% set pending_range_end = [pending_total_pages + 1, pending_page + 3]|min %}
+                {% for p in range(pending_range_start, pending_range_end) %}
+                <li class="page-item {% if p == pending_page %}active{% endif %}">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('main.list_projetos_pendentes', page=p, periodo=filtro_periodo, area=selected_area, responsavel=selected_responsavel) }}"
+                    >
+                        {{ p }}
+                    </a>
+                </li>
+                {% endfor %}
+
+                {% if pending_page < pending_total_pages %}
+                <li class="page-item">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('main.list_projetos_pendentes', page=pending_page + 1, periodo=filtro_periodo, area=selected_area, responsavel=selected_responsavel) }}"
+                        aria-label="Próxima página"
+                    >
+                        <span aria-hidden="true">»</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a
+                        class="page-link"
+                        href="{{ url_for('main.list_projetos_pendentes', page=pending_total_pages, periodo=filtro_periodo, area=selected_area, responsavel=selected_responsavel) }}"
+                        aria-label="Última página"
+                    >
+                        <span aria-hidden="true">»»</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </section>
+    {% endif %}
     {% endif %}
 
     <div class="pending-empty-state{% if projetos_com_etapas %} pending-empty-state-hidden{% endif %}" id="pendingEmptyState">
