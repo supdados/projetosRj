@@ -2652,22 +2652,7 @@
                 // Descrição curta - textarea pequena
                 else if (field === 'short_description') {
                     input = document.createElement('textarea');
-                    input.className = 'form-control form-control-sm';
-                    input.style.cssText = `
-                    font-size: 0.875rem;
-                    line-height: 1.4;
-                    color: #ffffff;
-                    -webkit-text-fill-color: #ffffff;
-                    background-color: rgba(255, 255, 255, 0.15);
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    border-radius: 6px;
-                    padding: 0.4rem 0.6rem;
-                    resize: vertical;
-                    min-height: 38px;
-                    max-height: 80px;
-                    width: 100%;
-                    margin-bottom: 0.5rem;
-                `;
+                    input.className = 'form-control form-control-sm project-inline-input project-inline-input-description';
                     input.rows = 2;
                     input.value = currentValue || '';
                     input.placeholder = 'Adicione uma descrição...';
@@ -2678,32 +2663,9 @@
                 else if (field === 'titulo') {
                     input = document.createElement('input');
                     input.type = 'text';
-                    input.className = 'form-control form-control-sm';
-                    input.style.cssText = `
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                    line-height: 1.2;
-                    color: white;
-                    background-color: rgba(255, 255, 255, 0.15);
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    border-radius: 8px;
-                    padding: 0.5rem 0.75rem;
-                    width: 100%;
-                    margin-bottom: 0.5rem;
-                    transition: all 0.2s ease;
-                `;
+                    input.className = 'form-control form-control-sm project-inline-input project-inline-input-title';
                     input.value = currentValue;
                     input.placeholder = 'Nome do projeto';
-
-                    // Adicionar efeito de foco
-                    input.addEventListener('focus', function () {
-                        this.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                        this.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-                    });
-                    input.addEventListener('blur', function () {
-                        this.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-                        this.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                    });
                 }
                 // Campos de texto normais (órgão, processo SEI, github, documentação, etc.)
                 else {

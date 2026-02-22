@@ -649,6 +649,26 @@ body.is-authenticated .content.expanded {
     position: relative;
 }
 
+.app-theme-menu {
+    display: inline-flex;
+    position: relative;
+}
+
+.app-theme-toggle {
+    position: relative;
+}
+
+.app-theme-toggle.is-dark {
+    color: var(--primary-color);
+    background: #e5f0fb;
+    border-color: #cadef1;
+}
+
+.app-theme-toggle:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.16);
+}
+
 .app-notifications-menu .dropdown-toggle::after {
     display: none;
 }
@@ -1294,6 +1314,15 @@ body.is-authenticated .content.expanded {
 }
 
 @media (max-width: 1260px) {
+    .app-topnav-right {
+        gap: 0.55rem;
+    }
+
+    .app-theme-toggle {
+        width: 2.2rem;
+        height: 2.2rem;
+    }
+
     .app-global-search {
         width: clamp(220px, 22vw, 300px);
     }
@@ -1370,6 +1399,10 @@ body.is-authenticated .main-content > .app-page-shell {
     .app-notifications-dropdown {
         min-width: min(90vw, 340px);
         max-width: min(90vw, 340px);
+    }
+
+    .app-topnav-right {
+        gap: 0.45rem;
     }
 }
 
@@ -4591,6 +4624,11 @@ html, body {
 
 .project-create-modal .label-icon {
     color: #6a829f;
+}
+
+.template-stage-duration-hint {
+    color: #6c757d;
+    font-size: 0.85rem;
 }
 
 .project-create-modal .form-control-glass,

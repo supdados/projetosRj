@@ -8,7 +8,29 @@
     
     <!-- Meta tag para evitar redimensionamento visual -->
     <meta name="format-detection" content="telephone=no">
-    <meta name="theme-color" content="#005A92">
+    <meta name="theme-color" content="#005A92" id="appThemeColorMeta">
+    {% if current_user_obj %}
+    <script>
+        (function() {
+            var storageKey = 'projetosrj.theme';
+            var root = document.documentElement;
+            var theme = 'light';
+            try {
+                var storedTheme = window.localStorage.getItem(storageKey);
+                if (storedTheme === 'light' || storedTheme === 'dark') {
+                    theme = storedTheme;
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            } catch (error) {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            }
+            root.setAttribute('data-theme', theme);
+        })();
+    </script>
+    {% endif %}
     
     <!-- Favicon -->
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
@@ -30,6 +52,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='design-system.css') }}">
     
     {% block head_extra %}{% endblock %}
+    {% if current_user_obj %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='theme-dark.css') }}">
+    {% endif %}
 </head>
 <body class="loading-active{% if current_user_obj %} is-authenticated{% endif %}">
     
@@ -234,6 +259,19 @@
                                     <div class="app-notifications-state" id="appNotificationsState">Abra o painel para carregar as notificações.</div>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="app-theme-menu">
+                            <button
+                                class="btn app-nav-icon-btn app-theme-toggle"
+                                type="button"
+                                id="appThemeToggle"
+                                title="Alternar tema"
+                                aria-label="Alternar tema"
+                                aria-pressed="false"
+                            >
+                                <i class="fas fa-moon" id="appThemeToggleIcon"></i>
+                            </button>
                         </div>
 
                         <div class="app-account-tooltip">
@@ -900,12 +938,119 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const body = document.body;
+            const root = document.documentElement;
+            const isAuthenticatedPage = body.classList.contains('is-authenticated');
             const loadingOverlay = document.querySelector('.loading-overlay');
             const skeletonContent = document.querySelector('.skeleton-content');
             const skeletonTemplateStore = document.getElementById('skeleton-template-store');
             const hasBootstrap = typeof window.bootstrap !== 'undefined';
             const nonNavigationalToggles = ['dropdown', 'collapse', 'modal', 'offcanvas', 'tab', 'pill'];
             const skeletonTemplates = {};
+            const themeToggleButton = document.getElementById('appThemeToggle');
+            const themeToggleIcon = document.getElementById('appThemeToggleIcon');
+            const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+            const themeStorageKey = 'projetosrj.theme';
+            const themeColorByMode = {
+                light: '#005A92',
+                dark: '#273447',
+            };
+            const darkMediaQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+            function normalizeTheme(themeName) {
+                return themeName === 'dark' ? 'dark' : 'light';
+            }
+
+            function readStoredTheme() {
+                try {
+                    const storedTheme = window.localStorage.getItem(themeStorageKey);
+                    return storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : null;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            let storedThemeOverride = readStoredTheme();
+
+            function updateThemeColor(themeName) {
+                if (!themeColorMeta) {
+                    return;
+                }
+                themeColorMeta.setAttribute('content', themeColorByMode[themeName] || themeColorByMode.light);
+            }
+
+            function updateThemeToggle(themeName) {
+                if (!themeToggleButton || !themeToggleIcon) {
+                    return;
+                }
+                const isDarkTheme = themeName === 'dark';
+                themeToggleButton.classList.toggle('is-dark', isDarkTheme);
+                themeToggleButton.setAttribute('aria-pressed', isDarkTheme ? 'true' : 'false');
+                themeToggleButton.setAttribute('title', isDarkTheme ? 'Ativar modo claro' : 'Ativar modo escuro');
+                themeToggleButton.setAttribute('aria-label', isDarkTheme ? 'Ativar modo claro' : 'Ativar modo escuro');
+                themeToggleIcon.classList.remove('fa-moon', 'fa-sun');
+                themeToggleIcon.classList.add(isDarkTheme ? 'fa-sun' : 'fa-moon');
+            }
+
+            function applyTheme(themeName, persistChoice) {
+                if (!isAuthenticatedPage) {
+                    return;
+                }
+                const normalizedTheme = normalizeTheme(themeName);
+                root.setAttribute('data-theme', normalizedTheme);
+                updateThemeColor(normalizedTheme);
+                updateThemeToggle(normalizedTheme);
+
+                if (!persistChoice) {
+                    return;
+                }
+
+                try {
+                    window.localStorage.setItem(themeStorageKey, normalizedTheme);
+                    storedThemeOverride = normalizedTheme;
+                } catch (error) {
+                    /* noop */
+                }
+            }
+
+            function resolveInitialTheme() {
+                const attrTheme = root.getAttribute('data-theme');
+                if (attrTheme === 'light' || attrTheme === 'dark') {
+                    return attrTheme;
+                }
+                if (storedThemeOverride) {
+                    return storedThemeOverride;
+                }
+                return darkMediaQuery && darkMediaQuery.matches ? 'dark' : 'light';
+            }
+
+            if (isAuthenticatedPage) {
+                applyTheme(resolveInitialTheme(), false);
+
+                if (themeToggleButton) {
+                    themeToggleButton.addEventListener('click', function() {
+                        const currentTheme = normalizeTheme(root.getAttribute('data-theme'));
+                        const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                        applyTheme(nextTheme, true);
+                    });
+                }
+
+                if (darkMediaQuery) {
+                    const onSystemThemeChange = function(event) {
+                        if (storedThemeOverride) {
+                            return;
+                        }
+                        applyTheme(event.matches ? 'dark' : 'light', false);
+                    };
+
+                    if (typeof darkMediaQuery.addEventListener === 'function') {
+                        darkMediaQuery.addEventListener('change', onSystemThemeChange);
+                    } else if (typeof darkMediaQuery.addListener === 'function') {
+                        darkMediaQuery.addListener(onSystemThemeChange);
+                    }
+                }
+            } else {
+                updateThemeColor('light');
+            }
 
             body.classList.add('loading-active');
 

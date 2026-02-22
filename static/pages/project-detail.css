@@ -569,6 +569,30 @@
         outline: none;
     }
 
+    .project-inline-input {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .project-inline-input-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1.2;
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .project-inline-input-description {
+        font-size: 0.875rem;
+        line-height: 1.4;
+        border-radius: 6px;
+        padding: 0.4rem 0.6rem;
+        resize: vertical;
+        min-height: 38px;
+        max-height: 80px;
+    }
+
     /* Estilos especiais para campos no header (fundo azul) */
     .project-header [data-field] input.form-control,
     .project-header [data-field] textarea.form-control,
