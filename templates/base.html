@@ -1470,16 +1470,11 @@
                         return response.json();
                     })
                     .then(function(payload) {
-                        const unreadBefore = Number(payload && payload.unread_before);
                         const unreadAfter = Number(payload && payload.unread_after);
-                        updateNotificationsCounter(Number.isFinite(unreadAfter) ? unreadAfter : 0);
+                        // Mantém o texto "X não lida(s)" estável até recarregar a página.
+                        // Apenas o badge do sino zera imediatamente ao abrir o dropdown.
                         updateNotificationsBadge(Number.isFinite(unreadAfter) ? unreadAfter : 0);
                         renderNotificationsItems(payload && payload.items ? payload.items : []);
-
-                        // Em caso de resposta inesperada, mantém UI coerente com "lidas ao abrir".
-                        if (!Number.isFinite(unreadBefore)) {
-                            updateNotificationsCounter(0);
-                        }
                     })
                     .catch(function() {
                         renderNotificationsState('Não foi possível carregar as notificações.');

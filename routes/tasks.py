@@ -649,16 +649,27 @@ def edit_task_item(item_id):
     if not can_edit:
         return jsonify({'success': False, 'message': 'Sem permissão'}), 403
     
-    descricao = request.form.get('descricao', '').strip()
+    descricao = request.form.get('descricao', item.descricao).strip()
     status = request.form.get('status', item.status)
-    responsavel = request.form.get('responsavel', '').strip()
-    prioridade = request.form.get('prioridade', '').strip() or None
-    tipo_pedido = request.form.get('tipo_pedido', '').strip() or None
 
-    if prioridade not in VALID_PRIORIDADES:
-        prioridade = None
-    if tipo_pedido not in VALID_TIPOS:
-        tipo_pedido = None
+    if 'responsavel' in request.form:
+        responsavel = request.form.get('responsavel', '').strip()
+    else:
+        responsavel = item.responsavel or ''
+
+    if 'prioridade' in request.form:
+        prioridade = request.form.get('prioridade', '').strip() or None
+        if prioridade and prioridade not in VALID_PRIORIDADES:
+            prioridade = None
+    else:
+        prioridade = item.prioridade
+
+    if 'tipo_pedido' in request.form:
+        tipo_pedido = request.form.get('tipo_pedido', '').strip() or None
+        if tipo_pedido and tipo_pedido not in VALID_TIPOS:
+            tipo_pedido = None
+    else:
+        tipo_pedido = item.tipo_pedido
 
     # Validações
     if not descricao:

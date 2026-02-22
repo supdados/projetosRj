@@ -1514,6 +1514,7 @@
         if (!addUrl) return;
 
         var addResponsavelNames = [];
+        var addItemSubmitting = false;
         renderResponsavelPickerTrigger(addResponsavelTrigger, addResponsavelNames, 'Responsável');
 
         function resizeAddDesc() {
@@ -1687,10 +1688,14 @@
             });
         }
 
-        function submitAddItem() {
+        function submitAddItem(options) {
+            if (addItemSubmitting) return;
+            var opts = options || {};
+            var keepComposerOpen = opts.keepComposerOpen === true;
             var desc = (addDesc && addDesc.value) ? addDesc.value.trim() : '';
             if (!desc) { addDesc.focus(); return; }
 
+            addItemSubmitting = true;
             requestAddItem({
                 descricao: desc,
                 status: addStatus ? addStatus.value : 'programado',
@@ -1700,10 +1705,17 @@
             })
                 .then(function (data) {
                     insertNewItem(data);
-                    resetAddFormForNextItem();
+                    if (keepComposerOpen) {
+                        resetAddFormForNextItem();
+                    } else {
+                        hideAddForm();
+                    }
                 })
                 .catch(function (error) {
                     alert((error && error.message) || 'Erro ao adicionar item.');
+                })
+                .finally(function () {
+                    addItemSubmitting = false;
                 });
         }
 
@@ -1711,7 +1723,10 @@
 
         addDesc.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') hideAddForm();
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitAddItem(); }
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitAddItem({ keepComposerOpen: true });
+            }
         });
         addDesc.addEventListener('input', resizeAddDesc);
 
@@ -1753,8 +1768,13 @@
 
         document.addEventListener('mousedown', function (e) {
             if (formWrap.hasAttribute('hidden')) return;
+            if (addItemSubmitting) return;
             if (addRow.contains(e.target)) return;
             if (responsavelPickerManager.isEventInsidePopover(e.target)) return;
+            if ((addDesc && (addDesc.value || '').trim())) {
+                submitAddItem({ keepComposerOpen: false });
+                return;
+            }
             if (isAddFormEmpty()) hideAddForm();
         });
 
@@ -2089,12 +2109,32 @@
     }
 
     function persistTaskItemDetails(itemId, payload) {
+        var row = getTaskItemRowById(itemId);
+        var safePayload = payload || {};
+        var hasOwn = Object.prototype.hasOwnProperty;
+
+        var descricaoValue = hasOwn.call(safePayload, 'descricao')
+            ? (safePayload.descricao || '')
+            : (row ? getTaskItemDescricao(row) : '');
+        var statusValue = hasOwn.call(safePayload, 'status')
+            ? (safePayload.status || 'programado')
+            : (row ? getTaskItemStatus(row) : 'programado');
+        var responsavelValue = hasOwn.call(safePayload, 'responsavel')
+            ? (safePayload.responsavel || '')
+            : (row ? getTaskItemResponsavel(row) : '');
+        var prioridadeValue = hasOwn.call(safePayload, 'prioridade')
+            ? (safePayload.prioridade || '')
+            : (row ? getTaskItemPrioridade(row) : '');
+        var tipoPedidoValue = hasOwn.call(safePayload, 'tipo_pedido')
+            ? (safePayload.tipo_pedido || '')
+            : (row ? getTaskItemTipoPedido(row) : '');
+
         var formData = new FormData();
-        formData.append('descricao', (payload && payload.descricao) || '');
-        formData.append('status', (payload && payload.status) || 'programado');
-        formData.append('responsavel', (payload && payload.responsavel) || '');
-        formData.append('prioridade', (payload && payload.prioridade) || '');
-        formData.append('tipo_pedido', (payload && payload.tipo_pedido) || '');
+        formData.append('descricao', descricaoValue);
+        formData.append('status', statusValue);
+        formData.append('responsavel', responsavelValue);
+        formData.append('prioridade', prioridadeValue);
+        formData.append('tipo_pedido', tipoPedidoValue);
 
         return fetch('/tarefas/itens/' + itemId + '/edit', {
             method: 'POST',
@@ -2297,6 +2337,7 @@
             itemId: null,
             responsavelNames: [],
             isSaving: false,
+            isClosing: false,
             isCommentBusy: false,
             autosaveTimer: null,
             autosaveDebounceMs: 520,
@@ -3255,10 +3296,11 @@
             });
         }
 
-        function closeDrawer() {
+        function performDrawerClose() {
             if (!hasDrawer()) return;
             clearDrawerAutosaveTimer();
             clearDrawerCommentsStatusTimer();
+            drawerState.isClosing = false;
             drawerState.hasPendingSave = false;
             drawerState.hasUnsavedChanges = false;
             drawerState.forceCommentsBottom = false;
@@ -3284,6 +3326,35 @@
                 resizeDrawerDescTextarea();
                 refreshDrawerCommentComposer();
             }, 160);
+        }
+
+        function closeDrawer(options) {
+            if (!hasDrawer()) return;
+            var opts = options || {};
+            var force = opts.force === true;
+            var currentItemId = drawerState.itemId ? String(drawerState.itemId) : '';
+
+            if (!currentItemId) {
+                performDrawerClose();
+                return;
+            }
+
+            if (!force && !isDeleting) {
+                if (drawerState.isClosing) return;
+                drawerState.isClosing = true;
+                flushDrawerAutosave('close')
+                    .catch(function () {})
+                    .finally(function () {
+                        if (drawerState.itemId && String(drawerState.itemId) !== currentItemId) {
+                            drawerState.isClosing = false;
+                            return;
+                        }
+                        performDrawerClose();
+                    });
+                return;
+            }
+
+            performDrawerClose();
         }
 
         function openDrawerAnexos(itemId) {
@@ -3870,7 +3941,9 @@
                 }
 
                 function submitComposer(event) {
-                    event.preventDefault();
+                    if (event && typeof event.preventDefault === 'function') {
+                        event.preventDefault();
+                    }
                     if (isSaving || isDeleting || isPersisting) return;
                     if (!window.taskItemsListBridge || typeof window.taskItemsListBridge.requestAddItem !== 'function') {
                         alert('Fluxo de adição indisponível.');
@@ -3904,6 +3977,14 @@
                             isSaving = false;
                             composer.classList.remove('is-saving');
                         });
+                }
+
+                function trySubmitComposerOutside() {
+                    if (isSaving || isDeleting || isPersisting) return false;
+                    var descricao = (desc.value || '').trim();
+                    if (!descricao) return false;
+                    submitComposer();
+                    return true;
                 }
 
                 addBtn.addEventListener('click', function () {
@@ -3946,6 +4027,7 @@
                     close: closeComposer,
                     isOpen: isComposerOpen,
                     hasValue: hasComposerValue,
+                    trySubmitOutside: trySubmitComposerOutside,
                     containsTarget: function (target) {
                         return !!(target && composer.contains(target));
                     },
@@ -3963,7 +4045,10 @@
                     var controller = composerControllers[key];
                     if (!controller || typeof controller.isOpen !== 'function' || !controller.isOpen()) return;
                     if (typeof controller.containsTarget === 'function' && controller.containsTarget(event.target)) return;
-                    if (typeof controller.hasValue === 'function' && controller.hasValue()) return;
+                    if (typeof controller.hasValue === 'function' && controller.hasValue()) {
+                        if (typeof controller.trySubmitOutside === 'function' && controller.trySubmitOutside()) return;
+                        return;
+                    }
                     controller.close(true);
                 });
             });
@@ -4607,9 +4692,16 @@
         var saving = false;
         var finished = false;
 
+        function handlePointerDownOutside(event) {
+            if (saving || finished) return;
+            if (descWrap.contains(event.target)) return;
+            saveDesc();
+        }
+
         function restoreUi(text) {
             if (finished) return;
             finished = true;
+            document.removeEventListener('pointerdown', handlePointerDownOutside, true);
             descEl.textContent = text;
             descEl.removeAttribute('hidden');
             descEl.classList.remove('task-item-desc-editing-active');
@@ -4668,6 +4760,8 @@
                 }
             }, 150);
         });
+
+        document.addEventListener('pointerdown', handlePointerDownOutside, true);
     }
 
     function setResponsavelCellText(respSpan, text) {
