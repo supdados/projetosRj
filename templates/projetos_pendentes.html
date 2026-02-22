@@ -135,7 +135,6 @@
                             <th>Responsável</th>
                             <th>Início Prev.</th>
                             <th>Fim Prev.</th>
-                            <th>Status</th>
                             <th class="pending-actions-col">Ações</th>
                         </tr>
                     </thead>
@@ -155,12 +154,7 @@
                             <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.responsavel or 'Não informado' }}</td>
                             <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}</td>
                             <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}</td>
-                            <td>
-                                <span class="pending-status-badge {% if etapa.iniciada and not etapa.done %}pending-status-started{% else %}pending-status-open{% endif %}">
-                                    {% if etapa.iniciada and not etapa.done %}Iniciada{% else %}Aberta{% endif %}
-                                </span>
-                            </td>
-                            <td>
+                            <td class="pending-actions-cell">
                                 <div class="pending-actions">
                                     <button
                                         type="button"
@@ -191,7 +185,7 @@
                     {% if item.qtd_outras > 0 %}
                     <tfoot>
                         <tr class="pending-expand-row">
-                            <td colspan="6">
+                            <td colspan="5">
                                 <button
                                     type="button"
                                     class="pending-expand-btn toggle-outras-btn"
@@ -220,7 +214,6 @@
                                 <th>Responsável</th>
                                 <th>Início Prev.</th>
                                 <th>Fim Prev.</th>
-                                <th>Status</th>
                                 <th class="pending-actions-col">Ações</th>
                             </tr>
                         </thead>
@@ -240,12 +233,7 @@
                                 <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.responsavel or 'Não informado' }}</td>
                                 <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}</td>
                                 <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}</td>
-                                <td>
-                                    <span class="pending-status-badge {% if etapa.iniciada and not etapa.done %}pending-status-started{% else %}pending-status-open{% endif %}">
-                                        {% if etapa.iniciada and not etapa.done %}Iniciada{% else %}Aberta{% endif %}
-                                    </span>
-                                </td>
-                                <td>
+                                <td class="pending-actions-cell">
                                     <div class="pending-actions">
                                         <button
                                             type="button"
@@ -522,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!placeholder) {
                 placeholder = document.createElement('tr');
                 placeholder.className = 'pending-visible-empty';
-                placeholder.innerHTML = '<td colspan="6">Sem etapas urgentes na janela atual.</td>';
+                placeholder.innerHTML = '<td colspan="5">Sem etapas urgentes na janela atual.</td>';
                 body.appendChild(placeholder);
             }
         } else if (placeholder) {

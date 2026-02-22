@@ -135,9 +135,12 @@
     }
 
     .dashboard-page-v2 .glass-btn.dashboard-new-project-btn:hover,
-    .dashboard-page-v2 .glass-btn.dashboard-new-project-btn:focus {
+    .dashboard-page-v2 .glass-btn.dashboard-new-project-btn:focus,
+    .dashboard-page-v2 .glass-btn.dashboard-new-project-btn:focus-visible {
         transform: none;
-        filter: saturate(1.06);
+        background: linear-gradient(135deg, #1173b5 0%, #0d669f 52%, #0a5788 100%) !important;
+        border-color: rgba(16, 76, 121, 0.3) !important;
+        filter: none;
         box-shadow: 0 14px 28px rgba(6, 74, 123, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
     }
 
@@ -227,6 +230,21 @@
     .dashboard-page-v2 .dashboard-kpi-row .dashboard-glass-card .card-body > .d-flex > .ms-3 {
         margin-left: 0 !important;
         min-width: 0;
+    }
+
+    .dashboard-page-v2 .dashboard-kpi-row > [class*="col-"] > a {
+        display: block;
+        border-radius: 14px;
+    }
+
+    .dashboard-page-v2 .dashboard-kpi-row > [class*="col-"] > a .dashboard-glass-card {
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .dashboard-page-v2 .dashboard-kpi-row > [class*="col-"] > a:hover .dashboard-glass-card,
+    .dashboard-page-v2 .dashboard-kpi-row > [class*="col-"] > a:focus-visible .dashboard-glass-card {
+        border-color: rgba(13, 102, 159, 0.58) !important;
+        box-shadow: 0 12px 28px rgba(6, 74, 123, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.38);
     }
 
     .dashboard-page-v2 .dashboard-glass-card .h4 {

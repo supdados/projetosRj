@@ -137,15 +137,18 @@
     }
 
     .btn-pending-primary {
-        background: linear-gradient(135deg, #0067a8 0%, #005a92 100%);
-        border-color: #005a92;
+        border: 1px solid rgba(16, 76, 121, 0.24);
+        background: linear-gradient(135deg, #0e6aa8 0%, #0b5e94 52%, #084f7e 100%);
+        box-shadow: 0 10px 22px rgba(6, 74, 123, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.24);
         color: #fff;
     }
 
-    .btn-pending-primary:hover {
-        background: linear-gradient(135deg, #0073ba 0%, #00619a 100%);
+    .btn-pending-primary:hover,
+    .btn-pending-primary:focus {
+        background: linear-gradient(135deg, #1173b5 0%, #0d669f 52%, #0a5788 100%);
+        border-color: rgba(16, 76, 121, 0.3);
+        box-shadow: 0 14px 28px rgba(6, 74, 123, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
         color: #fff;
-        border-color: #00558a;
     }
 
     .pending-project-list {
@@ -259,6 +262,11 @@
         border-bottom: 1px solid #dfe7f1;
     }
 
+    .pending-actions-col {
+        text-align: center;
+        width: 220px;
+    }
+
     .pending-table td {
         border-bottom: 1px solid #edf2f8;
         padding: 0.6rem 0.7rem;
@@ -299,11 +307,18 @@
 
     .pending-actions {
         display: inline-flex;
+        align-items: center;
+        justify-content: center;
         gap: 0.35rem;
+    }
+
+    .pending-actions-cell {
+        text-align: center;
     }
 
     .pending-action-btn {
         height: 30px;
+        min-width: 108px;
         border-radius: 7px;
         border: 1px solid #cbdcf0;
         padding: 0 0.58rem;
@@ -313,6 +328,7 @@
         font-size: var(--ds-font-size-xs);
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.3rem;
         transition: all 0.16s ease;
     }
