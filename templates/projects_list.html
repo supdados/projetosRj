@@ -151,14 +151,51 @@
                         </select>
                     </div>
 
+                    {% set _abep_label = '' %}
+                    {% if selected_abep_indicator %}
+                        {% for item in ABEP_INDICADORES_OPTIONS %}
+                            {% if item.value == selected_abep_indicator %}
+                                {% set _abep_label = item.label %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
                     <div class="projects-v4-field projects-v4-field-abep">
-                        <label for="filterAbepIndicator" class="projects-v4-label ds-type-label">Indicador ABEP</label>
-                        <select class="projects-v4-input" name="abep_indicator" id="filterAbepIndicator">
-                            <option value="">Todos os indicadores ABEP</option>
-                            {% for item in ABEP_INDICADORES_OPTIONS %}
-                            <option value="{{ item.value }}" {% if item.value == selected_abep_indicator %}selected{% endif %}>{{ item.label }}</option>
-                            {% endfor %}
-                        </select>
+                        <label for="filterAbepIndicatorInput" class="projects-v4-label ds-type-label">Indicador ABEP</label>
+                        <div class="projects-v4-abep-combobox">
+                            <input
+                                type="text"
+                                class="projects-v4-input"
+                                id="filterAbepIndicatorInput"
+                                placeholder="Busque por número ou título..."
+                                autocomplete="off"
+                                role="combobox"
+                                aria-expanded="false"
+                                aria-controls="filterAbepIndicatorDropdown"
+                                aria-haspopup="listbox"
+                                value="{{ _abep_label }}">
+                            <input type="hidden"
+                                   id="filterAbepIndicatorHidden"
+                                   name="abep_indicator"
+                                   value="{{ selected_abep_indicator|default('', true) }}">
+                            <div class="projects-v4-abep-dropdown"
+                                 id="filterAbepIndicatorDropdown"
+                                 role="listbox"
+                                 hidden>
+                                {% for item in ABEP_INDICADORES_OPTIONS %}
+                                <div class="projects-v4-abep-option"
+                                     data-value="{{ item.value }}"
+                                     data-label="{{ item.label }}"
+                                     role="option">
+                                    {{ item.label }}
+                                </div>
+                                {% endfor %}
+                                <div class="projects-v4-abep-option projects-v4-abep-empty"
+                                     data-abep-empty="1"
+                                     hidden>
+                                    Nenhum indicador encontrado
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -377,6 +414,109 @@
                 densityObserver.observe(filterActions);
             }
         }
+
+        // ABEP combobox no filtro
+        (function() {
+            var input = document.getElementById('filterAbepIndicatorInput');
+            var hiddenInput = document.getElementById('filterAbepIndicatorHidden');
+            var dropdown = document.getElementById('filterAbepIndicatorDropdown');
+            if (!input || !hiddenInput || !dropdown) return;
+
+            var options = Array.from(dropdown.querySelectorAll('.projects-v4-abep-option[data-value]'));
+            var emptyState = dropdown.querySelector('[data-abep-empty="1"]');
+
+            function clearActive() {
+                options.forEach(function(o) { o.classList.remove('active'); });
+            }
+
+            function filterOptions() {
+                var term = (input.value || '').trim().toLowerCase();
+                var count = 0;
+                options.forEach(function(o) {
+                    var label = (o.getAttribute('data-label') || '').toLowerCase();
+                    var value = (o.getAttribute('data-value') || '').toLowerCase();
+                    var match = !term || label.indexOf(term) !== -1 || value.indexOf(term) !== -1;
+                    o.classList.toggle('hidden-by-filter', !match);
+                    o.classList.remove('active');
+                    if (match) count++;
+                });
+                if (emptyState) emptyState.hidden = count > 0;
+            }
+
+            function getVisible() {
+                return options.filter(function(o) { return !o.classList.contains('hidden-by-filter'); });
+            }
+
+            function show() {
+                filterOptions();
+                dropdown.removeAttribute('hidden');
+                input.setAttribute('aria-expanded', 'true');
+            }
+
+            function hide() {
+                dropdown.setAttribute('hidden', '');
+                input.setAttribute('aria-expanded', 'false');
+                clearActive();
+            }
+
+            function select(option) {
+                hiddenInput.value = option.getAttribute('data-value') || '';
+                input.value = option.getAttribute('data-label') || option.textContent.trim();
+                hide();
+            }
+
+            input.addEventListener('focus', show);
+            input.addEventListener('click', show);
+            input.addEventListener('input', function() {
+                hiddenInput.value = '';
+                show();
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') { hide(); return; }
+                var vis = getVisible();
+                if (!vis.length) { if (e.key === 'Enter') e.preventDefault(); return; }
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    var act = dropdown.querySelector('.projects-v4-abep-option.active');
+                    var idx = vis.indexOf(act);
+                    idx = idx < 0 ? 0 : Math.min(idx + 1, vis.length - 1);
+                    clearActive();
+                    vis[idx].classList.add('active');
+                    vis[idx].scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    var act2 = dropdown.querySelector('.projects-v4-abep-option.active');
+                    var idx2 = vis.indexOf(act2);
+                    idx2 = idx2 < 0 ? vis.length - 1 : Math.max(idx2 - 1, 0);
+                    clearActive();
+                    vis[idx2].classList.add('active');
+                    vis[idx2].scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'Enter') {
+                    var act3 = dropdown.querySelector('.projects-v4-abep-option.active');
+                    if (act3 && !act3.classList.contains('hidden-by-filter')) {
+                        e.preventDefault();
+                        select(act3);
+                    }
+                }
+            });
+
+            options.forEach(function(option) {
+                option.addEventListener('mousedown', function(e) { e.preventDefault(); });
+                option.addEventListener('click', function() { select(option); });
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!dropdown.contains(e.target) && e.target !== input) hide();
+            });
+
+            input.addEventListener('blur', function() {
+                setTimeout(function() {
+                    if (!dropdown.contains(document.activeElement) && document.activeElement !== input) hide();
+                }, 120);
+            });
+        })();
     });
 </script>
 {% include "project_add_form_js.html" %}

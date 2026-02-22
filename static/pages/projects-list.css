@@ -304,6 +304,7 @@
 .projects-v4-filter-advanced.is-open {
     grid-template-rows: 1fr;
     opacity: 1;
+    overflow: visible;
     pointer-events: auto;
     border-top-color: #dfeaf6;
     margin-top: 0.12rem;
@@ -317,7 +318,7 @@
     gap: 0.5rem;
     align-items: flex-end;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .projects-v4-filter-advanced-grid .projects-v4-field {
@@ -331,6 +332,65 @@
 .projects-v4-filter-advanced-grid .projects-v4-field-abep {
     flex: 2.8 1 420px;
     min-width: 320px;
+}
+
+/* ABEP combobox no filtro */
+.projects-v4-abep-combobox {
+    position: relative;
+}
+
+.projects-v4-abep-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 3px;
+    max-height: 220px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #ffffff;
+    border: 1px solid #d0e1f0;
+    border-radius: 9px;
+    box-shadow: 0 10px 24px rgba(13, 59, 99, 0.16);
+    z-index: 1200;
+}
+
+.projects-v4-abep-dropdown.projects-v4-abep-dropdown-up {
+    top: auto;
+    bottom: calc(100% + 3px);
+    margin-top: 0;
+}
+
+.projects-v4-abep-dropdown[hidden] {
+    display: none !important;
+}
+
+.projects-v4-abep-option {
+    padding: 0.44rem 0.62rem;
+    font-size: var(--ds-font-size-sm);
+    color: #334b66;
+    cursor: pointer;
+}
+
+.projects-v4-abep-option:hover,
+.projects-v4-abep-option.active {
+    background: rgba(74, 137, 199, 0.12);
+    color: #1f4e7a;
+}
+
+.projects-v4-abep-option.hidden-by-filter {
+    display: none !important;
+}
+
+.projects-v4-abep-option.projects-v4-abep-empty {
+    color: #6e8299;
+    cursor: default;
+    font-style: italic;
+}
+
+.projects-v4-abep-option.projects-v4-abep-empty:hover {
+    background: transparent;
+    color: #6e8299;
 }
 
 .projects-v4-table-card {

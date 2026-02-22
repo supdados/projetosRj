@@ -1,6 +1,30 @@
+/* Viewport-fit: dashboard inteira cabe na tela, sem scroll na página */
+.wrapper:has(.dashboard-page-breathe) {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+.wrapper:has(.dashboard-page-breathe) > .content {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+}
+
+.wrapper:has(.dashboard-page-breathe) .main-content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .dashboard-page-v2 {
     background: #f4f7fb;
     padding: 0.84rem 0.9rem 0.9rem;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .dashboard-page-v2 .row {
@@ -685,75 +709,62 @@
             margin-bottom: 0.4rem !important;
         }
 
+        /* Grid principal: ocupa o espaço restante, cards lado a lado */
         .dashboard-page-v2 .dashboard-main-grid {
             --bs-gutter-x: 0.95rem;
             --bs-gutter-y: 0.6rem;
+            flex: 1;
             min-height: 0;
+            flex-wrap: nowrap !important;
             align-items: stretch;
             overflow: hidden;
         }
 
-        .dashboard-page-v2 .dashboard-main-grid > .dashboard-recent-col,
-        .dashboard-page-v2 .dashboard-main-grid > .dashboard-side-col {
+        /* Colunas: flex container para o card preencher */
+        .dashboard-page-v2 .dashboard-recent-col {
             display: flex;
-            min-height: 0;
-            height: 100%;
-            overflow: hidden;
-        }
-
-        .dashboard-page-v2 #dashboardRecentProjectsCard,
-        .dashboard-page-v2 #dashboardTasksCard {
-            display: flex;
-            flex-direction: column;
             min-height: 0;
             overflow: hidden;
-        }
-
-        .dashboard-page-v2 .dashboard-recent-col .main-content-card {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
-
-        .dashboard-page-v2 .dashboard-recent-col .main-content-card .glass-card-body {
-            display: flex;
-            flex: 1 1 auto;
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        .dashboard-page-v2 .dashboard-recent-col .glass-table-wrapper {
-            flex: 1 1 auto;
-            min-height: 0;
-            overflow-y: auto;
-            max-height: none;
-            overscroll-behavior: contain;
         }
 
         .dashboard-page-v2 .dashboard-side-col {
             display: flex;
-            flex-direction: column;
             min-height: 0;
-            height: 100%;
         }
 
-        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-kpi-card {
-            width: 100%;
-            height: 100%;
+        /* Card de Projetos Recentes: flex column, scroll na tabela */
+        .dashboard-page-v2 #dashboardRecentProjectsCard {
             display: flex;
             flex-direction: column;
-            flex: 1 1 auto;
+            width: 100%;
             min-height: 0;
             overflow: hidden;
         }
 
-        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-kpi-card .card-body {
-            flex: 1 1 auto;
+        .dashboard-page-v2 #dashboardRecentProjectsCard > .glass-card-header {
+            flex-shrink: 0;
+        }
+
+        .dashboard-page-v2 #dashboardRecentProjectsCard > .glass-card-body {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .dashboard-page-v2 .dashboard-recent-col .glass-table-wrapper {
+            flex: 1;
             min-height: 0;
             overflow-y: auto;
+            overflow-x: hidden;
             overscroll-behavior: contain;
+        }
+
+        /* Card de Tarefas: altura natural */
+        .dashboard-page-v2 #dashboardTasksCard {
+            display: flex;
+            flex-direction: column;
         }
     }
 
@@ -770,11 +781,6 @@
             --donut-size: 140px;
             --donut-stroke: 3.7;
         }
-
-        .dashboard-page-v2 .dashboard-side-col .dashboard-tasks-kpi-card {
-            min-height: 0;
-        }
-
     }
 
     @media (max-width: 575.98px) {
