@@ -16,7 +16,7 @@
         <span class="search-results-count">{{ items|length }}</span>
     </div>
     {% for item in items %}
-    <a href="{{ item.url }}" class="search-result-item">
+    <a href="{{ item.url }}" class="search-result-item search-result-item-square">
         <div class="search-result-content">
             <div class="search-result-head">
                 <span class="search-result-badge {{ badge_class }}">{{ item.type_label }}</span>

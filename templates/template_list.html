@@ -26,7 +26,13 @@
             <!-- Templates List Clean -->
             <div class="templates-list-clean">
                 {% for template in templates %}
-                <div class="template-item-clean">
+                <div
+                    class="template-item-clean template-item-clickable"
+                    data-template-url="{{ url_for('main.edit_template', template_id=template.id) }}"
+                    tabindex="0"
+                    role="link"
+                    aria-label="Editar modelo {{ template.name }}"
+                >
                     <div class="template-icon-clean">
                         <i class="fas fa-clipboard-list"></i>
                     </div>
@@ -45,11 +51,7 @@
                         {% endif %}
                     </div>
                     
-                    <div class="template-actions-clean">
-                        <a href="{{ url_for('main.edit_template', template_id=template.id) }}" 
-                           class="btn-action-clean btn-edit-clean" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </a>
+                    <div class="template-actions-clean" data-stop-row-click="1">
                         <button type="button" class="btn-action-clean btn-delete-clean" 
                                 data-bs-toggle="modal" data-bs-target="#deleteModal-{{ template.id }}"
                                 title="Excluir">
@@ -106,4 +108,33 @@
             </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+    function navigateToTemplate(card) {
+        var url = card.getAttribute('data-template-url');
+        if (url) {
+            window.location.href = url;
+        }
+    }
+
+    var cards = document.querySelectorAll('.template-item-clickable[data-template-url]');
+    cards.forEach(function (card) {
+        card.addEventListener('click', function (event) {
+            if (event.target.closest('[data-stop-row-click="1"]')) return;
+            navigateToTemplate(card);
+        });
+
+        card.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            if (event.target.closest('[data-stop-row-click="1"]')) return;
+            event.preventDefault();
+            navigateToTemplate(card);
+        });
+    });
+})();
+</script>
 {% endblock %}

@@ -183,31 +183,42 @@
                                         <div class="row g-3 mt-0">
                                             <div class="col-12">
                                                 <div class="form-group-glass">
-                                                    <label for="project_abep_indicator_group" class="form-label-glass">
+                                                    <label for="project_abep_indicator_input" class="form-label-glass">
                                                         <i class="fas fa-list-ol label-icon"></i>
                                                         Indicadores ABEP
                                                     </label>
-                                                    <div class="row g-2">
-                                                        <div class="col-md-4">
-                                                            <select class="form-select-glass form-select-glass-enhanced"
-                                                                    id="project_abep_indicator_group">
-                                                                <option value="" selected>Todos os indicadores</option>
-                                                                <option value="1">Indicador 1</option>
-                                                                <option value="2">Indicador 2</option>
-                                                                <option value="3">Indicador 3</option>
-                                                                <option value="4">Indicador 4</option>
-                                                                <option value="5">Indicador 5</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-8">
-                                                            <select class="form-select-glass form-select-glass-enhanced"
-                                                                    id="project_abep_indicator"
-                                                                    name="project_abep_indicator">
-                                                                <option value="">Selecione um indicador ABEP</option>
-                                                                {% for item in ABEP_INDICADORES_OPTIONS %}
-                                                                    <option value="{{ item.value }}">{{ item.label }}</option>
-                                                                {% endfor %}
-                                                            </select>
+                                                    <div class="project-search-wrap project-create-abep-combobox">
+                                                        <input
+                                                            type="text"
+                                                            class="form-control-glass form-control-glass-enhanced project-search-input"
+                                                            id="project_abep_indicator_input"
+                                                            placeholder="Busque por número ou título do indicador ABEP"
+                                                            autocomplete="off"
+                                                            role="combobox"
+                                                            aria-expanded="false"
+                                                            aria-controls="projectAbepIndicatorDropdown"
+                                                            aria-haspopup="listbox">
+                                                        <input type="hidden"
+                                                               id="project_abep_indicator"
+                                                               name="project_abep_indicator"
+                                                               value="">
+                                                        <div class="project-search-dropdown project-create-abep-dropdown"
+                                                             id="projectAbepIndicatorDropdown"
+                                                             role="listbox"
+                                                             hidden>
+                                                            {% for item in ABEP_INDICADORES_OPTIONS %}
+                                                                <div class="project-search-option"
+                                                                     data-value="{{ item.value }}"
+                                                                     data-label="{{ item.label }}"
+                                                                     role="option">
+                                                                    {{ item.label }}
+                                                                </div>
+                                                            {% endfor %}
+                                                            <div class="project-search-option project-search-empty"
+                                                                 data-abep-empty="1"
+                                                                 hidden>
+                                                                Nenhum indicador encontrado
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>

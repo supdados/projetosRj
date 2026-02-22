@@ -102,10 +102,12 @@
     padding: 0.9rem 1rem;
     background: #ffffff;
     border-bottom: 1px solid #edf2f8;
+    cursor: pointer;
     transition: all 0.16s ease;
 }
 
-.template-item-clean:hover {
+.template-item-clean:hover,
+.template-item-clean:focus-within {
     background: #f8fbff;
 }
 
@@ -178,6 +180,7 @@
     display: flex;
     gap: 0.5rem;
     flex-shrink: 0;
+    align-items: center;
 }
 
 .btn-action-clean {
@@ -191,7 +194,7 @@
     border-radius: 8px;
     color: #6c757d;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.16s ease;
     text-decoration: none;
 }
 
@@ -203,14 +206,27 @@
     font-size: var(--ds-font-size-base);
 }
 
-.btn-edit-clean:hover {
-    background: var(--primary-color);
-    color: white;
+.btn-delete-clean {
+    border-color: #e6c8c8;
+    color: #9b1c1c;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(2px);
 }
 
-.btn-delete-clean:hover {
+.template-item-clean:hover .btn-delete-clean,
+.template-item-clean:focus-within .btn-delete-clean {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.btn-delete-clean:hover,
+.btn-delete-clean:focus {
     background: #dc3545;
     color: white;
+    border-color: #dc3545;
 }
 
 /* Empty State Clean */
@@ -381,6 +397,14 @@
     .template-actions-clean {
         width: 100%;
         justify-content: flex-start;
+    }
+}
+
+@media (hover: none) {
+    .btn-delete-clean {
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
     }
 }
 

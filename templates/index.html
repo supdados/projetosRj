@@ -128,7 +128,7 @@
 
     <div class="row g-3 dashboard-main-grid">
         <div class="col-12 col-lg-8 dashboard-recent-col">
-            <div class="card border-0 glass-card h-100 main-content-card">
+            <div id="dashboardRecentProjectsCard" class="card border-0 glass-card h-100 main-content-card">
                 <div class="card-header glass-card-header dashboard-section-header px-3">
                     <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title dashboard-section-title">
                         <i class="fas fa-clock me-2 text-primary"></i>Projetos Recentes
@@ -190,7 +190,7 @@
         </div>
 
         <div class="col-12 col-lg-4 dashboard-side-col">
-            <div class="card border-0 glass-card sidebar-content-card dashboard-tasks-kpi-card">
+            <div id="dashboardTasksCard" class="card border-0 glass-card sidebar-content-card dashboard-tasks-kpi-card">
                 <div class="card-header glass-card-header dashboard-section-header px-3 d-flex justify-content-between align-items-center">
                     <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title dashboard-section-title">
                         <i class="fas fa-list-check me-2 text-primary"></i>Tarefas
@@ -302,12 +302,66 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const dateEl = document.getElementById('dashboardWelcomeDate');
+        const dashboardPage = document.querySelector('.dashboard-page-v2');
+        const dashboardMainGrid = document.querySelector('.dashboard-main-grid');
+        const recentProjectsCard = document.getElementById('dashboardRecentProjectsCard');
+        const tasksCard = document.getElementById('dashboardTasksCard');
+        const mainContentEl = document.querySelector('.main-content');
+        const footerEl = document.querySelector('footer');
+        const MIN_CARD_HEIGHT = 200;
+        const CARD_BOTTOM_SAFETY_OFFSET = 14;
 
         // Init tooltips for KPI bar segments
         if (typeof window.bootstrap !== 'undefined' && bootstrap.Tooltip) {
             document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
                 bootstrap.Tooltip.getOrCreateInstance(el);
             });
+        }
+
+        function resetDashboardHeights() {
+            if (dashboardMainGrid) {
+                dashboardMainGrid.style.removeProperty('height');
+            }
+            if (recentProjectsCard) {
+                recentProjectsCard.style.removeProperty('height');
+            }
+            if (tasksCard) {
+                tasksCard.style.removeProperty('height');
+            }
+        }
+
+        function syncDashboardCardHeights() {
+            if (!dashboardPage || !dashboardMainGrid || !recentProjectsCard || !tasksCard) {
+                return;
+            }
+
+            if (window.innerWidth < 992) {
+                resetDashboardHeights();
+                return;
+            }
+
+            resetDashboardHeights();
+
+            const gridRect = dashboardMainGrid.getBoundingClientRect();
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            const footerHeight = footerEl ? footerEl.getBoundingClientRect().height : 0;
+            const mainContentStyles = mainContentEl ? window.getComputedStyle(mainContentEl) : null;
+            const mainContentBottomPadding = mainContentStyles
+                ? parseFloat(mainContentStyles.paddingBottom || '0') || 0
+                : 0;
+
+            const availableHeight = Math.floor(
+                viewportHeight - gridRect.top - footerHeight - mainContentBottomPadding - CARD_BOTTOM_SAFETY_OFFSET
+            );
+            const tasksNaturalHeight = Math.ceil(tasksCard.getBoundingClientRect().height);
+            const targetHeight = Math.min(tasksNaturalHeight, Math.max(availableHeight, MIN_CARD_HEIGHT));
+
+            if (Number.isFinite(targetHeight) && targetHeight > 0) {
+                const targetHeightCssValue = `${targetHeight}px`;
+                dashboardMainGrid.style.height = targetHeightCssValue;
+                tasksCard.style.height = targetHeightCssValue;
+                recentProjectsCard.style.height = targetHeightCssValue;
+            }
         }
 
         if (dateEl) {
@@ -333,6 +387,11 @@
                 dateEl.textContent = formatFallback(now);
             }
         }
+
+        syncDashboardCardHeights();
+        window.addEventListener('resize', syncDashboardCardHeights);
+        window.addEventListener('orientationchange', syncDashboardCardHeights);
+        window.addEventListener('load', syncDashboardCardHeights);
     });
 </script>
 {% include "project_add_form_js.html" %}

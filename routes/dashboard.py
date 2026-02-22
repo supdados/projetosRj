@@ -18,7 +18,8 @@ def dashboard():
         if user_areas:
             project_query_base = project_query_base.filter(Project.area_responsavel.in_(user_areas))
 
-    recent_projects = project_query_base.order_by(Project.id.desc()).limit(9).all()
+    RECENT_PROJECTS_LIMIT = 9
+    recent_projects = project_query_base.order_by(Project.id.desc()).limit(RECENT_PROJECTS_LIMIT).all()
     
     def count_projects_for_user(filter_expression=None):
         query = Project.query
