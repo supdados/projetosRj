@@ -10,29 +10,48 @@ from .shared import log_project_action
 @main_bp.route('/project/<int:project_id>/etapa/add', methods=['POST'])
 @login_required
 def add_etapa(project_id):
+    def is_ajax_request():
+        requested_with = request.headers.get('X-Requested-With', '').lower() == 'xmlhttprequest'
+        accepts_json = 'application/json' in request.headers.get('Accept', '').lower()
+        return requested_with or accepts_json
+
+    ajax_request = is_ajax_request()
     project = Project.query.get_or_404(project_id)
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+        if ajax_request:
+            return jsonify({'success': False, 'message': 'Você não tem permissão para adicionar etapas a este projeto.'}), 403
         flash('Você não tem permissão para adicionar etapas a este projeto.', 'danger')
         return redirect(url_for('main.project_detail', project_id=project_id)) # Ou para list_projects
 
-    descricao = request.form.get('etapa_descricao')
+    descricao = (request.form.get('etapa_descricao') or '').strip()
     if not descricao:
+        if ajax_request:
+            return jsonify({'success': False, 'message': 'A descrição da etapa é obrigatória.'}), 400
         flash('A descrição da etapa é obrigatória.', 'warning')
         return redirect(url_for('main.project_detail', project_id=project_id))
 
     data_inicio_str = request.form.get('etapa_data_inicio')
     data_fim_str = request.form.get('etapa_data_fim')
-    responsavel = request.form.get('etapa_responsavel')
-    comentarios = request.form.get('etapa_comentarios')
+    responsavel = (request.form.get('etapa_responsavel') or '').strip() or None
+    comentarios = (request.form.get('etapa_comentarios') or '').strip() or None
     etapa_iniciada = request.form.get('etapa_iniciada') == 'on'
     etapa_concluida = request.form.get('etapa_done') == 'on'
+    validation_warning = None
 
     if not etapa_iniciada and etapa_concluida:
-        flash('Uma etapa não pode ser marcada como concluída sem ser iniciada.', 'warning')
+        validation_warning = 'Uma etapa não pode ser marcada como concluída sem ser iniciada.'
+        if not ajax_request:
+            flash(validation_warning, 'warning')
         etapa_concluida = False # Força para não concluída
 
-    data_inicio = datetime.datetime.strptime(data_inicio_str, '%Y-%m-%d').date() if data_inicio_str else None
-    data_fim = datetime.datetime.strptime(data_fim_str, '%Y-%m-%d').date() if data_fim_str else None
+    try:
+        data_inicio = datetime.datetime.strptime(data_inicio_str, '%Y-%m-%d').date() if data_inicio_str else None
+        data_fim = datetime.datetime.strptime(data_fim_str, '%Y-%m-%d').date() if data_fim_str else None
+    except ValueError:
+        if ajax_request:
+            return jsonify({'success': False, 'message': 'Formato de data inválido.'}), 400
+        flash('Formato de data inválido.', 'warning')
+        return redirect(url_for('main.project_detail', project_id=project_id))
 
     # Calcular a ordem da nova etapa
     ultima_etapa = Etapa.query.with_parent(project).order_by(Etapa.ordem.desc()).first()
@@ -45,14 +64,44 @@ def add_etapa(project_id):
     )
     db.session.add(new_etapa)
     
-    # Registrar no histórico
-    log_project_action(
-        project_id=project.id,
-        action_type='add_etapa',
-        description=f'Adicionou a etapa "{descricao}"'
-    )
-    
-    db.session.commit()
+    try:
+        # Registrar no histórico
+        log_project_action(
+            project_id=project.id,
+            action_type='add_etapa',
+            description=f'Adicionou a etapa "{descricao}"'
+        )
+
+        db.session.commit()
+
+        if ajax_request:
+            return jsonify(
+                {
+                    'success': True,
+                    'message': 'Etapa adicionada com sucesso!',
+                    'warning': validation_warning,
+                    'etapa': {
+                        'id': new_etapa.id,
+                        'descricao': new_etapa.descricao,
+                        'comentarios': new_etapa.comentarios or '',
+                        'responsavel': new_etapa.responsavel or '',
+                        'data_inicio': new_etapa.data_inicio.strftime('%Y-%m-%d') if new_etapa.data_inicio else '',
+                        'data_inicio_display': new_etapa.data_inicio.strftime('%d/%m/%Y') if new_etapa.data_inicio else '-',
+                        'data_fim': new_etapa.data_fim.strftime('%Y-%m-%d') if new_etapa.data_fim else '',
+                        'data_fim_display': new_etapa.data_fim.strftime('%d/%m/%Y') if new_etapa.data_fim else '-',
+                        'iniciada': bool(new_etapa.iniciada),
+                        'done': bool(new_etapa.done),
+                        'ordem': int(new_etapa.ordem or 0),
+                    },
+                }
+            )
+    except Exception:
+        db.session.rollback()
+        if ajax_request:
+            return jsonify({'success': False, 'message': 'Erro ao adicionar etapa.'}), 500
+        flash('Erro ao adicionar etapa.', 'danger')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+
     flash('Etapa adicionada com sucesso!', 'success')
     return redirect(url_for('main.project_detail', project_id=project_id))
 

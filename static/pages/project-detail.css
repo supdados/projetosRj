@@ -34,8 +34,8 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         color: white;
         border-radius: 12px;
-        padding: 1.25rem 1.5rem;
-        margin-bottom: 1.25rem;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
         box-shadow:
             0 8px 32px rgba(0, 90, 146, 0.15),
             inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -60,8 +60,8 @@
 
     .project-header h1 {
         font-weight: var(--ds-font-weight-bold);
-        margin-bottom: 0.5rem;
-        font-size: var(--ds-font-size-2xl);
+        margin-bottom: 0.35rem;
+        font-size: var(--ds-font-size-xl);
         color: white;
         background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
         -webkit-background-clip: text;
@@ -75,19 +75,19 @@
     .project-header p {
         opacity: 0.9;
         margin-bottom: 0;
-        font-size: var(--ds-font-size-md);
+        font-size: var(--ds-font-size-sm);
         position: relative;
         z-index: 1;
         display: flex;
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: 0.7rem;
     }
 
     .project-header p span {
         display: flex;
         align-items: center;
         background: rgba(255, 255, 255, 0.1);
-        padding: 0.375rem 0.75rem;
+        padding: 0.28rem 0.65rem;
         border-radius: 16px;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -482,9 +482,9 @@
 
     .indicadores-list li {
         position: relative;
-        padding-left: 1rem;
+        padding-left: 1.3rem;
         margin-bottom: 0.375rem;
-        color: #475569;
+        color: #41566f;
         font-size: var(--ds-font-size-sm);
         line-height: var(--ds-line-height-normal);
     }
@@ -494,8 +494,8 @@
         color: #005A92;
         font-size: var(--ds-font-size-2xs);
         position: absolute;
-        left: 0.5rem;
-        top: 0;
+        left: 0.12rem;
+        top: 0.24rem;
     }
 
     /* Section Titles */
@@ -644,125 +644,209 @@
         box-shadow: 0 2px 8px rgba(0, 90, 146, 0.15);
     }
 
-    /* Modal Nova Etapa - padrão clean */
-    #addEtapaModal .modal-content {
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-        background: #ffffff;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
+    #etapaInlineAddEntryRow td {
+        border-top: 1px dashed #d7e3f1;
+        background: #f8fbff;
     }
 
-    #addEtapaModal .modal-header-clean {
-        padding: 1.5rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        display: flex;
-        align-items: center;
-        gap: 1rem;
+    .etapa-inline-entry-cell {
+        padding: 0.35rem 0.65rem !important;
     }
 
-    #addEtapaModal .modal-icon-clean {
-        width: 44px;
-        height: 44px;
-        background: rgba(0, 90, 146, 0.15);
-        border-radius: 10px;
-        display: flex;
+    .etapa-inline-entry-btn {
+        width: 100%;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        flex-shrink: 0;
-    }
-
-    #addEtapaModal .modal-icon-clean i {
-        font-size: var(--ds-font-size-xl);
-        color: var(--primary-color);
-    }
-
-    #addEtapaModal .modal-title-clean {
-        margin: 0;
-        color: #1a1a1a;
-    }
-
-    #addEtapaModal .modal-subtitle-clean {
-        margin: 0.2rem 0 0;
-        color: #6c757d;
-    }
-
-    #addEtapaModal .btn-close-clean {
-        width: 32px;
-        height: 32px;
-        background: transparent;
-        border: none;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-left: auto;
-        cursor: pointer;
-        transition: all 0.2s;
-        color: #6c757d;
-    }
-
-    #addEtapaModal .btn-close-clean:hover {
-        background: rgba(0, 0, 0, 0.05);
-    }
-
-    #addEtapaModal .modal-body-clean {
-        padding: 1.5rem;
-    }
-
-    #addEtapaModal .project-modal-input {
-        background: #ffffff;
-        border: 1px solid #cfdeed !important;
-        color: #2b3d52;
-        box-shadow: none;
-    }
-
-    #addEtapaModal .project-modal-input:focus {
-        background: #ffffff;
-        border-color: #8bb0d7 !important;
-        box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
-    }
-
-    #addEtapaModal .etapa-modal-switch {
-        margin-top: 0.15rem;
-    }
-
-    #addEtapaModal .modal-footer-clean {
-        padding: 1rem 1.5rem;
-        border-top: 1px solid rgba(0, 0, 0, 0.08);
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.8rem;
-    }
-
-    #addEtapaModal .btn-modal-clean {
-        padding: 0.65rem 1.3rem;
-        border: none;
+        gap: 0.55rem;
+        border: 1px dashed #a7bfd9;
+        background: #f2f8ff;
+        color: #3e6084;
         border-radius: 8px;
+        padding: 0.6rem 0.75rem;
+        font-size: var(--ds-font-size-sm);
         font-weight: var(--ds-font-weight-semibold);
-        font-size: var(--ds-font-size-md);
+        transition: border-color 0.16s ease, color 0.16s ease, background-color 0.16s ease;
+    }
+
+    .etapa-inline-entry-btn:hover,
+    .etapa-inline-entry-btn:focus-visible {
+        border-color: #7da0c3;
+        color: #244c76;
+        background: #eaf3ff;
+        outline: none;
+    }
+
+    #etapaInlineAddFormRow td {
+        border-top: 1px solid #dfe8f2;
+        background: #f7faff;
+        padding: 0.5rem 0.55rem !important;
+        vertical-align: middle;
+    }
+
+    .etapa-inline-form-row .etapa-inline-cell-drag {
+        text-align: center;
+    }
+
+    .etapa-inline-drag-placeholder {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
+        color: #a8bacf;
+        background: #eef4fb;
+        border: 1px solid #d8e4f1;
+    }
+
+    .etapa-inline-cell-number {
+        text-align: center;
+    }
+
+    .etapa-inline-new-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.15rem 0.45rem;
+        border-radius: 999px;
+        font-size: var(--ds-font-size-2xs);
+        text-transform: uppercase;
+        letter-spacing: var(--ds-letter-spacing-wide);
+        color: #5f7692;
+        background: #edf3fb;
+        border: 1px solid #d5e2ef;
+    }
+
+    .etapa-inline-input,
+    .etapa-inline-textarea {
+        width: 100%;
+        border: 1px solid #cfdced !important;
+        background: #ffffff;
+        color: #30465f;
+        border-radius: 7px;
+        box-shadow: none !important;
+        font-size: var(--ds-font-size-sm);
+    }
+
+    .etapa-inline-textarea {
+        resize: none;
+        min-height: 34px;
+        height: 34px;
+        padding: 0.36rem 0.56rem;
+        line-height: 1.35;
+        overflow: hidden;
+    }
+
+    .etapa-inline-input:focus,
+    .etapa-inline-textarea:focus {
+        border-color: #87a9cc !important;
+        box-shadow: 0 0 0 3px rgba(30, 82, 140, 0.12) !important;
+    }
+
+    .etapa-inline-cell-date,
+    .etapa-inline-cell-responsavel {
+        min-width: 122px;
+    }
+
+    .etapa-inline-date-wrap {
+        position: relative;
+    }
+
+    .etapa-inline-date-wrap.is-empty .etapa-inline-input {
+        background: #f8fbff;
+        border-color: #d8e4f1 !important;
+        color: #7e93aa;
+    }
+
+    .etapa-inline-cell-status {
+        text-align: center;
+    }
+
+    .etapa-inline-cell-status .inline-status-toggle {
+        line-height: 1;
         cursor: pointer;
-        transition: all 0.2s;
     }
 
-    #addEtapaModal .btn-cancel-clean {
-        background: rgba(0, 0, 0, 0.05);
-        color: #495057;
+    .etapa-inline-cell-status .inline-status-toggle:disabled {
+        cursor: not-allowed;
     }
 
-    #addEtapaModal .btn-cancel-clean:hover {
-        background: rgba(0, 0, 0, 0.1);
+    .etapa-inline-cell-status .inline-status-toggle .badge {
+        min-width: 3.35rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    #addEtapaModal .etapa-modal-submit {
-        background: var(--primary-color);
-        color: #ffffff;
+    .etapa-inline-cell-status .inline-status-toggle:focus-visible .badge {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(30, 82, 140, 0.16);
     }
 
-    #addEtapaModal .etapa-modal-submit:hover {
-        background: var(--primary-dark);
-        color: #ffffff;
+    .etapa-inline-cell-actions {
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .etapa-inline-cell-actions .etapa-inline-icon-btn {
+        margin: 0 0.16rem;
+    }
+
+    .etapa-inline-icon-btn {
+        width: 31px;
+        height: 31px;
+        border-radius: 8px;
+        border: 1px solid #cddbea;
+        background: #ffffff;
+        color: #516a85;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease;
+    }
+
+    .etapa-inline-icon-btn:hover,
+    .etapa-inline-icon-btn:focus-visible {
+        outline: none;
+        border-color: #9fb9d4;
+        background: #f2f7fd;
+        color: #2f4f73;
+    }
+
+    .etapa-inline-icon-btn-confirm {
+        border-color: #b7ddc7;
+        background: #f1fbf5;
+        color: #1f6d46;
+    }
+
+    .etapa-inline-icon-btn-confirm:hover,
+    .etapa-inline-icon-btn-confirm:focus-visible {
+        border-color: #95cfae;
+        background: #e6f7ec;
+        color: #175a39;
+    }
+
+    .etapa-inline-icon-btn-cancel {
+        border-color: #e2c7c7;
+        background: #fff7f7;
+        color: #8c4a4a;
+    }
+
+    .etapa-inline-icon-btn-cancel:hover,
+    .etapa-inline-icon-btn-cancel:focus-visible {
+        border-color: #d4adad;
+        background: #fbeeee;
+        color: #763737;
+    }
+
+    .etapa-inline-empty-row td {
+        background: #fbfdff;
+        color: #6f859f;
+        text-align: center;
+        padding: 0.8rem 0.75rem;
+        font-size: var(--ds-font-size-sm);
+        border-top: 1px solid #edf2f8;
     }
 
     /* Import Model Button */
@@ -871,26 +955,29 @@
 
     .comentario-textarea-inline {
         width: 100%;
-        padding: 0.5rem 0.7rem;
-        border: 1px solid #0d6efd;
-        border-radius: 6px;
-        font-size: var(--ds-font-size-md);
-        color: #495057;
-        resize: vertical;
-        min-height: 50px;
-        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        padding: 0.38rem 0.58rem;
+        border: 1px solid #c4d5e7;
+        border-radius: 7px;
+        font-size: var(--ds-font-size-sm);
+        color: #3e556f;
+        resize: none;
+        min-height: 44px;
+        box-shadow: none;
         font-family: inherit;
-        margin-top: 0.25rem;
+        margin-top: 0.22rem;
+        background: #ffffff;
+        line-height: 1.45;
+        overflow-y: hidden;
     }
 
     .comentario-textarea-inline:focus {
         outline: none;
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
+        border-color: #7ea6ce;
+        box-shadow: 0 0 0 3px rgba(30, 84, 143, 0.12);
     }
 
     .comentario-textarea-inline::placeholder {
-        color: #adb5bd;
+        color: #9ab0c6;
         font-style: italic;
     }
 
@@ -1282,11 +1369,13 @@
         border: 1px solid #dfe8f2;
         border-radius: 14px;
         box-shadow: 0 8px 24px rgba(20, 45, 78, 0.06);
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: visible;
     }
 
     .etapa-v4-table-wrap {
         overflow-x: auto;
+        overflow-y: visible;
     }
 
     .etapa-v4-table {
@@ -1301,11 +1390,12 @@
     .etapa-v4-table thead th {
         border-bottom: 1px solid #dfe7f1;
         background: #f4f8fc;
-        color: #5a6d84;
+        color: #546f8d;
         font-size: var(--ds-font-size-xs);
         text-transform: uppercase;
         letter-spacing: var(--ds-letter-spacing-caps);
         font-weight: var(--ds-font-weight-bold);
+        font-family: var(--ds-font-family-base);
         padding: 0.58rem 0.7rem;
         white-space: nowrap;
     }
@@ -1314,12 +1404,13 @@
         border-top: 1px solid #edf2f8;
         padding: 0.62rem 0.7rem;
         vertical-align: middle;
-        color: #223247;
+        color: #304a66;
         font-size: var(--ds-font-size-sm);
+        font-family: var(--ds-font-family-base);
     }
 
     .etapa-v4-table tbody tr:hover td {
-        background: #f8fbff;
+        background: #f6fafe;
     }
 
     .etapa-v4-col-drag {
@@ -1364,7 +1455,7 @@
 
     .etapa-descricao {
         font-weight: var(--ds-font-weight-semibold);
-        color: inherit !important;
+        color: #263f59 !important;
     }
 
     .etapa-v4-cell-description {
@@ -1372,6 +1463,16 @@
         flex-direction: column;
         justify-content: center;
         gap: 0.2rem;
+    }
+
+    .etapa-v4-cell-description .editable-field,
+    .etapa-v4-cell-responsavel .editable-field,
+    .etapa-v4-cell-date .editable-field {
+        color: inherit;
+    }
+
+    .etapa-done .etapa-row-text {
+        color: #7b8fa7 !important;
     }
 
     .etapa-descricao-main {
@@ -1639,6 +1740,21 @@
         opacity: 0.95;
     }
 
+    @media (max-width: 900px) {
+        #etapaInlineAddFormRow td {
+            padding: 0.42rem 0.34rem !important;
+        }
+
+        .etapa-inline-new-badge {
+            padding-inline: 0.3rem;
+        }
+
+        .etapa-inline-icon-btn {
+            width: 29px;
+            height: 29px;
+        }
+    }
+
     @media (min-width: 769px) {
 
         .etapa-v4-table-wrap {
@@ -1661,24 +1777,29 @@
 
     .editable-field-textarea {
         width: 100%;
-        min-height: 80px;
+        min-height: 34px;
         border: 1px solid var(--primary-color) !important;
         border-radius: 6px;
-        padding: 0.375rem 0.75rem;
+        padding: 0.34rem 0.6rem;
         font-size: inherit;
         box-shadow: 0 0 5px rgba(0, 90, 146, 0.2);
+        resize: none;
+        overflow: hidden;
+        line-height: 1.4;
     }
 
     .custom-context-menu {
-        position: absolute;
+        position: fixed;
         z-index: 1050;
         display: none;
-        background-color: white;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        padding: 0.5rem 0;
-        min-width: 150px;
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid #d6e2ee;
+        border-radius: 11px;
+        box-shadow: 0 12px 28px rgba(24, 53, 86, 0.16);
+        padding: 0.4rem;
+        min-width: 170px;
+        transform-origin: top left;
+        animation: contextMenuFadeIn 0.14s ease;
     }
 
     .custom-context-menu ul {
@@ -1688,16 +1809,38 @@
     }
 
     .custom-context-menu li {
-        padding: 0.5rem 1rem;
+        padding: 0.45rem 0.62rem;
         cursor: pointer;
-        font-size: var(--ds-font-size-md);
+        font-size: var(--ds-font-size-sm);
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.52rem;
+        border-radius: 8px;
+        color: #365172;
+        transition: background-color 0.14s ease, color 0.14s ease;
     }
 
-    .custom-context-menu li:hover {
-        background-color: #f0f0f0;
+    .custom-context-menu li:hover,
+    .custom-context-menu li:focus-visible {
+        background-color: #edf4fc;
+        color: #24476f;
+        outline: none;
+    }
+
+    .custom-context-menu li i {
+        color: #4d77a5 !important;
+    }
+
+    @keyframes contextMenuFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-3px) scale(0.98);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
     }
 
     /* Modal de Confirmação Customizado */
@@ -2009,7 +2152,7 @@
     }
 
     .project-header-main-row {
-        gap: 0.75rem;
+        gap: 0.5rem;
     }
 
     .project-header-main-content {
@@ -2021,6 +2164,7 @@
     .project-header-description {
         max-height: none;
         overflow: visible;
+        line-height: var(--ds-line-height-normal);
     }
 
     .project-compact-header {

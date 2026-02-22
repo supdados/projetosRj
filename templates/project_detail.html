@@ -351,103 +351,19 @@
         <h2 class="ds-type-section-title">Etapas do Projeto</h2>
     </div>
 
-    {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
+    {% set can_edit_etapas = is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
+    {% if can_edit_etapas %}
     <div class="d-flex justify-content-end gap-2 mb-3">
         {% if not project.etapas %}
         <button type="button" class="btn btn-import-model" data-bs-toggle="modal" data-bs-target="#importModelModal">
             <i class="fas fa-file-import me-1"></i> Importar Modelo
         </button>
         {% endif %}
-        <button type="button" class="btn btn-add-etapa" data-bs-toggle="modal" data-bs-target="#addEtapaModal">
+        <button type="button" class="btn btn-add-etapa" id="btnOpenInlineEtapaAdd">
             <i class="fas fa-plus me-1"></i> Adicionar Etapa
         </button>
     </div>
     {% endif %}
-
-    <!-- Modal Adicionar Etapa - Padrão Clean -->
-    <div class="modal fade" id="addEtapaModal" tabindex="-1" aria-labelledby="addEtapaModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content modal-clean etapa-modal-clean">
-                <form id="addEtapaForm" action="{{ url_for('main.add_etapa', project_id=project.id) }}" method="POST">
-                    <div class="modal-header-clean etapa-modal-header">
-                        <div class="modal-icon-clean etapa-modal-icon">
-                            <i class="fas fa-list-check"></i>
-                        </div>
-                        <div>
-                            <h5 class="modal-title-clean ds-type-section-title" id="addEtapaModalLabel">Nova Etapa</h5>
-                            <p class="modal-subtitle-clean ds-type-body-sm">Adicione uma etapa ao projeto {{
-                                project.titulo }}</p>
-                        </div>
-                        <button type="button" class="btn-close-clean" data-bs-dismiss="modal" aria-label="Close">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-
-                    <div class="modal-body-clean etapa-modal-body">
-                        <div class="mb-3">
-                            <label for="etapa_descricao_modal" class="form-label fw-medium">
-                                Descrição da Etapa <span class="text-danger">*</span>
-                            </label>
-                            <textarea class="form-control project-modal-input" id="etapa_descricao_modal" name="etapa_descricao"
-                                rows="3" required placeholder="Digite a descrição da etapa..."></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="etapa_comentarios_modal" class="form-label fw-medium">Comentários</label>
-                            <textarea class="form-control project-modal-input" id="etapa_comentarios_modal" name="etapa_comentarios"
-                                rows="2" placeholder="Comentários adicionais (opcional)"></textarea>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label for="etapa_data_inicio_modal" class="form-label fw-medium">Data de Início</label>
-                                <input type="date" class="form-control project-modal-input" id="etapa_data_inicio_modal"
-                                    name="etapa_data_inicio">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="etapa_data_fim_modal" class="form-label fw-medium">Data de Fim</label>
-                                <input type="date" class="form-control project-modal-input" id="etapa_data_fim_modal"
-                                    name="etapa_data_fim">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="etapa_responsavel_modal" class="form-label fw-medium">Responsável</label>
-                                <input type="text" class="form-control project-modal-input" id="etapa_responsavel_modal"
-                                    name="etapa_responsavel" placeholder="Nome do responsável">
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mt-1">
-                            <div class="col-md-6">
-                                <div class="form-check form-switch etapa-modal-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="etapa_iniciada_modal"
-                                        name="etapa_iniciada">
-                                    <label class="form-check-label fw-medium" for="etapa_iniciada_modal">Marcar como
-                                        iniciada</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch etapa-modal-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="etapa_done_modal"
-                                        name="etapa_done">
-                                    <label class="form-check-label fw-medium" for="etapa_done_modal">Marcar como
-                                        concluída</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer-clean etapa-modal-footer">
-                        <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
-                            Cancelar
-                        </button>
-                        <button type="submit" class="btn-modal-clean etapa-modal-submit">
-                            <i class="fas fa-plus me-1"></i>Adicionar Etapa
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal Importar Modelo - Glass Design -->
     <div class="modal fade" id="importModelModal" tabindex="-1" aria-labelledby="importModelModalLabel"
@@ -556,7 +472,7 @@
     </div>
 
     <section class="etapa-list">
-        {% if project.etapas %}
+        {% if project.etapas or can_edit_etapas %}
         <div class="etapa-v4-table-card">
             <div class="etapa-v4-table-wrap">
                 <table class="etapa-v4-table table-etapas">
@@ -573,7 +489,7 @@
                         <th class="etapa-v4-col-actions text-center">Ações</th>
                     </tr>
                 </thead>
-                <tbody id="etapas-tbody">
+                <tbody id="etapas-tbody" data-can-edit="{{ 'true' if can_edit_etapas else 'false' }}">
                     {% for etapa in project.etapas %}
                     <tr class="{{ 'etapa-done' if etapa.done else ('etapa-iniciada' if etapa.iniciada else '') }} etapa-draggable-row"
                         data-etapa-id="{{ etapa.id }}">
@@ -670,6 +586,72 @@
                         </td>
                     </tr>
                     {% endfor %}
+                    {% if can_edit_etapas and not project.etapas %}
+                    <tr id="etapaInlineEmptyRow" class="etapa-inline-empty-row">
+                        <td colspan="9">Nenhuma etapa adicionada ainda.</td>
+                    </tr>
+                    {% endif %}
+                    {% if can_edit_etapas %}
+                    <tr id="etapaInlineAddEntryRow">
+                        <td colspan="9" class="etapa-inline-entry-cell">
+                            <button type="button" class="etapa-inline-entry-btn">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>Adicionar nova etapa</span>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr id="etapaInlineAddFormRow" class="ds-hidden etapa-inline-form-row">
+                        <td class="etapa-inline-cell etapa-inline-cell-drag etapa-v4-cell-drag">
+                            <span class="etapa-inline-drag-placeholder" aria-hidden="true">
+                                <i class="fas fa-grip-vertical"></i>
+                            </span>
+                            <form id="etapaInlineAddForm" action="{{ url_for('main.add_etapa', project_id=project.id) }}" method="POST" class="ds-hidden"></form>
+                        </td>
+                        <td class="etapa-inline-cell etapa-inline-cell-number etapa-v4-cell-number etapa-row-text">
+                            <span class="etapa-inline-new-badge">nova</span>
+                        </td>
+                        <td class="etapa-inline-cell etapa-inline-cell-desc etapa-v4-cell-description etapa-row-text">
+                            <label for="etapa_inline_descricao" class="visually-hidden">Descrição da etapa</label>
+                            <textarea id="etapa_inline_descricao" class="form-control etapa-inline-textarea" name="etapa_descricao" form="etapaInlineAddForm" rows="1" required placeholder="Descreva a nova etapa"></textarea>
+                        </td>
+                        <td class="etapa-inline-cell etapa-inline-cell-date etapa-v4-cell-date etapa-row-text">
+                            <label for="etapa_inline_data_inicio" class="visually-hidden">Data de início</label>
+                            <div class="etapa-inline-date-wrap is-empty">
+                                <input type="date" id="etapa_inline_data_inicio" class="form-control etapa-inline-input" name="etapa_data_inicio" form="etapaInlineAddForm" autocomplete="off" data-empty-state-input>
+                            </div>
+                        </td>
+                        <td class="etapa-inline-cell etapa-inline-cell-date etapa-v4-cell-date etapa-row-text">
+                            <label for="etapa_inline_data_fim" class="visually-hidden">Data de fim</label>
+                            <div class="etapa-inline-date-wrap is-empty">
+                                <input type="date" id="etapa_inline_data_fim" class="form-control etapa-inline-input" name="etapa_data_fim" form="etapaInlineAddForm" autocomplete="off" data-empty-state-input>
+                            </div>
+                        </td>
+                        <td class="etapa-inline-cell etapa-inline-cell-responsavel etapa-v4-cell-responsavel etapa-row-text">
+                            <label for="etapa_inline_responsavel" class="visually-hidden">Responsável</label>
+                            <input type="text" id="etapa_inline_responsavel" class="form-control etapa-inline-input" name="etapa_responsavel" form="etapaInlineAddForm" placeholder="Responsável">
+                        </td>
+                        <td class="etapa-inline-cell etapa-inline-cell-status text-center etapa-v4-cell-status">
+                            <input class="etapa-inline-checkbox-native ds-hidden" type="checkbox" id="etapa_inline_iniciada" name="etapa_iniciada" form="etapaInlineAddForm" aria-label="Marcar etapa como iniciada">
+                            <button type="button" class="btn btn-sm p-0 border-0 align-baseline inline-status-toggle inline-status-toggle-iniciada" aria-label="Marcar etapa como iniciada" title="Marcar como iniciada">
+                                <span class="badge rounded-pill bg-secondary-light"><i class="far fa-circle me-1"></i>Não</span>
+                            </button>
+                        </td>
+                        <td class="etapa-inline-cell etapa-inline-cell-status text-center etapa-v4-cell-status">
+                            <input class="etapa-inline-checkbox-native ds-hidden" type="checkbox" id="etapa_inline_done" name="etapa_done" form="etapaInlineAddForm" aria-label="Marcar etapa como concluída">
+                            <button type="button" class="btn btn-sm p-0 border-0 align-baseline inline-status-toggle inline-status-toggle-done" aria-label="Marcar etapa como concluída" title="Marcar como concluída (necessário iniciar primeiro)" disabled>
+                                <span class="badge rounded-pill bg-danger-light"><i class="far fa-square me-1"></i>Não</span>
+                            </button>
+                        </td>
+                        <td class="etapa-inline-cell etapa-inline-cell-actions actions text-center etapa-v4-actions-cell">
+                            <button type="submit" form="etapaInlineAddForm" id="btnSubmitInlineEtapaAdd" class="etapa-inline-icon-btn etapa-inline-icon-btn-confirm" title="Confirmar etapa" aria-label="Confirmar etapa">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button type="button" id="btnCancelInlineEtapaAdd" class="etapa-inline-icon-btn etapa-inline-icon-btn-cancel" title="Cancelar adição" aria-label="Cancelar adição">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
             </div>
@@ -734,6 +716,554 @@
     document.addEventListener('DOMContentLoaded', function () {
         // INÍCIO: Script de Drag and Drop para Etapas
         const tbody = document.getElementById('etapas-tbody');
+        const canEditEtapas = tbody ? tbody.dataset.canEdit === 'true' : false;
+        const btnOpenInlineEtapaAdd = document.getElementById('btnOpenInlineEtapaAdd');
+        const inlineAddEntryRow = document.getElementById('etapaInlineAddEntryRow');
+        const inlineAddFormRow = document.getElementById('etapaInlineAddFormRow');
+        const inlineAddForm = document.getElementById('etapaInlineAddForm');
+        const inlineAddEntryBtn = inlineAddEntryRow ? inlineAddEntryRow.querySelector('.etapa-inline-entry-btn') : null;
+        const inlineAddCancelBtn = document.getElementById('btnCancelInlineEtapaAdd');
+        const inlineAddSubmitBtn = document.getElementById('btnSubmitInlineEtapaAdd');
+        const inlineEmptyRow = document.getElementById('etapaInlineEmptyRow');
+        const inlineDescricaoInput = document.getElementById('etapa_inline_descricao');
+        const inlineDateInputs = inlineAddFormRow
+            ? Array.from(inlineAddFormRow.querySelectorAll('[data-empty-state-input]'))
+            : [];
+        const inlineIniciadaCheckbox = document.getElementById('etapa_inline_iniciada');
+        const inlineDoneCheckbox = document.getElementById('etapa_inline_done');
+        const inlineIniciadaToggle = inlineAddFormRow
+            ? inlineAddFormRow.querySelector('.inline-status-toggle-iniciada')
+            : null;
+        const inlineDoneToggle = inlineAddFormRow
+            ? inlineAddFormRow.querySelector('.inline-status-toggle-done')
+            : null;
+        const projectIdPrefix = "{{ project.id }}";
+        let inlineComposerSaving = false;
+        let inlineDatePickerOpening = false;
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renumberEtapaRows() {
+            if (!tbody) return;
+            const rows = tbody.querySelectorAll('tr.etapa-draggable-row');
+            rows.forEach((row, index) => {
+                const numeroCelula = row.querySelector('.etapa-order-cell');
+                if (numeroCelula) {
+                    numeroCelula.textContent = `${projectIdPrefix}.${index + 1}`;
+                }
+            });
+        }
+
+        function isInlineComposerOpen() {
+            return Boolean(inlineAddFormRow && !inlineAddFormRow.classList.contains('ds-hidden'));
+        }
+
+        function syncInlineDateEmptyState(input) {
+            const wrap = input ? input.closest('.etapa-inline-date-wrap') : null;
+            if (!wrap) {
+                return;
+            }
+            wrap.classList.toggle('is-empty', !(input.value || '').trim());
+        }
+
+        function syncAllInlineDateEmptyState() {
+            inlineDateInputs.forEach(syncInlineDateEmptyState);
+        }
+
+        function resetInlineComposerDateValues() {
+            inlineDateInputs.forEach(input => {
+                input.value = '';
+                syncInlineDateEmptyState(input);
+            });
+        }
+
+        function resizeInlineDescricaoTextarea() {
+            if (!inlineDescricaoInput) {
+                return;
+            }
+            const computed = window.getComputedStyle(inlineDescricaoInput);
+            const lineHeight = parseFloat(computed.lineHeight) || 20;
+            const minHeight = lineHeight + 12;
+            inlineDescricaoInput.style.height = 'auto';
+            inlineDescricaoInput.style.height = `${Math.max(inlineDescricaoInput.scrollHeight, minHeight)}px`;
+        }
+
+        function refreshConcludeButtonCounters() {
+            const btnConcluir = document.getElementById('btn-concluir-projeto');
+            if (!btnConcluir || !tbody) return;
+            const totalEtapas = tbody.querySelectorAll('tr.etapa-draggable-row').length;
+            btnConcluir.dataset.totalEtapas = String(totalEtapas);
+            verificarEAtualizarBotaoConcluir();
+        }
+
+        function syncInlineStatusControls() {
+            const isIniciada = Boolean(inlineIniciadaCheckbox && inlineIniciadaCheckbox.checked);
+            const isDone = Boolean(inlineDoneCheckbox && inlineDoneCheckbox.checked);
+
+            if (inlineIniciadaToggle) {
+                updateIniciadaButton(inlineIniciadaToggle, isIniciada);
+            }
+            if (inlineDoneToggle) {
+                updateDoneButton(inlineDoneToggle, isDone, isIniciada);
+            }
+        }
+
+        function missingDatePickerViewportSpace(input) {
+            if (!input || typeof input.getBoundingClientRect !== 'function') {
+                return 0;
+            }
+            const minSpace = 340;
+            const padding = 18;
+            const rect = input.getBoundingClientRect();
+            const availableSpaceBelow = window.innerHeight - rect.bottom - padding;
+            return Math.max(0, minSpace - availableSpaceBelow);
+        }
+
+        function openInlineDatePicker(input) {
+            if (!input) {
+                return;
+            }
+            try {
+                input.focus({ preventScroll: true });
+            } catch (error) {
+                input.focus();
+            }
+            if (typeof input.showPicker === 'function') {
+                try {
+                    input.showPicker();
+                    return;
+                } catch (error) {
+                    // Fallback para navegadores sem suporte/permite showPicker
+                }
+            }
+            input.click();
+        }
+
+        function buildEtapaCommentHtml(etapaId, comentarios) {
+            const hasComment = Boolean((comentarios || '').trim());
+            if (hasComment) {
+                return `
+                    <div class="small text-muted mt-1 etapa-comentario-display ds-cursor-pointer" data-etapa-id="${etapaId}" title="Clique para editar">
+                        <i class="fas fa-comment-alt me-1"></i> ${escapeHtml(comentarios)}
+                    </div>
+                `;
+            }
+            if (!canEditEtapas) {
+                return '';
+            }
+            return `
+                <div class="small text-muted mt-1 etapa-comentario-placeholder ds-cursor-pointer" data-etapa-id="${etapaId}" data-comentario="">
+                    <i class="fas fa-comment-medical me-1"></i> adicionar comentário
+                </div>
+            `;
+        }
+
+        function buildEtapaRow(etapaPayload) {
+            const etapaId = etapaPayload.id;
+            const descricao = etapaPayload.descricao || '-';
+            const responsavel = etapaPayload.responsavel || '-';
+            const comentarios = etapaPayload.comentarios || '';
+            const dataInicio = etapaPayload.data_inicio || '';
+            const dataInicioDisplay = etapaPayload.data_inicio_display || '-';
+            const dataFim = etapaPayload.data_fim || '';
+            const dataFimDisplay = etapaPayload.data_fim_display || '-';
+            const iniciada = Boolean(etapaPayload.iniciada);
+            const done = Boolean(etapaPayload.done);
+            const rowClasses = [
+                'etapa-draggable-row',
+                done ? 'etapa-done' : (iniciada ? 'etapa-iniciada' : ''),
+            ]
+                .filter(Boolean)
+                .join(' ');
+
+            const row = document.createElement('tr');
+            row.className = rowClasses;
+            row.dataset.etapaId = String(etapaId);
+
+            const doneButtonDisabled = (!iniciada && !done) || !canEditEtapas ? 'disabled' : '';
+            const iniciadaDisabled = canEditEtapas ? '' : 'disabled';
+            const doneTitle = done
+                ? 'Marcar como pendente'
+                : (iniciada ? 'Marcar como concluída' : 'Marcar como concluída (necessário iniciar primeiro)');
+            const actionHtml = canEditEtapas
+                ? `
+                    <form action="/etapa/${etapaId}/delete" method="post" class="inline-form"
+                        onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
+                        <button type="submit" class="btn btn-sm btn-floating" title="Excluir Etapa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                `
+                : '<span class="text-muted small">-</span>';
+
+            row.innerHTML = `
+                <td class="drag-handle etapa-drag-handle etapa-v4-cell-drag" draggable="true"><i class="fas fa-grip-vertical"></i></td>
+                <td class="etapa-order-cell etapa-v4-cell-number"></td>
+                <td class="etapa-descricao etapa-row-text etapa-v4-cell-description ${done ? 'text-decoration-line-through text-muted' : ''} etapa-hover-container">
+                    <div class="etapa-descricao-main">
+                        <span class="editable-field" data-field="descricao" data-etapa-id="${etapaId}">${escapeHtml(descricao)}</span>
+                    </div>
+                    <div class="etapa-descricao-comment">
+                        ${buildEtapaCommentHtml(etapaId, comentarios)}
+                    </div>
+                    <button class="btn-comment-data ds-hidden" data-etapa-id="${etapaId}" data-comentario="${escapeHtml(comentarios)}"></button>
+                </td>
+                <td class="etapa-row-text etapa-v4-cell-date ${done ? 'text-decoration-line-through text-muted' : ''}">
+                    <span class="editable-field" data-field="data_inicio" data-etapa-id="${etapaId}" data-original-value="${escapeHtml(dataInicio)}">${escapeHtml(dataInicioDisplay)}</span>
+                </td>
+                <td class="etapa-row-text etapa-v4-cell-date ${done ? 'text-decoration-line-through text-muted' : ''}">
+                    <span class="editable-field" data-field="data_fim" data-etapa-id="${etapaId}" data-original-value="${escapeHtml(dataFim)}">${escapeHtml(dataFimDisplay)}</span>
+                </td>
+                <td class="etapa-row-text etapa-v4-cell-responsavel ${done ? 'text-decoration-line-through text-muted' : ''}">
+                    <span class="editable-field" data-field="responsavel" data-etapa-id="${etapaId}">${escapeHtml(responsavel)}</span>
+                </td>
+                <td class="text-center etapa-v4-cell-status">
+                    <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-iniciada"
+                        data-etapa-id="${etapaId}"
+                        title="${iniciada ? 'Marcar como não iniciada' : 'Marcar como iniciada'}" ${iniciadaDisabled}>
+                        <span class="badge rounded-pill ${iniciada ? 'bg-success-light' : 'bg-secondary-light'}">
+                            <i class="${iniciada ? 'fas fa-check-circle' : 'far fa-circle'} me-1"></i>${iniciada ? 'Sim' : 'Não'}
+                        </span>
+                    </button>
+                </td>
+                <td class="text-center etapa-v4-cell-status">
+                    <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-done"
+                        data-etapa-id="${etapaId}" ${doneButtonDisabled} title="${doneTitle}">
+                        <span class="badge rounded-pill ${done ? 'bg-success-light' : 'bg-danger-light'}">
+                            <i class="${done ? 'fas fa-check-square' : 'far fa-square'} me-1"></i>${done ? 'Sim' : 'Não'}
+                        </span>
+                    </button>
+                </td>
+                <td class="actions text-center etapa-v4-actions-cell">
+                    ${actionHtml}
+                </td>
+            `;
+            return row;
+        }
+
+        function appendEtapaRow(etapaPayload) {
+            if (!tbody || !etapaPayload || !etapaPayload.id) {
+                return;
+            }
+
+            const row = buildEtapaRow(etapaPayload);
+            if (inlineEmptyRow && inlineEmptyRow.parentNode) {
+                inlineEmptyRow.remove();
+            }
+            if (inlineAddEntryRow && inlineAddEntryRow.parentNode === tbody) {
+                tbody.insertBefore(row, inlineAddEntryRow);
+            } else if (inlineAddFormRow && inlineAddFormRow.parentNode === tbody) {
+                tbody.insertBefore(row, inlineAddFormRow);
+            } else {
+                tbody.appendChild(row);
+            }
+            renumberEtapaRows();
+            refreshConcludeButtonCounters();
+        }
+
+        function openInlineEtapaComposer(source) {
+            if (!canEditEtapas || !inlineAddFormRow || !inlineAddForm) {
+                return;
+            }
+            if (isInlineComposerOpen()) {
+                if (inlineDescricaoInput) {
+                    inlineDescricaoInput.focus();
+                }
+                return;
+            }
+            inlineAddForm.reset();
+            resetInlineComposerDateValues();
+            syncInlineStatusControls();
+            resizeInlineDescricaoTextarea();
+            inlineAddFormRow.classList.remove('ds-hidden');
+            if (inlineAddEntryRow) {
+                inlineAddEntryRow.classList.add('ds-hidden');
+            }
+            if (inlineEmptyRow) {
+                inlineEmptyRow.classList.add('ds-hidden');
+            }
+            requestAnimationFrame(() => {
+                inlineAddFormRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                if (inlineDescricaoInput) {
+                    inlineDescricaoInput.focus();
+                }
+            });
+            if (source === 'entry') {
+                inlineAddFormRow.dataset.openedFrom = 'entry';
+            } else {
+                inlineAddFormRow.dataset.openedFrom = 'button';
+            }
+        }
+
+        function closeInlineEtapaComposer(reset = true) {
+            if (!inlineAddFormRow) {
+                return;
+            }
+            inlineAddFormRow.classList.add('ds-hidden');
+            if (inlineAddEntryRow) {
+                inlineAddEntryRow.classList.remove('ds-hidden');
+            }
+            if (reset && inlineAddForm) {
+                inlineAddForm.reset();
+                resetInlineComposerDateValues();
+                syncInlineStatusControls();
+                resizeInlineDescricaoTextarea();
+            }
+            if (inlineEmptyRow && tbody && tbody.querySelectorAll('tr.etapa-draggable-row').length === 0) {
+                inlineEmptyRow.classList.remove('ds-hidden');
+            }
+            delete inlineAddFormRow.dataset.openedFrom;
+        }
+
+        async function submitInlineEtapaForm(options = {}) {
+            if (!inlineAddForm || inlineComposerSaving) {
+                return;
+            }
+            const keepComposerOpen = Boolean(options.keepComposerOpen);
+
+            const descricao = (inlineDescricaoInput ? inlineDescricaoInput.value : '').trim();
+            if (!descricao) {
+                showAjaxFlashMessage('A descrição da etapa é obrigatória.', 'warning');
+                if (inlineDescricaoInput) {
+                    inlineDescricaoInput.focus();
+                }
+                return;
+            }
+
+            const originalSubmitHtml = inlineAddSubmitBtn ? inlineAddSubmitBtn.innerHTML : '';
+            inlineComposerSaving = true;
+            if (inlineAddSubmitBtn) {
+                inlineAddSubmitBtn.disabled = true;
+                inlineAddSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>';
+            }
+            if (inlineAddCancelBtn) {
+                inlineAddCancelBtn.disabled = true;
+            }
+
+            try {
+                const response = await fetch(inlineAddForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                    },
+                    body: new FormData(inlineAddForm)
+                });
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (error) {
+                    data = null;
+                }
+
+                if (!response.ok || !data || !data.success || !data.etapa) {
+                    showAjaxFlashMessage(data?.message || 'Erro ao adicionar etapa.', 'danger');
+                    return;
+                }
+
+                appendEtapaRow(data.etapa);
+                if (data.warning) {
+                    showAjaxFlashMessage(data.warning, 'warning');
+                }
+                showAjaxFlashMessage(data.message || 'Etapa adicionada com sucesso!', 'success');
+                if (keepComposerOpen) {
+                    inlineAddForm.reset();
+                    resetInlineComposerDateValues();
+                    syncInlineStatusControls();
+                    resizeInlineDescricaoTextarea();
+                    requestAnimationFrame(() => {
+                        inlineAddFormRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                        if (inlineDescricaoInput) {
+                            inlineDescricaoInput.focus();
+                        }
+                    });
+                } else {
+                    closeInlineEtapaComposer(true);
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar etapa inline:', error);
+                showAjaxFlashMessage('Erro de comunicação ao adicionar etapa.', 'danger');
+            } finally {
+                inlineComposerSaving = false;
+                if (inlineAddSubmitBtn) {
+                    inlineAddSubmitBtn.disabled = false;
+                    inlineAddSubmitBtn.innerHTML = originalSubmitHtml;
+                }
+                if (inlineAddCancelBtn) {
+                    inlineAddCancelBtn.disabled = false;
+                }
+            }
+        }
+
+        if (btnOpenInlineEtapaAdd) {
+            btnOpenInlineEtapaAdd.addEventListener('click', function () {
+                openInlineEtapaComposer('button');
+            });
+        }
+
+        if (inlineAddEntryBtn) {
+            inlineAddEntryBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                openInlineEtapaComposer('entry');
+            });
+        }
+
+        if (inlineAddCancelBtn) {
+            inlineAddCancelBtn.addEventListener('click', function () {
+                closeInlineEtapaComposer(true);
+            });
+        }
+
+        if (inlineAddForm) {
+            inlineAddForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                submitInlineEtapaForm();
+            });
+        }
+
+        if (inlineDescricaoInput) {
+            inlineDescricaoInput.addEventListener('input', function () {
+                resizeInlineDescricaoTextarea();
+            });
+            resizeInlineDescricaoTextarea();
+        }
+
+        if (inlineAddFormRow) {
+            inlineAddFormRow.addEventListener('keydown', function (event) {
+                if (!isInlineComposerOpen() || inlineComposerSaving) {
+                    return;
+                }
+                if (event.defaultPrevented) {
+                    return;
+                }
+
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeInlineEtapaComposer(true);
+                    return;
+                }
+
+                if (event.key !== 'Enter' || event.shiftKey) {
+                    return;
+                }
+
+                const target = event.target instanceof Element ? event.target : null;
+                if (target && (target.closest('.etapa-inline-icon-btn') || target.closest('.inline-status-toggle'))) {
+                    return;
+                }
+
+                event.preventDefault();
+                const descricao = (inlineDescricaoInput ? inlineDescricaoInput.value : '').trim();
+                if (!descricao) {
+                    if (inlineDescricaoInput) {
+                        inlineDescricaoInput.focus();
+                    }
+                    return;
+                }
+                submitInlineEtapaForm({ keepComposerOpen: true });
+            });
+        }
+
+        inlineDateInputs.forEach(input => {
+            input.addEventListener('input', function () {
+                syncInlineDateEmptyState(input);
+            });
+            input.addEventListener('change', function () {
+                syncInlineDateEmptyState(input);
+            });
+            input.addEventListener('pointerdown', function (event) {
+                if (!isInlineComposerOpen() || event.button !== 0 || inlineDatePickerOpening) {
+                    return;
+                }
+                const missingSpace = missingDatePickerViewportSpace(input);
+                if (missingSpace <= 0) {
+                    return;
+                }
+                event.preventDefault();
+                const maxDelta = Math.round(window.innerHeight * 0.72);
+                const delta = Math.min(maxDelta, missingSpace + 22);
+                window.scrollBy(0, delta);
+                inlineDatePickerOpening = true;
+                requestAnimationFrame(function () {
+                    openInlineDatePicker(input);
+                    window.setTimeout(function () {
+                        inlineDatePickerOpening = false;
+                    }, 180);
+                });
+            });
+            input.addEventListener('focus', function () {
+                if (!isInlineComposerOpen() || inlineDatePickerOpening) {
+                    return;
+                }
+                const missingSpace = missingDatePickerViewportSpace(input);
+                if (missingSpace <= 0) {
+                    return;
+                }
+                const maxDelta = Math.round(window.innerHeight * 0.72);
+                const delta = Math.min(maxDelta, missingSpace + 22);
+                window.scrollBy(0, delta);
+            });
+        });
+        syncAllInlineDateEmptyState();
+        syncInlineStatusControls();
+
+        if (inlineIniciadaToggle && inlineIniciadaCheckbox) {
+            inlineIniciadaToggle.addEventListener('click', function (event) {
+                event.preventDefault();
+                inlineIniciadaCheckbox.checked = !inlineIniciadaCheckbox.checked;
+                if (!inlineIniciadaCheckbox.checked && inlineDoneCheckbox) {
+                    inlineDoneCheckbox.checked = false;
+                }
+                syncInlineStatusControls();
+            });
+        }
+
+        if (inlineDoneToggle && inlineDoneCheckbox) {
+            inlineDoneToggle.addEventListener('click', function (event) {
+                event.preventDefault();
+                if (inlineDoneToggle.disabled) {
+                    return;
+                }
+                inlineDoneCheckbox.checked = !inlineDoneCheckbox.checked;
+                syncInlineStatusControls();
+            });
+        }
+
+        document.addEventListener('pointerdown', function (event) {
+            if (!isInlineComposerOpen() || inlineComposerSaving) {
+                return;
+            }
+            if (event.button !== 0) {
+                return;
+            }
+
+            const target = event.target instanceof Element ? event.target : null;
+
+            if (
+                target?.closest('#etapaInlineAddFormRow') ||
+                target?.closest('#etapaInlineAddEntryRow') ||
+                target?.closest('#btnOpenInlineEtapaAdd')
+            ) {
+                return;
+            }
+
+            const descricao = (inlineDescricaoInput ? inlineDescricaoInput.value : '').trim();
+            if (descricao) {
+                submitInlineEtapaForm();
+            } else {
+                closeInlineEtapaComposer(true);
+            }
+        });
+
         if (tbody) {
             let draggedItem = null;
             let originalIndex = -1;
@@ -820,14 +1350,7 @@
                 hideDropIndicator();
                 tbody.querySelectorAll('tr.etapa-draggable-row.drag-over').forEach(r => r.classList.remove('drag-over'));
 
-                const rows = tbody.querySelectorAll('tr.etapa-draggable-row');
-                const projectId = "{{ project.id }}";
-                rows.forEach((row, index) => {
-                    const numeroCelula = row.querySelector('.etapa-order-cell');
-                    if (numeroCelula) {
-                        numeroCelula.textContent = projectId + '.' + (index + 1);
-                    }
-                });
+                renumberEtapaRows();
             });
 
             tbody.addEventListener('dragover', function (e) {
@@ -916,6 +1439,26 @@
         let currentTargetElement = null;
 
         if (mainContent) {
+            function showContextMenuAt(x, y) {
+                if (!contextMenu) {
+                    return;
+                }
+                contextMenu.style.position = 'fixed';
+                contextMenu.style.display = 'block';
+                contextMenu.style.visibility = 'hidden';
+
+                const menuRect = contextMenu.getBoundingClientRect();
+                const viewportPadding = 10;
+                const maxLeft = window.innerWidth - menuRect.width - viewportPadding;
+                const maxTop = window.innerHeight - menuRect.height - viewportPadding;
+                const left = Math.max(viewportPadding, Math.min(x, maxLeft));
+                const top = Math.max(viewportPadding, Math.min(y, maxTop));
+
+                contextMenu.style.left = `${left}px`;
+                contextMenu.style.top = `${top}px`;
+                contextMenu.style.visibility = 'visible';
+            }
+
             // --- Lógica do Menu de Contexto para Datas ---
             mainContent.addEventListener('contextmenu', function (e) {
                 const target = e.target.closest('.editable-field[data-field*="data"]');
@@ -940,10 +1483,7 @@
                     return;
                 }
 
-                contextMenu.style.position = 'fixed';
-                contextMenu.style.top = `${e.clientY}px`;
-                contextMenu.style.left = `${e.clientX}px`;
-                contextMenu.style.display = 'block';
+                showContextMenuAt(e.clientX, e.clientY);
             });
 
             // --- Lógica de clique no menu de contexto ---
@@ -1012,12 +1552,29 @@
 
             // Esconde o menu ao clicar em qualquer lugar
             window.addEventListener('click', hideContextMenu);
+            window.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    hideContextMenu();
+                }
+            });
 
             function hideContextMenu() {
-                if (contextMenu.style.display === 'block') {
+                if (contextMenu && contextMenu.style.display === 'block') {
                     contextMenu.style.display = 'none';
+                    contextMenu.style.visibility = 'hidden';
                     currentTargetElement = null;
                 }
+            }
+
+            function resizeDescricaoEditor(textarea) {
+                if (!textarea) {
+                    return;
+                }
+                const computed = window.getComputedStyle(textarea);
+                const lineHeight = parseFloat(computed.lineHeight) || 20;
+                const minHeight = lineHeight + 12;
+                textarea.style.height = 'auto';
+                textarea.style.height = `${Math.max(textarea.scrollHeight, minHeight)}px`;
             }
 
             mainContent.addEventListener('click', function (e) {
@@ -1048,6 +1605,11 @@
                     input = document.createElement('textarea');
                     input.className = 'editable-field-textarea';
                     input.value = originalValue;
+                    input.rows = 1;
+                    resizeDescricaoEditor(input);
+                    input.addEventListener('input', function () {
+                        resizeDescricaoEditor(input);
+                    });
                 } else {
                     input = document.createElement('input');
                     input.className = 'editable-field-input';
@@ -1658,84 +2220,85 @@
             }
         }
 
-        document.querySelectorAll('.toggle-iniciada').forEach(button => {
-            button.addEventListener('click', function () {
-                const etapaId = this.dataset.etapaId;
+        if (tbody) {
+            tbody.addEventListener('click', function (event) {
+                const iniciadaButton = event.target.closest('.toggle-iniciada');
+                if (iniciadaButton && tbody.contains(iniciadaButton)) {
+                    const etapaId = iniciadaButton.dataset.etapaId;
 
-                fetch(`/etapa/${etapaId}/toggle_iniciada`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
-                    }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            updateIniciadaButton(this, data.iniciada);
+                    fetch(`/etapa/${etapaId}/toggle_iniciada`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                updateIniciadaButton(iniciadaButton, data.iniciada);
 
-                            const commonAncestor = this.closest('tr.etapa-draggable-row');
-                            if (commonAncestor) {
-                                const doneButton = commonAncestor.querySelector(`.toggle-done[data-etapa-id="${etapaId}"]`);
-                                if (doneButton) {
-                                    updateDoneButton(doneButton, data.done, data.iniciada);
+                                const commonAncestor = iniciadaButton.closest('tr.etapa-draggable-row');
+                                if (commonAncestor) {
+                                    const doneButton = commonAncestor.querySelector(`.toggle-done[data-etapa-id="${etapaId}"]`);
+                                    if (doneButton) {
+                                        updateDoneButton(doneButton, data.done, data.iniciada);
+                                    }
                                 }
-                            }
-                            updateRowAppearance(etapaId, data.iniciada, data.done);
-                            if (data.message) {
-                                showAjaxFlashMessage(data.message, 'info');
+                                updateRowAppearance(etapaId, data.iniciada, data.done);
+                                if (data.message) {
+                                    showAjaxFlashMessage(data.message, 'info');
+                                } else {
+                                    showAjaxFlashMessage(data.iniciada ? 'Iniciada.' : 'Não iniciada.', 'success');
+                                }
+                                verificarEAtualizarBotaoConcluir();
                             } else {
-                                showAjaxFlashMessage(data.iniciada ? 'Iniciada.' : 'Não iniciada.', 'success');
+                                showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', 'danger');
                             }
-                            // Atualizar estado do botão de concluir projeto
-                            verificarEAtualizarBotaoConcluir();
-                        } else {
-                            showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', 'danger');
+                        })
+                        .catch(error => {
+                            console.error('Erro ao alternar iniciada:', error);
+                            showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
+                        });
+                    return;
+                }
+
+                const doneButton = event.target.closest('.toggle-done');
+                if (doneButton && tbody.contains(doneButton)) {
+                    if (doneButton.disabled) return;
+                    const etapaId = doneButton.dataset.etapaId;
+
+                    fetch(`/etapa/${etapaId}/toggle`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
                         }
                     })
-                    .catch(error => {
-                        console.error('Erro ao alternar iniciada:', error);
-                        showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
-                    });
-            });
-        });
-
-        document.querySelectorAll('.toggle-done').forEach(button => {
-            button.addEventListener('click', function () {
-                if (this.disabled) return;
-                const etapaId = this.dataset.etapaId;
-
-                fetch(`/etapa/${etapaId}/toggle`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
-                    }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            updateDoneButton(this, data.done, data.iniciada);
-                            updateRowAppearance(etapaId, data.iniciada, data.done);
-                            if (data.message) {
-                                showAjaxFlashMessage(data.message, 'info');
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                updateDoneButton(doneButton, data.done, data.iniciada);
+                                updateRowAppearance(etapaId, data.iniciada, data.done);
+                                if (data.message) {
+                                    showAjaxFlashMessage(data.message, 'info');
+                                } else {
+                                    showAjaxFlashMessage(data.done ? 'Concluída.' : 'Pendente.', 'success');
+                                }
+                                verificarEAtualizarBotaoConcluir();
                             } else {
-                                showAjaxFlashMessage(data.done ? 'Concluída.' : 'Pendente.', 'success');
+                                showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', data.success === false && data.message && data.message.includes("não foi iniciada") ? 'warning' : 'danger');
                             }
-                            // Atualizar estado do botão de concluir projeto
-                            verificarEAtualizarBotaoConcluir();
-                        } else {
-                            showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', data.success === false && data.message && data.message.includes("não foi iniciada") ? 'warning' : 'danger');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erro ao alternar concluída:', error);
-                        showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
-                    });
+                        })
+                        .catch(error => {
+                            console.error('Erro ao alternar concluída:', error);
+                            showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
+                        });
+                }
             });
-        });
+        }
 
         // Verificar estado inicial do botão de concluir ao carregar a página
         verificarEAtualizarBotaoConcluir();
@@ -2661,77 +3224,137 @@
     // COMENTÁRIOS DAS ETAPAS - Edição Inline
     // ============================================
     document.addEventListener('DOMContentLoaded', function () {
+        const etapasTbody = document.getElementById('etapas-tbody');
+        if (!etapasTbody) {
+            return;
+        }
+
         let comentarioAtualEditando = null;
+        const canEditEtapas = etapasTbody.dataset.canEdit === 'true';
 
-        // Abrir edição inline ao clicar no comentário exibido ou placeholder
-        document.querySelectorAll('.etapa-comentario-display, .etapa-comentario-placeholder').forEach(el => {
-            el.addEventListener('click', function (e) {
-                e.stopPropagation();
-                const etapaId = this.dataset.etapaId;
-                const btnData = document.querySelector(`.btn-comment-data[data-etapa-id="${etapaId}"]`);
-                const comentarioAtual = btnData ? btnData.dataset.comentario : '';
+        function getCommentData(etapaId) {
+            const btnData = etapasTbody.querySelector(`.btn-comment-data[data-etapa-id="${etapaId}"]`);
+            return btnData ? (btnData.dataset.comentario || '') : '';
+        }
 
-                abrirEdicaoInline(this, etapaId, comentarioAtual);
-            });
-        });
+        function updateCommentData(etapaId, comentario) {
+            const btnData = etapasTbody.querySelector(`.btn-comment-data[data-etapa-id="${etapaId}"]`);
+            if (btnData) {
+                btnData.dataset.comentario = comentario || '';
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = `${Math.max(textarea.scrollHeight, 44)}px`;
+        }
+
+        function renderCommentState(etapaId, comentario) {
+            const row = etapasTbody.querySelector(`tr[data-etapa-id="${etapaId}"]`);
+            if (!row) {
+                return;
+            }
+            const commentContainer = row.querySelector('.etapa-descricao-comment');
+            if (!commentContainer) {
+                return;
+            }
+
+            const trimmedComentario = (comentario || '').trim();
+            updateCommentData(etapaId, trimmedComentario);
+            commentContainer.innerHTML = '';
+
+            if (trimmedComentario) {
+                const display = document.createElement('div');
+                display.className = 'small text-muted mt-1 etapa-comentario-display ds-cursor-pointer';
+                display.dataset.etapaId = etapaId;
+                display.title = 'Clique para editar';
+                display.innerHTML = `<i class="fas fa-comment-alt me-1"></i> ${escapeHtml(trimmedComentario)}`;
+                commentContainer.appendChild(display);
+                return;
+            }
+
+            if (!canEditEtapas) {
+                return;
+            }
+
+            const placeholder = document.createElement('div');
+            placeholder.className = 'small text-muted mt-1 etapa-comentario-placeholder ds-cursor-pointer';
+            placeholder.dataset.etapaId = etapaId;
+            placeholder.dataset.comentario = '';
+            placeholder.innerHTML = '<i class="fas fa-comment-medical me-1"></i> adicionar comentário';
+            commentContainer.appendChild(placeholder);
+        }
 
         function abrirEdicaoInline(elemento, etapaId, comentarioAtual) {
             // Cancelar qualquer edição anterior
             if (comentarioAtualEditando) {
-                cancelarEdicao(comentarioAtualEditando);
+                cancelarEdicao();
             }
 
             // Criar textarea
             const textarea = document.createElement('textarea');
             textarea.className = 'comentario-textarea-inline';
             textarea.value = comentarioAtual;
-            textarea.placeholder = 'Digite seu comentário e pressione Enter para salvar...';
+            textarea.placeholder = 'Digite e pressione Enter para salvar';
             textarea.rows = 2;
 
             // Substituir elemento original pelo textarea
             elemento.style.display = 'none';
             elemento.after(textarea);
+            autoResizeTextarea(textarea);
 
             // Focar no textarea
             textarea.focus();
             textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
-            comentarioAtualEditando = { textarea, elemento };
+            comentarioAtualEditando = { textarea, elemento, etapaId, comentarioAtual };
+
+            textarea.addEventListener('input', function () {
+                autoResizeTextarea(textarea);
+            });
 
             // Salvar com Enter
             textarea.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     const novoComentario = textarea.value.trim();
-                    salvarComentarioInline(etapaId, novoComentario, textarea, elemento);
+                    salvarComentarioInline(etapaId, novoComentario, textarea);
                 } else if (e.key === 'Escape') {
-                    cancelarEdicao({ textarea, elemento });
+                    cancelarEdicao();
                 }
             });
 
             // Cancelar ao clicar fora (blur)
-            textarea.addEventListener('blur', function (e) {
-                // Delay para permitir cliques em outros elementos
+            textarea.addEventListener('blur', function () {
                 setTimeout(() => {
                     if (comentarioAtualEditando && comentarioAtualEditando.textarea === textarea) {
-                        cancelarEdicao({ textarea, elemento });
+                        cancelarEdicao();
                     }
-                }, 200);
+                }, 140);
             });
         }
 
-        function cancelarEdicao(edicaoInfo) {
-            if (edicaoInfo && edicaoInfo.textarea && edicaoInfo.elemento) {
-                edicaoInfo.textarea.remove();
-                edicaoInfo.elemento.style.display = '';
+        function cancelarEdicao() {
+            if (comentarioAtualEditando && comentarioAtualEditando.textarea && comentarioAtualEditando.elemento) {
+                comentarioAtualEditando.textarea.remove();
+                comentarioAtualEditando.elemento.style.display = '';
             }
             comentarioAtualEditando = null;
         }
 
-        async function salvarComentarioInline(etapaId, comentario, textarea, elementoOriginal) {
+        async function salvarComentarioInline(etapaId, comentario, textarea) {
             // Desabilitar textarea durante salvamento
             textarea.disabled = true;
-            textarea.style.opacity = '0.6';
+            textarea.style.opacity = '0.7';
             textarea.placeholder = 'Salvando...';
 
             try {
@@ -2756,9 +3379,8 @@
                     comentarioAtualEditando = null;
 
                     // Atualizar inline
-                    atualizarComentarioInline(etapaId, comentario, elementoOriginal);
+                    renderCommentState(etapaId, comentario);
 
-                    // Mensagem de sucesso (opcional, pode remover se quiser mais discreto)
                     if (typeof showAjaxFlashMessage === 'function') {
                         showAjaxFlashMessage(comentario ? 'Comentário salvo!' : 'Comentário removido!', 'success');
                     }
@@ -2775,56 +3397,23 @@
                 // Reabilitar textarea em caso de erro
                 textarea.disabled = false;
                 textarea.style.opacity = '1';
-                textarea.placeholder = 'Digite seu comentário e pressione Enter para salvar...';
+                textarea.placeholder = 'Digite e pressione Enter para salvar';
                 textarea.focus();
             }
         }
 
-        function atualizarComentarioInline(etapaId, novoComentario, elementoOriginal) {
-            // Atualizar o data-comentario do botão de dados oculto
-            const btnData = document.querySelector(`.btn-comment-data[data-etapa-id="${etapaId}"]`);
-            if (btnData) {
-                btnData.dataset.comentario = novoComentario;
+        etapasTbody.addEventListener('click', function (event) {
+            const target = event.target.closest('.etapa-comentario-display, .etapa-comentario-placeholder');
+            if (!target || !etapasTbody.contains(target)) {
+                return;
             }
 
-            if (novoComentario) {
-                // Atualizar para comentário com conteúdo
-                if (elementoOriginal) {
-                    elementoOriginal.className = 'small text-muted mt-1 etapa-comentario-display ds-cursor-pointer';
-                    elementoOriginal.innerHTML = `<i class="fas fa-comment-alt me-1"></i> ${novoComentario}`;
-                    elementoOriginal.title = 'Clique para editar';
-                    elementoOriginal.style.display = '';
-
-                    // Remover event listener antigo e adicionar novo
-                    const newElement = elementoOriginal.cloneNode(true);
-                    elementoOriginal.parentNode.replaceChild(newElement, elementoOriginal);
-                    newElement.addEventListener('click', function (e) {
-                        e.stopPropagation();
-                        const btnData = document.querySelector(`.btn-comment-data[data-etapa-id="${etapaId}"]`);
-                        const comentarioAtual = btnData ? btnData.dataset.comentario : '';
-                        abrirEdicaoInline(this, etapaId, comentarioAtual);
-                    });
-                }
-            } else {
-                // Remover comentário e mostrar placeholder
-                if (elementoOriginal) {
-                    elementoOriginal.className = 'small text-muted mt-1 etapa-comentario-placeholder ds-cursor-pointer';
-                    elementoOriginal.innerHTML = '<i class="fas fa-comment-medical me-1"></i> adicionar comentário';
-                    elementoOriginal.title = '';
-                    elementoOriginal.style.display = '';
-
-                    // Remover event listener antigo e adicionar novo
-                    const newElement = elementoOriginal.cloneNode(true);
-                    elementoOriginal.parentNode.replaceChild(newElement, elementoOriginal);
-                    newElement.addEventListener('click', function (e) {
-                        e.stopPropagation();
-                        const btnData = document.querySelector(`.btn-comment-data[data-etapa-id="${etapaId}"]`);
-                        const comentarioAtual = btnData ? btnData.dataset.comentario : '';
-                        abrirEdicaoInline(this, etapaId, comentarioAtual);
-                    });
-                }
-            }
-        }
+            event.preventDefault();
+            event.stopPropagation();
+            const etapaId = target.dataset.etapaId;
+            const comentarioAtual = getCommentData(etapaId);
+            abrirEdicaoInline(target, etapaId, comentarioAtual);
+        });
     });
 
     document.addEventListener('DOMContentLoaded', function () {

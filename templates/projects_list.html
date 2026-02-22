@@ -10,10 +10,7 @@
 <div class="app-page-shell app-page-shell--raised projects-v4-page" id="projectsV4Page">
     <header class="projects-v4-header">
         <div class="projects-v4-header-main">
-            <h1 class="projects-v4-title ds-type-page-title">
-                <i class="fas fa-folder-open" aria-hidden="true"></i>
-                Todos os Projetos
-            </h1>
+            <h1 class="projects-v4-title ds-type-page-title">Todos os Projetos</h1>
             <p class="projects-v4-subtitle ds-type-body-sm">Visualize, filtre e acompanhe seus projetos.</p>
         </div>
 
@@ -21,12 +18,6 @@
             <span class="projects-v4-meta-pill">
                 {{ total_projects }} projeto{{ 's' if total_projects != 1 else '' }}
             </span>
-            {% if has_active_filters %}
-            <button type="button" id="clearFiltersBtn" class="btn-projects-v4 btn-projects-v4-secondary" title="Limpar todos os filtros">
-                <i class="fas fa-rotate-left" aria-hidden="true"></i>
-                Limpar filtros
-            </button>
-            {% endif %}
             <button type="button" class="btn-projects-v4 btn-projects-v4-primary" data-bs-toggle="modal" data-bs-target="#addProjectModal">
                 <i class="fas fa-plus" aria-hidden="true"></i>
                 Novo projeto
@@ -36,7 +27,7 @@
 
     <section class="projects-v4-filters">
         <form method="GET" action="{{ url_for('main.list_projects') }}" class="projects-v4-filter-form" id="filterForm">
-            <div class="projects-v4-filter-essential">
+            <div class="projects-v4-filter-essential" id="projectsV4FilterEssential">
                 <div class="projects-v4-field projects-v4-field-search">
                     <label for="searchProject" class="projects-v4-label ds-type-label">Busca livre</label>
                     <div class="projects-v4-search-wrap">
@@ -44,7 +35,7 @@
                         <input
                             type="text"
                             class="projects-v4-input"
-                            placeholder="Digite título, área ou órgão..."
+                            placeholder="Digite título, área ou indicador..."
                             id="searchProject"
                             name="search"
                             value="{{ search_query }}">
@@ -83,25 +74,33 @@
                     </select>
                 </div>
 
-                <div class="projects-v4-filter-actions">
+                <div class="projects-v4-filter-actions" id="projectsV4FilterActions">
+                    <button type="submit" class="btn-projects-v4 btn-projects-v4-primary" title="Filtrar">
+                        <i class="fas fa-filter" aria-hidden="true"></i>
+                        <span class="projects-v4-btn-label">Filtrar</span>
+                    </button>
                     <button
                         type="button"
                         id="toggleAdvancedFiltersBtn"
                         class="btn-projects-v4 btn-projects-v4-secondary btn-projects-v4-toggle"
+                        data-compactable="true"
+                        data-hover-label="Mais filtros"
+                        title="Mais filtros"
+                        aria-label="Mais filtros"
                         aria-expanded="{{ 'true' if has_advanced_filters_active else 'false' }}"
                         aria-controls="advancedFiltersPanel">
                         <i class="fas fa-sliders-h" aria-hidden="true"></i>
-                        <span class="projects-v4-toggle-label">
-                            {{ 'Ocultar filtros' if has_advanced_filters_active else 'Mais filtros' }}
-                        </span>
+                        <span class="projects-v4-btn-label projects-v4-toggle-label">Mais filtros</span>
                     </button>
-                    <button type="submit" class="btn-projects-v4 btn-projects-v4-primary">
-                        <i class="fas fa-filter" aria-hidden="true"></i>
-                        Filtrar
-                    </button>
-                    <a href="{{ url_for('main.list_projects') }}" class="btn-projects-v4 btn-projects-v4-secondary text-decoration-none">
+                    <a
+                        href="{{ url_for('main.list_projects') }}"
+                        class="btn-projects-v4 btn-projects-v4-secondary text-decoration-none"
+                        data-compactable="true"
+                        data-hover-label="Limpar"
+                        title="Limpar filtros"
+                        aria-label="Limpar filtros">
                         <i class="fas fa-rotate-left" aria-hidden="true"></i>
-                        Resetar
+                        <span class="projects-v4-btn-label">Limpar</span>
                     </a>
                 </div>
             </div>
@@ -175,7 +174,6 @@
                         <th class="projects-v4-col-id">#</th>
                         <th class="projects-v4-col-title">Título</th>
                         <th class="projects-v4-col-area">Área</th>
-                        <th class="projects-v4-col-orgao">Órgão</th>
                         <th class="projects-v4-col-delivery">Tipo Entrega</th>
                         <th class="projects-v4-col-priority">Prioridade</th>
                         <th class="projects-v4-col-status">Status</th>
@@ -196,7 +194,6 @@
                             </a>
                         </td>
                         <td>{{ project.area_responsavel if project.area_responsavel else '-' }}</td>
-                        <td>{{ project.orgao if project.orgao else '-' }}</td>
                         <td class="projects-v4-cell-delivery">
                             {% if project.delivery_type %}
                             <span class="projects-v4-badge projects-v4-badge-delivery">{{ project.delivery_type }}</span>
@@ -315,18 +312,33 @@
 {{ super() }}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var clearFiltersBtn = document.getElementById('clearFiltersBtn');
-        if (clearFiltersBtn) {
-            clearFiltersBtn.addEventListener('click', function () {
-                window.location.href = "{{ url_for('main.list_projects') }}";
-            });
-        }
-
         var advancedFiltersPanel = document.getElementById('advancedFiltersPanel');
         var toggleAdvancedFiltersBtn = document.getElementById('toggleAdvancedFiltersBtn');
+        var filterActions = document.getElementById('projectsV4FilterActions');
+        var filterRow = document.getElementById('projectsV4FilterEssential');
         var toggleAdvancedFiltersLabel = toggleAdvancedFiltersBtn
             ? toggleAdvancedFiltersBtn.querySelector('.projects-v4-toggle-label')
             : null;
+        var densityRaf = null;
+        var densityObserver = null;
+
+        function scheduleDensitySync() {
+            if (!filterActions || !filterRow) return;
+            if (densityRaf) cancelAnimationFrame(densityRaf);
+            densityRaf = requestAnimationFrame(function () {
+                densityRaf = null;
+                syncFilterActionsDensity();
+            });
+        }
+
+        function syncFilterActionsDensity() {
+            if (!filterActions || !filterRow) return;
+            filterActions.classList.remove('is-compact');
+            var shouldCompact = filterRow.scrollWidth > (filterRow.clientWidth + 1);
+            if (shouldCompact) {
+                filterActions.classList.add('is-compact');
+            }
+        }
 
         function syncAdvancedFiltersState(isOpen) {
             if (!advancedFiltersPanel || !toggleAdvancedFiltersBtn) {
@@ -342,8 +354,10 @@
                 advancedFiltersPanel.setAttribute('inert', '');
             }
 
+            toggleAdvancedFiltersBtn.classList.toggle('is-active', isOpen);
+
             if (toggleAdvancedFiltersLabel) {
-                toggleAdvancedFiltersLabel.textContent = isOpen ? 'Ocultar filtros' : 'Mais filtros';
+                toggleAdvancedFiltersLabel.textContent = 'Mais filtros';
             }
         }
 
@@ -352,6 +366,16 @@
             toggleAdvancedFiltersBtn.addEventListener('click', function () {
                 syncAdvancedFiltersState(!advancedFiltersPanel.classList.contains('is-open'));
             });
+        }
+
+        if (filterActions && filterRow) {
+            syncFilterActionsDensity();
+            window.addEventListener('resize', scheduleDensitySync);
+            if (typeof ResizeObserver === 'function') {
+                densityObserver = new ResizeObserver(scheduleDensitySync);
+                densityObserver.observe(filterRow);
+                densityObserver.observe(filterActions);
+            }
         }
     });
 </script>
