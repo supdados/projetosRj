@@ -23,6 +23,7 @@
     --success-light-bg: rgba(22, 163, 74, 0.08);
     --info-light-bg: rgba(202, 138, 4, 0.08);
     --danger-light-bg: rgba(220, 38, 38, 0.08);
+
 }
 
 body {
@@ -910,43 +911,152 @@ body.is-authenticated .content.expanded {
 }
 
 .app-notification-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.52rem;
     text-decoration: none;
-    border: 1px solid #e5edf7;
+    border: 1px solid #e2eaf3;
     border-radius: 10px;
     background: #ffffff;
-    padding: 0.58rem 0.64rem;
-    transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+    padding: 0.54rem 0.6rem;
+    transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .app-notification-item:hover,
 .app-notification-item:focus {
-    border-color: #cadef1;
-    background: #f4f9ff;
-    transform: translateY(-1px);
+    border-color: #d2deea;
+    background: #f8fbff;
+}
+
+
+.app-notification-item:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.14rem rgba(0, 90, 146, 0.14);
+}
+
+.app-notification-item.is-unread {
+    border-color: #ccdced;
+    background: #f5f9ff;
+}
+
+.app-notification-leading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.34rem;
+    min-width: 0;
+}
+
+.app-notification-unread-dot {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 999px;
+    background: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.app-notification-unread-dot.is-hidden {
+    opacity: 0;
+}
+
+.app-notification-icon-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 7px;
+    background: #eef3f8;
+    color: #71849a;
+    border: 1px solid #dde7f1;
+    flex-shrink: 0;
+}
+
+.app-notification-icon {
+    font-size: var(--ds-font-size-xs);
+}
+
+.app-notification-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.14rem;
+}
+
+.app-notification-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 0;
 }
 
 .app-notification-title {
-    color: #284767;
+    color: #2e445c;
     font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-semibold);
+    line-height: var(--ds-line-height-snug);
+    min-width: 0;
+    word-break: break-word;
+}
+
+.app-notification-item.is-unread .app-notification-title {
     font-weight: var(--ds-font-weight-bold);
-    line-height: var(--ds-line-height-snug);
 }
 
-.app-notification-message {
-    color: #4d6480;
+.app-notification-time {
+    color: #8ea0b3;
+    font-size: var(--ds-font-size-2xs);
+    font-weight: var(--ds-font-weight-medium);
+    line-height: var(--ds-line-height-tight);
+    flex-shrink: 0;
+}
+
+.app-notification-subline {
+    color: #6d8198;
     font-size: var(--ds-font-size-sm);
-    font-weight: var(--ds-font-weight-medium);
+    font-weight: var(--ds-font-weight-regular);
     line-height: var(--ds-line-height-normal);
+    word-break: break-word;
 }
 
-.app-notification-meta {
-    color: #7a8ca3;
-    font-size: var(--ds-font-size-xs);
-    font-weight: var(--ds-font-weight-medium);
+.app-notif-actor {
+    color: #005A92;
+    font-weight: var(--ds-font-weight-semibold);
+}
+
+.app-notif-status {
+    display: inline-block;
+    padding: 0.06rem 0.38rem;
+    border-radius: 5px;
+    font-size: var(--ds-font-size-2xs);
+    font-weight: var(--ds-font-weight-semibold);
     line-height: var(--ds-line-height-snug);
+    vertical-align: baseline;
+}
+
+.app-notif-status-programado {
+    background: #edf0f4;
+    border: 1px solid #d8dee7;
+    color: #4c5563;
+}
+
+.app-notif-status-em-andamento {
+    background: #e6f2ff;
+    border: 1px solid #cddff5;
+    color: #215488;
+}
+
+.app-notif-status-validacao {
+    background: #fff3df;
+    border: 1px solid #f4dfb8;
+    color: #8a4f00;
+}
+
+.app-notif-status-finalizado {
+    background: #eaf7f1;
+    border: 1px solid #cbe9dc;
+    color: #186244;
 }
 
 .app-global-search {

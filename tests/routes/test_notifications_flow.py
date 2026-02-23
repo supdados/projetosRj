@@ -52,6 +52,9 @@ def test_notifications_dropdown_marks_as_read(app, client_user, seed_data):
     assert payload['unread_after'] == 0
     assert isinstance(payload['items'], list)
     assert payload['items']
+    assert any(item.get('is_unread') is True for item in payload['items'])
+    assert all('event_type' in item for item in payload['items'])
+    assert all('is_unread' in item for item in payload['items'])
 
     with app.app_context():
         unread_after = UserNotification.query.filter_by(
@@ -59,6 +62,14 @@ def test_notifications_dropdown_marks_as_read(app, client_user, seed_data):
             is_read=False,
         ).count()
         assert unread_after == 0
+
+    second_dropdown_response = client_user.post('/api/notificacoes/dropdown')
+    assert second_dropdown_response.status_code == 200
+    second_payload = second_dropdown_response.get_json()
+    assert second_payload['unread_before'] == 0
+    assert second_payload['unread_after'] == 0
+    assert isinstance(second_payload['items'], list)
+    assert all(item.get('is_unread') is False for item in second_payload['items'])
 
 
 def test_comment_reply_notifies_previous_participant(app, client_user, seed_data):

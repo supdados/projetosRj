@@ -220,26 +220,91 @@ html[data-theme="dark"] body.is-authenticated .app-notifications-state {
 }
 
 html[data-theme="dark"] body.is-authenticated .app-notification-item {
-    border-color: rgba(99, 166, 219, 0.2);
-    background: rgba(35, 48, 66, 0.72);
+    border-color: rgba(99, 166, 219, 0.24);
+    background: rgba(35, 48, 66, 0.74);
+    box-shadow: none;
 }
 
 html[data-theme="dark"] body.is-authenticated .app-notification-item:hover,
 html[data-theme="dark"] body.is-authenticated .app-notification-item:focus {
-    border-color: rgba(99, 166, 219, 0.42);
-    background: rgba(78, 149, 204, 0.18);
+    border-color: rgba(123, 185, 233, 0.42);
+    background: rgba(78, 149, 204, 0.2);
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notification-item.is-unread {
+    border-color: rgba(123, 185, 233, 0.54);
+    background: rgba(63, 96, 131, 0.58);
+    box-shadow: 0 8px 16px rgba(7, 11, 18, 0.28);
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notification-item:focus-visible {
+    box-shadow: 0 0 0 0.14rem rgba(99, 166, 219, 0.32);
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notification-leading {
+    color: inherit;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notification-main {
+    color: inherit;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notification-row {
+    color: inherit;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notification-unread-dot {
+    background: var(--app-color-primary-hover);
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notification-icon-wrap {
+    background: rgba(40, 55, 74, 0.82);
+    color: #a9bed2;
+    border-color: rgba(99, 166, 219, 0.24);
 }
 
 html[data-theme="dark"] body.is-authenticated .app-notification-title {
-    color: #dce8f4;
+    color: #dfeaf5;
 }
 
-html[data-theme="dark"] body.is-authenticated .app-notification-message {
-    color: var(--app-color-text-secondary);
+html[data-theme="dark"] body.is-authenticated .app-notification-item.is-unread .app-notification-title {
+    color: #edf5fd;
 }
 
-html[data-theme="dark"] body.is-authenticated .app-notification-meta {
-    color: var(--app-color-text-muted);
+html[data-theme="dark"] body.is-authenticated .app-notification-time {
+    color: #9eb0c5;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notification-subline {
+    color: #b8cbdf;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notif-actor {
+    color: #7ec0ee;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notif-status-programado {
+    background: rgba(141, 160, 182, 0.18);
+    border-color: rgba(141, 160, 182, 0.42);
+    color: #d8e3ee;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notif-status-em-andamento {
+    background: rgba(99, 166, 219, 0.22);
+    border-color: rgba(99, 166, 219, 0.5);
+    color: #d9ebfc;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notif-status-validacao {
+    background: rgba(216, 162, 77, 0.22);
+    border-color: rgba(216, 162, 77, 0.5);
+    color: #fbe8c8;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-notif-status-finalizado {
+    background: rgba(73, 185, 135, 0.22);
+    border-color: rgba(73, 185, 135, 0.5);
+    color: #d9f3e8;
 }
 
 /* Global search */

@@ -25,6 +25,11 @@ def notifications_dropdown_api():
         .limit(20)
         .all()
     )
+    unread_notification_ids = {
+        notification.id
+        for notification in notifications
+        if not notification.is_read
+    }
 
     if unread_before:
         base_query.filter(UserNotification.is_read.is_(False)).update(
@@ -39,11 +44,13 @@ def notifications_dropdown_api():
     items = [
         {
             'id': notification.id,
+            'event_type': notification.event_type,
             'title': notification.title,
             'message': notification.message,
             'actor_name': notification.actor.name if notification.actor else '',
             'target_url': notification.target_url,
             'created_at': format_local_time(notification.created_at, '%d/%m/%Y %H:%M'),
+            'is_unread': notification.id in unread_notification_ids,
         }
         for notification in notifications
     ]
