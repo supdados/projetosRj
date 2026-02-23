@@ -1974,6 +1974,19 @@
         var idAttr = commentEl.id || '';
         var id = parseInt(idAttr.replace('comment-', ''), 10);
         if (!Number.isFinite(id)) return null;
+        var toneIndex = null;
+        if (commentEl.classList) {
+            for (var i = 0; i < commentEl.classList.length; i++) {
+                var cls = commentEl.classList[i];
+                if (cls.indexOf('task-comment-author-') === 0) {
+                    var parsedTone = parseInt(cls.replace('task-comment-author-', ''), 10);
+                    if (Number.isFinite(parsedTone)) {
+                        toneIndex = Math.abs(parsedTone) % 5;
+                    }
+                    break;
+                }
+            }
+        }
 
         var authorEl = commentEl.querySelector('.task-comment-user');
         var timeEl = commentEl.querySelector('.task-comment-time');
@@ -1988,6 +2001,7 @@
             content: textEl ? (textEl.textContent || '').trim() : '',
             is_own: !!editBtn && hasDelete,
             user_id: null,
+            tone_index: toneIndex,
             updated_at: null,
         };
     }
@@ -2965,18 +2979,25 @@
             submitBtn.disabled = drawerState.isCommentBusy || isDeleting || !hasContent;
         }
 
+        var drawerAuthorToneMap = Object.create(null);
+        var drawerAuthorToneCursor = 0;
+        var DRAWER_AUTHOR_TONE_TOTAL = 5;
+
         function getCommentAuthorToneClass(comment) {
+            if (comment && Number.isFinite(comment.tone_index)) {
+                return 'author-tone-' + (Math.abs(comment.tone_index) % DRAWER_AUTHOR_TONE_TOTAL);
+            }
             var rawKey = '';
             if (comment && comment.author_name) rawKey = String(comment.author_name).trim().toLowerCase();
             if (!rawKey && comment && Number.isFinite(comment.user_id)) rawKey = String(comment.user_id);
+            if (!rawKey && comment && Number.isFinite(comment.id)) rawKey = 'autor-id-' + String(comment.id);
             if (!rawKey) rawKey = 'autor-indefinido';
 
-            var hash = 0;
-            for (var i = 0; i < rawKey.length; i++) {
-                hash = ((hash << 5) - hash) + rawKey.charCodeAt(i);
-                hash |= 0;
+            if (!Object.prototype.hasOwnProperty.call(drawerAuthorToneMap, rawKey)) {
+                drawerAuthorToneMap[rawKey] = drawerAuthorToneCursor % DRAWER_AUTHOR_TONE_TOTAL;
+                drawerAuthorToneCursor += 1;
             }
-            return 'author-tone-' + (Math.abs(hash) % 6);
+            return 'author-tone-' + drawerAuthorToneMap[rawKey];
         }
 
         function scrollDrawerCommentsToBottom(force) {
