@@ -573,9 +573,9 @@
                             {% if is_admin_user or (current_user_obj and
                             current_user_obj.has_access_to_area(project.area_responsavel)) %}
                             <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post"
-                                class="inline-form"
+                                class="inline-form" data-etapa-delete-form
                                 onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
-                                <button type="submit" class="btn btn-sm btn-floating"
+                                <button type="submit" class="btn btn-sm btn-floating" data-etapa-delete-btn
                                     title="Excluir Etapa">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -803,6 +803,30 @@
             verificarEAtualizarBotaoConcluir();
         }
 
+        function ensureInlineEmptyRowVisible() {
+            if (!tbody) {
+                return;
+            }
+
+            let emptyRow = document.getElementById('etapaInlineEmptyRow');
+            if (!emptyRow) {
+                emptyRow = document.createElement('tr');
+                emptyRow.id = 'etapaInlineEmptyRow';
+                emptyRow.className = 'etapa-inline-empty-row';
+                emptyRow.innerHTML = '<td colspan="9">Nenhuma etapa adicionada ainda.</td>';
+
+                if (inlineAddEntryRow && inlineAddEntryRow.parentNode === tbody) {
+                    tbody.insertBefore(emptyRow, inlineAddEntryRow);
+                } else if (inlineAddFormRow && inlineAddFormRow.parentNode === tbody) {
+                    tbody.insertBefore(emptyRow, inlineAddFormRow);
+                } else {
+                    tbody.appendChild(emptyRow);
+                }
+            }
+
+            emptyRow.classList.remove('ds-hidden');
+        }
+
         function syncInlineStatusControls() {
             const isIniciada = Boolean(inlineIniciadaCheckbox && inlineIniciadaCheckbox.checked);
             const isDone = Boolean(inlineDoneCheckbox && inlineDoneCheckbox.checked);
@@ -894,9 +918,9 @@
                 : (iniciada ? 'Marcar como concluída' : 'Marcar como concluída (necessário iniciar primeiro)');
             const actionHtml = canEditEtapas
                 ? `
-                    <form action="/etapa/${etapaId}/delete" method="post" class="inline-form"
+                    <form action="/etapa/${etapaId}/delete" method="post" class="inline-form" data-etapa-delete-form
                         onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
-                        <button type="submit" class="btn btn-sm btn-floating" title="Excluir Etapa">
+                        <button type="submit" class="btn btn-sm btn-floating" data-etapa-delete-btn title="Excluir Etapa">
                             <i class="fas fa-trash"></i>
                         </button>
                     </form>
@@ -2221,6 +2245,77 @@
         }
 
         if (tbody) {
+            tbody.addEventListener('submit', async function (event) {
+                const deleteForm = event.target.closest('form[data-etapa-delete-form]');
+                if (!deleteForm || !tbody.contains(deleteForm)) {
+                    return;
+                }
+
+                if (event.defaultPrevented) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                const deleteButton = deleteForm.querySelector('[data-etapa-delete-btn]');
+                const originalButtonHtml = deleteButton ? deleteButton.innerHTML : '';
+
+                if (deleteButton) {
+                    deleteButton.disabled = true;
+                    deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>';
+                }
+
+                try {
+                    const response = await fetch(deleteForm.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                        }
+                    });
+
+                    let data = null;
+                    try {
+                        data = await response.json();
+                    } catch (error) {
+                        data = null;
+                    }
+
+                    if (!response.ok || !data || !data.success) {
+                        const errorMessage = data && data.message ? data.message : 'Erro ao excluir etapa.';
+                        showAjaxFlashMessage(errorMessage, 'danger');
+                        if (deleteButton) {
+                            deleteButton.disabled = false;
+                            deleteButton.innerHTML = originalButtonHtml;
+                        }
+                        return;
+                    }
+
+                    const row = deleteForm.closest('tr.etapa-draggable-row');
+                    if (row) {
+                        row.remove();
+                    }
+
+                    renumberEtapaRows();
+                    refreshConcludeButtonCounters();
+
+                    const remainingRows = tbody.querySelectorAll('tr.etapa-draggable-row').length;
+                    if (remainingRows === 0) {
+                        ensureInlineEmptyRowVisible();
+                    }
+
+                    showAjaxFlashMessage(data.message || 'Etapa excluída com sucesso.', 'success');
+                } catch (error) {
+                    console.error('Erro ao excluir etapa:', error);
+                    showAjaxFlashMessage('Erro de comunicação ao excluir etapa.', 'danger');
+                    if (deleteButton) {
+                        deleteButton.disabled = false;
+                        deleteButton.innerHTML = originalButtonHtml;
+                    }
+                }
+            });
+
             tbody.addEventListener('click', function (event) {
                 const iniciadaButton = event.target.closest('.toggle-iniciada');
                 if (iniciadaButton && tbody.contains(iniciadaButton)) {

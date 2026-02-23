@@ -200,6 +200,16 @@
     box-shadow: none;
 }
 
+/* Cursor feedback on filter controls */
+.projects-v4-filter-form .projects-v4-input {
+    cursor: pointer;
+}
+
+.projects-v4-filter-form .projects-v4-field-search .projects-v4-input,
+.projects-v4-filter-form #filterAbepIndicatorInput {
+    cursor: text;
+}
+
 .projects-v4-search-wrap .projects-v4-input {
     padding-left: 2rem;
 }

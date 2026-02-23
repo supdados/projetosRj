@@ -31,6 +31,10 @@
     --bs-gutter-x: 0.95rem;
 }
 
+.dashboard-page-v2 .dashboard-main-grid {
+    --bs-gutter-x: 0.5rem;
+}
+
     .dashboard-page-v2 .dashboard-welcome-strip {
         display: flex;
         align-items: center;
@@ -264,6 +268,10 @@
     .dashboard-page-v2 .main-content-card,
     .dashboard-page-v2 .sidebar-content-card {
         border-radius: 14px !important;
+    }
+
+    .dashboard-page-v2 #dashboardTasksCard {
+        width: 100%;
     }
 
     .dashboard-page-v2 .glass-card-header {

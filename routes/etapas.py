@@ -226,24 +226,62 @@ def edit_etapa(etapa_id):
 @main_bp.route('/etapa/<int:etapa_id>/delete', methods=['POST'])
 @login_required
 def delete_etapa(etapa_id):
+    def is_ajax_request():
+        requested_with = request.headers.get('X-Requested-With', '').lower() == 'xmlhttprequest'
+        accepts_json = 'application/json' in request.headers.get('Accept', '').lower()
+        return requested_with or accepts_json
+
+    ajax_request = is_ajax_request()
     etapa_to_delete = Etapa.query.get_or_404(etapa_id)
     project_of_etapa = etapa_to_delete.project
+    project_id_for_redirect = etapa_to_delete.project_id
+
     if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
+        message = 'Você não tem permissão para excluir etapas deste projeto.'
+        if ajax_request:
+            return jsonify({
+                'success': False,
+                'message': message,
+                'etapa_id': etapa_id,
+                'project_id': project_id_for_redirect,
+            }), 403
         flash('Você não tem permissão para excluir etapas deste projeto.', 'danger')
         return redirect(url_for('main.project_detail', project_id=project_of_etapa.id))
 
-    project_id_for_redirect = etapa_to_delete.project_id
     etapa_descricao = etapa_to_delete.descricao
-    
-    # Registrar no histórico
-    log_project_action(
-        project_id=project_id_for_redirect,
-        action_type='delete_etapa',
-        description=f'Excluiu a etapa "{etapa_descricao}"'
-    )
-    
-    db.session.delete(etapa_to_delete)
-    db.session.commit()
+
+    try:
+        # Registrar no histórico
+        log_project_action(
+            project_id=project_id_for_redirect,
+            action_type='delete_etapa',
+            description=f'Excluiu a etapa "{etapa_descricao}"'
+        )
+
+        db.session.delete(etapa_to_delete)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        if ajax_request:
+            return jsonify({
+                'success': False,
+                'message': 'Erro ao excluir etapa.',
+                'etapa_id': etapa_id,
+                'project_id': project_id_for_redirect,
+            }), 500
+        flash('Erro ao excluir etapa.', 'danger')
+        return redirect(url_for('main.project_detail', project_id=project_id_for_redirect))
+
+    if ajax_request:
+        total_etapas = Etapa.query.filter_by(project_id=project_id_for_redirect).count()
+        return jsonify({
+            'success': True,
+            'message': 'Etapa excluída com sucesso.',
+            'etapa_id': etapa_id,
+            'project_id': project_id_for_redirect,
+            'total_etapas': total_etapas,
+        })
+
     flash('Etapa excluída com sucesso.', 'success')
     return redirect(url_for('main.project_detail', project_id=project_id_for_redirect))
 

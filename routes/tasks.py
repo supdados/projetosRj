@@ -188,6 +188,24 @@ def _build_task_visibility_query(show_finalized, include_relations=True):
     return query.filter(Task.is_finalized.is_(show_finalized))
 
 
+def _apply_task_listing_filters(query, project_filter='', search_query=''):
+    """Aplica filtros de projeto e busca de título na listagem de tarefas."""
+    if project_filter:
+        if project_filter == 'sem_projeto':
+            query = query.filter(Task.project_id.is_(None))
+        else:
+            try:
+                project_id = int(project_filter)
+            except (TypeError, ValueError):
+                return query.filter(db.false())
+            query = query.filter(Task.project_id == project_id)
+
+    if search_query:
+        query = query.filter(Task.titulo.ilike(f'%{search_query}%'))
+
+    return query
+
+
 def _get_projects_for_task_filter():
     if g.user.is_admin:
         return Project.query.order_by(Project.titulo).all()
@@ -239,16 +257,11 @@ def _render_tasks_listing(show_finalized):
     if page < 1:
         page = 1
 
-    query = _build_task_visibility_query(show_finalized=show_finalized)
-
-    if project_filter:
-        if project_filter == 'sem_projeto':
-            query = query.filter(Task.project_id.is_(None))
-        else:
-            query = query.filter(Task.project_id == project_filter)
-
-    if search_query:
-        query = query.filter(Task.titulo.ilike(f'%{search_query}%'))
+    query = _apply_task_listing_filters(
+        _build_task_visibility_query(show_finalized=show_finalized),
+        project_filter=project_filter,
+        search_query=search_query,
+    )
 
     if show_finalized:
         query = query.order_by(Task.finalized_at.desc(), Task.created_at.desc())
@@ -258,8 +271,16 @@ def _render_tasks_listing(show_finalized):
     pagination = query.paginate(page=page, per_page=20, error_out=False)
     tasks = pagination.items
 
-    active_count = _build_task_visibility_query(show_finalized=False, include_relations=False).count()
-    finalized_count = _build_task_visibility_query(show_finalized=True, include_relations=False).count()
+    active_count = _apply_task_listing_filters(
+        _build_task_visibility_query(show_finalized=False, include_relations=False),
+        project_filter=project_filter,
+        search_query=search_query,
+    ).count()
+    finalized_count = _apply_task_listing_filters(
+        _build_task_visibility_query(show_finalized=True, include_relations=False),
+        project_filter=project_filter,
+        search_query=search_query,
+    ).count()
     index_offset = (pagination.page - 1) * pagination.per_page
     page_total = pagination.pages if pagination.pages else 1
     page_info_text = f'Página {pagination.page} de {page_total}'

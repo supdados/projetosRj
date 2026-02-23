@@ -1,3 +1,6 @@
+import datetime
+import re
+
 from models import Task, db
 
 
@@ -80,6 +83,67 @@ def test_tasks_pagination_uses_20_and_keeps_continuous_index_with_filters(app, c
     assert 'Página 2 de 2'.encode('utf-8') in response.data
     assert b'search=Paginated+Task' in response.data
     assert f'project={project_id}'.encode() in response.data
+
+
+def test_task_archive_counts_follow_project_and_search_filters(app, client_user, seed_data):
+    with app.app_context():
+        db.session.add_all(
+            [
+                Task(
+                    titulo='Filtro Mercado Ativa A',
+                    project_id=seed_data['project_id'],
+                    created_by_id=seed_data['user_id'],
+                ),
+                Task(
+                    titulo='Filtro Mercado Ativa B',
+                    project_id=seed_data['project_id'],
+                    created_by_id=seed_data['user_id'],
+                ),
+                Task(
+                    titulo='Filtro Mercado Finalizada A',
+                    project_id=seed_data['project_id'],
+                    created_by_id=seed_data['user_id'],
+                    is_finalized=True,
+                    finalized_at=datetime.datetime(2026, 2, 20, 14, 0, 0),
+                ),
+                Task(
+                    titulo='Filtro Mercado Ativa Outro Projeto',
+                    project_id=seed_data['project_complete_id'],
+                    created_by_id=seed_data['user_id'],
+                ),
+                Task(
+                    titulo='Filtro Mercado Finalizada Outro Projeto',
+                    project_id=seed_data['project_complete_id'],
+                    created_by_id=seed_data['user_id'],
+                    is_finalized=True,
+                    finalized_at=datetime.datetime(2026, 2, 21, 9, 0, 0),
+                ),
+            ]
+        )
+        db.session.commit()
+
+    project_id = seed_data['project_id']
+    query = f'project={project_id}&search=Filtro+Mercado'
+
+    active_response = client_user.get(f'/tarefas?{query}')
+    assert active_response.status_code == 200
+    active_html = active_response.get_data(as_text=True)
+    finalized_match = re.search(
+        r'Finalizadas</span>\s*<span class="tasks-archive-count">(\d+)</span>',
+        active_html,
+    )
+    assert finalized_match is not None
+    assert finalized_match.group(1) == '1'
+
+    finalized_response = client_user.get(f'/tarefas/finalizadas?{query}')
+    assert finalized_response.status_code == 200
+    finalized_html = finalized_response.get_data(as_text=True)
+    active_match = re.search(
+        r'Ativas</span>\s*<span class="tasks-archive-count">(\d+)</span>',
+        finalized_html,
+    )
+    assert active_match is not None
+    assert active_match.group(1) == '2'
 
 
 def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(app, client_user, seed_data):
