@@ -1467,6 +1467,15 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-row:hov
     background: var(--td-items-hover);
 }
 
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .empty-state-items {
+    background: var(--td-items-surface-base);
+    border-color: var(--td-items-border);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .empty-state-items .task-item-add-placeholder:hover {
+    background: rgba(78, 149, 204, 0.16);
+}
+
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-add-row {
     background: var(--td-items-surface-elevated);
     border-top-color: rgba(99, 166, 219, 0.2);
