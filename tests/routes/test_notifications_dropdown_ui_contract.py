@@ -22,8 +22,8 @@ def test_notifications_dropdown_contains_semantic_render_hooks(client_user):
         "safeEventType.startsWith('project_')",
         "safeEventType.startsWith('task_')",
         'fa-bell',
-        'notificationTooltipRaw',
-        'title="${notificationTooltip}"',
+        'const titleRaw = item && item.title ? item.title : \'Atualização\';',
+        '<span class="app-notification-title">${title}</span>',
     ]
 
     for fragment in required_fragments:

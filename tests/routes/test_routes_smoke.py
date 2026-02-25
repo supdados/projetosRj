@@ -25,16 +25,25 @@ def _resolve_request(case, seed_data):
     return path, request_kwargs
 
 
-def _pick_client(case, *, client, client_user, client_admin, client_outsider):
+def _login(client, user_id):
+    with client.session_transaction() as session:
+        session['user_id'] = user_id
+
+
+def _build_client(case, app, seed_data):
+    client = app.test_client()
     role = case['role']
     if role == 'anon':
         return client
     if role == 'user':
-        return client_user
+        _login(client, seed_data['user_id'])
+        return client
     if role == 'admin':
-        return client_admin
+        _login(client, seed_data['admin_id'])
+        return client
     if role == 'outsider':
-        return client_outsider
+        _login(client, seed_data['outsider_id'])
+        return client
     raise ValueError(f'Role nao suportado no caso {case["id"]}: {role}')
 
 
@@ -46,14 +55,8 @@ def _assert_expected_status(response, expected_status):
 
 
 @pytest.mark.parametrize('case', ROUTE_CASES, ids=[case['id'] for case in ROUTE_CASES])
-def test_routes_smoke(case, client, client_user, client_admin, client_outsider, seed_data):
-    http_client = _pick_client(
-        case,
-        client=client,
-        client_user=client_user,
-        client_admin=client_admin,
-        client_outsider=client_outsider,
-    )
+def test_routes_smoke(case, app, seed_data):
+    http_client = _build_client(case, app, seed_data)
     path, request_kwargs = _resolve_request(case, seed_data)
 
     response = http_client.open(
