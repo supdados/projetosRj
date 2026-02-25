@@ -16,7 +16,8 @@ from .decorators import login_required
 from .shared import format_local_time
 
 VALID_PRIORIDADES = {'baixa', 'media', 'alta', 'urgente'}
-VALID_TIPOS = {'implementacao', 'bug', 'melhoria', 'duvida', 'outros'}
+VALID_TIPOS = {'bug', 'melhoria', 'duvida', 'outros'}
+LEGACY_TIPOS = {'implementacao'}
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'}
 
 
@@ -686,8 +687,15 @@ def edit_task_item(item_id):
         prioridade = item.prioridade
 
     if 'tipo_pedido' in request.form:
-        tipo_pedido = request.form.get('tipo_pedido', '').strip() or None
-        if tipo_pedido and tipo_pedido not in VALID_TIPOS:
+        incoming_tipo_pedido = request.form.get('tipo_pedido', '').strip() or None
+        if incoming_tipo_pedido is None:
+            tipo_pedido = None
+        elif incoming_tipo_pedido in VALID_TIPOS:
+            tipo_pedido = incoming_tipo_pedido
+        elif incoming_tipo_pedido in LEGACY_TIPOS and item.tipo_pedido in LEGACY_TIPOS:
+            # Compatibilidade: preserva legado quando o valor semântico não muda.
+            tipo_pedido = item.tipo_pedido
+        else:
             tipo_pedido = None
     else:
         tipo_pedido = item.tipo_pedido

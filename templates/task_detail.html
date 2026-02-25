@@ -190,7 +190,9 @@
                                             data-item-id="{{ item.id }}" title="Tipo"
                                             onchange="updateItemTipo({{ item.id }}, this.value)">
                                             <option value="">—</option>
-                                            <option value="implementacao" {% if item.tipo_pedido == 'implementacao' %}selected{% endif %}>Implementação</option>
+                                            {% if item.tipo_pedido == 'implementacao' %}
+                                            <option value="implementacao" selected hidden>Implementação (legado)</option>
+                                            {% endif %}
                                             <option value="bug" {% if item.tipo_pedido == 'bug' %}selected{% endif %}>Bug</option>
                                             <option value="melhoria" {% if item.tipo_pedido == 'melhoria' %}selected{% endif %}>Melhoria</option>
                                             <option value="duvida" {% if item.tipo_pedido == 'duvida' %}selected{% endif %}>Dúvida</option>
@@ -324,7 +326,6 @@
                                             </select>
                                             <select class="task-item-add-tipo" id="addItemTipo">
                                                 <option value="">Tipo</option>
-                                                <option value="implementacao">Implementação</option>
                                                 <option value="bug">Bug</option>
                                                 <option value="melhoria">Melhoria</option>
                                                 <option value="duvida">Dúvida</option>
@@ -374,7 +375,6 @@
                                         </select>
                                         <select class="task-item-add-tipo" id="addItemTipo">
                                             <option value="">Tipo</option>
-                                            <option value="implementacao">Implementação</option>
                                             <option value="bug">Bug</option>
                                             <option value="melhoria">Melhoria</option>
                                             <option value="duvida">Dúvida</option>
@@ -439,7 +439,6 @@
                                             </select>
                                             <select class="task-items-kanban-add-tipo">
                                                 <option value="">Tipo</option>
-                                                <option value="implementacao">Implementação</option>
                                                 <option value="bug">Bug</option>
                                                 <option value="melhoria">Melhoria</option>
                                                 <option value="duvida">Dúvida</option>
@@ -506,7 +505,7 @@
                                 <label class="task-item-drawer-label" for="taskItemDrawerTipoPedido">Tipo</label>
                                 <select id="taskItemDrawerTipoPedido" class="task-item-drawer-select task-item-drawer-tipo-select">
                                     <option value="">— Nenhum —</option>
-                                    <option value="implementacao">Implementação</option>
+                                    <option value="implementacao" hidden>Implementação (legado)</option>
                                     <option value="bug">Bug</option>
                                     <option value="melhoria">Melhoria</option>
                                     <option value="duvida">Dúvida</option>
@@ -1573,6 +1572,9 @@
             var item = data.item;
             var prioridade = item.prioridade || '';
             var tipoPedido = item.tipo_pedido || '';
+            var legacyTipoOption = tipoPedido === 'implementacao'
+                ? '<option value="implementacao" selected hidden>Implementação (legado)</option>'
+                : '';
 
             var pOptions = '<option value="">—</option>' +
                 '<option value="baixa"' + (prioridade === 'baixa' ? ' selected' : '') + '>Baixa</option>' +
@@ -1580,7 +1582,7 @@
                 '<option value="alta"' + (prioridade === 'alta' ? ' selected' : '') + '>Alta</option>' +
                 '<option value="urgente"' + (prioridade === 'urgente' ? ' selected' : '') + '>Urgente</option>';
             var tOptions = '<option value="">—</option>' +
-                '<option value="implementacao"' + (tipoPedido === 'implementacao' ? ' selected' : '') + '>Implementação</option>' +
+                legacyTipoOption +
                 '<option value="bug"' + (tipoPedido === 'bug' ? ' selected' : '') + '>Bug</option>' +
                 '<option value="melhoria"' + (tipoPedido === 'melhoria' ? ' selected' : '') + '>Melhoria</option>' +
                 '<option value="duvida"' + (tipoPedido === 'duvida' ? ' selected' : '') + '>Dúvida</option>' +

@@ -720,7 +720,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (data.done) {
                     removeRowFromPending(row);
-                    showToast('Etapa concluida e removida da triagem.', 'info');
+                    showToast('Etapa concluída', 'info');
                 } else {
                     updateButtonStates(row, data.iniciada, data.done);
                 }

@@ -76,3 +76,13 @@ def test_task_detail_template_contains_kanban_column_add_hooks(client_user, seed
 
     for add_hook in required_add_hooks:
         assert add_hook in html
+
+
+def test_task_detail_template_hides_implementacao_option_but_keeps_legacy_support(client_user, seed_data):
+    response = client_user.get(f"/tarefas/{seed_data['task_id']}")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert '<option value="implementacao">Implementação</option>' not in html
+    assert 'Implementação (legado)' in html
