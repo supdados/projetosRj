@@ -120,6 +120,27 @@ AREA_PROTECTED_CASES = [
         'expected_status': 403,
     },
     {
+        'id': 'outsider_task_update_status',
+        'method': 'POST',
+        'path': '/tarefas/{task_id}/update_status',
+        'json': {'status': 'em_andamento'},
+        'expected_status': 403,
+    },
+    {
+        'id': 'outsider_task_update_prioridade',
+        'method': 'POST',
+        'path': '/tarefas/{task_id}/update_prioridade',
+        'json': {'prioridade': 'alta'},
+        'expected_status': 403,
+    },
+    {
+        'id': 'outsider_task_update_tipo',
+        'method': 'POST',
+        'path': '/tarefas/{task_id}/update_tipo',
+        'json': {'tipo_pedido': 'bug'},
+        'expected_status': 403,
+    },
+    {
         'id': 'outsider_task_item_add',
         'method': 'POST',
         'path': '/tarefas/{task_id}/itens/add',
@@ -142,6 +163,26 @@ AREA_PROTECTED_CASES = [
         'expected_status': 403,
     },
     {
+        'id': 'outsider_task_comment_add_canonical',
+        'method': 'POST',
+        'path': '/tarefas/{task_id}/comentarios/add',
+        'headers': {'X-Requested-With': 'XMLHttpRequest'},
+        'data': {'content': 'Comentario sem permissao'},
+        'expected_status': 403,
+    },
+    {
+        'id': 'outsider_task_anexos_list_canonical',
+        'method': 'GET',
+        'path': '/tarefas/{task_id}/anexos',
+        'expected_status': 403,
+    },
+    {
+        'id': 'outsider_task_anexo_add_canonical',
+        'method': 'POST',
+        'path': '/tarefas/{task_id}/anexos/add',
+        'expected_status': 403,
+    },
+    {
         'id': 'outsider_task_hub_suggestions',
         'method': 'GET',
         'path': '/tarefas/sugestoes-responsavel',
@@ -159,8 +200,13 @@ AREA_PROTECTED_CASES = [
         'id': 'outsider_task_reactivate',
         'method': 'POST',
         'path': '/tarefas/{task_id}/reativar',
-        'expected_status': 302,
-        'redirect_contains': '/tarefas',
+        'expected_status': 403,
+    },
+    {
+        'id': 'outsider_task_desarquivar',
+        'method': 'POST',
+        'path': '/tarefas/{task_id}/desarquivar',
+        'expected_status': 403,
     },
 ]
 

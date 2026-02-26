@@ -25,13 +25,13 @@ def test_task_hub_global_add_item_in_filtered_project(app, client_user, seed_dat
     payload = response.get_json()
     assert payload['success'] is True
     assert payload['item']['project_id'] == seed_data['project_id']
-    assert payload['item']['task_id'] == seed_data['task_id']
+    assert payload['item']['task_id'] == payload['item']['id']
     assert payload['item']['project_titulo'] == 'Projeto Auditoria'
 
     with app.app_context():
         item = db.session.get(TaskItem, payload['item']['id'])
         assert item is not None
-        assert item.task_id == seed_data['task_id']
+        assert item.project_id == seed_data['project_id']
 
 
 def test_task_hub_global_add_item_without_filter_choosing_project(client_user, seed_data):
@@ -65,7 +65,7 @@ def test_task_hub_global_add_item_in_sem_projeto_anchor(client_user, seed_data):
     payload = response.get_json()
     assert payload['success'] is True
     assert payload['item']['project_id'] is None
-    assert payload['item']['task_id'] == seed_data['orphan_task_id']
+    assert payload['item']['task_id'] == payload['item']['id']
     assert payload['item']['project_value'] == 'sem_projeto'
 
 

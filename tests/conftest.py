@@ -186,49 +186,43 @@ def seed_data(app):
         db.session.add(foreign_etapa)
 
         task = Task(
-            titulo='Tarefa Auditoria',
+            descricao='Item Auditoria',
+            status='programado',
+            responsavel='Usuario Auditoria',
+            ordem=1,
             project_id=project.id,
             created_by_id=user.id,
         )
         foreign_task = Task(
-            titulo='Tarefa VPD',
+            descricao='Item VPD',
+            status='em_andamento',
+            responsavel='Usuario VPD',
+            ordem=1,
             project_id=foreign_project.id,
             created_by_id=outsider.id,
         )
         orphan_task = Task(
-            titulo='Tarefa Sem Projeto',
+            descricao='Tarefa Sem Projeto',
+            status='programado',
+            ordem=1,
             project_id=None,
             created_by_id=user.id,
         )
         db.session.add_all([task, foreign_task, orphan_task])
         db.session.flush()
 
-        task_item = TaskItem(
-            descricao='Item Auditoria',
-            status='programado',
-            responsavel='Usuario Auditoria',
-            ordem=1,
-            task_id=task.id,
-        )
-        foreign_task_item = TaskItem(
-            descricao='Item VPD',
-            status='em_andamento',
-            responsavel='Usuario VPD',
-            ordem=1,
-            task_id=foreign_task.id,
-        )
-        db.session.add_all([task_item, foreign_task_item])
-        db.session.flush()
+        task_item = task
+        foreign_task_item = foreign_task
 
         comment = TaskItemComment(
             content='Comentario inicial',
             user_id=user.id,
-            task_item_id=task_item.id,
+            task_id=task_item.id,
         )
         foreign_comment = TaskItemComment(
             content='Comentario externo',
             user_id=outsider.id,
-            task_item_id=foreign_task_item.id,
+            task_id=foreign_task_item.id,
         )
         db.session.add_all([comment, foreign_comment])
 

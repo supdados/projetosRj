@@ -58,7 +58,7 @@
             "<strong>{{ search_query }}</strong>".
         </p>
         {% else %}
-        <p class="search-results-subtitle ds-type-body-sm">Busque por projetos, etapas, tarefas e itens de tarefa.</p>
+        <p class="search-results-subtitle ds-type-body-sm">Busque por projetos, etapas e tarefas.</p>
         {% endif %}
 
         <form method="GET" action="{{ url_for('main.global_search_page') }}" class="search-results-form">
@@ -66,7 +66,7 @@
                 type="search"
                 name="q"
                 class="search-results-input"
-                placeholder="Buscar projetos, etapas, tarefas e itens..."
+                placeholder="Buscar projetos, etapas e tarefas..."
                 value="{{ search_query }}"
                 autocomplete="off"
             >
@@ -96,9 +96,6 @@
         {{ render_section('Tarefas', 'fa-clipboard-list', search_payload.results.tasks, 'search-result-badge-task') }}
         {% endif %}
 
-        {% if search_payload.results.task_items %}
-        {{ render_section('Itens de Tarefa', 'fa-list', search_payload.results.task_items, 'search-result-badge-task-item') }}
-        {% endif %}
     </div>
     {% endif %}
 </div>

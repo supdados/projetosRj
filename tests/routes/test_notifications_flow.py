@@ -97,7 +97,7 @@ def test_comment_reply_notifies_previous_participant(app, client_user, seed_data
     with app.app_context():
         notification_for_b = (
             UserNotification.query
-            .filter_by(recipient_user_id=user_b_id, event_type='task_item_comment_added')
+            .filter_by(recipient_user_id=user_b_id, event_type='task_comment_added')
             .order_by(UserNotification.id.desc())
             .first()
         )
@@ -123,7 +123,7 @@ def test_status_change_by_other_user_notifies_task_creator(app, seed_data):
             UserNotification.query
             .filter_by(
                 recipient_user_id=seed_data['user_id'],
-                event_type='task_item_status_updated',
+                event_type='task_status_updated',
             )
             .order_by(UserNotification.id.desc())
             .first()
@@ -163,7 +163,7 @@ def test_assignment_change_notifies_assigned_user(app, seed_data):
     with app.app_context():
         notification = (
             UserNotification.query
-            .filter_by(recipient_user_id=assignee_id, event_type='task_item_assignment')
+            .filter_by(recipient_user_id=assignee_id, event_type='task_assignment')
             .order_by(UserNotification.id.desc())
             .first()
         )

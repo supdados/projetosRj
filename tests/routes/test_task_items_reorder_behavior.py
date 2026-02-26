@@ -5,20 +5,24 @@ def test_reorder_task_items_applies_order_for_task_items_only(app, client_user, 
     with app.app_context():
         task_id = seed_data['task_id']
         first_item_id = seed_data['task_item_id']
+        anchor = TaskItem.query.get(task_id)
+        assert anchor is not None
 
         second_item = TaskItem(
             descricao='Item adicional 2',
             status='programado',
             responsavel='Usuario Auditoria',
             ordem=2,
-            task_id=task_id,
+            project_id=anchor.project_id,
+            created_by_id=anchor.created_by_id,
         )
         third_item = TaskItem(
             descricao='Item adicional 3',
             status='validacao',
             responsavel='Usuario Auditoria',
             ordem=3,
-            task_id=task_id,
+            project_id=anchor.project_id,
+            created_by_id=anchor.created_by_id,
         )
         db.session.add_all([second_item, third_item])
         db.session.commit()
@@ -35,9 +39,19 @@ def test_reorder_task_items_applies_order_for_task_items_only(app, client_user, 
     assert payload['success'] is True
 
     with app.app_context():
+        anchor = TaskItem.query.get(seed_data['task_id'])
+        assert anchor is not None
         ordered_ids = [
             item.id
-            for item in TaskItem.query.filter_by(task_id=seed_data['task_id']).order_by(TaskItem.ordem.asc()).all()
+            for item in (
+                TaskItem.query
+                .filter(
+                    TaskItem.project_id == anchor.project_id,
+                    TaskItem.is_archived.is_(False),
+                )
+                .order_by(TaskItem.ordem.asc())
+                .all()
+            )
         ]
         assert ordered_ids == [third_item_id, first_item_id, second_item_id]
 
@@ -47,20 +61,24 @@ def test_reorder_task_items_ignores_duplicates_invalid_and_foreign_ids(app, clie
         task_id = seed_data['task_id']
         first_item_id = seed_data['task_item_id']
         foreign_item_id = seed_data['foreign_task_item_id']
+        anchor = TaskItem.query.get(task_id)
+        assert anchor is not None
 
         second_item = TaskItem(
             descricao='Item adicional 2',
             status='programado',
             responsavel='Usuario Auditoria',
             ordem=2,
-            task_id=task_id,
+            project_id=anchor.project_id,
+            created_by_id=anchor.created_by_id,
         )
         third_item = TaskItem(
             descricao='Item adicional 3',
             status='finalizado',
             responsavel='Usuario Auditoria',
             ordem=3,
-            task_id=task_id,
+            project_id=anchor.project_id,
+            created_by_id=anchor.created_by_id,
         )
         db.session.add_all([second_item, third_item])
         db.session.commit()
@@ -87,7 +105,17 @@ def test_reorder_task_items_ignores_duplicates_invalid_and_foreign_ids(app, clie
     assert payload['success'] is True
 
     with app.app_context():
-        ordered_items = TaskItem.query.filter_by(task_id=task_id).order_by(TaskItem.ordem.asc()).all()
+        anchor = TaskItem.query.get(task_id)
+        assert anchor is not None
+        ordered_items = (
+            TaskItem.query
+            .filter(
+                TaskItem.project_id == anchor.project_id,
+                TaskItem.is_archived.is_(False),
+            )
+            .order_by(TaskItem.ordem.asc())
+            .all()
+        )
         ordered_ids = [item.id for item in ordered_items]
         ordered_ordens = [item.ordem for item in ordered_items]
 

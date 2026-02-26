@@ -789,7 +789,7 @@
         };
     })();
 
-    // --- Adicionar item inline (hub com múltiplos projetos) ---
+    // --- Adicionar tarefa inline (hub com múltiplos projetos) ---
     (function () {
         var listEl = document.querySelector('.task-items-list');
         if (!listEl) return;
@@ -825,7 +825,7 @@
             var countEl = groupEl.querySelector('.task-hub-group-count');
             if (!countEl) return;
             var count = groupEl.querySelectorAll('.task-item-row[data-item-id]').length;
-            countEl.textContent = count + (count === 1 ? ' item' : ' itens');
+            countEl.textContent = count + (count === 1 ? ' tarefa' : ' tarefas');
         }
 
         function buildItemRowMarkup(item) {
@@ -897,7 +897,7 @@
                 '</div></div></div>' +
                 '<div id="comments-body-' + item.id + '" class="task-item-comments" hidden>' +
                 '<div class="task-item-comments-inner">' +
-                '<form class="task-comment-form" action="/tarefas/itens/' + item.id + '/comentarios/add" method="POST" data-item-id="' + item.id + '">' +
+                '<form class="task-comment-form" action="/tarefas/' + item.id + '/comentarios/add" method="POST" data-item-id="' + item.id + '">' +
                 '<textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)" required></textarea>' +
                 '<button type="submit" title="Enviar comentário"><i class="fas fa-paper-plane" aria-hidden="true"></i><span class="visually-hidden">Enviar</span></button>' +
                 '</form></div></div></div></div>';
@@ -905,11 +905,11 @@
             var modalHtml =
                 '<div class="modal fade task-detail-v2-modal" id="deleteItemModal-' + item.id + '" tabindex="-1" aria-hidden="true">' +
                 '<div class="modal-dialog modal-dialog-centered"><div class="modal-content modal-clean">' +
-                '<div class="modal-header-clean"><div><h5 class="modal-title-clean ds-type-section-title">Excluir Item</h5><p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p></div>' +
+                '<div class="modal-header-clean"><div><h5 class="modal-title-clean ds-type-section-title">Excluir Tarefa</h5><p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p></div>' +
                 '<button type="button" class="btn-close-clean" data-bs-dismiss="modal">&times;</button></div>' +
-                '<div class="modal-body-clean"><p>Confirma a exclusão deste item?</p><p class="text-muted small">' + escapeHtml((item.descricao || '').substring(0, 100)) + ((item.descricao || '').length > 100 ? '...' : '') + '</p></div>' +
+                '<div class="modal-body-clean"><p>Confirma a exclusão desta tarefa?</p><p class="text-muted small">' + escapeHtml((item.descricao || '').substring(0, 100)) + ((item.descricao || '').length > 100 ? '...' : '') + '</p></div>' +
                 '<div class="modal-footer-clean"><button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">Cancelar</button>' +
-                '<form action="/tarefas/itens/' + item.id + '/delete" method="POST" class="inline-form">' +
+                '<form action="/tarefas/' + item.id + '/delete" method="POST" class="inline-form">' +
                 '<button type="submit" class="btn-modal-clean btn-confirm-delete">Excluir</button></form></div></div></div></div>';
 
             return { rowHtml: rowHtml, modalHtml: modalHtml };
@@ -948,10 +948,10 @@
                         if (data.success && data.item) {
                             resolve(data);
                         } else {
-                            reject(new Error((data && data.message) || 'Erro ao adicionar item.'));
+                            reject(new Error((data && data.message) || 'Erro ao adicionar tarefa.'));
                         }
                     } catch (err) {
-                        reject(new Error('Erro ao adicionar item. Tente novamente.'));
+                        reject(new Error('Erro ao adicionar tarefa. Tente novamente.'));
                     }
                 };
                 xhr.onerror = function () {
@@ -1063,7 +1063,7 @@
                         else hideForm();
                     })
                     .catch(function (error) {
-                        alert((error && error.message) || 'Erro ao adicionar item.');
+                        alert((error && error.message) || 'Erro ao adicionar tarefa.');
                     })
                     .finally(function () {
                         isSubmitting = false;
@@ -1183,7 +1183,7 @@
         var countEl = document.querySelector('.items-header-clean .header-count');
         if (!countEl) return;
         var itemCount = document.querySelectorAll('.task-item-row[data-item-id]').length;
-        countEl.textContent = itemCount + (itemCount === 1 ? ' item' : ' itens');
+        countEl.textContent = itemCount + (itemCount === 1 ? ' tarefa' : ' tarefas');
     }
 
     function removeTaskItemFromDom(itemId) {
@@ -1205,7 +1205,7 @@
             var remaining = groupEl.querySelectorAll('.task-item-row[data-item-id]').length;
             var groupCountEl = groupEl.querySelector('.task-hub-group-count');
             if (groupCountEl) {
-                groupCountEl.textContent = remaining + (remaining === 1 ? ' item' : ' itens');
+                groupCountEl.textContent = remaining + (remaining === 1 ? ' tarefa' : ' tarefas');
             }
             if (remaining === 0 && groupEl.parentNode) {
                 groupEl.parentNode.removeChild(groupEl);
@@ -1503,7 +1503,7 @@
         formData.append('prioridade', prioridadeValue);
         formData.append('tipo_pedido', tipoPedidoValue);
 
-        return fetch('/tarefas/itens/' + itemId + '/edit', {
+        return fetch('/tarefas/' + itemId + '/edit', {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
@@ -1514,7 +1514,7 @@
             .then(function (response) {
                 return response.json().catch(function () { return {}; }).then(function (data) {
                     if (!response.ok || !data.success) {
-                        throw new Error((data && data.message) || 'Erro ao salvar item.');
+                        throw new Error((data && data.message) || 'Erro ao salvar tarefa.');
                     }
                     return data;
                 });
@@ -1540,12 +1540,12 @@
         return true;
     }
 
-    // Atualizar status do item via AJAX (sem recarregar a página)
+    // Atualizar status da tarefa via AJAX (sem recarregar a página)
     function updateItemStatus(itemId, status, options) {
         var opts = options || {};
         var showAlert = opts.showAlert !== false;
 
-        return fetch('/tarefas/itens/' + itemId + '/update_status', {
+        return fetch('/tarefas/' + itemId + '/update_status', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1583,7 +1583,7 @@
         var prev = selectEl ? selectEl.getAttribute('data-prev-value') || '' : '';
         if (selectEl) selectEl.setAttribute('data-prev-value', prioridade);
 
-        return fetch('/tarefas/itens/' + itemId + '/update_prioridade', {
+        return fetch('/tarefas/' + itemId + '/update_prioridade', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prioridade: prioridade || null })
@@ -1613,7 +1613,7 @@
     }
 
     function updateItemTipo(itemId, tipo) {
-        return fetch('/tarefas/itens/' + itemId + '/update_tipo', {
+        return fetch('/tarefas/' + itemId + '/update_tipo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tipo_pedido: tipo || null })
@@ -1933,7 +1933,7 @@
             deleteBtn.className = 'task-items-kanban-delete-btn';
             deleteBtn.setAttribute('data-action', 'kanban-delete');
             deleteBtn.setAttribute('data-item-id', item.id);
-            deleteBtn.setAttribute('aria-label', 'Excluir item');
+            deleteBtn.setAttribute('aria-label', 'Excluir tarefa');
             deleteBtn.innerHTML = '<i class="fas fa-trash-alt" aria-hidden="true"></i>';
             top.appendChild(deleteBtn);
 
@@ -1959,7 +1959,7 @@
             comments.setAttribute('data-action', 'kanban-open-comments');
             comments.setAttribute('data-item-id', item.id);
             comments.setAttribute('title', 'Abrir comentários');
-            comments.setAttribute('aria-label', 'Abrir comentários do item');
+            comments.setAttribute('aria-label', 'Abrir comentários da tarefa');
             comments.innerHTML = '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-items-kanban-comments-count">0</span>';
             metaIcons.appendChild(comments);
 
@@ -1969,7 +1969,7 @@
             anexos.setAttribute('data-action', 'kanban-open-anexos');
             anexos.setAttribute('data-item-id', item.id);
             anexos.setAttribute('title', 'Abrir anexos');
-            anexos.setAttribute('aria-label', 'Abrir anexos do item');
+            anexos.setAttribute('aria-label', 'Abrir anexos da tarefa');
             anexos.innerHTML = '<i class="fas fa-paperclip" aria-hidden="true"></i><span class="task-items-kanban-anexos-count is-hidden"></span>';
             metaIcons.appendChild(anexos);
 
@@ -1999,7 +1999,7 @@
             deleteConfirm.setAttribute('data-item-id', item.id);
             deleteConfirm.setAttribute('hidden', '');
             deleteConfirm.innerHTML =
-                '<p>Excluir este item?</p>' +
+                '<p>Excluir esta tarefa?</p>' +
                 '<div class="task-items-kanban-delete-confirm-actions">' +
                 '<button type="button" class="task-items-kanban-delete-cancel" data-action="kanban-delete-cancel">Cancelar</button>' +
                 '<button type="button" class="task-items-kanban-delete-confirm-btn" data-action="kanban-delete-confirm">Excluir</button>' +
@@ -2118,7 +2118,7 @@
             }).then(function (response) {
                 return response.json().catch(function () { return {}; }).then(function (data) {
                     if (!response.ok || !data.success) {
-                        throw new Error((data && data.message) || 'Erro ao reordenar itens.');
+                        throw new Error((data && data.message) || 'Erro ao reordenar tarefas.');
                     }
                     return data;
                 });
@@ -2151,7 +2151,7 @@
         }
 
         function deleteTaskItemAjax(itemId) {
-            return fetch('/tarefas/itens/' + itemId + '/delete', {
+            return fetch('/tarefas/' + itemId + '/delete', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -2160,7 +2160,7 @@
             }).then(function (response) {
                 return response.json().catch(function () { return {}; }).then(function (data) {
                     if (!response.ok || !data.success) {
-                        throw new Error((data && data.message) || 'Erro ao excluir item.');
+                        throw new Error((data && data.message) || 'Erro ao excluir tarefa.');
                     }
                     return data;
                 });
@@ -2190,7 +2190,7 @@
                     renderKanbanFromList();
                 })
                 .catch(function (error) {
-                    alert((error && error.message) || 'Não foi possível excluir o item.');
+                    alert((error && error.message) || 'Não foi possível excluir a tarefa.');
                     renderKanbanFromList();
                 })
                 .finally(function () {
@@ -2496,7 +2496,7 @@
                 .then(function (data) {
                     if (token !== drawerState.saveToken) return false;
                     if (!data || !data.item) {
-                        throw new Error('Erro ao salvar item.');
+                        throw new Error('Erro ao salvar tarefa.');
                     }
 
                     updateTaskItemRowFromPayload(data.item);
@@ -2548,7 +2548,7 @@
             if (!comments.length) {
                 var empty = document.createElement('div');
                 empty.className = 'task-item-drawer-comments-empty';
-                empty.textContent = 'Sem comentários neste item.';
+                empty.textContent = 'Sem comentários nesta tarefa.';
                 drawerCommentsList.appendChild(empty);
             } else {
                 comments.forEach(function (comment) {
@@ -2768,7 +2768,7 @@
             if (!itemId || !file) return Promise.resolve(false);
             var formData = new FormData();
             formData.append('file', file);
-            return fetch('/tarefas/itens/' + itemId + '/anexos/add', {
+            return fetch('/tarefas/' + itemId + '/anexos/add', {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                 body: formData,
@@ -2923,7 +2923,7 @@
         function postCommentAdd(itemId, content) {
             var formData = new FormData();
             formData.append('content', content);
-            return fetch('/tarefas/itens/' + itemId + '/comentarios/add', {
+            return fetch('/tarefas/' + itemId + '/comentarios/add', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -3452,7 +3452,7 @@
                         if (projectInput) {
                             projectInput.focus();
                         }
-                        alert('Selecione um projeto para criar o item.');
+                        alert('Selecione um projeto para criar a tarefa.');
                         return;
                     }
 
@@ -3472,7 +3472,7 @@
                             if (currentView === 'kanban') renderKanbanFromList();
                         })
                         .catch(function (error) {
-                            alert((error && error.message) || 'Erro ao adicionar item.');
+                            alert((error && error.message) || 'Erro ao adicionar tarefa.');
                         })
                         .finally(function () {
                             isSaving = false;
@@ -3609,7 +3609,7 @@
             if (!drawerAnexosList) return;
             drawerAnexosList.innerHTML = '<span class="task-item-drawer-anexos-loading">Carregando...</span>';
 
-            fetch('/tarefas/itens/' + itemId + '/anexos', {
+            fetch('/tarefas/' + itemId + '/anexos', {
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
             })
                 .then(function (r) { return r.json(); })
@@ -3619,7 +3619,7 @@
                     if (!data.anexos.length) {
                         var empty = document.createElement('p');
                         empty.className = 'task-item-drawer-anexos-empty';
-                        empty.textContent = 'Nenhum anexo neste item.';
+                        empty.textContent = 'Nenhum anexo nesta tarefa.';
                         drawerAnexosList.appendChild(empty);
                     } else {
                         data.anexos.forEach(function (a) {
@@ -3645,7 +3645,7 @@
             uploadingEl.textContent = 'Enviando ' + file.name + '...';
             if (drawerAnexosList) drawerAnexosList.appendChild(uploadingEl);
 
-            fetch('/tarefas/itens/' + itemId + '/anexos/add', {
+            fetch('/tarefas/' + itemId + '/anexos/add', {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                 body: formData,
@@ -3689,7 +3689,7 @@
                     if (drawerAnexosList && !drawerAnexosList.querySelector('.task-item-drawer-anexo-item')) {
                         var empty = document.createElement('p');
                         empty.className = 'task-item-drawer-anexos-empty';
-                        empty.textContent = 'Nenhum anexo neste item.';
+                        empty.textContent = 'Nenhum anexo nesta tarefa.';
                         drawerAnexosList.appendChild(empty);
                     }
                     if (window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {
@@ -3734,7 +3734,7 @@
                 if (!drawerState.itemId || isDeleting) return;
                 var drawerProjectValue = getTaskItemProjectValue(drawerState.itemId);
                 if (!drawerProjectValue) {
-                    alert('Projeto não encontrado para este item.');
+                    alert('Projeto não encontrado para esta tarefa.');
                     return;
                 }
 
@@ -4633,22 +4633,14 @@
         });
     })();
 
-    // Reset do form quando modal é fechado
-    var addItemModalEl = document.getElementById('addItemModal');
-    if (addItemModalEl) {
-        addItemModalEl.addEventListener('hidden.bs.modal', function () {
-            var itemModalTitle = document.getElementById('itemModalTitle');
-            var itemForm = document.getElementById('itemForm');
-            if (itemModalTitle) itemModalTitle.textContent = 'Novo Item';
-            if (itemForm) {
-                itemForm.action = '{{ url_for("main.add_task_item", task_id=task.id) }}';
-                itemForm.reset();
-            }
-        });
-    }
-
     (function applyFocusItemFromUrl() {
-        var focusItemId = new URLSearchParams(window.location.search).get('focus_item');
+        var configFocusTask = window.TASK_HUB_CONFIG && window.TASK_HUB_CONFIG.focusTask
+            ? String(window.TASK_HUB_CONFIG.focusTask)
+            : '';
+        var focusItemId = configFocusTask || new URLSearchParams(window.location.search).get('focus_task');
+        if (!focusItemId) {
+            focusItemId = new URLSearchParams(window.location.search).get('focus_item');
+        }
         if (!focusItemId) return;
         if (window.taskItemsKanban && typeof window.taskItemsKanban.applyView === 'function') {
             window.taskItemsKanban.applyView('list');

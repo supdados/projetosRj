@@ -1,4 +1,6 @@
-from models import Task, TaskItem, db
+import datetime
+
+from models import Task, db
 
 
 def test_finalize_moves_task_to_finalized_listing(app, client_user, seed_data):
@@ -19,7 +21,7 @@ def test_finalize_moves_task_to_finalized_listing(app, client_user, seed_data):
 
     finalized_page = client_user.get('/tarefas/finalizadas')
     assert finalized_page.status_code == 200
-    assert b'Tarefa Auditoria' in finalized_page.data
+    assert b'Item Auditoria' in finalized_page.data
 
 
 def test_reactivate_returns_task_to_active_listing(app, client_user, seed_data):
@@ -41,7 +43,7 @@ def test_reactivate_returns_task_to_active_listing(app, client_user, seed_data):
 
     finalized_page = client_user.get('/tarefas/finalizadas')
     assert finalized_page.status_code == 200
-    assert b'Tarefa Auditoria' not in finalized_page.data
+    assert b'Item Auditoria' not in finalized_page.data
 
 
 def test_outsider_cannot_finalize_task(app, client_outsider, seed_data):
@@ -60,12 +62,15 @@ def test_outsider_cannot_finalize_task(app, client_outsider, seed_data):
 
 def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app, client_user, seed_data):
     with app.app_context():
-        task_sem_item = Task(
-            titulo='Task sem item para esconder projeto',
+        archived_task = Task(
+            descricao='Tarefa arquivada para esconder projeto',
+            status='finalizado',
+            is_archived=True,
+            archived_at=datetime.datetime.utcnow(),
             project_id=seed_data['project_complete_id'],
             created_by_id=seed_data['user_id'],
         )
-        db.session.add(task_sem_item)
+        db.session.add(archived_task)
         db.session.commit()
 
     hub_without_item = client_user.get('/tarefas')
@@ -73,18 +78,12 @@ def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app,
     assert b'Projeto Concluivel' not in hub_without_item.data
 
     with app.app_context():
-        task_for_project_complete = (
-            Task.query
-            .filter(Task.project_id == seed_data['project_complete_id'], Task.is_finalized.is_(False))
-            .order_by(Task.id.desc())
-            .first()
-        )
         db.session.add(
-            TaskItem(
-                descricao='Primeiro item do projeto completo',
+            Task(
+                descricao='Primeira tarefa ativa do projeto completo',
                 status='programado',
-                task_id=task_for_project_complete.id,
-                ordem=1,
+                project_id=seed_data['project_complete_id'],
+                created_by_id=seed_data['user_id'],
             )
         )
         db.session.commit()
@@ -113,7 +112,7 @@ def test_tasks_hub_hides_area_selector_for_single_area_user_and_shows_for_admin(
 def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(app, client_user, seed_data):
     task_id = seed_data['task_id']
     project_id = seed_data['project_id']
-    task_title = b'Tarefa Auditoria'
+    task_title = b'Item Auditoria'
 
     client_user.post(f'/tarefas/{task_id}/finalizar', follow_redirects=False)
 
@@ -133,13 +132,12 @@ def test_project_tasks_template_contract_has_modal_project_locked_and_no_view_bu
     html = response.get_data(as_text=True)
 
     assert f'/tarefas/finalizadas?project={seed_data["project_id"]}' in html
-    assert f'/tarefas/{seed_data["task_id"]}/finalizar' in html
-    assert 'btn-view-clean' not in html
+    assert '/tarefas/arquivar-finalizadas' in html
     assert 'class="project-view-breadcrumb"' in html
-    assert 'breadcrumb-item' not in html
     assert 'id="project_locked"' in html
     assert 'readonly' in html
     assert f'<input type="hidden" name="project_id" value="{seed_data["project_id"]}">' in html
+    assert 'id="filter_project_input"' not in html
 
 
 def test_project_tasks_empty_state_has_no_create_first_button(client_user, seed_data):
@@ -147,6 +145,6 @@ def test_project_tasks_empty_state_has_no_create_first_button(client_user, seed_
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'Nenhuma tarefa neste projeto' in html
-    assert 'Crie a primeira tarefa para este projeto' not in html
-    assert 'Criar Primeira Tarefa' not in html
+    assert 'Nenhuma tarefa neste projeto' not in html
+    assert 'Adicionar nova tarefa' in html
+    assert 'task-hub-add-row' in html

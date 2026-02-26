@@ -1,67 +1,49 @@
 {% extends "base.html" %}
 
-{% block title %}Tarefas - ProjetosRJ{% endblock %}
+{% block title %}Tarefas Arquivadas - ProjetosRJ{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='pages/tarefas.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="app-page-shell app-page-shell--raised tasks-page" id="tasksPageRoot">
+<div class="app-page-shell app-page-shell--raised tasks-page" id="tasksArchivedPage">
     {% set current_url = request.full_path.rstrip('?') %}
 
     <header class="tasks-header">
         <div class="tasks-header-main">
-            <h1 class="tasks-title ds-type-page-title">Tarefas</h1>
-            <p class="tasks-subtitle mb-0 ds-type-body-sm">Acompanhe suas tarefas</p>
+            <h1 class="tasks-title ds-type-page-title">Tarefas arquivadas</h1>
+            <p class="tasks-subtitle mb-0 ds-type-body-sm">Lista simples de tarefas arquivadas</p>
         </div>
         <div class="tasks-header-actions">
             <span class="tasks-total-pill">
                 {{ pagination.total }} tarefa{{ 's' if pagination.total != 1 else '' }}
             </span>
-
-            {% if show_finalized %}
-            {% if project_filter or search_query %}
-            {% set archive_target = url_for('main.list_tasks', project=project_filter, search=search_query) %}
-            {% else %}
-            {% set archive_target = url_for('main.list_tasks') %}
-            {% endif %}
-            <a href="{{ archive_target }}" class="btn-task btn-task-archive" title="Ver tarefas ativas" aria-label="Ver tarefas ativas">
+            <a
+                href="{{ url_for('main.list_tasks', area=selected_area, project=project_filter) if selected_area or project_filter else url_for('main.list_tasks') }}"
+                class="btn-task btn-task-archive"
+                title="Ver tarefas ativas"
+                aria-label="Ver tarefas ativas">
                 <i class="fas fa-inbox" aria-hidden="true"></i>
                 <span>Ativas</span>
                 <span class="tasks-archive-count">{{ active_count }}</span>
             </a>
-            {% else %}
-            {% if project_filter or search_query %}
-            {% set archive_target = url_for('main.list_tasks_finalized', project=project_filter, search=search_query) %}
-            {% else %}
-            {% set archive_target = url_for('main.list_tasks_finalized') %}
-            {% endif %}
-            <a href="{{ archive_target }}" class="btn-task btn-task-archive" title="Ver tarefas finalizadas" aria-label="Ver tarefas finalizadas">
-                <i class="fas fa-box-archive" aria-hidden="true"></i>
-                <span>Finalizadas</span>
-                <span class="tasks-archive-count">{{ finalized_count }}</span>
-            </a>
-            {% endif %}
-
-            <button type="button" class="btn-task btn-task-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-                Nova tarefa
-            </button>
         </div>
     </header>
 
     <section class="tasks-filters">
         <form method="GET" action="{{ url_for(list_endpoint) }}" class="tasks-filter-form" id="filterTasksForm">
-            <div class="tasks-field tasks-field-search">
-                <label for="task_search" class="tasks-label ds-type-label">Título da tarefa</label>
-                <input
-                    type="text"
-                    id="task_search"
-                    name="search"
-                    class="form-control tasks-input"
-                    placeholder="Buscar por título..."
-                    value="{{ search_query }}">
+            {% if show_area_selector %}
+            <div class="tasks-field">
+                <label for="filter_area" class="tasks-label ds-type-label">Área</label>
+                <select id="filter_area" name="area" class="form-control tasks-input">
+                    <option value="">Todas as áreas</option>
+                    {% for area in area_options %}
+                    <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
+                    {% endfor %}
+                </select>
             </div>
+            {% endif %}
 
             <div class="tasks-field tasks-field-project">
                 <label for="filter_project_input" class="tasks-label ds-type-label">Projeto</label>
@@ -74,16 +56,27 @@
                         autocomplete="off"
                         aria-haspopup="listbox"
                         aria-expanded="false"
-                        value="{% if project_filter == 'sem_projeto' %}Sem Projeto{% elif project_filter %}{% for p in projects %}{% if p.id|string == project_filter %}{{ p.titulo }}{% endif %}{% endfor %}{% endif %}">
+                        value="{{ selected_project_label or '' }}">
                     <input type="hidden" name="project" id="filter_project" value="{{ project_filter or '' }}">
                     <div class="project-search-dropdown" id="filterProjectDropdown" role="listbox" hidden>
-                        <div class="project-search-option" data-value="" data-label="Todos os Projetos">Todos os Projetos</div>
-                        <div class="project-search-option" data-value="sem_projeto" data-label="Sem Projeto">Sem Projeto</div>
-                        {% for project in projects %}
-                        <div class="project-search-option" data-value="{{ project.id }}" data-label="{{ project.titulo }}">{{ project.titulo }}</div>
+                        <div class="project-search-option" data-value="" data-label="Todos os projetos">Todos os projetos</div>
+                        {% for project in project_options %}
+                        <div class="project-search-option" data-value="{{ project.value }}" data-label="{{ project.label }}">{{ project.label }}</div>
                         {% endfor %}
+                        <div class="project-search-option project-search-empty" data-empty-state="1" hidden>Nenhum projeto encontrado</div>
                     </div>
                 </div>
+            </div>
+
+            <div class="tasks-field tasks-field-search">
+                <label for="task_search" class="tasks-label ds-type-label">Descrição</label>
+                <input
+                    type="text"
+                    id="task_search"
+                    name="search"
+                    class="form-control tasks-input"
+                    placeholder="Buscar por descrição..."
+                    value="{{ search_query }}">
             </div>
 
             <div class="tasks-filter-actions">
@@ -103,29 +96,21 @@
     {% if tasks %}
     <section class="tasks-cards">
         {% for task in tasks %}
-        {% set finalizados = task.items|selectattr('status', 'equalto', 'finalizado')|list|length %}
         {% set task_index = index_offset + loop.index %}
-
-        <article
-            class="task-card{% if task.items|length > 0 and finalizados == task.items|length %} is-complete{% endif %}"
-            data-task-url="{{ url_for('main.task_detail', task_id=task.id) }}"
-            data-task-index="{{ task_index }}"
-        >
+        <article class="task-card is-complete" data-task-index="{{ task_index }}">
             <div class="task-card-main">
                 <div class="task-card-head">
                     <div class="task-card-title-wrap">
                         <span class="task-card-index" aria-hidden="true">{{ task_index }}.</span>
-                        <h2 class="task-card-title">{{ task.titulo }}</h2>
+                        <h2 class="task-card-title">{{ task.descricao }}</h2>
                     </div>
                     <div class="task-card-head-chips">
-                        {% if show_finalized %}
                         <span class="tasks-status-chip is-finalized">
-                            <i class="fas fa-check-circle"></i>
-                            Finalizada
+                            <i class="fas fa-box-archive"></i>
+                            Arquivada
                         </span>
-                        {% endif %}
                         <span class="tasks-status-chip">
-                            {{ finalizados }}/{{ task.items|length }} finalizados
+                            Status: {{ task.status.replace('_', ' ')|title }}
                         </span>
                     </div>
                 </div>
@@ -140,75 +125,44 @@
                     {% endif %}
 
                     <span class="tasks-meta-chip">
-                        <i class="fas fa-calendar-alt" aria-hidden="true"></i>
-                        Criada em {{ task.created_at.strftime('%d/%m/%Y') if task.created_at else '-' }}
+                        <i class="fas fa-user" aria-hidden="true"></i>
+                        {{ task.responsavel or 'Responsável não informado' }}
                     </span>
 
-                    {% if show_finalized and task.finalized_at %}
+                    {% if task.prioridade %}
+                    <span class="tasks-meta-chip">Prioridade: {{ task.prioridade|title }}</span>
+                    {% endif %}
+
+                    {% if task.tipo_pedido %}
+                    <span class="tasks-meta-chip">Tipo: {{ task.tipo_pedido|title }}</span>
+                    {% endif %}
+
+                    {% if task.archived_at %}
                     <span class="tasks-meta-chip">
-                        <i class="fas fa-box-archive" aria-hidden="true"></i>
-                        Finalizada em {{ task.finalized_at.strftime('%d/%m/%Y') }}
+                        <i class="fas fa-calendar-check" aria-hidden="true"></i>
+                        Arquivada em {{ task.archived_at|local_datetime }}
                     </span>
                     {% endif %}
                 </div>
             </div>
 
             <div class="task-card-actions" data-stop-row-click="1">
-                {% if show_finalized %}
-                <form action="{{ url_for('main.reactivate_task', task_id=task.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Deseja reativar esta tarefa?');">
+                <form action="{{ url_for('main.unarchive_task', task_id=task.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Desarquivar esta tarefa?');">
                     <input type="hidden" name="next" value="{{ current_url }}">
-                    <button type="submit" class="tasks-action-btn is-toggle" title="Reativar tarefa">
+                    <button type="submit" class="tasks-action-btn is-toggle" title="Desarquivar tarefa">
                         <i class="fas fa-rotate-left" aria-hidden="true"></i>
-                        <span>Reativar</span>
+                        <span>Desarquivar</span>
                     </button>
                 </form>
-                {% else %}
-                <form action="{{ url_for('main.finalize_task', task_id=task.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Deseja finalizar esta tarefa?');">
+                <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Excluir tarefa permanentemente?');">
                     <input type="hidden" name="next" value="{{ current_url }}">
-                    <button type="submit" class="tasks-action-btn is-toggle" title="Finalizar tarefa">
-                        <i class="fas fa-box-archive" aria-hidden="true"></i>
-                        <span>Finalizar</span>
+                    <button type="submit" class="tasks-action-btn is-delete" title="Excluir">
+                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                        <span class="visually-hidden">Excluir</span>
                     </button>
                 </form>
-                {% endif %}
-
-                <button type="button" class="tasks-action-btn is-delete" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ task.id }}" title="Excluir">
-                    <i class="fas fa-trash-alt" aria-hidden="true"></i>
-                    <span class="visually-hidden">Excluir</span>
-                </button>
             </div>
         </article>
-
-        <div class="modal fade tasks-modal" id="deleteModal-{{ task.id }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content tasks-modal-content">
-                    <div class="tasks-modal-header">
-                        <div>
-                            <h5 class="tasks-modal-title">Excluir tarefa</h5>
-                            <p class="tasks-modal-subtitle mb-0">Esta ação não pode ser desfeita.</p>
-                        </div>
-                        <button type="button" class="tasks-modal-close" data-bs-dismiss="modal" aria-label="Fechar">
-                            &times;
-                        </button>
-                    </div>
-                    <div class="tasks-modal-body">
-                        <p class="mb-2">Confirma a exclusão da tarefa <strong>{{ task.titulo }}</strong>?</p>
-                        {% if task.items %}
-                        <p class="tasks-modal-warning mb-0">
-                            Esta tarefa possui {{ task.items|length }} item(ns) que também serão excluídos.
-                        </p>
-                        {% endif %}
-                    </div>
-                    <div class="tasks-modal-footer">
-                        <button type="button" class="btn-task btn-task-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" class="d-inline">
-                            <input type="hidden" name="next" value="{{ current_url }}">
-                            <button type="submit" class="btn-task btn-task-danger">Excluir</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
         {% endfor %}
     </section>
 
@@ -216,7 +170,7 @@
     <nav aria-label="Paginação de tarefas" class="tasks-pagination-wrap">
         <ul class="pagination tasks-pagination mb-0">
             <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for(list_endpoint, page=pagination.prev_num, project=project_filter, search=search_query) if pagination.has_prev else '#' }}" aria-label="Página anterior">
+                <a class="page-link" href="{{ url_for(list_endpoint, page=pagination.prev_num, area=selected_area, project=project_filter, search=search_query) if pagination.has_prev else '#' }}" aria-label="Página anterior">
                     <span aria-hidden="true">«</span>
                 </a>
             </li>
@@ -224,7 +178,7 @@
             {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                 {% if page_num %}
                 <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for(list_endpoint, page=page_num, project=project_filter, search=search_query) }}">{{ page_num }}</a>
+                    <a class="page-link" href="{{ url_for(list_endpoint, page=page_num, area=selected_area, project=project_filter, search=search_query) }}">{{ page_num }}</a>
                 </li>
                 {% else %}
                 <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -232,7 +186,7 @@
             {% endfor %}
 
             <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for(list_endpoint, page=pagination.next_num, project=project_filter, search=search_query) if pagination.has_next else '#' }}" aria-label="Próxima página">
+                <a class="page-link" href="{{ url_for(list_endpoint, page=pagination.next_num, area=selected_area, project=project_filter, search=search_query) if pagination.has_next else '#' }}" aria-label="Próxima página">
                     <span aria-hidden="true">»</span>
                 </a>
             </li>
@@ -241,71 +195,11 @@
     {% endif %}
     {% else %}
     <section class="tasks-empty-state">
-        {% if show_finalized %}
-        <h2 class="tasks-empty-title">Nenhuma tarefa finalizada</h2>
-        <p class="tasks-empty-text">Finalize tarefas ativas para que elas apareçam aqui.</p>
-        <a href="{{ url_for('main.list_tasks') }}" class="btn-task btn-task-secondary">Ver tarefas ativas</a>
-        {% else %}
-        <h2 class="tasks-empty-title">Nenhuma tarefa encontrada</h2>
-        <p class="tasks-empty-text">Crie sua primeira tarefa para começar a acompanhar as entregas.</p>
-        <button type="button" class="btn-task btn-task-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-            Criar primeira tarefa
-        </button>
-        {% endif %}
+        <h2 class="tasks-empty-title">Nenhuma tarefa arquivada</h2>
+        <p class="tasks-empty-text">Ajuste os filtros ou arquive tarefas finalizadas na visão ativa.</p>
+        <a href="{{ url_for('main.list_tasks') }}" class="btn-task btn-task-secondary">Voltar para ativas</a>
     </section>
     {% endif %}
-</div>
-
-<div class="modal fade tasks-modal" id="addTaskModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content tasks-modal-content">
-            <form action="{{ url_for('main.add_task') }}" method="POST">
-                <div class="tasks-modal-header">
-                    <div>
-                        <h5 class="tasks-modal-title">Nova tarefa</h5>
-                        <p class="tasks-modal-subtitle mb-0">Crie uma nova tarefa e adicione itens depois.</p>
-                    </div>
-                    <button type="button" class="tasks-modal-close" data-bs-dismiss="modal" aria-label="Fechar">
-                        &times;
-                    </button>
-                </div>
-
-                <div class="tasks-modal-body">
-                    <div class="mb-3">
-                        <label for="titulo" class="tasks-label ds-type-label">Título da tarefa <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control tasks-input" id="titulo" name="titulo" required>
-                    </div>
-
-                    <div class="mb-0">
-                        <label for="project_id_input" class="tasks-label ds-type-label">Projeto (opcional)</label>
-                        <div class="project-search-wrap">
-                            <input
-                                type="text"
-                                class="form-control tasks-input project-search-input"
-                                id="project_id_input"
-                                placeholder="Digite para filtrar projetos..."
-                                autocomplete="off"
-                                aria-haspopup="listbox"
-                                aria-expanded="false">
-                            <input type="hidden" name="project_id" id="project_id" value="">
-                            <div class="project-search-dropdown" id="addTaskProjectDropdown" role="listbox" hidden>
-                                <div class="project-search-option" data-value="" data-label="Sem projeto">Sem projeto</div>
-                                {% for project in projects %}
-                                <div class="project-search-option" data-value="{{ project.id }}" data-label="{{ project.titulo }}">{{ project.titulo }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="tasks-help-text">Associe esta tarefa a um projeto ou mantenha como tarefa avulsa.</div>
-                    </div>
-                </div>
-
-                <div class="tasks-modal-footer">
-                    <button type="button" class="btn-task btn-task-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn-task btn-task-primary">Criar tarefa</button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 {% endblock %}
 
@@ -313,124 +207,90 @@
 {{ super() }}
 <script>
 (function () {
-    function initProjectSearch(wrap, hiddenInputId, dropdownId, onSelect) {
-        var wrapEl = document.querySelector(wrap);
-        if (!wrapEl) return;
-        var input = wrapEl.querySelector('.project-search-input');
-        var hidden = document.getElementById(hiddenInputId);
-        var dropdown = document.getElementById(dropdownId);
-        if (!input || !hidden || !dropdown) return;
+    var wrap = document.querySelector('.tasks-filters .project-search-wrap');
+    var input = document.getElementById('filter_project_input');
+    var hidden = document.getElementById('filter_project');
+    var dropdown = document.getElementById('filterProjectDropdown');
+    if (!wrap || !input || !hidden || !dropdown) return;
 
-        var options = dropdown.querySelectorAll('.project-search-option');
+    var options = Array.prototype.slice.call(dropdown.querySelectorAll('.project-search-option[data-value]'));
+    var emptyState = dropdown.querySelector('[data-empty-state="1"]');
 
-        function filterOptions() {
-            var q = (input.value || '').trim().toLowerCase();
-            options.forEach(function (opt) {
-                var label = (opt.getAttribute('data-label') || opt.textContent || '').toLowerCase();
-                if (!q || label.indexOf(q) !== -1) {
-                    opt.classList.remove('hidden-by-filter');
-                } else {
-                    opt.classList.add('hidden-by-filter');
-                }
-            });
-        }
-
-        function showDropdown() {
-            filterOptions();
-            dropdown.removeAttribute('hidden');
-            input.setAttribute('aria-expanded', 'true');
-        }
-
-        function hideDropdown() {
-            dropdown.setAttribute('hidden', '');
-            input.setAttribute('aria-expanded', 'false');
-        }
-
-        function selectOption(opt) {
-            var val = opt.getAttribute('data-value');
-            var label = opt.getAttribute('data-label') || opt.textContent || '';
-            hidden.value = val || '';
-            input.value = label;
-            hideDropdown();
-            if (onSelect) onSelect(val, label);
-        }
-
-        input.addEventListener('focus', function () { showDropdown(); });
-        input.addEventListener('input', function () { showDropdown(); });
-
-        input.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                hideDropdown();
-                return;
-            }
-
-            var visible = Array.prototype.filter.call(options, function (o) {
-                return !o.classList.contains('hidden-by-filter');
-            });
-
-            if (e.key === 'ArrowDown' && visible.length) {
-                e.preventDefault();
-                var idxDown = visible.indexOf(dropdown.querySelector('.project-search-option.active'));
-                idxDown = idxDown < 0 ? 0 : Math.min(idxDown + 1, visible.length - 1);
-                visible.forEach(function (o, i) { o.classList.toggle('active', i === idxDown); });
-                visible[idxDown].scrollIntoView({ block: 'nearest' });
-            } else if (e.key === 'ArrowUp' && visible.length) {
-                e.preventDefault();
-                var idxUp = visible.indexOf(dropdown.querySelector('.project-search-option.active'));
-                idxUp = idxUp < 0 ? visible.length - 1 : Math.max(idxUp - 1, 0);
-                visible.forEach(function (o, i) { o.classList.toggle('active', i === idxUp); });
-                visible[idxUp].scrollIntoView({ block: 'nearest' });
-            } else if (e.key === 'Enter') {
-                var active = dropdown.querySelector('.project-search-option.active');
-                if (active && !active.classList.contains('hidden-by-filter')) {
-                    e.preventDefault();
-                    selectOption(active);
-                }
-            }
-        });
-
+    function filterOptions() {
+        var q = (input.value || '').trim().toLowerCase();
+        var visibleCount = 0;
         options.forEach(function (opt) {
-            opt.addEventListener('click', function () {
-                selectOption(opt);
+            var label = (opt.getAttribute('data-label') || opt.textContent || '').toLowerCase();
+            var isVisible = !q || label.indexOf(q) !== -1;
+            opt.classList.toggle('hidden-by-filter', !isVisible);
+            if (isVisible) visibleCount += 1;
+        });
+        if (emptyState) emptyState.hidden = visibleCount > 0;
+    }
+
+    function showDropdown() {
+        filterOptions();
+        dropdown.removeAttribute('hidden');
+        input.setAttribute('aria-expanded', 'true');
+    }
+
+    function hideDropdown() {
+        dropdown.setAttribute('hidden', '');
+        input.setAttribute('aria-expanded', 'false');
+    }
+
+    function selectOption(opt) {
+        var value = (opt.getAttribute('data-value') || '').trim();
+        var label = opt.getAttribute('data-label') || opt.textContent || '';
+        hidden.value = value;
+        input.value = label;
+        hideDropdown();
+    }
+
+    input.addEventListener('focus', showDropdown);
+    input.addEventListener('input', showDropdown);
+
+    input.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            hideDropdown();
+            return;
+        }
+
+        var visibleOptions = options.filter(function (opt) {
+            return !opt.classList.contains('hidden-by-filter');
+        });
+        if (!visibleOptions.length) return;
+
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            var active = dropdown.querySelector('.project-search-option.active');
+            var idx = visibleOptions.indexOf(active);
+            if (event.key === 'ArrowDown') {
+                idx = idx < 0 ? 0 : Math.min(idx + 1, visibleOptions.length - 1);
+            } else {
+                idx = idx < 0 ? visibleOptions.length - 1 : Math.max(idx - 1, 0);
+            }
+            visibleOptions.forEach(function (opt, i) {
+                opt.classList.toggle('active', i === idx);
             });
-        });
-
-        document.addEventListener('click', function (e) {
-            if (!wrapEl.contains(e.target)) hideDropdown();
-        });
-
-        input.addEventListener('blur', function () {
-            setTimeout(function () {
-                if (!dropdown.contains(document.activeElement) && document.activeElement !== input) hideDropdown();
-            }, 150);
-        });
-    }
-
-    initProjectSearch('#addTaskModal .project-search-wrap', 'project_id', 'addTaskProjectDropdown');
-    initProjectSearch('.tasks-filters .project-search-wrap', 'filter_project', 'filterProjectDropdown');
-
-    var addModal = document.getElementById('addTaskModal');
-    if (addModal) {
-        addModal.addEventListener('show.bs.modal', function () {
-            var pid = document.getElementById('project_id');
-            var inp = document.querySelector('#addTaskModal .project-search-input');
-            if (pid && inp) {
-                pid.value = '';
-                inp.value = '';
+            visibleOptions[idx].scrollIntoView({ block: 'nearest' });
+        } else if (event.key === 'Enter') {
+            var current = dropdown.querySelector('.project-search-option.active');
+            if (current && !current.classList.contains('hidden-by-filter')) {
+                event.preventDefault();
+                selectOption(current);
             }
-        });
-    }
+        }
+    });
 
-    document.querySelectorAll('.task-card[data-task-url]').forEach(function (card) {
-        card.addEventListener('click', function (event) {
-            if (event.target.closest('[data-stop-row-click="1"], a, button, form, .modal')) {
-                return;
-            }
-            var url = card.getAttribute('data-task-url');
-            if (url) {
-                window.location = url;
-            }
+    options.forEach(function (opt) {
+        opt.addEventListener('click', function () {
+            selectOption(opt);
         });
+    });
+
+    document.addEventListener('mousedown', function (event) {
+        if (!wrap.contains(event.target)) hideDropdown();
     });
 })();
 </script>

@@ -6,8 +6,8 @@ from sqlalchemy import func
 from models import (
     Project,
     ProjectHistory,
-    TaskItem,
-    TaskItemComment,
+    Task,
+    TaskComment,
     User,
     UserArea,
     UserNotification,
@@ -132,8 +132,6 @@ def resolve_project_owner_user_ids(project):
         .first()
     )
     if first_history_entry and first_history_entry.user_id:
-        # Projeto legado sem dono explicitado: se só existe a ação atual
-        # (não create/seed_create), cai para admin da área.
         total_history_count = (
             ProjectHistory.query
             .filter(ProjectHistory.project_id == project.id)
@@ -146,65 +144,28 @@ def resolve_project_owner_user_ids(project):
     return _resolve_admin_ids_for_area(project.area_responsavel)
 
 
-def _get_task_item_ids(task_id):
-    return [
-        item_id
-        for (item_id,) in TaskItem.query.with_entities(TaskItem.id).filter(TaskItem.task_id == task_id).all()
-    ]
-
-
 def _get_task_responsavel_user_ids(task_id):
-    responsavel_names = []
-    responsavel_values = (
-        TaskItem.query
-        .with_entities(TaskItem.responsavel)
-        .filter(TaskItem.task_id == task_id, TaskItem.responsavel.isnot(None))
-        .all()
-    )
-    for (responsavel_value,) in responsavel_values:
-        responsavel_names.extend(_split_responsavel_names(responsavel_value))
-    return _resolve_user_ids_from_names(responsavel_names)
-
-
-def _get_task_comment_author_ids(task_id):
-    item_ids = _get_task_item_ids(task_id)
-    if not item_ids:
-        return set()
-    return {
-        user_id
-        for (user_id,) in (
-            TaskItemComment.query
-            .with_entities(TaskItemComment.user_id)
-            .filter(TaskItemComment.task_item_id.in_(item_ids))
-            .distinct()
-            .all()
-        )
-        if user_id
-    }
-
-
-def _get_task_item_comment_author_ids(item_id):
-    return {
-        user_id
-        for (user_id,) in (
-            TaskItemComment.query
-            .with_entities(TaskItemComment.user_id)
-            .filter(TaskItemComment.task_item_id == item_id)
-            .distinct()
-            .all()
-        )
-        if user_id
-    }
-
-
-def _get_task_item_responsavel_user_ids(task_id, item_id):
     responsavel_value = (
-        TaskItem.query
-        .with_entities(TaskItem.responsavel)
-        .filter(TaskItem.id == item_id, TaskItem.task_id == task_id)
+        Task.query
+        .with_entities(Task.responsavel)
+        .filter(Task.id == task_id, Task.responsavel.isnot(None))
         .scalar()
     )
     return _resolve_user_ids_from_names(_split_responsavel_names(responsavel_value))
+
+
+def _get_task_comment_author_ids(task_id):
+    return {
+        user_id
+        for (user_id,) in (
+            TaskComment.query
+            .with_entities(TaskComment.user_id)
+            .filter(TaskComment.task_id == task_id)
+            .distinct()
+            .all()
+        )
+        if user_id
+    }
 
 
 def resolve_task_collaborator_user_ids(task):
@@ -220,15 +181,9 @@ def resolve_task_collaborator_user_ids(task):
 
 
 def resolve_task_item_collaborator_user_ids(task, item_id):
-    if not task:
-        return set()
-
-    recipient_ids = set()
-    if task.created_by_id:
-        recipient_ids.add(task.created_by_id)
-    recipient_ids.update(_get_task_item_responsavel_user_ids(task.id, item_id))
-    recipient_ids.update(_get_task_item_comment_author_ids(item_id))
-    return recipient_ids
+    # Compatibilidade: item_id legado agora aponta para a própria tarefa.
+    del item_id
+    return resolve_task_collaborator_user_ids(task)
 
 
 def notify_project_history_action(
@@ -271,12 +226,9 @@ def notify_task_event(task, actor_user_id, event_type, title, message, item_id=N
     if not task:
         return 0
 
-    if item_id is not None:
-        recipient_ids = resolve_task_item_collaborator_user_ids(task, item_id)
-        default_target_url = url_for('main.task_detail', task_id=task.id, focus_item=item_id)
-    else:
-        recipient_ids = resolve_task_collaborator_user_ids(task)
-        default_target_url = url_for('main.task_detail', task_id=task.id)
+    del item_id  # Mantido por compatibilidade de assinatura.
+    recipient_ids = resolve_task_collaborator_user_ids(task)
+    default_target_url = url_for('main.task_detail', task_id=task.id)
 
     return create_user_notifications(
         recipient_ids,
@@ -289,21 +241,22 @@ def notify_task_event(task, actor_user_id, event_type, title, message, item_id=N
 
 
 def notify_task_assignment_change(task, item, actor_user_id, old_responsavel, new_responsavel):
-    if not task or not item:
+    if not task:
         return 0
 
-    recipient_ids = resolve_task_item_collaborator_user_ids(task, item.id)
+    task_obj = item or task
+    recipient_ids = resolve_task_collaborator_user_ids(task)
     recipient_ids.update(_resolve_user_ids_from_names(_split_responsavel_names(new_responsavel)))
 
     old_text = _truncate_text(old_responsavel or 'Sem responsavel', 70)
     new_text = _truncate_text(new_responsavel or 'Sem responsavel', 70)
-    item_desc = _truncate_text(item.descricao or f'Item #{item.id}', 90)
+    task_desc = _truncate_text(task_obj.descricao or f'Tarefa #{task_obj.id}', 90)
 
     return create_user_notifications(
         recipient_ids,
         actor_user_id=actor_user_id,
-        event_type='task_item_assignment',
-        title=f'Responsavel atualizado em "{_truncate_text(task.titulo, 80)}"',
-        message=f'O item "{item_desc}" mudou de "{old_text}" para "{new_text}".',
-        target_url=url_for('main.task_detail', task_id=task.id, focus_item=item.id),
+        event_type='task_assignment',
+        title='Responsavel atualizado na tarefa',
+        message=f'A tarefa "{task_desc}" mudou de "{old_text}" para "{new_text}".',
+        target_url=url_for('main.task_detail', task_id=task.id),
     )

@@ -13,16 +13,37 @@
     id="taskHubPage"
     data-current-user-id="{{ current_user_obj.id if current_user_obj else '' }}"
     data-selected-project="{{ selected_project or '' }}"
+    data-selected-area="{{ selected_area or '' }}"
+    data-project-locked="{{ '1' if project_locked else '0' }}"
 >
+    {% if project_locked and project_locked_obj %}
+    <div class="project-view-breadcrumb">{{ project_locked_obj.titulo }}</div>
+    {% endif %}
     <header class="tasks-header">
         <div class="tasks-header-main">
             <h1 class="tasks-title ds-type-page-title">Tarefas</h1>
-            <p class="tasks-subtitle mb-0 ds-type-body-sm">Hub de itens por projeto</p>
+            <p class="tasks-subtitle mb-0 ds-type-body-sm">Hub de tarefas por projeto</p>
         </div>
         <div class="tasks-header-actions">
             <span class="tasks-total-pill">
-                {{ total_items }} item{{ 's' if total_items != 1 else '' }}
+                {{ total_items }} tarefa{{ 's' if total_items != 1 else '' }}
             </span>
+            <form
+                method="POST"
+                action="{{ url_for('main.archive_finalized_tasks') }}"
+                class="inline-form"
+                onsubmit="return confirm('Arquivar tarefas finalizadas do escopo atual?');">
+                {% if selected_area %}
+                <input type="hidden" name="area" value="{{ selected_area }}">
+                {% endif %}
+                {% if selected_project %}
+                <input type="hidden" name="project" value="{{ selected_project }}">
+                {% endif %}
+                <button type="submit" class="btn-task btn-task-secondary" title="Arquivar finalizados">
+                    <i class="fas fa-box-archive" aria-hidden="true"></i>
+                    <span>Arquivar finalizados</span>
+                </button>
+            </form>
             <a
                 href="{{ url_for('main.list_tasks_finalized', area=selected_area, project=selected_project) if selected_area or selected_project else url_for('main.list_tasks_finalized') }}"
                 class="btn-task btn-task-archive"
@@ -35,8 +56,12 @@
     </header>
 
     <section class="tasks-filters">
-        <form method="GET" action="{{ url_for('main.list_tasks') }}" class="tasks-filter-form" id="filterTasksForm">
-            {% if show_area_selector %}
+        <form
+            method="GET"
+            action="{{ url_for('main.project_tasks', project_id=project_locked_obj.id) if project_locked and project_locked_obj else url_for('main.list_tasks') }}"
+            class="tasks-filter-form"
+            id="filterTasksForm">
+            {% if show_area_selector and not project_locked %}
             <div class="tasks-field">
                 <label for="filter_area" class="tasks-label ds-type-label">Área</label>
                 <select id="filter_area" name="area" class="form-control tasks-input">
@@ -48,6 +73,19 @@
             </div>
             {% endif %}
 
+            {% if project_locked and project_locked_obj %}
+            <div class="tasks-field tasks-field-project">
+                <label for="project_locked" class="tasks-label ds-type-label">Projeto</label>
+                <input
+                    type="text"
+                    class="form-control tasks-input"
+                    id="project_locked"
+                    value="{{ project_locked_obj.titulo }}"
+                    readonly>
+                <input type="hidden" name="project" value="{{ project_locked_obj.id }}">
+                <input type="hidden" name="project_id" value="{{ project_locked_obj.id }}">
+            </div>
+            {% else %}
             <div class="tasks-field tasks-field-project">
                 <label for="filter_project_input" class="tasks-label ds-type-label">Projeto</label>
                 <div class="project-search-wrap project-search-wrap-sm">
@@ -75,10 +113,11 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
 
             <div class="tasks-filter-actions">
                 <button type="submit" class="btn-task btn-task-primary">Filtrar</button>
-                <a href="{{ url_for('main.list_tasks') }}" class="btn-task btn-task-secondary">Limpar</a>
+                <a href="{{ url_for('main.project_tasks', project_id=project_locked_obj.id) if project_locked and project_locked_obj else url_for('main.list_tasks') }}" class="btn-task btn-task-secondary">Limpar</a>
             </div>
         </form>
     </section>
@@ -87,13 +126,13 @@
     <section class="task-detail-v2-items task-hub-items">
         <div class="items-header-clean">
             <div class="header-info">
-                <h5 class="items-title-clean ds-type-section-title">Itens ativos</h5>
-                <span class="header-count">{{ total_items }} {{ 'itens' if total_items != 1 else 'item' }}</span>
+                <h5 class="items-title-clean ds-type-section-title">Tarefas ativas</h5>
+                <span class="header-count">{{ total_items }} {{ 'tarefas' if total_items != 1 else 'tarefa' }}</span>
             </div>
             <div class="items-header-actions">
                 <div class="task-items-view-toggle" id="taskItemsViewToggle" role="group"
                     data-active-view="list"
-                    aria-label="Alternar visualização de itens">
+                    aria-label="Alternar visualização de tarefas">
                     <button type="button" class="task-items-view-btn is-active" data-view="list"
                         aria-pressed="true">Lista</button>
                     <button type="button" class="task-items-view-btn" data-view="kanban"
@@ -107,7 +146,7 @@
                 <div
                     class="task-items-list task-hub-items-list"
                     data-task-id=""
-                    data-add-item-url="{{ url_for('main.add_task_item_global') }}"
+                    data-add-item-url="{{ url_for('main.add_task') }}"
                     data-sugestoes-url="{{ url_for('main.get_hub_assignable_users') }}"
                     data-reorder-url="">
 
@@ -138,11 +177,11 @@
                                 {% endif %}
                             </div>
                             <span class="task-hub-group-count">
-                                {{ group['items']|length }} {{ 'itens' if group['items']|length != 1 else 'item' }}
+                                {{ group['tasks']|length }} {{ 'tarefas' if group['tasks']|length != 1 else 'tarefa' }}
                             </span>
                         </header>
 
-                        {% for item in group['items'] %}
+                        {% for item in group['tasks'] %}
                         <div
                             class="task-item-row"
                             data-item-id="{{ item.id }}"
@@ -254,7 +293,7 @@
                                         </div>
                                         {% endfor %}
                                         <form class="task-comment-form"
-                                            action="{{ url_for('main.add_task_item_comment', item_id=item.id) }}"
+                                            action="{{ url_for('main.add_task_comment', task_id=item.id) }}"
                                             method="POST"
                                             data-item-id="{{ item.id }}">
                                             <textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)"
@@ -274,18 +313,18 @@
                                 <div class="modal-content modal-clean">
                                     <div class="modal-header-clean">
                                         <div>
-                                            <h5 class="modal-title-clean ds-type-section-title">Excluir Item</h5>
+                                            <h5 class="modal-title-clean ds-type-section-title">Excluir Tarefa</h5>
                                             <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
                                         </div>
                                         <button type="button" class="btn-close-clean" data-bs-dismiss="modal">&times;</button>
                                     </div>
                                     <div class="modal-body-clean">
-                                        <p>Confirma a exclusão deste item?</p>
+                                        <p>Confirma a exclusão desta tarefa?</p>
                                         <p class="text-muted small">{{ item.descricao[:100] }}{% if item.descricao|length > 100 %}...{% endif %}</p>
                                     </div>
                                     <div class="modal-footer-clean">
                                         <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">Cancelar</button>
-                                        <form action="{{ url_for('main.delete_task_item', item_id=item.id) }}" method="POST" class="inline-form">
+                                        <form action="{{ url_for('main.delete_task', task_id=item.id) }}" method="POST" class="inline-form">
                                             <button type="submit" class="btn-modal-clean btn-confirm-delete">Excluir</button>
                                         </form>
                                     </div>
@@ -297,14 +336,14 @@
                         <div class="task-item-add-row task-hub-add-row" data-project-value="{{ group['project_value'] }}">
                             <div class="task-item-add-placeholder" data-role="open-add-form">
                                 <span class="task-item-add-dashes">—</span>
-                                <span class="task-item-add-label">Adicionar novo item</span>
+                                <span class="task-item-add-label">Adicionar nova tarefa</span>
                             </div>
                             <div class="task-item-add-form" data-role="add-form" hidden>
                                 <div class="task-item-add-bar"></div>
                                 <div class="task-item-add-main">
                                     <div class="task-item-add-line">
                                         <textarea class="task-item-add-desc" data-role="descricao" rows="1"
-                                            placeholder="Descreva o item..."></textarea>
+                                            placeholder="Descreva a tarefa..."></textarea>
                                         <select class="task-item-add-prioridade" data-role="prioridade">
                                             <option value="">Prioridade</option>
                                             <option value="baixa">Baixa</option>
@@ -355,7 +394,7 @@
                             aria-label="Coluna {{ status_label }}"></div>
                         <div class="task-items-kanban-composer" data-status="{{ status_key }}">
                             <button type="button" class="task-items-kanban-add-btn"
-                                data-status="{{ status_key }}">+ Adicionar item</button>
+                                data-status="{{ status_key }}">+ Adicionar tarefa</button>
                             <form class="task-items-kanban-add-form" data-status="{{ status_key }}" hidden>
                                 {% if not selected_project %}
                                 <div class="project-search-wrap task-hub-kanban-project-wrap">
@@ -379,7 +418,7 @@
                                 <input type="hidden" class="task-items-kanban-add-project-value" data-role="project-value" value="{{ selected_project }}">
                                 {% endif %}
                                 <textarea class="task-items-kanban-add-desc" rows="2"
-                                    placeholder="Descreva o item..." required></textarea>
+                                    placeholder="Descreva a tarefa..." required></textarea>
                                 <button type="button" class="responsavel-picker-trigger task-items-kanban-add-owner"
                                     data-role="responsavel-trigger" aria-haspopup="dialog" aria-expanded="false">
                                     <span class="responsavel-picker-trigger-content">
@@ -419,12 +458,12 @@
         <aside class="task-item-drawer" id="taskItemDrawer" aria-hidden="true" hidden>
             <header class="task-item-drawer-header">
                 <div>
-                    <p class="task-item-drawer-kicker">Detalhes do item</p>
-                    <h6 class="task-item-drawer-title" id="taskItemDrawerTitle">Item</h6>
+                    <p class="task-item-drawer-kicker">Detalhes da tarefa</p>
+                    <h6 class="task-item-drawer-title" id="taskItemDrawerTitle">Tarefa</h6>
                 </div>
                 <div class="task-item-drawer-header-actions">
                     <button type="button" class="task-item-drawer-delete-icon" id="taskItemDrawerDeleteIcon"
-                        aria-label="Excluir item">
+                        aria-label="Excluir tarefa">
                         <i class="fas fa-trash-alt" aria-hidden="true"></i>
                     </button>
                     <button type="button" class="task-item-drawer-close" id="taskItemDrawerClose"
@@ -436,10 +475,10 @@
                     <span class="task-items-kanban-badge status-programado" id="taskItemDrawerStatusBadge">Programado</span>
                 </div>
                 <div class="task-item-drawer-delete-confirm" id="taskItemDrawerDeleteConfirm" hidden>
-                    <p>Deseja excluir este item?</p>
+                    <p>Deseja excluir esta tarefa?</p>
                     <div class="task-item-drawer-delete-confirm-actions">
                         <button type="button" class="task-item-drawer-delete-cancel" id="taskItemDrawerDeleteCancel">Cancelar</button>
-                        <button type="button" class="task-item-drawer-delete-confirm-btn" id="taskItemDrawerDeleteConfirmBtn">Excluir item</button>
+                        <button type="button" class="task-item-drawer-delete-confirm-btn" id="taskItemDrawerDeleteConfirmBtn">Excluir tarefa</button>
                     </div>
                 </div>
 
@@ -469,7 +508,7 @@
 
                 <label class="task-item-drawer-label" for="taskItemDrawerDesc">Descrição</label>
                 <textarea id="taskItemDrawerDesc" rows="2" class="task-item-drawer-textarea"
-                    placeholder="Descreva o item..."></textarea>
+                    placeholder="Descreva a tarefa..."></textarea>
 
                 <label class="task-item-drawer-label">Responsável</label>
                 <button type="button" class="responsavel-picker-trigger task-item-drawer-responsavel-trigger"
@@ -542,8 +581,14 @@
     </section>
     {% else %}
     <section class="tasks-empty-state">
-        <h2 class="tasks-empty-title">Nenhum item encontrado</h2>
-        <p class="tasks-empty-text">Ajuste os filtros para visualizar itens ativos.</p>
+        <h2 class="tasks-empty-title">{% if project_locked %}Nenhuma tarefa neste projeto{% else %}Nenhuma tarefa encontrada{% endif %}</h2>
+        <p class="tasks-empty-text">
+            {% if project_locked %}
+            Não há tarefas ativas visíveis neste projeto.
+            {% else %}
+            Ajuste os filtros para visualizar tarefas ativas.
+            {% endif %}
+        </p>
     </section>
     {% endif %}
 </div>
@@ -574,6 +619,9 @@
 <script>
 window.TASK_HUB_CONFIG = {
     selectedProject: {{ (selected_project or '')|tojson }},
+    selectedArea: {{ (selected_area or '')|tojson }},
+    projectLocked: {{ project_locked|tojson }},
+    focusTask: {{ (request.args.get('focus_task') or '')|tojson }},
 };
 </script>
 <script src="{{ url_for('static', filename='pages/task-hub.js') }}"></script>
