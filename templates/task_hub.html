@@ -1,0 +1,580 @@
+{% extends "base.html" %}
+
+{% block title %}Tarefas - ProjetosRJ{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='pages/tarefas.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='pages/task-detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div
+    class="app-page-shell app-page-shell--raised tasks-page task-hub-page task-detail-v2"
+    id="taskHubPage"
+    data-current-user-id="{{ current_user_obj.id if current_user_obj else '' }}"
+    data-selected-project="{{ selected_project or '' }}"
+>
+    <header class="tasks-header">
+        <div class="tasks-header-main">
+            <h1 class="tasks-title ds-type-page-title">Tarefas</h1>
+            <p class="tasks-subtitle mb-0 ds-type-body-sm">Hub de itens por projeto</p>
+        </div>
+        <div class="tasks-header-actions">
+            <span class="tasks-total-pill">
+                {{ total_items }} item{{ 's' if total_items != 1 else '' }}
+            </span>
+            <a
+                href="{{ url_for('main.list_tasks_finalized', area=selected_area, project=selected_project) if selected_area or selected_project else url_for('main.list_tasks_finalized') }}"
+                class="btn-task btn-task-archive"
+                title="Ver tarefas finalizadas"
+                aria-label="Ver tarefas finalizadas">
+                <i class="fas fa-box-archive" aria-hidden="true"></i>
+                <span>Finalizadas</span>
+            </a>
+        </div>
+    </header>
+
+    <section class="tasks-filters">
+        <form method="GET" action="{{ url_for('main.list_tasks') }}" class="tasks-filter-form" id="filterTasksForm">
+            {% if show_area_selector %}
+            <div class="tasks-field">
+                <label for="filter_area" class="tasks-label ds-type-label">Área</label>
+                <select id="filter_area" name="area" class="form-control tasks-input">
+                    <option value="">Todas as áreas</option>
+                    {% for area in area_options %}
+                    <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="tasks-field tasks-field-project">
+                <label for="filter_project_input" class="tasks-label ds-type-label">Projeto</label>
+                <div class="project-search-wrap project-search-wrap-sm">
+                    <input
+                        type="text"
+                        class="form-control tasks-input project-search-input"
+                        id="filter_project_input"
+                        placeholder="Digite para filtrar projetos..."
+                        autocomplete="off"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        value="{{ selected_project_label or '' }}">
+                    <input type="hidden" name="project" id="filter_project" value="{{ selected_project or '' }}">
+                    <div class="project-search-dropdown" id="filterProjectDropdown" role="listbox" hidden>
+                        <div class="project-search-option" data-value="" data-label="Todos os Projetos">Todos os Projetos</div>
+                        {% for project in project_options %}
+                        <div
+                            class="project-search-option"
+                            data-value="{{ project.value }}"
+                            data-label="{{ project.label }}">
+                            {{ project.label }}
+                        </div>
+                        {% endfor %}
+                        <div class="project-search-option project-search-empty" data-empty-state="1" hidden>Nenhum projeto encontrado</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tasks-filter-actions">
+                <button type="submit" class="btn-task btn-task-primary">Filtrar</button>
+                <a href="{{ url_for('main.list_tasks') }}" class="btn-task btn-task-secondary">Limpar</a>
+            </div>
+        </form>
+    </section>
+
+    {% if groups %}
+    <section class="task-detail-v2-items task-hub-items">
+        <div class="items-header-clean">
+            <div class="header-info">
+                <h5 class="items-title-clean ds-type-section-title">Itens ativos</h5>
+                <span class="header-count">{{ total_items }} {{ 'itens' if total_items != 1 else 'item' }}</span>
+            </div>
+            <div class="items-header-actions">
+                <div class="task-items-view-toggle" id="taskItemsViewToggle" role="group"
+                    data-active-view="list"
+                    aria-label="Alternar visualização de itens">
+                    <button type="button" class="task-items-view-btn is-active" data-view="list"
+                        aria-pressed="true">Lista</button>
+                    <button type="button" class="task-items-view-btn" data-view="kanban"
+                        aria-pressed="false">Kanban</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="task-items-view-panels">
+            <div class="task-items-view-panel is-active" id="taskItemsListView" data-view-panel="list">
+                <div
+                    class="task-items-list task-hub-items-list"
+                    data-task-id=""
+                    data-add-item-url="{{ url_for('main.add_task_item_global') }}"
+                    data-sugestoes-url="{{ url_for('main.get_hub_assignable_users') }}"
+                    data-reorder-url="">
+
+                    <div class="task-item-header-row">
+                        <div class="task-item-bar task-item-bar-header"></div>
+                        <div class="task-item-main">
+                            <div class="task-item-line task-item-header">
+                                <span class="task-item-col-desc">Descrição</span>
+                                <span class="task-item-col-prioridade">Prioridade</span>
+                                <span class="task-item-col-tipo">Tipo</span>
+                                <span class="task-item-col-status">Status</span>
+                                <span class="task-item-col-responsavel">Responsável</span>
+                                <span class="task-item-col-actions" title="Ações">Ações</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% for group in groups %}
+                    <section
+                        class="task-hub-group"
+                        data-project-value="{{ group['project_value'] }}"
+                        data-project-id="{{ group['project_id'] or '' }}">
+                        <header class="task-hub-group-header">
+                            <div class="task-hub-group-title-wrap">
+                                <h6 class="task-hub-group-title">{{ group['project_titulo'] }}</h6>
+                                {% if group['project_area'] %}
+                                <span class="task-hub-group-area">{{ group['project_area'] }}</span>
+                                {% endif %}
+                            </div>
+                            <span class="task-hub-group-count">
+                                {{ group['items']|length }} {{ 'itens' if group['items']|length != 1 else 'item' }}
+                            </span>
+                        </header>
+
+                        {% for item in group['items'] %}
+                        <div
+                            class="task-item-row"
+                            data-item-id="{{ item.id }}"
+                            data-item-status="{{ item.status }}"
+                            data-comments-count="{{ item.comments|length }}"
+                            data-item-prioridade="{{ item.prioridade or '' }}"
+                            data-item-tipo="{{ item.tipo_pedido or '' }}"
+                            data-anexos-count="{{ item.anexos|length }}"
+                            data-task-id="{{ item.hub_task_id or '' }}"
+                            data-task-titulo="{{ item.hub_task_titulo }}"
+                            data-project-value="{{ item.hub_project_value }}"
+                            data-project-titulo="{{ item.hub_project_titulo }}">
+                            <div class="task-item-bar status-{{ item.status }}"></div>
+                            <div class="task-item-main">
+                                <div class="task-item-line">
+                                    <div class="task-item-desc-wrap">
+                                        <div class="task-item-desc-row">
+                                            <p class="task-item-desc" data-item-id="{{ item.id }}">{{ item.descricao }}</p>
+                                            <button type="button" class="task-item-desc-edit-btn" data-item-id="{{ item.id }}"
+                                                title="Editar descrição">
+                                                <i class="fas fa-pen" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Editar</span>
+                                            </button>
+                                        </div>
+                                        <p class="task-hub-item-context">
+                                            <span>{{ item.hub_project_titulo }}</span> ·
+                                            <a href="{{ url_for('main.task_detail', task_id=item.hub_task_id) }}">
+                                                {{ item.hub_task_titulo }}
+                                            </a>
+                                        </p>
+                                    </div>
+                                    <div class="task-item-meta">
+                                        <select class="task-item-prioridade-select prioridade-{{ item.prioridade or 'none' }}"
+                                            data-item-id="{{ item.id }}"
+                                            title="Prioridade"
+                                            onchange="updateItemPrioridade({{ item.id }}, this.value, this)">
+                                            <option value="">—</option>
+                                            <option value="baixa" {% if item.prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
+                                            <option value="media" {% if item.prioridade == 'media' %}selected{% endif %}>Média</option>
+                                            <option value="alta" {% if item.prioridade == 'alta' %}selected{% endif %}>Alta</option>
+                                            <option value="urgente" {% if item.prioridade == 'urgente' %}selected{% endif %}>Urgente</option>
+                                        </select>
+                                        <select class="task-item-tipo-select"
+                                            data-item-id="{{ item.id }}"
+                                            title="Tipo"
+                                            onchange="updateItemTipo({{ item.id }}, this.value)">
+                                            <option value="">—</option>
+                                            {% if item.tipo_pedido == 'implementacao' %}
+                                            <option value="implementacao" selected hidden>Implementação (legado)</option>
+                                            {% endif %}
+                                            <option value="bug" {% if item.tipo_pedido == 'bug' %}selected{% endif %}>Bug</option>
+                                            <option value="melhoria" {% if item.tipo_pedido == 'melhoria' %}selected{% endif %}>Melhoria</option>
+                                            <option value="duvida" {% if item.tipo_pedido == 'duvida' %}selected{% endif %}>Dúvida</option>
+                                            <option value="outros" {% if item.tipo_pedido == 'outros' %}selected{% endif %}>Outros</option>
+                                        </select>
+                                        <select class="task-item-status status-{{ item.status }}"
+                                            onchange="updateItemStatus({{ item.id }}, this.value)"
+                                            title="Status">
+                                            <option value="programado" {% if item.status == 'programado' %}selected{% endif %}>Programado</option>
+                                            <option value="em_andamento" {% if item.status == 'em_andamento' %}selected{% endif %}>Em andamento</option>
+                                            <option value="validacao" {% if item.status == 'validacao' %}selected{% endif %}>Validação</option>
+                                            <option value="finalizado" {% if item.status == 'finalizado' %}selected{% endif %}>Finalizado</option>
+                                        </select>
+                                        <span class="task-item-responsavel" data-item-id="{{ item.id }}">{% if item.responsavel %}{{ item.responsavel }}{% else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
+                                        <div class="task-item-actions">
+                                            <button type="button" class="task-item-comments-btn" aria-expanded="false"
+                                                data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)"
+                                                title="Comentários">
+                                                <i class="far fa-comment-alt" aria-hidden="true"></i>
+                                                <span class="task-item-comments-num">{{ item.comments|length }}</span>
+                                            </button>
+                                            <button type="button" class="task-item-anexos-btn" title="Anexos" data-item-id="{{ item.id }}">
+                                                <i class="fas fa-paperclip" aria-hidden="true"></i>
+                                                <span class="task-item-anexos-num">{{ item.anexos|length }}</span>
+                                            </button>
+                                            <button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal"
+                                                data-bs-target="#deleteItemModal-{{ item.id }}" title="Excluir">
+                                                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="comments-body-{{ item.id }}" class="task-item-comments" hidden>
+                                    <div class="task-item-comments-inner">
+                                        {% for comment in item.comments %}
+                                        <div class="task-comment task-comment-author-{{ comment.user_id % 5 }}"
+                                            id="comment-{{ comment.id }}">
+                                            <div class="task-comment-head">
+                                                <span class="task-comment-user">{{ comment.author.name }}</span>
+                                                <span class="task-comment-time">{{ comment.created_at|local_time }}{% if comment.updated_at %} <em>(edit.)</em>{% endif %}</span>
+                                                {% if current_user_obj and current_user_obj.id == comment.user_id %}
+                                                <span class="task-comment-acts">
+                                                    <button type="button" class="task-comment-btn btn-edit-comment"
+                                                        data-comment-id="{{ comment.id }}"
+                                                        data-comment-content="{{ comment.content|e }}"
+                                                        title="Editar">Editar</button>
+                                                    <form
+                                                        action="{{ url_for('main.delete_task_item_comment', comment_id=comment.id) }}"
+                                                        method="POST"
+                                                        class="d-inline"
+                                                        onsubmit="return confirm('Excluir comentário?');">
+                                                        <button type="submit" class="task-comment-btn task-comment-btn-del"
+                                                            title="Excluir">Excluir</button>
+                                                    </form>
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                            <p class="task-comment-text">{{ comment.content }}</p>
+                                        </div>
+                                        {% endfor %}
+                                        <form class="task-comment-form"
+                                            action="{{ url_for('main.add_task_item_comment', item_id=item.id) }}"
+                                            method="POST"
+                                            data-item-id="{{ item.id }}">
+                                            <textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)"
+                                                required></textarea>
+                                            <button type="submit" title="Enviar comentário">
+                                                <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Enviar</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal fade task-detail-v2-modal" id="deleteItemModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content modal-clean">
+                                    <div class="modal-header-clean">
+                                        <div>
+                                            <h5 class="modal-title-clean ds-type-section-title">Excluir Item</h5>
+                                            <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
+                                        </div>
+                                        <button type="button" class="btn-close-clean" data-bs-dismiss="modal">&times;</button>
+                                    </div>
+                                    <div class="modal-body-clean">
+                                        <p>Confirma a exclusão deste item?</p>
+                                        <p class="text-muted small">{{ item.descricao[:100] }}{% if item.descricao|length > 100 %}...{% endif %}</p>
+                                    </div>
+                                    <div class="modal-footer-clean">
+                                        <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">Cancelar</button>
+                                        <form action="{{ url_for('main.delete_task_item', item_id=item.id) }}" method="POST" class="inline-form">
+                                            <button type="submit" class="btn-modal-clean btn-confirm-delete">Excluir</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <div class="task-item-add-row task-hub-add-row" data-project-value="{{ group['project_value'] }}">
+                            <div class="task-item-add-placeholder" data-role="open-add-form">
+                                <span class="task-item-add-dashes">—</span>
+                                <span class="task-item-add-label">Adicionar novo item</span>
+                            </div>
+                            <div class="task-item-add-form" data-role="add-form" hidden>
+                                <div class="task-item-add-bar"></div>
+                                <div class="task-item-add-main">
+                                    <div class="task-item-add-line">
+                                        <textarea class="task-item-add-desc" data-role="descricao" rows="1"
+                                            placeholder="Descreva o item..."></textarea>
+                                        <select class="task-item-add-prioridade" data-role="prioridade">
+                                            <option value="">Prioridade</option>
+                                            <option value="baixa">Baixa</option>
+                                            <option value="media">Média</option>
+                                            <option value="alta">Alta</option>
+                                            <option value="urgente">Urgente</option>
+                                        </select>
+                                        <select class="task-item-add-tipo" data-role="tipo_pedido">
+                                            <option value="">Tipo</option>
+                                            <option value="bug">Bug</option>
+                                            <option value="melhoria">Melhoria</option>
+                                            <option value="duvida">Dúvida</option>
+                                            <option value="outros">Outros</option>
+                                        </select>
+                                        <select class="task-item-add-status" data-role="status">
+                                            <option value="programado">Programado</option>
+                                            <option value="em_andamento">Em andamento</option>
+                                            <option value="validacao">Validação</option>
+                                            <option value="finalizado">Finalizado</option>
+                                        </select>
+                                        <button type="button" class="responsavel-picker-trigger" data-role="responsavel-trigger"
+                                            aria-haspopup="dialog" aria-expanded="false">
+                                            <span class="responsavel-picker-trigger-content">
+                                                <em class="responsavel-placeholder">Responsável</em>
+                                            </span>
+                                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                        </button>
+                                        <button type="button" class="btn-task btn-task-secondary task-hub-add-cancel" data-role="cancel-add">Cancelar</button>
+                                        <button type="button" class="btn-task btn-task-primary task-hub-add-submit" data-role="submit-add">Salvar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="task-items-view-panel" id="taskItemsKanbanView" data-view-panel="kanban" hidden>
+                <div class="task-items-kanban-board" id="taskItemsKanbanBoard">
+                    {% for status_key, status_label in [('programado', 'Programado'), ('em_andamento', 'Em andamento'), ('validacao', 'Validação'), ('finalizado', 'Finalizado')] %}
+                    <section class="task-items-kanban-column status-{{ status_key }}" data-status="{{ status_key }}">
+                        <header class="task-items-kanban-col-head">
+                            <h6 class="task-items-kanban-col-title">{{ status_label }}</h6>
+                            <span class="task-items-kanban-count" data-role="count">0</span>
+                        </header>
+                        <div class="task-items-kanban-dropzone" data-status="{{ status_key }}"
+                            aria-label="Coluna {{ status_label }}"></div>
+                        <div class="task-items-kanban-composer" data-status="{{ status_key }}">
+                            <button type="button" class="task-items-kanban-add-btn"
+                                data-status="{{ status_key }}">+ Adicionar item</button>
+                            <form class="task-items-kanban-add-form" data-status="{{ status_key }}" hidden>
+                                {% if not selected_project %}
+                                <div class="project-search-wrap task-hub-kanban-project-wrap">
+                                    <input
+                                        type="text"
+                                        class="task-items-kanban-add-project-input project-search-input"
+                                        data-role="project-input"
+                                        placeholder="Selecione o projeto..."
+                                        autocomplete="off"
+                                        aria-haspopup="listbox"
+                                        aria-expanded="false">
+                                    <input type="hidden" class="task-items-kanban-add-project-value" data-role="project-value" value="">
+                                    <div class="project-search-dropdown task-hub-kanban-project-dropdown" data-role="project-dropdown" role="listbox" hidden>
+                                        {% for project in project_options %}
+                                        <div class="project-search-option" data-value="{{ project.value }}" data-label="{{ project.label }}">{{ project.label }}</div>
+                                        {% endfor %}
+                                        <div class="project-search-option project-search-empty" data-empty-state="1" hidden>Nenhum projeto encontrado</div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <input type="hidden" class="task-items-kanban-add-project-value" data-role="project-value" value="{{ selected_project }}">
+                                {% endif %}
+                                <textarea class="task-items-kanban-add-desc" rows="2"
+                                    placeholder="Descreva o item..." required></textarea>
+                                <button type="button" class="responsavel-picker-trigger task-items-kanban-add-owner"
+                                    data-role="responsavel-trigger" aria-haspopup="dialog" aria-expanded="false">
+                                    <span class="responsavel-picker-trigger-content">
+                                        <em class="responsavel-placeholder">Responsável</em>
+                                    </span>
+                                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                </button>
+                                <div class="task-items-kanban-add-extra">
+                                    <select class="task-items-kanban-add-prioridade">
+                                        <option value="">Prioridade</option>
+                                        <option value="baixa">Baixa</option>
+                                        <option value="media">Média</option>
+                                        <option value="alta">Alta</option>
+                                        <option value="urgente">Urgente</option>
+                                    </select>
+                                    <select class="task-items-kanban-add-tipo">
+                                        <option value="">Tipo</option>
+                                        <option value="bug">Bug</option>
+                                        <option value="melhoria">Melhoria</option>
+                                        <option value="duvida">Dúvida</option>
+                                        <option value="outros">Outros</option>
+                                    </select>
+                                </div>
+                                <div class="task-items-kanban-add-actions">
+                                    <button type="submit" class="task-items-kanban-add-submit">Salvar</button>
+                                    <button type="button" class="task-items-kanban-add-cancel">Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+                    </section>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="task-item-drawer-backdrop" id="taskItemDrawerBackdrop" hidden></div>
+        <aside class="task-item-drawer" id="taskItemDrawer" aria-hidden="true" hidden>
+            <header class="task-item-drawer-header">
+                <div>
+                    <p class="task-item-drawer-kicker">Detalhes do item</p>
+                    <h6 class="task-item-drawer-title" id="taskItemDrawerTitle">Item</h6>
+                </div>
+                <div class="task-item-drawer-header-actions">
+                    <button type="button" class="task-item-drawer-delete-icon" id="taskItemDrawerDeleteIcon"
+                        aria-label="Excluir item">
+                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="task-item-drawer-close" id="taskItemDrawerClose"
+                        aria-label="Fechar detalhes">&times;</button>
+                </div>
+            </header>
+            <div class="task-item-drawer-body">
+                <div class="task-item-drawer-status-row">
+                    <span class="task-items-kanban-badge status-programado" id="taskItemDrawerStatusBadge">Programado</span>
+                </div>
+                <div class="task-item-drawer-delete-confirm" id="taskItemDrawerDeleteConfirm" hidden>
+                    <p>Deseja excluir este item?</p>
+                    <div class="task-item-drawer-delete-confirm-actions">
+                        <button type="button" class="task-item-drawer-delete-cancel" id="taskItemDrawerDeleteCancel">Cancelar</button>
+                        <button type="button" class="task-item-drawer-delete-confirm-btn" id="taskItemDrawerDeleteConfirmBtn">Excluir item</button>
+                    </div>
+                </div>
+
+                <div class="task-item-drawer-props">
+                    <div class="task-item-drawer-prop-group">
+                        <label class="task-item-drawer-label" for="taskItemDrawerPrioridade">Prioridade</label>
+                        <select id="taskItemDrawerPrioridade" class="task-item-drawer-select task-item-drawer-prioridade-select">
+                            <option value="">— Nenhuma —</option>
+                            <option value="baixa">Baixa</option>
+                            <option value="media">Média</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                        </select>
+                    </div>
+                    <div class="task-item-drawer-prop-group">
+                        <label class="task-item-drawer-label" for="taskItemDrawerTipoPedido">Tipo</label>
+                        <select id="taskItemDrawerTipoPedido" class="task-item-drawer-select task-item-drawer-tipo-select">
+                            <option value="">— Nenhum —</option>
+                            <option value="implementacao" hidden>Implementação (legado)</option>
+                            <option value="bug">Bug</option>
+                            <option value="melhoria">Melhoria</option>
+                            <option value="duvida">Dúvida</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <label class="task-item-drawer-label" for="taskItemDrawerDesc">Descrição</label>
+                <textarea id="taskItemDrawerDesc" rows="2" class="task-item-drawer-textarea"
+                    placeholder="Descreva o item..."></textarea>
+
+                <label class="task-item-drawer-label">Responsável</label>
+                <button type="button" class="responsavel-picker-trigger task-item-drawer-responsavel-trigger"
+                    id="taskItemDrawerResponsavelTrigger" aria-haspopup="dialog" aria-expanded="false">
+                    <span class="responsavel-picker-trigger-content">
+                        <em class="responsavel-placeholder">Responsável</em>
+                    </span>
+                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                </button>
+
+                <p class="task-item-drawer-autosave-status is-saved" id="taskItemDrawerAutosaveStatus"
+                    role="status" aria-live="polite">Salvo</p>
+
+                <div class="task-item-drawer-comments">
+                    <button type="button" class="task-item-drawer-comments-toggle"
+                        id="taskItemDrawerCommentsToggle" aria-expanded="false"
+                        aria-controls="taskItemDrawerCommentsBody">
+                        <span class="task-item-drawer-comments-toggle-main">
+                            <span class="task-item-drawer-comments-title">Comentários</span>
+                            <span class="task-item-drawer-comments-count" id="taskItemDrawerCommentsCount">0</span>
+                        </span>
+                        <span class="task-item-drawer-comments-toggle-icon" aria-hidden="true">
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </span>
+                    </button>
+                    <div class="task-item-drawer-comments-body" id="taskItemDrawerCommentsBody"
+                        aria-hidden="true" hidden>
+                        <p class="task-item-drawer-comments-status" id="taskItemDrawerCommentsStatus" hidden
+                            role="status" aria-live="polite"></p>
+                        <div class="task-item-drawer-comments-list" id="taskItemDrawerCommentsList"></div>
+                        <form id="taskItemDrawerCommentForm" class="task-item-drawer-comment-form">
+                            <textarea id="taskItemDrawerCommentInput" name="content" rows="2"
+                                placeholder="Escreva um comentário... (Enter para enviar)" required></textarea>
+                            <div class="task-item-drawer-comment-form-footer">
+                                <span class="task-item-drawer-comment-hint">Enter envia · Shift+Enter quebra linha</span>
+                                <button type="submit" title="Comentar" aria-label="Comentar">
+                                    <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Comentar</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="task-item-drawer-anexos" id="taskItemDrawerAnexosSection">
+                    <button type="button" class="task-item-drawer-anexos-toggle" id="taskItemDrawerAnexosToggle"
+                        aria-expanded="false" aria-controls="taskItemDrawerAnexosBody">
+                        <span class="task-item-drawer-anexos-toggle-main">
+                            <i class="fas fa-paperclip" aria-hidden="true"></i>
+                            <span class="task-item-drawer-anexos-title">Anexos</span>
+                            <span class="task-item-drawer-anexos-count" id="taskItemDrawerAnexosCount">0</span>
+                        </span>
+                        <span class="task-item-drawer-anexos-toggle-icon" aria-hidden="true">
+                            <i class="fas fa-chevron-down"></i>
+                        </span>
+                    </button>
+                    <div class="task-item-drawer-anexos-body" id="taskItemDrawerAnexosBody" hidden>
+                        <div class="task-item-drawer-anexos-list" id="taskItemDrawerAnexosList"></div>
+                        <label class="task-item-drawer-anexos-upload-btn" title="Adicionar anexo">
+                            <i class="fas fa-plus" aria-hidden="true"></i>
+                            <span>Adicionar anexo</span>
+                            <input type="file" id="taskItemDrawerAnexoInput"
+                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                                style="display:none;">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </section>
+    {% else %}
+    <section class="tasks-empty-state">
+        <h2 class="tasks-empty-title">Nenhum item encontrado</h2>
+        <p class="tasks-empty-text">Ajuste os filtros para visualizar itens ativos.</p>
+    </section>
+    {% endif %}
+</div>
+
+<input type="file" id="taskQuickAnexoInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" hidden>
+
+<div class="task-anexo-preview-backdrop" id="taskAnexoPreviewBackdrop" hidden></div>
+<section class="task-anexo-preview-modal" id="taskAnexoPreviewModal" role="dialog" aria-modal="true"
+    aria-hidden="true" aria-labelledby="taskAnexoPreviewTitle" hidden>
+    <div class="task-anexo-preview-dialog">
+        <header class="task-anexo-preview-header">
+            <h6 class="task-anexo-preview-title" id="taskAnexoPreviewTitle">Anexo</h6>
+            <button type="button" class="task-anexo-preview-close" id="taskAnexoPreviewClose"
+                aria-label="Fechar preview">&times;</button>
+        </header>
+        <div class="task-anexo-preview-body" id="taskAnexoPreviewBody"></div>
+        <footer class="task-anexo-preview-footer">
+            <a class="task-anexo-preview-link" id="taskAnexoPreviewOpen" href="#" target="_blank" rel="noopener">Abrir em nova aba</a>
+            <a class="task-anexo-preview-link task-anexo-preview-link-primary" id="taskAnexoPreviewDownload" href="#"
+                target="_blank" rel="noopener">Baixar</a>
+        </footer>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+window.TASK_HUB_CONFIG = {
+    selectedProject: {{ (selected_project or '')|tojson }},
+};
+</script>
+<script src="{{ url_for('static', filename='pages/task-hub.js') }}"></script>
+{% endblock %}

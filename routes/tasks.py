@@ -18,6 +18,7 @@ from .shared import format_local_time
 VALID_PRIORIDADES = {'baixa', 'media', 'alta', 'urgente'}
 VALID_TIPOS = {'bug', 'melhoria', 'duvida', 'outros'}
 LEGACY_TIPOS = {'implementacao'}
+VALID_STATUSES = {'programado', 'em_andamento', 'validacao', 'finalizado'}
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'}
 
 
@@ -214,6 +215,195 @@ def _get_projects_for_task_filter():
     return Project.query.filter(Project.area_responsavel.in_(user_areas)).order_by(Project.titulo).all()
 
 
+def _resolve_task_hub_area_scope(selected_area):
+    """Resolve escopo de área permitido para o hub de itens."""
+    area = (selected_area or '').strip()
+
+    if g.user.is_admin:
+        if area:
+            return [area], area
+        return None, ''
+
+    user_areas = g.user.get_areas()
+    if not user_areas:
+        return [], area
+
+    if area:
+        if area in user_areas:
+            return [area], area
+        return [], area
+
+    return user_areas, ''
+
+
+def _build_task_items_hub_query(selected_area='', project_filter=''):
+    """Monta query de itens ativos visíveis no hub /tarefas."""
+    area_scope, normalized_area = _resolve_task_hub_area_scope(selected_area)
+
+    query = (
+        TaskItem.query
+        .options(
+            joinedload(TaskItem.task).joinedload(Task.project),
+            joinedload(TaskItem.comments),
+            joinedload(TaskItem.anexos),
+        )
+        .join(Task, TaskItem.task_id == Task.id)
+        .outerjoin(Project, Task.project_id == Project.id)
+        .filter(Task.is_finalized.is_(False))
+    )
+
+    if g.user.is_admin:
+        # Admin vê tudo quando não há filtro de área.
+        pass
+    else:
+        visibility_filters = [db.and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)]
+        if area_scope:
+            visibility_filters.insert(
+                0,
+                db.and_(Task.project_id.isnot(None), Project.area_responsavel.in_(area_scope)),
+            )
+        query = query.filter(db.or_(*visibility_filters))
+
+    if normalized_area:
+        query = query.filter(
+            Task.project_id.isnot(None),
+            Project.area_responsavel == normalized_area,
+        )
+
+    if project_filter:
+        if project_filter == 'sem_projeto':
+            query = query.filter(Task.project_id.is_(None))
+        else:
+            try:
+                project_id = int(project_filter)
+            except (TypeError, ValueError):
+                return query.filter(db.false())
+            query = query.filter(Task.project_id == project_id)
+
+    return query.order_by(
+        Project.titulo.asc(),
+        Task.created_at.asc(),
+        Task.id.asc(),
+        TaskItem.ordem.asc(),
+        TaskItem.id.asc(),
+    )
+
+
+def _group_hub_items_by_project(items):
+    """Agrupa itens visíveis por projeto para renderização do hub."""
+    groups = {}
+
+    for item in items:
+        task = item.task
+        project = task.project if task else None
+        project_id = project.id if project else None
+        project_title = (project.titulo if project else 'Sem projeto') or 'Sem projeto'
+        project_area = project.area_responsavel if project else None
+        project_value = str(project_id) if project_id else 'sem_projeto'
+        group_key = f'project:{project_id}' if project_id else 'sem_projeto'
+
+        if group_key not in groups:
+            groups[group_key] = {
+                'key': group_key,
+                'project_id': project_id,
+                'project_value': project_value,
+                'project_titulo': project_title,
+                'project_area': project_area,
+                'items': [],
+                'task_ids': set(),
+            }
+
+        # Metadados de contexto usados no template/JS do hub.
+        item.hub_project_value = project_value
+        item.hub_project_titulo = project_title
+        item.hub_task_titulo = task.titulo if task else ''
+        item.hub_task_id = task.id if task else None
+
+        groups[group_key]['items'].append(item)
+        if task:
+            groups[group_key]['task_ids'].add(task.id)
+
+    ordered_groups = sorted(
+        groups.values(),
+        key=lambda group: (
+            group['project_id'] is None,  # "Sem projeto" sempre ao final.
+            (group['project_titulo'] or '').casefold(),
+        ),
+    )
+
+    for group in ordered_groups:
+        group['task_count'] = len(group['task_ids'])
+
+    return ordered_groups
+
+
+def _build_task_hub_area_options():
+    """Lista áreas disponíveis para o seletor do hub."""
+    if g.user.is_admin:
+        rows = (
+            db.session.query(Project.area_responsavel)
+            .join(Task, Task.project_id == Project.id)
+            .join(TaskItem, TaskItem.task_id == Task.id)
+            .filter(
+                Task.is_finalized.is_(False),
+                Project.area_responsavel.isnot(None),
+            )
+            .distinct()
+            .all()
+        )
+        return sorted({(area or '').strip() for (area,) in rows if (area or '').strip()})
+
+    return sorted({area for area in g.user.get_areas() if area})
+
+
+def _render_task_hub():
+    """Renderiza o novo hub de itens da rota /tarefas."""
+    selected_area = (request.args.get('area') or '').strip()
+    project_filter = (request.args.get('project') or '').strip()
+
+    items = _build_task_items_hub_query(
+        selected_area=selected_area,
+        project_filter=project_filter,
+    ).all()
+    groups = _group_hub_items_by_project(items)
+
+    filter_scope_items = _build_task_items_hub_query(
+        selected_area=selected_area,
+        project_filter='',
+    ).all()
+    filter_scope_groups = _group_hub_items_by_project(filter_scope_items)
+
+    project_options = [
+        {
+            'value': group['project_value'],
+            'label': group['project_titulo'],
+            'area': group['project_area'],
+        }
+        for group in filter_scope_groups
+    ]
+
+    project_label_map = {opt['value']: opt['label'] for opt in project_options}
+    selected_project_label = project_label_map.get(project_filter, '')
+    if not selected_project_label and project_filter == 'sem_projeto':
+        selected_project_label = 'Sem projeto'
+
+    user_areas = g.user.get_areas()
+    show_area_selector = g.user.is_admin or len(user_areas) > 1
+    area_options = _build_task_hub_area_options() if show_area_selector else []
+
+    return render_template(
+        'task_hub.html',
+        groups=groups,
+        project_options=project_options,
+        selected_project=project_filter,
+        selected_project_label=selected_project_label,
+        selected_area=selected_area,
+        area_options=area_options,
+        show_area_selector=show_area_selector,
+        total_items=len(items),
+    )
+
+
 def _get_safe_next_url():
     raw_next = (
         request.form.get('next')
@@ -309,8 +499,8 @@ def _render_tasks_listing(show_finalized):
 @main_bp.route('/tarefas', methods=['GET'])
 @login_required
 def list_tasks():
-    """Lista tarefas ativas do usuário com filtros e paginação."""
-    return _render_tasks_listing(show_finalized=False)
+    """Hub de itens de tarefas ativas, agrupado por projeto."""
+    return _render_task_hub()
 
 
 @main_bp.route('/tarefas/finalizadas', methods=['GET'])
@@ -558,6 +748,251 @@ def reactivate_task(task_id):
         flash(f'Erro ao reativar tarefa: {str(e)}', 'danger')
 
     return _redirect_back_or('main.list_tasks')
+
+
+def _can_access_project_in_tasks(project):
+    if project is None:
+        return True
+    if g.user.is_admin:
+        return True
+    return g.user.has_access_to_area(project.area_responsavel)
+
+
+def _resolve_hub_project_token(raw_project_value):
+    project_value = (raw_project_value or '').strip()
+    if not project_value:
+        return None, 'Projeto é obrigatório.', 400
+
+    if project_value == 'sem_projeto':
+        return None, None, 200
+
+    try:
+        project_id = int(project_value)
+    except (TypeError, ValueError):
+        return None, 'Projeto inválido.', 400
+
+    project = Project.query.get(project_id)
+    if not project:
+        return None, 'Projeto não encontrado.', 404
+
+    if not _can_access_project_in_tasks(project):
+        return None, 'Sem permissão para este projeto.', 403
+
+    return project, None, 200
+
+
+def _resolve_anchor_task_for_hub(project):
+    """
+    Resolve tarefa âncora de criação global:
+    - projeto: tarefa ativa mais antiga; cria âncora se não existir;
+    - sem_projeto: tarefa ativa avulsa do usuário; cria avulsa se não existir.
+    """
+    if project is None:
+        anchor = (
+            Task.query
+            .filter(
+                Task.project_id.is_(None),
+                Task.created_by_id == g.user.id,
+                Task.is_finalized.is_(False),
+            )
+            .order_by(Task.created_at.asc(), Task.id.asc())
+            .first()
+        )
+        if anchor:
+            return anchor
+
+        anchor = Task(
+            titulo='Tarefa avulsa',
+            project_id=None,
+            created_by_id=g.user.id,
+        )
+        db.session.add(anchor)
+        db.session.flush()
+        return anchor
+
+    anchor = (
+        Task.query
+        .filter(
+            Task.project_id == project.id,
+            Task.is_finalized.is_(False),
+        )
+        .order_by(Task.created_at.asc(), Task.id.asc())
+        .first()
+    )
+    if anchor:
+        return anchor
+
+    anchor = Task(
+        titulo=f'Tarefa âncora - {project.titulo}',
+        project_id=project.id,
+        created_by_id=g.user.id,
+    )
+    db.session.add(anchor)
+    db.session.flush()
+    return anchor
+
+
+def _get_assignable_users_for_hub_project(project):
+    """Sugestões de responsável para contexto global por projeto."""
+    candidate_ids = set()
+
+    candidate_ids.add(g.user.id)
+    admin_ids = [user_id for (user_id,) in User.query.with_entities(User.id).filter(User.is_admin.is_(True)).all()]
+    candidate_ids.update(admin_ids)
+
+    if project is not None and project.area_responsavel:
+        area = project.area_responsavel
+        area_user_ids = [
+            user_id
+            for (user_id,) in UserArea.query.with_entities(UserArea.user_id).filter_by(area=area).all()
+        ]
+        candidate_ids.update(area_user_ids)
+
+        legacy_area_ids = [
+            user_id
+            for (user_id,) in User.query.with_entities(User.id).filter(User.area_responsavel == area).all()
+        ]
+        candidate_ids.update(legacy_area_ids)
+
+    if not candidate_ids:
+        return []
+
+    return User.query.filter(User.id.in_(candidate_ids)).order_by(User.name.asc()).all()
+
+
+@main_bp.route('/tarefas/itens/add', methods=['POST'])
+@login_required
+def add_task_item_global():
+    """Cria item no hub global por projeto (ou sem_projeto)."""
+    is_ajax = (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or request.accept_mimetypes.best == 'application/json'
+    )
+
+    project_raw = request.form.get('project')
+    if project_raw is None:
+        payload = request.get_json(silent=True) or {}
+        project_raw = payload.get('project')
+
+    project, project_error, status_code = _resolve_hub_project_token(project_raw)
+    if project_error:
+        if is_ajax:
+            return jsonify({'success': False, 'message': project_error}), status_code
+        flash(project_error, 'danger')
+        return redirect(url_for('main.list_tasks'))
+
+    descricao = (request.form.get('descricao') or '').strip()
+    status = (request.form.get('status') or 'programado').strip()
+    responsavel = (request.form.get('responsavel') or '').strip()
+    prioridade = (request.form.get('prioridade') or '').strip() or None
+    tipo_pedido = (request.form.get('tipo_pedido') or '').strip() or None
+
+    if status not in VALID_STATUSES:
+        status = 'programado'
+    if prioridade and prioridade not in VALID_PRIORIDADES:
+        prioridade = None
+    if tipo_pedido and tipo_pedido not in VALID_TIPOS:
+        tipo_pedido = None
+
+    if not descricao:
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Descrição é obrigatória.'}), 400
+        flash('Descrição é obrigatória.', 'danger')
+        return redirect(url_for('main.list_tasks'))
+
+    try:
+        anchor_task = _resolve_anchor_task_for_hub(project)
+        is_valid_responsavel, canonical_responsavel, invalid_names = _validate_task_item_responsavel(
+            anchor_task,
+            responsavel,
+        )
+        if not is_valid_responsavel:
+            message = _format_invalid_responsavel_message(invalid_names)
+            if is_ajax:
+                return jsonify({'success': False, 'message': message}), 400
+            flash(message, 'danger')
+            return redirect(url_for('main.list_tasks'))
+
+        max_ordem = db.session.query(db.func.max(TaskItem.ordem)).filter_by(task_id=anchor_task.id).scalar() or 0
+        item = TaskItem(
+            descricao=descricao,
+            status=status,
+            responsavel=canonical_responsavel if canonical_responsavel else None,
+            prioridade=prioridade,
+            tipo_pedido=tipo_pedido,
+            task_id=anchor_task.id,
+            ordem=max_ordem + 1,
+        )
+
+        db.session.add(item)
+        db.session.flush()
+        notify_task_event(
+            anchor_task,
+            actor_user_id=g.user.id,
+            event_type='task_item_created',
+            title=f'Novo item em "{anchor_task.titulo}"',
+            message=(
+                f'{g.user.name} criou o item "{_preview_text(item.descricao, 90)}" '
+                f'com status {_task_item_status_label(item.status)}.'
+            ),
+            item_id=item.id,
+        )
+        if item.responsavel:
+            notify_task_assignment_change(
+                anchor_task,
+                item,
+                g.user.id,
+                old_responsavel=None,
+                new_responsavel=item.responsavel,
+            )
+        db.session.commit()
+
+        if is_ajax:
+            return jsonify({
+                'success': True,
+                'item': {
+                    'id': item.id,
+                    'descricao': item.descricao,
+                    'status': item.status,
+                    'responsavel': item.responsavel or '',
+                    'prioridade': item.prioridade or '',
+                    'tipo_pedido': item.tipo_pedido or '',
+                    'task_id': anchor_task.id,
+                    'task_titulo': anchor_task.titulo,
+                    'project_id': anchor_task.project_id,
+                    'project_titulo': anchor_task.project.titulo if anchor_task.project else 'Sem projeto',
+                    'project_value': str(anchor_task.project_id) if anchor_task.project_id else 'sem_projeto',
+                    'comments_count': 0,
+                    'anexos_count': 0,
+                },
+            })
+        flash('Item adicionado com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if is_ajax:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        flash(f'Erro ao adicionar item: {str(e)}', 'danger')
+
+    return redirect(url_for('main.list_tasks'))
+
+
+@main_bp.route('/tarefas/sugestoes-responsavel', methods=['GET'])
+@login_required
+def get_hub_assignable_users():
+    """API: usuários elegíveis por contexto do projeto no hub global."""
+    project_raw = (request.args.get('project') or '').strip()
+    project, project_error, status_code = _resolve_hub_project_token(project_raw)
+    if project_error:
+        return jsonify({'success': False, 'message': project_error}), status_code
+
+    users = _get_assignable_users_for_hub_project(project)
+    payload = [{'id': user.id, 'name': user.name} for user in users]
+
+    q = (request.args.get('q') or '').strip().lower()
+    if q:
+        payload = [user for user in payload if q in (user['name'] or '').lower()]
+
+    return jsonify({'users': payload})
 
 
 # ===================================

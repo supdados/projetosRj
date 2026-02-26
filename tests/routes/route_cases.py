@@ -433,6 +433,23 @@ ROUTE_CASES = [
         'requires_admin': False,
     },
     {
+        'id': 'task_item_global_add_post',
+        'method': 'POST',
+        'rule': '/tarefas/itens/add',
+        'path': '/tarefas/itens/add',
+        'role': 'user',
+        'headers': {'X-Requested-With': 'XMLHttpRequest'},
+        'data': {
+            'project': '{project_id}',
+            'descricao': 'Item global novo',
+            'status': 'programado',
+            'responsavel': 'Usuario Auditoria',
+        },
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
         'id': 'task_item_edit_post',
         'method': 'POST',
         'rule': '/tarefas/itens/<int:item_id>/edit',
@@ -552,6 +569,17 @@ ROUTE_CASES = [
         'path': '/tarefas/{task_id}/sugestoes-responsavel',
         'role': 'user',
         'query_string': {'q': 'Usuario'},
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
+        'id': 'task_hub_assignable_users_get',
+        'method': 'GET',
+        'rule': '/tarefas/sugestoes-responsavel',
+        'path': '/tarefas/sugestoes-responsavel',
+        'role': 'user',
+        'query_string': {'project': '{project_id}', 'q': 'Usuario'},
         'expected_status': 200,
         'requires_login': True,
         'requires_admin': False,
@@ -852,4 +880,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 75
+assert len(ROUTE_CASES) == 77

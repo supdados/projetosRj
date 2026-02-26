@@ -128,9 +128,24 @@ AREA_PROTECTED_CASES = [
         'expected_status': 403,
     },
     {
+        'id': 'outsider_task_item_global_add',
+        'method': 'POST',
+        'path': '/tarefas/itens/add',
+        'headers': {'X-Requested-With': 'XMLHttpRequest'},
+        'data': {'project': '{project_id}', 'descricao': 'Item bloqueado'},
+        'expected_status': 403,
+    },
+    {
         'id': 'outsider_task_suggestions',
         'method': 'GET',
         'path': '/tarefas/{task_id}/sugestoes-responsavel',
+        'expected_status': 403,
+    },
+    {
+        'id': 'outsider_task_hub_suggestions',
+        'method': 'GET',
+        'path': '/tarefas/sugestoes-responsavel',
+        'query_string': {'project': '{project_id}'},
         'expected_status': 403,
     },
     {

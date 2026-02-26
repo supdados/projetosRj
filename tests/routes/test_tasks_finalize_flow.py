@@ -1,7 +1,4 @@
-import datetime
-import re
-
-from models import Task, db
+from models import Task, TaskItem, db
 
 
 def test_finalize_moves_task_to_finalized_listing(app, client_user, seed_data):
@@ -18,7 +15,7 @@ def test_finalize_moves_task_to_finalized_listing(app, client_user, seed_data):
 
     active_page = client_user.get('/tarefas')
     assert active_page.status_code == 200
-    assert b'Tarefa Auditoria' not in active_page.data
+    assert b'Item Auditoria' not in active_page.data
 
     finalized_page = client_user.get('/tarefas/finalizadas')
     assert finalized_page.status_code == 200
@@ -40,7 +37,7 @@ def test_reactivate_returns_task_to_active_listing(app, client_user, seed_data):
 
     active_page = client_user.get('/tarefas')
     assert active_page.status_code == 200
-    assert b'Tarefa Auditoria' in active_page.data
+    assert b'Item Auditoria' in active_page.data
 
     finalized_page = client_user.get('/tarefas/finalizadas')
     assert finalized_page.status_code == 200
@@ -61,89 +58,56 @@ def test_outsider_cannot_finalize_task(app, client_outsider, seed_data):
         assert task.finalized_at is None
 
 
-def test_tasks_pagination_uses_20_and_keeps_continuous_index_with_filters(app, client_user, seed_data):
+def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app, client_user, seed_data):
     with app.app_context():
-        for idx in range(1, 26):
-            db.session.add(
-                Task(
-                    titulo=f'Paginated Task {idx:02d}',
-                    project_id=seed_data['project_id'],
-                    created_by_id=seed_data['user_id'],
-                )
-            )
+        task_sem_item = Task(
+            titulo='Task sem item para esconder projeto',
+            project_id=seed_data['project_complete_id'],
+            created_by_id=seed_data['user_id'],
+        )
+        db.session.add(task_sem_item)
         db.session.commit()
 
-    project_id = seed_data['project_id']
-    response = client_user.get(f'/tarefas?search=Paginated+Task&project={project_id}&page=2')
-    assert response.status_code == 200
+    hub_without_item = client_user.get('/tarefas')
+    assert hub_without_item.status_code == 200
+    assert b'Projeto Concluivel' not in hub_without_item.data
 
-    assert b'data-task-index=\"21\"' in response.data
-    assert b'data-task-index=\"25\"' in response.data
-    assert b'data-task-index=\"26\"' not in response.data
-    assert 'Página 2 de 2'.encode('utf-8') in response.data
-    assert b'search=Paginated+Task' in response.data
-    assert f'project={project_id}'.encode() in response.data
-
-
-def test_task_archive_counts_follow_project_and_search_filters(app, client_user, seed_data):
     with app.app_context():
-        db.session.add_all(
-            [
-                Task(
-                    titulo='Filtro Mercado Ativa A',
-                    project_id=seed_data['project_id'],
-                    created_by_id=seed_data['user_id'],
-                ),
-                Task(
-                    titulo='Filtro Mercado Ativa B',
-                    project_id=seed_data['project_id'],
-                    created_by_id=seed_data['user_id'],
-                ),
-                Task(
-                    titulo='Filtro Mercado Finalizada A',
-                    project_id=seed_data['project_id'],
-                    created_by_id=seed_data['user_id'],
-                    is_finalized=True,
-                    finalized_at=datetime.datetime(2026, 2, 20, 14, 0, 0),
-                ),
-                Task(
-                    titulo='Filtro Mercado Ativa Outro Projeto',
-                    project_id=seed_data['project_complete_id'],
-                    created_by_id=seed_data['user_id'],
-                ),
-                Task(
-                    titulo='Filtro Mercado Finalizada Outro Projeto',
-                    project_id=seed_data['project_complete_id'],
-                    created_by_id=seed_data['user_id'],
-                    is_finalized=True,
-                    finalized_at=datetime.datetime(2026, 2, 21, 9, 0, 0),
-                ),
-            ]
+        task_for_project_complete = (
+            Task.query
+            .filter(Task.project_id == seed_data['project_complete_id'], Task.is_finalized.is_(False))
+            .order_by(Task.id.desc())
+            .first()
+        )
+        db.session.add(
+            TaskItem(
+                descricao='Primeiro item do projeto completo',
+                status='programado',
+                task_id=task_for_project_complete.id,
+                ordem=1,
+            )
         )
         db.session.commit()
 
-    project_id = seed_data['project_id']
-    query = f'project={project_id}&search=Filtro+Mercado'
+    hub_with_item = client_user.get('/tarefas')
+    assert hub_with_item.status_code == 200
+    assert b'Projeto Concluivel' in hub_with_item.data
 
-    active_response = client_user.get(f'/tarefas?{query}')
-    assert active_response.status_code == 200
-    active_html = active_response.get_data(as_text=True)
-    finalized_match = re.search(
-        r'Finalizadas</span>\s*<span class="tasks-archive-count">(\d+)</span>',
-        active_html,
-    )
-    assert finalized_match is not None
-    assert finalized_match.group(1) == '1'
 
-    finalized_response = client_user.get(f'/tarefas/finalizadas?{query}')
-    assert finalized_response.status_code == 200
-    finalized_html = finalized_response.get_data(as_text=True)
-    active_match = re.search(
-        r'Ativas</span>\s*<span class="tasks-archive-count">(\d+)</span>',
-        finalized_html,
-    )
-    assert active_match is not None
-    assert active_match.group(1) == '2'
+def test_tasks_hub_hides_area_selector_for_single_area_user_and_shows_for_admin(client, seed_data):
+    with client.session_transaction() as session:
+        session['user_id'] = seed_data['user_id']
+
+    user_response = client.get('/tarefas')
+    assert user_response.status_code == 200
+    assert b'name="area"' not in user_response.data
+
+    with client.session_transaction() as session:
+        session['user_id'] = seed_data['admin_id']
+
+    admin_response = client.get('/tarefas')
+    assert admin_response.status_code == 200
+    assert b'name="area"' in admin_response.data
 
 
 def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(app, client_user, seed_data):
