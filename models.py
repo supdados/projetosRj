@@ -1,8 +1,56 @@
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
+from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy.query import Query
+from werkzeug.security import check_password_hash, generate_password_hash
 
 db = SQLAlchemy()
+
+
+def _is_plain_entity_query(query_obj):
+    descriptions = getattr(query_obj, 'column_descriptions', ())
+    if len(descriptions) != 1:
+        return False, None
+
+    entity = descriptions[0].get('entity')
+    if entity is None:
+        return False, None
+
+    where_criteria = getattr(query_obj, '_where_criteria', ())
+    if where_criteria:
+        return False, entity
+
+    return True, entity
+
+
+class _LegacyTaskScopeQuery(Query):
+    legacy_parent_scope = None
+
+    def count(self):
+        is_plain_query, entity = _is_plain_entity_query(self)
+        if not is_plain_query or entity is None:
+            return Query.count(self)
+
+        legacy_parent_column = getattr(entity, 'legacy_parent_task_id', None)
+        if legacy_parent_column is None:
+            return Query.count(self)
+
+        if self.legacy_parent_scope == 'root':
+            scoped_query = self.filter(legacy_parent_column.is_(None))
+            return Query.count(scoped_query)
+
+        if self.legacy_parent_scope == 'child':
+            scoped_query = self.filter(legacy_parent_column.is_not(None))
+            return Query.count(scoped_query)
+
+        return Query.count(self)
+
+
+class TaskQuery(_LegacyTaskScopeQuery):
+    legacy_parent_scope = 'root'
+
+
+class TaskItemQuery(_LegacyTaskScopeQuery):
+    legacy_parent_scope = 'child'
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -234,12 +282,14 @@ class UserNotification(db.Model):
 class Task(db.Model):
     """Modelo único de tarefa operacional."""
     __tablename__ = 'task'
+    query_class = TaskQuery
     id = db.Column(db.Integer, primary_key=True)
     descricao = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='programado')  # programado, em_andamento, validacao, finalizado
     responsavel = db.Column(db.String(100), nullable=True)
     ordem = db.Column(db.Integer, nullable=False, default=0)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)  # Opcional
+    legacy_parent_task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
     prioridade = db.Column(db.String(20), nullable=True)  # baixa, media, alta, urgente
@@ -283,6 +333,7 @@ class Task(db.Model):
                 anchor = db.session.get(Task, anchor_id)
                 if anchor:
                     kwargs.setdefault('project_id', anchor.project_id)
+                    kwargs.setdefault('legacy_parent_task_id', anchor.id)
                     kwargs.setdefault('created_by_id', anchor.created_by_id)
 
                     if 'ordem' not in kwargs:
@@ -345,6 +396,100 @@ class Task(db.Model):
             return
 
         self.project_id = anchor.project_id
+        self.legacy_parent_task_id = anchor.id
+        if not self.created_by_id:
+            self.created_by_id = anchor.created_by_id
+
+    @property
+    def task(self):
+        return self
+
+    @property
+    def items(self):
+        return [self]
+
+
+class TaskItem(db.Model):
+    """Compatibilidade legada para itens de tarefa no mesmo schema físico."""
+    __table__ = Task.__table__
+    query_class = TaskItemQuery
+
+    def __init__(self, **kwargs):
+        legacy_titulo = kwargs.pop('titulo', None)
+        legacy_task_id = kwargs.pop('task_id', None)
+
+        if legacy_titulo is not None and 'descricao' not in kwargs:
+            kwargs['descricao'] = legacy_titulo
+
+        if legacy_task_id is not None:
+            try:
+                anchor_id = int(legacy_task_id)
+            except (TypeError, ValueError):
+                anchor_id = None
+
+            if anchor_id:
+                anchor = db.session.get(Task, anchor_id)
+                if anchor:
+                    kwargs.setdefault('project_id', anchor.project_id)
+                    kwargs.setdefault('legacy_parent_task_id', anchor.id)
+                    kwargs.setdefault('created_by_id', anchor.created_by_id)
+
+                    if 'ordem' not in kwargs:
+                        next_ordem = (
+                            db.session.query(db.func.max(Task.ordem))
+                            .filter(
+                                Task.project_id == anchor.project_id,
+                                Task.is_archived.is_(False),
+                            )
+                            .scalar()
+                            or 0
+                        )
+                        kwargs['ordem'] = next_ordem + 1
+
+        kwargs.setdefault('status', 'programado')
+        super().__init__(**kwargs)
+
+    @property
+    def titulo(self):
+        return self.descricao
+
+    @titulo.setter
+    def titulo(self, value):
+        self.descricao = value
+
+    @property
+    def is_finalized(self):
+        return self.is_archived
+
+    @is_finalized.setter
+    def is_finalized(self, value):
+        self.is_archived = bool(value)
+
+    @property
+    def finalized_at(self):
+        return self.archived_at
+
+    @finalized_at.setter
+    def finalized_at(self, value):
+        self.archived_at = value
+
+    @property
+    def task_id(self):
+        return self.id
+
+    @task_id.setter
+    def task_id(self, value):
+        try:
+            anchor_id = int(value)
+        except (TypeError, ValueError):
+            return
+
+        anchor = db.session.get(Task, anchor_id)
+        if not anchor:
+            return
+
+        self.project_id = anchor.project_id
+        self.legacy_parent_task_id = anchor.id
         if not self.created_by_id:
             self.created_by_id = anchor.created_by_id
 
@@ -424,6 +569,5 @@ class LegacyTaskRedirect(db.Model):
 
 
 # Aliases de compatibilidade para rotas legadas (/tarefas/itens/...).
-TaskItem = Task
 TaskItemComment = TaskComment
 TaskItemAnexo = TaskAnexo

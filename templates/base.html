@@ -1617,11 +1617,17 @@
                         return { kind: 'finalized', icon: 'fa-check-circle' };
                     }
 
-                    if (safeEventType === 'task_assignment') {
+                    if (
+                        safeEventType === 'task_assignment' ||
+                        safeEventType === 'task_item_assignment'
+                    ) {
                         return { kind: 'assignment', icon: 'fa-user-check' };
                     }
 
-                    if (safeEventType.startsWith('task_comment_')) {
+                    if (
+                        safeEventType.startsWith('task_comment_') ||
+                        safeEventType.startsWith('task_item_comment_')
+                    ) {
                         return { kind: 'comment', icon: 'fa-comments' };
                     }
 

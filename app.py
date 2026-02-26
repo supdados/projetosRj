@@ -188,6 +188,9 @@ def ensure_task_core_columns():
         if 'ordem' not in columns:
             db.session.execute(text("ALTER TABLE task ADD COLUMN ordem INTEGER NOT NULL DEFAULT 0"))
             added.append('task.ordem')
+        if 'legacy_parent_task_id' not in columns:
+            db.session.execute(text("ALTER TABLE task ADD COLUMN legacy_parent_task_id INTEGER"))
+            added.append('task.legacy_parent_task_id')
         if 'prioridade' not in columns:
             db.session.execute(text("ALTER TABLE task ADD COLUMN prioridade VARCHAR(20)"))
             added.append('task.prioridade')

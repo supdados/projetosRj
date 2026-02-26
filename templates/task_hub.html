@@ -44,8 +44,16 @@
                     <span>Arquivar finalizados</span>
                 </button>
             </form>
+            {% set finalized_url = url_for('main.list_tasks_finalized') %}
+            {% if selected_area and selected_project %}
+                {% set finalized_url = url_for('main.list_tasks_finalized', area=selected_area, project=selected_project) %}
+            {% elif selected_project %}
+                {% set finalized_url = url_for('main.list_tasks_finalized', project=selected_project) %}
+            {% elif selected_area %}
+                {% set finalized_url = url_for('main.list_tasks_finalized', area=selected_area) %}
+            {% endif %}
             <a
-                href="{{ url_for('main.list_tasks_finalized', area=selected_area, project=selected_project) if selected_area or selected_project else url_for('main.list_tasks_finalized') }}"
+                href="{{ finalized_url }}"
                 class="btn-task btn-task-archive"
                 title="Ver tarefas finalizadas"
                 aria-label="Ver tarefas finalizadas">
