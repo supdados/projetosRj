@@ -345,12 +345,22 @@ ROUTE_CASES = [
         'requires_admin': False,
     },
     {
+        'id': 'tasks_archived_get',
+        'method': 'GET',
+        'rule': '/tarefas/arquivadas',
+        'path': '/tarefas/arquivadas',
+        'role': 'user',
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
         'id': 'tasks_finalized_get',
         'method': 'GET',
         'rule': '/tarefas/finalizadas',
         'path': '/tarefas/finalizadas',
         'role': 'user',
-        'expected_status': 200,
+        'expected_status': 302,
         'requires_login': True,
         'requires_admin': False,
     },
@@ -966,4 +976,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 85
+assert len(ROUTE_CASES) == 86

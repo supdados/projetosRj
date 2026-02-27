@@ -7,13 +7,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="app-page-shell app-page-shell--raised tasks-page" id="tasksArchivedPage">
+<div class="app-page-shell app-page-shell--raised tasks-page" id="tasksArchivedPage" data-active-url="{{ active_url }}">
     {% set current_url = request.full_path.rstrip('?') %}
 
     <header class="tasks-header">
         <div class="tasks-header-main">
             <h1 class="tasks-title ds-type-page-title">Tarefas arquivadas</h1>
-            <p class="tasks-subtitle mb-0 ds-type-body-sm">Lista simples de tarefas arquivadas</p>
+            <p class="tasks-subtitle mb-0 ds-type-body-sm">Itens retirados da visão ativa</p>
         </div>
         <div class="tasks-header-actions">
             <span class="tasks-total-pill">
@@ -33,18 +33,6 @@
 
     <section class="tasks-filters">
         <form method="GET" action="{{ url_for(list_endpoint) }}" class="tasks-filter-form" id="filterTasksForm">
-            {% if show_area_selector %}
-            <div class="tasks-field">
-                <label for="filter_area" class="tasks-label ds-type-label">Área</label>
-                <select id="filter_area" name="area" class="form-control tasks-input">
-                    <option value="">Todas as áreas</option>
-                    {% for area in area_options %}
-                    <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            {% endif %}
-
             <div class="tasks-field tasks-field-project">
                 <label for="filter_project_input" class="tasks-label ds-type-label">Projeto</label>
                 <div class="project-search-wrap project-search-wrap-sm">
@@ -67,6 +55,18 @@
                     </div>
                 </div>
             </div>
+
+            {% if show_area_selector %}
+            <div class="tasks-field">
+                <label for="filter_area" class="tasks-label ds-type-label">Área</label>
+                <select id="filter_area" name="area" class="form-control tasks-input">
+                    <option value="">Todas as áreas</option>
+                    {% for area in area_options %}
+                    <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
 
             <div class="tasks-field tasks-field-search">
                 <label for="task_search" class="tasks-label ds-type-label">Descrição</label>
@@ -187,7 +187,7 @@
 
             <div class="task-card-actions" data-stop-row-click="1">
                 <form action="{{ url_for('main.unarchive_task', task_id=task.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Desarquivar esta tarefa?');">
-                    <input type="hidden" name="next" value="{{ current_url }}">
+                    <input type="hidden" name="next" value="{{ active_url }}">
                     <button type="submit" class="tasks-action-btn is-toggle" title="Desarquivar tarefa">
                         <i class="fas fa-rotate-left" aria-hidden="true"></i>
                         <span>Desarquivar</span>
@@ -235,8 +235,8 @@
     {% else %}
     <section class="tasks-empty-state">
         <h2 class="tasks-empty-title">Nenhuma tarefa arquivada</h2>
-        <p class="tasks-empty-text">Ajuste os filtros ou arquive tarefas finalizadas na visão ativa.</p>
-        <a href="{{ url_for('main.list_tasks') }}" class="btn-task btn-task-secondary">Voltar para ativas</a>
+        <p class="tasks-empty-text">Ajuste os filtros ou arquive tarefas na visão ativa.</p>
+        <a href="{{ active_url }}" class="btn-task btn-task-secondary">Voltar para ativas</a>
     </section>
     {% endif %}
 </div>
@@ -256,6 +256,7 @@
     var options = Array.prototype.slice.call(dropdown.querySelectorAll('.project-search-option[data-value]'));
     var emptyState = dropdown.querySelector('[data-empty-state="1"]');
     var submitTimer = null;
+    var archivedPage = document.getElementById('tasksArchivedPage');
 
     function submitFilters(delay) {
         if (submitTimer) window.clearTimeout(submitTimer);
@@ -358,6 +359,83 @@
 
     document.addEventListener('mousedown', function (event) {
         if (!wrap.contains(event.target)) hideDropdown();
+    });
+
+    function updateArchivedHeaderCount(total) {
+        if (!archivedPage) return;
+        var totalPill = archivedPage.querySelector('.tasks-total-pill');
+        if (totalPill) {
+            totalPill.textContent = total + ' tarefa' + (total === 1 ? '' : 's');
+        }
+        var pageMeta = archivedPage.querySelector('.tasks-page-meta');
+        if (pageMeta) {
+            var chips = pageMeta.querySelectorAll('.tasks-chip');
+            if (chips.length > 1) {
+                if (total > 0) {
+                    chips[1].textContent = 'Mostrando 1 - ' + total + ' de ' + total;
+                    chips[1].removeAttribute('hidden');
+                } else {
+                    chips[1].setAttribute('hidden', '');
+                }
+            }
+        }
+    }
+
+    function ensureArchivedEmptyState() {
+        if (!archivedPage) return;
+        var list = archivedPage.querySelector('.tasks-cards');
+        if (list && list.querySelector('.task-card')) return;
+        if (archivedPage.querySelector('.tasks-empty-state')) return;
+
+        if (list) list.parentNode.removeChild(list);
+        var pagination = archivedPage.querySelector('.tasks-pagination-wrap');
+        if (pagination) pagination.parentNode.removeChild(pagination);
+        var empty = document.createElement('section');
+        empty.className = 'tasks-empty-state';
+        var activeUrl = archivedPage.getAttribute('data-active-url') || '/tarefas';
+        empty.innerHTML =
+            '<h2 class="tasks-empty-title">Nenhuma tarefa arquivada</h2>' +
+            '<p class="tasks-empty-text">Ajuste os filtros ou arquive tarefas na visão ativa.</p>' +
+            '<a href="' + activeUrl + '" class="btn-task btn-task-secondary">Voltar para ativas</a>';
+        archivedPage.appendChild(empty);
+    }
+
+    Array.prototype.slice.call(document.querySelectorAll('form[action*="/desarquivar"]')).forEach(function (archiveForm) {
+        archiveForm.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+            if (!window.confirm('Desarquivar esta tarefa?')) return;
+
+            var formData = new FormData(archiveForm);
+            fetch(archiveForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: formData,
+            })
+                .then(function (response) {
+                    return response.json().catch(function () { return {}; }).then(function (data) {
+                        if (!response.ok || !data.success) {
+                            throw new Error((data && data.message) || 'Erro ao desarquivar tarefa.');
+                        }
+                        return data;
+                    });
+                })
+                .then(function () {
+                    var card = archiveForm.closest('.task-card');
+                    if (card && card.parentNode) {
+                        card.parentNode.removeChild(card);
+                    }
+                    var remaining = document.querySelectorAll('.tasks-cards .task-card').length;
+                    updateArchivedHeaderCount(remaining);
+                    ensureArchivedEmptyState();
+                })
+                .catch(function (error) {
+                    alert((error && error.message) || 'Erro ao desarquivar tarefa.');
+                });
+        });
     });
 })();
 </script>

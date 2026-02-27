@@ -814,6 +814,21 @@
             return normalized || '';
         }
 
+        function buildProjectDetailUrl(projectValue) {
+            var normalized = normalizeProjectValue(projectValue);
+            if (!normalized || normalized === 'sem_projeto') return '';
+            return '/project/' + encodeURIComponent(normalized);
+        }
+
+        function buildProjectContextMarkup(projectValue, projectTitulo) {
+            var projectLabel = projectTitulo || 'Sem projeto';
+            var projectUrl = buildProjectDetailUrl(projectValue);
+            if (!projectUrl) {
+                return '<span>' + escapeHtml(projectLabel) + '</span>';
+            }
+            return '<a href="' + projectUrl + '">' + escapeHtml(projectLabel) + '</a>';
+        }
+
         function getAddRowByProject(projectValue) {
             var value = normalizeProjectValue(projectValue);
             if (!value) return null;
@@ -832,9 +847,7 @@
             var prioridade = item.prioridade || '';
             var tipoPedido = item.tipo_pedido || '';
             var projectTitulo = item.project_titulo || 'Sem projeto';
-            var taskTitulo = item.task_titulo || 'Tarefa';
             var projectValue = item.project_value || (item.project_id ? String(item.project_id) : 'sem_projeto');
-            var taskId = item.task_id ? String(item.task_id) : '';
             var legacyTipoOption = tipoPedido === 'implementacao'
                 ? '<option value="implementacao" selected hidden>Implementação (legado)</option>'
                 : '';
@@ -872,9 +885,7 @@
                 '<button type="button" class="task-item-desc-edit-btn" data-item-id="' + item.id + '" title="Editar descrição">' +
                 '<i class="fas fa-pen" aria-hidden="true"></i><span class="visually-hidden">Editar</span></button>' +
                 '</div>' +
-                '<p class="task-hub-item-context"><span>' + escapeHtml(projectTitulo) + '</span> · ' +
-                (taskId ? '<a href="/tarefas/' + taskId + '">' + escapeHtml(taskTitulo) + '</a>' : escapeHtml(taskTitulo)) +
-                '</p>' +
+                '<p class="task-hub-item-context">' + buildProjectContextMarkup(projectValue, projectTitulo) + '</p>' +
                 '</div>' +
                 '<div class="task-item-meta">' +
                 '<select class="task-item-prioridade-select prioridade-' + (prioridade || 'none') + '" data-item-id="' + item.id + '" title="Prioridade" onchange="updateItemPrioridade(' + item.id + ', this.value, this)">' + prioridadeOptions + '</select>' +
@@ -977,6 +988,7 @@
 
             updateGroupCount(targetAddRow.closest('.task-hub-group'));
             updateTaskItemsHeaderCount();
+            updateTaskItemsTotalPill();
             if (window.taskItemsKanban && typeof window.taskItemsKanban.rebuildFromList === 'function') {
                 window.taskItemsKanban.rebuildFromList();
             }
@@ -1186,6 +1198,13 @@
         countEl.textContent = itemCount + (itemCount === 1 ? ' tarefa' : ' tarefas');
     }
 
+    function updateTaskItemsTotalPill() {
+        var totalPill = document.querySelector('.tasks-header .tasks-total-pill');
+        if (!totalPill) return;
+        var itemCount = document.querySelectorAll('.task-item-row[data-item-id]').length;
+        totalPill.textContent = itemCount + ' tarefa' + (itemCount === 1 ? '' : 's');
+    }
+
     function removeTaskItemFromDom(itemId) {
         if (!itemId) return false;
         var removed = false;
@@ -1213,6 +1232,7 @@
         }
 
         updateTaskItemsHeaderCount();
+        updateTaskItemsTotalPill();
         return removed;
     }
 
@@ -1802,6 +1822,29 @@
             return board.querySelector('.task-items-kanban-dropzone[data-status="' + normalizeStatus(status) + '"]');
         }
 
+        function buildKanbanProjectUrl(projectValue) {
+            var normalized = String(projectValue == null ? '' : projectValue).trim();
+            if (!normalized || normalized === 'sem_projeto') return '';
+            return '/project/' + encodeURIComponent(normalized);
+        }
+
+        function renderKanbanContext(contextEl, item) {
+            if (!contextEl) return;
+            contextEl.innerHTML = '';
+
+            var projectLabel = item.projectTitulo || 'Sem projeto';
+            var projectUrl = buildKanbanProjectUrl(item.projectValue);
+            if (!projectUrl) {
+                contextEl.textContent = projectLabel;
+                return;
+            }
+
+            var link = document.createElement('a');
+            link.href = projectUrl;
+            link.textContent = projectLabel;
+            contextEl.appendChild(link);
+        }
+
         function readStoredView() {
             if (!storageKey) return 'list';
             try {
@@ -1869,11 +1912,7 @@
             if (desc) desc.textContent = item.descricao || 'Sem descrição';
 
             var contextEl = card.querySelector('.task-hub-kanban-context');
-            if (contextEl) {
-                var projectLabel = item.projectTitulo || 'Sem projeto';
-                var taskLabel = item.taskTitulo || 'Tarefa';
-                contextEl.textContent = projectLabel + ' · ' + taskLabel;
-            }
+            renderKanbanContext(contextEl, item);
 
             var owner = card.querySelector('.task-items-kanban-owner');
             if (owner) {
@@ -4093,6 +4132,73 @@
     })();
 
     window.taskItemsKanban = taskItemsKanbanManager;
+
+    (function initArchiveFinalizedTasksForm() {
+        var root = document.getElementById('taskHubPage');
+        var archiveForm = document.getElementById('archiveFinalizedTasksForm');
+        if (!root || !archiveForm) return;
+
+        function ensureTaskHubEmptyState() {
+            var listItems = document.querySelectorAll('.task-item-row[data-item-id]');
+            if (listItems.length) return;
+            if (root.querySelector('.tasks-empty-state')) return;
+
+            var itemsSection = root.querySelector('.task-detail-v2-items.task-hub-items');
+            if (itemsSection && itemsSection.parentNode) {
+                itemsSection.parentNode.removeChild(itemsSection);
+            }
+
+            var emptyState = document.createElement('section');
+            emptyState.className = 'tasks-empty-state';
+            emptyState.innerHTML =
+                '<h2 class="tasks-empty-title">' + escapeTaskItemHtml(root.getAttribute('data-empty-title') || 'Nenhuma tarefa encontrada') + '</h2>' +
+                '<p class="tasks-empty-text">' + escapeTaskItemHtml(root.getAttribute('data-empty-text') || 'Ajuste os filtros para visualizar tarefas ativas.') + '</p>';
+            root.appendChild(emptyState);
+        }
+
+        archiveForm.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+
+            var formData = new FormData(archiveForm);
+            fetch(archiveForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: formData,
+            })
+                .then(function (response) {
+                    return response.json().catch(function () { return {}; }).then(function (data) {
+                        if (!response.ok || !data.success) {
+                            throw new Error((data && data.message) || 'Erro ao arquivar tarefas.');
+                        }
+                        return data;
+                    });
+                })
+                .then(function (data) {
+                    var archivedIds = Array.isArray(data.archived_task_ids) ? data.archived_task_ids : [];
+                    if (!archivedIds.length) {
+                        alert((data && data.message) || 'Nenhuma tarefa finalizada para arquivar no escopo atual.');
+                        return;
+                    }
+
+                    archivedIds.forEach(function (itemId) {
+                        removeTaskItemFromDom(String(itemId));
+                    });
+
+                    if (window.taskItemsKanban && typeof window.taskItemsKanban.rebuildFromList === 'function') {
+                        window.taskItemsKanban.rebuildFromList();
+                    }
+
+                    ensureTaskHubEmptyState();
+                })
+                .catch(function (error) {
+                    alert((error && error.message) || 'Erro ao arquivar tarefas.');
+                });
+        });
+    })();
 
     // Expandir/recolher comentários com animação suave
     function clearCommentsTransition(body) {

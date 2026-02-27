@@ -129,7 +129,7 @@
                             </a>
                             <a
                                 href="{{ url_for('main.list_tasks') }}"
-                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_tasks' or endpoint == 'main.list_tasks_finalized' or endpoint == 'main.project_tasks' else '' }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_tasks' or endpoint == 'main.list_tasks_archived' or endpoint == 'main.list_tasks_finalized' or endpoint == 'main.project_tasks' else '' }}"
                                 data-bs-toggle="tooltip"
                                 data-bs-placement="bottom"
                                 title="Tarefas"
@@ -373,7 +373,7 @@
                 {% set skeleton_type = 'projects' %}
             {% elif skeleton_endpoint == 'main.list_projetos_pendentes' %}
                 {% set skeleton_type = 'pending' %}
-            {% elif skeleton_endpoint == 'main.list_tasks' or skeleton_endpoint == 'main.list_tasks_finalized' %}
+            {% elif skeleton_endpoint == 'main.list_tasks' or skeleton_endpoint == 'main.list_tasks_archived' or skeleton_endpoint == 'main.list_tasks_finalized' %}
                 {% set skeleton_type = 'tasks' %}
             {% elif skeleton_endpoint == 'main.project_tasks' %}
                 {% set skeleton_type = 'project_tasks' %}
@@ -1130,6 +1130,9 @@
                     return 'pending';
                 }
                 if (pathname === '/tarefas') {
+                    return 'tasks';
+                }
+                if (pathname === '/tarefas/arquivadas') {
                     return 'tasks';
                 }
                 if (pathname === '/tarefas/finalizadas') {

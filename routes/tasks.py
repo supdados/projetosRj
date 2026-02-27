@@ -255,6 +255,21 @@ def _build_task_listing_url(
     return url_for(endpoint, **kwargs)
 
 
+def _build_legacy_query_args():
+    query_args = request.args.to_dict(flat=True)
+    if query_args:
+        return '?' + urlencode(query_args)
+    return ''
+
+
+def _task_active_target_url(task):
+    if task and task.project_id:
+        return url_for('main.project_tasks', project_id=task.project_id, focus_task=task.id)
+    if task:
+        return url_for('main.list_tasks', focus_task=task.id)
+    return url_for('main.list_tasks')
+
+
 def _format_invalid_responsavel_message(invalid_names):
     invalid_str = ', '.join(invalid_names)
     return f'Responsável inválido: {invalid_str}. Selecione somente usuários com permissão de visualização.'
@@ -637,7 +652,7 @@ def _render_task_hub(locked_project=None, template_name='task_hub.html'):
         project_id=locked_project.id if locked_project else None,
     )
     finalized_url = _build_task_listing_url(
-        'main.list_tasks_finalized',
+        'main.list_tasks_archived',
         selected_area=selected_area,
         project_filter=project_filter,
         prioridade_filter=prioridade_filter,
@@ -731,7 +746,7 @@ def _build_archived_listing_query(
     return query.order_by(Task.archived_at.desc(), Task.created_at.desc())
 
 
-def _render_tasks_listing_finalized():
+def _render_tasks_listing_archived():
     filter_values = _read_task_filter_values(request.args)
     project_filter = filter_values['project_filter']
     selected_area = filter_values['selected_area']
@@ -831,7 +846,7 @@ def _render_tasks_listing_finalized():
         status_filter=status_filter,
         responsavel_filter=responsavel_filter,
     )
-    clear_url = _build_task_listing_url('main.list_tasks_finalized')
+    clear_url = _build_task_listing_url('main.list_tasks_archived')
 
     return render_template(
         'task_list.html',
@@ -853,13 +868,13 @@ def _render_tasks_listing_finalized():
         status_options=filter_options['status_options'],
         responsavel_options=filter_options['responsavel_options'],
         show_finalized=True,
-        list_endpoint='main.list_tasks_finalized',
+        list_endpoint='main.list_tasks_archived',
         index_offset=index_offset,
         page_info_text=page_info_text,
         start_index=start_index,
         end_index=end_index,
         active_count=active_count,
-        finalized_count=finalized_count,
+        archived_count=finalized_count,
         active_url=active_url,
         clear_url=clear_url,
     )
@@ -997,10 +1012,16 @@ def list_tasks():
     return _render_task_hub()
 
 
+@main_bp.route('/tarefas/arquivadas', methods=['GET'])
+@login_required
+def list_tasks_archived():
+    return _render_tasks_listing_archived()
+
+
 @main_bp.route('/tarefas/finalizadas', methods=['GET'])
 @login_required
 def list_tasks_finalized():
-    return _render_tasks_listing_finalized()
+    return redirect(f'{url_for("main.list_tasks_archived")}{_build_legacy_query_args()}')
 
 
 @main_bp.route('/tarefas/add', methods=['POST'])
@@ -1331,33 +1352,47 @@ def _archive_task(task):
 @main_bp.route('/tarefas/<int:task_id>/finalizar', methods=['POST'])
 @login_required
 def finalize_task(task_id):
+    is_ajax = (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or request.accept_mimetypes.best == 'application/json'
+    )
     task = db.session.get(Task, task_id)
     if not task or not _can_view_task(g.user, task):
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Você não tem permissão para finalizar esta tarefa.'}), 403
         flash('Você não tem permissão para finalizar esta tarefa.', 'danger')
         return _redirect_back_or('main.list_tasks')
 
     if task.is_archived:
+        if is_ajax:
+            return jsonify({'success': False, 'message': 'Esta tarefa já está arquivada.'}), 400
         flash('Esta tarefa já está arquivada.', 'info')
-        return _redirect_back_or('main.list_tasks_finalized')
+        return _redirect_back_or('main.list_tasks_archived')
 
     try:
+        old_status = task.status
         task.status = 'finalizado'
-        _archive_task(task)
-        notify_task_event(
-            task,
-            actor_user_id=g.user.id,
-            event_type='task_archived',
-            title='Tarefa arquivada',
-            message=f'{g.user.name} arquivou a tarefa "{_preview_text(task.descricao, 90)}".',
-            target_url=url_for('main.list_tasks_finalized'),
-        )
+        if old_status != task.status:
+            notify_task_event(
+                task,
+                actor_user_id=g.user.id,
+                event_type='task_finalized',
+                title='Tarefa finalizada',
+                message=f'{g.user.name} finalizou a tarefa "{_preview_text(task.descricao, 90)}".',
+                target_url=_task_active_target_url(task),
+            )
         db.session.commit()
-        flash('Tarefa arquivada com sucesso!', 'success')
+        if is_ajax:
+            serialized = _serialize_task_payload(task)
+            return jsonify({'success': True, 'task': serialized, 'item': serialized})
+        flash('Tarefa finalizada com sucesso!', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'Erro ao arquivar tarefa: {str(e)}', 'danger')
+        if is_ajax:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        flash(f'Erro ao finalizar tarefa: {str(e)}', 'danger')
 
-    return _redirect_back_or('main.list_tasks_finalized')
+    return _redirect_back_or('main.list_tasks')
 
 
 @main_bp.route('/tarefas/<int:task_id>/desarquivar', methods=['POST'])
@@ -1391,7 +1426,7 @@ def unarchive_task(task_id):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json':
             return jsonify({'success': False, 'message': str(e)}), 500
         flash(f'Erro ao desarquivar tarefa: {str(e)}', 'danger')
-        return _redirect_back_or('main.list_tasks_finalized')
+        return _redirect_back_or('main.list_tasks_archived')
 
 
 @main_bp.route('/tarefas/<int:task_id>/reativar', methods=['POST'])
@@ -1433,6 +1468,7 @@ def archive_finalized_tasks():
 
     tasks = query.all()
     archived_count = 0
+    archived_task_ids = []
     now = datetime.datetime.utcnow()
 
     try:
@@ -1440,36 +1476,36 @@ def archive_finalized_tasks():
             task.is_archived = True
             task.archived_at = now
             archived_count += 1
+            archived_task_ids.append(str(task.id))
+            notify_task_event(
+                task,
+                actor_user_id=g.user.id,
+                event_type='task_archived',
+                title='Tarefa arquivada',
+                message=f'{g.user.name} arquivou a tarefa "{_preview_text(task.descricao, 90)}".',
+                target_url=url_for('main.list_tasks_archived'),
+            )
         db.session.commit()
 
         if is_ajax:
-            return jsonify({'success': True, 'archived_count': archived_count})
+            return jsonify({
+                'success': True,
+                'archived_count': archived_count,
+                'archived_task_ids': archived_task_ids,
+                'message': f'{archived_count} tarefa(s) arquivada(s).' if archived_count else 'Nenhuma tarefa finalizada para arquivar no escopo atual.',
+            })
 
         if archived_count:
             flash(f'{archived_count} tarefa(s) finalizada(s) arquivada(s).', 'success')
         else:
             flash('Nenhuma tarefa finalizada para arquivar no escopo atual.', 'info')
-
-        query_args = {}
-        if selected_area:
-            query_args['area'] = selected_area
-        if project_filter:
-            query_args['project'] = project_filter
-        if prioridade_filter:
-            query_args['prioridade'] = prioridade_filter
-        if tipo_filter:
-            query_args['tipo'] = tipo_filter
-        if status_filter:
-            query_args['status'] = status_filter
-        if responsavel_filter:
-            query_args['responsavel'] = responsavel_filter
-        return redirect(url_for('main.list_tasks_finalized', **query_args))
+        return _redirect_back_or('main.list_tasks')
     except Exception as e:
         db.session.rollback()
         if is_ajax:
             return jsonify({'success': False, 'message': str(e)}), 500
         flash(f'Erro ao arquivar tarefas: {str(e)}', 'danger')
-        return redirect(url_for('main.list_tasks'))
+        return _redirect_back_or('main.list_tasks')
 
 
 @main_bp.route('/tarefas/sugestoes-responsavel', methods=['GET'])

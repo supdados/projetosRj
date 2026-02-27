@@ -69,7 +69,7 @@ def test_finalized_listing_filters_by_priority_type_status_and_responsavel(app, 
         db.session.commit()
 
     response = client_user.get(
-        '/tarefas/finalizadas?prioridade=urgente&tipo=bug&status=finalizado&responsavel=Usuario+Editavel'
+        '/tarefas/arquivadas?prioridade=urgente&tipo=bug&status=finalizado&responsavel=Usuario+Editavel'
     )
     assert response.status_code == 200
 

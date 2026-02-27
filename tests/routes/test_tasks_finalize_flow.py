@@ -3,7 +3,7 @@ import datetime
 from models import Task, db
 
 
-def test_finalize_moves_task_to_finalized_listing(app, client_user, seed_data):
+def test_finalize_keeps_task_active_and_only_updates_status(app, client_user, seed_data):
     task_id = seed_data['task_id']
 
     response = client_user.post(f'/tarefas/{task_id}/finalizar', follow_redirects=False)
@@ -12,6 +12,30 @@ def test_finalize_moves_task_to_finalized_listing(app, client_user, seed_data):
     with app.app_context():
         task = db.session.get(Task, task_id)
         assert task is not None
+        assert task.status == 'finalizado'
+        assert task.is_finalized is False
+        assert task.finalized_at is None
+
+    active_page = client_user.get('/tarefas')
+    assert active_page.status_code == 200
+    assert b'Item Auditoria' in active_page.data
+
+    archived_page = client_user.get('/tarefas/arquivadas')
+    assert archived_page.status_code == 200
+    assert b'Item Auditoria' not in archived_page.data
+
+
+def test_archive_finalized_moves_task_to_archived_listing(app, client_user, seed_data):
+    task_id = seed_data['task_id']
+    client_user.post(f'/tarefas/{task_id}/finalizar', follow_redirects=False)
+
+    response = client_user.post('/tarefas/arquivar-finalizadas', follow_redirects=False)
+    assert response.status_code == 302
+
+    with app.app_context():
+        task = db.session.get(Task, task_id)
+        assert task is not None
+        assert task.status == 'finalizado'
         assert task.is_finalized is True
         assert task.finalized_at is not None
 
@@ -19,14 +43,15 @@ def test_finalize_moves_task_to_finalized_listing(app, client_user, seed_data):
     assert active_page.status_code == 200
     assert b'Item Auditoria' not in active_page.data
 
-    finalized_page = client_user.get('/tarefas/finalizadas')
-    assert finalized_page.status_code == 200
-    assert b'Item Auditoria' in finalized_page.data
+    archived_page = client_user.get('/tarefas/arquivadas')
+    assert archived_page.status_code == 200
+    assert b'Item Auditoria' in archived_page.data
 
 
-def test_reactivate_returns_task_to_active_listing(app, client_user, seed_data):
+def test_reactivate_returns_archived_task_to_active_listing_as_programado(app, client_user, seed_data):
     task_id = seed_data['task_id']
     client_user.post(f'/tarefas/{task_id}/finalizar', follow_redirects=False)
+    client_user.post('/tarefas/arquivar-finalizadas', follow_redirects=False)
 
     response = client_user.post(f'/tarefas/{task_id}/reativar', follow_redirects=False)
     assert response.status_code == 302
@@ -36,14 +61,60 @@ def test_reactivate_returns_task_to_active_listing(app, client_user, seed_data):
         assert task is not None
         assert task.is_finalized is False
         assert task.finalized_at is None
+        assert task.status == 'programado'
 
     active_page = client_user.get('/tarefas')
     assert active_page.status_code == 200
     assert b'Item Auditoria' in active_page.data
 
-    finalized_page = client_user.get('/tarefas/finalizadas')
-    assert finalized_page.status_code == 200
-    assert b'Item Auditoria' not in finalized_page.data
+    archived_page = client_user.get('/tarefas/arquivadas')
+    assert archived_page.status_code == 200
+    assert b'Item Auditoria' not in archived_page.data
+
+
+def test_archive_finalized_ajax_returns_archived_ids(app, client_user, seed_data):
+    task_id = seed_data['task_id']
+    client_user.post(f'/tarefas/{task_id}/finalizar', follow_redirects=False)
+
+    response = client_user.post(
+        '/tarefas/arquivar-finalizadas',
+        headers={
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        },
+    )
+    assert response.status_code == 200
+    payload = response.get_json()
+
+    assert payload['success'] is True
+    assert payload['archived_count'] == 1
+    assert payload['archived_task_ids'] == [str(task_id)]
+
+
+def test_unarchive_ajax_returns_programado_payload(app, client_user, seed_data):
+    task_id = seed_data['task_id']
+    client_user.post(f'/tarefas/{task_id}/finalizar', follow_redirects=False)
+    client_user.post('/tarefas/arquivar-finalizadas', follow_redirects=False)
+
+    response = client_user.post(
+        f'/tarefas/{task_id}/desarquivar',
+        headers={
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        },
+    )
+    assert response.status_code == 200
+    payload = response.get_json()
+
+    assert payload['success'] is True
+    assert payload['task']['status'] == 'programado'
+    assert payload['item']['status'] == 'programado'
+
+
+def test_archived_alias_redirects_to_archived_route(client_user):
+    response = client_user.get('/tarefas/finalizadas?status=finalizado', follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/tarefas/arquivadas?status=finalizado')
 
 
 def test_outsider_cannot_finalize_task(app, client_outsider, seed_data):
@@ -58,6 +129,7 @@ def test_outsider_cannot_finalize_task(app, client_outsider, seed_data):
         assert task is not None
         assert task.is_finalized is False
         assert task.finalized_at is None
+        assert task.status == 'programado'
 
 
 def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app, client_user, seed_data):
@@ -115,11 +187,12 @@ def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(app, client_u
     task_title = b'Item Auditoria'
 
     client_user.post(f'/tarefas/{task_id}/finalizar', follow_redirects=False)
+    client_user.post('/tarefas/arquivar-finalizadas', follow_redirects=False)
 
     project_tasks_page = client_user.get(f'/projeto/{project_id}/tarefas')
     assert project_tasks_page.status_code == 200
     assert task_title not in project_tasks_page.data
-    assert f'/tarefas/finalizadas?project={project_id}'.encode() in project_tasks_page.data
+    assert f'/tarefas/arquivadas?project={project_id}'.encode() in project_tasks_page.data
 
     dashboard_page = client_user.get('/dashboard')
     assert dashboard_page.status_code == 200
@@ -131,8 +204,9 @@ def test_project_tasks_template_contract_has_modal_project_locked_and_no_view_bu
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert f'/tarefas/finalizadas?project={seed_data["project_id"]}' in html
+    assert f'/tarefas/arquivadas?project={seed_data["project_id"]}' in html
     assert '/tarefas/arquivar-finalizadas' in html
+    assert 'Arquivadas' in html
     assert 'class="project-view-breadcrumb"' in html
     assert 'id="project_locked"' in html
     assert 'readonly' in html
@@ -145,6 +219,6 @@ def test_project_tasks_empty_state_has_no_create_first_button(client_user, seed_
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'Nenhuma tarefa neste projeto' not in html
+    assert '<section class="tasks-empty-state">' not in html
     assert 'Adicionar nova tarefa' in html
     assert 'task-hub-add-row' in html
