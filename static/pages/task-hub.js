@@ -4542,8 +4542,34 @@
         openEditComment(btn.getAttribute('data-comment-id'), btn.getAttribute('data-comment-content'));
     });
 
-    // Filtro de projeto (combobox ABEP-like)
-    (function initHubProjectFilterCombobox() {
+    (function initTaskHubAutoFilters() {
+        var form = document.getElementById('filterTasksForm');
+        if (!form) return;
+
+        var submitTimer = null;
+
+        function submitFilters() {
+            if (submitTimer) {
+                window.clearTimeout(submitTimer);
+                submitTimer = null;
+            }
+            form.submit();
+        }
+
+        function submitFiltersDebounced(delay) {
+            if (submitTimer) window.clearTimeout(submitTimer);
+            submitTimer = window.setTimeout(function () {
+                submitTimer = null;
+                form.submit();
+            }, typeof delay === 'number' ? delay : 220);
+        }
+
+        Array.prototype.slice.call(form.querySelectorAll('select[name="area"], select[name="prioridade"], select[name="tipo"], select[name="status"], select[name="responsavel"]'))
+            .forEach(function (field) {
+                field.addEventListener('change', submitFilters);
+            });
+
+        // Filtro de projeto (combobox ABEP-like)
         var wrap = document.querySelector('.tasks-filters .project-search-wrap');
         var input = document.getElementById('filter_project_input');
         var hidden = document.getElementById('filter_project');
@@ -4584,10 +4610,17 @@
             hidden.value = value;
             input.value = label;
             hideDropdown();
+            submitFilters();
         }
 
         input.addEventListener('focus', showDropdown);
         input.addEventListener('input', showDropdown);
+        input.addEventListener('search', function () {
+            if ((input.value || '').trim()) return;
+            if (!hidden.value) return;
+            hidden.value = '';
+            submitFiltersDebounced(80);
+        });
 
         input.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {

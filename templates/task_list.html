@@ -20,7 +20,7 @@
                 {{ pagination.total }} tarefa{{ 's' if pagination.total != 1 else '' }}
             </span>
             <a
-                href="{{ url_for('main.list_tasks', area=selected_area, project=project_filter) if selected_area or project_filter else url_for('main.list_tasks') }}"
+                href="{{ active_url }}"
                 class="btn-task btn-task-archive"
                 title="Ver tarefas ativas"
                 aria-label="Ver tarefas ativas">
@@ -79,9 +79,48 @@
                     value="{{ search_query }}">
             </div>
 
+            <div class="tasks-field">
+                <label for="filter_prioridade" class="tasks-label ds-type-label">Prioridade</label>
+                <select id="filter_prioridade" name="prioridade" class="form-control tasks-input">
+                    <option value="">Todas</option>
+                    {% for option in prioridade_options %}
+                    <option value="{{ option.value }}" {% if option.value == selected_prioridade %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="tasks-field">
+                <label for="filter_tipo" class="tasks-label ds-type-label">Tipo</label>
+                <select id="filter_tipo" name="tipo" class="form-control tasks-input">
+                    <option value="">Todos</option>
+                    {% for option in tipo_options %}
+                    <option value="{{ option.value }}" {% if option.value == selected_tipo %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="tasks-field">
+                <label for="filter_status" class="tasks-label ds-type-label">Status</label>
+                <select id="filter_status" name="status" class="form-control tasks-input">
+                    <option value="">Todos</option>
+                    {% for option in status_options %}
+                    <option value="{{ option.value }}" {% if option.value == selected_status %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="tasks-field">
+                <label for="filter_responsavel" class="tasks-label ds-type-label">Responsável</label>
+                <select id="filter_responsavel" name="responsavel" class="form-control tasks-input">
+                    <option value="">Todos</option>
+                    {% for option in responsavel_options %}
+                    <option value="{{ option.value }}" {% if option.value == selected_responsavel %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
             <div class="tasks-filter-actions">
-                <button type="submit" class="btn-task btn-task-primary">Filtrar</button>
-                <a href="{{ url_for(list_endpoint) }}" class="btn-task btn-task-secondary">Limpar</a>
+                <a href="{{ clear_url }}" class="btn-task btn-task-secondary">Limpar</a>
             </div>
         </form>
     </section>
@@ -170,7 +209,7 @@
     <nav aria-label="Paginação de tarefas" class="tasks-pagination-wrap">
         <ul class="pagination tasks-pagination mb-0">
             <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for(list_endpoint, page=pagination.prev_num, area=selected_area, project=project_filter, search=search_query) if pagination.has_prev else '#' }}" aria-label="Página anterior">
+                <a class="page-link" href="{{ url_for(list_endpoint, page=pagination.prev_num, area=selected_area, project=project_filter, search=search_query, prioridade=selected_prioridade, tipo=selected_tipo, status=selected_status, responsavel=selected_responsavel) if pagination.has_prev else '#' }}" aria-label="Página anterior">
                     <span aria-hidden="true">«</span>
                 </a>
             </li>
@@ -178,7 +217,7 @@
             {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                 {% if page_num %}
                 <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for(list_endpoint, page=page_num, area=selected_area, project=project_filter, search=search_query) }}">{{ page_num }}</a>
+                    <a class="page-link" href="{{ url_for(list_endpoint, page=page_num, area=selected_area, project=project_filter, search=search_query, prioridade=selected_prioridade, tipo=selected_tipo, status=selected_status, responsavel=selected_responsavel) }}">{{ page_num }}</a>
                 </li>
                 {% else %}
                 <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -186,7 +225,7 @@
             {% endfor %}
 
             <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for(list_endpoint, page=pagination.next_num, area=selected_area, project=project_filter, search=search_query) if pagination.has_next else '#' }}" aria-label="Próxima página">
+                <a class="page-link" href="{{ url_for(list_endpoint, page=pagination.next_num, area=selected_area, project=project_filter, search=search_query, prioridade=selected_prioridade, tipo=selected_tipo, status=selected_status, responsavel=selected_responsavel) if pagination.has_next else '#' }}" aria-label="Próxima página">
                     <span aria-hidden="true">»</span>
                 </a>
             </li>
@@ -207,14 +246,28 @@
 {{ super() }}
 <script>
 (function () {
+    var form = document.getElementById('filterTasksForm');
     var wrap = document.querySelector('.tasks-filters .project-search-wrap');
     var input = document.getElementById('filter_project_input');
     var hidden = document.getElementById('filter_project');
     var dropdown = document.getElementById('filterProjectDropdown');
-    if (!wrap || !input || !hidden || !dropdown) return;
+    if (!form || !wrap || !input || !hidden || !dropdown) return;
 
     var options = Array.prototype.slice.call(dropdown.querySelectorAll('.project-search-option[data-value]'));
     var emptyState = dropdown.querySelector('[data-empty-state="1"]');
+    var submitTimer = null;
+
+    function submitFilters(delay) {
+        if (submitTimer) window.clearTimeout(submitTimer);
+        if (typeof delay === 'number' && delay > 0) {
+            submitTimer = window.setTimeout(function () {
+                submitTimer = null;
+                form.submit();
+            }, delay);
+            return;
+        }
+        form.submit();
+    }
 
     function filterOptions() {
         var q = (input.value || '').trim().toLowerCase();
@@ -245,10 +298,24 @@
         hidden.value = value;
         input.value = label;
         hideDropdown();
+        submitFilters();
     }
 
     input.addEventListener('focus', showDropdown);
     input.addEventListener('input', showDropdown);
+
+    Array.prototype.slice.call(form.querySelectorAll('select[name="area"], select[name="prioridade"], select[name="tipo"], select[name="status"], select[name="responsavel"]')).forEach(function (field) {
+        field.addEventListener('change', function () {
+            submitFilters();
+        });
+    });
+
+    var searchInput = document.getElementById('task_search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            submitFilters(260);
+        });
+    }
 
     input.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {

@@ -13,11 +13,17 @@ def test_tasks_hub_template_contains_view_toggle_and_project_filter(client_user)
         'id="taskItemsKanbanBoard"',
         'id="filter_project_input"',
         'id="filterProjectDropdown"',
+        'id="filter_prioridade"',
+        'id="filter_tipo"',
+        'id="filter_status"',
+        'id="filter_responsavel"',
         'class="task-hub-group"',
         'task-hub-add-row',
     ]
     for hook in required_hooks:
         assert hook in html
+
+    assert '>Filtrar<' not in html
 
 
 def test_tasks_hub_kanban_composer_requires_project_when_no_filter(client_user):

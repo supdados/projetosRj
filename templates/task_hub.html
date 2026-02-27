@@ -39,19 +39,23 @@
                 {% if selected_project %}
                 <input type="hidden" name="project" value="{{ selected_project }}">
                 {% endif %}
+                {% if selected_prioridade %}
+                <input type="hidden" name="prioridade" value="{{ selected_prioridade }}">
+                {% endif %}
+                {% if selected_tipo %}
+                <input type="hidden" name="tipo" value="{{ selected_tipo }}">
+                {% endif %}
+                {% if selected_status %}
+                <input type="hidden" name="status" value="{{ selected_status }}">
+                {% endif %}
+                {% if selected_responsavel %}
+                <input type="hidden" name="responsavel" value="{{ selected_responsavel }}">
+                {% endif %}
                 <button type="submit" class="btn-task btn-task-secondary" title="Arquivar finalizados">
                     <i class="fas fa-box-archive" aria-hidden="true"></i>
                     <span>Arquivar finalizados</span>
                 </button>
             </form>
-            {% set finalized_url = url_for('main.list_tasks_finalized') %}
-            {% if selected_area and selected_project %}
-                {% set finalized_url = url_for('main.list_tasks_finalized', area=selected_area, project=selected_project) %}
-            {% elif selected_project %}
-                {% set finalized_url = url_for('main.list_tasks_finalized', project=selected_project) %}
-            {% elif selected_area %}
-                {% set finalized_url = url_for('main.list_tasks_finalized', area=selected_area) %}
-            {% endif %}
             <a
                 href="{{ finalized_url }}"
                 class="btn-task btn-task-archive"
@@ -123,9 +127,48 @@
             </div>
             {% endif %}
 
+            <div class="tasks-field">
+                <label for="filter_prioridade" class="tasks-label ds-type-label">Prioridade</label>
+                <select id="filter_prioridade" name="prioridade" class="form-control tasks-input">
+                    <option value="">Todas</option>
+                    {% for option in prioridade_options %}
+                    <option value="{{ option.value }}" {% if option.value == selected_prioridade %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="tasks-field">
+                <label for="filter_tipo" class="tasks-label ds-type-label">Tipo</label>
+                <select id="filter_tipo" name="tipo" class="form-control tasks-input">
+                    <option value="">Todos</option>
+                    {% for option in tipo_options %}
+                    <option value="{{ option.value }}" {% if option.value == selected_tipo %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="tasks-field">
+                <label for="filter_status" class="tasks-label ds-type-label">Status</label>
+                <select id="filter_status" name="status" class="form-control tasks-input">
+                    <option value="">Todos</option>
+                    {% for option in status_options %}
+                    <option value="{{ option.value }}" {% if option.value == selected_status %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="tasks-field">
+                <label for="filter_responsavel" class="tasks-label ds-type-label">Responsável</label>
+                <select id="filter_responsavel" name="responsavel" class="form-control tasks-input">
+                    <option value="">Todos</option>
+                    {% for option in responsavel_options %}
+                    <option value="{{ option.value }}" {% if option.value == selected_responsavel %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
             <div class="tasks-filter-actions">
-                <button type="submit" class="btn-task btn-task-primary">Filtrar</button>
-                <a href="{{ url_for('main.project_tasks', project_id=project_locked_obj.id) if project_locked and project_locked_obj else url_for('main.list_tasks') }}" class="btn-task btn-task-secondary">Limpar</a>
+                <a href="{{ clear_url }}" class="btn-task btn-task-secondary">Limpar</a>
             </div>
         </form>
     </section>

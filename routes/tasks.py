@@ -30,6 +30,9 @@ VALID_TIPOS = {'bug', 'melhoria', 'duvida', 'outros'}
 LEGACY_TIPOS = {'implementacao'}
 VALID_STATUSES = {'programado', 'em_andamento', 'validacao', 'finalizado'}
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'}
+TASK_PRIORIDADE_ORDER = ('baixa', 'media', 'alta', 'urgente')
+TASK_TIPO_ORDER = ('bug', 'melhoria', 'duvida', 'outros', 'implementacao')
+TASK_STATUS_ORDER = ('programado', 'em_andamento', 'validacao', 'finalizado')
 
 
 def _get_upload_folder():
@@ -51,6 +54,27 @@ def _task_status_label(status):
         'finalizado': 'Finalizado',
     }
     return labels.get(status, status or '')
+
+
+def _task_prioridade_label(prioridade):
+    labels = {
+        'baixa': 'Baixa',
+        'media': 'Média',
+        'alta': 'Alta',
+        'urgente': 'Urgente',
+    }
+    return labels.get(prioridade, prioridade or '')
+
+
+def _task_tipo_label(tipo):
+    labels = {
+        'bug': 'Bug',
+        'melhoria': 'Melhoria',
+        'duvida': 'Dúvida',
+        'outros': 'Outros',
+        'implementacao': 'Implementação (legado)',
+    }
+    return labels.get(tipo, tipo or '')
 
 
 def _preview_text(value, max_length=90):
@@ -85,6 +109,150 @@ def _split_responsavel_names(raw_value):
 
 def _normalize_responsavel_value(raw_value):
     return ', '.join(_split_responsavel_names(raw_value))
+
+
+def _read_task_filter_values(source):
+    return {
+        'selected_area': (source.get('area') or '').strip(),
+        'project_filter': (source.get('project') or '').strip(),
+        'prioridade_filter': (source.get('prioridade') or '').strip(),
+        'tipo_filter': (source.get('tipo') or '').strip(),
+        'status_filter': (source.get('status') or '').strip(),
+        'responsavel_filter': _normalize_person_name(source.get('responsavel') or ''),
+    }
+
+
+def _merge_task_filter_values(*values_list):
+    merged = {
+        'selected_area': '',
+        'project_filter': '',
+        'prioridade_filter': '',
+        'tipo_filter': '',
+        'status_filter': '',
+        'responsavel_filter': '',
+    }
+
+    for values in values_list:
+        if not values:
+            continue
+        for key in merged:
+            value = values.get(key)
+            if value:
+                merged[key] = value
+
+    return merged
+
+
+def _ordered_task_filter_values(values, preferred_order):
+    present = {value for value in values if value}
+    ordered = [value for value in preferred_order if value in present]
+    ordered.extend(sorted((value for value in present if value not in preferred_order), key=lambda item: item.casefold()))
+    return ordered
+
+
+def _ensure_filter_option(options, selected_value, label):
+    if not selected_value:
+        return
+    if any(option['value'] == selected_value for option in options):
+        return
+    options.append({'value': selected_value, 'label': label})
+
+
+def _build_task_filter_options(tasks, selected_filters=None):
+    selected_filters = selected_filters or {}
+
+    prioridade_options = [
+        {'value': value, 'label': _task_prioridade_label(value)}
+        for value in _ordered_task_filter_values(
+            [task.prioridade for task in tasks if task.prioridade],
+            TASK_PRIORIDADE_ORDER,
+        )
+    ]
+    tipo_options = [
+        {'value': value, 'label': _task_tipo_label(value)}
+        for value in _ordered_task_filter_values(
+            [task.tipo_pedido for task in tasks if task.tipo_pedido],
+            TASK_TIPO_ORDER,
+        )
+    ]
+    status_options = [
+        {'value': value, 'label': _task_status_label(value)}
+        for value in _ordered_task_filter_values(
+            [task.status for task in tasks if task.status],
+            TASK_STATUS_ORDER,
+        )
+    ]
+
+    responsavel_values = []
+    for task in tasks:
+        responsavel_values.extend(_split_responsavel_names(task.responsavel or ''))
+    responsavel_options = [
+        {'value': value, 'label': value}
+        for value in sorted(set(responsavel_values), key=lambda item: item.casefold())
+    ]
+
+    _ensure_filter_option(
+        prioridade_options,
+        selected_filters.get('prioridade_filter', ''),
+        _task_prioridade_label(selected_filters.get('prioridade_filter', '')),
+    )
+    _ensure_filter_option(
+        tipo_options,
+        selected_filters.get('tipo_filter', ''),
+        _task_tipo_label(selected_filters.get('tipo_filter', '')),
+    )
+    _ensure_filter_option(
+        status_options,
+        selected_filters.get('status_filter', ''),
+        _task_status_label(selected_filters.get('status_filter', '')),
+    )
+    _ensure_filter_option(
+        responsavel_options,
+        selected_filters.get('responsavel_filter', ''),
+        selected_filters.get('responsavel_filter', ''),
+    )
+
+    return {
+        'prioridade_options': prioridade_options,
+        'tipo_options': tipo_options,
+        'status_options': status_options,
+        'responsavel_options': responsavel_options,
+    }
+
+
+def _build_task_listing_url(
+    endpoint,
+    *,
+    selected_area='',
+    project_filter='',
+    prioridade_filter='',
+    tipo_filter='',
+    status_filter='',
+    responsavel_filter='',
+    search_query='',
+    page=None,
+    project_id=None,
+):
+    kwargs = {}
+    if project_id is not None:
+        kwargs['project_id'] = project_id
+    if selected_area:
+        kwargs['area'] = selected_area
+    if project_filter:
+        kwargs['project'] = project_filter
+    if prioridade_filter:
+        kwargs['prioridade'] = prioridade_filter
+    if tipo_filter:
+        kwargs['tipo'] = tipo_filter
+    if status_filter:
+        kwargs['status'] = status_filter
+    if responsavel_filter:
+        kwargs['responsavel'] = responsavel_filter
+    if search_query:
+        kwargs['search'] = search_query
+    if page is not None:
+        kwargs['page'] = page
+    return url_for(endpoint, **kwargs)
 
 
 def _format_invalid_responsavel_message(invalid_names):
@@ -241,6 +409,10 @@ def _build_visible_tasks_query(
     include_archived=False,
     selected_area='',
     project_filter='',
+    prioridade_filter='',
+    tipo_filter='',
+    status_filter='',
+    responsavel_filter='',
     include_relations=True,
 ):
     area_scope, normalized_area = _resolve_task_hub_area_scope(selected_area)
@@ -276,6 +448,19 @@ def _build_visible_tasks_query(
             except (TypeError, ValueError):
                 return query.filter(db.false())
             query = query.filter(Task.project_id == project_id)
+
+    if prioridade_filter:
+        query = query.filter(Task.prioridade == prioridade_filter)
+
+    if tipo_filter:
+        query = query.filter(Task.tipo_pedido == tipo_filter)
+
+    if status_filter:
+        query = query.filter(Task.status == status_filter)
+
+    if responsavel_filter:
+        pattern = f"%{responsavel_filter.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')}%"
+        query = query.filter(Task.responsavel.ilike(pattern, escape='\\'))
 
     query = query.filter(Task.is_archived.is_(bool(include_archived)))
 
@@ -370,8 +555,13 @@ def _get_projects_for_task_filter(selected_area=''):
 
 
 def _render_task_hub(locked_project=None, template_name='task_hub.html'):
-    selected_area = (request.args.get('area') or '').strip()
-    project_filter = (request.args.get('project') or '').strip()
+    filter_values = _read_task_filter_values(request.args)
+    selected_area = filter_values['selected_area']
+    project_filter = filter_values['project_filter']
+    prioridade_filter = filter_values['prioridade_filter']
+    tipo_filter = filter_values['tipo_filter']
+    status_filter = filter_values['status_filter']
+    responsavel_filter = filter_values['responsavel_filter']
 
     if locked_project is not None:
         selected_area = ''
@@ -381,6 +571,10 @@ def _render_task_hub(locked_project=None, template_name='task_hub.html'):
         include_archived=False,
         selected_area=selected_area,
         project_filter=project_filter,
+        prioridade_filter=prioridade_filter,
+        tipo_filter=tipo_filter,
+        status_filter=status_filter,
+        responsavel_filter=responsavel_filter,
     ).all()
     groups = _group_hub_tasks_by_project(tasks)
     if locked_project is not None and not groups:
@@ -419,9 +613,38 @@ def _render_task_hub(locked_project=None, template_name='task_hub.html'):
     if locked_project is not None and not selected_project_label:
         selected_project_label = locked_project.titulo
 
+    attribute_scope_tasks = _build_visible_tasks_query(
+        include_archived=False,
+        selected_area=selected_area,
+        project_filter=project_filter,
+        include_relations=False,
+    ).all()
+    filter_options = _build_task_filter_options(
+        attribute_scope_tasks,
+        selected_filters={
+            'prioridade_filter': prioridade_filter,
+            'tipo_filter': tipo_filter,
+            'status_filter': status_filter,
+            'responsavel_filter': responsavel_filter,
+        },
+    )
+
     user_areas = g.user.get_areas()
     show_area_selector = (locked_project is None) and (g.user.is_admin or len(user_areas) > 1)
     area_options = _build_task_hub_area_options() if show_area_selector else []
+    clear_url = _build_task_listing_url(
+        'main.project_tasks' if locked_project else 'main.list_tasks',
+        project_id=locked_project.id if locked_project else None,
+    )
+    finalized_url = _build_task_listing_url(
+        'main.list_tasks_finalized',
+        selected_area=selected_area,
+        project_filter=project_filter,
+        prioridade_filter=prioridade_filter,
+        tipo_filter=tipo_filter,
+        status_filter=status_filter,
+        responsavel_filter=responsavel_filter,
+    )
 
     return render_template(
         template_name,
@@ -431,10 +654,20 @@ def _render_task_hub(locked_project=None, template_name='task_hub.html'):
         selected_project_label=selected_project_label,
         selected_area=selected_area,
         area_options=area_options,
+        selected_prioridade=prioridade_filter,
+        selected_tipo=tipo_filter,
+        selected_status=status_filter,
+        selected_responsavel=responsavel_filter,
+        prioridade_options=filter_options['prioridade_options'],
+        tipo_options=filter_options['tipo_options'],
+        status_options=filter_options['status_options'],
+        responsavel_options=filter_options['responsavel_options'],
         show_area_selector=show_area_selector,
         total_items=len(tasks),
         project_locked=bool(locked_project),
         project_locked_obj=locked_project,
+        clear_url=clear_url,
+        finalized_url=finalized_url,
     )
 
 
@@ -472,11 +705,23 @@ def _redirect_back_or(default_endpoint, **kwargs):
     return redirect(url_for(default_endpoint, **kwargs))
 
 
-def _build_archived_listing_query(project_filter='', search_query='', selected_area=''):
+def _build_archived_listing_query(
+    project_filter='',
+    search_query='',
+    selected_area='',
+    prioridade_filter='',
+    tipo_filter='',
+    status_filter='',
+    responsavel_filter='',
+):
     query = _build_visible_tasks_query(
         include_archived=True,
         selected_area=selected_area,
         project_filter=project_filter,
+        prioridade_filter=prioridade_filter,
+        tipo_filter=tipo_filter,
+        status_filter=status_filter,
+        responsavel_filter=responsavel_filter,
         include_relations=True,
     )
 
@@ -487,8 +732,13 @@ def _build_archived_listing_query(project_filter='', search_query='', selected_a
 
 
 def _render_tasks_listing_finalized():
-    project_filter = (request.args.get('project') or '').strip()
-    selected_area = (request.args.get('area') or '').strip()
+    filter_values = _read_task_filter_values(request.args)
+    project_filter = filter_values['project_filter']
+    selected_area = filter_values['selected_area']
+    prioridade_filter = filter_values['prioridade_filter']
+    tipo_filter = filter_values['tipo_filter']
+    status_filter = filter_values['status_filter']
+    responsavel_filter = filter_values['responsavel_filter']
     search_query = (request.args.get('search', '') or '').strip()
     page = request.args.get('page', 1, type=int) or 1
     if page < 1:
@@ -498,6 +748,10 @@ def _render_tasks_listing_finalized():
         project_filter=project_filter,
         search_query=search_query,
         selected_area=selected_area,
+        prioridade_filter=prioridade_filter,
+        tipo_filter=tipo_filter,
+        status_filter=status_filter,
+        responsavel_filter=responsavel_filter,
     )
 
     pagination = query.paginate(page=page, per_page=20, error_out=False)
@@ -507,12 +761,20 @@ def _render_tasks_listing_finalized():
         include_archived=False,
         selected_area=selected_area,
         project_filter=project_filter,
+        prioridade_filter=prioridade_filter,
+        tipo_filter=tipo_filter,
+        status_filter=status_filter,
+        responsavel_filter=responsavel_filter,
         include_relations=False,
     ).count()
     finalized_count = _build_visible_tasks_query(
         include_archived=True,
         selected_area=selected_area,
         project_filter=project_filter,
+        prioridade_filter=prioridade_filter,
+        tipo_filter=tipo_filter,
+        status_filter=status_filter,
+        responsavel_filter=responsavel_filter,
         include_relations=False,
     ).count()
 
@@ -541,9 +803,35 @@ def _render_tasks_listing_finalized():
     if not selected_project_label and project_filter == 'sem_projeto':
         selected_project_label = 'Sem projeto'
 
+    attribute_scope_tasks = _build_visible_tasks_query(
+        include_archived=True,
+        selected_area=selected_area,
+        project_filter=project_filter,
+        include_relations=False,
+    ).all()
+    filter_options = _build_task_filter_options(
+        attribute_scope_tasks,
+        selected_filters={
+            'prioridade_filter': prioridade_filter,
+            'tipo_filter': tipo_filter,
+            'status_filter': status_filter,
+            'responsavel_filter': responsavel_filter,
+        },
+    )
+
     user_areas = g.user.get_areas()
     show_area_selector = g.user.is_admin or len(user_areas) > 1
     area_options = _build_task_hub_area_options(include_archived=True) if show_area_selector else []
+    active_url = _build_task_listing_url(
+        'main.list_tasks',
+        selected_area=selected_area,
+        project_filter=project_filter,
+        prioridade_filter=prioridade_filter,
+        tipo_filter=tipo_filter,
+        status_filter=status_filter,
+        responsavel_filter=responsavel_filter,
+    )
+    clear_url = _build_task_listing_url('main.list_tasks_finalized')
 
     return render_template(
         'task_list.html',
@@ -556,6 +844,14 @@ def _render_tasks_listing_finalized():
         area_options=area_options,
         show_area_selector=show_area_selector,
         search_query=search_query,
+        selected_prioridade=prioridade_filter,
+        selected_tipo=tipo_filter,
+        selected_status=status_filter,
+        selected_responsavel=responsavel_filter,
+        prioridade_options=filter_options['prioridade_options'],
+        tipo_options=filter_options['tipo_options'],
+        status_options=filter_options['status_options'],
+        responsavel_options=filter_options['responsavel_options'],
         show_finalized=True,
         list_endpoint='main.list_tasks_finalized',
         index_offset=index_offset,
@@ -564,6 +860,8 @@ def _render_tasks_listing_finalized():
         end_index=end_index,
         active_count=active_count,
         finalized_count=finalized_count,
+        active_url=active_url,
+        clear_url=clear_url,
     )
 
 
@@ -1111,13 +1409,25 @@ def archive_finalized_tasks():
     )
 
     payload = request.get_json(silent=True) or {}
-    selected_area = (request.form.get('area') or payload.get('area') or '').strip()
-    project_filter = (request.form.get('project') or payload.get('project') or '').strip()
+    filter_values = _merge_task_filter_values(
+        _read_task_filter_values(payload),
+        _read_task_filter_values(request.form),
+    )
+    selected_area = filter_values['selected_area']
+    project_filter = filter_values['project_filter']
+    prioridade_filter = filter_values['prioridade_filter']
+    tipo_filter = filter_values['tipo_filter']
+    status_filter = filter_values['status_filter']
+    responsavel_filter = filter_values['responsavel_filter']
 
     query = _build_visible_tasks_query(
         include_archived=False,
         selected_area=selected_area,
         project_filter=project_filter,
+        prioridade_filter=prioridade_filter,
+        tipo_filter=tipo_filter,
+        status_filter=status_filter,
+        responsavel_filter=responsavel_filter,
         include_relations=False,
     ).filter(Task.status == 'finalizado')
 
@@ -1145,6 +1455,14 @@ def archive_finalized_tasks():
             query_args['area'] = selected_area
         if project_filter:
             query_args['project'] = project_filter
+        if prioridade_filter:
+            query_args['prioridade'] = prioridade_filter
+        if tipo_filter:
+            query_args['tipo'] = tipo_filter
+        if status_filter:
+            query_args['status'] = status_filter
+        if responsavel_filter:
+            query_args['responsavel'] = responsavel_filter
         return redirect(url_for('main.list_tasks_finalized', **query_args))
     except Exception as e:
         db.session.rollback()
