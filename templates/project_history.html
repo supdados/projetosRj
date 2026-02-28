@@ -65,7 +65,7 @@
                 {% set action_label = 'Evento' %}
                 {% set tone = 'neutral' %}
 
-                {% if action_type in ['create', 'edit', 'delete', 'finalize'] %}
+                {% if action_type in ['create', 'edit', 'delete', 'finalize', 'reactivate'] %}
                     {% set category = 'project' %}
                     {% if action_type == 'create' %}
                         {% set action_label = 'Criação de projeto' %}
@@ -79,6 +79,9 @@
                     {% elif action_type == 'finalize' %}
                         {% set action_label = 'Conclusão de projeto' %}
                         {% set tone = 'success' %}
+                    {% elif action_type == 'reactivate' %}
+                        {% set action_label = 'Reativação de projeto' %}
+                        {% set tone = 'primary' %}
                     {% endif %}
                 {% elif action_type in ['add_etapa', 'edit_etapa', 'edit_etapa_inline', 'delete_etapa', 'toggle_iniciada', 'toggle_done', 'import_model', 'edit_etapa_comentario', 'reorder_etapas', 'cascade_update'] %}
                     {% set category = 'stage' %}

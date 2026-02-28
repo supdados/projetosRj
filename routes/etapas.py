@@ -30,6 +30,19 @@ def add_etapa(project_id):
         flash('A descrição da etapa é obrigatória.', 'warning')
         return redirect(url_for('main.project_detail', project_id=project_id))
 
+    reactivate_project = (request.form.get('reactivate_project') or '').strip().lower() in {'1', 'true', 'on', 'sim'}
+    if project.status == 'Finalizado' and not reactivate_project:
+        message = 'Ao adicionar uma nova etapa, o projeto voltará para o status Vigente. Deseja continuar?'
+        if ajax_request:
+            return jsonify({
+                'success': False,
+                'message': message,
+                'confirmation_required': True,
+                'project_status': project.status,
+            }), 409
+        flash(message, 'warning')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+
     data_inicio_str = request.form.get('etapa_data_inicio')
     data_fim_str = request.form.get('etapa_data_fim')
     responsavel = (request.form.get('etapa_responsavel') or '').strip() or None
@@ -37,6 +50,7 @@ def add_etapa(project_id):
     etapa_iniciada = request.form.get('etapa_iniciada') == 'on'
     etapa_concluida = request.form.get('etapa_done') == 'on'
     validation_warning = None
+    project_was_reactivated = False
 
     if not etapa_iniciada and etapa_concluida:
         validation_warning = 'Uma etapa não pode ser marcada como concluída sem ser iniciada.'
@@ -70,6 +84,16 @@ def add_etapa(project_id):
     db.session.add(new_etapa)
     
     try:
+        if project.status == 'Finalizado':
+            project.status = 'Vigente'
+            project_was_reactivated = True
+
+            log_project_action(
+                project_id=project.id,
+                action_type='reactivate',
+                description=f'Reativou o projeto ao adicionar a etapa "{descricao}"'
+            )
+
         # Registrar no histórico
         log_project_action(
             project_id=project.id,
@@ -79,12 +103,19 @@ def add_etapa(project_id):
 
         db.session.commit()
 
+        success_message = 'Etapa adicionada com sucesso!'
+        if project_was_reactivated:
+            success_message = 'Etapa adicionada com sucesso! O projeto voltou para Vigente.'
+
         if ajax_request:
             return jsonify(
                 {
                     'success': True,
-                    'message': 'Etapa adicionada com sucesso!',
+                    'message': success_message,
                     'warning': validation_warning,
+                    'project_status': project.status,
+                    'project_reactivated': project_was_reactivated,
+                    'reload_page': project_was_reactivated,
                     'etapa': {
                         'id': new_etapa.id,
                         'descricao': new_etapa.descricao,
@@ -107,7 +138,7 @@ def add_etapa(project_id):
         flash('Erro ao adicionar etapa.', 'danger')
         return redirect(url_for('main.project_detail', project_id=project_id))
 
-    flash('Etapa adicionada com sucesso!', 'success')
+    flash(success_message, 'success')
     return redirect(url_for('main.project_detail', project_id=project_id))
 
 @main_bp.route('/project/<int:project_id>/import_model', methods=['POST'])

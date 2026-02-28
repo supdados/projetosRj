@@ -314,7 +314,7 @@
                 </div>
             </div>
         </div>
-        <div class="card-footer text-end">
+        <div class="card-footer text-end" id="projectActionsFooter">
             <a href="{{ url_for('main.project_history', project_id=project.id) }}" class="btn btn-sm btn-history">
                 <i class="fas fa-history me-1"></i>Ver Histórico
             </a>
@@ -686,6 +686,22 @@
     </div>
 </div>
 
+<div id="reactivate-project-confirm-modal" class="confirm-modal-overlay" aria-hidden="true">
+    <div class="confirm-modal confirm-modal-reactivate" role="dialog" aria-modal="true" aria-labelledby="reactivate-project-confirm-title">
+        <div class="confirm-modal-reactivate__icon" aria-hidden="true">
+            <i class="fas fa-rotate-left"></i>
+        </div>
+        <h5 id="reactivate-project-confirm-title">Reativar projeto ao criar etapa?</h5>
+        <p class="confirm-modal-reactivate__body">
+            Este projeto está finalizado. Se você adicionar uma nova etapa, ele voltará automaticamente para o status <strong>Vigente</strong>.
+        </p>
+        <div class="confirm-modal-buttons">
+            <button id="reactivate-project-cancel-btn" class="btn btn-secondary">Não, cancelar</button>
+            <button id="reactivate-project-confirm-btn" class="btn btn-primary">Sim, adicionar etapa</button>
+        </div>
+    </div>
+</div>
+
 <!-- Celebração visual da conclusão -->
 <div class="project-conclude-celebration" id="projectConcludeCelebration" aria-hidden="true">
     <div class="project-conclude-celebration__backdrop"></div>
@@ -737,9 +753,18 @@
         const inlineDoneToggle = inlineAddFormRow
             ? inlineAddFormRow.querySelector('.inline-status-toggle-done')
             : null;
+        const projectStatusField = document.querySelector('[data-field="status"]');
+        const projectActionsFooter = document.getElementById('projectActionsFooter');
+        const reactivateProjectModal = document.getElementById('reactivate-project-confirm-modal');
+        const reactivateProjectConfirmBtn = document.getElementById('reactivate-project-confirm-btn');
+        const reactivateProjectCancelBtn = document.getElementById('reactivate-project-cancel-btn');
         const projectIdPrefix = "{{ project.id }}";
+        let currentProjectStatus = projectStatusField
+            ? (projectStatusField.dataset.value || '').trim()
+            : "{{ project.status }}";
         let inlineComposerSaving = false;
         let inlineDatePickerOpening = false;
+        let reactivateProjectModalResolver = null;
 
         function escapeHtml(value) {
             return String(value || '')
@@ -782,6 +807,86 @@
                 input.value = '';
                 syncInlineDateEmptyState(input);
             });
+        }
+
+        function resolveReactivateProjectModal(confirmed) {
+            if (!reactivateProjectModalResolver) {
+                return;
+            }
+
+            const resolver = reactivateProjectModalResolver;
+            reactivateProjectModalResolver = null;
+            reactivateProjectModal.style.display = 'none';
+            reactivateProjectModal.setAttribute('aria-hidden', 'true');
+            resolver(Boolean(confirmed));
+        }
+
+        function promptReactivateProjectConfirmation() {
+            if (!reactivateProjectModal) {
+                return Promise.resolve(window.confirm('Ao adicionar uma nova etapa, o projeto voltará para Vigente. Deseja continuar?'));
+            }
+
+            reactivateProjectModal.style.display = 'flex';
+            reactivateProjectModal.setAttribute('aria-hidden', 'false');
+
+            return new Promise((resolve) => {
+                reactivateProjectModalResolver = resolve;
+                requestAnimationFrame(() => {
+                    if (reactivateProjectConfirmBtn) {
+                        reactivateProjectConfirmBtn.focus();
+                    }
+                });
+            });
+        }
+
+        function buildProjectStatusBadge(statusValue) {
+            if (statusValue === 'Vigente') {
+                return '<span class="badge bg-success text-uppercase"><i class="fas fa-check-circle me-1"></i>Vigente</span>';
+            }
+            if (statusValue === 'Finalizado') {
+                return '<span class="badge bg-secondary text-uppercase"><i class="fas fa-flag-checkered me-1"></i>Finalizado</span>';
+            }
+            if (statusValue === 'Suspenso') {
+                return '<span class="badge bg-warning text-dark text-uppercase"><i class="fas fa-pause-circle me-1"></i>Suspenso</span>';
+            }
+            return `<span class="badge bg-light text-dark">${escapeHtml(statusValue || 'Não definido')}</span>`;
+        }
+
+        function updateProjectStatusDisplay(statusValue) {
+            if (!projectStatusField) {
+                return;
+            }
+
+            projectStatusField.dataset.value = statusValue || '';
+            projectStatusField.innerHTML = buildProjectStatusBadge(statusValue);
+            currentProjectStatus = statusValue || '';
+        }
+
+        function ensureConcludeProjectButton() {
+            if (document.getElementById('btn-concluir-projeto') || !projectActionsFooter) {
+                return;
+            }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url_for("main.concluir_project", project_id=project.id) }}';
+            form.className = 'inline-form';
+            form.id = 'concludeProjectForm';
+
+            const totalEtapas = tbody ? tbody.querySelectorAll('tr.etapa-draggable-row').length : 0;
+            form.innerHTML = `
+                <button type="submit" id="btn-concluir-projeto" class="btn btn-success btn-sm btn-conclude-project"
+                    disabled
+                    data-total-etapas="${totalEtapas}"
+                    data-project-title="{{ project.titulo|e }}"
+                    title="Todas as etapas devem estar iniciadas e concluídas">
+                    <i class="fas fa-check-circle me-1"></i>Concluir Projeto
+                </button>
+            `;
+
+            projectActionsFooter.appendChild(form);
+            bindConcludeProjectControls();
+            verificarEAtualizarBotaoConcluir();
         }
 
         function resizeInlineDescricaoTextarea() {
@@ -1061,6 +1166,16 @@
                 return;
             }
 
+            const shouldReactivateProject = currentProjectStatus === 'Finalizado';
+            if (shouldReactivateProject && !options.reactivateProject) {
+                const confirmed = await promptReactivateProjectConfirmation();
+                if (!confirmed) {
+                    closeInlineEtapaComposer(true);
+                    showAjaxFlashMessage('A etapa não foi salva e o projeto permaneceu finalizado.', 'info');
+                    return;
+                }
+            }
+
             const originalSubmitHtml = inlineAddSubmitBtn ? inlineAddSubmitBtn.innerHTML : '';
             inlineComposerSaving = true;
             if (inlineAddSubmitBtn) {
@@ -1072,6 +1187,11 @@
             }
 
             try {
+                const formData = new FormData(inlineAddForm);
+                if (shouldReactivateProject) {
+                    formData.set('reactivate_project', '1');
+                }
+
                 const response = await fetch(inlineAddForm.action, {
                     method: 'POST',
                     headers: {
@@ -1079,7 +1199,7 @@
                         'Accept': 'application/json',
                         'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
                     },
-                    body: new FormData(inlineAddForm)
+                    body: formData
                 });
 
                 let data = null;
@@ -1090,8 +1210,20 @@
                 }
 
                 if (!response.ok || !data || !data.success || !data.etapa) {
+                    if (response.status === 409 && data?.confirmation_required) {
+                        showAjaxFlashMessage(data.message || 'Confirmação necessária para reativar o projeto.', 'warning');
+                        return;
+                    }
                     showAjaxFlashMessage(data?.message || 'Erro ao adicionar etapa.', 'danger');
                     return;
+                }
+
+                if (data.project_status) {
+                    updateProjectStatusDisplay(data.project_status);
+                }
+
+                if (data.project_reactivated) {
+                    ensureConcludeProjectButton();
                 }
 
                 appendEtapaRow(data.etapa);
@@ -1146,6 +1278,32 @@
                 closeInlineEtapaComposer(true);
             });
         }
+
+        if (reactivateProjectCancelBtn) {
+            reactivateProjectCancelBtn.addEventListener('click', function () {
+                resolveReactivateProjectModal(false);
+            });
+        }
+
+        if (reactivateProjectConfirmBtn) {
+            reactivateProjectConfirmBtn.addEventListener('click', function () {
+                resolveReactivateProjectModal(true);
+            });
+        }
+
+        if (reactivateProjectModal) {
+            reactivateProjectModal.addEventListener('click', function (event) {
+                if (event.target === reactivateProjectModal) {
+                    resolveReactivateProjectModal(false);
+                }
+            });
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && reactivateProjectModalResolver) {
+                resolveReactivateProjectModal(false);
+            }
+        });
 
         if (inlineAddForm) {
             inlineAddForm.addEventListener('submit', function (event) {
@@ -1828,8 +1986,8 @@
             }
         }
 
-        const concludeProjectForm = document.getElementById('concludeProjectForm');
-        const concludeProjectButton = document.getElementById('btn-concluir-projeto');
+        let concludeProjectForm = document.getElementById('concludeProjectForm');
+        let concludeProjectButton = document.getElementById('btn-concluir-projeto');
         const concludeCelebrationEl = document.getElementById('projectConcludeCelebration');
         const concludeCelebrationTitleEl = concludeCelebrationEl
             ? concludeCelebrationEl.querySelector('[data-celebration-title]')
@@ -1842,7 +2000,39 @@
         let concludeRequestInFlight = false;
         let concludeAudioContext = null;
         let concludeCelebrationTimeoutId = null;
-        const concludeButtonDefaultHtml = concludeProjectButton ? concludeProjectButton.innerHTML : '';
+        let concludeButtonDefaultHtml = concludeProjectButton ? concludeProjectButton.innerHTML : '<i class="fas fa-check-circle me-1"></i>Concluir Projeto';
+
+        function bindConcludeProjectControls() {
+            concludeProjectForm = document.getElementById('concludeProjectForm');
+            concludeProjectButton = document.getElementById('btn-concluir-projeto');
+
+            if (!concludeProjectForm || !concludeProjectButton) {
+                return;
+            }
+
+            concludeButtonDefaultHtml = concludeProjectButton.innerHTML || '<i class="fas fa-check-circle me-1"></i>Concluir Projeto';
+
+            if (concludeProjectButton.dataset.boundConclude === 'true') {
+                return;
+            }
+
+            concludeProjectButton.addEventListener('pointerdown', function () {
+                primeConcludeAudioContext();
+            }, { passive: true });
+
+            concludeProjectForm.addEventListener('submit', function (event) {
+                if (concludeRequestInFlight || concludeProjectButton.disabled) {
+                    event.preventDefault();
+                    return;
+                }
+
+                event.preventDefault();
+                primeConcludeAudioContext();
+                submitConcludeProjectWithCelebration();
+            });
+
+            concludeProjectButton.dataset.boundConclude = 'true';
+        }
 
         function getConcludeAudioContext() {
             if (concludeAudioContext) {
@@ -2131,24 +2321,7 @@
             }
         }
 
-        if (concludeProjectButton) {
-            concludeProjectButton.addEventListener('pointerdown', function () {
-                primeConcludeAudioContext();
-            }, { passive: true });
-        }
-
-        if (concludeProjectForm && concludeProjectButton) {
-            concludeProjectForm.addEventListener('submit', function (event) {
-                if (concludeRequestInFlight || concludeProjectButton.disabled) {
-                    event.preventDefault();
-                    return;
-                }
-
-                event.preventDefault();
-                primeConcludeAudioContext();
-                submitConcludeProjectWithCelebration();
-            });
-        }
+        bindConcludeProjectControls();
 
         function updateIniciadaButton(button, iniciada) {
             const badge = button.querySelector('.badge');
