@@ -1,0 +1,184 @@
+@media (min-width: 992px) {
+    .task-detail-v2 .task-item-header,
+    .task-detail-v2 .task-item-line,
+    .task-detail-v2 .task-item-add-line {
+        grid-template-columns: minmax(0, 1fr) var(--td-col-prioridade) var(--td-col-tipo) var(--td-col-status) var(--td-col-owner) var(--td-col-actions);
+    }
+}
+
+@media (max-width: 991px) {
+    .task-detail-v2 {
+        padding: 1rem;
+    }
+
+    .task-detail-v2 {
+        --td-col-prioridade: 98px;
+        --td-col-tipo: 106px;
+        --td-col-status: 126px;
+        --td-col-owner: 172px;
+        --td-col-actions: 116px;
+        --td-kanban-card-slot-height: 122px;
+    }
+
+    .task-detail-v2 .task-title-refined {
+        font-size: 1.12rem;
+    }
+
+    .task-detail-v2 .task-title-and-project {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.34rem;
+    }
+
+    .task-detail-v2 .task-header-edit-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .task-detail-v2 .task-header-project-search,
+    .task-detail-v2 .task-edit-titulo-input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .task-detail-v2 .task-header-actions-refined {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .task-detail-v2 .items-header-clean {
+        padding: 0.76rem 0.8rem;
+    }
+
+    .task-detail-v2 .items-header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .task-detail-v2 .task-items-kanban-board {
+        display: flex;
+        overflow-x: auto;
+        gap: 0.56rem;
+        padding-bottom: 0.16rem;
+    }
+
+    .task-detail-v2 .task-items-kanban-column {
+        min-width: min(78vw, 300px);
+        min-height: 320px;
+    }
+
+    .task-detail-v2 .task-item-drawer {
+        width: min(430px, 100vw);
+    }
+}
+
+@media (max-width: 768px) {
+    .task-detail-v2 {
+        padding: 0.86rem 0.76rem;
+    --td-col-prioridade: 94px;
+        --td-col-tipo: 102px;
+        --td-col-status: 122px;
+        --td-col-owner: 160px;
+        --td-col-actions: 110px;
+        --td-kanban-card-slot-height: 118px;
+    }
+
+    .task-detail-v2 .task-item-header-row,
+    .task-detail-v2 .task-item-row,
+    .task-detail-v2 .task-item-add-row {
+        min-width: 1080px;
+    }
+
+    .task-detail-v2 .task-item-main,
+    .task-detail-v2 .task-item-add-main {
+        padding: 0.56rem 0.62rem;
+    }
+
+    .task-detail-v2 .task-items-list {
+        border-radius: var(--td-radius-md);
+    }
+
+    .task-detail-v2 .task-items-kanban-column {
+        min-width: min(85vw, 280px);
+    }
+
+    .task-detail-v2 .task-item-drawer {
+        width: 100vw;
+        border-left: 0;
+    }
+
+    .task-detail-v2 .task-item-drawer-comments-list {
+        max-height: 34vh;
+    }
+}
+
+@media (max-width: 576px) {
+    .task-detail-v2 {
+        padding: 0.72rem 0.58rem;
+        border-radius: var(--td-radius-md);
+    }
+
+    .task-detail-v2 .task-view-top-row,
+    .task-detail-v2 .items-header-clean {
+        gap: 0.5rem;
+    }
+
+    .task-detail-v2 .items-header-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .task-detail-v2 .task-items-view-toggle {
+        width: 100%;
+    }
+
+    .task-detail-v2 .task-items-view-label {
+        font-size: var(--ds-font-size-xs);
+    }
+
+    .task-detail-v2 .task-item-header-row,
+    .task-detail-v2 .task-item-row,
+    .task-detail-v2 .task-item-add-row {
+        min-width: 800px;
+    }
+
+    .task-detail-v2 .btn-task-action,
+    .task-detail-v2 .btn-new-clean {
+        width: 100%;
+    }
+
+    .task-detail-v2 .task-header-actions-refined {
+        width: 100%;
+    }
+
+    .task-detail-v2 .task-header-actions-refined .btn-task-action {
+        flex: 1;
+    }
+
+    .task-detail-v2 .task-items-kanban-column {
+        min-width: min(88vw, 252px);
+    }
+
+    .task-detail-v2 .task-item-drawer-comment-form-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .task-detail-v2 .task-item-drawer-comment-form button[type="submit"] {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .task-detail-v2 .task-item-drawer-header,
+    .task-detail-v2 .task-item-drawer-body {
+        padding-left: 0.72rem;
+        padding-right: 0.72rem;
+    }
+
+    .task-detail-v2-modal .modal-header-clean,
+    .task-detail-v2-modal .modal-body-clean,
+    .task-detail-v2-modal .modal-footer-clean {
+        padding-left: 0.82rem;
+        padding-right: 0.82rem;
+    }
+}

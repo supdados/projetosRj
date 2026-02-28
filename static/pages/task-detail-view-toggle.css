@@ -1,0 +1,138 @@
+.task-detail-v2 .task-items-view-toggle {
+    --td-view-toggle-width: 184px;
+    --td-view-toggle-height: 36px;
+    --td-toggle-base-fill: #ccdff2;
+    --td-toggle-active-start: #0e6aa8;
+    --td-toggle-active-end: #084f7e;
+    --td-toggle-inactive-start: #e0edf8;
+    --td-toggle-inactive-end: #d2e4f4;
+    --td-toggle-divider-stroke: rgba(10, 74, 130, 0.16);
+    --td-toggle-outer-border: rgba(10, 74, 130, 0.22);
+    --td-toggle-inner-border: rgba(255, 255, 255, 0.32);
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: stretch;
+    width: min(100%, var(--td-view-toggle-width));
+    height: var(--td-view-toggle-height);
+    padding: 0;
+    border: none;
+    background: transparent;
+    isolation: isolate;
+    overflow: visible;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.task-detail-v2 .task-items-view-toggle::before {
+    content: none;
+}
+
+.task-detail-v2 .task-items-view-toggle-art {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.task-detail-v2 .task-items-view-toggle-labels {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 0;
+}
+
+.task-detail-v2 .task-items-view-toggle-refined .task-items-view-btn {
+    flex: 1 1 50%;
+    width: 50%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.task-detail-v2 .task-items-view-toggle-refined .task-items-view-btn:focus {
+    outline: none;
+}
+
+.task-detail-v2 .task-items-view-btn {
+    transition: transform 0.1s ease;
+}
+
+.task-detail-v2 .task-items-view-btn:active {
+    transform: scale(0.985);
+}
+
+.task-detail-v2 .task-items-view-label {
+    width: 100%;
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.62rem;
+    color: #5a7fa0;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-semibold);
+    letter-spacing: 0;
+    text-shadow: none;
+    transition: color 0.55s cubic-bezier(0.25, 0.8, 0.25, 1), text-shadow 0.55s ease;
+    white-space: nowrap;
+}
+
+.task-detail-v2 .task-items-view-label.is-active {
+    color: #ffffff;
+    text-shadow: 0 1px 1px rgba(5, 45, 90, 0.22);
+}
+
+.task-detail-v2 .task-items-view-toggle:hover .task-items-view-label.is-active {
+    color: #ffffff;
+}
+
+.task-detail-v2 .task-items-view-toggle:hover .task-items-view-label:not(.is-active) {
+    color: #3d6282;
+}
+
+.task-detail-v2 .task-items-view-btn:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px rgba(130, 175, 230, 0.32);
+}
+
+.task-detail-v2 .task-items-view-panels {
+    width: 100%;
+}
+
+.task-detail-v2 .task-items-view-panel {
+    opacity: 1;
+    transform: none;
+    transition: none;
+}
+
+.task-detail-v2 .task-items-view-panel[hidden] {
+    display: none !important;
+}
+
+.task-detail-v2 .task-items-view-panel.is-active {
+    animation: none;
+}
+
+@keyframes td-kanban-delete-confirm-in {
+    from {
+        opacity: 0;
+        transform: translateY(-3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
