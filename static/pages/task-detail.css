@@ -1116,6 +1116,7 @@
     font-size: var(--ds-font-size-xs);
     background: #fff;
     color: #365c80;
+    cursor: pointer;
 }
 
 .task-detail-v2 .task-items-kanban-add-actions {

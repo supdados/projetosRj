@@ -719,6 +719,7 @@
     font-size: var(--ds-font-size-xs);
     color: #2b3d52;
     background: #fff;
+    cursor: pointer;
     transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
 }
 
@@ -736,6 +737,7 @@
     outline: none;
     border-color: #8bb0d7;
     background: #f6fbff;
+    cursor: text;
     box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
 }
 
