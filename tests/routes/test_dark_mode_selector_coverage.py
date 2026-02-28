@@ -79,7 +79,6 @@ def test_dark_mode_stylesheet_contains_critical_interaction_selectors():
         '.app-notification-icon-wrap',
         '.app-notification-item.is-unread',
         '.task-item-row:hover',
-        '.task-card:hover',
         ':focus-visible',
         ':disabled',
     ]

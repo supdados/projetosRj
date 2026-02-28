@@ -14,7 +14,7 @@ PHASE1_TEMPLATES = [
     Path("templates/index.html"),
     Path("templates/projects_list.html"),
     Path("templates/project_detail.html"),
-    Path("templates/task_list.html"),
+    Path("templates/task_hub.html"),
     Path("templates/task_detail.html"),
     Path("templates/projetos_pendentes.html"),
 ]
@@ -24,6 +24,7 @@ EXPECTED_LINKS = {
     Path("templates/index.html"): "pages/index.css",
     Path("templates/projects_list.html"): "pages/projects-list.css",
     Path("templates/project_detail.html"): "pages/project-detail.css",
+    Path("templates/task_hub.html"): "pages/tarefas.css",
     Path("templates/projetos_pendentes.html"): "pages/projetos-pendentes.css",
     Path("templates/login.html"): "pages/login.css",
     Path("templates/search_results.html"): "pages/search-results.css",

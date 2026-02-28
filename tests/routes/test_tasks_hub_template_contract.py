@@ -1,3 +1,8 @@
+import datetime
+
+from models import Task, db
+
+
 def test_tasks_hub_template_contains_view_toggle_and_project_filter(client_user):
     response = client_user.get('/tarefas')
     assert response.status_code == 200
@@ -63,3 +68,45 @@ def test_tasks_hub_uses_project_links_and_not_duplicate_task_detail_link(client_
     html = response.get_data(as_text=True)
     assert f'href="/project/{seed_data["project_id"]}"' in html
     assert f'href="/tarefas/{seed_data["task_id"]}"' not in html
+
+
+def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(app, client_user, seed_data):
+    with app.app_context():
+        archived_task = Task(
+            descricao='Tarefa arquivada readonly',
+            status='finalizado',
+            responsavel='Usuario Editavel',
+            prioridade='alta',
+            tipo_pedido='bug',
+            ordem=99,
+            project_id=seed_data['project_id'],
+            created_by_id=seed_data['user_id'],
+            is_archived=True,
+            archived_at=datetime.datetime.utcnow(),
+        )
+        db.session.add(archived_task)
+        db.session.commit()
+
+    response = client_user.get('/tarefas/arquivadas')
+    assert response.status_code == 200
+
+    html = response.get_data(as_text=True)
+    required_hooks = [
+        'id="taskItemsListView"',
+        'class="task-hub-group"',
+        'task-item-col-desc',
+        'task-item-col-prioridade',
+        'task-item-col-tipo',
+        'task-item-col-status',
+        'task-item-col-responsavel',
+        'task-item-status-readonly',
+        'task-item-unarchive-form',
+        '>Ativas<',
+    ]
+    for hook in required_hooks:
+        assert hook in html
+
+    assert 'id="taskItemsViewToggle"' not in html
+    assert 'id="taskItemsKanbanView"' not in html
+    assert 'task-hub-add-row' not in html
+    assert 'task-item-desc-edit-btn' not in html

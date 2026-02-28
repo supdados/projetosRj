@@ -1205,6 +1205,36 @@
         totalPill.textContent = itemCount + ' tarefa' + (itemCount === 1 ? '' : 's');
     }
 
+    function updateTaskHubArchiveCounter(delta) {
+        if (!delta) return;
+        var countEl = document.querySelector('.tasks-header .tasks-archive-count');
+        if (!countEl) return;
+        var current = parseInt(countEl.textContent || '0', 10);
+        if (!Number.isFinite(current)) current = 0;
+        var next = current + delta;
+        countEl.textContent = String(next < 0 ? 0 : next);
+    }
+
+    function ensureTaskHubEmptyState(root) {
+        var pageRoot = root || document.getElementById('taskHubPage');
+        if (!pageRoot) return;
+        var listItems = document.querySelectorAll('.task-item-row[data-item-id]');
+        if (listItems.length) return;
+        if (pageRoot.querySelector('.tasks-empty-state')) return;
+
+        var itemsSection = pageRoot.querySelector('.task-detail-v2-items.task-hub-items');
+        if (itemsSection && itemsSection.parentNode) {
+            itemsSection.parentNode.removeChild(itemsSection);
+        }
+
+        var emptyState = document.createElement('section');
+        emptyState.className = 'tasks-empty-state';
+        emptyState.innerHTML =
+            '<h2 class="tasks-empty-title">' + escapeTaskItemHtml(pageRoot.getAttribute('data-empty-title') || 'Nenhuma tarefa encontrada') + '</h2>' +
+            '<p class="tasks-empty-text">' + escapeTaskItemHtml(pageRoot.getAttribute('data-empty-text') || 'Ajuste os filtros para visualizar tarefas ativas.') + '</p>';
+        pageRoot.appendChild(emptyState);
+    }
+
     function removeTaskItemFromDom(itemId) {
         if (!itemId) return false;
         var removed = false;
@@ -4138,24 +4168,6 @@
         var archiveForm = document.getElementById('archiveFinalizedTasksForm');
         if (!root || !archiveForm) return;
 
-        function ensureTaskHubEmptyState() {
-            var listItems = document.querySelectorAll('.task-item-row[data-item-id]');
-            if (listItems.length) return;
-            if (root.querySelector('.tasks-empty-state')) return;
-
-            var itemsSection = root.querySelector('.task-detail-v2-items.task-hub-items');
-            if (itemsSection && itemsSection.parentNode) {
-                itemsSection.parentNode.removeChild(itemsSection);
-            }
-
-            var emptyState = document.createElement('section');
-            emptyState.className = 'tasks-empty-state';
-            emptyState.innerHTML =
-                '<h2 class="tasks-empty-title">' + escapeTaskItemHtml(root.getAttribute('data-empty-title') || 'Nenhuma tarefa encontrada') + '</h2>' +
-                '<p class="tasks-empty-text">' + escapeTaskItemHtml(root.getAttribute('data-empty-text') || 'Ajuste os filtros para visualizar tarefas ativas.') + '</p>';
-            root.appendChild(emptyState);
-        }
-
         archiveForm.addEventListener('submit', function (event) {
             if (event.defaultPrevented) return;
             event.preventDefault();
@@ -4192,10 +4204,52 @@
                         window.taskItemsKanban.rebuildFromList();
                     }
 
-                    ensureTaskHubEmptyState();
+                    ensureTaskHubEmptyState(root);
                 })
                 .catch(function (error) {
                     alert((error && error.message) || 'Erro ao arquivar tarefas.');
+                });
+        });
+    })();
+
+    (function initArchivedTaskActions() {
+        var root = document.getElementById('taskHubPage');
+        if (!root || root.getAttribute('data-archived-mode') !== '1') return;
+
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (!form || !form.classList || !form.classList.contains('task-item-unarchive-form')) return;
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+
+            var itemRow = form.closest('.task-item-row[data-item-id]');
+            var itemId = itemRow ? String(itemRow.getAttribute('data-item-id') || '') : '';
+            if (!itemId) return;
+
+            var formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: formData,
+            })
+                .then(function (response) {
+                    return response.json().catch(function () { return {}; }).then(function (data) {
+                        if (!response.ok || !data.success) {
+                            throw new Error((data && data.message) || 'Erro ao desarquivar tarefa.');
+                        }
+                        return data;
+                    });
+                })
+                .then(function () {
+                    removeTaskItemFromDom(itemId);
+                    updateTaskHubArchiveCounter(1);
+                    ensureTaskHubEmptyState(root);
+                })
+                .catch(function (error) {
+                    alert((error && error.message) || 'Erro ao desarquivar tarefa.');
                 });
         });
     })();

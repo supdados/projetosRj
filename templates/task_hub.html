@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Tarefas - ProjetosRJ{% endblock %}
+{% block title %}{{ 'Tarefas Arquivadas' if archived_mode else 'Tarefas' }} - ProjetosRJ{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='pages/tarefas.css') }}">
@@ -8,6 +8,9 @@
 {% endblock %}
 
 {% block content %}
+{% set prioridade_labels = {'baixa': 'Baixa', 'media': 'Média', 'alta': 'Alta', 'urgente': 'Urgente'} %}
+{% set tipo_labels = {'bug': 'Bug', 'melhoria': 'Melhoria', 'duvida': 'Dúvida', 'outros': 'Outros', 'implementacao': 'Implementação'} %}
+{% set status_labels = {'programado': 'Programado', 'em_andamento': 'Em andamento', 'validacao': 'Validação', 'finalizado': 'Finalizado'} %}
 <div
     class="app-page-shell app-page-shell--raised tasks-page task-hub-page task-detail-v2"
     id="taskHubPage"
@@ -15,8 +18,9 @@
     data-selected-project="{{ selected_project or '' }}"
     data-selected-area="{{ selected_area or '' }}"
     data-project-locked="{{ '1' if project_locked else '0' }}"
-    data-empty-title="{{ 'Nenhuma tarefa neste projeto' if project_locked else 'Nenhuma tarefa encontrada' }}"
-    data-empty-text="{{ 'Não há tarefas ativas visíveis neste projeto.' if project_locked else 'Ajuste os filtros para visualizar tarefas ativas.' }}"
+    data-archived-mode="{{ '1' if archived_mode else '0' }}"
+    data-empty-title="{{ empty_title }}"
+    data-empty-text="{{ empty_text }}"
 >
     {% set current_url = request.full_path.rstrip('?') %}
     {% if project_locked and project_locked_obj %}
@@ -24,13 +28,24 @@
     {% endif %}
     <header class="tasks-header">
         <div class="tasks-header-main">
-            <h1 class="tasks-title ds-type-page-title">Tarefas</h1>
-            <p class="tasks-subtitle mb-0 ds-type-body-sm">Hub de tarefas por projeto</p>
+            <h1 class="tasks-title ds-type-page-title">{{ page_title }}</h1>
+            <p class="tasks-subtitle mb-0 ds-type-body-sm">{{ page_subtitle }}</p>
         </div>
         <div class="tasks-header-actions">
             <span class="tasks-total-pill">
                 {{ total_items }} tarefa{{ 's' if total_items != 1 else '' }}
             </span>
+            {% if archived_mode %}
+            <a
+                href="{{ active_url }}"
+                class="btn-task btn-task-archive"
+                title="Ver tarefas ativas"
+                aria-label="Ver tarefas ativas">
+                <i class="fas fa-inbox" aria-hidden="true"></i>
+                <span>Ativas</span>
+                <span class="tasks-archive-count">{{ active_count }}</span>
+            </a>
+            {% else %}
             <form
                 method="POST"
                 action="{{ url_for('main.archive_finalized_tasks') }}"
@@ -62,20 +77,21 @@
                 </button>
             </form>
             <a
-                href="{{ finalized_url }}"
+                href="{{ archived_url }}"
                 class="btn-task btn-task-archive"
                 title="Ver tarefas arquivadas"
                 aria-label="Ver tarefas arquivadas">
                 <i class="fas fa-box-archive" aria-hidden="true"></i>
                 <span>Arquivadas</span>
             </a>
+            {% endif %}
         </div>
     </header>
 
     <section class="tasks-filters">
         <form
             method="GET"
-            action="{{ url_for('main.project_tasks', project_id=project_locked_obj.id) if project_locked and project_locked_obj else url_for('main.list_tasks') }}"
+            action="{{ filter_form_action }}"
             class="tasks-filter-form"
             id="filterTasksForm">
             {% if project_locked and project_locked_obj %}
@@ -182,9 +198,10 @@
     <section class="task-detail-v2-items task-hub-items">
         <div class="items-header-clean">
             <div class="header-info">
-                <h5 class="items-title-clean ds-type-section-title">Tarefas ativas</h5>
+                <h5 class="items-title-clean ds-type-section-title">{{ section_title }}</h5>
                 <span class="header-count">{{ total_items }} {{ 'tarefas' if total_items != 1 else 'tarefa' }}</span>
             </div>
+            {% if not archived_mode %}
             <div class="items-header-actions">
                 <div class="task-items-view-toggle" id="taskItemsViewToggle" role="group"
                     data-active-view="list"
@@ -195,6 +212,7 @@
                         aria-pressed="false">Kanban</button>
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <div class="task-items-view-panels">
@@ -262,11 +280,13 @@
                                     <div class="task-item-desc-wrap">
                                         <div class="task-item-desc-row">
                                             <p class="task-item-desc" data-item-id="{{ item.id }}">{{ item.descricao }}</p>
+                                            {% if not archived_mode %}
                                             <button type="button" class="task-item-desc-edit-btn" data-item-id="{{ item.id }}"
                                                 title="Editar descrição">
                                                 <i class="fas fa-pen" aria-hidden="true"></i>
                                                 <span class="visually-hidden">Editar</span>
                                             </button>
+                                            {% endif %}
                                         </div>
                                         <p class="task-hub-item-context">
                                             {% if item.project_id %}
@@ -279,6 +299,48 @@
                                         </p>
                                     </div>
                                     <div class="task-item-meta">
+                                        {% if archived_mode %}
+                                        <div class="task-item-prioridade-cell">
+                                            {% if item.prioridade %}
+                                            <span class="task-item-priority-chip priority-{{ item.prioridade }}">{{ prioridade_labels.get(item.prioridade, item.prioridade|title) }}</span>
+                                            {% else %}
+                                            <span class="task-item-cell-empty">—</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="task-item-tipo-cell">
+                                            {% if item.tipo_pedido %}
+                                            <span class="task-item-tipo-chip">{{ tipo_labels.get(item.tipo_pedido, item.tipo_pedido|title) }}</span>
+                                            {% else %}
+                                            <span class="task-item-cell-empty">—</span>
+                                            {% endif %}
+                                        </div>
+                                        <span class="task-item-status-readonly status-{{ item.status }}">{{ status_labels.get(item.status, item.status.replace('_', ' ')|title) }}</span>
+                                        <span class="task-item-responsavel">{% if item.responsavel %}{{ item.responsavel }}{% else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
+                                        <div class="task-item-actions">
+                                            <form
+                                                action="{{ url_for('main.unarchive_task', task_id=item.id) }}"
+                                                method="POST"
+                                                class="inline-form task-item-unarchive-form"
+                                                onsubmit="return confirm('Desarquivar esta tarefa?');">
+                                                <input type="hidden" name="next" value="{{ active_url }}">
+                                                <button type="submit" class="task-item-btn task-item-btn-secondary" title="Desarquivar">
+                                                    <i class="fas fa-rotate-left" aria-hidden="true"></i>
+                                                    <span class="visually-hidden">Desarquivar</span>
+                                                </button>
+                                            </form>
+                                            <form
+                                                action="{{ url_for('main.delete_task', task_id=item.id) }}"
+                                                method="POST"
+                                                class="inline-form"
+                                                onsubmit="return confirm('Excluir tarefa permanentemente?');">
+                                                <input type="hidden" name="next" value="{{ current_url }}">
+                                                <button type="submit" class="task-item-btn task-item-del" title="Excluir">
+                                                    <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                                    <span class="visually-hidden">Excluir</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                        {% else %}
                                         <select class="task-item-prioridade-select prioridade-{{ item.prioridade or 'none' }}"
                                             data-item-id="{{ item.id }}"
                                             title="Prioridade"
@@ -327,8 +389,10 @@
                                                 <i class="fas fa-trash-alt" aria-hidden="true"></i>
                                             </button>
                                         </div>
+                                        {% endif %}
                                     </div>
                                 </div>
+                                {% if not archived_mode %}
                                 <div id="comments-body-{{ item.id }}" class="task-item-comments" hidden>
                                     <div class="task-item-comments-inner">
                                         {% for comment in item.comments %}
@@ -370,9 +434,11 @@
                                         </form>
                                     </div>
                                 </div>
+                                {% endif %}
                             </div>
                         </div>
 
+                        {% if not archived_mode %}
                         <div class="modal fade task-detail-v2-modal" id="deleteItemModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content modal-clean">
@@ -396,8 +462,10 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                         {% endfor %}
 
+                        {% if not archived_mode %}
                         <div class="task-item-add-row task-hub-add-row" data-project-value="{{ group['project_value'] }}">
                             <div class="task-item-add-placeholder" data-role="open-add-form">
                                 <span class="task-item-add-dashes">—</span>
@@ -442,11 +510,13 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                     </section>
                     {% endfor %}
                 </div>
             </div>
 
+            {% if not archived_mode %}
             <div class="task-items-view-panel" id="taskItemsKanbanView" data-view-panel="kanban" hidden>
                 <div class="task-items-kanban-board" id="taskItemsKanbanBoard">
                     {% for status_key, status_label in [('programado', 'Programado'), ('em_andamento', 'Em andamento'), ('validacao', 'Validação'), ('finalizado', 'Finalizado')] %}
@@ -517,8 +587,10 @@
                     {% endfor %}
                 </div>
             </div>
+            {% endif %}
         </div>
 
+        {% if not archived_mode %}
         <div class="task-item-drawer-backdrop" id="taskItemDrawerBackdrop" hidden></div>
         <aside class="task-item-drawer" id="taskItemDrawer" aria-hidden="true" hidden>
             <header class="task-item-drawer-header">
@@ -643,21 +715,17 @@
                 </div>
             </div>
         </aside>
+        {% endif %}
     </section>
     {% else %}
     <section class="tasks-empty-state">
-        <h2 class="tasks-empty-title">{% if project_locked %}Nenhuma tarefa neste projeto{% else %}Nenhuma tarefa encontrada{% endif %}</h2>
-        <p class="tasks-empty-text">
-            {% if project_locked %}
-            Não há tarefas ativas visíveis neste projeto.
-            {% else %}
-            Ajuste os filtros para visualizar tarefas ativas.
-            {% endif %}
-        </p>
+        <h2 class="tasks-empty-title">{{ empty_title }}</h2>
+        <p class="tasks-empty-text">{{ empty_text }}</p>
     </section>
     {% endif %}
 </div>
 
+{% if not archived_mode %}
 <input type="file" id="taskQuickAnexoInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" hidden>
 
 <div class="task-anexo-preview-backdrop" id="taskAnexoPreviewBackdrop" hidden></div>
@@ -677,6 +745,7 @@
         </footer>
     </div>
 </section>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -686,6 +755,7 @@ window.TASK_HUB_CONFIG = {
     selectedProject: {{ (selected_project or '')|tojson }},
     selectedArea: {{ (selected_area or '')|tojson }},
     projectLocked: {{ project_locked|tojson }},
+    archivedMode: {{ archived_mode|tojson }},
     focusTask: {{ (request.args.get('focus_task') or '')|tojson }},
 };
 </script>

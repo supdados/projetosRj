@@ -2338,7 +2338,8 @@ body.task-item-drawer-open {
     display: contents;
 }
 
-.task-detail-v2 .task-item-status {
+.task-detail-v2 .task-item-status,
+.task-detail-v2 .task-item-status-readonly {
     height: 30px;
     border-radius: 7px;
     border: 1px solid transparent;
@@ -2353,30 +2354,41 @@ body.task-item-drawer-open {
     text-align-last: center;
 }
 
+.task-detail-v2 .task-item-status-readonly {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+}
+
 .task-detail-v2 .task-item-status:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
 }
 
-.task-detail-v2 .task-item-status.status-programado {
+.task-detail-v2 .task-item-status.status-programado,
+.task-detail-v2 .task-item-status-readonly.status-programado {
     background: #edf0f4;
     border-color: #d8dee7;
     color: #4c5563;
 }
 
-.task-detail-v2 .task-item-status.status-em_andamento {
+.task-detail-v2 .task-item-status.status-em_andamento,
+.task-detail-v2 .task-item-status-readonly.status-em_andamento {
     background: #e6f2ff;
     border-color: #cddff5;
     color: #215488;
 }
 
-.task-detail-v2 .task-item-status.status-validacao {
+.task-detail-v2 .task-item-status.status-validacao,
+.task-detail-v2 .task-item-status-readonly.status-validacao {
     background: #fff3df;
     border-color: #f4dfb8;
     color: #8a4f00;
 }
 
-.task-detail-v2 .task-item-status.status-finalizado {
+.task-detail-v2 .task-item-status.status-finalizado,
+.task-detail-v2 .task-item-status-readonly.status-finalizado {
     background: #eaf7f1;
     border-color: #cbe9dc;
     color: #186244;
@@ -2573,6 +2585,16 @@ body.task-item-drawer-open {
 
 .task-detail-v2 .task-item-btn:hover {
     color: #17497a;
+}
+
+.task-detail-v2 .task-item-btn-secondary {
+    color: #1f6a4e;
+}
+
+.task-detail-v2 .task-item-btn-secondary:hover,
+.task-detail-v2 .task-item-btn-secondary:focus {
+    color: #155339;
+    background: rgba(27, 122, 82, 0.08);
 }
 
 .task-detail-v2 .task-item-del {

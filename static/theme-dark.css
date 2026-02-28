@@ -1210,7 +1210,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-floating {
 /* Success actions */
 html[data-theme="dark"] body.is-authenticated .main-content .btn-success,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-finalize-clean,
-html[data-theme="dark"] body.is-authenticated .main-content .tasks-status-chip.is-finalized,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-status-open {
     background: rgba(73, 185, 135, 0.22);
     border-color: rgba(73, 185, 135, 0.46);
@@ -1248,7 +1247,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-confirm-delete,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-confirm-delete:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-glass-remove,
 html[data-theme="dark"] body.is-authenticated .main-content .task-item-del,
-html[data-theme="dark"] body.is-authenticated .main-content .tasks-action-btn.is-delete,
 html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-action-btn.is-delete,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-chip-atrasada {
     background: rgba(217, 122, 122, 0.2);
@@ -1263,7 +1261,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-task-danger:foc
 html[data-theme="dark"] body.is-authenticated .main-content .btn-delete-clean:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-confirm-delete:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-glass-remove:hover,
-html[data-theme="dark"] body.is-authenticated .main-content .tasks-action-btn.is-delete:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-action-btn.is-delete:hover {
     background: rgba(217, 122, 122, 0.3);
     border-color: rgba(217, 122, 122, 0.66);
@@ -1279,8 +1276,6 @@ html[data-theme="dark"] body.is-authenticated .main-content [class*="chip"],
 html[data-theme="dark"] body.is-authenticated .main-content .priority-badge,
 html[data-theme="dark"] body.is-authenticated .main-content .glass-badge,
 html[data-theme="dark"] body.is-authenticated .main-content .tasks-chip,
-html[data-theme="dark"] body.is-authenticated .main-content .tasks-meta-chip,
-html[data-theme="dark"] body.is-authenticated .main-content .tasks-status-chip,
 html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-badge,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-chip,
 html[data-theme="dark"] body.is-authenticated .main-content .task-item-priority-chip,
@@ -1294,8 +1289,7 @@ html[data-theme="dark"] body.is-authenticated .main-content .search-result-badge
 
 html[data-theme="dark"] body.is-authenticated .main-content .badge.bg-success,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-status-open,
-html[data-theme="dark"] body.is-authenticated .main-content .search-result-badge-task,
-html[data-theme="dark"] body.is-authenticated .main-content .tasks-status-chip.is-finalized {
+html[data-theme="dark"] body.is-authenticated .main-content .search-result-badge-task {
     background: rgba(73, 185, 135, 0.22);
     border-color: rgba(73, 185, 135, 0.42);
     color: #c9efdf;
@@ -1321,7 +1315,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .badge.bg-info,
 html[data-theme="dark"] body.is-authenticated .main-content .badge.bg-secondary,
 html[data-theme="dark"] body.is-authenticated .main-content .search-result-badge-project,
 html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-badge-delivery,
-html[data-theme="dark"] body.is-authenticated .main-content .tasks-chip-page,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-chip-14dias,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-chip-21dias {
     background: rgba(78, 149, 204, 0.2);
@@ -1348,7 +1341,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .etapa-v4-table tbod
     color: var(--app-color-text-primary);
 }
 
-html[data-theme="dark"] body.is-authenticated .main-content .task-card,
 html[data-theme="dark"] body.is-authenticated .main-content .task-item-clean,
 html[data-theme="dark"] body.is-authenticated .main-content .template-item-clean,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-project-card,
@@ -1358,13 +1350,11 @@ html[data-theme="dark"] body.is-authenticated .main-content .history-entry {
     border-color: var(--app-color-border);
 }
 
-html[data-theme="dark"] body.is-authenticated .main-content .task-card:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .task-item-clean:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .template-item-clean:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-expand-btn:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-project-title:hover,
-html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-project-link:hover,
-html[data-theme="dark"] body.is-authenticated .main-content .tasks-project-link:hover {
+html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-project-link:hover {
     background: rgba(78, 149, 204, 0.14);
     color: var(--app-color-text-primary);
 }
@@ -1373,8 +1363,7 @@ html[data-theme="dark"] body.is-authenticated .main-content .tasks-project-link:
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-project-badge-refined,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-edit-project-chip,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .responsavel-chip,
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .responsavel-picker-chip,
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-card-head-chips {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .responsavel-picker-chip {
     background: rgba(78, 149, 204, 0.18);
     border-color: rgba(99, 166, 219, 0.38);
     color: #dbeaf8;
@@ -1413,6 +1402,17 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .etapa-inline-entr
     background: rgba(78, 149, 204, 0.2);
     border-color: rgba(99, 166, 219, 0.46);
     color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-btn-secondary {
+    color: #bfe8d4;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-btn-secondary:hover,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-btn-secondary:focus {
+    background: rgba(73, 185, 135, 0.22);
+    border-color: rgba(73, 185, 135, 0.46);
+    color: #e4f8ef;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-row:hover,
@@ -1544,6 +1544,7 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-add-bar
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-tipo-select,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-add-prioridade,
@@ -1565,25 +1566,29 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-add-sta
     outline: none;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-programado {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-programado,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-programado {
     background: rgba(141, 160, 182, 0.18);
     border-color: rgba(141, 160, 182, 0.42);
     color: #d8e3ee;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-em_andamento {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-em_andamento,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-em_andamento {
     background: rgba(99, 166, 219, 0.22);
     border-color: rgba(99, 166, 219, 0.5);
     color: #d9ebfc;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-validacao {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-validacao,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-validacao {
     background: rgba(216, 162, 77, 0.22);
     border-color: rgba(216, 162, 77, 0.5);
     color: #fbe8c8;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-finalizado {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-finalizado,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-finalizado {
     background: rgba(73, 185, 135, 0.22);
     border-color: rgba(73, 185, 135, 0.5);
     color: #d9f3e8;
@@ -3574,79 +3579,6 @@ html[data-theme="dark"] body.is-authenticated .tasks-page .btn-task-archive .tas
     background: rgba(99, 166, 219, 0.3);
     border: 1px solid rgba(99, 166, 219, 0.52);
     color: #e9f3fd;
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-project-link {
-    background: rgba(99, 166, 219, 0.22);
-    border-color: rgba(99, 166, 219, 0.46);
-    color: #d9e8f6;
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-project-link:hover,
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-project-link:focus {
-    background: rgba(99, 166, 219, 0.3);
-    border-color: rgba(99, 166, 219, 0.58);
-    color: #edf5fc;
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .task-card-head-chips {
-    background: transparent !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-status-chip {
-    background: rgba(99, 166, 219, 0.22);
-    border-color: rgba(99, 166, 219, 0.46);
-    color: #d9e8f6;
-    border-radius: 999px !important;
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-status-chip.is-finalized {
-    background: rgba(73, 185, 135, 0.22);
-    border-color: rgba(73, 185, 135, 0.46);
-    color: #c9efdf;
-    border-radius: 999px !important;
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-pagination .page-link {
-    background: #2b3a4f;
-    border-color: var(--app-color-border);
-    color: var(--app-color-text-secondary);
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-pagination .page-link:hover,
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-pagination .page-link:focus {
-    background: rgba(78, 149, 204, 0.22);
-    border-color: rgba(99, 166, 219, 0.5);
-    color: var(--app-color-text-primary);
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-pagination .page-item.active .page-link {
-    background: linear-gradient(135deg, #0f6fae 0%, #0c6299 52%, #095380 100%);
-    border-color: rgba(20, 117, 181, 0.62);
-    color: #f6fbff;
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-pagination .page-item.active .page-link:hover,
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-pagination .page-item.active .page-link:focus {
-    background: linear-gradient(135deg, #1681c8 0%, #1272b2 52%, #0d608f 100%);
-    border-color: rgba(38, 140, 208, 0.74);
-    color: #ffffff;
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-action-btn.is-toggle {
-    background: rgba(73, 185, 135, 0.22);
-    border-color: rgba(73, 185, 135, 0.46);
-    color: #c9efdf;
-}
-
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-action-btn.is-toggle:hover,
-html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-action-btn.is-toggle:focus {
-    background: rgba(73, 185, 135, 0.32);
-    border-color: rgba(73, 185, 135, 0.64);
-    color: #e8f8f1;
 }
 
 html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-content {
