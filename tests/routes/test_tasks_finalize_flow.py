@@ -1,6 +1,5 @@
-import datetime
-
 from models import Task, db
+from time_utils import utc_now
 
 
 def test_finalize_keeps_task_active_and_only_updates_status(app, client_user, seed_data):
@@ -138,7 +137,7 @@ def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app,
             descricao='Tarefa arquivada para esconder projeto',
             status='finalizado',
             is_archived=True,
-            archived_at=datetime.datetime.utcnow(),
+            archived_at=utc_now(),
             project_id=seed_data['project_complete_id'],
             created_by_id=seed_data['user_id'],
         )

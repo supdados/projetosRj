@@ -1,6 +1,5 @@
-import datetime
-
 from models import Task, db
+from time_utils import utc_now
 
 
 def test_tasks_hub_template_contains_view_toggle_and_project_filter(client_user):
@@ -90,7 +89,7 @@ def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(a
             project_id=seed_data['project_id'],
             created_by_id=seed_data['user_id'],
             is_archived=True,
-            archived_at=datetime.datetime.utcnow(),
+            archived_at=utc_now(),
         )
         db.session.add(archived_task)
         db.session.commit()

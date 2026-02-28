@@ -1,9 +1,8 @@
-import datetime
-
 from flask import g, jsonify
 from sqlalchemy.orm import joinedload
 
 from models import UserNotification, db
+from time_utils import utc_now
 
 from .blueprint import main_bp
 from .decorators import login_required
@@ -35,7 +34,7 @@ def notifications_dropdown_api():
         base_query.filter(UserNotification.is_read.is_(False)).update(
             {
                 UserNotification.is_read: True,
-                UserNotification.read_at: datetime.datetime.utcnow(),
+                UserNotification.read_at: utc_now(),
             },
             synchronize_session=False,
         )

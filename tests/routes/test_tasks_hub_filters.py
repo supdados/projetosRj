@@ -1,6 +1,5 @@
-import datetime
-
 from models import Task, db
+from time_utils import utc_now
 
 
 def test_tasks_hub_filters_by_priority_type_status_and_responsavel(app, client_user, seed_data):
@@ -51,7 +50,7 @@ def test_finalized_listing_filters_by_priority_type_status_and_responsavel(app, 
             project_id=seed_data['project_id'],
             created_by_id=seed_data['user_id'],
             is_archived=True,
-            archived_at=datetime.datetime.utcnow(),
+            archived_at=utc_now(),
         )
         archived_other = Task(
             descricao='Arquivada fora do filtro',
@@ -63,7 +62,7 @@ def test_finalized_listing_filters_by_priority_type_status_and_responsavel(app, 
             project_id=seed_data['project_id'],
             created_by_id=seed_data['user_id'],
             is_archived=True,
-            archived_at=datetime.datetime.utcnow(),
+            archived_at=utc_now(),
         )
         db.session.add_all([archived_match, archived_other])
         db.session.commit()

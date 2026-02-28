@@ -18,7 +18,7 @@ def test_delete_task_item_ajax_returns_json_and_deletes_item(app, client_user, s
     assert payload['item_id'] == item_id
 
     with app.app_context():
-        assert TaskItem.query.get(item_id) is None
+        assert db.session.get(TaskItem, item_id) is None
 
 
 def test_delete_task_item_ajax_forbidden_for_outsider(app, client_outsider, seed_data):
@@ -32,7 +32,7 @@ def test_delete_task_item_ajax_forbidden_for_outsider(app, client_outsider, seed
     assert payload['item_id'] == item_id
 
     with app.app_context():
-        assert TaskItem.query.get(item_id) is not None
+        assert db.session.get(TaskItem, item_id) is not None
 
 
 def test_delete_task_item_ajax_error_keeps_json_contract(app, client_user, seed_data, monkeypatch):
@@ -52,4 +52,4 @@ def test_delete_task_item_ajax_error_keeps_json_contract(app, client_user, seed_
     assert 'erro-forcado-delete-item' in payload['message']
 
     with app.app_context():
-        assert TaskItem.query.get(item_id) is not None
+        assert db.session.get(TaskItem, item_id) is not None

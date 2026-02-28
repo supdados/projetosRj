@@ -12,12 +12,12 @@ Uso:
     python run_migrations.py
 """
 
-import datetime
 from sqlalchemy import inspect, text
 from app import app, db
 # Importe todos os modelos necessários de uma vez
 from models import User, UserArea, ProjectHistory, Project
 from objective_catalog import sync_goal_catalog_to_db
+from time_utils import utc_now
 
 def migrate_user_areas():
     """
@@ -73,7 +73,7 @@ def create_history_table():
                 user_id=user.id,
                 action_type='migration',
                 action_description='Sistema de histórico instalado com sucesso!',
-                timestamp=datetime.datetime.utcnow()
+                timestamp=utc_now()
             )
             db.session.add(test_entry)
         

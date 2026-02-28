@@ -5,6 +5,7 @@ from models import StageTemplate, StageTemplateItem, db
 
 from .blueprint import main_bp
 from .decorators import admin_required, login_required
+from .shared import get_or_404
 @main_bp.route('/admin/templates')
 @login_required
 @admin_required
@@ -54,7 +55,7 @@ def create_template():
 @login_required
 @admin_required
 def edit_template(template_id):
-    template = StageTemplate.query.get_or_404(template_id)
+    template = get_or_404(StageTemplate, template_id)
 
     if request.method == 'POST':
         name = request.form.get('name')
@@ -95,7 +96,7 @@ def edit_template(template_id):
 @login_required
 @admin_required
 def delete_template(template_id):
-    template = StageTemplate.query.get_or_404(template_id)
+    template = get_or_404(StageTemplate, template_id)
     db.session.delete(template)
     db.session.commit()
     flash('Modelo de etapas excluído com sucesso.', 'success')

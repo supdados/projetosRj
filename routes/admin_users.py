@@ -4,7 +4,7 @@ from models import User, UserArea, db
 
 from .blueprint import main_bp
 from .decorators import admin_required, login_required
-from .shared import AREAS_RESPONSAVEIS_CHOICES
+from .shared import AREAS_RESPONSAVEIS_CHOICES, get_or_404
 @main_bp.route('/admin/users')
 @login_required
 @admin_required
@@ -63,7 +63,7 @@ def add_user():
 @login_required
 @admin_required
 def edit_user(user_id):
-    user_to_edit = User.query.get_or_404(user_id)
+    user_to_edit = get_or_404(User, user_id)
     if request.method == 'POST':
         # Username geralmente não é editável ou requer cuidados especiais de unicidade
         user_to_edit.name = request.form.get('name')
@@ -100,7 +100,7 @@ def edit_user(user_id):
 @login_required
 @admin_required
 def delete_user(user_id):
-    user_to_delete = User.query.get_or_404(user_id)
+    user_to_delete = get_or_404(User, user_id)
 
     if user_to_delete.id == g.user.id: # Admin não pode se auto-excluir
         flash('Você não pode excluir sua própria conta de administrador.', 'danger')

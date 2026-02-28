@@ -20,6 +20,7 @@ from models import (
     db,
 )
 from services.notifications import notify_task_assignment_change, notify_task_event
+from time_utils import utc_now
 
 from .blueprint import main_bp
 from .decorators import login_required
@@ -1245,7 +1246,7 @@ def update_task_tipo(task_id):
 
 def _archive_task(task):
     task.is_archived = True
-    task.archived_at = datetime.datetime.utcnow()
+    task.archived_at = utc_now()
 
 
 @main_bp.route('/tarefas/<int:task_id>/finalizar', methods=['POST'])
@@ -1368,7 +1369,7 @@ def archive_finalized_tasks():
     tasks = query.all()
     archived_count = 0
     archived_task_ids = []
-    now = datetime.datetime.utcnow()
+    now = utc_now()
 
     try:
         for task in tasks:
@@ -1534,7 +1535,7 @@ def edit_task_item_comment(comment_id):
 
     old_content = comment.content
     comment.content = content
-    comment.updated_at = datetime.datetime.utcnow()
+    comment.updated_at = utc_now()
 
     try:
         notify_task_event(

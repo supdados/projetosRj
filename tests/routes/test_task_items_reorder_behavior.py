@@ -5,7 +5,7 @@ def test_reorder_task_items_applies_order_for_task_items_only(app, client_user, 
     with app.app_context():
         task_id = seed_data['task_id']
         first_item_id = seed_data['task_item_id']
-        anchor = TaskItem.query.get(task_id)
+        anchor = db.session.get(TaskItem, task_id)
         assert anchor is not None
 
         second_item = TaskItem(
@@ -39,7 +39,7 @@ def test_reorder_task_items_applies_order_for_task_items_only(app, client_user, 
     assert payload['success'] is True
 
     with app.app_context():
-        anchor = TaskItem.query.get(seed_data['task_id'])
+        anchor = db.session.get(TaskItem, seed_data['task_id'])
         assert anchor is not None
         ordered_ids = [
             item.id
@@ -61,7 +61,7 @@ def test_reorder_task_items_ignores_duplicates_invalid_and_foreign_ids(app, clie
         task_id = seed_data['task_id']
         first_item_id = seed_data['task_item_id']
         foreign_item_id = seed_data['foreign_task_item_id']
-        anchor = TaskItem.query.get(task_id)
+        anchor = db.session.get(TaskItem, task_id)
         assert anchor is not None
 
         second_item = TaskItem(
@@ -85,7 +85,7 @@ def test_reorder_task_items_ignores_duplicates_invalid_and_foreign_ids(app, clie
         second_item_id = second_item.id
         third_item_id = third_item.id
 
-        foreign_before = TaskItem.query.get(foreign_item_id).ordem
+        foreign_before = db.session.get(TaskItem, foreign_item_id).ordem
 
     response = client_user.post(
         f'/tarefas/{task_id}/itens/reordenar',
@@ -105,7 +105,7 @@ def test_reorder_task_items_ignores_duplicates_invalid_and_foreign_ids(app, clie
     assert payload['success'] is True
 
     with app.app_context():
-        anchor = TaskItem.query.get(task_id)
+        anchor = db.session.get(TaskItem, task_id)
         assert anchor is not None
         ordered_items = (
             TaskItem.query
@@ -121,4 +121,4 @@ def test_reorder_task_items_ignores_duplicates_invalid_and_foreign_ids(app, clie
 
         assert ordered_ids == [third_item_id, second_item_id, first_item_id]
         assert ordered_ordens == [1, 2, 3]
-        assert TaskItem.query.get(foreign_item_id).ordem == foreign_before
+        assert db.session.get(TaskItem, foreign_item_id).ordem == foreign_before

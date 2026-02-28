@@ -1,7 +1,7 @@
 import datetime
 from zoneinfo import ZoneInfo
 
-from flask import g
+from flask import abort, g
 
 from abep_catalog import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
 from models import ProjectHistory, db
@@ -106,7 +106,14 @@ def parse_abep_indicator_filter(raw_value):
 
 def inject_current_year():
     return {
-        'current_year': datetime.datetime.utcnow().year,
+        'current_year': datetime.datetime.now(datetime.UTC).year,
         'AREAS_RESPONSAVEIS_CHOICES': AREAS_RESPONSAVEIS_CHOICES,
         'ABEP_INDICADORES_OPTIONS': ABEP_INDICADORES_OPTIONS,
     }
+
+
+def get_or_404(model, object_id):
+    instance = db.session.get(model, object_id)
+    if instance is None:
+        abort(404)
+    return instance

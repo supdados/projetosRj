@@ -18,6 +18,7 @@ from objective_catalog import (
     sync_goal_catalog_to_db,
 )
 from abep_catalog import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
+from time_utils import utc_now
 
 main_bp = Blueprint('main', __name__)
 
@@ -430,7 +431,7 @@ def admin_required(f):
 # O registro dela no app é feito em app.py
 def inject_current_year():
     return {
-        'current_year': datetime.datetime.utcnow().year,
+        'current_year': datetime.datetime.now(datetime.UTC).year,
         'AREAS_RESPONSAVEIS_CHOICES': AREAS_RESPONSAVEIS_CHOICES,
         'ABEP_INDICADORES_OPTIONS': ABEP_INDICADORES_OPTIONS
     }
@@ -1348,7 +1349,12 @@ def add_etapa(project_id):
     data_fim = datetime.datetime.strptime(data_fim_str, '%Y-%m-%d').date() if data_fim_str else None
 
     # Calcular a ordem da nova etapa
-    ultima_etapa = Etapa.query.with_parent(project).order_by(Etapa.ordem.desc()).first()
+    ultima_etapa = (
+        db.session.query(Etapa)
+        .filter(Etapa.project_id == project.id)
+        .order_by(Etapa.ordem.desc())
+        .first()
+    )
     nova_ordem = (ultima_etapa.ordem + 1) if ultima_etapa else 0
 
     new_etapa = Etapa(
@@ -1402,7 +1408,12 @@ def import_model_to_project(project_id):
         current_date = start_date
         
         # Calcular a próxima ordem disponível
-        ultima_etapa = Etapa.query.with_parent(project).order_by(Etapa.ordem.desc()).first()
+        ultima_etapa = (
+            db.session.query(Etapa)
+            .filter(Etapa.project_id == project.id)
+            .order_by(Etapa.ordem.desc())
+            .first()
+        )
         ordem_inicial = (ultima_etapa.ordem + 1) if ultima_etapa else 0
         
         # Criar etapas baseadas no modelo
@@ -1775,7 +1786,7 @@ def cascade_date_update(project_id):
 
     try:
         days_delta = datetime.timedelta(days=days_to_add)
-        base_etapa = Etapa.query.get(base_etapa_id)
+        base_etapa = db.session.get(Etapa, base_etapa_id)
         if not base_etapa or base_etapa.project_id != project_id:
             return jsonify({'success': False, 'message': 'Etapa base não encontrada.'}), 404
         
@@ -2224,7 +2235,7 @@ def add_task():
     if project_id:
         try:
             project_id = int(project_id)
-            project = Project.query.get(project_id)
+            project = db.session.get(Project, project_id)
             if not project:
                 flash('Projeto não encontrado.', 'danger')
                 return redirect(url_for('main.list_tasks'))
@@ -2315,7 +2326,7 @@ def edit_task(task_id):
     if project_id:
         try:
             project_id = int(project_id)
-            project = Project.query.get(project_id)
+            project = db.session.get(Project, project_id)
             if not project:
                 return jsonify({'success': False, 'message': 'Projeto não encontrado'}), 404
             
@@ -2575,7 +2586,7 @@ def reorder_task_items(task_id):
         ordem_items = request.json.get('ordem', [])
         
         for index, item_id in enumerate(ordem_items, start=1):
-            item = TaskItem.query.get(item_id)
+            item = db.session.get(TaskItem, item_id)
             if item and item.task_id == task_id:
                 item.ordem = index
         
@@ -2671,7 +2682,7 @@ def edit_task_item_comment(comment_id):
         return redirect(url_for('main.task_detail', task_id=comment.task_item.task_id))
     
     comment.content = content
-    comment.updated_at = datetime.datetime.utcnow()
+    comment.updated_at = utc_now()
     try:
         db.session.commit()
         if is_ajax:

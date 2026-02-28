@@ -1,4 +1,4 @@
-from models import Etapa
+from models import Etapa, db
 
 
 AJAX_HEADERS = {
@@ -29,7 +29,7 @@ def test_add_etapa_inline_ajax_success_returns_json_payload(app, client_user, se
     assert payload['etapa']['ordem'] == 2
 
     with app.app_context():
-        etapa = Etapa.query.get(payload['etapa']['id'])
+        etapa = db.session.get(Etapa, payload['etapa']['id'])
         assert etapa is not None
         assert etapa.project_id == seed_data['project_id']
         assert etapa.descricao == 'Nova etapa inline'

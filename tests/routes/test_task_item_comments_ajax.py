@@ -1,4 +1,4 @@
-from models import TaskItemComment
+from models import TaskItemComment, db
 
 
 def test_delete_task_item_comment_ajax_returns_json_and_deletes_comment(app, client_user, seed_data):
@@ -18,7 +18,7 @@ def test_delete_task_item_comment_ajax_returns_json_and_deletes_comment(app, cli
     assert payload['comment_id'] == comment_id
 
     with app.app_context():
-        assert TaskItemComment.query.get(comment_id) is None
+        assert db.session.get(TaskItemComment, comment_id) is None
 
 
 def test_delete_task_item_comment_ajax_forbidden_for_non_owner(app, client_outsider, seed_data):
@@ -38,4 +38,4 @@ def test_delete_task_item_comment_ajax_forbidden_for_non_owner(app, client_outsi
     assert payload['comment_id'] == comment_id
 
     with app.app_context():
-        assert TaskItemComment.query.get(comment_id) is not None
+        assert db.session.get(TaskItemComment, comment_id) is not None

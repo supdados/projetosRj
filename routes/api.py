@@ -10,6 +10,7 @@ from objective_catalog import (
 
 from .blueprint import main_bp
 from .decorators import login_required
+from .shared import get_or_404
 @main_bp.route('/api/resultados/<int:objetivo_id>')
 @login_required
 def get_resultados(objetivo_id):
@@ -37,7 +38,7 @@ def get_templates():
 @main_bp.route('/api/templates/<int:template_id>')
 @login_required
 def get_template_stages(template_id):
-    template = StageTemplate.query.get_or_404(template_id)
+    template = get_or_404(StageTemplate, template_id)
     stages = [{'name': item.name, 'order': item.order, 'duration': item.duration_days} for item in template.items]
     return jsonify(stages)
 @main_bp.route('/api/projetos_usuario', methods=['GET'])

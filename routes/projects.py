@@ -11,6 +11,7 @@ from .blueprint import main_bp
 from .decorators import login_required
 from .shared import (
     AREAS_RESPONSAVEIS_CHOICES,
+    get_or_404,
     get_goal_catalog_context,
     log_project_action,
     parse_abep_indicator_filter,
@@ -587,7 +588,7 @@ def add_project():
 @main_bp.route('/project/<int:project_id>')
 @login_required
 def project_detail(project_id):
-    project = Project.query.get_or_404(project_id)
+    project = get_or_404(Project, project_id)
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
         flash('Você não tem permissão para visualizar este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
@@ -603,7 +604,7 @@ def project_detail(project_id):
 @main_bp.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_project(project_id):
-    project_to_edit = Project.query.get_or_404(project_id)
+    project_to_edit = get_or_404(Project, project_id)
     if not g.user.is_admin and not g.user.has_access_to_area(project_to_edit.area_responsavel):
         flash('Você não tem permissão para editar este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
@@ -715,7 +716,7 @@ def edit_project(project_id):
 @login_required
 def get_project_edit_data(project_id):
     """Endpoint AJAX para buscar dados necessários para edição"""
-    project = Project.query.get_or_404(project_id)
+    project = get_or_404(Project, project_id)
     
     # Verificar permissão
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
@@ -743,7 +744,7 @@ def get_project_edit_data(project_id):
 @login_required
 def update_project_inline(project_id):
     """Endpoint AJAX para atualizar projeto inline"""
-    project_to_edit = Project.query.get_or_404(project_id)
+    project_to_edit = get_or_404(Project, project_id)
     
     # Verificar permissão
     if not g.user.is_admin and not g.user.has_access_to_area(project_to_edit.area_responsavel):
@@ -864,7 +865,7 @@ def update_project_inline(project_id):
 # @admin_required # Decida se apenas admin pode excluir. Se não, a lógica abaixo se aplica.
 def delete_project(project_id):
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    project_to_delete = Project.query.get_or_404(project_id)
+    project_to_delete = get_or_404(Project, project_id)
 
     # Permissão para excluir: Admin pode excluir qualquer um.
     # Usuário não-admin só pode excluir projetos de suas áreas.
@@ -895,7 +896,7 @@ def delete_project(project_id):
 @main_bp.route('/project/<int:project_id>/concluir', methods=['POST'])
 @login_required
 def concluir_project(project_id):
-    project = Project.query.get_or_404(project_id)
+    project = get_or_404(Project, project_id)
     redirect_url = url_for('main.project_detail', project_id=project_id)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
 
@@ -952,7 +953,7 @@ def concluir_project(project_id):
 @login_required
 def project_history(project_id):
     """Visualizar histórico de ações de um projeto"""
-    project = Project.query.get_or_404(project_id)
+    project = get_or_404(Project, project_id)
     
     # Verificar permissão
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):

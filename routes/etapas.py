@@ -6,7 +6,7 @@ from models import Etapa, Project, StageTemplate, db
 
 from .blueprint import main_bp
 from .decorators import login_required
-from .shared import log_project_action
+from .shared import get_or_404, log_project_action
 @main_bp.route('/project/<int:project_id>/etapa/add', methods=['POST'])
 @login_required
 def add_etapa(project_id):
@@ -16,7 +16,7 @@ def add_etapa(project_id):
         return requested_with or accepts_json
 
     ajax_request = is_ajax_request()
-    project = Project.query.get_or_404(project_id)
+    project = get_or_404(Project, project_id)
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
         if ajax_request:
             return jsonify({'success': False, 'message': 'Você não tem permissão para adicionar etapas a este projeto.'}), 403
@@ -54,7 +54,12 @@ def add_etapa(project_id):
         return redirect(url_for('main.project_detail', project_id=project_id))
 
     # Calcular a ordem da nova etapa
-    ultima_etapa = Etapa.query.with_parent(project).order_by(Etapa.ordem.desc()).first()
+    ultima_etapa = (
+        db.session.query(Etapa)
+        .filter(Etapa.project_id == project.id)
+        .order_by(Etapa.ordem.desc())
+        .first()
+    )
     nova_ordem = (ultima_etapa.ordem + 1) if ultima_etapa else 0
 
     new_etapa = Etapa(
@@ -109,7 +114,7 @@ def add_etapa(project_id):
 @login_required
 def import_model_to_project(project_id):
     """Importa etapas de um modelo para um projeto existente"""
-    project = Project.query.get_or_404(project_id)
+    project = get_or_404(Project, project_id)
     
     # Verificar permissão
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
@@ -124,7 +129,7 @@ def import_model_to_project(project_id):
         return redirect(url_for('main.project_detail', project_id=project_id))
     
     # Buscar o modelo
-    template = StageTemplate.query.get_or_404(template_id)
+    template = get_or_404(StageTemplate, template_id)
     
     if not template.items:
         flash('Este modelo não possui etapas.', 'warning')
@@ -138,7 +143,12 @@ def import_model_to_project(project_id):
         current_date = start_date
         
         # Calcular a próxima ordem disponível
-        ultima_etapa = Etapa.query.with_parent(project).order_by(Etapa.ordem.desc()).first()
+        ultima_etapa = (
+            db.session.query(Etapa)
+            .filter(Etapa.project_id == project.id)
+            .order_by(Etapa.ordem.desc())
+            .first()
+        )
         ordem_inicial = (ultima_etapa.ordem + 1) if ultima_etapa else 0
         
         # Criar etapas baseadas no modelo
@@ -183,7 +193,7 @@ def import_model_to_project(project_id):
 @main_bp.route('/etapa/<int:etapa_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_etapa(etapa_id):
-    etapa = Etapa.query.get_or_404(etapa_id)
+    etapa = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa.project # Projeto pai da etapa
     if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
         flash('Você não tem permissão para editar etapas deste projeto.', 'danger')
@@ -232,7 +242,7 @@ def delete_etapa(etapa_id):
         return requested_with or accepts_json
 
     ajax_request = is_ajax_request()
-    etapa_to_delete = Etapa.query.get_or_404(etapa_id)
+    etapa_to_delete = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa_to_delete.project
     project_id_for_redirect = etapa_to_delete.project_id
 
@@ -288,7 +298,7 @@ def delete_etapa(etapa_id):
 @main_bp.route('/project/<int:project_id>/etapas/reordenar', methods=['POST'])
 @login_required
 def reorder_etapas(project_id):
-    project = Project.query.get_or_404(project_id)
+    project = get_or_404(Project, project_id)
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
         return jsonify({'success': False, 'message': 'Você não tem permissão para reordenar etapas deste projeto.'}), 403
 
@@ -321,7 +331,7 @@ def reorder_etapas(project_id):
 @main_bp.route('/etapa/<int:etapa_id>/toggle_iniciada', methods=['POST'])
 @login_required
 def toggle_iniciada_etapa(etapa_id):
-    etapa = Etapa.query.get_or_404(etapa_id)
+    etapa = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa.project
     if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
         return jsonify({'success': False, 'message': 'Permissão negada para alterar esta etapa.'}), 403
@@ -349,7 +359,7 @@ def toggle_iniciada_etapa(etapa_id):
 @main_bp.route('/etapa/<int:etapa_id>/toggle', methods=['POST']) # Rota para toggle 'done'
 @login_required
 def toggle_etapa(etapa_id): # Renomeada para evitar conflito, mas a URL é a mesma
-    etapa = Etapa.query.get_or_404(etapa_id)
+    etapa = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa.project
     if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
         return jsonify({'success': False, 'message': 'Permissão negada para alterar esta etapa.'}), 403
@@ -379,7 +389,7 @@ def toggle_etapa(etapa_id): # Renomeada para evitar conflito, mas a URL é a mes
 @main_bp.route('/etapa/<int:etapa_id>/update_field', methods=['POST'])
 @login_required
 def update_etapa_field(etapa_id):
-    etapa = Etapa.query.get_or_404(etapa_id)
+    etapa = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa.project
     
     if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
@@ -495,7 +505,7 @@ def update_etapa_field(etapa_id):
 @login_required
 def update_etapa_comentario(etapa_id):
     """Endpoint para adicionar/editar/remover comentário de uma etapa via modal."""
-    etapa = Etapa.query.get_or_404(etapa_id)
+    etapa = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa.project
     
     if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
@@ -539,7 +549,7 @@ def update_etapa_comentario(etapa_id):
 @main_bp.route('/project/<int:project_id>/cascade_update', methods=['POST'])
 @login_required
 def cascade_date_update(project_id):
-    project = Project.query.get_or_404(project_id)
+    project = get_or_404(Project, project_id)
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
         return jsonify({'success': False, 'message': 'Permissão negada.'}), 403
 
@@ -552,7 +562,7 @@ def cascade_date_update(project_id):
 
     try:
         days_delta = datetime.timedelta(days=days_to_add)
-        base_etapa = Etapa.query.get(base_etapa_id)
+        base_etapa = db.session.get(Etapa, base_etapa_id)
         if not base_etapa or base_etapa.project_id != project_id:
             return jsonify({'success': False, 'message': 'Etapa base não encontrada.'}), 404
         

@@ -1,7 +1,8 @@
-import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.query import Query
 from werkzeug.security import check_password_hash, generate_password_hash
+
+from time_utils import utc_now
 
 db = SQLAlchemy()
 
@@ -238,7 +239,7 @@ class ProjectHistory(db.Model):
     action_description = db.Column(db.Text, nullable=False)  # Descrição legível da ação
     old_value = db.Column(db.Text, nullable=True)  # Valor anterior (JSON ou texto)
     new_value = db.Column(db.Text, nullable=True)  # Novo valor (JSON ou texto)
-    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    timestamp = db.Column(db.DateTime, default=utc_now, nullable=False)
     
     # Relacionamentos
     project = db.relationship('Project', backref=db.backref('history', cascade='all, delete-orphan'))
@@ -260,7 +261,7 @@ class UserNotification(db.Model):
     message = db.Column(db.Text, nullable=False)
     target_url = db.Column(db.String(500), nullable=False)
     is_read = db.Column(db.Boolean, nullable=False, default=False, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
     read_at = db.Column(db.DateTime, nullable=True)
 
     recipient = db.relationship('User', foreign_keys=[recipient_user_id], backref='received_notifications')
@@ -291,7 +292,7 @@ class Task(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)  # Opcional
     legacy_parent_task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
     prioridade = db.Column(db.String(20), nullable=True)  # baixa, media, alta, urgente
     tipo_pedido = db.Column(db.String(30), nullable=True)  # bug, melhoria, duvida, outros
     is_archived = db.Column(db.Boolean, nullable=False, default=False, index=True)
@@ -511,7 +512,7 @@ class TaskAnexo(db.Model):
     stored_filename = db.Column(db.String(255), nullable=False)  # nome no disco (uuid)
     content_type = db.Column(db.String(100), nullable=True)
     uploaded_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
 
     uploaded_by = db.relationship('User', backref='task_anexos')
 
@@ -534,8 +535,8 @@ class TaskComment(db.Model):
     content = db.Column(db.Text, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.utcnow, nullable=True)  # Apenas preenchido quando o comentário for editado
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, onupdate=utc_now, nullable=True)  # Apenas preenchido quando o comentário for editado
     
     author = db.relationship('User', backref='task_comments')
 
@@ -562,7 +563,7 @@ class LegacyTaskRedirect(db.Model):
     legacy_task_id = db.Column(db.Integer, nullable=False, index=True, unique=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
     sample_task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
 
     project = db.relationship('Project', backref='legacy_task_redirects')
     sample_task = db.relationship('Task', backref='legacy_redirect_sources')
