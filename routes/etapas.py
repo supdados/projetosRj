@@ -523,7 +523,7 @@ def update_etapa_field(etapa_id):
             
             etapa.responsavel = new_value
             response_data['newValue'] = new_value
-            response_data['displayValue'] = new_value if new_value else '-'
+            response_data['displayValue'] = new_value if new_value else 'Sem responsável'
         
         db.session.commit()
         return jsonify(response_data)

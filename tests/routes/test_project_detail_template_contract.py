@@ -35,6 +35,7 @@ def test_project_detail_template_contains_inline_add_stage_contract(client_user,
     html = response.get_data(as_text=True)
 
     inline_hooks = [
+        'id="btnImportModel"',
         'id="btnOpenInlineEtapaAdd"',
         'id="etapaInlineAddEntryRow"',
         'id="etapaInlineAddFormRow"',
@@ -49,6 +50,7 @@ def test_project_detail_template_contains_inline_add_stage_contract(client_user,
         'id="etapa_inline_iniciada"',
         'id="etapa_inline_done"',
         'inline-status-toggle',
+        'etapa-status-toggle',
         'etapa-inline-form-row',
     ]
 

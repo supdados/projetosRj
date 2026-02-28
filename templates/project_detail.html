@@ -354,11 +354,9 @@
     {% set can_edit_etapas = is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
     {% if can_edit_etapas %}
     <div class="d-flex justify-content-end gap-2 mb-3">
-        {% if not project.etapas %}
-        <button type="button" class="btn btn-import-model" data-bs-toggle="modal" data-bs-target="#importModelModal">
+        <button type="button" class="btn btn-import-model{% if project.etapas %} ds-hidden{% endif %}" id="btnImportModel" data-bs-toggle="modal" data-bs-target="#importModelModal">
             <i class="fas fa-file-import me-1"></i> Importar Modelo
         </button>
-        {% endif %}
         <button type="button" class="btn btn-add-etapa" id="btnOpenInlineEtapaAdd">
             <i class="fas fa-plus me-1"></i> Adicionar Etapa
         </button>
@@ -535,37 +533,39 @@
                             </span>
                         </td>
                         <td class="etapa-row-text etapa-v4-cell-responsavel {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
-                            <span class="editable-field" data-field="responsavel" data-etapa-id="{{ etapa.id }}">
-                                {{ etapa.responsavel if etapa.responsavel else '-' }}
+                            <span class="editable-field{% if not etapa.responsavel %} editable-field-empty{% endif %}" data-field="responsavel" data-etapa-id="{{ etapa.id }}" data-empty-display="Sem responsável">
+                                {{ etapa.responsavel if etapa.responsavel else 'Sem responsável' }}
                             </span>
                         </td>
                         <td class="text-center etapa-v4-cell-status">
-                            <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-iniciada"
+                            <button type="button" class="btn btn-sm etapa-status-toggle toggle-iniciada etapa-status-toggle-{{ 'started' if etapa.iniciada else 'idle' }}"
                                 data-etapa-id="{{ etapa.id }}"
+                                data-state="{{ 'started' if etapa.iniciada else 'idle' }}"
                                 title="{{ 'Marcar como não iniciada' if etapa.iniciada else 'Marcar como iniciada' }}"
                                 {% if not (is_admin_user or (current_user_obj and
                                 current_user_obj.has_access_to_area(project.area_responsavel))) %}disabled{% endif %}>
                                 {% if etapa.iniciada %}
-                                <span class="badge rounded-pill bg-success-light"><i
-                                        class="fas fa-check-circle me-1"></i>Sim</span>
+                                <i class="fas fa-stop-circle"></i>
+                                <span>Iniciada</span>
                                 {% else %}
-                                <span class="badge rounded-pill bg-secondary-light"><i
-                                        class="far fa-circle me-1"></i>Não</span>
+                                <i class="fas fa-play-circle"></i>
+                                <span>Iniciar</span>
                                 {% endif %}
                             </button>
                         </td>
                         <td class="text-center etapa-v4-cell-status">
-                            <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-done"
+                            <button type="button" class="btn btn-sm etapa-status-toggle toggle-done etapa-status-toggle-{{ 'done' if etapa.done else ('ready' if etapa.iniciada else 'blocked') }}"
                                 data-etapa-id="{{ etapa.id }}" {{ 'disabled' if (not etapa.iniciada and not etapa.done)
                                 or not (is_admin_user or (current_user_obj and
                                 current_user_obj.has_access_to_area(project.area_responsavel))) else '' }}
+                                data-state="{{ 'done' if etapa.done else ('ready' if etapa.iniciada else 'blocked') }}"
                                 title="{{ 'Marcar como pendente' if etapa.done else ('Marcar como concluída (necessário iniciar primeiro)' if not etapa.iniciada else 'Marcar como concluída') }}">
                                 {% if etapa.done %}
-                                <span class="badge rounded-pill bg-success-light"><i
-                                        class="fas fa-check-square me-1"></i>Sim</span>
+                                <i class="fas fa-check-circle"></i>
+                                <span>Concluída</span>
                                 {% else %}
-                                <span class="badge rounded-pill bg-danger-light"><i
-                                        class="far fa-square me-1"></i>Não</span>
+                                <i class="fas fa-check-circle"></i>
+                                <span>Concluir</span>
                                 {% endif %}
                             </button>
                         </td>
@@ -632,14 +632,16 @@
                         </td>
                         <td class="etapa-inline-cell etapa-inline-cell-status text-center etapa-v4-cell-status">
                             <input class="etapa-inline-checkbox-native ds-hidden" type="checkbox" id="etapa_inline_iniciada" name="etapa_iniciada" form="etapaInlineAddForm" aria-label="Marcar etapa como iniciada">
-                            <button type="button" class="btn btn-sm p-0 border-0 align-baseline inline-status-toggle inline-status-toggle-iniciada" aria-label="Marcar etapa como iniciada" title="Marcar como iniciada">
-                                <span class="badge rounded-pill bg-secondary-light"><i class="far fa-circle me-1"></i>Não</span>
+                            <button type="button" class="btn btn-sm etapa-status-toggle etapa-status-toggle-idle inline-status-toggle inline-status-toggle-iniciada" aria-label="Marcar etapa como iniciada" title="Marcar como iniciada" data-state="idle">
+                                <i class="fas fa-play-circle"></i>
+                                <span>Iniciar</span>
                             </button>
                         </td>
                         <td class="etapa-inline-cell etapa-inline-cell-status text-center etapa-v4-cell-status">
                             <input class="etapa-inline-checkbox-native ds-hidden" type="checkbox" id="etapa_inline_done" name="etapa_done" form="etapaInlineAddForm" aria-label="Marcar etapa como concluída">
-                            <button type="button" class="btn btn-sm p-0 border-0 align-baseline inline-status-toggle inline-status-toggle-done" aria-label="Marcar etapa como concluída" title="Marcar como concluída (necessário iniciar primeiro)" disabled>
-                                <span class="badge rounded-pill bg-danger-light"><i class="far fa-square me-1"></i>Não</span>
+                            <button type="button" class="btn btn-sm etapa-status-toggle etapa-status-toggle-blocked inline-status-toggle inline-status-toggle-done" aria-label="Marcar etapa como concluída" title="Marcar como concluída (necessário iniciar primeiro)" disabled data-state="blocked">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Concluir</span>
                             </button>
                         </td>
                         <td class="etapa-inline-cell etapa-inline-cell-actions actions text-center etapa-v4-actions-cell">
@@ -733,6 +735,7 @@
         // INÍCIO: Script de Drag and Drop para Etapas
         const tbody = document.getElementById('etapas-tbody');
         const canEditEtapas = tbody ? tbody.dataset.canEdit === 'true' : false;
+        const btnImportModel = document.getElementById('btnImportModel');
         const btnOpenInlineEtapaAdd = document.getElementById('btnOpenInlineEtapaAdd');
         const inlineAddEntryRow = document.getElementById('etapaInlineAddEntryRow');
         const inlineAddFormRow = document.getElementById('etapaInlineAddFormRow');
@@ -773,6 +776,49 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
+        }
+
+        function getResponsavelDisplayValue(value) {
+            return (value || '').trim() ? String(value).trim() : 'Sem responsável';
+        }
+
+        function isResponsavelEmptyValue(value) {
+            return !String(value || '').trim() || String(value).trim() === 'Sem responsável';
+        }
+
+        function updateResponsavelFieldDisplay(target, value) {
+            if (!target) {
+                return;
+            }
+
+            const hasValue = !isResponsavelEmptyValue(value);
+            target.textContent = hasValue ? String(value).trim() : 'Sem responsável';
+            target.classList.toggle('editable-field-empty', !hasValue);
+        }
+
+        function syncImportModelButtonVisibility() {
+            if (!btnImportModel || !tbody) {
+                return;
+            }
+
+            const totalRows = tbody.querySelectorAll('tr.etapa-draggable-row').length;
+            btnImportModel.classList.toggle('ds-hidden', totalRows > 0);
+        }
+
+        function setStatusToggleVariant(button, variant) {
+            if (!button) {
+                return;
+            }
+
+            button.classList.remove(
+                'etapa-status-toggle-idle',
+                'etapa-status-toggle-started',
+                'etapa-status-toggle-ready',
+                'etapa-status-toggle-done',
+                'etapa-status-toggle-blocked'
+            );
+            button.classList.add(`etapa-status-toggle-${variant}`);
+            button.dataset.state = variant;
         }
 
         function renumberEtapaRows() {
@@ -901,9 +947,11 @@
         }
 
         function refreshConcludeButtonCounters() {
-            const btnConcluir = document.getElementById('btn-concluir-projeto');
-            if (!btnConcluir || !tbody) return;
+            if (!tbody) return;
             const totalEtapas = tbody.querySelectorAll('tr.etapa-draggable-row').length;
+            const btnConcluir = document.getElementById('btn-concluir-projeto');
+            syncImportModelButtonVisibility();
+            if (!btnConcluir) return;
             btnConcluir.dataset.totalEtapas = String(totalEtapas);
             verificarEAtualizarBotaoConcluir();
         }
@@ -997,7 +1045,7 @@
         function buildEtapaRow(etapaPayload) {
             const etapaId = etapaPayload.id;
             const descricao = etapaPayload.descricao || '-';
-            const responsavel = etapaPayload.responsavel || '-';
+            const responsavel = getResponsavelDisplayValue(etapaPayload.responsavel || '');
             const comentarios = etapaPayload.comentarios || '';
             const dataInicio = etapaPayload.data_inicio || '';
             const dataInicioDisplay = etapaPayload.data_inicio_display || '-';
@@ -1051,23 +1099,22 @@
                     <span class="editable-field" data-field="data_fim" data-etapa-id="${etapaId}" data-original-value="${escapeHtml(dataFim)}">${escapeHtml(dataFimDisplay)}</span>
                 </td>
                 <td class="etapa-row-text etapa-v4-cell-responsavel ${done ? 'text-decoration-line-through text-muted' : ''}">
-                    <span class="editable-field" data-field="responsavel" data-etapa-id="${etapaId}">${escapeHtml(responsavel)}</span>
+                    <span class="editable-field${isResponsavelEmptyValue(responsavel) ? ' editable-field-empty' : ''}" data-field="responsavel" data-etapa-id="${etapaId}" data-empty-display="Sem responsável">${escapeHtml(responsavel)}</span>
                 </td>
                 <td class="text-center etapa-v4-cell-status">
-                    <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-iniciada"
+                    <button type="button" class="btn btn-sm etapa-status-toggle toggle-iniciada etapa-status-toggle-${iniciada ? 'started' : 'idle'}"
                         data-etapa-id="${etapaId}"
+                        data-state="${iniciada ? 'started' : 'idle'}"
                         title="${iniciada ? 'Marcar como não iniciada' : 'Marcar como iniciada'}" ${iniciadaDisabled}>
-                        <span class="badge rounded-pill ${iniciada ? 'bg-success-light' : 'bg-secondary-light'}">
-                            <i class="${iniciada ? 'fas fa-check-circle' : 'far fa-circle'} me-1"></i>${iniciada ? 'Sim' : 'Não'}
-                        </span>
+                        <i class="fas ${iniciada ? 'fa-stop-circle' : 'fa-play-circle'}"></i>
+                        <span>${iniciada ? 'Iniciada' : 'Iniciar'}</span>
                     </button>
                 </td>
                 <td class="text-center etapa-v4-cell-status">
-                    <button type="button" class="btn btn-sm p-0 border-0 align-baseline toggle-done"
-                        data-etapa-id="${etapaId}" ${doneButtonDisabled} title="${doneTitle}">
-                        <span class="badge rounded-pill ${done ? 'bg-success-light' : 'bg-danger-light'}">
-                            <i class="${done ? 'fas fa-check-square' : 'far fa-square'} me-1"></i>${done ? 'Sim' : 'Não'}
-                        </span>
+                    <button type="button" class="btn btn-sm etapa-status-toggle toggle-done etapa-status-toggle-${done ? 'done' : (iniciada ? 'ready' : 'blocked')}"
+                        data-etapa-id="${etapaId}" data-state="${done ? 'done' : (iniciada ? 'ready' : 'blocked')}" ${doneButtonDisabled} title="${doneTitle}">
+                        <i class="fas fa-check-circle"></i>
+                        <span>${done ? 'Concluída' : 'Concluir'}</span>
                     </button>
                 </td>
                 <td class="actions text-center etapa-v4-actions-cell">
@@ -1778,6 +1825,9 @@
                 const field = target.dataset.field;
                 const etapaId = target.dataset.etapaId;
                 let originalValue = target.textContent.trim();
+                if (field === 'responsavel' && target.classList.contains('editable-field-empty')) {
+                    originalValue = '';
+                }
                 // Para datas, o valor do input precisa ser no formato YYYY-MM-DD
                 const originalDateValue = target.dataset.originalValue || '';
 
@@ -1832,9 +1882,13 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                target.textContent = data.displayValue;
                                 if (field.includes('data')) {
+                                    target.textContent = data.displayValue;
                                     target.dataset.originalValue = data.newValue;
+                                } else if (field === 'responsavel') {
+                                    updateResponsavelFieldDisplay(target, data.newValue || '');
+                                } else {
+                                    target.textContent = data.displayValue;
                                 }
 
                                 // Lógica para data de fim e cascata
@@ -1854,12 +1908,20 @@
                                 }
 
                             } else {
-                                target.textContent = originalValue;
+                                if (field === 'responsavel') {
+                                    updateResponsavelFieldDisplay(target, originalValue);
+                                } else {
+                                    target.textContent = originalValue;
+                                }
                                 showAjaxFlashMessage(data.message || 'Falha ao salvar.', 'danger');
                             }
                         })
                         .catch(error => {
-                            target.textContent = originalValue;
+                            if (field === 'responsavel') {
+                                updateResponsavelFieldDisplay(target, originalValue);
+                            } else {
+                                target.textContent = originalValue;
+                            }
                             showAjaxFlashMessage('Erro de comunicação.', 'danger');
                             console.error('Error updating field:', error);
                         });
@@ -2340,29 +2402,26 @@
         bindConcludeProjectControls();
 
         function updateIniciadaButton(button, iniciada) {
-            const badge = button.querySelector('.badge');
-            if (!badge) return;
+            if (!button) return;
+            setStatusToggleVariant(button, iniciada ? 'started' : 'idle');
             if (iniciada) {
-                badge.className = 'badge rounded-pill bg-success-light';
-                badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>Sim';
+                button.innerHTML = '<i class="fas fa-stop-circle"></i><span>Iniciada</span>';
                 button.title = 'Marcar como não iniciada';
             } else {
-                badge.className = 'badge rounded-pill bg-secondary-light';
-                badge.innerHTML = '<i class="far fa-circle me-1"></i>Não';
+                button.innerHTML = '<i class="fas fa-play-circle"></i><span>Iniciar</span>';
                 button.title = 'Marcar como iniciada';
             }
         }
 
         function updateDoneButton(button, done, iniciada) {
-            const badge = button.querySelector('.badge');
-            if (!badge) return;
+            if (!button) return;
             if (done) {
-                badge.className = 'badge rounded-pill bg-success-light';
-                badge.innerHTML = '<i class="fas fa-check-square me-1"></i>Sim';
+                setStatusToggleVariant(button, 'done');
+                button.innerHTML = '<i class="fas fa-check-circle"></i><span>Concluída</span>';
                 button.title = 'Marcar como pendente';
             } else {
-                badge.className = 'badge rounded-pill bg-danger-light';
-                badge.innerHTML = '<i class="far fa-square me-1"></i>Não';
+                setStatusToggleVariant(button, iniciada ? 'ready' : 'blocked');
+                button.innerHTML = '<i class="fas fa-check-circle"></i><span>Concluir</span>';
                 button.title = iniciada ? 'Marcar como concluída' : 'Marcar como concluída (necessário iniciar primeiro)';
             }
             button.disabled = !iniciada && !done;
@@ -2411,11 +2470,11 @@
                     etapasUnicas.add(etapaId);
 
                     // Verifica se a etapa está iniciada
-                    const isIniciada = btn.querySelector('.bg-success-light') !== null;
+                    const isIniciada = btn.dataset.state === 'started';
 
                     // Encontra o botão de concluída correspondente
                     const btnDone = btn.closest('tr')?.querySelector(`.toggle-done[data-etapa-id="${etapaId}"]`);
-                    const isDone = btnDone?.querySelector('.bg-success-light') !== null;
+                    const isDone = btnDone?.dataset.state === 'done';
 
                     if (!isIniciada || !isDone) {
                         todasConcluidas = false;
@@ -2586,6 +2645,7 @@
 
         // Verificar estado inicial do botão de concluir ao carregar a página
         verificarEAtualizarBotaoConcluir();
+        syncImportModelButtonVisibility();
 
         // ===== EDIÇÃO INLINE DO PROJETO =====
         const editButton = document.querySelector('.btn-edit-project');

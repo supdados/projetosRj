@@ -1726,18 +1726,18 @@ html[data-theme="dark"] body.is-authenticated .account-page-shell textarea:-webk
 
 /* Project detail dark refinements */
 html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-edit-project {
-    background: rgba(48, 72, 98, 0.78) !important;
-    border-color: rgba(172, 200, 228, 0.32) !important;
-    color: #d6e5f4 !important;
+    background: rgba(216, 162, 77, 0.22) !important;
+    border-color: rgba(216, 162, 77, 0.46) !important;
+    color: #f5dfbd !important;
 }
 
 
 html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-edit-project:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-edit-project:focus,
 html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-edit-project:focus-visible {
-    background: rgba(64, 93, 124, 0.92) !important;
-    border-color: rgba(172, 200, 228, 0.5) !important;
-    color: #edf4fb !important;
+    background: rgba(216, 162, 77, 0.32) !important;
+    border-color: rgba(216, 162, 77, 0.64) !important;
+    color: #fff1d7 !important;
 }
 
 
