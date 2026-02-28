@@ -545,7 +545,7 @@
     margin-top: 0.15rem;
 }
 
-.task-hub-page .task-items-list {
+.task-hub-page .task-items-list.task-hub-items-list {
     display: flex;
     flex-direction: column;
     gap: 0.9rem;
@@ -1009,7 +1009,7 @@ html[data-theme="dark"] body.is-authenticated .tasks-modal .project-search-optio
    Task Hub
    ========================================== */
 
-html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-list {
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-list.task-hub-items-list {
     background: transparent;
     border-color: transparent;
     box-shadow: none;
