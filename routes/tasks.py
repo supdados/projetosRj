@@ -313,14 +313,13 @@ def _resolve_project_token(raw_project_value, allow_empty=False):
     return project, None, 200
 
 
-def _get_assignable_users_for_project(project):
+def _get_assignable_users_for_area(area):
     candidate_ids = {g.user.id}
 
     admin_ids = [user_id for (user_id,) in User.query.with_entities(User.id).filter(User.is_admin.is_(True)).all()]
     candidate_ids.update(admin_ids)
 
-    if project is not None and project.area_responsavel:
-        area = project.area_responsavel
+    if area:
         area_user_ids = [
             user_id
             for (user_id,) in UserArea.query.with_entities(UserArea.user_id).filter_by(area=area).all()
@@ -337,6 +336,11 @@ def _get_assignable_users_for_project(project):
         return []
 
     return User.query.filter(User.id.in_(candidate_ids)).order_by(User.name.asc()).all()
+
+
+def _get_assignable_users_for_project(project):
+    area = project.area_responsavel if project is not None else None
+    return _get_assignable_users_for_area(area)
 
 
 def _validate_task_responsavel(project, raw_value):
@@ -1407,11 +1411,18 @@ def archive_finalized_tasks():
 @login_required
 def get_hub_assignable_users():
     project_raw = (request.args.get('project') or '').strip()
-    project, project_error, status_code = _resolve_project_token(project_raw, allow_empty=False)
-    if project_error:
-        return jsonify({'success': False, 'message': project_error}), status_code
+    area_raw = (request.args.get('area') or '').strip()
 
-    users = _get_assignable_users_for_project(project)
+    if project_raw:
+        project, project_error, status_code = _resolve_project_token(project_raw, allow_empty=False)
+        if project_error:
+            return jsonify({'success': False, 'message': project_error}), status_code
+        users = _get_assignable_users_for_project(project)
+    elif area_raw:
+        users = _get_assignable_users_for_area(area_raw)
+    else:
+        return jsonify({'success': False, 'message': 'Informe um projeto ou área.'}), 400
+
     payload = [{'id': user.id, 'name': user.name} for user in users]
 
     q = (request.args.get('q') or '').strip().lower()

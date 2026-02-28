@@ -433,11 +433,15 @@
         triggerEl.setAttribute('data-selected-count', String((selectedNames || []).length || 0));
     }
 
-    function fetchAssignableUsers(taskId, sugestoesUrl, projectValue) {
+    function fetchAssignableUsers(taskId, sugestoesUrl, projectValue, areaValue) {
         if (!sugestoesUrl) return Promise.resolve([]);
         var normalizedProject = String(projectValue == null ? '' : projectValue).trim();
-        if (!normalizedProject) return Promise.resolve([]);
-        var requestUrl = sugestoesUrl + (sugestoesUrl.indexOf('?') >= 0 ? '&' : '?') + 'project=' + encodeURIComponent(normalizedProject);
+        var normalizedArea = String(areaValue == null ? '' : areaValue).trim();
+        if (!normalizedProject && !normalizedArea) return Promise.resolve([]);
+        var param = normalizedProject
+            ? 'project=' + encodeURIComponent(normalizedProject)
+            : 'area=' + encodeURIComponent(normalizedArea);
+        var requestUrl = sugestoesUrl + (sugestoesUrl.indexOf('?') >= 0 ? '&' : '?') + param;
         var cacheKey = requestUrl;
         if (responsavelAssignableUsersCache[cacheKey]) {
             return responsavelAssignableUsersCache[cacheKey];
@@ -653,7 +657,7 @@
             setLoading(true, 'Carregando usuários...', false);
             positionPopover();
 
-            fetchAssignableUsers(options.taskId, options.sugestoesUrl, options.projectValue)
+            fetchAssignableUsers(options.taskId, options.sugestoesUrl, options.projectValue, options.areaValue)
                 .then(function (users) {
                     if (!state || token !== openToken) return;
 
@@ -3446,6 +3450,10 @@
                 window.TASK_HUB_CONFIG &&
                 String(window.TASK_HUB_CONFIG.selectedProject || '').trim()
             ) || '';
+            var selectedAreaFromFilter = (
+                window.TASK_HUB_CONFIG &&
+                String(window.TASK_HUB_CONFIG.selectedArea || '').trim()
+            ) || '';
 
             function ensureComposerVisible(composerEl, focusEl, attempt) {
                 if (!composerEl || typeof composerEl.getBoundingClientRect !== 'function') return;
@@ -3725,7 +3733,7 @@
                     event.stopPropagation();
                     if (isSaving || isDeleting || isPersisting) return;
                     var composerProject = getComposerProjectValue();
-                    if (!composerProject) {
+                    if (!composerProject && !selectedAreaFromFilter) {
                         if (projectInput) projectInput.focus();
                         alert('Selecione um projeto para escolher responsáveis.');
                         return;
@@ -3735,6 +3743,7 @@
                         taskId: taskId,
                         sugestoesUrl: listEl.getAttribute('data-sugestoes-url') || '',
                         projectValue: composerProject,
+                        areaValue: !composerProject ? selectedAreaFromFilter : '',
                         initialRawValue: selectedNames.join(', '),
                         onApply: function (payload) {
                             selectedNames = payload.names.slice();
