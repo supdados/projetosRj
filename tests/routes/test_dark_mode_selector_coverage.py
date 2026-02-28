@@ -1,9 +1,29 @@
 from pathlib import Path
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DARK_MODE_CSS_ASSETS = [
+    PROJECT_ROOT / 'static' / 'theme-dark.css',
+    PROJECT_ROOT / 'static' / 'pages' / 'tarefas.css',
+    PROJECT_ROOT / 'static' / 'pages' / 'task-detail-dark.css',
+    PROJECT_ROOT / 'static' / 'pages' / 'search-results.css',
+    PROJECT_ROOT / 'static' / 'pages' / 'project-detail.css',
+    PROJECT_ROOT / 'static' / 'pages' / 'project-history.css',
+    PROJECT_ROOT / 'static' / 'pages' / 'template-list.css',
+    PROJECT_ROOT / 'static' / 'pages' / 'template-form.css',
+]
+
+
 def test_dark_mode_stylesheet_contains_critical_interaction_selectors():
-    css_path = Path(__file__).resolve().parents[2] / 'static' / 'theme-dark.css'
-    css = css_path.read_text(encoding='utf-8')
+    missing_assets = [
+        str(path.relative_to(PROJECT_ROOT))
+        for path in DARK_MODE_CSS_ASSETS
+        if not path.exists()
+    ]
+    assert not missing_assets, f'Assets CSS ausentes: {missing_assets}'
+
+    # O dark mode foi modularizado por página; o contrato precisa cobrir o bundle real.
+    css = '\n'.join(path.read_text(encoding='utf-8') for path in DARK_MODE_CSS_ASSETS)
 
     required_fragments = [
         'Interaction Hardening',

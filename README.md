@@ -1,6 +1,8 @@
 # projetosRj
 código fonte para o gerenciador de projetos do estado do rio de janeiro.
 
+Todos os caminhos deste README são relativos à raiz do repositório `projetosRj/`, e os comandos assumem execução dentro desse diretório.
+
 ## Catalogo de Objetivos, Resultados e Indicadores
 
 Este projeto agora usa um **catalogo canonico em codigo** para:
@@ -29,7 +31,7 @@ Tambem existe sincronizacao na rota operacional:
 ### Script para producao (MySQL) e local (SQLite)
 
 Arquivo:
-- `/projetosRj/sync_objectives_catalog.py`
+- `projetosRj/sync_objectives_catalog.py`
 
 Exemplos:
 ```bash
@@ -60,7 +62,7 @@ Foi adicionado o campo `project.abep_indicator`:
 4. Aparece como filtro na listagem de todos os projetos.
 
 Catalogo fixo:
-- `/projetosRj/abep_catalog.py`
+- `projetosRj/abep_catalog.py`
 
 Migracao para bancos existentes:
 - Script dedicado: `python3 migrate_add_abep_indicator.py`
@@ -70,7 +72,7 @@ Migracao para bancos existentes:
 ## Organizacao de rotas (modular)
 
 As rotas foram refatoradas para um pacote dedicado:
-- `/projetosRj/routes/`
+- `projetosRj/routes/`
 
 Estrutura principal:
 - `routes/blueprint.py`: blueprint unico `main_bp` (mantem endpoints `main.*`).
@@ -105,7 +107,7 @@ Dependencias de desenvolvimento:
 Executar a suite de testes:
 
 ```bash
-./projetosRj/tests -q
+./.venv/bin/python -m pytest -q
 ```
 
 A cobertura de rotas fica em:
@@ -117,12 +119,12 @@ A cobertura de rotas fica em:
 ## Seed fake (dados para visualizacao)
 
 Script:
-- `/projetosRj/scripts/seed_fake_data.py`
+- `projetosRj/scripts/seed_fake_data.py`
 
 Execucao padrao (reseta e recria o banco atual):
 
 ```bash
-./projetosRj/scripts/seed_fake_data.py --yes
+./scripts/seed_fake_data.py --yes
 ```
 
 Padrao de volume:
@@ -135,7 +137,7 @@ Padrao de volume:
 Exemplo com volume customizado:
 
 ```bash
-./projetosRj/scripts/seed_fake_data.py \
+./scripts/seed_fake_data.py \
   --yes \
   --projects 150 \
   --stages-per-project 6 \

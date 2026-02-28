@@ -206,8 +206,9 @@ def test_project_tasks_template_contract_has_modal_project_locked_and_no_view_bu
 
     assert f'/tarefas/arquivadas?project={seed_data["project_id"]}' in html
     assert '/tarefas/arquivar-finalizadas' in html
-    assert 'Arquivadas' in html
-    assert 'class="project-view-breadcrumb"' in html
+    assert 'title="Tarefas arquivadas"' in html
+    assert 'aria-label="Tarefas arquivadas"' in html
+    assert 'data-project-locked="1"' in html
     assert 'id="project_locked"' in html
     assert 'readonly' in html
     assert f'<input type="hidden" name="project_id" value="{seed_data["project_id"]}">' in html
