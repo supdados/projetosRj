@@ -261,7 +261,7 @@
                                     <i class="fas fa-pen" aria-hidden="true"></i>
                                     <span class="visually-hidden">Editar projeto</span>
                                 </a>
-                                <form action="{{ url_for('main.delete_project', project_id=project.id) }}" method="post" class="inline-form" onsubmit="return confirm('Tem certeza que deseja excluir este projeto e todas as suas etapas?');">
+                                <form action="{{ url_for('main.delete_project', project_id=project.id) }}" method="post" class="inline-form js-delete-project-form">
                                     <button type="submit" class="projects-v4-action-btn is-delete" title="Excluir projeto">
                                         <i class="fas fa-trash" aria-hidden="true"></i>
                                         <span class="visually-hidden">Excluir projeto</span>
@@ -515,6 +515,71 @@
                 setTimeout(function() {
                     if (!dropdown.contains(document.activeElement) && document.activeElement !== input) hide();
                 }, 120);
+            });
+        })();
+
+        // Delete project via AJAX (preserva filtros ativos)
+        (function () {
+            function showFlash(msg, type) {
+                var stack = document.querySelector('.app-flash-stack');
+                if (!stack) {
+                    stack = document.createElement('div');
+                    stack.className = 'app-flash-stack';
+                    stack.setAttribute('role', 'status');
+                    stack.setAttribute('aria-live', 'polite');
+                    stack.setAttribute('aria-atomic', 'true');
+                    document.body.appendChild(stack);
+                }
+                var icons = { success: 'fa-check-circle', danger: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle' };
+                var iconClass = icons[type] || 'fa-info-circle';
+                var timeout = type === 'danger' ? 4200 : 2600;
+                var el = document.createElement('div');
+                el.className = 'alert alert-' + type + ' alert-dismissible fade show app-flash-alert';
+                el.setAttribute('role', 'alert');
+                el.innerHTML =
+                    '<div class="d-flex align-items-start gap-2">' +
+                        '<i class="fas ' + iconClass + ' app-flash-icon"></i>' +
+                        '<span class="app-flash-text">' + msg + '</span>' +
+                    '</div>' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                stack.appendChild(el);
+                setTimeout(function () {
+                    if (window.bootstrap && bootstrap.Alert) {
+                        bootstrap.Alert.getOrCreateInstance(el).close();
+                    } else {
+                        el.remove();
+                    }
+                }, timeout);
+            }
+
+            document.querySelectorAll('.js-delete-project-form').forEach(function (form) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    if (!confirm('Tem certeza que deseja excluir este projeto e todas as suas etapas?')) return;
+                    var row = form.closest('tr');
+                    var btn = form.querySelector('button[type="submit"]');
+                    if (btn) btn.disabled = true;
+                    fetch(form.action, {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        if (data.ok) {
+                            row.style.transition = 'opacity 0.25s ease';
+                            row.style.opacity = '0';
+                            setTimeout(function () { row.remove(); }, 260);
+                            showFlash(data.message, 'success');
+                        } else {
+                            if (btn) btn.disabled = false;
+                            showFlash(data.message || 'Erro ao excluir projeto.', 'danger');
+                        }
+                    })
+                    .catch(function () {
+                        if (btn) btn.disabled = false;
+                        showFlash('Erro de conexão. Tente novamente.', 'danger');
+                    });
+                });
             });
         })();
     });

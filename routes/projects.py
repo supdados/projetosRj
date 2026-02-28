@@ -863,14 +863,18 @@ def update_project_inline(project_id):
 @login_required
 # @admin_required # Decida se apenas admin pode excluir. Se não, a lógica abaixo se aplica.
 def delete_project(project_id):
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     project_to_delete = Project.query.get_or_404(project_id)
 
     # Permissão para excluir: Admin pode excluir qualquer um.
     # Usuário não-admin só pode excluir projetos de suas áreas.
     if not g.user.is_admin and not g.user.has_access_to_area(project_to_delete.area_responsavel):
+        if is_ajax:
+            from flask import jsonify
+            return jsonify({'ok': False, 'message': 'Você não tem permissão para excluir este projeto.'}), 403
         flash('Você não tem permissão para excluir este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
-    
+
     # Registrar no histórico antes de excluir
     project_titulo = project_to_delete.titulo
     log_project_action(
@@ -878,9 +882,13 @@ def delete_project(project_id):
         action_type='delete',
         description=f'Excluiu o projeto "{project_titulo}"'
     )
-    
+
     db.session.delete(project_to_delete)
     db.session.commit()
+
+    if is_ajax:
+        from flask import jsonify
+        return jsonify({'ok': True, 'message': f'Projeto "{project_titulo}" excluído.'})
     flash(f'Projeto "{project_titulo}" e suas etapas foram excluídos.', 'success')
     return redirect(url_for('main.list_projects'))
 

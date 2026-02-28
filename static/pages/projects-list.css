@@ -989,3 +989,27 @@ html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-bad
     border-color: rgba(99, 166, 219, 0.46);
     color: #d9e8f6;
 }
+
+/* ====================================
+   Empty state: dark mode
+   ==================================== */
+
+html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-empty-state {
+    background: rgba(30, 48, 68, 0.60);
+    border-color: rgba(60, 100, 148, 0.30);
+}
+
+html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-empty-icon {
+    background: rgba(15, 111, 174, 0.18);
+    border-color: rgba(30, 120, 190, 0.32);
+    color: #7ab8e0;
+}
+
+html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-empty-title {
+    color: #c8dff2;
+}
+
+html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-empty-text {
+    color: #7a9ab8;
+}
+
