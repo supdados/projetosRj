@@ -30,7 +30,11 @@ def test_tasks_hub_template_contains_view_toggle_and_project_filter(client_user)
 
     assert '>Filtrar<' not in html
     assert 'id="archiveFinalizedTasksForm"' in html
-    assert '>Arquivadas<' in html
+    assert 'items-header-clean' not in html
+    assert html.index('id="taskItemsViewToggle"') < html.index('id="filterTasksForm"')
+    assert 'Gerenciamento de tarefas' in html
+    assert 'title="Tarefas arquivadas"' in html
+    assert 'aria-label="Tarefas arquivadas"' in html
 
 
 def test_tasks_hub_kanban_composer_requires_project_when_no_filter(client_user):

@@ -1043,6 +1043,19 @@ html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-action-
     color: #ffe3e3;
 }
 
+html[data-theme="dark"] body.is-authenticated .main-content .task-detail-v2 .task-item-del {
+    background: transparent;
+    border-color: transparent;
+    color: #a4b7cb;
+}
+
+html[data-theme="dark"] body.is-authenticated .main-content .task-detail-v2 .task-item-del:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .task-detail-v2 .task-item-del:focus-visible {
+    background: rgba(217, 122, 122, 0.16);
+    border-color: transparent;
+    color: #ffb8b8;
+}
+
 
 /* Chips and badges */
 html[data-theme="dark"] body.is-authenticated .main-content .badge,
@@ -1710,5 +1723,4 @@ html[data-theme="dark"] body.is-authenticated .account-page-shell textarea:-webk
     transition: background-color 9999s ease-in-out 0s;
     caret-color: var(--app-color-text-primary);
 }
-
 

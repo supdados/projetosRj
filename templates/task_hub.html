@@ -26,13 +26,15 @@
 
     <header class="tasks-header">
         <div class="tasks-header-main">
-            <h1 class="tasks-title ds-type-page-title">{{ page_title }}</h1>
+            <div class="tasks-title-row">
+                <h1 class="tasks-title ds-type-page-title">{{ page_title }}</h1>
+                <span class="tasks-total-pill">
+                    {{ total_items }} tarefa{{ 's' if total_items != 1 else '' }}
+                </span>
+            </div>
             <p class="tasks-subtitle mb-0 ds-type-body-sm">{{ page_subtitle }}</p>
         </div>
         <div class="tasks-header-actions">
-            <span class="tasks-total-pill">
-                {{ total_items }} tarefa{{ 's' if total_items != 1 else '' }}
-            </span>
             {% if archived_mode %}
             <a
                 href="{{ active_url }}"
@@ -70,18 +72,92 @@
                 {% endif %}
                 <input type="hidden" name="next" value="{{ current_url }}">
                 <button type="submit" class="btn-task btn-task-secondary" title="Arquivar finalizados">
-                    <i class="fas fa-box-archive" aria-hidden="true"></i>
                     <span>Arquivar finalizados</span>
+                    <i class="fas fa-folder-arrow-down" aria-hidden="true"></i>
                 </button>
             </form>
             <a
                 href="{{ archived_url }}"
-                class="btn-task btn-task-archive"
-                title="Ver tarefas arquivadas"
-                aria-label="Ver tarefas arquivadas">
+                class="btn-task btn-task-archive btn-task-icon-only"
+                title="Tarefas arquivadas"
+                aria-label="Tarefas arquivadas">
                 <i class="fas fa-box-archive" aria-hidden="true"></i>
-                <span>Arquivadas</span>
             </a>
+            {% endif %}
+            {% if not archived_mode %}
+            <div class="task-items-view-toggle task-items-view-toggle-refined" id="taskItemsViewToggle" role="group"
+                data-active-view="list"
+                aria-label="Alternar visualização de tarefas">
+                <svg class="task-items-view-toggle-art" viewBox="0 0 272 50" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true" focusable="false">
+                    <defs>
+                        <clipPath id="taskHubViewTogglePill">
+                            <rect width="272" height="50" rx="10" />
+                        </clipPath>
+                        <clipPath id="taskHubViewToggleLeft">
+                            <path data-role="path-left"
+                                d="M 136 0 C 138.1 7.5, 143 14, 139.5 25 C 136 36, 131.1 42.5, 136 50 L 0 50 L 0 0 Z" />
+                        </clipPath>
+                        <clipPath id="taskHubViewToggleRight">
+                            <path data-role="path-right"
+                                d="M 136 0 C 138.1 7.5, 143 14, 139.5 25 C 136 36, 131.1 42.5, 136 50 L 272 50 L 272 0 Z" />
+                        </clipPath>
+                        <linearGradient id="taskHubViewToggleActive" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" style="stop-color: var(--td-toggle-active-start);" />
+                            <stop offset="100%" style="stop-color: var(--td-toggle-active-end);" />
+                        </linearGradient>
+                        <linearGradient id="taskHubViewToggleInactive" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" style="stop-color: var(--td-toggle-inactive-start);" />
+                            <stop offset="100%" style="stop-color: var(--td-toggle-inactive-end);" />
+                        </linearGradient>
+                        <linearGradient id="taskHubViewToggleShine" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.04" />
+                            <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+                        </linearGradient>
+                    </defs>
+
+                    <g clip-path="url(#taskHubViewTogglePill)">
+                        <rect width="272" height="50" style="fill: var(--td-toggle-base-fill);" />
+
+                        <g clip-path="url(#taskHubViewToggleLeft)">
+                            <rect data-role="fill-left" width="272" height="50"
+                                fill="url(#taskHubViewToggleActive)" />
+                            <rect data-role="highlight-left" width="272" height="50"
+                                fill="url(#taskHubViewToggleShine)" opacity="1" />
+                        </g>
+
+                        <g clip-path="url(#taskHubViewToggleRight)">
+                            <rect data-role="fill-right" width="272" height="50"
+                                fill="url(#taskHubViewToggleInactive)" />
+                            <rect data-role="highlight-right" width="272" height="50"
+                                fill="url(#taskHubViewToggleShine)" opacity="0" />
+                        </g>
+
+                        <path data-role="divider"
+                            d="M 136 0 C 138.1 7.5, 143 14, 139.5 25 C 136 36, 131.1 42.5, 136 50"
+                            style="stroke: var(--td-toggle-divider-stroke);" stroke-width="1" fill="none" />
+
+                        <rect x="0.5" y="0.5" width="271" height="49" rx="9.5"
+                            style="stroke: var(--td-toggle-outer-border);" fill="none" />
+
+                        <g clip-path="url(#taskHubViewToggleLeft)">
+                            <rect data-role="border-left" x="1" y="1" width="270" height="48" rx="9"
+                                style="stroke: var(--td-toggle-inner-border);" fill="none" opacity="1" />
+                        </g>
+                    </g>
+                </svg>
+
+                <div class="task-items-view-toggle-labels">
+                    <button type="button" class="task-items-view-btn is-active" data-view="list"
+                        aria-pressed="true">
+                        <span class="task-items-view-label is-active" data-view-label="list">Lista</span>
+                    </button>
+                    <button type="button" class="task-items-view-btn" data-view="kanban"
+                        aria-pressed="false">
+                        <span class="task-items-view-label" data-view-label="kanban">Kanban</span>
+                    </button>
+                </div>
+            </div>
             {% endif %}
         </div>
     </header>
@@ -194,90 +270,6 @@
 
     {% if groups %}
     <section class="task-detail-v2-items task-hub-items">
-        <div class="items-header-clean">
-            <div class="header-info">
-                <h5 class="items-title-clean ds-type-section-title">{{ section_title }}</h5>
-                <span class="header-count">{{ total_items }} {{ 'tarefas' if total_items != 1 else 'tarefa' }}</span>
-            </div>
-            {% if not archived_mode %}
-            <div class="items-header-actions">
-                <div class="task-items-view-toggle task-items-view-toggle-refined" id="taskItemsViewToggle" role="group"
-                    data-active-view="list"
-                    aria-label="Alternar visualização de tarefas">
-                    <svg class="task-items-view-toggle-art" viewBox="0 0 272 50" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"
-                        aria-hidden="true" focusable="false">
-                        <defs>
-                            <clipPath id="taskHubViewTogglePill">
-                                <rect width="272" height="50" rx="25" />
-                            </clipPath>
-                            <clipPath id="taskHubViewToggleLeft">
-                                <path data-role="path-left"
-                                    d="M 136 0 C 138.1 7.5, 143 14, 139.5 25 C 136 36, 131.1 42.5, 136 50 L 0 50 L 0 0 Z" />
-                            </clipPath>
-                            <clipPath id="taskHubViewToggleRight">
-                                <path data-role="path-right"
-                                    d="M 136 0 C 138.1 7.5, 143 14, 139.5 25 C 136 36, 131.1 42.5, 136 50 L 272 50 L 272 0 Z" />
-                            </clipPath>
-                            <linearGradient id="taskHubViewToggleActive" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" style="stop-color: var(--td-toggle-active-start);" />
-                                <stop offset="100%" style="stop-color: var(--td-toggle-active-end);" />
-                            </linearGradient>
-                            <linearGradient id="taskHubViewToggleInactive" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" style="stop-color: var(--td-toggle-inactive-start);" />
-                                <stop offset="100%" style="stop-color: var(--td-toggle-inactive-end);" />
-                            </linearGradient>
-                            <linearGradient id="taskHubViewToggleShine" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.04" />
-                                <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
-                            </linearGradient>
-                        </defs>
-
-                        <g clip-path="url(#taskHubViewTogglePill)">
-                            <rect width="272" height="50" style="fill: var(--td-toggle-base-fill);" />
-
-                            <g clip-path="url(#taskHubViewToggleLeft)">
-                                <rect data-role="fill-left" width="272" height="50"
-                                    fill="url(#taskHubViewToggleActive)" />
-                                <rect data-role="highlight-left" width="272" height="50"
-                                    fill="url(#taskHubViewToggleShine)" opacity="1" />
-                            </g>
-
-                            <g clip-path="url(#taskHubViewToggleRight)">
-                                <rect data-role="fill-right" width="272" height="50"
-                                    fill="url(#taskHubViewToggleInactive)" />
-                                <rect data-role="highlight-right" width="272" height="50"
-                                    fill="url(#taskHubViewToggleShine)" opacity="0" />
-                            </g>
-
-                            <path data-role="divider"
-                                d="M 136 0 C 138.1 7.5, 143 14, 139.5 25 C 136 36, 131.1 42.5, 136 50"
-                                style="stroke: var(--td-toggle-divider-stroke);" stroke-width="1" fill="none" />
-
-                            <rect x="0.5" y="0.5" width="271" height="49" rx="24.5"
-                                style="stroke: var(--td-toggle-outer-border);" fill="none" />
-
-                            <g clip-path="url(#taskHubViewToggleLeft)">
-                                <rect data-role="border-left" x="1" y="1" width="270" height="48" rx="24"
-                                    style="stroke: var(--td-toggle-inner-border);" fill="none" opacity="1" />
-                            </g>
-                        </g>
-                    </svg>
-
-                    <div class="task-items-view-toggle-labels">
-                        <button type="button" class="task-items-view-btn is-active" data-view="list"
-                            aria-pressed="true">
-                            <span class="task-items-view-label is-active" data-view-label="list">Lista</span>
-                        </button>
-                        <button type="button" class="task-items-view-btn" data-view="kanban"
-                            aria-pressed="false">
-                            <span class="task-items-view-label" data-view-label="kanban">Kanban</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
         <div class="task-items-view-panels">
             <div class="task-items-view-panel is-active" id="taskItemsListView" data-view-panel="list">
                 <div

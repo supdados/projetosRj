@@ -700,13 +700,13 @@ def _render_task_hub(locked_project=None, template_name='task_hub.html', include
         empty_text = 'Ajuste os filtros ou arquive tarefas na visão ativa.'
     elif locked_project:
         page_title = 'Tarefas'
-        page_subtitle = 'Hub de tarefas por projeto'
+        page_subtitle = 'Gerenciamento de tarefas'
         section_title = 'Tarefas ativas'
         empty_title = 'Nenhuma tarefa neste projeto'
         empty_text = 'Não há tarefas ativas visíveis neste projeto.'
     else:
         page_title = 'Tarefas'
-        page_subtitle = 'Hub de tarefas por projeto'
+        page_subtitle = 'Gerenciamento de tarefas'
         section_title = 'Tarefas ativas'
         empty_title = 'Nenhuma tarefa encontrada'
         empty_text = 'Ajuste os filtros para visualizar tarefas ativas.'
