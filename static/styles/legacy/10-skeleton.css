@@ -1,0 +1,1517 @@
+/* Skeleton Screens (esqueletos de carregamento) */
+.skeleton-container {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+}
+
+.loading-active .skeleton-container {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    background-color: #f7f9fc;
+    overflow-y: auto;
+}
+
+.loading-active .main-content {
+    display: none !important;
+}
+
+/* Esconder footer durante carregamento */
+.loading-active footer {
+    display: none !important;
+}
+
+.skeleton-content {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.skeleton-content > .skeleton-page {
+    width: 90%;
+    margin-inline: auto;
+}
+
+.skeleton-card {
+    background: #fff;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.skeleton-header {
+    height: 32px;
+    width: 70%;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-text {
+    height: 16px;
+    width: 100%;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-text.short {
+    width: 60%;
+}
+
+.skeleton-text.medium {
+    width: 80%;
+}
+
+.skeleton-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-button {
+    width: 120px;
+    height: 36px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1rem;
+}
+
+@media (min-width: 768px) {
+    .skeleton-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    .skeleton-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 991px) {
+    .skeleton-content > .skeleton-page {
+        width: 100%;
+    }
+}
+
+.skeleton-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 1rem;
+    background-color: #fff;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+}
+
+.skeleton-table-row {
+    display: flex;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 0.75rem;
+}
+
+.skeleton-table-cell {
+    flex: 1;
+    height: 20px;
+    margin-right: 10px;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    border-radius: 4px;
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.skeleton-dashboard-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.9rem;
+    min-height: 86px;
+    padding: 0.92rem 1.15rem;
+}
+
+.skeleton-dashboard-hero-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.skeleton-dashboard-hero-title {
+    width: min(340px, 62%);
+    height: 30px;
+    margin-bottom: 0.45rem;
+}
+
+.skeleton-dashboard-hero-date {
+    width: min(220px, 46%);
+    height: 14px;
+    margin-bottom: 0.35rem;
+}
+
+.skeleton-dashboard-hero-subtitle {
+    width: min(360px, 70%);
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-hero-button {
+    width: 154px;
+    height: 40px;
+    border-radius: 9px;
+    flex-shrink: 0;
+}
+
+.skeleton-dashboard-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 0.88rem;
+    min-height: 90px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-stat-icon {
+    width: 51px;
+    height: 51px;
+    border-radius: 14px;
+    flex-shrink: 0;
+}
+
+.skeleton-dashboard-stat-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.skeleton-dashboard-stat-number {
+    width: 40%;
+    height: 23px;
+    margin-bottom: 0.42rem;
+}
+
+.skeleton-dashboard-stat-helper {
+    width: 92%;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-main-card,
+.skeleton-dashboard-side-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-dashboard-side-card .skeleton-dashboard-card-header {
+    padding: 0.72rem 1rem;
+}
+
+.skeleton-dashboard-card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #ebeff5;
+}
+
+.skeleton-dashboard-card-title {
+    width: 52%;
+    height: 24px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-table-head {
+    display: flex;
+    gap: 0;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #edf1f6;
+    background: #f7f9fc;
+}
+
+.skeleton-dashboard-table-head .skeleton-table-cell {
+    height: 15px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-table {
+    box-shadow: none;
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-table .skeleton-table-row {
+    padding: 0.9rem 1rem;
+}
+
+.skeleton-dashboard-table .skeleton-table-row:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-dashboard-table .skeleton-table-cell {
+    height: 16px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-priority-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.skeleton-dashboard-total-pill {
+    width: 76px;
+    height: 24px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-priority-compact-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.45rem;
+    padding: 0.72rem 0.85rem 0.82rem;
+}
+
+.skeleton-dashboard-priority-compact-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    justify-content: space-between;
+    border: 1px solid #edf1f6;
+    border-radius: 8px;
+    padding: 0.42rem 0.58rem;
+    background-color: #fff;
+}
+
+.skeleton-dashboard-priority-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-dashboard-priority-label {
+    flex: 1;
+    height: 12px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-priority-count {
+    width: 20px;
+    height: 12px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-task-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.skeleton-dashboard-task-list-wrap {
+    min-height: 0;
+}
+
+.skeleton-dashboard-task-entry {
+    padding: 0.72rem 0.85rem;
+    border-bottom: 1px solid #edf1f6;
+}
+
+.skeleton-dashboard-task-entry:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-dashboard-task-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-bottom: 0.35rem;
+}
+
+.skeleton-dashboard-task-title {
+    flex: 1;
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-task-count {
+    width: 24px;
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-task-project {
+    width: 58%;
+    height: 12px;
+    margin-bottom: 0.35rem;
+}
+
+.skeleton-dashboard-task-items {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.skeleton-dashboard-task-item {
+    height: 12px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-task-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    padding: 0.32rem 0.56rem;
+    border-top: 1px solid #edf1f6;
+    background: #fbfdff;
+}
+
+.skeleton-dashboard-page-btn {
+    width: 58px;
+    height: 22px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-dashboard-page-info {
+    width: 48px;
+    height: 12px;
+    margin-bottom: 0;
+}
+
+@media (min-width: 992px) {
+    .skeleton-dashboard-kpi-row {
+        margin-bottom: 0.55rem !important;
+    }
+
+    .skeleton-dashboard-recent-col {
+        display: block;
+    }
+
+    .skeleton-dashboard-side-col {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        min-height: 0;
+    }
+
+    .skeleton-dashboard-side-col .skeleton-dashboard-priority-compact {
+        flex: 0 0 auto;
+        margin-bottom: 0 !important;
+    }
+
+    .skeleton-dashboard-side-col .skeleton-dashboard-tasks-card {
+        flex: 0 0 auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .skeleton-dashboard-side-col .skeleton-dashboard-task-list-wrap {
+        overflow: hidden;
+    }
+
+    .skeleton-dashboard-main-card {
+        width: 100%;
+        height: auto;
+        align-self: flex-start;
+    }
+    .skeleton-dashboard-side-col .skeleton-dashboard-tasks-card {
+        height: auto;
+        min-height: 0;
+    }
+
+    .skeleton-dashboard-side-col .skeleton-dashboard-task-list-wrap {
+        max-height: none;
+    }
+}
+
+/* Skeletons dedicados por tela */
+.skeleton-page {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.skeleton-projects-page .skeleton-projects-toolbar {
+    padding: 1rem 1.1rem;
+}
+
+.skeleton-projects-toolbar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.62rem;
+}
+
+.skeleton-projects-title {
+    width: min(300px, 58%);
+    height: 26px;
+    margin-bottom: 0;
+}
+
+.skeleton-projects-toolbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+}
+
+.skeleton-projects-action-sm {
+    width: 122px;
+    height: 34px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-projects-action-lg {
+    width: 148px;
+    height: 36px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-projects-search {
+    height: 36px;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+}
+
+.skeleton-projects-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.skeleton-projects-filter-pill {
+    width: 132px;
+    height: 34px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-projects-filter-btn {
+    width: 94px;
+    height: 34px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-projects-table-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-projects-table-head {
+    padding: 0.62rem 0.85rem;
+}
+
+.skeleton-projects-table {
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.skeleton-projects-table .skeleton-table-row {
+    padding: 0.68rem 0.85rem;
+}
+
+.skeleton-pending-page .skeleton-pending-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.9rem 1rem;
+}
+
+.skeleton-pending-title {
+    width: min(250px, 72%);
+    height: 24px;
+    margin-bottom: 0.38rem;
+}
+
+.skeleton-pending-subtitle {
+    width: min(460px, 84%);
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-total {
+    width: 140px;
+    height: 32px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-filters {
+    padding: 0.75rem 1rem;
+}
+
+.skeleton-pending-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: center;
+}
+
+.skeleton-pending-filter {
+    width: 176px;
+    height: 34px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-filter-btn {
+    width: 84px;
+    height: 34px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-project-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-pending-project-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.74rem 0.92rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-pending-project-title {
+    width: min(280px, 78%);
+    height: 20px;
+    margin-bottom: 0.34rem;
+}
+
+.skeleton-pending-project-meta {
+    width: min(360px, 88%);
+    height: 13px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-chip-row {
+    display: inline-flex;
+    gap: 0.36rem;
+}
+
+.skeleton-pending-chip {
+    width: 68px;
+    height: 28px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-pending-table-head {
+    padding: 0.63rem 0.92rem;
+}
+
+.skeleton-pending-table {
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.skeleton-pending-table .skeleton-table-row {
+    padding: 0.7rem 0.92rem;
+}
+
+.skeleton-tasks-page .skeleton-tasks-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.9rem 1rem;
+}
+
+.skeleton-tasks-header-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.skeleton-tasks-header-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+}
+
+.skeleton-tasks-title {
+    width: min(180px, 68%);
+    height: 24px;
+    margin-bottom: 0.34rem;
+}
+
+.skeleton-tasks-subtitle {
+    width: min(360px, 92%);
+    height: 13px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-add-btn {
+    width: 132px;
+    height: 36px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.skeleton-tasks-meta-pill {
+    width: 124px;
+    height: 28px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    padding: 0.74rem 0.94rem;
+}
+
+.skeleton-tasks-filter-field {
+    width: 230px;
+    height: 36px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-filter-btn {
+    width: 88px;
+    height: 36px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-list-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-tasks-row {
+    display: flex;
+    align-items: center;
+    gap: 0.66rem;
+    padding: 0.78rem 0.95rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-tasks-row:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-tasks-row-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.skeleton-tasks-row-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.skeleton-tasks-row-title {
+    width: min(280px, 78%);
+    height: 17px;
+    margin-bottom: 0.42rem;
+}
+
+.skeleton-tasks-row-meta {
+    display: inline-flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.skeleton-tasks-row-chip {
+    width: 96px;
+    height: 24px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-tasks-row-actions {
+    display: inline-flex;
+    gap: 0.36rem;
+    flex-shrink: 0;
+}
+
+.skeleton-tasks-row-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-tasks-page .skeleton-project-tasks-breadcrumb {
+    width: min(280px, 76%);
+    height: 16px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-tasks-project-card,
+.skeleton-project-tasks-header,
+.skeleton-project-tasks-list-card {
+    margin-bottom: 0;
+}
+
+.skeleton-project-tasks-project-head,
+.skeleton-project-tasks-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+}
+
+.skeleton-project-tasks-project-title {
+    width: min(320px, 82%);
+    height: 20px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-tasks-project-back {
+    width: 118px;
+    height: 34px;
+    border-radius: 9px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-tasks-header-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.skeleton-project-tasks-title {
+    width: min(220px, 72%);
+    height: 24px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-tasks-count {
+    width: 120px;
+    height: 28px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-tasks-add-btn {
+    width: 132px;
+    height: 36px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-tasks-list-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-project-tasks-row {
+    display: flex;
+    align-items: center;
+    gap: 0.66rem;
+    padding: 0.86rem 0.95rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-project-tasks-row:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-project-tasks-row-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.skeleton-project-tasks-row-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.skeleton-project-tasks-row-title {
+    width: min(280px, 78%);
+    height: 16px;
+    margin-bottom: 0.42rem;
+}
+
+.skeleton-project-tasks-row-meta {
+    display: inline-flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.skeleton-project-tasks-row-chip {
+    width: 92px;
+    height: 24px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-tasks-row-actions {
+    display: inline-flex;
+    gap: 0.36rem;
+    flex-shrink: 0;
+}
+
+.skeleton-project-tasks-row-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-search-page .skeleton-search-header {
+    margin-bottom: 0;
+}
+
+.skeleton-search-title {
+    width: min(260px, 72%);
+    height: 24px;
+    margin-bottom: 0.4rem;
+}
+
+.skeleton-search-subtitle {
+    width: min(460px, 86%);
+    height: 14px;
+    margin-bottom: 0.75rem;
+}
+
+.skeleton-search-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.skeleton-search-input {
+    flex: 1;
+    height: 38px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-search-submit {
+    width: 100px;
+    height: 38px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-search-section {
+    margin-bottom: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-search-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-search-section-title {
+    width: min(190px, 70%);
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-search-result-row {
+    padding: 0.74rem 0.9rem;
+    border-bottom: 1px solid #f1f5fa;
+}
+
+.skeleton-search-result-row:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-search-result-title {
+    width: min(360px, 86%);
+    height: 14px;
+    margin-bottom: 0.28rem;
+}
+
+.skeleton-search-result-subtitle {
+    width: min(480px, 92%);
+    height: 12px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-list-page .skeleton-templates-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-list-title {
+    width: min(260px, 76%);
+    height: 24px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-list-add-btn {
+    width: 132px;
+    height: 36px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-list-card {
+    padding: 0;
+    overflow: hidden;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-list-row {
+    display: flex;
+    align-items: center;
+    gap: 0.66rem;
+    padding: 0.86rem 0.95rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-templates-list-row:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-templates-list-row-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.skeleton-templates-list-row-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.skeleton-templates-list-row-title {
+    width: min(260px, 80%);
+    height: 15px;
+    margin-bottom: 0.35rem;
+}
+
+.skeleton-templates-list-row-subtitle {
+    width: min(440px, 92%);
+    height: 12px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-list-row-actions {
+    display: inline-flex;
+    gap: 0.36rem;
+    flex-shrink: 0;
+}
+
+.skeleton-templates-list-row-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-form-header,
+.skeleton-templates-form-section {
+    margin-bottom: 0;
+}
+
+.skeleton-templates-form-title {
+    width: min(300px, 76%);
+    height: 24px;
+    margin-bottom: 0.4rem;
+}
+
+.skeleton-templates-form-subtitle {
+    width: min(460px, 90%);
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-form-field {
+    height: 40px;
+    border-radius: 8px;
+    margin-bottom: 0.56rem;
+}
+
+.skeleton-templates-form-field-lg {
+    height: 92px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-form-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.62rem;
+}
+
+.skeleton-templates-form-section-title {
+    width: min(220px, 70%);
+    height: 16px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-form-add-stage {
+    width: 128px;
+    height: 34px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-form-stage-row {
+    display: flex;
+    align-items: center;
+    gap: 0.48rem;
+    margin-bottom: 0.45rem;
+}
+
+.skeleton-templates-form-stage-row:last-child {
+    margin-bottom: 0;
+}
+
+.skeleton-templates-form-stage-name {
+    flex: 1;
+    height: 36px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-form-stage-days {
+    width: 104px;
+    height: 36px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-form-stage-remove {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-templates-form-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.48rem;
+}
+
+.skeleton-templates-form-footer-btn {
+    width: 142px;
+    height: 36px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    .skeleton-project-tasks-row,
+    .skeleton-templates-list-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .skeleton-project-tasks-row-actions,
+    .skeleton-templates-list-row-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .skeleton-project-tasks-project-head,
+    .skeleton-project-tasks-header,
+    .skeleton-search-form,
+    .skeleton-templates-list-page .skeleton-templates-list-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .skeleton-project-tasks-project-back,
+    .skeleton-project-tasks-add-btn,
+    .skeleton-search-submit,
+    .skeleton-templates-list-add-btn {
+        width: 100%;
+    }
+
+    .skeleton-templates-form-stage-row {
+        flex-wrap: wrap;
+    }
+
+    .skeleton-templates-form-stage-name {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+}
+
+.skeleton-project-detail-header {
+    padding: 0.95rem 1rem;
+}
+
+.skeleton-project-detail-header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
+    margin-bottom: 0.58rem;
+}
+
+.skeleton-project-detail-title {
+    width: min(340px, 70%);
+    height: 26px;
+    margin-bottom: 0.36rem;
+}
+
+.skeleton-project-detail-description {
+    width: min(500px, 88%);
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-detail-back {
+    width: 92px;
+    height: 34px;
+    border-radius: 10px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-detail-dates {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.skeleton-project-detail-date {
+    width: 132px;
+    height: 30px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-project-detail-info {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-project-detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding: 0.78rem 0.95rem 0.9rem;
+}
+
+.skeleton-project-detail-info-item {
+    border: 1px solid #edf2f8;
+    border-radius: 10px;
+    padding: 0.55rem 0.6rem;
+}
+
+.skeleton-project-detail-info-item .skeleton-text:last-child {
+    margin-bottom: 0;
+}
+
+.skeleton-project-detail-stages {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-project-stage-row {
+    padding: 0.78rem 0.95rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-project-stage-row:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-project-stage-title {
+    width: min(220px, 68%);
+    height: 16px;
+    margin-bottom: 0.42rem;
+}
+
+.skeleton-project-stage-text {
+    width: min(460px, 92%);
+    height: 13px;
+    margin-bottom: 0.45rem;
+}
+
+.skeleton-project-stage-meta {
+    display: inline-flex;
+    gap: 0.36rem;
+}
+
+.skeleton-project-stage-chip {
+    width: 92px;
+    height: 24px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.skeleton-task-detail-breadcrumb {
+    width: min(260px, 68%);
+    height: 18px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-back {
+    width: 86px;
+    height: 32px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-header {
+    padding: 0.85rem 0.95rem;
+}
+
+.skeleton-task-detail-header-main {
+    margin-bottom: 0.52rem;
+}
+
+.skeleton-task-detail-title {
+    width: min(360px, 82%);
+    height: 24px;
+    margin-bottom: 0.35rem;
+}
+
+.skeleton-task-detail-project {
+    width: 162px;
+    height: 30px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-header-meta {
+    display: inline-flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.skeleton-task-detail-meta-pill {
+    width: 114px;
+    height: 24px;
+    border-radius: 999px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-items {
+    padding: 0;
+    overflow: hidden;
+}
+
+.skeleton-task-detail-items .skeleton-dashboard-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.skeleton-task-detail-add-item {
+    width: 112px;
+    height: 30px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-columns {
+    display: flex;
+    gap: 0;
+    padding: 0.64rem 0.95rem;
+    background: #f7f9fc;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-task-detail-columns .skeleton-table-cell {
+    height: 13px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-item-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.95rem;
+    border-bottom: 1px solid #edf2f8;
+}
+
+.skeleton-task-detail-item-row:last-child {
+    border-bottom: 0;
+}
+
+.skeleton-task-detail-item-desc {
+    flex: 2.5;
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-item-status {
+    width: 102px;
+    height: 28px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-item-owner {
+    flex: 1;
+    height: 13px;
+    margin-bottom: 0;
+}
+
+.skeleton-task-detail-item-action {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+/* Estilos específicos para a página inicial (dashboard) na versão desktop */
+@media (min-width: 768px) {
+    
+    /* Altura máxima para o card de projetos recentes */
+    .col-md-8 .card, .col-md-4 .card {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Reduzir padding nos cabeçalhos dos cards */
+    .col-md-8 .card-header, .col-md-4 .card-header {
+        padding: 0.5rem 1rem !important;
+    }
+    
+    /* Ajustar padding nos corpos dos cards */
+    .col-md-8 .card-body, .col-md-4 .card-body {
+        padding: 0.75rem !important;
+    }
+    
+    /* Tornar a tabela de projetos recentes mais compacta */
+    .col-md-8 .table th, .col-md-8 .table td {
+        padding: 0.4rem 0.75rem;
+        font-size: var(--ds-font-size-md);
+    }
+    
+    /* Definir altura máxima para a tabela de projetos recentes com scroll interno - aumentada */
+    .col-md-8 .table-responsive {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    /* Reduzir o tamanho dos cards de estatísticas */
+    .g-2.mb-3 .card-body {
+        padding: 0.5rem !important;
+    }
+    
+    /* Tornar o grid de prioridades mais compacto, mas não tão compacto */
+    .priority-grid-clean {
+        gap: 8px;
+    }
+    
+    .priority-item-clean {
+        padding: 8px 12px;
+    }
+    
+    /* Reduzir o espaçamento entre os cards de estatísticas */
+    .row.g-2 {
+        --bs-gutter-y: 0.25rem !important;
+    }
+    
+    /* Cards de ações rápidas ajustados */
+    .btn-outline-primary, .btn-outline-secondary {
+        padding: 0.35rem 0.75rem;
+        font-size: var(--ds-font-size-md);
+    }
+}
+
+.dashboard-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.bg-primary-light {
+    background-color: var(--primary-light-bg);
+}
+
+.bg-success-light {
+    background-color: var(--success-light-bg);
+}
+
+.bg-info-light {
+    background-color: var(--info-light-bg);
+}
+
+.bg-danger-light {
+    background-color: var(--danger-light-bg);
+}
+
+/* Ajustes específicos para a versão desktop */
+@media (min-width: 768px) {
+    /* Ajuste do layout para mostrar 4 cards em uma linha */
+    .row.g-2.mb-3 {
+        margin-left: -0.25rem !important;
+        margin-right: -0.25rem !important;
+    }
+    
+    .row.g-2.mb-3 .col-md-3 {
+        padding: 0.25rem !important;
+    }
+    
+}
+
+/* Keyframes para animação do skeleton */
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
