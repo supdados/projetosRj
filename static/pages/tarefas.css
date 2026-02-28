@@ -676,9 +676,8 @@
 }
 
 .task-hub-page .task-hub-add-row .task-item-add-line {
-    display: grid;
-    grid-template-columns: minmax(280px, 1fr) 112px 112px 138px minmax(170px, 220px) auto auto;
-    gap: 0.38rem;
+    grid-template-columns: minmax(0, 1fr) var(--td-col-prioridade) var(--td-col-tipo) var(--td-col-status) var(--td-col-owner) var(--td-col-actions);
+    gap: 0.45rem 0.5rem;
     align-items: center;
 }
 
@@ -686,11 +685,6 @@
 .task-hub-page .task-hub-add-row .responsavel-picker-trigger {
     width: 100%;
     justify-content: space-between;
-}
-
-.task-hub-page .task-hub-add-cancel,
-.task-hub-page .task-hub-add-submit {
-    min-width: 84px;
 }
 
 .task-hub-page .task-hub-kanban-context {

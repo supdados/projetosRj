@@ -559,7 +559,7 @@
                         {% if not archived_mode %}
                         <div class="task-item-add-row task-hub-add-row" data-project-value="{{ group['project_value'] }}">
                             <div class="task-item-add-placeholder" data-role="open-add-form">
-                                <span class="task-item-add-dashes">—</span>
+                                <span class="task-item-add-dashes"><i class="fas fa-plus" aria-hidden="true"></i></span>
                                 <span class="task-item-add-label">Adicionar nova tarefa</span>
                             </div>
                             <div class="task-item-add-form" data-role="add-form" hidden>
@@ -595,8 +595,14 @@
                                             </span>
                                             <i class="fas fa-chevron-down" aria-hidden="true"></i>
                                         </button>
-                                        <button type="button" class="btn-task btn-task-secondary task-hub-add-cancel" data-role="cancel-add">Cancelar</button>
-                                        <button type="button" class="btn-task btn-task-primary task-hub-add-submit" data-role="submit-add">Salvar</button>
+                                        <div class="task-item-add-actions">
+                                            <button type="button" class="task-item-btn task-hub-add-cancel" data-role="cancel-add" title="Cancelar">
+                                                <i class="fas fa-xmark" aria-hidden="true"></i>
+                                            </button>
+                                            <button type="button" class="task-item-btn task-item-btn-confirm task-hub-add-submit" data-role="submit-add" title="Salvar">
+                                                <i class="fas fa-check" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
