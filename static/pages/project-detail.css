@@ -2685,12 +2685,21 @@ html[data-theme="dark"] body.is-authenticated .info-card .btn-history {
     color: #d6e5f4;
 }
 
+html[data-theme="dark"] body.is-authenticated .info-card .btn-edit-project {
+    background: rgba(48, 72, 98, 0.78);
+    border-color: rgba(172, 200, 228, 0.32);
+    color: #d6e5f4;
+}
+
 html[data-theme="dark"] body.is-authenticated .info-card .btn-ver-tarefas-projeto:hover,
 html[data-theme="dark"] body.is-authenticated .info-card .btn-ver-tarefas-projeto:focus,
 html[data-theme="dark"] body.is-authenticated .info-card .btn-ver-tarefas-projeto:focus-visible,
 html[data-theme="dark"] body.is-authenticated .info-card .btn-history:hover,
 html[data-theme="dark"] body.is-authenticated .info-card .btn-history:focus,
-html[data-theme="dark"] body.is-authenticated .info-card .btn-history:focus-visible {
+html[data-theme="dark"] body.is-authenticated .info-card .btn-history:focus-visible,
+html[data-theme="dark"] body.is-authenticated .info-card .btn-edit-project:hover,
+html[data-theme="dark"] body.is-authenticated .info-card .btn-edit-project:focus,
+html[data-theme="dark"] body.is-authenticated .info-card .btn-edit-project:focus-visible {
     background: rgba(64, 93, 124, 0.92);
     border-color: rgba(172, 200, 228, 0.50);
     color: #edf4fb;
@@ -2753,6 +2762,53 @@ html[data-theme="dark"] body.is-authenticated .info-card .priority-badge.priorit
     background: rgba(129, 152, 177, 0.24);
     border-color: rgba(168, 184, 202, 0.48);
     color: #e3edf8 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .info-card .detail-item .badge.bg-success {
+    background: rgba(73, 185, 135, 0.22) !important;
+    border-color: rgba(73, 185, 135, 0.46) !important;
+    color: #d8f5e8 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .info-card .detail-item .badge.bg-secondary {
+    background: rgba(126, 145, 168, 0.22) !important;
+    border-color: rgba(159, 176, 196, 0.44) !important;
+    color: #deebf8 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .info-card .detail-item .badge.bg-warning {
+    background: rgba(216, 162, 77, 0.2) !important;
+    border-color: rgba(216, 162, 77, 0.42) !important;
+    color: #ffe7c3 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .info-card .detail-item .badge.bg-info {
+    background: rgba(78, 149, 204, 0.2) !important;
+    border-color: rgba(99, 166, 219, 0.42) !important;
+    color: #dcecff !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .info-card .detail-item .badge.bg-light {
+    background: rgba(129, 152, 177, 0.18) !important;
+    border-color: rgba(159, 176, 196, 0.34) !important;
+    color: #c8d8e8 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .info-card .detail-item .badge i {
+    color: inherit !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .section-divider h2 {
+    background: none;
+    -webkit-text-fill-color: initial;
+    color: #e3edf8;
+}
+
+html[data-theme="dark"] body.is-authenticated .section-divider::after {
+    background: linear-gradient(90deg,
+            rgba(172, 200, 228, 0.6) 0%,
+            rgba(99, 166, 219, 0.28) 50%,
+            transparent 100%);
 }
 
 html[data-theme="dark"] body.is-authenticated .etapa-v4-table-card {
@@ -2962,17 +3018,17 @@ html[data-theme="dark"] body.is-authenticated .etapa-inline-empty-row td {
 /* Project detail delete stage action: keep danger hover readable */
 
 html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating {
-    background: rgba(217, 122, 122, 0.12);
-    border-color: rgba(217, 122, 122, 0.4) !important;
-    color: #f4c9c9 !important;
+    background: transparent;
+    border-color: transparent !important;
+    color: #9fb2c7 !important;
 }
 
 html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating:hover,
 html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating:focus,
 html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating:focus-visible {
-    background: rgba(217, 122, 122, 0.3) !important;
-    border-color: rgba(217, 122, 122, 0.68) !important;
-    color: #ffe9e9 !important;
+    background: rgba(217, 122, 122, 0.24) !important;
+    border-color: transparent !important;
+    color: #ffd8d8 !important;
     box-shadow: none;
     transform: none;
 }
@@ -3066,14 +3122,29 @@ html[data-theme="dark"] body.is-authenticated .glass-footer-import {
 }
 
 html[data-theme="dark"] body.is-authenticated .btn-glass-primary-import {
-    background: linear-gradient(135deg, #0f6fae 0%, #0c6299 52%, #095380 100%);
-    color: #f7fbff;
-    border: 1px solid rgba(20, 117, 181, 0.58);
+    background: #2a394d;
+    color: #d6e5f4;
+    border: 1px solid rgba(172, 200, 228, 0.32);
 }
 
 html[data-theme="dark"] body.is-authenticated .btn-glass-primary-import:hover {
-    background: linear-gradient(135deg, #1681c8 0%, #1272b2 52%, #0d608f 100%);
-    border-color: rgba(38, 140, 208, 0.72);
+    background: rgba(64, 93, 124, 0.92);
+    border-color: rgba(172, 200, 228, 0.5);
+    color: #edf4fb;
+}
+
+html[data-theme="dark"] body.is-authenticated .btn-import-model {
+    background: #2a394d;
+    border-color: var(--app-color-border) !important;
+    color: var(--app-color-text-secondary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .btn-import-model:hover,
+html[data-theme="dark"] body.is-authenticated .btn-import-model:focus,
+html[data-theme="dark"] body.is-authenticated .btn-import-model:focus-visible {
+    background: rgba(78, 149, 204, 0.2);
+    border-color: rgba(99, 166, 219, 0.46) !important;
+    color: var(--app-color-text-primary) !important;
 }
 
 html[data-theme="dark"] body.is-authenticated .custom-context-menu {

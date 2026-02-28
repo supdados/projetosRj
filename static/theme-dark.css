@@ -897,7 +897,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-
 html[data-theme="dark"] body.is-authenticated .main-content .btn-glass-primary,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-new-clean,
 html[data-theme="dark"] body.is-authenticated .main-content .dashboard-new-project-btn,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-import-model,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-task-save-edit,
 html[data-theme="dark"] body.is-authenticated .main-content .task-modal-submit-primary {
     background: linear-gradient(135deg, #4f95cc 0%, #3f84b9 100%);
@@ -933,7 +932,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-new-clean:hover
 html[data-theme="dark"] body.is-authenticated .main-content .btn-new-clean:focus,
 html[data-theme="dark"] body.is-authenticated .main-content .dashboard-new-project-btn:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .dashboard-new-project-btn:focus,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-import-model:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-task-save-edit:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .task-modal-submit-primary:hover {
     background: linear-gradient(135deg, #63a6db 0%, #4f95cc 100%);
@@ -970,6 +968,7 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-pending,
 html[data-theme="dark"] body.is-authenticated .main-content .template-form-header-back,
 html[data-theme="dark"] body.is-authenticated .main-content .project-info-back-link,
 html[data-theme="dark"] body.is-authenticated .main-content .history-back-btn,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-import-model,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-add-etapa,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-floating {
     background: #2a394d;
@@ -1724,3 +1723,122 @@ html[data-theme="dark"] body.is-authenticated .account-page-shell textarea:-webk
     caret-color: var(--app-color-text-primary);
 }
 
+
+/* Project detail dark refinements */
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-edit-project {
+    background: rgba(48, 72, 98, 0.78) !important;
+    border-color: rgba(172, 200, 228, 0.32) !important;
+    color: #d6e5f4 !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-edit-project:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-edit-project:focus,
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-edit-project:focus-visible {
+    background: rgba(64, 93, 124, 0.92) !important;
+    border-color: rgba(172, 200, 228, 0.5) !important;
+    color: #edf4fb !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-conclude-project {
+    background: rgba(73, 185, 135, 0.22) !important;
+    border-color: rgba(73, 185, 135, 0.46) !important;
+    color: #c8efdf !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-conclude-project:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-conclude-project:focus,
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-conclude-project:focus-visible {
+    background: rgba(73, 185, 135, 0.3) !important;
+    border-color: rgba(73, 185, 135, 0.6) !important;
+    color: #e4f8ef !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .btn-conclude-project:disabled {
+    background: rgba(73, 185, 135, 0.14) !important;
+    border-color: rgba(73, 185, 135, 0.28) !important;
+    color: rgba(200, 239, 223, 0.72) !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .section-divider h2 {
+    background: none;
+    color: #e3edf8;
+    -webkit-text-fill-color: initial;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .section-divider::after {
+    background: linear-gradient(90deg, rgba(172, 200, 228, 0.6) 0%, rgba(99, 166, 219, 0.28) 50%, transparent 100%);
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .detail-item .badge.bg-success {
+    background: rgba(73, 185, 135, 0.22) !important;
+    border-color: rgba(73, 185, 135, 0.46) !important;
+    color: #d8f5e8 !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .detail-item .badge.bg-secondary {
+    background: rgba(126, 145, 168, 0.22) !important;
+    border-color: rgba(159, 176, 196, 0.44) !important;
+    color: #deebf8 !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .detail-item .badge.bg-warning {
+    background: rgba(216, 162, 77, 0.2) !important;
+    border-color: rgba(216, 162, 77, 0.42) !important;
+    color: #ffe7c3 !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .detail-item .badge.bg-info {
+    background: rgba(78, 149, 204, 0.2) !important;
+    border-color: rgba(99, 166, 219, 0.42) !important;
+    color: #dcecff !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .detail-item .badge.bg-light {
+    background: rgba(129, 152, 177, 0.18) !important;
+    border-color: rgba(159, 176, 196, 0.34) !important;
+    color: #c8d8e8 !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .info-card .detail-item .badge i {
+    color: inherit !important;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .etapa-v4-actions-cell .btn-floating {
+    background: transparent;
+    border-color: transparent;
+    color: #9fb2c7;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .etapa-v4-actions-cell .btn-floating:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .etapa-v4-actions-cell .btn-floating:focus,
+html[data-theme="dark"] body.is-authenticated .main-content .etapa-v4-actions-cell .btn-floating:focus-visible {
+    background: rgba(217, 122, 122, 0.24);
+    border-color: transparent;
+    color: #ffd8d8;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .main-content .btn-import-model:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-import-model:focus,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-import-model:focus-visible,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-add-etapa:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-add-etapa:focus,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-add-etapa:focus-visible {
+    background: rgba(78, 149, 204, 0.2);
+    border-color: rgba(99, 166, 219, 0.46);
+    color: var(--app-color-text-primary);
+}
