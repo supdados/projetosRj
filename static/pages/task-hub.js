@@ -2875,6 +2875,15 @@
             setDrawerCommentsStatus();
             setDrawerCommentsExpanded(false, { instant: true });
 
+            // Reset attachments section so loadDrawerAnexos is always triggered for the new task
+            if (drawerAnexosToggle) {
+                drawerAnexosToggle.setAttribute('aria-expanded', 'false');
+                drawerAnexosToggle.classList.remove('is-expanded');
+            }
+            if (drawerAnexosBody) drawerAnexosBody.setAttribute('hidden', '');
+            if (drawerAnexosList) drawerAnexosList.innerHTML = '';
+            if (drawerAnexosCount) drawerAnexosCount.textContent = '0';
+
             drawer.removeAttribute('hidden');
             drawerBackdrop.removeAttribute('hidden');
             drawer.setAttribute('aria-hidden', 'false');
@@ -2911,6 +2920,8 @@
                 drawer.setAttribute('hidden', '');
                 drawerBackdrop.setAttribute('hidden', '');
                 drawerCommentsList.innerHTML = '';
+                if (drawerAnexosList) drawerAnexosList.innerHTML = '';
+                if (drawerAnexosCount) drawerAnexosCount.textContent = '0';
                 drawerTitle.textContent = 'Item';
                 setDrawerAutosaveStatus('saved');
                 setDrawerCommentsStatus();
