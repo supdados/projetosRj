@@ -21,6 +21,7 @@ def test_project_detail_template_contains_stage_table_hooks(client_user, seed_da
         'data-etapa-id="',
         'data-field="',
         'data-original-value="',
+        'data-empty-display="Sem data"',
         'id="date-context-menu"',
     ]
 

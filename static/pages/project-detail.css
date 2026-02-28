@@ -1451,10 +1451,12 @@
 
     .etapa-v4-col-date {
         width: 130px;
+        text-align: center;
     }
 
     .etapa-v4-col-responsavel {
         width: 170px;
+        text-align: center;
     }
 
     .etapa-v4-col-status {
@@ -1477,6 +1479,11 @@
         white-space: nowrap;
     }
 
+    .etapa-v4-cell-date,
+    .etapa-v4-cell-responsavel {
+        text-align: center;
+    }
+
     .etapa-descricao {
         font-weight: var(--ds-font-weight-semibold);
         color: #263f59 !important;
@@ -1495,30 +1502,42 @@
         color: inherit;
     }
 
-    .etapa-v4-cell-responsavel .editable-field {
+    .etapa-v4-cell-responsavel .editable-field,
+    .etapa-v4-cell-date .editable-field {
         width: 100%;
         min-height: 30px;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         padding: 0.22rem 0.48rem;
         border-radius: 8px;
+        text-align: center;
         transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
     }
 
-    .etapa-v4-cell-responsavel .editable-field-empty {
+    .etapa-v4-cell-date .editable-field-input,
+    .etapa-v4-cell-responsavel .editable-field-input {
+        text-align: center;
+    }
+
+    .etapa-v4-cell-responsavel .editable-field-empty,
+    .etapa-v4-cell-date .editable-field-empty {
         color: #6f859f;
         background: #f6f9fc;
         border: 1px dashed #d6e2ef;
     }
 
-    .etapa-v4-cell-responsavel .editable-field-empty:hover {
+    .etapa-v4-cell-responsavel .editable-field-empty:hover,
+    .etapa-v4-cell-date .editable-field-empty:hover {
         background: #eef4fa;
         border-color: #bfd0e1;
         color: #536d89;
     }
 
     .etapa-done .etapa-v4-cell-responsavel .editable-field-empty,
-    .etapa-done .etapa-v4-cell-responsavel .editable-field-empty:hover {
+    .etapa-done .etapa-v4-cell-responsavel .editable-field-empty:hover,
+    .etapa-done .etapa-v4-cell-date .editable-field-empty,
+    .etapa-done .etapa-v4-cell-date .editable-field-empty:hover {
         background: transparent;
         border-color: transparent;
         color: #8ea1b7;
@@ -3007,20 +3026,24 @@ html[data-theme="dark"] body.is-authenticated .editable-field-textarea:focus {
     box-shadow: 0 0 0 0.2rem rgba(78, 149, 204, 0.22);
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-responsavel .editable-field-empty {
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-responsavel .editable-field-empty,
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .editable-field-empty {
     background: rgba(35, 49, 68, 0.8);
     border-color: rgba(99, 166, 219, 0.24);
     color: #9eb6cb;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-responsavel .editable-field-empty:hover {
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-responsavel .editable-field-empty:hover,
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .editable-field-empty:hover {
     background: rgba(43, 58, 79, 0.92);
     border-color: rgba(99, 166, 219, 0.4);
     color: #cfe0ef;
 }
 
 html[data-theme="dark"] body.is-authenticated .etapa-done .etapa-v4-cell-responsavel .editable-field-empty,
-html[data-theme="dark"] body.is-authenticated .etapa-done .etapa-v4-cell-responsavel .editable-field-empty:hover {
+html[data-theme="dark"] body.is-authenticated .etapa-done .etapa-v4-cell-responsavel .editable-field-empty:hover,
+html[data-theme="dark"] body.is-authenticated .etapa-done .etapa-v4-cell-date .editable-field-empty,
+html[data-theme="dark"] body.is-authenticated .etapa-done .etapa-v4-cell-date .editable-field-empty:hover {
     background: transparent;
     border-color: transparent;
     color: #8ea6be;

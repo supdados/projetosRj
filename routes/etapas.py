@@ -122,9 +122,9 @@ def add_etapa(project_id):
                         'comentarios': new_etapa.comentarios or '',
                         'responsavel': new_etapa.responsavel or '',
                         'data_inicio': new_etapa.data_inicio.strftime('%Y-%m-%d') if new_etapa.data_inicio else '',
-                        'data_inicio_display': new_etapa.data_inicio.strftime('%d/%m/%Y') if new_etapa.data_inicio else '-',
+                        'data_inicio_display': new_etapa.data_inicio.strftime('%d/%m/%Y') if new_etapa.data_inicio else 'Sem data',
                         'data_fim': new_etapa.data_fim.strftime('%Y-%m-%d') if new_etapa.data_fim else '',
-                        'data_fim_display': new_etapa.data_fim.strftime('%d/%m/%Y') if new_etapa.data_fim else '-',
+                        'data_fim_display': new_etapa.data_fim.strftime('%d/%m/%Y') if new_etapa.data_fim else 'Sem data',
                         'iniciada': bool(new_etapa.iniciada),
                         'done': bool(new_etapa.done),
                         'ordem': int(new_etapa.ordem or 0),
@@ -462,7 +462,7 @@ def update_etapa_field(etapa_id):
             
             etapa.data_inicio = new_date
             response_data['newValue'] = value
-            response_data['displayValue'] = new_date.strftime('%d/%m/%Y') if new_date else '-'
+            response_data['displayValue'] = new_date.strftime('%d/%m/%Y') if new_date else 'Sem data'
 
             if old_date and new_date:
                 delta = new_date - old_date
@@ -489,7 +489,7 @@ def update_etapa_field(etapa_id):
             
             etapa.data_fim = new_date
             response_data['newValue'] = value
-            response_data['displayValue'] = new_date.strftime('%d/%m/%Y') if new_date else '-'
+            response_data['displayValue'] = new_date.strftime('%d/%m/%Y') if new_date else 'Sem data'
             
         elif field == 'descricao':
             old_value = etapa.descricao

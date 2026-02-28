@@ -521,15 +521,15 @@
                                 data-comentario="{{ etapa.comentarios or '' }}"></button>
                         </td>
                         <td class="etapa-row-text etapa-v4-cell-date {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
-                            <span class="editable-field" data-field="data_inicio" data-etapa-id="{{ etapa.id }}"
-                                data-original-value="{{ etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else '' }}">
-                                {{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}
+                            <span class="editable-field{% if not etapa.data_inicio %} editable-field-empty{% endif %}" data-field="data_inicio" data-etapa-id="{{ etapa.id }}"
+                                data-original-value="{{ etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else '' }}" data-empty-display="Sem data">
+                                {{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else 'Sem data' }}
                             </span>
                         </td>
                         <td class="etapa-row-text etapa-v4-cell-date {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
-                            <span class="editable-field" data-field="data_fim" data-etapa-id="{{ etapa.id }}"
-                                data-original-value="{{ etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '' }}">
-                                {{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}
+                            <span class="editable-field{% if not etapa.data_fim %} editable-field-empty{% endif %}" data-field="data_fim" data-etapa-id="{{ etapa.id }}"
+                                data-original-value="{{ etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '' }}" data-empty-display="Sem data">
+                                {{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else 'Sem data' }}
                             </span>
                         </td>
                         <td class="etapa-row-text etapa-v4-cell-responsavel {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
@@ -782,18 +782,31 @@
             return (value || '').trim() ? String(value).trim() : 'Sem responsável';
         }
 
+        function getDateDisplayValue(rawValue, displayValue) {
+            return (rawValue || '').trim() ? String(displayValue || '').trim() : 'Sem data';
+        }
+
         function isResponsavelEmptyValue(value) {
             return !String(value || '').trim() || String(value).trim() === 'Sem responsável';
         }
 
-        function updateResponsavelFieldDisplay(target, value) {
+        function updateEditableFieldDisplay(target, hasValue, displayValue, emptyDisplay) {
             if (!target) {
                 return;
             }
 
-            const hasValue = !isResponsavelEmptyValue(value);
-            target.textContent = hasValue ? String(value).trim() : 'Sem responsável';
+            target.textContent = hasValue ? String(displayValue || '').trim() : emptyDisplay;
             target.classList.toggle('editable-field-empty', !hasValue);
+        }
+
+        function updateResponsavelFieldDisplay(target, value) {
+            const hasValue = !isResponsavelEmptyValue(value);
+            updateEditableFieldDisplay(target, hasValue, value, 'Sem responsável');
+        }
+
+        function updateDateFieldDisplay(target, rawValue, displayValue) {
+            const hasValue = Boolean((rawValue || '').trim());
+            updateEditableFieldDisplay(target, hasValue, displayValue, 'Sem data');
         }
 
         function syncImportModelButtonVisibility() {
@@ -1048,9 +1061,9 @@
             const responsavel = getResponsavelDisplayValue(etapaPayload.responsavel || '');
             const comentarios = etapaPayload.comentarios || '';
             const dataInicio = etapaPayload.data_inicio || '';
-            const dataInicioDisplay = etapaPayload.data_inicio_display || '-';
+            const dataInicioDisplay = getDateDisplayValue(dataInicio, etapaPayload.data_inicio_display || '');
             const dataFim = etapaPayload.data_fim || '';
-            const dataFimDisplay = etapaPayload.data_fim_display || '-';
+            const dataFimDisplay = getDateDisplayValue(dataFim, etapaPayload.data_fim_display || '');
             const iniciada = Boolean(etapaPayload.iniciada);
             const done = Boolean(etapaPayload.done);
             const rowClasses = [
@@ -1093,10 +1106,10 @@
                     <button class="btn-comment-data ds-hidden" data-etapa-id="${etapaId}" data-comentario="${escapeHtml(comentarios)}"></button>
                 </td>
                 <td class="etapa-row-text etapa-v4-cell-date ${done ? 'text-decoration-line-through text-muted' : ''}">
-                    <span class="editable-field" data-field="data_inicio" data-etapa-id="${etapaId}" data-original-value="${escapeHtml(dataInicio)}">${escapeHtml(dataInicioDisplay)}</span>
+                    <span class="editable-field${dataInicio ? '' : ' editable-field-empty'}" data-field="data_inicio" data-etapa-id="${etapaId}" data-original-value="${escapeHtml(dataInicio)}" data-empty-display="Sem data">${escapeHtml(dataInicioDisplay)}</span>
                 </td>
                 <td class="etapa-row-text etapa-v4-cell-date ${done ? 'text-decoration-line-through text-muted' : ''}">
-                    <span class="editable-field" data-field="data_fim" data-etapa-id="${etapaId}" data-original-value="${escapeHtml(dataFim)}">${escapeHtml(dataFimDisplay)}</span>
+                    <span class="editable-field${dataFim ? '' : ' editable-field-empty'}" data-field="data_fim" data-etapa-id="${etapaId}" data-original-value="${escapeHtml(dataFim)}" data-empty-display="Sem data">${escapeHtml(dataFimDisplay)}</span>
                 </td>
                 <td class="etapa-row-text etapa-v4-cell-responsavel ${done ? 'text-decoration-line-through text-muted' : ''}">
                     <span class="editable-field${isResponsavelEmptyValue(responsavel) ? ' editable-field-empty' : ''}" data-field="responsavel" data-etapa-id="${etapaId}" data-empty-display="Sem responsável">${escapeHtml(responsavel)}</span>
@@ -1748,16 +1761,16 @@
                         .then(data => {
                             if (data.success) {
                                 // Atualiza o campo que foi clicado (data_inicio ou data_fim)
-                                elementToUpdate.textContent = data.displayValue;
-                                elementToUpdate.dataset.originalValue = data.newValue;
+                                updateDateFieldDisplay(elementToUpdate, data.newValue || '', data.displayValue || '');
+                                elementToUpdate.dataset.originalValue = data.newValue || '';
 
                                 // Se a data de início foi alterada, atualiza também a data de fim da mesma etapa
                                 if (field === 'data_inicio' && data.updatedEndDate) {
                                     const etapaRow = elementToUpdate.closest('tr');
                                     const endDateElement = etapaRow.querySelector('.editable-field[data-field="data_fim"]');
                                     if (endDateElement) {
-                                        endDateElement.textContent = data.updatedEndDateDisplay;
-                                        endDateElement.dataset.originalValue = data.updatedEndDate;
+                                        updateDateFieldDisplay(endDateElement, data.updatedEndDate || '', data.updatedEndDateDisplay || '');
+                                        endDateElement.dataset.originalValue = data.updatedEndDate || '';
                                     }
                                 }
 
@@ -1883,8 +1896,8 @@
                         .then(data => {
                             if (data.success) {
                                 if (field.includes('data')) {
-                                    target.textContent = data.displayValue;
-                                    target.dataset.originalValue = data.newValue;
+                                    updateDateFieldDisplay(target, data.newValue || '', data.displayValue || '');
+                                    target.dataset.originalValue = data.newValue || '';
                                 } else if (field === 'responsavel') {
                                     updateResponsavelFieldDisplay(target, data.newValue || '');
                                 } else {
@@ -1896,8 +1909,8 @@
                                     const etapaRow = target.closest('tr');
                                     const endDateElement = etapaRow.querySelector('.editable-field[data-field="data_fim"]');
                                     if (endDateElement) {
-                                        endDateElement.textContent = data.updatedEndDateDisplay;
-                                        endDateElement.dataset.originalValue = data.updatedEndDate;
+                                        updateDateFieldDisplay(endDateElement, data.updatedEndDate || '', data.updatedEndDateDisplay || '');
+                                        endDateElement.dataset.originalValue = data.updatedEndDate || '';
                                     }
                                 }
 
