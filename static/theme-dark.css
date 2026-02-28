@@ -898,13 +898,18 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-glass-primary,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-new-clean,
 html[data-theme="dark"] body.is-authenticated .main-content .dashboard-new-project-btn,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-import-model,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-history,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-projeto,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-task-save-edit,
 html[data-theme="dark"] body.is-authenticated .main-content .task-modal-submit-primary {
     background: linear-gradient(135deg, #4f95cc 0%, #3f84b9 100%);
     border-color: #3f84b9;
     color: #f8fbff;
+}
+
+html[data-theme="dark"] body.is-authenticated .main-content .btn-history,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-projeto {
+    background: rgba(48, 72, 98, 0.78);
+    border-color: rgba(172, 200, 228, 0.32);
+    color: #d6e5f4;
 }
 
 
@@ -929,13 +934,20 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-new-clean:focus
 html[data-theme="dark"] body.is-authenticated .main-content .dashboard-new-project-btn:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .dashboard-new-project-btn:focus,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-import-model:hover,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-history:hover,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-projeto:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-task-save-edit:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .task-modal-submit-primary:hover {
     background: linear-gradient(135deg, #63a6db 0%, #4f95cc 100%);
     border-color: #63a6db;
     color: #ffffff;
+}
+
+html[data-theme="dark"] body.is-authenticated .main-content .btn-history:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-history:focus,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-projeto:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-projeto:focus {
+    background: rgba(64, 93, 124, 0.92);
+    border-color: rgba(172, 200, 228, 0.50);
+    color: #edf4fb;
 }
 
 

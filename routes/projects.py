@@ -595,7 +595,7 @@ def project_detail(project_id):
     # O cálculo do índice de exibição dinâmico foi removido.
     # O ID real do projeto (project.id) será usado diretamente no template.
 
-    active_task_count = Task.query.filter_by(project_id=project.id, is_finalized=False).count()
+    active_task_count = Task.query.filter_by(project_id=project.id, is_archived=False).count()
 
     return render_template('project_detail.html', project=project, active_task_count=active_task_count)
 
