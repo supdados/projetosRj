@@ -16,11 +16,15 @@ def test_project_detail_ajax_flash_stack_is_limited_to_three():
 def test_project_detail_ajax_flash_uses_compact_app_flash_markup():
     template_path = Path(__file__).resolve().parents[2] / 'templates' / 'project_detail.html'
     main_js_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'project-detail' / '01-main.js'
-    css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'project-detail.css'
+    pages_root = Path(__file__).resolve().parents[2] / 'static' / 'pages'
+    css_bundle_paths = [
+        pages_root / 'project-detail.css',
+        *sorted((pages_root / 'project-detail').glob('*.css')),
+    ]
 
     template_content = _read(template_path)
     main_js_content = _read(main_js_path)
-    css_content = _read(css_path)
+    css_content = '\n'.join(_read(path) for path in css_bundle_paths)
 
     assert "pages/project-detail/01-main.js" in template_content
     assert 'app-flash-alert app-flash-alert-compact' in main_js_content

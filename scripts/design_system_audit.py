@@ -128,11 +128,12 @@ def css_files() -> list[Path]:
     legacy_root = ROOT / "static/styles"
     if legacy_root.exists():
         legacy_css = sorted(path.relative_to(ROOT) for path in legacy_root.rglob("*.css"))
+    page_css = sorted(path.relative_to(ROOT) for path in (ROOT / "static/pages").rglob("*.css"))
     return [
         Path("static/style.css"),
         Path("static/design-system.css"),
         *legacy_css,
-        *sorted(path.relative_to(ROOT) for path in (ROOT / "static/pages").glob("*.css")),
+        *page_css,
     ]
 
 

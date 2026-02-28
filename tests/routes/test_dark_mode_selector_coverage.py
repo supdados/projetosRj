@@ -2,12 +2,16 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_DETAIL_CSS_BUNDLE = [
+    PROJECT_ROOT / 'static' / 'pages' / 'project-detail.css',
+    *sorted((PROJECT_ROOT / 'static' / 'pages' / 'project-detail').glob('*.css')),
+]
 DARK_MODE_CSS_ASSETS = [
     PROJECT_ROOT / 'static' / 'theme-dark.css',
     PROJECT_ROOT / 'static' / 'pages' / 'tarefas.css',
     PROJECT_ROOT / 'static' / 'pages' / 'task-detail-dark.css',
     PROJECT_ROOT / 'static' / 'pages' / 'search-results.css',
-    PROJECT_ROOT / 'static' / 'pages' / 'project-detail.css',
+    *PROJECT_DETAIL_CSS_BUNDLE,
     PROJECT_ROOT / 'static' / 'pages' / 'project-history.css',
     PROJECT_ROOT / 'static' / 'pages' / 'template-list.css',
     PROJECT_ROOT / 'static' / 'pages' / 'template-form.css',
