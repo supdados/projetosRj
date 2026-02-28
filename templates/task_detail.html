@@ -776,5 +776,10 @@
         addTaskItemUrl: {{ url_for('main.add_task_item', task_id=task.id)|tojson }},
     };
 </script>
-<script src="{{ url_for('static', filename='pages/task-detail.js') }}"></script>
+<script src="{{ url_for('static', filename='pages/task-detail/01-header-editor.js') }}"></script>
+<script src="{{ url_for('static', filename='pages/task-detail/02-responsavel-picker.js') }}"></script>
+<script src="{{ url_for('static', filename='pages/task-detail/03-add-item-inline.js') }}"></script>
+<script src="{{ url_for('static', filename='pages/task-detail/04-task-item-helpers.js') }}"></script>
+<script src="{{ url_for('static', filename='pages/task-detail/05-kanban-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='pages/task-detail/06-inline-editors.js') }}"></script>
 {% endblock %}
