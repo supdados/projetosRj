@@ -2504,6 +2504,27 @@ body.task-item-drawer-open {
     color: #8a1515;
 }
 
+/* Options: reset para evitar herança de cor no Windows/Linux
+   Cada option recebe sua própria cor para leitura limpa no dropdown */
+.task-detail-v2 .task-item-status option {
+    background: #ffffff;
+    color: #374151;
+}
+.task-detail-v2 .task-item-status option[value="programado"]   { background: #edf0f4; color: #4c5563; }
+.task-detail-v2 .task-item-status option[value="em_andamento"] { background: #e6f2ff; color: #215488; }
+.task-detail-v2 .task-item-status option[value="validacao"]    { background: #fff3df; color: #8a4f00; }
+.task-detail-v2 .task-item-status option[value="finalizado"]   { background: #eaf7f1; color: #186244; }
+
+.task-detail-v2 .task-item-prioridade-select option {
+    background: #ffffff;
+    color: #374151;
+}
+.task-detail-v2 .task-item-prioridade-select option[value=""]        { background: #f4f4f5; color: #8a9bb0; }
+.task-detail-v2 .task-item-prioridade-select option[value="baixa"]   { background: #edf7ed; color: #1e6e35; }
+.task-detail-v2 .task-item-prioridade-select option[value="media"]   { background: #fff8e6; color: #7d5200; }
+.task-detail-v2 .task-item-prioridade-select option[value="alta"]    { background: #fff1e6; color: #8a3600; }
+.task-detail-v2 .task-item-prioridade-select option[value="urgente"] { background: #fdeaea; color: #8a1515; }
+
 .task-detail-v2 .task-item-responsavel {
     font-size: var(--ds-font-size-xs);
     color: #4f6d8f;
@@ -4139,6 +4160,26 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-priorid
     border-color: rgba(217, 122, 122, 0.52);
     color: #ffdcdc;
 }
+
+/* Options modo escuro: reset para evitar herança de cor no Windows/Linux */
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option {
+    background: #1e2a3a;
+    color: #d0dce9;
+}
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="programado"]   { background: #1e2d3e; color: #d8e3ee; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="em_andamento"] { background: #1a2d42; color: #d9ebfc; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="validacao"]    { background: #2e2810; color: #fbe8c8; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="finalizado"]   { background: #1a2e27; color: #d9f3e8; }
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option {
+    background: #1e2a3a;
+    color: #d0dce9;
+}
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value=""]        { background: #1e2a3a; color: #b9c9d8; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="baixa"]   { background: #1a2e27; color: #d7f2e8; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="media"]   { background: #1a2a3d; color: #d7ebff; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="alta"]    { background: #2e2810; color: #ffe8c8; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="urgente"] { background: #2e1a1a; color: #ffdcdc; }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-view-toggle {
     --td-toggle-base-fill: #253545;

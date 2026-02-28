@@ -6603,6 +6603,16 @@ html, body {
         color: #fff;
     }
 
+    /* Options: reset para evitar herança de cor no Windows/Linux */
+    .task-detail-v2 .task-item-status option {
+        background: #ffffff;
+        color: #374151;
+    }
+    .task-detail-v2 .task-item-status option[value="programado"]   { background: #e5e7eb; color: #374151; }
+    .task-detail-v2 .task-item-status option[value="em_andamento"] { background: #e0f2fe; color: #0c4a6e; }
+    .task-detail-v2 .task-item-status option[value="validacao"]    { background: #fef9c3; color: #713f12; }
+    .task-detail-v2 .task-item-status option[value="finalizado"]   { background: #dcfce7; color: #14532d; }
+
     .task-detail-v2 .task-item-responsavel {
         font-size: var(--ds-font-size-2xs);
         color: #6b7280;
