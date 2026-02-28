@@ -513,73 +513,120 @@
 .task-detail-v2 .items-header-actions {
     display: inline-flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 0.56rem;
     flex-wrap: wrap;
+    margin-left: auto;
 }
 
 .task-detail-v2 .task-items-view-toggle {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    border: 1px solid #c9d9eb;
-    background: #eef4fb;
-    padding: 3px;
-    gap: 3px;
+    --td-view-toggle-width: 184px;
+    --td-view-toggle-height: 32px;
+    --td-toggle-base-fill: #e3edf7;
+    --td-toggle-active-start: #1173b5;
+    --td-toggle-active-end: #0a5788;
+    --td-toggle-inactive-start: #f8fbff;
+    --td-toggle-inactive-end: #e6eef7;
+    --td-toggle-divider-stroke: rgba(26, 88, 138, 0.18);
+    --td-toggle-outer-border: rgba(27, 92, 145, 0.24);
+    --td-toggle-inner-border: rgba(255, 255, 255, 0.22);
     position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: stretch;
+    width: min(100%, var(--td-view-toggle-width));
+    height: var(--td-view-toggle-height);
+    padding: 0;
+    border: none;
+    background: transparent;
     isolation: isolate;
+    overflow: visible;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .task-detail-v2 .task-items-view-toggle::before {
-    content: "";
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: calc((100% - 9px) / 2);
-    height: calc(100% - 6px);
-    border-radius: 999px;
-    border: 1px solid #b9cfe6;
-    background: #fff;
-    box-shadow: 0 4px 10px rgba(19, 63, 101, 0.12);
-    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s ease;
-    z-index: 0;
+    content: none;
+}
+
+.task-detail-v2 .task-items-view-toggle-art {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
     pointer-events: none;
 }
 
-.task-detail-v2 .task-items-view-toggle[data-active-view="kanban"]::before {
-    transform: translateX(calc(100% + 3px));
+.task-detail-v2 .task-items-view-toggle-labels {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 0;
 }
 
-.task-detail-v2 .task-items-view-btn {
-    flex: 0 0 var(--td-view-toggle-btn-width);
-    width: var(--td-view-toggle-btn-width);
-    height: 30px;
-    border-radius: 999px;
-    border: 1px solid transparent;
+.task-detail-v2 .task-items-view-toggle-refined .task-items-view-btn {
+    flex: 1 1 50%;
+    width: 50%;
+    height: 100%;
+    padding: 0;
+    border: none;
     background: transparent;
-    color: #557392;
-    font-size: var(--ds-font-size-xs);
-    font-weight: var(--ds-font-weight-semibold);
-    padding: 0 0.78rem;
+    color: inherit;
     position: relative;
     z-index: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.24s ease, text-shadow 0.24s ease;
+    border-radius: 16px;
+    cursor: pointer;
 }
 
-.task-detail-v2 .task-items-view-btn:hover {
-    color: #2a5a8a;
+.task-detail-v2 .task-items-view-toggle-refined .task-items-view-btn:focus {
+    outline: none;
 }
 
-.task-detail-v2 .task-items-view-btn.is-active {
-    color: #1d4f83;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.84);
+.task-detail-v2 .task-items-view-btn {
+    transition: transform 0.1s ease;
+}
+
+.task-detail-v2 .task-items-view-btn:active {
+    transform: scale(0.985);
+}
+
+.task-detail-v2 .task-items-view-label {
+    width: 100%;
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.62rem;
+    color: #557392;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-semibold);
+    letter-spacing: 0;
+    text-shadow: none;
+    transition: color 0.55s cubic-bezier(0.25, 0.8, 0.25, 1), text-shadow 0.55s ease;
+    white-space: nowrap;
+}
+
+.task-detail-v2 .task-items-view-label.is-active {
+    color: #eef6fd;
+    text-shadow: 0 1px 0 rgba(8, 46, 78, 0.16);
+}
+
+.task-detail-v2 .task-items-view-toggle:hover .task-items-view-label.is-active {
+    color: #ffffff;
+}
+
+.task-detail-v2 .task-items-view-toggle:hover .task-items-view-label:not(.is-active) {
+    color: #6c88a8;
 }
 
 .task-detail-v2 .task-items-view-btn:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.14);
+    box-shadow: inset 0 0 0 2px rgba(130, 175, 230, 0.32);
 }
 
 .task-detail-v2 .task-items-view-panels {
@@ -2664,6 +2711,7 @@ body.task-item-drawer-open {
     .task-detail-v2 .task-items-view-panel,
     .task-detail-v2 .task-items-view-toggle::before,
     .task-detail-v2 .task-items-view-btn,
+    .task-detail-v2 .task-items-view-label,
     .task-detail-v2 .task-items-kanban-card,
     .task-detail-v2 .task-items-kanban-dropzone,
     .task-detail-v2 .task-item-drawer,
@@ -3711,9 +3759,8 @@ body.task-item-drawer-open {
         width: 100%;
     }
 
-    .task-detail-v2 .task-items-view-btn {
-        width: auto;
-        flex: 1;
+    .task-detail-v2 .task-items-view-label {
+        font-size: var(--ds-font-size-xs);
     }
 
     .task-detail-v2 .task-item-header-row,

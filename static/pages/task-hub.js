@@ -1702,6 +1702,18 @@
         var board = document.getElementById('taskItemsKanbanBoard');
         var listEl = document.querySelector('.task-items-list');
         var toggleButtons = toggleRoot ? toggleRoot.querySelectorAll('.task-items-view-btn[data-view]') : [];
+        var toggleVisual = toggleRoot ? {
+            pathLeft: toggleRoot.querySelector('[data-role="path-left"]'),
+            pathRight: toggleRoot.querySelector('[data-role="path-right"]'),
+            divider: toggleRoot.querySelector('[data-role="divider"]'),
+            fillLeft: toggleRoot.querySelector('[data-role="fill-left"]'),
+            fillRight: toggleRoot.querySelector('[data-role="fill-right"]'),
+            highlightLeft: toggleRoot.querySelector('[data-role="highlight-left"]'),
+            highlightRight: toggleRoot.querySelector('[data-role="highlight-right"]'),
+            borderLeft: toggleRoot.querySelector('[data-role="border-left"]'),
+            labelList: toggleRoot.querySelector('[data-view-label="list"]'),
+            labelKanban: toggleRoot.querySelector('[data-view-label="kanban"]'),
+        } : null;
         var reorderUrl = listEl ? (listEl.getAttribute('data-reorder-url') || '') : '';
         var taskId = listEl ? (listEl.getAttribute('data-task-id') || '') : '';
         var storageKey = taskId ? ('task-items-view:' + taskId) : 'task-hub-items-view';
@@ -1749,6 +1761,8 @@
         var isPersisting = false;
         var isDeleting = false;
         var suppressCardClickUntil = 0;
+        var toggleVisualDir = 1;
+        var toggleVisualFrame = null;
         var composerControllers = {};
         var drawerState = {
             itemId: null,
@@ -1830,14 +1844,131 @@
             return [descricao, status, responsavel, prioridade, tipoPedido].join('\u001f');
         }
 
-        function setToggleActiveState(mode) {
+        function buildToggleCurvePath(direction) {
+            var d = direction;
+            var x = 136;
+            return [
+                'M ' + x + ' 0',
+                'C ' + (x + (7 * 0.3 * d)) + ' ' + (50 * 0.15) + ',',
+                '  ' + (x + (7 * d)) + ' ' + (50 * 0.28) + ',',
+                '  ' + (x + (7 * 0.5 * d)) + ' ' + (50 * 0.5),
+                'C ' + x + ' ' + (50 * 0.72) + ',',
+                '  ' + (x - (7 * 0.7 * d)) + ' ' + (50 * 0.85) + ',',
+                '  ' + x + ' 50'
+            ].join(' ');
+        }
+
+        function buildToggleLeftPath(direction) {
+            return buildToggleCurvePath(direction) + ' L 0 50 L 0 0 Z';
+        }
+
+        function buildToggleRightPath(direction) {
+            return buildToggleCurvePath(direction) + ' L 272 50 L 272 0 Z';
+        }
+
+        function syncTogglePaths(direction) {
+            if (!toggleVisual || !toggleVisual.pathLeft || !toggleVisual.pathRight || !toggleVisual.divider) return;
+            toggleVisual.pathLeft.setAttribute('d', buildToggleLeftPath(direction));
+            toggleVisual.pathRight.setAttribute('d', buildToggleRightPath(direction));
+            toggleVisual.divider.setAttribute('d', buildToggleCurvePath(direction));
+        }
+
+        function syncToggleColors(mode) {
+            if (!toggleVisual) return;
+            var isList = mode !== 'kanban';
+
+            if (toggleVisual.fillLeft) {
+                toggleVisual.fillLeft.setAttribute(
+                    'fill',
+                    isList ? 'url(#taskHubViewToggleActive)' : 'url(#taskHubViewToggleInactive)'
+                );
+            }
+            if (toggleVisual.fillRight) {
+                toggleVisual.fillRight.setAttribute(
+                    'fill',
+                    isList ? 'url(#taskHubViewToggleInactive)' : 'url(#taskHubViewToggleActive)'
+                );
+            }
+            if (toggleVisual.highlightLeft) {
+                toggleVisual.highlightLeft.setAttribute('opacity', isList ? '1' : '0');
+            }
+            if (toggleVisual.highlightRight) {
+                toggleVisual.highlightRight.setAttribute('opacity', isList ? '0' : '1');
+            }
+            if (toggleVisual.borderLeft) {
+                toggleVisual.borderLeft.setAttribute('opacity', isList ? '1' : '0');
+            }
+            if (toggleVisual.labelList) {
+                toggleVisual.labelList.classList.toggle('is-active', isList);
+            }
+            if (toggleVisual.labelKanban) {
+                toggleVisual.labelKanban.classList.toggle('is-active', !isList);
+            }
+        }
+
+        function animateToggleVisual(targetDir) {
+            var fromDir = toggleVisualDir;
+            var start = performance.now();
+            var duration = 500;
+
+            if (toggleVisualFrame) {
+                cancelAnimationFrame(toggleVisualFrame);
+                toggleVisualFrame = null;
+            }
+
+            function ease(t) {
+                return t < 0.5
+                    ? 4 * t * t * t
+                    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+
+            function frame(now) {
+                var elapsed = now - start;
+                var progress = Math.min(elapsed / duration, 1);
+                var dir = fromDir + ((targetDir - fromDir) * ease(progress));
+                toggleVisualDir = dir;
+                syncTogglePaths(dir);
+
+                if (progress < 1) {
+                    toggleVisualFrame = requestAnimationFrame(frame);
+                    return;
+                }
+
+                toggleVisualDir = targetDir;
+                toggleVisualFrame = null;
+            }
+
+            toggleVisualFrame = requestAnimationFrame(frame);
+        }
+
+        function setToggleActiveState(mode, opts) {
             var targetMode = mode === 'kanban' ? 'kanban' : 'list';
+            var options = opts || {};
+            var targetDir = targetMode === 'kanban' ? -1 : 1;
             toggleRoot.setAttribute('data-active-view', targetMode);
             toggleButtons.forEach(function (button) {
                 var isActive = button.getAttribute('data-view') === targetMode;
                 button.classList.toggle('is-active', isActive);
                 button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
             });
+            syncToggleColors(targetMode);
+
+            if (!toggleVisual || !toggleVisual.pathLeft || !toggleVisual.pathRight || !toggleVisual.divider) {
+                toggleVisualDir = targetDir;
+                return;
+            }
+
+            if (options.animate === false || prefersReducedMotion() || toggleVisualDir === targetDir) {
+                if (toggleVisualFrame) {
+                    cancelAnimationFrame(toggleVisualFrame);
+                    toggleVisualFrame = null;
+                }
+                syncTogglePaths(targetDir);
+                toggleVisualDir = targetDir;
+                return;
+            }
+
+            animateToggleVisual(targetDir);
         }
 
         function normalizeStatus(status) {
@@ -4100,7 +4231,7 @@
             kanbanView.hidden = targetMode !== 'kanban';
             listView.classList.toggle('is-active', targetMode === 'list');
             kanbanView.classList.toggle('is-active', targetMode === 'kanban');
-            setToggleActiveState(targetMode);
+            setToggleActiveState(targetMode, { animate: options.animateToggle !== false });
 
             if (targetMode === 'kanban') {
                 renderKanbanFromList();
@@ -4118,7 +4249,7 @@
             var button = event.target.closest('.task-items-view-btn[data-view]');
             if (!button) return;
             event.preventDefault();
-            applyView(button.getAttribute('data-view'));
+            applyView(button.getAttribute('data-view'), { animateToggle: true });
         }
 
         function init() {
@@ -4129,7 +4260,7 @@
             bindDrawerEvents();
             bindAnexoPreviewModalEvents();
             renderKanbanFromList();
-            applyView(readStoredView(), { persist: false });
+            applyView(readStoredView(), { persist: false, animateToggle: false });
         }
 
         init();

@@ -119,13 +119,78 @@
                         <span class="header-count">{{ task.items|length }} {{ 'itens' if task.items|length != 1 else 'item' }}</span>
                     </div>
                     <div class="items-header-actions">
-                        <div class="task-items-view-toggle" id="taskItemsViewToggle" role="group"
+                        <div class="task-items-view-toggle task-items-view-toggle-refined" id="taskItemsViewToggle" role="group"
                             data-active-view="list"
                             aria-label="Alternar visualização de itens">
-                            <button type="button" class="task-items-view-btn is-active" data-view="list"
-                                aria-pressed="true">Lista</button>
-                            <button type="button" class="task-items-view-btn" data-view="kanban"
-                                aria-pressed="false">Kanban</button>
+                            <svg class="task-items-view-toggle-art" viewBox="0 0 272 50" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden="true" focusable="false">
+                                <defs>
+                                    <clipPath id="taskItemsViewTogglePill">
+                                        <rect width="272" height="50" rx="25" />
+                                    </clipPath>
+                                    <clipPath id="taskItemsViewToggleLeft">
+                                        <path data-role="path-left"
+                                            d="M 136 0 C 138.1 7.5, 143 14, 139.5 25 C 136 36, 131.1 42.5, 136 50 L 0 50 L 0 0 Z" />
+                                    </clipPath>
+                                    <clipPath id="taskItemsViewToggleRight">
+                                        <path data-role="path-right"
+                                            d="M 136 0 C 138.1 7.5, 143 14, 139.5 25 C 136 36, 131.1 42.5, 136 50 L 272 50 L 272 0 Z" />
+                                    </clipPath>
+                                    <linearGradient id="taskItemsViewToggleActive" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" style="stop-color: var(--td-toggle-active-start);" />
+                                        <stop offset="100%" style="stop-color: var(--td-toggle-active-end);" />
+                                    </linearGradient>
+                                    <linearGradient id="taskItemsViewToggleInactive" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" style="stop-color: var(--td-toggle-inactive-start);" />
+                                        <stop offset="100%" style="stop-color: var(--td-toggle-inactive-end);" />
+                                    </linearGradient>
+                                    <linearGradient id="taskItemsViewToggleShine" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.04" />
+                                        <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+                                    </linearGradient>
+                                </defs>
+
+                                <g clip-path="url(#taskItemsViewTogglePill)">
+                                    <rect width="272" height="50" style="fill: var(--td-toggle-base-fill);" />
+
+                                    <g clip-path="url(#taskItemsViewToggleLeft)">
+                                        <rect data-role="fill-left" width="272" height="50"
+                                            fill="url(#taskItemsViewToggleActive)" />
+                                        <rect data-role="highlight-left" width="272" height="50"
+                                            fill="url(#taskItemsViewToggleShine)" opacity="1" />
+                                    </g>
+
+                                    <g clip-path="url(#taskItemsViewToggleRight)">
+                                        <rect data-role="fill-right" width="272" height="50"
+                                            fill="url(#taskItemsViewToggleInactive)" />
+                                        <rect data-role="highlight-right" width="272" height="50"
+                                            fill="url(#taskItemsViewToggleShine)" opacity="0" />
+                                    </g>
+
+                                    <path data-role="divider"
+                                        d="M 136 0 C 138.1 7.5, 143 14, 139.5 25 C 136 36, 131.1 42.5, 136 50"
+                                        style="stroke: var(--td-toggle-divider-stroke);" stroke-width="1" fill="none" />
+
+                                    <rect x="0.5" y="0.5" width="271" height="49" rx="24.5"
+                                        style="stroke: var(--td-toggle-outer-border);" fill="none" />
+
+                                    <g clip-path="url(#taskItemsViewToggleLeft)">
+                                        <rect data-role="border-left" x="1" y="1" width="270" height="48" rx="24"
+                                            style="stroke: var(--td-toggle-inner-border);" fill="none" opacity="1" />
+                                    </g>
+                                </g>
+                            </svg>
+
+                            <div class="task-items-view-toggle-labels">
+                                <button type="button" class="task-items-view-btn is-active" data-view="list"
+                                    aria-pressed="true">
+                                    <span class="task-items-view-label is-active" data-view-label="list">Lista</span>
+                                </button>
+                                <button type="button" class="task-items-view-btn" data-view="kanban"
+                                    aria-pressed="false">
+                                    <span class="task-items-view-label" data-view-label="kanban">Kanban</span>
+                                </button>
+                            </div>
                         </div>
                         <button type="button" class="btn-new-clean" id="btnFocusAddItem" title="Ir para adicionar item">
                             Novo item
@@ -2301,6 +2366,18 @@
         var board = document.getElementById('taskItemsKanbanBoard');
         var listEl = document.querySelector('.task-items-list');
         var toggleButtons = toggleRoot ? toggleRoot.querySelectorAll('.task-items-view-btn[data-view]') : [];
+        var toggleVisual = toggleRoot ? {
+            pathLeft: toggleRoot.querySelector('[data-role="path-left"]'),
+            pathRight: toggleRoot.querySelector('[data-role="path-right"]'),
+            divider: toggleRoot.querySelector('[data-role="divider"]'),
+            fillLeft: toggleRoot.querySelector('[data-role="fill-left"]'),
+            fillRight: toggleRoot.querySelector('[data-role="fill-right"]'),
+            highlightLeft: toggleRoot.querySelector('[data-role="highlight-left"]'),
+            highlightRight: toggleRoot.querySelector('[data-role="highlight-right"]'),
+            borderLeft: toggleRoot.querySelector('[data-role="border-left"]'),
+            labelList: toggleRoot.querySelector('[data-view-label="list"]'),
+            labelKanban: toggleRoot.querySelector('[data-view-label="kanban"]'),
+        } : null;
         var reorderUrl = listEl ? (listEl.getAttribute('data-reorder-url') || '') : '';
         var taskId = listEl ? (listEl.getAttribute('data-task-id') || '') : '';
         var storageKey = taskId ? ('task-items-view:' + taskId) : null;
@@ -2348,6 +2425,8 @@
         var isPersisting = false;
         var isDeleting = false;
         var suppressCardClickUntil = 0;
+        var toggleVisualDir = 1;
+        var toggleVisualFrame = null;
         var composerControllers = {};
         var drawerState = {
             itemId: null,
@@ -2429,14 +2508,131 @@
             return [descricao, status, responsavel, prioridade, tipoPedido].join('\u001f');
         }
 
-        function setToggleActiveState(mode) {
+        function buildToggleCurvePath(direction) {
+            var d = direction;
+            var x = 136;
+            return [
+                'M ' + x + ' 0',
+                'C ' + (x + (7 * 0.3 * d)) + ' ' + (50 * 0.15) + ',',
+                '  ' + (x + (7 * d)) + ' ' + (50 * 0.28) + ',',
+                '  ' + (x + (7 * 0.5 * d)) + ' ' + (50 * 0.5),
+                'C ' + x + ' ' + (50 * 0.72) + ',',
+                '  ' + (x - (7 * 0.7 * d)) + ' ' + (50 * 0.85) + ',',
+                '  ' + x + ' 50'
+            ].join(' ');
+        }
+
+        function buildToggleLeftPath(direction) {
+            return buildToggleCurvePath(direction) + ' L 0 50 L 0 0 Z';
+        }
+
+        function buildToggleRightPath(direction) {
+            return buildToggleCurvePath(direction) + ' L 272 50 L 272 0 Z';
+        }
+
+        function syncTogglePaths(direction) {
+            if (!toggleVisual || !toggleVisual.pathLeft || !toggleVisual.pathRight || !toggleVisual.divider) return;
+            toggleVisual.pathLeft.setAttribute('d', buildToggleLeftPath(direction));
+            toggleVisual.pathRight.setAttribute('d', buildToggleRightPath(direction));
+            toggleVisual.divider.setAttribute('d', buildToggleCurvePath(direction));
+        }
+
+        function syncToggleColors(mode) {
+            if (!toggleVisual) return;
+            var isList = mode !== 'kanban';
+
+            if (toggleVisual.fillLeft) {
+                toggleVisual.fillLeft.setAttribute(
+                    'fill',
+                    isList ? 'url(#taskItemsViewToggleActive)' : 'url(#taskItemsViewToggleInactive)'
+                );
+            }
+            if (toggleVisual.fillRight) {
+                toggleVisual.fillRight.setAttribute(
+                    'fill',
+                    isList ? 'url(#taskItemsViewToggleInactive)' : 'url(#taskItemsViewToggleActive)'
+                );
+            }
+            if (toggleVisual.highlightLeft) {
+                toggleVisual.highlightLeft.setAttribute('opacity', isList ? '1' : '0');
+            }
+            if (toggleVisual.highlightRight) {
+                toggleVisual.highlightRight.setAttribute('opacity', isList ? '0' : '1');
+            }
+            if (toggleVisual.borderLeft) {
+                toggleVisual.borderLeft.setAttribute('opacity', isList ? '1' : '0');
+            }
+            if (toggleVisual.labelList) {
+                toggleVisual.labelList.classList.toggle('is-active', isList);
+            }
+            if (toggleVisual.labelKanban) {
+                toggleVisual.labelKanban.classList.toggle('is-active', !isList);
+            }
+        }
+
+        function animateToggleVisual(targetDir) {
+            var fromDir = toggleVisualDir;
+            var start = performance.now();
+            var duration = 500;
+
+            if (toggleVisualFrame) {
+                cancelAnimationFrame(toggleVisualFrame);
+                toggleVisualFrame = null;
+            }
+
+            function ease(t) {
+                return t < 0.5
+                    ? 4 * t * t * t
+                    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+
+            function frame(now) {
+                var elapsed = now - start;
+                var progress = Math.min(elapsed / duration, 1);
+                var dir = fromDir + ((targetDir - fromDir) * ease(progress));
+                toggleVisualDir = dir;
+                syncTogglePaths(dir);
+
+                if (progress < 1) {
+                    toggleVisualFrame = requestAnimationFrame(frame);
+                    return;
+                }
+
+                toggleVisualDir = targetDir;
+                toggleVisualFrame = null;
+            }
+
+            toggleVisualFrame = requestAnimationFrame(frame);
+        }
+
+        function setToggleActiveState(mode, opts) {
             var targetMode = mode === 'kanban' ? 'kanban' : 'list';
+            var options = opts || {};
+            var targetDir = targetMode === 'kanban' ? -1 : 1;
             toggleRoot.setAttribute('data-active-view', targetMode);
             toggleButtons.forEach(function (button) {
                 var isActive = button.getAttribute('data-view') === targetMode;
                 button.classList.toggle('is-active', isActive);
                 button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
             });
+            syncToggleColors(targetMode);
+
+            if (!toggleVisual || !toggleVisual.pathLeft || !toggleVisual.pathRight || !toggleVisual.divider) {
+                toggleVisualDir = targetDir;
+                return;
+            }
+
+            if (options.animate === false || prefersReducedMotion() || toggleVisualDir === targetDir) {
+                if (toggleVisualFrame) {
+                    cancelAnimationFrame(toggleVisualFrame);
+                    toggleVisualFrame = null;
+                }
+                syncTogglePaths(targetDir);
+                toggleVisualDir = targetDir;
+                return;
+            }
+
+            animateToggleVisual(targetDir);
         }
 
         function normalizeStatus(status) {
@@ -4540,7 +4736,7 @@
             kanbanView.hidden = targetMode !== 'kanban';
             listView.classList.toggle('is-active', targetMode === 'list');
             kanbanView.classList.toggle('is-active', targetMode === 'kanban');
-            setToggleActiveState(targetMode);
+            setToggleActiveState(targetMode, { animate: options.animateToggle !== false });
 
             if (targetMode === 'kanban') {
                 renderKanbanFromList();
@@ -4558,7 +4754,7 @@
             var button = event.target.closest('.task-items-view-btn[data-view]');
             if (!button) return;
             event.preventDefault();
-            applyView(button.getAttribute('data-view'));
+            applyView(button.getAttribute('data-view'), { animateToggle: true });
         }
 
         function init() {
@@ -4569,7 +4765,7 @@
             bindDrawerEvents();
             bindAnexoPreviewModalEvents();
             renderKanbanFromList();
-            applyView(readStoredView(), { persist: false });
+            applyView(readStoredView(), { persist: false, animateToggle: false });
         }
 
         init();
