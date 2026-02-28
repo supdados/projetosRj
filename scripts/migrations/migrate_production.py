@@ -150,7 +150,21 @@ def run_migrations(engine):
         else:
             log.append("  [--] Tabela `project_history` já existe.")
 
-        # ── 5. Tabela `StageTemplate` ─────────────────────────────────────────
+        # ── 5. Tabela `area_catalog` ─────────────────────────────────────────
+        log.append("\n[area_catalog]:")
+        if not table_exists(inspector, 'area_catalog'):
+            conn.execute(text("""
+                CREATE TABLE `area_catalog` (
+                    `id`   INT AUTO_INCREMENT PRIMARY KEY,
+                    `name` VARCHAR(100) NOT NULL UNIQUE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """))
+            conn.commit()
+            log.append("  [OK] Tabela `area_catalog` criada.")
+        else:
+            log.append("  [--] Tabela `area_catalog` já existe.")
+
+        # ── 6. Tabela `StageTemplate` ─────────────────────────────────────────
         log.append("\n[StageTemplate]:")
         if not table_exists(inspector, 'StageTemplate'):
             conn.execute(text("""
@@ -165,7 +179,7 @@ def run_migrations(engine):
         else:
             log.append("  [--] Tabela `StageTemplate` já existe.")
 
-        # ── 6. Tabela `StageTemplateItem` ─────────────────────────────────────
+        # ── 7. Tabela `StageTemplateItem` ─────────────────────────────────────
         log.append("\n[StageTemplateItem]:")
         if not table_exists(inspector, 'StageTemplateItem'):
             conn.execute(text("""
@@ -184,7 +198,7 @@ def run_migrations(engine):
         else:
             log.append("  [--] Tabela `StageTemplateItem` já existe.")
 
-        # ── 7. Tabela `task` ──────────────────────────────────────────────────
+        # ── 8. Tabela `task` ──────────────────────────────────────────────────
         log.append("\n[task]:")
         if not table_exists(inspector, 'task'):
             conn.execute(text("""
@@ -219,7 +233,7 @@ def run_migrations(engine):
             else:
                 log.append("  [--] Índice task.ix_task_is_finalized já existe.")
 
-        # ── 8. Tabela `task_item` ─────────────────────────────────────────────
+        # ── 9. Tabela `task_item` ─────────────────────────────────────────────
         log.append("\n[task_item]:")
         if not table_exists(inspector, 'task_item'):
             conn.execute(text("""
@@ -244,7 +258,7 @@ def run_migrations(engine):
             for col, typ in [('prioridade', 'VARCHAR(20)'), ('tipo_pedido', 'VARCHAR(30)')]:
                 ensure_column(inspector, conn, 'task_item', col, typ, log)
 
-        # ── 9. Tabela `task_item_comment` ─────────────────────────────────────
+        # ── 10. Tabela `task_item_comment` ─────────────────────────────────────
         log.append("\n[task_item_comment]:")
         if not table_exists(inspector, 'task_item_comment'):
             conn.execute(text("""

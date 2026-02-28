@@ -3053,7 +3053,7 @@
 
             // Admin vê todas as áreas, não-admin vê apenas suas áreas
             {% if is_admin_user %}
-            const areas = ["Auditoria", "CHEGAB", "SUPDADOS", "SUBDGD", "SUPEST", "SUPIM", "SUPPAE", "PRODERJ", "ASSESP", "ECENTRAL", "SUBEDD", "VPD", "VPE", "VPT"];
+            const areas = {{ AREAS_RESPONSAVEIS_CHOICES|tojson }};
             {% else %}
             const areas = {{ current_user_obj.get_areas()|tojson }};
             {% endif %}

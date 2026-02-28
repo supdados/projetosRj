@@ -277,7 +277,7 @@
                         <div class="app-account-tooltip">
                             <div class="dropdown app-account-menu">
                                 <button
-                                    class="btn app-nav-icon-btn app-account-trigger dropdown-toggle {{ 'active' if endpoint == 'main.change_password' or endpoint == 'main.list_users' or endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') or endpoint == 'main.edit_user' else '' }}"
+                                    class="btn app-nav-icon-btn app-account-trigger dropdown-toggle {{ 'active' if endpoint == 'main.change_password' or endpoint == 'main.list_users' or endpoint == 'main.list_areas' or endpoint == 'main.add_area' or endpoint == 'main.edit_area' or endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') or endpoint == 'main.edit_user' else '' }}"
                                     type="button"
                                     id="appAccountMenuDesktop"
                                     data-bs-toggle="dropdown"
@@ -300,6 +300,15 @@
                                             <span class="app-dropdown-item-main">
                                                 <i class="fas fa-users-cog"></i>
                                                 <span>Gerenciar Usuários</span>
+                                            </span>
+                                            <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('main.list_areas') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.list_areas' or endpoint == 'main.add_area' or endpoint == 'main.edit_area' else '' }}">
+                                            <span class="app-dropdown-item-main">
+                                                <i class="fas fa-layer-group"></i>
+                                                <span>Gerenciar Áreas</span>
                                             </span>
                                             <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
                                         </a>

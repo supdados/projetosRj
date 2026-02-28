@@ -7,6 +7,7 @@ Este script executa as seguintes migrações em sequência:
 2. Cria a tabela 'project_history' para o rastreamento de ações em projetos.
 3. Sincroniza o catalogo canonico de objetivo/resultado/indicador.
 4. Garante a coluna 'abep_indicator' na tabela 'project'.
+5. Sincroniza o catálogo administrável de áreas.
 
 Uso:
     python3 scripts/migrations/run_migrations.py
@@ -24,6 +25,7 @@ from app import app, db
 # Importe todos os modelos necessários de uma vez
 from models import User, UserArea, ProjectHistory, Project
 from objective_catalog import sync_goal_catalog_to_db
+from routes.shared import ensure_area_catalog_seeded
 from time_utils import utc_now
 
 def migrate_user_areas():
@@ -137,6 +139,22 @@ def ensure_abep_indicator_column():
         print(f"   ✗ ERRO ao criar coluna abep_indicator: {e}")
         return False
 
+
+def sync_area_catalog():
+    """
+    Garante que o catálogo de áreas exista e esteja sincronizado.
+    """
+    print("\n-- [5/5] Sincronizando catálogo de áreas...")
+    try:
+        db.create_all()
+        areas = ensure_area_catalog_seeded()
+        print(f"   ✓ Sucesso: catálogo com {len(areas)} área(s).")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"   ✗ ERRO ao sincronizar catálogo de áreas: {e}")
+        return False
+
 if __name__ == '__main__':
     # Executa tudo dentro do contexto da aplicação Flask
     with app.app_context():
@@ -161,6 +179,11 @@ if __name__ == '__main__':
 
         # Etapa 4: Garantir coluna Indicador ABEP
         if not ensure_abep_indicator_column():
+            print("\n!! Migração interrompida devido a um erro.")
+            exit(1) # Sai com código de erro
+
+        # Etapa 5: Sincronizar catálogo de áreas
+        if not sync_area_catalog():
             print("\n!! Migração interrompida devido a um erro.")
             exit(1) # Sai com código de erro
 

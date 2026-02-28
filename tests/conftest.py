@@ -9,6 +9,7 @@ from app import create_app
 from models import (
     Etapa,
     IndicadorProjeto,
+    AreaCatalog,
     Project,
     ProjectHistory,
     StageTemplate,
@@ -21,6 +22,7 @@ from models import (
     db,
 )
 from objective_catalog import sync_goal_catalog_to_db
+from routes.shared import ensure_area_catalog_seeded
 
 TEST_PASSWORD = 'senha123'
 
@@ -63,6 +65,7 @@ def app(tmp_path):
     with flask_app.app_context():
         db.drop_all()
         db.create_all()
+        ensure_area_catalog_seeded()
         sync_goal_catalog_to_db(commit=True)
 
     yield flask_app
@@ -236,6 +239,9 @@ def seed_data(app):
         )
         db.session.commit()
 
+        auditoria_area = AreaCatalog.query.filter_by(name='Auditoria').first()
+        vpe_area = AreaCatalog.query.filter_by(name='VPE').first()
+
         return {
             'admin_id': admin.id,
             'user_id': user.id,
@@ -256,6 +262,8 @@ def seed_data(app):
             'comment_id': comment.id,
             'foreign_comment_id': foreign_comment.id,
             'template_id': template.id,
+            'auditoria_area_id': auditoria_area.id if auditoria_area else None,
+            'vpe_area_id': vpe_area.id if vpe_area else None,
             'user_username': user.username,
             'user_password': TEST_PASSWORD,
             'admin_username': admin.username,

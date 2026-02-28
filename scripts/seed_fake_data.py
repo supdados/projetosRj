@@ -26,6 +26,7 @@ from app import create_app
 from models import (
     Etapa,
     IndicadorProjeto,
+    AreaCatalog,
     Project,
     ProjectHistory,
     Task,
@@ -36,7 +37,7 @@ from models import (
     db,
 )
 from objective_catalog import GOAL_CATALOG, sync_goal_catalog_to_db
-from routes.shared import AREAS_RESPONSAVEIS_CHOICES
+from routes.shared import ensure_area_catalog_seeded, get_area_catalog_choices
 
 PRIORITIES = ['urgente', 'alta', 'media', 'baixa']
 PROJECT_STATUSES = ['Vigente', 'Vigente', 'Vigente', 'Finalizado', 'Suspenso']
@@ -58,6 +59,15 @@ def _choose_goal_ids(index):
 
 
 def _create_seed_users():
+    area_names = get_area_catalog_choices()
+    if not area_names:
+        ensure_area_catalog_seeded()
+        area_names = get_area_catalog_choices()
+    if not area_names:
+        area_names = ['Auditoria']
+        db.session.add(AreaCatalog(name='Auditoria'))
+        db.session.flush()
+
     admin = User(
         username='admin_seed',
         name='Administrador Seed',
@@ -70,7 +80,7 @@ def _create_seed_users():
     db.session.add(UserArea(user_id=admin.id, area='Auditoria'))
 
     users_by_area = {}
-    for index, area in enumerate(AREAS_RESPONSAVEIS_CHOICES, start=1):
+    for index, area in enumerate(area_names, start=1):
         suffix = _sanitize_username_suffix(area) or f'area{index:02d}'
         user = User(
             username=f'user_seed_{index:02d}_{suffix}',
@@ -116,10 +126,11 @@ def seed_fake_data(
             db.drop_all()
 
         db.create_all()
+        ensure_area_catalog_seeded()
         sync_goal_catalog_to_db(commit=True)
 
         admin, users_by_area = _create_seed_users()
-        area_names = list(AREAS_RESPONSAVEIS_CHOICES)
+        area_names = list(get_area_catalog_choices())
         base_date = datetime.date(2026, 1, 1)
 
         for project_index in range(projects):

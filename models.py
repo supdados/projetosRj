@@ -229,6 +229,16 @@ class UserArea(db.Model):
     def __repr__(self):
         return f'<UserArea user_id={self.user_id} area={self.area}>'
 
+
+class AreaCatalog(db.Model):
+    """Catálogo de áreas administráveis via painel."""
+    __tablename__ = 'area_catalog'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+
+    def __repr__(self):
+        return f'<AreaCatalog {self.name}>'
+
 class ProjectHistory(db.Model):
     """Tabela de auditoria/histórico de ações em projetos"""
     __tablename__ = 'project_history'

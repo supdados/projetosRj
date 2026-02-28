@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Áreas - ProjetosRJ{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-2 admin-users-shell">
+    <section class="admin-users-header">
+        <div class="admin-users-header-main">
+            <div class="admin-users-header-icon">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <div class="admin-users-header-copy">
+                <h1 class="admin-users-title ds-type-page-title">Gerenciar Áreas</h1>
+                <p class="admin-users-subtitle mb-0 ds-type-body-sm">Cadastre, renomeie e exclua áreas responsáveis.</p>
+            </div>
+        </div>
+        <a href="{{ url_for('main.add_area') }}" class="btn admin-users-create-btn">
+            <i class="fas fa-plus me-2"></i>Nova Área
+        </a>
+    </section>
+
+    <section class="admin-users-meta-row">
+        <span class="admin-users-meta-chip">
+            <i class="fas fa-layer-group me-1"></i>{{ areas|length }} área{{ 's' if areas|length != 1 else '' }}
+        </span>
+    </section>
+
+    {% if areas %}
+    <section class="admin-users-table-card">
+        <div class="table-responsive">
+            <table class="table admin-users-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Área</th>
+                        <th class="text-center">Projetos Associados</th>
+                        <th class="text-center">Usuários Vinculados</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for area in areas %}
+                    {% set projects_total = project_counts.get(area.name, 0) %}
+                    {% set users_total = user_counts.get(area.name, 0) %}
+                    <tr>
+                        <td>
+                            <span class="admin-users-id-chip">#{{ area.id }}</span>
+                        </td>
+                        <td>
+                            <span class="admin-users-name">{{ area.name }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="admin-users-role-badge {{ 'is-admin' if projects_total > 0 else 'is-standard' }}">
+                                {{ projects_total }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="admin-users-role-badge {{ 'is-admin' if users_total > 0 else 'is-standard' }}">
+                                {{ users_total }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <div class="admin-users-actions">
+                                <a href="{{ url_for('main.edit_area', area_id=area.id) }}"
+                                   class="btn admin-users-action-btn is-edit"
+                                   title="Editar Área">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                {% if projects_total > 0 %}
+                                <button type="button"
+                                        class="btn admin-users-action-btn is-disabled"
+                                        title="Não é possível excluir: há projetos associados."
+                                        disabled>
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% else %}
+                                <form action="{{ url_for('main.delete_area', area_id=area.id) }}"
+                                      method="POST"
+                                      class="d-inline-block"
+                                      onsubmit="return confirm('Tem certeza que deseja excluir a área {{ area.name }}?');">
+                                    <button type="submit" class="btn admin-users-action-btn is-delete" title="Excluir Área">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% else %}
+    <section class="admin-users-empty-state">
+        <div class="admin-users-empty-icon">
+            <i class="fas fa-layer-group"></i>
+        </div>
+        <h2 class="admin-users-empty-title">Nenhuma área cadastrada</h2>
+        <p class="admin-users-empty-text">Crie a primeira área para habilitar o gerenciamento no painel.</p>
+        <a href="{{ url_for('main.add_area') }}" class="btn admin-users-create-btn">
+            <i class="fas fa-plus me-2"></i>Criar Primeira Área
+        </a>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

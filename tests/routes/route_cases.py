@@ -876,6 +876,73 @@ ROUTE_CASES = [
         'requires_login': True,
         'requires_admin': True,
     },
+    # Admin areas
+    {
+        'id': 'admin_areas_get',
+        'method': 'GET',
+        'rule': '/admin/areas',
+        'path': '/admin/areas',
+        'role': 'admin',
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': True,
+    },
+    {
+        'id': 'admin_areas_new_get',
+        'method': 'GET',
+        'rule': '/admin/areas/new',
+        'path': '/admin/areas/new',
+        'role': 'admin',
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': True,
+    },
+    {
+        'id': 'admin_areas_new_post',
+        'method': 'POST',
+        'rule': '/admin/areas/new',
+        'path': '/admin/areas/new',
+        'role': 'admin',
+        'data': {
+            'name': 'Area Nova Teste',
+        },
+        'expected_status': 302,
+        'requires_login': True,
+        'requires_admin': True,
+    },
+    {
+        'id': 'admin_areas_edit_get',
+        'method': 'GET',
+        'rule': '/admin/areas/<int:area_id>/edit',
+        'path': '/admin/areas/{vpe_area_id}/edit',
+        'role': 'admin',
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': True,
+    },
+    {
+        'id': 'admin_areas_edit_post',
+        'method': 'POST',
+        'rule': '/admin/areas/<int:area_id>/edit',
+        'path': '/admin/areas/{vpe_area_id}/edit',
+        'role': 'admin',
+        'data': {
+            'name': 'VPE Ajustada',
+        },
+        'expected_status': 302,
+        'requires_login': True,
+        'requires_admin': True,
+    },
+    {
+        'id': 'admin_areas_delete_post',
+        'method': 'POST',
+        'rule': '/admin/areas/<int:area_id>/delete',
+        'path': '/admin/areas/{vpe_area_id}/delete',
+        'role': 'admin',
+        'expected_status': 302,
+        'requires_login': True,
+        'requires_admin': True,
+    },
     # Admin templates
     {
         'id': 'admin_templates_get',
@@ -976,4 +1043,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 86
+assert len(ROUTE_CASES) == 92

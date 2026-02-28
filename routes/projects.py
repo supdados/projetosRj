@@ -10,7 +10,9 @@ from objective_catalog import normalize_goal_selection
 from .blueprint import main_bp
 from .decorators import login_required
 from .shared import (
-    AREAS_RESPONSAVEIS_CHOICES,
+    get_area_catalog_choices,
+    is_area_in_catalog,
+    resolve_catalog_area_name,
     get_or_404,
     get_goal_catalog_context,
     log_project_action,
@@ -119,13 +121,14 @@ def list_projects():
     projects_paginated = all_projects_filtered[start_idx:end_idx]
     
     # Opções para os dropdowns de filtro
-    # Áreas: se não for admin, suas áreas (se tiver). Se admin, todas as áreas com projetos + áreas padrão.
+    area_catalog_choices = get_area_catalog_choices()
+
+    # Áreas: se não for admin, suas áreas (se tiver). Se admin, catálogo dinâmico.
     if not g.user.is_admin:
         user_areas = g.user.get_areas()
         areas_options_for_dropdown = sorted(user_areas) if user_areas else []
     else:
-        project_areas_in_db = set(p.area_responsavel for p in Project.query.all() if p.area_responsavel)
-        areas_options_for_dropdown = sorted(list(project_areas_in_db.union(set(AREAS_RESPONSAVEIS_CHOICES))))
+        areas_options_for_dropdown = area_catalog_choices
 
     priorities_options = sorted(list(set(p.prioridade for p in Project.query.all() if p.prioridade)))
     statuses_options = sorted(list(set(p.status for p in Project.query.all() if p.status)))
@@ -181,7 +184,7 @@ def list_projects():
         delivery_types_options=delivery_types_options,
         has_active_filters=has_active_filters,
         has_advanced_filters_active=has_advanced_filters_active,
-        AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES
+        AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices
     )
 @main_bp.route('/projetos_pendentes')
 @login_required
@@ -240,11 +243,11 @@ def list_projetos_pendentes():
 
     projetos_vigentes = query_projetos_base.order_by(Project.titulo.asc()).all()
     project_ids = [p.id for p in projetos_vigentes]
+    area_catalog_choices = get_area_catalog_choices()
 
     areas_options_for_dropdown = []
     if g.user.is_admin:
-        project_areas_in_db = set(p.area_responsavel for p in Project.query.all() if p.area_responsavel)
-        areas_options_for_dropdown = sorted(list(project_areas_in_db.union(set(AREAS_RESPONSAVEIS_CHOICES))))
+        areas_options_for_dropdown = area_catalog_choices
 
     objetivos, _, _ = get_goal_catalog_context()
 
@@ -253,7 +256,7 @@ def list_projetos_pendentes():
             'projetos_pendentes.html',
             projetos_com_etapas=[],
             objetivos=objetivos,
-            AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES,
+            AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
             areas_options=areas_options_for_dropdown,
             selected_area=selected_area_filter,
             filtro_periodo=filtro_periodo,
@@ -430,7 +433,7 @@ def list_projetos_pendentes():
         'projetos_pendentes.html',
         projetos_com_etapas=projetos_pendentes_paginated,
         objetivos=objetivos,
-        AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES,
+        AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
         areas_options=areas_options_for_dropdown,
         selected_area=selected_area_filter,
         filtro_periodo=filtro_periodo,
@@ -466,6 +469,11 @@ def add_project():
             return redirect(request.referrer or url_for('main.dashboard'))
 
         area_responsavel = request.form.get('project_area_responsavel')
+        if area_responsavel and not is_area_in_catalog(area_responsavel):
+            flash('A área selecionada é inválida ou não está mais disponível.', 'danger')
+            return redirect(request.referrer or url_for('main.dashboard'))
+        if area_responsavel:
+            area_responsavel = resolve_catalog_area_name(area_responsavel)
         
         # Verificação de permissão: usuário pode criar projeto apenas em suas áreas
         if not g.user.is_admin:
@@ -633,6 +641,10 @@ def edit_project(project_id):
         # Admin ou usuário com múltiplas áreas pode alterar área
         new_area = request.form.get('project_area_responsavel')
         if new_area:
+            if not is_area_in_catalog(new_area):
+                flash('A área selecionada é inválida ou não está mais disponível.', 'warning')
+                return redirect(url_for('main.edit_project', project_id=project_id))
+            new_area = resolve_catalog_area_name(new_area)
             old_area = project_to_edit.area_responsavel
             user_areas = g.user.get_areas()
             if g.user.is_admin or (len(user_areas) > 1 and new_area in user_areas):
@@ -705,7 +717,7 @@ def edit_project(project_id):
     return render_template(
         'project_form.html', 
         project=project_to_edit, 
-        areas_responsaveis=AREAS_RESPONSAVEIS_CHOICES, # Lista de todas as áreas possíveis para o dropdown
+        areas_responsaveis=get_area_catalog_choices(),
         objetivos=objetivos,
         resultados_por_objetivo=resultados_por_objetivo,
         indicadores_por_resultado=indicadores_por_resultado,
@@ -733,7 +745,7 @@ def get_project_edit_data(project_id):
             'resultados_por_objetivo': resultados_por_objetivo,
             'indicadores_por_resultado': indicadores_por_resultado,
             'indicadores_do_projeto': indicadores_do_projeto_ids,
-            'areas_responsaveis': AREAS_RESPONSAVEIS_CHOICES,
+            'areas_responsaveis': get_area_catalog_choices(),
             'is_admin': g.user.is_admin
         })
         
@@ -778,6 +790,12 @@ def update_project_inline(project_id):
         if 'area_responsavel' in data:
             new_area = data['area_responsavel']
             if new_area != project_to_edit.area_responsavel:
+                if not is_area_in_catalog(new_area):
+                    return jsonify({
+                        'success': False,
+                        'message': 'A área selecionada é inválida ou não está mais disponível.',
+                    }), 400
+                new_area = resolve_catalog_area_name(new_area)
                 user_areas = g.user.get_areas()
                 if g.user.is_admin or (len(user_areas) > 1 and new_area in user_areas):
                     changes.append(f'área de "{project_to_edit.area_responsavel}" para "{new_area}"')

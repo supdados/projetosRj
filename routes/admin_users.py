@@ -4,7 +4,33 @@ from models import User, UserArea, db
 
 from .blueprint import main_bp
 from .decorators import admin_required, login_required
-from .shared import AREAS_RESPONSAVEIS_CHOICES, get_or_404
+from .shared import get_area_catalog_choices, get_or_404, normalize_area_name
+
+
+def _parse_selected_areas(raw_areas):
+    area_catalog_choices = get_area_catalog_choices()
+    catalog_map = {name.casefold(): name for name in area_catalog_choices}
+    selected_areas = []
+    invalid_areas = []
+    seen = set()
+
+    for raw_area in raw_areas:
+        normalized = normalize_area_name(raw_area)
+        if not normalized:
+            continue
+        key = normalized.casefold()
+        canonical_name = catalog_map.get(key)
+        if canonical_name is None:
+            invalid_areas.append(normalized)
+            continue
+        if key in seen:
+            continue
+        seen.add(key)
+        selected_areas.append(canonical_name)
+
+    return selected_areas, invalid_areas, area_catalog_choices
+
+
 @main_bp.route('/admin/users')
 @login_required
 @admin_required
@@ -19,15 +45,22 @@ def list_users():
 @admin_required
 def add_user():
     if request.method == 'POST':
+        selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
+            request.form.getlist('areas_responsavel')
+        )
         username = request.form.get('username')
         name = request.form.get('name')
         password = request.form.get('password')
         orgao = request.form.get('orgao')
-        areas_responsavel_form = request.form.getlist('areas_responsavel') # Lista de áreas
         is_admin_form = request.form.get('is_admin') == 'on'
 
         if not username or not name or not password:
             flash('Username, Nome Completo e Senha são obrigatórios.', 'danger')
+        elif invalid_areas:
+            flash(
+                f'Área(s) inválida(s): {", ".join(invalid_areas)}. Atualize o formulário e tente novamente.',
+                'danger',
+            )
         elif User.query.filter_by(username=username).first():
             flash('Este nome de usuário já está em uso. Escolha outro.', 'danger')
         else:
@@ -42,21 +75,32 @@ def add_user():
             db.session.flush()  # Para obter o ID do usuário
             
             # Adicionar áreas selecionadas
-            for area in areas_responsavel_form:
-                if area:  # Ignora strings vazias
-                    user_area = UserArea(user_id=new_user.id, area=area)
-                    db.session.add(user_area)
+            for area in selected_areas:
+                user_area = UserArea(user_id=new_user.id, area=area)
+                db.session.add(user_area)
             
             db.session.commit()
             flash(f'Usuário "{name}" ({username}) criado com sucesso!', 'success')
             return redirect(url_for('main.list_users'))
         # Se caiu aqui, houve erro, então renderiza o form novamente com os dados (se o template suportar)
         # ou apenas renderiza o form vazio.
-        return render_template('user_form.html', user=request.form, user_areas=areas_responsavel_form, action_verb="Adicionar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
+        return render_template(
+            'user_form.html',
+            user=request.form,
+            user_areas=selected_areas,
+            action_verb="Adicionar",
+            areas_responsaveis_choices=area_catalog_choices,
+        )
 
 
     # Método GET: exibe o formulário para adicionar novo usuário
-    return render_template('user_form.html', user=User(), user_areas=[], action_verb="Adicionar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
+    return render_template(
+        'user_form.html',
+        user=User(),
+        user_areas=[],
+        action_verb="Adicionar",
+        areas_responsaveis_choices=get_area_catalog_choices(),
+    )
 
 
 @main_bp.route('/admin/users/edit/<int:user_id>', methods=['GET', 'POST'])
@@ -68,7 +112,9 @@ def edit_user(user_id):
         # Username geralmente não é editável ou requer cuidados especiais de unicidade
         user_to_edit.name = request.form.get('name')
         user_to_edit.orgao = request.form.get('orgao') if request.form.get('orgao') else None
-        areas_responsavel_form = request.form.getlist('areas_responsavel') # Lista de áreas
+        selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
+            request.form.getlist('areas_responsavel')
+        )
         
         is_admin_form_val = request.form.get('is_admin') == 'on'
 
@@ -78,12 +124,31 @@ def edit_user(user_id):
             if admin_count <= 1:
                 flash('Não é possível remover o status de administrador do único administrador existente.', 'danger')
                 # Não altera user_to_edit.is_admin e recarrega o form
-                return render_template('user_form.html', user=user_to_edit, user_areas=user_to_edit.get_areas(), action_verb="Editar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
+                return render_template(
+                    'user_form.html',
+                    user=user_to_edit,
+                    user_areas=user_to_edit.get_areas(),
+                    action_verb="Editar",
+                    areas_responsaveis_choices=area_catalog_choices,
+                )
+
+        if invalid_areas:
+            flash(
+                f'Área(s) inválida(s): {", ".join(invalid_areas)}. Atualize o formulário e tente novamente.',
+                'danger',
+            )
+            return render_template(
+                'user_form.html',
+                user=user_to_edit,
+                user_areas=selected_areas,
+                action_verb="Editar",
+                areas_responsaveis_choices=area_catalog_choices,
+            )
         
         user_to_edit.is_admin = is_admin_form_val
 
         # Atualizar áreas do usuário
-        user_to_edit.set_areas(areas_responsavel_form)
+        user_to_edit.set_areas(selected_areas)
 
         new_password = request.form.get('password')
         if new_password: # Só atualiza a senha se uma nova for fornecida
@@ -94,7 +159,13 @@ def edit_user(user_id):
         return redirect(url_for('main.list_users'))
     
     # Método GET
-    return render_template('user_form.html', user=user_to_edit, user_areas=user_to_edit.get_areas(), action_verb="Editar", areas_responsaveis_choices=AREAS_RESPONSAVEIS_CHOICES)
+    return render_template(
+        'user_form.html',
+        user=user_to_edit,
+        user_areas=user_to_edit.get_areas(),
+        action_verb="Editar",
+        areas_responsaveis_choices=get_area_catalog_choices(),
+    )
 
 @main_bp.route('/admin/users/delete/<int:user_id>', methods=['POST'])
 @login_required

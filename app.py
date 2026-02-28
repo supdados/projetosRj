@@ -232,10 +232,14 @@ def initialize_database():
     db.create_all()
     column_added = ensure_project_abep_indicator_column()
     task_core_cols = ensure_task_core_columns()
+    from routes.shared import ensure_area_catalog_seeded
+
+    area_catalog_choices = ensure_area_catalog_seeded()
     sync_summary = sync_goal_catalog_to_db(commit=True)
     return {
         'column_added': column_added,
         'task_core_cols': task_core_cols,
+        'area_catalog_choices': area_catalog_choices,
         'sync_summary': sync_summary,
     }
 

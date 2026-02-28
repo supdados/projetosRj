@@ -7,7 +7,7 @@ from models import Etapa, Project, Task, db
 
 from .blueprint import main_bp
 from .decorators import login_required
-from .shared import AREAS_RESPONSAVEIS_CHOICES, get_goal_catalog_context
+from .shared import get_area_catalog_choices, get_goal_catalog_context
 
 
 @main_bp.route('/dashboard')
@@ -54,6 +54,7 @@ def dashboard():
             projetos_em_atraso += 1
 
     objetivos, _, _ = get_goal_catalog_context()
+    area_catalog_choices = get_area_catalog_choices()
 
     def apply_task_visibility_rules(query, include_archived=False):
         if not include_archived:
@@ -128,5 +129,5 @@ def dashboard():
         task_items_finalizado=task_items_finalizado,
         task_items_total=task_items_total,
         objetivos=objetivos,
-        AREAS_RESPONSAVEIS_CHOICES=AREAS_RESPONSAVEIS_CHOICES,
+        AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
     )
