@@ -3,12 +3,18 @@
 Sincroniza o catalogo canonico de objetivos/resultados/indicadores no banco.
 
 Uso:
-    python3 sync_objectives_catalog.py
-    python3 sync_objectives_catalog.py --dry-run
-    python3 sync_objectives_catalog.py --skip-create-all
+    python3 scripts/catalog/sync_objectives_catalog.py
+    python3 scripts/catalog/sync_objectives_catalog.py --dry-run
+    python3 scripts/catalog/sync_objectives_catalog.py --skip-create-all
 """
 
 import argparse
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from app import app, db
 from models import Objetivo, ResultadoEsperado, Indicador

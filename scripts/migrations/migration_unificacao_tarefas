@@ -21,18 +21,20 @@ Configuração (via .env ou variáveis de ambiente):
   DB_PORT=3306        (opcional)
 
 Uso:
-  chmod +x migration_unificacao_tarefas
-  ./migration_unificacao_tarefas
+  chmod +x scripts/migrations/migration_unificacao_tarefas
+  ./scripts/migrations/migration_unificacao_tarefas
 """
 
 import os
 import sys
+from pathlib import Path
 from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, inspect, text
 
-load_dotenv()
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(PROJECT_ROOT / '.env')
 
 
 def build_engine():

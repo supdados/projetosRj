@@ -18,17 +18,19 @@ Configuração (.env ou variáveis de ambiente):
   DB_PORT=3306        (opcional, padrão: 3306)
 
 Uso:
-  python migrate_production.py
+  python3 scripts/migrations/migrate_production.py
 """
 
 import os
 import sys
+from pathlib import Path
 from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, inspect, text
 
-load_dotenv()
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(PROJECT_ROOT / '.env')
 
 
 # ── Conexão ───────────────────────────────────────────────────────────────────

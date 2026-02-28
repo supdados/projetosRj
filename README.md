@@ -3,6 +3,23 @@ código fonte para o gerenciador de projetos do estado do rio de janeiro.
 
 Todos os caminhos deste README são relativos à raiz do repositório `projetosRj/`, e os comandos assumem execução dentro desse diretório.
 
+## Mapa rapido da pasta
+
+Arquivos que ficam na raiz:
+- `app.py`, `wsgi.py`: ponto de entrada da aplicação.
+- `models.py`, `time_utils.py`: base de dados e utilitários centrais.
+- `objective_catalog.py`, `abep_catalog.py`: catálogos canônicos usados pelo backend.
+- `README.md`, `requirements`, `requirements-dev.txt`: documentação e dependências.
+
+Pastas principais:
+- `routes/`: rotas modulares da aplicação. O arquivo legado foi preservado em `routes/legacy_monolith.py`.
+- `scripts/`: utilitários operacionais, agora separados por domínio.
+- `docs/`: documentação e ativos de apoio, incluindo capturas em `docs/assets/capturas/`.
+- `templates/`, `static/`, `services/`, `tests/`, `migrations/`, `instance/`: camadas funcionais da app.
+
+Detalhamento adicional:
+- `docs/estrutura-do-projeto.md`
+
 ## Catalogo de Objetivos, Resultados e Indicadores
 
 Este projeto agora usa um **catalogo canonico em codigo** para:
@@ -31,13 +48,13 @@ Tambem existe sincronizacao na rota operacional:
 ### Script para producao (MySQL) e local (SQLite)
 
 Arquivo:
-- `projetosRj/sync_objectives_catalog.py`
+- `projetosRj/scripts/catalog/sync_objectives_catalog.py`
 
 Exemplos:
 ```bash
-python3 sync_objectives_catalog.py
-python3 sync_objectives_catalog.py --dry-run
-python3 sync_objectives_catalog.py --skip-create-all
+python3 scripts/catalog/sync_objectives_catalog.py
+python3 scripts/catalog/sync_objectives_catalog.py --dry-run
+python3 scripts/catalog/sync_objectives_catalog.py --skip-create-all
 ```
 
 Comportamento:
@@ -65,8 +82,8 @@ Catalogo fixo:
 - `projetosRj/abep_catalog.py`
 
 Migracao para bancos existentes:
-- Script dedicado: `python3 migrate_add_abep_indicator.py`
-- `run_migrations.py` tambem inclui esta etapa.
+- Script dedicado: `python3 scripts/migrations/migrate_add_abep_indicator.py`
+- `scripts/migrations/run_migrations.py` tambem inclui esta etapa.
 - O startup da app garante automaticamente a coluna quando ela nao existe.
 
 ## Organizacao de rotas (modular)
@@ -145,3 +162,12 @@ Exemplo com volume customizado:
   --items-per-task 4 \
   --comments-per-item 1
 ```
+
+## Scripts operacionais
+
+- Criar admin: `python3 scripts/admin/gerar_senha.py`
+- Sincronizar catalogo: `python3 scripts/catalog/sync_objectives_catalog.py`
+- Rodar migracoes locais: `python3 scripts/migrations/run_migrations.py`
+- Garantir campo ABEP: `python3 scripts/migrations/migrate_add_abep_indicator.py`
+- Migracao incremental MySQL: `python3 scripts/migrations/migrate_production.py`
+- Migracao de unificacao de tarefas: `./scripts/migrations/migration_unificacao_tarefas`

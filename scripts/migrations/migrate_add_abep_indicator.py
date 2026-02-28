@@ -5,8 +5,15 @@ Migração idempotente para adicionar o campo project.abep_indicator.
 Compatível com SQLite e MySQL.
 
 Uso:
-    python3 migrate_add_abep_indicator.py
+    python3 scripts/migrations/migrate_add_abep_indicator.py
 """
+
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from sqlalchemy import inspect, text
 from app import app, db

@@ -1,5 +1,13 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+import sys
 import getpass
 from sqlalchemy.exc import IntegrityError, OperationalError
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 # Importa a instância do app e do db, e o modelo User
 from app import app

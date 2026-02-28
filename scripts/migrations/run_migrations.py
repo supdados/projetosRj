@@ -9,8 +9,15 @@ Este script executa as seguintes migrações em sequência:
 4. Garante a coluna 'abep_indicator' na tabela 'project'.
 
 Uso:
-    python run_migrations.py
+    python3 scripts/migrations/run_migrations.py
 """
+
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from sqlalchemy import inspect, text
 from app import app, db
