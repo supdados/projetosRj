@@ -476,7 +476,8 @@ def _build_visible_tasks_query(
         query = query.filter(Task.status == status_filter)
 
     if responsavel_filter:
-        pattern = f"%{responsavel_filter.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')}%"
+        escaped_responsavel = responsavel_filter.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        pattern = f"%{escaped_responsavel}%"
         query = query.filter(Task.responsavel.ilike(pattern, escape='\\'))
 
     query = query.filter(Task.is_archived.is_(bool(include_archived)))
