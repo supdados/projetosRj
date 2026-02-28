@@ -296,16 +296,18 @@
                         data-project-id="{{ group['project_id'] or '' }}">
                         <header class="task-hub-group-header">
                             <div class="task-hub-group-title-wrap">
-                                {% if group['project_id'] %}
-                                <a href="{{ url_for('main.project_detail', project_id=group['project_id']) }}" class="task-hub-group-title task-hub-group-title-link">
-                                    {{ group['project_titulo'] }}
-                                </a>
-                                {% else %}
-                                <h6 class="task-hub-group-title">{{ group['project_titulo'] }}</h6>
-                                {% endif %}
-                                {% if group['project_area'] %}
-                                <span class="task-hub-group-area">{{ group['project_area'] }}</span>
-                                {% endif %}
+                                <div class="task-hub-group-heading">
+                                    {% if group['project_id'] %}
+                                    <a href="{{ url_for('main.project_detail', project_id=group['project_id']) }}" class="task-hub-group-title task-hub-group-title-link">
+                                        {{ group['project_titulo'] }}
+                                    </a>
+                                    {% else %}
+                                    <h6 class="task-hub-group-title">{{ group['project_titulo'] }}</h6>
+                                    {% endif %}
+                                    <p class="task-hub-group-meta">
+                                        Area: <strong>{{ group['project_area'] or 'Nao informada' }}</strong>
+                                    </p>
+                                </div>
                             </div>
                             <span class="task-hub-group-count">
                                 {{ group['tasks']|length }} {{ 'tarefas' if group['tasks']|length != 1 else 'tarefa' }}
@@ -399,17 +401,41 @@
                                                     <span class="visually-hidden">Desarquivar</span>
                                                 </button>
                                             </form>
-                                            <form
-                                                action="{{ url_for('main.delete_task', task_id=item.id) }}"
-                                                method="POST"
-                                                class="inline-form"
-                                                onsubmit="return confirm('Excluir tarefa permanentemente?');">
-                                                <input type="hidden" name="next" value="{{ current_url }}">
-                                                <button type="submit" class="task-item-btn task-item-del" title="Apagar" aria-label="Apagar">
-                                                    <i class="fas fa-trash-alt" aria-hidden="true"></i>
-                                                    <span class="visually-hidden">Apagar</span>
-                                                </button>
-                                            </form>
+                                            <button
+                                                type="button"
+                                                class="task-item-btn task-item-del"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteArchivedTaskModal-{{ item.id }}"
+                                                title="Apagar"
+                                                aria-label="Apagar">
+                                                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Apagar</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal fade tasks-modal" id="deleteArchivedTaskModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content tasks-modal-content">
+                                                    <div class="tasks-modal-header">
+                                                        <div>
+                                                            <h5 class="tasks-modal-title">Excluir tarefa</h5>
+                                                            <p class="tasks-modal-subtitle">Remocao permanente da tarefa arquivada</p>
+                                                        </div>
+                                                        <button type="button" class="tasks-modal-close" data-bs-dismiss="modal" aria-label="Fechar">&times;</button>
+                                                    </div>
+                                                    <div class="tasks-modal-body">
+                                                        <p class="mb-2">Esta tarefa sera apagada em definitivo.</p>
+                                                        <p class="tasks-modal-warning mb-2">Esta acao nao pode ser desfeita.</p>
+                                                        <p class="tasks-help-text mb-0">{{ item.descricao[:140] }}{% if item.descricao|length > 140 %}...{% endif %}</p>
+                                                    </div>
+                                                    <div class="tasks-modal-footer">
+                                                        <button type="button" class="btn-task btn-task-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <form action="{{ url_for('main.delete_task', task_id=item.id) }}" method="POST" class="inline-form">
+                                                            <input type="hidden" name="next" value="{{ current_url }}">
+                                                            <button type="submit" class="btn-task btn-task-danger">Excluir</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                         {% else %}
                                         <select class="task-item-prioridade-select prioridade-{{ item.prioridade or 'none' }}"

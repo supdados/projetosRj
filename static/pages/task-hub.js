@@ -846,8 +846,12 @@
         function buildItemRowMarkup(item) {
             var prioridade = item.prioridade || '';
             var tipoPedido = item.tipo_pedido || '';
+            var taskId = item.task_id || item.id || '';
+            var taskTitulo = item.task_titulo || item.descricao || '';
             var projectTitulo = item.project_titulo || 'Sem projeto';
             var projectValue = item.project_value || (item.project_id ? String(item.project_id) : 'sem_projeto');
+            var commentsCount = Number(item.comments_count || 0);
+            var anexosCount = Number(item.anexos_count || 0);
             var legacyTipoOption = tipoPedido === 'implementacao'
                 ? '<option value="implementacao" selected hidden>Implementação (legado)</option>'
                 : '';
@@ -868,10 +872,10 @@
                 '<div class="task-item-row" ' +
                 'data-item-id="' + item.id + '" ' +
                 'data-item-status="' + item.status + '" ' +
-                'data-comments-count="0" ' +
+                'data-comments-count="' + commentsCount + '" ' +
                 'data-item-prioridade="' + escapeHtml(prioridade) + '" ' +
                 'data-item-tipo="' + escapeHtml(tipoPedido) + '" ' +
-                'data-anexos-count="0" ' +
+                'data-anexos-count="' + anexosCount + '" ' +
                 'data-task-id="' + escapeHtml(taskId) + '" ' +
                 'data-task-titulo="' + escapeHtml(taskTitulo) + '" ' +
                 'data-project-value="' + escapeHtml(projectValue) + '" ' +
@@ -901,9 +905,9 @@
                 '</span>' +
                 '<div class="task-item-actions">' +
                 '<button type="button" class="task-item-comments-btn" aria-expanded="false" data-target="comments-body-' + item.id + '" onclick="toggleComments(this)" title="Comentários">' +
-                '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-item-comments-num">0</span></button>' +
+                '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-item-comments-num">' + commentsCount + '</span></button>' +
                 '<button type="button" class="task-item-anexos-btn" title="Anexos" data-item-id="' + item.id + '">' +
-                '<i class="fas fa-paperclip" aria-hidden="true"></i><span class="task-item-anexos-num">0</span></button>' +
+                '<i class="fas fa-paperclip" aria-hidden="true"></i><span class="task-item-anexos-num">' + anexosCount + '</span></button>' +
                 '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>' +
                 '</div></div></div>' +
                 '<div id="comments-body-' + item.id + '" class="task-item-comments" hidden>' +

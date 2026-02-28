@@ -1841,6 +1841,40 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 20px rgba(7, 11, 18, 0.36);
 }
 
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-delete-confirm {
+    background: #2a1f25;
+    border-color: rgba(217, 122, 122, 0.34);
+    box-shadow: 0 10px 20px rgba(7, 11, 18, 0.34);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-delete-confirm p {
+    color: #f3caca;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-delete-cancel {
+    background: #223144;
+    border-color: rgba(99, 166, 219, 0.34);
+    color: #d0e4f8;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-delete-cancel:hover {
+    background: rgba(78, 149, 204, 0.2);
+    border-color: rgba(99, 166, 219, 0.5);
+    color: #f3f9ff;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-delete-confirm-btn {
+    background: rgba(217, 122, 122, 0.2);
+    border-color: rgba(217, 122, 122, 0.46);
+    color: #f5cece;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-delete-confirm-btn:hover {
+    background: rgba(217, 122, 122, 0.3);
+    border-color: rgba(217, 122, 122, 0.66);
+    color: #ffe3e3;
+}
+
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-add-desc,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-add-prioridade,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-add-tipo {
@@ -2141,6 +2175,34 @@ html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-btn-lab
 html[data-theme="dark"] body.is-authenticated .main-content .btn-task-action-label,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-chip-value {
     color: inherit;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2-modal .modal-content.modal-clean {
+    background: var(--app-color-surface) !important;
+    border-color: var(--app-color-border) !important;
+    box-shadow: 0 22px 52px rgba(7, 11, 18, 0.56) !important;
+    color: var(--app-color-text-secondary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2-modal .modal-header-clean,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2-modal .modal-footer-clean {
+    background: var(--app-color-surface-elevated) !important;
+    border-color: rgba(99, 166, 219, 0.22) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2-modal .modal-body-clean {
+    background: var(--app-color-surface) !important;
+    color: var(--app-color-text-secondary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2-modal .modal-title-clean {
+    color: var(--app-color-text-primary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2-modal .modal-subtitle-clean,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2-modal .modal-body-clean .text-muted,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2-modal .modal-body-clean .small {
+    color: var(--app-color-text-muted) !important;
 }
 
 html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-btn-label,
@@ -5625,33 +5687,38 @@ html[data-theme="dark"] body.is-authenticated .project-tasks-page .empty-state-c
    Task Hub
    ========================================== */
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-list {
-    background: #0f1824;
-    border-color: #24394f;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-header {
-    background: linear-gradient(180deg, #142131 0%, #121d2c 100%);
-    border-bottom-color: #23384c;
+    background: #223042;
+    border-bottom-color: #2d455d;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group {
-    border-top-color: #1f3347;
+    background: #273447;
+    border-color: #24394f;
+    box-shadow: 0 14px 30px rgba(7, 11, 18, 0.22);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-title {
     color: #c9dff6;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-area {
-    background: #1b2c3e;
-    border-color: #355271;
-    color: #9bc2ea;
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-meta {
+    color: #8ea4bb;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-meta strong {
+    color: #d2e3f3;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-count {
-    background: #132133;
-    border-color: #2a4056;
-    color: #99b8d8;
+    background: #223246;
+    border-color: #355271;
+    color: #a8c1da;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-item-context {
