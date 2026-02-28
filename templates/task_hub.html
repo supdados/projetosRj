@@ -23,9 +23,7 @@
     data-empty-text="{{ empty_text }}"
 >
     {% set current_url = request.full_path.rstrip('?') %}
-    {% if project_locked and project_locked_obj %}
-    <div class="project-view-breadcrumb">{{ project_locked_obj.titulo }}</div>
-    {% endif %}
+
     <header class="tasks-header">
         <div class="tasks-header-main">
             <h1 class="tasks-title ds-type-page-title">{{ page_title }}</h1>
@@ -355,15 +353,6 @@
                                             </button>
                                             {% endif %}
                                         </div>
-                                        <p class="task-hub-item-context">
-                                            {% if item.project_id %}
-                                            <a href="{{ url_for('main.project_detail', project_id=item.project_id) }}">
-                                                {{ item.hub_project_titulo }}
-                                            </a>
-                                            {% else %}
-                                            <span>Sem projeto</span>
-                                            {% endif %}
-                                        </p>
                                     </div>
                                     <div class="task-item-meta">
                                         {% if archived_mode %}

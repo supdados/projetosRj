@@ -889,7 +889,6 @@
                 '<button type="button" class="task-item-desc-edit-btn" data-item-id="' + item.id + '" title="Editar descrição">' +
                 '<i class="fas fa-pen" aria-hidden="true"></i><span class="visually-hidden">Editar</span></button>' +
                 '</div>' +
-                '<p class="task-hub-item-context">' + buildProjectContextMarkup(projectValue, projectTitulo) + '</p>' +
                 '</div>' +
                 '<div class="task-item-meta">' +
                 '<select class="task-item-prioridade-select prioridade-' + (prioridade || 'none') + '" data-item-id="' + item.id + '" title="Prioridade" onchange="updateItemPrioridade(' + item.id + ', this.value, this)">' + prioridadeOptions + '</select>' +
