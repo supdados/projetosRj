@@ -634,10 +634,13 @@
                                         type="text"
                                         class="task-items-kanban-add-project-input project-search-input"
                                         data-role="project-input"
-                                        placeholder="Selecione o projeto..."
+                                        placeholder="Selecione o projeto"
                                         autocomplete="off"
                                         aria-haspopup="listbox"
                                         aria-expanded="false">
+                                    <span class="task-hub-kanban-project-caret" aria-hidden="true">
+                                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                    </span>
                                     <input type="hidden" class="task-items-kanban-add-project-value" data-role="project-value" value="">
                                     <div class="project-search-dropdown task-hub-kanban-project-dropdown" data-role="project-dropdown" role="listbox" hidden>
                                         {% for project in project_options %}
@@ -716,6 +719,9 @@
                     </div>
                 </div>
 
+                <p class="task-item-drawer-autosave-status is-saved" id="taskItemDrawerAutosaveStatus"
+                    role="status" aria-live="polite">Salvo</p>
+
                 <div class="task-item-drawer-props">
                     <div class="task-item-drawer-prop-group">
                         <label class="task-item-drawer-label" for="taskItemDrawerPrioridade">Prioridade</label>
@@ -752,9 +758,6 @@
                     </span>
                     <i class="fas fa-chevron-down" aria-hidden="true"></i>
                 </button>
-
-                <p class="task-item-drawer-autosave-status is-saved" id="taskItemDrawerAutosaveStatus"
-                    role="status" aria-live="polite">Salvo</p>
 
                 <div class="task-item-drawer-comments">
                     <button type="button" class="task-item-drawer-comments-toggle"

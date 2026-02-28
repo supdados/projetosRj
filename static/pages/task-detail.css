@@ -1609,13 +1609,17 @@ body.task-item-drawer-open {
 }
 
 .task-detail-v2 .task-item-drawer-autosave-status {
-    margin: -0.12rem 0 0.08rem;
-    min-height: 1.1rem;
+    margin: -0.08rem 0 0.02rem;
+    align-self: flex-start;
     font-size: var(--ds-font-size-2xs);
     font-weight: var(--ds-font-weight-semibold);
     color: #5a7592;
     letter-spacing: 0.01em;
     transition: color 0.18s ease, opacity 0.18s ease;
+}
+
+.task-detail-v2 .task-item-drawer-autosave-status:empty {
+    display: none;
 }
 
 .task-detail-v2 .task-item-drawer-autosave-status.is-saving {

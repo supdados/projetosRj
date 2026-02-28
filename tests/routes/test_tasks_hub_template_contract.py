@@ -40,6 +40,10 @@ def test_tasks_hub_kanban_composer_requires_project_when_no_filter(client_user):
 
     assert 'task-items-kanban-add-project-input' in html
     assert 'task-hub-kanban-project-dropdown' in html
+    assert 'task-hub-kanban-project-caret' in html
+    assert 'placeholder="Selecione o projeto"' in html
+    assert 'placeholder="Selecione o projeto..."' not in html
+    assert html.index('id="taskItemDrawerAutosaveStatus"') < html.index('id="taskItemDrawerPrioridade"')
 
 
 def test_tasks_hub_kanban_composer_uses_filtered_project_without_project_input(client_user, seed_data):
