@@ -12,7 +12,7 @@ Arquivos que ficam na raiz:
 - `README.md`, `requirements`, `requirements-dev.txt`: documentação e dependências.
 
 Pastas principais:
-- `routes/`: rotas modulares da aplicação. O arquivo legado foi preservado em `routes/legacy_monolith.py`.
+- `routes/`: rotas modulares da aplicação.
 - `scripts/`: utilitários operacionais, agora separados por domínio.
 - `docs/`: documentação e ativos de apoio, incluindo capturas em `docs/assets/capturas/`.
 - `templates/`, `static/`, `services/`, `tests/`, `migrations/`, `instance/`: camadas funcionais da app.

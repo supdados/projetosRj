@@ -15,7 +15,6 @@ PHASE1_TEMPLATES = [
     Path("templates/projects_list.html"),
     Path("templates/project_detail.html"),
     Path("templates/task_hub.html"),
-    Path("templates/task_detail.html"),
     Path("templates/projetos_pendentes.html"),
 ]
 
