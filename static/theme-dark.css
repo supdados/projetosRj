@@ -1405,14 +1405,14 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .etapa-inline-entr
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-btn-secondary {
-    color: #bfe8d4;
+    color: #c8dcf0;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-btn-secondary:hover,
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-btn-secondary:focus {
-    background: rgba(73, 185, 135, 0.22);
-    border-color: rgba(73, 185, 135, 0.46);
-    color: #e4f8ef;
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-btn-secondary:focus-visible {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px rgba(99, 166, 219, 0.44);
+    color: #edf5fc;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-row:hover,

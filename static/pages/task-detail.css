@@ -2588,13 +2588,26 @@ body.task-item-drawer-open {
 }
 
 .task-detail-v2 .task-item-btn-secondary {
-    color: #1f6a4e;
+    color: #2f5a88;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    border-radius: 999px;
+    padding: 0;
+    background: transparent;
+    transition: color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .task-detail-v2 .task-item-btn-secondary:hover,
-.task-detail-v2 .task-item-btn-secondary:focus {
-    color: #155339;
-    background: rgba(27, 122, 82, 0.08);
+.task-detail-v2 .task-item-btn-secondary:focus-visible {
+    color: #17497a;
+    background: transparent;
+    box-shadow: inset 0 0 0 1px rgba(23, 73, 122, 0.24);
+    transform: translateY(-0.5px);
+}
+
+#taskHubPage[data-archived-mode="1"] .task-item-actions .inline-form {
+    flex: 0 0 auto;
 }
 
 .task-detail-v2 .task-item-del {
@@ -2620,6 +2633,7 @@ body.task-item-drawer-open {
     background: transparent;
     box-shadow: 0 0 0 3px rgba(154, 58, 58, 0.14), inset 0 0 0 1px rgba(154, 58, 58, 0.34);
 }
+
 
 .task-detail-v2 .task-item-comments {
     border-top: 1px solid #e3ebf4;

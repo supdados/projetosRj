@@ -317,13 +317,19 @@
                                         <span class="task-item-status-readonly status-{{ item.status }}">{{ status_labels.get(item.status, item.status.replace('_', ' ')|title) }}</span>
                                         <span class="task-item-responsavel">{% if item.responsavel %}{{ item.responsavel }}{% else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
                                         <div class="task-item-actions">
+                                            <button type="button" class="task-item-comments-btn" aria-expanded="false"
+                                                data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)"
+                                                title="Comentários">
+                                                <i class="far fa-comment-alt" aria-hidden="true"></i>
+                                                <span class="task-item-comments-num">{{ item.comments|length }}</span>
+                                            </button>
                                             <form
                                                 action="{{ url_for('main.unarchive_task', task_id=item.id) }}"
                                                 method="POST"
                                                 class="inline-form task-item-unarchive-form"
                                                 onsubmit="return confirm('Desarquivar esta tarefa?');">
                                                 <input type="hidden" name="next" value="{{ active_url }}">
-                                                <button type="submit" class="task-item-btn task-item-btn-secondary" title="Desarquivar">
+                                                <button type="submit" class="task-item-btn task-item-btn-secondary" title="Desarquivar" aria-label="Desarquivar">
                                                     <i class="fas fa-rotate-left" aria-hidden="true"></i>
                                                     <span class="visually-hidden">Desarquivar</span>
                                                 </button>
@@ -334,9 +340,9 @@
                                                 class="inline-form"
                                                 onsubmit="return confirm('Excluir tarefa permanentemente?');">
                                                 <input type="hidden" name="next" value="{{ current_url }}">
-                                                <button type="submit" class="task-item-btn task-item-del" title="Excluir">
+                                                <button type="submit" class="task-item-btn task-item-del" title="Apagar" aria-label="Apagar">
                                                     <i class="fas fa-trash-alt" aria-hidden="true"></i>
-                                                    <span class="visually-hidden">Excluir</span>
+                                                    <span class="visually-hidden">Apagar</span>
                                                 </button>
                                             </form>
                                         </div>
@@ -392,7 +398,6 @@
                                         {% endif %}
                                     </div>
                                 </div>
-                                {% if not archived_mode %}
                                 <div id="comments-body-{{ item.id }}" class="task-item-comments" hidden>
                                     <div class="task-item-comments-inner">
                                         {% for comment in item.comments %}
@@ -401,7 +406,7 @@
                                             <div class="task-comment-head">
                                                 <span class="task-comment-user">{{ comment.author.name }}</span>
                                                 <span class="task-comment-time">{{ comment.created_at|local_time }}{% if comment.updated_at %} <em>(edit.)</em>{% endif %}</span>
-                                                {% if current_user_obj and current_user_obj.id == comment.user_id %}
+                                                {% if not archived_mode and current_user_obj and current_user_obj.id == comment.user_id %}
                                                 <span class="task-comment-acts">
                                                     <button type="button" class="task-comment-btn btn-edit-comment"
                                                         data-comment-id="{{ comment.id }}"
@@ -421,6 +426,12 @@
                                             <p class="task-comment-text">{{ comment.content }}</p>
                                         </div>
                                         {% endfor %}
+                                        {% if item.comments|length == 0 %}
+                                        <div class="task-comment task-comment-empty">
+                                            <p class="task-comment-text">Nenhum comentário registrado.</p>
+                                        </div>
+                                        {% endif %}
+                                        {% if not archived_mode %}
                                         <form class="task-comment-form"
                                             action="{{ url_for('main.add_task_comment', task_id=item.id) }}"
                                             method="POST"
@@ -432,9 +443,9 @@
                                                 <span class="visually-hidden">Enviar</span>
                                             </button>
                                         </form>
+                                        {% endif %}
                                     </div>
                                 </div>
-                                {% endif %}
                             </div>
                         </div>
 

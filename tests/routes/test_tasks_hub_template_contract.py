@@ -101,6 +101,10 @@ def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(a
         'task-item-col-responsavel',
         'task-item-status-readonly',
         'task-item-unarchive-form',
+        'task-item-comments-btn',
+        'comments-body-',
+        'title="Desarquivar"',
+        'Apagar',
         '>Ativas<',
     ]
     for hook in required_hooks:
@@ -110,3 +114,5 @@ def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(a
     assert 'id="taskItemsKanbanView"' not in html
     assert 'task-hub-add-row' not in html
     assert 'task-item-desc-edit-btn' not in html
+    assert 'class="task-comment-form"' not in html
+    assert 'btn-edit-comment' not in html
