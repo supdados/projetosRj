@@ -2933,7 +2933,6 @@ html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floati
 }
 
 html[data-theme="dark"] body.is-authenticated .etapa-comentario-display {
-    background: rgba(99, 166, 219, 0.08);
     color: #bfd2e5 !important;
 }
 

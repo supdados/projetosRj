@@ -3465,6 +3465,11 @@
                 return;
             }
 
+            if (target.closest('tr.etapa-done')) {
+                showAjaxFlashMessage('Não é possível editar comentários de uma etapa concluída.', 'warning');
+                return;
+            }
+
             event.preventDefault();
             event.stopPropagation();
             const etapaId = target.dataset.etapaId;

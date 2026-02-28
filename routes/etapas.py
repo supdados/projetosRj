@@ -501,6 +501,9 @@ def update_etapa_comentario(etapa_id):
     if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
         return jsonify({'success': False, 'message': 'Permissão negada.'}), 403
 
+    if etapa.done:
+        return jsonify({'success': False, 'message': 'Não é possível editar comentários de uma etapa concluída.'}), 403
+
     data = request.get_json()
     comentario = data.get('comentario', '').strip()
     
