@@ -1633,22 +1633,34 @@
     /* Glass AJAX Flash Messages */
     #ajax-flash-messages-container {
         position: fixed;
-        top: 90px;
-        right: 20px;
-        z-index: 1056;
-        min-width: 300px;
-        max-width: 450px;
+        top: 76px;
+        right: 0.9rem;
+        width: min(320px, calc(100vw - 1.8rem));
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        z-index: 1400;
+        pointer-events: none;
     }
 
-    #ajax-flash-messages-container .alert {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 90, 146, 0.15);
-        color: var(--text-color);
+    #ajax-flash-messages-container .app-flash-alert-compact {
+        margin: 0;
+        padding: 0.46rem 0.64rem;
+        border-radius: 10px;
+        font-size: var(--ds-font-size-sm);
+        line-height: var(--ds-line-height-snug);
+        box-shadow: 0 8px 22px rgba(21, 34, 55, 0.14);
+        pointer-events: auto;
         animation: slideInRight 0.3s ease-out;
+    }
+
+    #ajax-flash-messages-container .app-flash-alert-compact .btn-close {
+        padding: 0.45rem;
+    }
+
+    #ajax-flash-messages-container .app-flash-alert-compact .app-flash-icon {
+        margin-top: 0.05rem;
+        font-size: var(--ds-font-size-sm);
     }
 
     @keyframes slideInRight {
@@ -1663,7 +1675,7 @@
         }
     }
 
-    #ajax-flash-messages-container .alert.fade-out {
+    #ajax-flash-messages-container .app-flash-alert-compact.fade-out {
         animation: slideOutRight 0.3s ease-in forwards;
     }
 

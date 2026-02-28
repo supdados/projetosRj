@@ -1945,8 +1945,8 @@
 
             if (!message) return;
 
-            // Limitar a 5 notificações simultâneas
-            const MAX_NOTIFICATIONS = 5;
+            // Limitar a 3 notificações simultâneas
+            const MAX_NOTIFICATIONS = 3;
             const existingAlerts = flashContainer.querySelectorAll('.alert');
 
             if (existingAlerts.length >= MAX_NOTIFICATIONS) {
@@ -1968,9 +1968,25 @@
             }
 
             const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show m-0 mt-2`;
+            const normalizedType = type === 'error' ? 'danger' : type;
+            const iconByType = {
+                success: 'check-circle',
+                danger: 'exclamation-circle',
+                warning: 'exclamation-triangle',
+                info: 'info-circle',
+            };
+            const iconName = iconByType[normalizedType] || 'info-circle';
+            const safeMessage = escapeHtml(message);
+
+            alertDiv.className = `alert alert-${normalizedType} alert-dismissible fade show app-flash-alert app-flash-alert-compact`;
             alertDiv.role = 'alert';
-            alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+            alertDiv.innerHTML = `
+                <div class="d-flex align-items-start gap-2">
+                    <i class="fas fa-${iconName} app-flash-icon"></i>
+                    <span class="app-flash-text">${safeMessage}</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
 
             flashContainer.appendChild(alertDiv);
 
