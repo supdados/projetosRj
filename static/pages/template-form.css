@@ -445,3 +445,77 @@
         padding: 0.76rem 0.62rem 0.88rem;
     }
 }
+
+
+/* ====================================
+   Dark Mode Overrides
+   ==================================== */
+
+html[data-theme="dark"] body.is-authenticated .template-form-page {
+    --tf-bg: var(--app-color-canvas);
+    --tf-surface: var(--app-color-surface);
+    --tf-border: var(--app-color-border);
+    --tf-border-strong: #4a6078;
+    --tf-text: var(--app-color-text-primary);
+    --tf-muted: var(--app-color-text-muted);
+    --tf-primary: var(--app-color-primary);
+    --tf-primary-hover: var(--app-color-primary-hover);
+    --tf-soft: rgba(78, 149, 204, 0.18);
+    --tf-danger: var(--app-color-danger);
+}
+
+/* Template form */
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .template-form-title {
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .template-form-card-head {
+    background: var(--app-color-surface-elevated);
+    border-bottom-color: var(--app-color-border);
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .template-form-card-title {
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .template-form-label,
+html[data-theme="dark"] body.is-authenticated .template-form-page .template-stage-label {
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .glass-stage-item-template {
+    background: #2b3a4f;
+    border-color: var(--app-color-border);
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .glass-stage-item-template:hover {
+    background: rgba(78, 149, 204, 0.14);
+    border-color: rgba(99, 166, 219, 0.46);
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .duration-label {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .stages-empty-state {
+    background: #2b3a4f;
+    border-color: rgba(99, 166, 219, 0.34);
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .stages-empty-state i {
+    color: #8fb0cf;
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .stages-empty-state p {
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .stages-empty-state span {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .template-form-page .template-form-actions {
+    background: var(--app-color-surface);
+    border-color: var(--app-color-border);
+}

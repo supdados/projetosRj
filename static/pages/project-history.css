@@ -283,3 +283,129 @@
         padding: 2rem 1rem;
         color: #617c99;
     }
+
+
+/* ====================================
+   Dark Mode Overrides
+   ==================================== */
+
+html[data-theme="dark"] body.is-authenticated .history-page {
+    --history-bg: var(--app-color-canvas);
+    --history-card: var(--app-color-surface);
+    --history-border: var(--app-color-border);
+    --history-muted: var(--app-color-text-muted);
+    --history-text: var(--app-color-text-primary);
+    --history-primary: var(--app-color-primary-hover);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-header,
+html[data-theme="dark"] body.is-authenticated .history-tools,
+html[data-theme="dark"] body.is-authenticated .history-list-card {
+    background: var(--app-color-surface);
+    border-color: var(--app-color-border);
+    box-shadow: 0 9px 24px rgba(7, 11, 18, 0.33);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-header h1 {
+    color: var(--app-color-primary-hover);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-header p,
+html[data-theme="dark"] body.is-authenticated .history-entry-meta {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-entry-title {
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .main-content .history-entry {
+    background: var(--app-color-surface);
+    border-color: var(--app-color-border);
+}
+
+/* Project history */
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-header h1 {
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-field input,
+html[data-theme="dark"] body.is-authenticated .history-page .history-field select {
+    background: #2b3a4f !important;
+    border-color: var(--app-color-border) !important;
+    color: var(--app-color-text-primary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-field input::placeholder {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-field input:focus,
+html[data-theme="dark"] body.is-authenticated .history-page .history-field select:focus {
+    border-color: rgba(99, 166, 219, 0.56) !important;
+    box-shadow: 0 0 0 0.2rem rgba(78, 149, 204, 0.2) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-list-header {
+    color: var(--app-color-text-secondary);
+    border-bottom-color: var(--app-color-border);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-counter {
+    background: #2f3f55;
+    border-color: #41566f;
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-counter strong {
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-action-pill.tone-success {
+    background: rgba(73, 185, 135, 0.22);
+    border-color: rgba(73, 185, 135, 0.42);
+    color: #c9efdf;
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-action-pill.tone-danger {
+    background: rgba(217, 122, 122, 0.22);
+    border-color: rgba(217, 122, 122, 0.44);
+    color: #f6d0d0;
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-action-pill.tone-primary,
+html[data-theme="dark"] body.is-authenticated .history-page .history-action-pill.tone-info {
+    background: rgba(78, 149, 204, 0.2);
+    border-color: rgba(99, 166, 219, 0.42);
+    color: #d9e8f6;
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-action-pill.tone-neutral {
+    background: rgba(141, 160, 182, 0.18);
+    border-color: rgba(141, 160, 182, 0.36);
+    color: #c5d2df;
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-diff-box {
+    background: #2b3a4f;
+    border-color: var(--app-color-border);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-diff-box h6 {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-diff-box pre {
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-diff-box.old {
+    background: rgba(217, 122, 122, 0.14);
+    border-color: rgba(217, 122, 122, 0.42);
+}
+
+html[data-theme="dark"] body.is-authenticated .history-page .history-diff-box.new {
+    background: rgba(73, 185, 135, 0.14);
+    border-color: rgba(73, 185, 135, 0.42);
+}

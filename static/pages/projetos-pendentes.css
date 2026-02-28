@@ -525,3 +525,219 @@
             border-radius: 10px;
         }
     }
+
+
+/* ====================================
+   Dark Mode Overrides
+   ==================================== */
+
+html[data-theme="dark"] body.is-authenticated .pending-page {
+    --pending-bg: var(--app-color-canvas);
+    --pending-border: var(--app-color-border);
+    --pending-card: var(--app-color-surface);
+    --pending-text: var(--app-color-text-primary);
+    --pending-muted: var(--app-color-text-muted);
+    --pending-primary: var(--app-color-primary);
+    --pending-overdue: var(--app-color-danger);
+    --pending-short: var(--app-color-warning);
+    --pending-mid: var(--app-color-primary-hover);
+    --pending-no-date: var(--app-color-text-muted);
+    --pending-open: var(--app-color-success);
+    --pending-shadow: 0 9px 26px rgba(7, 11, 18, 0.34);
+}
+
+/* Pending projects page refinements */
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-field select {
+    background: #2b3a4f;
+    border-color: var(--app-color-border);
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-field select:hover {
+    border-color: rgba(99, 166, 219, 0.44);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-field select:focus {
+    border-color: rgba(99, 166, 219, 0.56);
+    box-shadow: 0 0 0 0.2rem rgba(78, 149, 204, 0.2);
+    outline: none;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-field select option {
+    background: #2b3a4f;
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-project-title {
+    color: #dce8f4;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-project-title i {
+    color: #bad4ea;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-project-title:hover,
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-project-title:focus {
+    color: #ecf4fb;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .btn-pending-primary {
+    background: linear-gradient(135deg, #0f6fae 0%, #0c6299 52%, #095380 100%);
+    border-color: rgba(20, 117, 181, 0.62);
+    color: #f6fbff;
+    box-shadow: 0 10px 22px rgba(7, 28, 47, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .btn-pending-primary:hover,
+html[data-theme="dark"] body.is-authenticated .pending-page .btn-pending-primary:focus {
+    background: linear-gradient(135deg, #1681c8 0%, #1272b2 52%, #0d608f 100%);
+    border-color: rgba(38, 140, 208, 0.74);
+    color: #ffffff;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-total-pill {
+    background: rgba(78, 149, 204, 0.16);
+    border-color: rgba(99, 166, 219, 0.34);
+    color: #d8e8f7;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-total-pill #summary-total-projects {
+    color: #ecf4fb;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-project-header {
+    border-bottom-color: rgba(99, 166, 219, 0.18) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-table-wrap {
+    background: transparent;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-chip-value {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    color: inherit !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-expand-row td {
+    background: #2b3a4f;
+    border-bottom-color: rgba(99, 166, 219, 0.2);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-expand-btn {
+    background: transparent;
+    color: #d9e8f6;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-expand-btn:hover,
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-expand-btn:focus {
+    background: transparent;
+    color: #ecf4fb;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-other-panel {
+    background: #233245;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-other-panel.is-open {
+    border-top-color: rgba(99, 166, 219, 0.28);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-other-header {
+    color: var(--app-color-text-secondary);
+    background: rgba(78, 149, 204, 0.1);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-status-badge.pending-status-open {
+    background: rgba(73, 185, 135, 0.22);
+    border-color: rgba(73, 185, 135, 0.46);
+    color: #c9efdf;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-status-badge.pending-status-started {
+    background: rgba(78, 149, 204, 0.22);
+    border-color: rgba(99, 166, 219, 0.48);
+    color: #d9e8f6;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-action-btn.started {
+    background: rgba(73, 185, 135, 0.22) !important;
+    border-color: rgba(73, 185, 135, 0.46) !important;
+    color: #c9efdf !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-action-btn.started:hover,
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-action-btn.started:focus {
+    background: rgba(73, 185, 135, 0.3) !important;
+    border-color: rgba(73, 185, 135, 0.6) !important;
+    color: #e8f8f1 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-action-btn.complete:not(:disabled) {
+    background: rgba(78, 149, 204, 0.24) !important;
+    border-color: rgba(99, 166, 219, 0.5) !important;
+    color: #d9e8f6 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-action-btn.complete:not(:disabled):hover,
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-action-btn.complete:not(:disabled):focus {
+    background: rgba(78, 149, 204, 0.34) !important;
+    border-color: rgba(99, 166, 219, 0.66) !important;
+    color: #ecf4fb !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-action-btn.complete:disabled {
+    background: #253346 !important;
+    border-color: #3a4b61 !important;
+    color: #8298b0 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-visible-empty td {
+    background: #253649;
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-pagination-wrap {
+    background: var(--app-color-surface);
+    border-color: var(--app-color-border);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-pagination-info {
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-pagination .page-link {
+    background: #2b3a4f;
+    border-color: var(--app-color-border);
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-pagination .page-link:hover,
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-pagination .page-link:focus {
+    background: rgba(78, 149, 204, 0.2);
+    border-color: rgba(99, 166, 219, 0.5);
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-pagination .page-item.active .page-link {
+    background: linear-gradient(135deg, #0f6fae 0%, #0c6299 52%, #095380 100%);
+    border-color: rgba(20, 117, 181, 0.62);
+    color: #f6fbff;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-pagination .page-item.active .page-link:hover,
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-pagination .page-item.active .page-link:focus {
+    background: linear-gradient(135deg, #1681c8 0%, #1272b2 52%, #0d608f 100%);
+    border-color: rgba(38, 140, 208, 0.74);
+    color: #ffffff;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-pagination .page-item.disabled .page-link {
+    background: #253346;
+    border-color: #3a4b61;
+    color: #8298b0;
+}

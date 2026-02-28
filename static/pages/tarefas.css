@@ -760,3 +760,313 @@
         align-self: flex-start;
     }
 }
+
+
+/* ====================================
+   Dark Mode Overrides
+   ==================================== */
+
+/* Page-specific variable overrides */
+
+html[data-theme="dark"] body.is-authenticated .tasks-page {
+    --tasks-bg: var(--app-color-canvas);
+    --tasks-border: var(--app-color-border);
+    --tasks-card: var(--app-color-surface);
+    --tasks-text: var(--app-color-text-primary);
+    --tasks-muted: var(--app-color-text-muted);
+    --tasks-primary: var(--app-color-primary);
+    --tasks-primary-hover: var(--app-color-primary-hover);
+    --tasks-primary-soft: rgba(78, 149, 204, 0.18);
+    --tasks-danger: var(--app-color-danger);
+    --tasks-danger-hover: #e49393;
+    --tasks-success: var(--app-color-success);
+    --tasks-success-soft: rgba(73, 185, 135, 0.18);
+    --tasks-shadow: 0 9px 26px rgba(7, 11, 18, 0.34);
+}
+
+/* ====================================
+   Tasks list refinements (dark)
+   ==================================== */
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-title {
+    color: var(--app-color-text-primary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .btn-task-primary {
+    background: linear-gradient(135deg, #0f6fae 0%, #0c6299 52%, #095380 100%);
+    border-color: rgba(20, 117, 181, 0.56);
+    color: #f6fbff;
+    box-shadow: 0 10px 22px rgba(7, 28, 47, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .btn-task-primary:hover,
+html[data-theme="dark"] body.is-authenticated .tasks-page .btn-task-primary:focus {
+    background: linear-gradient(135deg, #1681c8 0%, #1272b2 52%, #0d608f 100%);
+    border-color: rgba(38, 140, 208, 0.7);
+    color: #ffffff;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .btn-task-archive .tasks-archive-count {
+    background: rgba(99, 166, 219, 0.3);
+    border: 1px solid rgba(99, 166, 219, 0.52);
+    color: #e9f3fd;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-content {
+    background: var(--app-color-surface);
+    border-color: var(--app-color-border);
+    box-shadow: 0 18px 44px rgba(7, 11, 18, 0.52);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-header,
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-footer {
+    background: var(--app-color-surface-elevated);
+    border-color: rgba(99, 166, 219, 0.22);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-body {
+    background: var(--app-color-surface);
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-title {
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-subtitle,
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-help-text {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-warning {
+    color: #f5dfbf;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-close {
+    background: #2b3a4f;
+    border-color: var(--app-color-border);
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-close:hover,
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal-close:focus {
+    background: rgba(78, 149, 204, 0.2);
+    border-color: rgba(99, 166, 219, 0.5);
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal .tasks-input,
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal .form-control {
+    background: #2b3a4f;
+    border-color: var(--app-color-border);
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal .tasks-input::placeholder,
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal .form-control::placeholder {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal .tasks-input:focus,
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal .form-control:focus {
+    border-color: rgba(99, 166, 219, 0.56);
+    box-shadow: 0 0 0 0.2rem rgba(78, 149, 204, 0.22);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal .project-search-dropdown {
+    background: #2b3a4f;
+    border-color: var(--app-color-border);
+    box-shadow: 0 10px 24px rgba(7, 11, 18, 0.46);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal .project-search-option {
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal .project-search-option:hover,
+html[data-theme="dark"] body.is-authenticated .tasks-page .tasks-modal .project-search-option.active {
+    background: rgba(78, 149, 204, 0.2);
+    color: var(--app-color-text-primary);
+}
+
+/* Tasks modal can be rendered outside .tasks-page root */
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-modal-content {
+    background: var(--app-color-surface) !important;
+    border-color: var(--app-color-border) !important;
+    box-shadow: 0 18px 44px rgba(7, 11, 18, 0.52) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-modal-header,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-modal-footer {
+    background: var(--app-color-surface-elevated) !important;
+    border-color: rgba(99, 166, 219, 0.22) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-modal-body {
+    background: var(--app-color-surface) !important;
+    color: var(--app-color-text-secondary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-modal-title {
+    color: var(--app-color-text-primary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-modal-subtitle,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-help-text {
+    color: var(--app-color-text-muted) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-modal-warning {
+    color: #f5dfbf !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-modal-close {
+    background: #2b3a4f !important;
+    border-color: var(--app-color-border) !important;
+    color: var(--app-color-text-secondary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-modal-close:hover,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-modal-close:focus {
+    background: rgba(78, 149, 204, 0.2) !important;
+    border-color: rgba(99, 166, 219, 0.5) !important;
+    color: var(--app-color-text-primary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-input,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .form-control {
+    background: #2b3a4f !important;
+    border-color: var(--app-color-border) !important;
+    color: var(--app-color-text-secondary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-input::placeholder,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .form-control::placeholder {
+    color: var(--app-color-text-muted) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .tasks-input:focus,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .form-control:focus {
+    border-color: rgba(99, 166, 219, 0.56) !important;
+    box-shadow: 0 0 0 0.2rem rgba(78, 149, 204, 0.22) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .project-search-dropdown {
+    background: #2b3a4f !important;
+    border-color: var(--app-color-border) !important;
+    box-shadow: 0 10px 24px rgba(7, 11, 18, 0.46) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .project-search-option {
+    color: var(--app-color-text-secondary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .project-search-option:hover,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .project-search-option.active {
+    background: rgba(78, 149, 204, 0.2) !important;
+    color: var(--app-color-text-primary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .btn-task-primary {
+    background: linear-gradient(135deg, #0f6fae 0%, #0c6299 52%, #095380 100%) !important;
+    border-color: rgba(20, 117, 181, 0.56) !important;
+    color: #f6fbff !important;
+    box-shadow: 0 10px 22px rgba(7, 28, 47, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-modal .btn-task-primary:hover,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .btn-task-primary:focus {
+    background: linear-gradient(135deg, #1681c8 0%, #1272b2 52%, #0d608f 100%) !important;
+    border-color: rgba(38, 140, 208, 0.7) !important;
+    color: #ffffff !important;
+}
+
+/* Tasks project picker dropdown (filter + modal) */
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .project-search-dropdown,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .project-search-dropdown {
+    background: #2b3a4f !important;
+    border-color: var(--app-color-border) !important;
+    box-shadow: 0 10px 24px rgba(7, 11, 18, 0.46) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .project-search-option,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .project-search-option {
+    color: var(--app-color-text-secondary) !important;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .tasks-page .project-search-option:hover,
+html[data-theme="dark"] body.is-authenticated .tasks-page .project-search-option.active,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .project-search-option:hover,
+html[data-theme="dark"] body.is-authenticated .tasks-modal .project-search-option.active {
+    background: rgba(78, 149, 204, 0.2) !important;
+    color: var(--app-color-text-primary) !important;
+}
+
+/* ==========================================
+   Task Hub
+   ========================================== */
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-list {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-header {
+    background: #223042;
+    border-bottom-color: #2d455d;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group {
+    background: #273447;
+    border-color: #24394f;
+    box-shadow: 0 14px 30px rgba(7, 11, 18, 0.22);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-title {
+    color: #c9dff6;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-meta {
+    color: #8ea4bb;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-meta strong {
+    color: #d2e3f3;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-count {
+    background: #223246;
+    border-color: #355271;
+    color: #a8c1da;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-item-context {
+    color: #8ba9c9;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-item-context a {
+    color: #8fc0ee;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-add-row {
+    border-top-color: #2a4258;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-kanban-context {
+    color: #8eaed0;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-project-input {
+    background: #0f1a29;
+    border-color: #2d455d;
+    color: #d0e4f8;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-project-input:focus {
+    border-color: rgba(108, 159, 211, 0.76);
+    box-shadow: 0 0 0 3px rgba(32, 99, 161, 0.32);
+}

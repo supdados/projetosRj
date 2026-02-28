@@ -787,3 +787,116 @@
         transform: none;
     }
 }
+
+
+/* ====================================
+   Dark Mode Overrides
+   ==================================== */
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page {
+    --project-tasks-bg: var(--app-color-canvas);
+    --project-tasks-border: var(--app-color-border);
+    --project-tasks-card: var(--app-color-surface);
+    --project-tasks-text: var(--app-color-text-primary);
+    --project-tasks-muted: var(--app-color-text-muted);
+    --project-tasks-primary: var(--app-color-primary);
+    --project-tasks-primary-hover: var(--app-color-primary-hover);
+    --project-tasks-soft: rgba(78, 149, 204, 0.18);
+    --project-tasks-danger: var(--app-color-danger);
+    --project-tasks-danger-hover: #e49393;
+    --project-tasks-shadow: 0 9px 26px rgba(7, 11, 18, 0.34);
+}
+
+/* Project tasks page dark completion */
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .project-view-breadcrumb {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .project-breadcrumb-link {
+    color: var(--app-color-primary-hover);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .project-breadcrumb-link:hover {
+    color: #e5f1fb;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .project-breadcrumb-sep {
+    color: #8ea5bc;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .project-breadcrumb-current {
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .project-info-title,
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .header-title-clean,
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .task-name-clean {
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .project-info-title i,
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .header-title-clean i,
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .task-icon-clean i {
+    color: var(--app-color-primary-hover);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .project-info-badge,
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .header-count,
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .task-items-count {
+    background: rgba(78, 149, 204, 0.2);
+    border-color: rgba(99, 166, 219, 0.42);
+    color: #d9e8f6;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .task-icon-clean {
+    background: rgba(78, 149, 204, 0.14);
+    border: 1px solid rgba(99, 166, 219, 0.3);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .task-meta-item {
+    background: #2b3a4f;
+    border-color: var(--app-color-border);
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .task-meta-item.text-muted {
+    color: var(--app-color-text-muted) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .btn-task-archive-clean {
+    background: #2a394d;
+    border-color: var(--app-color-border);
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .btn-task-archive-clean:hover,
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .btn-task-archive-clean:focus {
+    background: rgba(78, 149, 204, 0.2);
+    border-color: rgba(99, 166, 219, 0.46);
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .tasks-archive-count-clean {
+    background: rgba(141, 160, 182, 0.24);
+    border: 1px solid rgba(141, 160, 182, 0.38);
+    color: #d7e2ed;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .empty-state-clean {
+    background: #2b3a4f;
+    border-color: rgba(99, 166, 219, 0.34);
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .empty-state-clean i {
+    color: #89b6dd;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .empty-state-clean h5 {
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-tasks-page .empty-state-clean p {
+    color: var(--app-color-text-muted);
+}
