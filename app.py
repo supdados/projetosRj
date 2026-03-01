@@ -10,6 +10,7 @@ from sqlalchemy import inspect, text
 from models import User, UserNotification, db
 from objective_catalog import sync_goal_catalog_to_db
 from routes import inject_current_year, main_bp
+from time_utils import register_sqlite_adapters
 
 load_dotenv()
 
@@ -300,6 +301,9 @@ def create_app(test_config=None):
 
     if not app.config.get('SQLALCHEMY_DATABASE_URI'):
         app.config['SQLALCHEMY_DATABASE_URI'] = _resolve_database_uri()
+
+    if str(app.config.get('SQLALCHEMY_DATABASE_URI', '')).startswith('sqlite:'):
+        register_sqlite_adapters()
 
     db.init_app(app)
     migrate.init_app(app, db)
