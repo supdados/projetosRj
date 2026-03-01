@@ -219,8 +219,8 @@
 }
 
 .task-detail-v2 .task-items-kanban-badge.status-para_ajustes {
-    background: #fff3e0;
-    border-color: #fdc9a0;
+    background: #ffe7cf;
+    border-color: #efbc8d;
     color: #7c3210;
 }
 
@@ -617,8 +617,8 @@
 }
 
 .task-detail-v2 .task-items-kanban-column.status-para_ajustes .task-items-kanban-col-head {
-    border-bottom-color: #fdc9a0;
-    background: #fff3e0;
+    border-bottom-color: #efbc8d;
+    background: #ffe7cf;
 }
 
 .task-detail-v2 .task-items-kanban-column.status-finalizada .task-items-kanban-col-head {

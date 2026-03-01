@@ -732,22 +732,30 @@
 
         function setDrawerAutosaveStatus(state, message) {
             if (!hasDrawer() || !drawerAutosaveStatus) return;
-            var normalizedState = state || 'saved';
+            var normalizedState = state || 'idle';
             drawerAutosaveStatus.classList.remove('is-saving', 'is-saved', 'is-error', 'is-invalid');
-            drawerAutosaveStatus.classList.add('is-' + normalizedState);
 
             if (message) {
+                if (normalizedState !== 'idle') {
+                    drawerAutosaveStatus.classList.add('is-' + normalizedState);
+                }
                 drawerAutosaveStatus.textContent = message;
                 return;
             }
 
-            if (normalizedState === 'saving') {
+            if (normalizedState === 'idle') {
+                drawerAutosaveStatus.textContent = '';
+            } else if (normalizedState === 'saving') {
+                drawerAutosaveStatus.classList.add('is-saving');
                 drawerAutosaveStatus.textContent = 'Salvando...';
             } else if (normalizedState === 'error') {
+                drawerAutosaveStatus.classList.add('is-error');
                 drawerAutosaveStatus.textContent = 'Não foi possível salvar.';
             } else if (normalizedState === 'invalid') {
+                drawerAutosaveStatus.classList.add('is-invalid');
                 drawerAutosaveStatus.textContent = 'Descrição é obrigatória.';
             } else {
+                drawerAutosaveStatus.classList.add('is-saved');
                 drawerAutosaveStatus.textContent = 'Salvo';
             }
         }
@@ -970,9 +978,10 @@
             var snapshot = payloadSnapshot(payload);
             if (snapshot !== drawerState.lastSavedSnapshot) {
                 drawerState.hasUnsavedChanges = true;
+                setDrawerAutosaveStatus();
             } else if (!drawerState.isSaving && !drawerState.hasPendingSave) {
                 drawerState.hasUnsavedChanges = false;
-                setDrawerAutosaveStatus('saved');
+                setDrawerAutosaveStatus();
             }
 
             if (opts.immediate) {
@@ -1002,7 +1011,7 @@
             var snapshot = payloadSnapshot(payload);
             if (snapshot === drawerState.lastSavedSnapshot) {
                 drawerState.hasUnsavedChanges = false;
-                setDrawerAutosaveStatus('saved');
+                setDrawerAutosaveStatus();
                 return Promise.resolve(true);
             }
 
@@ -1187,7 +1196,7 @@
             setDrawerSaving(false);
             setDrawerCommentsBusy(false);
             setDrawerDeleteConfirmVisible(false);
-            setDrawerAutosaveStatus('saved');
+            setDrawerAutosaveStatus();
             drawerCommentForm.reset();
             resizeDrawerCommentTextarea();
             resizeDrawerDescTextarea();
@@ -1243,7 +1252,7 @@
                 if (drawerAnexosList) drawerAnexosList.innerHTML = '';
                 if (drawerAnexosCount) drawerAnexosCount.textContent = '0';
                 drawerTitle.textContent = 'Item';
-                setDrawerAutosaveStatus('saved');
+                setDrawerAutosaveStatus();
                 setDrawerCommentsStatus();
                 drawerCommentForm.reset();
                 resizeDrawerCommentTextarea();

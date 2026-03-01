@@ -10,14 +10,16 @@
 <div class="app-page-shell app-page-shell--raised projects-v4-page" id="projectsV4Page">
     <header class="projects-v4-header">
         <div class="projects-v4-header-main">
-            <h1 class="projects-v4-title ds-type-page-title">Todos os Projetos</h1>
+            <h1 class="projects-v4-title ds-type-page-title">
+                <span>Todos os Projetos</span>
+                <span class="projects-v4-meta-pill">
+                    {{ total_projects }} projeto{{ 's' if total_projects != 1 else '' }}
+                </span>
+            </h1>
             <p class="projects-v4-subtitle ds-type-body-sm">Visualize, filtre e acompanhe seus projetos.</p>
         </div>
 
         <div class="projects-v4-header-actions">
-            <span class="projects-v4-meta-pill">
-                {{ total_projects }} projeto{{ 's' if total_projects != 1 else '' }}
-            </span>
             <button type="button" class="btn-projects-v4 btn-projects-v4-primary" data-bs-toggle="modal" data-bs-target="#addProjectModal">
                 <i class="fas fa-plus" aria-hidden="true"></i>
                 Novo projeto

@@ -41,6 +41,7 @@
     font-weight: var(--ds-font-weight-bold);
     display: inline-flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
 }
 
@@ -61,7 +62,7 @@
 .projects-v4-meta-pill {
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 8px;
     border: 1px solid #d6e4f3;
     background: var(--projects-v4-soft);
     color: #1a4f85;
@@ -797,6 +798,13 @@ html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-pro
     color: var(--app-color-text-primary);
 }
 
+html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-meta-pill {
+    background: rgba(78, 149, 204, 0.18);
+    border-color: rgba(99, 166, 219, 0.3);
+    color: #dbeaf8;
+    box-shadow: none;
+}
+
 html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-project-link:hover,
 html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-project-link:focus {
     color: #e5f1fb;
@@ -1012,4 +1020,3 @@ html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-emp
 html[data-theme="dark"] body.is-authenticated .projects-v4-page .projects-v4-empty-text {
     color: #7a9ab8;
 }
-

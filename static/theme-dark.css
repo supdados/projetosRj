@@ -112,9 +112,9 @@ html[data-theme="dark"] body.is-authenticated .app-theme-toggle:focus-visible {
 
 
 html[data-theme="dark"] body.is-authenticated .app-notifications-badge {
-    background: #d98989;
-    color: #fff8f8;
-    border: 1px solid rgba(255, 237, 237, 0.4);
+    background: linear-gradient(180deg, #ff586a 0%, #e11d48 100%);
+    color: #fff8fb;
+    border: 1px solid rgba(255, 196, 205, 0.48);
     box-shadow: 0 0 0 2px #273447;
 }
 

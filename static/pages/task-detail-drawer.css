@@ -51,13 +51,21 @@ body.task-item-drawer-open {
     min-width: 0;
 }
 
-.task-detail-v2 .task-item-drawer-header > div:first-child {
+.task-detail-v2 .task-item-drawer-header-copy {
     min-width: 0;
     flex: 1 1 0;
 }
 
+.task-detail-v2 .task-item-drawer-header-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    margin-bottom: 0.22rem;
+}
+
 .task-detail-v2 .task-item-drawer-kicker {
-    margin: 0 0 0.22rem;
+    margin: 0;
     font-size: var(--ds-font-size-2xs);
     text-transform: uppercase;
     letter-spacing: var(--ds-letter-spacing-wide);
@@ -428,13 +436,13 @@ body.task-item-drawer-open {
 }
 
 .task-detail-v2 .task-item-drawer-autosave-status {
-    margin: -0.08rem 0 0.02rem;
-    align-self: flex-start;
+    margin: 0;
     font-size: var(--ds-font-size-2xs);
     font-weight: var(--ds-font-weight-semibold);
     color: #5a7592;
     letter-spacing: 0.01em;
     transition: color 0.18s ease, opacity 0.18s ease;
+    white-space: nowrap;
 }
 
 .task-detail-v2 .task-item-drawer-autosave-status:empty {

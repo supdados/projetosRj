@@ -689,8 +689,12 @@
         <div class="task-item-drawer-backdrop" id="taskItemDrawerBackdrop" hidden></div>
         <aside class="task-item-drawer" id="taskItemDrawer" aria-hidden="true" hidden>
             <header class="task-item-drawer-header">
-                <div>
-                    <p class="task-item-drawer-kicker">Detalhes da tarefa</p>
+                <div class="task-item-drawer-header-copy">
+                    <div class="task-item-drawer-header-meta">
+                        <p class="task-item-drawer-kicker">Detalhes da tarefa</p>
+                        <p class="task-item-drawer-autosave-status" id="taskItemDrawerAutosaveStatus"
+                            role="status" aria-live="polite"></p>
+                    </div>
                     <h6 class="task-item-drawer-title" id="taskItemDrawerTitle">Tarefa</h6>
                 </div>
                 <div class="task-item-drawer-header-actions">
@@ -713,9 +717,6 @@
                         <button type="button" class="task-item-drawer-delete-confirm-btn" id="taskItemDrawerDeleteConfirmBtn">Excluir tarefa</button>
                     </div>
                 </div>
-
-                <p class="task-item-drawer-autosave-status is-saved" id="taskItemDrawerAutosaveStatus"
-                    role="status" aria-live="polite">Salvo</p>
 
                 <div class="task-item-drawer-props">
                     <div class="task-item-drawer-prop-group">
