@@ -473,7 +473,7 @@
 .projects-v4-id-chip {
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(173, 200, 226, 0.72);
     background: rgba(245, 250, 255, 0.88);
     color: #517092;
@@ -498,7 +498,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 999px;
+    border-radius: 6px;
     padding: 0.16rem 0.56rem;
     font-size: var(--ds-font-size-2xs);
     font-weight: var(--ds-font-weight-bold);
