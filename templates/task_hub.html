@@ -851,12 +851,12 @@ window.TASK_HUB_CONFIG = {
     focusTask: {{ (request.args.get('focus_task') or '')|tojson }},
 };
 </script>
-<script src="{{ url_for('static', filename='pages/modules/task-item-helpers.js') }}"></script>
-<script src="{{ url_for('static', filename='pages/modules/responsavel-picker.js') }}"></script>
-<script src="{{ url_for('static', filename='pages/modules/task-header-editor.js') }}"></script>
-<script src="{{ url_for('static', filename='pages/modules/add-item-inline.js') }}"></script>
-<script src="{{ url_for('static', filename='pages/modules/task-item-operations.js') }}"></script>
-<script src="{{ url_for('static', filename='pages/modules/kanban-manager.js') }}"></script>
-<script src="{{ url_for('static', filename='pages/modules/task-archive.js') }}"></script>
-<script src="{{ url_for('static', filename='pages/modules/inline-editors.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/task-item-helpers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/responsavel-picker.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/task-header-editor.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/add-item-inline.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/task-item-operations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/task-archive.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/inline-editors.js') }}"></script>
 {% endblock %}
