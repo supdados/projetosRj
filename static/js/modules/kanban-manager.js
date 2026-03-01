@@ -114,6 +114,14 @@
         };
 
         if (!toggleRoot || !listView || !kanbanView || !board || !listEl) {
+            if (toggleRoot) {
+                toggleRoot.addEventListener('click', function (event) {
+                    var button = event.target.closest('.task-items-view-btn[data-no-tasks="1"]');
+                    if (!button) return;
+                    event.preventDefault();
+                    showNoTasksToast();
+                });
+            }
             return fallbackApi;
         }
 
@@ -2574,10 +2582,31 @@
             }
         }
 
+        function showNoTasksToast() {
+            var existing = document.querySelector('.tasks-no-tasks-toast');
+            if (existing) {
+                clearTimeout(existing._hideTimer);
+                clearTimeout(existing._removeTimer);
+                existing.remove();
+            }
+            var toast = document.createElement('div');
+            toast.className = 'tasks-no-tasks-toast';
+            toast.textContent = 'Adicione tarefas para usar o Kanban.';
+            document.body.appendChild(toast);
+            toast._hideTimer = setTimeout(function () {
+                toast.classList.add('is-hiding');
+                toast._removeTimer = setTimeout(function () { toast.remove(); }, 320);
+            }, 2800);
+        }
+
         function handleToggleClick(event) {
             var button = event.target.closest('.task-items-view-btn[data-view]');
             if (!button) return;
             event.preventDefault();
+            if (button.getAttribute('data-no-tasks') === '1') {
+                showNoTasksToast();
+                return;
+            }
             applyView(button.getAttribute('data-view'), { animateToggle: true });
         }
 

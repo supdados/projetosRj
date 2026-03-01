@@ -136,3 +136,16 @@
         transform: translateY(0);
     }
 }
+
+/* Kanban button — disabled when no tasks */
+.task-detail-v2 .task-items-view-toggle-refined .task-items-view-btn[data-no-tasks="1"] {
+    cursor: not-allowed;
+}
+
+.task-detail-v2 .task-items-view-toggle-refined .task-items-view-btn[data-no-tasks="1"] .task-items-view-label {
+    opacity: 0.45;
+}
+
+html[data-theme="dark"] .task-detail-v2 .task-items-view-toggle-refined .task-items-view-btn[data-no-tasks="1"] .task-items-view-label {
+    opacity: 0.35;
+}

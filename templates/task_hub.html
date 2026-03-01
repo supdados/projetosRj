@@ -153,6 +153,7 @@
                         <span class="task-items-view-label is-active" data-view-label="list">Lista</span>
                     </button>
                     <button type="button" class="task-items-view-btn" data-view="kanban"
+                        {% if total_items == 0 %}data-no-tasks="1" title="Nenhuma tarefa para exibir no Kanban"{% endif %}
                         aria-pressed="false">
                         <span class="task-items-view-label" data-view-label="kanban">Kanban</span>
                     </button>
