@@ -208,10 +208,10 @@
             <table class="projects-v4-table">
                 <thead>
                     <tr>
-                        <th class="projects-v4-col-id">#</th>
+                        <th class="projects-v4-col-id text-center">ID</th>
                         <th class="projects-v4-col-title">Título</th>
                         <th class="projects-v4-col-area">Área</th>
-                        <th class="projects-v4-col-delivery">Tipo Entrega</th>
+                        <th class="projects-v4-col-delivery text-center">Tipo Entrega</th>
                         <th class="projects-v4-col-priority">Prioridade</th>
                         <th class="projects-v4-col-status">Status</th>
                         <th class="projects-v4-col-date">Data Início</th>
@@ -222,8 +222,8 @@
                 <tbody>
                     {% for project in projects %}
                     <tr>
-                        <td>
-                            <span class="projects-v4-id-chip">#{{ project.id }}</span>
+                        <td class="text-center">
+                            <span class="projects-v4-id-chip">{{ project.id }}</span>
                         </td>
                         <td>
                             <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="projects-v4-project-link">
@@ -231,7 +231,7 @@
                             </a>
                         </td>
                         <td>{{ project.area_responsavel if project.area_responsavel else '-' }}</td>
-                        <td class="projects-v4-cell-delivery">
+                        <td class="projects-v4-cell-delivery text-center">
                             {% if project.delivery_type %}
                             <span class="projects-v4-badge projects-v4-badge-delivery">{{ project.delivery_type }}</span>
                             {% else %}
