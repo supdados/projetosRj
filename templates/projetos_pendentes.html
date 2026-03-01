@@ -9,18 +9,18 @@
 {% block content %}
 <div class="app-page-shell app-page-shell--raised pending-page" id="pendingPageRoot">
     <header class="pending-header">
-        <div>
-            <h1>
-                Projetos Pendentes
+        <div class="pending-header-main">
+            <h1 class="pending-title">
+                <span>Projetos Pendentes</span>
+                <span class="pending-total-pill">
+                    Projetos no foco: <span id="summary-total-projects">{{ summary_counts.total_projects }}</span>
+                </span>
             </h1>
-            <p>
+            <p class="pending-subtitle">
                 Janela ativa: <strong>{{ period_label_map.get(filtro_periodo, 'Atrasados') }}</strong>
                 {% if selected_responsavel %} · Responsável contém: <strong>{{ selected_responsavel }}</strong>{% endif %}
                 {% if selected_area %} · Área: <strong>{{ selected_area }}</strong>{% endif %}
             </p>
-        </div>
-        <div class="pending-total-pill">
-            Projetos no foco: <span id="summary-total-projects">{{ summary_counts.total_projects }}</span>
         </div>
     </header>
 

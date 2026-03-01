@@ -898,7 +898,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-primary,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-task-primary,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-task-primary-clean,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-projects-v4-primary,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-pending-primary,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-template-primary,
 html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-primary,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-glass-primary,
@@ -927,8 +926,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-task-primary-cl
 html[data-theme="dark"] body.is-authenticated .main-content .btn-task-primary-clean:focus,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-projects-v4-primary:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-projects-v4-primary:focus,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-pending-primary:hover,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-pending-primary:focus,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-template-primary:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-template-primary:focus,
 html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-primary:hover,
@@ -953,6 +950,21 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-pro
     background: rgba(64, 93, 124, 0.92);
     border-color: rgba(172, 200, 228, 0.50);
     color: #edf4fb;
+}
+
+/* Pending projects: keep the filter CTA aligned with the project list primary button */
+html[data-theme="dark"] body.is-authenticated .pending-page .btn-pending.btn-pending-primary {
+    background: linear-gradient(135deg, #0f6fae 0%, #0c6299 52%, #095380 100%);
+    border-color: rgba(20, 117, 181, 0.56);
+    color: #f6fbff;
+    box-shadow: 0 10px 22px rgba(7, 28, 47, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .btn-pending.btn-pending-primary:hover,
+html[data-theme="dark"] body.is-authenticated .pending-page .btn-pending.btn-pending-primary:focus {
+    background: linear-gradient(135deg, #1681c8 0%, #1272b2 52%, #0d608f 100%);
+    border-color: rgba(38, 140, 208, 0.70);
+    color: #ffffff;
 }
 
 

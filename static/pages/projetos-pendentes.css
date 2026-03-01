@@ -32,31 +32,40 @@
         gap: 1rem;
     }
 
-    .pending-header h1 {
+    .pending-header-main {
+        min-width: 0;
+    }
+
+    .pending-title {
         margin: 0;
         font-size: var(--ds-font-size-2xl);
         color: var(--pending-primary);
         font-weight: var(--ds-font-weight-bold);
         display: inline-flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 0.55rem;
     }
 
-    .pending-header p {
+    .pending-subtitle {
         margin: 0.3rem 0 0;
         color: var(--pending-muted);
         font-size: var(--ds-font-size-base);
+        line-height: 1.45;
     }
 
     .pending-total-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.28rem;
         border: 1px solid #d6e4f3;
         background: #edf5fe;
         color: #1a4f85;
-        border-radius: 999px;
-        padding: 0.35rem 0.7rem;
+        border-radius: 8px;
+        padding: 0.28rem 0.68rem;
         font-weight: var(--ds-font-weight-semibold);
         white-space: nowrap;
-        font-size: var(--ds-font-size-sm);
+        font-size: var(--ds-font-size-xs);
     }
 
     .pending-filters {
@@ -124,16 +133,23 @@
         font-size: var(--ds-font-size-sm);
         font-weight: var(--ds-font-weight-semibold);
         border: 1px solid #ccdeef;
-        padding: 0 0.7rem;
+        padding: 0 0.78rem;
         background: #fff;
         color: #34526e;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.38rem;
         transition: all 0.16s ease;
+        cursor: pointer;
     }
 
-    .btn-pending:hover {
+    .btn-pending:hover,
+    .btn-pending:focus {
         border-color: #b5cde4;
         background: #f4f9ff;
         color: #17497a;
+        text-decoration: none;
     }
 
     .btn-pending-primary {
@@ -546,6 +562,10 @@ html[data-theme="dark"] body.is-authenticated .pending-page {
     --pending-shadow: 0 9px 26px rgba(7, 11, 18, 0.34);
 }
 
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-subtitle {
+    color: #9eb2c7;
+}
+
 /* Pending projects page refinements */
 
 html[data-theme="dark"] body.is-authenticated .pending-page .pending-field select {
@@ -600,6 +620,7 @@ html[data-theme="dark"] body.is-authenticated .pending-page .pending-total-pill 
     background: rgba(78, 149, 204, 0.16);
     border-color: rgba(99, 166, 219, 0.34);
     color: #d8e8f7;
+    box-shadow: none;
 }
 
 html[data-theme="dark"] body.is-authenticated .pending-page .pending-total-pill #summary-total-projects {
