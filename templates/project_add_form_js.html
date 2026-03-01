@@ -27,6 +27,20 @@
         let templatesLoaded = false;
         let templatesLoading = false;
         let activeAccordionScrollFrame = null;
+        let modalTriggerElement = null;
+        let lastInteractionWasKeyboard = false;
+
+        document.addEventListener('keydown', function () {
+            lastInteractionWasKeyboard = true;
+        }, true);
+
+        document.addEventListener('pointerdown', function () {
+            lastInteractionWasKeyboard = false;
+        }, true);
+
+        document.addEventListener('mousedown', function () {
+            lastInteractionWasKeyboard = false;
+        }, true);
 
         // Máscara para o campo Processo SEI
         const seiProcessInput = document.getElementById('project_sei_process');
@@ -649,6 +663,12 @@
 
         // Inicialização do modal
         if (addProjectModal) {
+            addProjectModal.addEventListener('show.bs.modal', function (event) {
+                modalTriggerElement = event.relatedTarget && typeof event.relatedTarget.blur === 'function'
+                    ? event.relatedTarget
+                    : null;
+            });
+
             addProjectModal.addEventListener('shown.bs.modal', function () {
                 updateSubmitState();
                 setTimeout(() => {
@@ -660,14 +680,37 @@
             
             // Limpar formulário quando modal for fechado
             addProjectModal.addEventListener('hidden.bs.modal', function () {
+                if (document.activeElement && addProjectModal.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
+                    document.activeElement.blur();
+                }
+
+                if (modalTriggerElement && !lastInteractionWasKeyboard && typeof modalTriggerElement.blur === 'function') {
+                    modalTriggerElement.blur();
+                }
+
                 if (addProjectForm) {
                     addProjectForm.reset();
                 }
 
-                if (accordionRoot && window.bootstrap && window.bootstrap.Collapse) {
-                    accordionRoot.querySelectorAll('.accordion-collapse.show').forEach(collapseEl => {
-                        const instance = window.bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
-                        instance.hide();
+                if (accordionRoot) {
+                    if (window.bootstrap && window.bootstrap.Collapse) {
+                        accordionRoot.querySelectorAll('.accordion-collapse.show').forEach(collapseEl => {
+                            const instance = window.bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
+                            instance.hide();
+                        });
+                    }
+
+                    accordionRoot.querySelectorAll('.project-create-accordion-button').forEach(buttonEl => {
+                        buttonEl.classList.add('collapsed');
+                        buttonEl.setAttribute('aria-expanded', 'false');
+                        if (typeof buttonEl.blur === 'function') {
+                            buttonEl.blur();
+                        }
+                    });
+
+                    accordionRoot.querySelectorAll('.accordion-collapse').forEach(collapseEl => {
+                        collapseEl.classList.remove('show', 'collapsing');
+                        collapseEl.style.height = '';
                     });
                 }
 
@@ -684,6 +727,7 @@
                 templatesLoading = false;
                 abepComboboxControl.reset();
                 updateSubmitState();
+                modalTriggerElement = null;
             });
         }
 

@@ -139,7 +139,6 @@
     }
 
     .dashboard-page-v2 .glass-btn.dashboard-new-project-btn:hover,
-    .dashboard-page-v2 .glass-btn.dashboard-new-project-btn:focus,
     .dashboard-page-v2 .glass-btn.dashboard-new-project-btn:focus-visible {
         transform: none;
         background: linear-gradient(135deg, #1173b5 0%, #0d669f 52%, #0a5788 100%) !important;
@@ -1147,7 +1146,7 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .dashboard-new-
 }
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .dashboard-new-project-btn:hover,
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .dashboard-new-project-btn:focus {
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .dashboard-new-project-btn:focus-visible {
     background: linear-gradient(135deg, #1681c8 0%, #1272b2 52%, #0d608f 100%) !important;
     border-color: rgba(38, 140, 208, 0.74) !important;
     color: #ffffff !important;
