@@ -26,7 +26,7 @@
                     {{ project.short_description if project.short_description else '' }}
                 </p>
             </div>
-            <a href="{{ url_for('main.list_projects') }}" class="btn btn-sm back-button ms-3 btn-back-to-list">
+            <a href="{{ url_for('main.list_projects') }}" class="btn btn-sm back-button ms-3 btn-back-to-list" data-area-nav>
                 <i class="fas fa-arrow-left me-1"></i>Voltar
             </a>
         </div>
@@ -56,7 +56,7 @@
                         }}</span>
                 </div>
             </div>
-            <a href="{{ url_for('main.list_projects') }}" class="project-compact-back">
+            <a href="{{ url_for('main.list_projects') }}" class="project-compact-back" data-area-nav>
                 <i class="fas fa-arrow-left"></i>
                 <span>Voltar</span>
             </a>

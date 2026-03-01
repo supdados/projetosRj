@@ -303,9 +303,10 @@
                 function getSearchPageDestination(query) {
                     const searchPageUrl = searchForm.getAttribute('action') || window.location.pathname;
                     const trimmed = (query || '').trim();
-                    return trimmed
-                        ? `${searchPageUrl}?q=${encodeURIComponent(trimmed)}`
-                        : searchPageUrl;
+                    if (!trimmed) return searchPageUrl;
+                    const area = (window.__APP_SELECTED_AREA__ || '').trim();
+                    const areaParam = area ? `&area=${encodeURIComponent(area)}` : '';
+                    return `${searchPageUrl}?q=${encodeURIComponent(trimmed)}${areaParam}`;
                 }
 
                 function clearSearchFooter() {
@@ -457,7 +458,9 @@
                     renderSearchState('Buscando...');
                     openSearchDropdown();
 
-                    fetch(`${searchApiUrl}?q=${encodeURIComponent(query)}&limit=5`, {
+                    const _searchArea = (window.__APP_SELECTED_AREA__ || '').trim();
+                    const _areaParam = _searchArea ? `&area=${encodeURIComponent(_searchArea)}` : '';
+                    fetch(`${searchApiUrl}?q=${encodeURIComponent(query)}&limit=5${_areaParam}`, {
                         method: 'GET',
                         headers: { 'Accept': 'application/json' },
                         signal: requestController.signal

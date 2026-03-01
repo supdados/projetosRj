@@ -50,7 +50,7 @@
 
     <div class="row g-2 mb-3 dashboard-kpi-row">
         <div class="col-6 col-md-3">
-            <a href="{{ url_for('main.list_projects') }}" class="text-decoration-none">
+            <a href="{{ url_for('main.list_projects') }}" class="text-decoration-none" data-area-nav>
                 <div class="card border-0 h-100 glass-card dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
@@ -69,7 +69,7 @@
         </div>
 
         <div class="col-6 col-md-3">
-            <a href="{{ url_for('main.list_projects', status='Finalizado') }}" class="text-decoration-none">
+            <a href="{{ url_for('main.list_projects', status='Finalizado') }}" class="text-decoration-none" data-area-nav>
                 <div class="card border-0 h-100 glass-card dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
@@ -88,7 +88,7 @@
         </div>
 
         <div class="col-6 col-md-3">
-            <a href="{{ url_for('main.list_projects', status='Vigente') }}" class="text-decoration-none">
+            <a href="{{ url_for('main.list_projects', status='Vigente') }}" class="text-decoration-none" data-area-nav>
                 <div class="card border-0 h-100 glass-card dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
@@ -107,7 +107,7 @@
         </div>
 
         <div class="col-6 col-md-3">
-            <a href="{{ url_for('main.list_projects', atraso='atrasado') }}" class="text-decoration-none">
+            <a href="{{ url_for('main.list_projects', atraso='atrasado') }}" class="text-decoration-none" data-area-nav>
                 <div class="card border-0 h-100 glass-card dashboard-glass-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
@@ -195,7 +195,7 @@
                     <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title dashboard-section-title">
                         <i class="fas fa-list-check me-2 text-primary"></i>Tarefas
                     </h5>
-                    <a href="{{ url_for('main.list_tasks') }}" class="dashboard-tasks-view-all">Ver todas <i class="fas fa-arrow-right ms-1"></i></a>
+                    <a href="{{ url_for('main.list_tasks') }}" class="dashboard-tasks-view-all" data-area-nav>Ver todas <i class="fas fa-arrow-right ms-1"></i></a>
                 </div>
                 <div class="card-body px-3 py-3 glass-card-body">
                     {% if task_items_total > 0 %}

@@ -1,6 +1,6 @@
 import datetime
 
-from flask import g, render_template
+from flask import g, render_template, request
 from sqlalchemy import and_, or_
 
 from models import Etapa, Project, Task, db
@@ -13,11 +13,15 @@ from .shared import get_area_catalog_choices, get_goal_catalog_context
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
+    selected_area = (request.args.get('area') or '').strip()
+
     project_query_base = Project.query
     if not g.user.is_admin:
         user_areas = g.user.get_areas()
         if user_areas:
             project_query_base = project_query_base.filter(Project.area_responsavel.in_(user_areas))
+    if selected_area:
+        project_query_base = project_query_base.filter(Project.area_responsavel == selected_area)
 
     RECENT_PROJECTS_LIMIT = 9
     recent_projects = project_query_base.order_by(Project.id.desc()).limit(RECENT_PROJECTS_LIMIT).all()
@@ -28,6 +32,8 @@ def dashboard():
             user_areas = g.user.get_areas()
             if user_areas:
                 query = query.filter(Project.area_responsavel.in_(user_areas))
+        if selected_area:
+            query = query.filter(Project.area_responsavel == selected_area)
         if filter_expression is not None:
             query = query.filter(filter_expression)
         return query.count()
@@ -48,6 +54,8 @@ def dashboard():
         user_areas = g.user.get_areas()
         if user_areas:
             projetos_vigentes_query = projetos_vigentes_query.filter(Project.area_responsavel.in_(user_areas))
+    if selected_area:
+        projetos_vigentes_query = projetos_vigentes_query.filter(Project.area_responsavel == selected_area)
 
     for projeto in projetos_vigentes_query.all():
         if Etapa.query.filter(Etapa.project_id == projeto.id, Etapa.done == False, Etapa.data_fim < data_atual).count() > 0:
@@ -61,18 +69,28 @@ def dashboard():
             query = query.filter(Task.is_archived.is_(False))
 
         if g.user.is_admin:
+            if selected_area:
+                query = query.outerjoin(Project, Task.project_id == Project.id).filter(
+                    Task.project_id.isnot(None),
+                    Project.area_responsavel == selected_area,
+                )
             return query
 
         user_areas = g.user.get_areas()
+        if selected_area and user_areas:
+            effective_areas = [selected_area] if selected_area in user_areas else []
+        else:
+            effective_areas = user_areas
+
         visibility_filters = [
             and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)
         ]
-        if user_areas:
+        if effective_areas:
             visibility_filters.insert(
                 0,
                 and_(
                     Task.project_id.isnot(None),
-                    Project.area_responsavel.in_(user_areas)
+                    Project.area_responsavel.in_(effective_areas)
                 )
             )
 
@@ -82,7 +100,6 @@ def dashboard():
     open_tasks_count_query = apply_task_visibility_rules(open_tasks_count_query, include_archived=False)
     dashboard_open_tasks_count = int(open_tasks_count_query.scalar() or 0)
 
-    # Mantido por compatibilidade com template atual.
     dashboard_open_items_count = dashboard_open_tasks_count
 
     def count_tasks_by_status(status_value):

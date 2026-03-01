@@ -109,7 +109,7 @@ def _normalize_global_search_limit(raw_limit, default_limit=GLOBAL_SEARCH_DEFAUL
     return max(1, min(parsed, max_limit))
 
 
-def build_global_search_results(term, user, limit_per_type=None, include_has_more=False):
+def build_global_search_results(term, user, limit_per_type=None, include_has_more=False, selected_area=''):
     normalized_term = (term or '').strip()
     if not normalized_term:
         return _empty_global_search_payload(normalized_term)
@@ -118,6 +118,20 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
     prefix_pattern = f'{normalized_term.lower()}%'
 
     user_areas = user.get_areas() if (user and not user.is_admin) else []
+
+    # Compute effective area restriction
+    selected_area = (selected_area or '').strip()
+    if selected_area:
+        if user.is_admin:
+            filter_areas = [selected_area]
+        elif selected_area in user_areas:
+            filter_areas = [selected_area]
+        else:
+            filter_areas = []
+        area_restricted = True
+    else:
+        filter_areas = user_areas
+        area_restricted = not user.is_admin
 
     effective_limit = limit_per_type
     if include_has_more and limit_per_type is not None:
@@ -147,9 +161,9 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
             Project.area_responsavel.ilike(search_pattern),
         )
     )
-    if not user.is_admin:
-        if user_areas:
-            project_query = project_query.filter(Project.area_responsavel.in_(user_areas))
+    if area_restricted:
+        if filter_areas:
+            project_query = project_query.filter(Project.area_responsavel.in_(filter_areas))
         else:
             project_query = project_query.filter(Project.id == -1)
     project_query = apply_optional_limit(project_query.order_by(prefix_order_for(Project.titulo), Project.id.desc()))
@@ -163,9 +177,9 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
             Etapa.responsavel.ilike(search_pattern),
         )
     )
-    if not user.is_admin:
-        if user_areas:
-            stage_query = stage_query.filter(Project.area_responsavel.in_(user_areas))
+    if area_restricted:
+        if filter_areas:
+            stage_query = stage_query.filter(Project.area_responsavel.in_(filter_areas))
         else:
             stage_query = stage_query.filter(Project.id == -1)
     stage_query = apply_optional_limit(stage_query.order_by(prefix_order_for(Etapa.descricao), Etapa.id.desc()))
@@ -181,13 +195,22 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
             Task.tipo_pedido.ilike(search_pattern),
         )
     )
-    if not user.is_admin:
-        task_query = task_query.filter(
-            or_(
-                and_(Task.project_id.isnot(None), Project.area_responsavel.in_(user_areas)),
-                and_(Task.project_id.is_(None), Task.created_by_id == user.id),
-            )
-        )
+    if area_restricted:
+        if filter_areas:
+            if user.is_admin:
+                task_query = task_query.filter(
+                    Task.project_id.isnot(None),
+                    Project.area_responsavel.in_(filter_areas),
+                )
+            else:
+                task_query = task_query.filter(
+                    or_(
+                        and_(Task.project_id.isnot(None), Project.area_responsavel.in_(filter_areas)),
+                        and_(Task.project_id.is_(None), Task.created_by_id == user.id),
+                    )
+                )
+        else:
+            task_query = task_query.filter(Task.id == -1)
     task_query = apply_optional_limit(task_query.order_by(prefix_order_for(Task.descricao), Task.id.desc()))
     tasks = task_query.all()
     tasks, tasks_has_more = trim_limited_rows(tasks)
@@ -304,6 +327,7 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
 @login_required
 def global_search_api():
     search_term = (request.args.get('q') or '').strip()
+    selected_area = (request.args.get('area') or '').strip()
     limit_per_type = _normalize_global_search_limit(
         request.args.get('limit'),
         default_limit=GLOBAL_SEARCH_DEFAULT_LIMIT,
@@ -318,6 +342,7 @@ def global_search_api():
         g.user,
         limit_per_type=limit_per_type,
         include_has_more=True,
+        selected_area=selected_area,
     )
     return jsonify(payload)
 
@@ -326,11 +351,13 @@ def global_search_api():
 @login_required
 def global_search_page():
     search_term = (request.args.get('q') or '').strip()
+    selected_area = (request.args.get('area') or '').strip()
     if search_term:
         search_payload = build_global_search_results(
             search_term,
             g.user,
             limit_per_type=GLOBAL_SEARCH_PAGE_LIMIT,
+            selected_area=selected_area,
         )
     else:
         search_payload = _empty_global_search_payload(search_term)
