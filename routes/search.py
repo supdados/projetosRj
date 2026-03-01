@@ -152,14 +152,23 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
     def prefix_order_for(column):
         return case((func.lower(func.coalesce(column, '')).like(prefix_pattern), 0), else_=1)
 
+    try:
+        search_id = int(normalized_term)
+    except ValueError:
+        search_id = None
+
+    project_id_filter = (Project.id == search_id) if search_id is not None else None
+
+    project_text_filters = or_(
+        Project.titulo.ilike(search_pattern),
+        Project.orgao.ilike(search_pattern),
+        Project.short_description.ilike(search_pattern),
+        Project.observacao.ilike(search_pattern),
+        Project.area_responsavel.ilike(search_pattern),
+    )
+
     project_query = Project.query.filter(
-        or_(
-            Project.titulo.ilike(search_pattern),
-            Project.orgao.ilike(search_pattern),
-            Project.short_description.ilike(search_pattern),
-            Project.observacao.ilike(search_pattern),
-            Project.area_responsavel.ilike(search_pattern),
-        )
+        or_(project_id_filter, project_text_filters) if project_id_filter is not None else project_text_filters
     )
     if area_restricted:
         if filter_areas:

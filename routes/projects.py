@@ -78,13 +78,18 @@ def list_projects():
     # Filtro de busca (título, área, órgão, indicador ABEP)
     if search_query:
         search_pattern = f"%{search_query}%"
+        try:
+            search_id = int(search_query)
+        except ValueError:
+            search_id = None
+        text_filters = db.or_(
+            Project.titulo.ilike(search_pattern),
+            Project.area_responsavel.ilike(search_pattern),
+            Project.orgao.ilike(search_pattern),
+            Project.abep_indicator.ilike(search_pattern),
+        )
         query = query.filter(
-            db.or_(
-                Project.titulo.ilike(search_pattern),
-                Project.area_responsavel.ilike(search_pattern),
-                Project.orgao.ilike(search_pattern),
-                Project.abep_indicator.ilike(search_pattern)
-            )
+            db.or_(Project.id == search_id, text_filters) if search_id is not None else text_filters
         )
         
     # Aplicar filtros de DB antes de filtrar por atraso (que é feito em Python)
