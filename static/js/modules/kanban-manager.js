@@ -2006,7 +2006,17 @@
                         .then(function (data) {
                             window.taskItemsListBridge.insertItemFromPayload(data, { projectValue: composerProject });
                             closeComposer(true);
-                            if (currentView === 'kanban') renderKanbanFromList();
+                            if (currentView === 'kanban') {
+                                renderKanbanFromList();
+                                var newItemId = data && data.item && String(data.item.id);
+                                if (newItemId) {
+                                    var newCard = board.querySelector('.task-items-kanban-card[data-item-id="' + newItemId + '"]');
+                                    var targetDropzone = getDropzone(status);
+                                    if (newCard && targetDropzone) {
+                                        targetDropzone.appendChild(newCard);
+                                    }
+                                }
+                            }
                         })
                         .catch(function (error) {
                             alert((error && error.message) || 'Erro ao adicionar tarefa.');

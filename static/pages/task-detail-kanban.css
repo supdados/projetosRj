@@ -53,7 +53,7 @@
     flex-direction: column;
     gap: var(--td-kanban-drop-gap);
     padding: 0.56rem;
-    min-height: calc((var(--td-kanban-card-slot-height) * 3) + (var(--td-kanban-drop-gap) * 2) + 1.12rem);
+    min-height: calc((var(--td-kanban-card-slot-height) * 3) + (var(--td-kanban-drop-gap) * 2) + 1.12rem + 6px);
     position: relative;
     transition: background-color 0.16s ease, box-shadow 0.16s ease;
 }
