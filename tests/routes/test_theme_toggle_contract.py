@@ -18,7 +18,7 @@ def test_theme_toggle_is_not_rendered_on_login_page(client):
     assert 'id="appThemeToggle"' not in html
 
 
-def test_theme_toggle_is_between_notifications_and_account(client_user):
+def test_theme_toggle_is_after_notifications_and_account(client_user):
     response = client_user.get('/dashboard')
 
     assert response.status_code == 200
@@ -28,4 +28,4 @@ def test_theme_toggle_is_between_notifications_and_account(client_user):
     theme_toggle_index = html.index('id="appThemeToggle"')
     account_index = html.index('id="appAccountMenuDesktop"')
 
-    assert notifications_index < theme_toggle_index < account_index
+    assert notifications_index < account_index < theme_toggle_index
