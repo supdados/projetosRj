@@ -72,6 +72,8 @@
 
         var currentView = 'list';
         var dragContext = null;
+        var dragPlaceholder = null;
+        var dragGhost = null;
         var isPersisting = false;
         var isDeleting = false;
         var suppressCardClickUntil = 0;
@@ -1671,6 +1673,96 @@
             board.querySelectorAll('.task-items-kanban-dropzone.is-drag-over').forEach(function (zone) {
                 zone.classList.remove('is-drag-over');
             });
+            board.querySelectorAll('.task-items-kanban-column.is-column-drag-target').forEach(function (column) {
+                column.classList.remove('is-column-drag-target');
+            });
+        }
+
+        function setDropzoneHover(dropzone) {
+            if (!dropzone) return;
+            clearDropzoneHover();
+            dropzone.classList.add('is-drag-over');
+            var column = dropzone.closest('.task-items-kanban-column[data-status]');
+            if (column) column.classList.add('is-column-drag-target');
+        }
+
+        function getDraggingCard() {
+            if (dragContext && dragContext.itemId) {
+                var contextualCard = board.querySelector('.task-items-kanban-card[data-item-id="' + dragContext.itemId + '"]');
+                if (contextualCard) return contextualCard;
+            }
+            return board.querySelector('.task-items-kanban-card.is-dragging');
+        }
+
+        function createDragPlaceholder(card) {
+            removeDragPlaceholder();
+            if (!card) return null;
+
+            var rect = card.getBoundingClientRect();
+            dragPlaceholder = document.createElement('div');
+            dragPlaceholder.className = 'task-items-kanban-placeholder';
+            dragPlaceholder.setAttribute('aria-hidden', 'true');
+            dragPlaceholder.style.height = Math.max(Math.round(rect.height), 40) + 'px';
+            return dragPlaceholder;
+        }
+
+        function removeDragPlaceholder() {
+            if (!dragPlaceholder) return;
+            if (dragPlaceholder.parentNode) {
+                dragPlaceholder.parentNode.removeChild(dragPlaceholder);
+            }
+            dragPlaceholder = null;
+        }
+
+        function createDragGhost(card) {
+            removeDragGhost();
+            if (!card || !pageRoot) return null;
+
+            var rect = card.getBoundingClientRect();
+            dragGhost = card.cloneNode(true);
+            dragGhost.classList.remove('is-dragging', 'is-drop-settling', 'is-delete-confirming');
+            dragGhost.classList.add('is-drag-ghost');
+            dragGhost.style.position = 'fixed';
+            dragGhost.style.top = '-9999px';
+            dragGhost.style.left = '-9999px';
+            dragGhost.style.width = Math.round(rect.width) + 'px';
+            dragGhost.style.pointerEvents = 'none';
+            dragGhost.style.zIndex = '9999';
+            pageRoot.appendChild(dragGhost);
+            return dragGhost;
+        }
+
+        function removeDragGhost() {
+            if (!dragGhost) return;
+            if (dragGhost.parentNode) {
+                dragGhost.parentNode.removeChild(dragGhost);
+            }
+            dragGhost = null;
+        }
+
+        function restoreDraggedCardPosition() {
+            var card = getDraggingCard();
+            if (card) {
+                setCardStatus(card, (dragContext && dragContext.previousStatus) || 'nao_iniciada');
+                card.classList.remove('is-dragging');
+                card.classList.remove('is-drop-settling');
+            }
+            removeDragPlaceholder();
+            removeDragGhost();
+        }
+
+        function triggerDropSettle(card) {
+            if (!card || prefersReducedMotion()) return;
+
+            card.classList.remove('is-drop-settling');
+            void card.offsetWidth;
+            card.classList.add('is-drop-settling');
+
+            var handleAnimationEnd = function () {
+                card.classList.remove('is-drop-settling');
+                card.removeEventListener('animationend', handleAnimationEnd);
+            };
+            card.addEventListener('animationend', handleAnimationEnd);
         }
 
         function persistKanbanChange(itemId, previousStatus) {
@@ -1699,7 +1791,7 @@
                 })
                 .then(function () {
                     syncListOrderFromKanban();
-                    renderKanbanFromList();
+                    updateColumnMeta();
                 })
                 .catch(function (error) {
                     console.error('Erro ao persistir kanban:', error);
@@ -1718,40 +1810,62 @@
                 dropzone.addEventListener('dragenter', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
                     event.preventDefault();
-                    dropzone.classList.add('is-drag-over');
+                    setDropzoneHover(dropzone);
                 });
 
                 dropzone.addEventListener('dragover', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
                     event.preventDefault();
-                    dropzone.classList.add('is-drag-over');
+                    setDropzoneHover(dropzone);
 
-                    var dragging = board.querySelector('.task-items-kanban-card.is-dragging');
+                    var dragging = getDraggingCard();
                     if (!dragging) return;
+
                     var afterElement = getDragAfterElement(dropzone, event.clientY);
+                    var placeholder = dragPlaceholder || createDragPlaceholder(dragging);
+                    if (!placeholder) return;
                     if (afterElement) {
-                        dropzone.insertBefore(dragging, afterElement);
+                        dropzone.insertBefore(placeholder, afterElement);
                     } else {
-                        dropzone.appendChild(dragging);
+                        dropzone.appendChild(placeholder);
                     }
-                    setCardStatus(dragging, dropzone.getAttribute('data-status') || 'nao_iniciada');
                 });
 
                 dropzone.addEventListener('dragleave', function (event) {
                     if (!dropzone.contains(event.relatedTarget)) {
                         dropzone.classList.remove('is-drag-over');
+                        var column = dropzone.closest('.task-items-kanban-column[data-status]');
+                        if (column) column.classList.remove('is-column-drag-target');
                     }
                 });
 
                 dropzone.addEventListener('drop', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
                     event.preventDefault();
-                    dropzone.classList.remove('is-drag-over');
                     suppressCardClickUntil = Date.now() + 220;
 
+                    var dragging = getDraggingCard();
                     var itemId = dragContext.itemId;
                     var previousStatus = dragContext.previousStatus;
-                    dragContext = null;
+                    dragContext.didDrop = true;
+                    if (dragging) {
+                        setCardStatus(dragging, dropzone.getAttribute('data-status') || 'nao_iniciada');
+                        if (dragPlaceholder && dragPlaceholder.parentNode === dropzone) {
+                            dropzone.insertBefore(dragging, dragPlaceholder);
+                        } else {
+                            var afterElement = getDragAfterElement(dropzone, event.clientY);
+                            if (afterElement) {
+                                dropzone.insertBefore(dragging, afterElement);
+                            } else {
+                                dropzone.appendChild(dragging);
+                            }
+                        }
+                        dragging.classList.remove('is-dragging');
+                    }
+                    removeDragPlaceholder();
+                    removeDragGhost();
+                    clearDropzoneHover();
+                    triggerDropSettle(dragging);
                     persistKanbanChange(itemId, previousStatus);
                     updateColumnMeta();
                 });
@@ -2549,21 +2663,43 @@
                     return;
                 }
                 closeAllCardDeleteConfirms();
+                clearDropzoneHover();
+                removeDragPlaceholder();
+                card.classList.remove('is-drop-settling');
 
                 dragContext = {
                     itemId: card.getAttribute('data-item-id'),
                     previousStatus: card.getAttribute('data-status') || 'nao_iniciada',
+                    originParent: card.parentNode,
+                    originNextSibling: card.nextElementSibling,
+                    didDrop: false,
                 };
-                card.classList.add('is-dragging');
                 if (event.dataTransfer) {
                     event.dataTransfer.effectAllowed = 'move';
                     event.dataTransfer.setData('text/plain', dragContext.itemId || '');
+                    var ghost = createDragGhost(card);
+                    if (ghost && typeof event.dataTransfer.setDragImage === 'function') {
+                        event.dataTransfer.setDragImage(ghost, 24, 24);
+                    }
                 }
+                setTimeout(function () {
+                    if (!dragContext || dragContext.itemId !== card.getAttribute('data-item-id')) return;
+                    card.classList.add('is-dragging');
+                    removeDragGhost();
+                }, 0);
             });
 
             board.addEventListener('dragend', function () {
-                var dragging = board.querySelector('.task-items-kanban-card.is-dragging');
-                if (dragging) dragging.classList.remove('is-dragging');
+                var context = dragContext;
+                if (context && !context.didDrop) {
+                    restoreDraggedCardPosition();
+                } else {
+                    var dragging = getDraggingCard();
+                    if (dragging) dragging.classList.remove('is-dragging');
+                    removeDragPlaceholder();
+                    removeDragGhost();
+                }
+                dragContext = null;
                 suppressCardClickUntil = Date.now() + 140;
                 clearDropzoneHover();
                 updateColumnMeta();
