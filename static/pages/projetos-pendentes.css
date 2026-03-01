@@ -741,3 +741,21 @@ html[data-theme="dark"] body.is-authenticated .pending-page .pending-pagination 
     border-color: #3a4b61;
     color: #8298b0;
 }
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-empty-state {
+    background: var(--app-color-surface);
+    border-color: rgba(99, 166, 219, 0.22);
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-empty-state i {
+    color: #4e95cc;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-empty-state h5 {
+    color: #d9e8f6;
+}
+
+html[data-theme="dark"] body.is-authenticated .pending-page .pending-empty-state p {
+    color: var(--app-color-text-muted);
+}

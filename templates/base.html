@@ -990,6 +990,16 @@
         document.addEventListener('DOMContentLoaded', function () {
             var storedArea = getStoredArea();
 
+            // Intercepta cliques em botões que limpam a área (ex: "Limpar filtros")
+            document.querySelectorAll('[data-area-clear]').forEach(function (el) {
+                el.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    setStoredArea('');
+                    window.__APP_SELECTED_AREA__ = '';
+                    window.location.href = el.getAttribute('href');
+                });
+            });
+
             // Intercepta cliques nos itens do dropdown de área
             document.querySelectorAll('[data-area-select]').forEach(function (el) {
                 el.addEventListener('click', function (e) {
