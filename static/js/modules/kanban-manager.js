@@ -1,12 +1,13 @@
 // === kanban-manager.js — Kanban completo (IIFE grande) ===
 
     var taskItemsKanbanManager = (function () {
-        var statusOrder = ['programado', 'em_andamento', 'validacao', 'finalizado'];
+        var statusOrder = ['nao_iniciada', 'em_andamento', 'para_validacao', 'para_ajustes', 'finalizada'];
         var statusLabels = {
-            programado: 'Programado',
+            nao_iniciada: 'Não iniciada',
             em_andamento: 'Em andamento',
-            validacao: 'Validação',
-            finalizado: 'Finalizado',
+            para_validacao: 'Para validação',
+            para_ajustes: 'Para ajustes',
+            finalizada: 'Finalizada',
         };
         var pageRoot = document.querySelector('.task-detail-v2');
         var toggleRoot = document.getElementById('taskItemsViewToggle');
@@ -158,7 +159,7 @@
         function payloadSnapshot(payload) {
             var data = payload || {};
             var descricao = (data.descricao || '').trim();
-            var status = normalizeStatus(data.status || 'programado');
+            var status = normalizeStatus(data.status || 'nao_iniciada');
             var responsavel = (data.responsavel || '').trim();
             var prioridade = (data.prioridade || '').trim();
             var tipoPedido = (data.tipo_pedido || '').trim();
@@ -293,11 +294,11 @@
         }
 
         function normalizeStatus(status) {
-            return statusOrder.indexOf(status) !== -1 ? status : 'programado';
+            return statusOrder.indexOf(status) !== -1 ? status : 'nao_iniciada';
         }
 
         function getStatusLabel(status) {
-            return statusLabels[normalizeStatus(status)] || 'Programado';
+            return statusLabels[normalizeStatus(status)] || 'Não iniciada';
         }
 
         function getDropzone(status) {
@@ -379,7 +380,7 @@
             card.setAttribute('data-status', normalized);
             var badge = card.querySelector('.task-items-kanban-badge');
             if (badge) {
-                badge.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+                badge.classList.remove('status-nao_iniciada', 'status-em_andamento', 'status-para_validacao', 'status-para_ajustes', 'status-finalizada');
                 badge.classList.add('status-' + normalized);
                 badge.textContent = getStatusLabel(normalized);
             }
@@ -540,7 +541,7 @@
                 var countEl = column.querySelector('.task-items-kanban-count[data-role="count"]');
                 if (countEl) countEl.textContent = String(count);
                 column.classList.toggle('is-empty', count === 0);
-                column.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+                column.classList.remove('status-nao_iniciada', 'status-em_andamento', 'status-para_validacao', 'status-para_ajustes', 'status-finalizada');
                 column.classList.add('status-' + status);
             });
         }
@@ -927,7 +928,7 @@
         function setDrawerStatus(status) {
             if (!hasDrawer()) return;
             var normalized = normalizeStatus(status);
-            drawerStatusBadge.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+            drawerStatusBadge.classList.remove('status-nao_iniciada', 'status-em_andamento', 'status-para_validacao', 'status-para_ajustes', 'status-finalizada');
             drawerStatusBadge.classList.add('status-' + normalized);
             drawerStatusBadge.textContent = getStatusLabel(normalized);
         }
@@ -1733,7 +1734,7 @@
                     } else {
                         dropzone.appendChild(dragging);
                     }
-                    setCardStatus(dragging, dropzone.getAttribute('data-status') || 'programado');
+                    setCardStatus(dragging, dropzone.getAttribute('data-status') || 'nao_iniciada');
                 });
 
                 dropzone.addEventListener('dragleave', function (event) {
@@ -1812,7 +1813,7 @@
             }
 
             composers.forEach(function (composer) {
-                var status = normalizeStatus(composer.getAttribute('data-status') || 'programado');
+                var status = normalizeStatus(composer.getAttribute('data-status') || 'nao_iniciada');
                 var addBtn = composer.querySelector('.task-items-kanban-add-btn[data-status]');
                 var form = composer.querySelector('.task-items-kanban-add-form[data-status]');
                 var desc = form ? form.querySelector('.task-items-kanban-add-desc') : null;
@@ -2101,7 +2102,7 @@
 
         function focusComposerForStatus(status) {
             if (currentView !== 'kanban') return false;
-            var normalized = normalizeStatus(status || 'programado');
+            var normalized = normalizeStatus(status || 'nao_iniciada');
             var controller = composerControllers[normalized];
             if (!controller || typeof controller.focus !== 'function') return false;
             var column = kanbanView.querySelector('.task-items-kanban-column[data-status="' + normalized + '"]');
@@ -2541,7 +2542,7 @@
 
                 dragContext = {
                     itemId: card.getAttribute('data-item-id'),
-                    previousStatus: card.getAttribute('data-status') || 'programado',
+                    previousStatus: card.getAttribute('data-status') || 'nao_iniciada',
                 };
                 card.classList.add('is-dragging');
                 if (event.dataTransfer) {

@@ -85,7 +85,7 @@ def ensure_task_core_columns():
                 if 'descricao' in columns:
                     descricao_expr = "COALESCE(descricao, titulo, '')"
 
-                status_expr = col_expr('status', default_sql="'programado'", coalesce_default="'programado'")
+                status_expr = col_expr('status', default_sql="'nao_iniciada'", coalesce_default="'nao_iniciada'")
                 responsavel_expr = col_expr('responsavel')
                 ordem_expr = col_expr('ordem', default_sql='0', coalesce_default='0')
                 project_expr = col_expr('project_id')
@@ -116,7 +116,7 @@ def ensure_task_core_columns():
                         CREATE TABLE task_task_only_tmp (
                             id INTEGER PRIMARY KEY,
                             descricao TEXT NOT NULL,
-                            status VARCHAR(20) NOT NULL DEFAULT 'programado',
+                            status VARCHAR(20) NOT NULL DEFAULT 'nao_iniciada',
                             responsavel VARCHAR(100),
                             ordem INTEGER NOT NULL DEFAULT 0,
                             project_id INTEGER,
@@ -180,7 +180,7 @@ def ensure_task_core_columns():
             db.session.execute(text("UPDATE task SET descricao = titulo WHERE descricao IS NULL"))
             added.append('task.descricao')
         if 'status' not in columns:
-            db.session.execute(text("ALTER TABLE task ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'programado'"))
+            db.session.execute(text("ALTER TABLE task ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'nao_iniciada'"))
             added.append('task.status')
         if 'responsavel' not in columns:
             db.session.execute(text("ALTER TABLE task ADD COLUMN responsavel VARCHAR(100)"))

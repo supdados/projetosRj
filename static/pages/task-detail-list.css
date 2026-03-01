@@ -91,7 +91,7 @@
     flex-shrink: 0;
 }
 
-.task-detail-v2 .task-item-bar.status-programado {
+.task-detail-v2 .task-item-bar.status-nao_iniciada {
     background: #6b7280;
 }
 
@@ -99,11 +99,15 @@
     background: #215488;
 }
 
-.task-detail-v2 .task-item-bar.status-validacao {
+.task-detail-v2 .task-item-bar.status-para_validacao {
     background: #8a4f00;
 }
 
-.task-detail-v2 .task-item-bar.status-finalizado {
+.task-detail-v2 .task-item-bar.status-para_ajustes {
+    background: #c2520a;
+}
+
+.task-detail-v2 .task-item-bar.status-finalizada {
     background: #186244;
 }
 
@@ -310,8 +314,8 @@
     box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
 }
 
-.task-detail-v2 .task-item-status.status-programado,
-.task-detail-v2 .task-item-status-readonly.status-programado {
+.task-detail-v2 .task-item-status.status-nao_iniciada,
+.task-detail-v2 .task-item-status-readonly.status-nao_iniciada {
     background: #edf0f4;
     border-color: #d8dee7;
     color: #4c5563;
@@ -324,15 +328,22 @@
     color: #215488;
 }
 
-.task-detail-v2 .task-item-status.status-validacao,
-.task-detail-v2 .task-item-status-readonly.status-validacao {
+.task-detail-v2 .task-item-status.status-para_validacao,
+.task-detail-v2 .task-item-status-readonly.status-para_validacao {
     background: #fff3df;
     border-color: #f4dfb8;
     color: #8a4f00;
 }
 
-.task-detail-v2 .task-item-status.status-finalizado,
-.task-detail-v2 .task-item-status-readonly.status-finalizado {
+.task-detail-v2 .task-item-status.status-para_ajustes,
+.task-detail-v2 .task-item-status-readonly.status-para_ajustes {
+    background: #fff3e0;
+    border-color: #fdc9a0;
+    color: #7c3210;
+}
+
+.task-detail-v2 .task-item-status.status-finalizada,
+.task-detail-v2 .task-item-status-readonly.status-finalizada {
     background: #eaf7f1;
     border-color: #cbe9dc;
     color: #186244;
@@ -407,10 +418,11 @@
     background: #ffffff;
     color: #374151;
 }
-.task-detail-v2 .task-item-status option[value="programado"]   { background: #edf0f4; color: #4c5563; }
-.task-detail-v2 .task-item-status option[value="em_andamento"] { background: #e6f2ff; color: #215488; }
-.task-detail-v2 .task-item-status option[value="validacao"]    { background: #fff3df; color: #8a4f00; }
-.task-detail-v2 .task-item-status option[value="finalizado"]   { background: #eaf7f1; color: #186244; }
+.task-detail-v2 .task-item-status option[value="nao_iniciada"]   { background: #edf0f4; color: #4c5563; }
+.task-detail-v2 .task-item-status option[value="em_andamento"]  { background: #e6f2ff; color: #215488; }
+.task-detail-v2 .task-item-status option[value="para_validacao"] { background: #fff3df; color: #8a4f00; }
+.task-detail-v2 .task-item-status option[value="para_ajustes"]  { background: #fff3e0; color: #7c3210; }
+.task-detail-v2 .task-item-status option[value="finalizada"]    { background: #eaf7f1; color: #186244; }
 
 .task-detail-v2 .task-item-prioridade-select option {
     background: #ffffff;

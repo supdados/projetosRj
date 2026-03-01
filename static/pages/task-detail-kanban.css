@@ -1,6 +1,6 @@
 .task-detail-v2 .task-items-kanban-board {
     display: grid;
-    grid-template-columns: repeat(4, minmax(240px, 1fr));
+    grid-template-columns: repeat(5, minmax(200px, 1fr));
     gap: 0.62rem;
     align-items: start;
 }
@@ -137,7 +137,7 @@
     white-space: nowrap;
 }
 
-.task-detail-v2 .task-items-kanban-badge.status-programado {
+.task-detail-v2 .task-items-kanban-badge.status-nao_iniciada {
     background: #edf0f4;
     border-color: #d8dee7;
     color: #4c5563;
@@ -149,13 +149,19 @@
     color: #215488;
 }
 
-.task-detail-v2 .task-items-kanban-badge.status-validacao {
+.task-detail-v2 .task-items-kanban-badge.status-para_validacao {
     background: #fff3df;
     border-color: #f4dfb8;
     color: #8a4f00;
 }
 
-.task-detail-v2 .task-items-kanban-badge.status-finalizado {
+.task-detail-v2 .task-items-kanban-badge.status-para_ajustes {
+    background: #fff3e0;
+    border-color: #fdc9a0;
+    color: #7c3210;
+}
+
+.task-detail-v2 .task-items-kanban-badge.status-finalizada {
     background: #eaf7f1;
     border-color: #cbe9dc;
     color: #186244;
@@ -520,7 +526,7 @@
     opacity: 0.64;
 }
 
-.task-detail-v2 .task-items-kanban-column.status-programado .task-items-kanban-col-head {
+.task-detail-v2 .task-items-kanban-column.status-nao_iniciada .task-items-kanban-col-head {
     border-bottom-color: #d8dee7;
     background: #edf0f4;
 }
@@ -530,12 +536,17 @@
     background: #e6f2ff;
 }
 
-.task-detail-v2 .task-items-kanban-column.status-validacao .task-items-kanban-col-head {
+.task-detail-v2 .task-items-kanban-column.status-para_validacao .task-items-kanban-col-head {
     border-bottom-color: #f4dfb8;
     background: #fff3df;
 }
 
-.task-detail-v2 .task-items-kanban-column.status-finalizado .task-items-kanban-col-head {
+.task-detail-v2 .task-items-kanban-column.status-para_ajustes .task-items-kanban-col-head {
+    border-bottom-color: #fdc9a0;
+    background: #fff3e0;
+}
+
+.task-detail-v2 .task-items-kanban-column.status-finalizada .task-items-kanban-col-head {
     border-bottom-color: #cbe9dc;
     background: #eaf7f1;
 }

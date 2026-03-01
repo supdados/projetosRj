@@ -16,7 +16,7 @@ def test_tasks_hub_filters_by_priority_type_status_and_responsavel(app, client_u
         )
         other_task = Task(
             descricao='Tarefa fora do filtro',
-            status='programado',
+            status='nao_iniciada',
             responsavel='Usuario Auditoria',
             prioridade='baixa',
             tipo_pedido='melhoria',
@@ -42,7 +42,7 @@ def test_finalized_listing_filters_by_priority_type_status_and_responsavel(app, 
     with app.app_context():
         archived_match = Task(
             descricao='Arquivada filtro alvo',
-            status='finalizado',
+            status='finalizada',
             responsavel='Usuario Editavel',
             prioridade='urgente',
             tipo_pedido='bug',
@@ -54,7 +54,7 @@ def test_finalized_listing_filters_by_priority_type_status_and_responsavel(app, 
         )
         archived_other = Task(
             descricao='Arquivada fora do filtro',
-            status='finalizado',
+            status='finalizada',
             responsavel='Usuario Auditoria',
             prioridade='media',
             tipo_pedido='melhoria',
@@ -68,7 +68,7 @@ def test_finalized_listing_filters_by_priority_type_status_and_responsavel(app, 
         db.session.commit()
 
     response = client_user.get(
-        '/tarefas/arquivadas?prioridade=urgente&tipo=bug&status=finalizado&responsavel=Usuario+Editavel'
+        '/tarefas/arquivadas?prioridade=urgente&tipo=bug&status=finalizada&responsavel=Usuario+Editavel'
     )
     assert response.status_code == 200
 

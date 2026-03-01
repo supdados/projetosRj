@@ -435,7 +435,7 @@ ROUTE_CASES = [
         'headers': {'X-Requested-With': 'XMLHttpRequest'},
         'data': {
             'descricao': 'Item novo',
-            'status': 'programado',
+            'status': 'nao_iniciada',
             'responsavel': 'Usuario Auditoria',
         },
         'expected_status': 200,
@@ -452,7 +452,7 @@ ROUTE_CASES = [
         'data': {
             'project': '{project_id}',
             'descricao': 'Item global novo',
-            'status': 'programado',
+            'status': 'nao_iniciada',
             'responsavel': 'Usuario Auditoria',
         },
         'expected_status': 200,
@@ -467,7 +467,7 @@ ROUTE_CASES = [
         'role': 'user',
         'data': {
             'descricao': 'Item editado',
-            'status': 'validacao',
+            'status': 'para_validacao',
             'responsavel': 'Usuario Auditoria',
         },
         'expected_status': 200,

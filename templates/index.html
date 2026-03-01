@@ -199,15 +199,17 @@
                 </div>
                 <div class="card-body px-3 py-3 glass-card-body">
                     {% if task_items_total > 0 %}
-                    {% set finalized_pct = ((task_items_finalizado / task_items_total) * 100) | round(1) %}
+                    {% set finalizada_pct = ((task_items_finalizada / task_items_total) * 100) | round(1) %}
                     {% set andamento_pct = ((task_items_em_andamento / task_items_total) * 100) | round(1) %}
-                    {% set validacao_pct = ((task_items_validacao / task_items_total) * 100) | round(1) %}
-                    {% set programado_pct = (100 - finalized_pct - andamento_pct - validacao_pct) | round(1) %}
+                    {% set para_validacao_pct = ((task_items_para_validacao / task_items_total) * 100) | round(1) %}
+                    {% set para_ajustes_pct = ((task_items_para_ajustes / task_items_total) * 100) | round(1) %}
+                    {% set nao_iniciada_pct = (100 - finalizada_pct - andamento_pct - para_validacao_pct - para_ajustes_pct) | round(1) %}
                     {% else %}
-                    {% set finalized_pct = 0 %}
+                    {% set finalizada_pct = 0 %}
                     {% set andamento_pct = 0 %}
-                    {% set validacao_pct = 0 %}
-                    {% set programado_pct = 0 %}
+                    {% set para_validacao_pct = 0 %}
+                    {% set para_ajustes_pct = 0 %}
+                    {% set nao_iniciada_pct = 0 %}
                     {% endif %}
 
                     <!-- KPI summary row -->
@@ -221,7 +223,7 @@
                             <span class="tasks-kpi-big-label">Itens Abertos</span>
                         </div>
                         <div class="tasks-kpi-number-card tasks-kpi-done-card">
-                            <span class="tasks-kpi-big-number">{{ task_items_finalizado }}</span>
+                            <span class="tasks-kpi-big-number">{{ task_items_finalizada }}</span>
                             <span class="tasks-kpi-big-label">Concluídos</span>
                         </div>
                     </div>
@@ -234,19 +236,21 @@
                         </div>
                         <div class="tasks-kpi-stacked-bar">
                             {% if task_items_total > 0 %}
-                            <div class="tasks-kpi-bar-segment bar-finalizado" style="width: {{ finalized_pct }}%" data-bs-toggle="tooltip" title="Finalizado: {{ task_items_finalizado }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-finalizada" style="width: {{ finalizada_pct }}%" data-bs-toggle="tooltip" title="Finalizada: {{ task_items_finalizada }}"></div>
                             <div class="tasks-kpi-bar-segment bar-em-andamento" style="width: {{ andamento_pct }}%" data-bs-toggle="tooltip" title="Em andamento: {{ task_items_em_andamento }}"></div>
-                            <div class="tasks-kpi-bar-segment bar-validacao" style="width: {{ validacao_pct }}%" data-bs-toggle="tooltip" title="Validação: {{ task_items_validacao }}"></div>
-                            <div class="tasks-kpi-bar-segment bar-programado" style="width: {{ programado_pct }}%" data-bs-toggle="tooltip" title="Programado: {{ task_items_programado }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-para-validacao" style="width: {{ para_validacao_pct }}%" data-bs-toggle="tooltip" title="Para validação: {{ task_items_para_validacao }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-para-ajustes" style="width: {{ para_ajustes_pct }}%" data-bs-toggle="tooltip" title="Para ajustes: {{ task_items_para_ajustes }}"></div>
+                            <div class="tasks-kpi-bar-segment bar-nao-iniciada" style="width: {{ nao_iniciada_pct }}%" data-bs-toggle="tooltip" title="Não iniciada: {{ task_items_nao_iniciada }}"></div>
                             {% else %}
                             <div class="tasks-kpi-bar-segment bar-empty tasks-kpi-bar-full"></div>
                             {% endif %}
                         </div>
                         <div class="tasks-kpi-simple-legend" aria-label="Legenda dos itens por status">
-                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-finalizado"></span>Finalizado</span>
+                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-finalizada"></span>Finalizada</span>
                             <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-em-andamento"></span>Em andamento</span>
-                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-validacao"></span>Validação</span>
-                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-programado"></span>Programado</span>
+                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-para-validacao"></span>Para validação</span>
+                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-para-ajustes"></span>Para ajustes</span>
+                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-nao-iniciada"></span>Não iniciada</span>
                         </div>
                     </div>
 
@@ -258,31 +262,36 @@
                                 viewBox="0 0 36 36"
                                 class="tasks-kpi-donut-svg"
                                 role="img"
-                                aria-label="Itens por status: {{ finalized_pct | round(0) | int }}% finalizado, {{ andamento_pct | round(0) | int }}% em andamento, {{ validacao_pct | round(0) | int }}% em validação e {{ programado_pct | round(0) | int }}% programado.">
+                                aria-label="Itens por status: {{ finalizada_pct | round(0) | int }}% finalizada, {{ andamento_pct | round(0) | int }}% em andamento, {{ para_validacao_pct | round(0) | int }}% para validação, {{ para_ajustes_pct | round(0) | int }}% para ajustes e {{ nao_iniciada_pct | round(0) | int }}% não iniciada.">
                                 <circle class="tasks-kpi-donut-ring" cx="18" cy="18" r="15.915"></circle>
-                                <circle class="tasks-kpi-donut-seg seg-finalizado" cx="18" cy="18" r="15.915"
-                                    stroke-dasharray="{{ finalized_pct }} {{ 100 - finalized_pct }}"
+                                <circle class="tasks-kpi-donut-seg seg-finalizada" cx="18" cy="18" r="15.915"
+                                    stroke-dasharray="{{ finalizada_pct }} {{ 100 - finalizada_pct }}"
                                     stroke-dashoffset="25"
                                     data-bs-toggle="tooltip"
-                                    title="Finalizado: {{ task_items_finalizado }} ({{ finalized_pct }}%)"></circle>
+                                    title="Finalizada: {{ task_items_finalizada }} ({{ finalizada_pct }}%)"></circle>
                                 <circle class="tasks-kpi-donut-seg seg-em-andamento" cx="18" cy="18" r="15.915"
                                     stroke-dasharray="{{ andamento_pct }} {{ 100 - andamento_pct }}"
-                                    stroke-dashoffset="{{ 25 - finalized_pct }}"
+                                    stroke-dashoffset="{{ 25 - finalizada_pct }}"
                                     data-bs-toggle="tooltip"
                                     title="Em andamento: {{ task_items_em_andamento }} ({{ andamento_pct }}%)"></circle>
-                                <circle class="tasks-kpi-donut-seg seg-validacao" cx="18" cy="18" r="15.915"
-                                    stroke-dasharray="{{ validacao_pct }} {{ 100 - validacao_pct }}"
-                                    stroke-dashoffset="{{ 25 - finalized_pct - andamento_pct }}"
+                                <circle class="tasks-kpi-donut-seg seg-para-validacao" cx="18" cy="18" r="15.915"
+                                    stroke-dasharray="{{ para_validacao_pct }} {{ 100 - para_validacao_pct }}"
+                                    stroke-dashoffset="{{ 25 - finalizada_pct - andamento_pct }}"
                                     data-bs-toggle="tooltip"
-                                    title="Validação: {{ task_items_validacao }} ({{ validacao_pct }}%)"></circle>
-                                <circle class="tasks-kpi-donut-seg seg-programado" cx="18" cy="18" r="15.915"
-                                    stroke-dasharray="{{ programado_pct }} {{ 100 - programado_pct }}"
-                                    stroke-dashoffset="{{ 25 - finalized_pct - andamento_pct - validacao_pct }}"
+                                    title="Para validação: {{ task_items_para_validacao }} ({{ para_validacao_pct }}%)"></circle>
+                                <circle class="tasks-kpi-donut-seg seg-para-ajustes" cx="18" cy="18" r="15.915"
+                                    stroke-dasharray="{{ para_ajustes_pct }} {{ 100 - para_ajustes_pct }}"
+                                    stroke-dashoffset="{{ 25 - finalizada_pct - andamento_pct - para_validacao_pct }}"
                                     data-bs-toggle="tooltip"
-                                    title="Programado: {{ task_items_programado }} ({{ programado_pct }}%)"></circle>
+                                    title="Para ajustes: {{ task_items_para_ajustes }} ({{ para_ajustes_pct }}%)"></circle>
+                                <circle class="tasks-kpi-donut-seg seg-nao-iniciada" cx="18" cy="18" r="15.915"
+                                    stroke-dasharray="{{ nao_iniciada_pct }} {{ 100 - nao_iniciada_pct }}"
+                                    stroke-dashoffset="{{ 25 - finalizada_pct - andamento_pct - para_validacao_pct - para_ajustes_pct }}"
+                                    data-bs-toggle="tooltip"
+                                    title="Não iniciada: {{ task_items_nao_iniciada }} ({{ nao_iniciada_pct }}%)"></circle>
                             </svg>
                             <div class="tasks-kpi-donut-center">
-                                <span class="tasks-kpi-donut-center-number">{{ finalized_pct | round(0) | int }}%</span>
+                                <span class="tasks-kpi-donut-center-number">{{ finalizada_pct | round(0) | int }}%</span>
                                 <span class="tasks-kpi-donut-center-label">concluído</span>
                             </div>
                         </div>

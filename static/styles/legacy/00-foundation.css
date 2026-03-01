@@ -1035,7 +1035,7 @@ body.is-authenticated .content.expanded {
     vertical-align: baseline;
 }
 
-.app-notif-status-programado {
+.app-notif-status-nao-iniciada {
     background: #edf0f4;
     border: 1px solid #d8dee7;
     color: #4c5563;
@@ -1047,13 +1047,19 @@ body.is-authenticated .content.expanded {
     color: #215488;
 }
 
-.app-notif-status-validacao {
+.app-notif-status-para-validacao {
     background: #fff3df;
     border: 1px solid #f4dfb8;
     color: #8a4f00;
 }
 
-.app-notif-status-finalizado {
+.app-notif-status-para-ajustes {
+    background: #fff3e0;
+    border: 1px solid #fdc9a0;
+    color: #7c3210;
+}
+
+.app-notif-status-finalizada {
     background: #eaf7f1;
     border: 1px solid #cbe9dc;
     color: #186244;

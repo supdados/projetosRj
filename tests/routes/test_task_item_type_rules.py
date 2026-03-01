@@ -68,7 +68,7 @@ def test_add_task_item_with_implementacao_type_is_sanitized_to_empty(app, client
         f"/tarefas/{seed_data['task_id']}/itens/add",
         data={
             'descricao': 'Novo item sem tipo legado',
-            'status': 'programado',
+            'status': 'nao_iniciada',
             'responsavel': 'Usuario Auditoria',
             'prioridade': '',
             'tipo_pedido': 'implementacao',

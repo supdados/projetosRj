@@ -227,8 +227,8 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-add-sta
     outline: none;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-programado,
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-programado {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-nao_iniciada,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-nao_iniciada {
     background: rgba(141, 160, 182, 0.18);
     border-color: rgba(141, 160, 182, 0.42);
     color: #d8e3ee;
@@ -241,15 +241,22 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-
     color: #d9ebfc;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-validacao,
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-validacao {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-para_validacao,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-para_validacao {
     background: rgba(216, 162, 77, 0.22);
     border-color: rgba(216, 162, 77, 0.5);
     color: #fbe8c8;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-finalizado,
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-finalizado {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-para_ajustes,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-para_ajustes {
+    background: rgba(220, 104, 3, 0.22);
+    border-color: rgba(220, 104, 3, 0.5);
+    color: #fed7aa;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status.status-finalizada,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status-readonly.status-finalizada {
     background: rgba(73, 185, 135, 0.22);
     border-color: rgba(73, 185, 135, 0.5);
     color: #d9f3e8;
@@ -291,10 +298,11 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status 
     background: #1e2a3a;
     color: #d0dce9;
 }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="programado"]   { background: #1e2d3e; color: #d8e3ee; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="em_andamento"] { background: #1a2d42; color: #d9ebfc; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="validacao"]    { background: #2e2810; color: #fbe8c8; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="finalizado"]   { background: #1a2e27; color: #d9f3e8; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="nao_iniciada"]   { background: #1e2d3e; color: #d8e3ee; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="em_andamento"]  { background: #1a2d42; color: #d9ebfc; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="para_validacao"] { background: #2e2810; color: #fbe8c8; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="para_ajustes"]  { background: #2e1a08; color: #fed7aa; }
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="finalizada"]    { background: #1a2e27; color: #d9f3e8; }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option {
     background: #1e2a3a;
@@ -373,7 +381,7 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban
     color: var(--td-items-text);
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-column.status-programado .task-items-kanban-col-head {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-column.status-nao_iniciada .task-items-kanban-col-head {
     background: rgba(141, 160, 182, 0.2);
     border-bottom-color: rgba(141, 160, 182, 0.48);
 }
@@ -383,12 +391,17 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban
     border-bottom-color: rgba(99, 166, 219, 0.52);
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-column.status-validacao .task-items-kanban-col-head {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-column.status-para_validacao .task-items-kanban-col-head {
     background: rgba(216, 162, 77, 0.24);
     border-bottom-color: rgba(216, 162, 77, 0.5);
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-column.status-finalizado .task-items-kanban-col-head {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-column.status-para_ajustes .task-items-kanban-col-head {
+    background: rgba(220, 104, 3, 0.24);
+    border-bottom-color: rgba(220, 104, 3, 0.5);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-column.status-finalizada .task-items-kanban-col-head {
     background: rgba(73, 185, 135, 0.24);
     border-bottom-color: rgba(73, 185, 135, 0.5);
 }
@@ -445,7 +458,7 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban
     color: #eef6ff;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-card .task-items-kanban-badge.status-programado {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-card .task-items-kanban-badge.status-nao_iniciada {
     background: rgba(141, 160, 182, 0.2);
     border-color: rgba(141, 160, 182, 0.48);
     color: #d8e2ed;
@@ -457,13 +470,19 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban
     color: #d8ecfd;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-card .task-items-kanban-badge.status-validacao {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-card .task-items-kanban-badge.status-para_validacao {
     background: rgba(216, 162, 77, 0.22);
     border-color: rgba(216, 162, 77, 0.5);
     color: #ffe9cb;
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-card .task-items-kanban-badge.status-finalizado {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-card .task-items-kanban-badge.status-para_ajustes {
+    background: rgba(220, 104, 3, 0.22);
+    border-color: rgba(220, 104, 3, 0.5);
+    color: #fed7aa;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-card .task-items-kanban-badge.status-finalizada {
     background: rgba(73, 185, 135, 0.22);
     border-color: rgba(73, 185, 135, 0.5);
     color: #dbf5ea;

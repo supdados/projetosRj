@@ -190,7 +190,7 @@ def seed_data(app):
 
         task = Task(
             descricao='Item Auditoria',
-            status='programado',
+            status='nao_iniciada',
             responsavel='Usuario Auditoria',
             ordem=1,
             project_id=project.id,
@@ -206,7 +206,7 @@ def seed_data(app):
         )
         orphan_task = Task(
             descricao='Tarefa Sem Projeto',
-            status='programado',
+            status='nao_iniciada',
             ordem=1,
             project_id=None,
             created_by_id=user.id,

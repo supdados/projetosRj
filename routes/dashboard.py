@@ -96,7 +96,7 @@ def dashboard():
 
         return query.outerjoin(Project, Task.project_id == Project.id).filter(or_(*visibility_filters))
 
-    open_tasks_count_query = db.session.query(db.func.count(Task.id)).select_from(Task).filter(Task.status != 'finalizado')
+    open_tasks_count_query = db.session.query(db.func.count(Task.id)).select_from(Task).filter(Task.status != 'finalizada')
     open_tasks_count_query = apply_task_visibility_rules(open_tasks_count_query, include_archived=False)
     dashboard_open_tasks_count = int(open_tasks_count_query.scalar() or 0)
 
@@ -107,11 +107,12 @@ def dashboard():
         q = apply_task_visibility_rules(q, include_archived=False)
         return int(q.scalar() or 0)
 
-    task_items_programado = count_tasks_by_status('programado')
+    task_items_nao_iniciada = count_tasks_by_status('nao_iniciada')
     task_items_em_andamento = count_tasks_by_status('em_andamento')
-    task_items_validacao = count_tasks_by_status('validacao')
-    task_items_finalizado = count_tasks_by_status('finalizado')
-    task_items_total = task_items_programado + task_items_em_andamento + task_items_validacao + task_items_finalizado
+    task_items_para_validacao = count_tasks_by_status('para_validacao')
+    task_items_para_ajustes = count_tasks_by_status('para_ajustes')
+    task_items_finalizada = count_tasks_by_status('finalizada')
+    task_items_total = task_items_nao_iniciada + task_items_em_andamento + task_items_para_validacao + task_items_para_ajustes + task_items_finalizada
 
     dashboard_tasks = []
     dashboard_tasks_pagination = {
@@ -140,10 +141,11 @@ def dashboard():
         dashboard_open_tasks_count=dashboard_open_tasks_count,
         dashboard_open_items_count=dashboard_open_items_count,
         dashboard_tasks_pagination=dashboard_tasks_pagination,
-        task_items_programado=task_items_programado,
+        task_items_nao_iniciada=task_items_nao_iniciada,
         task_items_em_andamento=task_items_em_andamento,
-        task_items_validacao=task_items_validacao,
-        task_items_finalizado=task_items_finalizado,
+        task_items_para_validacao=task_items_para_validacao,
+        task_items_para_ajustes=task_items_para_ajustes,
+        task_items_finalizada=task_items_finalizada,
         task_items_total=task_items_total,
         objetivos=objetivos,
         AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,

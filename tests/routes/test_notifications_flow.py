@@ -34,7 +34,7 @@ def test_notifications_dropdown_marks_as_read(app, client_user, seed_data):
     actor_client = _client_for_user(app, actor_id)
     response = actor_client.post(
         f"/tarefas/itens/{seed_data['task_item_id']}/update_status",
-        json={'status': 'validacao'},
+        json={'status': 'para_validacao'},
     )
     assert response.status_code == 200
 

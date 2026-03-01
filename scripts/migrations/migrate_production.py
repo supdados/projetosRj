@@ -390,6 +390,30 @@ def run_migrations(engine):
             else:
                 log.append("  [--] Índice user_notification.recipient_read_created já existe.")
 
+        # ── 12. Rename de status na tabela `task` ─────────────────────────────
+        log.append("\n[task.status] — renomear valores de status:")
+        if table_exists(inspector, 'task') and column_exists(inspector, 'task', 'status'):
+            renames = [
+                ('programado',  'nao_iniciada'),
+                ('validacao',   'para_validacao'),
+                ('finalizado',  'finalizada'),
+            ]
+            for old_val, new_val in renames:
+                result = conn.execute(
+                    text(f"SELECT COUNT(*) FROM `task` WHERE `status` = '{old_val}'")
+                )
+                count = result.scalar() or 0
+                if count > 0:
+                    conn.execute(
+                        text(f"UPDATE `task` SET `status` = '{new_val}' WHERE `status` = '{old_val}'")
+                    )
+                    conn.commit()
+                    log.append(f"  [OK] task.status '{old_val}' → '{new_val}' ({count} linhas)")
+                else:
+                    log.append(f"  [--] task.status '{old_val}' — nenhuma linha encontrada")
+        else:
+            log.append("  [AVISO] Tabela `task` ou coluna `status` não encontrada — pulando.")
+
     return log
 
 

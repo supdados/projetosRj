@@ -22,14 +22,14 @@
 
         var bar = row.querySelector('.task-item-bar');
         if (bar) {
-            bar.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+            bar.classList.remove('status-nao_iniciada', 'status-em_andamento', 'status-para_validacao', 'status-para_ajustes', 'status-finalizada');
             bar.classList.add('status-' + status);
         }
 
         var statusSelect = row.querySelector('.task-item-status');
         if (statusSelect) {
             statusSelect.value = status;
-            statusSelect.classList.remove('status-programado', 'status-em_andamento', 'status-validacao', 'status-finalizado');
+            statusSelect.classList.remove('status-nao_iniciada', 'status-em_andamento', 'status-para_validacao', 'status-para_ajustes', 'status-finalizada');
             statusSelect.classList.add('status-' + status);
         }
     }
@@ -132,11 +132,11 @@
     }
 
     function getTaskItemStatus(row) {
-        if (!row) return 'programado';
+        if (!row) return 'nao_iniciada';
         var status = row.getAttribute('data-item-status') || '';
         if (status) return status;
         var statusSelect = row.querySelector('.task-item-status');
-        return statusSelect && statusSelect.value ? statusSelect.value : 'programado';
+        return statusSelect && statusSelect.value ? statusSelect.value : 'nao_iniciada';
     }
 
     function getTaskItemDescricao(row) {
@@ -393,8 +393,8 @@
             ? (safePayload.descricao || '')
             : (row ? getTaskItemDescricao(row) : '');
         var statusValue = hasOwn.call(safePayload, 'status')
-            ? (safePayload.status || 'programado')
-            : (row ? getTaskItemStatus(row) : 'programado');
+            ? (safePayload.status || 'nao_iniciada')
+            : (row ? getTaskItemStatus(row) : 'nao_iniciada');
         var responsavelValue = hasOwn.call(safePayload, 'responsavel')
             ? (safePayload.responsavel || '')
             : (row ? getTaskItemResponsavel(row) : '');

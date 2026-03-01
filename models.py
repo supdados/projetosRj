@@ -295,7 +295,7 @@ class Task(db.Model):
     query_class = TaskQuery
     id = db.Column(db.Integer, primary_key=True)
     descricao = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default='programado')  # programado, em_andamento, validacao, finalizado
+    status = db.Column(db.String(20), nullable=False, default='nao_iniciada')  # nao_iniciada, em_andamento, para_validacao, para_ajustes, finalizada
     responsavel = db.Column(db.String(100), nullable=True)
     ordem = db.Column(db.Integer, nullable=False, default=0)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)  # Opcional
@@ -358,7 +358,7 @@ class Task(db.Model):
                         )
                         kwargs['ordem'] = next_ordem + 1
 
-        kwargs.setdefault('status', 'programado')
+        kwargs.setdefault('status', 'nao_iniciada')
         super().__init__(**kwargs)
     
     def __repr__(self):
@@ -456,7 +456,7 @@ class TaskItem(db.Model):
                         )
                         kwargs['ordem'] = next_ordem + 1
 
-        kwargs.setdefault('status', 'programado')
+        kwargs.setdefault('status', 'nao_iniciada')
         super().__init__(**kwargs)
 
     @property

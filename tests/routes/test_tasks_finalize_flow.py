@@ -11,7 +11,7 @@ def test_finalize_keeps_task_active_and_only_updates_status(app, client_user, se
     with app.app_context():
         task = db.session.get(Task, task_id)
         assert task is not None
-        assert task.status == 'finalizado'
+        assert task.status == 'finalizada'
         assert task.is_finalized is False
         assert task.finalized_at is None
 
@@ -34,7 +34,7 @@ def test_archive_finalized_moves_task_to_archived_listing(app, client_user, seed
     with app.app_context():
         task = db.session.get(Task, task_id)
         assert task is not None
-        assert task.status == 'finalizado'
+        assert task.status == 'finalizada'
         assert task.is_finalized is True
         assert task.finalized_at is not None
 
@@ -60,7 +60,7 @@ def test_reactivate_returns_archived_task_to_active_listing_as_programado(app, c
         assert task is not None
         assert task.is_finalized is False
         assert task.finalized_at is None
-        assert task.status == 'programado'
+        assert task.status == 'nao_iniciada'
 
     active_page = client_user.get('/tarefas')
     assert active_page.status_code == 200
@@ -106,8 +106,8 @@ def test_unarchive_ajax_returns_programado_payload(app, client_user, seed_data):
     payload = response.get_json()
 
     assert payload['success'] is True
-    assert payload['task']['status'] == 'programado'
-    assert payload['item']['status'] == 'programado'
+    assert payload['task']['status'] == 'nao_iniciada'
+    assert payload['item']['status'] == 'nao_iniciada'
 
 
 def test_archived_alias_redirects_to_archived_route(client_user):
@@ -128,14 +128,14 @@ def test_outsider_cannot_finalize_task(app, client_outsider, seed_data):
         assert task is not None
         assert task.is_finalized is False
         assert task.finalized_at is None
-        assert task.status == 'programado'
+        assert task.status == 'nao_iniciada'
 
 
 def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app, client_user, seed_data):
     with app.app_context():
         archived_task = Task(
             descricao='Tarefa arquivada para esconder projeto',
-            status='finalizado',
+            status='finalizada',
             is_archived=True,
             archived_at=utc_now(),
             project_id=seed_data['project_complete_id'],
@@ -152,7 +152,7 @@ def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app,
         db.session.add(
             Task(
                 descricao='Primeira tarefa ativa do projeto completo',
-                status='programado',
+                status='nao_iniciada',
                 project_id=seed_data['project_complete_id'],
                 created_by_id=seed_data['user_id'],
             )

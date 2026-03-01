@@ -104,10 +104,11 @@
                 '<select class="task-item-prioridade-select prioridade-' + (prioridade || 'none') + '" data-item-id="' + item.id + '" title="Prioridade" onchange="updateItemPrioridade(' + item.id + ', this.value, this)">' + prioridadeOptions + '</select>' +
                 '<select class="task-item-tipo-select" data-item-id="' + item.id + '" title="Tipo" onchange="updateItemTipo(' + item.id + ', this.value)">' + tipoOptions + '</select>' +
                 '<select class="task-item-status status-' + item.status + '" onchange="updateItemStatus(' + item.id + ', this.value)" title="Status">' +
-                '<option value="programado"' + (item.status === 'programado' ? ' selected' : '') + '>Programado</option>' +
+                '<option value="nao_iniciada"' + (item.status === 'nao_iniciada' ? ' selected' : '') + '>Não iniciada</option>' +
                 '<option value="em_andamento"' + (item.status === 'em_andamento' ? ' selected' : '') + '>Em andamento</option>' +
-                '<option value="validacao"' + (item.status === 'validacao' ? ' selected' : '') + '>Validação</option>' +
-                '<option value="finalizado"' + (item.status === 'finalizado' ? ' selected' : '') + '>Finalizado</option>' +
+                '<option value="para_validacao"' + (item.status === 'para_validacao' ? ' selected' : '') + '>Para validação</option>' +
+                '<option value="para_ajustes"' + (item.status === 'para_ajustes' ? ' selected' : '') + '>Para ajustes</option>' +
+                '<option value="finalizada"' + (item.status === 'finalizada' ? ' selected' : '') + '>Finalizada</option>' +
                 '</select>' +
                 '<span class="task-item-responsavel" data-item-id="' + item.id + '">' +
                 (item.responsavel ? htmlEncode(item.responsavel) : '<em class="responsavel-placeholder">Responsável não informado</em>') +
@@ -157,7 +158,7 @@
                 var formData = new FormData();
                 formData.append('project', projectValue);
                 formData.append('descricao', descricao);
-                formData.append('status', dataPayload.status || 'programado');
+                formData.append('status', dataPayload.status || 'nao_iniciada');
                 formData.append('responsavel', (dataPayload.responsavel || '').trim());
                 formData.append('prioridade', (dataPayload.prioridade || '').trim());
                 formData.append('tipo_pedido', (dataPayload.tipo_pedido || '').trim());
@@ -245,7 +246,7 @@
 
             function resetForm() {
                 addDesc.value = '';
-                addStatus.value = 'programado';
+                addStatus.value = 'nao_iniciada';
                 if (addPrioridade) addPrioridade.value = '';
                 if (addTipo) addTipo.value = '';
                 responsavelNames = [];
@@ -277,7 +278,7 @@
                 requestAddItem({
                     project: projectValue,
                     descricao: descricao,
-                    status: addStatus.value || 'programado',
+                    status: addStatus.value || 'nao_iniciada',
                     responsavel: responsavelNames.join(', '),
                     prioridade: addPrioridade ? addPrioridade.value : '',
                     tipo_pedido: addTipo ? addTipo.value : '',

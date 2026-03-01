@@ -411,7 +411,7 @@ def finalize_task(task_id):
 
     try:
         old_status = task.status
-        task.status = 'finalizado'
+        task.status = 'finalizada'
         if old_status != task.status:
             notify_task_event(
                 task,
@@ -444,7 +444,7 @@ def unarchive_task(task_id):
 
     task.is_archived = False
     task.archived_at = None
-    task.status = 'programado'
+    task.status = 'nao_iniciada'
 
     try:
         notify_task_event(
@@ -504,7 +504,7 @@ def archive_finalized_tasks():
         status_filter=status_filter,
         responsavel_filter=responsavel_filter,
         include_relations=False,
-    ).filter(Task.status == 'finalizado')
+    ).filter(Task.status == 'finalizada')
 
     tasks = query.all()
     archived_count = 0

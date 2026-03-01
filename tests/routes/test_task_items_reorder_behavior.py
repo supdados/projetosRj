@@ -10,7 +10,7 @@ def test_reorder_task_items_applies_order_for_task_items_only(app, client_user, 
 
         second_item = TaskItem(
             descricao='Item adicional 2',
-            status='programado',
+            status='nao_iniciada',
             responsavel='Usuario Auditoria',
             ordem=2,
             project_id=anchor.project_id,
@@ -18,7 +18,7 @@ def test_reorder_task_items_applies_order_for_task_items_only(app, client_user, 
         )
         third_item = TaskItem(
             descricao='Item adicional 3',
-            status='validacao',
+            status='para_validacao',
             responsavel='Usuario Auditoria',
             ordem=3,
             project_id=anchor.project_id,
@@ -66,7 +66,7 @@ def test_reorder_task_items_ignores_duplicates_invalid_and_foreign_ids(app, clie
 
         second_item = TaskItem(
             descricao='Item adicional 2',
-            status='programado',
+            status='nao_iniciada',
             responsavel='Usuario Auditoria',
             ordem=2,
             project_id=anchor.project_id,
@@ -74,7 +74,7 @@ def test_reorder_task_items_ignores_duplicates_invalid_and_foreign_ids(app, clie
         )
         third_item = TaskItem(
             descricao='Item adicional 3',
-            status='finalizado',
+            status='finalizada',
             responsavel='Usuario Auditoria',
             ordem=3,
             project_id=anchor.project_id,

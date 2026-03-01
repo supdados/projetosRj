@@ -43,7 +43,7 @@ PRIORITIES = ['urgente', 'alta', 'media', 'baixa']
 PROJECT_STATUSES = ['Vigente', 'Vigente', 'Vigente', 'Finalizado', 'Suspenso']
 DELIVERY_TYPES = ['Sistema', 'Painel', 'Norma', 'Instrumento de parceria', 'Fluxo Processual', 'Outro']
 SPECIAL_PROJECTS = [None, None, 'ABEP', 'TCE']
-TASK_ITEM_STATUSES = ['programado', 'em_andamento', 'validacao', 'finalizado']
+TASK_ITEM_STATUSES = ['nao_iniciada', 'em_andamento', 'para_validacao', 'para_ajustes', 'finalizada']
 
 
 def _sanitize_username_suffix(value):
@@ -210,7 +210,7 @@ def seed_fake_data(
 
                 for item_index in range(items_per_task):
                     item_status = TASK_ITEM_STATUSES[(task_index + item_index) % len(TASK_ITEM_STATUSES)]
-                    responsavel = owner.name if item_status != 'finalizado' else None
+                    responsavel = owner.name if item_status != 'finalizada' else None
                     item = TaskItem(
                         descricao=f'Item {item_index + 1} da tarefa {task_index + 1} do projeto {project_index + 1:03d}',
                         status=item_status,

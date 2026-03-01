@@ -225,10 +225,11 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
     tasks, tasks_has_more = trim_limited_rows(tasks)
 
     status_labels = {
-        'programado': 'Programado',
+        'nao_iniciada': 'Não iniciada',
         'em_andamento': 'Em andamento',
-        'validacao': 'Validação',
-        'finalizado': 'Finalizado',
+        'para_validacao': 'Para validação',
+        'para_ajustes': 'Para ajustes',
+        'finalizada': 'Finalizada',
     }
 
     project_results = [

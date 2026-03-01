@@ -606,15 +606,17 @@
         flex-shrink: 0;
     }
 
-    .dashboard-page-v2 .tasks-kpi-simple-dot.status-finalizado { background: #16a34a; }
+    .dashboard-page-v2 .tasks-kpi-simple-dot.status-finalizada { background: #16a34a; }
     .dashboard-page-v2 .tasks-kpi-simple-dot.status-em-andamento { background: #005A92; }
-    .dashboard-page-v2 .tasks-kpi-simple-dot.status-validacao { background: #ca8a04; }
-    .dashboard-page-v2 .tasks-kpi-simple-dot.status-programado { background: #8198b1; }
+    .dashboard-page-v2 .tasks-kpi-simple-dot.status-para-validacao { background: #ca8a04; }
+    .dashboard-page-v2 .tasks-kpi-simple-dot.status-para-ajustes { background: #ea580c; }
+    .dashboard-page-v2 .tasks-kpi-simple-dot.status-nao-iniciada { background: #8198b1; }
 
-    .dashboard-page-v2 .bar-finalizado { background: #16a34a; }
+    .dashboard-page-v2 .bar-finalizada { background: #16a34a; }
     .dashboard-page-v2 .bar-em-andamento { background: #005A92; }
-    .dashboard-page-v2 .bar-validacao { background: #ca8a04; }
-    .dashboard-page-v2 .bar-programado { background: #8198b1; }
+    .dashboard-page-v2 .bar-para-validacao { background: #ca8a04; }
+    .dashboard-page-v2 .bar-para-ajustes { background: #ea580c; }
+    .dashboard-page-v2 .bar-nao-iniciada { background: #8198b1; }
     .dashboard-page-v2 .bar-empty { background: #e0e8f0; }
 
     /* Donut chart */
@@ -654,10 +656,11 @@
         stroke-linecap: butt;
     }
 
-    .dashboard-page-v2 .seg-finalizado { stroke: #16a34a; }
+    .dashboard-page-v2 .seg-finalizada { stroke: #16a34a; }
     .dashboard-page-v2 .seg-em-andamento { stroke: #005A92; }
-    .dashboard-page-v2 .seg-validacao { stroke: #ca8a04; }
-    .dashboard-page-v2 .seg-programado { stroke: #8198b1; }
+    .dashboard-page-v2 .seg-para-validacao { stroke: #ca8a04; }
+    .dashboard-page-v2 .seg-para-ajustes { stroke: #ea580c; }
+    .dashboard-page-v2 .seg-nao-iniciada { stroke: #8198b1; }
 
     .dashboard-page-v2 .tasks-kpi-donut-center {
         position: absolute;
@@ -1020,15 +1023,16 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-donu
 }
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 {
-    --tasks-kpi-finalizado: #49b987;
+    --tasks-kpi-finalizada: #49b987;
     --tasks-kpi-andamento: #4e95cc;
-    --tasks-kpi-validacao: #d8a24d;
-    --tasks-kpi-programado: #8da0b6;
+    --tasks-kpi-para-validacao: #d8a24d;
+    --tasks-kpi-para-ajustes: #e07740;
+    --tasks-kpi-nao-iniciada: #8da0b6;
 }
 
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-simple-dot.status-finalizado,
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .bar-finalizado {
-    background: var(--tasks-kpi-finalizado);
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-simple-dot.status-finalizada,
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .bar-finalizada {
+    background: var(--tasks-kpi-finalizada);
 }
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-simple-dot.status-em-andamento,
@@ -1036,28 +1040,37 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .bar-em-andamen
     background: var(--tasks-kpi-andamento);
 }
 
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-simple-dot.status-validacao,
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .bar-validacao {
-    background: var(--tasks-kpi-validacao);
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-simple-dot.status-para-validacao,
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .bar-para-validacao {
+    background: var(--tasks-kpi-para-validacao);
 }
 
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-simple-dot.status-programado,
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .bar-programado {
-    background: var(--tasks-kpi-programado);
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-simple-dot.status-para-ajustes,
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .bar-para-ajustes {
+    background: var(--tasks-kpi-para-ajustes);
 }
 
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-finalizado {
-    stroke: var(--tasks-kpi-finalizado);
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-simple-dot.status-nao-iniciada,
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .bar-nao-iniciada {
+    background: var(--tasks-kpi-nao-iniciada);
+}
+
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-finalizada {
+    stroke: var(--tasks-kpi-finalizada);
 }
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-em-andamento {
     stroke: var(--tasks-kpi-andamento);
 }
 
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-validacao {
-    stroke: var(--tasks-kpi-validacao);
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-para-validacao {
+    stroke: var(--tasks-kpi-para-validacao);
 }
 
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-programado {
-    stroke: var(--tasks-kpi-programado);
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-para-ajustes {
+    stroke: var(--tasks-kpi-para-ajustes);
+}
+
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-nao-iniciada {
+    stroke: var(--tasks-kpi-nao-iniciada);
 }

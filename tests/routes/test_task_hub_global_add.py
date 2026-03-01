@@ -14,7 +14,7 @@ def test_task_hub_global_add_item_in_filtered_project(app, client_user, seed_dat
         data={
             'project': str(seed_data['project_id']),
             'descricao': 'Item global no projeto filtrado',
-            'status': 'programado',
+            'status': 'nao_iniciada',
             'responsavel': 'Usuario Auditoria',
             'prioridade': 'media',
             'tipo_pedido': 'bug',
@@ -57,7 +57,7 @@ def test_task_hub_global_add_item_in_sem_projeto_anchor(client_user, seed_data):
         data={
             'project': 'sem_projeto',
             'descricao': 'Item sem projeto criado no hub',
-            'status': 'programado',
+            'status': 'nao_iniciada',
         },
     )
     assert response.status_code == 200

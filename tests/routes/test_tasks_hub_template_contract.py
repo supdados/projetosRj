@@ -81,7 +81,7 @@ def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(a
     with app.app_context():
         archived_task = Task(
             descricao='Tarefa arquivada readonly',
-            status='finalizado',
+            status='finalizada',
             responsavel='Usuario Editavel',
             prioridade='alta',
             tipo_pedido='bug',

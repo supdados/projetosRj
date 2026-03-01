@@ -334,7 +334,7 @@ html[data-theme="dark"] body.is-authenticated .app-notif-actor {
 }
 
 
-html[data-theme="dark"] body.is-authenticated .app-notif-status-programado {
+html[data-theme="dark"] body.is-authenticated .app-notif-status-nao-iniciada {
     background: rgba(141, 160, 182, 0.18);
     border-color: rgba(141, 160, 182, 0.42);
     color: #d8e3ee;
@@ -348,14 +348,21 @@ html[data-theme="dark"] body.is-authenticated .app-notif-status-em-andamento {
 }
 
 
-html[data-theme="dark"] body.is-authenticated .app-notif-status-validacao {
+html[data-theme="dark"] body.is-authenticated .app-notif-status-para-validacao {
     background: rgba(216, 162, 77, 0.22);
     border-color: rgba(216, 162, 77, 0.5);
     color: #fbe8c8;
 }
 
 
-html[data-theme="dark"] body.is-authenticated .app-notif-status-finalizado {
+html[data-theme="dark"] body.is-authenticated .app-notif-status-para-ajustes {
+    background: rgba(220, 104, 3, 0.22);
+    border-color: rgba(220, 104, 3, 0.5);
+    color: #fed7aa;
+}
+
+
+html[data-theme="dark"] body.is-authenticated .app-notif-status-finalizada {
     background: rgba(73, 185, 135, 0.22);
     border-color: rgba(73, 185, 135, 0.5);
     color: #d9f3e8;

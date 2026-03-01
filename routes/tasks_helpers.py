@@ -19,11 +19,11 @@ from services.notifications import notify_task_assignment_change, notify_task_ev
 VALID_PRIORIDADES = {'baixa', 'media', 'alta', 'urgente'}
 VALID_TIPOS = {'bug', 'melhoria', 'duvida', 'outros'}
 LEGACY_TIPOS = {'implementacao'}
-VALID_STATUSES = {'programado', 'em_andamento', 'validacao', 'finalizado'}
+VALID_STATUSES = {'nao_iniciada', 'em_andamento', 'para_validacao', 'para_ajustes', 'finalizada'}
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'}
 TASK_PRIORIDADE_ORDER = ('baixa', 'media', 'alta', 'urgente')
 TASK_TIPO_ORDER = ('bug', 'melhoria', 'duvida', 'outros', 'implementacao')
-TASK_STATUS_ORDER = ('programado', 'em_andamento', 'validacao', 'finalizado')
+TASK_STATUS_ORDER = ('nao_iniciada', 'em_andamento', 'para_validacao', 'para_ajustes', 'finalizada')
 
 
 def _get_upload_folder():
@@ -39,10 +39,11 @@ def _allowed_attachment(filename):
 
 def _task_status_label(status):
     labels = {
-        'programado': 'Programado',
+        'nao_iniciada': 'Não iniciada',
         'em_andamento': 'Em andamento',
-        'validacao': 'Validação',
-        'finalizado': 'Finalizado',
+        'para_validacao': 'Para validação',
+        'para_ajustes': 'Para ajustes',
+        'finalizada': 'Finalizada',
     }
     return labels.get(status, status or '')
 
@@ -168,10 +169,7 @@ def _build_task_filter_options(tasks, selected_filters=None):
     ]
     status_options = [
         {'value': value, 'label': _task_status_label(value)}
-        for value in _ordered_task_filter_values(
-            [task.status for task in tasks if task.status],
-            TASK_STATUS_ORDER,
-        )
+        for value in TASK_STATUS_ORDER
     ]
 
     responsavel_values = []
@@ -763,7 +761,7 @@ def _extract_creation_payload(default_project=None):
     if not descricao:
         descricao = (request.form.get('titulo') or payload.get('titulo') or '').strip()
 
-    status = (request.form.get('status') or payload.get('status') or 'programado').strip()
+    status = (request.form.get('status') or payload.get('status') or 'nao_iniciada').strip()
     responsavel = (request.form.get('responsavel') or payload.get('responsavel') or '').strip()
     prioridade = (request.form.get('prioridade') or payload.get('prioridade') or '').strip() or None
     tipo_pedido = (request.form.get('tipo_pedido') or payload.get('tipo_pedido') or '').strip() or None
@@ -793,7 +791,7 @@ def _create_task_common(default_project=None):
         flash(project_error, 'danger')
         return redirect(url_for('main.list_tasks'))
 
-    status = payload['status'] if payload['status'] in VALID_STATUSES else 'programado'
+    status = payload['status'] if payload['status'] in VALID_STATUSES else 'nao_iniciada'
     prioridade = payload['prioridade'] if payload['prioridade'] in VALID_PRIORIDADES else None
     tipo_pedido = payload['tipo_pedido'] if payload['tipo_pedido'] in VALID_TIPOS else None
 

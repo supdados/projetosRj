@@ -607,7 +607,7 @@
         flex-shrink: 0;
     }
 
-    .task-detail-v2 .task-item-bar.status-programado {
+    .task-detail-v2 .task-item-bar.status-nao_iniciada {
         background: #9ca3af;
     }
 
@@ -615,11 +615,15 @@
         background: #0ea5e9;
     }
 
-    .task-detail-v2 .task-item-bar.status-validacao {
+    .task-detail-v2 .task-item-bar.status-para_validacao {
         background: #eab308;
     }
 
-    .task-detail-v2 .task-item-bar.status-finalizado {
+    .task-detail-v2 .task-item-bar.status-para_ajustes {
+        background: #f97316;
+    }
+
+    .task-detail-v2 .task-item-bar.status-finalizada {
         background: #22c55e;
     }
 

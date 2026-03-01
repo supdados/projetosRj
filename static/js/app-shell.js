@@ -622,9 +622,10 @@
 
                 var notifStatusEntries = [
                     { label: 'Em andamento', css: 'app-notif-status app-notif-status-em-andamento' },
-                    { label: 'Programado', css: 'app-notif-status app-notif-status-programado' },
-                    { label: 'Validacao', css: 'app-notif-status app-notif-status-validacao' },
-                    { label: 'Finalizado', css: 'app-notif-status app-notif-status-finalizado' },
+                    { label: 'Não iniciada', css: 'app-notif-status app-notif-status-nao-iniciada' },
+                    { label: 'Para validação', css: 'app-notif-status app-notif-status-para-validacao' },
+                    { label: 'Para ajustes', css: 'app-notif-status app-notif-status-para-ajustes' },
+                    { label: 'Finalizada', css: 'app-notif-status app-notif-status-finalizada' },
                 ];
 
                 function colorizeNotificationSubline(escapedSubline, escapedActorName) {
