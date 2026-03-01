@@ -101,7 +101,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.52rem;
-    cursor: pointer;
+    cursor: grab;
     transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
     outline: none;
     overflow: hidden;
@@ -116,7 +116,7 @@
 .task-detail-v2 .task-items-kanban-badge,
 .task-detail-v2 .task-items-kanban-priority,
 .task-detail-v2 .task-items-kanban-tipo {
-    cursor: pointer;
+    cursor: grab;
 }
 
 .task-detail-v2 .task-items-kanban-card:hover {
