@@ -223,25 +223,11 @@ def ensure_task_core_columns():
 
 def initialize_database():
     """
-    Inicializa estrutura mínima do banco:
-    - cria tabelas faltantes;
-    - garante coluna ABEP em bancos legados;
-    - garante colunas do novo modelo de tarefas;
-    - sincroniza catálogo de objetivo/resultado/indicador.
+    Inicializa/normaliza o schema usando a rotina canônica de migração.
     """
-    db.create_all()
-    column_added = ensure_project_abep_indicator_column()
-    task_core_cols = ensure_task_core_columns()
-    from routes.shared import ensure_area_catalog_seeded
+    from scripts.migrations.run_migrations import run_all_migrations
 
-    area_catalog_choices = ensure_area_catalog_seeded()
-    sync_summary = sync_goal_catalog_to_db(commit=True)
-    return {
-        'column_added': column_added,
-        'task_core_cols': task_core_cols,
-        'area_catalog_choices': area_catalog_choices,
-        'sync_summary': sync_summary,
-    }
+    return run_all_migrations(emit_output=False, stamp_alembic=False)
 
 
 def _register_request_hooks(app):

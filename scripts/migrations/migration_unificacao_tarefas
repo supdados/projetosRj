@@ -1,28 +1,12 @@
 #!/usr/bin/env python3
 """
-migration_unificacao_tarefas
-============================
-Migração idempotente para MySQL: unificação TaskItem -> Task (task-only).
+Wrapper legado para a antiga migração TaskItem -> Task.
 
-O script cobre dois cenários:
-1) Banco legado com `task_item*`: migra dados para `task`, `task_comment`, `task_anexo`.
-2) Banco já sem `task_item`, mas com coluna legada `task.titulo`: normaliza schema para task-only.
+Mantido apenas para preservar o comando histórico:
+    ./scripts/migrations/migration_unificacao_tarefas
 
-Pré-requisitos:
-  pip install sqlalchemy pymysql python-dotenv
-
-Configuração (via .env ou variáveis de ambiente):
-  DATABASE_URL=mysql+pymysql://user:pass@host/dbname
-  ou
-  DB_USER=...
-  DB_PASSWORD=...
-  DB_NAME=...
-  DB_HOST=localhost   (opcional)
-  DB_PORT=3306        (opcional)
-
-Uso:
-  chmod +x scripts/migrations/migration_unificacao_tarefas
-  ./scripts/migrations/migration_unificacao_tarefas
+Toda a lógica real agora vive em:
+    scripts/migrations/run_migrations.py
 """
 
 import os
@@ -31,7 +15,7 @@ from pathlib import Path
 from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, text
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(PROJECT_ROOT / '.env')
@@ -52,475 +36,45 @@ def build_engine():
         print('ERRO: configure DATABASE_URL ou DB_USER / DB_PASSWORD / DB_NAME.')
         sys.exit(1)
 
-    uri = f"mysql+pymysql://{user}:{quote_plus(password)}@{host}:{port}/{name}"
+    uri = f'mysql+pymysql://{user}:{quote_plus(password)}@{host}:{port}/{name}'
     return create_engine(uri)
-
-
-def table_exists(inspector, table_name):
-    return table_name in inspector.get_table_names()
-
-
-def column_names(inspector, table_name):
-    return {col['name'] for col in inspector.get_columns(table_name)}
-
-
-def index_names(inspector, table_name):
-    try:
-        return {idx['name'] for idx in inspector.get_indexes(table_name)}
-    except Exception:
-        return set()
-
-
-def first_user_id(conn):
-    return conn.execute(text("SELECT id FROM `user` ORDER BY id ASC LIMIT 1")).scalar()
-
-
-def ensure_legacy_redirect_table(conn, inspector, log):
-    if not table_exists(inspector, 'legacy_task_redirect'):
-        conn.execute(
-            text(
-                """
-                CREATE TABLE `legacy_task_redirect` (
-                    `id` INT NOT NULL AUTO_INCREMENT,
-                    `legacy_task_id` INT NOT NULL,
-                    `project_id` INT NULL,
-                    `sample_task_id` INT NULL,
-                    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (`id`),
-                    UNIQUE KEY `uq_legacy_task_redirect_legacy_task_id` (`legacy_task_id`),
-                    KEY `ix_legacy_task_redirect_project_id` (`project_id`),
-                    KEY `ix_legacy_task_redirect_sample_task_id` (`sample_task_id`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-                """
-            )
-        )
-        conn.commit()
-        log.append('  [OK] Tabela legacy_task_redirect criada.')
-        inspector = inspect(conn.engine)
-    else:
-        log.append('  [--] Tabela legacy_task_redirect já existe.')
-
-    idx = index_names(inspector, 'legacy_task_redirect')
-    if 'uq_legacy_task_redirect_legacy_task_id' not in idx:
-        conn.execute(
-            text(
-                "ALTER TABLE `legacy_task_redirect` "
-                "ADD UNIQUE KEY `uq_legacy_task_redirect_legacy_task_id` (`legacy_task_id`)"
-            )
-        )
-        conn.commit()
-        log.append('  [OK] Índice único legacy_task_redirect.legacy_task_id criado.')
-
-
-def ensure_task_indexes(conn, inspector, log):
-    if table_exists(inspector, 'task'):
-        task_idx = index_names(inspector, 'task')
-        expected_task_indexes = {
-            'ix_task_status': 'CREATE INDEX `ix_task_status` ON `task` (`status`)',
-            'ix_task_project_id': 'CREATE INDEX `ix_task_project_id` ON `task` (`project_id`)',
-            'ix_task_is_archived': 'CREATE INDEX `ix_task_is_archived` ON `task` (`is_archived`)',
-            'ix_task_created_by_id': 'CREATE INDEX `ix_task_created_by_id` ON `task` (`created_by_id`)',
-        }
-        for idx_name, ddl in expected_task_indexes.items():
-            if idx_name not in task_idx:
-                conn.execute(text(ddl))
-                conn.commit()
-                log.append(f'  [OK] Índice {idx_name} criado.')
-
-    if table_exists(inspector, 'task_comment'):
-        comment_idx = index_names(inspector, 'task_comment')
-        if 'ix_task_comment_task_id' not in comment_idx:
-            conn.execute(text("CREATE INDEX `ix_task_comment_task_id` ON `task_comment` (`task_id`)"))
-            conn.commit()
-            log.append('  [OK] Índice ix_task_comment_task_id criado.')
-
-    if table_exists(inspector, 'task_anexo'):
-        anexo_idx = index_names(inspector, 'task_anexo')
-        if 'ix_task_anexo_task_id' not in anexo_idx:
-            conn.execute(text("CREATE INDEX `ix_task_anexo_task_id` ON `task_anexo` (`task_id`)"))
-            conn.commit()
-            log.append('  [OK] Índice ix_task_anexo_task_id criado.')
-
-
-def ensure_task_only_schema_without_task_item(conn, inspector, log):
-    if not table_exists(inspector, 'task'):
-        raise RuntimeError('Tabela `task` não encontrada.')
-
-    cols = column_names(inspector, 'task')
-    fallback_user_id = first_user_id(conn)
-    if fallback_user_id is None:
-        raise RuntimeError('Tabela `user` sem registros: impossível definir created_by_id.')
-
-    if 'descricao' not in cols:
-        conn.execute(text("ALTER TABLE `task` ADD COLUMN `descricao` TEXT NULL"))
-        conn.execute(text("UPDATE `task` SET `descricao` = COALESCE(`titulo`, '')"))
-        conn.execute(text("ALTER TABLE `task` MODIFY COLUMN `descricao` TEXT NOT NULL"))
-        conn.commit()
-        log.append('  [OK] task.descricao criada e preenchida a partir de task.titulo.')
-    else:
-        conn.execute(text("UPDATE `task` SET `descricao` = '' WHERE `descricao` IS NULL"))
-        conn.commit()
-
-    if 'status' not in cols:
-        conn.execute(text("ALTER TABLE `task` ADD COLUMN `status` VARCHAR(20) NOT NULL DEFAULT 'programado'"))
-        conn.commit()
-        log.append('  [OK] task.status criada.')
-    if 'responsavel' not in cols:
-        conn.execute(text("ALTER TABLE `task` ADD COLUMN `responsavel` VARCHAR(100) NULL"))
-        conn.commit()
-        log.append('  [OK] task.responsavel criada.')
-    if 'ordem' not in cols:
-        conn.execute(text("ALTER TABLE `task` ADD COLUMN `ordem` INT NOT NULL DEFAULT 0"))
-        conn.commit()
-        log.append('  [OK] task.ordem criada.')
-    if 'prioridade' not in cols:
-        conn.execute(text("ALTER TABLE `task` ADD COLUMN `prioridade` VARCHAR(20) NULL"))
-        conn.commit()
-        log.append('  [OK] task.prioridade criada.')
-    if 'tipo_pedido' not in cols:
-        conn.execute(text("ALTER TABLE `task` ADD COLUMN `tipo_pedido` VARCHAR(30) NULL"))
-        conn.commit()
-        log.append('  [OK] task.tipo_pedido criada.')
-
-    cols = column_names(inspector, 'task')
-    if 'created_by_id' not in cols:
-        conn.execute(
-            text(
-                f"ALTER TABLE `task` ADD COLUMN `created_by_id` INT NOT NULL DEFAULT {int(fallback_user_id)}"
-            )
-        )
-        conn.commit()
-        log.append('  [OK] task.created_by_id criada.')
-    else:
-        conn.execute(
-            text(
-                f"UPDATE `task` SET `created_by_id` = {int(fallback_user_id)} "
-                "WHERE `created_by_id` IS NULL"
-            )
-        )
-        conn.commit()
-
-    cols = column_names(inspector, 'task')
-    if 'created_at' not in cols:
-        conn.execute(text("ALTER TABLE `task` ADD COLUMN `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"))
-        conn.commit()
-        log.append('  [OK] task.created_at criada.')
-
-    cols = column_names(inspector, 'task')
-    if 'is_archived' not in cols:
-        conn.execute(text("ALTER TABLE `task` ADD COLUMN `is_archived` BOOLEAN NOT NULL DEFAULT 0"))
-        if 'is_finalized' in cols:
-            conn.execute(text("UPDATE `task` SET `is_archived` = COALESCE(`is_finalized`, 0)"))
-        conn.commit()
-        log.append('  [OK] task.is_archived criada.')
-
-    cols = column_names(inspector, 'task')
-    if 'archived_at' not in cols:
-        conn.execute(text("ALTER TABLE `task` ADD COLUMN `archived_at` DATETIME NULL"))
-        if 'finalized_at' in cols:
-            conn.execute(text("UPDATE `task` SET `archived_at` = `finalized_at` WHERE `archived_at` IS NULL"))
-        conn.commit()
-        log.append('  [OK] task.archived_at criada.')
-
-    cols = column_names(inspector, 'task')
-    if 'titulo' in cols:
-        conn.execute(text("ALTER TABLE `task` DROP COLUMN `titulo`"))
-        conn.commit()
-        log.append('  [OK] task.titulo removida.')
-
-    cols = column_names(inspector, 'task')
-    if 'is_finalized' in cols:
-        conn.execute(text("ALTER TABLE `task` DROP COLUMN `is_finalized`"))
-        conn.commit()
-        log.append('  [OK] task.is_finalized removida.')
-
-    cols = column_names(inspector, 'task')
-    if 'finalized_at' in cols:
-        conn.execute(text("ALTER TABLE `task` DROP COLUMN `finalized_at`"))
-        conn.commit()
-        log.append('  [OK] task.finalized_at removida.')
-
-
-def migrate_from_task_item(conn, inspector, log):
-    task_cols = column_names(inspector, 'task')
-    item_cols = column_names(inspector, 'task_item')
-    if 'task_id' not in item_cols:
-        raise RuntimeError('Coluna obrigatória task_item.task_id não encontrada.')
-
-    fallback_user_id = first_user_id(conn)
-    if fallback_user_id is None:
-        raise RuntimeError('Tabela `user` sem registros: impossível definir created_by_id.')
-
-    def has_col(cols, name):
-        return name in cols
-
-    status_expr = "COALESCE(ti.`status`, 'programado')" if has_col(item_cols, 'status') else "'programado'"
-    responsavel_expr = "ti.`responsavel`" if has_col(item_cols, 'responsavel') else "NULL"
-    ordem_expr = "COALESCE(ti.`ordem`, 0)" if has_col(item_cols, 'ordem') else "0"
-    prioridade_expr = "ti.`prioridade`" if has_col(item_cols, 'prioridade') else "NULL"
-    tipo_expr = "ti.`tipo_pedido`" if has_col(item_cols, 'tipo_pedido') else "NULL"
-    created_at_expr = "COALESCE(ti.`created_at`, NOW())" if has_col(item_cols, 'created_at') else "NOW()"
-
-    project_expr = "t.`project_id`" if has_col(task_cols, 'project_id') else "NULL"
-    created_by_expr = (
-        f"COALESCE(t.`created_by_id`, {int(fallback_user_id)})"
-        if has_col(task_cols, 'created_by_id')
-        else str(int(fallback_user_id))
-    )
-    if has_col(task_cols, 'is_archived'):
-        is_archived_expr = "COALESCE(t.`is_archived`, 0)"
-    elif has_col(task_cols, 'is_finalized'):
-        is_archived_expr = "COALESCE(t.`is_finalized`, 0)"
-    else:
-        is_archived_expr = "0"
-
-    if has_col(task_cols, 'archived_at'):
-        archived_at_expr = "t.`archived_at`"
-    elif has_col(task_cols, 'finalized_at'):
-        archived_at_expr = "t.`finalized_at`"
-    else:
-        archived_at_expr = "NULL"
-
-    conn.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
-    conn.execute(text("DROP TABLE IF EXISTS `task_new_u`"))
-    conn.execute(text("DROP TABLE IF EXISTS `task_comment_new_u`"))
-    conn.execute(text("DROP TABLE IF EXISTS `task_anexo_new_u`"))
-    conn.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
-    conn.commit()
-
-    conn.execute(
-        text(
-            """
-            CREATE TABLE `task_new_u` (
-                `id` INT NOT NULL AUTO_INCREMENT,
-                `descricao` TEXT NOT NULL,
-                `status` VARCHAR(20) NOT NULL DEFAULT 'programado',
-                `responsavel` VARCHAR(100) NULL,
-                `ordem` INT NOT NULL DEFAULT 0,
-                `project_id` INT NULL,
-                `created_by_id` INT NOT NULL,
-                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                `prioridade` VARCHAR(20) NULL,
-                `tipo_pedido` VARCHAR(30) NULL,
-                `is_archived` BOOLEAN NOT NULL DEFAULT 0,
-                `archived_at` DATETIME NULL,
-                PRIMARY KEY (`id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """
-        )
-    )
-
-    conn.execute(
-        text(
-            """
-            CREATE TABLE `task_comment_new_u` (
-                `id` INT NOT NULL AUTO_INCREMENT,
-                `content` TEXT NOT NULL,
-                `user_id` INT NOT NULL,
-                `task_id` INT NOT NULL,
-                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` DATETIME NULL,
-                PRIMARY KEY (`id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """
-        )
-    )
-
-    conn.execute(
-        text(
-            """
-            CREATE TABLE `task_anexo_new_u` (
-                `id` INT NOT NULL AUTO_INCREMENT,
-                `task_id` INT NOT NULL,
-                `filename` VARCHAR(255) NOT NULL,
-                `stored_filename` VARCHAR(255) NOT NULL,
-                `content_type` VARCHAR(100) NULL,
-                `uploaded_by_id` INT NOT NULL,
-                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (`id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """
-        )
-    )
-    conn.commit()
-    log.append('  [OK] Tabelas temporárias de migração criadas.')
-
-    conn.execute(
-        text(
-            f"""
-            INSERT INTO `task_new_u` (
-                `id`,
-                `descricao`,
-                `status`,
-                `responsavel`,
-                `ordem`,
-                `project_id`,
-                `created_by_id`,
-                `created_at`,
-                `prioridade`,
-                `tipo_pedido`,
-                `is_archived`,
-                `archived_at`
-            )
-            SELECT
-                ti.`id`,
-                COALESCE(ti.`descricao`, ''),
-                {status_expr},
-                {responsavel_expr},
-                {ordem_expr},
-                {project_expr},
-                {created_by_expr},
-                {created_at_expr},
-                {prioridade_expr},
-                {tipo_expr},
-                {is_archived_expr},
-                {archived_at_expr}
-            FROM `task_item` ti
-            LEFT JOIN `task` t ON t.`id` = ti.`task_id`
-            """
-        )
-    )
-
-    if table_exists(inspector, 'task_item_comment'):
-        comment_cols = column_names(inspector, 'task_item_comment')
-        created_expr = "COALESCE(c.`created_at`, NOW())" if 'created_at' in comment_cols else "NOW()"
-        updated_expr = "c.`updated_at`" if 'updated_at' in comment_cols else "NULL"
-        conn.execute(
-            text(
-                f"""
-                INSERT INTO `task_comment_new_u` (
-                    `id`,
-                    `content`,
-                    `user_id`,
-                    `task_id`,
-                    `created_at`,
-                    `updated_at`
-                )
-                SELECT
-                    c.`id`,
-                    COALESCE(c.`content`, ''),
-                    c.`user_id`,
-                    c.`task_item_id`,
-                    {created_expr},
-                    {updated_expr}
-                FROM `task_item_comment` c
-                """
-            )
-        )
-
-    if table_exists(inspector, 'task_item_anexo'):
-        anexo_cols = column_names(inspector, 'task_item_anexo')
-        created_expr = "COALESCE(a.`created_at`, NOW())" if 'created_at' in anexo_cols else "NOW()"
-        conn.execute(
-            text(
-                f"""
-                INSERT INTO `task_anexo_new_u` (
-                    `id`,
-                    `task_id`,
-                    `filename`,
-                    `stored_filename`,
-                    `content_type`,
-                    `uploaded_by_id`,
-                    `created_at`
-                )
-                SELECT
-                    a.`id`,
-                    a.`task_item_id`,
-                    COALESCE(a.`filename`, ''),
-                    COALESCE(a.`stored_filename`, ''),
-                    a.`content_type`,
-                    a.`uploaded_by_id`,
-                    {created_expr}
-                FROM `task_item_anexo` a
-                """
-            )
-        )
-
-    project_expr_redirect = "t.`project_id`" if 'project_id' in task_cols else "NULL"
-    conn.execute(
-        text(
-            f"""
-            INSERT INTO `legacy_task_redirect` (`legacy_task_id`, `project_id`, `sample_task_id`)
-            SELECT
-                t.`id` AS legacy_task_id,
-                {project_expr_redirect} AS project_id,
-                MIN(ti.`id`) AS sample_task_id
-            FROM `task` t
-            LEFT JOIN `task_item` ti ON ti.`task_id` = t.`id`
-            GROUP BY t.`id`, {project_expr_redirect}
-            ON DUPLICATE KEY UPDATE
-                `project_id` = VALUES(`project_id`),
-                `sample_task_id` = VALUES(`sample_task_id`)
-            """
-        )
-    )
-    conn.commit()
-    log.append('  [OK] Dados migrados para tabelas temporárias.')
-
-    conn.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
-    conn.execute(text("DROP TABLE IF EXISTS `task_comment`"))
-    conn.execute(text("DROP TABLE IF EXISTS `task_anexo`"))
-    conn.execute(text("DROP TABLE IF EXISTS `task_item_comment`"))
-    conn.execute(text("DROP TABLE IF EXISTS `task_item_anexo`"))
-    conn.execute(text("DROP TABLE IF EXISTS `task_item`"))
-    conn.execute(text("DROP TABLE IF EXISTS `task`"))
-    conn.execute(
-        text(
-            """
-            RENAME TABLE
-                `task_new_u` TO `task`,
-                `task_comment_new_u` TO `task_comment`,
-                `task_anexo_new_u` TO `task_anexo`
-            """
-        )
-    )
-    conn.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
-    conn.commit()
-    log.append('  [OK] Tabelas finais task/task_comment/task_anexo promovidas.')
 
 
 def run():
     engine = build_engine()
-
     if engine.dialect.name != 'mysql':
-        print(f"ERRO: este script é exclusivo para MySQL. Dialeto detectado: {engine.dialect.name}")
+        print(f'ERRO: este wrapper é exclusivo para MySQL. Dialeto detectado: {engine.dialect.name}')
         sys.exit(1)
 
-    log = []
-    with engine.connect() as conn:
-        inspector = inspect(engine)
+    try:
+        with engine.connect() as conn:
+            conn.execute(text('SELECT 1'))
+    except Exception as exc:
+        print(f'ERRO ao conectar: {exc}')
+        sys.exit(1)
 
-        if not table_exists(inspector, 'task'):
-            print('ERRO: tabela `task` não encontrada. Nada para migrar.')
+    from app import app
+    from models import db
+    from scripts.migrations.run_migrations import ensure_task_schema, stamp_alembic_head
+
+    with app.app_context():
+        if db.engine.dialect.name != 'mysql':
+            print(
+                'ERRO: a aplicação não está conectada em MySQL. '
+                f'Dialeto detectado no app: {db.engine.dialect.name}'
+            )
             sys.exit(1)
 
-        if not table_exists(inspector, 'user'):
-            print('ERRO: tabela `user` não encontrada.')
+        summary = ensure_task_schema(emit_output=True)
+        if not summary.get('success'):
             sys.exit(1)
 
-        log.append('[1/4] Garantindo tabela de redirect legado...')
-        ensure_legacy_redirect_table(conn, inspector, log)
+        alembic_summary = stamp_alembic_head(emit_output=True)
+        if not alembic_summary.get('success'):
+            sys.exit(1)
 
-        inspector = inspect(engine)
-        if table_exists(inspector, 'task_item'):
-            log.append('[2/4] Migrando task_item* para modelo task-only...')
-            migrate_from_task_item(conn, inspector, log)
-        else:
-            log.append('[2/4] task_item ausente, normalizando schema task-only...')
-            ensure_task_only_schema_without_task_item(conn, inspector, log)
-
-        inspector = inspect(engine)
-        log.append('[3/4] Garantindo índices do modelo novo...')
-        ensure_task_indexes(conn, inspector, log)
-
-        log.append('[4/4] Migração concluída com sucesso.')
-
-    print('\n'.join(log))
+        print('[OK] Wrapper legado finalizado com sucesso.')
 
 
 if __name__ == '__main__':
-    try:
-        run()
-    except Exception as exc:
-        print(f'ERRO durante migração: {exc}')
-        sys.exit(1)
+    run()

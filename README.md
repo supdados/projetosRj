@@ -82,9 +82,9 @@ Catalogo fixo:
 - `projetosRj/abep_catalog.py`
 
 Migracao para bancos existentes:
-- Script dedicado: `python3 scripts/migrations/migrate_add_abep_indicator.py`
-- `scripts/migrations/run_migrations.py` tambem inclui esta etapa.
-- O startup da app garante automaticamente a coluna quando ela nao existe.
+- Script canonico: `python3 scripts/migrations/run_migrations.py`
+- Wrapper legado: `python3 scripts/migrations/migrate_add_abep_indicator.py`
+- O startup da app usa a mesma rotina canonica de compatibilidade.
 
 ## Organizacao de rotas (modular)
 
@@ -167,7 +167,20 @@ Exemplo com volume customizado:
 
 - Criar admin: `python3 scripts/admin/gerar_senha.py`
 - Sincronizar catalogo: `python3 scripts/catalog/sync_objectives_catalog.py`
-- Rodar migracoes locais: `python3 scripts/migrations/run_migrations.py`
-- Garantir campo ABEP: `python3 scripts/migrations/migrate_add_abep_indicator.py`
-- Migracao incremental MySQL: `python3 scripts/migrations/migrate_production.py`
-- Migracao de unificacao de tarefas: `./scripts/migrations/migration_unificacao_tarefas`
+- Migracao canonica (SQLite e MySQL): `python3 scripts/migrations/run_migrations.py`
+- Wrapper legado ABEP: `python3 scripts/migrations/migrate_add_abep_indicator.py`
+- Wrapper legado producao MySQL: `python3 scripts/migrations/migrate_production.py`
+- Wrapper legado unificacao de tarefas: `./scripts/migrations/migration_unificacao_tarefas`
+
+### Ordem oficial de migracao
+
+O repositorio agora considera um unico fluxo oficial:
+1. `scripts/migrations/run_migrations.py`
+
+Esse script, em ordem, faz:
+1. Migra `user.area_responsavel` para `user_areas` quando a coluna legada existe.
+2. Garante tabelas e colunas modernas de `project`, `etapa` e `project_history`.
+3. Unifica qualquer banco misto com `task_item*` para o modelo final `task/task_comment/task_anexo/legacy_task_redirect`.
+4. Normaliza os status de tarefa para `nao_iniciada`, `em_andamento`, `para_validacao`, `para_ajustes`, `finalizada`.
+5. Sincroniza os catalogos canonicos de objetivos e areas.
+6. Em MySQL, marca `alembic_version` no head atual apos convergir o schema.
