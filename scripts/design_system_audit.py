@@ -28,7 +28,6 @@ EXPECTED_LINKS = {
     Path("templates/login.html"): "pages/login.css",
     Path("templates/search_results.html"): "pages/search-results.css",
     Path("templates/project_history.html"): "pages/project-history.css",
-    Path("templates/project_tasks.html"): "pages/project-tasks.css",
     Path("templates/template_form.html"): "pages/template-form.css",
     Path("templates/template_list.html"): "pages/template-list.css",
 }
@@ -45,7 +44,6 @@ EXPECTED_FILES = [
     Path("static/pages/login.css"),
     Path("static/pages/search-results.css"),
     Path("static/pages/project-history.css"),
-    Path("static/pages/project-tasks.css"),
     Path("static/pages/template-form.css"),
     Path("static/pages/template-list.css"),
     Path("docs/design-system.md"),

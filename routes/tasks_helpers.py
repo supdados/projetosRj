@@ -542,26 +542,6 @@ def _build_task_hub_area_options(include_archived=False):
     return sorted({(area or '').strip() for (area,) in rows if (area or '').strip()})
 
 
-def _get_projects_for_task_filter(selected_area=''):
-    query = Project.query
-    if g.user.is_admin:
-        if selected_area:
-            query = query.filter(Project.area_responsavel == selected_area)
-        return query.order_by(Project.titulo.asc()).all()
-
-    user_areas = g.user.get_areas()
-    if not user_areas:
-        return []
-
-    query = query.filter(Project.area_responsavel.in_(user_areas))
-    if selected_area:
-        if selected_area not in user_areas:
-            return []
-        query = query.filter(Project.area_responsavel == selected_area)
-
-    return query.order_by(Project.titulo.asc()).all()
-
-
 def _render_task_hub(locked_project=None, template_name='task_hub.html', include_archived=False):
     filter_values = _read_task_filter_values(request.args)
     selected_area = filter_values['selected_area']
