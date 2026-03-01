@@ -95,7 +95,6 @@
     border: 1px solid #d8e4f0;
     background: #fff;
     box-shadow: 0 6px 16px rgba(18, 56, 91, 0.08);
-    height: var(--td-kanban-card-slot-height);
     min-height: var(--td-kanban-card-slot-height);
     padding: 0.56rem 0.6rem 0.6rem;
     display: flex;
@@ -274,20 +273,13 @@
     color: #2f4864;
     font-size: var(--ds-font-size-sm);
     line-height: var(--ds-line-height-normal);
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
     word-break: break-word;
     min-height: 0;
     flex: 1 1 auto;
-    overflow: hidden;
 }
 
 .task-detail-v2 .task-hub-kanban-context {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
+    word-break: break-word;
 }
 
 .task-detail-v2 .task-items-kanban-meta {

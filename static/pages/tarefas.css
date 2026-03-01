@@ -712,7 +712,7 @@
 }
 
 .task-hub-page .task-hub-kanban-context {
-    margin: -0.14rem 0 0.26rem;
+    margin: 0 0 0.26rem;
     color: #6b849f;
     font-size: var(--ds-font-size-2xs);
     line-height: 1.3;
