@@ -166,7 +166,7 @@
         backdrop-filter: blur(18px);
         border: 1px solid rgba(255, 255, 255, 0.18) !important;
         box-shadow: 0 8px 28px rgba(0, 90, 146, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.34);
-        transition: box-shadow var(--transition-speed) ease, border-color var(--transition-speed) ease;
+        transition: box-shadow var(--ds-transition-slow) ease, border-color var(--ds-transition-slow) ease;
         position: relative;
         overflow: hidden;
     }
@@ -215,7 +215,7 @@
     }
 
     .dashboard-page-v2 .glass-icon-wrapper {
-        transition: box-shadow var(--transition-speed) ease, border-color var(--transition-speed) ease;
+        transition: box-shadow var(--ds-transition-slow) ease, border-color var(--ds-transition-slow) ease;
     }
 
     .dashboard-page-v2 .dashboard-glass-card .card-body {
@@ -280,7 +280,7 @@
     }
 
     .dashboard-page-v2 .glass-card-title {
-        color: var(--primary-color);
+        color: var(--ds-color-primary-600);
         text-shadow: none;
         font-weight: var(--ds-font-weight-bold);
     }
@@ -316,15 +316,15 @@
     .dashboard-page-v2 .glass-btn-sm {
         background: linear-gradient(135deg, rgba(0, 90, 146, 0.1) 0%, rgba(0, 90, 146, 0.05) 100%);
         border: 1px solid rgba(0, 90, 146, 0.22) !important;
-        color: var(--primary-color) !important;
-        transition: background var(--transition-speed) ease, border-color var(--transition-speed) ease;
+        color: var(--ds-color-primary-600) !important;
+        transition: background var(--ds-transition-slow) ease, border-color var(--ds-transition-slow) ease;
     }
 
     .dashboard-page-v2 .glass-btn-sm:hover {
         background: linear-gradient(135deg, rgba(0, 90, 146, 0.16) 0%, rgba(0, 90, 146, 0.09) 100%);
         border-color: rgba(0, 90, 146, 0.32) !important;
         transform: none;
-        color: var(--primary-dark) !important;
+        color: var(--ds-color-primary-700) !important;
     }
 
     .dashboard-page-v2 .glass-table-wrapper {
@@ -338,14 +338,14 @@
 
     .dashboard-page-v2 .glass-table-header th {
         border: none !important;
-        color: var(--primary-color);
+        color: var(--ds-color-primary-600);
         font-weight: var(--ds-font-weight-bold);
         font-size: var(--ds-font-size-sm);
     }
 
     .dashboard-page-v2 .glass-table-row {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
-        transition: background var(--transition-speed) ease;
+        transition: background var(--ds-transition-slow) ease;
         border: none !important;
     }
 
@@ -388,8 +388,8 @@
     }
 
     .dashboard-page-v2 .glass-link {
-        color: var(--primary-color) !important;
-        transition: color var(--transition-speed) ease;
+        color: var(--ds-color-primary-600) !important;
+        transition: color var(--ds-transition-slow) ease;
         text-shadow: none;
         font-size: var(--ds-font-size-base);
         display: block;
@@ -397,7 +397,7 @@
     }
 
     .dashboard-page-v2 .glass-link:hover {
-        color: var(--primary-dark) !important;
+        color: var(--ds-color-primary-700) !important;
         text-shadow: none;
         transform: none;
     }

@@ -101,11 +101,7 @@ def _resolve_admin_ids_for_area(area):
         user_id
         for (user_id,) in UserArea.query.with_entities(UserArea.user_id).filter(UserArea.area == area).all()
     }
-    legacy_area_user_ids = {
-        user_id
-        for (user_id,) in User.query.with_entities(User.id).filter(User.area_responsavel == area).all()
-    }
-    scoped_admin_ids = admin_ids.intersection(area_user_ids.union(legacy_area_user_ids))
+    scoped_admin_ids = admin_ids.intersection(area_user_ids)
     if scoped_admin_ids:
         return scoped_admin_ids
     return admin_ids

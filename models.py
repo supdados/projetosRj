@@ -59,7 +59,6 @@ class User(db.Model):
     password_hash = db.Column(db.String(200), nullable=False) # Aumentado para acomodar hashes mais longos
     name = db.Column(db.String(120), nullable=False)
     orgao = db.Column(db.String(100), nullable=True)
-    area_responsavel = db.Column(db.String(100), nullable=True) # DEPRECATED: mantido para compatibilidade durante migração
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     
     # Relacionamento com múltiplas áreas

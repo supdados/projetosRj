@@ -66,7 +66,6 @@ def create_admin_user():
 
         # Campos opcionais
         orgao = input("Digite o órgão (opcional, pressione Enter para pular): ").strip()
-        area_responsavel = input("Digite a área responsável (opcional, pressione Enter para pular): ").strip()
 
         try:
             # Cria a instância do usuário com os dados fornecidos
@@ -74,7 +73,6 @@ def create_admin_user():
                 username=username,
                 name=name,
                 orgao=orgao or None,  # Salva como NULL se a string for vazia
-                area_responsavel=area_responsavel or None, # Salva como NULL se a string for vazia
                 is_admin=True  # Define o usuário como administrador
             )
 

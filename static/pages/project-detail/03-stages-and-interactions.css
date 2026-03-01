@@ -340,8 +340,8 @@
         -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         border-radius: 8px;
-        color: var(--text-color);
-        transition: all var(--transition-speed) ease;
+        color: var(--ds-color-text-primary);
+        transition: all var(--ds-transition-slow) ease;
     }
 
     .form-control:focus,
@@ -354,7 +354,7 @@
     }
 
     .form-label {
-        color: var(--text-color);
+        color: var(--ds-color-text-primary);
         font-weight: var(--ds-font-weight-medium);
         margin-bottom: 0.5rem;
     }
@@ -446,7 +446,7 @@
     .etapa-draggable-row {
         /* cursor: grab !important; */
         /* Removido para que apenas o handle seja 'grab' */
-        transition: all var(--transition-speed) ease;
+        transition: all var(--ds-transition-slow) ease;
         position: relative;
     }
 
@@ -474,9 +474,9 @@
         right: 0;
         height: 3px;
         background: linear-gradient(90deg,
-                var(--primary-color) 0%,
+                var(--ds-color-primary-600) 0%,
                 rgba(0, 90, 146, 0.8) 50%,
-                var(--primary-color) 100%);
+                var(--ds-color-primary-600) 100%);
         border-radius: 2px;
         z-index: 1000;
         opacity: 0;
@@ -498,7 +498,7 @@
         top: -3px;
         width: 9px;
         height: 9px;
-        background: var(--primary-color);
+        background: var(--ds-color-primary-600);
         border-radius: 50%;
         box-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
     }
@@ -510,7 +510,7 @@
         top: -3px;
         width: 9px;
         height: 9px;
-        background: var(--primary-color);
+        background: var(--ds-color-primary-600);
         border-radius: 50%;
         box-shadow: 0 2px 4px rgba(0, 90, 146, 0.3);
     }
@@ -523,7 +523,7 @@
         box-shadow: 0 8px 32px rgba(0, 90, 146, 0.2);
         border-radius: 12px;
         padding: 1rem 1.5rem;
-        color: var(--text-color);
+        color: var(--ds-color-text-primary);
         opacity: 0.95;
     }
 

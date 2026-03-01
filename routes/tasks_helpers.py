@@ -317,12 +317,6 @@ def _get_assignable_users_for_area(area):
         ]
         candidate_ids.update(area_user_ids)
 
-        legacy_area_ids = [
-            user_id
-            for (user_id,) in User.query.with_entities(User.id).filter(User.area_responsavel == area).all()
-        ]
-        candidate_ids.update(legacy_area_ids)
-
     if not candidate_ids:
         return []
 

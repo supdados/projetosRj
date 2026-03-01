@@ -5,7 +5,7 @@ from flask import abort, g
 from sqlalchemy import func, inspect
 
 from abep_catalog import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
-from models import AreaCatalog, Project, ProjectHistory, User, UserArea, db
+from models import AreaCatalog, Project, ProjectHistory, UserArea, db
 from objective_catalog import (
     OBJETIVO_IDS,
     get_indicadores_por_resultado,
@@ -72,17 +72,6 @@ def _collect_referenced_area_names():
                 .all()
             )
         )
-    if 'user' in table_names:
-        candidates.extend(
-            area
-            for (area,) in (
-                db.session.query(User.area_responsavel)
-                .filter(User.area_responsavel.isnot(None))
-                .distinct()
-                .all()
-            )
-        )
-
     unique_names = []
     seen = set()
     for candidate in candidates:

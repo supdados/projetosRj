@@ -1,7 +1,7 @@
 from flask import flash, redirect, render_template, request, url_for
 from sqlalchemy import func
 
-from models import AreaCatalog, Project, User, UserArea, db
+from models import AreaCatalog, Project, UserArea, db
 
 from .blueprint import main_bp
 from .decorators import admin_required, login_required
@@ -108,10 +108,6 @@ def edit_area(area_id):
                     synchronize_session=False,
                 )
             )
-            User.query.filter(User.area_responsavel == old_name).update(
-                {User.area_responsavel: normalized_name},
-                synchronize_session=False,
-            )
             area.name = normalized_name
             db.session.commit()
         except Exception as exc:
@@ -153,10 +149,6 @@ def delete_area(area_id):
     try:
         removed_user_links = UserArea.query.filter(UserArea.area == area.name).delete(
             synchronize_session=False
-        )
-        User.query.filter(User.area_responsavel == area.name).update(
-            {User.area_responsavel: None},
-            synchronize_session=False,
         )
         db.session.delete(area)
         db.session.commit()

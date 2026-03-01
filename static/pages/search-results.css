@@ -22,7 +22,7 @@
     }
 
     .search-results-title i {
-        color: var(--primary-color);
+        color: var(--ds-color-primary-600);
     }
 
     .search-results-subtitle {
@@ -59,7 +59,7 @@
         border: none;
         border-radius: 11px;
         padding: 0.58rem 1.05rem;
-        background: var(--primary-color);
+        background: var(--ds-color-primary-600);
         color: #fff;
         font-weight: var(--ds-font-weight-semibold);
     }

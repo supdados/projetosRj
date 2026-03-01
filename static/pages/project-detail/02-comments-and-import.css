@@ -101,8 +101,8 @@
         width: 48px;
         height: 48px;
         background: linear-gradient(135deg,
-                var(--primary-color) 0%,
-                var(--primary-dark) 100%);
+                var(--ds-color-primary-600) 0%,
+                var(--ds-color-primary-700) 100%);
         border-radius: 12px;
         display: flex;
         align-items: center;
@@ -203,8 +203,8 @@
         width: 32px;
         height: 32px;
         background: linear-gradient(135deg,
-                var(--primary-color) 0%,
-                var(--primary-dark) 100%);
+                var(--ds-color-primary-600) 0%,
+                var(--ds-color-primary-700) 100%);
         border-radius: 8px;
         display: flex;
         align-items: center;
@@ -247,7 +247,7 @@
 
     .label-icon-import {
         font-size: var(--ds-font-size-sm);
-        color: var(--primary-color);
+        color: var(--ds-color-primary-600);
         opacity: 0.8;
     }
 
@@ -272,7 +272,7 @@
     .form-select-glass-import:focus,
     .form-control-glass-import:focus {
         outline: none;
-        border-color: var(--primary-color);
+        border-color: var(--ds-color-primary-600);
         box-shadow: 0 4px 12px rgba(0, 90, 146, 0.15);
         background: #ffffff;
     }
@@ -289,7 +289,7 @@
 
     .form-text-import i {
         font-size: var(--ds-font-size-xs);
-        color: var(--primary-color);
+        color: var(--ds-color-primary-600);
     }
 
     /* Preview List */
@@ -317,7 +317,7 @@
     .preview-item-number {
         width: 28px;
         height: 28px;
-        background: var(--primary-color);
+        background: var(--ds-color-primary-600);
         color: white;
         border-radius: 7px;
         display: flex;
@@ -403,16 +403,16 @@
 
     .btn-glass-primary-import {
         background: linear-gradient(135deg,
-                var(--primary-color) 0%,
-                var(--primary-dark) 100%);
+                var(--ds-color-primary-600) 0%,
+                var(--ds-color-primary-700) 100%);
         color: white;
         box-shadow: 0 4px 12px rgba(0, 90, 146, 0.25);
     }
 
     .btn-glass-primary-import:hover {
         background: linear-gradient(135deg,
-                var(--primary-dark) 0%,
-                var(--primary-color) 100%);
+                var(--ds-color-primary-700) 0%,
+                var(--ds-color-primary-600) 100%);
         box-shadow: 0 6px 16px rgba(0, 90, 146, 0.35);
     }
 
@@ -424,7 +424,7 @@
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         color: white !important;
-        transition: all var(--transition-speed) ease;
+        transition: all var(--ds-transition-slow) ease;
     }
 
     .btn-warning:hover {
