@@ -1409,6 +1409,128 @@
     margin-bottom: 0;
 }
 
+.skeleton-login-page {
+    min-height: calc(100vh - 220px);
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+}
+
+.skeleton-login-card {
+    width: min(100%, 430px);
+    margin-bottom: 0;
+    padding: 2rem 1.75rem;
+    border-radius: 16px;
+}
+
+.skeleton-login-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 1.4rem;
+}
+
+.skeleton-login-brand-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    margin-bottom: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.skeleton-login-brand-glyph {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-login-title {
+    width: 168px;
+    height: 30px;
+    margin-bottom: 0.35rem;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-login-subtitle {
+    width: min(260px, 90%);
+    height: 14px;
+    margin-bottom: 0;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+.skeleton-login-field {
+    margin-bottom: 0.95rem;
+}
+
+.skeleton-login-label {
+    width: 92px;
+    height: 12px;
+    margin-bottom: 0.45rem;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-login-input-group {
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-login-input-icon {
+    width: 42px;
+    height: 46px;
+    border-radius: 0;
+    flex: 0 0 auto;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-login-input {
+    flex: 1;
+    height: 14px;
+    margin-bottom: 0;
+    padding: 0;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-login-submit {
+    width: 100%;
+    height: 46px;
+    border-radius: 12px;
+    margin-top: 0.55rem;
+    margin-bottom: 0;
+    background: linear-gradient(90deg, #eee 0%, #f5f5f5 50%, #eee 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@media (max-width: 576px) {
+    .skeleton-login-page {
+        padding: 0.8rem 0.3rem;
+    }
+
+    .skeleton-login-card {
+        padding: 1.5rem 1rem;
+    }
+}
+
 /* Estilos específicos para a página inicial (dashboard) na versão desktop */
 @media (min-width: 768px) {
     
@@ -1514,4 +1636,3 @@
         background-position: -200% 0;
     }
 }
-

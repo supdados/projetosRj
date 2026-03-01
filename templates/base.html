@@ -9,7 +9,6 @@
     <!-- Meta tag para evitar redimensionamento visual -->
     <meta name="format-detection" content="telephone=no">
     <meta name="theme-color" content="#005A92" id="appThemeColorMeta">
-    {% if current_user_obj %}
     <script>
         (function() {
             var storageKey = 'projetosrj.theme';
@@ -30,7 +29,6 @@
             root.setAttribute('data-theme', theme);
         })();
     </script>
-    {% endif %}
     
     <!-- Favicon -->
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
@@ -396,6 +394,8 @@
                 {% set skeleton_type = 'templates_list' %}
             {% elif skeleton_endpoint == 'main.create_template' or skeleton_endpoint == 'main.edit_template' %}
                 {% set skeleton_type = 'templates_form' %}
+            {% elif skeleton_endpoint == 'main.login_page' %}
+                {% set skeleton_type = 'login' %}
             {% elif skeleton_endpoint == 'main.project_detail' %}
                 {% set skeleton_type = 'project_detail' %}
             {% elif skeleton_endpoint == 'main.task_detail' %}
@@ -846,6 +846,36 @@
                         {% endfor %}
                     </div>
                 </div>
+                {% elif kind == 'login' %}
+                <div class="skeleton-page login-page skeleton-login-page">
+                    <div class="login-card skeleton-card skeleton-login-card">
+                        <div class="login-brand skeleton-login-brand">
+                            <div class="login-brand-icon skeleton-login-brand-icon">
+                                <span class="skeleton-login-brand-glyph" aria-hidden="true"></span>
+                            </div>
+                            <div class="login-title skeleton-login-title" aria-hidden="true"></div>
+                            <div class="login-subtitle skeleton-login-subtitle" aria-hidden="true"></div>
+                        </div>
+
+                        <div class="login-field skeleton-login-field">
+                            <div class="login-field-label skeleton-login-label" aria-hidden="true"></div>
+                            <div class="login-input-group skeleton-login-input-group">
+                                <span class="login-input-icon skeleton-login-input-icon" aria-hidden="true"></span>
+                                <div class="login-input skeleton-login-input" aria-hidden="true"></div>
+                            </div>
+                        </div>
+
+                        <div class="login-field skeleton-login-field">
+                            <div class="login-field-label skeleton-login-label" aria-hidden="true"></div>
+                            <div class="login-input-group skeleton-login-input-group">
+                                <span class="login-input-icon skeleton-login-input-icon" aria-hidden="true"></span>
+                                <div class="login-input skeleton-login-input" aria-hidden="true"></div>
+                            </div>
+                        </div>
+
+                        <div class="btn login-submit skeleton-login-submit" aria-hidden="true"></div>
+                    </div>
+                </div>
                 {% else %}
                 <div class="skeleton-page skeleton-generic-page">
                     <div class="skeleton-header"></div>
@@ -892,7 +922,7 @@
                     {{ render_skeleton(skeleton_type) }}
                 </div>
                 <div id="skeleton-template-store" hidden aria-hidden="true">
-                    {% for kind in ['dashboard', 'projects', 'pending', 'tasks', 'project_tasks', 'search', 'templates_list', 'templates_form', 'project_detail', 'task_detail', 'generic'] %}
+                    {% for kind in ['dashboard', 'projects', 'pending', 'tasks', 'project_tasks', 'search', 'templates_list', 'templates_form', 'login', 'project_detail', 'task_detail', 'generic'] %}
                     <template data-skeleton-template="{{ kind }}">
                         {{ render_skeleton(kind) }}
                     </template>
