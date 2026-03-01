@@ -212,26 +212,40 @@
                     {% set nao_iniciada_pct = 0 %}
                     {% endif %}
 
-                    <!-- KPI summary row -->
-                    <div class="tasks-kpi-summary">
-                        <div class="tasks-kpi-number-card">
-                            <span class="tasks-kpi-big-number">{{ dashboard_open_tasks_count }}</span>
-                            <span class="tasks-kpi-big-label">Tarefas Abertas</span>
+                    <!-- Priority breakdown -->
+                    <div class="tasks-kpi-priority-section">
+                        <div class="tasks-kpi-progress-header">
+                            <span class="tasks-kpi-progress-title">Por prioridade</span>
+                            <span class="tasks-kpi-progress-total">{{ dashboard_open_tasks_count }} abertas</span>
                         </div>
-                        <div class="tasks-kpi-number-card">
-                            <span class="tasks-kpi-big-number">{{ dashboard_open_items_count }}</span>
-                            <span class="tasks-kpi-big-label">Itens Abertos</span>
-                        </div>
-                        <div class="tasks-kpi-number-card tasks-kpi-done-card">
-                            <span class="tasks-kpi-big-number">{{ task_items_finalizada }}</span>
-                            <span class="tasks-kpi-big-label">Concluídos</span>
+                        <div class="tasks-kpi-priority-grid">
+                            <a href="{{ url_for('main.list_tasks', prioridade='urgente') }}" class="tasks-kpi-priority-row" data-area-nav>
+                                <span class="tasks-kpi-priority-dot prio-urgente"></span>
+                                <span class="tasks-kpi-priority-label">Urgente</span>
+                                <span class="tasks-kpi-priority-count">{{ task_urgente_count }}</span>
+                            </a>
+                            <a href="{{ url_for('main.list_tasks', prioridade='alta') }}" class="tasks-kpi-priority-row" data-area-nav>
+                                <span class="tasks-kpi-priority-dot prio-alta"></span>
+                                <span class="tasks-kpi-priority-label">Alta</span>
+                                <span class="tasks-kpi-priority-count">{{ task_alta_count }}</span>
+                            </a>
+                            <a href="{{ url_for('main.list_tasks', prioridade='media') }}" class="tasks-kpi-priority-row" data-area-nav>
+                                <span class="tasks-kpi-priority-dot prio-media"></span>
+                                <span class="tasks-kpi-priority-label">Média</span>
+                                <span class="tasks-kpi-priority-count">{{ task_media_count }}</span>
+                            </a>
+                            <a href="{{ url_for('main.list_tasks', prioridade='baixa') }}" class="tasks-kpi-priority-row" data-area-nav>
+                                <span class="tasks-kpi-priority-dot prio-baixa"></span>
+                                <span class="tasks-kpi-priority-label">Baixa</span>
+                                <span class="tasks-kpi-priority-count">{{ task_baixa_count }}</span>
+                            </a>
                         </div>
                     </div>
 
-                    <!-- Progress bar chart -->
+                    <!-- Status stacked bar -->
                     <div class="tasks-kpi-progress-section">
                         <div class="tasks-kpi-progress-header">
-                            <span class="tasks-kpi-progress-title">Itens por Status</span>
+                            <span class="tasks-kpi-progress-title">Por status</span>
                             <span class="tasks-kpi-progress-total">{{ task_items_total }} total</span>
                         </div>
                         <div class="tasks-kpi-stacked-bar">
@@ -245,55 +259,36 @@
                             <div class="tasks-kpi-bar-segment bar-empty tasks-kpi-bar-full"></div>
                             {% endif %}
                         </div>
-                        <div class="tasks-kpi-simple-legend" aria-label="Legenda dos itens por status">
-                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-finalizada"></span>Finalizada</span>
-                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-em-andamento"></span>Em andamento</span>
-                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-para-validacao"></span>Para validação</span>
-                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-para-ajustes"></span>Para ajustes</span>
-                            <span class="tasks-kpi-simple-item"><span class="tasks-kpi-simple-dot status-nao-iniciada"></span>Não iniciada</span>
+                        <div class="tasks-kpi-simple-legend" aria-label="Legenda por status">
+                            <a href="{{ url_for('main.list_tasks', status='finalizada') }}" class="tasks-kpi-simple-item" data-area-nav><span class="tasks-kpi-simple-dot status-finalizada"></span>Concluída</a>
+                            <a href="{{ url_for('main.list_tasks', status='em_andamento') }}" class="tasks-kpi-simple-item" data-area-nav><span class="tasks-kpi-simple-dot status-em-andamento"></span>Andamento</a>
+                            <a href="{{ url_for('main.list_tasks', status='para_validacao') }}" class="tasks-kpi-simple-item" data-area-nav><span class="tasks-kpi-simple-dot status-para-validacao"></span>Validação</a>
+                            <a href="{{ url_for('main.list_tasks', status='para_ajustes') }}" class="tasks-kpi-simple-item" data-area-nav><span class="tasks-kpi-simple-dot status-para-ajustes"></span>Ajustes</a>
+                            <a href="{{ url_for('main.list_tasks', status='nao_iniciada') }}" class="tasks-kpi-simple-item" data-area-nav><span class="tasks-kpi-simple-dot status-nao-iniciada"></span>N. iniciada</a>
                         </div>
                     </div>
 
-                    <!-- Donut chart via SVG -->
-                    {% if task_items_total > 0 %}
-                    <div class="tasks-kpi-donut-section">
-                        <div class="tasks-kpi-donut-wrap">
-                            <svg
-                                viewBox="0 0 36 36"
-                                class="tasks-kpi-donut-svg"
-                                role="img"
-                                aria-label="Itens por status: {{ finalizada_pct | round(0) | int }}% finalizada, {{ andamento_pct | round(0) | int }}% em andamento, {{ para_validacao_pct | round(0) | int }}% para validação, {{ para_ajustes_pct | round(0) | int }}% para ajustes e {{ nao_iniciada_pct | round(0) | int }}% não iniciada.">
-                                <circle class="tasks-kpi-donut-ring" cx="18" cy="18" r="15.915"></circle>
-                                <circle class="tasks-kpi-donut-seg seg-finalizada" cx="18" cy="18" r="15.915"
-                                    stroke-dasharray="{{ finalizada_pct }} {{ 100 - finalizada_pct }}"
-                                    stroke-dashoffset="25"
-                                    data-bs-toggle="tooltip"
-                                    title="Finalizada: {{ task_items_finalizada }} ({{ finalizada_pct }}%)"></circle>
-                                <circle class="tasks-kpi-donut-seg seg-em-andamento" cx="18" cy="18" r="15.915"
-                                    stroke-dasharray="{{ andamento_pct }} {{ 100 - andamento_pct }}"
-                                    stroke-dashoffset="{{ 25 - finalizada_pct }}"
-                                    data-bs-toggle="tooltip"
-                                    title="Em andamento: {{ task_items_em_andamento }} ({{ andamento_pct }}%)"></circle>
-                                <circle class="tasks-kpi-donut-seg seg-para-validacao" cx="18" cy="18" r="15.915"
-                                    stroke-dasharray="{{ para_validacao_pct }} {{ 100 - para_validacao_pct }}"
-                                    stroke-dashoffset="{{ 25 - finalizada_pct - andamento_pct }}"
-                                    data-bs-toggle="tooltip"
-                                    title="Para validação: {{ task_items_para_validacao }} ({{ para_validacao_pct }}%)"></circle>
-                                <circle class="tasks-kpi-donut-seg seg-para-ajustes" cx="18" cy="18" r="15.915"
-                                    stroke-dasharray="{{ para_ajustes_pct }} {{ 100 - para_ajustes_pct }}"
-                                    stroke-dashoffset="{{ 25 - finalizada_pct - andamento_pct - para_validacao_pct }}"
-                                    data-bs-toggle="tooltip"
-                                    title="Para ajustes: {{ task_items_para_ajustes }} ({{ para_ajustes_pct }}%)"></circle>
-                                <circle class="tasks-kpi-donut-seg seg-nao-iniciada" cx="18" cy="18" r="15.915"
-                                    stroke-dasharray="{{ nao_iniciada_pct }} {{ 100 - nao_iniciada_pct }}"
-                                    stroke-dashoffset="{{ 25 - finalizada_pct - andamento_pct - para_validacao_pct - para_ajustes_pct }}"
-                                    data-bs-toggle="tooltip"
-                                    title="Não iniciada: {{ task_items_nao_iniciada }} ({{ nao_iniciada_pct }}%)"></circle>
-                            </svg>
-                            <div class="tasks-kpi-donut-center">
-                                <span class="tasks-kpi-donut-center-number">{{ finalizada_pct | round(0) | int }}%</span>
-                                <span class="tasks-kpi-donut-center-label">concluído</span>
-                            </div>
+                    <!-- Recent tasks mini-list -->
+                    {% if recent_tasks %}
+                    <div class="tasks-kpi-recent-section">
+                        <div class="tasks-kpi-progress-header">
+                            <span class="tasks-kpi-progress-title">Recentes</span>
+                        </div>
+                        <div class="tasks-kpi-recent-list">
+                            {% for t in recent_tasks %}
+                            <a href="{{ url_for('main.list_tasks', focus_task=t.id) }}" class="tasks-kpi-recent-item" data-area-nav title="{{ t.descricao }}">
+                                <span class="tasks-kpi-recent-status status-{{ t.status | replace('_', '-') }}"></span>
+                                <span class="tasks-kpi-recent-desc">{{ t.descricao }}</span>
+                                <div class="tasks-kpi-recent-meta">
+                                    {% if t.prioridade %}
+                                    <span class="tasks-kpi-recent-badge badge-{{ t.prioridade }}">{{ t.prioridade }}</span>
+                                    {% endif %}
+                                    {% if t.project %}
+                                    <span class="tasks-kpi-recent-project">{{ t.project.titulo | truncate(14, True, '…') }}</span>
+                                    {% endif %}
+                                </div>
+                            </a>
+                            {% endfor %}
                         </div>
                     </div>
                     {% endif %}

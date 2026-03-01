@@ -114,6 +114,30 @@ def dashboard():
     task_items_finalizada = count_tasks_by_status('finalizada')
     task_items_total = task_items_nao_iniciada + task_items_em_andamento + task_items_para_validacao + task_items_para_ajustes + task_items_finalizada
 
+    def count_open_tasks_by_priority(prioridade_value):
+        if prioridade_value is None:
+            q = db.session.query(db.func.count(Task.id)).select_from(Task).filter(
+                Task.prioridade.is_(None),
+                Task.status != 'finalizada',
+            )
+        else:
+            q = db.session.query(db.func.count(Task.id)).select_from(Task).filter(
+                Task.prioridade == prioridade_value,
+                Task.status != 'finalizada',
+            )
+        q = apply_task_visibility_rules(q, include_archived=False)
+        return int(q.scalar() or 0)
+
+    task_urgente_count = count_open_tasks_by_priority('urgente')
+    task_alta_count = count_open_tasks_by_priority('alta')
+    task_media_count = count_open_tasks_by_priority('media')
+    task_baixa_count = count_open_tasks_by_priority('baixa')
+    task_atencao_count = task_items_para_validacao + task_items_para_ajustes
+
+    recent_tasks_q = Task.query.filter(Task.status != 'finalizada')
+    recent_tasks_q = apply_task_visibility_rules(recent_tasks_q, include_archived=False)
+    recent_tasks = recent_tasks_q.order_by(Task.id.desc()).limit(6).all()
+
     dashboard_tasks = []
     dashboard_tasks_pagination = {
         'page': 1,
@@ -147,6 +171,12 @@ def dashboard():
         task_items_para_ajustes=task_items_para_ajustes,
         task_items_finalizada=task_items_finalizada,
         task_items_total=task_items_total,
+        task_urgente_count=task_urgente_count,
+        task_alta_count=task_alta_count,
+        task_media_count=task_media_count,
+        task_baixa_count=task_baixa_count,
+        task_atencao_count=task_atencao_count,
+        recent_tasks=recent_tasks,
         objetivos=objetivos,
         AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
     )
