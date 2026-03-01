@@ -219,8 +219,8 @@
     }
 
     .dashboard-page-v2 .dashboard-glass-card .card-body {
-        padding: 0.78rem 0.9rem;
-        min-height: 108px;
+        padding: 0.68rem 0.86rem;
+        min-height: 98px;
         display: flex;
         align-items: center;
     }
@@ -286,9 +286,9 @@
     }
 
     .dashboard-page-v2 .dashboard-section-header {
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
-        min-height: 64px;
+        padding-top: 0.36rem !important;
+        padding-bottom: 0.36rem !important;
+        min-height: 52px;
         display: flex;
         align-items: center;
     }
@@ -573,20 +573,35 @@
 
     .dashboard-page-v2 .tasks-kpi-stacked-bar {
         display: flex;
-        height: 14px;
-        border-radius: 999px;
+        height: 16px;
+        border-radius: 8px;
         overflow: hidden;
         background: #e8eff6;
+        border: 1px solid rgba(191, 208, 226, 0.72);
     }
 
     .dashboard-page-v2 .tasks-kpi-bar-segment {
+        display: block;
         height: 100%;
         min-width: 2px;
         transition: width 0.4s ease;
+        text-decoration: none;
+        position: relative;
     }
 
     .dashboard-page-v2 .tasks-kpi-bar-full {
         width: 100%;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-stacked-bar a.tasks-kpi-bar-segment {
+        cursor: pointer;
+    }
+
+    .dashboard-page-v2 .tasks-kpi-stacked-bar a.tasks-kpi-bar-segment:hover,
+    .dashboard-page-v2 .tasks-kpi-stacked-bar a.tasks-kpi-bar-segment:focus-visible {
+        filter: brightness(1.05);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+        z-index: 1;
     }
 
     .dashboard-page-v2 .tasks-kpi-simple-legend {
@@ -659,18 +674,19 @@
         gap: 0.4rem;
     }
     .dashboard-page-v2 .tasks-kpi-priority-grid {
-        display: flex;
-        gap: 0.3rem;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.26rem;
     }
     .dashboard-page-v2 .tasks-kpi-priority-row {
         display: flex;
         align-items: center;
         gap: 0.28rem;
-        padding: 0.38rem 0.5rem;
-        border-radius: 6px;
+        padding: 0.42rem 0.42rem;
+        min-height: 46px;
+        border-radius: 7px;
         background: rgba(255, 255, 255, 0.5);
         border: 1px solid rgba(200, 215, 230, 0.5);
-        flex: 1;
         min-width: 0;
         text-decoration: none;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -691,16 +707,17 @@
     .dashboard-page-v2 .tasks-kpi-priority-dot.prio-media   { background: #005A92; }
     .dashboard-page-v2 .tasks-kpi-priority-dot.prio-baixa   { background: #8198b1; }
     .dashboard-page-v2 .tasks-kpi-priority-label {
-        font-size: 0.72rem;
-        font-weight: var(--ds-font-weight-medium);
+        font-size: 0.73rem;
+        font-weight: var(--ds-font-weight-semibold);
         color: #4f6d8b;
         flex: 1;
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
     .dashboard-page-v2 .tasks-kpi-priority-count {
-        font-size: 0.78rem;
+        font-size: 0.84rem;
         font-weight: var(--ds-font-weight-bold);
         color: #1a4d7a;
         flex-shrink: 0;
@@ -725,8 +742,8 @@
         display: flex;
         align-items: center;
         gap: 0.45rem;
-        padding: 0.42rem 0.55rem;
-        height: 56px;
+        padding: 0.48rem 0.58rem;
+        height: 60px;
         border-radius: 6px;
         background: rgba(255, 255, 255, 0.5);
         border: 1px solid rgba(200, 215, 230, 0.5);
@@ -1030,6 +1047,7 @@
         }
     }
 
+
     @media (min-width: 992px) and (max-height: 900px) {
         .dashboard-page-v2 .dashboard-welcome-strip {
             margin-bottom: 0.45rem !important;
@@ -1248,6 +1266,17 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-prio
 }
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-priority-count {
     color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-stacked-bar,
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .bar-empty {
+    background: rgba(41, 57, 76, 0.92);
+    border-color: rgba(99, 166, 219, 0.28);
+}
+
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-stacked-bar a.tasks-kpi-bar-segment:hover,
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-stacked-bar a.tasks-kpi-bar-segment:focus-visible {
+    box-shadow: inset 0 0 0 1px rgba(232, 242, 252, 0.34);
 }
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-recent-item {

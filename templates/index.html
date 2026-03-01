@@ -258,11 +258,11 @@
                         </div>
                         <div class="tasks-kpi-stacked-bar">
                             {% if task_items_total > 0 %}
-                            <div class="tasks-kpi-bar-segment bar-finalizada" style="width: {{ finalizada_pct }}%" data-bs-toggle="tooltip" title="Finalizada: {{ task_items_finalizada }}"></div>
-                            <div class="tasks-kpi-bar-segment bar-em-andamento" style="width: {{ andamento_pct }}%" data-bs-toggle="tooltip" title="Em andamento: {{ task_items_em_andamento }}"></div>
-                            <div class="tasks-kpi-bar-segment bar-para-validacao" style="width: {{ para_validacao_pct }}%" data-bs-toggle="tooltip" title="Para validação: {{ task_items_para_validacao }}"></div>
-                            <div class="tasks-kpi-bar-segment bar-para-ajustes" style="width: {{ para_ajustes_pct }}%" data-bs-toggle="tooltip" title="Para ajustes: {{ task_items_para_ajustes }}"></div>
-                            <div class="tasks-kpi-bar-segment bar-nao-iniciada" style="width: {{ nao_iniciada_pct }}%" data-bs-toggle="tooltip" title="Não iniciada: {{ task_items_nao_iniciada }}"></div>
+                            <a href="{{ url_for('main.list_tasks', status='finalizada') }}" class="tasks-kpi-bar-segment bar-finalizada" style="width: {{ finalizada_pct }}%" data-bs-toggle="tooltip" title="Finalizada: {{ task_items_finalizada }}" aria-label="Ver tarefas finalizadas" data-area-nav></a>
+                            <a href="{{ url_for('main.list_tasks', status='em_andamento') }}" class="tasks-kpi-bar-segment bar-em-andamento" style="width: {{ andamento_pct }}%" data-bs-toggle="tooltip" title="Em andamento: {{ task_items_em_andamento }}" aria-label="Ver tarefas em andamento" data-area-nav></a>
+                            <a href="{{ url_for('main.list_tasks', status='para_validacao') }}" class="tasks-kpi-bar-segment bar-para-validacao" style="width: {{ para_validacao_pct }}%" data-bs-toggle="tooltip" title="Para validação: {{ task_items_para_validacao }}" aria-label="Ver tarefas para validação" data-area-nav></a>
+                            <a href="{{ url_for('main.list_tasks', status='para_ajustes') }}" class="tasks-kpi-bar-segment bar-para-ajustes" style="width: {{ para_ajustes_pct }}%" data-bs-toggle="tooltip" title="Para ajustes: {{ task_items_para_ajustes }}" aria-label="Ver tarefas para ajustes" data-area-nav></a>
+                            <a href="{{ url_for('main.list_tasks', status='nao_iniciada') }}" class="tasks-kpi-bar-segment bar-nao-iniciada" style="width: {{ nao_iniciada_pct }}%" data-bs-toggle="tooltip" title="Não iniciada: {{ task_items_nao_iniciada }}" aria-label="Ver tarefas não iniciadas" data-area-nav></a>
                             {% else %}
                             <div class="tasks-kpi-bar-segment bar-empty tasks-kpi-bar-full"></div>
                             {% endif %}
