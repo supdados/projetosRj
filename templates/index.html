@@ -8,7 +8,7 @@
 
 {% block content %}
 {% set user_areas = current_user_obj.get_areas() if current_user_obj else [] %}
-<div class="app-page-shell dashboard-page-v2 dashboard-page-breathe">
+<div class="app-page-shell dashboard-page-v2 dashboard-page-breathe" data-dashboard-density="compact">
     <div class="row">
         <div class="col-12">
             <header class="dashboard-welcome-strip mb-3">
@@ -149,7 +149,15 @@
                             <tbody>
                                 {% if recent_projects %}
                                     {% for project in recent_projects %}
-                                    <tr class="glass-table-row">
+                                    {% set project_density_class = '' %}
+                                    {% if loop.index >= 14 %}
+                                        {% set project_density_class = ' dashboard-project-row-cinema' %}
+                                    {% elif loop.index >= 12 %}
+                                        {% set project_density_class = ' dashboard-project-row-expanded' %}
+                                    {% elif loop.index >= 10 %}
+                                        {% set project_density_class = ' dashboard-project-row-comfortable' %}
+                                    {% endif %}
+                                    <tr class="glass-table-row{{ project_density_class }}">
                                         <td class="text-center dashboard-col-id">{{ project.id }}</td>
                                         <td class="dashboard-col-projeto">
                                             <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="text-decoration-none fw-medium glass-link">
@@ -276,15 +284,29 @@
                         </div>
                         <div class="tasks-kpi-recent-list">
                             {% for t in recent_tasks %}
-                            <a href="{{ url_for('main.list_tasks', focus_task=t.id) }}" class="tasks-kpi-recent-item" data-area-nav title="{{ t.descricao }}">
+                            {% set task_density_class = '' %}
+                            {% if loop.index >= 8 %}
+                                {% set task_density_class = ' tasks-kpi-recent-item-cinema' %}
+                            {% elif loop.index >= 6 %}
+                                {% set task_density_class = ' tasks-kpi-recent-item-expanded' %}
+                            {% elif loop.index >= 5 %}
+                                {% set task_density_class = ' tasks-kpi-recent-item-comfortable' %}
+                            {% endif %}
+                            <a href="{{ url_for('main.list_tasks', focus_task=t.id) }}" class="tasks-kpi-recent-item{{ task_density_class }}" data-area-nav title="{{ t.descricao }}">
                                 <span class="tasks-kpi-recent-status status-{{ t.status | replace('_', '-') }}"></span>
-                                <span class="tasks-kpi-recent-desc">{{ t.descricao }}</span>
-                                <div class="tasks-kpi-recent-meta">
+                                <div class="tasks-kpi-recent-copy">
+                                    <span class="tasks-kpi-recent-title">{{ t.descricao }}</span>
+                                    <span class="tasks-kpi-recent-project">
+                                        {% if t.project %}
+                                            {{ t.project.titulo }}
+                                        {% else %}
+                                            Sem projeto vinculado
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="tasks-kpi-recent-side">
                                     {% if t.prioridade %}
                                     <span class="tasks-kpi-recent-badge badge-{{ t.prioridade }}">{{ t.prioridade }}</span>
-                                    {% endif %}
-                                    {% if t.project %}
-                                    <span class="tasks-kpi-recent-project">{{ t.project.titulo | truncate(14, True, '…') }}</span>
                                     {% endif %}
                                 </div>
                             </a>
@@ -306,12 +328,102 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const dateEl = document.getElementById('dashboardWelcomeDate');
+        const dashboardPage = document.querySelector('.dashboard-page-v2[data-dashboard-density]');
+        const recentTasksList = dashboardPage ? dashboardPage.querySelector('.tasks-kpi-recent-list') : null;
+        const tasksCard = dashboardPage ? dashboardPage.querySelector('#dashboardTasksCard') : null;
+        let densityFrame = 0;
+        let dashboardResizeObserver = null;
+
+        function resolveDashboardDensity(width, height) {
+            if (width >= 1920 && height >= 1040) {
+                return 'cinema';
+            }
+            if (width >= 1680 && height >= 940) {
+                return 'expanded';
+            }
+            if (width >= 1440 && height >= 860) {
+                return 'comfortable';
+            }
+            return 'compact';
+        }
+
+        function applyDashboardDensity() {
+            if (!dashboardPage) {
+                return;
+            }
+            dashboardPage.dataset.dashboardDensity = resolveDashboardDensity(window.innerWidth, window.innerHeight);
+        }
+
+        function applyRecentTaskFit() {
+            if (!recentTasksList) {
+                return;
+            }
+
+            const items = Array.from(recentTasksList.querySelectorAll('.tasks-kpi-recent-item'));
+            if (!items.length) {
+                return;
+            }
+
+            items.forEach(function(item) {
+                item.classList.remove('is-fit-hidden');
+            });
+
+            const listRect = recentTasksList.getBoundingClientRect();
+            if (!listRect.height) {
+                return;
+            }
+
+            let shouldHideFollowing = false;
+            items.forEach(function(item) {
+                if (shouldHideFollowing) {
+                    item.classList.add('is-fit-hidden');
+                    return;
+                }
+
+                if (window.getComputedStyle(item).display === 'none') {
+                    return;
+                }
+
+                const itemRect = item.getBoundingClientRect();
+                if (itemRect.bottom > listRect.bottom + 1) {
+                    item.classList.add('is-fit-hidden');
+                    shouldHideFollowing = true;
+                }
+            });
+        }
+
+        function applyDashboardLayout() {
+            applyDashboardDensity();
+            applyRecentTaskFit();
+        }
+
+        function scheduleDashboardDensity() {
+            if (densityFrame) {
+                window.cancelAnimationFrame(densityFrame);
+            }
+            densityFrame = window.requestAnimationFrame(function() {
+                densityFrame = 0;
+                applyDashboardLayout();
+            });
+        }
 
         // Init tooltips for KPI bar segments
         if (typeof window.bootstrap !== 'undefined' && bootstrap.Tooltip) {
             document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
                 bootstrap.Tooltip.getOrCreateInstance(el);
             });
+        }
+
+        applyDashboardLayout();
+        window.requestAnimationFrame(scheduleDashboardDensity);
+        window.addEventListener('resize', scheduleDashboardDensity, { passive: true });
+        window.addEventListener('load', scheduleDashboardDensity, { once: true });
+
+        if (tasksCard && 'ResizeObserver' in window) {
+            dashboardResizeObserver = new ResizeObserver(function() {
+                scheduleDashboardDensity();
+            });
+            dashboardResizeObserver.observe(tasksCard);
         }
 
         if (dateEl) {

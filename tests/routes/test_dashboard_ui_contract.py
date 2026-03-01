@@ -5,7 +5,7 @@ from models import Project, db
 
 def test_dashboard_recent_projects_renders_maximum_9_rows(app, client_user):
     with app.app_context():
-        for index in range(1, 13):
+        for index in range(1, 19):
             project = Project(
                 titulo=f'Dashboard Limit Test {index:02d}',
                 area_responsavel='Auditoria',
@@ -23,10 +23,10 @@ def test_dashboard_recent_projects_renders_maximum_9_rows(app, client_user):
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    rendered_rows = re.findall(r'class="glass-table-row"', html)
-    assert len(rendered_rows) == 9
+    rendered_rows = re.findall(r'class="glass-table-row(?: [^"]+)?"', html)
+    assert len(rendered_rows) == 15
 
-    expected_visible_titles = [f'Dashboard Limit Test {index:02d}' for index in range(12, 3, -1)]
+    expected_visible_titles = [f'Dashboard Limit Test {index:02d}' for index in range(18, 3, -1)]
     expected_hidden_titles = [f'Dashboard Limit Test {index:02d}' for index in range(1, 4)]
 
     for title in expected_visible_titles:

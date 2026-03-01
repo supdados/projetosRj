@@ -23,7 +23,7 @@ def dashboard():
     if selected_area:
         project_query_base = project_query_base.filter(Project.area_responsavel == selected_area)
 
-    RECENT_PROJECTS_LIMIT = 9
+    RECENT_PROJECTS_LIMIT = 15
     recent_projects = project_query_base.order_by(Project.id.desc()).limit(RECENT_PROJECTS_LIMIT).all()
 
     def count_projects_for_user(filter_expression=None):
@@ -136,7 +136,7 @@ def dashboard():
 
     recent_tasks_q = Task.query.filter(Task.status != 'finalizada')
     recent_tasks_q = apply_task_visibility_rules(recent_tasks_q, include_archived=False)
-    recent_tasks = recent_tasks_q.order_by(Task.id.desc()).limit(6).all()
+    recent_tasks = recent_tasks_q.order_by(Task.id.desc()).limit(9).all()
 
     dashboard_tasks = []
     dashboard_tasks_pagination = {
