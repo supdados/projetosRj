@@ -1698,11 +1698,15 @@
             removeDragPlaceholder();
             if (!card) return null;
 
-            var rect = card.getBoundingClientRect();
+            var placeholderHeight = (
+                dragContext &&
+                Number.isFinite(dragContext.cardHeight) &&
+                dragContext.cardHeight > 0
+            ) ? dragContext.cardHeight : card.getBoundingClientRect().height;
             dragPlaceholder = document.createElement('div');
             dragPlaceholder.className = 'task-items-kanban-placeholder';
             dragPlaceholder.setAttribute('aria-hidden', 'true');
-            dragPlaceholder.style.height = Math.max(Math.round(rect.height), 40) + 'px';
+            dragPlaceholder.style.height = Math.max(Math.round(placeholderHeight), 40) + 'px';
             return dragPlaceholder;
         }
 
@@ -2670,6 +2674,7 @@
                 dragContext = {
                     itemId: card.getAttribute('data-item-id'),
                     previousStatus: card.getAttribute('data-status') || 'nao_iniciada',
+                    cardHeight: card.getBoundingClientRect().height,
                     originParent: card.parentNode,
                     originNextSibling: card.nextElementSibling,
                     didDrop: false,

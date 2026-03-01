@@ -53,7 +53,7 @@
     flex-direction: column;
     gap: var(--td-kanban-drop-gap);
     padding: 0.56rem;
-    min-height: calc((var(--td-kanban-card-slot-height) * 3) + (var(--td-kanban-drop-gap) * 2) + 1.12rem + 6px);
+    min-height: calc((var(--td-kanban-card-slot-height) * 3) + (var(--td-kanban-drop-gap) * 2) + 1.12rem);
     position: relative;
     transition: background-color 0.16s ease, box-shadow 0.16s ease;
 }
@@ -90,22 +90,36 @@
 }
 
 .task-detail-v2 .task-items-kanban-card {
+    box-sizing: border-box;
     border-radius: 10px;
     border: 1px solid #d8e4f0;
     background: #fff;
     box-shadow: 0 6px 16px rgba(18, 56, 91, 0.08);
+    height: var(--td-kanban-card-slot-height);
     min-height: var(--td-kanban-card-slot-height);
     padding: 0.56rem 0.6rem 0.6rem;
     display: flex;
     flex-direction: column;
     gap: 0.52rem;
-    cursor: grab;
+    cursor: pointer;
     transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
     outline: none;
+    overflow: hidden;
+}
+
+.task-detail-v2 .task-items-kanban-card-top,
+.task-detail-v2 .task-items-kanban-desc,
+.task-detail-v2 .task-hub-kanban-context,
+.task-detail-v2 .task-items-kanban-meta,
+.task-detail-v2 .task-items-kanban-owner,
+.task-detail-v2 .task-items-kanban-chips,
+.task-detail-v2 .task-items-kanban-badge,
+.task-detail-v2 .task-items-kanban-priority,
+.task-detail-v2 .task-items-kanban-tipo {
+    cursor: pointer;
 }
 
 .task-detail-v2 .task-items-kanban-card:hover {
-    transform: translateY(-1px);
     border-color: #bfd5ea;
     box-shadow: 0 10px 22px rgba(16, 53, 87, 0.12);
 }
@@ -135,11 +149,18 @@
 }
 
 .task-detail-v2 .task-items-kanban-card.is-dragging {
-    opacity: 0.28;
-    transform: scale(0.985);
-    border-color: #b7cee5;
-    box-shadow: 0 10px 22px rgba(18, 56, 91, 0.12);
+    opacity: 0;
+    height: 0;
+    min-height: 0;
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    box-shadow: none;
+    transform: none;
     cursor: grabbing;
+    overflow: hidden;
+    pointer-events: none;
 }
 
 @keyframes td-kanban-drop-settle {
@@ -224,6 +245,7 @@
     pointer-events: none;
     transform: translateY(-1px);
     transition: opacity 0.16s ease, transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+    cursor: pointer;
 }
 
 .task-detail-v2 .task-items-kanban-card:hover .task-items-kanban-delete-btn,
@@ -252,9 +274,20 @@
     color: #2f4864;
     font-size: var(--ds-font-size-sm);
     line-height: var(--ds-line-height-normal);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
     word-break: break-word;
     min-height: 0;
     flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.task-detail-v2 .task-hub-kanban-context {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
 }
 
 .task-detail-v2 .task-items-kanban-meta {
