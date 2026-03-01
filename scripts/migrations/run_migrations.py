@@ -20,7 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from sqlalchemy import inspect, text
+from sqlalchemy import MetaData, Table, inspect, select, text
 from app import app, db
 # Importe todos os modelos necessários de uma vez
 from models import User, UserArea, ProjectHistory, Project
@@ -38,19 +38,38 @@ def migrate_user_areas():
         # Garante que a tabela user_areas exista
         db.create_all()
 
-        users = User.query.all()
+        inspector = inspect(db.engine)
+        table_names = inspector.get_table_names()
+        if 'user' not in table_names:
+            print("   ✓ Tabela 'user' não encontrada; nada para migrar.")
+            return True
+
+        user_columns = {col['name'] for col in inspector.get_columns('user')}
+        if 'area_responsavel' not in user_columns:
+            print("   ✓ Coluna legada 'user.area_responsavel' não existe; nada para migrar.")
+            return True
+
+        user_table = Table('user', MetaData(), autoload_with=db.engine)
+        existing_links = {
+            (user_id, area)
+            for user_id, area in db.session.query(UserArea.user_id, UserArea.area).all()
+        }
+
         migrated_count = 0
-        
-        for user in users:
-            # Pula se o usuário já tiver áreas na nova tabela para evitar duplicatas
-            if UserArea.query.filter_by(user_id=user.id).first():
+        legacy_rows = db.session.execute(
+            select(user_table.c.id, user_table.c.area_responsavel)
+        ).all()
+
+        for user_id, legacy_area in legacy_rows:
+            normalized_area = (legacy_area or '').strip()
+            if not normalized_area:
                 continue
-            
-            # Se o campo antigo tiver valor, cria a nova entrada
-            if user.area_responsavel:
-                new_user_area = UserArea(user_id=user.id, area=user.area_responsavel)
-                db.session.add(new_user_area)
-                migrated_count += 1
+            if (user_id, normalized_area) in existing_links:
+                continue
+
+            db.session.add(UserArea(user_id=user_id, area=normalized_area))
+            existing_links.add((user_id, normalized_area))
+            migrated_count += 1
         
         db.session.commit()
         print(f"   ✓ Sucesso: {migrated_count} novas áreas foram migradas.")

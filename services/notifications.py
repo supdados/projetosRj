@@ -30,7 +30,7 @@ def _split_responsavel_names(raw_value):
     seen = set()
 
     for part in re.split(r'[,\n;]+', raw_value):
-        normalized = _normalize_person_name(part.lstrip('@'))
+        normalized = _normalize_person_name(part.strip().lstrip('@'))
         if not normalized:
             continue
         key = normalized.casefold()
