@@ -43,10 +43,11 @@ def list_projects():
         selected_status = 'Vigente'
 
     query = Project.query
+    user_areas = sorted(g.user.get_areas()) if not g.user.is_admin else []
+    can_filter_by_area = g.user.is_admin or len(user_areas) > 1
 
     # Filtro de área baseado no perfil do usuário E no filtro do formulário
     if not g.user.is_admin:
-        user_areas = g.user.get_areas()
         if user_areas:
             # Usuário não-admin com áreas: filtra pelas suas áreas
             query = query.filter(Project.area_responsavel.in_(user_areas))
@@ -128,12 +129,13 @@ def list_projects():
     # Opções para os dropdowns de filtro
     area_catalog_choices = get_area_catalog_choices()
 
-    # Áreas: se não for admin, suas áreas (se tiver). Se admin, catálogo dinâmico.
-    if not g.user.is_admin:
-        user_areas = g.user.get_areas()
-        areas_options_for_dropdown = sorted(user_areas) if user_areas else []
-    else:
+    # Áreas: admin vê o catálogo completo; usuário com múltiplas áreas vê apenas as áreas dele.
+    if g.user.is_admin:
         areas_options_for_dropdown = area_catalog_choices
+    elif can_filter_by_area:
+        areas_options_for_dropdown = user_areas
+    else:
+        areas_options_for_dropdown = []
 
     priorities_options = sorted(list(set(p.prioridade for p in Project.query.all() if p.prioridade)))
     statuses_options = sorted(list(set(p.status for p in Project.query.all() if p.status)))
@@ -161,8 +163,8 @@ def list_projects():
         has_active_filters = True
     if has_advanced_filters_active:
         has_active_filters = True
-    # Área só conta como filtro ativo se o usuário for admin
-    if g.user.is_admin and selected_area_filter:
+    # Área conta como filtro ativo apenas quando o usuário pode escolher entre múltiplas áreas.
+    if can_filter_by_area and selected_area_filter:
         has_active_filters = True
 
     return render_template(
@@ -172,6 +174,7 @@ def list_projects():
         total_pages=total_pages,
         total_projects=total_projects,
         search_query=search_query,
+        can_filter_by_area=can_filter_by_area,
         selected_priority=selected_priority,
         selected_status=selected_status,
         selected_area=selected_area_filter, 

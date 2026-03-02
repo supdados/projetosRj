@@ -1,7 +1,7 @@
 import datetime
 
 from abep_catalog import ABEP_INDICADORES_OPTIONS
-from models import Etapa, Indicador, IndicadorProjeto, Project, ProjectHistory, db
+from models import Etapa, Indicador, IndicadorProjeto, Project, ProjectHistory, User, UserArea, db
 
 
 def _valid_indicator_ids():
@@ -32,6 +32,49 @@ def test_projects_list_defaults_to_vigente_and_current_user_area(app, client_use
     assert 'Projeto Auditoria' in html
     assert 'Projeto VPD' not in html
     assert 'Projeto Auditoria Finalizado' not in html
+
+
+def test_projects_list_shows_area_filter_for_non_admin_with_multiple_areas(app, client, seed_data):
+    with app.app_context():
+        user = User(
+            username='user_multi_area',
+            name='Usuario Multi Area',
+            orgao='Orgao Multi',
+            is_admin=False,
+        )
+        user.set_password('senha123')
+        db.session.add(user)
+        db.session.flush()
+        db.session.add_all(
+            [
+                UserArea(user_id=user.id, area='Auditoria'),
+                UserArea(user_id=user.id, area='VPD'),
+            ]
+        )
+        db.session.commit()
+        user_id = user.id
+
+    with client.session_transaction() as session:
+        session['user_id'] = user_id
+
+    response = client.get('/projects')
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert 'id="filterArea"' in html
+    assert '<option value="Auditoria"' in html
+    assert '<option value="VPD"' in html
+    assert 'Projeto Auditoria' in html
+    assert 'Projeto VPD' in html
+
+    response = client.get('/projects', query_string={'area': 'VPD'})
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert 'id="filterArea"' in html
+    assert 'Projeto VPD' in html
+    assert 'Projeto Auditoria' not in html
+    assert '<option value="VPD" selected' in html
 
 
 def test_projects_list_applies_admin_advanced_filters(app, client_admin):
@@ -332,4 +375,3 @@ def test_delete_project_ajax_removes_project_from_database(app, client_user):
 
     with app.app_context():
         assert db.session.get(Project, project_id) is None
-
