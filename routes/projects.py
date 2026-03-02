@@ -238,14 +238,17 @@ def list_projetos_pendentes():
     visible_buckets = visible_buckets_by_period[filtro_periodo]
 
     query_projetos_base = Project.query.filter(Project.status == 'Vigente')
+    user_areas = sorted(g.user.get_areas()) if not g.user.is_admin else []
+    can_filter_by_area = g.user.is_admin or len(user_areas) > 1
 
     if g.user.is_admin:
         if selected_area_filter:
             query_projetos_base = query_projetos_base.filter(Project.area_responsavel == selected_area_filter)
     else:
-        user_areas = g.user.get_areas()
         if user_areas:
             query_projetos_base = query_projetos_base.filter(Project.area_responsavel.in_(user_areas))
+            if selected_area_filter and selected_area_filter in user_areas:
+                query_projetos_base = query_projetos_base.filter(Project.area_responsavel == selected_area_filter)
         else:
             query_projetos_base = query_projetos_base.filter(Project.id == -1)
 
@@ -256,6 +259,8 @@ def list_projetos_pendentes():
     areas_options_for_dropdown = []
     if g.user.is_admin:
         areas_options_for_dropdown = area_catalog_choices
+    elif can_filter_by_area:
+        areas_options_for_dropdown = user_areas
 
     objetivos, _, _ = get_goal_catalog_context()
 
@@ -265,6 +270,7 @@ def list_projetos_pendentes():
             projetos_com_etapas=[],
             objetivos=objetivos,
             AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
+            can_filter_by_area=can_filter_by_area,
             areas_options=areas_options_for_dropdown,
             selected_area=selected_area_filter,
             filtro_periodo=filtro_periodo,
@@ -442,6 +448,7 @@ def list_projetos_pendentes():
         projetos_com_etapas=projetos_pendentes_paginated,
         objetivos=objetivos,
         AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
+        can_filter_by_area=can_filter_by_area,
         areas_options=areas_options_for_dropdown,
         selected_area=selected_area_filter,
         filtro_periodo=filtro_periodo,

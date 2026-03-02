@@ -35,7 +35,7 @@
                 </select>
             </div>
 
-            {% if is_admin_user and areas_options %}
+            {% if can_filter_by_area and areas_options %}
             <div class="pending-field">
                 <label for="areaFilter">Área</label>
                 <select name="area" id="areaFilter">
