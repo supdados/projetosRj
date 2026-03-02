@@ -1086,7 +1086,7 @@
                 }
             }
 
-            function resizeDescricaoEditor(textarea) {
+            function resizeMultilineEditor(textarea) {
                 if (!textarea) {
                     return;
                 }
@@ -1129,9 +1129,19 @@
                     input.className = 'editable-field-textarea';
                     input.value = originalValue;
                     input.rows = 1;
-                    resizeDescricaoEditor(input);
+                    resizeMultilineEditor(input);
                     input.addEventListener('input', function () {
-                        resizeDescricaoEditor(input);
+                        resizeMultilineEditor(input);
+                    });
+                } else if (field === 'responsavel') {
+                    input = document.createElement('textarea');
+                    input.className = 'editable-field-textarea editable-field-textarea-responsavel';
+                    input.value = originalValue === '-' ? '' : originalValue;
+                    input.rows = 1;
+                    input.placeholder = 'Sem responsável';
+                    resizeMultilineEditor(input);
+                    input.addEventListener('input', function () {
+                        resizeMultilineEditor(input);
                     });
                 } else {
                     input = document.createElement('input');
@@ -1221,7 +1231,7 @@
                 input.addEventListener('blur', saveChanges);
 
                 input.addEventListener('keydown', function (event) {
-                    if (event.key === 'Enter' && field !== 'descricao') {
+                    if (event.key === 'Enter' && field !== 'descricao' && !event.shiftKey) {
                         event.preventDefault();
                         saveChanges();
                     } else if (event.key === 'Escape') {
@@ -2264,8 +2274,11 @@
                     input = await createIndicadoresContainer(ids, resultadoOriginal);
                 }
                 // Campos com select especial
-                else if (field === 'status' || field === 'prioridade' || field === 'special_project' || field === 'delivery_type' || field === 'abep_indicator') {
+                else if (field === 'status' || field === 'prioridade' || field === 'special_project' || field === 'delivery_type') {
                     input = createSelectForField(field, currentValue);
+                }
+                else if (field === 'abep_indicator') {
+                    input = createAbepIndicatorCombobox(currentValue);
                 }
                 // Área responsável - dropdown com áreas
                 else if (field === 'area_responsavel') {
@@ -2343,6 +2356,223 @@
         // Variáveis globais para dados EEGG
         let editDataCache = null;
         const ABEP_INDICADORES_OPTIONS = abepIndicatorsOptions;
+
+        function findAbepIndicatorOption(value) {
+            const normalizedValue = String(value || '').trim();
+            if (!normalizedValue) {
+                return null;
+            }
+            return ABEP_INDICADORES_OPTIONS.find(item => (
+                item.value === normalizedValue || item.label === normalizedValue
+            )) || null;
+        }
+
+        function createAbepIndicatorCombobox(currentValue) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'project-detail-abep-combobox';
+            wrapper.dataset.field = 'abep_indicator';
+            wrapper.dataset.originalValue = currentValue || '';
+            wrapper.innerHTML = `
+                <input
+                    type="text"
+                    class="project-detail-abep-input form-control form-control-sm"
+                    placeholder="Busque por número ou título..."
+                    autocomplete="off"
+                    role="combobox"
+                    aria-expanded="false"
+                    aria-haspopup="listbox">
+                <input type="hidden" class="project-detail-abep-hidden">
+            `;
+
+            const input = wrapper.querySelector('.project-detail-abep-input');
+            const hiddenInput = wrapper.querySelector('.project-detail-abep-hidden');
+            const dropdown = document.createElement('div');
+            dropdown.className = 'project-detail-abep-dropdown';
+            dropdown.setAttribute('role', 'listbox');
+            dropdown.setAttribute('hidden', '');
+            document.body.appendChild(dropdown);
+            const emptyState = document.createElement('div');
+            emptyState.className = 'project-detail-abep-option project-detail-abep-empty';
+            emptyState.hidden = true;
+            emptyState.textContent = 'Nenhum indicador encontrado';
+
+            Object.defineProperty(wrapper, 'value', {
+                configurable: true,
+                get() {
+                    return hiddenInput.value || '';
+                },
+                set(nextValue) {
+                    hiddenInput.value = nextValue || '';
+                },
+            });
+
+            const optionNodes = ABEP_INDICADORES_OPTIONS.map(item => {
+                const option = document.createElement('div');
+                option.className = 'project-detail-abep-option';
+                option.dataset.value = item.value;
+                option.dataset.label = item.label;
+                option.setAttribute('role', 'option');
+                option.textContent = item.label;
+                dropdown.appendChild(option);
+                return option;
+            });
+            dropdown.appendChild(emptyState);
+
+            function syncSelectedValue(nextValue) {
+                wrapper.value = nextValue || '';
+            }
+
+            function clearActiveOption() {
+                optionNodes.forEach(option => option.classList.remove('active'));
+            }
+
+            function getVisibleOptions() {
+                return optionNodes.filter(option => !option.classList.contains('hidden-by-filter'));
+            }
+
+            function filterOptions() {
+                const searchTerm = (input.value || '').trim().toLowerCase();
+                let visibleCount = 0;
+
+                optionNodes.forEach(option => {
+                    const label = (option.dataset.label || '').toLowerCase();
+                    const value = (option.dataset.value || '').toLowerCase();
+                    const matches = !searchTerm || label.includes(searchTerm) || value.includes(searchTerm);
+                    option.classList.toggle('hidden-by-filter', !matches);
+                    option.classList.remove('active');
+                    if (matches) {
+                        visibleCount += 1;
+                    }
+                });
+
+                emptyState.hidden = visibleCount > 0;
+            }
+
+            function updateDropdownPlacement() {
+                const rect = input.getBoundingClientRect();
+                const maxWidth = Math.max(220, window.innerWidth - 24);
+                const width = Math.min(Math.max(rect.width, 280), maxWidth);
+                const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
+                const availableBelow = Math.max(96, window.innerHeight - rect.bottom - 16);
+
+                dropdown.style.left = `${left}px`;
+                dropdown.style.top = `${rect.bottom + 4}px`;
+                dropdown.style.width = `${width}px`;
+                dropdown.style.maxHeight = `${Math.min(220, availableBelow)}px`;
+            }
+
+            function showDropdown() {
+                filterOptions();
+                updateDropdownPlacement();
+                dropdown.removeAttribute('hidden');
+                input.setAttribute('aria-expanded', 'true');
+            }
+
+            function hideDropdown() {
+                dropdown.setAttribute('hidden', '');
+                input.setAttribute('aria-expanded', 'false');
+                clearActiveOption();
+            }
+
+            function selectOption(option) {
+                syncSelectedValue(option.dataset.value || '');
+                input.value = option.dataset.label || option.textContent || '';
+                hideDropdown();
+            }
+
+            const currentOption = findAbepIndicatorOption(currentValue);
+            syncSelectedValue(currentOption ? currentOption.value : (currentValue || ''));
+            input.value = currentOption ? currentOption.label : (currentValue || '');
+
+            input.addEventListener('focus', showDropdown);
+            input.addEventListener('click', showDropdown);
+            input.addEventListener('input', function () {
+                syncSelectedValue('');
+                showDropdown();
+            });
+
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    hideDropdown();
+                    return;
+                }
+
+                const visibleOptions = getVisibleOptions();
+                if (!visibleOptions.length) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                    }
+                    return;
+                }
+
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    const activeOption = dropdown.querySelector('.project-detail-abep-option.active');
+                    let index = visibleOptions.indexOf(activeOption);
+                    index = index < 0 ? 0 : Math.min(index + 1, visibleOptions.length - 1);
+                    clearActiveOption();
+                    visibleOptions[index].classList.add('active');
+                    visibleOptions[index].scrollIntoView({ block: 'nearest' });
+                    return;
+                }
+
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    const activeOption = dropdown.querySelector('.project-detail-abep-option.active');
+                    let index = visibleOptions.indexOf(activeOption);
+                    index = index < 0 ? visibleOptions.length - 1 : Math.max(index - 1, 0);
+                    clearActiveOption();
+                    visibleOptions[index].classList.add('active');
+                    visibleOptions[index].scrollIntoView({ block: 'nearest' });
+                    return;
+                }
+
+                if (event.key === 'Enter') {
+                    const activeOption = dropdown.querySelector('.project-detail-abep-option.active');
+                    if (activeOption && !activeOption.classList.contains('hidden-by-filter')) {
+                        event.preventDefault();
+                        selectOption(activeOption);
+                    }
+                }
+            });
+
+            optionNodes.forEach(option => {
+                option.addEventListener('mousedown', function (event) {
+                    event.preventDefault();
+                });
+                option.addEventListener('click', function () {
+                    selectOption(option);
+                });
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!wrapper.contains(event.target) && !dropdown.contains(event.target)) {
+                    hideDropdown();
+                }
+            });
+
+            window.addEventListener('resize', function () {
+                if (!dropdown.hasAttribute('hidden')) {
+                    updateDropdownPlacement();
+                }
+            });
+
+            window.addEventListener('scroll', function () {
+                if (!dropdown.hasAttribute('hidden')) {
+                    updateDropdownPlacement();
+                }
+            }, true);
+
+            input.addEventListener('blur', function () {
+                setTimeout(function () {
+                    if (!wrapper.contains(document.activeElement) && !dropdown.contains(document.activeElement)) {
+                        hideDropdown();
+                    }
+                }, 120);
+            });
+
+            return wrapper;
+        }
 
         async function loadEditData() {
             if (editDataCache) return editDataCache;
@@ -2606,11 +2836,6 @@
                     { value: 'Fluxo Processual', label: 'Fluxo Processual' },
                     { value: 'Outro', label: 'Outro' }
                 ];
-            } else if (field === 'abep_indicator') {
-                options = [{ value: '', label: 'Não informado' }];
-                ABEP_INDICADORES_OPTIONS.forEach(item => {
-                    options.push({ value: item.value, label: item.label });
-                });
             }
 
             options.forEach(opt => {

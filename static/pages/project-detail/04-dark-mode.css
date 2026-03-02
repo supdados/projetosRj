@@ -513,6 +513,38 @@ html[data-theme="dark"] body.is-authenticated .editable-field-textarea:focus {
     box-shadow: 0 0 0 0.2rem rgba(78, 149, 204, 0.22);
 }
 
+html[data-theme="dark"] body.is-authenticated .project-detail-abep-input,
+html[data-theme="dark"] body.is-authenticated .project-detail-abep-dropdown {
+    background: #223144;
+    border-color: rgba(99, 166, 219, 0.34);
+    color: #d5e4f3;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-detail-abep-input::placeholder {
+    color: #a9bfd3;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-detail-abep-input:focus {
+    border-color: rgba(99, 166, 219, 0.58);
+    box-shadow: 0 0 0 0.2rem rgba(78, 149, 204, 0.22);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-detail-abep-option {
+    color: #cfdeec;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-detail-abep-option:hover,
+html[data-theme="dark"] body.is-authenticated .project-detail-abep-option.active {
+    background: rgba(78, 149, 204, 0.2);
+    color: #eef6fd;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-detail-abep-option.project-detail-abep-empty,
+html[data-theme="dark"] body.is-authenticated .project-detail-abep-option.project-detail-abep-empty:hover {
+    color: #9eb6cb;
+    background: transparent;
+}
+
 html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-responsavel .editable-field-empty,
 html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .editable-field-empty {
     background: rgba(35, 49, 68, 0.8);

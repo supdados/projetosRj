@@ -720,6 +720,12 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .responsavel-picke
     color: #a9bfd3;
 }
 
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .responsavel-picker-more {
+    background: rgba(78, 149, 204, 0.2);
+    color: #d7e7f5;
+    border: 1px solid rgba(99, 166, 219, 0.36);
+}
+
 html[data-theme="dark"] body.is-authenticated .responsavel-picker-popover {
     background: #2a394d;
     border-color: var(--app-color-border);
