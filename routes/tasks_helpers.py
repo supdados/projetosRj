@@ -612,14 +612,13 @@ def _render_task_hub(locked_project=None, template_name='task_hub.html', include
     user_areas = g.user.get_areas()
     show_area_selector = (locked_project is None) and (g.user.is_admin or len(user_areas) > 1)
     area_options = _build_task_hub_area_options(include_archived=include_archived) if show_area_selector else []
-    filter_form_endpoint = 'main.project_tasks' if locked_project else ('main.list_tasks_archived' if include_archived else 'main.list_tasks')
+    filter_form_endpoint = 'main.list_tasks_archived' if include_archived else 'main.list_tasks'
     filter_form_action = _build_task_listing_url(
         filter_form_endpoint,
-        project_id=locked_project.id if locked_project else None,
     )
+    clear_endpoint = 'main.list_tasks_archived' if include_archived else 'main.list_tasks'
     clear_url = _build_task_listing_url(
-        filter_form_endpoint,
-        project_id=locked_project.id if locked_project else None,
+        clear_endpoint,
     )
 
     archived_url = None

@@ -198,7 +198,7 @@ def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(app, client_u
     assert task_title not in dashboard_page.data
 
 
-def test_project_tasks_template_contract_has_modal_project_locked_and_no_view_button(client_user, seed_data):
+def test_project_tasks_template_contract_keeps_project_context_but_allows_switching_project_filter(client_user, seed_data):
     response = client_user.get(f"/projeto/{seed_data['project_id']}/tarefas")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
@@ -208,10 +208,11 @@ def test_project_tasks_template_contract_has_modal_project_locked_and_no_view_bu
     assert 'title="Tarefas arquivadas"' in html
     assert 'aria-label="Tarefas arquivadas"' in html
     assert 'data-project-locked="1"' in html
-    assert 'id="project_locked"' in html
-    assert 'readonly' in html
-    assert f'<input type="hidden" name="project_id" value="{seed_data["project_id"]}">' in html
-    assert 'id="filter_project_input"' not in html
+    assert 'id="filter_project_input"' in html
+    assert f'<input type="hidden" name="project" id="filter_project" value="{seed_data["project_id"]}">' in html
+    assert 'id="project_locked"' not in html
+    assert 'action="/tarefas"' in html
+    assert 'href="/tarefas"' in html
 
 
 def test_project_tasks_empty_state_has_no_create_first_button(client_user, seed_data):

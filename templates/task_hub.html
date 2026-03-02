@@ -169,19 +169,6 @@
             action="{{ filter_form_action }}"
             class="tasks-filter-form"
             id="filterTasksForm">
-            {% if project_locked and project_locked_obj %}
-            <div class="tasks-field tasks-field-project">
-                <label for="project_locked" class="tasks-label ds-type-label">Projeto</label>
-                <input
-                    type="text"
-                    class="form-control tasks-input"
-                    id="project_locked"
-                    value="{{ project_locked_obj.titulo }}"
-                    readonly>
-                <input type="hidden" name="project" value="{{ project_locked_obj.id }}">
-                <input type="hidden" name="project_id" value="{{ project_locked_obj.id }}">
-            </div>
-            {% else %}
             <div class="tasks-field tasks-field-project">
                 <label for="filter_project_input" class="tasks-label ds-type-label">Projeto</label>
                 <div class="project-search-wrap project-search-wrap-sm">
@@ -209,7 +196,6 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
 
             {% if show_area_selector and not project_locked %}
             <div class="tasks-field">
