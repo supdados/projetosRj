@@ -77,21 +77,35 @@
     function ensureTaskHubEmptyState(root) {
         var pageRoot = root || document.getElementById('taskHubPage');
         if (!pageRoot) return;
-        var listItems = document.querySelectorAll('.task-item-row[data-item-id]');
-        if (listItems.length) return;
-        if (pageRoot.querySelector('.tasks-empty-state')) return;
+        var listEl = pageRoot.querySelector('.task-items-list.task-hub-items-list');
+        var emptyState = pageRoot.querySelector('[data-role="task-hub-empty-state"]');
+        var hasGroups = !!(listEl && listEl.querySelector('.task-hub-group'));
 
-        var itemsSection = pageRoot.querySelector('.task-detail-v2-items.task-hub-items');
-        if (itemsSection && itemsSection.parentNode) {
-            itemsSection.parentNode.removeChild(itemsSection);
+        if (listEl) {
+            listEl.hidden = !hasGroups;
         }
 
-        var emptyState = document.createElement('section');
-        emptyState.className = 'tasks-empty-state';
-        emptyState.innerHTML =
+        if (emptyState) {
+            emptyState.hidden = hasGroups;
+            return;
+        }
+
+        if (hasGroups) return;
+
+        var fallbackState = document.createElement('section');
+        fallbackState.className = 'tasks-empty-state task-hub-empty-state';
+        fallbackState.setAttribute('data-role', 'task-hub-empty-state');
+        fallbackState.innerHTML =
             '<h2 class="tasks-empty-title">' + escapeTaskItemHtml(pageRoot.getAttribute('data-empty-title') || 'Nenhuma tarefa encontrada') + '</h2>' +
             '<p class="tasks-empty-text">' + escapeTaskItemHtml(pageRoot.getAttribute('data-empty-text') || 'Ajuste os filtros para visualizar tarefas ativas.') + '</p>';
-        pageRoot.appendChild(emptyState);
+
+        var listView = pageRoot.querySelector('#taskItemsListView');
+        if (listView) {
+            listView.insertBefore(fallbackState, listView.firstChild);
+            return;
+        }
+
+        pageRoot.appendChild(fallbackState);
     }
 
     function removeTaskItemFromDom(itemId) {

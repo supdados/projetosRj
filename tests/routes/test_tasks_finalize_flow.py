@@ -146,7 +146,8 @@ def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app,
 
     hub_without_item = client_user.get('/tarefas')
     assert hub_without_item.status_code == 200
-    assert b'Projeto Concluivel' not in hub_without_item.data
+    assert f'data-project-id="{seed_data["project_complete_id"]}"'.encode() not in hub_without_item.data
+    assert f'data-value="{seed_data["project_complete_id"]}"'.encode() in hub_without_item.data
 
     with app.app_context():
         db.session.add(
@@ -161,7 +162,7 @@ def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app,
 
     hub_with_item = client_user.get('/tarefas')
     assert hub_with_item.status_code == 200
-    assert b'Projeto Concluivel' in hub_with_item.data
+    assert f'data-project-id="{seed_data["project_complete_id"]}"'.encode() in hub_with_item.data
 
 
 def test_tasks_hub_hides_area_selector_for_single_area_user_and_shows_for_admin(client, seed_data):
@@ -223,3 +224,4 @@ def test_project_tasks_empty_state_has_no_create_first_button(client_user, seed_
     assert '<section class="tasks-empty-state">' not in html
     assert 'Adicionar nova tarefa' in html
     assert 'task-hub-add-row' in html
+    assert 'id="taskHubCreateButton"' not in html

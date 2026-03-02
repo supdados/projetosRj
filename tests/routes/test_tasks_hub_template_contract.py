@@ -12,6 +12,7 @@ def test_tasks_hub_template_contains_view_toggle_and_project_filter(client_user)
 
     required_hooks = [
         'id="taskItemsViewToggle"',
+        'id="taskHubCreateButton"',
         'data-view="list"',
         'data-view="kanban"',
         'id="taskItemsListView"',
@@ -79,6 +80,15 @@ def test_tasks_hub_uses_project_links_and_not_duplicate_task_detail_link(client_
     assert f'href="/tarefas/{seed_data["task_id"]}"' not in html
 
 
+def test_tasks_hub_project_filter_lists_visible_projects_without_active_items(client_user, seed_data):
+    response = client_user.get('/tarefas')
+    assert response.status_code == 200
+
+    html = response.get_data(as_text=True)
+    assert f'data-value="{seed_data["project_complete_id"]}"' in html
+    assert 'Projeto Concluivel' in html
+
+
 def test_tasks_hub_project_filter_js_allows_enter_to_clear_empty_selection():
     file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'inline-editors.js'
     content = file_path.read_text(encoding='utf-8')
@@ -86,6 +96,18 @@ def test_tasks_hub_project_filter_js_allows_enter_to_clear_empty_selection():
     assert 'function clearProjectFilter(shouldSubmit)' in content
     assert "if (!(input.value || '').trim()) {" in content
     assert 'clearProjectFilter(true);' in content
+
+
+def test_tasks_hub_global_placeholder_project_picker_scopes_projects_by_selected_area():
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline.js'
+    content = file_path.read_text(encoding='utf-8')
+
+    assert 'function getProjectOptionsForPicker()' in content
+    assert 'if (!selectedArea) {' in content
+    assert 'optionArea === selectedAreaKey' in content
+    assert "input.addEventListener('focus', showDropdown);" not in content
+    assert "input.addEventListener('click', showDropdown);" in content
+    assert "if (typeof opts.containsTarget === 'function' && opts.containsTarget(event.target)) return;" in content
 
 
 def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(app, client_user, seed_data):

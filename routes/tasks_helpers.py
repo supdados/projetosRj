@@ -379,6 +379,7 @@ def _serialize_task_payload(task):
         'task_titulo': task.descricao,
         'project_id': project_id,
         'project_titulo': project.titulo if project else 'Sem projeto',
+        'project_area': project.area_responsavel if project else '',
         'project_value': str(project_id) if project_id else 'sem_projeto',
         'comments_count': len(task.comments),
         'anexos_count': len(task.anexos),
@@ -535,6 +536,53 @@ def _build_task_hub_area_options(include_archived=False):
     return sorted({(area or '').strip() for (area,) in rows if (area or '').strip()})
 
 
+def _build_task_hub_project_options(include_archived=False, selected_area=''):
+    area_scope, normalized_area = _resolve_task_hub_area_scope(selected_area)
+
+    query = Project.query
+
+    if not g.user.is_admin:
+        if area_scope:
+            query = query.filter(Project.area_responsavel.in_(area_scope))
+        else:
+            query = query.filter(db.false())
+
+    if normalized_area:
+        query = query.filter(Project.area_responsavel == normalized_area)
+
+    projects = query.order_by(db.func.lower(Project.titulo), Project.titulo.asc(), Project.id.asc()).all()
+    options = [
+        {
+            'value': str(project.id),
+            'label': project.titulo,
+            'area': project.area_responsavel,
+        }
+        for project in projects
+    ]
+
+    has_orphan_tasks = (
+        _build_visible_tasks_query(
+            include_archived=include_archived,
+            selected_area=selected_area,
+            project_filter='sem_projeto',
+            include_relations=False,
+        )
+        .limit(1)
+        .first()
+        is not None
+    )
+    if has_orphan_tasks:
+        options.append(
+            {
+                'value': 'sem_projeto',
+                'label': 'Sem projeto',
+                'area': '',
+            }
+        )
+
+    return options
+
+
 def _render_task_hub(locked_project=None, template_name='task_hub.html', include_archived=False):
     filter_values = _read_task_filter_values(request.args)
     selected_area, invalid_area_filter = sanitize_area_filter_for_current_user(filter_values['selected_area'])
@@ -573,21 +621,10 @@ def _render_task_hub(locked_project=None, template_name='task_hub.html', include
             }
         ]
 
-    filter_scope_tasks = _build_visible_tasks_query(
+    project_options = _build_task_hub_project_options(
         include_archived=include_archived,
         selected_area=selected_area,
-        project_filter='',
-    ).all()
-    filter_scope_groups = _group_hub_tasks_by_project(filter_scope_tasks)
-
-    project_options = [
-        {
-            'value': group['project_value'],
-            'label': group['project_titulo'],
-            'area': group['project_area'],
-        }
-        for group in filter_scope_groups
-    ]
+    )
 
     project_label_map = {opt['value']: opt['label'] for opt in project_options}
     selected_project_label = project_label_map.get(project_filter, '')

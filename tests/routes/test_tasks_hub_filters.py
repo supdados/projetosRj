@@ -86,3 +86,12 @@ def test_tasks_hub_redirects_when_non_admin_forces_foreign_area(client_user):
 
     assert response.status_code == 302
     assert response.headers['Location'].endswith('/tarefas?status=em_andamento')
+
+
+def test_tasks_hub_project_filter_respects_selected_area_for_admin(client_admin, seed_data):
+    response = client_admin.get('/tarefas', query_string={'area': 'VPD'})
+    assert response.status_code == 200
+
+    html = response.get_data(as_text=True)
+    assert f'data-value="{seed_data["foreign_project_id"]}"' in html
+    assert f'data-value="{seed_data["project_id"]}"' not in html

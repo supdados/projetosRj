@@ -2723,6 +2723,9 @@
         function applyView(mode, opts) {
             var targetMode = mode === 'kanban' ? 'kanban' : 'list';
             var options = opts || {};
+            if (targetMode === 'kanban' && !listEl.querySelector('.task-item-row[data-item-id]')) {
+                targetMode = 'list';
+            }
             currentView = targetMode;
 
             listView.hidden = targetMode !== 'list';
