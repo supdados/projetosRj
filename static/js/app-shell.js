@@ -390,6 +390,7 @@
                         items.forEach(function(item) {
                             const itemUrl = item && item.url ? item.url : '#';
                             const title = item && item.title ? item.title : '';
+                            const displayTitle = item && item.display_title ? item.display_title : title;
                             const subtitle = item && item.subtitle ? item.subtitle : '';
                             const meta = item && item.meta ? item.meta : '';
                             const typeLabel = item && item.type_label ? item.type_label : group.label;
@@ -412,7 +413,7 @@
                                     <div class="app-global-search-item-main">
                                         <div class="app-global-search-item-head">
                                             <span class="app-global-search-item-type ${group.badgeClass}">${escapeHtml(typeLabel)}</span>
-                                            <span class="app-global-search-item-title">${escapeHtml(title)}</span>
+                                            <span class="app-global-search-item-title">${escapeHtml(displayTitle)}</span>
                                         </div>
                                         ${subtitle ? `<div class="app-global-search-item-subtitle">${escapeHtml(subtitle)}</div>` : ''}
                                         ${meta ? `<div class="app-global-search-item-meta">${escapeHtml(meta)}</div>` : ''}

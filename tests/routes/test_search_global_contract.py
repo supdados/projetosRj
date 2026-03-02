@@ -59,6 +59,7 @@ def test_global_search_api_returns_grouped_payload_limits_and_has_more(app, clie
     }
 
     assert payload['results']['projects'][0]['type'] == 'project'
+    assert payload['results']['projects'][0]['display_title'] == f"{payload['results']['projects'][0]['url'].split('/project/')[1]}-{payload['results']['projects'][0]['title']}"
     assert payload['results']['stages'][0]['type'] == 'stage'
     assert payload['results']['tasks'][0]['type'] == 'task'
     assert payload['results']['projects'][0]['url'].startswith('/project/')

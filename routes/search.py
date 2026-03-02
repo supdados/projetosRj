@@ -46,6 +46,11 @@ def _build_match_excerpt(value, term, max_length=110):
     return snippet
 
 
+def _build_project_display_title(project, max_length=120):
+    base_title = project.titulo or f'Projeto #{project.id}'
+    return _truncate_text(f'{project.id}-{base_title}', max_length)
+
+
 def _resolve_match_info(term, ordered_fields):
     normalized_term = (term or '').strip().lower()
     if not normalized_term:
@@ -241,6 +246,7 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
             'type': 'project',
             'type_label': 'Projeto',
             'title': _truncate_text(project.titulo or f'Projeto #{project.id}', 120),
+            'display_title': _build_project_display_title(project),
             'subtitle': f'Orgao: {_truncate_text(project.orgao, 90)}' if project.orgao else '',
             'meta': f'Area: {project.area_responsavel}' if project.area_responsavel else 'Area nao informada',
             'url': url_for('main.project_detail', project_id=project.id),
