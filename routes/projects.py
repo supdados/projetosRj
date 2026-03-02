@@ -13,6 +13,8 @@ from .shared import (
     get_area_catalog_choices,
     is_area_in_catalog,
     resolve_catalog_area_name,
+    redirect_to_current_route_without_area,
+    sanitize_area_filter_for_current_user,
     get_or_404,
     get_goal_catalog_context,
     log_project_action,
@@ -24,7 +26,7 @@ from .shared import (
 def list_projects():
     selected_priority = request.args.get('prioridade')
     selected_status = request.args.get('status')
-    selected_area_filter = request.args.get('area') # Filtro de área do formulário
+    selected_area_filter, invalid_area_filter = sanitize_area_filter_for_current_user(request.args.get('area'))
     selected_atraso = request.args.get('atraso')
     selected_special_project = request.args.get('special_project')  # Novo filtro
     selected_delivery_type = request.args.get('delivery_type')  # Novo filtro
@@ -41,6 +43,9 @@ def list_projects():
     # "Todos os status", que envia uma string vazia ("").
     if selected_status is None:
         selected_status = 'Vigente'
+
+    if invalid_area_filter:
+        return redirect_to_current_route_without_area()
 
     query = Project.query
     user_areas = sorted(g.user.get_areas()) if not g.user.is_admin else []
@@ -197,7 +202,7 @@ def list_projects():
 @main_bp.route('/projetos_pendentes')
 @login_required
 def list_projetos_pendentes():
-    selected_area_filter = (request.args.get('area') or '').strip()
+    selected_area_filter, invalid_area_filter = sanitize_area_filter_for_current_user(request.args.get('area'))
     filtro_periodo = (request.args.get('periodo') or 'atrasados').strip()
     selected_responsavel = (request.args.get('responsavel') or '').strip()
     pending_page = request.args.get('page', 1, type=int)
@@ -206,6 +211,9 @@ def list_projetos_pendentes():
     valid_periods = {'atrasados', '7dias', '14dias', '21dias'}
     if filtro_periodo not in valid_periods:
         filtro_periodo = 'atrasados'
+
+    if invalid_area_filter:
+        return redirect_to_current_route_without_area()
 
     data_atual = datetime.date.today()
     data_7_dias = data_atual + datetime.timedelta(days=7)

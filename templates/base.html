@@ -989,6 +989,7 @@
     <script>
     (function () {
         var STORAGE_KEY = 'projetosrj.selected_area';
+        var AVAILABLE_AREAS = {{ (available_areas if current_user_obj else [])|tojson }};
 
         function getStoredArea() {
             try { return localStorage.getItem(STORAGE_KEY) || ''; } catch (e) { return ''; }
@@ -1015,10 +1016,16 @@
         }
 
         // Expõe a área globalmente para app-shell.js e outros scripts
-        window.__APP_SELECTED_AREA__ = getStoredArea();
+        var initialStoredArea = getStoredArea();
+        if (initialStoredArea && AVAILABLE_AREAS.indexOf(initialStoredArea) === -1) {
+            setStoredArea('');
+            initialStoredArea = '';
+        }
+        window.__APP_SELECTED_AREA__ = initialStoredArea;
 
         document.addEventListener('DOMContentLoaded', function () {
             var storedArea = getStoredArea();
+            window.__APP_SELECTED_AREA__ = storedArea;
 
             // Intercepta cliques em botões que limpam a área (ex: "Limpar filtros")
             document.querySelectorAll('[data-area-clear]').forEach(function (el) {

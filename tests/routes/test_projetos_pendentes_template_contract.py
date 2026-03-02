@@ -52,3 +52,14 @@ def test_projetos_pendentes_shows_area_filter_for_non_admin_with_multiple_areas(
     assert 'Projeto VPD' in html
     assert 'Projeto Auditoria' not in html
     assert '<option value="VPD" selected' in html
+
+
+def test_projetos_pendentes_redirects_when_non_admin_forces_foreign_area(client_user):
+    response = client_user.get(
+        '/projetos_pendentes',
+        query_string={'area': 'VPD', 'periodo': '7dias'},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/projetos_pendentes?periodo=7dias')

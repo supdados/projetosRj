@@ -15,6 +15,7 @@ from models import (
     db,
 )
 from services.notifications import notify_task_assignment_change, notify_task_event
+from .shared import redirect_to_current_route_without_area, sanitize_area_filter_for_current_user
 
 VALID_PRIORIDADES = {'baixa', 'media', 'alta', 'urgente'}
 VALID_TIPOS = {'bug', 'melhoria', 'duvida', 'outros'}
@@ -536,7 +537,9 @@ def _build_task_hub_area_options(include_archived=False):
 
 def _render_task_hub(locked_project=None, template_name='task_hub.html', include_archived=False):
     filter_values = _read_task_filter_values(request.args)
-    selected_area = filter_values['selected_area']
+    selected_area, invalid_area_filter = sanitize_area_filter_for_current_user(filter_values['selected_area'])
+    if invalid_area_filter and locked_project is None:
+        return redirect_to_current_route_without_area()
     project_filter = filter_values['project_filter']
     prioridade_filter = filter_values['prioridade_filter']
     tipo_filter = filter_values['tipo_filter']

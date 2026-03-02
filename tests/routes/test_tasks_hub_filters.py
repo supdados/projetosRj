@@ -75,3 +75,14 @@ def test_finalized_listing_filters_by_priority_type_status_and_responsavel(app, 
     html = response.get_data(as_text=True)
     assert 'Arquivada filtro alvo' in html
     assert 'Arquivada fora do filtro' not in html
+
+
+def test_tasks_hub_redirects_when_non_admin_forces_foreign_area(client_user):
+    response = client_user.get(
+        '/tarefas',
+        query_string={'area': 'VPD', 'status': 'em_andamento'},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/tarefas?status=em_andamento')

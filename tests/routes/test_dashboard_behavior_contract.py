@@ -133,3 +133,13 @@ def test_dashboard_admin_area_filter_restricts_projects_and_tasks(app, client_ad
 
     recent_task_titles = [task.descricao for task in context['recent_tasks']]
     assert recent_task_titles == ['Item VPD']
+
+
+def test_dashboard_redirects_when_non_admin_forces_foreign_area(client, seed_data):
+    with client.session_transaction() as session:
+        session['user_id'] = seed_data['deletable_user_id']
+
+    response = client.get('/dashboard', query_string={'area': 'SUBEDD'}, follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/dashboard')

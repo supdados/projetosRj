@@ -77,6 +77,17 @@ def test_projects_list_shows_area_filter_for_non_admin_with_multiple_areas(app, 
     assert '<option value="VPD" selected' in html
 
 
+def test_projects_list_redirects_when_non_admin_forces_foreign_area(client_user):
+    response = client_user.get(
+        '/projects',
+        query_string={'area': 'VPD', 'status': 'Vigente'},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/projects?status=Vigente')
+
+
 def test_projects_list_applies_admin_advanced_filters(app, client_admin):
     abep_value = ABEP_INDICADORES_OPTIONS[0]['value']
 

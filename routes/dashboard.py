@@ -7,17 +7,25 @@ from models import Etapa, Project, Task, db
 
 from .blueprint import main_bp
 from .decorators import login_required
-from .shared import get_area_catalog_choices, get_goal_catalog_context
+from .shared import (
+    get_area_catalog_choices,
+    get_goal_catalog_context,
+    redirect_to_current_route_without_area,
+    sanitize_area_filter_for_current_user,
+)
 
 
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    selected_area = (request.args.get('area') or '').strip()
+    selected_area, invalid_area_filter = sanitize_area_filter_for_current_user(request.args.get('area'))
+    user_areas = g.user.get_areas() if not g.user.is_admin else []
+
+    if invalid_area_filter:
+        return redirect_to_current_route_without_area()
 
     project_query_base = Project.query
     if not g.user.is_admin:
-        user_areas = g.user.get_areas()
         if user_areas:
             project_query_base = project_query_base.filter(Project.area_responsavel.in_(user_areas))
     if selected_area:
@@ -29,7 +37,6 @@ def dashboard():
     def count_projects_for_user(filter_expression=None):
         query = Project.query
         if not g.user.is_admin:
-            user_areas = g.user.get_areas()
             if user_areas:
                 query = query.filter(Project.area_responsavel.in_(user_areas))
         if selected_area:
@@ -51,7 +58,6 @@ def dashboard():
 
     projetos_vigentes_query = Project.query.filter(Project.status == 'Vigente')
     if not g.user.is_admin:
-        user_areas = g.user.get_areas()
         if user_areas:
             projetos_vigentes_query = projetos_vigentes_query.filter(Project.area_responsavel.in_(user_areas))
     if selected_area:
@@ -76,7 +82,6 @@ def dashboard():
                 )
             return query
 
-        user_areas = g.user.get_areas()
         if selected_area and user_areas:
             effective_areas = [selected_area] if selected_area in user_areas else []
         else:

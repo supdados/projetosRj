@@ -113,7 +113,9 @@ def test_global_search_api_prefers_prefix_matches_and_respects_area_scope(app, s
     )
     assert blocked_user_response.status_code == 200
     blocked_payload = blocked_user_response.get_json()
-    assert blocked_payload['counts']['total'] == 0
+    blocked_titles = [item['title'] for item in blocked_payload['results']['projects']]
+    assert 'Busca Especial Prefixo' in blocked_titles
+    assert 'Busca Especial VPD' not in blocked_titles
 
     admin_response = admin_client.get(
         '/api/busca-global',
@@ -178,3 +180,14 @@ def test_search_page_empty_state_without_query_and_without_results(client_user):
     no_results_response = client_user.get('/busca', query_string={'q': 'TermoInexistenteXYZ'})
     assert no_results_response.status_code == 200
     assert 'Nenhuma referencia encontrada para "<strong>TermoInexistenteXYZ</strong>".' in no_results_response.get_data(as_text=True)
+
+
+def test_search_page_redirects_when_non_admin_forces_foreign_area(client_user):
+    response = client_user.get(
+        '/busca',
+        query_string={'q': 'Auditoria', 'area': 'VPD'},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/busca?q=Auditoria')

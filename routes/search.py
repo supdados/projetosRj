@@ -6,6 +6,7 @@ from models import Etapa, Project, Task
 
 from .blueprint import main_bp
 from .decorators import login_required
+from .shared import redirect_to_current_route_without_area, sanitize_area_filter_for_current_user, sanitize_area_filter_for_user
 
 GLOBAL_SEARCH_DEFAULT_LIMIT = 5
 GLOBAL_SEARCH_API_MAX_LIMIT = 20
@@ -120,7 +121,10 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
     user_areas = user.get_areas() if (user and not user.is_admin) else []
 
     # Compute effective area restriction
-    selected_area = (selected_area or '').strip()
+    selected_area, invalid_area_filter = sanitize_area_filter_for_user(user, selected_area)
+    if invalid_area_filter:
+        selected_area = ''
+
     if selected_area:
         if user.is_admin:
             filter_areas = [selected_area]
@@ -337,7 +341,7 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
 @login_required
 def global_search_api():
     search_term = (request.args.get('q') or '').strip()
-    selected_area = (request.args.get('area') or '').strip()
+    selected_area, _ = sanitize_area_filter_for_current_user(request.args.get('area'))
     limit_per_type = _normalize_global_search_limit(
         request.args.get('limit'),
         default_limit=GLOBAL_SEARCH_DEFAULT_LIMIT,
@@ -361,7 +365,9 @@ def global_search_api():
 @login_required
 def global_search_page():
     search_term = (request.args.get('q') or '').strip()
-    selected_area = (request.args.get('area') or '').strip()
+    selected_area, invalid_area_filter = sanitize_area_filter_for_current_user(request.args.get('area'))
+    if invalid_area_filter:
+        return redirect_to_current_route_without_area()
     if search_term:
         search_payload = build_global_search_results(
             search_term,

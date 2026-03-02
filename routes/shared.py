@@ -1,7 +1,8 @@
 import datetime
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
-from flask import abort, g
+from flask import abort, g, redirect, request, url_for
 from sqlalchemy import func, inspect
 
 from abep_catalog import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
@@ -158,6 +159,38 @@ def resolve_catalog_area_name(area_name):
 
 def is_area_in_catalog(area_name):
     return resolve_catalog_area_name(area_name) is not None
+
+
+def sanitize_area_filter_for_user(user, selected_area):
+    normalized = normalize_area_name(selected_area)
+    if not normalized or user is None or user.is_admin:
+        return normalized, False
+
+    user_areas = user.get_areas()
+    if normalized in user_areas:
+        return normalized, False
+
+    return '', True
+
+
+def sanitize_area_filter_for_current_user(selected_area):
+    return sanitize_area_filter_for_user(getattr(g, 'user', None), selected_area)
+
+
+def redirect_to_current_route_without_area():
+    if request.endpoint:
+        target_url = url_for(request.endpoint, **(request.view_args or {}))
+    else:
+        target_url = request.path
+
+    query_args = request.args.to_dict(flat=False)
+    query_args.pop('area', None)
+    query_string = urlencode(query_args, doseq=True)
+
+    if query_string:
+        target_url = f'{target_url}?{query_string}'
+
+    return redirect(target_url)
 
 
 def format_local_time(dt, fmt='%d/%m %H:%M'):
