@@ -712,6 +712,13 @@
             }
         }
 
+        if (sourceGroup) {
+            var sourceProjectValue = normalizeProjectValue(sourceGroup.getAttribute('data-project-value'));
+            if (sourceProjectValue === projectInfo.value) {
+                return sourceGroup;
+            }
+        }
+
         if (existingGroup) {
             return existingGroup;
         }
@@ -720,10 +727,11 @@
 
     function insertNewItem(data, options) {
         var payload = data || {};
+        var opts = options || {};
         var item = payload.item || {};
         if (!item || !item.id) return null;
 
-        var targetGroup = resolveTargetGroupForItem(item, options);
+        var targetGroup = resolveTargetGroupForItem(item, opts);
         if (!targetGroup) return null;
 
         var targetAddRow = targetGroup.querySelector('.task-hub-add-row[data-project-value]');
@@ -739,7 +747,9 @@
         if (window.taskItemsKanban && typeof window.taskItemsKanban.rebuildFromList === 'function') {
             window.taskItemsKanban.rebuildFromList();
         }
-        focusTaskItemRow(String(item.id), { scrollDelay: 100 });
+        if (opts.focusInserted !== false) {
+            focusTaskItemRow(String(item.id), { scrollDelay: 100 });
+        }
         return getTaskItemRowById(item.id);
     }
 
@@ -859,6 +869,7 @@
                         addRow: addRow,
                         projectValue: projectValue,
                         sourceGroup: addRow.closest('.task-hub-group'),
+                        focusInserted: !!opts.isGlobalPlaceholder,
                     });
 
                     if (keepOpen && !opts.isGlobalPlaceholder) {

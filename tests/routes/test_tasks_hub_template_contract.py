@@ -39,6 +39,19 @@ def test_tasks_hub_template_contains_view_toggle_and_project_filter(client_user)
     assert 'aria-label="Tarefas arquivadas"' in html
 
 
+def test_tasks_hub_header_orders_archive_then_toggle_then_create(client_user):
+    response = client_user.get('/tarefas')
+    assert response.status_code == 200
+
+    html = response.get_data(as_text=True)
+    archive_form_index = html.index('id="archiveFinalizedTasksForm"')
+    archived_link_index = html.index('aria-label="Tarefas arquivadas"')
+    toggle_index = html.index('id="taskItemsViewToggle"')
+    create_button_index = html.index('id="taskHubCreateButton"')
+
+    assert archive_form_index < archived_link_index < toggle_index < create_button_index
+
+
 def test_tasks_hub_kanban_composer_requires_project_when_no_filter(client_user):
     response = client_user.get('/tarefas')
     assert response.status_code == 200
@@ -108,6 +121,23 @@ def test_tasks_hub_global_placeholder_project_picker_scopes_projects_by_selected
     assert "input.addEventListener('focus', showDropdown);" not in content
     assert "input.addEventListener('click', showDropdown);" in content
     assert "if (typeof opts.containsTarget === 'function' && opts.containsTarget(event.target)) return;" in content
+
+
+def test_tasks_hub_inline_add_js_reuses_existing_group_and_skips_focus_jump():
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline.js'
+    content = file_path.read_text(encoding='utf-8')
+
+    assert 'return sourceGroup;' in content
+    assert 'if (opts.focusInserted !== false) {' in content
+    assert 'focusInserted: !!opts.isGlobalPlaceholder' in content
+
+
+def test_tasks_hub_global_placeholder_css_keeps_extra_spacing_before_area_line():
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'tarefas.css'
+    content = file_path.read_text(encoding='utf-8')
+
+    assert '.task-hub-page .task-hub-group-global-placeholder .task-hub-group-project-wrap {' in content
+    assert 'margin-bottom: 0.58rem;' in content
 
 
 def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(app, client_user, seed_data):

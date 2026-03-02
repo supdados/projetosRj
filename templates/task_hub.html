@@ -46,46 +46,46 @@
                 <span class="tasks-archive-count">{{ active_count }}</span>
             </a>
             {% else %}
-            <form
-                method="POST"
-                action="{{ url_for('main.archive_finalized_tasks') }}"
-                id="archiveFinalizedTasksForm"
-                class="inline-form"
-                onsubmit="return confirm('Arquivar tarefas finalizadas do escopo atual?');">
-                {% if selected_area %}
-                <input type="hidden" name="area" value="{{ selected_area }}">
-                {% endif %}
-                {% if selected_project %}
-                <input type="hidden" name="project" value="{{ selected_project }}">
-                {% endif %}
-                {% if selected_prioridade %}
-                <input type="hidden" name="prioridade" value="{{ selected_prioridade }}">
-                {% endif %}
-                {% if selected_tipo %}
-                <input type="hidden" name="tipo" value="{{ selected_tipo }}">
-                {% endif %}
-                {% if selected_status %}
-                <input type="hidden" name="status" value="{{ selected_status }}">
-                {% endif %}
-                {% if selected_responsavel %}
-                <input type="hidden" name="responsavel" value="{{ selected_responsavel }}">
-                {% endif %}
-                <input type="hidden" name="next" value="{{ current_url }}">
-                <button type="submit" class="btn-task btn-task-secondary" title="Arquivar finalizados">
-                    <span>Arquivar finalizados</span>
-                    <i class="fas fa-folder-arrow-down" aria-hidden="true"></i>
-                </button>
-            </form>
-            <a
-                href="{{ archived_url }}"
-                class="btn-task btn-task-archive btn-task-icon-only"
-                title="Tarefas arquivadas"
-                aria-label="Tarefas arquivadas">
-                <i class="fas fa-box-archive" aria-hidden="true"></i>
-            </a>
-            {% endif %}
-            {% if not archived_mode %}
             <div class="tasks-view-actions">
+                <div class="tasks-archive-actions">
+                    <form
+                        method="POST"
+                        action="{{ url_for('main.archive_finalized_tasks') }}"
+                        id="archiveFinalizedTasksForm"
+                        class="inline-form"
+                        onsubmit="return confirm('Arquivar tarefas finalizadas do escopo atual?');">
+                        {% if selected_area %}
+                        <input type="hidden" name="area" value="{{ selected_area }}">
+                        {% endif %}
+                        {% if selected_project %}
+                        <input type="hidden" name="project" value="{{ selected_project }}">
+                        {% endif %}
+                        {% if selected_prioridade %}
+                        <input type="hidden" name="prioridade" value="{{ selected_prioridade }}">
+                        {% endif %}
+                        {% if selected_tipo %}
+                        <input type="hidden" name="tipo" value="{{ selected_tipo }}">
+                        {% endif %}
+                        {% if selected_status %}
+                        <input type="hidden" name="status" value="{{ selected_status }}">
+                        {% endif %}
+                        {% if selected_responsavel %}
+                        <input type="hidden" name="responsavel" value="{{ selected_responsavel }}">
+                        {% endif %}
+                        <input type="hidden" name="next" value="{{ current_url }}">
+                        <button type="submit" class="btn-task btn-task-secondary" title="Arquivar finalizados">
+                            <span>Arquivar finalizados</span>
+                            <i class="fas fa-folder-arrow-down" aria-hidden="true"></i>
+                        </button>
+                    </form>
+                    <a
+                        href="{{ archived_url }}"
+                        class="btn-task btn-task-archive btn-task-icon-only"
+                        title="Tarefas arquivadas"
+                        aria-label="Tarefas arquivadas">
+                        <i class="fas fa-box-archive" aria-hidden="true"></i>
+                    </a>
+                </div>
                 <div class="task-items-view-toggle task-items-view-toggle-refined" id="taskItemsViewToggle" role="group"
                     data-active-view="list"
                     aria-label="Alternar visualização de tarefas">
