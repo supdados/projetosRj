@@ -275,7 +275,7 @@
                     data-task-id=""
                     data-add-item-url="{{ url_for('main.add_task') }}"
                     data-sugestoes-url="{{ url_for('main.get_hub_assignable_users') }}"
-                    data-reorder-url=""
+                    data-reorder-url="{{ url_for('main.reorder_tasks_hub') }}"
                     {% if not groups %}hidden{% endif %}>
 
                     {% for group in groups %}

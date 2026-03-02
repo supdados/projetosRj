@@ -46,6 +46,62 @@ from .tasks_helpers import (
     _task_status_label,
 )
 
+
+def _parse_unique_task_order_ids(raw_ids):
+    if not isinstance(raw_ids, list):
+        raw_ids = []
+
+    ordered_ids = []
+    seen = set()
+    for raw_id in raw_ids:
+        try:
+            task_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        if task_id in seen:
+            continue
+        seen.add(task_id)
+        ordered_ids.append(task_id)
+
+    return ordered_ids
+
+
+def _task_hub_reorder_scope_key(task):
+    if task.project_id is not None:
+        return ('project', task.project_id)
+    if g.user.is_admin:
+        return ('orphan', None)
+    return ('orphan', task.created_by_id)
+
+
+def _build_task_hub_reorder_scope_query(scope_key):
+    scope_type, scope_value = scope_key
+    query = _build_visible_tasks_query(include_relations=False).order_by(None)
+
+    if scope_type == 'project':
+        query = query.filter(Task.project_id == scope_value)
+    elif scope_type == 'orphan':
+        query = query.filter(Task.project_id.is_(None))
+        if scope_value is not None:
+            query = query.filter(Task.created_by_id == scope_value)
+    else:
+        query = query.filter(db.false())
+
+    return query.order_by(Task.ordem.asc(), Task.id.asc())
+
+
+def _apply_task_order(scope_query, ordered_ids):
+    scope_tasks = scope_query.all()
+    tasks_by_id = {task.id: task for task in scope_tasks}
+
+    ordered_tasks = [tasks_by_id[task_id] for task_id in ordered_ids if task_id in tasks_by_id]
+    ordered_task_ids = {task.id for task in ordered_tasks}
+    remaining_tasks = [task for task in scope_tasks if task.id not in ordered_task_ids]
+
+    for index, task in enumerate(ordered_tasks + remaining_tasks, start=1):
+        task.ordem = index
+
+
 @main_bp.route('/tarefas', methods=['GET'])
 @login_required
 def list_tasks():
@@ -68,6 +124,47 @@ def list_tasks_finalized():
 @login_required
 def add_task():
     return _create_task_common()
+
+
+@main_bp.route('/tarefas/reordenar', methods=['POST'])
+@login_required
+def reorder_tasks_hub():
+    payload = request.get_json(silent=True) or {}
+    ordem_ids = _parse_unique_task_order_ids(payload.get('ordem', []))
+    if not ordem_ids:
+        return jsonify({'success': True, 'message': 'Nenhuma alteração de ordem enviada'})
+
+    visible_tasks = (
+        _build_visible_tasks_query(include_relations=False)
+        .order_by(None)
+        .filter(Task.id.in_(ordem_ids))
+        .all()
+    )
+    tasks_by_id = {task.id: task for task in visible_tasks}
+
+    scope_orders = {}
+    scope_sequence = []
+    for task_id in ordem_ids:
+        task = tasks_by_id.get(task_id)
+        if task is None:
+            continue
+        scope_key = _task_hub_reorder_scope_key(task)
+        if scope_key not in scope_orders:
+            scope_orders[scope_key] = []
+            scope_sequence.append(scope_key)
+        scope_orders[scope_key].append(task.id)
+
+    try:
+        for scope_key in scope_sequence:
+            _apply_task_order(
+                _build_task_hub_reorder_scope_query(scope_key),
+                scope_orders[scope_key],
+            )
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Ordem atualizada'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @main_bp.route('/tarefas/<int:task_id>', methods=['GET'])
@@ -989,21 +1086,7 @@ def reorder_task_items(task_id):
         return jsonify({'success': False, 'message': 'Sem permissão'}), 403
 
     payload = request.get_json(silent=True) or {}
-    ordem_items_raw = payload.get('ordem', [])
-    if not isinstance(ordem_items_raw, list):
-        ordem_items_raw = []
-
-    ordem_ids = []
-    seen = set()
-    for raw_id in ordem_items_raw:
-        try:
-            task_id_value = int(raw_id)
-        except (TypeError, ValueError):
-            continue
-        if task_id_value in seen:
-            continue
-        seen.add(task_id_value)
-        ordem_ids.append(task_id_value)
+    ordem_ids = _parse_unique_task_order_ids(payload.get('ordem', []))
 
     scope_query = Task.query.filter(
         Task.project_id == anchor.project_id,
@@ -1013,17 +1096,8 @@ def reorder_task_items(task_id):
     if anchor.project_id is None and not g.user.is_admin:
         scope_query = scope_query.filter(Task.created_by_id == g.user.id)
 
-    scope_tasks = scope_query.all()
-    tasks_by_id = {t.id: t for t in scope_tasks}
-
-    ordered_tasks = [tasks_by_id[t_id] for t_id in ordem_ids if t_id in tasks_by_id]
-    ordered_ids = {t.id for t in ordered_tasks}
-    remaining = [t for t in scope_tasks if t.id not in ordered_ids]
-    final_order = ordered_tasks + remaining
-
     try:
-        for index, task in enumerate(final_order, start=1):
-            task.ordem = index
+        _apply_task_order(scope_query, ordem_ids)
         db.session.commit()
         return jsonify({'success': True, 'message': 'Ordem atualizada'})
     except Exception as e:

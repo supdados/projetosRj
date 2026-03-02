@@ -37,6 +37,7 @@ def test_tasks_hub_template_contains_view_toggle_and_project_filter(client_user)
     assert 'Gerenciamento de tarefas' in html
     assert 'title="Tarefas arquivadas"' in html
     assert 'aria-label="Tarefas arquivadas"' in html
+    assert 'data-reorder-url="/tarefas/reordenar"' in html
 
 
 def test_tasks_hub_header_orders_archive_then_toggle_then_create(client_user):
@@ -138,6 +139,28 @@ def test_tasks_hub_global_placeholder_css_keeps_extra_spacing_before_area_line()
 
     assert '.task-hub-page .task-hub-group-global-placeholder .task-hub-group-project-wrap {' in content
     assert 'margin-bottom: 0.58rem;' in content
+
+
+def test_tasks_hub_kanban_js_persists_visual_order_per_url():
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'kanban-manager.js'
+    content = file_path.read_text(encoding='utf-8')
+
+    assert 'function buildKanbanOrderStorageKey()' in content
+    assert "return 'task-hub-kanban-order:' + window.location.pathname + window.location.search;" in content
+    assert 'function readStoredKanbanOrder()' in content
+    assert 'function sortItemsForKanban(items)' in content
+    assert 'writeStoredKanbanOrder(serializeKanbanOrder());' in content
+
+
+def test_tasks_hub_kanban_js_keeps_grouped_list_rows_inside_project_sections():
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'kanban-manager.js'
+    content = file_path.read_text(encoding='utf-8')
+
+    assert 'function syncGroupedListOrder(orderIds)' in content
+    assert "var groups = listEl.querySelectorAll('.task-hub-group');" in content
+    assert "var row = group.querySelector('.task-item-row[data-item-id=\"' + id + '\"]');" in content
+    assert "if (isTaskHubGroupedList()) {" in content
+    assert 'syncGroupedListOrder(orderIds);' in content
 
 
 def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(app, client_user, seed_data):

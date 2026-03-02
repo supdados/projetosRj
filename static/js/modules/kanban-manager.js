@@ -31,6 +31,7 @@
         var reorderUrl = listEl ? (listEl.getAttribute('data-reorder-url') || '') : '';
         var taskId = listEl ? (listEl.getAttribute('data-task-id') || '') : '';
         var storageKey = taskId ? ('task-items-view:' + taskId) : 'task-hub-items-view';
+        var kanbanOrderStorageKey = buildKanbanOrderStorageKey();
         var currentUserIdRaw = pageRoot ? (pageRoot.getAttribute('data-current-user-id') || '') : '';
         var currentUserId = parseInt(currentUserIdRaw, 10);
         if (!Number.isFinite(currentUserId)) currentUserId = null;
@@ -347,6 +348,51 @@
             } catch (error) {}
         }
 
+        function buildKanbanOrderStorageKey() {
+            try {
+                return 'task-hub-kanban-order:' + window.location.pathname + window.location.search;
+            } catch (error) {
+                return taskId ? ('task-items-kanban-order:' + taskId) : '';
+            }
+        }
+
+        function normalizeStoredKanbanOrder(rawOrder) {
+            if (!Array.isArray(rawOrder)) return [];
+
+            var normalized = [];
+            var seen = {};
+            rawOrder.forEach(function (value) {
+                var id = String(value == null ? '' : value).trim();
+                if (!id || seen[id]) return;
+                seen[id] = true;
+                normalized.push(id);
+            });
+            return normalized;
+        }
+
+        function readStoredKanbanOrder() {
+            if (!kanbanOrderStorageKey) return [];
+            try {
+                return normalizeStoredKanbanOrder(JSON.parse(localStorage.getItem(kanbanOrderStorageKey) || '[]'));
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function writeStoredKanbanOrder(orderIds) {
+            if (!kanbanOrderStorageKey) return;
+            try {
+                localStorage.setItem(
+                    kanbanOrderStorageKey,
+                    JSON.stringify(normalizeStoredKanbanOrder(orderIds))
+                );
+            } catch (error) {}
+        }
+
+        function isTaskHubGroupedList() {
+            return !!listEl.querySelector('.task-hub-group');
+        }
+
         function readRowItem(row) {
             if (!row) return null;
             syncTaskItemRowMetadata(row);
@@ -374,6 +420,36 @@
                 listEl.querySelectorAll('.task-item-row[data-item-id]'),
                 function (row) { return readRowItem(row); }
             ).filter(function (item) { return !!item; });
+        }
+
+        function sortItemsForKanban(items) {
+            var storedOrder = readStoredKanbanOrder();
+            if (!storedOrder.length) return items;
+
+            var orderIndex = {};
+            storedOrder.forEach(function (id, index) {
+                orderIndex[String(id)] = index;
+            });
+
+            return items
+                .map(function (item, index) {
+                    var itemId = String(item && item.id != null ? item.id : '');
+                    var storedIndex = Object.prototype.hasOwnProperty.call(orderIndex, itemId)
+                        ? orderIndex[itemId]
+                        : Number.MAX_SAFE_INTEGER;
+                    return {
+                        item: item,
+                        index: index,
+                        storedIndex: storedIndex,
+                    };
+                })
+                .sort(function (left, right) {
+                    if (left.storedIndex !== right.storedIndex) {
+                        return left.storedIndex - right.storedIndex;
+                    }
+                    return left.index - right.index;
+                })
+                .map(function (entry) { return entry.item; });
         }
 
         function setCardStatus(card, status) {
@@ -549,7 +625,7 @@
         }
 
         function renderKanbanFromList() {
-            var items = collectListItems();
+            var items = sortItemsForKanban(collectListItems());
             statusOrder.forEach(function (status) {
                 var dropzone = getDropzone(status);
                 if (dropzone) dropzone.innerHTML = '';
@@ -562,6 +638,7 @@
             });
 
             updateColumnMeta();
+            writeStoredKanbanOrder(serializeKanbanOrder());
 
             if (drawerState.itemId && !getTaskItemRowById(drawerState.itemId)) {
                 closeDrawer();
@@ -593,6 +670,7 @@
                 dropzone.appendChild(card);
             }
             updateColumnMeta();
+            writeStoredKanbanOrder(serializeKanbanOrder());
         }
 
         function serializeKanbanOrder() {
@@ -608,10 +686,39 @@
             return order;
         }
 
+        function syncGroupedListOrder(orderIds) {
+            var groups = listEl.querySelectorAll('.task-hub-group');
+            groups.forEach(function (group) {
+                var addRow = group.querySelector('.task-hub-add-row') || group.querySelector('#addItemRow');
+                var fragment = document.createDocumentFragment();
+
+                orderIds.forEach(function (id) {
+                    var row = group.querySelector('.task-item-row[data-item-id="' + id + '"]');
+                    if (row) fragment.appendChild(row);
+
+                    var modal = group.querySelector('#deleteItemModal-' + id);
+                    if (modal) fragment.appendChild(modal);
+                });
+
+                if (!fragment.childNodes.length) return;
+
+                if (addRow && addRow.parentNode === group) {
+                    group.insertBefore(fragment, addRow);
+                } else {
+                    group.appendChild(fragment);
+                }
+            });
+        }
+
         function syncListOrderFromKanban() {
             if (!reorderUrl) return;
             var orderIds = serializeKanbanOrder();
             if (!orderIds.length) return;
+
+            if (isTaskHubGroupedList()) {
+                syncGroupedListOrder(orderIds);
+                return;
+            }
 
             var addRow = listEl.querySelector('.task-hub-add-row') || listEl.querySelector('#addItemRow');
             var fragment = document.createDocumentFragment();
@@ -1805,6 +1912,7 @@
                 .then(function () {
                     syncListOrderFromKanban();
                     updateColumnMeta();
+                    writeStoredKanbanOrder(serializeKanbanOrder());
                 })
                 .catch(function (error) {
                     console.error('Erro ao persistir kanban:', error);
