@@ -1215,29 +1215,29 @@ html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-glo
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-title {
-    color: #c9dff6;
+    color: var(--app-color-text-primary);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-meta {
-    color: #8ea4bb;
+    color: var(--app-color-text-muted);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-meta strong {
-    color: #d2e3f3;
+    color: var(--app-color-text-secondary);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-count {
-    background: #223246;
-    border-color: #355271;
-    color: #a8c1da;
+    background: rgba(141, 160, 182, 0.18);
+    border-color: rgba(141, 160, 182, 0.34);
+    color: var(--app-color-text-secondary);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-item-context {
-    color: #8ba9c9;
+    color: var(--app-color-text-muted);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-item-context a {
-    color: #8fc0ee;
+    color: var(--app-color-text-secondary);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-add-row {
@@ -1245,17 +1245,17 @@ html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-add-row {
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-kanban-context {
-    color: #8eaed0;
+    color: var(--app-color-text-muted);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-project-input {
     background: #223144;
     border-color: rgba(99, 166, 219, 0.34);
-    color: var(--td-items-text-secondary);
+    color: var(--app-color-text-secondary);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-project-input::placeholder {
-    color: #a9bfd6;
+    color: var(--app-color-text-muted);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-project-input:hover {
@@ -1270,15 +1270,15 @@ html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-kanban-project-caret {
-    color: #9db6cf;
+    color: var(--app-color-text-secondary);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-project-input[aria-expanded="true"] ~ .task-hub-kanban-project-caret {
-    color: #d6e9fb;
+    color: var(--app-color-text-primary);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-project-input {
-    color: #d9ebfc;
+    color: var(--app-color-text-secondary);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-global-placeholder .task-item-add-main {

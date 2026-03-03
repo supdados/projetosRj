@@ -184,6 +184,27 @@ def test_tasks_hub_kanban_project_link_keeps_drag_cursor_on_hold():
     assert 'cursor: grabbing;' in kanban_css_content
 
 
+def test_tasks_hub_view_toggle_hover_only_affects_hovered_button():
+    pages_root = Path(__file__).resolve().parents[2] / 'static' / 'pages'
+    light_css = (pages_root / 'task-detail-view-toggle.css').read_text(encoding='utf-8')
+    dark_css = (pages_root / 'task-detail-dark.css').read_text(encoding='utf-8')
+
+    assert '.task-detail-v2 .task-items-view-btn:hover .task-items-view-label:not(.is-active),' in light_css
+    assert '.task-detail-v2 .task-items-view-toggle:hover .task-items-view-label:not(.is-active)' not in light_css
+    assert 'html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-view-btn:hover .task-items-view-label:not(.is-active),' in dark_css
+    assert 'html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-view-toggle:hover .task-items-view-label:not(.is-active)' not in dark_css
+
+
+def test_tasks_hub_dark_mode_uses_neutral_text_tokens_for_structural_copy():
+    tarefas_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'tarefas.css'
+    tarefas_css_content = tarefas_css_path.read_text(encoding='utf-8')
+
+    assert 'html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-title {\n    color: var(--app-color-text-primary);' in tarefas_css_content
+    assert 'html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-meta {\n    color: var(--app-color-text-muted);' in tarefas_css_content
+    assert 'html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-item-context {\n    color: var(--app-color-text-muted);' in tarefas_css_content
+    assert 'html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-kanban-context {\n    color: var(--app-color-text-muted);' in tarefas_css_content
+
+
 def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(app, client_user, seed_data):
     with app.app_context():
         archived_task = Task(

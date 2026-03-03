@@ -95,11 +95,8 @@
     text-shadow: 0 1px 1px rgba(5, 45, 90, 0.22);
 }
 
-.task-detail-v2 .task-items-view-toggle:hover .task-items-view-label.is-active {
-    color: #ffffff;
-}
-
-.task-detail-v2 .task-items-view-toggle:hover .task-items-view-label:not(.is-active) {
+.task-detail-v2 .task-items-view-btn:hover .task-items-view-label:not(.is-active),
+.task-detail-v2 .task-items-view-btn:focus-visible .task-items-view-label:not(.is-active) {
     color: #3d6282;
 }
 
