@@ -943,6 +943,7 @@
     }
 
     @media (min-width: 992px) {
+        .dashboard-page-v2 .dashboard-welcome-strip,
         .dashboard-page-v2 .dashboard-kpi-row {
             margin-bottom: 0.4rem !important;
         }
@@ -1048,10 +1049,7 @@
 
 
     @media (min-width: 992px) and (max-height: 900px) {
-        .dashboard-page-v2 .dashboard-welcome-strip {
-            margin-bottom: 0.45rem !important;
-        }
-
+        .dashboard-page-v2 .dashboard-welcome-strip,
         .dashboard-page-v2 .dashboard-kpi-row {
             margin-bottom: 0.28rem !important;
         }

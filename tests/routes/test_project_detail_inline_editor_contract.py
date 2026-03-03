@@ -36,3 +36,5 @@ def test_task_detail_dark_css_styles_responsavel_picker_more():
     content = _read(file_path)
 
     assert '.task-detail-v2 .responsavel-picker-more' in content
+    assert '.responsavel-picker-option-checkbox {' in content
+    assert '.responsavel-picker-option-checkbox:checked::after {' in content
