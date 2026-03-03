@@ -829,7 +829,7 @@
     text-decoration: none;
     font-weight: var(--ds-font-weight-semibold);
     -webkit-user-drag: none;
-    cursor: inherit;
+    cursor: pointer;
 }
 
 .task-hub-page .task-hub-kanban-context a:hover,

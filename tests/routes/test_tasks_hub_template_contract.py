@@ -179,7 +179,7 @@ def test_tasks_hub_kanban_project_link_keeps_drag_cursor_on_hold():
     kanban_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'task-detail-kanban.css'
     kanban_css_content = kanban_css_path.read_text(encoding='utf-8')
 
-    assert 'cursor: inherit;' in tarefas_css_content
+    assert 'cursor: pointer;' in tarefas_css_content
     assert '.task-detail-v2 .task-items-kanban-card:active .task-hub-kanban-context a,' in kanban_css_content
     assert 'cursor: grabbing;' in kanban_css_content
 
