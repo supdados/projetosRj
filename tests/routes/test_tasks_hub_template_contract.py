@@ -205,6 +205,14 @@ def test_tasks_hub_dark_mode_uses_neutral_text_tokens_for_structural_copy():
     assert 'html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-kanban-context {\n    color: var(--app-color-text-muted);' in tarefas_css_content
 
 
+def test_tasks_hub_inline_add_action_buttons_use_square_corners():
+    list_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'task-detail-list.css'
+    list_css_content = list_css_path.read_text(encoding='utf-8')
+
+    assert '.task-detail-v2 .task-hub-add-cancel {\n    color: #6b7280;\n    width: 26px;\n    height: 26px;\n    min-width: 26px;\n    border-radius: 8px;' in list_css_content
+    assert '.task-detail-v2 .task-item-btn-confirm {\n    color: #16a34a;\n    width: 26px;\n    height: 26px;\n    min-width: 26px;\n    border-radius: 8px;' in list_css_content
+
+
 def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(app, client_user, seed_data):
     with app.app_context():
         archived_task = Task(

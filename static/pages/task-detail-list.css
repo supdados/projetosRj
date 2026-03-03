@@ -624,7 +624,8 @@
     color: #6b7280;
     width: 26px;
     height: 26px;
-    border-radius: 999px;
+    min-width: 26px;
+    border-radius: 8px;
     padding: 0;
     background: transparent;
     transition: color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
@@ -641,7 +642,8 @@
     color: #16a34a;
     width: 26px;
     height: 26px;
-    border-radius: 999px;
+    min-width: 26px;
+    border-radius: 8px;
     padding: 0;
     background: transparent;
     transition: color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
