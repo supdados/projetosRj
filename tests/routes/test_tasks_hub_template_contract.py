@@ -163,6 +163,27 @@ def test_tasks_hub_kanban_js_keeps_grouped_list_rows_inside_project_sections():
     assert 'syncGroupedListOrder(orderIds);' in content
 
 
+def test_tasks_hub_kanban_project_link_disables_native_link_drag():
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'kanban-manager.js'
+    js_content = js_path.read_text(encoding='utf-8')
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'tarefas.css'
+    css_content = css_path.read_text(encoding='utf-8')
+
+    assert "link.setAttribute('draggable', 'false');" in js_content
+    assert '-webkit-user-drag: none;' in css_content
+
+
+def test_tasks_hub_kanban_project_link_keeps_drag_cursor_on_hold():
+    tarefas_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'tarefas.css'
+    tarefas_css_content = tarefas_css_path.read_text(encoding='utf-8')
+    kanban_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'task-detail-kanban.css'
+    kanban_css_content = kanban_css_path.read_text(encoding='utf-8')
+
+    assert 'cursor: inherit;' in tarefas_css_content
+    assert '.task-detail-v2 .task-items-kanban-card:active .task-hub-kanban-context a,' in kanban_css_content
+    assert 'cursor: grabbing;' in kanban_css_content
+
+
 def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(app, client_user, seed_data):
     with app.app_context():
         archived_task = Task(

@@ -328,6 +328,7 @@
             var link = document.createElement('a');
             link.href = projectUrl;
             link.textContent = projectLabel;
+            link.setAttribute('draggable', 'false');
             contextEl.appendChild(link);
         }
 

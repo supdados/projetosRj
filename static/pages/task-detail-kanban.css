@@ -162,6 +162,20 @@
     pointer-events: none;
 }
 
+.task-detail-v2 .task-items-kanban-card:active,
+.task-detail-v2 .task-items-kanban-card:active .task-items-kanban-card-top,
+.task-detail-v2 .task-items-kanban-card:active .task-items-kanban-desc,
+.task-detail-v2 .task-items-kanban-card:active .task-hub-kanban-context,
+.task-detail-v2 .task-items-kanban-card:active .task-hub-kanban-context a,
+.task-detail-v2 .task-items-kanban-card:active .task-items-kanban-meta,
+.task-detail-v2 .task-items-kanban-card:active .task-items-kanban-owner,
+.task-detail-v2 .task-items-kanban-card:active .task-items-kanban-chips,
+.task-detail-v2 .task-items-kanban-card:active .task-items-kanban-badge,
+.task-detail-v2 .task-items-kanban-card:active .task-items-kanban-priority,
+.task-detail-v2 .task-items-kanban-card:active .task-items-kanban-tipo {
+    cursor: grabbing;
+}
+
 @keyframes td-kanban-drop-settle {
     0% {
         transform: scale(1.03) translateY(-2px);

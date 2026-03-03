@@ -828,6 +828,8 @@
     color: #466687;
     text-decoration: none;
     font-weight: var(--ds-font-weight-semibold);
+    -webkit-user-drag: none;
+    cursor: inherit;
 }
 
 .task-hub-page .task-hub-kanban-context a:hover,
