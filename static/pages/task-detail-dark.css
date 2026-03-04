@@ -293,26 +293,11 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-priorid
     color: #ffdcdc;
 }
 
-/* Options modo escuro: reset para evitar herança de cor no Windows/Linux */
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option {
-    background: #1e2a3a;
-    color: #d0dce9;
-}
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="nao_iniciada"]   { background: #1e2d3e; color: #d8e3ee; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="em_andamento"]  { background: #1a2d42; color: #d9ebfc; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="para_validacao"] { background: #2e2810; color: #fbe8c8; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="para_ajustes"]  { background: #2e1a08; color: #fed7aa; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="finalizada"]    { background: #1a2e27; color: #d9f3e8; }
-
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option {
     background: #1e2a3a;
     color: #d0dce9;
 }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value=""]        { background: #1e2a3a; color: #b9c9d8; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="baixa"]   { background: #1a2e27; color: #d7f2e8; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="media"]   { background: #1a2a3d; color: #d7ebff; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="alta"]    { background: #2e2810; color: #ffe8c8; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="urgente"] { background: #2e1a1a; color: #ffdcdc; }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-view-toggle {
     --td-toggle-base-fill: #253545;
