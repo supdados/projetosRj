@@ -551,6 +551,17 @@ ROUTE_CASES = [
         'requires_admin': False,
     },
     {
+        'id': 'tasks_reorder_post',
+        'method': 'POST',
+        'rule': '/tarefas/reordenar',
+        'path': '/tarefas/reordenar',
+        'role': 'user',
+        'json': {'ordem': ['{task_id}']},
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
         'id': 'task_items_reorder_post',
         'method': 'POST',
         'rule': '/tarefas/<int:task_id>/itens/reordenar',
@@ -1043,4 +1054,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 92
+assert len(ROUTE_CASES) == 93
