@@ -219,6 +219,45 @@ def test_login_govbr_callback_blocks_when_sub_conflicts(app, client, seed_data, 
         assert 'user_id' not in session
 
 
+def test_login_govbr_callback_prefers_existing_sub_without_needing_cpf(app, client, seed_data, monkeypatch):
+    _enable_govbr(app)
+
+    with app.app_context():
+        user = db.session.get(User, seed_data['user_id'])
+        user.cpf_govbr = None
+        user.govbr_sub = 'sub-principal'
+        db.session.commit()
+
+    monkeypatch.setattr(
+        auth_routes,
+        'exchange_code_for_tokens',
+        lambda _config, *, code: {'access_token': f'access-{code}', 'id_token': 'id-token'},
+    )
+    monkeypatch.setattr(
+        auth_routes,
+        'decode_jwt_payload',
+        lambda _token: {'nonce': 'nonce-5', 'sub': 'sub-principal'},
+    )
+    monkeypatch.setattr(
+        auth_routes,
+        'fetch_userinfo',
+        lambda _config, *, access_token: {'sub': 'sub-principal'},
+    )
+
+    with client.session_transaction() as session:
+        session['govbr_auth_state'] = 'state-5'
+        session['govbr_auth_nonce'] = 'nonce-5'
+
+    response = client.get('/auth/govbr/callback?code=ok&state=state-5', follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/dashboard')
+
+    with client.session_transaction() as session:
+        assert session['user_id'] == seed_data['user_id']
+        assert session['auth_provider'] == 'govbr'
+
+
 def test_logout_for_govbr_session_defaults_to_local_login_redirect(app, client, seed_data, monkeypatch):
     _enable_govbr(app)
     monkeypatch.setattr(

@@ -197,31 +197,47 @@ def login_govbr_callback():
     cpf_value = userinfo.get('preferred_username') or id_payload.get('preferred_username')
     sub_value = userinfo.get('sub') or id_payload.get('sub')
 
+    if not sub_value:
+        flash('Não foi possível identificar o usuário gov.br (sub ausente).', 'danger')
+        return redirect(url_for('main.login_page'))
+
     try:
-        cpf = normalize_cpf(cpf_value)
+        cpf = normalize_cpf(cpf_value) if cpf_value is not None else None
     except ValueError:
         cpf = None
 
-    if not cpf or not sub_value:
-        flash('Não foi possível identificar o usuário gov.br (CPF/sub ausente).', 'danger')
-        return redirect(url_for('main.login_page'))
+    user = User.query.filter_by(govbr_sub=sub_value).first()
+    matched_by_username = False
+    is_first_link = user is None
 
-    user, matched_by_username = _find_user_by_cpf_for_govbr(cpf)
-    if user is None:
-        flash('Usuário gov.br não vinculado no sistema. Solicite cadastro de CPF ao administrador.', 'danger')
-        return redirect(url_for('main.login_page'))
+    if is_first_link:
+        if not cpf:
+            flash(
+                'Usuário gov.br não vinculado no sistema (CPF não retornado para vínculo inicial).',
+                'danger',
+            )
+            return redirect(url_for('main.login_page'))
 
-    if user.govbr_sub and user.govbr_sub != sub_value:
-        flash('Vínculo gov.br inconsistente para este usuário. Contate o administrador.', 'danger')
-        return redirect(url_for('main.login_page'))
+        user, matched_by_username = _find_user_by_cpf_for_govbr(cpf)
+        if user is None:
+            flash('Usuário gov.br não vinculado no sistema. Solicite cadastro de CPF ao administrador.', 'danger')
+            return redirect(url_for('main.login_page'))
+
+        if user.govbr_sub and user.govbr_sub != sub_value:
+            flash('Vínculo gov.br inconsistente para este usuário. Contate o administrador.', 'danger')
+            return redirect(url_for('main.login_page'))
 
     try:
         changed = False
-        if matched_by_username and not user.cpf_govbr:
+        if is_first_link and matched_by_username and cpf and not user.cpf_govbr:
             user.cpf_govbr = cpf
             changed = True
-        if not user.govbr_sub:
+        if is_first_link and not user.govbr_sub:
             user.govbr_sub = sub_value
+            changed = True
+        if not is_first_link and cpf and not user.cpf_govbr:
+            # Backfill opcional de CPF para usuários já vinculados por sub.
+            user.cpf_govbr = cpf
             changed = True
         if changed:
             db.session.commit()
