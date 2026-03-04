@@ -1,6 +1,7 @@
 from flask import flash, g, redirect, render_template, request, url_for
 
 from models import User, UserArea, db
+from services.govbr_oidc import normalize_cpf
 
 from .blueprint import main_bp
 from .decorators import admin_required, login_required
@@ -31,6 +32,15 @@ def _parse_selected_areas(raw_areas):
     return selected_areas, invalid_areas, area_catalog_choices
 
 
+def _parse_cpf_govbr(raw_cpf):
+    if raw_cpf is None or not str(raw_cpf).strip():
+        return None, None
+    try:
+        return normalize_cpf(raw_cpf), None
+    except ValueError as exc:
+        return None, str(exc)
+
+
 @main_bp.route('/admin/users')
 @login_required
 @admin_required
@@ -53,9 +63,12 @@ def add_user():
         password = request.form.get('password')
         orgao = request.form.get('orgao')
         is_admin_form = request.form.get('is_admin') == 'on'
+        cpf_govbr, cpf_error = _parse_cpf_govbr(request.form.get('cpf_govbr'))
 
         if not username or not name or not password:
             flash('Username, Nome Completo e Senha são obrigatórios.', 'danger')
+        elif cpf_error:
+            flash(f'CPF gov.br inválido: {cpf_error}', 'danger')
         elif invalid_areas:
             flash(
                 f'Área(s) inválida(s): {", ".join(invalid_areas)}. Atualize o formulário e tente novamente.',
@@ -63,12 +76,15 @@ def add_user():
             )
         elif User.query.filter_by(username=username).first():
             flash('Este nome de usuário já está em uso. Escolha outro.', 'danger')
+        elif cpf_govbr and User.query.filter_by(cpf_govbr=cpf_govbr).first():
+            flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
         else:
             new_user = User(
                 username=username, 
                 name=name, 
                 orgao=orgao if orgao else None, 
-                is_admin=is_admin_form
+                is_admin=is_admin_form,
+                cpf_govbr=cpf_govbr,
             )
             new_user.set_password(password)
             db.session.add(new_user)
@@ -115,6 +131,7 @@ def edit_user(user_id):
         selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
             request.form.getlist('areas_responsavel')
         )
+        cpf_govbr, cpf_error = _parse_cpf_govbr(request.form.get('cpf_govbr'))
         
         is_admin_form_val = request.form.get('is_admin') == 'on'
 
@@ -144,8 +161,35 @@ def edit_user(user_id):
                 action_verb="Editar",
                 areas_responsaveis_choices=area_catalog_choices,
             )
+
+        if cpf_error:
+            flash(f'CPF gov.br inválido: {cpf_error}', 'danger')
+            return render_template(
+                'user_form.html',
+                user=user_to_edit,
+                user_areas=selected_areas,
+                action_verb="Editar",
+                areas_responsaveis_choices=area_catalog_choices,
+            )
+
+        if (
+            cpf_govbr
+            and User.query.filter(User.cpf_govbr == cpf_govbr, User.id != user_to_edit.id).first()
+        ):
+            flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
+            return render_template(
+                'user_form.html',
+                user=user_to_edit,
+                user_areas=selected_areas,
+                action_verb="Editar",
+                areas_responsaveis_choices=area_catalog_choices,
+            )
         
         user_to_edit.is_admin = is_admin_form_val
+        old_cpf = user_to_edit.cpf_govbr
+        user_to_edit.cpf_govbr = cpf_govbr
+        if not cpf_govbr or (old_cpf and old_cpf != cpf_govbr):
+            user_to_edit.govbr_sub = None
 
         # Atualizar áreas do usuário
         user_to_edit.set_areas(selected_areas)

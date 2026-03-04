@@ -55,6 +55,31 @@
                         <div class="invalid-feedback">Por favor, informe o nome de usuário para login.</div>
                         {% endif %}
                     </div>
+
+                    <div class="col-12 col-lg-6">
+                        <label for="cpf_govbr" class="account-label">CPF gov.br</label>
+                        <input
+                            type="text"
+                            class="form-control account-input"
+                            id="cpf_govbr"
+                            name="cpf_govbr"
+                            value="{{ user.cpf_govbr or request.form.cpf_govbr or '' }}"
+                            placeholder="Somente números ou com máscara"
+                        >
+                        <div class="account-help-text">Campo opcional. Use CPF com 11 dígitos para habilitar login gov.br.</div>
+                    </div>
+
+                    <div class="col-12 col-lg-6">
+                        <label for="govbr_sub" class="account-label">Identificador gov.br (sub)</label>
+                        <input
+                            type="text"
+                            class="form-control account-input account-input-readonly"
+                            id="govbr_sub"
+                            value="{{ user.govbr_sub or 'Será preenchido automaticamente no primeiro login gov.br' }}"
+                            readonly
+                        >
+                        <div class="account-help-text">Preenchimento automático e uso interno para validação de vínculo.</div>
+                    </div>
                 </div>
             </div>
 

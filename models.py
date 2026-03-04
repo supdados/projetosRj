@@ -60,6 +60,8 @@ class User(db.Model):
     name = db.Column(db.String(120), nullable=False)
     orgao = db.Column(db.String(100), nullable=True)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    cpf_govbr = db.Column(db.String(11), unique=True, nullable=True, index=True)
+    govbr_sub = db.Column(db.String(255), unique=True, nullable=True, index=True)
     
     # Relacionamento com múltiplas áreas
     areas = db.relationship('UserArea', backref='user', lazy=True, cascade="all, delete-orphan")

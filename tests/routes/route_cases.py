@@ -32,6 +32,26 @@ ROUTE_CASES = [
         'requires_admin': False,
     },
     {
+        'id': 'login_govbr_get',
+        'method': 'GET',
+        'rule': '/login/govbr',
+        'path': '/login/govbr',
+        'role': 'anon',
+        'expected_status': 302,
+        'requires_login': False,
+        'requires_admin': False,
+    },
+    {
+        'id': 'login_govbr_callback_get',
+        'method': 'GET',
+        'rule': '/auth/govbr/callback',
+        'path': '/auth/govbr/callback',
+        'role': 'anon',
+        'expected_status': 302,
+        'requires_login': False,
+        'requires_admin': False,
+    },
+    {
         'id': 'logout_get',
         'method': 'GET',
         'rule': '/logout',
@@ -1054,4 +1074,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 93
+assert len(ROUTE_CASES) == 95

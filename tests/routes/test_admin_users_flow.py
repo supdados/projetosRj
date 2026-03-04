@@ -108,3 +108,83 @@ def test_admin_cannot_delete_own_account(app, client_admin, seed_data):
     with app.app_context():
         admin = db.session.get(User, seed_data['admin_id'])
         assert admin is not None
+
+
+def test_admin_can_create_user_with_valid_cpf_govbr(app, client_admin):
+    response = client_admin.post(
+        '/admin/users/add',
+        data={
+            'username': 'usuario_com_cpf',
+            'name': 'Usuario CPF',
+            'password': 'senhaNova123',
+            'orgao': 'Orgao Novo',
+            'areas_responsavel': ['Auditoria'],
+            'cpf_govbr': '123.456.789-01',
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert '/admin/users' in response.headers['Location']
+
+    with app.app_context():
+        user = User.query.filter_by(username='usuario_com_cpf').first()
+        assert user is not None
+        assert user.cpf_govbr == '12345678901'
+        assert user.govbr_sub is None
+
+
+def test_admin_user_create_rejects_invalid_cpf_govbr(app, client_admin):
+    response = client_admin.post(
+        '/admin/users/add',
+        data={
+            'username': 'usuario_cpf_invalido',
+            'name': 'Usuario CPF Invalido',
+            'password': 'senhaNova123',
+            'orgao': 'Orgao Novo',
+            'areas_responsavel': ['Auditoria'],
+            'cpf_govbr': '12345',
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'CPF gov.br inválido' in html
+
+    with app.app_context():
+        assert User.query.filter_by(username='usuario_cpf_invalido').first() is None
+
+
+def test_admin_user_create_rejects_duplicate_cpf_govbr(app, client_admin):
+    with app.app_context():
+        existing = User(
+            username='usuario_cpf_existente',
+            name='Usuario CPF Existente',
+            orgao='Orgao Teste',
+            is_admin=False,
+            cpf_govbr='12345678901',
+        )
+        existing.set_password('senha123')
+        db.session.add(existing)
+        db.session.commit()
+
+    response = client_admin.post(
+        '/admin/users/add',
+        data={
+            'username': 'usuario_cpf_duplicado',
+            'name': 'Usuario CPF Duplicado',
+            'password': 'senhaNova123',
+            'orgao': 'Orgao Novo',
+            'areas_responsavel': ['Auditoria'],
+            'cpf_govbr': '123.456.789-01',
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'Já existe um usuário vinculado a este CPF gov.br.' in html
+
+    with app.app_context():
+        assert User.query.filter_by(username='usuario_cpf_duplicado').first() is None

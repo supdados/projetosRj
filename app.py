@@ -10,6 +10,7 @@ from sqlalchemy import inspect, text
 from models import User, UserNotification, db
 from objective_catalog import sync_goal_catalog_to_db
 from routes import inject_current_year, main_bp
+from services.govbr_oidc import is_govbr_oidc_enabled
 from time_utils import register_sqlite_adapters
 
 load_dotenv()
@@ -43,6 +44,17 @@ def _resolve_database_uri(explicit_uri=None):
 def _env_flag_is_true(name, default='false'):
     raw = os.getenv(name, default)
     return str(raw).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _env_int(name, default=10):
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
 
 
 def ensure_project_abep_indicator_column():
@@ -284,6 +296,7 @@ def _register_context_processors(app):
             'current_user_obj': current_user_obj,
             'is_admin_user': is_admin,
             'unread_notifications_count': unread_notifications_count,
+            'govbr_login_enabled': is_govbr_oidc_enabled(app.config),
         }
 
 
@@ -294,6 +307,16 @@ def create_app(test_config=None):
         SQLALCHEMY_DATABASE_URI=_resolve_database_uri(),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         SKIP_STARTUP_DB_INIT=_env_flag_is_true('SKIP_STARTUP_DB_INIT', default='false'),
+        GOVBR_OIDC_ENABLED=_env_flag_is_true('GOVBR_OIDC_ENABLED', default='false'),
+        GOVBR_OIDC_BASE_URL=os.getenv('GOVBR_OIDC_BASE_URL', ''),
+        GOVBR_OIDC_REALM=os.getenv('GOVBR_OIDC_REALM', ''),
+        GOVBR_OIDC_CLIENT_ID=os.getenv('GOVBR_OIDC_CLIENT_ID', ''),
+        GOVBR_OIDC_CLIENT_SECRET=os.getenv('GOVBR_OIDC_CLIENT_SECRET', ''),
+        GOVBR_OIDC_REDIRECT_URI=os.getenv('GOVBR_OIDC_REDIRECT_URI', 'http://localhost:5002/auth/govbr/callback'),
+        GOVBR_OIDC_POST_LOGOUT_REDIRECT_URI=os.getenv('GOVBR_OIDC_POST_LOGOUT_REDIRECT_URI', 'http://localhost:5002/login'),
+        GOVBR_OIDC_FEDERATED_LOGOUT_ENABLED=_env_flag_is_true('GOVBR_OIDC_FEDERATED_LOGOUT_ENABLED', default='false'),
+        GOVBR_OIDC_SCOPE=os.getenv('GOVBR_OIDC_SCOPE', 'openid profile email'),
+        GOVBR_OIDC_TIMEOUT_SECONDS=_env_int('GOVBR_OIDC_TIMEOUT_SECONDS', default=10),
     )
 
     if test_config:

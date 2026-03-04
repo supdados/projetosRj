@@ -39,6 +39,7 @@
                         <th>Login</th>
                         <th>Órgão</th>
                         <th>Áreas Responsáveis</th>
+                        <th>CPF gov.br</th>
                         <th class="text-center">Perfil</th>
                         <th class="text-center">Ações</th>
                     </tr>
@@ -73,6 +74,20 @@
                             </div>
                             {% else %}
                             <span class="admin-users-muted">Sem área definida</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user_item.cpf_govbr %}
+                            <div class="admin-users-name-cell">
+                                <span class="admin-users-username">{{ user_item.cpf_govbr }}</span>
+                                {% if user_item.govbr_sub %}
+                                <span class="admin-users-self-tag">Vinculado</span>
+                                {% else %}
+                                <span class="admin-users-self-tag">Pendente</span>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <span class="admin-users-muted">Não vinculado</span>
                             {% endif %}
                         </td>
                         <td class="text-center">

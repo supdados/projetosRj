@@ -68,6 +68,20 @@ PROJECT_COLUMNS = [
     ('github_link', 'VARCHAR(500)'),
     ('documentation_link', 'VARCHAR(500)'),
 ]
+USER_AUTH_COLUMNS = [
+    ('cpf_govbr', 'VARCHAR(11)'),
+    ('govbr_sub', 'VARCHAR(255)'),
+]
+USER_AUTH_INDEXES = {
+    'uq_user_cpf_govbr': {
+        'ddl': 'CREATE UNIQUE INDEX uq_user_cpf_govbr ON `user` (cpf_govbr)',
+        'compatible_names': {'ix_user_cpf_govbr'},
+    },
+    'uq_user_govbr_sub': {
+        'ddl': 'CREATE UNIQUE INDEX uq_user_govbr_sub ON `user` (govbr_sub)',
+        'compatible_names': {'ix_user_govbr_sub'},
+    },
+}
 USER_NOTIFICATION_INDEXES = {
     'ix_user_notification_recipient_user_id': 'CREATE INDEX ix_user_notification_recipient_user_id ON user_notification (recipient_user_id)',
     'ix_user_notification_actor_user_id': 'CREATE INDEX ix_user_notification_actor_user_id ON user_notification (actor_user_id)',
@@ -820,17 +834,66 @@ def _ensure_runtime_indexes():
 
 def _migrate_user_areas_step(emit_output=True):
     _emit("\n-- [1/7] Iniciando migração de áreas de usuários...", emit_output)
+    migrated_count = 0
+    auth_columns_added = []
+    auth_indexes_added = []
     try:
         db.create_all()
 
         inspector = inspect(db.engine)
         if not _table_exists(inspector, 'user'):
             _emit("   ✓ Tabela 'user' não encontrada; nada para migrar.", emit_output)
-            return {'success': True, 'migrated_count': 0}
+            return {
+                'success': True,
+                'migrated_count': 0,
+                'auth_columns_added': auth_columns_added,
+                'auth_indexes_added': auth_indexes_added,
+            }
+
+        user_columns = _column_names(inspector, 'user')
+        for column_name, column_type in USER_AUTH_COLUMNS:
+            if column_name in user_columns:
+                continue
+            db.session.execute(text(f'ALTER TABLE `user` ADD COLUMN {column_name} {column_type}'))
+            auth_columns_added.append(f'user.{column_name}')
+            inspector = inspect(db.engine)
+            user_columns = _column_names(inspector, 'user')
+
+        if auth_columns_added:
+            db.session.commit()
+            _emit(
+                f"   ✓ Colunas de auth gov.br garantidas: {', '.join(auth_columns_added)}",
+                emit_output,
+            )
+
+        inspector = inspect(db.engine)
+        user_indexes = _index_names(inspector, 'user')
+        for index_name, index_payload in USER_AUTH_INDEXES.items():
+            if index_name in user_indexes:
+                continue
+            compatible_names = index_payload.get('compatible_names', set())
+            if any(compatible_name in user_indexes for compatible_name in compatible_names):
+                continue
+            db.session.execute(text(index_payload['ddl']))
+            auth_indexes_added.append(index_name)
+            db.session.commit()
+            inspector = inspect(db.engine)
+            user_indexes = _index_names(inspector, 'user')
+
+        if auth_indexes_added:
+            _emit(
+                f"   ✓ Índices de auth gov.br garantidos: {', '.join(auth_indexes_added)}",
+                emit_output,
+            )
 
         if 'area_responsavel' not in _column_names(inspector, 'user'):
             _emit("   ✓ Coluna legada 'user.area_responsavel' não existe; nada para migrar.", emit_output)
-            return {'success': True, 'migrated_count': 0}
+            return {
+                'success': True,
+                'migrated_count': migrated_count,
+                'auth_columns_added': auth_columns_added,
+                'auth_indexes_added': auth_indexes_added,
+            }
 
         user_table = Table('user', MetaData(), autoload_with=db.engine)
         existing_links = {
@@ -838,7 +901,6 @@ def _migrate_user_areas_step(emit_output=True):
             for user_id, area in db.session.query(UserArea.user_id, UserArea.area).all()
         }
 
-        migrated_count = 0
         for user_id, legacy_area in db.session.execute(
             select(user_table.c.id, user_table.c.area_responsavel)
         ).all():
@@ -853,11 +915,21 @@ def _migrate_user_areas_step(emit_output=True):
 
         db.session.commit()
         _emit(f"   ✓ Sucesso: {migrated_count} novas áreas foram migradas.", emit_output)
-        return {'success': True, 'migrated_count': migrated_count}
+        return {
+            'success': True,
+            'migrated_count': migrated_count,
+            'auth_columns_added': auth_columns_added,
+            'auth_indexes_added': auth_indexes_added,
+        }
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO na migração de áreas: {exc}", emit_output)
-        return {'success': False, 'migrated_count': 0}
+        return {
+            'success': False,
+            'migrated_count': migrated_count,
+            'auth_columns_added': auth_columns_added,
+            'auth_indexes_added': auth_indexes_added,
+        }
 
 
 def migrate_user_areas(emit_output=True):
@@ -1126,6 +1198,8 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         'area_catalog_choices': steps[5]['areas'],
         'sync_summary': steps[4]['summary'],
         'user_areas_migrated': steps[0]['migrated_count'],
+        'user_auth_columns_added': steps[0].get('auth_columns_added', []),
+        'user_auth_indexes_added': steps[0].get('auth_indexes_added', []),
         'project_columns_added': project_columns_added,
         'alembic_stamped': alembic_summary['stamped'],
     }
