@@ -57,8 +57,15 @@
         <a
             href="{{ url_for('main.login_govbr', next=next_page) if next_page else url_for('main.login_govbr') }}"
             class="btn login-govbr-btn"
+            data-trigger="login"
+            aria-label="Entrar com GOV.BR"
         >
-            <i class="fas fa-id-card me-2"></i>Entrar com gov.br
+            <span class="login-govbr-text">Entrar com</span>
+            <img
+                src="{{ url_for('static', filename='img/govbr-colorido-b.png') }}"
+                class="login-govbr-logo"
+                alt="gov.br"
+            >
         </a>
         {% endif %}
     </div>

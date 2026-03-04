@@ -159,24 +159,53 @@
         width: 100%;
         height: 46px;
         border-radius: 12px;
-        border: 1px solid #0d4f75;
-        background: linear-gradient(180deg, #1173a6 0%, #0b5a83 100%);
-        color: #ffffff !important;
-        font-weight: var(--ds-font-weight-semibold);
+        border: 1px solid #1351b4 !important;
+        background-color: #f8f8f8;
+        background-image: none;
+        color: #1351b4 !important;
+        font-weight: 600;
+        font-size: 1rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        padding: 0 1rem;
+        text-decoration: none;
     }
 
     .login-govbr-btn:hover {
-        color: #ffffff !important;
-        filter: brightness(1.04);
-        box-shadow: 0 10px 20px rgba(5, 63, 96, 0.24);
+        background-color: #ffffff;
+        border-color: #1351b4 !important;
+        color: #1351b4 !important;
+        text-decoration: none;
+        filter: brightness(1.02);
     }
 
     .login-govbr-btn:active {
-        transform: translateY(1px);
+        background-color: #f3f3f3;
+        border-color: #1351b4 !important;
+        filter: none;
+        color: #1351b4 !important;
+    }
+
+    .login-govbr-btn:focus,
+    .login-govbr-btn:focus-visible {
+        border-color: #1351b4 !important;
+        outline: 2px dashed #c2850c;
+        outline-offset: 2px;
+    }
+
+    .login-govbr-logo {
+        margin-left: 0.5rem;
+        width: auto;
+        max-height: 20px;
+        flex: 0 0 auto;
+        display: block;
+    }
+
+    .login-govbr-text {
+        font-size: 1rem;
+        font-weight: 500;
+        line-height: 1;
     }
 
     html[data-theme="dark"] body:not(.is-authenticated) {
