@@ -308,6 +308,31 @@
         return html;
     }
 
+    function syncTaskItemCommentsEmptyState(row) {
+        var wrap = getTaskItemCommentsInner(row);
+        if (!wrap) return;
+
+        var hasComments = wrap.querySelector('.task-comment[id^="comment-"]');
+        var placeholders = wrap.querySelectorAll('.task-comment-empty');
+
+        if (hasComments) {
+            Array.prototype.forEach.call(placeholders, function (node) {
+                if (node && node.parentNode) node.parentNode.removeChild(node);
+            });
+            return;
+        }
+
+        if (placeholders.length) return;
+
+        var empty = document.createElement('div');
+        empty.className = 'task-comment task-comment-empty';
+        empty.innerHTML = '<p class="task-comment-text">Nenhum comentário registrado.</p>';
+
+        var form = wrap.querySelector('.task-comment-form');
+        if (form) wrap.insertBefore(empty, form);
+        else wrap.appendChild(empty);
+    }
+
     function appendCommentToTaskItemRow(row, comment) {
         if (!row || !comment || !comment.id) return null;
         var wrap = getTaskItemCommentsInner(row);
@@ -320,7 +345,8 @@
         var commentEl = temp.firstChild;
         if (!commentEl) return null;
         wrap.insertBefore(commentEl, form);
-        setTaskItemCommentsCount(row, getTaskItemCommentsCount(row) + 1);
+        syncTaskItemCommentsEmptyState(row);
+        setTaskItemCommentsCount(row, wrap.querySelectorAll('.task-comment[id^="comment-"]').length);
         syncTaskItemRowMetadata(row);
         return commentEl;
     }
@@ -344,7 +370,12 @@
         var row = commentEl.closest('.task-item-row');
         if (commentEl.parentNode) commentEl.parentNode.removeChild(commentEl);
         if (row) {
-            setTaskItemCommentsCount(row, Math.max(0, getTaskItemCommentsCount(row) - 1));
+            var wrap = getTaskItemCommentsInner(row);
+            syncTaskItemCommentsEmptyState(row);
+            setTaskItemCommentsCount(
+                row,
+                wrap ? wrap.querySelectorAll('.task-comment[id^="comment-"]').length : 0
+            );
             syncTaskItemRowMetadata(row);
         }
         return row;
