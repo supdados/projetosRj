@@ -1112,9 +1112,9 @@
 /* Pages without variable-driven palettes */
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 {
-    --dashboard-brand-blue: #0f6fae;
-    --dashboard-brand-blue-soft: rgba(15, 111, 174, 0.22);
-    --dashboard-brand-blue-border: rgba(38, 140, 208, 0.52);
+    --dashboard-brand-blue: #4DA9F9;
+    --dashboard-brand-blue-soft: rgba(77, 169, 249, 0.22);
+    --dashboard-brand-blue-border: rgba(77, 169, 249, 0.52);
     background: var(--app-color-canvas);
 }
 
@@ -1291,6 +1291,9 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-prio
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-priority-count {
     color: var(--app-color-text-primary);
 }
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-priority-dot.prio-media {
+    background: #4DA9F9;
+}
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-stacked-bar,
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .bar-empty {
@@ -1323,7 +1326,7 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-rece
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-recent-badge.badge-baixa   { background: rgba(141, 160, 182, 0.2); color: #8da0b6; }
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-recent-status.status-nao-iniciada   { background: #8da0b6; }
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-recent-status.status-em-andamento    { background: #4e95cc; }
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-recent-status.status-em-andamento    { background: #4DA9F9; }
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-recent-status.status-para-validacao  { background: #d8a24d; }
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-recent-status.status-para-ajustes    { background: #e07740; }
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-recent-status.status-finalizada       { background: #49b987; }
@@ -1369,7 +1372,7 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-donu
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 {
     --tasks-kpi-finalizada: #49b987;
-    --tasks-kpi-andamento: #4e95cc;
+    --tasks-kpi-andamento: #4DA9F9;
     --tasks-kpi-para-validacao: #d8a24d;
     --tasks-kpi-para-ajustes: #e07740;
     --tasks-kpi-nao-iniciada: #8da0b6;
