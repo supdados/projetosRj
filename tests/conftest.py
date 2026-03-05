@@ -2,6 +2,7 @@ import datetime
 import os
 
 import pytest
+from sqlalchemy.pool import NullPool
 
 os.environ.setdefault('SKIP_STARTUP_DB_INIT', 'true')
 
@@ -58,6 +59,7 @@ def app(tmp_path):
             'SECRET_KEY': 'test-secret-key',
             'SQLALCHEMY_DATABASE_URI': f'sqlite:///{db_path}',
             'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+            'SQLALCHEMY_ENGINE_OPTIONS': {'poolclass': NullPool},
             'SKIP_STARTUP_DB_INIT': True,
         }
     )
@@ -73,6 +75,7 @@ def app(tmp_path):
     with flask_app.app_context():
         db.session.remove()
         db.drop_all()
+        db.engine.dispose()
 
 
 @pytest.fixture
