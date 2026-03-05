@@ -7,17 +7,30 @@
 
     .login-card {
         width: 100%;
-        max-width: 430px;
+        max-width: 380px;
         background: #ffffff;
         border: 1px solid #e6edf5;
         border-radius: 16px;
         box-shadow: 0 20px 45px rgba(0, 45, 80, 0.08);
-        padding: 2rem 1.75rem;
+        padding: 1.6rem 1.5rem;
     }
 
     .login-brand {
-        text-align: center;
-        margin-bottom: 1.4rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+        margin-bottom: 1.1rem;
+    }
+
+    .login-brand-logo {
+        grid-row: auto;
+        height: 3.4rem;
+        width: auto;
+        margin: 0;
+        display: block;
+        object-fit: contain;
+        filter: none;
     }
 
     .login-brand-icon {
@@ -38,13 +51,15 @@
         margin: 0;
         font-size: var(--ds-font-size-2xl);
         font-weight: var(--ds-font-weight-bold);
-        color: #223246;
+        color: var(--primary-color);
+        align-self: auto;
     }
 
     .login-subtitle {
-        margin: 0.35rem 0 0;
+        margin: 0.1rem 0 0;
         color: #728196;
         font-size: var(--ds-font-size-base);
+        align-self: start;
     }
 
     .login-field {
@@ -394,8 +409,12 @@
         box-shadow: 0 10px 22px rgba(10, 23, 36, 0.3);
     }
 
+    html[data-theme="dark"] .login-brand-logo {
+        filter: grayscale(1) brightness(2.8) contrast(1.05);
+    }
+
     html[data-theme="dark"] .login-title {
-        color: #f3f8fd;
+        color: #ffffff;
     }
 
     html[data-theme="dark"] .login-subtitle {

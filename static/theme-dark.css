@@ -62,7 +62,7 @@ html[data-theme="dark"] body.is-authenticated .app-topnav {
 
 html[data-theme="dark"] body.is-authenticated .app-brand,
 html[data-theme="dark"] body.is-authenticated .app-brand-text {
-    color: var(--app-color-text-primary);
+    color: #ffffff;
 }
 
 

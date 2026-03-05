@@ -31,8 +31,12 @@
     </script>
     
     <!-- Favicon -->
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico', v='20260304e') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico', v='20260304e') }}" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/brand/favicon.svg', v='20260304e') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/brand/favicon-32.png', v='20260304e') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/brand/favicon-16.png', v='20260304e') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/brand/logo-blue.png', v='20260304h') }}">
     
     <!-- Local typography assets (self-host) -->
     <link rel="preload" href="{{ url_for('static', filename='fonts/Inter-Variable.woff2') }}" as="font" type="font/woff2" crossorigin>
@@ -100,7 +104,7 @@
                 <div class="container-fluid app-topnav-container">
                     <div class="app-topnav-left">
                         <a href="{{ url_for('main.dashboard') }}" class="navbar-brand app-brand" data-area-nav>
-                            <i class="fas fa-project-diagram app-brand-icon"></i>
+                            <img src="{{ url_for('static', filename='img/brand/logo-blue.png', v='20260304h') }}" class="app-brand-logo" alt="Logo ProjetosRJ">
                             <span class="app-brand-text">ProjetosRJ</span>
                         </a>
 
@@ -362,9 +366,9 @@
             {% else %}
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid">
-                    <a href="{{ url_for('main.login_page') }}" class="navbar-brand ms-0">
-                        <i class="fas me-2"></i>
-                        <span>ProjetosRJ</span>
+                    <a href="{{ url_for('main.login_page') }}" class="navbar-brand app-brand ms-0">
+                        <img src="{{ url_for('static', filename='img/brand/logo-blue.png', v='20260304h') }}" class="app-brand-logo" alt="Logo ProjetosRJ">
+                        <span class="app-brand-text">ProjetosRJ</span>
                     </a>
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">

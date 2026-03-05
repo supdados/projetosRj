@@ -10,17 +10,8 @@
 <div class="login-page">
     <div class="login-card">
         <div class="login-brand">
-            <div class="login-brand-icon">
-                <i class="fas fa-project-diagram"></i>
-            </div>
+            <img src="{{ url_for('static', filename='img/brand/logo-blue.png', v='20260304h') }}" class="login-brand-logo" alt="Logo ProjetosRJ">
             <h1 class="login-title ds-type-page-title">ProjetosRJ</h1>
-            <p class="login-subtitle ds-type-body-sm">
-                {% if govbr_login_enabled %}
-                Acesse com usuário/senha local ou gov.br
-                {% else %}
-                Acesse com seu usuário e senha
-                {% endif %}
-            </p>
         </div>
 
         {% if error %}
