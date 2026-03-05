@@ -124,6 +124,7 @@ def add_user():
 @admin_required
 def edit_user(user_id):
     user_to_edit = get_or_404(User, user_id)
+    hide_govbr_link_fields = bool(user_to_edit.cpf_govbr and user_to_edit.govbr_sub)
     if request.method == 'POST':
         # Username geralmente não é editável ou requer cuidados especiais de unicidade
         user_to_edit.name = request.form.get('name')
@@ -131,7 +132,11 @@ def edit_user(user_id):
         selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
             request.form.getlist('areas_responsavel')
         )
-        cpf_govbr, cpf_error = _parse_cpf_govbr(request.form.get('cpf_govbr'))
+        should_update_cpf = not hide_govbr_link_fields and 'cpf_govbr' in request.form
+        cpf_govbr = user_to_edit.cpf_govbr
+        cpf_error = None
+        if should_update_cpf:
+            cpf_govbr, cpf_error = _parse_cpf_govbr(request.form.get('cpf_govbr'))
         
         is_admin_form_val = request.form.get('is_admin') == 'on'
 
@@ -147,6 +152,7 @@ def edit_user(user_id):
                     user_areas=user_to_edit.get_areas(),
                     action_verb="Editar",
                     areas_responsaveis_choices=area_catalog_choices,
+                    hide_govbr_link_fields=hide_govbr_link_fields,
                 )
 
         if invalid_areas:
@@ -160,6 +166,7 @@ def edit_user(user_id):
                 user_areas=selected_areas,
                 action_verb="Editar",
                 areas_responsaveis_choices=area_catalog_choices,
+                hide_govbr_link_fields=hide_govbr_link_fields,
             )
 
         if cpf_error:
@@ -170,10 +177,12 @@ def edit_user(user_id):
                 user_areas=selected_areas,
                 action_verb="Editar",
                 areas_responsaveis_choices=area_catalog_choices,
+                hide_govbr_link_fields=hide_govbr_link_fields,
             )
 
         if (
-            cpf_govbr
+            should_update_cpf
+            and cpf_govbr
             and User.query.filter(User.cpf_govbr == cpf_govbr, User.id != user_to_edit.id).first()
         ):
             flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
@@ -183,13 +192,15 @@ def edit_user(user_id):
                 user_areas=selected_areas,
                 action_verb="Editar",
                 areas_responsaveis_choices=area_catalog_choices,
+                hide_govbr_link_fields=hide_govbr_link_fields,
             )
         
         user_to_edit.is_admin = is_admin_form_val
-        old_cpf = user_to_edit.cpf_govbr
-        user_to_edit.cpf_govbr = cpf_govbr
-        if not cpf_govbr or (old_cpf and old_cpf != cpf_govbr):
-            user_to_edit.govbr_sub = None
+        if should_update_cpf:
+            old_cpf = user_to_edit.cpf_govbr
+            user_to_edit.cpf_govbr = cpf_govbr
+            if not cpf_govbr or (old_cpf and old_cpf != cpf_govbr):
+                user_to_edit.govbr_sub = None
 
         # Atualizar áreas do usuário
         user_to_edit.set_areas(selected_areas)
@@ -209,6 +220,7 @@ def edit_user(user_id):
         user_areas=user_to_edit.get_areas(),
         action_verb="Editar",
         areas_responsaveis_choices=get_area_catalog_choices(),
+        hide_govbr_link_fields=hide_govbr_link_fields,
     )
 
 @main_bp.route('/admin/users/delete/<int:user_id>', methods=['POST'])

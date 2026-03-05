@@ -8,6 +8,7 @@
 {% set page_subtitle = 'Atualize seus dados de acesso e organização.' if is_own_profile else ('Configure os dados do usuário e permissões de acesso.' if action_verb == 'Adicionar' else 'Atualize os dados, áreas e permissões deste usuário.') %}
 {% set submit_label = 'Salvar Alterações' if user.id else 'Criar Usuário' %}
 {% set cancel_href = url_for('main.dashboard') if is_own_profile else url_for('main.list_users') %}
+{% set hide_govbr_link_fields = hide_govbr_link_fields|default(false) %}
 
 <div class="container-fluid px-3 px-md-4 py-2 account-page-shell">
     <section class="account-page-header">
@@ -56,6 +57,18 @@
                         {% endif %}
                     </div>
 
+                    {% if hide_govbr_link_fields %}
+                    <div class="col-12">
+                        <label for="govbr_link_status" class="account-label">Vínculo gov.br</label>
+                        <input
+                            type="text"
+                            class="form-control account-input account-input-readonly"
+                            id="govbr_link_status"
+                            value="Vinculado por gov.br"
+                            readonly
+                        >
+                    </div>
+                    {% else %}
                     <div class="col-12 col-lg-6">
                         <label for="cpf_govbr" class="account-label">CPF gov.br</label>
                         <input
@@ -80,6 +93,7 @@
                         >
                         <div class="account-help-text">Preenchimento automático e uso interno para validação de vínculo.</div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
 
