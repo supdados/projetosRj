@@ -1867,6 +1867,10 @@ footer p {
     pointer-events: none;
 }
 
+body.is-authenticated .app-flash-stack {
+    top: 73px;
+}
+
 .app-flash-alert {
     margin: 0;
     padding: 0.56rem 0.74rem;
