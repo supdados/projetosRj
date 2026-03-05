@@ -130,3 +130,12 @@ def test_non_admin_menu_shows_manage_account_entry(client_user):
     assert response.status_code == 200
     page = response.get_data(as_text=True)
     assert 'Gerenciar Conta' in page
+
+
+def test_manage_account_does_not_render_sub_field_for_unlinked_user(client_user):
+    response = client_user.get('/profile/change-password', follow_redirects=False)
+
+    assert response.status_code == 200
+    page = response.get_data(as_text=True)
+    assert 'Identificador gov.br (sub)' not in page
+    assert 'id="govbr_sub"' not in page

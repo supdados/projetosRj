@@ -18,6 +18,9 @@
 }
 
 .dashboard-page-v2 {
+    --dashboard-brand-blue: #0e6aa8;
+    --dashboard-brand-blue-soft: rgba(14, 106, 168, 0.12);
+    --dashboard-brand-blue-border: rgba(14, 106, 168, 0.3);
     background: #f4f7fb;
     padding: 0.84rem 0.9rem 0.9rem;
     flex: 1;
@@ -242,6 +245,24 @@
 
     .dashboard-page-v2 .dashboard-kpi-row > [class*="col-"] > a .dashboard-glass-card {
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .dashboard-page-v2 .dashboard-kpi-row .dashboard-glass-card .h4 {
+        color: var(--dashboard-brand-blue);
+    }
+
+    .dashboard-page-v2 .dashboard-brand-icon {
+        color: var(--dashboard-brand-blue) !important;
+    }
+
+    .dashboard-page-v2 .dashboard-brand-text {
+        color: var(--dashboard-brand-blue) !important;
+    }
+
+    .dashboard-page-v2 .dashboard-brand-icon-wrap {
+        background: var(--dashboard-brand-blue-soft) !important;
+        border: 1px solid var(--dashboard-brand-blue-border);
+        color: var(--dashboard-brand-blue) !important;
     }
 
     .dashboard-page-v2 .dashboard-kpi-row > [class*="col-"] > a:hover .dashboard-glass-card,
@@ -1091,6 +1112,9 @@
 /* Pages without variable-driven palettes */
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 {
+    --dashboard-brand-blue: #0f6fae;
+    --dashboard-brand-blue-soft: rgba(15, 111, 174, 0.22);
+    --dashboard-brand-blue-border: rgba(38, 140, 208, 0.52);
     background: var(--app-color-canvas);
 }
 
@@ -1151,9 +1175,12 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .dashboard-new-
     box-shadow: 0 14px 28px rgba(7, 32, 54, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .dashboard-glass-card .h4,
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .dashboard-kpi-row .fw-medium {
     color: var(--app-color-text-primary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .dashboard-kpi-row .dashboard-glass-card .h4 {
+    color: var(--dashboard-brand-blue) !important;
 }
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .dashboard-kpi-row .small {

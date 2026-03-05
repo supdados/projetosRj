@@ -247,3 +247,12 @@ def test_admin_own_profile_hides_cpf_and_sub_when_govbr_is_linked(app, client_ad
     assert 'Vinculado por gov.br' in page
     assert 'name="cpf_govbr"' not in page
     assert 'id="govbr_sub"' not in page
+
+
+def test_admin_edit_user_does_not_render_sub_field_when_unlinked(client_admin, seed_data):
+    response = client_admin.get(f"/admin/users/edit/{seed_data['editable_user_id']}", follow_redirects=False)
+
+    assert response.status_code == 200
+    page = response.get_data(as_text=True)
+    assert 'Identificador gov.br (sub)' not in page
+    assert 'id="govbr_sub"' not in page

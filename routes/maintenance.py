@@ -10,7 +10,16 @@ from .blueprint import main_bp
 # Rota específica para servir o favicon
 @main_bp.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(main_bp.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    response = send_from_directory(
+        os.path.join(main_bp.root_path, 'static'),
+        'favicon.ico',
+        mimetype='image/vnd.microsoft.icon',
+        max_age=0,
+    )
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 @main_bp.route('/setup_db')
 # @login_required # Opcional: proteger esta rota
 # @admin_required # Opcional: proteger esta rota

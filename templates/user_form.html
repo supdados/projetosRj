@@ -58,7 +58,7 @@
                     </div>
 
                     {% if hide_govbr_link_fields %}
-                    <div class="col-12">
+                    <div class="col-12 account-field-compact">
                         <label for="govbr_link_status" class="account-label">Vínculo gov.br</label>
                         <input
                             type="text"
@@ -69,7 +69,7 @@
                         >
                     </div>
                     {% else %}
-                    <div class="col-12 col-lg-6">
+                    <div class="col-12 account-field-compact">
                         <label for="cpf_govbr" class="account-label">CPF gov.br</label>
                         <input
                             type="text"
@@ -80,18 +80,6 @@
                             placeholder="Somente números ou com máscara"
                         >
                         <div class="account-help-text">Campo opcional. Use CPF com 11 dígitos para habilitar login gov.br.</div>
-                    </div>
-
-                    <div class="col-12 col-lg-6">
-                        <label for="govbr_sub" class="account-label">Identificador gov.br (sub)</label>
-                        <input
-                            type="text"
-                            class="form-control account-input account-input-readonly"
-                            id="govbr_sub"
-                            value="{{ user.govbr_sub or 'Será preenchido automaticamente no primeiro login gov.br' }}"
-                            readonly
-                        >
-                        <div class="account-help-text">Preenchimento automático e uso interno para validação de vínculo.</div>
                     </div>
                     {% endif %}
                 </div>
