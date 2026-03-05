@@ -1786,6 +1786,105 @@
             }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
         }
 
+        function getColumnDropzone(column) {
+            if (!column) return null;
+            return column.querySelector('.task-items-kanban-dropzone[data-status]');
+        }
+
+        function getDropzoneByHorizontalPointer(clientX) {
+            if (!Number.isFinite(clientX)) return null;
+            var columns = Array.prototype.slice.call(
+                board.querySelectorAll('.task-items-kanban-column[data-status]')
+            );
+            var insideMatch = null;
+            var nearestMatch = null;
+
+            columns.forEach(function (column) {
+                var dropzone = getColumnDropzone(column);
+                if (!dropzone) return;
+
+                var rect = column.getBoundingClientRect();
+                if (!rect || rect.width <= 0) return;
+
+                if (clientX >= rect.left && clientX <= rect.right) {
+                    insideMatch = dropzone;
+                    return;
+                }
+
+                var distance = clientX < rect.left
+                    ? (rect.left - clientX)
+                    : (clientX - rect.right);
+                if (!nearestMatch || distance < nearestMatch.distance) {
+                    nearestMatch = { distance: distance, dropzone: dropzone };
+                }
+            });
+
+            return insideMatch || (nearestMatch ? nearestMatch.dropzone : null);
+        }
+
+        function resolveDropzoneFromEvent(event) {
+            if (!event || !event.target || typeof event.target.closest !== 'function') return null;
+
+            var targetDropzone = event.target.closest('.task-items-kanban-dropzone[data-status]');
+            if (targetDropzone) return targetDropzone;
+
+            var targetColumn = event.target.closest('.task-items-kanban-column[data-status]');
+            var columnDropzone = getColumnDropzone(targetColumn);
+            if (columnDropzone) return columnDropzone;
+
+            return getDropzoneByHorizontalPointer(event.clientX);
+        }
+
+        function placeDragPlaceholder(dropzone, clientY) {
+            if (!dropzone) return;
+            setDropzoneHover(dropzone);
+
+            var dragging = getDraggingCard();
+            if (!dragging) return;
+
+            var afterElement = getDragAfterElement(dropzone, clientY);
+            var placeholder = dragPlaceholder || createDragPlaceholder(dragging);
+            if (!placeholder) return;
+            if (afterElement) {
+                dropzone.insertBefore(placeholder, afterElement);
+            } else {
+                dropzone.appendChild(placeholder);
+            }
+        }
+
+        function finalizeDrop(event, dropzone) {
+            if (!dropzone) return;
+            event.preventDefault();
+            suppressCardClickUntil = Date.now() + 220;
+
+            var dragging = getDraggingCard();
+            var itemId = dragContext.itemId;
+            var previousStatus = dragContext.previousStatus;
+            dragContext.didDrop = true;
+
+            if (dragging) {
+                setCardStatus(dragging, dropzone.getAttribute('data-status') || 'nao_iniciada');
+                if (dragPlaceholder && dragPlaceholder.parentNode === dropzone) {
+                    dropzone.insertBefore(dragging, dragPlaceholder);
+                } else {
+                    var afterElement = getDragAfterElement(dropzone, event.clientY);
+                    if (afterElement) {
+                        dropzone.insertBefore(dragging, afterElement);
+                    } else {
+                        dropzone.appendChild(dragging);
+                    }
+                }
+                dragging.classList.remove('is-dragging');
+            }
+
+            removeDragPlaceholder();
+            removeDragGhost();
+            clearDropzoneHover();
+            triggerDropSettle(dragging);
+            persistKanbanChange(itemId, previousStatus);
+            updateColumnMeta();
+        }
+
         function clearDropzoneHover() {
             board.querySelectorAll('.task-items-kanban-dropzone.is-drag-over').forEach(function (zone) {
                 zone.classList.remove('is-drag-over');
@@ -1938,19 +2037,7 @@
                 dropzone.addEventListener('dragover', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
                     event.preventDefault();
-                    setDropzoneHover(dropzone);
-
-                    var dragging = getDraggingCard();
-                    if (!dragging) return;
-
-                    var afterElement = getDragAfterElement(dropzone, event.clientY);
-                    var placeholder = dragPlaceholder || createDragPlaceholder(dragging);
-                    if (!placeholder) return;
-                    if (afterElement) {
-                        dropzone.insertBefore(placeholder, afterElement);
-                    } else {
-                        dropzone.appendChild(placeholder);
-                    }
+                    placeDragPlaceholder(dropzone, event.clientY);
                 });
 
                 dropzone.addEventListener('dragleave', function (event) {
@@ -1963,34 +2050,29 @@
 
                 dropzone.addEventListener('drop', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
-                    event.preventDefault();
-                    suppressCardClickUntil = Date.now() + 220;
-
-                    var dragging = getDraggingCard();
-                    var itemId = dragContext.itemId;
-                    var previousStatus = dragContext.previousStatus;
-                    dragContext.didDrop = true;
-                    if (dragging) {
-                        setCardStatus(dragging, dropzone.getAttribute('data-status') || 'nao_iniciada');
-                        if (dragPlaceholder && dragPlaceholder.parentNode === dropzone) {
-                            dropzone.insertBefore(dragging, dragPlaceholder);
-                        } else {
-                            var afterElement = getDragAfterElement(dropzone, event.clientY);
-                            if (afterElement) {
-                                dropzone.insertBefore(dragging, afterElement);
-                            } else {
-                                dropzone.appendChild(dragging);
-                            }
-                        }
-                        dragging.classList.remove('is-dragging');
-                    }
-                    removeDragPlaceholder();
-                    removeDragGhost();
-                    clearDropzoneHover();
-                    triggerDropSettle(dragging);
-                    persistKanbanChange(itemId, previousStatus);
-                    updateColumnMeta();
+                    finalizeDrop(event, dropzone);
                 });
+            });
+
+            board.addEventListener('dragover', function (event) {
+                if (!dragContext || isPersisting || isDeleting || event.defaultPrevented) return;
+                var dropzone = resolveDropzoneFromEvent(event);
+                if (!dropzone) return;
+                event.preventDefault();
+                placeDragPlaceholder(dropzone, event.clientY);
+            });
+
+            board.addEventListener('drop', function (event) {
+                if (!dragContext || isPersisting || isDeleting || event.defaultPrevented) return;
+                var dropzone = resolveDropzoneFromEvent(event);
+                if (!dropzone) return;
+                finalizeDrop(event, dropzone);
+            });
+
+            board.addEventListener('dragleave', function (event) {
+                if (!dragContext || isPersisting || isDeleting) return;
+                if (board.contains(event.relatedTarget)) return;
+                clearDropzoneHover();
             });
         }
 

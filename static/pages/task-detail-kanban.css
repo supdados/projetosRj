@@ -2,7 +2,7 @@
     display: grid;
     grid-template-columns: repeat(5, minmax(200px, 1fr));
     gap: 0.62rem;
-    align-items: start;
+    align-items: stretch;
 }
 
 .task-detail-v2 .task-items-kanban-column {
@@ -51,6 +51,7 @@
 .task-detail-v2 .task-items-kanban-dropzone {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     gap: var(--td-kanban-drop-gap);
     padding: 0.56rem;
     min-height: calc((var(--td-kanban-card-slot-height) * 3) + (var(--td-kanban-drop-gap) * 2) + 1.12rem);
