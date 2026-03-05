@@ -9,6 +9,7 @@
             para_ajustes: 'Para ajustes',
             finalizada: 'Finalizada',
         };
+        var DRAWER_RESTRICTED_EDIT_MESSAGE = 'Somente o autor da tarefa ou um administrador pode editar descrição, prioridade e responsável.';
         var pageRoot = document.querySelector('.task-detail-v2');
         var toggleRoot = document.getElementById('taskItemsViewToggle');
         var listView = document.getElementById('taskItemsListView');
@@ -44,6 +45,7 @@
         var drawerDesc = document.getElementById('taskItemDrawerDesc');
         var drawerResponsavelTrigger = document.getElementById('taskItemDrawerResponsavelTrigger');
         var drawerAutosaveStatus = document.getElementById('taskItemDrawerAutosaveStatus');
+        var drawerPermissionBanner = document.getElementById('taskItemDrawerPermissionBanner');
         var drawerDeleteIcon = document.getElementById('taskItemDrawerDeleteIcon');
         var drawerDeleteConfirm = document.getElementById('taskItemDrawerDeleteConfirm');
         var drawerDeleteCancel = document.getElementById('taskItemDrawerDeleteCancel');
@@ -98,6 +100,8 @@
             isCommentsExpanded: false,
             commentsTransitionTimer: null,
             commentsTransitionMs: 250,
+            canEditRestricted: true,
+            permissionBannerTimer: null,
         };
         var quickUploadState = { itemId: null };
         var previewState = {
@@ -153,6 +157,65 @@
             if (!drawerState.autosaveTimer) return;
             clearTimeout(drawerState.autosaveTimer);
             drawerState.autosaveTimer = null;
+        }
+
+        function clearDrawerPermissionBannerTimer() {
+            if (!drawerState.permissionBannerTimer) return;
+            clearTimeout(drawerState.permissionBannerTimer);
+            drawerState.permissionBannerTimer = null;
+        }
+
+        function hideDrawerPermissionBanner() {
+            if (!drawerPermissionBanner) return;
+            clearDrawerPermissionBannerTimer();
+            drawerPermissionBanner.textContent = '';
+            drawerPermissionBanner.setAttribute('hidden', '');
+        }
+
+        function showDrawerPermissionBanner(message) {
+            if (!drawerPermissionBanner) return;
+            clearDrawerPermissionBannerTimer();
+            drawerPermissionBanner.textContent = message || DRAWER_RESTRICTED_EDIT_MESSAGE;
+            drawerPermissionBanner.removeAttribute('hidden');
+            drawerState.permissionBannerTimer = setTimeout(function () {
+                hideDrawerPermissionBanner();
+            }, 3200);
+        }
+
+        function setDrawerRestrictedFieldLocks(canEditRestricted) {
+            var canEdit = !!canEditRestricted;
+            drawerState.canEditRestricted = canEdit;
+            if (!hasDrawer()) return;
+
+            drawer.classList.toggle('is-restricted-edit-blocked', !canEdit);
+
+            if (drawerDesc) {
+                drawerDesc.readOnly = !canEdit;
+                drawerDesc.classList.toggle('is-locked', !canEdit);
+                drawerDesc.setAttribute('aria-readonly', canEdit ? 'false' : 'true');
+            }
+            if (drawerPrioridade) {
+                drawerPrioridade.classList.toggle('is-locked', !canEdit);
+                drawerPrioridade.setAttribute('aria-disabled', canEdit ? 'false' : 'true');
+            }
+            if (drawerResponsavelTrigger) {
+                drawerResponsavelTrigger.classList.toggle('is-locked', !canEdit);
+                drawerResponsavelTrigger.setAttribute('aria-disabled', canEdit ? 'false' : 'true');
+            }
+
+            if (canEdit) {
+                hideDrawerPermissionBanner();
+            }
+        }
+
+        function handleDrawerRestrictedInteraction(event) {
+            if (drawerState.canEditRestricted || !drawerState.itemId || isDeleting) return false;
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            showDrawerPermissionBanner(DRAWER_RESTRICTED_EDIT_MESSAGE);
+            return true;
         }
 
         function prefersReducedMotion() {
@@ -1325,6 +1388,8 @@
                 closeDrawer();
                 return;
             }
+            var canEditRestricted = !!(typeof getTaskItemCanDelete === 'function' && getTaskItemCanDelete(row));
+            setDrawerRestrictedFieldLocks(canEditRestricted);
 
             var descricao = getTaskItemDescricao(row);
             var responsavel = getTaskItemResponsavel(row);
@@ -1364,6 +1429,7 @@
             drawerState.hasUnsavedChanges = false;
             drawerState.forceCommentsBottom = true;
             clearDrawerAutosaveTimer();
+            hideDrawerPermissionBanner();
             clearDrawerCommentsStatusTimer();
             syncDrawerFromCurrentRow();
             setDrawerSaving(false);
@@ -1410,6 +1476,8 @@
             drawerState.forceCommentsBottom = false;
             drawerState.isCommentsExpanded = false;
             drawerState.itemId = null;
+            setDrawerRestrictedFieldLocks(true);
+            hideDrawerPermissionBanner();
             drawer.classList.remove('is-open');
             drawerBackdrop.classList.remove('is-open');
             drawer.setAttribute('aria-hidden', 'true');
@@ -2700,6 +2768,7 @@
                 event.preventDefault();
                 event.stopPropagation();
                 if (!drawerState.itemId || isDeleting) return;
+                if (handleDrawerRestrictedInteraction(event)) return;
                 var drawerProjectValue = getTaskItemProjectValue(drawerState.itemId);
                 if (!drawerProjectValue) {
                     alert('Projeto não encontrado para esta tarefa.');
@@ -2722,28 +2791,71 @@
                 });
             });
 
+            drawerDesc.addEventListener('click', function (event) {
+                if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) {
+                    handleDrawerRestrictedInteraction(event);
+                }
+            });
+            drawerDesc.addEventListener('keydown', function (event) {
+                if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) {
+                    handleDrawerRestrictedInteraction(event);
+                }
+            });
             drawerDesc.addEventListener('input', function () {
                 if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) return;
                 drawerTitle.textContent = (drawerDesc.value || '').trim() || 'Item sem descrição';
                 resizeDrawerDescTextarea();
                 scheduleDrawerAutosave();
             });
             drawerDesc.addEventListener('change', function () {
                 if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) return;
                 resizeDrawerDescTextarea();
             });
             drawerDesc.addEventListener('keyup', function () {
                 if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) return;
                 resizeDrawerDescTextarea();
             });
             drawerDesc.addEventListener('blur', function () {
                 if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) return;
                 flushDrawerAutosave('blur');
             });
 
             if (drawerPrioridade) {
+                drawerPrioridade.addEventListener('pointerdown', function (event) {
+                    if (!drawerState.itemId || isDeleting) return;
+                    if (!drawerState.canEditRestricted) {
+                        handleDrawerRestrictedInteraction(event);
+                    }
+                });
+                drawerPrioridade.addEventListener('mousedown', function (event) {
+                    if (!drawerState.itemId || isDeleting) return;
+                    if (!drawerState.canEditRestricted) {
+                        handleDrawerRestrictedInteraction(event);
+                    }
+                });
+                drawerPrioridade.addEventListener('keydown', function (event) {
+                    if (!drawerState.itemId || isDeleting) return;
+                    if (drawerState.canEditRestricted) return;
+                    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+                        handleDrawerRestrictedInteraction(event);
+                    }
+                });
                 drawerPrioridade.addEventListener('change', function () {
                     if (!drawerState.itemId || isDeleting) return;
+                    if (!drawerState.canEditRestricted) {
+                        var row = getTaskItemRowById(drawerState.itemId);
+                        if (row) {
+                            drawerPrioridade.value = getTaskItemPrioridade(row) || '';
+                        }
+                        showDrawerPermissionBanner(DRAWER_RESTRICTED_EDIT_MESSAGE);
+                        return;
+                    }
                     scheduleDrawerAutosave({ immediate: true });
                 });
             }

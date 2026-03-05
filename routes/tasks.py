@@ -38,6 +38,7 @@ from .tasks_helpers import (
     _get_assignable_users_for_project,
     _get_upload_folder,
     _merge_task_filter_values,
+    _normalize_responsavel_value,
     _preview_text,
     _read_task_filter_values,
     _redirect_back_or,
@@ -51,6 +52,9 @@ from .tasks_helpers import (
 
 FINALIZE_DENIED_MESSAGE = 'Apenas o criador da tarefa pode movê-la para Finalizada.'
 DELETE_DENIED_MESSAGE = 'Somente o autor da tarefa ou um administrador pode excluí-la.'
+EDIT_RESTRICTED_FIELDS_DENIED_MESSAGE = (
+    'Somente o autor da tarefa ou um administrador pode editar descrição, prioridade e responsável.'
+)
 
 
 def _parse_unique_task_order_ids(raw_ids):
@@ -270,6 +274,17 @@ def edit_task(task_id):
     else:
         resolved_tipo = task.tipo_pedido
 
+    can_edit_restricted_fields = _can_manage_task_restricted_actions(g.user, task)
+    descricao_changed = incoming_descricao != (task.descricao or '').strip()
+    prioridade_changed = (incoming_prioridade or '') != (task.prioridade or '')
+    responsavel_changed = (
+        _normalize_responsavel_value(incoming_responsavel)
+        != _normalize_responsavel_value(task.responsavel or '')
+    )
+    if (descricao_changed or prioridade_changed or responsavel_changed) and not can_edit_restricted_fields:
+        _audit_denied_task_action(task, 'forbidden_edit_restricted')
+        return jsonify({'success': False, 'message': EDIT_RESTRICTED_FIELDS_DENIED_MESSAGE}), 403
+
     if not incoming_descricao:
         return jsonify({'success': False, 'message': 'Descrição é obrigatória'}), 400
 
@@ -443,6 +458,10 @@ def update_task_prioridade(task_id):
     prioridade = payload.get('prioridade', '') or None
     if prioridade and prioridade not in VALID_PRIORIDADES:
         return jsonify({'success': False, 'message': 'Prioridade inválida'}), 400
+
+    if not _can_manage_task_restricted_actions(g.user, task):
+        _audit_denied_task_action(task, 'forbidden_edit_restricted')
+        return jsonify({'success': False, 'message': EDIT_RESTRICTED_FIELDS_DENIED_MESSAGE}), 403
 
     old_prioridade = task.prioridade
     task.prioridade = prioridade

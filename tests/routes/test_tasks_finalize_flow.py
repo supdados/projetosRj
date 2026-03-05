@@ -184,6 +184,134 @@ def test_collaborator_cannot_finalize_task_via_direct_route_and_audited(app, cli
         assert audit.actor_user_id == seed_data['editable_user_id']
 
 
+def test_collaborator_cannot_edit_restricted_fields_via_edit_route_and_audited(app, client_editable, seed_data):
+    task_id = seed_data['task_id']
+
+    response = client_editable.post(
+        f'/tarefas/{task_id}/edit',
+        data={
+            'descricao': 'Descricao bloqueada para colaborador',
+            'status': 'nao_iniciada',
+            'responsavel': 'Usuario Editavel',
+            'prioridade': 'alta',
+            'tipo_pedido': '',
+        },
+    )
+
+    assert response.status_code == 403
+    payload = response.get_json()
+    assert payload['success'] is False
+    assert 'Somente o autor da tarefa' in payload['message']
+
+    with app.app_context():
+        task = db.session.get(Task, task_id)
+        assert task is not None
+        assert task.descricao == 'Item Auditoria'
+        assert task.responsavel == 'Usuario Auditoria'
+        assert task.prioridade is None
+
+        audit = (
+            TaskAccessAudit.query
+            .filter_by(task_id=task_id, action_type='forbidden_edit_restricted')
+            .order_by(TaskAccessAudit.id.desc())
+            .first()
+        )
+        assert audit is not None
+        assert audit.actor_user_id == seed_data['editable_user_id']
+        assert audit.task_author_user_id == seed_data['user_id']
+
+
+def test_collaborator_can_still_edit_non_restricted_fields_via_edit_route(app, client_editable, seed_data):
+    task_id = seed_data['task_id']
+
+    response = client_editable.post(
+        f'/tarefas/{task_id}/edit',
+        data={
+            'descricao': 'Item Auditoria',
+            'status': 'em_andamento',
+            'responsavel': 'Usuario Auditoria',
+            'prioridade': '',
+            'tipo_pedido': 'bug',
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload['success'] is True
+    assert payload['item']['status'] == 'em_andamento'
+    assert payload['item']['tipo_pedido'] == 'bug'
+    assert payload['item']['descricao'] == 'Item Auditoria'
+    assert payload['item']['responsavel'] == 'Usuario Auditoria'
+    assert payload['item']['prioridade'] == ''
+
+    with app.app_context():
+        task = db.session.get(Task, task_id)
+        assert task is not None
+        assert task.status == 'em_andamento'
+        assert task.tipo_pedido == 'bug'
+        assert task.descricao == 'Item Auditoria'
+        assert task.responsavel == 'Usuario Auditoria'
+        assert task.prioridade is None
+
+
+def test_collaborator_cannot_update_prioridade_direct_route_and_audited(app, client_editable, seed_data):
+    task_id = seed_data['task_id']
+
+    response = client_editable.post(
+        f'/tarefas/{task_id}/update_prioridade',
+        json={'prioridade': 'alta'},
+    )
+
+    assert response.status_code == 403
+    payload = response.get_json()
+    assert payload['success'] is False
+    assert 'Somente o autor da tarefa' in payload['message']
+
+    with app.app_context():
+        task = db.session.get(Task, task_id)
+        assert task is not None
+        assert task.prioridade is None
+
+        audit = (
+            TaskAccessAudit.query
+            .filter_by(task_id=task_id, action_type='forbidden_edit_restricted')
+            .order_by(TaskAccessAudit.id.desc())
+            .first()
+        )
+        assert audit is not None
+        assert audit.actor_user_id == seed_data['editable_user_id']
+        assert audit.task_author_user_id == seed_data['user_id']
+
+
+def test_admin_can_edit_restricted_fields(app, client_admin, seed_data):
+    task_id = seed_data['task_id']
+
+    response = client_admin.post(
+        f'/tarefas/{task_id}/edit',
+        data={
+            'descricao': 'Descricao atualizada por admin',
+            'status': 'nao_iniciada',
+            'responsavel': 'Administrador',
+            'prioridade': 'urgente',
+            'tipo_pedido': '',
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload['success'] is True
+    assert payload['item']['descricao'] == 'Descricao atualizada por admin'
+    assert payload['item']['responsavel'] == 'Administrador'
+    assert payload['item']['prioridade'] == 'urgente'
+
+    with app.app_context():
+        task = db.session.get(Task, task_id)
+        assert task is not None
+        assert task.descricao == 'Descricao atualizada por admin'
+        assert task.responsavel == 'Administrador'
+        assert task.prioridade == 'urgente'
+
+
 def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app, client_user, seed_data):
     with app.app_context():
         archived_task = Task(

@@ -164,6 +164,21 @@ body.task-item-drawer-open {
     gap: 0.54rem;
 }
 
+.task-detail-v2 .task-item-drawer-permission-banner {
+    margin: 0;
+    padding: 0.44rem 0.56rem;
+    border: 1px solid #d3e3f4;
+    border-radius: 10px;
+    background: #edf5ff;
+    color: #2f5a86;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-semibold);
+}
+
+.task-detail-v2 .task-item-drawer-permission-banner[hidden] {
+    display: none;
+}
+
 .task-detail-v2 .task-item-drawer-label {
     margin: 0;
     font-size: var(--ds-font-size-2xs);
@@ -192,6 +207,26 @@ body.task-item-drawer-open {
     outline: none;
     border-color: #8bb0d7;
     box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
+}
+
+.task-detail-v2 .task-item-drawer-textarea.is-locked,
+.task-detail-v2 .task-item-drawer-select.is-locked,
+.task-detail-v2 .responsavel-picker-trigger.task-item-drawer-responsavel-trigger.is-locked {
+    cursor: not-allowed;
+}
+
+.task-detail-v2 .task-item-drawer-textarea.is-locked,
+.task-detail-v2 .task-item-drawer-select.is-locked,
+.task-detail-v2 .responsavel-picker-trigger.task-item-drawer-responsavel-trigger.is-locked,
+.task-detail-v2 .responsavel-picker-trigger.task-item-drawer-responsavel-trigger.is-locked:hover {
+    background: #f3f7fb;
+    border-color: #d0deeb;
+    color: #5e7895;
+    box-shadow: none;
+}
+
+.task-detail-v2 .task-item-drawer-textarea.is-locked::placeholder {
+    color: #8ba1b8;
 }
 
 /* ==========================================

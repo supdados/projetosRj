@@ -67,6 +67,15 @@ def test_tasks_hub_kanban_composer_requires_project_when_no_filter(client_user):
     assert html.index('id="taskItemDrawerAutosaveStatus"') < html.index('id="taskItemDrawerPrioridade"')
 
 
+def test_tasks_hub_drawer_contains_permission_banner_hook(client_user):
+    response = client_user.get('/tarefas')
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert 'id="taskItemDrawerPermissionBanner"' in html
+    assert 'class="task-item-drawer-permission-banner"' in html
+
+
 def test_tasks_hub_kanban_composer_uses_filtered_project_without_project_input(client_user, seed_data):
     response = client_user.get(f'/tarefas?project={seed_data["project_id"]}')
     assert response.status_code == 200
@@ -170,6 +179,30 @@ def test_tasks_hub_kanban_js_persists_visual_order_per_url():
     assert 'function readStoredKanbanOrder()' in content
     assert 'function sortItemsForKanban(items)' in content
     assert 'writeStoredKanbanOrder(serializeKanbanOrder());' in content
+
+
+def test_tasks_hub_kanban_js_blocks_restricted_drawer_fields_and_shows_banner():
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'kanban-manager.js'
+    content = file_path.read_text(encoding='utf-8')
+
+    assert "var DRAWER_RESTRICTED_EDIT_MESSAGE = 'Somente o autor da tarefa ou um administrador pode editar descrição, prioridade e responsável.';" in content
+    assert "var drawerPermissionBanner = document.getElementById('taskItemDrawerPermissionBanner');" in content
+    assert 'function setDrawerRestrictedFieldLocks(canEditRestricted)' in content
+    assert 'function handleDrawerRestrictedInteraction(event)' in content
+    assert "drawerPrioridade.addEventListener('pointerdown'" in content
+
+
+def test_tasks_hub_drawer_css_marks_locked_controls_as_not_allowed():
+    drawer_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'task-detail-drawer.css'
+    drawer_css_content = drawer_css_path.read_text(encoding='utf-8')
+    dark_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'task-detail-dark.css'
+    dark_css_content = dark_css_path.read_text(encoding='utf-8')
+
+    assert '.task-detail-v2 .task-item-drawer-permission-banner {' in drawer_css_content
+    assert '.task-detail-v2 .task-item-drawer-select.is-locked,' in drawer_css_content
+    assert 'cursor: not-allowed;' in drawer_css_content
+    assert '.task-item-drawer-permission-banner {' in dark_css_content
+    assert '.task-item-drawer-select.is-locked,' in dark_css_content
 
 
 def test_tasks_hub_kanban_js_keeps_grouped_list_rows_inside_project_sections():
