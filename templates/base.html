@@ -854,11 +854,8 @@
                 <div class="skeleton-page login-page skeleton-login-page">
                     <div class="login-card skeleton-card skeleton-login-card">
                         <div class="login-brand skeleton-login-brand">
-                            <div class="login-brand-icon skeleton-login-brand-icon">
-                                <span class="skeleton-login-brand-glyph" aria-hidden="true"></span>
-                            </div>
+                            <div class="login-brand-logo skeleton-login-brand-logo" aria-hidden="true"></div>
                             <div class="login-title skeleton-login-title" aria-hidden="true"></div>
-                            <div class="login-subtitle skeleton-login-subtitle" aria-hidden="true"></div>
                         </div>
 
                         <div class="login-field skeleton-login-field">
@@ -878,6 +875,16 @@
                         </div>
 
                         <div class="btn login-submit skeleton-login-submit" aria-hidden="true"></div>
+
+                        {% if govbr_login_enabled %}
+                        <div class="login-divider skeleton-login-divider" role="separator" aria-hidden="true">
+                            <span class="skeleton-login-divider-text" aria-hidden="true"></span>
+                        </div>
+                        <div class="btn login-govbr-btn skeleton-login-govbr-btn" aria-hidden="true">
+                            <span class="skeleton-login-govbr-text" aria-hidden="true"></span>
+                            <span class="skeleton-login-govbr-logo" aria-hidden="true"></span>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% else %}

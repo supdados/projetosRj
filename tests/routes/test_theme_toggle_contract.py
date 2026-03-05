@@ -32,8 +32,20 @@ def test_login_route_is_mapped_to_login_skeleton_in_app_shell():
     app_shell_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell.js'
     app_shell_content = _read(app_shell_path)
 
-    assert "pathname === '/' || pathname === '/login'" in app_shell_content
+    assert "pathname === '/'" in app_shell_content
+    assert "pathname === '/login'" in app_shell_content
+    assert "pathname === '/login/govbr'" in app_shell_content
+    assert "pathname === '/auth/govbr/callback'" in app_shell_content
     assert "return 'login';" in app_shell_content
+
+
+def test_login_skeleton_template_tracks_govbr_layout_contract():
+    base_template_path = Path(__file__).resolve().parents[2] / 'templates' / 'base.html'
+    base_template_content = _read(base_template_path)
+
+    assert 'skeleton-login-brand-logo' in base_template_content
+    assert 'skeleton-login-govbr-btn' in base_template_content
+    assert '{% if govbr_login_enabled %}' in base_template_content
 
 
 def test_theme_toggle_is_after_notifications_and_account(client_user):
