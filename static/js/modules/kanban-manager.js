@@ -2002,7 +2002,11 @@
             var statusChanged = normalizeStatus(previousStatus) !== nextStatus;
 
             var statusPromise = statusChanged
-                ? updateItemStatus(itemId, nextStatus, { skipKanbanSync: true, showAlert: false })
+                ? updateItemStatus(itemId, nextStatus, {
+                    skipKanbanSync: true,
+                    showAlert: false,
+                    celebrationOrigin: card,
+                })
                 : Promise.resolve();
 
             statusPromise
