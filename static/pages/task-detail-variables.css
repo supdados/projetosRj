@@ -22,5 +22,7 @@
     --td-view-toggle-btn-width: 106px;
     --td-kanban-card-slot-height: 126px;
     --td-kanban-drop-gap: 0.5rem;
+    --td-kanban-visible-cards: 3;
+    --td-kanban-visible-gaps: 2;
     --td-drawer-comments-body-max-height: 760px;
 }

@@ -69,8 +69,25 @@
     flex: 1 1 auto;
     gap: var(--td-kanban-drop-gap);
     padding: 0.56rem;
-    min-height: calc((var(--td-kanban-card-slot-height) * 3) + (var(--td-kanban-drop-gap) * 2) + 1.12rem);
+    height: calc(
+        (var(--td-kanban-card-slot-height) * var(--td-kanban-visible-cards))
+        + (var(--td-kanban-drop-gap) * var(--td-kanban-visible-gaps))
+        + 1.12rem
+    );
+    min-height: calc(
+        (var(--td-kanban-card-slot-height) * var(--td-kanban-visible-cards))
+        + (var(--td-kanban-drop-gap) * var(--td-kanban-visible-gaps))
+        + 1.12rem
+    );
+    max-height: calc(
+        (var(--td-kanban-card-slot-height) * var(--td-kanban-visible-cards))
+        + (var(--td-kanban-drop-gap) * var(--td-kanban-visible-gaps))
+        + 1.12rem
+    );
     position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
     transition: background-color 0.16s ease, box-shadow 0.16s ease;
 }
 
@@ -304,12 +321,23 @@
     font-size: var(--ds-font-size-sm);
     line-height: var(--ds-line-height-normal);
     word-break: break-word;
-    min-height: 0;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .task-detail-v2 .task-hub-kanban-context {
+    margin: 0;
+    color: #6b849f;
+    font-size: var(--ds-font-size-2xs);
+    line-height: 1.3;
     word-break: break-word;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .task-detail-v2 .task-items-kanban-meta {

@@ -1838,6 +1838,7 @@
         function placeDragPlaceholder(dropzone, clientY) {
             if (!dropzone) return;
             setDropzoneHover(dropzone);
+            autoScrollDropzoneOnDrag(dropzone, clientY);
 
             var dragging = getDraggingCard();
             if (!dragging) return;
@@ -1850,6 +1851,25 @@
             } else {
                 dropzone.appendChild(placeholder);
             }
+        }
+
+        function autoScrollDropzoneOnDrag(dropzone, clientY) {
+            if (!dropzone || !Number.isFinite(clientY)) return;
+            var rect = dropzone.getBoundingClientRect();
+            if (!rect || rect.height <= 0) return;
+
+            var threshold = Math.max(24, Math.min(72, rect.height * 0.22));
+            var delta = 0;
+            if (clientY < (rect.top + threshold)) {
+                var ratioUp = (rect.top + threshold - clientY) / threshold;
+                delta = -Math.max(6, Math.round(18 * ratioUp));
+            } else if (clientY > (rect.bottom - threshold)) {
+                var ratioDown = (clientY - (rect.bottom - threshold)) / threshold;
+                delta = Math.max(6, Math.round(18 * ratioDown));
+            }
+
+            if (!delta) return;
+            dropzone.scrollTop += delta;
         }
 
         function finalizeDrop(event, dropzone) {

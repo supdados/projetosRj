@@ -1,3 +1,10 @@
+@media (min-width: 1400px) and (min-height: 860px) {
+    .task-detail-v2 {
+        --td-kanban-visible-cards: 5;
+        --td-kanban-visible-gaps: 4;
+    }
+}
+
 @media (min-width: 992px) {
     .task-detail-v2 .task-item-header,
     .task-detail-v2 .task-item-line,
@@ -18,6 +25,8 @@
         --td-col-owner: 172px;
         --td-col-actions: 116px;
         --td-kanban-card-slot-height: 122px;
+        --td-kanban-visible-cards: 3;
+        --td-kanban-visible-gaps: 2;
     }
 
     .task-detail-v2 .task-title-refined {
@@ -82,6 +91,8 @@
         --td-col-owner: 160px;
         --td-col-actions: 110px;
         --td-kanban-card-slot-height: 118px;
+        --td-kanban-visible-cards: 3;
+        --td-kanban-visible-gaps: 2;
     }
 
     .task-detail-v2 .task-item-header-row,
