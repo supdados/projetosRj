@@ -230,6 +230,20 @@ html[data-theme="dark"] body.is-authenticated .app-dropdown-item:active .app-dro
     color: var(--app-color-primary-hover);
 }
 
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item.active,
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item:active {
+    background: rgba(223, 240, 255, 0.16);
+    border-color: rgba(173, 220, 255, 0.42);
+    color: #f1f8ff;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item.active .app-dropdown-item-main i,
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item:active .app-dropdown-item-main i,
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item.active .app-dropdown-item-check,
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item:active .app-dropdown-item-check {
+    color: #dff0ff;
+}
+
 
 html[data-theme="dark"] body.is-authenticated .app-dropdown-item-danger {
     color: #efb1b1;
@@ -812,6 +826,12 @@ html[data-theme="dark"] body.is-authenticated .admin-users-header {
     background: var(--app-color-surface);
     border-color: var(--app-color-border);
     box-shadow: 0 8px 20px rgba(7, 11, 18, 0.32);
+}
+
+html[data-theme="dark"] body.is-authenticated .admin-users-shell .admin-users-header-icon {
+    background: rgba(77, 169, 249, 0.18);
+    border-color: rgba(77, 169, 249, 0.42);
+    color: #4DA9F9;
 }
 
 
@@ -1547,6 +1567,13 @@ html[data-theme="dark"] body.is-authenticated .account-page-shell .account-page-
     background: rgba(78, 149, 204, 0.18);
     border-color: rgba(99, 166, 219, 0.42);
     color: #d9e8f6;
+}
+
+html[data-theme="dark"] body.is-authenticated .account-page-shell.account-page-shell-user-add .account-page-icon,
+html[data-theme="dark"] body.is-authenticated .account-page-shell.account-page-shell-area-add .account-page-icon {
+    background: rgba(77, 169, 249, 0.18);
+    border-color: rgba(77, 169, 249, 0.42);
+    color: #4DA9F9;
 }
 
 

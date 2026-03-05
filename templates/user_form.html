@@ -10,7 +10,7 @@
 {% set cancel_href = url_for('main.dashboard') if is_own_profile else url_for('main.list_users') %}
 {% set hide_govbr_link_fields = hide_govbr_link_fields|default(false) %}
 
-<div class="container-fluid px-3 px-md-4 py-2 account-page-shell">
+<div class="container-fluid px-3 px-md-4 py-2 account-page-shell{% if action_verb == 'Adicionar' and not is_own_profile %} account-page-shell-user-add{% endif %}">
     <section class="account-page-header">
         <div class="account-page-header-main">
             <div class="account-page-icon">

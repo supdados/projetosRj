@@ -5,7 +5,7 @@
 {% block content %}
 {% set submit_label = 'Criar Área' if action_verb == 'Adicionar' else 'Salvar Alterações' %}
 
-<div class="container-fluid px-3 px-md-4 py-2 account-page-shell">
+<div class="container-fluid px-3 px-md-4 py-2 account-page-shell{% if action_verb == 'Adicionar' %} account-page-shell-area-add{% endif %}">
     <section class="account-page-header">
         <div class="account-page-header-main">
             <div class="account-page-icon">
