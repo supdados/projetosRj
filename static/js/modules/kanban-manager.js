@@ -67,6 +67,7 @@
         var quickAnexoInput = document.getElementById('taskQuickAnexoInput');
         var anexoPreviewModal = document.getElementById('taskAnexoPreviewModal');
         var anexoPreviewBackdrop = document.getElementById('taskAnexoPreviewBackdrop');
+        var anexoPreviewDialog = anexoPreviewModal ? anexoPreviewModal.querySelector('.task-anexo-preview-dialog') : null;
         var anexoPreviewClose = document.getElementById('taskAnexoPreviewClose');
         var anexoPreviewTitle = document.getElementById('taskAnexoPreviewTitle');
         var anexoPreviewBody = document.getElementById('taskAnexoPreviewBody');
@@ -1601,6 +1602,7 @@
             return !!(
                 anexoPreviewModal &&
                 anexoPreviewBackdrop &&
+                anexoPreviewDialog &&
                 anexoPreviewBody &&
                 anexoPreviewTitle &&
                 anexoPreviewOpen &&
@@ -1695,6 +1697,13 @@
             }
             if (anexoPreviewBackdrop) {
                 anexoPreviewBackdrop.addEventListener('click', function () {
+                    closeAnexoPreviewModal();
+                });
+            }
+            if (anexoPreviewModal && anexoPreviewDialog) {
+                anexoPreviewModal.addEventListener('click', function (event) {
+                    if (!previewState.isOpen) return;
+                    if (anexoPreviewDialog.contains(event.target)) return;
                     closeAnexoPreviewModal();
                 });
             }

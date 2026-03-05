@@ -716,8 +716,8 @@ body.task-item-drawer-open {
 }
 
 .task-detail-v2 .task-item-drawer-comment:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 16px rgba(19, 63, 101, 0.1);
+    transform: none;
+    box-shadow: 0 4px 10px rgba(19, 63, 101, 0.06);
 }
 
 .task-detail-v2 .task-item-drawer-comment.author-tone-0 {

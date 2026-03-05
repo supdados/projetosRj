@@ -446,9 +446,18 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban
     color: var(--td-items-text-secondary);
 }
 
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context,
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context a {
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context {
     color: var(--td-items-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context a {
+    color: #8fc6ff;
+    font-weight: var(--ds-font-weight-bold);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context a:hover,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context a:focus-visible {
+    color: #c9e4ff;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-owner.is-empty {
@@ -1251,7 +1260,7 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-comment:hover {
-    box-shadow: 0 10px 20px rgba(4, 9, 15, 0.48);
+    box-shadow: 0 7px 14px rgba(4, 9, 15, 0.36);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-comment.author-tone-0 {
@@ -1727,7 +1736,7 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-comment:hover {
-    box-shadow: 0 10px 20px rgba(4, 9, 15, 0.48);
+    box-shadow: 0 7px 14px rgba(4, 9, 15, 0.36);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-comment.author-tone-0 {
