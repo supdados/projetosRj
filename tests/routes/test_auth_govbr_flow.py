@@ -42,6 +42,24 @@ def test_login_govbr_redirects_to_provider_and_stores_state(app, client, monkeyp
         assert session['govbr_auth_next'] == '/projects'
 
 
+def test_login_govbr_uses_request_host_for_redirect_uri_when_hostname_differs(app, client, monkeypatch):
+    _enable_govbr(app)
+
+    captured = {}
+
+    def fake_build_authorization_url(config, *, state, nonce):
+        captured['redirect_uri'] = config.get('GOVBR_OIDC_REDIRECT_URI')
+        return 'https://idp.dev/auth'
+
+    monkeypatch.setattr(auth_routes, 'build_authorization_url', fake_build_authorization_url)
+
+    response = client.get('/login/govbr', base_url='http://127.0.0.1:5002', follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers['Location'] == 'https://idp.dev/auth'
+    assert captured['redirect_uri'] == 'http://127.0.0.1:5002/auth/govbr/callback'
+
+
 def test_login_govbr_callback_rejects_invalid_state(app, client):
     _enable_govbr(app)
 
@@ -54,6 +72,45 @@ def test_login_govbr_callback_rejects_invalid_state(app, client):
 
     assert response.status_code == 302
     assert response.headers['Location'].endswith('/login')
+
+
+def test_login_govbr_callback_uses_redirect_uri_saved_in_session(app, client, seed_data, monkeypatch):
+    _enable_govbr(app)
+
+    with app.app_context():
+        user = db.session.get(User, seed_data['user_id'])
+        user.cpf_govbr = '12345678901'
+        user.govbr_sub = None
+        db.session.commit()
+
+    captured = {}
+
+    def fake_exchange_code_for_tokens(config, *, code):
+        captured['redirect_uri'] = config.get('GOVBR_OIDC_REDIRECT_URI')
+        return {'access_token': f'access-{code}', 'id_token': 'id-token'}
+
+    monkeypatch.setattr(auth_routes, 'exchange_code_for_tokens', fake_exchange_code_for_tokens)
+    monkeypatch.setattr(
+        auth_routes,
+        'decode_jwt_payload',
+        lambda _token: {'nonce': 'nonce-redirect', 'preferred_username': '12345678901', 'sub': 'sub-redirect'},
+    )
+    monkeypatch.setattr(
+        auth_routes,
+        'fetch_userinfo',
+        lambda _config, *, access_token: {'preferred_username': '12345678901', 'sub': 'sub-redirect'},
+    )
+
+    with client.session_transaction() as session:
+        session['govbr_auth_state'] = 'state-redirect'
+        session['govbr_auth_nonce'] = 'nonce-redirect'
+        session['govbr_auth_redirect_uri'] = 'http://127.0.0.1:5002/auth/govbr/callback'
+
+    response = client.get('/auth/govbr/callback?code=ok&state=state-redirect', follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/dashboard')
+    assert captured['redirect_uri'] == 'http://127.0.0.1:5002/auth/govbr/callback'
 
 
 def test_login_govbr_callback_success_with_user_mapped_by_cpf(app, client, seed_data, monkeypatch):

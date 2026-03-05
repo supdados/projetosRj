@@ -70,6 +70,30 @@ def _login_redirect_target():
     return next_page or url_for("main.dashboard")
 
 
+def _build_config_with_redirect_uri(redirect_uri):
+    if not redirect_uri:
+        return current_app.config
+    config = dict(current_app.config)
+    config["GOVBR_OIDC_REDIRECT_URI"] = redirect_uri
+    return config
+
+
+def _resolve_runtime_govbr_redirect_uri():
+    configured_redirect_uri = str(current_app.config.get("GOVBR_OIDC_REDIRECT_URI", "")).strip()
+    if not configured_redirect_uri:
+        return None
+
+    parsed = urlparse(configured_redirect_uri)
+    if not parsed.scheme or not parsed.netloc:
+        return url_for("main.login_govbr_callback", _external=True)
+
+    request_hostname = request.host.split(":", 1)[0]
+    if parsed.scheme == request.scheme and parsed.hostname == request_hostname:
+        return configured_redirect_uri
+
+    return parsed._replace(scheme=request.scheme, netloc=request.host).geturl()
+
+
 def _remember_auth_session(user, *, provider, id_token=None):
     session.clear()
     session["user_id"] = user.id
@@ -125,17 +149,27 @@ def login_govbr():
             return redirect(url_for('main.login_page', next=next_page))
         return redirect(url_for('main.login_page'))
 
+    runtime_redirect_uri = _resolve_runtime_govbr_redirect_uri()
+
     state = secrets.token_urlsafe(32)
     nonce = secrets.token_urlsafe(32)
     session['govbr_auth_state'] = state
     session['govbr_auth_nonce'] = nonce
+    if runtime_redirect_uri:
+        session['govbr_auth_redirect_uri'] = runtime_redirect_uri
+    else:
+        session.pop('govbr_auth_redirect_uri', None)
     if next_page:
         session['govbr_auth_next'] = next_page
     else:
         session.pop('govbr_auth_next', None)
 
     try:
-        auth_url = build_authorization_url(current_app.config, state=state, nonce=nonce)
+        auth_url = build_authorization_url(
+            _build_config_with_redirect_uri(runtime_redirect_uri),
+            state=state,
+            nonce=nonce,
+        )
     except GovBrOIDCError as exc:
         flash(f'Falha ao iniciar login gov.br: {exc}', 'danger')
         return redirect(url_for('main.login_page'))
@@ -151,7 +185,9 @@ def login_govbr_callback():
 
     expected_state = session.pop('govbr_auth_state', None)
     expected_nonce = session.pop('govbr_auth_nonce', None)
+    auth_redirect_uri = session.pop('govbr_auth_redirect_uri', None)
     next_page = _resolve_safe_next_url(session.pop('govbr_auth_next', None))
+    auth_config = _build_config_with_redirect_uri(auth_redirect_uri)
 
     provider_error = request.args.get('error')
     if provider_error:
@@ -177,7 +213,7 @@ def login_govbr_callback():
         return redirect(url_for('main.login_page'))
 
     try:
-        tokens = exchange_code_for_tokens(current_app.config, code=code)
+        tokens = exchange_code_for_tokens(auth_config, code=code)
         access_token = tokens.get('access_token')
         id_token = tokens.get('id_token')
         if not access_token or not id_token:
@@ -189,7 +225,7 @@ def login_govbr_callback():
         if expected_nonce and token_nonce and token_nonce != expected_nonce:
             raise GovBrOIDCError('Nonce do ID token não confere com a requisição original.')
 
-        userinfo = fetch_userinfo(current_app.config, access_token=access_token)
+        userinfo = fetch_userinfo(auth_config, access_token=access_token)
     except GovBrOIDCError as exc:
         flash(f'Falha no login gov.br: {exc}', 'danger')
         return redirect(url_for('main.login_page'))
