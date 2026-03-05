@@ -390,6 +390,17 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-dropzone {
     background: transparent;
+    scrollbar-color: rgba(156, 184, 210, 0.58) transparent;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar-thumb {
+    background: rgba(156, 184, 210, 0.54);
+    background-clip: padding-box;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar-thumb:hover {
+    background: rgba(188, 211, 233, 0.7);
+    background-clip: padding-box;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-column.is-empty .task-items-kanban-dropzone::after {

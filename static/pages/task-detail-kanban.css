@@ -2,7 +2,7 @@
     display: grid;
     grid-template-columns: repeat(5, minmax(200px, 1fr));
     gap: 0.62rem;
-    align-items: stretch;
+    align-items: start;
 }
 
 .task-finalize-confetti-canvas {
@@ -66,7 +66,6 @@
 .task-detail-v2 .task-items-kanban-dropzone {
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
     gap: var(--td-kanban-drop-gap);
     padding: 0.56rem;
     height: calc(
@@ -87,8 +86,31 @@
     position: relative;
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(92, 126, 157, 0.54) transparent;
     transition: background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar {
+    width: 8px;
+}
+
+.task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 999px;
+}
+
+.task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar-thumb {
+    background: rgba(92, 126, 157, 0.54);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    min-height: 40px;
+}
+
+.task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar-thumb:hover {
+    background: rgba(70, 103, 133, 0.68);
+    background-clip: padding-box;
 }
 
 .task-detail-v2 .task-items-kanban-column.is-empty .task-items-kanban-dropzone::after {

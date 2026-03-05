@@ -69,7 +69,6 @@
         overflow-x: auto;
         gap: 0.56rem;
         padding-bottom: 0.16rem;
-        align-items: flex-start;
     }
 
     .task-detail-v2 .task-items-kanban-column {
