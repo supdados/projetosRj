@@ -1,9 +1,14 @@
 import base64
 import json
+import time
 from dataclasses import dataclass
+from datetime import timedelta
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+import jwt
+from jwt import PyJWKClient
 
 
 class GovBrOIDCError(RuntimeError):
@@ -36,6 +41,14 @@ class GovBrOIDCSettings:
     @property
     def logout_endpoint(self):
         return f"{self.base_url}/auth/realms/{self.realm}/protocol/openid-connect/logout"
+
+    @property
+    def jwks_uri(self):
+        return f"{self.base_url}/auth/realms/{self.realm}/protocol/openid-connect/certs"
+
+    @property
+    def issuer(self):
+        return f"{self.base_url}/auth/realms/{self.realm}"
 
 
 def _as_bool(value):
@@ -109,10 +122,75 @@ def format_cpf(cpf_digits):
     return f"{cpf[0:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:11]}"
 
 
-def decode_jwt_payload(token):
+_jwks_client_cache = {}
+_JWKS_CACHE_TTL = 3600
+
+
+def _get_jwks_client(jwks_uri):
+    now = time.monotonic()
+    cached = _jwks_client_cache.get(jwks_uri)
+    if cached and (now - cached[1]) < _JWKS_CACHE_TTL:
+        return cached[0]
+    client = PyJWKClient(jwks_uri, cache_keys=True, lifespan=_JWKS_CACHE_TTL)
+    _jwks_client_cache[jwks_uri] = (client, now)
+    return client
+
+
+def decode_jwt_payload(token, *, config=None):
+    """Decodifica e valida o ID token JWT.
+
+    Quando ``config`` é fornecido, realiza validação completa:
+    assinatura via JWKS, issuer, audience e expiração.
+    Sem ``config``, faz apenas decodificação básica do payload (fallback).
+    """
     if not token or token.count(".") < 2:
         raise GovBrOIDCError("ID token inválido.")
 
+    if config is not None:
+        return _decode_jwt_verified(token, config)
+
+    return _decode_jwt_unverified(token)
+
+
+def _decode_jwt_verified(token, config):
+    settings = get_govbr_oidc_settings(config)
+    try:
+        jwks_client = _get_jwks_client(settings.jwks_uri)
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+    except Exception as exc:
+        raise GovBrOIDCError(
+            f"Falha ao obter chave pública do IdP para validar ID token: {exc}"
+        ) from exc
+
+    try:
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=settings.client_id,
+            issuer=settings.issuer,
+            leeway=timedelta(seconds=30),
+            options={
+                "require": ["exp", "iss", "aud", "sub"],
+                "verify_exp": True,
+                "verify_iss": True,
+                "verify_aud": True,
+            },
+        )
+    except jwt.ExpiredSignatureError as exc:
+        raise GovBrOIDCError("ID token expirado.") from exc
+    except jwt.InvalidIssuerError as exc:
+        raise GovBrOIDCError("ID token com issuer inválido.") from exc
+    except jwt.InvalidAudienceError as exc:
+        raise GovBrOIDCError("ID token com audience inválido.") from exc
+    except jwt.InvalidTokenError as exc:
+        raise GovBrOIDCError(f"ID token inválido: {exc}") from exc
+
+    return payload
+
+
+def _decode_jwt_unverified(token):
+    """Fallback: decodifica apenas o payload sem verificar assinatura."""
     payload_segment = token.split(".")[1]
     if len(payload_segment) > 4096:
         raise GovBrOIDCError("Payload do ID token excede tamanho esperado.")
@@ -218,6 +296,25 @@ def fetch_userinfo(config, *, access_token):
     )
     if "sub" not in payload:
         raise GovBrOIDCError("Resposta do userinfo sem claim sub.")
+    return payload
+
+
+def refresh_access_token(config, *, refresh_token):
+    """Usa o refresh token para obter novos tokens do IdP."""
+    settings = get_govbr_oidc_settings(config)
+    payload = _http_json_request(
+        method="POST",
+        url=settings.token_endpoint,
+        timeout_seconds=settings.timeout_seconds,
+        form_data={
+            "grant_type": "refresh_token",
+            "client_id": settings.client_id,
+            "client_secret": settings.client_secret,
+            "refresh_token": refresh_token,
+        },
+    )
+    if "access_token" not in payload:
+        raise GovBrOIDCError("Resposta de refresh sem access_token.")
     return payload
 
 

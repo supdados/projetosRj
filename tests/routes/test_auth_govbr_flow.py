@@ -93,7 +93,7 @@ def test_login_govbr_callback_uses_redirect_uri_saved_in_session(app, client, se
     monkeypatch.setattr(
         auth_routes,
         'decode_jwt_payload',
-        lambda _token: {'nonce': 'nonce-redirect', 'preferred_username': '12345678901', 'sub': 'sub-redirect'},
+        lambda _token, **kw: {'nonce': 'nonce-redirect', 'preferred_username': '12345678901', 'sub': 'sub-redirect'},
     )
     monkeypatch.setattr(
         auth_routes,
@@ -130,7 +130,7 @@ def test_login_govbr_callback_success_with_user_mapped_by_cpf(app, client, seed_
     monkeypatch.setattr(
         auth_routes,
         'decode_jwt_payload',
-        lambda _token: {'nonce': 'nonce-1', 'preferred_username': '12345678901', 'sub': 'sub-1'},
+        lambda _token, **kw: {'nonce': 'nonce-1', 'preferred_username': '12345678901', 'sub': 'sub-1'},
     )
     monkeypatch.setattr(
         auth_routes,
@@ -182,7 +182,7 @@ def test_login_govbr_callback_fallback_by_username_sets_cpf(app, client, monkeyp
     monkeypatch.setattr(
         auth_routes,
         'decode_jwt_payload',
-        lambda _token: {'nonce': 'nonce-2', 'preferred_username': '12345678901', 'sub': 'sub-2'},
+        lambda _token, **kw: {'nonce': 'nonce-2', 'preferred_username': '12345678901', 'sub': 'sub-2'},
     )
     monkeypatch.setattr(
         auth_routes,
@@ -217,7 +217,7 @@ def test_login_govbr_callback_blocks_when_user_is_not_linked(app, client, monkey
     monkeypatch.setattr(
         auth_routes,
         'decode_jwt_payload',
-        lambda _token: {'nonce': 'nonce-3', 'preferred_username': '11122233344', 'sub': 'sub-3'},
+        lambda _token, **kw: {'nonce': 'nonce-3', 'preferred_username': '11122233344', 'sub': 'sub-3'},
     )
     monkeypatch.setattr(
         auth_routes,
@@ -255,7 +255,7 @@ def test_login_govbr_callback_blocks_when_sub_conflicts(app, client, seed_data, 
     monkeypatch.setattr(
         auth_routes,
         'decode_jwt_payload',
-        lambda _token: {'nonce': 'nonce-4', 'preferred_username': '12345678901', 'sub': 'sub-new'},
+        lambda _token, **kw: {'nonce': 'nonce-4', 'preferred_username': '12345678901', 'sub': 'sub-new'},
     )
     monkeypatch.setattr(
         auth_routes,
@@ -293,7 +293,7 @@ def test_login_govbr_callback_prefers_existing_sub_without_needing_cpf(app, clie
     monkeypatch.setattr(
         auth_routes,
         'decode_jwt_payload',
-        lambda _token: {'nonce': 'nonce-5', 'sub': 'sub-principal'},
+        lambda _token, **kw: {'nonce': 'nonce-5', 'sub': 'sub-principal'},
     )
     monkeypatch.setattr(
         auth_routes,

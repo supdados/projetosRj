@@ -1,4 +1,5 @@
 import secrets
+import time
 from urllib.parse import urlparse
 
 from flask import current_app, flash, g, redirect, render_template, request, session, url_for
@@ -219,7 +220,7 @@ def login_govbr_callback():
         if not access_token or not id_token:
             raise GovBrOIDCError('Resposta de token incompleta.')
 
-        id_payload = decode_jwt_payload(id_token)
+        id_payload = decode_jwt_payload(id_token, config=auth_config)
         token_nonce = id_payload.get('nonce')
         # Alguns provedores RHSSO podem não incluir nonce no id_token em code flow.
         if expected_nonce and token_nonce and token_nonce != expected_nonce:
@@ -227,6 +228,7 @@ def login_govbr_callback():
 
         userinfo = fetch_userinfo(auth_config, access_token=access_token)
     except GovBrOIDCError as exc:
+        current_app.logger.exception('Falha no login gov.br: %s', exc)
         flash(f'Falha no login gov.br: {exc}', 'danger')
         return redirect(url_for('main.login_page'))
 
@@ -283,9 +285,24 @@ def login_govbr_callback():
         return redirect(url_for('main.login_page'))
 
     _remember_auth_session(user, provider='govbr', id_token=id_token)
+    expires_in = tokens.get('expires_in')
+    if expires_in:
+        session['govbr_access_token_exp'] = int(time.time()) + int(expires_in)
     g.user = user
     flash(f'Login gov.br bem-sucedido, {user.name}!', 'success')
-    return redirect(next_page or url_for('main.dashboard'))
+    response = redirect(next_page or url_for('main.dashboard'))
+    refresh_token_value = tokens.get('refresh_token')
+    if refresh_token_value:
+        refresh_expires_in = tokens.get('refresh_expires_in')
+        response.set_cookie(
+            'govbr_refresh_token',
+            refresh_token_value,
+            httponly=True,
+            secure=current_app.config.get('SESSION_COOKIE_SECURE', False),
+            samesite='Strict',
+            max_age=int(refresh_expires_in) if refresh_expires_in else None,
+        )
+    return response
 
 @main_bp.route('/logout')
 @login_required # Só pode fazer logout se estiver logado
@@ -307,11 +324,11 @@ def logout():
             logout_url = None
 
     session.clear()
-    g.user = None # Limpa g.user também
+    g.user = None  # Limpa g.user também
     flash('Você foi desconectado.', 'info')
-    if logout_url:
-        return redirect(logout_url)
-    return redirect(url_for('main.login_page'))
+    response = redirect(logout_url or url_for('main.login_page'))
+    response.delete_cookie('govbr_refresh_token', samesite='Strict')
+    return response
 
 @main_bp.route('/profile/change-password', methods=['GET', 'POST'])
 @login_required
