@@ -290,3 +290,9 @@ def client_user(client, seed_data):
 def client_outsider(client, seed_data):
     _login(client, seed_data['outsider_id'])
     return client
+
+
+@pytest.fixture
+def client_editable(client, seed_data):
+    _login(client, seed_data['editable_user_id'])
+    return client

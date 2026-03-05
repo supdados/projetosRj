@@ -304,6 +304,44 @@
             return statusLabels[normalizeStatus(status)] || 'Não iniciada';
         }
 
+        function parsePermissionFlag(value, fallbackValue) {
+            if (value == null) return !!fallbackValue;
+            var normalized = String(value).trim().toLowerCase();
+            if (!normalized) return !!fallbackValue;
+            if (normalized === '1' || normalized === 'true' || normalized === 'yes') return true;
+            if (normalized === '0' || normalized === 'false' || normalized === 'no') return false;
+            return !!fallbackValue;
+        }
+
+        function canItemMoveToStatus(item, targetStatus, previousStatus) {
+            var normalizedTargetStatus = normalizeStatus(targetStatus);
+            if (normalizedTargetStatus !== 'finalizada') {
+                return true;
+            }
+
+            var normalizedPreviousStatus = normalizeStatus(previousStatus || (item && item.status));
+            if (normalizedPreviousStatus === 'finalizada') {
+                return true;
+            }
+
+            return !!(item && item.canFinalize);
+        }
+
+        function canDragItemMoveToStatus(targetStatus) {
+            if (!dragContext) return false;
+
+            var dragging = getDraggingCard();
+            var canFinalize = dragging
+                ? parsePermissionFlag(dragging.getAttribute('data-can-finalize'), true)
+                : true;
+
+            return canItemMoveToStatus(
+                { canFinalize: canFinalize, status: dragContext.previousStatus },
+                targetStatus,
+                dragContext.previousStatus
+            );
+        }
+
         function getDropzone(status) {
             return board.querySelector('.task-items-kanban-dropzone[data-status="' + normalizeStatus(status) + '"]');
         }
@@ -413,6 +451,8 @@
                 projectValue: String(row.getAttribute('data-project-value') || '').trim(),
                 projectTitulo: String(row.getAttribute('data-project-titulo') || '').trim(),
                 taskTitulo: String(row.getAttribute('data-task-titulo') || '').trim(),
+                canDelete: typeof getTaskItemCanDelete === 'function' ? getTaskItemCanDelete(row) : true,
+                canFinalize: typeof getTaskItemCanFinalize === 'function' ? getTaskItemCanFinalize(row) : true,
             };
         }
 
@@ -468,6 +508,8 @@
         function fillKanbanCardContent(card, item) {
             if (!card || !item) return;
             card.setAttribute('data-item-id', item.id);
+            card.setAttribute('data-can-delete', item.canDelete ? '1' : '0');
+            card.setAttribute('data-can-finalize', item.canFinalize ? '1' : '0');
             setCardStatus(card, item.status);
 
             var desc = card.querySelector('.task-items-kanban-desc');
@@ -515,11 +557,14 @@
         }
 
         function buildKanbanCard(item) {
+            var canDelete = item.canDelete !== false;
             var card = document.createElement('article');
             card.className = 'task-items-kanban-card';
             card.setAttribute('draggable', 'true');
             card.setAttribute('data-item-id', item.id);
             card.setAttribute('data-status', item.status);
+            card.setAttribute('data-can-delete', canDelete ? '1' : '0');
+            card.setAttribute('data-can-finalize', item.canFinalize ? '1' : '0');
             card.tabIndex = 0;
 
             var top = document.createElement('div');
@@ -529,14 +574,17 @@
             badge.className = 'task-items-kanban-badge';
             top.appendChild(badge);
 
-            var deleteBtn = document.createElement('button');
-            deleteBtn.type = 'button';
-            deleteBtn.className = 'task-items-kanban-delete-btn';
-            deleteBtn.setAttribute('data-action', 'kanban-delete');
-            deleteBtn.setAttribute('data-item-id', item.id);
-            deleteBtn.setAttribute('aria-label', 'Excluir tarefa');
-            deleteBtn.innerHTML = '<i class="fas fa-trash-alt" aria-hidden="true"></i>';
-            top.appendChild(deleteBtn);
+            var deleteBtn = null;
+            if (canDelete) {
+                deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'task-items-kanban-delete-btn';
+                deleteBtn.setAttribute('data-action', 'kanban-delete');
+                deleteBtn.setAttribute('data-item-id', item.id);
+                deleteBtn.setAttribute('aria-label', 'Excluir tarefa');
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt" aria-hidden="true"></i>';
+                top.appendChild(deleteBtn);
+            }
 
             var desc = document.createElement('p');
             desc.className = 'task-items-kanban-desc';
@@ -587,25 +635,31 @@
             tipo.className = 'task-items-kanban-tipo is-empty';
             chipsGroup.appendChild(tipo);
 
-            top.insertBefore(chipsGroup, deleteBtn);
+            if (deleteBtn) {
+                top.insertBefore(chipsGroup, deleteBtn);
+            } else {
+                top.appendChild(chipsGroup);
+            }
 
             card.appendChild(top);
             card.appendChild(desc);
             card.appendChild(contextEl);
             card.appendChild(meta);
 
-            var deleteConfirm = document.createElement('div');
-            deleteConfirm.className = 'task-items-kanban-delete-confirm';
-            deleteConfirm.setAttribute('data-role', 'delete-confirm');
-            deleteConfirm.setAttribute('data-item-id', item.id);
-            deleteConfirm.setAttribute('hidden', '');
-            deleteConfirm.innerHTML =
-                '<p>Excluir esta tarefa?</p>' +
-                '<div class="task-items-kanban-delete-confirm-actions">' +
-                '<button type="button" class="task-items-kanban-delete-cancel" data-action="kanban-delete-cancel">Cancelar</button>' +
-                '<button type="button" class="task-items-kanban-delete-confirm-btn" data-action="kanban-delete-confirm">Excluir</button>' +
-                '</div>';
-            card.appendChild(deleteConfirm);
+            if (canDelete) {
+                var deleteConfirm = document.createElement('div');
+                deleteConfirm.className = 'task-items-kanban-delete-confirm';
+                deleteConfirm.setAttribute('data-role', 'delete-confirm');
+                deleteConfirm.setAttribute('data-item-id', item.id);
+                deleteConfirm.setAttribute('hidden', '');
+                deleteConfirm.innerHTML =
+                    '<p>Excluir esta tarefa?</p>' +
+                    '<div class="task-items-kanban-delete-confirm-actions">' +
+                    '<button type="button" class="task-items-kanban-delete-cancel" data-action="kanban-delete-cancel">Cancelar</button>' +
+                    '<button type="button" class="task-items-kanban-delete-confirm-btn" data-action="kanban-delete-confirm">Excluir</button>' +
+                    '</div>';
+                card.appendChild(deleteConfirm);
+            }
 
             fillKanbanCardContent(card, item);
             return card;
@@ -832,7 +886,17 @@
 
         function refreshDrawerActionControls() {
             if (!hasDrawer()) return;
-            var disableDelete = isDeleting || drawerState.isSaving || drawerState.isCommentBusy;
+            var row = drawerState.itemId ? getTaskItemRowById(drawerState.itemId) : null;
+            var canDelete = !!(row && typeof getTaskItemCanDelete === 'function' && getTaskItemCanDelete(row));
+
+            if (!canDelete) {
+                setDrawerDeleteConfirmVisible(false);
+                drawerDeleteIcon.setAttribute('hidden', '');
+            } else {
+                drawerDeleteIcon.removeAttribute('hidden');
+            }
+
+            var disableDelete = !canDelete || isDeleting || drawerState.isSaving || drawerState.isCommentBusy;
             drawerDeleteIcon.disabled = disableDelete;
             drawerDeleteCancel.disabled = disableDelete;
             drawerDeleteConfirmBtn.disabled = disableDelete;
@@ -1288,6 +1352,7 @@
             drawerTitle.textContent = (drawerDesc.value || '').trim() || descricao || 'Item sem descrição';
             renderDrawerCommentsFromRow(row, { forceBottom: drawerState.forceCommentsBottom });
             drawerState.forceCommentsBottom = false;
+            refreshDrawerActionControls();
         }
 
         function openDrawer(itemId) {
@@ -1877,6 +1942,16 @@
             event.preventDefault();
             suppressCardClickUntil = Date.now() + 220;
 
+            if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) {
+                if (dragContext) {
+                    dragContext.didDrop = true;
+                }
+                restoreDraggedCardPosition();
+                clearDropzoneHover();
+                alert('Somente o autor da tarefa ou um administrador pode movê-la para Finalizada.');
+                return;
+            }
+
             var dragging = getDraggingCard();
             var itemId = dragContext.itemId;
             var previousStatus = dragContext.previousStatus;
@@ -2041,7 +2116,7 @@
                 .catch(function (error) {
                     console.error('Erro ao persistir kanban:', error);
                     renderKanbanFromList();
-                    alert('Nao foi possivel persistir a movimentacao no Kanban.');
+                    alert((error && error.message) || 'Nao foi possivel persistir a movimentacao no Kanban.');
                 })
                 .finally(function () {
                     isPersisting = false;
@@ -2054,12 +2129,14 @@
             dropzones.forEach(function (dropzone) {
                 dropzone.addEventListener('dragenter', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
+                    if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
                     event.preventDefault();
                     setDropzoneHover(dropzone);
                 });
 
                 dropzone.addEventListener('dragover', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
+                    if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
                     event.preventDefault();
                     placeDragPlaceholder(dropzone, event.clientY);
                 });
@@ -2082,6 +2159,7 @@
                 if (!dragContext || isPersisting || isDeleting || event.defaultPrevented) return;
                 var dropzone = resolveDropzoneFromEvent(event);
                 if (!dropzone) return;
+                if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
                 event.preventDefault();
                 placeDragPlaceholder(dropzone, event.clientY);
             });

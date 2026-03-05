@@ -567,6 +567,26 @@ class TaskComment(db.Model):
         return f'<TaskComment {self.id} by user {self.user_id}>'
 
 
+class TaskAccessAudit(db.Model):
+    """Auditoria de tentativas negadas em ações restritas de tarefa."""
+    __tablename__ = 'task_access_audit'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, nullable=False, index=True)
+    project_id = db.Column(db.Integer, nullable=True, index=True)
+    actor_user_id = db.Column(db.Integer, nullable=False, index=True)
+    actor_name = db.Column(db.String(100), nullable=False)
+    task_author_user_id = db.Column(db.Integer, nullable=True, index=True)
+    action_type = db.Column(db.String(50), nullable=False, index=True)
+    reason = db.Column(db.String(120), nullable=False)
+    attempted_status = db.Column(db.String(20), nullable=True)
+    task_description = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False, index=True)
+
+    def __repr__(self):
+        return f'<TaskAccessAudit {self.action_type} task={self.task_id} actor={self.actor_user_id}>'
+
+
 class LegacyTaskRedirect(db.Model):
     """Mapeamento para redirecionar links legados de tarefas-pai antigas."""
     __tablename__ = 'legacy_task_redirect'

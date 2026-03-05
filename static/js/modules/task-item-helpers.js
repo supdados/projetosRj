@@ -16,6 +16,46 @@
         return String(row.getAttribute('data-project-value') || '').trim();
     }
 
+    function parseTaskItemFlag(value) {
+        if (value == null) return null;
+        var normalized = String(value).trim().toLowerCase();
+        if (!normalized) return null;
+        if (normalized === '1' || normalized === 'true' || normalized === 'yes') return true;
+        if (normalized === '0' || normalized === 'false' || normalized === 'no') return false;
+        return null;
+    }
+
+    function getTaskItemCanDelete(row) {
+        if (!row) return false;
+        var attrValue = parseTaskItemFlag(row.getAttribute('data-can-delete'));
+        if (attrValue !== null) return attrValue;
+        return !!row.querySelector('.task-item-del');
+    }
+
+    function getTaskItemCanFinalize(row) {
+        if (!row) return false;
+        var attrValue = parseTaskItemFlag(row.getAttribute('data-can-finalize'));
+        if (attrValue !== null) return attrValue;
+
+        var statusSelect = row.querySelector('.task-item-status');
+        if (!statusSelect) return false;
+
+        var finalizeOption = statusSelect.querySelector('option[value="finalizada"]');
+        return !!(finalizeOption && !finalizeOption.disabled);
+    }
+
+    function applyTaskItemPermissions(row, item) {
+        if (!row || !item) return;
+
+        if (Object.prototype.hasOwnProperty.call(item, 'can_delete')) {
+            row.setAttribute('data-can-delete', item.can_delete ? '1' : '0');
+        }
+
+        if (Object.prototype.hasOwnProperty.call(item, 'can_finalize')) {
+            row.setAttribute('data-can-finalize', item.can_finalize ? '1' : '0');
+        }
+    }
+
     function setTaskItemRowStatus(row, status) {
         if (!row) return;
         row.setAttribute('data-item-status', status);
@@ -394,6 +434,8 @@
         if (!item || !item.id) return null;
         var row = getTaskItemRowById(item.id);
         if (!row) return null;
+
+        applyTaskItemPermissions(row, item);
 
         if (typeof item.descricao === 'string') {
             var descEl = row.querySelector('.task-item-desc');

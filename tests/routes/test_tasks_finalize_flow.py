@@ -1,4 +1,4 @@
-from models import Task, db
+from models import Task, TaskAccessAudit, db
 from time_utils import utc_now
 
 
@@ -129,6 +129,59 @@ def test_outsider_cannot_finalize_task(app, client_outsider, seed_data):
         assert task.is_finalized is False
         assert task.finalized_at is None
         assert task.status == 'nao_iniciada'
+
+
+def test_collaborator_cannot_move_task_to_finalizada_via_status_update_and_audited(app, client_editable, seed_data):
+    task_id = seed_data['task_id']
+
+    response = client_editable.post(
+        f'/tarefas/{task_id}/update_status',
+        json={'status': 'finalizada'},
+    )
+
+    assert response.status_code == 403
+    payload = response.get_json()
+    assert payload['success'] is False
+    assert 'Somente o autor da tarefa' in payload['message']
+
+    with app.app_context():
+        task = db.session.get(Task, task_id)
+        assert task is not None
+        assert task.status == 'nao_iniciada'
+
+        audit = (
+            TaskAccessAudit.query
+            .filter_by(task_id=task_id, action_type='forbidden_finalize')
+            .order_by(TaskAccessAudit.id.desc())
+            .first()
+        )
+        assert audit is not None
+        assert audit.actor_user_id == seed_data['editable_user_id']
+        assert audit.task_author_user_id == seed_data['user_id']
+        assert audit.attempted_status == 'finalizada'
+
+
+def test_collaborator_cannot_finalize_task_via_direct_route_and_audited(app, client_editable, seed_data):
+    task_id = seed_data['task_id']
+
+    response = client_editable.post(f'/tarefas/{task_id}/finalizar', follow_redirects=False)
+
+    assert response.status_code == 302
+    assert '/tarefas' in (response.headers.get('Location') or '')
+
+    with app.app_context():
+        task = db.session.get(Task, task_id)
+        assert task is not None
+        assert task.status == 'nao_iniciada'
+
+        audit = (
+            TaskAccessAudit.query
+            .filter_by(task_id=task_id, action_type='forbidden_finalize')
+            .order_by(TaskAccessAudit.id.desc())
+            .first()
+        )
+        assert audit is not None
+        assert audit.actor_user_id == seed_data['editable_user_id']
 
 
 def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app, client_user, seed_data):

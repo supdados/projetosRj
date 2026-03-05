@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 from models import Task, db
 from time_utils import utc_now
@@ -101,6 +102,25 @@ def test_tasks_hub_project_filter_lists_visible_projects_without_active_items(cl
     html = response.get_data(as_text=True)
     assert f'data-value="{seed_data["project_complete_id"]}"' in html
     assert 'Projeto Concluivel' in html
+
+
+def test_tasks_hub_hides_finalize_and_delete_controls_for_non_author(client_editable, seed_data):
+    response = client_editable.get('/tarefas')
+    assert response.status_code == 200
+
+    html = response.get_data(as_text=True)
+    row_match = re.search(
+        rf'<div\s+class="task-item-row"[^>]*data-item-id="{seed_data["task_id"]}"[\s\S]*?<select class="task-item-status[\s\S]*?</select>',
+        html,
+    )
+
+    assert row_match is not None
+    row_html = row_match.group(0)
+    assert 'data-can-delete="0"' in row_html
+    assert 'data-can-finalize="0"' in row_html
+    assert 'value="finalizada"' not in row_html
+    assert f'data-bs-target="#deleteItemModal-{seed_data["task_id"]}"' not in html
+    assert f'id="deleteItemModal-{seed_data["task_id"]}"' not in html
 
 
 def test_tasks_hub_project_filter_js_allows_enter_to_clear_empty_selection():

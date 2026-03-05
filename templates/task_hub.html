@@ -322,6 +322,8 @@
                             class="task-item-row"
                             data-item-id="{{ item.id }}"
                             data-item-status="{{ item.status }}"
+                            data-can-delete="{{ '1' if item.hub_can_delete else '0' }}"
+                            data-can-finalize="{{ '1' if item.hub_can_finalize else '0' }}"
                             data-comments-count="{{ item.comments|length }}"
                             data-item-prioridade="{{ item.prioridade or '' }}"
                             data-item-tipo="{{ item.tipo_pedido or '' }}"
@@ -381,6 +383,7 @@
                                                     <span class="visually-hidden">Desarquivar</span>
                                                 </button>
                                             </form>
+                                            {% if item.hub_can_delete %}
                                             <button
                                                 type="button"
                                                 class="task-item-btn task-item-del"
@@ -391,7 +394,9 @@
                                                 <i class="fas fa-trash-alt" aria-hidden="true"></i>
                                                 <span class="visually-hidden">Apagar</span>
                                             </button>
+                                            {% endif %}
                                         </div>
+                                        {% if item.hub_can_delete %}
                                         <div class="modal fade tasks-modal" id="deleteArchivedTaskModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
                                             <div class="modal-dialog modal-dialog-centered">
                                                 <div class="modal-content tasks-modal-content">
@@ -417,6 +422,7 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        {% endif %}
                                         {% else %}
                                         <select class="task-item-prioridade-select prioridade-{{ item.prioridade or 'none' }}"
                                             data-item-id="{{ item.id }}"
@@ -448,7 +454,11 @@
                                             <option value="em_andamento" {% if item.status == 'em_andamento' %}selected{% endif %}>Em andamento</option>
                                             <option value="para_validacao" {% if item.status == 'para_validacao' %}selected{% endif %}>Para validação</option>
                                             <option value="para_ajustes" {% if item.status == 'para_ajustes' %}selected{% endif %}>Para ajustes</option>
+                                            {% if item.hub_can_finalize %}
                                             <option value="finalizada" {% if item.status == 'finalizada' %}selected{% endif %}>Finalizada</option>
+                                            {% elif item.status == 'finalizada' %}
+                                            <option value="finalizada" selected disabled>Finalizada</option>
+                                            {% endif %}
                                         </select>
                                         <span class="task-item-responsavel" data-item-id="{{ item.id }}">{% if item.responsavel %}{{ item.responsavel }}{% else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
                                         <div class="task-item-actions">
@@ -462,10 +472,12 @@
                                                 <i class="fas fa-paperclip" aria-hidden="true"></i>
                                                 <span class="task-item-anexos-num">{{ item.anexos|length }}</span>
                                             </button>
+                                            {% if item.hub_can_delete %}
                                             <button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal"
                                                 data-bs-target="#deleteItemModal-{{ item.id }}" title="Excluir">
                                                 <i class="fas fa-trash-alt" aria-hidden="true"></i>
                                             </button>
+                                            {% endif %}
                                         </div>
                                         {% endif %}
                                     </div>
@@ -522,6 +534,7 @@
                         </div>
 
                         {% if not archived_mode %}
+                        {% if item.hub_can_delete %}
                         <div class="modal fade task-detail-v2-modal" id="deleteItemModal-{{ item.id }}" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content modal-clean">
@@ -545,6 +558,7 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                         {% endif %}
                         {% endfor %}
 

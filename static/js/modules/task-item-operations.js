@@ -408,6 +408,23 @@
         var nextStatus = normalizeTaskStatusValue(status);
         var rowBeforeUpdate = getTaskItemRowById(itemId);
         var previousStatus = normalizeTaskStatusValue(rowBeforeUpdate ? getTaskItemStatus(rowBeforeUpdate) : '');
+        var isNewFinalizeAttempt = (
+            nextStatus === TASK_FINALIZADA_STATUS &&
+            previousStatus !== TASK_FINALIZADA_STATUS
+        );
+
+        if (
+            isNewFinalizeAttempt &&
+            rowBeforeUpdate &&
+            typeof getTaskItemCanFinalize === 'function' &&
+            !getTaskItemCanFinalize(rowBeforeUpdate)
+        ) {
+            var finalizePermissionError = new Error('Somente o autor da tarefa ou um administrador pode movê-la para Finalizada.');
+            if (showAlert) {
+                alert(finalizePermissionError.message);
+            }
+            return Promise.reject(finalizePermissionError);
+        }
 
         return fetch('/tarefas/' + itemId + '/update_status', {
             method: 'POST',

@@ -331,6 +331,34 @@
         });
     }
 
+    function canDeleteTaskItem(item) {
+        return item && item.can_delete !== false;
+    }
+
+    function canFinalizeTaskItem(item) {
+        return item && item.can_finalize !== false;
+    }
+
+    function buildStatusOptionsMarkup(item) {
+        var status = String(item && item.status || 'nao_iniciada');
+        var options = [
+            '<option value="nao_iniciada"' + (status === 'nao_iniciada' ? ' selected' : '') + '>Não iniciada</option>',
+            '<option value="em_andamento"' + (status === 'em_andamento' ? ' selected' : '') + '>Em andamento</option>',
+            '<option value="para_validacao"' + (status === 'para_validacao' ? ' selected' : '') + '>Para validação</option>',
+            '<option value="para_ajustes"' + (status === 'para_ajustes' ? ' selected' : '') + '>Para ajustes</option>',
+        ];
+
+        if (canFinalizeTaskItem(item)) {
+            options.push(
+                '<option value="finalizada"' + (status === 'finalizada' ? ' selected' : '') + '>Finalizada</option>'
+            );
+        } else if (status === 'finalizada') {
+            options.push('<option value="finalizada" selected disabled>Finalizada</option>');
+        }
+
+        return options.join('');
+    }
+
     function buildItemRowMarkup(item) {
         var prioridade = item.prioridade || '';
         var tipoPedido = item.tipo_pedido || '';
@@ -339,6 +367,7 @@
         var projectInfo = getProjectInfo(item.project_value || item.project_id || '', item.project_titulo, item.project_area);
         var commentsCount = Number(item.comments_count || 0);
         var anexosCount = Number(item.anexos_count || 0);
+        var canDelete = canDeleteTaskItem(item);
         var legacyTipoOption = tipoPedido === 'implementacao'
             ? '<option value="implementacao" selected hidden>Implementação (legado)</option>'
             : '';
@@ -359,6 +388,8 @@
             '<div class="task-item-row" ',
             'data-item-id="' + item.id + '" ',
             'data-item-status="' + item.status + '" ',
+            'data-can-delete="' + (canDelete ? '1' : '0') + '" ',
+            'data-can-finalize="' + (canFinalizeTaskItem(item) ? '1' : '0') + '" ',
             'data-comments-count="' + commentsCount + '" ',
             'data-item-prioridade="' + escapeHtml(prioridade) + '" ',
             'data-item-tipo="' + escapeHtml(tipoPedido) + '" ',
@@ -381,11 +412,7 @@
             '<select class="task-item-prioridade-select prioridade-' + (prioridade || 'none') + '" data-item-id="' + item.id + '" title="Prioridade" onchange="updateItemPrioridade(' + item.id + ', this.value, this)">' + prioridadeOptions + '</select>',
             '<select class="task-item-tipo-select" data-item-id="' + item.id + '" title="Tipo" onchange="updateItemTipo(' + item.id + ', this.value)">' + tipoOptions + '</select>',
             '<select class="task-item-status status-' + item.status + '" onchange="updateItemStatus(' + item.id + ', this.value)" title="Status">',
-            '<option value="nao_iniciada"' + (item.status === 'nao_iniciada' ? ' selected' : '') + '>Não iniciada</option>',
-            '<option value="em_andamento"' + (item.status === 'em_andamento' ? ' selected' : '') + '>Em andamento</option>',
-            '<option value="para_validacao"' + (item.status === 'para_validacao' ? ' selected' : '') + '>Para validação</option>',
-            '<option value="para_ajustes"' + (item.status === 'para_ajustes' ? ' selected' : '') + '>Para ajustes</option>',
-            '<option value="finalizada"' + (item.status === 'finalizada' ? ' selected' : '') + '>Finalizada</option>',
+            buildStatusOptionsMarkup(item),
             '</select>',
             '<span class="task-item-responsavel" data-item-id="' + item.id + '">',
             (item.responsavel ? htmlEncode(item.responsavel) : '<em class="responsavel-placeholder">Responsável não informado</em>'),
@@ -395,7 +422,7 @@
             '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-item-comments-num">' + commentsCount + '</span></button>',
             '<button type="button" class="task-item-anexos-btn" title="Anexos" data-item-id="' + item.id + '">',
             '<i class="fas fa-paperclip" aria-hidden="true"></i><span class="task-item-anexos-num">' + anexosCount + '</span></button>',
-            '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>',
+            canDelete ? '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>' : '',
             '</div></div></div>',
             '<div id="comments-body-' + item.id + '" class="task-item-comments" hidden>',
             '<div class="task-item-comments-inner">',
@@ -404,6 +431,10 @@
             '<button type="submit" title="Enviar comentário"><i class="fas fa-paper-plane" aria-hidden="true"></i><span class="visually-hidden">Enviar</span></button>',
             '</form></div></div></div></div>',
         ].join('');
+
+        if (!canDelete) {
+            return { rowHtml: rowHtml, modalHtml: '' };
+        }
 
         var modalHtml = [
             '<div class="modal fade task-detail-v2-modal" id="deleteItemModal-' + item.id + '" tabindex="-1" aria-hidden="true">',
