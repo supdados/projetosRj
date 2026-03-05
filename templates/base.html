@@ -329,8 +329,8 @@
                                     <li>
                                         <a href="{{ url_for('main.change_password') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.change_password' else '' }}">
                                             <span class="app-dropdown-item-main">
-                                                <i class="fas fa-key"></i>
-                                                <span>Alterar Senha</span>
+                                                <i class="fas {{ 'fa-key' if is_admin_user else 'fa-user-cog' }}"></i>
+                                                <span>{{ 'Alterar Senha' if is_admin_user else 'Gerenciar Conta' }}</span>
                                             </span>
                                             <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
                                         </a>

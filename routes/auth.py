@@ -280,30 +280,65 @@ def logout():
 @main_bp.route('/profile/change-password', methods=['GET', 'POST'])
 @login_required
 def change_password():
+    is_govbr_linked = bool(g.user and g.user.cpf_govbr and g.user.govbr_sub)
+
     if request.method == 'POST':
+        submitted_name = request.form.get('name')
+        name = (submitted_name if submitted_name is not None else g.user.name or '').strip()
+        if not name:
+            flash('O nome é obrigatório.', 'danger')
+            return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+
+        new_cpf = g.user.cpf_govbr
+        if not is_govbr_linked and 'cpf_govbr' in request.form:
+            raw_cpf = request.form.get('cpf_govbr')
+            if raw_cpf is None or not str(raw_cpf).strip():
+                new_cpf = None
+            else:
+                try:
+                    new_cpf = normalize_cpf(raw_cpf)
+                except ValueError as exc:
+                    flash(f'CPF gov.br inválido: {exc}', 'danger')
+                    return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+
+            if (
+                new_cpf
+                and User.query.filter(User.cpf_govbr == new_cpf, User.id != g.user.id).first()
+            ):
+                flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
+                return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+
         current_password = request.form.get('current_password')
         new_password = request.form.get('new_password')
         confirm_new_password = request.form.get('confirm_new_password')
 
-        if not current_password or not new_password or not confirm_new_password:
-            flash('Todos os campos são obrigatórios.', 'danger')
-            return render_template('change_password.html')
+        should_update_password = bool(current_password or new_password or confirm_new_password)
+        if should_update_password and (not current_password or not new_password or not confirm_new_password):
+            flash('Para alterar a senha, preencha senha atual, nova senha e confirmação.', 'danger')
+            return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
-        if not g.user.check_password(current_password):
+        if should_update_password and not g.user.check_password(current_password):
             flash('Senha atual incorreta.', 'danger')
-            return render_template('change_password.html')
+            return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
-        if new_password != confirm_new_password:
+        if should_update_password and new_password != confirm_new_password:
             flash('A nova senha e a confirmação não correspondem.', 'danger')
-            return render_template('change_password.html')
-        
-        if len(new_password) < 6:
-            flash('A nova senha deve ter no mínimo 6 caracteres.', 'danger')
-            return render_template('change_password.html')
+            return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
-        g.user.set_password(new_password)
+        if should_update_password and len(new_password) < 6:
+            flash('A nova senha deve ter no mínimo 6 caracteres.', 'danger')
+            return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+
+        g.user.name = name
+        if not is_govbr_linked and 'cpf_govbr' in request.form:
+            g.user.cpf_govbr = new_cpf
+        if should_update_password:
+            g.user.set_password(new_password)
         db.session.commit()
-        flash('Senha alterada com sucesso!', 'success')
+        if should_update_password:
+            flash('Conta atualizada e senha alterada com sucesso!', 'success')
+        else:
+            flash('Conta atualizada com sucesso!', 'success')
         return redirect(url_for('main.dashboard'))
 
-    return render_template('change_password.html')
+    return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
