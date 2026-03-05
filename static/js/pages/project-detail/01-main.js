@@ -959,6 +959,54 @@
         let currentTargetElement = null;
 
         if (mainContent) {
+            function parseIsoDateToUtc(isoDate) {
+                if (!isoDate || typeof isoDate !== 'string') {
+                    return null;
+                }
+                const parts = isoDate.split('-').map(Number);
+                if (parts.length !== 3 || parts.some(Number.isNaN)) {
+                    return null;
+                }
+                const [year, month, day] = parts;
+                return new Date(Date.UTC(year, month - 1, day));
+            }
+
+            function formatUtcDateToIso(dateValue) {
+                if (!(dateValue instanceof Date) || Number.isNaN(dateValue.getTime())) {
+                    return '';
+                }
+                const year = dateValue.getUTCFullYear();
+                const month = String(dateValue.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(dateValue.getUTCDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            function isBusinessDayUtc(dateValue) {
+                const weekday = dateValue.getUTCDay();
+                return weekday !== 0 && weekday !== 6;
+            }
+
+            function addBusinessDaysToIsoDate(isoDate, businessDays) {
+                const baseDate = parseIsoDateToUtc(isoDate);
+                const delta = Number(businessDays);
+
+                if (!baseDate || !Number.isFinite(delta)) {
+                    return '';
+                }
+
+                let remaining = Math.abs(Math.trunc(delta));
+                const step = delta >= 0 ? 1 : -1;
+
+                while (remaining > 0) {
+                    baseDate.setUTCDate(baseDate.getUTCDate() + step);
+                    if (isBusinessDayUtc(baseDate)) {
+                        remaining -= 1;
+                    }
+                }
+
+                return formatUtcDateToIso(baseDate);
+            }
+
             function showContextMenuAt(x, y) {
                 if (!contextMenu) {
                     return;
@@ -1016,14 +1064,12 @@
                     const field = elementToUpdate.dataset.field;
                     const etapaId = elementToUpdate.dataset.etapaId;
 
-                    // Calcula a nova data
-                    const originalDate = new Date(originalDateStr + 'T00:00:00'); // Adiciona T00:00 para evitar problemas de fuso
-                    originalDate.setDate(originalDate.getDate() + daysToAdd);
-
-                    const year = originalDate.getFullYear();
-                    const month = String(originalDate.getMonth() + 1).padStart(2, '0');
-                    const day = String(originalDate.getDate()).padStart(2, '0');
-                    const newDateValue = `${year}-${month}-${day}`;
+                    const newDateValue = addBusinessDaysToIsoDate(originalDateStr, daysToAdd);
+                    if (!newDateValue) {
+                        showAjaxFlashMessage('Não foi possível calcular a nova data útil.', 'danger');
+                        hideContextMenu();
+                        return;
+                    }
 
                     // Envia a atualização para o backend
                     fetch(`/etapa/${etapaId}/update_field`, {
@@ -1056,7 +1102,7 @@
                                 if (field === 'data_inicio' && daysToAdd !== 0) {
                                     showCascadeConfirmModal(etapaId, daysToAdd);
                                 } else {
-                                    showAjaxFlashMessage(`Data atualizada: +${daysToAdd} dias`, 'success');
+                                    showAjaxFlashMessage(`Data atualizada: +${daysToAdd} dia(s) útil(eis)`, 'success');
                                 }
                             } else {
                                 showAjaxFlashMessage(data.message || 'Falha ao atualizar data.', 'danger');
