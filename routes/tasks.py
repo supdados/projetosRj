@@ -49,7 +49,7 @@ from .tasks_helpers import (
     _task_status_label,
 )
 
-FINALIZE_DENIED_MESSAGE = 'Somente o autor da tarefa ou um administrador pode movê-la para Finalizada.'
+FINALIZE_DENIED_MESSAGE = 'Apenas o criador da tarefa pode movê-la para Finalizada.'
 DELETE_DENIED_MESSAGE = 'Somente o autor da tarefa ou um administrador pode excluí-la.'
 
 

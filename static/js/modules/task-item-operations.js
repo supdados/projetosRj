@@ -419,7 +419,7 @@
             typeof getTaskItemCanFinalize === 'function' &&
             !getTaskItemCanFinalize(rowBeforeUpdate)
         ) {
-            var finalizePermissionError = new Error('Somente o autor da tarefa ou um administrador pode movê-la para Finalizada.');
+            var finalizePermissionError = new Error('Apenas o criador da tarefa pode movê-la para Finalizada.');
             if (showAlert) {
                 alert(finalizePermissionError.message);
             }

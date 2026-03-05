@@ -1948,7 +1948,7 @@
                 }
                 restoreDraggedCardPosition();
                 clearDropzoneHover();
-                alert('Somente o autor da tarefa ou um administrador pode movê-la para Finalizada.');
+                alert('Apenas o criador da tarefa pode movê-la para Finalizada.');
                 return;
             }
 
@@ -2129,15 +2129,15 @@
             dropzones.forEach(function (dropzone) {
                 dropzone.addEventListener('dragenter', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
-                    if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
                     event.preventDefault();
+                    if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
                     setDropzoneHover(dropzone);
                 });
 
                 dropzone.addEventListener('dragover', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
-                    if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
                     event.preventDefault();
+                    if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
                     placeDragPlaceholder(dropzone, event.clientY);
                 });
 
@@ -2159,8 +2159,8 @@
                 if (!dragContext || isPersisting || isDeleting || event.defaultPrevented) return;
                 var dropzone = resolveDropzoneFromEvent(event);
                 if (!dropzone) return;
-                if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
                 event.preventDefault();
+                if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
                 placeDragPlaceholder(dropzone, event.clientY);
             });
 

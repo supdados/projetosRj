@@ -142,7 +142,7 @@ def test_collaborator_cannot_move_task_to_finalizada_via_status_update_and_audit
     assert response.status_code == 403
     payload = response.get_json()
     assert payload['success'] is False
-    assert 'Somente o autor da tarefa' in payload['message']
+    assert 'Apenas o criador da tarefa' in payload['message']
 
     with app.app_context():
         task = db.session.get(Task, task_id)
