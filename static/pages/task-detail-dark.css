@@ -446,6 +446,11 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban
     color: var(--td-items-text-secondary);
 }
 
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context a {
+    color: var(--td-items-text-muted);
+}
+
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-owner.is-empty {
     color: var(--td-items-text-muted);
 }

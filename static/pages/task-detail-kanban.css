@@ -348,7 +348,7 @@
 
 .task-detail-v2 .task-hub-kanban-context {
     margin: 0;
-    color: #6b849f;
+    color: #1f629a;
     font-size: var(--ds-font-size-2xs);
     line-height: 1.3;
     display: block;
@@ -360,10 +360,18 @@
 
 .task-detail-v2 .task-hub-kanban-context a {
     display: block;
+    color: #1f629a;
     max-width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-decoration: none;
+}
+
+.task-detail-v2 .task-hub-kanban-context a:hover,
+.task-detail-v2 .task-hub-kanban-context a:focus-visible {
+    color: #184f7d;
+    text-decoration: underline;
 }
 
 .task-detail-v2 .task-items-kanban-meta {

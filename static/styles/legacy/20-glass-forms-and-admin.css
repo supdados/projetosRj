@@ -1462,9 +1462,23 @@
 
 .project-create-btn-primary:disabled,
 .project-create-btn-primary.is-disabled {
-    opacity: 0.6;
+    background: #e8edf3;
+    border-color: #c8d3e0;
+    color: #7b8da2;
+    box-shadow: none;
+    opacity: 1;
     cursor: not-allowed;
-    filter: saturate(0.8);
+    filter: none;
+}
+
+.project-create-btn-primary:disabled:hover,
+.project-create-btn-primary:disabled:focus,
+.project-create-btn-primary.is-disabled:hover,
+.project-create-btn-primary.is-disabled:focus {
+    background: #e8edf3;
+    border-color: #c8d3e0;
+    color: #7b8da2;
+    box-shadow: none;
 }
 
 @media (min-width: 992px) {
