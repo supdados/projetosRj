@@ -2,6 +2,7 @@ import datetime
 
 import routes.calendars as calendar_routes
 from models import CalendarEvent, UserCalendarConnection, db
+from services.google_calendar import GoogleCalendarError
 
 
 def test_calendars_page_renders_core_actions(client_user):
@@ -153,3 +154,30 @@ def test_calendar_webhook_rejects_invalid_channel_token(app, client, seed_data):
     )
 
     assert response.status_code == 403
+
+
+def test_resolve_webhook_address_prefers_forwarded_https_on_ngrok(app):
+    app.config['GOOGLE_CALENDAR_WEBHOOK_URL'] = ''
+
+    with app.test_request_context(
+        '/calendarios',
+        base_url='http://127.0.0.1:5002',
+        headers={
+            'X-Forwarded-Proto': 'https',
+            'X-Forwarded-Host': 'reverberative-dawn-syndetically.ngrok-free.dev',
+        },
+    ):
+        address = calendar_routes._resolve_webhook_address()
+
+    assert address == 'https://reverberative-dawn-syndetically.ngrok-free.dev/webhook'
+
+
+def test_describe_calendar_issue_normalizes_webhook_https_error():
+    error = GoogleCalendarError(
+        'bad request',
+        status_code=400,
+        response_body='{"error":{"errors":[{"reason":"push.webhookUrlNotHttps"}]}}',
+    )
+
+    message = calendar_routes._describe_calendar_issue(error)
+    assert 'Webhook do Google precisa ser HTTPS' in message

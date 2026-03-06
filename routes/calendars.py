@@ -36,17 +36,19 @@ def _resolve_runtime_google_redirect_uri():
     if configured_redirect_uri:
         return configured_redirect_uri
 
-    callback_url = url_for('main.google_calendar_oauth_callback', _external=True)
+    callback_path = url_for('main.google_calendar_oauth_callback')
+    callback_url = _build_public_url(callback_path)
     callback_parsed = urlparse(callback_url)
     redirect_uris = get_google_client_redirect_uris(current_app.config)
 
     if callback_url in redirect_uris:
         return callback_url
 
-    request_host = request.host.split(':', 1)[0]
+    request_host = _public_host_without_port()
+    public_scheme = _public_scheme()
     for candidate in redirect_uris:
         parsed = urlparse(candidate)
-        if parsed.path == callback_parsed.path and parsed.hostname == request_host and parsed.scheme == request.scheme:
+        if parsed.path == callback_parsed.path and parsed.hostname == request_host and parsed.scheme == public_scheme:
             return candidate
 
     for candidate in redirect_uris:
@@ -61,11 +63,59 @@ def _resolve_google_calendar_id():
     return configured or 'primary'
 
 
+def _forwarded_header_value(header_name):
+    raw_value = (request.headers.get(header_name) or '').strip()
+    if not raw_value:
+        return ''
+    return raw_value.split(',', 1)[0].strip()
+
+
+def _public_host():
+    forwarded_host = _forwarded_header_value('X-Forwarded-Host')
+    return forwarded_host or request.host
+
+
+def _public_host_without_port():
+    return _public_host().split(':', 1)[0]
+
+
+def _public_scheme():
+    forwarded_proto = _forwarded_header_value('X-Forwarded-Proto')
+    if forwarded_proto:
+        return forwarded_proto
+
+    host = _public_host_without_port()
+    if host.endswith('.ngrok-free.dev') or host.endswith('.ngrok.app'):
+        return 'https'
+
+    return request.scheme or 'http'
+
+
+def _build_public_url(path):
+    normalized_path = path if str(path).startswith('/') else f'/{path}'
+    return f'{_public_scheme()}://{_public_host()}{normalized_path}'
+
+
 def _resolve_webhook_address():
     configured = str(current_app.config.get('GOOGLE_CALENDAR_WEBHOOK_URL', '')).strip()
     if configured:
         return configured
-    return url_for('main.calendar_webhook', _external=True)
+    return _build_public_url(url_for('main.calendar_webhook'))
+
+
+def _describe_calendar_issue(error):
+    if isinstance(error, GoogleCalendarError):
+        body = (error.response_body or '')
+        if (
+            'webhookUrlNotHttps' in body
+            or 'WebHook callback must be HTTPS' in body
+        ):
+            return (
+                'Webhook do Google precisa ser HTTPS. Configure '
+                '`GOOGLE_CALENDAR_WEBHOOK_URL` com `https://.../webhook` e clique em '
+                '"Renovar watch".'
+            )
+    return str(error)
 
 
 def _to_utc_naive(local_dt):
@@ -586,12 +636,12 @@ def google_calendar_oauth_callback():
     try:
         _sync_events_from_google(connection, force_full=True)
     except GoogleCalendarError as exc:
-        sync_issue = str(exc)
+        sync_issue = _describe_calendar_issue(exc)
 
     try:
         _renew_watch_channel(connection)
     except Exception as exc:
-        watch_issue = str(exc)
+        watch_issue = _describe_calendar_issue(exc)
 
     try:
         db.session.commit()
@@ -674,7 +724,7 @@ def renew_google_calendar_watch():
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        flash(f'Erro ao renovar watch do Google Calendar: {exc}', 'danger')
+        flash(f'Erro ao renovar watch do Google Calendar: {_describe_calendar_issue(exc)}', 'danger')
         return redirect(url_for('main.calendars_hub'))
 
     if watch_summary.get('expires_at'):
