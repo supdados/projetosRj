@@ -41,6 +41,50 @@ def _parse_cpf_govbr(raw_cpf):
         return None, str(exc)
 
 
+def _normalize_selected_areas_for_form(selected_areas, area_catalog_choices):
+    catalog_map = {
+        normalize_area_name(area_name).casefold(): area_name
+        for area_name in area_catalog_choices
+        if normalize_area_name(area_name)
+    }
+
+    normalized_user_areas = []
+    seen = set()
+
+    for area in selected_areas:
+        normalized_area = normalize_area_name(area)
+        if not normalized_area:
+            continue
+
+        normalized_key = normalized_area.casefold()
+        if normalized_key in seen:
+            continue
+        seen.add(normalized_key)
+
+        normalized_user_areas.append(catalog_map.get(normalized_key, normalized_area))
+
+    return normalized_user_areas
+
+
+def _area_choice_keys(selected_areas):
+    keys = []
+    seen = set()
+
+    for area in selected_areas:
+        normalized = normalize_area_name(area)
+        if not normalized:
+            continue
+
+        key = normalized.casefold()
+        if key in seen:
+            continue
+
+        seen.add(key)
+        keys.append(key)
+
+    return keys
+
+
 @main_bp.route('/admin/users')
 @login_required
 @admin_required
@@ -104,6 +148,7 @@ def add_user():
             'user_form.html',
             user=request.form,
             user_areas=selected_areas,
+            user_area_keys=_area_choice_keys(selected_areas),
             action_verb="Adicionar",
             areas_responsaveis_choices=area_catalog_choices,
         )
@@ -133,11 +178,19 @@ def edit_user(user_id):
         selected_areas = user_to_edit.get_areas()
         invalid_areas = []
         area_catalog_choices = get_area_catalog_choices()
+        normalized_selected_areas = _normalize_selected_areas_for_form(selected_areas, area_catalog_choices)
 
         if areas_form_submitted:
             selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
                 request.form.getlist('areas_responsavel')
             )
+            normalized_selected_areas = _normalize_selected_areas_for_form(
+                selected_areas,
+                area_catalog_choices,
+            )
+            selected_area_keys = _area_choice_keys(normalized_selected_areas)
+        else:
+            selected_area_keys = _area_choice_keys(normalized_selected_areas)
         should_update_cpf = not hide_govbr_link_fields and 'cpf_govbr' in request.form
         cpf_govbr = user_to_edit.cpf_govbr
         cpf_error = None
@@ -155,7 +208,16 @@ def edit_user(user_id):
                 return render_template(
                     'user_form.html',
                     user=user_to_edit,
-                    user_areas=user_to_edit.get_areas(),
+                    user_areas=_normalize_selected_areas_for_form(
+                        user_to_edit.get_areas(),
+                        area_catalog_choices,
+                    ),
+                    user_area_keys=_area_choice_keys(
+                        _normalize_selected_areas_for_form(
+                            user_to_edit.get_areas(),
+                            area_catalog_choices,
+                        )
+                    ),
                     action_verb="Editar",
                     areas_responsaveis_choices=area_catalog_choices,
                     hide_govbr_link_fields=hide_govbr_link_fields,
@@ -169,7 +231,8 @@ def edit_user(user_id):
             return render_template(
                 'user_form.html',
                 user=user_to_edit,
-                user_areas=selected_areas,
+                user_areas=normalized_selected_areas,
+                user_area_keys=selected_area_keys,
                 action_verb="Editar",
                 areas_responsaveis_choices=area_catalog_choices,
                 hide_govbr_link_fields=hide_govbr_link_fields,
@@ -180,7 +243,8 @@ def edit_user(user_id):
             return render_template(
                 'user_form.html',
                 user=user_to_edit,
-                user_areas=selected_areas,
+                user_areas=normalized_selected_areas,
+                user_area_keys=selected_area_keys,
                 action_verb="Editar",
                 areas_responsaveis_choices=area_catalog_choices,
                 hide_govbr_link_fields=hide_govbr_link_fields,
@@ -195,7 +259,8 @@ def edit_user(user_id):
             return render_template(
                 'user_form.html',
                 user=user_to_edit,
-                user_areas=selected_areas,
+                user_areas=normalized_selected_areas,
+                user_area_keys=selected_area_keys,
                 action_verb="Editar",
                 areas_responsaveis_choices=area_catalog_choices,
                 hide_govbr_link_fields=hide_govbr_link_fields,
@@ -223,12 +288,18 @@ def edit_user(user_id):
         return redirect(url_for('main.list_users'))
     
     # Método GET
+    area_catalog_choices = get_area_catalog_choices()
+    selected_areas = _normalize_selected_areas_for_form(
+        user_to_edit.get_areas(),
+        area_catalog_choices,
+    )
     return render_template(
         'user_form.html',
         user=user_to_edit,
-        user_areas=user_to_edit.get_areas(),
+        user_areas=selected_areas,
+        user_area_keys=_area_choice_keys(selected_areas),
         action_verb="Editar",
-        areas_responsaveis_choices=get_area_catalog_choices(),
+        areas_responsaveis_choices=area_catalog_choices,
         hide_govbr_link_fields=hide_govbr_link_fields,
     )
 

@@ -124,7 +124,7 @@
                                         name="areas_responsavel"
                                         value="{{ area_choice }}"
                                         id="area_{{ loop.index }}"
-                                        {% if area_choice in user_areas %}checked{% endif %}
+                                        {% if area_choice|lower in (user_area_keys|default([])) or area_choice in user_areas %}checked{% endif %}
                                     >
                                     <label class="account-area-label" for="area_{{ loop.index }}">
                                         {{ area_choice }}
