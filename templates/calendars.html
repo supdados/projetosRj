@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Calendários - ProjetosRJ{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='pages/calendars.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="app-page-shell app-page-shell--raised calendars-page">
+    <header class="calendars-header">
+        <div>
+            <h1 class="ds-type-page-title">Calendários</h1>
+            <p class="mb-0">Gerencie eventos internos e sincronize com Google Calendar.</p>
+        </div>
+        <div class="calendars-header-meta">
+            <span class="calendars-chip {{ 'is-on' if connection else 'is-off' }}">
+                {{ 'Google conectado' if connection else 'Google desconectado' }}
+            </span>
+            {% if last_sync_display %}
+            <span class="calendars-chip">Último sync: {{ last_sync_display }}</span>
+            {% endif %}
+        </div>
+    </header>
+
+    <section class="calendars-connection-card">
+        {% if not google_calendar_enabled %}
+        <div class="calendars-alert warning">
+            Integração Google Calendar desabilitada. Verifique `client_secret.json` e variáveis de ambiente.
+        </div>
+        {% elif connection %}
+        <div class="calendars-connection-status">
+            <div>
+                <h2 class="ds-type-card-title">Conexão ativa</h2>
+                <p class="mb-0">
+                    Calendário: <strong>{{ connection.calendar_id }}</strong>
+                    {% if watch_expiration_display %}
+                    | Watch expira em: <strong>{{ watch_expiration_display }}</strong>
+                    {% endif %}
+                    {% if not watch_active %}
+                    | <span class="calendars-text-warning">Watch inativo</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="calendars-connection-actions">
+                <form method="POST" action="{{ url_for('main.sync_google_calendar_now') }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Sincronizar agora</button>
+                </form>
+                <form method="POST" action="{{ url_for('main.renew_google_calendar_watch') }}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Renovar watch</button>
+                </form>
+                <form method="POST" action="{{ url_for('main.disconnect_google_calendar') }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Desconectar</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="calendars-connection-status">
+            <div>
+                <h2 class="ds-type-card-title">Conectar Google Calendar</h2>
+                <p class="mb-0">
+                    Autorize o acesso para sincronização de leitura/escrita e recebimento de alterações via webhook.
+                </p>
+            </div>
+            <a href="{{ url_for('main.start_google_calendar_oauth') }}" class="btn btn-primary btn-sm">
+                Conectar com Google
+            </a>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="calendars-create-card">
+        <h2 class="ds-type-card-title">Novo evento</h2>
+        <form method="POST" action="{{ url_for('main.create_calendar_event') }}" class="calendars-event-form">
+            <div class="calendars-grid-two">
+                <div class="form-group">
+                    <label for="eventTitle">Título</label>
+                    <input id="eventTitle" type="text" name="title" class="form-control" maxlength="200" required>
+                </div>
+                <div class="form-group">
+                    <label for="eventLocation">Local</label>
+                    <input id="eventLocation" type="text" name="location" class="form-control" maxlength="255">
+                </div>
+            </div>
+            <div class="calendars-grid-two">
+                <div class="form-group">
+                    <label for="eventStartsAt">Início</label>
+                    <input id="eventStartsAt" type="datetime-local" name="starts_at" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="eventEndsAt">Fim</label>
+                    <input id="eventEndsAt" type="datetime-local" name="ends_at" class="form-control" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="eventDescription">Descrição</label>
+                <textarea id="eventDescription" name="description" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="calendars-form-actions">
+                <button type="submit" class="btn btn-primary">Salvar evento</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="calendars-list-card">
+        <div class="calendars-list-header">
+            <h2 class="ds-type-card-title mb-0">Eventos</h2>
+            <span class="calendars-list-count">
+                {{ calendar_events|length }} registro{{ 's' if calendar_events|length != 1 else '' }}
+            </span>
+        </div>
+
+        {% if calendar_events %}
+        <div class="calendars-events-list">
+            {% for item in calendar_events %}
+            {% set event = item.model %}
+            <article class="calendars-event-row">
+                <div class="calendars-event-main">
+                    <div class="calendars-event-head">
+                        <h3>{{ event.title }}</h3>
+                        <span class="calendars-sync-badge status-{{ event.sync_status }}">
+                            {% if event.sync_status == 'ok' %}
+                            Sincronizado
+                            {% elif event.sync_status == 'error' %}
+                            Erro de sync
+                            {% else %}
+                            Pendente
+                            {% endif %}
+                        </span>
+                    </div>
+                    <p class="calendars-event-meta">
+                        {{ item.starts_at_display }} até {{ item.ends_at_display }}
+                        {% if event.location %}
+                        | {{ event.location }}
+                        {% endif %}
+                    </p>
+                    {% if event.description %}
+                    <p class="calendars-event-description">{{ event.description }}</p>
+                    {% endif %}
+                    {% if event.sync_error %}
+                    <p class="calendars-event-sync-error">{{ event.sync_error }}</p>
+                    {% endif %}
+                </div>
+                <div class="calendars-event-actions">
+                    <details>
+                        <summary>Editar</summary>
+                        <form method="POST" action="{{ url_for('main.edit_calendar_event', event_id=event.id) }}" class="calendars-inline-form">
+                            <input type="text" name="title" class="form-control form-control-sm" value="{{ event.title }}" maxlength="200" required>
+                            <input type="text" name="location" class="form-control form-control-sm" value="{{ event.location or '' }}" maxlength="255">
+                            <input type="datetime-local" name="starts_at" class="form-control form-control-sm" value="{{ item.starts_at_input }}" required>
+                            <input type="datetime-local" name="ends_at" class="form-control form-control-sm" value="{{ item.ends_at_input }}" required>
+                            <textarea name="description" class="form-control form-control-sm" rows="2">{{ event.description or '' }}</textarea>
+                            <button type="submit" class="btn btn-sm btn-primary">Salvar</button>
+                        </form>
+                    </details>
+                    <form method="POST" action="{{ url_for('main.delete_calendar_event', event_id=event.id) }}" onsubmit="return confirm('Excluir este evento?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                    </form>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="calendars-empty-state">
+            Nenhum evento cadastrado. Crie o primeiro evento para iniciar a sincronização.
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

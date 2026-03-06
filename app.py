@@ -393,6 +393,14 @@ def create_app(test_config=None):
         GOVBR_OIDC_FEDERATED_LOGOUT_ENABLED=_env_flag_is_true('GOVBR_OIDC_FEDERATED_LOGOUT_ENABLED', default='true'),
         GOVBR_OIDC_SCOPE=os.getenv('GOVBR_OIDC_SCOPE', 'openid profile email'),
         GOVBR_OIDC_TIMEOUT_SECONDS=_env_int('GOVBR_OIDC_TIMEOUT_SECONDS', default=10),
+        GOOGLE_CALENDAR_ENABLED=_env_flag_is_true('GOOGLE_CALENDAR_ENABLED', default='true'),
+        GOOGLE_CALENDAR_CLIENT_SECRET_FILE=os.getenv('GOOGLE_CALENDAR_CLIENT_SECRET_FILE', 'client_secret.json'),
+        GOOGLE_CALENDAR_REDIRECT_URI=os.getenv('GOOGLE_CALENDAR_REDIRECT_URI', ''),
+        GOOGLE_CALENDAR_WEBHOOK_URL=os.getenv('GOOGLE_CALENDAR_WEBHOOK_URL', ''),
+        GOOGLE_CALENDAR_SCOPE=os.getenv('GOOGLE_CALENDAR_SCOPE', 'https://www.googleapis.com/auth/calendar.events'),
+        GOOGLE_CALENDAR_TIMEOUT_SECONDS=_env_int('GOOGLE_CALENDAR_TIMEOUT_SECONDS', default=10),
+        GOOGLE_CALENDAR_DEFAULT_ID=os.getenv('GOOGLE_CALENDAR_DEFAULT_ID', 'primary'),
+        GOOGLE_CALENDAR_WATCH_TTL_SECONDS=_env_int('GOOGLE_CALENDAR_WATCH_TTL_SECONDS', default=604800),
     )
 
     if test_config:

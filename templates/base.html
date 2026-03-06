@@ -143,6 +143,17 @@
                                 <i class="fas fa-tasks"></i>
                             </a>
                             <a
+                                href="{{ url_for('main.calendars_hub') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.calendars_hub' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                data-area-nav
+                                title="Calendários"
+                                aria-label="Calendários"
+                            >
+                                <i class="fas fa-calendar-alt"></i>
+                            </a>
+                            <a
                                 href="{{ url_for('main.list_projetos_pendentes') }}"
                                 class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projetos_pendentes' else '' }}"
                                 data-bs-toggle="tooltip"

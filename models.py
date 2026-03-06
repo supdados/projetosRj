@@ -291,6 +291,66 @@ class UserNotification(db.Model):
         return f'<UserNotification {self.event_type} to user {self.recipient_user_id}>'
 
 
+class UserCalendarConnection(db.Model):
+    """Credenciais OAuth e estado de sincronização do Google Calendar por usuário."""
+    __tablename__ = 'user_calendar_connection'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True, index=True)
+    provider = db.Column(db.String(30), nullable=False, default='google')
+    calendar_id = db.Column(db.String(255), nullable=False, default='primary')
+    access_token = db.Column(db.Text, nullable=True)
+    refresh_token = db.Column(db.Text, nullable=False)
+    token_expires_at = db.Column(db.DateTime, nullable=True)
+    scope = db.Column(db.String(500), nullable=True)
+    watch_channel_id = db.Column(db.String(255), nullable=True, unique=True)
+    watch_resource_id = db.Column(db.String(255), nullable=True)
+    watch_expiration = db.Column(db.DateTime, nullable=True)
+    watch_channel_token = db.Column(db.String(255), nullable=True)
+    sync_token = db.Column(db.Text, nullable=True)
+    last_sync_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    user = db.relationship('User', backref=db.backref('calendar_connection', uselist=False))
+
+    def __repr__(self):
+        return f'<UserCalendarConnection user={self.user_id} provider={self.provider}>'
+
+
+class CalendarEvent(db.Model):
+    """Evento local sincronizável com Google Calendar."""
+    __tablename__ = 'calendar_event'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    location = db.Column(db.String(255), nullable=True)
+    starts_at = db.Column(db.DateTime, nullable=False, index=True)
+    ends_at = db.Column(db.DateTime, nullable=False)
+    is_all_day = db.Column(db.Boolean, nullable=False, default=False)
+    timezone = db.Column(db.String(64), nullable=False, default='America/Sao_Paulo')
+    source = db.Column(db.String(20), nullable=False, default='app')  # app | google
+    google_calendar_id = db.Column(db.String(255), nullable=True, default='primary')
+    google_event_id = db.Column(db.String(255), nullable=True)
+    sync_status = db.Column(db.String(20), nullable=False, default='pending')  # pending | ok | error
+    sync_error = db.Column(db.Text, nullable=True)
+    last_synced_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    user = db.relationship('User', backref='calendar_events')
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'google_event_id', name='uq_calendar_event_user_google_event'),
+        db.Index('ix_calendar_event_user_starts_at', 'user_id', 'starts_at'),
+    )
+
+    def __repr__(self):
+        return f'<CalendarEvent {self.id} user={self.user_id} title={self.title}>'
+
+
 class Task(db.Model):
     """Modelo único de tarefa operacional."""
     __tablename__ = 'task'

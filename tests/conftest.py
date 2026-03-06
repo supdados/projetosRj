@@ -8,6 +8,7 @@ os.environ.setdefault('SKIP_STARTUP_DB_INIT', 'true')
 
 from app import create_app
 from models import (
+    CalendarEvent,
     Etapa,
     IndicadorProjeto,
     AreaCatalog,
@@ -217,6 +218,19 @@ def seed_data(app):
         db.session.add_all([task, foreign_task, orphan_task])
         db.session.flush()
 
+        calendar_event = CalendarEvent(
+            user_id=user.id,
+            title='Evento Seed',
+            description='Evento inicial de calendário para testes',
+            location='Sala 101',
+            starts_at=datetime.datetime(2026, 3, 10, 12, 0),
+            ends_at=datetime.datetime(2026, 3, 10, 13, 0),
+            source='app',
+            sync_status='pending',
+        )
+        db.session.add(calendar_event)
+        db.session.flush()
+
         task_item = task
         foreign_task_item = foreign_task
 
@@ -260,6 +274,7 @@ def seed_data(app):
             'task_id': task.id,
             'foreign_task_id': foreign_task.id,
             'orphan_task_id': orphan_task.id,
+            'calendar_event_id': calendar_event.id,
             'task_item_id': task_item.id,
             'foreign_task_item_id': foreign_task_item.id,
             'comment_id': comment.id,
