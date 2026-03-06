@@ -129,9 +129,15 @@ def edit_user(user_id):
         # Username geralmente não é editável ou requer cuidados especiais de unicidade
         user_to_edit.name = request.form.get('name')
         user_to_edit.orgao = request.form.get('orgao') if request.form.get('orgao') else None
-        selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
-            request.form.getlist('areas_responsavel')
-        )
+        areas_form_submitted = 'areas_responsavel' in request.form
+        selected_areas = user_to_edit.get_areas()
+        invalid_areas = []
+        area_catalog_choices = get_area_catalog_choices()
+
+        if areas_form_submitted:
+            selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
+                request.form.getlist('areas_responsavel')
+            )
         should_update_cpf = not hide_govbr_link_fields and 'cpf_govbr' in request.form
         cpf_govbr = user_to_edit.cpf_govbr
         cpf_error = None
@@ -202,8 +208,11 @@ def edit_user(user_id):
             if not cpf_govbr or (old_cpf and old_cpf != cpf_govbr):
                 user_to_edit.govbr_sub = None
 
-        # Atualizar áreas do usuário
-        user_to_edit.set_areas(selected_areas)
+        if areas_form_submitted:
+            # Atualizar áreas do usuário apenas quando o grupo de áreas foi submetido.
+            # Caso o formulário venha sem a lista (por exemplo, em fluxo legado/compatibilidade),
+            # mantém as áreas previamente cadastradas.
+            user_to_edit.set_areas(selected_areas)
 
         new_password = request.form.get('password')
         if new_password: # Só atualiza a senha se uma nova for fornecida
