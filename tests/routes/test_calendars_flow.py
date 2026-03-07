@@ -15,6 +15,55 @@ def test_calendars_page_renders_core_actions(client_user):
     assert 'href="/calendar/oauth/start"' in html
 
 
+def test_calendars_connected_view_hides_calendar_watch_subtext(app, client_user, seed_data, monkeypatch):
+    with app.app_context():
+        connection = UserCalendarConnection(
+            user_id=seed_data['user_id'],
+            provider='google',
+            calendar_id='primary',
+            refresh_token='refresh-token',
+        )
+        db.session.add(connection)
+        db.session.commit()
+
+    monkeypatch.setattr(calendar_routes, '_run_auto_calendar_maintenance', lambda _connection: [])
+
+    response = client_user.get('/calendarios')
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert 'Conexão ativa' in html
+    assert 'Calendário:' not in html
+    assert 'Watch expira em:' not in html
+    assert 'Renovar watch' not in html
+
+
+def test_calendars_hub_runs_auto_maintenance_when_connected(app, client_user, seed_data, monkeypatch):
+    with app.app_context():
+        connection = UserCalendarConnection(
+            user_id=seed_data['user_id'],
+            provider='google',
+            calendar_id='primary',
+            refresh_token='refresh-token',
+        )
+        db.session.add(connection)
+        db.session.commit()
+
+    calls = {'count': 0}
+
+    def fake_auto_maintenance(connection):
+        calls['count'] += 1
+        connection.last_sync_at = datetime.datetime(2026, 3, 6, 20, 0)
+        return []
+
+    monkeypatch.setattr(calendar_routes, '_run_auto_calendar_maintenance', fake_auto_maintenance)
+
+    response = client_user.get('/calendarios')
+    assert response.status_code == 200
+    assert calls['count'] == 1
+    assert 'Último sync:' in response.get_data(as_text=True)
+
+
 def test_create_calendar_event_without_google_connection_marks_pending(app, client_user, seed_data):
     response = client_user.post(
         '/calendarios/eventos',

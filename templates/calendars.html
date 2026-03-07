@@ -32,22 +32,10 @@
         <div class="calendars-connection-status">
             <div>
                 <h2 class="ds-type-card-title">Conexão ativa</h2>
-                <p class="mb-0">
-                    Calendário: <strong>{{ connection.calendar_id }}</strong>
-                    {% if watch_expiration_display %}
-                    | Watch expira em: <strong>{{ watch_expiration_display }}</strong>
-                    {% endif %}
-                    {% if not watch_active %}
-                    | <span class="calendars-text-warning">Watch inativo</span>
-                    {% endif %}
-                </p>
             </div>
             <div class="calendars-connection-actions">
                 <form method="POST" action="{{ url_for('main.sync_google_calendar_now') }}">
                     <button type="submit" class="btn btn-sm btn-outline-primary">Sincronizar agora</button>
-                </form>
-                <form method="POST" action="{{ url_for('main.renew_google_calendar_watch') }}">
-                    <button type="submit" class="btn btn-sm btn-outline-secondary">Renovar watch</button>
                 </form>
                 <form method="POST" action="{{ url_for('main.disconnect_google_calendar') }}">
                     <button type="submit" class="btn btn-sm btn-outline-danger">Desconectar</button>

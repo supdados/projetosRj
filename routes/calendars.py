@@ -29,6 +29,8 @@ from .decorators import login_required
 TIMEZONE_BR = ZoneInfo('America/Sao_Paulo')
 GOOGLE_AUTH_STATE_SESSION_KEY = 'google_calendar_auth_state'
 GOOGLE_AUTH_REDIRECT_SESSION_KEY = 'google_calendar_auth_redirect_uri'
+AUTO_SYNC_INTERVAL_SECONDS = 300
+AUTO_WATCH_RENEW_BEFORE_SECONDS = 1800
 
 
 def _resolve_runtime_google_redirect_uri():
@@ -112,8 +114,7 @@ def _describe_calendar_issue(error):
         ):
             return (
                 'Webhook do Google precisa ser HTTPS. Configure '
-                '`GOOGLE_CALENDAR_WEBHOOK_URL` com `https://.../webhook` e clique em '
-                '"Renovar watch".'
+                '`GOOGLE_CALENDAR_WEBHOOK_URL` com `https://.../webhook` e recarregue a página.'
             )
     return str(error)
 
@@ -507,10 +508,76 @@ def _connection_for_webhook(channel_id):
     return UserCalendarConnection.query.filter_by(watch_channel_id=channel_id).first()
 
 
+def _auto_sync_interval_seconds():
+    raw_value = current_app.config.get('GOOGLE_CALENDAR_AUTO_SYNC_INTERVAL_SECONDS', AUTO_SYNC_INTERVAL_SECONDS)
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        return AUTO_SYNC_INTERVAL_SECONDS
+    return max(30, value)
+
+
+def _auto_watch_renew_before_seconds():
+    raw_value = current_app.config.get('GOOGLE_CALENDAR_AUTO_WATCH_RENEW_BEFORE_SECONDS', AUTO_WATCH_RENEW_BEFORE_SECONDS)
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        return AUTO_WATCH_RENEW_BEFORE_SECONDS
+    return max(60, value)
+
+
+def _should_auto_renew_watch(connection, now_utc):
+    if not connection.watch_channel_id or not connection.watch_resource_id:
+        return True
+    if not connection.watch_expiration:
+        return True
+    threshold = now_utc + datetime.timedelta(seconds=_auto_watch_renew_before_seconds())
+    return connection.watch_expiration <= threshold
+
+
+def _should_auto_sync(connection, now_utc):
+    if connection.last_sync_at is None:
+        return True
+    threshold = now_utc - datetime.timedelta(seconds=_auto_sync_interval_seconds())
+    return connection.last_sync_at <= threshold
+
+
+def _run_auto_calendar_maintenance(connection):
+    issues = []
+    now_utc = utc_now()
+
+    if _should_auto_renew_watch(connection, now_utc):
+        try:
+            _renew_watch_channel(connection)
+        except Exception as exc:
+            issues.append(f'Falha na renovação automática do watch: {_describe_calendar_issue(exc)}')
+
+    if _should_auto_sync(connection, now_utc):
+        try:
+            _sync_events_from_google(connection)
+        except Exception as exc:
+            issues.append(f'Falha na sincronização automática: {_describe_calendar_issue(exc)}')
+
+    return issues
+
+
 @main_bp.route('/calendarios', methods=['GET'])
 @login_required
 def calendars_hub():
     connection = _connection_for_current_user()
+    auto_issues = []
+
+    if connection is not None:
+        auto_issues = _run_auto_calendar_maintenance(connection)
+        try:
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            auto_issues.append(f'Falha ao persistir manutenção automática: {exc}')
+
+    for issue in auto_issues:
+        flash(issue, 'warning')
+
     events = (
         CalendarEvent.query
         .filter_by(user_id=g.user.id)
@@ -519,20 +586,11 @@ def calendars_hub():
     )
     event_rows = [_event_view_row(event) for event in events]
 
-    watch_active = bool(
-        connection
-        and connection.watch_channel_id
-        and connection.watch_expiration
-        and connection.watch_expiration > utc_now()
-    )
-
     return render_template(
         'calendars.html',
         calendar_events=event_rows,
         connection=connection,
         google_calendar_enabled=is_google_calendar_enabled(current_app.config),
-        watch_active=watch_active,
-        watch_expiration_display=_format_human_datetime(connection.watch_expiration) if connection and connection.watch_expiration else None,
         last_sync_display=_format_human_datetime(connection.last_sync_at) if connection and connection.last_sync_at else None,
     )
 
