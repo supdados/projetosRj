@@ -209,19 +209,31 @@
 }
 
 /* Week rows */
-.cal-week-spans {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  row-gap: 2px;
-  padding: 0 1px;
-  min-height: 0;
-}
-.cal-week-spans:not(:empty) {
-  padding: 2px 1px;
+.cal-week {
+  position: relative;
 }
 .cal-week-cells {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+/* Span bars overlay — absolutely positioned below the day number */
+.cal-week-spans {
+  position: absolute;
+  /* top = cell padding-top + day-num height + flex-gap */
+  top: calc(0.3rem + 1.5rem + 0.18rem);
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  row-gap: 2px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Spacer inside cells — reserves height so pills render below span overlay */
+.cal-span-spacer {
+  flex-shrink: 0;
 }
 
 /* Span bar (multi-day events) */
@@ -235,6 +247,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+  pointer-events: auto;
   color: #fff;
   background: var(--app-color-primary);
   transition: filter 0.1s;

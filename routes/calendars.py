@@ -538,7 +538,7 @@ def _event_json(event):
         'sync_status': event.sync_status,
         'source': event.source,
         'meet_link': event.meet_link or '',
-        'is_all_day': event.is_all_day,
+        'is_all_day': bool(event.is_all_day),
     }
 
 

@@ -347,13 +347,11 @@ function buildWeekRow(week) {
            new Date(ev.ends_at).getTime()   >  weekStartMs;
   });
 
-  // ── Span bars (multi-day events) ──
-  const spansEl = document.createElement('div');
-  spansEl.className = 'cal-week-spans';
-
+  // Pre-compute lanes so we know how much space to reserve inside cells
+  const spanBars = [];
+  const laneEnds = [];
   if (spanEvs.length) {
     const sorted = [...spanEvs].sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
-    const laneEnds = [];
     sorted.forEach(ev => {
       const evStartMs = new Date(ev.starts_at).getTime();
       const evEndMs   = new Date(ev.ends_at).getTime();
@@ -372,6 +370,36 @@ function buildWeekRow(week) {
         }
       });
 
+      spanBars.push({ ev, lane, colStart, colEnd, evStartMs, evEndMs });
+    });
+  }
+
+  // spanH: height in rem to reserve inside each cell for the span overlay
+  // Each lane is 1.2rem tall + 2px gap; add 4px breathing room below
+  const numLanes = laneEnds.length;
+  const spanH = numLanes > 0 ? numLanes * 1.2 + (numLanes - 1) * 0.125 + 0.25 : 0;
+
+  // ── Day cells (single-day events only) — rendered first in DOM ──
+  const cellsEl = document.createElement('div');
+  cellsEl.className = 'cal-week-cells';
+
+  week.forEach(day => {
+    const singleEvs = day.outside ? [] : CAL_EVENTS.filter(ev => {
+      if (isMultiDay(ev)) return false;
+      return dayTs(ev.starts_at) === new Date(day.y, day.m, day.d, 0, 0, 0).getTime();
+    }).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+
+    cellsEl.appendChild(makeCell(day, singleEvs, spanH));
+  });
+
+  weekEl.appendChild(cellsEl);
+
+  // ── Span bars (multi-day) — absolutely overlaid on top of cells ──
+  if (spanBars.length) {
+    const spansEl = document.createElement('div');
+    spansEl.className = 'cal-week-spans';
+
+    spanBars.forEach(({ ev, lane, colStart, colEnd, evStartMs, evEndMs }) => {
       const bar = document.createElement('div');
       bar.className = 'cal-span-bar ' + pillClass(ev);
       bar.style.gridColumn = colStart + ' / ' + colEnd;
@@ -390,28 +418,14 @@ function buildWeekRow(week) {
       bar.addEventListener('click', e => { e.stopPropagation(); openEditModal(ev); });
       spansEl.appendChild(bar);
     });
+
+    weekEl.appendChild(spansEl);
   }
 
-  weekEl.appendChild(spansEl);
-
-  // ── Day cells (single-day events only) ──
-  const cellsEl = document.createElement('div');
-  cellsEl.className = 'cal-week-cells';
-
-  week.forEach(day => {
-    const singleEvs = day.outside ? [] : CAL_EVENTS.filter(ev => {
-      if (isMultiDay(ev)) return false;
-      return dayTs(ev.starts_at) === new Date(day.y, day.m, day.d, 0, 0, 0).getTime();
-    }).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
-
-    cellsEl.appendChild(makeCell(day, singleEvs));
-  });
-
-  weekEl.appendChild(cellsEl);
   return weekEl;
 }
 
-function makeCell(day, singleEvs) {
+function makeCell(day, singleEvs, spanH = 0) {
   const { y, m, d, outside, isToday } = day;
   const cell = document.createElement('div');
   cell.className = 'cal-cell'
@@ -422,6 +436,14 @@ function makeCell(day, singleEvs) {
   num.className = 'cal-cell-num';
   num.textContent = d;
   cell.appendChild(num);
+
+  // Reserve space so span bar overlay doesn't cover single-day pills
+  if (spanH > 0) {
+    const spacer = document.createElement('div');
+    spacer.className = 'cal-span-spacer';
+    spacer.style.height = spanH + 'rem';
+    cell.appendChild(spacer);
+  }
 
   if (!outside) {
     const pad = n => String(n).padStart(2, '0');
@@ -436,8 +458,8 @@ function makeCell(day, singleEvs) {
     singleEvs.slice(0, MAX_PILLS).forEach(ev => {
       const pill = document.createElement('div');
       pill.className = 'cal-event-pill ' + pillClass(ev);
-      const dt = new Date(ev.starts_at);
-      const hm = ev.is_all_day ? '' : dt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ';
+      const showTime = !ev.is_all_day && ev.starts_at.slice(11) !== '00:00';
+      const hm = showTime ? new Date(ev.starts_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ' : '';
       pill.textContent = hm + ev.title;
       pill.title = ev.title;
       pill.addEventListener('click', e => { e.stopPropagation(); openEditModal(ev); });
@@ -509,7 +531,7 @@ function renderList() {
       // Time
       const timeEl = document.createElement('div');
       timeEl.className = 'cal-list-time';
-      if (ev.is_all_day) {
+      if (ev.is_all_day || ev.starts_at.slice(11) === '00:00') {
         timeEl.textContent = 'Dia inteiro';
       } else {
         const s = new Date(ev.starts_at), e2 = new Date(ev.ends_at);
@@ -718,6 +740,22 @@ function toggleAllDay(checked) {
   document.getElementById('datePair').style.display     = checked ? ''     : 'none';
   document.getElementById('fieldStartsAt').required     = !checked;
   document.getElementById('fieldEndsAt').required       = !checked;
+
+  if (checked) {
+    // Copy date portion from datetime fields → date-only fields
+    const sVal = document.getElementById('fieldStartsAt').value;
+    const eVal = document.getElementById('fieldEndsAt').value;
+    if (sVal) document.getElementById('fieldStartsAtDate').value = sVal.slice(0, 10);
+    if (eVal) document.getElementById('fieldEndsAtDate').value   = eVal.slice(0, 10);
+  } else {
+    // Copy date portion from date-only fields → datetime fields (keep existing time)
+    const sDate = document.getElementById('fieldStartsAtDate').value;
+    const eDate = document.getElementById('fieldEndsAtDate').value;
+    const sAt = document.getElementById('fieldStartsAt');
+    const eAt = document.getElementById('fieldEndsAt');
+    if (sDate) sAt.value = sDate + (sAt.value ? 'T' + sAt.value.slice(11) : 'T09:00');
+    if (eDate) eAt.value = eDate + (eAt.value ? 'T' + eAt.value.slice(11) : 'T10:00');
+  }
 }
 
 function toggleMeet(checked) {
