@@ -182,6 +182,8 @@ def _parse_event_form(form):
         'location': (form.get('location') or '').strip() or None,
         'starts_at': starts_at,
         'ends_at': ends_at,
+        'is_all_day': bool(form.get('all_day')),
+        'create_conference': bool(form.get('create_conference')),
     }
 
 
@@ -191,7 +193,15 @@ def _connection_for_current_user():
     return UserCalendarConnection.query.filter_by(user_id=g.user.id).first()
 
 
-def _google_event_payload(local_event):
+def _extract_meet_link(remote):
+    conference = remote.get('conferenceData') or {}
+    for ep in (conference.get('entryPoints') or []):
+        if ep.get('entryPointType') == 'video':
+            return ep.get('uri') or None
+    return remote.get('hangoutLink') or None
+
+
+def _google_event_payload(local_event, *, create_conference=False):
     payload = {
         'summary': local_event.title,
         'description': local_event.description or '',
@@ -205,6 +215,13 @@ def _google_event_payload(local_event):
             'timeZone': 'UTC',
         },
     }
+    if create_conference:
+        payload['conferenceData'] = {
+            'createRequest': {
+                'requestId': str(uuid.uuid4()),
+                'conferenceSolutionKey': {'type': 'hangoutsMeet'},
+            }
+        }
     return payload
 
 
@@ -239,15 +256,16 @@ def _ensure_google_access_token(connection, *, force_refresh=False):
     return connection.access_token
 
 
-def _sync_local_event_to_google(local_event, connection):
+def _sync_local_event_to_google(local_event, connection, *, create_conference=False):
     if connection is None:
         local_event.sync_status = 'pending'
         local_event.sync_error = 'Conexão com Google Calendar não configurada.'
         return
 
     access_token = _ensure_google_access_token(connection)
-    payload = _google_event_payload(local_event)
+    payload = _google_event_payload(local_event, create_conference=create_conference)
     calendar_id = connection.calendar_id or 'primary'
+    conf_version = 1 if create_conference else 0
 
     if local_event.google_event_id:
         try:
@@ -257,6 +275,7 @@ def _sync_local_event_to_google(local_event, connection):
                 calendar_id=calendar_id,
                 event_id=local_event.google_event_id,
                 event_payload=payload,
+                conference_data_version=conf_version,
             )
         except GoogleCalendarError as exc:
             if exc.status_code == 404:
@@ -265,6 +284,7 @@ def _sync_local_event_to_google(local_event, connection):
                     access_token=access_token,
                     calendar_id=calendar_id,
                     event_payload=payload,
+                    conference_data_version=conf_version,
                 )
             else:
                 raise
@@ -274,6 +294,7 @@ def _sync_local_event_to_google(local_event, connection):
             access_token=access_token,
             calendar_id=calendar_id,
             event_payload=payload,
+            conference_data_version=conf_version,
         )
 
     local_event.google_event_id = remote.get('id')
@@ -282,6 +303,7 @@ def _sync_local_event_to_google(local_event, connection):
     local_event.sync_status = 'ok'
     local_event.sync_error = None
     local_event.last_synced_at = utc_now()
+    local_event.meet_link = _extract_meet_link(remote)
 
 
 def _parse_google_event_datetime(payload):
@@ -352,6 +374,7 @@ def _upsert_local_event_from_google(connection, item):
     event.source = 'google'
     event.google_calendar_id = connection.calendar_id or 'primary'
     event.google_event_id = google_event_id
+    event.meet_link = _extract_meet_link(item)
     event.sync_status = 'ok'
     event.sync_error = None
     event.last_synced_at = utc_now()
@@ -502,6 +525,23 @@ def _event_view_row(event):
     }
 
 
+def _event_json(event):
+    return {
+        'id': event.id,
+        'title': event.title,
+        'description': event.description or '',
+        'location': event.location or '',
+        'starts_at': _format_input_datetime(event.starts_at),
+        'ends_at': _format_input_datetime(event.ends_at),
+        'starts_at_display': _format_human_datetime(event.starts_at),
+        'ends_at_display': _format_human_datetime(event.ends_at),
+        'sync_status': event.sync_status,
+        'source': event.source,
+        'meet_link': event.meet_link or '',
+        'is_all_day': event.is_all_day,
+    }
+
+
 def _connection_for_webhook(channel_id):
     if not channel_id:
         return None
@@ -589,6 +629,7 @@ def calendars_hub():
     return render_template(
         'calendars.html',
         calendar_events=event_rows,
+        events_json=[_event_json(e) for e in events],
         connection=connection,
         google_calendar_enabled=is_google_calendar_enabled(current_app.config),
         last_sync_display=_format_human_datetime(connection.last_sync_at) if connection and connection.last_sync_at else None,
@@ -811,6 +852,7 @@ def create_calendar_event():
         location=payload['location'],
         starts_at=payload['starts_at'],
         ends_at=payload['ends_at'],
+        is_all_day=payload['is_all_day'],
         timezone='America/Sao_Paulo',
         source='app',
     )
@@ -820,7 +862,7 @@ def create_calendar_event():
     sync_warning = None
     if connection is not None:
         try:
-            _sync_local_event_to_google(event, connection)
+            _sync_local_event_to_google(event, connection, create_conference=payload['create_conference'])
         except Exception as exc:
             event.sync_status = 'error'
             event.sync_error = str(exc)
@@ -869,13 +911,14 @@ def edit_calendar_event(event_id):
     event.location = payload['location']
     event.starts_at = payload['starts_at']
     event.ends_at = payload['ends_at']
+    event.is_all_day = payload['is_all_day']
     event.source = 'app'
 
     connection = _connection_for_current_user()
     sync_warning = None
     if connection is not None:
         try:
-            _sync_local_event_to_google(event, connection)
+            _sync_local_event_to_google(event, connection, create_conference=payload['create_conference'])
         except Exception as exc:
             event.sync_status = 'error'
             event.sync_error = str(exc)

@@ -334,6 +334,7 @@ class CalendarEvent(db.Model):
     source = db.Column(db.String(20), nullable=False, default='app')  # app | google
     google_calendar_id = db.Column(db.String(255), nullable=True, default='primary')
     google_event_id = db.Column(db.String(255), nullable=True)
+    meet_link = db.Column(db.String(512), nullable=True)
     sync_status = db.Column(db.String(20), nullable=False, default='pending')  # pending | ok | error
     sync_error = db.Column(db.Text, nullable=True)
     last_synced_at = db.Column(db.DateTime, nullable=True)

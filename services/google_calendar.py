@@ -234,10 +234,12 @@ def _authorized_headers(access_token):
     }
 
 
-def create_google_calendar_event(config, *, access_token, calendar_id, event_payload):
+def create_google_calendar_event(config, *, access_token, calendar_id, event_payload, conference_data_version=0):
     settings = get_google_calendar_settings(config)
     encoded_calendar = quote(str(calendar_id), safe='')
     url = f'{GOOGLE_CALENDAR_API_BASE}/calendars/{encoded_calendar}/events'
+    if conference_data_version:
+        url += f'?conferenceDataVersion={int(conference_data_version)}'
     return _http_json_request(
         method='POST',
         url=url,
@@ -247,11 +249,13 @@ def create_google_calendar_event(config, *, access_token, calendar_id, event_pay
     )
 
 
-def update_google_calendar_event(config, *, access_token, calendar_id, event_id, event_payload):
+def update_google_calendar_event(config, *, access_token, calendar_id, event_id, event_payload, conference_data_version=0):
     settings = get_google_calendar_settings(config)
     encoded_calendar = quote(str(calendar_id), safe='')
     encoded_event = quote(str(event_id), safe='')
     url = f'{GOOGLE_CALENDAR_API_BASE}/calendars/{encoded_calendar}/events/{encoded_event}'
+    if conference_data_version:
+        url += f'?conferenceDataVersion={int(conference_data_version)}'
     return _http_json_request(
         method='PUT',
         url=url,
