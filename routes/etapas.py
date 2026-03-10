@@ -7,6 +7,60 @@ from models import Etapa, Project, StageTemplate, db
 from .blueprint import main_bp
 from .decorators import login_required
 from .shared import get_or_404, log_project_action
+
+
+def _is_business_day(date_value):
+    return date_value.weekday() < 5
+
+
+def _normalize_to_business_day(date_value, *, forward=True):
+    if date_value is None:
+        return None
+
+    normalized = date_value
+    step = 1 if forward else -1
+    while not _is_business_day(normalized):
+        normalized += datetime.timedelta(days=step)
+    return normalized
+
+
+def _add_business_days(date_value, business_days):
+    if date_value is None:
+        return None
+
+    try:
+        business_days_int = int(business_days)
+    except (TypeError, ValueError):
+        business_days_int = 0
+
+    if business_days_int == 0:
+        return _normalize_to_business_day(date_value, forward=True)
+
+    current_date = date_value
+    remaining_days = abs(business_days_int)
+    step = 1 if business_days_int > 0 else -1
+    while remaining_days > 0:
+        current_date += datetime.timedelta(days=step)
+        if _is_business_day(current_date):
+            remaining_days -= 1
+    return current_date
+
+
+def _business_days_between(start_date, end_date):
+    if not start_date or not end_date or start_date == end_date:
+        return 0
+
+    step = 1 if end_date > start_date else -1
+    current_date = start_date
+    business_days = 0
+
+    while current_date != end_date:
+        current_date += datetime.timedelta(days=step)
+        if _is_business_day(current_date):
+            business_days += step
+    return business_days
+
+
 @main_bp.route('/project/<int:project_id>/etapa/add', methods=['POST'])
 @login_required
 def add_etapa(project_id):
@@ -333,7 +387,7 @@ def reorder_etapas(project_id):
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
         return jsonify({'success': False, 'message': 'Você não tem permissão para reordenar etapas deste projeto.'}), 403
 
-    data = request.get_json()
+    data = request.get_json() or {}
     etapa_ids_ordenadas = data.get('etapa_ids')
 
     if not etapa_ids_ordenadas or not isinstance(etapa_ids_ordenadas, list):
@@ -447,7 +501,8 @@ def update_etapa_field(etapa_id):
         
         if field == 'data_inicio':
             old_date = etapa.data_inicio
-            new_date = datetime.datetime.strptime(value, '%Y-%m-%d').date() if value else None
+            raw_new_date = datetime.datetime.strptime(value, '%Y-%m-%d').date() if value else None
+            new_date = _normalize_to_business_day(raw_new_date, forward=True) if raw_new_date else None
             
             # Registrar no histórico
             old_value_str = old_date.strftime('%d/%m/%Y') if old_date else 'vazio'
@@ -461,20 +516,22 @@ def update_etapa_field(etapa_id):
             )
             
             etapa.data_inicio = new_date
-            response_data['newValue'] = value
+            response_data['newValue'] = new_date.strftime('%Y-%m-%d') if new_date else ''
             response_data['displayValue'] = new_date.strftime('%d/%m/%Y') if new_date else 'Sem data'
 
             if old_date and new_date:
-                delta = new_date - old_date
+                days_diff = _business_days_between(old_date, new_date)
                 if etapa.data_fim:
-                    etapa.data_fim += delta
+                    etapa.data_fim = _add_business_days(etapa.data_fim, days_diff)
+                    etapa.data_fim = _normalize_to_business_day(etapa.data_fim, forward=True)
                     response_data['updatedEndDate'] = etapa.data_fim.strftime('%Y-%m-%d')
                     response_data['updatedEndDateDisplay'] = etapa.data_fim.strftime('%d/%m/%Y')
-                response_data['daysDiff'] = delta.days
+                response_data['daysDiff'] = days_diff
             
         elif field == 'data_fim':
             old_date = etapa.data_fim
-            new_date = datetime.datetime.strptime(value, '%Y-%m-%d').date() if value else None
+            raw_new_date = datetime.datetime.strptime(value, '%Y-%m-%d').date() if value else None
+            new_date = _normalize_to_business_day(raw_new_date, forward=True) if raw_new_date else None
             
             # Registrar no histórico
             old_value_str = old_date.strftime('%d/%m/%Y') if old_date else 'vazio'
@@ -488,7 +545,7 @@ def update_etapa_field(etapa_id):
             )
             
             etapa.data_fim = new_date
-            response_data['newValue'] = value
+            response_data['newValue'] = new_date.strftime('%Y-%m-%d') if new_date else ''
             response_data['displayValue'] = new_date.strftime('%d/%m/%Y') if new_date else 'Sem data'
             
         elif field == 'descricao':
@@ -584,7 +641,7 @@ def cascade_date_update(project_id):
     if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
         return jsonify({'success': False, 'message': 'Permissão negada.'}), 403
 
-    data = request.get_json()
+    data = request.get_json() or {}
     base_etapa_id = data.get('etapa_id')
     days_to_add = data.get('days_diff')
 
@@ -592,7 +649,11 @@ def cascade_date_update(project_id):
          return jsonify({'success': False, 'message': 'Parâmetros inválidos.'}), 400
 
     try:
-        days_delta = datetime.timedelta(days=days_to_add)
+        days_to_add = int(days_to_add)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': 'Parâmetro de dias inválido.'}), 400
+
+    try:
         base_etapa = db.session.get(Etapa, base_etapa_id)
         if not base_etapa or base_etapa.project_id != project_id:
             return jsonify({'success': False, 'message': 'Etapa base não encontrada.'}), 404
@@ -600,13 +661,15 @@ def cascade_date_update(project_id):
         subsequent_etapas = Etapa.query.filter(
             Etapa.project_id == project_id,
             Etapa.ordem > base_etapa.ordem
-        ).all()
+        ).order_by(Etapa.ordem.asc(), Etapa.id.asc()).all()
 
         for etapa in subsequent_etapas:
             if etapa.data_inicio:
-                etapa.data_inicio += days_delta
+                etapa.data_inicio = _add_business_days(etapa.data_inicio, days_to_add)
+                etapa.data_inicio = _normalize_to_business_day(etapa.data_inicio, forward=True)
             if etapa.data_fim:
-                etapa.data_fim += days_delta
+                etapa.data_fim = _add_business_days(etapa.data_fim, days_to_add)
+                etapa.data_fim = _normalize_to_business_day(etapa.data_fim, forward=True)
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Datas subsequentes atualizadas com sucesso.'})

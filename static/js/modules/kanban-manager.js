@@ -9,6 +9,7 @@
             para_ajustes: 'Para ajustes',
             finalizada: 'Finalizada',
         };
+        var DRAWER_RESTRICTED_EDIT_MESSAGE = 'Somente o autor da tarefa ou um administrador pode editar descrição, prioridade e responsável.';
         var pageRoot = document.querySelector('.task-detail-v2');
         var toggleRoot = document.getElementById('taskItemsViewToggle');
         var listView = document.getElementById('taskItemsListView');
@@ -44,6 +45,7 @@
         var drawerDesc = document.getElementById('taskItemDrawerDesc');
         var drawerResponsavelTrigger = document.getElementById('taskItemDrawerResponsavelTrigger');
         var drawerAutosaveStatus = document.getElementById('taskItemDrawerAutosaveStatus');
+        var drawerPermissionBanner = document.getElementById('taskItemDrawerPermissionBanner');
         var drawerDeleteIcon = document.getElementById('taskItemDrawerDeleteIcon');
         var drawerDeleteConfirm = document.getElementById('taskItemDrawerDeleteConfirm');
         var drawerDeleteCancel = document.getElementById('taskItemDrawerDeleteCancel');
@@ -65,6 +67,7 @@
         var quickAnexoInput = document.getElementById('taskQuickAnexoInput');
         var anexoPreviewModal = document.getElementById('taskAnexoPreviewModal');
         var anexoPreviewBackdrop = document.getElementById('taskAnexoPreviewBackdrop');
+        var anexoPreviewDialog = anexoPreviewModal ? anexoPreviewModal.querySelector('.task-anexo-preview-dialog') : null;
         var anexoPreviewClose = document.getElementById('taskAnexoPreviewClose');
         var anexoPreviewTitle = document.getElementById('taskAnexoPreviewTitle');
         var anexoPreviewBody = document.getElementById('taskAnexoPreviewBody');
@@ -98,6 +101,8 @@
             isCommentsExpanded: false,
             commentsTransitionTimer: null,
             commentsTransitionMs: 250,
+            canEditRestricted: true,
+            permissionBannerTimer: null,
         };
         var quickUploadState = { itemId: null };
         var previewState = {
@@ -153,6 +158,65 @@
             if (!drawerState.autosaveTimer) return;
             clearTimeout(drawerState.autosaveTimer);
             drawerState.autosaveTimer = null;
+        }
+
+        function clearDrawerPermissionBannerTimer() {
+            if (!drawerState.permissionBannerTimer) return;
+            clearTimeout(drawerState.permissionBannerTimer);
+            drawerState.permissionBannerTimer = null;
+        }
+
+        function hideDrawerPermissionBanner() {
+            if (!drawerPermissionBanner) return;
+            clearDrawerPermissionBannerTimer();
+            drawerPermissionBanner.textContent = '';
+            drawerPermissionBanner.setAttribute('hidden', '');
+        }
+
+        function showDrawerPermissionBanner(message) {
+            if (!drawerPermissionBanner) return;
+            clearDrawerPermissionBannerTimer();
+            drawerPermissionBanner.textContent = message || DRAWER_RESTRICTED_EDIT_MESSAGE;
+            drawerPermissionBanner.removeAttribute('hidden');
+            drawerState.permissionBannerTimer = setTimeout(function () {
+                hideDrawerPermissionBanner();
+            }, 3200);
+        }
+
+        function setDrawerRestrictedFieldLocks(canEditRestricted) {
+            var canEdit = !!canEditRestricted;
+            drawerState.canEditRestricted = canEdit;
+            if (!hasDrawer()) return;
+
+            drawer.classList.toggle('is-restricted-edit-blocked', !canEdit);
+
+            if (drawerDesc) {
+                drawerDesc.readOnly = !canEdit;
+                drawerDesc.classList.toggle('is-locked', !canEdit);
+                drawerDesc.setAttribute('aria-readonly', canEdit ? 'false' : 'true');
+            }
+            if (drawerPrioridade) {
+                drawerPrioridade.classList.toggle('is-locked', !canEdit);
+                drawerPrioridade.setAttribute('aria-disabled', canEdit ? 'false' : 'true');
+            }
+            if (drawerResponsavelTrigger) {
+                drawerResponsavelTrigger.classList.toggle('is-locked', !canEdit);
+                drawerResponsavelTrigger.setAttribute('aria-disabled', canEdit ? 'false' : 'true');
+            }
+
+            if (canEdit) {
+                hideDrawerPermissionBanner();
+            }
+        }
+
+        function handleDrawerRestrictedInteraction(event) {
+            if (drawerState.canEditRestricted || !drawerState.itemId || isDeleting) return false;
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            showDrawerPermissionBanner(DRAWER_RESTRICTED_EDIT_MESSAGE);
+            return true;
         }
 
         function prefersReducedMotion() {
@@ -304,6 +368,44 @@
             return statusLabels[normalizeStatus(status)] || 'Não iniciada';
         }
 
+        function parsePermissionFlag(value, fallbackValue) {
+            if (value == null) return !!fallbackValue;
+            var normalized = String(value).trim().toLowerCase();
+            if (!normalized) return !!fallbackValue;
+            if (normalized === '1' || normalized === 'true' || normalized === 'yes') return true;
+            if (normalized === '0' || normalized === 'false' || normalized === 'no') return false;
+            return !!fallbackValue;
+        }
+
+        function canItemMoveToStatus(item, targetStatus, previousStatus) {
+            var normalizedTargetStatus = normalizeStatus(targetStatus);
+            if (normalizedTargetStatus !== 'finalizada') {
+                return true;
+            }
+
+            var normalizedPreviousStatus = normalizeStatus(previousStatus || (item && item.status));
+            if (normalizedPreviousStatus === 'finalizada') {
+                return true;
+            }
+
+            return !!(item && item.canFinalize);
+        }
+
+        function canDragItemMoveToStatus(targetStatus) {
+            if (!dragContext) return false;
+
+            var dragging = getDraggingCard();
+            var canFinalize = dragging
+                ? parsePermissionFlag(dragging.getAttribute('data-can-finalize'), true)
+                : true;
+
+            return canItemMoveToStatus(
+                { canFinalize: canFinalize, status: dragContext.previousStatus },
+                targetStatus,
+                dragContext.previousStatus
+            );
+        }
+
         function getDropzone(status) {
             return board.querySelector('.task-items-kanban-dropzone[data-status="' + normalizeStatus(status) + '"]');
         }
@@ -413,6 +515,8 @@
                 projectValue: String(row.getAttribute('data-project-value') || '').trim(),
                 projectTitulo: String(row.getAttribute('data-project-titulo') || '').trim(),
                 taskTitulo: String(row.getAttribute('data-task-titulo') || '').trim(),
+                canDelete: typeof getTaskItemCanDelete === 'function' ? getTaskItemCanDelete(row) : true,
+                canFinalize: typeof getTaskItemCanFinalize === 'function' ? getTaskItemCanFinalize(row) : true,
             };
         }
 
@@ -468,6 +572,8 @@
         function fillKanbanCardContent(card, item) {
             if (!card || !item) return;
             card.setAttribute('data-item-id', item.id);
+            card.setAttribute('data-can-delete', item.canDelete ? '1' : '0');
+            card.setAttribute('data-can-finalize', item.canFinalize ? '1' : '0');
             setCardStatus(card, item.status);
 
             var desc = card.querySelector('.task-items-kanban-desc');
@@ -515,11 +621,14 @@
         }
 
         function buildKanbanCard(item) {
+            var canDelete = item.canDelete !== false;
             var card = document.createElement('article');
             card.className = 'task-items-kanban-card';
             card.setAttribute('draggable', 'true');
             card.setAttribute('data-item-id', item.id);
             card.setAttribute('data-status', item.status);
+            card.setAttribute('data-can-delete', canDelete ? '1' : '0');
+            card.setAttribute('data-can-finalize', item.canFinalize ? '1' : '0');
             card.tabIndex = 0;
 
             var top = document.createElement('div');
@@ -529,14 +638,17 @@
             badge.className = 'task-items-kanban-badge';
             top.appendChild(badge);
 
-            var deleteBtn = document.createElement('button');
-            deleteBtn.type = 'button';
-            deleteBtn.className = 'task-items-kanban-delete-btn';
-            deleteBtn.setAttribute('data-action', 'kanban-delete');
-            deleteBtn.setAttribute('data-item-id', item.id);
-            deleteBtn.setAttribute('aria-label', 'Excluir tarefa');
-            deleteBtn.innerHTML = '<i class="fas fa-trash-alt" aria-hidden="true"></i>';
-            top.appendChild(deleteBtn);
+            var deleteBtn = null;
+            if (canDelete) {
+                deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'task-items-kanban-delete-btn';
+                deleteBtn.setAttribute('data-action', 'kanban-delete');
+                deleteBtn.setAttribute('data-item-id', item.id);
+                deleteBtn.setAttribute('aria-label', 'Excluir tarefa');
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt" aria-hidden="true"></i>';
+                top.appendChild(deleteBtn);
+            }
 
             var desc = document.createElement('p');
             desc.className = 'task-items-kanban-desc';
@@ -587,25 +699,31 @@
             tipo.className = 'task-items-kanban-tipo is-empty';
             chipsGroup.appendChild(tipo);
 
-            top.insertBefore(chipsGroup, deleteBtn);
+            if (deleteBtn) {
+                top.insertBefore(chipsGroup, deleteBtn);
+            } else {
+                top.appendChild(chipsGroup);
+            }
 
             card.appendChild(top);
             card.appendChild(desc);
             card.appendChild(contextEl);
             card.appendChild(meta);
 
-            var deleteConfirm = document.createElement('div');
-            deleteConfirm.className = 'task-items-kanban-delete-confirm';
-            deleteConfirm.setAttribute('data-role', 'delete-confirm');
-            deleteConfirm.setAttribute('data-item-id', item.id);
-            deleteConfirm.setAttribute('hidden', '');
-            deleteConfirm.innerHTML =
-                '<p>Excluir esta tarefa?</p>' +
-                '<div class="task-items-kanban-delete-confirm-actions">' +
-                '<button type="button" class="task-items-kanban-delete-cancel" data-action="kanban-delete-cancel">Cancelar</button>' +
-                '<button type="button" class="task-items-kanban-delete-confirm-btn" data-action="kanban-delete-confirm">Excluir</button>' +
-                '</div>';
-            card.appendChild(deleteConfirm);
+            if (canDelete) {
+                var deleteConfirm = document.createElement('div');
+                deleteConfirm.className = 'task-items-kanban-delete-confirm';
+                deleteConfirm.setAttribute('data-role', 'delete-confirm');
+                deleteConfirm.setAttribute('data-item-id', item.id);
+                deleteConfirm.setAttribute('hidden', '');
+                deleteConfirm.innerHTML =
+                    '<p>Excluir esta tarefa?</p>' +
+                    '<div class="task-items-kanban-delete-confirm-actions">' +
+                    '<button type="button" class="task-items-kanban-delete-cancel" data-action="kanban-delete-cancel">Cancelar</button>' +
+                    '<button type="button" class="task-items-kanban-delete-confirm-btn" data-action="kanban-delete-confirm">Excluir</button>' +
+                    '</div>';
+                card.appendChild(deleteConfirm);
+            }
 
             fillKanbanCardContent(card, item);
             return card;
@@ -832,7 +950,17 @@
 
         function refreshDrawerActionControls() {
             if (!hasDrawer()) return;
-            var disableDelete = isDeleting || drawerState.isSaving || drawerState.isCommentBusy;
+            var row = drawerState.itemId ? getTaskItemRowById(drawerState.itemId) : null;
+            var canDelete = !!(row && typeof getTaskItemCanDelete === 'function' && getTaskItemCanDelete(row));
+
+            if (!canDelete) {
+                setDrawerDeleteConfirmVisible(false);
+                drawerDeleteIcon.setAttribute('hidden', '');
+            } else {
+                drawerDeleteIcon.removeAttribute('hidden');
+            }
+
+            var disableDelete = !canDelete || isDeleting || drawerState.isSaving || drawerState.isCommentBusy;
             drawerDeleteIcon.disabled = disableDelete;
             drawerDeleteCancel.disabled = disableDelete;
             drawerDeleteConfirmBtn.disabled = disableDelete;
@@ -1261,6 +1389,8 @@
                 closeDrawer();
                 return;
             }
+            var canEditRestricted = !!(typeof getTaskItemCanDelete === 'function' && getTaskItemCanDelete(row));
+            setDrawerRestrictedFieldLocks(canEditRestricted);
 
             var descricao = getTaskItemDescricao(row);
             var responsavel = getTaskItemResponsavel(row);
@@ -1288,6 +1418,7 @@
             drawerTitle.textContent = (drawerDesc.value || '').trim() || descricao || 'Item sem descrição';
             renderDrawerCommentsFromRow(row, { forceBottom: drawerState.forceCommentsBottom });
             drawerState.forceCommentsBottom = false;
+            refreshDrawerActionControls();
         }
 
         function openDrawer(itemId) {
@@ -1299,6 +1430,7 @@
             drawerState.hasUnsavedChanges = false;
             drawerState.forceCommentsBottom = true;
             clearDrawerAutosaveTimer();
+            hideDrawerPermissionBanner();
             clearDrawerCommentsStatusTimer();
             syncDrawerFromCurrentRow();
             setDrawerSaving(false);
@@ -1345,6 +1477,8 @@
             drawerState.forceCommentsBottom = false;
             drawerState.isCommentsExpanded = false;
             drawerState.itemId = null;
+            setDrawerRestrictedFieldLocks(true);
+            hideDrawerPermissionBanner();
             drawer.classList.remove('is-open');
             drawerBackdrop.classList.remove('is-open');
             drawer.setAttribute('aria-hidden', 'true');
@@ -1468,6 +1602,7 @@
             return !!(
                 anexoPreviewModal &&
                 anexoPreviewBackdrop &&
+                anexoPreviewDialog &&
                 anexoPreviewBody &&
                 anexoPreviewTitle &&
                 anexoPreviewOpen &&
@@ -1562,6 +1697,13 @@
             }
             if (anexoPreviewBackdrop) {
                 anexoPreviewBackdrop.addEventListener('click', function () {
+                    closeAnexoPreviewModal();
+                });
+            }
+            if (anexoPreviewModal && anexoPreviewDialog) {
+                anexoPreviewModal.addEventListener('click', function (event) {
+                    if (!previewState.isOpen) return;
+                    if (anexoPreviewDialog.contains(event.target)) return;
                     closeAnexoPreviewModal();
                 });
             }
@@ -1786,6 +1928,135 @@
             }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
         }
 
+        function getColumnDropzone(column) {
+            if (!column) return null;
+            return column.querySelector('.task-items-kanban-dropzone[data-status]');
+        }
+
+        function getDropzoneByHorizontalPointer(clientX) {
+            if (!Number.isFinite(clientX)) return null;
+            var columns = Array.prototype.slice.call(
+                board.querySelectorAll('.task-items-kanban-column[data-status]')
+            );
+            var insideMatch = null;
+            var nearestMatch = null;
+
+            columns.forEach(function (column) {
+                var dropzone = getColumnDropzone(column);
+                if (!dropzone) return;
+
+                var rect = column.getBoundingClientRect();
+                if (!rect || rect.width <= 0) return;
+
+                if (clientX >= rect.left && clientX <= rect.right) {
+                    insideMatch = dropzone;
+                    return;
+                }
+
+                var distance = clientX < rect.left
+                    ? (rect.left - clientX)
+                    : (clientX - rect.right);
+                if (!nearestMatch || distance < nearestMatch.distance) {
+                    nearestMatch = { distance: distance, dropzone: dropzone };
+                }
+            });
+
+            return insideMatch || (nearestMatch ? nearestMatch.dropzone : null);
+        }
+
+        function resolveDropzoneFromEvent(event) {
+            if (!event || !event.target || typeof event.target.closest !== 'function') return null;
+
+            var targetDropzone = event.target.closest('.task-items-kanban-dropzone[data-status]');
+            if (targetDropzone) return targetDropzone;
+
+            var targetColumn = event.target.closest('.task-items-kanban-column[data-status]');
+            var columnDropzone = getColumnDropzone(targetColumn);
+            if (columnDropzone) return columnDropzone;
+
+            return getDropzoneByHorizontalPointer(event.clientX);
+        }
+
+        function placeDragPlaceholder(dropzone, clientY) {
+            if (!dropzone) return;
+            setDropzoneHover(dropzone);
+            autoScrollDropzoneOnDrag(dropzone, clientY);
+
+            var dragging = getDraggingCard();
+            if (!dragging) return;
+
+            var afterElement = getDragAfterElement(dropzone, clientY);
+            var placeholder = dragPlaceholder || createDragPlaceholder(dragging);
+            if (!placeholder) return;
+            if (afterElement) {
+                dropzone.insertBefore(placeholder, afterElement);
+            } else {
+                dropzone.appendChild(placeholder);
+            }
+        }
+
+        function autoScrollDropzoneOnDrag(dropzone, clientY) {
+            if (!dropzone || !Number.isFinite(clientY)) return;
+            var rect = dropzone.getBoundingClientRect();
+            if (!rect || rect.height <= 0) return;
+
+            var threshold = Math.max(24, Math.min(72, rect.height * 0.22));
+            var delta = 0;
+            if (clientY < (rect.top + threshold)) {
+                var ratioUp = (rect.top + threshold - clientY) / threshold;
+                delta = -Math.max(6, Math.round(18 * ratioUp));
+            } else if (clientY > (rect.bottom - threshold)) {
+                var ratioDown = (clientY - (rect.bottom - threshold)) / threshold;
+                delta = Math.max(6, Math.round(18 * ratioDown));
+            }
+
+            if (!delta) return;
+            dropzone.scrollTop += delta;
+        }
+
+        function finalizeDrop(event, dropzone) {
+            if (!dropzone) return;
+            event.preventDefault();
+            suppressCardClickUntil = Date.now() + 220;
+
+            if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) {
+                if (dragContext) {
+                    dragContext.didDrop = true;
+                }
+                restoreDraggedCardPosition();
+                clearDropzoneHover();
+                alert('Apenas o criador da tarefa pode movê-la para Finalizada.');
+                return;
+            }
+
+            var dragging = getDraggingCard();
+            var itemId = dragContext.itemId;
+            var previousStatus = dragContext.previousStatus;
+            dragContext.didDrop = true;
+
+            if (dragging) {
+                setCardStatus(dragging, dropzone.getAttribute('data-status') || 'nao_iniciada');
+                if (dragPlaceholder && dragPlaceholder.parentNode === dropzone) {
+                    dropzone.insertBefore(dragging, dragPlaceholder);
+                } else {
+                    var afterElement = getDragAfterElement(dropzone, event.clientY);
+                    if (afterElement) {
+                        dropzone.insertBefore(dragging, afterElement);
+                    } else {
+                        dropzone.appendChild(dragging);
+                    }
+                }
+                dragging.classList.remove('is-dragging');
+            }
+
+            removeDragPlaceholder();
+            removeDragGhost();
+            clearDropzoneHover();
+            triggerDropSettle(dragging);
+            persistKanbanChange(itemId, previousStatus);
+            updateColumnMeta();
+        }
+
         function clearDropzoneHover() {
             board.querySelectorAll('.task-items-kanban-dropzone.is-drag-over').forEach(function (zone) {
                 zone.classList.remove('is-drag-over');
@@ -1903,7 +2174,11 @@
             var statusChanged = normalizeStatus(previousStatus) !== nextStatus;
 
             var statusPromise = statusChanged
-                ? updateItemStatus(itemId, nextStatus, { skipKanbanSync: true, showAlert: false })
+                ? updateItemStatus(itemId, nextStatus, {
+                    skipKanbanSync: true,
+                    showAlert: false,
+                    celebrationOrigin: card,
+                })
                 : Promise.resolve();
 
             statusPromise
@@ -1918,7 +2193,7 @@
                 .catch(function (error) {
                     console.error('Erro ao persistir kanban:', error);
                     renderKanbanFromList();
-                    alert('Nao foi possivel persistir a movimentacao no Kanban.');
+                    alert((error && error.message) || 'Nao foi possivel persistir a movimentacao no Kanban.');
                 })
                 .finally(function () {
                     isPersisting = false;
@@ -1932,25 +2207,15 @@
                 dropzone.addEventListener('dragenter', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
                     event.preventDefault();
+                    if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
                     setDropzoneHover(dropzone);
                 });
 
                 dropzone.addEventListener('dragover', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
                     event.preventDefault();
-                    setDropzoneHover(dropzone);
-
-                    var dragging = getDraggingCard();
-                    if (!dragging) return;
-
-                    var afterElement = getDragAfterElement(dropzone, event.clientY);
-                    var placeholder = dragPlaceholder || createDragPlaceholder(dragging);
-                    if (!placeholder) return;
-                    if (afterElement) {
-                        dropzone.insertBefore(placeholder, afterElement);
-                    } else {
-                        dropzone.appendChild(placeholder);
-                    }
+                    if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
+                    placeDragPlaceholder(dropzone, event.clientY);
                 });
 
                 dropzone.addEventListener('dragleave', function (event) {
@@ -1963,34 +2228,30 @@
 
                 dropzone.addEventListener('drop', function (event) {
                     if (!dragContext || isPersisting || isDeleting) return;
-                    event.preventDefault();
-                    suppressCardClickUntil = Date.now() + 220;
-
-                    var dragging = getDraggingCard();
-                    var itemId = dragContext.itemId;
-                    var previousStatus = dragContext.previousStatus;
-                    dragContext.didDrop = true;
-                    if (dragging) {
-                        setCardStatus(dragging, dropzone.getAttribute('data-status') || 'nao_iniciada');
-                        if (dragPlaceholder && dragPlaceholder.parentNode === dropzone) {
-                            dropzone.insertBefore(dragging, dragPlaceholder);
-                        } else {
-                            var afterElement = getDragAfterElement(dropzone, event.clientY);
-                            if (afterElement) {
-                                dropzone.insertBefore(dragging, afterElement);
-                            } else {
-                                dropzone.appendChild(dragging);
-                            }
-                        }
-                        dragging.classList.remove('is-dragging');
-                    }
-                    removeDragPlaceholder();
-                    removeDragGhost();
-                    clearDropzoneHover();
-                    triggerDropSettle(dragging);
-                    persistKanbanChange(itemId, previousStatus);
-                    updateColumnMeta();
+                    finalizeDrop(event, dropzone);
                 });
+            });
+
+            board.addEventListener('dragover', function (event) {
+                if (!dragContext || isPersisting || isDeleting || event.defaultPrevented) return;
+                var dropzone = resolveDropzoneFromEvent(event);
+                if (!dropzone) return;
+                event.preventDefault();
+                if (!canDragItemMoveToStatus(dropzone.getAttribute('data-status') || 'nao_iniciada')) return;
+                placeDragPlaceholder(dropzone, event.clientY);
+            });
+
+            board.addEventListener('drop', function (event) {
+                if (!dragContext || isPersisting || isDeleting || event.defaultPrevented) return;
+                var dropzone = resolveDropzoneFromEvent(event);
+                if (!dropzone) return;
+                finalizeDrop(event, dropzone);
+            });
+
+            board.addEventListener('dragleave', function (event) {
+                if (!dragContext || isPersisting || isDeleting) return;
+                if (board.contains(event.relatedTarget)) return;
+                clearDropzoneHover();
             });
         }
 
@@ -2516,6 +2777,7 @@
                 event.preventDefault();
                 event.stopPropagation();
                 if (!drawerState.itemId || isDeleting) return;
+                if (handleDrawerRestrictedInteraction(event)) return;
                 var drawerProjectValue = getTaskItemProjectValue(drawerState.itemId);
                 if (!drawerProjectValue) {
                     alert('Projeto não encontrado para esta tarefa.');
@@ -2538,28 +2800,71 @@
                 });
             });
 
+            drawerDesc.addEventListener('click', function (event) {
+                if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) {
+                    handleDrawerRestrictedInteraction(event);
+                }
+            });
+            drawerDesc.addEventListener('keydown', function (event) {
+                if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) {
+                    handleDrawerRestrictedInteraction(event);
+                }
+            });
             drawerDesc.addEventListener('input', function () {
                 if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) return;
                 drawerTitle.textContent = (drawerDesc.value || '').trim() || 'Item sem descrição';
                 resizeDrawerDescTextarea();
                 scheduleDrawerAutosave();
             });
             drawerDesc.addEventListener('change', function () {
                 if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) return;
                 resizeDrawerDescTextarea();
             });
             drawerDesc.addEventListener('keyup', function () {
                 if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) return;
                 resizeDrawerDescTextarea();
             });
             drawerDesc.addEventListener('blur', function () {
                 if (!drawerState.itemId || isDeleting) return;
+                if (!drawerState.canEditRestricted) return;
                 flushDrawerAutosave('blur');
             });
 
             if (drawerPrioridade) {
+                drawerPrioridade.addEventListener('pointerdown', function (event) {
+                    if (!drawerState.itemId || isDeleting) return;
+                    if (!drawerState.canEditRestricted) {
+                        handleDrawerRestrictedInteraction(event);
+                    }
+                });
+                drawerPrioridade.addEventListener('mousedown', function (event) {
+                    if (!drawerState.itemId || isDeleting) return;
+                    if (!drawerState.canEditRestricted) {
+                        handleDrawerRestrictedInteraction(event);
+                    }
+                });
+                drawerPrioridade.addEventListener('keydown', function (event) {
+                    if (!drawerState.itemId || isDeleting) return;
+                    if (drawerState.canEditRestricted) return;
+                    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+                        handleDrawerRestrictedInteraction(event);
+                    }
+                });
                 drawerPrioridade.addEventListener('change', function () {
                     if (!drawerState.itemId || isDeleting) return;
+                    if (!drawerState.canEditRestricted) {
+                        var row = getTaskItemRowById(drawerState.itemId);
+                        if (row) {
+                            drawerPrioridade.value = getTaskItemPrioridade(row) || '';
+                        }
+                        showDrawerPermissionBanner(DRAWER_RESTRICTED_EDIT_MESSAGE);
+                        return;
+                    }
                     scheduleDrawerAutosave({ immediate: true });
                 });
             }

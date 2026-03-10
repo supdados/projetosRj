@@ -8,8 +8,9 @@
 {% set page_subtitle = 'Atualize seus dados de acesso e organização.' if is_own_profile else ('Configure os dados do usuário e permissões de acesso.' if action_verb == 'Adicionar' else 'Atualize os dados, áreas e permissões deste usuário.') %}
 {% set submit_label = 'Salvar Alterações' if user.id else 'Criar Usuário' %}
 {% set cancel_href = url_for('main.dashboard') if is_own_profile else url_for('main.list_users') %}
+{% set hide_govbr_link_fields = hide_govbr_link_fields|default(false) %}
 
-<div class="container-fluid px-3 px-md-4 py-2 account-page-shell">
+<div class="container-fluid px-3 px-md-4 py-2 account-page-shell{% if action_verb == 'Adicionar' and not is_own_profile %} account-page-shell-user-add{% endif %}">
     <section class="account-page-header">
         <div class="account-page-header-main">
             <div class="account-page-icon">
@@ -55,6 +56,32 @@
                         <div class="invalid-feedback">Por favor, informe o nome de usuário para login.</div>
                         {% endif %}
                     </div>
+
+                    {% if hide_govbr_link_fields %}
+                    <div class="col-12 account-field-compact">
+                        <label for="govbr_link_status" class="account-label">Vínculo gov.br</label>
+                        <input
+                            type="text"
+                            class="form-control account-input account-input-readonly"
+                            id="govbr_link_status"
+                            value="Vinculado por gov.br"
+                            readonly
+                        >
+                    </div>
+                    {% else %}
+                    <div class="col-12 account-field-compact">
+                        <label for="cpf_govbr" class="account-label">CPF gov.br</label>
+                        <input
+                            type="text"
+                            class="form-control account-input"
+                            id="cpf_govbr"
+                            name="cpf_govbr"
+                            value="{{ user.cpf_govbr or request.form.cpf_govbr or '' }}"
+                            placeholder="Somente números ou com máscara"
+                        >
+                        <div class="account-help-text">Campo opcional. Use CPF com 11 dígitos para habilitar login gov.br.</div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -97,7 +124,7 @@
                                         name="areas_responsavel"
                                         value="{{ area_choice }}"
                                         id="area_{{ loop.index }}"
-                                        {% if area_choice in user_areas %}checked{% endif %}
+                                        {% if area_choice|lower in (user_area_keys|default([])) or area_choice in user_areas %}checked{% endif %}
                                     >
                                     <label class="account-area-label" for="area_{{ loop.index }}">
                                         {{ area_choice }}

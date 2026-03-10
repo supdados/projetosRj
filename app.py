@@ -1,15 +1,18 @@
 import os
+import time
+from datetime import timedelta
 from urllib.parse import quote_plus
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
-from flask import Flask, g, session
+from flask import Flask, g, redirect, request, session, url_for
 from flask_migrate import Migrate
 from sqlalchemy import inspect, text
 
 from models import User, UserNotification, db
 from objective_catalog import sync_goal_catalog_to_db
 from routes import inject_current_year, main_bp
+from services.govbr_oidc import GovBrOIDCError, is_govbr_oidc_enabled, refresh_access_token
 from time_utils import register_sqlite_adapters
 
 load_dotenv()
@@ -43,6 +46,17 @@ def _resolve_database_uri(explicit_uri=None):
 def _env_flag_is_true(name, default='false'):
     raw = os.getenv(name, default)
     return str(raw).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _env_int(name, default=10):
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
 
 
 def ensure_project_abep_indicator_column():
@@ -234,6 +248,7 @@ def initialize_database():
 def _register_request_hooks(app):
     @app.before_request
     def load_logged_in_user():
+        session.permanent = True
         user_id = session.get('user_id')
         g.user = None
         if user_id is None:
@@ -241,6 +256,60 @@ def _register_request_hooks(app):
         g.user = db.session.get(User, user_id)
         if g.user is None:
             session.clear()
+
+    @app.before_request
+    def check_govbr_token_expiry():
+        if session.get('auth_provider') != 'govbr':
+            return
+        if not getattr(g, 'user', None):
+            return
+
+        access_token_exp = session.get('govbr_access_token_exp')
+        if not access_token_exp:
+            return
+
+        # Renova com 30s de antecedência para evitar expiração durante a requisição.
+        if time.time() < access_token_exp - 30:
+            return
+
+        govbr_refresh_token = request.cookies.get('govbr_refresh_token')
+        if not govbr_refresh_token:
+            session.clear()
+            g.user = None
+            return redirect(url_for('main.login_page'))
+
+        try:
+            new_tokens = refresh_access_token(app.config, refresh_token=govbr_refresh_token)
+        except GovBrOIDCError:
+            session.clear()
+            g.user = None
+            return redirect(url_for('main.login_page'))
+
+        expires_in = new_tokens.get('expires_in')
+        refresh_expires_in = new_tokens.get('refresh_expires_in')
+        if expires_in:
+            session['govbr_access_token_exp'] = int(time.time()) + int(expires_in)
+        if refresh_expires_in:
+            session['govbr_refresh_exp'] = int(time.time()) + int(refresh_expires_in)
+
+        new_refresh_token = new_tokens.get('refresh_token')
+        if new_refresh_token:
+            g.govbr_new_refresh_token = new_refresh_token
+            g.govbr_new_refresh_max_age = int(refresh_expires_in) if refresh_expires_in else None
+
+    @app.after_request
+    def apply_govbr_refresh_cookie(response):
+        new_refresh_token = getattr(g, 'govbr_new_refresh_token', None)
+        if new_refresh_token:
+            response.set_cookie(
+                'govbr_refresh_token',
+                new_refresh_token,
+                httponly=True,
+                secure=app.config.get('SESSION_COOKIE_SECURE', False),
+                samesite='Strict',
+                max_age=getattr(g, 'govbr_new_refresh_max_age', None),
+            )
+        return response
 
 
 def _register_template_filters(app):
@@ -284,16 +353,55 @@ def _register_context_processors(app):
             'current_user_obj': current_user_obj,
             'is_admin_user': is_admin,
             'unread_notifications_count': unread_notifications_count,
+            'govbr_login_enabled': is_govbr_oidc_enabled(app.config),
         }
+
+
+def _resolve_secret_key(*, is_testing=False, is_debug=False):
+    secret = os.getenv('SECRET_KEY', '').strip()
+    if secret:
+        return secret
+    if is_testing or is_debug:
+        return 'dev-only-insecure-key'
+    raise RuntimeError(
+        'SECRET_KEY não definida. Configure via variável de ambiente antes de rodar em produção.'
+    )
 
 
 def create_app(test_config=None):
     app = Flask(__name__)
+
+    is_debug = app.debug or _env_flag_is_true('FLASK_DEBUG', default='false')
+    is_testing = bool(test_config and test_config.get('TESTING'))
+
     app.config.update(
-        SECRET_KEY=os.getenv('SECRET_KEY', '***REMOVED***'),
+        SECRET_KEY=_resolve_secret_key(is_testing=is_testing, is_debug=is_debug),
         SQLALCHEMY_DATABASE_URI=_resolve_database_uri(),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SECURE=_env_flag_is_true('SESSION_COOKIE_SECURE', default='false'),
+        SESSION_COOKIE_SAMESITE='Lax',
+        PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
         SKIP_STARTUP_DB_INIT=_env_flag_is_true('SKIP_STARTUP_DB_INIT', default='false'),
+        GOVBR_OIDC_ENABLED=_env_flag_is_true('GOVBR_OIDC_ENABLED', default='false'),
+        GOVBR_OIDC_BASE_URL=os.getenv('GOVBR_OIDC_BASE_URL', ''),
+        GOVBR_OIDC_REALM=os.getenv('GOVBR_OIDC_REALM', ''),
+        GOVBR_OIDC_CLIENT_ID=os.getenv('GOVBR_OIDC_CLIENT_ID', ''),
+        GOVBR_OIDC_CLIENT_SECRET=os.getenv('GOVBR_OIDC_CLIENT_SECRET', ''),
+        GOVBR_OIDC_REDIRECT_URI=os.getenv('GOVBR_OIDC_REDIRECT_URI', 'http://localhost:5002/auth/govbr/callback'),
+        GOVBR_OIDC_POST_LOGOUT_REDIRECT_URI=os.getenv('GOVBR_OIDC_POST_LOGOUT_REDIRECT_URI', 'http://localhost:5002/login'),
+        GOVBR_OIDC_FEDERATED_LOGOUT_ENABLED=_env_flag_is_true('GOVBR_OIDC_FEDERATED_LOGOUT_ENABLED', default='true'),
+        GOVBR_OIDC_SCOPE=os.getenv('GOVBR_OIDC_SCOPE', 'openid profile email'),
+        GOVBR_OIDC_TIMEOUT_SECONDS=_env_int('GOVBR_OIDC_TIMEOUT_SECONDS', default=10),
+        GOOGLE_CALENDAR_ENABLED=_env_flag_is_true('GOOGLE_CALENDAR_ENABLED', default='true'),
+        GOOGLE_CALENDAR_CLIENT_SECRET_FILE=os.getenv('GOOGLE_CALENDAR_CLIENT_SECRET_FILE', 'client_secret.json'),
+        GOOGLE_CALENDAR_PUBLIC_BASE_URL=os.getenv('GOOGLE_CALENDAR_PUBLIC_BASE_URL', ''),
+        GOOGLE_CALENDAR_REDIRECT_URI=os.getenv('GOOGLE_CALENDAR_REDIRECT_URI', ''),
+        GOOGLE_CALENDAR_WEBHOOK_URL=os.getenv('GOOGLE_CALENDAR_WEBHOOK_URL', ''),
+        GOOGLE_CALENDAR_SCOPE=os.getenv('GOOGLE_CALENDAR_SCOPE', 'https://www.googleapis.com/auth/calendar.events'),
+        GOOGLE_CALENDAR_TIMEOUT_SECONDS=_env_int('GOOGLE_CALENDAR_TIMEOUT_SECONDS', default=10),
+        GOOGLE_CALENDAR_DEFAULT_ID=os.getenv('GOOGLE_CALENDAR_DEFAULT_ID', 'primary'),
+        GOOGLE_CALENDAR_WATCH_TTL_SECONDS=_env_int('GOOGLE_CALENDAR_WATCH_TTL_SECONDS', default=604800),
     )
 
     if test_config:

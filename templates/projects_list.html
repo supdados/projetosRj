@@ -396,7 +396,11 @@
             toggleAdvancedFiltersBtn.classList.toggle('is-active', isOpen);
 
             if (toggleAdvancedFiltersLabel) {
-                toggleAdvancedFiltersLabel.textContent = 'Mais filtros';
+                var toggleLabel = isOpen ? 'Menos filtros' : 'Mais filtros';
+                toggleAdvancedFiltersLabel.textContent = toggleLabel;
+                toggleAdvancedFiltersBtn.setAttribute('data-hover-label', toggleLabel);
+                toggleAdvancedFiltersBtn.setAttribute('title', toggleLabel);
+                toggleAdvancedFiltersBtn.setAttribute('aria-label', toggleLabel);
             }
         }
 

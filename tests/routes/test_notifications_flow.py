@@ -134,7 +134,7 @@ def test_status_change_by_other_user_notifies_task_creator(app, seed_data):
 
 def test_assignment_change_notifies_assigned_user(app, seed_data):
     with app.app_context():
-        actor = _create_user('notif_actor_3', 'Notif Actor 3', areas=['Auditoria'])
+        actor = _create_user('notif_actor_3', 'Notif Actor 3', areas=['Auditoria'], is_admin=True)
         assignee = _create_user('notif_assignee_1', 'Notif Assignee 1', areas=['Auditoria'])
         actor_id = actor.id
         assignee_id = assignee.id

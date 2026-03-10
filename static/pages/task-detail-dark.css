@@ -293,26 +293,11 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-priorid
     color: #ffdcdc;
 }
 
-/* Options modo escuro: reset para evitar herança de cor no Windows/Linux */
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option {
-    background: #1e2a3a;
-    color: #d0dce9;
-}
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="nao_iniciada"]   { background: #1e2d3e; color: #d8e3ee; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="em_andamento"]  { background: #1a2d42; color: #d9ebfc; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="para_validacao"] { background: #2e2810; color: #fbe8c8; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="para_ajustes"]  { background: #2e1a08; color: #fed7aa; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option[value="finalizada"]    { background: #1a2e27; color: #d9f3e8; }
-
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-status option,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option {
     background: #1e2a3a;
     color: #d0dce9;
 }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value=""]        { background: #1e2a3a; color: #b9c9d8; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="baixa"]   { background: #1a2e27; color: #d7f2e8; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="media"]   { background: #1a2a3d; color: #d7ebff; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="alta"]    { background: #2e2810; color: #ffe8c8; }
-html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-prioridade-select option[value="urgente"] { background: #2e1a1a; color: #ffdcdc; }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-view-toggle {
     --td-toggle-base-fill: #253545;
@@ -405,6 +390,17 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-dropzone {
     background: transparent;
+    scrollbar-color: rgba(156, 184, 210, 0.58) transparent;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar-thumb {
+    background: rgba(156, 184, 210, 0.54);
+    background-clip: padding-box;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar-thumb:hover {
+    background: rgba(188, 211, 233, 0.7);
+    background-clip: padding-box;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-column.is-empty .task-items-kanban-dropzone::after {
@@ -448,6 +444,20 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-desc,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-owner {
     color: var(--td-items-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context {
+    color: var(--td-items-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context a {
+    color: #8fc6ff;
+    font-weight: var(--ds-font-weight-bold);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context a:hover,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-hub-kanban-context a:focus-visible {
+    color: #c9e4ff;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-kanban-owner.is-empty {
@@ -1250,7 +1260,7 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-comment:hover {
-    box-shadow: 0 10px 20px rgba(4, 9, 15, 0.48);
+    box-shadow: 0 7px 14px rgba(4, 9, 15, 0.36);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-comment.author-tone-0 {
@@ -1551,6 +1561,12 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-
     color: var(--td-drawer-text-muted);
 }
 
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-permission-banner {
+    border-color: rgba(99, 166, 219, 0.44);
+    background: rgba(28, 68, 104, 0.42);
+    color: #d8ebfd;
+}
+
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-textarea,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-select,
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .responsavel-picker-trigger.task-item-drawer-responsavel-trigger {
@@ -1575,6 +1591,20 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .responsavel-picke
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .responsavel-picker-trigger.task-item-drawer-responsavel-trigger:hover {
     background: var(--td-drawer-surface-card);
     border-color: rgba(99, 166, 219, 0.52);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-textarea.is-locked,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-select.is-locked,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .responsavel-picker-trigger.task-item-drawer-responsavel-trigger.is-locked,
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .responsavel-picker-trigger.task-item-drawer-responsavel-trigger.is-locked:hover {
+    background: #2a3b4e;
+    border-color: #43586f;
+    color: #8fa7bf;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-textarea.is-locked::placeholder {
+    color: #7f99b2;
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-select option {
@@ -1706,7 +1736,7 @@ html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-comment:hover {
-    box-shadow: 0 10px 20px rgba(4, 9, 15, 0.48);
+    box-shadow: 0 7px 14px rgba(4, 9, 15, 0.36);
 }
 
 html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-item-drawer-comment.author-tone-0 {

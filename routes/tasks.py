@@ -24,10 +24,13 @@ from .tasks_helpers import (
     VALID_PRIORIDADES,
     VALID_STATUSES,
     VALID_TIPOS,
+    _audit_denied_task_action,
     _allowed_attachment,
     _build_legacy_query_args,
     _build_visible_tasks_query,
     _can_access_project_in_tasks,
+    _can_manage_task_restricted_actions,
+    _can_transition_task_to_status,
     _can_view_task,
     _create_task_common,
     _format_invalid_responsavel_message,
@@ -35,6 +38,7 @@ from .tasks_helpers import (
     _get_assignable_users_for_project,
     _get_upload_folder,
     _merge_task_filter_values,
+    _normalize_responsavel_value,
     _preview_text,
     _read_task_filter_values,
     _redirect_back_or,
@@ -44,6 +48,12 @@ from .tasks_helpers import (
     _serialize_task_payload,
     _task_active_target_url,
     _task_status_label,
+)
+
+FINALIZE_DENIED_MESSAGE = 'Apenas o criador da tarefa pode movê-la para Finalizada.'
+DELETE_DENIED_MESSAGE = 'Somente o autor da tarefa ou um administrador pode excluí-la.'
+EDIT_RESTRICTED_FIELDS_DENIED_MESSAGE = (
+    'Somente o autor da tarefa ou um administrador pode editar descrição, prioridade e responsável.'
 )
 
 
@@ -264,6 +274,17 @@ def edit_task(task_id):
     else:
         resolved_tipo = task.tipo_pedido
 
+    can_edit_restricted_fields = _can_manage_task_restricted_actions(g.user, task)
+    descricao_changed = incoming_descricao != (task.descricao or '').strip()
+    prioridade_changed = (incoming_prioridade or '') != (task.prioridade or '')
+    responsavel_changed = (
+        _normalize_responsavel_value(incoming_responsavel)
+        != _normalize_responsavel_value(task.responsavel or '')
+    )
+    if (descricao_changed or prioridade_changed or responsavel_changed) and not can_edit_restricted_fields:
+        _audit_denied_task_action(task, 'forbidden_edit_restricted')
+        return jsonify({'success': False, 'message': EDIT_RESTRICTED_FIELDS_DENIED_MESSAGE}), 403
+
     if not incoming_descricao:
         return jsonify({'success': False, 'message': 'Descrição é obrigatória'}), 400
 
@@ -274,6 +295,10 @@ def edit_task(task_id):
     )
     if not is_valid_responsavel:
         return jsonify({'success': False, 'message': _format_invalid_responsavel_message(invalid_names)}), 400
+
+    if not _can_transition_task_to_status(g.user, task, incoming_status, previous_status=task.status):
+        _audit_denied_task_action(task, 'forbidden_finalize', attempted_status=incoming_status)
+        return jsonify({'success': False, 'message': FINALIZE_DENIED_MESSAGE}), 403
 
     old_descricao = task.descricao
     old_status = task.status
@@ -350,6 +375,13 @@ def delete_task(task_id):
         flash('Você não tem permissão para excluir esta tarefa.', 'danger')
         return _redirect_back_or('main.list_tasks')
 
+    if not _can_manage_task_restricted_actions(g.user, task):
+        _audit_denied_task_action(task, 'forbidden_delete')
+        if is_ajax:
+            return jsonify({'success': False, 'message': DELETE_DENIED_MESSAGE, 'item_id': task_id}), 403
+        flash(DELETE_DENIED_MESSAGE, 'danger')
+        return _redirect_back_or('main.list_tasks')
+
     try:
         notify_task_event(
             task,
@@ -387,6 +419,10 @@ def update_task_status(task_id):
     if status not in VALID_STATUSES:
         return jsonify({'success': False, 'message': 'Status inválido'}), 400
 
+    if not _can_transition_task_to_status(g.user, task, status, previous_status=task.status):
+        _audit_denied_task_action(task, 'forbidden_finalize', attempted_status=status)
+        return jsonify({'success': False, 'message': FINALIZE_DENIED_MESSAGE}), 403
+
     old_status = task.status
     task.status = status
 
@@ -422,6 +458,10 @@ def update_task_prioridade(task_id):
     prioridade = payload.get('prioridade', '') or None
     if prioridade and prioridade not in VALID_PRIORIDADES:
         return jsonify({'success': False, 'message': 'Prioridade inválida'}), 400
+
+    if not _can_manage_task_restricted_actions(g.user, task):
+        _audit_denied_task_action(task, 'forbidden_edit_restricted')
+        return jsonify({'success': False, 'message': EDIT_RESTRICTED_FIELDS_DENIED_MESSAGE}), 403
 
     old_prioridade = task.prioridade
     task.prioridade = prioridade
@@ -498,6 +538,13 @@ def finalize_task(task_id):
         if is_ajax:
             return jsonify({'success': False, 'message': 'Você não tem permissão para finalizar esta tarefa.'}), 403
         flash('Você não tem permissão para finalizar esta tarefa.', 'danger')
+        return _redirect_back_or('main.list_tasks')
+
+    if not _can_manage_task_restricted_actions(g.user, task):
+        _audit_denied_task_action(task, 'forbidden_finalize', attempted_status='finalizada')
+        if is_ajax:
+            return jsonify({'success': False, 'message': FINALIZE_DENIED_MESSAGE}), 403
+        flash(FINALIZE_DENIED_MESSAGE, 'danger')
         return _redirect_back_or('main.list_tasks')
 
     if task.is_archived:

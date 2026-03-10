@@ -179,7 +179,12 @@
                 if (pathname === '/dashboard') {
                     return 'dashboard';
                 }
-                if (pathname === '/' || pathname === '/login') {
+                if (
+                    pathname === '/' ||
+                    pathname === '/login' ||
+                    pathname === '/login/govbr' ||
+                    pathname === '/auth/govbr/callback'
+                ) {
                     return 'login';
                 }
                 if (pathname === '/projects') {

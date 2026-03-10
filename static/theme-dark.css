@@ -62,7 +62,7 @@ html[data-theme="dark"] body.is-authenticated .app-topnav {
 
 html[data-theme="dark"] body.is-authenticated .app-brand,
 html[data-theme="dark"] body.is-authenticated .app-brand-text {
-    color: var(--app-color-text-primary);
+    color: #ffffff;
 }
 
 
@@ -228,6 +228,20 @@ html[data-theme="dark"] body.is-authenticated .app-dropdown-item-check,
 html[data-theme="dark"] body.is-authenticated .app-dropdown-item.active .app-dropdown-item-main i,
 html[data-theme="dark"] body.is-authenticated .app-dropdown-item:active .app-dropdown-item-main i {
     color: var(--app-color-primary-hover);
+}
+
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item.active,
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item:active {
+    background: rgba(223, 240, 255, 0.16);
+    border-color: rgba(173, 220, 255, 0.42);
+    color: #f1f8ff;
+}
+
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item.active .app-dropdown-item-main i,
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item:active .app-dropdown-item-main i,
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item.active .app-dropdown-item-check,
+html[data-theme="dark"] body.is-authenticated .app-account-dropdown .app-dropdown-item:active .app-dropdown-item-check {
+    color: #dff0ff;
 }
 
 
@@ -814,6 +828,12 @@ html[data-theme="dark"] body.is-authenticated .admin-users-header {
     box-shadow: 0 8px 20px rgba(7, 11, 18, 0.32);
 }
 
+html[data-theme="dark"] body.is-authenticated .admin-users-shell .admin-users-header-icon {
+    background: rgba(77, 169, 249, 0.18);
+    border-color: rgba(77, 169, 249, 0.42);
+    color: #4DA9F9;
+}
+
 
 html[data-theme="dark"] body.is-authenticated .account-page-subtitle,
 html[data-theme="dark"] body.is-authenticated .account-help-text,
@@ -1353,8 +1373,7 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-close:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-close:focus,
 html[data-theme="dark"] body.is-authenticated .main-content .project-create-close:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .project-create-close:focus {
-    background: rgba(99, 166, 219, 0.18) var(--bs-btn-close-bg) center / 1em auto no-repeat !important;
-    border-radius: 0.45rem;
+    background: transparent var(--bs-btn-close-bg) center / 1em auto no-repeat !important;
     opacity: 1;
 }
 
@@ -1549,6 +1568,13 @@ html[data-theme="dark"] body.is-authenticated .account-page-shell .account-page-
     color: #d9e8f6;
 }
 
+html[data-theme="dark"] body.is-authenticated .account-page-shell.account-page-shell-user-add .account-page-icon,
+html[data-theme="dark"] body.is-authenticated .account-page-shell.account-page-shell-area-add .account-page-icon {
+    background: rgba(77, 169, 249, 0.18);
+    border-color: rgba(77, 169, 249, 0.42);
+    color: #4DA9F9;
+}
+
 
 html[data-theme="dark"] body.is-authenticated .account-page-shell .account-page-title {
     color: var(--app-color-text-primary);
@@ -1654,6 +1680,10 @@ html[data-theme="dark"] body.is-authenticated .account-page-shell .account-admin
 
 
 /* Project create modal - component-level dark completion */
+html[data-theme="dark"] body.is-authenticated .project-create-modal .project-create-accordion-button {
+    --bs-accordion-btn-active-icon: var(--bs-accordion-btn-icon);
+}
+
 html[data-theme="dark"] body.is-authenticated .project-create-modal .project-create-accordion-button::after {
     filter: invert(0.9) sepia(0.04) saturate(0.9) hue-rotate(172deg) brightness(1.08);
 }
@@ -1664,6 +1694,12 @@ html[data-theme="dark"] body.is-authenticated .project-create-modal .form-select
 html[data-theme="dark"] body.is-authenticated .project-create-modal .form-select {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23cfe3f6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m1 6 7 7 7-7'/%3e%3c/svg%3e");
     background-repeat: no-repeat;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-create-modal .form-select-glass:focus,
+html[data-theme="dark"] body.is-authenticated .project-create-modal .form-select-glass-enhanced:focus,
+html[data-theme="dark"] body.is-authenticated .project-create-modal .form-select:focus {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23cfe3f6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m1 6 7 7 7-7'/%3e%3c/svg%3e");
 }
 
 
@@ -1755,6 +1791,33 @@ html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-
     border-color: rgba(38, 140, 208, 0.74) !important;
     color: #ffffff !important;
     box-shadow: 0 14px 28px rgba(7, 32, 54, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+html[data-theme="dark"] body.is-authenticated .project-create-modal .project-create-btn-primary:disabled,
+html[data-theme="dark"] body.is-authenticated .project-create-modal .project-create-btn-primary.is-disabled,
+html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-primary:disabled,
+html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-primary.is-disabled {
+    background: #2a3648 !important;
+    border-color: #46586d !important;
+    color: #8ea3ba !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    cursor: not-allowed !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-create-modal .project-create-btn-primary:disabled:hover,
+html[data-theme="dark"] body.is-authenticated .project-create-modal .project-create-btn-primary:disabled:focus,
+html[data-theme="dark"] body.is-authenticated .project-create-modal .project-create-btn-primary.is-disabled:hover,
+html[data-theme="dark"] body.is-authenticated .project-create-modal .project-create-btn-primary.is-disabled:focus,
+html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-primary:disabled:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-primary:disabled:focus,
+html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-primary.is-disabled:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-primary.is-disabled:focus {
+    background: #2a3648 !important;
+    border-color: #46586d !important;
+    color: #8ea3ba !important;
+    box-shadow: none !important;
 }
 
 

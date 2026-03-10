@@ -10,11 +10,8 @@
 <div class="login-page">
     <div class="login-card">
         <div class="login-brand">
-            <div class="login-brand-icon">
-                <i class="fas fa-project-diagram"></i>
-            </div>
+            <img src="{{ url_for('static', filename='img/brand/logo-blue.png', v='20260304h') }}" class="login-brand-logo" alt="Logo ProjetosRJ">
             <h1 class="login-title ds-type-page-title">ProjetosRJ</h1>
-            <p class="login-subtitle ds-type-body-sm">Acesse com seu usuário e senha</p>
         </div>
 
         {% if error %}
@@ -24,6 +21,7 @@
         {% endif %}
 
         <form action="{{ url_for('main.login_page') }}" method="POST" autocomplete="off" novalidate>
+            <input type="hidden" name="next" value="{{ next_page or '' }}">
             <div class="login-field">
                 <label class="login-field-label" for="login-username">Usuário</label>
                 <div class="login-input-group">
@@ -42,6 +40,25 @@
 
             <button type="submit" class="btn login-submit">Entrar</button>
         </form>
+
+        {% if govbr_login_enabled %}
+        <div class="login-divider" role="separator" aria-label="Ou">
+            <span>ou</span>
+        </div>
+        <a
+            href="{{ url_for('main.login_govbr', next=next_page) if next_page else url_for('main.login_govbr') }}"
+            class="btn login-govbr-btn"
+            data-trigger="login"
+            aria-label="Entrar com GOV.BR"
+        >
+            <span class="login-govbr-text">Entrar com</span>
+            <img
+                src="{{ url_for('static', filename='img/govbr-colorido-b.png') }}"
+                class="login-govbr-logo"
+                alt="gov.br"
+            >
+        </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

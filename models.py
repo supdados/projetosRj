@@ -60,6 +60,8 @@ class User(db.Model):
     name = db.Column(db.String(120), nullable=False)
     orgao = db.Column(db.String(100), nullable=True)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    cpf_govbr = db.Column(db.String(11), unique=True, nullable=True, index=True)
+    govbr_sub = db.Column(db.String(255), unique=True, nullable=True, index=True)
     
     # Relacionamento com múltiplas áreas
     areas = db.relationship('UserArea', backref='user', lazy=True, cascade="all, delete-orphan")
@@ -287,6 +289,67 @@ class UserNotification(db.Model):
 
     def __repr__(self):
         return f'<UserNotification {self.event_type} to user {self.recipient_user_id}>'
+
+
+class UserCalendarConnection(db.Model):
+    """Credenciais OAuth e estado de sincronização do Google Calendar por usuário."""
+    __tablename__ = 'user_calendar_connection'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True, index=True)
+    provider = db.Column(db.String(30), nullable=False, default='google')
+    calendar_id = db.Column(db.String(255), nullable=False, default='primary')
+    access_token = db.Column(db.Text, nullable=True)
+    refresh_token = db.Column(db.Text, nullable=False)
+    token_expires_at = db.Column(db.DateTime, nullable=True)
+    scope = db.Column(db.String(500), nullable=True)
+    watch_channel_id = db.Column(db.String(255), nullable=True, unique=True)
+    watch_resource_id = db.Column(db.String(255), nullable=True)
+    watch_expiration = db.Column(db.DateTime, nullable=True)
+    watch_channel_token = db.Column(db.String(255), nullable=True)
+    sync_token = db.Column(db.Text, nullable=True)
+    last_sync_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    user = db.relationship('User', backref=db.backref('calendar_connection', uselist=False))
+
+    def __repr__(self):
+        return f'<UserCalendarConnection user={self.user_id} provider={self.provider}>'
+
+
+class CalendarEvent(db.Model):
+    """Evento local sincronizável com Google Calendar."""
+    __tablename__ = 'calendar_event'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    location = db.Column(db.String(255), nullable=True)
+    starts_at = db.Column(db.DateTime, nullable=False, index=True)
+    ends_at = db.Column(db.DateTime, nullable=False)
+    is_all_day = db.Column(db.Boolean, nullable=False, default=False)
+    timezone = db.Column(db.String(64), nullable=False, default='America/Sao_Paulo')
+    source = db.Column(db.String(20), nullable=False, default='app')  # app | google
+    google_calendar_id = db.Column(db.String(255), nullable=True, default='primary')
+    google_event_id = db.Column(db.String(255), nullable=True)
+    meet_link = db.Column(db.String(512), nullable=True)
+    sync_status = db.Column(db.String(20), nullable=False, default='pending')  # pending | ok | error
+    sync_error = db.Column(db.Text, nullable=True)
+    last_synced_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    user = db.relationship('User', backref='calendar_events')
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'google_event_id', name='uq_calendar_event_user_google_event'),
+        db.Index('ix_calendar_event_user_starts_at', 'user_id', 'starts_at'),
+    )
+
+    def __repr__(self):
+        return f'<CalendarEvent {self.id} user={self.user_id} title={self.title}>'
 
 
 class Task(db.Model):
@@ -563,6 +626,26 @@ class TaskComment(db.Model):
     
     def __repr__(self):
         return f'<TaskComment {self.id} by user {self.user_id}>'
+
+
+class TaskAccessAudit(db.Model):
+    """Auditoria de tentativas negadas em ações restritas de tarefa."""
+    __tablename__ = 'task_access_audit'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, nullable=False, index=True)
+    project_id = db.Column(db.Integer, nullable=True, index=True)
+    actor_user_id = db.Column(db.Integer, nullable=False, index=True)
+    actor_name = db.Column(db.String(100), nullable=False)
+    task_author_user_id = db.Column(db.Integer, nullable=True, index=True)
+    action_type = db.Column(db.String(50), nullable=False, index=True)
+    reason = db.Column(db.String(120), nullable=False)
+    attempted_status = db.Column(db.String(20), nullable=True)
+    task_description = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False, index=True)
+
+    def __repr__(self):
+        return f'<TaskAccessAudit {self.action_type} task={self.task_id} actor={self.actor_user_id}>'
 
 
 class LegacyTaskRedirect(db.Model):

@@ -166,5 +166,28 @@ def test_cascade_date_update_shifts_only_subsequent_stages(app, client_user, see
         assert etapa_subsequente is not None
         assert etapa_base.data_inicio == datetime.date(2026, 1, 10)
         assert etapa_base.data_fim == datetime.date(2026, 1, 15)
-        assert etapa_subsequente.data_inicio == datetime.date(2026, 1, 19)
+        assert etapa_subsequente.data_inicio == datetime.date(2026, 1, 21)
         assert etapa_subsequente.data_fim == datetime.date(2026, 1, 23)
+
+
+def test_cascade_date_update_moves_weekend_end_to_next_business_day(app, client_user, seed_data):
+    with app.app_context():
+        etapa_subsequente = db.session.get(Etapa, seed_data['etapa_started_id'])
+        assert etapa_subsequente is not None
+        etapa_subsequente.data_fim = datetime.date(2026, 1, 24)  # sábado
+        db.session.commit()
+
+    response = client_user.post(
+        f"/project/{seed_data['project_id']}/cascade_update",
+        json={'etapa_id': seed_data['etapa_id'], 'days_diff': 1},
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload['success'] is True
+
+    with app.app_context():
+        etapa_subsequente = db.session.get(Etapa, seed_data['etapa_started_id'])
+        assert etapa_subsequente is not None
+        assert etapa_subsequente.data_inicio == datetime.date(2026, 1, 19)
+        assert etapa_subsequente.data_fim == datetime.date(2026, 1, 26)

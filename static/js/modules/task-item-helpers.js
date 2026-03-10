@@ -16,6 +16,46 @@
         return String(row.getAttribute('data-project-value') || '').trim();
     }
 
+    function parseTaskItemFlag(value) {
+        if (value == null) return null;
+        var normalized = String(value).trim().toLowerCase();
+        if (!normalized) return null;
+        if (normalized === '1' || normalized === 'true' || normalized === 'yes') return true;
+        if (normalized === '0' || normalized === 'false' || normalized === 'no') return false;
+        return null;
+    }
+
+    function getTaskItemCanDelete(row) {
+        if (!row) return false;
+        var attrValue = parseTaskItemFlag(row.getAttribute('data-can-delete'));
+        if (attrValue !== null) return attrValue;
+        return !!row.querySelector('.task-item-del');
+    }
+
+    function getTaskItemCanFinalize(row) {
+        if (!row) return false;
+        var attrValue = parseTaskItemFlag(row.getAttribute('data-can-finalize'));
+        if (attrValue !== null) return attrValue;
+
+        var statusSelect = row.querySelector('.task-item-status');
+        if (!statusSelect) return false;
+
+        var finalizeOption = statusSelect.querySelector('option[value="finalizada"]');
+        return !!(finalizeOption && !finalizeOption.disabled);
+    }
+
+    function applyTaskItemPermissions(row, item) {
+        if (!row || !item) return;
+
+        if (Object.prototype.hasOwnProperty.call(item, 'can_delete')) {
+            row.setAttribute('data-can-delete', item.can_delete ? '1' : '0');
+        }
+
+        if (Object.prototype.hasOwnProperty.call(item, 'can_finalize')) {
+            row.setAttribute('data-can-finalize', item.can_finalize ? '1' : '0');
+        }
+    }
+
     function setTaskItemRowStatus(row, status) {
         if (!row) return;
         row.setAttribute('data-item-status', status);
@@ -308,6 +348,31 @@
         return html;
     }
 
+    function syncTaskItemCommentsEmptyState(row) {
+        var wrap = getTaskItemCommentsInner(row);
+        if (!wrap) return;
+
+        var hasComments = wrap.querySelector('.task-comment[id^="comment-"]');
+        var placeholders = wrap.querySelectorAll('.task-comment-empty');
+
+        if (hasComments) {
+            Array.prototype.forEach.call(placeholders, function (node) {
+                if (node && node.parentNode) node.parentNode.removeChild(node);
+            });
+            return;
+        }
+
+        if (placeholders.length) return;
+
+        var empty = document.createElement('div');
+        empty.className = 'task-comment task-comment-empty';
+        empty.innerHTML = '<p class="task-comment-text">Nenhum comentário registrado.</p>';
+
+        var form = wrap.querySelector('.task-comment-form');
+        if (form) wrap.insertBefore(empty, form);
+        else wrap.appendChild(empty);
+    }
+
     function appendCommentToTaskItemRow(row, comment) {
         if (!row || !comment || !comment.id) return null;
         var wrap = getTaskItemCommentsInner(row);
@@ -320,7 +385,8 @@
         var commentEl = temp.firstChild;
         if (!commentEl) return null;
         wrap.insertBefore(commentEl, form);
-        setTaskItemCommentsCount(row, getTaskItemCommentsCount(row) + 1);
+        syncTaskItemCommentsEmptyState(row);
+        setTaskItemCommentsCount(row, wrap.querySelectorAll('.task-comment[id^="comment-"]').length);
         syncTaskItemRowMetadata(row);
         return commentEl;
     }
@@ -344,7 +410,12 @@
         var row = commentEl.closest('.task-item-row');
         if (commentEl.parentNode) commentEl.parentNode.removeChild(commentEl);
         if (row) {
-            setTaskItemCommentsCount(row, Math.max(0, getTaskItemCommentsCount(row) - 1));
+            var wrap = getTaskItemCommentsInner(row);
+            syncTaskItemCommentsEmptyState(row);
+            setTaskItemCommentsCount(
+                row,
+                wrap ? wrap.querySelectorAll('.task-comment[id^="comment-"]').length : 0
+            );
             syncTaskItemRowMetadata(row);
         }
         return row;
@@ -363,6 +434,8 @@
         if (!item || !item.id) return null;
         var row = getTaskItemRowById(item.id);
         if (!row) return null;
+
+        applyTaskItemPermissions(row, item);
 
         if (typeof item.descricao === 'string') {
             var descEl = row.querySelector('.task-item-desc');

@@ -7,6 +7,7 @@ from . import admin_templates  # noqa: F401,E402
 from . import admin_users  # noqa: F401,E402
 from . import api  # noqa: F401,E402
 from . import auth  # noqa: F401,E402
+from . import calendars  # noqa: F401,E402
 from . import dashboard  # noqa: F401,E402
 from . import etapas  # noqa: F401,E402
 from . import maintenance  # noqa: F401,E402

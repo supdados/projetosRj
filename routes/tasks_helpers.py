@@ -9,6 +9,7 @@ from sqlalchemy.orm import joinedload
 from models import (
     Project,
     Task,
+    TaskAccessAudit,
     TaskComment,
     User,
     UserArea,
@@ -270,6 +271,58 @@ def _can_view_task(user, task):
     )
 
 
+def _can_manage_task_restricted_actions(user, task):
+    return bool(user and task and (user.is_admin or task.created_by_id == user.id))
+
+
+def _can_transition_task_to_status(user, task, next_status, previous_status=None):
+    normalized_next_status = (next_status or '').strip()
+    normalized_previous_status = (previous_status or task.status or '').strip()
+
+    if normalized_next_status != 'finalizada':
+        return True
+
+    if normalized_previous_status == 'finalizada':
+        return True
+
+    return _can_manage_task_restricted_actions(user, task)
+
+
+def _audit_denied_task_action(task, action_type, *, attempted_status=None):
+    actor = getattr(g, 'user', None)
+    if not task or not actor:
+        return
+
+    try:
+        db.session.add(
+            TaskAccessAudit(
+                task_id=task.id,
+                project_id=task.project_id,
+                actor_user_id=actor.id,
+                actor_name=actor.name or actor.username or 'Usuário',
+                task_author_user_id=task.created_by_id,
+                action_type=action_type,
+                reason='not_task_author',
+                attempted_status=attempted_status,
+                task_description=_preview_text(task.descricao, 240) or f'Tarefa #{task.id}',
+            )
+        )
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        print(f'Erro ao auditar tentativa negada em tarefa: {exc}')
+
+
+def _task_permission_flags(task, user=None):
+    actor = user or getattr(g, 'user', None)
+    can_manage = _can_manage_task_restricted_actions(actor, task)
+    return {
+        'can_delete': can_manage,
+        'can_finalize': can_manage,
+        'is_author': bool(actor and task and task.created_by_id == actor.id),
+    }
+
+
 def _can_access_project_in_tasks(project):
     if project is None:
         return True
@@ -368,6 +421,7 @@ def _resolve_responsavel_for_edit(task, incoming_raw_value, project):
 def _serialize_task_payload(task):
     project = task.project
     project_id = project.id if project else None
+    permission_flags = _task_permission_flags(task)
     return {
         'id': task.id,
         'descricao': task.descricao,
@@ -383,6 +437,9 @@ def _serialize_task_payload(task):
         'project_value': str(project_id) if project_id else 'sem_projeto',
         'comments_count': len(task.comments),
         'anexos_count': len(task.anexos),
+        'can_delete': permission_flags['can_delete'],
+        'can_finalize': permission_flags['can_finalize'],
+        'is_author': permission_flags['is_author'],
     }
 
 
@@ -501,6 +558,10 @@ def _group_hub_tasks_by_project(tasks):
         task.hub_project_titulo = project_title
         task.hub_task_titulo = task.descricao
         task.hub_task_id = task.id
+        permission_flags = _task_permission_flags(task)
+        task.hub_can_delete = permission_flags['can_delete']
+        task.hub_can_finalize = permission_flags['can_finalize']
+        task.hub_is_author = permission_flags['is_author']
 
         groups[group_key]['tasks'].append(task)
         groups[group_key]['items'].append(task)

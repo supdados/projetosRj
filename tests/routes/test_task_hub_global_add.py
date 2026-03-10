@@ -27,6 +27,8 @@ def test_task_hub_global_add_item_in_filtered_project(app, client_user, seed_dat
     assert payload['item']['project_id'] == seed_data['project_id']
     assert payload['item']['task_id'] == payload['item']['id']
     assert payload['item']['project_titulo'] == 'Projeto Auditoria'
+    assert payload['item']['can_delete'] is True
+    assert payload['item']['can_finalize'] is True
 
     with app.app_context():
         item = db.session.get(TaskItem, payload['item']['id'])

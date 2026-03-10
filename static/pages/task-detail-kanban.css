@@ -5,6 +5,21 @@
     align-items: start;
 }
 
+.task-finalize-confetti-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 1210;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+.task-finalize-confetti-canvas.is-active {
+    opacity: 1;
+}
+
 .task-detail-v2 .task-items-kanban-column {
     border-radius: var(--td-radius-md);
     border: 1px solid #d8e4f0;
@@ -53,9 +68,49 @@
     flex-direction: column;
     gap: var(--td-kanban-drop-gap);
     padding: 0.56rem;
-    min-height: calc((var(--td-kanban-card-slot-height) * 3) + (var(--td-kanban-drop-gap) * 2) + 1.12rem);
+    height: calc(
+        (var(--td-kanban-card-slot-height) * var(--td-kanban-visible-cards))
+        + (var(--td-kanban-drop-gap) * var(--td-kanban-visible-gaps))
+        + 1.12rem
+    );
+    min-height: calc(
+        (var(--td-kanban-card-slot-height) * var(--td-kanban-visible-cards))
+        + (var(--td-kanban-drop-gap) * var(--td-kanban-visible-gaps))
+        + 1.12rem
+    );
+    max-height: calc(
+        (var(--td-kanban-card-slot-height) * var(--td-kanban-visible-cards))
+        + (var(--td-kanban-drop-gap) * var(--td-kanban-visible-gaps))
+        + 1.12rem
+    );
     position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(92, 126, 157, 0.54) transparent;
     transition: background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar {
+    width: 8px;
+}
+
+.task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 999px;
+}
+
+.task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar-thumb {
+    background: rgba(92, 126, 157, 0.54);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    min-height: 40px;
+}
+
+.task-detail-v2 .task-items-kanban-dropzone::-webkit-scrollbar-thumb:hover {
+    background: rgba(70, 103, 133, 0.68);
+    background-clip: padding-box;
 }
 
 .task-detail-v2 .task-items-kanban-column.is-empty .task-items-kanban-dropzone::after {
@@ -99,6 +154,7 @@
     padding: 0.56rem 0.6rem 0.6rem;
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
     gap: 0.52rem;
     cursor: grab;
     transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
@@ -288,12 +344,35 @@
     font-size: var(--ds-font-size-sm);
     line-height: var(--ds-line-height-normal);
     word-break: break-word;
-    min-height: 0;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
 }
 
 .task-detail-v2 .task-hub-kanban-context {
-    word-break: break-word;
+    margin: 0;
+    color: #1f629a;
+    font-size: var(--ds-font-size-2xs);
+    line-height: 1.3;
+    display: block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.task-detail-v2 .task-hub-kanban-context a {
+    display: block;
+    color: #1f629a;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
+}
+
+.task-detail-v2 .task-hub-kanban-context a:hover,
+.task-detail-v2 .task-hub-kanban-context a:focus-visible {
+    color: #184f7d;
+    text-decoration: underline;
 }
 
 .task-detail-v2 .task-items-kanban-meta {

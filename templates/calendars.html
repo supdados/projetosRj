@@ -1,0 +1,799 @@
+{% extends "base.html" %}
+
+{% block title %}Calendário — ProjetosRJ{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='pages/calendars.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="app-page-shell app-page-shell--raised cal-page">
+
+  {# ── Header ─────────────────────────────────────────────────────────────── #}
+  <header class="cal-header">
+    <div class="cal-header-left">
+      <h1 class="cal-title">Calendário</h1>
+      {% if connection %}
+        <span class="cal-google-badge cal-google-badge--on">
+          <svg width="7" height="7" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>
+          Google conectado
+        </span>
+      {% elif google_calendar_enabled %}
+        <span class="cal-google-badge cal-google-badge--off">Google desconectado</span>
+      {% endif %}
+    </div>
+    <div class="cal-header-right">
+      <div class="cal-view-toggle" role="group">
+        <button class="cal-toggle-btn" id="btnViewCalendar" onclick="switchView('calendar')" title="Visão calendário">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </button>
+        <button class="cal-toggle-btn" id="btnViewList" onclick="switchView('list')" title="Visão lista">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+            <circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+
+      {% if connection %}
+        {% if last_sync_display %}
+          <span class="cal-sync-info">{{ last_sync_display }}</span>
+        {% endif %}
+        <form method="POST" action="{{ url_for('main.sync_google_calendar_now') }}" style="display:inline">
+          <button type="submit" class="cal-btn-sm">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+            </svg>
+            Sincronizar
+          </button>
+        </form>
+        <form method="POST" action="{{ url_for('main.disconnect_google_calendar') }}" style="display:inline">
+          <button type="submit" class="cal-btn-sm cal-btn-sm--subtle">Desconectar</button>
+        </form>
+      {% elif google_calendar_enabled %}
+        <a href="{{ url_for('main.start_google_calendar_oauth') }}" class="cal-btn-sm">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+          Conectar Google
+        </a>
+      {% endif %}
+
+      <button class="cal-btn-new" onclick="openCreateModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Novo evento
+      </button>
+    </div>
+  </header>
+
+  {# Alert: Google disabled #}
+  {% if not google_calendar_enabled %}
+  <div class="cal-alert cal-alert--warning">
+    Integração Google Calendar desabilitada. Verifique <code>client_secret.json</code> e variáveis de ambiente.
+  </div>
+  {% endif %}
+
+  {# ── Calendar view ──────────────────────────────────────────────────────── #}
+  <div class="cal-view cal-view--calendar" id="viewCalendar">
+    <div class="cal-month-nav">
+      <button class="cal-nav-btn" onclick="prevMonth()" title="Mês anterior">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="cal-month-label" id="monthLabel"></span>
+      <button class="cal-nav-btn" onclick="nextMonth()" title="Próximo mês">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="cal-today-btn" onclick="goToToday()">Hoje</button>
+    </div>
+    <div class="cal-grid-wrap">
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </div>
+
+  {# ── List view ──────────────────────────────────────────────────────────── #}
+  <div class="cal-view cal-view--list" id="viewList">
+    <div class="cal-list" id="calList"></div>
+  </div>
+
+</div>
+
+{# ── Event Modal ──────────────────────────────────────────────────────────── #}
+<div class="cal-modal-overlay" id="eventModal" onclick="handleOverlayClick(event)">
+  <div class="cal-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="cal-modal-header">
+      <h2 class="cal-modal-title" id="modalTitle">Novo evento</h2>
+      <button class="cal-modal-close" onclick="closeModal()" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form method="POST" id="eventForm" action="{{ url_for('main.create_calendar_event') }}" onsubmit="handleFormSubmit(event)">
+      <div class="cal-modal-body">
+
+        <div class="cal-field-title">
+          <input type="text" name="title" id="fieldTitle" placeholder="Título do evento" required maxlength="200" autocomplete="off">
+        </div>
+
+        <div class="cal-field-row">
+          <div class="cal-field-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div class="cal-field-content">
+            <label class="cal-allday-row">
+              <div class="cal-switch">
+                <input type="checkbox" name="all_day" id="fieldAllDay" onchange="toggleAllDay(this.checked)">
+                <span class="cal-switch-track"></span>
+              </div>
+              <span class="cal-allday-label">Dia inteiro</span>
+            </label>
+            <div id="datetimePair" class="cal-datetime-pair">
+              <div class="cal-datetime-col">
+                <span class="cal-datetime-sublabel">Início</span>
+                <input type="datetime-local" name="starts_at" id="fieldStartsAt" class="cal-field-input" required>
+              </div>
+              <div class="cal-datetime-col">
+                <span class="cal-datetime-sublabel">Fim</span>
+                <input type="datetime-local" name="ends_at" id="fieldEndsAt" class="cal-field-input" required>
+              </div>
+            </div>
+            <div id="datePair" class="cal-datetime-pair" style="display:none">
+              <div class="cal-datetime-col">
+                <span class="cal-datetime-sublabel">Data início</span>
+                <input type="date" id="fieldStartsAtDate" class="cal-field-input">
+              </div>
+              <div class="cal-datetime-col">
+                <span class="cal-datetime-sublabel">Data fim</span>
+                <input type="date" id="fieldEndsAtDate" class="cal-field-input">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if connection %}
+        <div class="cal-field-row">
+          <div class="cal-field-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+            </svg>
+          </div>
+          <div class="cal-field-content">
+
+            {# ── State A: no link — toggle to generate ── #}
+            <label class="cal-meet-row" id="meetGenerateRow">
+              <div class="cal-meet-icon-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+              </div>
+              <div class="cal-meet-text">
+                <span class="cal-meet-label">Google Meet</span>
+                <span class="cal-meet-sub" id="meetSub">Adicionar videochamada</span>
+              </div>
+              <div class="cal-switch">
+                <input type="checkbox" name="create_conference" id="fieldMeet" onchange="toggleMeet(this.checked)">
+                <span class="cal-switch-track"></span>
+              </div>
+            </label>
+
+            {# ── State B: link exists — show actions ── #}
+            <div class="cal-meet-existing" id="meetExistingRow" style="display:none">
+              <div class="cal-meet-existing-info">
+                <div class="cal-meet-icon-wrap">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                </div>
+                <div>
+                  <span class="cal-meet-label">Google Meet</span>
+                  <span class="cal-meet-url" id="meetUrlDisplay"></span>
+                </div>
+              </div>
+              <div class="cal-meet-existing-actions" id="meetExistingActions">
+                <a id="meetOpenLink" href="#" target="_blank" rel="noopener noreferrer" class="cal-meet-action-btn">Abrir Meet</a>
+                <button type="button" class="cal-meet-action-btn" onclick="copyMeetLink()">Copiar link</button>
+                <button type="button" class="cal-meet-action-btn cal-meet-action-btn--subtle" onclick="requestNewMeetLink()">Gerar novo link</button>
+              </div>
+              <div class="cal-meet-regen-msg" id="meetRegenMsg" style="display:none">
+                <span>Novo link será gerado ao salvar.</span>
+                <button type="button" class="cal-meet-action-btn cal-meet-action-btn--subtle" onclick="cancelNewMeetLink()">Cancelar</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="cal-field-row">
+          <div class="cal-field-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+          <div class="cal-field-content">
+            <input type="text" name="location" id="fieldLocation" placeholder="Adicionar local" class="cal-field-input" maxlength="255" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="cal-field-row">
+          <div class="cal-field-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/>
+              <line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/>
+            </svg>
+          </div>
+          <div class="cal-field-content">
+            <textarea name="description" id="fieldDescription" placeholder="Adicionar descrição" class="cal-field-textarea" rows="3"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="cal-modal-footer">
+        <div>
+          <button type="button" class="cal-btn-delete" id="btnDelete" onclick="deleteCurrentEvent()" style="display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+            Excluir
+          </button>
+        </div>
+        <div class="cal-modal-footer-right">
+          <button type="button" class="cal-btn-cancel" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="cal-btn-save">Salvar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form method="POST" id="deleteForm" action="" style="display:none"></form>
+
+<script>
+const CAL_EVENTS = {{ events_json | tojson }};
+const URL_CREATE = {{ url_for('main.create_calendar_event') | tojson }};
+const URL_EDIT_0 = {{ url_for('main.edit_calendar_event', event_id=0) | tojson }};
+const URL_DEL_0  = {{ url_for('main.delete_calendar_event', event_id=0) | tojson }};
+
+function makeUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+
+const _today  = new Date();
+let curYear   = _today.getFullYear();
+let curMonth  = _today.getMonth();
+let curView   = localStorage.getItem('cal_view') || 'calendar';
+let editId    = null;
+
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const WDAYS  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+// ── Views ────────────────────────────────────────────────────────────────────
+function switchView(v) {
+  curView = v;
+  localStorage.setItem('cal_view', v);
+  document.getElementById('viewCalendar').classList.toggle('is-active', v === 'calendar');
+  document.getElementById('viewList').classList.toggle('is-active', v === 'list');
+  document.getElementById('btnViewCalendar').classList.toggle('is-active', v === 'calendar');
+  document.getElementById('btnViewList').classList.toggle('is-active', v === 'list');
+  v === 'calendar' ? renderCalendar() : renderList();
+}
+
+// ── Calendar ─────────────────────────────────────────────────────────────────
+function prevMonth() { if (--curMonth < 0) { curMonth = 11; curYear--; } renderCalendar(); }
+function nextMonth() { if (++curMonth > 11) { curMonth = 0; curYear++; } renderCalendar(); }
+function goToToday() { curYear = _today.getFullYear(); curMonth = _today.getMonth(); renderCalendar(); }
+
+function dayTs(dateStr) {
+  const d = new Date(dateStr);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+function isMultiDay(ev) {
+  return dayTs(ev.starts_at) < dayTs(ev.ends_at);
+}
+
+function pillClass(ev) {
+  if (ev.sync_status === 'error')   return 'cal-pill--error';
+  if (ev.sync_status === 'pending') return 'cal-pill--pending';
+  if (ev.source === 'google')       return 'cal-pill--google';
+  return '';
+}
+
+function renderCalendar() {
+  document.getElementById('monthLabel').textContent = MONTHS[curMonth] + ' ' + curYear;
+  const grid = document.getElementById('calGrid');
+  grid.textContent = '';
+
+  const headers = document.createElement('div');
+  headers.className = 'cal-grid-headers';
+  WDAYS.forEach(wd => {
+    const h = document.createElement('div');
+    h.className = 'cal-day-header';
+    h.textContent = wd;
+    headers.appendChild(h);
+  });
+  grid.appendChild(headers);
+
+  const firstWday  = new Date(curYear, curMonth, 1).getDay();
+  const daysInMon  = new Date(curYear, curMonth + 1, 0).getDate();
+  const daysInPrev = new Date(curYear, curMonth, 0).getDate();
+
+  const days = [];
+  for (let i = firstWday - 1; i >= 0; i--)
+    days.push({ y: curYear, m: curMonth - 1, d: daysInPrev - i, outside: true });
+  for (let d = 1; d <= daysInMon; d++) {
+    const isT = curYear === _today.getFullYear() && curMonth === _today.getMonth() && d === _today.getDate();
+    days.push({ y: curYear, m: curMonth, d, outside: false, isToday: isT });
+  }
+  const used = firstWday + daysInMon;
+  const rem  = used % 7 === 0 ? 0 : 7 - (used % 7);
+  for (let d = 1; d <= rem; d++)
+    days.push({ y: curYear, m: curMonth + 1, d, outside: true });
+
+  for (let w = 0; w * 7 < days.length; w++)
+    grid.appendChild(buildWeekRow(days.slice(w * 7, w * 7 + 7)));
+}
+
+function buildWeekRow(week) {
+  const weekEl = document.createElement('div');
+  weekEl.className = 'cal-week';
+
+  const weekStartMs = new Date(week[0].y, week[0].m, week[0].d, 0, 0, 0).getTime();
+  const weekEndMs   = new Date(week[6].y, week[6].m, week[6].d, 23, 59, 59).getTime();
+
+  const spanEvs = CAL_EVENTS.filter(ev => {
+    if (!isMultiDay(ev)) return false;
+    return new Date(ev.starts_at).getTime() <= weekEndMs &&
+           new Date(ev.ends_at).getTime()   >  weekStartMs;
+  });
+
+  // Pre-compute lanes so we know how much space to reserve inside cells
+  const spanBars = [];
+  const laneEnds = [];
+  if (spanEvs.length) {
+    const sorted = [...spanEvs].sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+    sorted.forEach(ev => {
+      const evStartMs = new Date(ev.starts_at).getTime();
+      const evEndMs   = new Date(ev.ends_at).getTime();
+
+      let lane = laneEnds.findIndex(endMs => endMs <= evStartMs);
+      if (lane === -1) { lane = laneEnds.length; laneEnds.push(0); }
+      laneEnds[lane] = evEndMs;
+
+      let colStart = 8, colEnd = 0;
+      week.forEach((day, i) => {
+        const dMs  = new Date(day.y, day.m, day.d, 0, 0, 0).getTime();
+        const dEnd = new Date(day.y, day.m, day.d, 23, 59, 59).getTime();
+        if (evStartMs <= dEnd && evEndMs > dMs) {
+          if (i + 1 < colStart) colStart = i + 1;
+          if (i + 2 > colEnd)   colEnd   = i + 2;
+        }
+      });
+
+      spanBars.push({ ev, lane, colStart, colEnd, evStartMs, evEndMs });
+    });
+  }
+
+  // spanH: height in rem to reserve inside each cell for the span overlay
+  // Each lane is 1.2rem tall + 2px gap; add 4px breathing room below
+  const numLanes = laneEnds.length;
+  const spanH = numLanes > 0 ? numLanes * 1.2 + (numLanes - 1) * 0.125 + 0.25 : 0;
+
+  // ── Day cells (single-day events only) — rendered first in DOM ──
+  const cellsEl = document.createElement('div');
+  cellsEl.className = 'cal-week-cells';
+
+  week.forEach(day => {
+    const singleEvs = day.outside ? [] : CAL_EVENTS.filter(ev => {
+      if (isMultiDay(ev)) return false;
+      return dayTs(ev.starts_at) === new Date(day.y, day.m, day.d, 0, 0, 0).getTime();
+    }).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+
+    cellsEl.appendChild(makeCell(day, singleEvs, spanH));
+  });
+
+  weekEl.appendChild(cellsEl);
+
+  // ── Span bars (multi-day) — absolutely overlaid on top of cells ──
+  if (spanBars.length) {
+    const spansEl = document.createElement('div');
+    spansEl.className = 'cal-week-spans';
+
+    spanBars.forEach(({ ev, lane, colStart, colEnd, evStartMs, evEndMs }) => {
+      const bar = document.createElement('div');
+      bar.className = 'cal-span-bar ' + pillClass(ev);
+      bar.style.gridColumn = colStart + ' / ' + colEnd;
+      bar.style.gridRow    = String(lane + 1);
+
+      const startsInWeek = evStartMs >= weekStartMs;
+      const endsInWeek   = evEndMs   <= weekEndMs;
+      const r = '0.22rem';
+      if      (startsInWeek && endsInWeek)  bar.style.borderRadius = r;
+      else if (startsInWeek)                bar.style.borderRadius = r + ' 0 0 ' + r;
+      else if (endsInWeek)                  bar.style.borderRadius = '0 ' + r + ' ' + r + ' 0';
+      else                                  bar.style.borderRadius = '0';
+
+      bar.textContent = ev.title;
+      bar.title = ev.title;
+      bar.addEventListener('click', e => { e.stopPropagation(); openEditModal(ev); });
+      spansEl.appendChild(bar);
+    });
+
+    weekEl.appendChild(spansEl);
+  }
+
+  return weekEl;
+}
+
+function makeCell(day, singleEvs, spanH = 0) {
+  const { y, m, d, outside, isToday } = day;
+  const cell = document.createElement('div');
+  cell.className = 'cal-cell'
+    + (outside  ? ' cal-cell--outside' : '')
+    + (isToday  ? ' cal-cell--today'   : '');
+
+  const num = document.createElement('div');
+  num.className = 'cal-cell-num';
+  num.textContent = d;
+  cell.appendChild(num);
+
+  // Reserve space so span bar overlay doesn't cover single-day pills
+  if (spanH > 0) {
+    const spacer = document.createElement('div');
+    spacer.className = 'cal-span-spacer';
+    spacer.style.height = spanH + 'rem';
+    cell.appendChild(spacer);
+  }
+
+  if (!outside) {
+    const pad = n => String(n).padStart(2, '0');
+    const realDate = new Date(y, m, d);
+    const dateStr  = realDate.getFullYear() + '-' + pad(realDate.getMonth() + 1) + '-' + pad(realDate.getDate());
+
+    cell.addEventListener('click', ev => {
+      if (ev.target === cell || ev.target === num) openCreateModal(dateStr);
+    });
+
+    const MAX_PILLS = 3;
+    singleEvs.slice(0, MAX_PILLS).forEach(ev => {
+      const pill = document.createElement('div');
+      pill.className = 'cal-event-pill ' + pillClass(ev);
+      const showTime = !ev.is_all_day && ev.starts_at.slice(11) !== '00:00';
+      const hm = showTime ? new Date(ev.starts_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ' : '';
+      pill.textContent = hm + ev.title;
+      pill.title = ev.title;
+      pill.addEventListener('click', e => { e.stopPropagation(); openEditModal(ev); });
+      cell.appendChild(pill);
+    });
+    if (singleEvs.length > MAX_PILLS) {
+      const more = document.createElement('div');
+      more.className = 'cal-more-pills';
+      more.textContent = '+' + (singleEvs.length - MAX_PILLS) + ' mais';
+      cell.appendChild(more);
+    }
+  }
+  return cell;
+}
+
+// ── List ─────────────────────────────────────────────────────────────────────
+function listBarClass(ev) {
+  if (ev.sync_status === 'error')   return 'cal-list-bar--error';
+  if (ev.sync_status === 'pending') return 'cal-list-bar--pending';
+  if (ev.source === 'google')       return 'cal-list-bar--google';
+  return '';
+}
+
+function renderList() {
+  const list = document.getElementById('calList');
+  list.textContent = '';
+
+  if (!CAL_EVENTS.length) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-list-empty';
+    const strong = document.createElement('strong');
+    strong.textContent = 'Novo evento';
+    empty.append('Nenhum evento. Clique em ');
+    empty.appendChild(strong);
+    empty.append(' para começar.');
+    list.appendChild(empty);
+    return;
+  }
+
+  const sorted = [...CAL_EVENTS].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  const groups = {};
+  sorted.forEach(ev => {
+    const key = ev.starts_at.slice(0, 10);
+    (groups[key] = groups[key] || []).push(ev);
+  });
+
+  Object.entries(groups).forEach(([key, evs]) => {
+    const [y, m, d] = key.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const wday = dateObj.toLocaleDateString('pt-BR', {weekday: 'long'});
+    const grp = document.createElement('div');
+    grp.className = 'cal-list-group';
+
+    const dl = document.createElement('div');
+    dl.className = 'cal-list-date-label';
+    dl.textContent = wday.charAt(0).toUpperCase() + wday.slice(1) + ', ' + d + ' de ' + MONTHS[m - 1];
+    grp.appendChild(dl);
+
+    evs.forEach(ev => {
+      const row = document.createElement('div');
+      row.className = 'cal-list-event';
+      row.addEventListener('click', () => openEditModal(ev));
+
+      // Colour bar
+      const bar = document.createElement('div');
+      bar.className = 'cal-list-bar ' + listBarClass(ev);
+      row.appendChild(bar);
+
+      // Time
+      const timeEl = document.createElement('div');
+      timeEl.className = 'cal-list-time';
+      if (ev.is_all_day || ev.starts_at.slice(11) === '00:00') {
+        timeEl.textContent = 'Dia inteiro';
+      } else {
+        const s = new Date(ev.starts_at), e2 = new Date(ev.ends_at);
+        const fmt = dt => dt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+        const start = document.createTextNode(fmt(s));
+        const br = document.createElement('br');
+        const end = document.createElement('span');
+        end.className = 'cal-list-time-end';
+        end.textContent = '– ' + fmt(e2);
+        timeEl.appendChild(start);
+        timeEl.appendChild(br);
+        timeEl.appendChild(end);
+      }
+      row.appendChild(timeEl);
+
+      // Body
+      const body = document.createElement('div');
+      body.className = 'cal-list-body';
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'cal-list-title';
+      titleEl.textContent = ev.title;
+      body.appendChild(titleEl);
+
+      const meta = document.createElement('div');
+      meta.className = 'cal-list-meta';
+
+      if (ev.location) {
+        const locEl = document.createElement('span');
+        locEl.className = 'cal-meta-item';
+        locEl.textContent = ev.location;
+        meta.appendChild(locEl);
+      }
+
+      if (ev.meet_link) {
+        const meetA = document.createElement('a');
+        meetA.className = 'cal-meta-meet';
+        meetA.href = ev.meet_link;
+        meetA.target = '_blank';
+        meetA.rel = 'noopener noreferrer';
+        meetA.textContent = 'Meet';
+        meetA.addEventListener('click', e => e.stopPropagation());
+        meta.appendChild(meetA);
+      }
+
+      const badge = document.createElement('span');
+      badge.className = 'cal-sync-badge cal-sync-badge--' + ev.sync_status;
+      badge.textContent = ({ok:'Sync', error:'Erro sync', pending:'Pendente'})[ev.sync_status] || ev.sync_status;
+      meta.appendChild(badge);
+      body.appendChild(meta);
+      row.appendChild(body);
+
+      // Actions
+      const acts = document.createElement('div');
+      acts.className = 'cal-list-actions';
+
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'cal-btn-sm';
+      editBtn.title = 'Editar';
+      editBtn.setAttribute('aria-label', 'Editar');
+      editBtn.textContent = '✎';
+      editBtn.addEventListener('click', e => { e.stopPropagation(); openEditModal(ev); });
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'cal-btn-sm cal-btn-sm--danger';
+      delBtn.title = 'Excluir';
+      delBtn.setAttribute('aria-label', 'Excluir');
+      delBtn.textContent = '✕';
+      delBtn.addEventListener('click', e => { e.stopPropagation(); deleteEvent(ev.id); });
+
+      acts.appendChild(editBtn);
+      acts.appendChild(delBtn);
+      row.appendChild(acts);
+      grp.appendChild(row);
+    });
+
+    list.appendChild(grp);
+  });
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openCreateModal(dateStr) {
+  editId = null;
+  document.getElementById('modalTitle').textContent = 'Novo evento';
+  document.getElementById('eventForm').action = URL_CREATE;
+  document.getElementById('btnDelete').style.display = 'none';
+  document.getElementById('eventForm').reset();
+
+  const pad = n => String(n).padStart(2, '0');
+  const base = dateStr || (() => {
+    const n = new Date();
+    return n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
+  })();
+  document.getElementById('fieldStartsAt').value = base + 'T09:00';
+  document.getElementById('fieldEndsAt').value   = base + 'T10:00';
+  toggleAllDay(false);
+  resetMeetUI(null);
+  document.getElementById('eventModal').classList.add('is-open');
+  setTimeout(() => document.getElementById('fieldTitle').focus(), 60);
+}
+
+function openEditModal(ev) {
+  editId = ev.id;
+  document.getElementById('modalTitle').textContent = 'Editar evento';
+  document.getElementById('eventForm').action = makeUrl(URL_EDIT_0, ev.id);
+  document.getElementById('btnDelete').style.display = '';
+
+  document.getElementById('fieldTitle').value       = ev.title;
+  document.getElementById('fieldLocation').value    = ev.location || '';
+  document.getElementById('fieldDescription').value = ev.description || '';
+  document.getElementById('fieldAllDay').checked    = ev.is_all_day;
+  toggleAllDay(ev.is_all_day);
+
+  if (ev.is_all_day) {
+    document.getElementById('fieldStartsAtDate').value = ev.starts_at.slice(0, 10);
+    document.getElementById('fieldEndsAtDate').value   = ev.ends_at.slice(0, 10);
+  } else {
+    document.getElementById('fieldStartsAt').value = ev.starts_at;
+    document.getElementById('fieldEndsAt').value   = ev.ends_at;
+  }
+
+  resetMeetUI(ev.meet_link || null);
+  document.getElementById('eventModal').classList.add('is-open');
+  setTimeout(() => document.getElementById('fieldTitle').focus(), 60);
+}
+
+function resetMeetUI(existingLink) {
+  const fm      = document.getElementById('fieldMeet');
+  const genRow  = document.getElementById('meetGenerateRow');
+  const existRow = document.getElementById('meetExistingRow');
+  if (!fm) return;
+
+  fm.checked = false;
+
+  if (existingLink) {
+    if (genRow)  genRow.style.display  = 'none';
+    if (existRow) existRow.style.display = '';
+    const openLink   = document.getElementById('meetOpenLink');
+    const urlDisplay = document.getElementById('meetUrlDisplay');
+    const existActs  = document.getElementById('meetExistingActions');
+    const regenMsg   = document.getElementById('meetRegenMsg');
+    if (openLink)   openLink.href = existingLink;
+    if (urlDisplay) {
+      try { urlDisplay.textContent = new URL(existingLink).host + new URL(existingLink).pathname; }
+      catch { urlDisplay.textContent = existingLink; }
+    }
+    if (existActs) existActs.style.display = '';
+    if (regenMsg)  regenMsg.style.display  = 'none';
+  } else {
+    if (genRow)   genRow.style.display   = '';
+    if (existRow) existRow.style.display = 'none';
+    if (genRow)   genRow.classList.remove('is-active');
+    const ms = document.getElementById('meetSub');
+    if (ms) ms.textContent = 'Adicionar videochamada';
+  }
+}
+
+function copyMeetLink() {
+  const link = document.getElementById('meetOpenLink');
+  if (!link) return;
+  const url = link.href;
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    btn.textContent = 'Copiado!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = 'Copiado!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+function requestNewMeetLink() {
+  document.getElementById('meetExistingActions').style.display = 'none';
+  document.getElementById('meetRegenMsg').style.display = '';
+  const fm = document.getElementById('fieldMeet');
+  if (fm) fm.checked = true;
+}
+
+function cancelNewMeetLink() {
+  document.getElementById('meetExistingActions').style.display = '';
+  document.getElementById('meetRegenMsg').style.display = 'none';
+  const fm = document.getElementById('fieldMeet');
+  if (fm) fm.checked = false;
+}
+
+function closeModal() {
+  document.getElementById('eventModal').classList.remove('is-open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('eventModal')) closeModal();
+}
+
+function toggleAllDay(checked) {
+  document.getElementById('datetimePair').style.display = checked ? 'none' : '';
+  document.getElementById('datePair').style.display     = checked ? ''     : 'none';
+  document.getElementById('fieldStartsAt').required     = !checked;
+  document.getElementById('fieldEndsAt').required       = !checked;
+
+  if (checked) {
+    // Copy date portion from datetime fields → date-only fields
+    const sVal = document.getElementById('fieldStartsAt').value;
+    const eVal = document.getElementById('fieldEndsAt').value;
+    if (sVal) document.getElementById('fieldStartsAtDate').value = sVal.slice(0, 10);
+    if (eVal) document.getElementById('fieldEndsAtDate').value   = eVal.slice(0, 10);
+  } else {
+    // Copy date portion from date-only fields → datetime fields (keep existing time)
+    const sDate = document.getElementById('fieldStartsAtDate').value;
+    const eDate = document.getElementById('fieldEndsAtDate').value;
+    const sAt = document.getElementById('fieldStartsAt');
+    const eAt = document.getElementById('fieldEndsAt');
+    if (sDate) sAt.value = sDate + (sAt.value ? 'T' + sAt.value.slice(11) : 'T09:00');
+    if (eDate) eAt.value = eDate + (eAt.value ? 'T' + eAt.value.slice(11) : 'T10:00');
+  }
+}
+
+function toggleMeet(checked) {
+  const mr = document.getElementById('meetGenerateRow');
+  const ms = document.getElementById('meetSub');
+  if (mr) mr.classList.toggle('is-active', checked);
+  if (ms) ms.textContent = checked ? 'Link será gerado ao salvar' : 'Adicionar videochamada';
+}
+
+function handleFormSubmit(e) {
+  if (document.getElementById('fieldAllDay').checked) {
+    const sd = document.getElementById('fieldStartsAtDate').value;
+    const ed = document.getElementById('fieldEndsAtDate').value || sd;
+    if (!sd) { e.preventDefault(); alert('Informe a data de início.'); return; }
+    document.getElementById('fieldStartsAt').value    = sd + 'T00:00';
+    document.getElementById('fieldEndsAt').value      = (ed || sd) + 'T23:59';
+    document.getElementById('fieldStartsAt').required = false;
+    document.getElementById('fieldEndsAt').required   = false;
+  }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+function deleteCurrentEvent() { if (editId) deleteEvent(editId); }
+
+function deleteEvent(id) {
+  if (!confirm('Excluir este evento?')) return;
+  closeModal();
+  const f = document.getElementById('deleteForm');
+  f.action = makeUrl(URL_DEL_0, id);
+  f.submit();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+switchView(curView);
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('eventModal').classList.contains('is-open'))
+    closeModal();
+});
+</script>
+{% endblock %}

@@ -1,6 +1,7 @@
 from flask import flash, g, redirect, render_template, request, url_for
 
 from models import User, UserArea, db
+from services.govbr_oidc import normalize_cpf
 
 from .blueprint import main_bp
 from .decorators import admin_required, login_required
@@ -31,6 +32,59 @@ def _parse_selected_areas(raw_areas):
     return selected_areas, invalid_areas, area_catalog_choices
 
 
+def _parse_cpf_govbr(raw_cpf):
+    if raw_cpf is None or not str(raw_cpf).strip():
+        return None, None
+    try:
+        return normalize_cpf(raw_cpf), None
+    except ValueError as exc:
+        return None, str(exc)
+
+
+def _normalize_selected_areas_for_form(selected_areas, area_catalog_choices):
+    catalog_map = {
+        normalize_area_name(area_name).casefold(): area_name
+        for area_name in area_catalog_choices
+        if normalize_area_name(area_name)
+    }
+
+    normalized_user_areas = []
+    seen = set()
+
+    for area in selected_areas:
+        normalized_area = normalize_area_name(area)
+        if not normalized_area:
+            continue
+
+        normalized_key = normalized_area.casefold()
+        if normalized_key in seen:
+            continue
+        seen.add(normalized_key)
+
+        normalized_user_areas.append(catalog_map.get(normalized_key, normalized_area))
+
+    return normalized_user_areas
+
+
+def _area_choice_keys(selected_areas):
+    keys = []
+    seen = set()
+
+    for area in selected_areas:
+        normalized = normalize_area_name(area)
+        if not normalized:
+            continue
+
+        key = normalized.casefold()
+        if key in seen:
+            continue
+
+        seen.add(key)
+        keys.append(key)
+
+    return keys
+
+
 @main_bp.route('/admin/users')
 @login_required
 @admin_required
@@ -53,9 +107,12 @@ def add_user():
         password = request.form.get('password')
         orgao = request.form.get('orgao')
         is_admin_form = request.form.get('is_admin') == 'on'
+        cpf_govbr, cpf_error = _parse_cpf_govbr(request.form.get('cpf_govbr'))
 
         if not username or not name or not password:
             flash('Username, Nome Completo e Senha são obrigatórios.', 'danger')
+        elif cpf_error:
+            flash(f'CPF gov.br inválido: {cpf_error}', 'danger')
         elif invalid_areas:
             flash(
                 f'Área(s) inválida(s): {", ".join(invalid_areas)}. Atualize o formulário e tente novamente.',
@@ -63,12 +120,15 @@ def add_user():
             )
         elif User.query.filter_by(username=username).first():
             flash('Este nome de usuário já está em uso. Escolha outro.', 'danger')
+        elif cpf_govbr and User.query.filter_by(cpf_govbr=cpf_govbr).first():
+            flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
         else:
             new_user = User(
                 username=username, 
                 name=name, 
                 orgao=orgao if orgao else None, 
-                is_admin=is_admin_form
+                is_admin=is_admin_form,
+                cpf_govbr=cpf_govbr,
             )
             new_user.set_password(password)
             db.session.add(new_user)
@@ -88,6 +148,7 @@ def add_user():
             'user_form.html',
             user=request.form,
             user_areas=selected_areas,
+            user_area_keys=_area_choice_keys(selected_areas),
             action_verb="Adicionar",
             areas_responsaveis_choices=area_catalog_choices,
         )
@@ -108,13 +169,33 @@ def add_user():
 @admin_required
 def edit_user(user_id):
     user_to_edit = get_or_404(User, user_id)
+    hide_govbr_link_fields = bool(user_to_edit.cpf_govbr and user_to_edit.govbr_sub)
     if request.method == 'POST':
         # Username geralmente não é editável ou requer cuidados especiais de unicidade
         user_to_edit.name = request.form.get('name')
         user_to_edit.orgao = request.form.get('orgao') if request.form.get('orgao') else None
-        selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
-            request.form.getlist('areas_responsavel')
-        )
+        areas_form_submitted = 'areas_responsavel' in request.form
+        selected_areas = user_to_edit.get_areas()
+        invalid_areas = []
+        area_catalog_choices = get_area_catalog_choices()
+        normalized_selected_areas = _normalize_selected_areas_for_form(selected_areas, area_catalog_choices)
+
+        if areas_form_submitted:
+            selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
+                request.form.getlist('areas_responsavel')
+            )
+            normalized_selected_areas = _normalize_selected_areas_for_form(
+                selected_areas,
+                area_catalog_choices,
+            )
+            selected_area_keys = _area_choice_keys(normalized_selected_areas)
+        else:
+            selected_area_keys = _area_choice_keys(normalized_selected_areas)
+        should_update_cpf = not hide_govbr_link_fields and 'cpf_govbr' in request.form
+        cpf_govbr = user_to_edit.cpf_govbr
+        cpf_error = None
+        if should_update_cpf:
+            cpf_govbr, cpf_error = _parse_cpf_govbr(request.form.get('cpf_govbr'))
         
         is_admin_form_val = request.form.get('is_admin') == 'on'
 
@@ -127,9 +208,19 @@ def edit_user(user_id):
                 return render_template(
                     'user_form.html',
                     user=user_to_edit,
-                    user_areas=user_to_edit.get_areas(),
+                    user_areas=_normalize_selected_areas_for_form(
+                        user_to_edit.get_areas(),
+                        area_catalog_choices,
+                    ),
+                    user_area_keys=_area_choice_keys(
+                        _normalize_selected_areas_for_form(
+                            user_to_edit.get_areas(),
+                            area_catalog_choices,
+                        )
+                    ),
                     action_verb="Editar",
                     areas_responsaveis_choices=area_catalog_choices,
+                    hide_govbr_link_fields=hide_govbr_link_fields,
                 )
 
         if invalid_areas:
@@ -140,15 +231,53 @@ def edit_user(user_id):
             return render_template(
                 'user_form.html',
                 user=user_to_edit,
-                user_areas=selected_areas,
+                user_areas=normalized_selected_areas,
+                user_area_keys=selected_area_keys,
                 action_verb="Editar",
                 areas_responsaveis_choices=area_catalog_choices,
+                hide_govbr_link_fields=hide_govbr_link_fields,
+            )
+
+        if cpf_error:
+            flash(f'CPF gov.br inválido: {cpf_error}', 'danger')
+            return render_template(
+                'user_form.html',
+                user=user_to_edit,
+                user_areas=normalized_selected_areas,
+                user_area_keys=selected_area_keys,
+                action_verb="Editar",
+                areas_responsaveis_choices=area_catalog_choices,
+                hide_govbr_link_fields=hide_govbr_link_fields,
+            )
+
+        if (
+            should_update_cpf
+            and cpf_govbr
+            and User.query.filter(User.cpf_govbr == cpf_govbr, User.id != user_to_edit.id).first()
+        ):
+            flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
+            return render_template(
+                'user_form.html',
+                user=user_to_edit,
+                user_areas=normalized_selected_areas,
+                user_area_keys=selected_area_keys,
+                action_verb="Editar",
+                areas_responsaveis_choices=area_catalog_choices,
+                hide_govbr_link_fields=hide_govbr_link_fields,
             )
         
         user_to_edit.is_admin = is_admin_form_val
+        if should_update_cpf:
+            old_cpf = user_to_edit.cpf_govbr
+            user_to_edit.cpf_govbr = cpf_govbr
+            if not cpf_govbr or (old_cpf and old_cpf != cpf_govbr):
+                user_to_edit.govbr_sub = None
 
-        # Atualizar áreas do usuário
-        user_to_edit.set_areas(selected_areas)
+        if areas_form_submitted:
+            # Atualizar áreas do usuário apenas quando o grupo de áreas foi submetido.
+            # Caso o formulário venha sem a lista (por exemplo, em fluxo legado/compatibilidade),
+            # mantém as áreas previamente cadastradas.
+            user_to_edit.set_areas(selected_areas)
 
         new_password = request.form.get('password')
         if new_password: # Só atualiza a senha se uma nova for fornecida
@@ -159,12 +288,19 @@ def edit_user(user_id):
         return redirect(url_for('main.list_users'))
     
     # Método GET
+    area_catalog_choices = get_area_catalog_choices()
+    selected_areas = _normalize_selected_areas_for_form(
+        user_to_edit.get_areas(),
+        area_catalog_choices,
+    )
     return render_template(
         'user_form.html',
         user=user_to_edit,
-        user_areas=user_to_edit.get_areas(),
+        user_areas=selected_areas,
+        user_area_keys=_area_choice_keys(selected_areas),
         action_verb="Editar",
-        areas_responsaveis_choices=get_area_catalog_choices(),
+        areas_responsaveis_choices=area_catalog_choices,
+        hide_govbr_link_fields=hide_govbr_link_fields,
     )
 
 @main_bp.route('/admin/users/delete/<int:user_id>', methods=['POST'])

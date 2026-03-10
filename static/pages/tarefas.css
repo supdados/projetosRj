@@ -1248,6 +1248,16 @@ html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-kanban-co
     color: var(--app-color-text-muted);
 }
 
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-kanban-context a {
+    color: #8fc6ff;
+    font-weight: var(--ds-font-weight-bold);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-kanban-context a:hover,
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-kanban-context a:focus {
+    color: #c9e4ff;
+}
+
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-project-input {
     background: #223144;
     border-color: rgba(99, 166, 219, 0.34);

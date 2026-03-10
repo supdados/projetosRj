@@ -577,13 +577,34 @@ body.is-authenticated .content.expanded {
     padding: 0;
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.1rem;
     color: var(--dark-gray);
     text-decoration: none;
+    line-height: 1;
 }
 
 .app-brand:hover {
     color: var(--primary-color);
+}
+
+.app-brand-logo {
+    height: 2.4rem;
+    width: auto;
+    object-fit: contain;
+    object-position: center center;
+    display: block;
+    flex: 0 0 auto;
+    margin-right: 0;
+    filter: none;
+}
+
+html[data-theme="dark"] .app-brand-logo {
+    filter: grayscale(1) brightness(2.8) contrast(1.05);
+}
+
+html[data-theme="dark"] .app-brand,
+html[data-theme="dark"] .app-brand-text {
+    color: #ffffff;
 }
 
 .app-brand-icon {
@@ -592,6 +613,7 @@ body.is-authenticated .content.expanded {
 }
 
 .app-brand-text {
+    color: var(--primary-color);
     font-size: var(--ds-font-size-base);
     font-weight: var(--ds-font-weight-semibold);
     letter-spacing: var(--ds-letter-spacing-normal);
@@ -1511,6 +1533,15 @@ body.is-authenticated .main-content > .app-page-shell {
 }
 
 @media (max-width: 991px) {
+    .app-brand {
+        gap: 0.24rem;
+    }
+
+    .app-brand-logo {
+        height: 2rem;
+        width: auto;
+    }
+
     body.is-authenticated .main-content > .container-fluid,
     body.is-authenticated .main-content > .main-container,
     body.is-authenticated .main-content > .pending-page,
@@ -1836,6 +1867,10 @@ footer p {
     pointer-events: none;
 }
 
+body.is-authenticated .app-flash-stack {
+    top: 73px;
+}
+
 .app-flash-alert {
     margin: 0;
     padding: 0.56rem 0.74rem;
@@ -1958,4 +1993,3 @@ html, body {
     background-size: 200% 100% !important;
     animation: skeleton-loading 1.5s infinite !important;
 }
-

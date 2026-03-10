@@ -412,27 +412,20 @@
     color: #8a1515;
 }
 
-/* Options: reset para evitar herança de cor no Windows/Linux
-   Cada option recebe sua própria cor para leitura limpa no dropdown */
-.task-detail-v2 .task-item-status option {
-    background: #ffffff;
-    color: #374151;
-}
-.task-detail-v2 .task-item-status option[value="nao_iniciada"]   { background: #edf0f4; color: #4c5563; }
-.task-detail-v2 .task-item-status option[value="em_andamento"]  { background: #e6f2ff; color: #215488; }
-.task-detail-v2 .task-item-status option[value="para_validacao"] { background: #fff3df; color: #8a4f00; }
-.task-detail-v2 .task-item-status option[value="para_ajustes"]  { background: #fff3e0; color: #7c3210; }
-.task-detail-v2 .task-item-status option[value="finalizada"]    { background: #eaf7f1; color: #186244; }
-
+.task-detail-v2 .task-item-status option,
 .task-detail-v2 .task-item-prioridade-select option {
     background: #ffffff;
     color: #374151;
 }
-.task-detail-v2 .task-item-prioridade-select option[value=""]        { background: #f4f4f5; color: #8a9bb0; }
-.task-detail-v2 .task-item-prioridade-select option[value="baixa"]   { background: #edf7ed; color: #1e6e35; }
-.task-detail-v2 .task-item-prioridade-select option[value="media"]   { background: #fff8e6; color: #7d5200; }
-.task-detail-v2 .task-item-prioridade-select option[value="alta"]    { background: #fff1e6; color: #8a3600; }
-.task-detail-v2 .task-item-prioridade-select option[value="urgente"] { background: #fdeaea; color: #8a1515; }
+
+/* Neutraliza coloração de options herdada do CSS legado global. */
+.task-detail-v2 .task-item-status option[value="programado"],
+.task-detail-v2 .task-item-status option[value="em_andamento"],
+.task-detail-v2 .task-item-status option[value="validacao"],
+.task-detail-v2 .task-item-status option[value="finalizado"] {
+    background: #ffffff;
+    color: #374151;
+}
 
 .task-detail-v2 .task-item-responsavel {
     font-size: var(--ds-font-size-xs);

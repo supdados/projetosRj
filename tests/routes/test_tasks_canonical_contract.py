@@ -55,6 +55,8 @@ def test_edit_task_canonical_returns_updated_payload(app, client_user, seed_data
     assert payload['task']['status'] == 'para_validacao'
     assert payload['task']['prioridade'] == 'urgente'
     assert payload['task']['tipo_pedido'] == 'melhoria'
+    assert payload['task']['can_delete'] is True
+    assert payload['task']['can_finalize'] is True
     assert payload['item']['id'] == seed_data['task_id']
 
     with app.app_context():

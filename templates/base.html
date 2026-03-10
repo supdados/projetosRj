@@ -31,8 +31,12 @@
     </script>
     
     <!-- Favicon -->
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico', v='20260305a') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico', v='20260305a') }}" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/brand/favicon.svg', v='20260305a') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/brand/favicon-32.png', v='20260305a') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/brand/favicon-16.png', v='20260305a') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/brand/logo-blue.png', v='20260304h') }}">
     
     <!-- Local typography assets (self-host) -->
     <link rel="preload" href="{{ url_for('static', filename='fonts/Inter-Variable.woff2') }}" as="font" type="font/woff2" crossorigin>
@@ -100,7 +104,7 @@
                 <div class="container-fluid app-topnav-container">
                     <div class="app-topnav-left">
                         <a href="{{ url_for('main.dashboard') }}" class="navbar-brand app-brand" data-area-nav>
-                            <i class="fas fa-project-diagram app-brand-icon"></i>
+                            <img src="{{ url_for('static', filename='img/brand/logo-blue.png', v='20260304h') }}" class="app-brand-logo" alt="Logo ProjetosRJ">
                             <span class="app-brand-text">ProjetosRJ</span>
                         </a>
 
@@ -137,6 +141,17 @@
                                 aria-label="Tarefas"
                             >
                                 <i class="fas fa-tasks"></i>
+                            </a>
+                            <a
+                                href="{{ url_for('main.calendars_hub') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.calendars_hub' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                data-area-nav
+                                title="Calendários"
+                                aria-label="Calendários"
+                            >
+                                <i class="fas fa-calendar-alt"></i>
                             </a>
                             <a
                                 href="{{ url_for('main.list_projetos_pendentes') }}"
@@ -325,8 +340,8 @@
                                     <li>
                                         <a href="{{ url_for('main.change_password') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.change_password' else '' }}">
                                             <span class="app-dropdown-item-main">
-                                                <i class="fas fa-key"></i>
-                                                <span>Alterar Senha</span>
+                                                <i class="fas {{ 'fa-key' if is_admin_user else 'fa-user-cog' }}"></i>
+                                                <span>{{ 'Alterar Senha' if is_admin_user else 'Gerenciar Conta' }}</span>
                                             </span>
                                             <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
                                         </a>
@@ -362,9 +377,9 @@
             {% else %}
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid">
-                    <a href="{{ url_for('main.login_page') }}" class="navbar-brand ms-0">
-                        <i class="fas me-2"></i>
-                        <span>ProjetosRJ</span>
+                    <a href="{{ url_for('main.login_page') }}" class="navbar-brand app-brand ms-0">
+                        <img src="{{ url_for('static', filename='img/brand/logo-blue.png', v='20260304h') }}" class="app-brand-logo" alt="Logo ProjetosRJ">
+                        <span class="app-brand-text">ProjetosRJ</span>
                     </a>
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
@@ -850,11 +865,8 @@
                 <div class="skeleton-page login-page skeleton-login-page">
                     <div class="login-card skeleton-card skeleton-login-card">
                         <div class="login-brand skeleton-login-brand">
-                            <div class="login-brand-icon skeleton-login-brand-icon">
-                                <span class="skeleton-login-brand-glyph" aria-hidden="true"></span>
-                            </div>
+                            <div class="login-brand-logo skeleton-login-brand-logo" aria-hidden="true"></div>
                             <div class="login-title skeleton-login-title" aria-hidden="true"></div>
-                            <div class="login-subtitle skeleton-login-subtitle" aria-hidden="true"></div>
                         </div>
 
                         <div class="login-field skeleton-login-field">
@@ -874,6 +886,16 @@
                         </div>
 
                         <div class="btn login-submit skeleton-login-submit" aria-hidden="true"></div>
+
+                        {% if govbr_login_enabled %}
+                        <div class="login-divider skeleton-login-divider" role="separator" aria-hidden="true">
+                            <span class="skeleton-login-divider-text" aria-hidden="true"></span>
+                        </div>
+                        <div class="btn login-govbr-btn skeleton-login-govbr-btn" aria-hidden="true">
+                            <span class="skeleton-login-govbr-text" aria-hidden="true"></span>
+                            <span class="skeleton-login-govbr-logo" aria-hidden="true"></span>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% else %}
