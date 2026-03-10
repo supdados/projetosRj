@@ -27,7 +27,7 @@ from objective_catalog import sync_goal_catalog_to_db
 from routes.shared import ensure_area_catalog_seeded
 from time_utils import utc_now
 
-ALEMBIC_HEAD = 'd1e2f3a4b5c6'
+ALEMBIC_HEAD = 'e5f6a7b8c9d0'
 VALID_TASK_STATUSES = {
     'nao_iniciada',
     'em_andamento',
@@ -106,6 +106,14 @@ TASK_TEMP_TABLES = (
     'task_anexo__migration_tmp',
     'legacy_task_redirect__migration_tmp',
 )
+CALENDAR_INCREMENTAL_COLUMNS = {
+    'user_calendar_connection': [
+        ('watch_channel_token', 'VARCHAR(255)'),
+    ],
+    'calendar_event': [
+        ('meet_link', 'VARCHAR(512)'),
+    ],
+}
 
 
 def _emit(message, emit_output=True):
@@ -1129,6 +1137,39 @@ def sync_area_catalog(emit_output=True):
         return {'success': False, 'areas': None}
 
 
+def ensure_calendar_schema(emit_output=True):
+    _emit("\n-- [8/8] Garantindo schema do calendário...", emit_output)
+    changes = []
+    try:
+        db.create_all()
+        inspector = inspect(db.engine)
+
+        for table_name, required_columns in CALENDAR_INCREMENTAL_COLUMNS.items():
+            if not _table_exists(inspector, table_name):
+                continue
+            table_columns = _column_names(inspector, table_name)
+            for column_name, column_sql_type in required_columns:
+                if column_name in table_columns:
+                    continue
+                db.session.execute(
+                    text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_sql_type}')
+                )
+                changes.append(f'{table_name}.{column_name}')
+                inspector = inspect(db.engine)
+                table_columns = _column_names(inspector, table_name)
+
+        db.session.commit()
+        if changes:
+            _emit(f"   ✓ Ajustes aplicados: {', '.join(changes)}", emit_output)
+        else:
+            _emit('   ✓ Schema do calendário já estava atualizado.', emit_output)
+        return {'success': True, 'changes': changes}
+    except Exception as exc:
+        db.session.rollback()
+        _emit(f'   ✗ ERRO ao garantir schema do calendário: {exc}', emit_output)
+        return {'success': False, 'changes': changes}
+
+
 def stamp_alembic_head(emit_output=True):
     if db.engine.dialect.name != 'mysql':
         return {'success': True, 'stamped': False}
@@ -1177,6 +1218,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         ensure_task_schema(emit_output=emit_output),
         sync_goal_catalog(emit_output=emit_output),
         sync_area_catalog(emit_output=emit_output),
+        ensure_calendar_schema(emit_output=emit_output),
     ]
 
     if not all(step.get('success') for step in steps):
@@ -1190,11 +1232,13 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
 
     project_columns_added = steps[2]['added_columns']
     task_changes = steps[3]['changes']
+    calendar_changes = steps[6]['changes']
 
     return {
         'success': True,
         'column_added': 'project.abep_indicator' in project_columns_added,
         'task_core_cols': task_changes,
+        'calendar_changes': calendar_changes,
         'area_catalog_choices': steps[5]['areas'],
         'sync_summary': steps[4]['summary'],
         'user_areas_migrated': steps[0]['migrated_count'],

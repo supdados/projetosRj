@@ -10,7 +10,8 @@ def test_calendars_page_renders_core_actions(client_user):
     assert response.status_code == 200
 
     html = response.get_data(as_text=True)
-    assert 'Gerencie eventos internos e sincronize com Google Calendar.' in html
+    assert 'Calendário' in html
+    assert 'Conectar Google' in html
     assert 'action="/calendarios/eventos"' in html
     assert 'href="/calendar/oauth/start"' in html
 
@@ -32,7 +33,7 @@ def test_calendars_connected_view_hides_calendar_watch_subtext(app, client_user,
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'Conexão ativa' in html
+    assert 'Google conectado' in html
     assert 'Calendário:' not in html
     assert 'Watch expira em:' not in html
     assert 'Renovar watch' not in html
@@ -61,7 +62,9 @@ def test_calendars_hub_runs_auto_maintenance_when_connected(app, client_user, se
     response = client_user.get('/calendarios')
     assert response.status_code == 200
     assert calls['count'] == 1
-    assert 'Último sync:' in response.get_data(as_text=True)
+    html = response.get_data(as_text=True)
+    expected_sync = calendar_routes._format_human_datetime(datetime.datetime(2026, 3, 6, 20, 0))
+    assert expected_sync in html
 
 
 def test_create_calendar_event_without_google_connection_marks_pending(app, client_user, seed_data):
@@ -207,6 +210,7 @@ def test_calendar_webhook_rejects_invalid_channel_token(app, client, seed_data):
 
 def test_resolve_webhook_address_prefers_forwarded_https_on_ngrok(app):
     app.config['GOOGLE_CALENDAR_WEBHOOK_URL'] = ''
+    app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = ''
 
     with app.test_request_context(
         '/calendarios',
@@ -219,6 +223,51 @@ def test_resolve_webhook_address_prefers_forwarded_https_on_ngrok(app):
         address = calendar_routes._resolve_webhook_address()
 
     assert address == 'https://reverberative-dawn-syndetically.ngrok-free.dev/webhook'
+
+
+def test_resolve_webhook_address_prefers_public_base_url_config(app):
+    app.config['GOOGLE_CALENDAR_WEBHOOK_URL'] = ''
+    app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = 'https://projetos.proderj.rj.gov.br'
+
+    with app.test_request_context('/calendarios', base_url='http://127.0.0.1:5002'):
+        address = calendar_routes._resolve_webhook_address()
+
+    assert address == 'https://projetos.proderj.rj.gov.br/webhook'
+
+
+def test_resolve_runtime_google_redirect_uri_prefers_public_base_url(app, monkeypatch):
+    app.config['GOOGLE_CALENDAR_REDIRECT_URI'] = ''
+    app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = 'https://projetos.proderj.rj.gov.br'
+
+    monkeypatch.setattr(
+        calendar_routes,
+        'get_google_client_redirect_uris',
+        lambda _config: [
+            'http://127.0.0.1:5002/calendar/oauth/callback',
+            'https://projetos.proderj.rj.gov.br/calendar/oauth/callback',
+        ],
+    )
+
+    with app.test_request_context('/calendarios', base_url='http://127.0.0.1:5002'):
+        redirect_uri = calendar_routes._resolve_runtime_google_redirect_uri()
+
+    assert redirect_uri == 'https://projetos.proderj.rj.gov.br/calendar/oauth/callback'
+
+
+def test_resolve_runtime_google_redirect_uri_forces_public_base_url_when_configured(app, monkeypatch):
+    app.config['GOOGLE_CALENDAR_REDIRECT_URI'] = ''
+    app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = 'https://projetos.proderj.rj.gov.br'
+
+    monkeypatch.setattr(
+        calendar_routes,
+        'get_google_client_redirect_uris',
+        lambda _config: ['http://127.0.0.1:5002/calendar/oauth/callback'],
+    )
+
+    with app.test_request_context('/calendarios', base_url='http://127.0.0.1:5002'):
+        redirect_uri = calendar_routes._resolve_runtime_google_redirect_uri()
+
+    assert redirect_uri == 'https://projetos.proderj.rj.gov.br/calendar/oauth/callback'
 
 
 def test_describe_calendar_issue_normalizes_webhook_https_error():

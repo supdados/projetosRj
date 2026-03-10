@@ -40,6 +40,9 @@ def _resolve_runtime_google_redirect_uri():
 
     callback_path = url_for('main.google_calendar_oauth_callback')
     callback_url = _build_public_url(callback_path)
+    if _configured_public_origin():
+        return callback_url
+
     callback_parsed = urlparse(callback_url)
     redirect_uris = get_google_client_redirect_uris(current_app.config)
 
@@ -72,6 +75,22 @@ def _forwarded_header_value(header_name):
     return raw_value.split(',', 1)[0].strip()
 
 
+def _configured_public_origin():
+    configured = str(current_app.config.get('GOOGLE_CALENDAR_PUBLIC_BASE_URL', '')).strip()
+    if not configured:
+        return ''
+
+    parsed = urlparse(configured)
+    if not parsed.scheme or not parsed.netloc:
+        current_app.logger.warning(
+            'GOOGLE_CALENDAR_PUBLIC_BASE_URL inválida (%s). Use formato https://host.',
+            configured,
+        )
+        return ''
+
+    return f'{parsed.scheme}://{parsed.netloc}'
+
+
 def _public_host():
     forwarded_host = _forwarded_header_value('X-Forwarded-Host')
     return forwarded_host or request.host
@@ -87,6 +106,7 @@ def _public_scheme():
         return forwarded_proto
 
     host = _public_host_without_port()
+    # Mantém compatibilidade com desenvolvimento local via ngrok sem exigir env fixa.
     if host.endswith('.ngrok-free.dev') or host.endswith('.ngrok.app'):
         return 'https'
 
@@ -95,6 +115,9 @@ def _public_scheme():
 
 def _build_public_url(path):
     normalized_path = path if str(path).startswith('/') else f'/{path}'
+    configured_origin = _configured_public_origin()
+    if configured_origin:
+        return f'{configured_origin}{normalized_path}'
     return f'{_public_scheme()}://{_public_host()}{normalized_path}'
 
 
