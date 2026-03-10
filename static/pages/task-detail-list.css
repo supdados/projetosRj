@@ -418,6 +418,15 @@
     color: #374151;
 }
 
+/* Neutraliza coloração de options herdada do CSS legado global. */
+.task-detail-v2 .task-item-status option[value="programado"],
+.task-detail-v2 .task-item-status option[value="em_andamento"],
+.task-detail-v2 .task-item-status option[value="validacao"],
+.task-detail-v2 .task-item-status option[value="finalizado"] {
+    background: #ffffff;
+    color: #374151;
+}
+
 .task-detail-v2 .task-item-responsavel {
     font-size: var(--ds-font-size-xs);
     color: #4f6d8f;
