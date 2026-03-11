@@ -266,7 +266,8 @@
                 const groupConfig = [
                     { key: 'projects', label: 'Projetos', icon: 'fa-folder-open', badgeClass: 'type-project' },
                     { key: 'stages', label: 'Etapas', icon: 'fa-list-check', badgeClass: 'type-stage' },
-                    { key: 'tasks', label: 'Tarefas', icon: 'fa-clipboard-list', badgeClass: 'type-task' }
+                    { key: 'tasks', label: 'Tarefas', icon: 'fa-clipboard-list', badgeClass: 'type-task' },
+                    { key: 'events', label: 'Eventos', icon: 'fa-calendar-alt', badgeClass: 'type-event' }
                 ];
 
                 let debounceTimer = null;

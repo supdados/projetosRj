@@ -2,7 +2,7 @@ from flask import g, jsonify, render_template, request, url_for
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import joinedload
 
-from models import Etapa, Project, Task
+from models import CalendarEvent, Etapa, Project, Task
 
 from .blueprint import main_bp
 from .decorators import login_required
@@ -51,6 +51,26 @@ def _build_project_display_title(project, max_length=120):
     return _truncate_text(f'{project.id}-{base_title}', max_length)
 
 
+def _format_calendar_event_period(event):
+    if not event.starts_at:
+        return ''
+
+    starts_at = event.starts_at
+    ends_at = event.ends_at
+
+    if event.is_all_day:
+        if ends_at and ends_at.date() != starts_at.date():
+            return f'{starts_at:%d/%m/%Y} ate {ends_at:%d/%m/%Y}'
+        return starts_at.strftime('%d/%m/%Y')
+
+    if ends_at:
+        if starts_at.date() == ends_at.date():
+            return f'{starts_at:%d/%m/%Y} {starts_at:%H:%M} - {ends_at:%H:%M}'
+        return f'{starts_at:%d/%m/%Y %H:%M} - {ends_at:%d/%m/%Y %H:%M}'
+
+    return starts_at.strftime('%d/%m/%Y %H:%M')
+
+
 def _resolve_match_info(term, ordered_fields):
     normalized_term = (term or '').strip().lower()
     if not normalized_term:
@@ -88,6 +108,7 @@ def _empty_global_search_payload(term):
                 'projects': False,
                 'stages': False,
                 'tasks': False,
+                'events': False,
                 'any': False,
             },
         },
@@ -95,12 +116,14 @@ def _empty_global_search_payload(term):
             'projects': 0,
             'stages': 0,
             'tasks': 0,
+            'events': 0,
             'total': 0,
         },
         'results': {
             'projects': [],
             'stages': [],
             'tasks': [],
+            'events': [],
         },
     }
 
@@ -233,6 +256,26 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
     tasks = task_query.all()
     tasks, tasks_has_more = trim_limited_rows(tasks)
 
+    event_id_filter = (CalendarEvent.id == search_id) if search_id is not None else None
+    event_text_filters = or_(
+        CalendarEvent.title.ilike(search_pattern),
+        CalendarEvent.description.ilike(search_pattern),
+        CalendarEvent.location.ilike(search_pattern),
+    )
+    event_query = CalendarEvent.query.filter(
+        CalendarEvent.user_id == user.id,
+        or_(event_id_filter, event_text_filters) if event_id_filter is not None else event_text_filters,
+    )
+    event_query = apply_optional_limit(
+        event_query.order_by(
+            prefix_order_for(CalendarEvent.title),
+            CalendarEvent.starts_at.desc(),
+            CalendarEvent.id.desc(),
+        )
+    )
+    events = event_query.all()
+    events, events_has_more = trim_limited_rows(events)
+
     status_labels = {
         'nao_iniciada': 'Não iniciada',
         'em_andamento': 'Em andamento',
@@ -311,17 +354,51 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
             **task_match,
         })
 
+    event_sync_labels = {
+        'pending': 'Pendente',
+        'ok': 'Sincronizado',
+        'error': 'Erro',
+    }
+    event_results = []
+    for event in events:
+        event_match = _resolve_match_info(normalized_term, [
+            ('title', 'Titulo', event.title),
+            ('description', 'Descricao', event.description),
+            ('location', 'Local', event.location),
+        ])
+        event_meta_parts = []
+        event_period = _format_calendar_event_period(event)
+        if event_period:
+            event_meta_parts.append(f'Quando: {event_period}')
+        if event.location:
+            event_meta_parts.append(f'Local: {_truncate_text(event.location, 80)}')
+        sync_label = event_sync_labels.get(event.sync_status, event.sync_status or '')
+        if sync_label:
+            event_meta_parts.append(f'Sync: {sync_label}')
+
+        event_results.append({
+            'type': 'event',
+            'type_label': 'Evento',
+            'title': _truncate_text(event.title or f'Evento #{event.id}', 120),
+            'subtitle': _truncate_text(event.description, 95) if event.description else '',
+            'meta': ' | '.join(event_meta_parts),
+            'url': url_for('main.calendars_hub'),
+            **event_match,
+        })
+
     counts = {
         'projects': len(project_results),
         'stages': len(stage_results),
         'tasks': len(task_results),
+        'events': len(event_results),
     }
-    counts['total'] = counts['projects'] + counts['stages'] + counts['tasks']
+    counts['total'] = counts['projects'] + counts['stages'] + counts['tasks'] + counts['events']
 
     has_more = {
         'projects': projects_has_more,
         'stages': stages_has_more,
         'tasks': tasks_has_more,
+        'events': events_has_more,
     }
     has_more_any = any(has_more.values())
 
@@ -339,6 +416,7 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
             'projects': project_results,
             'stages': stage_results,
             'tasks': task_results,
+            'events': event_results,
         },
     }
 

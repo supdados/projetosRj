@@ -1252,6 +1252,11 @@ html[data-theme="dark"] .app-brand-text {
     color: #24571f;
 }
 
+.app-global-search-item-type.type-event {
+    background: #e7eefb;
+    color: #304d80;
+}
+
 .app-global-search-item-type.type-task-item {
     background: #ebe0ff;
     color: #5d3c87;

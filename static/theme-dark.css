@@ -495,6 +495,12 @@ html[data-theme="dark"] body.is-authenticated .app-global-search-item-type.type-
     color: #c9efdf;
 }
 
+html[data-theme="dark"] body.is-authenticated .app-global-search-item-type.type-event {
+    background: rgba(120, 147, 198, 0.22);
+    border-color: rgba(120, 147, 198, 0.44);
+    color: #d7e0f3;
+}
+
 
 html[data-theme="dark"] body.is-authenticated .app-global-search-item-type.type-task-item {
     background: rgba(141, 160, 182, 0.22);

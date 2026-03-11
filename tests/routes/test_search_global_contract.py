@@ -1,4 +1,6 @@
-from models import Etapa, Project, Task, db
+import datetime
+
+from models import CalendarEvent, Etapa, Project, Task, db
 
 
 def _client_for_user(app, user_id):
@@ -8,7 +10,7 @@ def _client_for_user(app, user_id):
     return client
 
 
-def test_global_search_api_returns_grouped_payload_limits_and_has_more(app, client_user):
+def test_global_search_api_returns_grouped_payload_limits_and_has_more(app, client_user, seed_data):
     with app.app_context():
         for index in range(1, 4):
             project = Project(
@@ -35,7 +37,19 @@ def test_global_search_api_returns_grouped_payload_limits_and_has_more(app, clie
                     status='nao_iniciada',
                     ordem=index,
                     project_id=project.id,
-                    created_by_id=2,
+                    created_by_id=seed_data['user_id'],
+                )
+            )
+            db.session.add(
+                CalendarEvent(
+                    user_id=seed_data['user_id'],
+                    title=f'Alvo Evento {index}',
+                    description=f'Descricao do evento alvo {index}',
+                    location=f'Sala {index}',
+                    starts_at=datetime.datetime(2026, 3, 10, 9, 0) + datetime.timedelta(days=index),
+                    ends_at=datetime.datetime(2026, 3, 10, 10, 0) + datetime.timedelta(days=index),
+                    source='app',
+                    sync_status='pending',
                 )
             )
         db.session.commit()
@@ -49,21 +63,25 @@ def test_global_search_api_returns_grouped_payload_limits_and_has_more(app, clie
     assert payload['meta']['has_more']['projects'] is True
     assert payload['meta']['has_more']['stages'] is True
     assert payload['meta']['has_more']['tasks'] is True
+    assert payload['meta']['has_more']['events'] is True
     assert payload['meta']['has_more']['any'] is True
 
     assert payload['counts'] == {
         'projects': 2,
         'stages': 2,
         'tasks': 2,
-        'total': 6,
+        'events': 2,
+        'total': 8,
     }
 
     assert payload['results']['projects'][0]['type'] == 'project'
     assert payload['results']['projects'][0]['display_title'] == f"{payload['results']['projects'][0]['url'].split('/project/')[1]}-{payload['results']['projects'][0]['title']}"
     assert payload['results']['stages'][0]['type'] == 'stage'
     assert payload['results']['tasks'][0]['type'] == 'task'
+    assert payload['results']['events'][0]['type'] == 'event'
     assert payload['results']['projects'][0]['url'].startswith('/project/')
     assert payload['results']['tasks'][0]['url'].startswith('/tarefas/')
+    assert payload['results']['events'][0]['url'].startswith('/calendarios')
 
 
 def test_global_search_api_prefers_prefix_matches_and_respects_area_scope(app, seed_data):
@@ -141,6 +159,7 @@ def test_global_search_api_returns_empty_payload_for_short_query(client_user):
                 'projects': False,
                 'stages': False,
                 'tasks': False,
+                'events': False,
                 'any': False,
             },
         },
@@ -148,14 +167,60 @@ def test_global_search_api_returns_empty_payload_for_short_query(client_user):
             'projects': 0,
             'stages': 0,
             'tasks': 0,
+            'events': 0,
             'total': 0,
         },
         'results': {
             'projects': [],
             'stages': [],
             'tasks': [],
+            'events': [],
         },
     }
+
+
+def test_global_search_api_includes_only_events_of_current_user(app, seed_data):
+    with app.app_context():
+        db.session.add(
+            CalendarEvent(
+                user_id=seed_data['user_id'],
+                title='Evento Exclusivo Auditoria',
+                description='Visivel apenas para o usuario Auditoria',
+                location='Sala Auditoria',
+                starts_at=datetime.datetime(2026, 4, 10, 9, 0),
+                ends_at=datetime.datetime(2026, 4, 10, 10, 0),
+                source='app',
+                sync_status='pending',
+            )
+        )
+        db.session.add(
+            CalendarEvent(
+                user_id=seed_data['outsider_id'],
+                title='Evento Exclusivo VPD',
+                description='Nao deve aparecer para Auditoria',
+                location='Sala VPD',
+                starts_at=datetime.datetime(2026, 4, 11, 9, 0),
+                ends_at=datetime.datetime(2026, 4, 11, 10, 0),
+                source='app',
+                sync_status='pending',
+            )
+        )
+        db.session.commit()
+
+    user_client = _client_for_user(app, seed_data['user_id'])
+    outsider_client = _client_for_user(app, seed_data['outsider_id'])
+
+    user_response = user_client.get('/api/busca-global', query_string={'q': 'Evento Exclusivo'})
+    assert user_response.status_code == 200
+    user_titles = [item['title'] for item in user_response.get_json()['results']['events']]
+    assert 'Evento Exclusivo Auditoria' in user_titles
+    assert 'Evento Exclusivo VPD' not in user_titles
+
+    outsider_response = outsider_client.get('/api/busca-global', query_string={'q': 'Evento Exclusivo'})
+    assert outsider_response.status_code == 200
+    outsider_titles = [item['title'] for item in outsider_response.get_json()['results']['events']]
+    assert 'Evento Exclusivo VPD' in outsider_titles
+    assert 'Evento Exclusivo Auditoria' not in outsider_titles
 
 
 def test_search_page_renders_grouped_sections_and_hides_foreign_area_results(client_user, seed_data):
@@ -171,6 +236,15 @@ def test_search_page_renders_grouped_sections_and_hides_foreign_area_results(cli
     assert 'Projeto Auditoria' in html
     assert 'Projeto VPD' not in html
     assert 'class="search-result-item search-result-item-square"' in html
+
+
+def test_search_page_renders_events_section_when_matches_exist(client_user):
+    response = client_user.get('/busca', query_string={'q': 'Evento Seed'})
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert 'Eventos' in html
+    assert 'Evento Seed' in html
 
 
 def test_search_page_empty_state_without_query_and_without_results(client_user):
