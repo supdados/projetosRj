@@ -406,6 +406,119 @@ html[data-theme="dark"] .cal-toggle-btn.is-active { background: #005a92 !importa
 .cal-popover-item.cal-pill--pending { border-left-color: #94a3b8; }
 .cal-popover-item.cal-pill--error   { border-left-color: var(--app-color-danger); }
 
+/* Event detail popover (Google-like preview) */
+.cal-event-popover {
+  position: fixed;
+  z-index: 820;
+  width: min(22rem, calc(100vw - 1rem));
+  background: var(--app-color-surface);
+  border: 1px solid var(--app-color-border);
+  border-radius: 0.72rem;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.16), 0 3px 10px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+.cal-event-popover-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 0.62rem 0.72rem 0.5rem;
+  border-bottom: 1px solid var(--app-color-border);
+  background: var(--app-color-surface-muted);
+}
+.cal-event-popover-title {
+  font-size: 0.91rem;
+  font-weight: 600;
+  color: var(--app-color-text-primary);
+  line-height: 1.32;
+  word-break: break-word;
+}
+.cal-event-popover-close {
+  border: none;
+  background: none;
+  color: var(--app-color-text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.18rem;
+  flex-shrink: 0;
+}
+.cal-event-popover-close:hover { color: var(--app-color-text-primary); }
+.cal-event-popover-body {
+  padding: 0.62rem 0.72rem 0.72rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.cal-event-popover-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.42rem;
+  font-size: 0.79rem;
+  color: var(--app-color-text-secondary);
+  line-height: 1.42;
+}
+.cal-event-popover-info i {
+  width: 0.9rem;
+  margin-top: 0.12rem;
+  color: var(--app-color-text-muted);
+  text-align: center;
+  flex-shrink: 0;
+}
+.cal-event-popover-description {
+  margin-top: 0.08rem;
+  font-size: 0.78rem;
+  color: var(--app-color-text-secondary);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.cal-event-popover-meet {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.08rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: #1a73e8;
+  text-decoration: none;
+}
+.cal-event-popover-meet:hover { text-decoration: underline; }
+.cal-event-popover-actions {
+  margin-top: 0.32rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.36rem;
+}
+.cal-event-popover-action {
+  border: 1px solid var(--app-color-border);
+  background: var(--app-color-surface);
+  color: var(--app-color-text-secondary);
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.52rem;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.cal-event-popover-action:hover {
+  background: var(--app-color-surface-muted);
+  border-color: var(--app-color-border);
+  color: var(--app-color-text-primary);
+}
+.cal-event-popover-action--danger {
+  border-color: rgba(220, 38, 38, 0.26);
+  color: var(--app-color-danger);
+}
+.cal-event-popover-action--danger:hover {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.42);
+  color: var(--app-color-danger);
+}
+
 /* ── List view ───────────────────────────────────────────────────────────── */
 .cal-list {
   display: flex;

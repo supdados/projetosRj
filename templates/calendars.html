@@ -273,6 +273,8 @@ const WDAYS  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 // ── Views ────────────────────────────────────────────────────────────────────
 function switchView(v) {
+  closeDayPopover();
+  closeEventPopover();
   curView = v;
   localStorage.setItem('cal_view', v);
   document.getElementById('viewCalendar').classList.toggle('is-active', v === 'calendar');
@@ -424,9 +426,12 @@ function buildWeekRow(week) {
       else if (endsInWeek)                  bar.style.borderRadius = '0 ' + r + ' ' + r + ' 0';
       else                                  bar.style.borderRadius = '0';
 
+      // Recuo visual no término do span, para não "colar" no dia seguinte.
+      bar.style.marginRight = endsInWeek ? '0.5rem' : '0';
+
       bar.textContent = ev.title;
       bar.title = ev.title;
-      bar.addEventListener('click', e => { e.stopPropagation(); openEditModal(ev); });
+      bar.addEventListener('click', e => { e.stopPropagation(); openEventPopover(ev, bar); });
       spansEl.appendChild(bar);
     });
 
@@ -473,7 +478,7 @@ function makeCell(day, singleEvs, spanH = 0, nLanes = 0) {
       const hm = showTime ? new Date(ev.starts_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ' : '';
       pill.textContent = hm + ev.title;
       pill.title = ev.title;
-      pill.addEventListener('click', e => { e.stopPropagation(); openEditModal(ev); });
+      pill.addEventListener('click', e => { e.stopPropagation(); openEventPopover(ev, pill); });
       cell.appendChild(pill);
     });
 
@@ -490,12 +495,147 @@ function makeCell(day, singleEvs, spanH = 0, nLanes = 0) {
 
 // ── Day popover ───────────────────────────────────────────────────────────────
 let _dayPopover = null;
+let _eventPopover = null;
 
 function closeDayPopover() {
   if (_dayPopover) { _dayPopover.remove(); _dayPopover = null; }
 }
 
+function closeEventPopover() {
+  if (_eventPopover) { _eventPopover.remove(); _eventPopover = null; }
+}
+
+function formatEventDateTime(ev) {
+  const startsAt = new Date(ev.starts_at);
+  const endsAt = new Date(ev.ends_at);
+  const sameDay = startsAt.toDateString() === endsAt.toDateString();
+  const dateFmt = dt => dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeFmt = dt => dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  if (ev.is_all_day) {
+    if (sameDay) return dateFmt(startsAt) + ' · Dia inteiro';
+    return dateFmt(startsAt) + ' até ' + dateFmt(endsAt) + ' · Dia inteiro';
+  }
+  if (sameDay) {
+    return dateFmt(startsAt) + ' · ' + timeFmt(startsAt) + ' - ' + timeFmt(endsAt);
+  }
+  return dateFmt(startsAt) + ' ' + timeFmt(startsAt) + ' até ' + dateFmt(endsAt) + ' ' + timeFmt(endsAt);
+}
+
+function openEventPopover(ev, anchor) {
+  if (!anchor) return;
+  closeDayPopover();
+  closeEventPopover();
+
+  const pop = document.createElement('div');
+  pop.className = 'cal-event-popover';
+  _eventPopover = pop;
+
+  const head = document.createElement('div');
+  head.className = 'cal-event-popover-head';
+
+  const title = document.createElement('div');
+  title.className = 'cal-event-popover-title';
+  title.textContent = ev.title || 'Sem titulo';
+  head.appendChild(title);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'cal-event-popover-close';
+  closeBtn.setAttribute('aria-label', 'Fechar');
+  closeBtn.textContent = '×';
+  closeBtn.addEventListener('click', e => { e.stopPropagation(); closeEventPopover(); });
+  head.appendChild(closeBtn);
+  pop.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'cal-event-popover-body';
+
+  const when = document.createElement('div');
+  when.className = 'cal-event-popover-info';
+  when.innerHTML = '<i class="fas fa-clock" aria-hidden="true"></i><span></span>';
+  when.querySelector('span').textContent = formatEventDateTime(ev);
+  body.appendChild(when);
+
+  if (ev.location) {
+    const loc = document.createElement('div');
+    loc.className = 'cal-event-popover-info';
+    loc.innerHTML = '<i class="fas fa-map-marker-alt" aria-hidden="true"></i><span></span>';
+    loc.querySelector('span').textContent = ev.location;
+    body.appendChild(loc);
+  }
+
+  if (ev.description) {
+    const desc = document.createElement('div');
+    desc.className = 'cal-event-popover-description';
+    desc.textContent = ev.description;
+    body.appendChild(desc);
+  }
+
+  if (ev.meet_link) {
+    const meet = document.createElement('a');
+    meet.className = 'cal-event-popover-meet';
+    meet.href = ev.meet_link;
+    meet.target = '_blank';
+    meet.rel = 'noopener noreferrer';
+    meet.textContent = 'Abrir Meet';
+    meet.addEventListener('click', e => e.stopPropagation());
+    body.appendChild(meet);
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'cal-event-popover-actions';
+
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.className = 'cal-event-popover-action';
+  editBtn.innerHTML = '<i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span>';
+  editBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    closeEventPopover();
+    openEditModal(ev);
+  });
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'cal-event-popover-action cal-event-popover-action--danger';
+  delBtn.innerHTML = '<i class="fas fa-trash" aria-hidden="true"></i><span>Apagar</span>';
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    closeEventPopover();
+    deleteEvent(ev.id);
+  });
+
+  actions.appendChild(editBtn);
+  actions.appendChild(delBtn);
+  body.appendChild(actions);
+  pop.appendChild(body);
+
+  pop.addEventListener('click', e => e.stopPropagation());
+  document.body.appendChild(pop);
+
+  const rect = anchor.getBoundingClientRect();
+  const popW = pop.offsetWidth || 320;
+  const popH = pop.offsetHeight || 220;
+  const viewW = window.innerWidth;
+  const viewH = window.innerHeight;
+
+  let left = rect.left;
+  let top = rect.bottom + 8;
+
+  if (left + popW > viewW - 8) left = viewW - popW - 8;
+  if (left < 8) left = 8;
+  if (top + popH > viewH - 8) top = rect.top - popH - 8;
+  if (top < 8) top = 8;
+
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+
+  setTimeout(() => document.addEventListener('click', closeEventPopover, { once: true }), 0);
+}
+
 function openDayPopover(day, evs, anchor) {
+  closeEventPopover();
   closeDayPopover();
 
   const pop = document.createElement('div');
@@ -524,7 +664,7 @@ function openDayPopover(day, evs, anchor) {
     const hm = showTime ? new Date(ev.starts_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ' : '';
     item.textContent = hm + ev.title;
     item.title = ev.title;
-    item.addEventListener('click', e => { e.stopPropagation(); closeDayPopover(); openEditModal(ev); });
+    item.addEventListener('click', e => { e.stopPropagation(); closeDayPopover(); openEventPopover(ev, item); });
     pop.appendChild(item);
   });
 
@@ -597,7 +737,7 @@ function renderList() {
     evs.forEach(ev => {
       const row = document.createElement('div');
       row.className = 'cal-list-event';
-      row.addEventListener('click', () => openEditModal(ev));
+      row.addEventListener('click', e => { e.stopPropagation(); openEventPopover(ev, row); });
 
       // Colour bar
       const bar = document.createElement('div');
@@ -692,6 +832,8 @@ function renderList() {
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function openCreateModal(dateStr) {
+  closeDayPopover();
+  closeEventPopover();
   editId = null;
   document.getElementById('modalTitle').textContent = 'Novo evento';
   document.getElementById('eventForm').action = URL_CREATE;
@@ -714,6 +856,8 @@ function openCreateModal(dateStr) {
 }
 
 function openEditModal(ev) {
+  closeDayPopover();
+  closeEventPopover();
   editId = ev.id;
   document.getElementById('modalTitle').textContent = 'Editar evento';
   document.getElementById('eventForm').action = makeUrl(URL_EDIT_0, ev.id);
@@ -947,6 +1091,7 @@ function handleFormSubmit(e) {
 function deleteCurrentEvent() { if (editId) deleteEvent(editId); }
 
 function deleteEvent(id) {
+  closeEventPopover();
   if (!confirm('Excluir este evento?')) return;
   closeModal();
   const f = document.getElementById('deleteForm');
@@ -962,6 +1107,10 @@ switchView(curView);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('eventModal').classList.contains('is-open'))
     closeModal();
+  if (e.key === 'Escape') {
+    closeDayPopover();
+    closeEventPopover();
+  }
 });
 </script>
 {% endblock %}
