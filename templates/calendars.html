@@ -325,12 +325,12 @@ function renderCalendar() {
     const isT = curYear === _today.getFullYear() && curMonth === _today.getMonth() && d === _today.getDate();
     days.push({ y: curYear, m: curMonth, d, outside: false, isToday: isT });
   }
-  const used = firstWday + daysInMon;
-  const rem  = used % 7 === 0 ? 0 : 7 - (used % 7);
-  for (let d = 1; d <= rem; d++)
-    days.push({ y: curYear, m: curMonth + 1, d, outside: true });
+  // Sempre 42 dias (6 semanas fixas) — igual ao Google Calendar
+  let nextD = 1;
+  while (days.length < 42)
+    days.push({ y: curYear, m: curMonth + 1, d: nextD++, outside: true });
 
-  for (let w = 0; w * 7 < days.length; w++)
+  for (let w = 0; w < 6; w++)
     grid.appendChild(buildWeekRow(days.slice(w * 7, w * 7 + 7)));
 }
 
@@ -374,22 +374,28 @@ function buildWeekRow(week) {
     });
   }
 
-  // spanH: height in rem to reserve inside each cell for the span overlay
-  // Each lane is 1.2rem tall + 2px gap; add 4px breathing room below
-  const numLanes = laneEnds.length;
-  const spanH = numLanes > 0 ? numLanes * 1.2 + (numLanes - 1) * 0.125 + 0.25 : 0;
+  // Para cada coluna (0-6), calcula quantas lanes de span bars passam por ela.
+  // colStart/colEnd são posições CSS grid 1-indexadas; dayIdx = col - 1.
+  // Assim, só os dias onde a barra realmente aparece recebem espaçador.
+  const colLanes = new Array(7).fill(0); // máximo de lanes por coluna
+  spanBars.forEach(({ lane, colStart, colEnd }) => {
+    for (let c = colStart - 1; c < colEnd - 1 && c < 7; c++)
+      colLanes[c] = Math.max(colLanes[c], lane + 1);
+  });
 
   // ── Day cells (single-day events only) — rendered first in DOM ──
   const cellsEl = document.createElement('div');
   cellsEl.className = 'cal-week-cells';
 
-  week.forEach(day => {
+  week.forEach((day, dayIdx) => {
     const singleEvs = day.outside ? [] : CAL_EVENTS.filter(ev => {
       if (isMultiDay(ev)) return false;
       return dayTs(ev.starts_at) === new Date(day.y, day.m, day.d, 0, 0, 0).getTime();
     }).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 
-    cellsEl.appendChild(makeCell(day, singleEvs, spanH));
+    const n      = colLanes[dayIdx];
+    const cellSH = n > 0 ? n * 1.2 + (n - 1) * 0.125 + 0.25 : 0;
+    cellsEl.appendChild(makeCell(day, singleEvs, cellSH));
   });
 
   weekEl.appendChild(cellsEl);
@@ -879,6 +885,7 @@ function deleteEvent(id) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+document.body.classList.add('cal-body');
 switchView(curView);
 
 document.addEventListener('keydown', e => {
