@@ -11,7 +11,7 @@ def test_calendars_page_renders_core_actions(client_user):
 
     html = response.get_data(as_text=True)
     assert 'Calendário' in html
-    assert 'Conectar Google' in html
+    assert 'Conectar' in html
     assert 'action="/calendarios/eventos"' in html
     assert 'href="/calendar/oauth/start"' in html
 
@@ -33,7 +33,9 @@ def test_calendars_connected_view_hides_calendar_watch_subtext(app, client_user,
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'Google conectado' in html
+    assert 'cal-google-badge--on' in html
+    assert 'Desconectar' in html
+    assert 'href="/calendar/oauth/start"' not in html
     assert 'Calendário:' not in html
     assert 'Watch expira em:' not in html
     assert 'Renovar watch' not in html
