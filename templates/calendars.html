@@ -629,6 +629,8 @@ function openCreateModal(dateStr) {
   })();
   document.getElementById('fieldStartsAt').value = base + 'T09:00';
   document.getElementById('fieldEndsAt').value   = base + 'T10:00';
+  document.getElementById('fieldEndsAt').min     = base + 'T09:00';
+  document.getElementById('fieldStartsAt')._prev = base + 'T09:00';
   toggleAllDay(false);
   resetMeetUI(null);
   document.getElementById('eventModal').classList.add('is-open');
@@ -648,11 +650,19 @@ function openEditModal(ev) {
   toggleAllDay(ev.is_all_day);
 
   if (ev.is_all_day) {
-    document.getElementById('fieldStartsAtDate').value = ev.starts_at.slice(0, 10);
-    document.getElementById('fieldEndsAtDate').value   = ev.ends_at.slice(0, 10);
+    const sd = ev.starts_at.slice(0, 10);
+    const ed = ev.ends_at.slice(0, 10);
+    document.getElementById('fieldStartsAtDate').value  = sd;
+    document.getElementById('fieldEndsAtDate').value    = ed;
+    document.getElementById('fieldEndsAtDate').min      = sd;
+    document.getElementById('fieldStartsAtDate')._prev  = sd;
   } else {
-    document.getElementById('fieldStartsAt').value = ev.starts_at;
-    document.getElementById('fieldEndsAt').value   = ev.ends_at;
+    const sv = ev.starts_at.length === 16 ? ev.starts_at : ev.starts_at.slice(0, 16);
+    const ev2 = ev.ends_at.length   === 16 ? ev.ends_at   : ev.ends_at.slice(0, 16);
+    document.getElementById('fieldStartsAt').value  = sv;
+    document.getElementById('fieldEndsAt').value    = ev2;
+    document.getElementById('fieldEndsAt').min      = sv;
+    document.getElementById('fieldStartsAt')._prev  = sv;
   }
 
   resetMeetUI(ev.meet_link || null);
@@ -765,15 +775,95 @@ function toggleMeet(checked) {
   if (ms) ms.textContent = checked ? 'Link será gerado ao salvar' : 'Adicionar videochamada';
 }
 
+// ── Date/Time sync (comportamento Google Calendar) ───────────────────────────
+function toDatetimeLocal(date) {
+  const pad = n => String(n).padStart(2, '0');
+  return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
+    + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+}
+
+(function setupDateTimeSync() {
+  const fStart  = document.getElementById('fieldStartsAt');
+  const fEnd    = document.getElementById('fieldEndsAt');
+  const fStartD = document.getElementById('fieldStartsAtDate');
+  const fEndD   = document.getElementById('fieldEndsAtDate');
+
+  // Captura o valor antes da edição para calcular a duração original
+  fStart.addEventListener('focus', () => { fStart._prev = fStart.value; });
+
+  // Quando início (datetime) muda: preserva a duração, desloca o fim
+  fStart.addEventListener('change', () => {
+    if (!fStart.value) return;
+    const newStart = new Date(fStart.value);
+    if (!fEnd.value) {
+      fEnd.value = toDatetimeLocal(new Date(newStart.getTime() + 3600000));
+    } else {
+      const oldStart = fStart._prev ? new Date(fStart._prev) : null;
+      const curEnd   = new Date(fEnd.value);
+      let dur = (oldStart && !isNaN(oldStart.getTime())) ? curEnd - oldStart : 3600000;
+      if (dur <= 0) dur = 3600000;
+      fEnd.value = toDatetimeLocal(new Date(newStart.getTime() + dur));
+    }
+    fStart._prev  = fStart.value;
+    fEnd.min      = fStart.value;
+  });
+
+  // Quando fim (datetime) muda: garante fim > início
+  fEnd.addEventListener('change', () => {
+    if (!fEnd.value || !fStart.value) return;
+    if (new Date(fEnd.value) <= new Date(fStart.value)) {
+      fEnd.value = toDatetimeLocal(new Date(new Date(fStart.value).getTime() + 3600000));
+    }
+  });
+
+  // Captura valor antes da edição para data início (dia inteiro)
+  fStartD.addEventListener('focus', () => { fStartD._prev = fStartD.value; });
+
+  // Quando data início (dia inteiro) muda: preserva duração em dias ou iguala fim
+  fStartD.addEventListener('change', () => {
+    if (!fStartD.value) return;
+    fEndD.min = fStartD.value;
+    if (!fEndD.value || fEndD.value < fStartD.value) {
+      // Tenta preservar o número de dias de duração
+      const oldStart = fStartD._prev ? new Date(fStartD._prev + 'T00:00') : null;
+      const curEnd   = fEndD.value   ? new Date(fEndD.value   + 'T00:00') : null;
+      const newStart = new Date(fStartD.value + 'T00:00');
+      let durDays = (oldStart && curEnd && !isNaN(oldStart)) ? Math.round((curEnd - oldStart) / 86400000) : 0;
+      if (durDays < 0) durDays = 0;
+      const newEnd = new Date(newStart.getTime() + durDays * 86400000);
+      const pad = n => String(n).padStart(2, '0');
+      fEndD.value = newEnd.getFullYear() + '-' + pad(newEnd.getMonth() + 1) + '-' + pad(newEnd.getDate());
+    }
+    fStartD._prev = fStartD.value;
+  });
+
+  // Quando data fim (dia inteiro) muda: garante fim >= início
+  fEndD.addEventListener('change', () => {
+    if (!fEndD.value || !fStartD.value) return;
+    if (fEndD.value < fStartD.value) {
+      fEndD.value = fStartD.value;
+    }
+  });
+})();
+
 function handleFormSubmit(e) {
   if (document.getElementById('fieldAllDay').checked) {
     const sd = document.getElementById('fieldStartsAtDate').value;
     const ed = document.getElementById('fieldEndsAtDate').value || sd;
     if (!sd) { e.preventDefault(); alert('Informe a data de início.'); return; }
+    if (ed < sd) { e.preventDefault(); alert('A data de fim não pode ser anterior à data de início.'); return; }
     document.getElementById('fieldStartsAt').value    = sd + 'T00:00';
     document.getElementById('fieldEndsAt').value      = (ed || sd) + 'T23:59';
     document.getElementById('fieldStartsAt').required = false;
     document.getElementById('fieldEndsAt').required   = false;
+  } else {
+    const sv = document.getElementById('fieldStartsAt').value;
+    const ev2 = document.getElementById('fieldEndsAt').value;
+    if (sv && ev2 && new Date(ev2) <= new Date(sv)) {
+      e.preventDefault();
+      alert('O horário de fim deve ser posterior ao horário de início.');
+      return;
+    }
   }
 }
 
