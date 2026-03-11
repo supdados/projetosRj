@@ -389,22 +389,57 @@ html[data-theme="dark"] .cal-toggle-btn.is-active { background: #005a92 !importa
 }
 .cal-popover-close:hover { color: var(--app-color-text-primary); }
 .cal-popover-item {
-  display: block;
-  padding: 0.4rem 0.65rem 0.4rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.4rem 0.65rem;
   font-size: 0.8rem;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  border-left: 3px solid var(--app-color-primary);
+  --cal-popover-dot: var(--app-color-primary);
   color: var(--app-color-text-primary);
   transition: background 0.1s;
 }
+.cal-popover-item::before {
+  content: '';
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 50%;
+  background: var(--cal-popover-dot);
+  flex-shrink: 0;
+}
 .cal-popover-item + .cal-popover-item { border-top: 1px solid var(--app-color-border); }
 .cal-popover-item:hover { background: var(--app-color-surface-muted); }
-.cal-popover-item.cal-pill--google  { border-left-color: #0f9d58; }
-.cal-popover-item.cal-pill--pending { border-left-color: #94a3b8; }
-.cal-popover-item.cal-pill--error   { border-left-color: var(--app-color-danger); }
+.cal-popover-item.cal-pill--google  { --cal-popover-dot: #0f9d58; }
+.cal-popover-item.cal-pill--pending { --cal-popover-dot: #94a3b8; }
+.cal-popover-item.cal-pill--error   { --cal-popover-dot: var(--app-color-danger); }
+.cal-popover-item--span {
+  display: block;
+  padding: 0.4rem 0.65rem;
+  color: #fff;
+  background: var(--app-color-primary);
+  border-radius: 0.34rem;
+  position: relative;
+}
+.cal-popover-item--span::before { display: none; }
+.cal-popover-item--span:hover {
+  filter: brightness(1.06);
+  background: var(--app-color-primary);
+}
+.cal-popover-item--span.cal-pill--google  { background: #0f9d58; }
+.cal-popover-item--span.cal-pill--pending { background: #94a3b8; }
+.cal-popover-item--span.cal-pill--error   { background: var(--app-color-danger); }
+.cal-popover-item--span.cal-popover-item--cut-right {
+  clip-path: polygon(0 0, calc(100% - 0.95rem) 0, 100% 50%, calc(100% - 0.95rem) 100%, 0 100%);
+}
+.cal-popover-item--span.cal-popover-item--cut-left {
+  clip-path: polygon(0.95rem 0, 100% 0, 100% 100%, 0.95rem 100%, 0 50%);
+}
+.cal-popover-item--span.cal-popover-item--cut-both {
+  clip-path: polygon(0.95rem 0, calc(100% - 0.95rem) 0, 100% 50%, calc(100% - 0.95rem) 100%, 0.95rem 100%, 0 50%);
+}
 
 /* Event detail popover (Google-like preview) */
 .cal-event-popover {

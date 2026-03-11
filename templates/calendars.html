@@ -299,6 +299,16 @@ function isMultiDay(ev) {
   return dayTs(ev.starts_at) < dayTs(ev.ends_at);
 }
 
+function eventCoversFullDayOn(dayStartMs, ev) {
+  const dayEndExclusiveMs = dayStartMs + 86400000;
+  const fullDayToleranceMs = 60000; // 23:59 local também conta como dia inteiro
+  const evStartMs = new Date(ev.starts_at).getTime();
+  const evEndMs = new Date(ev.ends_at).getTime();
+  const segStartMs = Math.max(evStartMs, dayStartMs);
+  const segEndMs = Math.min(evEndMs, dayEndExclusiveMs);
+  return segStartMs <= dayStartMs && segEndMs >= (dayEndExclusiveMs - fullDayToleranceMs);
+}
+
 function pillClass(ev) {
   if (ev.sync_status === 'error')   return 'cal-pill--error';
   if (ev.sync_status === 'pending') return 'cal-pill--pending';
@@ -464,6 +474,8 @@ function makeCell(day, singleEvs, spanH = 0, nLanes = 0) {
     const pad = n => String(n).padStart(2, '0');
     const realDate = new Date(y, m, d);
     const dateStr  = realDate.getFullYear() + '-' + pad(realDate.getMonth() + 1) + '-' + pad(realDate.getDate());
+    const dayStartMs = new Date(y, m, d, 0, 0, 0).getTime();
+    const dayEndMs   = new Date(y, m, d, 23, 59, 59).getTime();
 
     cell.addEventListener('click', ev => {
       if (ev.target === cell || ev.target === num) openCreateModal(dateStr);
@@ -486,7 +498,17 @@ function makeCell(day, singleEvs, spanH = 0, nLanes = 0) {
       const more = document.createElement('div');
       more.className = 'cal-more-pills';
       more.textContent = '+' + (singleEvs.length - MAX_PILLS) + ' mais';
-      more.addEventListener('click', e => { e.stopPropagation(); openDayPopover(day, singleEvs, more); });
+      const dayEvs = CAL_EVENTS.filter(ev => {
+        const evStartMs = new Date(ev.starts_at).getTime();
+        const evEndMs = new Date(ev.ends_at).getTime();
+        return evStartMs <= dayEndMs && evEndMs > dayStartMs;
+      }).sort((a, b) => {
+        const aFull = eventCoversFullDayOn(dayStartMs, a);
+        const bFull = eventCoversFullDayOn(dayStartMs, b);
+        if (aFull !== bFull) return aFull ? -1 : 1;
+        return a.starts_at.localeCompare(b.starts_at);
+      });
+      more.addEventListener('click', e => { e.stopPropagation(); openDayPopover(day, dayEvs, more); });
       cell.appendChild(more);
     }
   }
@@ -656,11 +678,31 @@ function openDayPopover(day, evs, anchor) {
   hdr.appendChild(closeBtn);
   pop.appendChild(hdr);
 
+  const dayStartMs = new Date(day.y, day.m, day.d, 0, 0, 0).getTime();
+  const dayEndExclusiveMs = dayStartMs + 86400000;
+
   // Lista de todos os eventos do dia
   evs.forEach(ev => {
     const item = document.createElement('div');
     item.className = 'cal-popover-item ' + pillClass(ev);
-    const showTime = !ev.is_all_day && ev.starts_at.slice(11) !== '00:00';
+    const evStartMs = new Date(ev.starts_at).getTime();
+    const evEndMs = new Date(ev.ends_at).getTime();
+    const occupiesFullDay = eventCoversFullDayOn(dayStartMs, ev);
+    const continuesFromPrev = evStartMs < dayStartMs;
+    const continuesToNext = evEndMs > dayEndExclusiveMs;
+
+    if (occupiesFullDay) {
+      item.classList.add('cal-popover-item--span');
+      if (continuesFromPrev && continuesToNext) {
+        item.classList.add('cal-popover-item--cut-both');
+      } else if (continuesFromPrev) {
+        item.classList.add('cal-popover-item--cut-left');
+      } else if (continuesToNext) {
+        item.classList.add('cal-popover-item--cut-right');
+      }
+    }
+
+    const showTime = !occupiesFullDay && !ev.is_all_day && ev.starts_at.slice(11) !== '00:00';
     const hm = showTime ? new Date(ev.starts_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ' : '';
     item.textContent = hm + ev.title;
     item.title = ev.title;
