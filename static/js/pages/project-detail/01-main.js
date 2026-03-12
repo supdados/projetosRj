@@ -345,7 +345,7 @@
             }
 
             return `
-                <span class="editable-field${hasValue ? '' : ' editable-field-empty'}" data-field="${field}" data-etapa-id="${etapaId}" data-original-value="${safeRawValue}" data-empty-display="Sem data" data-entry-type="google_meeting">${safeDisplay}</span>
+                <span class="editable-field etapa-meeting-date-value${hasValue ? '' : ' editable-field-empty'}" data-field="${field}" data-etapa-id="${etapaId}" data-original-value="${safeRawValue}" data-empty-display="Sem data" data-entry-type="google_meeting">${safeDisplay}</span>
             `;
         }
 
@@ -360,58 +360,13 @@
             return { label: 'Sincronizada', className: 'etapa-meeting-sync-pill--ok' };
         }
 
-        function getMeetingPermissionDescriptor(meetingInfo) {
-            if (meetingInfo?.can_edit_dates) {
-                return {
-                    label: 'Pode reagendar data',
-                    className: 'etapa-meeting-status-pill-editable',
-                    icon: 'calendar-check',
-                    title: 'Você pode reagendar a data desta reunião.',
-                };
-            }
-
-            if (String(meetingInfo?.sync_status || '').trim() === 'error') {
-                return {
-                    label: 'Somente leitura',
-                    className: 'etapa-meeting-status-pill-lock',
-                    icon: 'lock',
-                    title: meetingInfo?.sync_error || 'Evento indisponível no Google Calendar.',
-                };
-            }
-
-            return {
-                label: 'Conta vinculada controla data',
-                className: 'etapa-meeting-status-pill-lock',
-                icon: 'lock',
-                title: 'Somente a mesma conta Google conectada pode editar a data.',
-            };
-        }
-
-        function buildMeetingContextHtml(meetingInfo) {
-            const fragments = [];
-            if (meetingInfo?.location) {
-                fragments.push(`
-                    <span class="etapa-meeting-meta-value etapa-meeting-location">
-                        <i class="fas fa-location-dot"></i>
-                        <span>${escapeHtml(meetingInfo.location)}</span>
-                    </span>
-                `);
-            }
-
-            if (meetingInfo?.meet_link) {
-                fragments.push(`
-                    <a href="${escapeHtml(meetingInfo.meet_link)}" target="_blank" rel="noopener noreferrer" class="etapa-meeting-open-link">
-                        <i class="fas fa-video"></i>
-                        <span>Abrir Meet</span>
-                    </a>
-                `);
-            }
-
-            if (fragments.length === 0) {
-                fragments.push('<span class="etapa-meeting-empty">Sem local ou link de videochamada</span>');
-            }
-
-            return fragments.join('');
+        function buildMeetingDateChipHtml(label, contentHtml) {
+            return `
+                <span class="etapa-meeting-date-chip">
+                    <span class="etapa-meeting-date-label">${escapeHtml(label)}</span>
+                    ${contentHtml}
+                </span>
+            `;
         }
 
         function buildMeetingActionHtml(etapaId, meetingInfo) {
@@ -419,18 +374,16 @@
                 return `
                     <form action="/etapa/${etapaId}/delete" method="post" class="inline-form" data-etapa-delete-form
                         onsubmit="return confirm('Tem certeza que deseja excluir esta reunião?');">
-                        <button type="submit" class="etapa-meeting-danger-btn" data-etapa-delete-btn title="Excluir reunião">
+                        <button type="submit" class="etapa-meeting-icon-btn etapa-meeting-icon-btn-danger" data-etapa-delete-btn title="Excluir reunião">
                             <i class="fas fa-trash"></i>
-                            <span>Excluir reunião</span>
                         </button>
                     </form>
                 `;
             }
 
             return `
-                <span class="etapa-meeting-action-lock" title="Somente a mesma conta Google conectada pode excluir esta reunião.">
+                <span class="etapa-meeting-icon-btn etapa-meeting-icon-btn-lock" title="Somente a mesma conta Google conectada pode excluir esta reunião.">
                     <i class="fas fa-lock"></i>
-                    <span>Conta vinculada</span>
                 </span>
             `;
         }
@@ -446,12 +399,37 @@
             const meetingInfo = etapaPayload.meeting || {};
             const ownerEmail = meetingInfo.owner_email || responsavel || 'Conta Google vinculada';
             const syncDescriptor = getMeetingSyncDescriptor(meetingInfo);
-            const permissionDescriptor = getMeetingPermissionDescriptor(meetingInfo);
+            const syncPillHtml = String(meetingInfo.sync_status || 'pending').trim() !== 'ok'
+                ? `<span class="etapa-meeting-sync-pill ${syncDescriptor.className}">${syncDescriptor.label}</span>`
+                : '';
+            const ownerHtml = ownerEmail
+                ? `
+                    <span class="etapa-meeting-inline" title="${escapeHtml(ownerEmail)}">
+                        <i class="far fa-user"></i>
+                        <span>${escapeHtml(ownerEmail)}</span>
+                    </span>
+                `
+                : '';
+            const locationHtml = meetingInfo.location
+                ? `
+                    <span class="etapa-meeting-inline etapa-meeting-inline-location" title="${escapeHtml(meetingInfo.location)}">
+                        <i class="fas fa-location-dot"></i>
+                        <span>${escapeHtml(meetingInfo.location)}</span>
+                    </span>
+                `
+                : '';
+            const meetLinkHtml = meetingInfo.meet_link
+                ? `
+                    <a href="${escapeHtml(meetingInfo.meet_link)}" target="_blank" rel="noopener noreferrer" class="etapa-meeting-icon-btn" title="Abrir Meet">
+                        <i class="fas fa-video"></i>
+                    </a>
+                `
+                : '';
             const warningHtml = meetingInfo.sync_status === 'error'
                 ? `
                     <span class="etapa-meeting-warning" title="${escapeHtml(meetingInfo.sync_error || 'Evento indisponível no Google Calendar.')}">
                         <i class="fas fa-triangle-exclamation"></i>
-                        <span>Evento indisponível no Google Calendar</span>
+                        <span>Indisponível no Google</span>
                     </span>
                 `
                 : '';
@@ -464,64 +442,43 @@
             row.dataset.meetingSyncStatus = meetingInfo.sync_status || 'pending';
 
             row.innerHTML = `
-                <td colspan="9" class="etapa-meeting-row-cell">
-                    <article class="etapa-meeting-card">
-                        <div class="etapa-meeting-head">
-                            <div class="etapa-meeting-head-main">
-                                <button type="button" class="drag-handle etapa-drag-handle etapa-meeting-drag" draggable="true" title="Reordenar reunião" aria-label="Reordenar reunião">
-                                    <i class="fas fa-grip-vertical"></i>
-                                </button>
-                                <span class="etapa-order-cell etapa-meeting-order"></span>
-                                <span class="etapa-meeting-badge"><i class="fab fa-google me-1"></i>Reunião Google</span>
-                                <span class="etapa-meeting-sync-pill ${syncDescriptor.className}">${syncDescriptor.label}</span>
+                <td class="drag-handle etapa-drag-handle etapa-v4-cell-drag etapa-meeting-drag-cell" draggable="true">
+                    <i class="fab fa-google etapa-meeting-drag-icon"></i>
+                </td>
+                <td class="etapa-order-cell etapa-v4-cell-number"></td>
+                <td colspan="7" class="etapa-row-text etapa-meeting-row-cell">
+                    <div class="etapa-meeting-layout">
+                        <div class="etapa-meeting-copy">
+                            <div class="etapa-meeting-title-row">
+                                <span class="etapa-meeting-title etapa-descricao">${escapeHtml(descricao)}</span>
+                                ${syncPillHtml}
                             </div>
-                            <div class="etapa-meeting-head-actions">
-                                ${buildMeetingActionHtml(etapaId, meetingInfo)}
-                            </div>
-                        </div>
-
-                        <div class="etapa-meeting-body">
-                            <div class="etapa-meeting-copy etapa-descricao">
-                                <span class="etapa-meeting-title">${escapeHtml(descricao)}</span>
-                                <span class="etapa-meeting-subtitle">
+                            <div class="etapa-meeting-subtitle">
+                                <span class="etapa-meeting-inline">
                                     <i class="far fa-clock"></i>
                                     <span>${escapeHtml(meetingInfo.time_summary || 'Sem horário')}</span>
                                 </span>
+                                ${ownerHtml}
+                                ${locationHtml}
                                 ${warningHtml}
                             </div>
-
-                            <div class="etapa-meeting-pill-list">
-                                <span class="etapa-meeting-status-pill">Informativa</span>
-                                <span class="etapa-meeting-status-pill ${permissionDescriptor.className}" title="${escapeHtml(permissionDescriptor.title)}">
-                                    <i class="fas fa-${permissionDescriptor.icon}"></i>
-                                    <span>${escapeHtml(permissionDescriptor.label)}</span>
-                                </span>
-                            </div>
                         </div>
 
-                        <div class="etapa-meeting-meta-grid">
-                            <div class="etapa-meeting-meta-card etapa-meeting-meta-card-date">
-                                <span class="etapa-meeting-meta-label">Início</span>
-                                ${buildMeetingDateHtml(etapaId, 'data_inicio', dataInicio, dataInicioDisplay, meetingInfo)}
-                            </div>
-                            <div class="etapa-meeting-meta-card etapa-meeting-meta-card-date">
-                                <span class="etapa-meeting-meta-label">Fim</span>
-                                ${buildMeetingDateHtml(etapaId, 'data_fim', dataFim, dataFimDisplay, meetingInfo)}
-                            </div>
-                            <div class="etapa-meeting-meta-card">
-                                <span class="etapa-meeting-meta-label">Conta Google</span>
-                                <span class="etapa-meeting-owner">${escapeHtml(ownerEmail || 'Conta Google vinculada')}</span>
-                            </div>
-                            <div class="etapa-meeting-meta-card etapa-meeting-meta-card-context">
-                                <span class="etapa-meeting-meta-label">Local e acesso</span>
-                                <div class="etapa-meeting-context">
-                                    ${buildMeetingContextHtml(meetingInfo)}
-                                </div>
-                            </div>
+                        <div class="etapa-meeting-side">
+                            ${buildMeetingDateChipHtml(
+                                'Início',
+                                buildMeetingDateHtml(etapaId, 'data_inicio', dataInicio, dataInicioDisplay, meetingInfo)
+                            )}
+                            ${buildMeetingDateChipHtml(
+                                'Fim',
+                                buildMeetingDateHtml(etapaId, 'data_fim', dataFim, dataFimDisplay, meetingInfo)
+                            )}
+                            ${meetLinkHtml}
+                            ${buildMeetingActionHtml(etapaId, meetingInfo)}
                         </div>
+                    </div>
 
-                        <button class="btn-comment-data ds-hidden" data-etapa-id="${etapaId}" data-comentario=""></button>
-                    </article>
+                    <button class="btn-comment-data ds-hidden" data-etapa-id="${etapaId}" data-comentario=""></button>
                 </td>
             `;
             return row;
