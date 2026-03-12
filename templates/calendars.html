@@ -550,6 +550,16 @@ function formatEventDateTime(ev) {
 
 function openEventPopover(ev, anchor) {
   if (!anchor) return;
+  const dayPopoverAnchor = typeof anchor.closest === 'function'
+    ? anchor.closest('.cal-day-popover')
+    : null;
+  const rect = typeof anchor.getBoundingClientRect === 'function'
+    ? anchor.getBoundingClientRect()
+    : anchor;
+  const dayPopoverRect = dayPopoverAnchor && typeof dayPopoverAnchor.getBoundingClientRect === 'function'
+    ? dayPopoverAnchor.getBoundingClientRect()
+    : null;
+  if (!rect) return;
   closeDayPopover();
   closeEventPopover();
 
@@ -640,18 +650,18 @@ function openEventPopover(ev, anchor) {
   pop.addEventListener('click', e => e.stopPropagation());
   document.body.appendChild(pop);
 
-  const rect = anchor.getBoundingClientRect();
   const popW = pop.offsetWidth || 320;
   const popH = pop.offsetHeight || 220;
   const viewW = window.innerWidth;
   const viewH = window.innerHeight;
+  const posRefRect = dayPopoverRect || rect;
 
-  let left = rect.left;
-  let top = rect.bottom + 8;
+  let left = posRefRect.left;
+  let top = dayPopoverRect ? posRefRect.top : (posRefRect.bottom + 8);
 
   if (left + popW > viewW - 8) left = viewW - popW - 8;
   if (left < 8) left = 8;
-  if (top + popH > viewH - 8) top = rect.top - popH - 8;
+  if (top + popH > viewH - 8) top = posRefRect.top - popH - 8;
   if (top < 8) top = 8;
 
   pop.style.left = left + 'px';
@@ -710,7 +720,7 @@ function openDayPopover(day, evs, anchor) {
     const hm = showTime ? new Date(ev.starts_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ' : '';
     item.textContent = hm + ev.title;
     item.title = ev.title;
-    item.addEventListener('click', e => { e.stopPropagation(); closeDayPopover(); openEventPopover(ev, item); });
+    item.addEventListener('click', e => { e.stopPropagation(); openEventPopover(ev, item); });
     pop.appendChild(item);
   });
 
