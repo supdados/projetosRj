@@ -1937,17 +1937,92 @@
 
 
         // INÍCIO: Scripts Originais Restaurados (toggle status, view toggle, etc.)
+        const AJAX_FLASH_CONTAINER_ID = 'ajax-flash-messages-container';
+        let ajaxFlashLayoutListenersBound = false;
+
+        function getAjaxFlashAnchorElement() {
+            const compactHeader = document.getElementById('projectCompactHeader');
+            const compactInner = compactHeader
+                ? compactHeader.querySelector('.project-compact-inner')
+                : null;
+
+            // Quando o header compacto estiver ativo, o flash precisa respeitar o espaço à direita dele.
+            if (
+                compactHeader
+                && compactInner
+                && compactHeader.classList.contains('is-visible')
+                && compactHeader.getAttribute('aria-hidden') !== 'true'
+            ) {
+                return compactInner;
+            }
+
+            return document.querySelector('.info-card')
+                || document.getElementById('projectMainHeader')
+                || document.querySelector('.project-header')
+                || document.querySelector('.main-content > .container-fluid');
+        }
+
+        function updateAjaxFlashContainerLayout(flashContainer) {
+            if (!flashContainer) {
+                return;
+            }
+
+            const anchor = getAjaxFlashAnchorElement();
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+
+            if (!anchor || !viewportWidth) {
+                flashContainer.style.removeProperty('--ajax-flash-right-offset');
+                flashContainer.style.removeProperty('--ajax-flash-width');
+                return;
+            }
+
+            const anchorRect = anchor.getBoundingClientRect();
+            const sideGap = Math.max(0, Math.floor(viewportWidth - anchorRect.right));
+            const sideInset = 6;
+            const fittedWidth = Math.max(0, sideGap - (sideInset * 2));
+
+            // Encaixa o flash no recuo lateral, quase preenchendo o vao sem colar nas bordas.
+            if (fittedWidth >= 120) {
+                flashContainer.style.setProperty('--ajax-flash-right-offset', `${sideInset}px`);
+                flashContainer.style.setProperty('--ajax-flash-width', `${fittedWidth}px`);
+                return;
+            }
+
+            flashContainer.style.removeProperty('--ajax-flash-right-offset');
+            flashContainer.style.removeProperty('--ajax-flash-width');
+        }
+
+        function bindAjaxFlashLayoutListeners() {
+            if (ajaxFlashLayoutListenersBound) {
+                return;
+            }
+
+            const relayout = () => {
+                const flashContainer = document.getElementById(AJAX_FLASH_CONTAINER_ID);
+                if (!flashContainer) {
+                    return;
+                }
+                updateAjaxFlashContainerLayout(flashContainer);
+            };
+
+            window.addEventListener('resize', relayout, { passive: true });
+            window.addEventListener('scroll', relayout, { passive: true });
+            ajaxFlashLayoutListenersBound = true;
+        }
+
         function showAjaxFlashMessage(message, type = 'info', duration = 5000) {
-            const containerId = 'ajax-flash-messages-container';
-            let flashContainer = document.getElementById(containerId);
+            let flashContainer = document.getElementById(AJAX_FLASH_CONTAINER_ID);
 
             if (!flashContainer) {
                 flashContainer = document.createElement('div');
-                flashContainer.id = containerId;
+                flashContainer.id = AJAX_FLASH_CONTAINER_ID;
                 document.body.appendChild(flashContainer);
             }
 
             if (!message) return;
+
+            bindAjaxFlashLayoutListeners();
+            updateAjaxFlashContainerLayout(flashContainer);
 
             // Limitar a 3 notificações simultâneas
             const MAX_NOTIFICATIONS = 3;
@@ -1973,20 +2048,12 @@
 
             const alertDiv = document.createElement('div');
             const normalizedType = type === 'error' ? 'danger' : type;
-            const iconByType = {
-                success: 'check-circle',
-                danger: 'exclamation-circle',
-                warning: 'exclamation-triangle',
-                info: 'info-circle',
-            };
-            const iconName = iconByType[normalizedType] || 'info-circle';
             const safeMessage = escapeHtml(message);
 
             alertDiv.className = `alert alert-${normalizedType} alert-dismissible fade show app-flash-alert app-flash-alert-compact`;
             alertDiv.role = 'alert';
             alertDiv.innerHTML = `
-                <div class="d-flex align-items-start gap-2">
-                    <i class="fas fa-${iconName} app-flash-icon"></i>
+                <div class="d-flex align-items-start">
                     <span class="app-flash-text">${safeMessage}</span>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
