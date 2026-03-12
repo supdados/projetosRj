@@ -84,7 +84,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .etapa-v4-table tbod
 /* Project detail specific badges and inline actions */
 
 html[data-theme="dark"] body.is-authenticated .project-detail-v2 .priority-badge,
-html[data-theme="dark"] body.is-authenticated .project-detail-v2 .etapa-inline-new-badge,
 html[data-theme="dark"] body.is-authenticated .project-detail-v2 .etapa-inline-cell-status .inline-status-toggle .badge {
     background: rgba(78, 149, 204, 0.22);
     border-color: rgba(99, 166, 219, 0.4);
@@ -674,9 +673,7 @@ html[data-theme="dark"] body.is-authenticated .etapa-inline-drag-placeholder {
     color: #9bb3cb;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-inline-new-badge {
-    background: rgba(78, 149, 204, 0.2);
-    border-color: rgba(99, 166, 219, 0.4);
+html[data-theme="dark"] body.is-authenticated .etapa-inline-order-preview {
     color: #d9e8f6;
 }
 

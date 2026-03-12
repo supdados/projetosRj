@@ -53,7 +53,7 @@
     }
 
     .etapa-v4-col-number {
-        width: 84px;
+        width: 64px;
     }
 
     .etapa-v4-col-desc {
@@ -88,6 +88,16 @@
         color: #5f7691;
         font-weight: var(--ds-font-weight-medium);
         white-space: nowrap;
+    }
+
+    .etapa-v4-table thead .etapa-v4-col-number,
+    .etapa-v4-table tbody .etapa-v4-cell-number {
+        padding-right: 0.35rem;
+    }
+
+    .etapa-v4-table thead .etapa-v4-col-desc,
+    .etapa-v4-table tbody .etapa-v4-cell-description {
+        padding-left: 0.4rem;
     }
 
     .etapa-v4-cell-date,
@@ -784,8 +794,8 @@
             padding: 0.42rem 0.34rem !important;
         }
 
-        .etapa-inline-new-badge {
-            padding-inline: 0.3rem;
+        .etapa-inline-order-preview {
+            font-size: var(--ds-font-size-xs);
         }
 
         .etapa-inline-icon-btn {

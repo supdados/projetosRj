@@ -808,18 +808,10 @@
         text-align: center;
     }
 
-    .etapa-inline-new-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.15rem 0.45rem;
-        border-radius: 999px;
-        font-size: var(--ds-font-size-2xs);
-        text-transform: uppercase;
-        letter-spacing: var(--ds-letter-spacing-wide);
-        color: #5f7692;
-        background: #edf3fb;
-        border: 1px solid #d5e2ef;
+    .etapa-inline-order-preview {
+        display: inline-block;
+        min-width: 100%;
+        color: inherit;
     }
 
     .etapa-inline-input,

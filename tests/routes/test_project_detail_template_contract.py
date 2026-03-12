@@ -45,6 +45,7 @@ def test_project_detail_template_contains_inline_add_stage_contract(client_user,
         'id="etapaInlineAddEntryRow"',
         'id="etapaInlineAddFormRow"',
         'id="etapaInlineAddForm"',
+        'id="etapaInlineOrderPreview"',
         'id="btnSubmitInlineEtapaAdd"',
         'id="btnCancelInlineEtapaAdd"',
         'id="reactivate-project-confirm-modal"',
@@ -72,6 +73,8 @@ def test_project_detail_template_contains_inline_add_stage_contract(client_user,
     assert inline_row_match.group(0).count('<td') == 9
     assert 'type="checkbox"' in inline_row_match.group(0)
     assert 'role="switch"' not in inline_row_match.group(0)
+    assert 'etapa-inline-new-badge' not in inline_row_match.group(0)
+    assert '<th class="etapa-v4-col-number">ID</th>' in html
 
 
 def test_project_detail_without_stages_shows_only_inline_add_entry(app, client_user, seed_data):

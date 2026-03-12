@@ -478,7 +478,7 @@
                 <thead>
                     <tr>
                         <th class="etapa-v4-col-drag"></th>
-                        <th class="etapa-v4-col-number">#</th>
+                        <th class="etapa-v4-col-number">ID</th>
                         <th class="etapa-v4-col-desc">Descrição</th>
                         <th class="etapa-v4-col-date">Data Início</th>
                         <th class="etapa-v4-col-date">Data Fim</th>
@@ -697,7 +697,7 @@
                             <form id="etapaInlineAddForm" action="{{ url_for('main.add_etapa', project_id=project.id) }}" method="POST" class="ds-hidden"></form>
                         </td>
                         <td class="etapa-inline-cell etapa-inline-cell-number etapa-v4-cell-number etapa-row-text">
-                            <span class="etapa-inline-new-badge">nova</span>
+                            <span id="etapaInlineOrderPreview" class="etapa-inline-order-preview">{{ project.id }}.{{ (project.etapas|length) + 1 }}</span>
                         </td>
                         <td class="etapa-inline-cell etapa-inline-cell-desc etapa-v4-cell-description etapa-row-text">
                             <label for="etapa_inline_descricao" class="visually-hidden">Descrição da etapa</label>

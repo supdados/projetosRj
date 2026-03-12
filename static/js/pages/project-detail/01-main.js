@@ -26,6 +26,7 @@
         const btnOpenInlineMeetingAdd = document.getElementById('btnOpenInlineMeetingAdd');
         const inlineAddCancelBtn = document.getElementById('btnCancelInlineEtapaAdd');
         const inlineAddSubmitBtn = document.getElementById('btnSubmitInlineEtapaAdd');
+        const inlineOrderPreview = document.getElementById('etapaInlineOrderPreview');
         const inlineDescricaoInput = document.getElementById('etapa_inline_descricao');
         const inlineDateInputs = inlineAddFormRow
             ? Array.from(inlineAddFormRow.querySelectorAll('[data-empty-state-input]'))
@@ -167,15 +168,27 @@
             button.dataset.state = variant;
         }
 
+        function formatEtapaOrder(index) {
+            return projectIdPrefix ? `${projectIdPrefix}.${index}` : String(index);
+        }
+
+        function syncInlineOrderPreview() {
+            if (!inlineOrderPreview) {
+                return;
+            }
+            inlineOrderPreview.textContent = formatEtapaOrder(getEtapaRows().length + 1);
+        }
+
         function renumberEtapaRows() {
             if (!tbody) return;
             const rows = tbody.querySelectorAll('tr.etapa-draggable-row');
             rows.forEach((row, index) => {
                 const numeroCelula = row.querySelector('.etapa-order-cell');
                 if (numeroCelula) {
-                    numeroCelula.textContent = `${projectIdPrefix}.${index + 1}`;
+                    numeroCelula.textContent = formatEtapaOrder(index + 1);
                 }
             });
+            syncInlineOrderPreview();
         }
 
         function isInlineComposerOpen() {
@@ -795,6 +808,7 @@
             inlineAddForm.reset();
             resetInlineComposerDateValues();
             syncInlineStatusControls();
+            syncInlineOrderPreview();
             resizeInlineDescricaoTextarea();
             inlineAddFormRow.classList.remove('ds-hidden');
             if (inlineAddEntryRow) {
