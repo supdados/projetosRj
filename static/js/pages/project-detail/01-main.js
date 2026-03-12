@@ -1674,6 +1674,12 @@
                 if (!textarea) {
                     return;
                 }
+                if (!textarea.isConnected) {
+                    window.requestAnimationFrame(function () {
+                        resizeMultilineEditor(textarea);
+                    });
+                    return;
+                }
                 const computed = window.getComputedStyle(textarea);
                 const lineHeight = parseFloat(computed.lineHeight) || 20;
                 const minHeight = lineHeight + 12;
@@ -1742,6 +1748,11 @@
                 target.style.display = 'none';
                 target.insertAdjacentElement('afterend', input);
                 input.focus();
+                if (input.tagName === 'TEXTAREA') {
+                    window.requestAnimationFrame(function () {
+                        resizeMultilineEditor(input);
+                    });
+                }
 
                 function saveChanges() {
                     const newValue = input.value;

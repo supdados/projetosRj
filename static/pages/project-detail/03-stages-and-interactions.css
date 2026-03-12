@@ -138,6 +138,12 @@
         border: 1px dashed #d6e2ef;
     }
 
+    .etapa-v4-cell-responsavel .editable-field-empty {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     .etapa-v4-cell-responsavel .editable-field-empty:hover,
     .etapa-v4-cell-date .editable-field-empty:hover {
         background: #eef4fa;
