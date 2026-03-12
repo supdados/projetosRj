@@ -83,13 +83,15 @@
                         {% set action_label = 'Reativação de projeto' %}
                         {% set tone = 'primary' %}
                     {% endif %}
-                {% elif action_type in ['add_etapa', 'edit_etapa', 'edit_etapa_inline', 'delete_etapa', 'toggle_iniciada', 'toggle_done', 'import_model', 'edit_etapa_comentario', 'reorder_etapas', 'cascade_update', 'add_google_meeting', 'reschedule_google_meeting', 'delete_google_meeting'] %}
+                {% elif action_type in ['add_etapa', 'edit_etapa', 'edit_etapa_inline', 'delete_etapa', 'toggle_iniciada', 'toggle_done', 'import_model', 'edit_etapa_comentario', 'reorder_etapas', 'cascade_update', 'add_google_meeting', 'edit_google_meeting', 'reschedule_google_meeting', 'delete_google_meeting'] %}
                     {% set category = 'stage' %}
                     {% set tone = 'info' %}
                     {% if action_type == 'add_etapa' %}
                         {% set action_label = 'Nova etapa' %}
                     {% elif action_type == 'add_google_meeting' %}
                         {% set action_label = 'Nova reunião Google' %}
+                    {% elif action_type == 'edit_google_meeting' %}
+                        {% set action_label = 'Edição de reunião Google' %}
                     {% elif action_type == 'edit_etapa' %}
                         {% set action_label = 'Edição de etapa' %}
                     {% elif action_type == 'edit_etapa_inline' %}

@@ -164,10 +164,13 @@ def test_project_detail_renders_google_meeting_row_as_informational_item(app, cl
         calendar_event = CalendarEvent(
             user_id=seed_data['user_id'],
             title='Reunião de alinhamento',
+            description='Descrição da reunião',
+            location='Sala 2',
             starts_at=datetime.datetime(2026, 3, 20, 13, 0),
             ends_at=datetime.datetime(2026, 3, 20, 14, 0),
             google_event_id='google-meeting-template-contract',
             google_calendar_id='primary',
+            meet_link='https://meet.google.com/test-contract',
             sync_status='ok',
             source='app',
         )
@@ -195,6 +198,9 @@ def test_project_detail_renders_google_meeting_row_as_informational_item(app, cl
                 starts_at=calendar_event.starts_at,
                 ends_at=calendar_event.ends_at,
                 timezone='America/Sao_Paulo',
+                description=calendar_event.description,
+                location=calendar_event.location,
+                meet_link=calendar_event.meet_link,
                 sync_status='ok',
             )
         )
@@ -212,13 +218,20 @@ def test_project_detail_renders_google_meeting_row_as_informational_item(app, cl
     assert meeting_row_match is not None
     meeting_row = meeting_row_match.group(0)
 
-    assert '10:00 - 11:00' in meeting_row
-    assert 'colspan="7"' in meeting_row
-    assert 'etapa-meeting-layout' in meeting_row
-    assert 'etapa-meeting-date-chip' in meeting_row
+    assert '10:00 - 11:00' not in meeting_row
+    assert '20/03/2026 10:00' in meeting_row
+    assert '20/03/2026 11:00' in meeting_row
+    assert 'user@example.com' in meeting_row
+    assert 'far fa-user' in meeting_row
+    assert 'fa-video' in meeting_row
+    assert 'data-meeting-event=' in meeting_row
+    assert 'colspan="7"' not in meeting_row
+    assert 'etapa-meeting-owner' in meeting_row
     assert 'fab fa-google' in meeting_row
     assert 'Reunião Google' not in meeting_row
     assert 'etapa-v4-cell-number' in meeting_row
+    assert '>Início<' not in meeting_row
+    assert '>Fim<' not in meeting_row
     assert 'toggle-iniciada' not in meeting_row
     assert 'toggle-done' not in meeting_row
     assert 'data-field="descricao"' not in meeting_row

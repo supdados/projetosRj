@@ -8,7 +8,8 @@ from models import Etapa, IndicadorProjeto, Project, ProjectHistory, Task, UserC
 from objective_catalog import normalize_goal_selection
 from services.calendar_sync import hydrate_google_connection_identity
 from services.google_calendar import is_google_calendar_enabled
-from services.project_meetings import meeting_time_summary
+from services.calendar_core import format_input_datetime
+from services.project_meetings import meeting_time_display, meeting_time_summary
 
 from .blueprint import main_bp
 from .decorators import login_required
@@ -658,6 +659,8 @@ def project_detail(project_id):
         calendar_connection=calendar_connection,
         can_add_google_meeting=bool(calendar_connection and (calendar_connection.google_account_id or '').strip()),
         current_google_account_id=(calendar_connection.google_account_id or '') if calendar_connection else '',
+        calendar_input_datetime=format_input_datetime,
+        meeting_time_display=meeting_time_display,
         meeting_time_summary=meeting_time_summary,
     )
 

@@ -174,235 +174,245 @@
         display: block;
     }
 
-    .etapa-meeting-row-cell {
-        padding: 0.62rem 0.7rem !important;
-    }
-
     .etapa-meeting-drag-cell {
         text-align: center;
-        color: #9fb1c6;
     }
 
     .etapa-meeting-drag-icon {
         color: #4285f4;
-        font-size: 1.45rem;
+        font-size: 1.15rem;
         line-height: 1;
     }
 
-    .etapa-meeting-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 0.7rem;
-        min-height: 30px;
-    }
-
-    .etapa-meeting-sync-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        white-space: nowrap;
-        border-radius: 0;
-        padding: 0;
-        font-size: var(--ds-font-size-2xs);
-        font-weight: var(--ds-font-weight-semibold);
-        letter-spacing: 0;
-    }
-
-    .etapa-meeting-sync-pill {
-        border: 0;
-        background: transparent;
-        color: #617d98;
-    }
-
-    .etapa-meeting-sync-pill--ok {
-        color: #216b50;
-    }
-
-    .etapa-meeting-sync-pill--pending {
-        color: #8a5f24;
-    }
-
-    .etapa-meeting-sync-pill--error {
-        color: #a33d2e;
-    }
-
-    .etapa-meeting-copy {
-        display: flex;
-        flex: 1 1 auto;
-        flex-direction: column;
-        gap: 0.12rem;
-        min-width: 0;
-    }
-
-    .etapa-meeting-title-row {
-        display: flex;
-        align-items: center;
-        gap: 0.45rem;
-        min-width: 0;
-    }
-
-    .etapa-meeting-title {
-        color: inherit;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: var(--ds-font-size-sm);
-        font-weight: var(--ds-font-weight-semibold);
-        line-height: 1.25;
-    }
-
-    .etapa-meeting-subtitle {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.22rem 0.6rem;
-        color: #5f7691;
-        font-size: var(--ds-font-size-xs);
-        font-weight: var(--ds-font-weight-medium);
-        min-width: 0;
-    }
-
-    .etapa-meeting-inline {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        min-width: 0;
-        max-width: 100%;
-    }
-
-    .etapa-meeting-inline span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .etapa-meeting-inline-location {
-        max-width: min(18vw, 180px);
-    }
-
-    .etapa-meeting-warning {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.38rem;
-        width: fit-content;
-        border-radius: 0;
-        padding: 0;
-        background: transparent;
-        color: #a33d2e;
-        font-size: var(--ds-font-size-xs);
-        font-weight: var(--ds-font-weight-semibold);
-    }
-
-    .etapa-meeting-side {
-        display: flex;
-        align-items: center;
-        gap: 0.55rem;
-        min-width: 0;
-        flex-shrink: 0;
-    }
-
-    .etapa-meeting-date-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.38rem;
-        min-height: 30px;
-        padding: 0;
-        border-radius: 0;
-        background: transparent;
-        border: 0;
-    }
-
-    .etapa-meeting-date-label {
-        color: #6a8198;
-        font-size: var(--ds-font-size-xs);
-        font-weight: var(--ds-font-weight-medium);
-        letter-spacing: 0;
-        text-transform: none;
-    }
-
-    .etapa-meeting-date-value,
     .etapa-meeting-readonly-field {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.28rem;
+        width: 100%;
         min-height: 30px;
-        padding: 0;
-        border-radius: 0;
-        font-size: var(--ds-font-size-xs);
-        font-weight: var(--ds-font-weight-semibold);
-        white-space: nowrap;
-        line-height: 1;
-    }
-
-    .etapa-meeting-date-value {
-        color: #4d6b8a;
-        transition: background-color 0.16s ease, color 0.16s ease;
-    }
-
-    .etapa-meeting-date-value:hover {
-        background: transparent;
-    }
-
-    .etapa-meeting-date-value.editable-field-empty,
-    .etapa-meeting-readonly-field.editable-field-empty {
-        color: #758aa1;
-    }
-
-    .etapa-meeting-readonly-field {
-        color: #67809c;
-        background: transparent;
-        border: 0;
-        cursor: default;
-    }
-
-    .etapa-meeting-date-chip .editable-field-input {
-        width: 118px;
-        min-height: 30px;
-        padding: 0.22rem 0.45rem;
-        border-radius: 8px;
-    }
-
-    .etapa-meeting-icon-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 30px;
-        height: 30px;
-        border-radius: 7px;
-        border: 1px solid transparent;
-        background: transparent;
-        color: #617d98;
+        padding: 0.22rem 0.48rem;
+        border-radius: 8px;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .etapa-meeting-readonly-field.editable-field-empty {
+        color: #758aa1;
+        background: #f6f9fc;
+        border: 1px dashed #d6e2ef;
+    }
+
+    .etapa-meeting-readonly-field {
+        color: inherit;
+        cursor: default;
+    }
+
+    .etapa-meeting-description-cell {
+        gap: 0.1rem;
+    }
+
+    .etapa-meeting-owner {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.34rem;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: #5f7691;
         font-size: var(--ds-font-size-xs);
-        text-decoration: none;
-        transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+        font-weight: var(--ds-font-weight-medium);
     }
 
-    .etapa-meeting-icon-btn:hover,
-    .etapa-meeting-icon-btn:focus-visible {
-        background: #edf4fb;
-        border-color: #d4e0eb;
-        color: #365878;
-        outline: none;
+    .etapa-meeting-owner i {
+        flex-shrink: 0;
+        font-size: 0.82em;
     }
 
-    .etapa-meeting-icon-btn-danger {
-        border-color: transparent;
-        background: transparent;
-        color: #9d3d31;
+    .etapa-meeting-owner span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .etapa-row-google-meeting .etapa-meeting-description-cell,
+    .etapa-row-google-meeting .etapa-v4-cell-responsavel,
+    .etapa-row-google-meeting .etapa-v4-cell-status {
         cursor: pointer;
     }
 
-    .etapa-meeting-icon-btn-danger:hover,
-    .etapa-meeting-icon-btn-danger:focus-visible {
-        background: rgba(192, 71, 57, 0.1);
-        border-color: rgba(192, 71, 57, 0.24);
-        color: #842f25;
+    .etapa-meeting-date-cell .editable-field {
+        color: inherit;
     }
 
-    .etapa-meeting-icon-btn-lock {
+    .etapa-meeting-date-cell .editable-field-empty {
+        color: #6f859f;
+    }
+
+    .etapa-meeting-actions {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+    }
+
+    .etapa-meeting-action-btn {
+        color: #617d98 !important;
+    }
+
+    .etapa-meeting-action-lock {
         cursor: default;
+    }
+
+    .cal-event-popover {
+        position: fixed;
+        z-index: 900;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        min-width: 20rem;
+        max-width: min(22rem, calc(100vw - 1rem));
+        padding: 0.85rem 0.95rem 0.95rem;
+        background: var(--app-color-surface, #fff);
+        border: 1px solid var(--app-color-border, #dfe7f1);
+        border-radius: 1.2rem;
+        box-shadow: 0 12px 32px rgba(20, 45, 78, 0.16), 0 4px 12px rgba(20, 45, 78, 0.08);
+    }
+
+    .cal-event-popover-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .cal-event-popover-title {
+        min-width: 0;
+        color: #263f59;
+        font-size: var(--ds-font-size-md);
+        font-weight: var(--ds-font-weight-semibold);
+        line-height: 1.3;
+    }
+
+    .cal-event-popover-close {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: #7288a0;
+        font-size: 1.75rem;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease;
+    }
+
+    .cal-event-popover-close:hover {
+        background: #edf4fb;
+        color: #365878;
+    }
+
+    .cal-event-popover-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+    }
+
+    .cal-event-popover-info {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+        color: #516b86;
+        font-size: var(--ds-font-size-sm);
+        line-height: 1.45;
+    }
+
+    .cal-event-popover-info i {
+        width: 0.95rem;
+        margin-top: 0.18rem;
+        color: #7b93ab;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .cal-event-popover-info--warning {
+        color: #9d3d31;
+    }
+
+    .cal-event-popover-info--warning i {
+        color: #b94b3c;
+    }
+
+    .cal-event-popover-description {
+        color: #304a66;
+        font-size: var(--ds-font-size-sm);
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .cal-event-popover-meet {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: fit-content;
+        min-height: 2rem;
+        padding: 0.42rem 0.78rem;
+        border-radius: 999px;
+        background: #ecf6ff;
+        color: #005a92;
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-semibold);
+        text-decoration: none;
+    }
+
+    .cal-event-popover-meet:hover {
+        text-decoration: none;
+        background: #dff0ff;
+    }
+
+    .cal-event-popover-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding-top: 0.15rem;
+    }
+
+    .cal-event-popover-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.42rem;
+        min-height: 2rem;
+        padding: 0.42rem 0.78rem;
+        border: 1px solid #d3dfeb;
+        border-radius: 999px;
+        background: transparent;
+        color: #365878;
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-semibold);
+        cursor: pointer;
+        transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    }
+
+    .cal-event-popover-action:hover {
+        background: #edf4fb;
+        border-color: #bfd0e1;
+        color: #264763;
+    }
+
+    .cal-event-popover-action--danger {
+        color: #972d2d;
+        border-color: rgba(184, 63, 63, 0.24);
+    }
+
+    .cal-event-popover-action--danger:hover {
+        background: rgba(169, 59, 59, 0.14);
+        border-color: rgba(184, 63, 63, 0.42);
+        color: #842323;
     }
 
     .etapa-v4-cell-status .toggle-iniciada,
@@ -759,31 +769,9 @@
     }
 
     @media (max-width: 900px) {
-        .etapa-meeting-row-cell {
-            padding: 0.62rem 0.5rem !important;
-        }
-
-        .etapa-meeting-title-row {
-            flex-wrap: wrap;
-        }
-
-        .etapa-meeting-inline-location {
-            max-width: 100%;
-        }
-
-        .etapa-meeting-layout {
-            grid-template-columns: 1fr;
-            gap: 0.45rem;
-        }
-
-        .etapa-meeting-side {
-            width: 100%;
-            justify-content: flex-start;
-            flex-wrap: wrap;
-        }
-
-        .etapa-meeting-date-chip {
-            flex: 1 1 auto;
+        .etapa-meeting-owner {
+            white-space: normal;
+            word-break: break-word;
         }
 
         #etapaInlineAddFormRow td {

@@ -35,6 +35,16 @@ def meeting_time_summary(meeting):
     return f'{format_human_datetime(meeting.starts_at)} - {format_human_datetime(meeting.ends_at)}'
 
 
+def meeting_time_display(meeting, *, boundary='start'):
+    start_local, end_local = local_meeting_dates(meeting)
+    local_value = start_local if boundary != 'end' else end_local
+    if not local_value:
+        return ''
+    if meeting.is_all_day:
+        return 'Dia inteiro'
+    return local_value.strftime('%H:%M')
+
+
 def sync_etapa_from_meeting(etapa, meeting, *, title=None):
     if not etapa or not meeting:
         return etapa

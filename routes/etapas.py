@@ -3,7 +3,7 @@ import datetime
 from flask import current_app, flash, g, jsonify, redirect, render_template, request, url_for
 
 from models import CalendarEvent, Etapa, Project, ProjectStageMeeting, StageTemplate, UserCalendarConnection, db
-from services.calendar_core import parse_event_form, to_local_datetime
+from services.calendar_core import format_input_datetime, parse_event_form, to_local_datetime
 from services.calendar_sync import delete_remote_event, hydrate_google_connection_identity, sync_local_event_to_google
 from services.google_calendar import is_google_calendar_enabled
 from services.project_meetings import (
@@ -11,6 +11,7 @@ from services.project_meetings import (
     can_manage_project_meeting,
     delete_local_calendar_event_mirrors,
     is_google_meeting_stage,
+    meeting_time_display,
     meeting_time_summary,
     sync_etapa_from_meeting,
     sync_local_calendar_event_mirrors,
@@ -130,12 +131,20 @@ def _serialize_etapa_payload(etapa, *, connection=None):
         can_manage = can_manage_project_meeting(connection, etapa.meeting)
         payload['meeting'] = {
             'time_summary': meeting_time_summary(etapa.meeting),
+            'title': etapa.descricao,
+            'description': etapa.meeting.description or '',
+            'starts_at': format_input_datetime(etapa.meeting.starts_at),
+            'ends_at': format_input_datetime(etapa.meeting.ends_at),
+            'start_time_display': meeting_time_display(etapa.meeting, boundary='start'),
+            'end_time_display': meeting_time_display(etapa.meeting, boundary='end'),
+            'is_all_day': bool(etapa.meeting.is_all_day),
             'sync_status': etapa.meeting.sync_status,
             'sync_error': etapa.meeting.sync_error or '',
             'location': etapa.meeting.location or '',
             'meet_link': etapa.meeting.meet_link or '',
             'owner_email': etapa.meeting.google_owner_email or '',
             'can_manage': can_manage,
+            'can_edit': can_manage and etapa.meeting.sync_status != 'error',
             'can_edit_dates': can_manage and etapa.meeting.sync_status != 'error',
         }
     return payload
@@ -376,6 +385,134 @@ def add_project_meeting(project_id):
     if sync_warning:
         flash(sync_warning, 'warning')
     return redirect(url_for('main.project_detail', project_id=project_id))
+
+
+@main_bp.route('/etapa/<int:etapa_id>/meeting/edit', methods=['POST'])
+@login_required
+def edit_project_meeting(etapa_id):
+    ajax_request = _is_ajax_request()
+    etapa = get_or_404(Etapa, etapa_id)
+    project = etapa.project
+
+    if not is_google_meeting_stage(etapa) or etapa.meeting is None:
+        message = 'Esta etapa não é uma reunião Google editável.'
+        if ajax_request:
+            return jsonify({'success': False, 'message': message}), 400
+        flash(message, 'warning')
+        return redirect(url_for('main.project_detail', project_id=project.id))
+
+    if not _current_user_can_edit_project(project):
+        message = 'Você não tem permissão para editar reuniões deste projeto.'
+        if ajax_request:
+            return jsonify({'success': False, 'message': message}), 403
+        flash(message, 'danger')
+        return redirect(url_for('main.project_detail', project_id=project.id))
+
+    meeting = etapa.meeting
+    connection = _connection_for_current_user()
+    if not can_manage_project_meeting(connection, meeting):
+        message = 'Somente quem estiver com a mesma conta Google conectada pode editar esta reunião.'
+        if ajax_request:
+            return jsonify({'success': False, 'message': message}), 403
+        flash(message, 'warning')
+        return redirect(url_for('main.project_detail', project_id=project.id))
+
+    if meeting.sync_status == 'error':
+        message = 'Esta reunião está somente leitura porque o evento não está mais disponível no Google Calendar.'
+        if ajax_request:
+            return jsonify({'success': False, 'message': message}), 409
+        flash(message, 'warning')
+        return redirect(url_for('main.project_detail', project_id=project.id))
+
+    try:
+        payload = parse_event_form(request.form)
+    except ValueError as exc:
+        if ajax_request:
+            return jsonify({'success': False, 'message': str(exc)}), 400
+        flash(str(exc), 'warning')
+        return redirect(url_for('main.project_detail', project_id=project.id))
+
+    event = meeting.calendar_event
+    if event is None:
+        event = CalendarEvent(
+            user_id=meeting.creator_user_id,
+            title=etapa.descricao,
+            description=meeting.description,
+            location=meeting.location,
+            starts_at=meeting.starts_at,
+            ends_at=meeting.ends_at,
+            is_all_day=meeting.is_all_day,
+            timezone=meeting.timezone or 'America/Sao_Paulo',
+            source='app',
+            google_calendar_id=meeting.google_calendar_id,
+            google_event_id=meeting.google_event_id,
+            meet_link=meeting.meet_link,
+            sync_status=meeting.sync_status,
+            sync_error=meeting.sync_error,
+        )
+        db.session.add(event)
+        db.session.flush()
+        meeting.calendar_event_id = event.id
+
+    event.title = payload['title']
+    event.description = payload['description']
+    event.location = payload['location']
+    event.starts_at = payload['starts_at']
+    event.ends_at = payload['ends_at']
+    event.is_all_day = payload['is_all_day']
+    event.timezone = meeting.timezone or event.timezone or 'America/Sao_Paulo'
+    event.source = 'app'
+
+    sync_warning = None
+    try:
+        sync_local_event_to_google(
+            current_app.config,
+            event,
+            connection,
+            create_conference=payload['create_conference'],
+        )
+    except Exception as exc:
+        event.sync_status = 'error'
+        event.sync_error = str(exc)
+        sync_warning = str(exc)
+
+    update_meeting_from_calendar_event(meeting, event)
+    sync_etapa_from_meeting(etapa, meeting, title=event.title)
+    sync_local_calendar_event_mirrors(meeting, title=event.title)
+
+    try:
+        log_project_action(
+            project_id=project.id,
+            action_type='edit_google_meeting',
+            description=f'Editou a reunião "{event.title}"',
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        message = 'Erro ao salvar a reunião.'
+        if ajax_request:
+            return jsonify({'success': False, 'message': message}), 500
+        flash(message, 'danger')
+        return redirect(url_for('main.project_detail', project_id=project.id))
+
+    success_message = 'Reunião atualizada com sucesso!'
+    if sync_warning:
+        success_message = 'Reunião atualizada, mas houve falha na sincronização com o Google Calendar.'
+
+    if ajax_request:
+        return jsonify(
+            {
+                'success': True,
+                'message': success_message,
+                'warning': sync_warning,
+                'etapa': _serialize_etapa_payload(etapa, connection=connection),
+            }
+        )
+
+    flash(success_message, 'warning' if sync_warning else 'success')
+    if sync_warning:
+        flash(sync_warning, 'warning')
+    return redirect(url_for('main.project_detail', project_id=project.id))
 
 @main_bp.route('/project/<int:project_id>/import_model', methods=['POST'])
 @login_required

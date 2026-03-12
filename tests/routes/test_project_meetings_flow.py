@@ -199,6 +199,70 @@ def test_same_google_account_on_another_internal_user_can_reschedule_project_mee
         assert etapa.data_fim == datetime.date(2026, 3, 21)
 
 
+def test_same_google_account_can_edit_project_meeting_via_modal_route(app, client, seed_data, monkeypatch):
+    with app.app_context():
+        _add_connection(seed_data['user_id'], 'google-shared-1', 'owner@example.com')
+        shared_user = _create_area_user('shared_google_editor', 'Shared Editor', 'Auditoria')
+        _add_connection(shared_user.id, 'google-shared-1', 'owner@example.com')
+        meeting_etapa_id = _seed_project_meeting(
+            seed_data,
+            owner_user_id=seed_data['user_id'],
+            owner_account_id='google-shared-1',
+            owner_email='owner@example.com',
+        )
+        db.session.commit()
+        shared_user_id = shared_user.id
+
+    _login(client, shared_user_id)
+
+    def fake_sync(_config, event, _connection, create_conference=False):
+        event.sync_status = 'ok'
+        event.sync_error = None
+        if create_conference:
+            event.meet_link = 'https://meet.google.com/edited-room'
+        return event
+
+    monkeypatch.setattr(etapa_routes, 'sync_local_event_to_google', fake_sync)
+
+    response = client.post(
+        f"/etapa/{meeting_etapa_id}/meeting/edit",
+        data={
+            'title': 'Reunião editada',
+            'starts_at': '2026-03-20T15:30',
+            'ends_at': '2026-03-20T16:45',
+            'location': 'Sala nova',
+            'description': 'Pauta atualizada',
+            'create_conference': 'on',
+        },
+        headers=AJAX_HEADERS,
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload['success'] is True
+    assert payload['etapa']['descricao'] == 'Reunião editada'
+    assert payload['etapa']['meeting']['location'] == 'Sala nova'
+    assert payload['etapa']['meeting']['description'] == 'Pauta atualizada'
+    assert payload['etapa']['meeting']['meet_link'] == 'https://meet.google.com/edited-room'
+
+    with app.app_context():
+        etapa = db.session.get(Etapa, meeting_etapa_id)
+        assert etapa.descricao == 'Reunião editada'
+        assert etapa.data_inicio == datetime.date(2026, 3, 20)
+        assert etapa.data_fim == datetime.date(2026, 3, 20)
+
+        meeting = ProjectStageMeeting.query.filter_by(etapa_id=meeting_etapa_id).first()
+        assert meeting is not None
+        assert meeting.location == 'Sala nova'
+        assert meeting.description == 'Pauta atualizada'
+        assert meeting.meet_link == 'https://meet.google.com/edited-room'
+
+        event = db.session.get(CalendarEvent, meeting.calendar_event_id)
+        assert event is not None
+        assert event.title == 'Reunião editada'
+        assert event.location == 'Sala nova'
+
+
 def test_different_google_account_cannot_update_or_delete_project_meeting(app, client, seed_data):
     with app.app_context():
         _add_connection(seed_data['user_id'], 'google-shared-1', 'owner@example.com')

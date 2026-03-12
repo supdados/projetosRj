@@ -10,6 +10,7 @@
         : [];
     const canAddGoogleMeeting = Boolean(projectDetailConfig.canAddGoogleMeeting);
     const addMeetingUrl = projectDetailConfig.addMeetingUrl || `/project/${projectIdValue}/meeting/add`;
+    const editMeetingUrlTemplate = projectDetailConfig.editMeetingUrlTemplate || `/etapa/0/meeting/edit`;
     const projectMeetingModalId = projectDetailConfig.projectMeetingModalId || 'projectMeetingModal';
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -50,6 +51,7 @@
         let inlineDatePickerOpening = false;
         let reactivateProjectModalResolver = null;
         let projectMeetingModal = null;
+        let currentMeetingPopover = null;
 
         function escapeHtml(value) {
             return String(value || '')
@@ -66,6 +68,29 @@
 
         function getDateDisplayValue(rawValue, displayValue) {
             return (rawValue || '').trim() ? String(displayValue || '').trim() : 'Sem data';
+        }
+
+        function formatMeetingDateTimeRange(eventData) {
+            const startsAt = eventData?.starts_at ? new Date(eventData.starts_at) : null;
+            const endsAt = eventData?.ends_at ? new Date(eventData.ends_at) : null;
+            if (!startsAt || !endsAt || Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
+                return 'Data não disponível';
+            }
+
+            const sameDay = startsAt.toDateString() === endsAt.toDateString();
+            const dateFmt = dt => dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeFmt = dt => dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+            if (eventData.is_all_day) {
+                if (sameDay) {
+                    return `${dateFmt(startsAt)} · Dia inteiro`;
+                }
+                return `${dateFmt(startsAt)} até ${dateFmt(endsAt)} · Dia inteiro`;
+            }
+            if (sameDay) {
+                return `${dateFmt(startsAt)} · ${timeFmt(startsAt)} - ${timeFmt(endsAt)}`;
+            }
+            return `${dateFmt(startsAt)} ${timeFmt(startsAt)} até ${dateFmt(endsAt)} ${timeFmt(endsAt)}`;
         }
 
         function isResponsavelEmptyValue(value) {
@@ -86,9 +111,23 @@
             updateEditableFieldDisplay(target, hasValue, value, 'Sem responsável');
         }
 
+        function buildMeetingDateDisplay(dateDisplay, timeDisplay) {
+            const safeDateDisplay = String(dateDisplay || 'Sem data').trim() || 'Sem data';
+            const safeTimeDisplay = String(timeDisplay || '').trim();
+            if (safeDateDisplay === 'Sem data' || !safeTimeDisplay) {
+                return safeDateDisplay;
+            }
+            return `${safeDateDisplay} ${safeTimeDisplay}`;
+        }
+
         function updateDateFieldDisplay(target, rawValue, displayValue) {
             const hasValue = Boolean((rawValue || '').trim());
-            updateEditableFieldDisplay(target, hasValue, displayValue, 'Sem data');
+            const emptyDisplay = target?.dataset?.emptyDisplay || 'Sem data';
+            let resolvedDisplay = hasValue ? String(displayValue || '').trim() : emptyDisplay;
+            if (hasValue && target && target.closest('tr.etapa-draggable-row')?.dataset.entryType === 'google_meeting') {
+                resolvedDisplay = buildMeetingDateDisplay(resolvedDisplay, target.dataset.timeDisplay || '');
+            }
+            updateEditableFieldDisplay(target, hasValue, resolvedDisplay, emptyDisplay);
         }
 
         function getEtapaRows() {
@@ -325,10 +364,11 @@
             `;
         }
 
-        function buildMeetingDateHtml(etapaId, field, rawValue, displayValue, meetingInfo) {
+        function buildMeetingDateHtml(etapaId, field, rawValue, displayValue, timeDisplay, meetingInfo) {
             const hasValue = Boolean((rawValue || '').trim());
-            const safeDisplay = escapeHtml(displayValue || 'Sem data');
+            const safeDisplay = escapeHtml(buildMeetingDateDisplay(displayValue || 'Sem data', timeDisplay || ''));
             const safeRawValue = escapeHtml(rawValue || '');
+            const safeTimeDisplay = escapeHtml(timeDisplay || '');
             const canEditDates = Boolean(meetingInfo && meetingInfo.can_edit_dates);
             const syncStatus = String(meetingInfo?.sync_status || '').trim();
             const lockTitle = syncStatus === 'error'
@@ -337,36 +377,213 @@
 
             if (!canEditDates) {
                 return `
-                    <span class="etapa-meeting-readonly-field${hasValue ? '' : ' editable-field-empty'}" title="${escapeHtml(lockTitle)}">
-                        <i class="fas fa-lock"></i>
-                        <span>${safeDisplay}</span>
-                    </span>
+                    <span class="etapa-meeting-readonly-field${hasValue ? '' : ' editable-field-empty'}" title="${escapeHtml(lockTitle)}">${safeDisplay}</span>
                 `;
             }
 
             return `
-                <span class="editable-field etapa-meeting-date-value${hasValue ? '' : ' editable-field-empty'}" data-field="${field}" data-etapa-id="${etapaId}" data-original-value="${safeRawValue}" data-empty-display="Sem data" data-entry-type="google_meeting">${safeDisplay}</span>
+                <span class="editable-field${hasValue ? '' : ' editable-field-empty'}" data-field="${field}" data-etapa-id="${etapaId}" data-original-value="${safeRawValue}" data-empty-display="Sem data" data-entry-type="google_meeting" data-time-display="${safeTimeDisplay}">${safeDisplay}</span>
             `;
         }
 
-        function getMeetingSyncDescriptor(meetingInfo) {
-            const syncStatus = String(meetingInfo?.sync_status || 'pending').trim();
-            if (syncStatus === 'error') {
-                return { label: 'Erro no Google', className: 'etapa-meeting-sync-pill--error' };
-            }
-            if (syncStatus === 'pending') {
-                return { label: 'Sincronizando', className: 'etapa-meeting-sync-pill--pending' };
-            }
-            return { label: 'Sincronizada', className: 'etapa-meeting-sync-pill--ok' };
+        function buildMeetingEventData(etapaPayload) {
+            const meetingInfo = etapaPayload?.meeting || {};
+            return {
+                id: etapaPayload?.id,
+                title: meetingInfo.title || etapaPayload?.descricao || 'Reunião sem título',
+                description: meetingInfo.description || '',
+                location: meetingInfo.location || '',
+                starts_at: meetingInfo.starts_at || '',
+                ends_at: meetingInfo.ends_at || '',
+                meet_link: meetingInfo.meet_link || '',
+                is_all_day: Boolean(meetingInfo.is_all_day),
+                owner_email: meetingInfo.owner_email || etapaPayload?.responsavel || 'Conta Google vinculada',
+                sync_status: meetingInfo.sync_status || 'pending',
+                sync_error: meetingInfo.sync_error || '',
+                can_manage: Boolean(meetingInfo.can_manage),
+                can_edit: Boolean(meetingInfo.can_edit),
+            };
         }
 
-        function buildMeetingDateChipHtml(label, contentHtml) {
-            return `
-                <span class="etapa-meeting-date-chip">
-                    <span class="etapa-meeting-date-label">${escapeHtml(label)}</span>
-                    ${contentHtml}
-                </span>
-            `;
+        function getMeetingEventDataFromRow(row) {
+            if (!row) {
+                return null;
+            }
+            if (row._meetingEventData) {
+                return row._meetingEventData;
+            }
+            const rawPayload = row.dataset.meetingEvent || '';
+            if (!rawPayload) {
+                return null;
+            }
+            try {
+                row._meetingEventData = JSON.parse(rawPayload);
+                return row._meetingEventData;
+            } catch (error) {
+                console.error('Erro ao ler payload da reunião do projeto:', error);
+                return null;
+            }
+        }
+
+        function closeMeetingPopover() {
+            if (currentMeetingPopover) {
+                currentMeetingPopover.remove();
+                currentMeetingPopover = null;
+            }
+        }
+
+        function openMeetingPopover(eventData, anchor) {
+            if (!eventData || !anchor) {
+                return;
+            }
+
+            const rect = typeof anchor.getBoundingClientRect === 'function'
+                ? anchor.getBoundingClientRect()
+                : anchor;
+            if (!rect) {
+                return;
+            }
+
+            closeMeetingPopover();
+
+            const pop = document.createElement('div');
+            pop.className = 'cal-event-popover';
+            currentMeetingPopover = pop;
+
+            const head = document.createElement('div');
+            head.className = 'cal-event-popover-head';
+
+            const title = document.createElement('div');
+            title.className = 'cal-event-popover-title';
+            title.textContent = eventData.title || 'Sem título';
+            head.appendChild(title);
+
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'cal-event-popover-close';
+            closeBtn.setAttribute('aria-label', 'Fechar');
+            closeBtn.textContent = '×';
+            closeBtn.addEventListener('click', function (event) {
+                event.stopPropagation();
+                closeMeetingPopover();
+            });
+            head.appendChild(closeBtn);
+            pop.appendChild(head);
+
+            const body = document.createElement('div');
+            body.className = 'cal-event-popover-body';
+
+            const when = document.createElement('div');
+            when.className = 'cal-event-popover-info';
+            when.innerHTML = '<i class="fas fa-clock" aria-hidden="true"></i><span></span>';
+            when.querySelector('span').textContent = formatMeetingDateTimeRange(eventData);
+            body.appendChild(when);
+
+            if (eventData.owner_email) {
+                const owner = document.createElement('div');
+                owner.className = 'cal-event-popover-info';
+                owner.innerHTML = '<i class="far fa-user" aria-hidden="true"></i><span></span>';
+                owner.querySelector('span').textContent = eventData.owner_email;
+                body.appendChild(owner);
+            }
+
+            if (eventData.location) {
+                const loc = document.createElement('div');
+                loc.className = 'cal-event-popover-info';
+                loc.innerHTML = '<i class="fas fa-map-marker-alt" aria-hidden="true"></i><span></span>';
+                loc.querySelector('span').textContent = eventData.location;
+                body.appendChild(loc);
+            }
+
+            if (eventData.description) {
+                const desc = document.createElement('div');
+                desc.className = 'cal-event-popover-description';
+                desc.textContent = eventData.description;
+                body.appendChild(desc);
+            }
+
+            if (eventData.sync_status === 'error') {
+                const warning = document.createElement('div');
+                warning.className = 'cal-event-popover-info cal-event-popover-info--warning';
+                warning.innerHTML = '<i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span></span>';
+                warning.querySelector('span').textContent = eventData.sync_error || 'Evento indisponível no Google Calendar.';
+                body.appendChild(warning);
+            }
+
+            if (eventData.meet_link) {
+                const meet = document.createElement('a');
+                meet.className = 'cal-event-popover-meet';
+                meet.href = eventData.meet_link;
+                meet.target = '_blank';
+                meet.rel = 'noopener noreferrer';
+                meet.textContent = 'Abrir Meet';
+                meet.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                });
+                body.appendChild(meet);
+            }
+
+            if (eventData.can_manage) {
+                const actions = document.createElement('div');
+                actions.className = 'cal-event-popover-actions';
+
+                if (eventData.can_edit && projectMeetingModal) {
+                    const editBtn = document.createElement('button');
+                    editBtn.type = 'button';
+                    editBtn.className = 'cal-event-popover-action';
+                    editBtn.innerHTML = '<i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span>';
+                    editBtn.addEventListener('click', function (event) {
+                        event.stopPropagation();
+                        closeMeetingPopover();
+                        projectMeetingModal.openEditModal(eventData);
+                    });
+                    actions.appendChild(editBtn);
+                }
+
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'cal-event-popover-action cal-event-popover-action--danger';
+                delBtn.innerHTML = '<i class="fas fa-trash" aria-hidden="true"></i><span>Apagar</span>';
+                delBtn.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    closeMeetingPopover();
+                    deleteProjectMeeting(eventData.id);
+                });
+                actions.appendChild(delBtn);
+                body.appendChild(actions);
+            } else {
+                const readonlyInfo = document.createElement('div');
+                readonlyInfo.className = 'cal-event-popover-info';
+                readonlyInfo.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i><span></span>';
+                readonlyInfo.querySelector('span').textContent = 'Somente a mesma conta Google conectada pode editar ou apagar.';
+                body.appendChild(readonlyInfo);
+            }
+
+            pop.appendChild(body);
+            pop.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+            document.body.appendChild(pop);
+
+            const popW = pop.offsetWidth || 320;
+            const popH = pop.offsetHeight || 220;
+            const viewW = window.innerWidth;
+            const viewH = window.innerHeight;
+
+            let left = rect.left;
+            let top = rect.bottom + 8;
+
+            if (left + popW > viewW - 8) left = viewW - popW - 8;
+            if (left < 8) left = 8;
+            if (top + popH > viewH - 8) top = rect.top - popH - 8;
+            if (top < 8) top = 8;
+
+            pop.style.left = `${left}px`;
+            pop.style.top = `${top}px`;
+
+            window.setTimeout(function () {
+                document.addEventListener('click', closeMeetingPopover, { once: true });
+            }, 0);
         }
 
         function buildMeetingActionHtml(etapaId, meetingInfo) {
@@ -374,7 +591,7 @@
                 return `
                     <form action="/etapa/${etapaId}/delete" method="post" class="inline-form" data-etapa-delete-form
                         onsubmit="return confirm('Tem certeza que deseja excluir esta reunião?');">
-                        <button type="submit" class="etapa-meeting-icon-btn etapa-meeting-icon-btn-danger" data-etapa-delete-btn title="Excluir reunião">
+                        <button type="submit" class="btn btn-sm btn-floating" data-etapa-delete-btn title="Excluir reunião">
                             <i class="fas fa-trash"></i>
                         </button>
                     </form>
@@ -382,7 +599,7 @@
             }
 
             return `
-                <span class="etapa-meeting-icon-btn etapa-meeting-icon-btn-lock" title="Somente a mesma conta Google conectada pode excluir esta reunião.">
+                <span class="btn btn-sm btn-floating etapa-meeting-action-lock" title="Somente a mesma conta Google conectada pode excluir esta reunião.">
                     <i class="fas fa-lock"></i>
                 </span>
             `;
@@ -398,41 +615,15 @@
             const dataFimDisplay = getDateDisplayValue(dataFim, etapaPayload.data_fim_display || '');
             const meetingInfo = etapaPayload.meeting || {};
             const ownerEmail = meetingInfo.owner_email || responsavel || 'Conta Google vinculada';
-            const syncDescriptor = getMeetingSyncDescriptor(meetingInfo);
-            const syncPillHtml = String(meetingInfo.sync_status || 'pending').trim() !== 'ok'
-                ? `<span class="etapa-meeting-sync-pill ${syncDescriptor.className}">${syncDescriptor.label}</span>`
-                : '';
-            const ownerHtml = ownerEmail
-                ? `
-                    <span class="etapa-meeting-inline" title="${escapeHtml(ownerEmail)}">
-                        <i class="far fa-user"></i>
-                        <span>${escapeHtml(ownerEmail)}</span>
-                    </span>
-                `
-                : '';
-            const locationHtml = meetingInfo.location
-                ? `
-                    <span class="etapa-meeting-inline etapa-meeting-inline-location" title="${escapeHtml(meetingInfo.location)}">
-                        <i class="fas fa-location-dot"></i>
-                        <span>${escapeHtml(meetingInfo.location)}</span>
-                    </span>
-                `
-                : '';
             const meetLinkHtml = meetingInfo.meet_link
                 ? `
-                    <a href="${escapeHtml(meetingInfo.meet_link)}" target="_blank" rel="noopener noreferrer" class="etapa-meeting-icon-btn" title="Abrir Meet">
+                    <a href="${escapeHtml(meetingInfo.meet_link)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-floating etapa-meeting-action-btn" title="Abrir Meet">
                         <i class="fas fa-video"></i>
                     </a>
                 `
                 : '';
-            const warningHtml = meetingInfo.sync_status === 'error'
-                ? `
-                    <span class="etapa-meeting-warning" title="${escapeHtml(meetingInfo.sync_error || 'Evento indisponível no Google Calendar.')}">
-                        <i class="fas fa-triangle-exclamation"></i>
-                        <span>Indisponível no Google</span>
-                    </span>
-                `
-                : '';
+            const startTimeDisplay = meetingInfo.start_time_display || '';
+            const endTimeDisplay = meetingInfo.end_time_display || '';
 
             const row = document.createElement('tr');
             row.className = `etapa-draggable-row etapa-row-google-meeting${meetingInfo.sync_status === 'error' ? ' etapa-row-google-meeting-error' : ''}`;
@@ -440,45 +631,38 @@
             row.dataset.entryType = 'google_meeting';
             row.dataset.workflowStage = 'false';
             row.dataset.meetingSyncStatus = meetingInfo.sync_status || 'pending';
+            row.dataset.meetingEvent = JSON.stringify(buildMeetingEventData(etapaPayload));
+            row._meetingEventData = buildMeetingEventData(etapaPayload);
 
             row.innerHTML = `
                 <td class="drag-handle etapa-drag-handle etapa-v4-cell-drag etapa-meeting-drag-cell" draggable="true">
                     <i class="fab fa-google etapa-meeting-drag-icon"></i>
                 </td>
                 <td class="etapa-order-cell etapa-v4-cell-number"></td>
-                <td colspan="7" class="etapa-row-text etapa-meeting-row-cell">
-                    <div class="etapa-meeting-layout">
-                        <div class="etapa-meeting-copy">
-                            <div class="etapa-meeting-title-row">
-                                <span class="etapa-meeting-title etapa-descricao">${escapeHtml(descricao)}</span>
-                                ${syncPillHtml}
-                            </div>
-                            <div class="etapa-meeting-subtitle">
-                                <span class="etapa-meeting-inline">
-                                    <i class="far fa-clock"></i>
-                                    <span>${escapeHtml(meetingInfo.time_summary || 'Sem horário')}</span>
-                                </span>
-                                ${ownerHtml}
-                                ${locationHtml}
-                                ${warningHtml}
-                            </div>
-                        </div>
-
-                        <div class="etapa-meeting-side">
-                            ${buildMeetingDateChipHtml(
-                                'Início',
-                                buildMeetingDateHtml(etapaId, 'data_inicio', dataInicio, dataInicioDisplay, meetingInfo)
-                            )}
-                            ${buildMeetingDateChipHtml(
-                                'Fim',
-                                buildMeetingDateHtml(etapaId, 'data_fim', dataFim, dataFimDisplay, meetingInfo)
-                            )}
-                            ${meetLinkHtml}
-                            ${buildMeetingActionHtml(etapaId, meetingInfo)}
-                        </div>
+                <td class="etapa-descricao etapa-row-text etapa-v4-cell-description etapa-meeting-description-cell">
+                    <div class="etapa-descricao-main">
+                        <span class="etapa-descricao">${escapeHtml(descricao)}</span>
                     </div>
-
+                    <div class="etapa-meeting-owner" title="${escapeHtml(ownerEmail)}">
+                        <i class="far fa-user" aria-hidden="true"></i>
+                        <span>${escapeHtml(ownerEmail)}</span>
+                    </div>
                     <button class="btn-comment-data ds-hidden" data-etapa-id="${etapaId}" data-comentario=""></button>
+                </td>
+                <td class="etapa-row-text etapa-v4-cell-date etapa-meeting-date-cell">
+                    ${buildMeetingDateHtml(etapaId, 'data_inicio', dataInicio, dataInicioDisplay, startTimeDisplay, meetingInfo)}
+                </td>
+                <td class="etapa-row-text etapa-v4-cell-date etapa-meeting-date-cell">
+                    ${buildMeetingDateHtml(etapaId, 'data_fim', dataFim, dataFimDisplay, endTimeDisplay, meetingInfo)}
+                </td>
+                <td class="etapa-row-text etapa-v4-cell-responsavel text-muted small">-</td>
+                <td class="text-center etapa-v4-cell-status text-muted small">-</td>
+                <td class="text-center etapa-v4-cell-status text-muted small">-</td>
+                <td class="actions text-center etapa-v4-actions-cell">
+                    <div class="etapa-meeting-actions">
+                        ${meetLinkHtml}
+                        ${buildMeetingActionHtml(etapaId, meetingInfo)}
+                    </div>
                 </td>
             `;
             return row;
@@ -585,6 +769,24 @@
             } else {
                 tbody.appendChild(row);
             }
+            renumberEtapaRows();
+            refreshConcludeButtonCounters();
+        }
+
+        function replaceEtapaRow(etapaPayload) {
+            if (!tbody || !etapaPayload || !etapaPayload.id) {
+                return;
+            }
+
+            const existingRow = tbody.querySelector(`tr.etapa-draggable-row[data-etapa-id="${etapaPayload.id}"]`);
+            const nextRow = buildEtapaRow(etapaPayload);
+            if (existingRow && existingRow.parentNode === tbody) {
+                existingRow.replaceWith(nextRow);
+            } else {
+                appendEtapaRow(etapaPayload);
+                return;
+            }
+            closeMeetingPopover();
             renumberEtapaRows();
             refreshConcludeButtonCounters();
         }
@@ -772,11 +974,79 @@
             }
         }
 
+        async function deleteProjectMeeting(etapaId, options) {
+            const settings = options || {};
+            const shouldConfirm = settings.confirm !== false;
+            if (!etapaId) {
+                return false;
+            }
+
+            if (shouldConfirm && !window.confirm('Tem certeza que deseja excluir esta reunião?')) {
+                return false;
+            }
+
+            const triggerButton = settings.triggerButton || null;
+            const originalButtonHtml = triggerButton ? triggerButton.innerHTML : '';
+            if (triggerButton) {
+                triggerButton.disabled = true;
+                triggerButton.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>';
+            }
+
+            try {
+                const response = await fetch(`/etapa/${etapaId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (error) {
+                    data = null;
+                }
+
+                if (!response.ok || !data || !data.success) {
+                    showAjaxFlashMessage(data?.message || 'Erro ao excluir reunião.', 'danger');
+                    if (triggerButton) {
+                        triggerButton.disabled = false;
+                        triggerButton.innerHTML = originalButtonHtml;
+                    }
+                    return false;
+                }
+
+                const row = tbody ? tbody.querySelector(`tr.etapa-draggable-row[data-etapa-id="${etapaId}"]`) : null;
+                if (row) {
+                    row.remove();
+                }
+                closeMeetingPopover();
+                if (settings.api && typeof settings.api.closeModal === 'function') {
+                    settings.api.closeModal();
+                }
+                renumberEtapaRows();
+                refreshConcludeButtonCounters();
+                showAjaxFlashMessage(data.message || 'Reunião excluída com sucesso.', 'success');
+                return true;
+            } catch (error) {
+                console.error('Erro ao excluir reunião do projeto:', error);
+                showAjaxFlashMessage('Erro de comunicação ao excluir reunião.', 'danger');
+                if (triggerButton) {
+                    triggerButton.disabled = false;
+                    triggerButton.innerHTML = originalButtonHtml;
+                }
+                return false;
+            }
+        }
+
         async function submitProjectMeetingForm(_event, api) {
             const form = api?.getForm ? api.getForm() : null;
             if (!form) {
                 return;
             }
+            const editingMeetingId = api?.getEditId ? api.getEditId() : null;
 
             const submitButton = form.querySelector('.cal-btn-save');
             const cancelButtons = Array.from(form.querySelectorAll('.cal-btn-cancel, [data-calendar-modal-close]'));
@@ -810,19 +1080,24 @@
                 }
 
                 if (!response.ok || !data || !data.success || !data.etapa) {
-                    showAjaxFlashMessage(data?.message || 'Erro ao adicionar reunião.', 'danger');
+                    showAjaxFlashMessage(data?.message || (editingMeetingId ? 'Erro ao salvar reunião.' : 'Erro ao adicionar reunião.'), 'danger');
                     return;
                 }
 
-                appendEtapaRow(data.etapa);
+                if (editingMeetingId) {
+                    replaceEtapaRow(data.etapa);
+                } else {
+                    appendEtapaRow(data.etapa);
+                }
+                closeMeetingPopover();
                 api.closeModal();
                 if (data.warning) {
                     showAjaxFlashMessage(data.warning, 'warning');
                 }
-                showAjaxFlashMessage(data.message || 'Reunião adicionada ao projeto com sucesso!', 'success');
+                showAjaxFlashMessage(data.message || (editingMeetingId ? 'Reunião atualizada com sucesso!' : 'Reunião adicionada ao projeto com sucesso!'), 'success');
             } catch (error) {
-                console.error('Erro ao adicionar reunião do projeto:', error);
-                showAjaxFlashMessage('Erro de comunicação ao adicionar reunião.', 'danger');
+                console.error('Erro ao salvar reunião do projeto:', error);
+                showAjaxFlashMessage(editingMeetingId ? 'Erro de comunicação ao salvar reunião.' : 'Erro de comunicação ao adicionar reunião.', 'danger');
             } finally {
                 if (submitButton) {
                     submitButton.disabled = false;
@@ -838,8 +1113,13 @@
             projectMeetingModal = window.createCalendarEventModal({
                 modalId: projectMeetingModalId,
                 createUrl: addMeetingUrl,
+                editUrlTemplate: editMeetingUrlTemplate,
                 createTitle: 'Nova reunião Google',
+                editTitle: 'Editar reunião Google',
                 onSubmit: submitProjectMeetingForm,
+                onDelete: function (etapaId, api) {
+                    deleteProjectMeeting(etapaId, { api });
+                },
                 onInvalid: function (message) {
                     showAjaxFlashMessage(message, 'warning');
                 },
@@ -896,6 +1176,9 @@
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape' && reactivateProjectModalResolver) {
                 resolveReactivateProjectModal(false);
+            }
+            if (event.key === 'Escape') {
+                closeMeetingPopover();
             }
         });
 
@@ -2121,6 +2404,12 @@
                 event.preventDefault();
 
                 const deleteButton = deleteForm.querySelector('[data-etapa-delete-btn]');
+                const row = deleteForm.closest('tr.etapa-draggable-row');
+                if (row?.dataset.entryType === 'google_meeting') {
+                    await deleteProjectMeeting(row.dataset.etapaId, { triggerButton: deleteButton, confirm: false });
+                    return;
+                }
+
                 const originalButtonHtml = deleteButton ? deleteButton.innerHTML : '';
 
                 if (deleteButton) {
@@ -2155,7 +2444,6 @@
                         return;
                     }
 
-                    const row = deleteForm.closest('tr.etapa-draggable-row');
                     if (row) {
                         row.remove();
                     }
@@ -2175,6 +2463,21 @@
             });
 
             tbody.addEventListener('click', function (event) {
+                const meetingRow = event.target.closest('tr.etapa-row-google-meeting');
+                const interactiveMeetingTarget = event.target.closest('a, button, form, .editable-field, input, textarea, select, .drag-handle');
+                if (meetingRow && tbody.contains(meetingRow) && !interactiveMeetingTarget) {
+                    const meetingEventData = getMeetingEventDataFromRow(meetingRow);
+                    if (meetingEventData) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        openMeetingPopover(
+                            meetingEventData,
+                            event.target.closest('td') || meetingRow.querySelector('.etapa-meeting-description-cell') || meetingRow
+                        );
+                        return;
+                    }
+                }
+
                 const iniciadaButton = event.target.closest('.toggle-iniciada');
                 if (iniciadaButton && tbody.contains(iniciadaButton)) {
                     const etapaId = iniciadaButton.dataset.etapaId;

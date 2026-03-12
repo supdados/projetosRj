@@ -776,100 +776,91 @@ html[data-theme="dark"] body.is-authenticated .etapa-meeting-drag-cell:focus-wit
     color: #a8cbff;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-sync-pill {
-    background: rgba(50, 70, 95, 0.78);
-    border-color: rgba(99, 166, 219, 0.24);
-    color: #cfdeeb;
-}
-
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-sync-pill--ok {
-    background: rgba(55, 140, 107, 0.18);
-    border-color: rgba(73, 185, 135, 0.34);
-    color: #d8f5e8;
-}
-
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-sync-pill--pending {
-    background: rgba(181, 132, 61, 0.18);
-    border-color: rgba(216, 162, 77, 0.34);
-    color: #ffe8c5;
-}
-
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-sync-pill--error {
-    background: rgba(220, 96, 73, 0.18);
-    border-color: rgba(224, 122, 108, 0.34);
-    color: #ffd1c8;
-}
-
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-title {
-    color: #edf5fc;
-}
-
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-subtitle {
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-owner {
     color: #a9bfd3;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-warning {
-    color: #ffd1c8;
-}
-
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-date-chip {
-    background: transparent;
-    border-color: transparent;
-}
-
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-date-label {
-    color: #9eb6cb;
-}
-
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-date-value {
-    color: #e2edf7;
-}
-
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-date-value:hover {
-    background: rgba(54, 79, 106, 0.78);
-    color: #eef5fc;
-}
-
 html[data-theme="dark"] body.is-authenticated .etapa-meeting-readonly-field {
-    background: transparent;
-    border-color: transparent;
-    color: #b6cada;
+    color: #d7e4f0;
+    background: rgba(54, 79, 106, 0.24);
+    border-color: rgba(126, 184, 232, 0.22);
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-date-chip .editable-field-input {
-    background: #1f2e40;
-    border-color: rgba(99, 166, 219, 0.36) !important;
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-readonly-field.editable-field-empty {
+    color: #aec3d7;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-action-btn,
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-action-lock {
+    color: #aec3d7;
+}
+
+html[data-theme="dark"] body.is-authenticated .cal-event-popover {
+    background: #182637;
+    border-color: rgba(126, 184, 232, 0.22);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.34), 0 4px 14px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-title {
     color: #edf5fc;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-icon-btn {
-    background: transparent;
-    border-color: transparent;
-    color: #d7e4f0;
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-close {
+    color: #a9bfd3;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-icon-btn:hover,
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-icon-btn:focus-visible {
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-close:hover {
     background: rgba(54, 79, 106, 0.78);
-    border-color: rgba(126, 184, 232, 0.36);
     color: #eef5fc;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-icon-btn-danger {
-    background: rgba(220, 96, 73, 0.12);
-    border-color: rgba(224, 122, 108, 0.26);
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-info {
+    color: #bfd1e1;
+}
+
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-info i {
+    color: #95afc8;
+}
+
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-info--warning,
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-info--warning i {
     color: #ffd1c8;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-icon-btn-danger:hover,
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-icon-btn-danger:focus-visible {
-    background: rgba(220, 96, 73, 0.18);
-    border-color: rgba(224, 122, 108, 0.34);
-    color: #ffe4df;
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-description {
+    color: #d9e6f1;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-meeting-icon-btn-lock {
-    color: #aec3d7;
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-meet {
+    background: rgba(55, 121, 188, 0.18);
+    color: #d8ebff;
+}
+
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-meet:hover {
+    background: rgba(55, 121, 188, 0.28);
+}
+
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-action {
+    background: transparent;
+    border-color: rgba(126, 184, 232, 0.26);
+    color: #d7e4f0;
+}
+
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-action:hover {
+    background: rgba(54, 79, 106, 0.78);
+    border-color: rgba(126, 184, 232, 0.42);
+    color: #eef5fc;
+}
+
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-action--danger {
+    color: #ffd1c8;
+    border-color: rgba(224, 122, 108, 0.32);
+}
+
+html[data-theme="dark"] body.is-authenticated .cal-event-popover-action--danger:hover {
+    background: rgba(220, 96, 73, 0.18);
+    border-color: rgba(224, 122, 108, 0.4);
+    color: #ffe4df;
 }
 
 html[data-theme="dark"] body.is-authenticated .etapa-comentario-display {
