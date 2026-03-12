@@ -29,6 +29,10 @@ def test_project_detail_inline_editor_supports_multiline_responsavel():
 
     assert 'editable-field-textarea-responsavel' in js_content
     assert '.editable-field-textarea.editable-field-textarea-responsavel' in css_content
+    assert 'lockInlineEditorToDisplayWidth' in js_content
+    assert "if (field === 'responsavel')" in js_content
+    assert 'min-width: 170px;' in css_content
+    assert 'box-sizing: border-box;' in css_content
 
 
 def test_project_detail_inline_stage_composer_avoids_smooth_scroll_hitbox_bug():

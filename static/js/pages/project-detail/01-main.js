@@ -1701,6 +1701,33 @@
                 textarea.style.height = `${Math.max(textarea.scrollHeight, minHeight)}px`;
             }
 
+            function lockInlineEditorToDisplayWidth(target, input) {
+                if (!target || !input) {
+                    return;
+                }
+
+                const cell = target.closest('td');
+                const targetRect = target.getBoundingClientRect();
+                const cellRect = cell ? cell.getBoundingClientRect() : null;
+                const cellStyles = cell ? window.getComputedStyle(cell) : null;
+                const cellPaddingX = cellStyles
+                    ? (parseFloat(cellStyles.paddingLeft) || 0) + (parseFloat(cellStyles.paddingRight) || 0)
+                    : 0;
+                const targetWidth = Math.ceil(targetRect.width || 0);
+                const fallbackWidth = Math.max(0, Math.floor((cellRect?.width || 0) - cellPaddingX));
+                const lockedWidth = Math.max(targetWidth, fallbackWidth);
+
+                if (!lockedWidth) {
+                    return;
+                }
+
+                input.style.display = 'block';
+                input.style.boxSizing = 'border-box';
+                input.style.width = `${lockedWidth}px`;
+                input.style.minWidth = `${lockedWidth}px`;
+                input.style.maxWidth = '100%';
+            }
+
             mainContent.addEventListener('click', function (e) {
                 const target = e.target.closest('.editable-field');
 
@@ -1757,6 +1784,10 @@
                         input.type = 'text';
                         input.value = originalValue === '-' ? '' : originalValue;
                     }
+                }
+
+                if (field === 'responsavel') {
+                    lockInlineEditorToDisplayWidth(target, input);
                 }
 
                 target.style.display = 'none';
