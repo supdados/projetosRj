@@ -258,6 +258,16 @@ ROUTE_CASES = [
         'requires_admin': False,
     },
     {
+        'id': 'project_meeting_edit_post',
+        'method': 'POST',
+        'rule': '/etapa/<int:etapa_id>/meeting/edit',
+        'path': '/etapa/{etapa_id}/meeting/edit',
+        'role': 'user',
+        'expected_status': 302,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
         'id': 'import_model_post',
         'method': 'POST',
         'rule': '/project/<int:project_id>/import_model',
@@ -1205,4 +1215,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 106
+assert len(ROUTE_CASES) == 107

@@ -28,5 +28,6 @@ def test_project_detail_ajax_flash_uses_compact_app_flash_markup():
 
     assert "js/pages/project-detail/01-main.js" in template_content
     assert 'app-flash-alert app-flash-alert-compact' in main_js_content
-    assert 'app-flash-icon' in main_js_content
+    assert 'app-flash-text' in main_js_content
+    assert 'app-flash-icon' not in main_js_content
     assert '.app-flash-alert-compact' in css_content
