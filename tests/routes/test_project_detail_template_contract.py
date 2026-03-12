@@ -214,8 +214,14 @@ def test_project_detail_renders_google_meeting_row_as_informational_item(app, cl
 
     assert 'Reunião Google' in meeting_row
     assert '10:00 - 11:00' in meeting_row
+    assert 'colspan="9"' in meeting_row
+    assert 'etapa-meeting-card' in meeting_row
+    assert 'etapa-meeting-meta-grid' in meeting_row
     assert 'etapa-meeting-status-pill' in meeting_row
+    assert 'Conta Google' in meeting_row
     assert 'toggle-iniciada' not in meeting_row
     assert 'toggle-done' not in meeting_row
     assert 'data-field="descricao"' not in meeting_row
     assert 'data-field="responsavel"' not in meeting_row
+    assert 'etapa-v4-cell-date' not in meeting_row
+    assert 'etapa-v4-cell-status' not in meeting_row
