@@ -223,6 +223,89 @@ def test_global_search_api_includes_only_events_of_current_user(app, seed_data):
     assert 'Evento Exclusivo Auditoria' not in outsider_titles
 
 
+def test_global_search_api_formats_single_day_all_day_event_without_next_day_suffix(app, seed_data):
+    with app.app_context():
+        db.session.add(
+            CalendarEvent(
+                user_id=seed_data['user_id'],
+                title='Evento Dia Inteiro Busca',
+                description='Evento de um dia inteiro',
+                starts_at=datetime.datetime(2026, 3, 11, 3, 0),
+                ends_at=datetime.datetime(2026, 3, 12, 2, 59),
+                is_all_day=True,
+                source='google',
+                sync_status='ok',
+            )
+        )
+        db.session.commit()
+
+    response = _client_for_user(app, seed_data['user_id']).get(
+        '/api/busca-global',
+        query_string={'q': 'Evento Dia Inteiro Busca'},
+    )
+
+    assert response.status_code == 200
+    event_results = response.get_json()['results']['events']
+    assert len(event_results) == 1
+    assert 'Quando: 11/03/2026' in event_results[0]['meta']
+    assert 'ate 12/03/2026' not in event_results[0]['meta']
+
+
+def test_global_search_api_formats_multi_day_all_day_event_with_inclusive_end_date(app, seed_data):
+    with app.app_context():
+        db.session.add(
+            CalendarEvent(
+                user_id=seed_data['user_id'],
+                title='Evento Multi Dia Busca',
+                description='Evento de varios dias inteiros',
+                starts_at=datetime.datetime(2026, 3, 11, 3, 0),
+                ends_at=datetime.datetime(2026, 3, 13, 2, 59),
+                is_all_day=True,
+                source='google',
+                sync_status='ok',
+            )
+        )
+        db.session.commit()
+
+    response = _client_for_user(app, seed_data['user_id']).get(
+        '/api/busca-global',
+        query_string={'q': 'Evento Multi Dia Busca'},
+    )
+
+    assert response.status_code == 200
+    event_results = response.get_json()['results']['events']
+    assert len(event_results) == 1
+    assert 'Quando: 11/03/2026 ate 12/03/2026' in event_results[0]['meta']
+
+
+def test_global_search_api_formats_utc_full_day_duration_as_single_local_day(app, seed_data):
+    with app.app_context():
+        db.session.add(
+            CalendarEvent(
+                user_id=seed_data['user_id'],
+                title='Evento Duracao Dia Local',
+                description='Mesmo caso exibido no calendario em um unico dia local',
+                starts_at=datetime.datetime(2026, 3, 12, 3, 0),
+                ends_at=datetime.datetime(2026, 3, 13, 2, 59),
+                is_all_day=False,
+                source='google',
+                sync_status='ok',
+            )
+        )
+        db.session.commit()
+
+    response = _client_for_user(app, seed_data['user_id']).get(
+        '/api/busca-global',
+        query_string={'q': 'Evento Duracao Dia Local'},
+    )
+
+    assert response.status_code == 200
+    event_results = response.get_json()['results']['events']
+    assert len(event_results) == 1
+    assert 'Quando: 12/03/2026 00:00 - 23:59' in event_results[0]['meta']
+    assert '13/03/2026' not in event_results[0]['meta']
+
+
 def test_search_page_renders_grouped_sections_and_hides_foreign_area_results(client_user, seed_data):
     response = client_user.get('/busca', query_string={'q': 'Auditoria'})
     assert response.status_code == 200

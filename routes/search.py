@@ -1,3 +1,6 @@
+import datetime
+from zoneinfo import ZoneInfo
+
 from flask import g, jsonify, render_template, request, url_for
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import joinedload
@@ -11,6 +14,7 @@ from .shared import redirect_to_current_route_without_area, sanitize_area_filter
 GLOBAL_SEARCH_DEFAULT_LIMIT = 5
 GLOBAL_SEARCH_API_MAX_LIMIT = 20
 GLOBAL_SEARCH_PAGE_LIMIT = 50
+TIMEZONE_BR = ZoneInfo('America/Sao_Paulo')
 
 
 def _truncate_text(value, max_length=140):
@@ -51,16 +55,29 @@ def _build_project_display_title(project, max_length=120):
     return _truncate_text(f'{project.id}-{base_title}', max_length)
 
 
+def _to_local_datetime(utc_naive):
+    if utc_naive is None:
+        return None
+    return utc_naive.replace(tzinfo=datetime.UTC).astimezone(TIMEZONE_BR)
+
+
 def _format_calendar_event_period(event):
     if not event.starts_at:
         return ''
 
-    starts_at = event.starts_at
-    ends_at = event.ends_at
+    starts_at = _to_local_datetime(event.starts_at)
+    ends_at = _to_local_datetime(event.ends_at)
 
     if event.is_all_day:
-        if ends_at and ends_at.date() != starts_at.date():
-            return f'{starts_at:%d/%m/%Y} ate {ends_at:%d/%m/%Y}'
+        display_end = starts_at.date()
+        if ends_at:
+            display_end = ends_at.date()
+            if ends_at > starts_at and ends_at.time() == datetime.time(0, 0):
+                display_end = (ends_at - datetime.timedelta(days=1)).date()
+            if display_end < starts_at.date():
+                display_end = starts_at.date()
+        if display_end != starts_at.date():
+            return f'{starts_at:%d/%m/%Y} ate {display_end:%d/%m/%Y}'
         return starts_at.strftime('%d/%m/%Y')
 
     if ends_at:
