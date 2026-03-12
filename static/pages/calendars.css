@@ -193,10 +193,12 @@ html[data-theme="dark"] .cal-toggle-btn.is-active { background: #005a92 !importa
   overflow: hidden;
   background: var(--app-color-surface);
 }
-/* 6 semanas fixas com altura igual — primeira linha auto para o cabeçalho */
+/* A altura total da grade permanece estável; o JS define 4-6 semanas conforme o mês. */
 .cal-grid {
   display: grid;
-  grid-template-rows: auto repeat(6, minmax(5.5rem, 1fr));
+  grid-template-rows: auto repeat(6, minmax(0, 1fr));
+  height: 100%;
+  min-height: 0;
 }
 .cal-grid-headers {
   display: grid;
@@ -241,6 +243,16 @@ html[data-theme="dark"] .cal-toggle-btn.is-active { background: #005a92 !importa
 /* Spacer inside cells — reserves height so pills render below span overlay */
 .cal-span-spacer {
   flex-shrink: 0;
+}
+
+.cal-cell-events {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.18rem;
+  overflow: hidden;
+  position: relative;
 }
 
 /* Span bar (multi-day events) */
@@ -373,6 +385,19 @@ html[data-theme="dark"] .cal-toggle-btn.is-active { background: #005a92 !importa
 .cal-more-pills:hover {
   background: var(--app-color-surface-muted);
   color: var(--app-color-text-primary);
+}
+.cal-more-pills--overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.34rem;
+  z-index: 2;
+  padding-top: 0.46rem;
+  padding-bottom: 0.12rem;
+  background: linear-gradient(180deg, transparent 0%, var(--app-color-surface) 48%);
+}
+.cal-cell:hover .cal-more-pills--overlay {
+  background: linear-gradient(180deg, transparent 0%, var(--app-color-surface-muted) 48%);
 }
 
 /* ── Day popover ─────────────────────────────────────────────────────────── */
@@ -1132,7 +1157,6 @@ body.cal-body .cal-view--list.is-active {
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
-  .cal-grid { grid-template-rows: auto repeat(6, minmax(3.8rem, 1fr)); }
   .cal-cell { min-height: 0; padding: 0.2rem; }
   .cal-event-pill { font-size: 0.62rem; padding: 0.04rem 0.18rem; gap: 0.22rem; }
   .cal-event-pill::before { width: 0.42rem; height: 0.42rem; }

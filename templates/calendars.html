@@ -316,6 +316,144 @@ function pillClass(ev) {
   return '';
 }
 
+let _calendarCellSyncRaf = null;
+
+function makeMonthEventPill(ev, dayStartMs) {
+  const pill = document.createElement('div');
+  pill.className = 'cal-event-pill ' + pillClass(ev);
+  const occupiesFullDay = eventCoversFullDayOn(dayStartMs, ev);
+  const isAllDayBar = ev.is_all_day || occupiesFullDay;
+  if (isAllDayBar) pill.classList.add('cal-event-pill--all-day');
+  const showTime = !isAllDayBar && ev.starts_at.slice(11) !== '00:00';
+  const hm = showTime ? new Date(ev.starts_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ' : '';
+  pill.textContent = hm + ev.title;
+  pill.title = ev.title;
+  pill.addEventListener('click', e => { e.stopPropagation(); openEventPopover(ev, pill); });
+  return pill;
+}
+
+function makeMonthMorePills(day, dayEvs, hiddenCount) {
+  const more = document.createElement('div');
+  more.className = 'cal-more-pills';
+  more.textContent = '+' + hiddenCount + ' mais';
+  more.addEventListener('click', e => { e.stopPropagation(); openDayPopover(day, dayEvs, more); });
+  return more;
+}
+
+function measureMonthCellEventMetrics() {
+  const probe = document.createElement('div');
+  probe.style.position = 'fixed';
+  probe.style.left = '-9999px';
+  probe.style.top = '-9999px';
+  probe.style.visibility = 'hidden';
+  probe.style.pointerEvents = 'none';
+
+  const host = document.createElement('div');
+  host.className = 'cal-cell-events';
+
+  const regular = document.createElement('div');
+  regular.className = 'cal-event-pill';
+  regular.textContent = '09:00 Evento';
+
+  const allDay = document.createElement('div');
+  allDay.className = 'cal-event-pill cal-event-pill--all-day';
+  allDay.textContent = 'Evento';
+
+  const more = document.createElement('div');
+  more.className = 'cal-more-pills';
+  more.textContent = '+9 mais';
+
+  host.appendChild(regular);
+  host.appendChild(allDay);
+  host.appendChild(more);
+  probe.appendChild(host);
+  document.body.appendChild(probe);
+
+  const styles = window.getComputedStyle(host);
+  const gap = parseFloat(styles.rowGap || styles.gap || '0') || 0;
+  const metrics = {
+    regular: regular.offsetHeight,
+    allDay: allDay.offsetHeight,
+    more: more.offsetHeight,
+    gap
+  };
+
+  probe.remove();
+  return metrics;
+}
+
+function getMonthEventRowsHeight(singleEvs, count, dayStartMs, metrics) {
+  if (count <= 0) return 0;
+  const rowHeights = singleEvs.map(ev => (
+    eventCoversFullDayOn(dayStartMs, ev) || ev.is_all_day
+      ? metrics.allDay
+      : metrics.regular
+  ));
+  let needed = 0;
+  for (let i = 0; i < count; i++) needed += rowHeights[i] || 0;
+  if (count > 1) needed += metrics.gap * (count - 1);
+  return needed;
+}
+
+function getVisibleMonthEventCount(singleEvs, availableHeight, dayStartMs, metrics) {
+  if (!singleEvs.length || availableHeight <= 0) return 0;
+  for (let count = singleEvs.length; count >= 0; count--) {
+    const needed = getMonthEventRowsHeight(singleEvs, count, dayStartMs, metrics);
+    if (needed <= availableHeight + 0.5) return count;
+  }
+
+  return 0;
+}
+
+function renderMonthCellEvents(cell, metrics) {
+  if (!cell || cell.classList.contains('cal-cell--outside') || !cell._eventsHost) return;
+
+  const host = cell._eventsHost;
+  const singleEvs = cell._singleEvents || [];
+  host.textContent = '';
+
+  if (!singleEvs.length) return;
+
+  const visibleCount = getVisibleMonthEventCount(
+    singleEvs,
+    host.clientHeight,
+    cell._dayStartMs,
+    metrics
+  );
+  const visibleHeight = getMonthEventRowsHeight(singleEvs, visibleCount, cell._dayStartMs, metrics);
+
+  singleEvs.slice(0, visibleCount).forEach(ev => {
+    host.appendChild(makeMonthEventPill(ev, cell._dayStartMs));
+  });
+
+  if (singleEvs.length > visibleCount) {
+    const more = makeMonthMorePills(cell._dayData, cell._dayEvents, singleEvs.length - visibleCount);
+    const inlineMoreHeight = metrics.more + (visibleCount > 0 ? metrics.gap : 0);
+    const remainingHeight = host.clientHeight - visibleHeight;
+    if (remainingHeight + 0.5 < inlineMoreHeight) {
+      more.classList.add('cal-more-pills--overlay');
+    }
+    host.appendChild(more);
+  }
+}
+
+function syncCalendarCellEventDensity() {
+  const grid = document.getElementById('calGrid');
+  if (!grid || curView !== 'calendar') return;
+
+  const metrics = measureMonthCellEventMetrics();
+  grid.querySelectorAll('.cal-cell').forEach(cell => renderMonthCellEvents(cell, metrics));
+}
+
+function scheduleCalendarCellEventDensitySync() {
+  if (curView !== 'calendar') return;
+  if (_calendarCellSyncRaf) cancelAnimationFrame(_calendarCellSyncRaf);
+  _calendarCellSyncRaf = requestAnimationFrame(() => {
+    _calendarCellSyncRaf = null;
+    syncCalendarCellEventDensity();
+  });
+}
+
 function renderCalendar() {
   document.getElementById('monthLabel').textContent = MONTHS[curMonth] + ' ' + curYear;
   const grid = document.getElementById('calGrid');
@@ -334,6 +472,8 @@ function renderCalendar() {
   const firstWday  = new Date(curYear, curMonth, 1).getDay();
   const daysInMon  = new Date(curYear, curMonth + 1, 0).getDate();
   const daysInPrev = new Date(curYear, curMonth, 0).getDate();
+  const weekCount  = Math.ceil((firstWday + daysInMon) / 7);
+  const totalCells = weekCount * 7;
 
   const days = [];
   for (let i = firstWday - 1; i >= 0; i--)
@@ -342,13 +482,18 @@ function renderCalendar() {
     const isT = curYear === _today.getFullYear() && curMonth === _today.getMonth() && d === _today.getDate();
     days.push({ y: curYear, m: curMonth, d, outside: false, isToday: isT });
   }
-  // Sempre 42 dias (6 semanas fixas) — igual ao Google Calendar
+
+  // Completa apenas as semanas necessárias do mês atual.
   let nextD = 1;
-  while (days.length < 42)
+  while (days.length < totalCells)
     days.push({ y: curYear, m: curMonth + 1, d: nextD++, outside: true });
 
-  for (let w = 0; w < 6; w++)
+  grid.style.gridTemplateRows = 'auto repeat(' + weekCount + ', minmax(0, 1fr))';
+
+  for (let w = 0; w < weekCount; w++)
     grid.appendChild(buildWeekRow(days.slice(w * 7, w * 7 + 7)));
+
+  scheduleCalendarCellEventDensitySync();
 }
 
 function buildWeekRow(week) {
@@ -471,50 +616,36 @@ function makeCell(day, singleEvs, spanH = 0, nLanes = 0) {
     cell.appendChild(spacer);
   }
 
+  const eventsHost = document.createElement('div');
+  eventsHost.className = 'cal-cell-events';
+  cell.appendChild(eventsHost);
+
   if (!outside) {
     const pad = n => String(n).padStart(2, '0');
     const realDate = new Date(y, m, d);
     const dateStr  = realDate.getFullYear() + '-' + pad(realDate.getMonth() + 1) + '-' + pad(realDate.getDate());
     const dayStartMs = new Date(y, m, d, 0, 0, 0).getTime();
     const dayEndMs   = new Date(y, m, d, 23, 59, 59).getTime();
+    const dayEvs = CAL_EVENTS.filter(ev => {
+      const evStartMs = new Date(ev.starts_at).getTime();
+      const evEndMs = new Date(ev.ends_at).getTime();
+      return evStartMs <= dayEndMs && evEndMs > dayStartMs;
+    }).sort((a, b) => {
+      const aFull = eventCoversFullDayOn(dayStartMs, a);
+      const bFull = eventCoversFullDayOn(dayStartMs, b);
+      if (aFull !== bFull) return aFull ? -1 : 1;
+      return a.starts_at.localeCompare(b.starts_at);
+    });
+
+    cell._dayData = day;
+    cell._dayStartMs = dayStartMs;
+    cell._dayEvents = dayEvs;
+    cell._singleEvents = singleEvs;
+    cell._eventsHost = eventsHost;
 
     cell.addEventListener('click', ev => {
-      if (ev.target === cell || ev.target === num) openCreateModal(dateStr);
+      if (ev.target === cell || ev.target === num || ev.target === eventsHost) openCreateModal(dateStr);
     });
-
-    const MAX_PILLS = Math.max(0, 2 - nLanes);
-
-    singleEvs.slice(0, MAX_PILLS).forEach(ev => {
-      const pill = document.createElement('div');
-      pill.className = 'cal-event-pill ' + pillClass(ev);
-      const occupiesFullDay = eventCoversFullDayOn(dayStartMs, ev);
-      const isAllDayBar = ev.is_all_day || occupiesFullDay;
-      if (isAllDayBar) pill.classList.add('cal-event-pill--all-day');
-      const showTime = !isAllDayBar && ev.starts_at.slice(11) !== '00:00';
-      const hm = showTime ? new Date(ev.starts_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ' : '';
-      pill.textContent = hm + ev.title;
-      pill.title = ev.title;
-      pill.addEventListener('click', e => { e.stopPropagation(); openEventPopover(ev, pill); });
-      cell.appendChild(pill);
-    });
-
-    if (singleEvs.length > MAX_PILLS) {
-      const more = document.createElement('div');
-      more.className = 'cal-more-pills';
-      more.textContent = '+' + (singleEvs.length - MAX_PILLS) + ' mais';
-      const dayEvs = CAL_EVENTS.filter(ev => {
-        const evStartMs = new Date(ev.starts_at).getTime();
-        const evEndMs = new Date(ev.ends_at).getTime();
-        return evStartMs <= dayEndMs && evEndMs > dayStartMs;
-      }).sort((a, b) => {
-        const aFull = eventCoversFullDayOn(dayStartMs, a);
-        const bFull = eventCoversFullDayOn(dayStartMs, b);
-        if (aFull !== bFull) return aFull ? -1 : 1;
-        return a.starts_at.localeCompare(b.starts_at);
-      });
-      more.addEventListener('click', e => { e.stopPropagation(); openDayPopover(day, dayEvs, more); });
-      cell.appendChild(more);
-    }
   }
   return cell;
 }
@@ -1186,6 +1317,16 @@ function deleteEvent(id) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.body.classList.add('cal-body');
 switchView(curView);
+
+window.addEventListener('resize', () => {
+  if (curView === 'calendar') scheduleCalendarCellEventDensitySync();
+});
+
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => {
+    if (curView === 'calendar') scheduleCalendarCellEventDensitySync();
+  });
+}
 
 
 document.addEventListener('keydown', e => {
