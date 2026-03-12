@@ -64,7 +64,12 @@ def dashboard():
         projetos_vigentes_query = projetos_vigentes_query.filter(Project.area_responsavel == selected_area)
 
     for projeto in projetos_vigentes_query.all():
-        if Etapa.query.filter(Etapa.project_id == projeto.id, Etapa.done == False, Etapa.data_fim < data_atual).count() > 0:
+        if Etapa.query.filter(
+            Etapa.project_id == projeto.id,
+            Etapa.done == False,
+            Etapa.entry_type != 'google_meeting',
+            Etapa.data_fim < data_atual,
+        ).count() > 0:
             projetos_em_atraso += 1
 
     objetivos, _, _ = get_goal_catalog_context()

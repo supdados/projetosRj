@@ -437,3 +437,110 @@ def test_schema_compatibility_unifies_mixed_task_and_task_item_schema(tmp_path):
 
         assert 'task.rebuilt_task_only' in summary['task_core_cols']
         assert 'task.migrated_legacy_items' in summary['task_core_cols']
+
+
+def test_schema_compatibility_adds_google_meeting_columns_and_link_table(tmp_path):
+    isolated_app = _create_isolated_app(tmp_path, 'legacy-calendar-stage-schema.sqlite')
+
+    with isolated_app.app_context():
+        db.session.execute(
+            text(
+                """
+                CREATE TABLE user (
+                    id INTEGER PRIMARY KEY,
+                    username VARCHAR(80) UNIQUE NOT NULL,
+                    password_hash VARCHAR(200) NOT NULL,
+                    name VARCHAR(120) NOT NULL,
+                    orgao VARCHAR(100),
+                    is_admin BOOLEAN NOT NULL DEFAULT 0
+                )
+                """
+            )
+        )
+        db.session.execute(
+            text(
+                """
+                CREATE TABLE project (
+                    id INTEGER PRIMARY KEY,
+                    titulo VARCHAR(200) NOT NULL,
+                    area_responsavel VARCHAR(100),
+                    orgao VARCHAR(100),
+                    prioridade VARCHAR(20),
+                    status VARCHAR(20) NOT NULL DEFAULT 'Vigente',
+                    observacao TEXT,
+                    objetivo_id INTEGER,
+                    resultado_esperado_id INTEGER
+                )
+                """
+            )
+        )
+        db.session.execute(
+            text(
+                """
+                CREATE TABLE etapa (
+                    id INTEGER PRIMARY KEY,
+                    descricao TEXT NOT NULL,
+                    data_inicio DATE,
+                    data_fim DATE,
+                    responsavel VARCHAR(100),
+                    iniciada BOOLEAN NOT NULL DEFAULT 0,
+                    done BOOLEAN NOT NULL DEFAULT 0,
+                    comentarios TEXT,
+                    project_id INTEGER NOT NULL,
+                    ordem INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
+        )
+        db.session.execute(
+            text(
+                """
+                CREATE TABLE user_calendar_connection (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    provider VARCHAR(30) NOT NULL DEFAULT 'google',
+                    calendar_id VARCHAR(255) NOT NULL DEFAULT 'primary',
+                    access_token TEXT,
+                    refresh_token TEXT NOT NULL,
+                    token_expires_at DATETIME,
+                    scope VARCHAR(500)
+                )
+                """
+            )
+        )
+        db.session.execute(
+            text(
+                """
+                CREATE TABLE calendar_event (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    title VARCHAR(200) NOT NULL,
+                    starts_at DATETIME NOT NULL,
+                    ends_at DATETIME NOT NULL,
+                    is_all_day BOOLEAN NOT NULL DEFAULT 0,
+                    timezone VARCHAR(64) NOT NULL DEFAULT 'America/Sao_Paulo',
+                    source VARCHAR(20) NOT NULL DEFAULT 'app',
+                    google_calendar_id VARCHAR(255),
+                    google_event_id VARCHAR(255),
+                    sync_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                    sync_error TEXT
+                )
+                """
+            )
+        )
+        db.session.commit()
+
+        first_summary = initialize_database()
+        second_summary = initialize_database()
+
+        inspector = inspect(db.engine)
+        etapa_columns = {column['name'] for column in inspector.get_columns('etapa')}
+        connection_columns = {column['name'] for column in inspector.get_columns('user_calendar_connection')}
+        table_names = set(inspector.get_table_names())
+
+        assert 'entry_type' in etapa_columns
+        assert 'google_account_id' in connection_columns
+        assert 'google_account_email' in connection_columns
+        assert 'project_stage_meeting' in table_names
+        assert first_summary['column_added'] is True
+        assert second_summary['column_added'] is False

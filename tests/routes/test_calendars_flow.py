@@ -1,7 +1,7 @@
 import datetime
 
 import routes.calendars as calendar_routes
-from models import CalendarEvent, UserCalendarConnection, db
+from models import CalendarEvent, Etapa, ProjectStageMeeting, UserCalendarConnection, db
 from services.google_calendar import GoogleCalendarError
 
 
@@ -154,6 +154,11 @@ def test_google_calendar_oauth_callback_persists_refresh_token(app, client_user,
         '_sync_events_from_google',
         lambda connection, force_full=False: {'upserted': 0, 'deleted': 0, 'ignored': 0, 'full_sync': True},
     )
+    monkeypatch.setattr(
+        calendar_routes,
+        'get_google_userinfo',
+        lambda _config, *, access_token: {'sub': 'google-user-123', 'email': 'user@example.com'},
+    )
 
     def fake_renew_watch(connection):
         connection.watch_channel_id = 'channel-1'
@@ -177,6 +182,8 @@ def test_google_calendar_oauth_callback_persists_refresh_token(app, client_user,
         assert connection.refresh_token == 'refresh-token-abc'
         assert connection.access_token == 'access-ok'
         assert connection.calendar_id == 'primary'
+        assert connection.google_account_id == 'google-user-123'
+        assert connection.google_account_email == 'user@example.com'
         assert connection.watch_channel_id == 'channel-1'
         assert connection.watch_resource_id == 'resource-1'
 
@@ -316,3 +323,153 @@ def test_describe_calendar_issue_normalizes_webhook_https_error():
 
     message = calendar_routes._describe_calendar_issue(error)
     assert 'Webhook do Google precisa ser HTTPS' in message
+
+
+def test_edit_calendar_event_updates_linked_project_meeting(app, client_user, seed_data, monkeypatch):
+    with app.app_context():
+        connection = UserCalendarConnection(
+            user_id=seed_data['user_id'],
+            provider='google',
+            calendar_id='primary',
+            refresh_token='refresh-token',
+            google_account_id='google-owner-1',
+            google_account_email='user@example.com',
+        )
+        event = CalendarEvent(
+            user_id=seed_data['user_id'],
+            title='Reunião inicial',
+            starts_at=datetime.datetime(2026, 3, 20, 13, 0),
+            ends_at=datetime.datetime(2026, 3, 20, 14, 0),
+            source='app',
+            google_event_id='google-linked-calendar-edit',
+            google_calendar_id='primary',
+            sync_status='ok',
+        )
+        etapa = Etapa(
+            descricao='Reunião inicial',
+            data_inicio=datetime.date(2026, 3, 20),
+            data_fim=datetime.date(2026, 3, 20),
+            responsavel='user@example.com',
+            project_id=seed_data['project_id'],
+            ordem=50,
+            entry_type='google_meeting',
+        )
+        db.session.add_all([connection, event, etapa])
+        db.session.flush()
+        db.session.add(
+            ProjectStageMeeting(
+                etapa_id=etapa.id,
+                project_id=seed_data['project_id'],
+                calendar_event_id=event.id,
+                creator_user_id=seed_data['user_id'],
+                google_owner_account_id='google-owner-1',
+                google_owner_email='user@example.com',
+                google_event_id=event.google_event_id,
+                google_calendar_id='primary',
+                starts_at=event.starts_at,
+                ends_at=event.ends_at,
+                timezone='America/Sao_Paulo',
+                sync_status='ok',
+            )
+        )
+        db.session.commit()
+        event_id = event.id
+        etapa_id = etapa.id
+
+    monkeypatch.setattr(
+        calendar_routes,
+        '_sync_local_event_to_google',
+        lambda event, connection, create_conference=False: event,
+    )
+
+    response = client_user.post(
+        f'/calendarios/eventos/{event_id}/editar',
+        data={
+            'title': 'Reunião atualizada',
+            'starts_at': '2026-03-21T10:00',
+            'ends_at': '2026-03-21T11:00',
+            'location': 'Sala 202',
+            'description': 'Atualizada no calendário',
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+
+    with app.app_context():
+        etapa = db.session.get(Etapa, etapa_id)
+        meeting = ProjectStageMeeting.query.filter_by(etapa_id=etapa_id).first()
+        assert etapa.descricao == 'Reunião atualizada'
+        assert etapa.data_inicio == datetime.date(2026, 3, 21)
+        assert etapa.data_fim == datetime.date(2026, 3, 21)
+        assert meeting.location == 'Sala 202'
+        assert calendar_routes._format_human_datetime(meeting.starts_at) == '21/03/2026 10:00'
+
+
+def test_upsert_google_cancelled_event_marks_linked_project_meeting_as_error(app, seed_data):
+    with app.app_context():
+        connection = UserCalendarConnection(
+            user_id=seed_data['user_id'],
+            provider='google',
+            calendar_id='primary',
+            refresh_token='refresh-token',
+            google_account_id='google-owner-1',
+            google_account_email='user@example.com',
+        )
+        event = CalendarEvent(
+            user_id=seed_data['user_id'],
+            title='Reunião cancelada',
+            starts_at=datetime.datetime(2026, 3, 22, 13, 0),
+            ends_at=datetime.datetime(2026, 3, 22, 14, 0),
+            source='google',
+            google_event_id='google-cancelled-linked',
+            google_calendar_id='primary',
+            sync_status='ok',
+        )
+        etapa = Etapa(
+            descricao='Reunião cancelada',
+            data_inicio=datetime.date(2026, 3, 22),
+            data_fim=datetime.date(2026, 3, 22),
+            responsavel='user@example.com',
+            project_id=seed_data['project_id'],
+            ordem=60,
+            entry_type='google_meeting',
+        )
+        db.session.add_all([connection, event, etapa])
+        db.session.flush()
+        db.session.add(
+            ProjectStageMeeting(
+                etapa_id=etapa.id,
+                project_id=seed_data['project_id'],
+                calendar_event_id=event.id,
+                creator_user_id=seed_data['user_id'],
+                google_owner_account_id='google-owner-1',
+                google_owner_email='user@example.com',
+                google_event_id='google-cancelled-linked',
+                google_calendar_id='primary',
+                starts_at=event.starts_at,
+                ends_at=event.ends_at,
+                timezone='America/Sao_Paulo',
+                sync_status='ok',
+            )
+        )
+        db.session.commit()
+        etapa_id = etapa.id
+
+        action = calendar_routes._upsert_local_event_from_google(
+            connection,
+            {
+                'id': 'google-cancelled-linked',
+                'status': 'cancelled',
+            },
+        )
+
+        assert action == 'deleted'
+
+        etapa = db.session.get(Etapa, etapa_id)
+        meeting = ProjectStageMeeting.query.filter_by(etapa_id=etapa_id).first()
+        assert etapa is not None
+        assert meeting is not None
+        assert meeting.sync_status == 'error'
+        assert 'removido' in (meeting.sync_error or '').lower()
+        assert CalendarEvent.query.filter_by(google_event_id='google-cancelled-linked').count() == 0

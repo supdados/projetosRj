@@ -4,8 +4,9 @@ from collections import defaultdict
 from flask import flash, g, jsonify, redirect, render_template, request, url_for
 
 from abep_catalog import normalize_abep_indicator
-from models import Etapa, IndicadorProjeto, Project, ProjectHistory, Task, db
+from models import Etapa, IndicadorProjeto, Project, ProjectHistory, Task, UserCalendarConnection, db
 from objective_catalog import normalize_goal_selection
+from services.project_meetings import meeting_time_summary
 
 from .blueprint import main_bp
 from .decorators import login_required
@@ -110,6 +111,7 @@ def list_projects():
                 etapas_atrasadas_count = Etapa.query.filter(
                     Etapa.project_id == projeto.id,
                     Etapa.done == False,
+                    Etapa.entry_type != 'google_meeting',
                     Etapa.data_fim < data_atual
                 ).count()
                 if selected_atraso == "atrasado" and etapas_atrasadas_count > 0:
@@ -314,6 +316,7 @@ def list_projetos_pendentes():
     responsaveis_query = Etapa.query.filter(
         Etapa.project_id.in_(project_ids),
         Etapa.done.is_(False),
+        Etapa.entry_type != 'google_meeting',
         Etapa.responsavel.isnot(None),
     ).with_entities(Etapa.responsavel).distinct().all()
     responsaveis_options = sorted(
@@ -324,6 +327,7 @@ def list_projetos_pendentes():
     etapas_query = Etapa.query.filter(
         Etapa.project_id.in_(project_ids),
         Etapa.done.is_(False),
+        Etapa.entry_type != 'google_meeting',
     )
     if selected_responsavel:
         etapas_query = etapas_query.filter(Etapa.responsavel.ilike(f"%{selected_responsavel}%"))
@@ -628,8 +632,17 @@ def project_detail(project_id):
     # O ID real do projeto (project.id) será usado diretamente no template.
 
     active_task_count = Task.query.filter_by(project_id=project.id, is_archived=False).count()
+    calendar_connection = UserCalendarConnection.query.filter_by(user_id=g.user.id).first()
 
-    return render_template('project_detail.html', project=project, active_task_count=active_task_count)
+    return render_template(
+        'project_detail.html',
+        project=project,
+        active_task_count=active_task_count,
+        calendar_connection=calendar_connection,
+        can_add_google_meeting=bool(calendar_connection and (calendar_connection.google_account_id or '').strip()),
+        current_google_account_id=(calendar_connection.google_account_id or '') if calendar_connection else '',
+        meeting_time_summary=meeting_time_summary,
+    )
 
 
 @main_bp.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])

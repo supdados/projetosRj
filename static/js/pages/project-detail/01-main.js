@@ -8,6 +8,9 @@
     const abepIndicatorsOptions = Array.isArray(projectDetailConfig.abepIndicatorsOptions)
         ? projectDetailConfig.abepIndicatorsOptions
         : [];
+    const canAddGoogleMeeting = Boolean(projectDetailConfig.canAddGoogleMeeting);
+    const addMeetingUrl = projectDetailConfig.addMeetingUrl || `/project/${projectIdValue}/meeting/add`;
+    const projectMeetingModalId = projectDetailConfig.projectMeetingModalId || 'projectMeetingModal';
 
     document.addEventListener('DOMContentLoaded', function () {
         // INÍCIO: Script de Drag and Drop para Etapas
@@ -18,7 +21,8 @@
         const inlineAddEntryRow = document.getElementById('etapaInlineAddEntryRow');
         const inlineAddFormRow = document.getElementById('etapaInlineAddFormRow');
         const inlineAddForm = document.getElementById('etapaInlineAddForm');
-        const inlineAddEntryBtn = inlineAddEntryRow ? inlineAddEntryRow.querySelector('.etapa-inline-entry-btn') : null;
+        const inlineAddEntryBtn = inlineAddEntryRow ? inlineAddEntryRow.querySelector('.etapa-inline-entry-btn-stage') : null;
+        const btnOpenInlineMeetingAdd = document.getElementById('btnOpenInlineMeetingAdd');
         const inlineAddCancelBtn = document.getElementById('btnCancelInlineEtapaAdd');
         const inlineAddSubmitBtn = document.getElementById('btnSubmitInlineEtapaAdd');
         const inlineDescricaoInput = document.getElementById('etapa_inline_descricao');
@@ -45,6 +49,7 @@
         let inlineComposerSaving = false;
         let inlineDatePickerOpening = false;
         let reactivateProjectModalResolver = null;
+        let projectMeetingModal = null;
 
         function escapeHtml(value) {
             return String(value || '')
@@ -86,12 +91,24 @@
             updateEditableFieldDisplay(target, hasValue, displayValue, 'Sem data');
         }
 
+        function getEtapaRows() {
+            return tbody ? Array.from(tbody.querySelectorAll('tr.etapa-draggable-row')) : [];
+        }
+
+        function getWorkflowStageRows() {
+            return getEtapaRows().filter(row => row.dataset.entryType !== 'google_meeting');
+        }
+
+        function isGoogleMeetingPayload(etapaPayload) {
+            return String(etapaPayload?.entry_type || 'manual') === 'google_meeting';
+        }
+
         function syncImportModelButtonVisibility() {
             if (!btnImportModel || !tbody) {
                 return;
             }
 
-            const totalRows = tbody.querySelectorAll('tr.etapa-draggable-row').length;
+            const totalRows = getWorkflowStageRows().length;
             btnImportModel.classList.toggle('ds-hidden', totalRows > 0);
         }
 
@@ -209,7 +226,7 @@
             form.className = 'inline-form';
             form.id = 'concludeProjectForm';
 
-            const totalEtapas = tbody ? tbody.querySelectorAll('tr.etapa-draggable-row').length : 0;
+            const totalEtapas = getWorkflowStageRows().length;
             form.innerHTML = `
                 <button type="submit" id="btn-concluir-projeto" class="btn btn-success btn-sm btn-conclude-project"
                     disabled
@@ -238,7 +255,7 @@
 
         function refreshConcludeButtonCounters() {
             if (!tbody) return;
-            const totalEtapas = tbody.querySelectorAll('tr.etapa-draggable-row').length;
+            const totalEtapas = getWorkflowStageRows().length;
             const btnConcluir = document.getElementById('btn-concluir-projeto');
             syncImportModelButtonVisibility();
             if (!btnConcluir) return;
@@ -308,7 +325,120 @@
             `;
         }
 
+        function buildMeetingDateHtml(etapaId, field, rawValue, displayValue, meetingInfo) {
+            const hasValue = Boolean((rawValue || '').trim());
+            const safeDisplay = escapeHtml(displayValue || 'Sem data');
+            const safeRawValue = escapeHtml(rawValue || '');
+            const canEditDates = Boolean(meetingInfo && meetingInfo.can_edit_dates);
+            const syncStatus = String(meetingInfo?.sync_status || '').trim();
+            const lockTitle = syncStatus === 'error'
+                ? (meetingInfo?.sync_error || 'Evento indisponível no Google Calendar.')
+                : 'Somente a mesma conta Google conectada pode editar a data.';
+
+            if (!canEditDates) {
+                return `
+                    <span class="etapa-meeting-readonly-field${hasValue ? '' : ' editable-field-empty'}" title="${escapeHtml(lockTitle)}">
+                        <i class="fas fa-lock"></i>
+                        <span>${safeDisplay}</span>
+                    </span>
+                `;
+            }
+
+            return `
+                <span class="editable-field${hasValue ? '' : ' editable-field-empty'}" data-field="${field}" data-etapa-id="${etapaId}" data-original-value="${safeRawValue}" data-empty-display="Sem data" data-entry-type="google_meeting">${safeDisplay}</span>
+            `;
+        }
+
+        function buildGoogleMeetingRow(etapaPayload) {
+            const etapaId = etapaPayload.id;
+            const descricao = etapaPayload.descricao || 'Reunião sem título';
+            const responsavel = etapaPayload.responsavel || '';
+            const dataInicio = etapaPayload.data_inicio || '';
+            const dataInicioDisplay = getDateDisplayValue(dataInicio, etapaPayload.data_inicio_display || '');
+            const dataFim = etapaPayload.data_fim || '';
+            const dataFimDisplay = getDateDisplayValue(dataFim, etapaPayload.data_fim_display || '');
+            const meetingInfo = etapaPayload.meeting || {};
+            const ownerEmail = meetingInfo.owner_email || responsavel || 'Conta Google vinculada';
+            const locationHtml = meetingInfo.location
+                ? `
+                    <div class="small text-muted mt-1 etapa-meeting-location">
+                        <i class="fas fa-location-dot me-1"></i>${escapeHtml(meetingInfo.location)}
+                    </div>
+                `
+                : '';
+            const warningHtml = meetingInfo.sync_status === 'error'
+                ? `
+                    <span class="etapa-meeting-warning" title="${escapeHtml(meetingInfo.sync_error || 'Evento indisponível no Google Calendar.')}">
+                        <i class="fas fa-triangle-exclamation me-1"></i>Evento indisponível no Google Calendar
+                    </span>
+                `
+                : '';
+            const actionHtml = meetingInfo.can_manage
+                ? `
+                    <form action="/etapa/${etapaId}/delete" method="post" class="inline-form" data-etapa-delete-form
+                        onsubmit="return confirm('Tem certeza que deseja excluir esta reunião?');">
+                        <button type="submit" class="btn btn-sm btn-floating" data-etapa-delete-btn title="Excluir reunião">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                `
+                : `
+                    <span class="etapa-meeting-action-lock" title="Somente a mesma conta Google conectada pode excluir esta reunião.">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                `;
+
+            const row = document.createElement('tr');
+            row.className = `etapa-draggable-row etapa-row-google-meeting${meetingInfo.sync_status === 'error' ? ' etapa-row-google-meeting-error' : ''}`;
+            row.dataset.etapaId = String(etapaId);
+            row.dataset.entryType = 'google_meeting';
+            row.dataset.workflowStage = 'false';
+            row.dataset.meetingSyncStatus = meetingInfo.sync_status || 'pending';
+
+            row.innerHTML = `
+                <td class="drag-handle etapa-drag-handle etapa-v4-cell-drag" draggable="true"><i class="fas fa-grip-vertical"></i></td>
+                <td class="etapa-order-cell etapa-v4-cell-number"></td>
+                <td class="etapa-descricao etapa-row-text etapa-v4-cell-description etapa-hover-container">
+                    <div class="etapa-descricao-main etapa-meeting-main">
+                        <span class="etapa-meeting-badge"><i class="fab fa-google me-1"></i>Reunião Google</span>
+                        <div class="etapa-meeting-copy">
+                            <span class="etapa-meeting-title">${escapeHtml(descricao)}</span>
+                            <span class="etapa-meeting-subtitle">${escapeHtml(meetingInfo.time_summary || 'Sem horário')}</span>
+                            ${warningHtml}
+                        </div>
+                    </div>
+                    <div class="etapa-descricao-comment">
+                        ${locationHtml}
+                    </div>
+                    <button class="btn-comment-data ds-hidden" data-etapa-id="${etapaId}" data-comentario=""></button>
+                </td>
+                <td class="etapa-row-text etapa-v4-cell-date">
+                    ${buildMeetingDateHtml(etapaId, 'data_inicio', dataInicio, dataInicioDisplay, meetingInfo)}
+                </td>
+                <td class="etapa-row-text etapa-v4-cell-date">
+                    ${buildMeetingDateHtml(etapaId, 'data_fim', dataFim, dataFimDisplay, meetingInfo)}
+                </td>
+                <td class="etapa-row-text etapa-v4-cell-responsavel">
+                    <span class="etapa-meeting-owner${ownerEmail ? '' : ' editable-field-empty'}">${escapeHtml(ownerEmail || 'Conta Google vinculada')}</span>
+                </td>
+                <td class="text-center etapa-v4-cell-status">
+                    <span class="etapa-meeting-status-pill">Informativa</span>
+                </td>
+                <td class="text-center etapa-v4-cell-status">
+                    <span class="etapa-meeting-status-pill etapa-meeting-status-pill-lock"><i class="fas fa-lock me-1"></i>Somente data</span>
+                </td>
+                <td class="actions text-center etapa-v4-actions-cell">
+                    ${actionHtml}
+                </td>
+            `;
+            return row;
+        }
+
         function buildEtapaRow(etapaPayload) {
+            if (isGoogleMeetingPayload(etapaPayload)) {
+                return buildGoogleMeetingRow(etapaPayload);
+            }
+
             const etapaId = etapaPayload.id;
             const descricao = etapaPayload.descricao || '-';
             const responsavel = getResponsavelDisplayValue(etapaPayload.responsavel || '');
@@ -329,6 +459,8 @@
             const row = document.createElement('tr');
             row.className = rowClasses;
             row.dataset.etapaId = String(etapaId);
+            row.dataset.entryType = 'manual';
+            row.dataset.workflowStage = 'true';
 
             const doneButtonDisabled = (!iniciada && !done) || !canEditEtapas ? 'disabled' : '';
             const iniciadaDisabled = canEditEtapas ? '' : 'disabled';
@@ -590,6 +722,80 @@
             }
         }
 
+        async function submitProjectMeetingForm(_event, api) {
+            const form = api?.getForm ? api.getForm() : null;
+            if (!form) {
+                return;
+            }
+
+            const submitButton = form.querySelector('.cal-btn-save');
+            const cancelButtons = Array.from(form.querySelectorAll('.cal-btn-cancel, [data-calendar-modal-close]'));
+            const originalSubmitHtml = submitButton ? submitButton.innerHTML : '';
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>';
+            }
+            cancelButtons.forEach(button => {
+                button.disabled = true;
+            });
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch(form.action || addMeetingUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: formData
+                });
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (error) {
+                    data = null;
+                }
+
+                if (!response.ok || !data || !data.success || !data.etapa) {
+                    showAjaxFlashMessage(data?.message || 'Erro ao adicionar reunião.', 'danger');
+                    return;
+                }
+
+                appendEtapaRow(data.etapa);
+                api.closeModal();
+                if (data.warning) {
+                    showAjaxFlashMessage(data.warning, 'warning');
+                }
+                showAjaxFlashMessage(data.message || 'Reunião adicionada ao projeto com sucesso!', 'success');
+            } catch (error) {
+                console.error('Erro ao adicionar reunião do projeto:', error);
+                showAjaxFlashMessage('Erro de comunicação ao adicionar reunião.', 'danger');
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalSubmitHtml;
+                }
+                cancelButtons.forEach(button => {
+                    button.disabled = false;
+                });
+            }
+        }
+
+        if (canAddGoogleMeeting && typeof window.createCalendarEventModal === 'function') {
+            projectMeetingModal = window.createCalendarEventModal({
+                modalId: projectMeetingModalId,
+                createUrl: addMeetingUrl,
+                createTitle: 'Nova reunião Google',
+                onSubmit: submitProjectMeetingForm,
+                onInvalid: function (message) {
+                    showAjaxFlashMessage(message, 'warning');
+                },
+            });
+        }
+
         if (btnOpenInlineEtapaAdd) {
             btnOpenInlineEtapaAdd.addEventListener('click', function () {
                 openInlineEtapaComposer('button');
@@ -600,6 +806,14 @@
             inlineAddEntryBtn.addEventListener('click', function (event) {
                 event.preventDefault();
                 openInlineEtapaComposer('entry');
+            });
+        }
+
+        if (btnOpenInlineMeetingAdd && projectMeetingModal) {
+            btnOpenInlineMeetingAdd.addEventListener('click', function (event) {
+                event.preventDefault();
+                closeInlineEtapaComposer(true);
+                projectMeetingModal.openCreateModal();
             });
         }
 
@@ -1028,6 +1242,14 @@
                     return;
                 }
 
+                const targetRow = target.closest('tr.etapa-draggable-row');
+                if (targetRow && targetRow.dataset.entryType === 'google_meeting') {
+                    e.preventDefault();
+                    hideContextMenu();
+                    showAjaxFlashMessage('Reuniões do Google não usam o atalho de dias úteis.', 'info');
+                    return;
+                }
+
                 // Impede se a etapa estiver concluída
                 if (target.closest('tr.etapa-done')) {
                     return;
@@ -1240,10 +1462,11 @@
                                     }
                                 }
 
-                                if (field === 'data_inicio' && data.daysDiff !== undefined && data.daysDiff !== 0) {
+                                const isMeetingField = Boolean(data.isMeeting || target.closest('tr.etapa-draggable-row')?.dataset.entryType === 'google_meeting');
+                                if (!isMeetingField && field === 'data_inicio' && data.daysDiff !== undefined && data.daysDiff !== 0) {
                                     showCascadeConfirmModal(etapaId, data.daysDiff);
                                 } else {
-                                    showAjaxFlashMessage('Alteração salva com sucesso!', 'success');
+                                    showAjaxFlashMessage(data.message || (isMeetingField ? 'Data da reunião atualizada com sucesso!' : 'Alteração salva com sucesso!'), 'success');
                                 }
 
                             } else {
@@ -1769,6 +1992,9 @@
         function updateRowAppearance(etapaId, iniciada, done) {
             const tableRow = document.querySelector(`#etapas-tbody tr[data-etapa-id="${etapaId}"]`);
             if (tableRow) {
+                if (tableRow.dataset.entryType === 'google_meeting') {
+                    return;
+                }
                 tableRow.classList.remove('etapa-done', 'etapa-iniciada');
                 const textElements = tableRow.querySelectorAll('.etapa-row-text');
                 if (done) {

@@ -657,6 +657,12 @@ html[data-theme="dark"] body.is-authenticated .etapa-inline-entry-btn:focus-visi
     color: #f0f7ff;
 }
 
+html[data-theme="dark"] body.is-authenticated .etapa-inline-entry-btn-meeting {
+    background: linear-gradient(180deg, rgba(53, 87, 120, 0.92) 0%, rgba(42, 68, 95, 0.96) 100%);
+    border-color: rgba(99, 166, 219, 0.42);
+    color: #e4f0fb;
+}
+
 html[data-theme="dark"] body.is-authenticated #etapaInlineAddFormRow td {
     background: #26364b;
     border-top-color: rgba(99, 166, 219, 0.22);
@@ -759,6 +765,67 @@ html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floati
     color: #ffd8d8 !important;
     box-shadow: none;
     transform: none;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-row-google-meeting td {
+    background: linear-gradient(180deg, rgba(38, 56, 78, 0.94) 0%, rgba(34, 49, 68, 0.96) 100%);
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-row-google-meeting:hover td {
+    background: rgba(58, 94, 128, 0.22) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-row-google-meeting-error td {
+    background: linear-gradient(180deg, rgba(92, 46, 46, 0.38) 0%, rgba(70, 37, 37, 0.48) 100%);
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-badge {
+    background: rgba(78, 149, 204, 0.18);
+    border-color: rgba(99, 166, 219, 0.4);
+    color: #dceaf7;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-title {
+    color: #edf5fc;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-subtitle,
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-location {
+    color: #a9bfd3;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-warning {
+    background: rgba(220, 96, 73, 0.18);
+    color: #ffd1c8;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-owner {
+    background: #27384b;
+    border-color: rgba(99, 166, 219, 0.24);
+    color: #d7e4f1;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-readonly-field {
+    background: #243447;
+    border-color: rgba(99, 166, 219, 0.24);
+    color: #b6cada;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-status-pill {
+    background: rgba(78, 149, 204, 0.14);
+    border-color: rgba(99, 166, 219, 0.28);
+    color: #cfe0ef;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-status-pill-lock {
+    background: rgba(63, 84, 108, 0.74);
+    color: #d7e4f0;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-meeting-action-lock {
+    background: #27384b;
+    border-color: rgba(99, 166, 219, 0.24);
+    color: #aec3d7;
 }
 
 html[data-theme="dark"] body.is-authenticated .etapa-comentario-display {

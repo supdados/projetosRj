@@ -2,11 +2,20 @@ import datetime
 import secrets
 import uuid
 from urllib.parse import urlparse
-from zoneinfo import ZoneInfo
 
 from flask import abort, current_app, flash, g, redirect, render_template, request, session, url_for
 
-from models import CalendarEvent, UserCalendarConnection, db
+from models import CalendarEvent, ProjectStageMeeting, UserCalendarConnection, db
+from services.calendar_core import (
+    TIMEZONE_BR,
+    extract_meet_link,
+    format_human_datetime,
+    format_input_datetime,
+    google_event_payload,
+    parse_event_form,
+    parse_google_event_datetime,
+)
+from services.calendar_sync import delete_remote_event, ensure_google_access_token, sync_local_event_to_google
 from services.google_calendar import (
     GoogleCalendarError,
     build_google_authorization_url,
@@ -14,6 +23,7 @@ from services.google_calendar import (
     create_google_calendar_watch,
     delete_google_calendar_event,
     exchange_google_code_for_tokens,
+    get_google_userinfo,
     get_google_client_redirect_uris,
     is_google_calendar_enabled,
     list_google_calendar_events,
@@ -21,12 +31,20 @@ from services.google_calendar import (
     stop_google_calendar_watch,
     update_google_calendar_event,
 )
+from services.project_meetings import (
+    can_manage_project_meeting,
+    delete_local_calendar_event_mirrors,
+    find_project_meeting_by_google_event,
+    find_project_meeting_for_calendar_event,
+    mark_project_meeting_sync_error,
+    sync_etapa_from_meeting,
+    sync_local_calendar_event_mirrors,
+    update_meeting_from_calendar_event,
+)
 from time_utils import utc_now
 
 from .blueprint import main_bp
 from .decorators import login_required
-
-TIMEZONE_BR = ZoneInfo('America/Sao_Paulo')
 GOOGLE_AUTH_STATE_SESSION_KEY = 'google_calendar_auth_state'
 GOOGLE_AUTH_REDIRECT_SESSION_KEY = 'google_calendar_auth_redirect_uri'
 AUTO_SYNC_INTERVAL_SECONDS = 300
@@ -142,72 +160,16 @@ def _describe_calendar_issue(error):
     return str(error)
 
 
-def _to_utc_naive(local_dt):
-    if local_dt.tzinfo is None:
-        local_dt = local_dt.replace(tzinfo=TIMEZONE_BR)
-    return local_dt.astimezone(datetime.UTC).replace(tzinfo=None)
-
-
-def _to_local_datetime(utc_naive):
-    if utc_naive is None:
-        return None
-    aware = utc_naive.replace(tzinfo=datetime.UTC)
-    return aware.astimezone(TIMEZONE_BR)
-
-
 def _format_input_datetime(utc_naive):
-    local = _to_local_datetime(utc_naive)
-    if local is None:
-        return ''
-    return local.strftime('%Y-%m-%dT%H:%M')
+    return format_input_datetime(utc_naive)
 
 
 def _format_human_datetime(utc_naive):
-    local = _to_local_datetime(utc_naive)
-    if local is None:
-        return '-'
-    return local.strftime('%d/%m/%Y %H:%M')
-
-
-def _utc_naive_to_rfc3339(utc_naive):
-    aware = utc_naive.replace(tzinfo=datetime.UTC)
-    return aware.isoformat().replace('+00:00', 'Z')
-
-
-def _parse_form_datetime(value):
-    raw_value = (value or '').strip()
-    if not raw_value:
-        return None
-    try:
-        parsed = datetime.datetime.strptime(raw_value, '%Y-%m-%dT%H:%M')
-    except ValueError as exc:
-        raise ValueError('Formato de data/hora inválido. Use o seletor da página.') from exc
-    return _to_utc_naive(parsed)
+    return format_human_datetime(utc_naive)
 
 
 def _parse_event_form(form):
-    title = (form.get('title') or '').strip()
-    if not title:
-        raise ValueError('Título do evento é obrigatório.')
-    if len(title) > 200:
-        raise ValueError('Título do evento deve ter no máximo 200 caracteres.')
-
-    starts_at = _parse_form_datetime(form.get('starts_at'))
-    ends_at = _parse_form_datetime(form.get('ends_at'))
-    if starts_at is None or ends_at is None:
-        raise ValueError('Data e hora de início/fim são obrigatórias.')
-    if ends_at <= starts_at:
-        raise ValueError('A data/hora de término precisa ser maior que a de início.')
-
-    return {
-        'title': title,
-        'description': (form.get('description') or '').strip() or None,
-        'location': (form.get('location') or '').strip() or None,
-        'starts_at': starts_at,
-        'ends_at': ends_at,
-        'is_all_day': bool(form.get('all_day')),
-        'create_conference': bool(form.get('create_conference')),
-    }
+    return parse_event_form(form)
 
 
 def _connection_for_current_user():
@@ -217,146 +179,80 @@ def _connection_for_current_user():
 
 
 def _extract_meet_link(remote):
-    conference = remote.get('conferenceData') or {}
-    for ep in (conference.get('entryPoints') or []):
-        if ep.get('entryPointType') == 'video':
-            return ep.get('uri') or None
-    return remote.get('hangoutLink') or None
+    return extract_meet_link(remote)
 
 
 def _google_event_payload(local_event, *, create_conference=False):
-    payload = {
-        'summary': local_event.title,
-        'description': local_event.description or '',
-        'location': local_event.location or '',
-        'start': {
-            'dateTime': _utc_naive_to_rfc3339(local_event.starts_at),
-            'timeZone': 'UTC',
-        },
-        'end': {
-            'dateTime': _utc_naive_to_rfc3339(local_event.ends_at),
-            'timeZone': 'UTC',
-        },
-    }
-    if create_conference:
-        payload['conferenceData'] = {
-            'createRequest': {
-                'requestId': str(uuid.uuid4()),
-                'conferenceSolutionKey': {'type': 'hangoutsMeet'},
-            }
-        }
-    return payload
+    return google_event_payload(local_event, create_conference=create_conference)
 
 
 def _ensure_google_access_token(connection, *, force_refresh=False):
-    now = utc_now()
-    if (
-        not force_refresh
-        and connection.access_token
-        and connection.token_expires_at
-        and connection.token_expires_at > (now + datetime.timedelta(seconds=60))
-    ):
-        return connection.access_token
-
-    refreshed = refresh_google_access_token(
+    return ensure_google_access_token(
         current_app.config,
-        refresh_token=connection.refresh_token,
+        connection,
+        force_refresh=force_refresh,
     )
-    connection.access_token = refreshed.get('access_token')
-
-    expires_in = refreshed.get('expires_in')
-    if expires_in is not None:
-        try:
-            seconds = max(int(expires_in), 0)
-        except (TypeError, ValueError):
-            seconds = 0
-        connection.token_expires_at = now + datetime.timedelta(seconds=seconds)
-
-    maybe_refresh = refreshed.get('refresh_token')
-    if maybe_refresh:
-        connection.refresh_token = maybe_refresh
-
-    return connection.access_token
 
 
 def _sync_local_event_to_google(local_event, connection, *, create_conference=False):
+    return sync_local_event_to_google(
+        current_app.config,
+        local_event,
+        connection,
+        create_conference=create_conference,
+    )
+
+
+def _refresh_connection_identity(connection, *, access_token=None):
     if connection is None:
-        local_event.sync_status = 'pending'
-        local_event.sync_error = 'Conexão com Google Calendar não configurada.'
+        return None
+
+    token = access_token or _ensure_google_access_token(connection)
+    userinfo = get_google_userinfo(current_app.config, access_token=token)
+    connection.google_account_id = (userinfo.get('sub') or '').strip() or None
+    connection.google_account_email = (userinfo.get('email') or '').strip() or None
+    return userinfo
+
+
+def _sync_project_meeting_from_calendar_event(event, *, connection=None):
+    meeting = find_project_meeting_for_calendar_event(event, connection=connection)
+    if meeting is None:
+        return None
+
+    update_meeting_from_calendar_event(meeting, event)
+    sync_etapa_from_meeting(meeting.etapa, meeting, title=event.title)
+    sync_local_calendar_event_mirrors(meeting, title=event.title)
+    return meeting
+
+
+def _mark_project_meeting_removed_by_google(*, google_event_id, google_calendar_id=None, google_owner_account_id=None):
+    meeting = find_project_meeting_by_google_event(
+        google_event_id=google_event_id,
+        google_calendar_id=google_calendar_id,
+        google_owner_account_id=google_owner_account_id,
+    )
+    if meeting is None:
+        return None
+
+    delete_local_calendar_event_mirrors(meeting)
+    mark_project_meeting_sync_error(meeting, message='Evento removido no Google Calendar.')
+    sync_etapa_from_meeting(meeting.etapa, meeting, title=meeting.etapa.descricao)
+    return meeting
+
+
+def _delete_project_meeting(meeting):
+    if meeting is None:
         return
 
-    access_token = _ensure_google_access_token(connection)
-    payload = _google_event_payload(local_event, create_conference=create_conference)
-    calendar_id = connection.calendar_id or 'primary'
-    conf_version = 1 if create_conference else 0
-
-    if local_event.google_event_id:
-        try:
-            remote = update_google_calendar_event(
-                current_app.config,
-                access_token=access_token,
-                calendar_id=calendar_id,
-                event_id=local_event.google_event_id,
-                event_payload=payload,
-                conference_data_version=conf_version,
-            )
-        except GoogleCalendarError as exc:
-            if exc.status_code == 404:
-                remote = create_google_calendar_event(
-                    current_app.config,
-                    access_token=access_token,
-                    calendar_id=calendar_id,
-                    event_payload=payload,
-                    conference_data_version=conf_version,
-                )
-            else:
-                raise
-    else:
-        remote = create_google_calendar_event(
-            current_app.config,
-            access_token=access_token,
-            calendar_id=calendar_id,
-            event_payload=payload,
-            conference_data_version=conf_version,
-        )
-
-    local_event.google_event_id = remote.get('id')
-    local_event.google_calendar_id = calendar_id
-    local_event.source = 'app'
-    local_event.sync_status = 'ok'
-    local_event.sync_error = None
-    local_event.last_synced_at = utc_now()
-    local_event.meet_link = _extract_meet_link(remote)
+    delete_local_calendar_event_mirrors(meeting)
+    if meeting.etapa is not None:
+        db.session.delete(meeting.etapa)
+        return
+    db.session.delete(meeting)
 
 
 def _parse_google_event_datetime(payload):
-    if not isinstance(payload, dict):
-        return None, None
-
-    raw_datetime = payload.get('dateTime')
-    if raw_datetime:
-        normalized = str(raw_datetime).replace('Z', '+00:00')
-        dt = datetime.datetime.fromisoformat(normalized)
-        if dt.tzinfo is None:
-            timezone_name = str(payload.get('timeZone', 'UTC')).strip() or 'UTC'
-            try:
-                dt = dt.replace(tzinfo=ZoneInfo(timezone_name))
-            except Exception:
-                dt = dt.replace(tzinfo=datetime.UTC)
-        return dt.astimezone(datetime.UTC).replace(tzinfo=None), False
-
-    raw_date = payload.get('date')
-    if raw_date:
-        date_value = datetime.date.fromisoformat(str(raw_date))
-        timezone_name = str(payload.get('timeZone') or TIMEZONE_BR.key).strip() or TIMEZONE_BR.key
-        try:
-            event_tz = ZoneInfo(timezone_name)
-        except Exception:
-            event_tz = TIMEZONE_BR
-        dt = datetime.datetime.combine(date_value, datetime.time.min, tzinfo=event_tz)
-        return dt.astimezone(datetime.UTC).replace(tzinfo=None), True
-
-    return None, None
+    return parse_google_event_datetime(payload)
 
 
 def _upsert_local_event_from_google(connection, item):
@@ -370,8 +266,15 @@ def _upsert_local_event_from_google(connection, item):
     ).first()
 
     if item.get('status') == 'cancelled':
+        meeting = _mark_project_meeting_removed_by_google(
+            google_event_id=google_event_id,
+            google_calendar_id=connection.calendar_id or 'primary',
+            google_owner_account_id=connection.google_account_id,
+        )
         if existing is not None:
             db.session.delete(existing)
+            return 'deleted'
+        if meeting is not None:
             return 'deleted'
         return 'ignored'
 
@@ -413,6 +316,7 @@ def _upsert_local_event_from_google(connection, item):
     event.sync_status = 'ok'
     event.sync_error = None
     event.last_synced_at = utc_now()
+    _sync_project_meeting_from_calendar_event(event, connection=connection)
 
     return 'upserted'
 
@@ -766,6 +670,12 @@ def google_calendar_oauth_callback():
 
     sync_issue = None
     watch_issue = None
+    identity_issue = None
+
+    try:
+        _refresh_connection_identity(connection, access_token=connection.access_token)
+    except Exception as exc:
+        identity_issue = _describe_calendar_issue(exc)
 
     try:
         _sync_events_from_google(connection, force_full=True)
@@ -784,8 +694,10 @@ def google_calendar_oauth_callback():
         flash(f'Falha ao salvar credenciais de calendário: {exc}', 'danger')
         return redirect(url_for('main.calendars_hub'))
 
-    if sync_issue or watch_issue:
+    if sync_issue or watch_issue or identity_issue:
         flash('Conexão com Google Calendar concluída com alertas.', 'warning')
+        if identity_issue:
+            flash(f'Conta Google conectada sem identificação completa: {identity_issue}', 'warning')
         if sync_issue:
             flash(f'Sincronização inicial não concluída: {sync_issue}', 'warning')
         if watch_issue:
@@ -934,6 +846,12 @@ def _get_user_event_or_404(event_id):
 @login_required
 def edit_calendar_event(event_id):
     event = _get_user_event_or_404(event_id)
+    connection = _connection_for_current_user()
+    linked_meeting = find_project_meeting_for_calendar_event(event, connection=connection)
+
+    if linked_meeting is not None and not can_manage_project_meeting(connection, linked_meeting):
+        flash('Somente quem estiver com a mesma conta Google conectada pode editar esta reunião.', 'warning')
+        return redirect(url_for('main.calendars_hub'))
 
     try:
         payload = _parse_event_form(request.form)
@@ -949,7 +867,6 @@ def edit_calendar_event(event_id):
     event.is_all_day = payload['is_all_day']
     event.source = 'app'
 
-    connection = _connection_for_current_user()
     sync_warning = None
     if connection is not None:
         try:
@@ -961,6 +878,9 @@ def edit_calendar_event(event_id):
     else:
         event.sync_status = 'pending'
         event.sync_error = 'Evento editado localmente. Conecte o Google Calendar para sincronizar.'
+
+    if linked_meeting is not None:
+        _sync_project_meeting_from_calendar_event(event, connection=connection)
 
     try:
         db.session.commit()
@@ -984,21 +904,32 @@ def edit_calendar_event(event_id):
 def delete_calendar_event(event_id):
     event = _get_user_event_or_404(event_id)
     connection = _connection_for_current_user()
+    linked_meeting = find_project_meeting_for_calendar_event(event, connection=connection)
+    if linked_meeting is not None and not can_manage_project_meeting(connection, linked_meeting):
+        flash('Somente quem estiver com a mesma conta Google conectada pode excluir esta reunião.', 'warning')
+        return redirect(url_for('main.calendars_hub'))
+
     remote_warning = None
 
     if connection is not None and event.google_event_id:
         try:
-            access_token = _ensure_google_access_token(connection)
-            delete_google_calendar_event(
+            delete_remote_event(
                 current_app.config,
-                access_token=access_token,
-                calendar_id=connection.calendar_id or 'primary',
-                event_id=event.google_event_id,
+                connection,
+                google_event_id=event.google_event_id,
+                google_calendar_id=event.google_calendar_id,
             )
         except Exception as exc:
             remote_warning = str(exc)
 
-    db.session.delete(event)
+    if linked_meeting is not None:
+        if remote_warning:
+            flash('Não foi possível remover a reunião no Google Calendar.', 'warning')
+            flash(remote_warning, 'warning')
+            return redirect(url_for('main.calendars_hub'))
+        _delete_project_meeting(linked_meeting)
+    else:
+        db.session.delete(event)
 
     try:
         db.session.commit()

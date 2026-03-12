@@ -242,6 +242,22 @@ ROUTE_CASES = [
         'requires_admin': False,
     },
     {
+        'id': 'project_meeting_add_post',
+        'method': 'POST',
+        'rule': '/project/<int:project_id>/meeting/add',
+        'path': '/project/{project_id}/meeting/add',
+        'role': 'user',
+        'data': {
+            'title': 'Reuniao de teste',
+            'starts_at': '2026-03-10T09:00',
+            'ends_at': '2026-03-10T10:00',
+            'location': 'Sala 2',
+        },
+        'expected_status': 302,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
         'id': 'import_model_post',
         'method': 'POST',
         'rule': '/project/<int:project_id>/import_model',
@@ -1189,4 +1205,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 105
+assert len(ROUTE_CASES) == 106

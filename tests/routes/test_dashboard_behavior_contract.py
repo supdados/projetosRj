@@ -1,7 +1,9 @@
+import datetime
+
 from flask import jsonify
 
 import routes.dashboard as dashboard_routes
-from models import Project, Task, db
+from models import CalendarEvent, Etapa, Project, ProjectStageMeeting, Task, db
 
 
 def _capture_dashboard_context(monkeypatch):
@@ -143,3 +145,66 @@ def test_dashboard_redirects_when_non_admin_forces_foreign_area(client, seed_dat
 
     assert response.status_code == 302
     assert response.headers['Location'].endswith('/dashboard')
+
+
+def test_dashboard_overdue_count_ignores_google_meeting_only_project(app, client_user, seed_data, monkeypatch):
+    with app.app_context():
+        project = Project(
+            titulo='Projeto Apenas Reuniao',
+            area_responsavel='Auditoria',
+            orgao='Orgao Dashboard',
+            prioridade='media',
+            status='Vigente',
+            objetivo_id=1,
+            resultado_esperado_id=1,
+        )
+        db.session.add(project)
+        db.session.flush()
+
+        event = CalendarEvent(
+            user_id=seed_data['user_id'],
+            title='Reunião atrasada informativa',
+            starts_at=datetime.datetime(2026, 1, 5, 13, 0),
+            ends_at=datetime.datetime(2026, 1, 5, 14, 0),
+            source='app',
+            google_event_id='google-dashboard-ignore',
+            google_calendar_id='primary',
+            sync_status='ok',
+        )
+        etapa = Etapa(
+            descricao='Reunião atrasada informativa',
+            data_inicio=datetime.date(2026, 1, 5),
+            data_fim=datetime.date(2026, 1, 5),
+            responsavel='user@example.com',
+            project_id=project.id,
+            ordem=0,
+            entry_type='google_meeting',
+        )
+        db.session.add_all([event, etapa])
+        db.session.flush()
+        db.session.add(
+            ProjectStageMeeting(
+                etapa_id=etapa.id,
+                project_id=project.id,
+                calendar_event_id=event.id,
+                creator_user_id=seed_data['user_id'],
+                google_owner_account_id='google-dashboard-ignore',
+                google_owner_email='user@example.com',
+                google_event_id='google-dashboard-ignore',
+                google_calendar_id='primary',
+                starts_at=event.starts_at,
+                ends_at=event.ends_at,
+                timezone='America/Sao_Paulo',
+                sync_status='ok',
+            )
+        )
+        db.session.commit()
+
+    captured = _capture_dashboard_context(monkeypatch)
+
+    response = client_user.get('/dashboard')
+
+    assert response.status_code == 200
+    context = captured['context']
+    assert context['num_projects'] == 3
+    assert context['projetos_em_atraso'] == 1

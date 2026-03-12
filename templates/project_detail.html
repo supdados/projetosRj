@@ -335,7 +335,7 @@
                 class="inline-form" id="concludeProjectForm">
                 <button type="submit" id="btn-concluir-projeto" class="btn btn-success btn-sm btn-conclude-project" {%
                     if not project.todas_etapas_concluidas %}disabled{% endif %}
-                    data-total-etapas="{{ project.etapas|length }}"
+                    data-total-etapas="{{ project.total_workflow_etapas }}"
                     data-project-title="{{ project.titulo }}"
                     title="{% if project.todas_etapas_concluidas %}Concluir projeto{% else %}Todas as etapas devem estar iniciadas e concluídas{% endif %}">
                     <i class="fas fa-check-circle me-1"></i>Concluir Projeto
@@ -354,7 +354,7 @@
     {% set can_edit_etapas = is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
     {% if can_edit_etapas %}
     <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn btn-import-model{% if project.etapas %} ds-hidden{% endif %}" id="btnImportModel" data-bs-toggle="modal" data-bs-target="#importModelModal">
+        <button type="button" class="btn btn-import-model{% if project.workflow_etapas %} ds-hidden{% endif %}" id="btnImportModel" data-bs-toggle="modal" data-bs-target="#importModelModal">
             <i class="fas fa-file-import me-1"></i> Importar Modelo
         </button>
         <button type="button" class="btn btn-add-etapa" id="btnOpenInlineEtapaAdd">
@@ -489,13 +489,45 @@
                 </thead>
                 <tbody id="etapas-tbody" data-can-edit="{{ 'true' if can_edit_etapas else 'false' }}">
                     {% for etapa in project.etapas %}
-                    <tr class="{{ 'etapa-done' if etapa.done else ('etapa-iniciada' if etapa.iniciada else '') }} etapa-draggable-row"
-                        data-etapa-id="{{ etapa.id }}">
+                    {% set is_google_meeting = etapa.entry_type == 'google_meeting' %}
+                    {% set meeting = etapa.meeting %}
+                    {% set can_manage_meeting = is_google_meeting and meeting and current_google_account_id and current_google_account_id == (meeting.google_owner_account_id or '') %}
+                    {% set can_edit_meeting_dates = can_manage_meeting and meeting and meeting.sync_status != 'error' %}
+                    <tr class="{% if not is_google_meeting %}{{ 'etapa-done' if etapa.done else ('etapa-iniciada' if etapa.iniciada else '') }}{% endif %} etapa-draggable-row{% if is_google_meeting %} etapa-row-google-meeting{% endif %}{% if is_google_meeting and meeting and meeting.sync_status == 'error' %} etapa-row-google-meeting-error{% endif %}"
+                        data-etapa-id="{{ etapa.id }}"
+                        data-entry-type="{{ etapa.entry_type or 'manual' }}"
+                        data-workflow-stage="{{ 'false' if is_google_meeting else 'true' }}"
+                        {% if is_google_meeting and meeting %}data-meeting-sync-status="{{ meeting.sync_status or 'pending' }}"{% endif %}>
                         <td class="drag-handle etapa-drag-handle etapa-v4-cell-drag" draggable="true"><i
                                 class="fas fa-grip-vertical"></i></td>
                         <td class="etapa-order-cell etapa-v4-cell-number">{{ project.id }}.{{ loop.index }}</td>
                         <td
-                            class="etapa-descricao etapa-row-text etapa-v4-cell-description {{ 'text-decoration-line-through text-muted' if etapa.done else '' }} etapa-hover-container">
+                            class="etapa-descricao etapa-row-text etapa-v4-cell-description {{ 'text-decoration-line-through text-muted' if etapa.done and not is_google_meeting else '' }} etapa-hover-container">
+                            {% if is_google_meeting %}
+                            <div class="etapa-descricao-main etapa-meeting-main">
+                                <span class="etapa-meeting-badge">
+                                    <i class="fab fa-google me-1"></i>Reunião Google
+                                </span>
+                                <div class="etapa-meeting-copy">
+                                    <span class="etapa-meeting-title">{{ etapa.descricao }}</span>
+                                    <span class="etapa-meeting-subtitle">{{ meeting_time_summary(meeting) if meeting else 'Sem horário' }}</span>
+                                    {% if meeting and meeting.sync_status == 'error' %}
+                                    <span class="etapa-meeting-warning" title="{{ meeting.sync_error or 'Evento indisponível no Google Calendar.' }}">
+                                        <i class="fas fa-triangle-exclamation me-1"></i>Evento indisponível no Google Calendar
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="etapa-descricao-comment">
+                                {% if meeting and meeting.location %}
+                                <div class="small text-muted mt-1 etapa-meeting-location">
+                                    <i class="fas fa-location-dot me-1"></i>{{ meeting.location }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <button class="btn-comment-data ds-hidden" data-etapa-id="{{ etapa.id }}"
+                                data-comentario=""></button>
+                            {% else %}
                             <div class="etapa-descricao-main">
                                 <span class="editable-field" data-field="descricao" data-etapa-id="{{ etapa.id }}">{{
                                     etapa.descricao }}</span>
@@ -519,25 +551,53 @@
                             <!-- Hidden button to store comment data -->
                             <button class="btn-comment-data ds-hidden" data-etapa-id="{{ etapa.id }}"
                                 data-comentario="{{ etapa.comentarios or '' }}"></button>
+                            {% endif %}
                         </td>
-                        <td class="etapa-row-text etapa-v4-cell-date {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
+                        <td class="etapa-row-text etapa-v4-cell-date {{ 'text-decoration-line-through text-muted' if etapa.done and not is_google_meeting else '' }}">
+                            {% if is_google_meeting and not can_edit_meeting_dates %}
+                            <span class="etapa-meeting-readonly-field{% if not etapa.data_inicio %} editable-field-empty{% endif %}"
+                                title="{% if meeting and meeting.sync_status == 'error' %}{{ meeting.sync_error or 'Evento indisponível no Google Calendar.' }}{% else %}Somente a mesma conta Google conectada pode editar a data.{% endif %}">
+                                <i class="fas fa-lock"></i>
+                                <span>{{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else 'Sem data' }}</span>
+                            </span>
+                            {% else %}
                             <span class="editable-field{% if not etapa.data_inicio %} editable-field-empty{% endif %}" data-field="data_inicio" data-etapa-id="{{ etapa.id }}"
-                                data-original-value="{{ etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else '' }}" data-empty-display="Sem data">
+                                data-original-value="{{ etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else '' }}" data-empty-display="Sem data"
+                                {% if is_google_meeting %}data-entry-type="google_meeting"{% endif %}>
                                 {{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else 'Sem data' }}
                             </span>
+                            {% endif %}
                         </td>
-                        <td class="etapa-row-text etapa-v4-cell-date {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
+                        <td class="etapa-row-text etapa-v4-cell-date {{ 'text-decoration-line-through text-muted' if etapa.done and not is_google_meeting else '' }}">
+                            {% if is_google_meeting and not can_edit_meeting_dates %}
+                            <span class="etapa-meeting-readonly-field{% if not etapa.data_fim %} editable-field-empty{% endif %}"
+                                title="{% if meeting and meeting.sync_status == 'error' %}{{ meeting.sync_error or 'Evento indisponível no Google Calendar.' }}{% else %}Somente a mesma conta Google conectada pode editar a data.{% endif %}">
+                                <i class="fas fa-lock"></i>
+                                <span>{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else 'Sem data' }}</span>
+                            </span>
+                            {% else %}
                             <span class="editable-field{% if not etapa.data_fim %} editable-field-empty{% endif %}" data-field="data_fim" data-etapa-id="{{ etapa.id }}"
-                                data-original-value="{{ etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '' }}" data-empty-display="Sem data">
+                                data-original-value="{{ etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '' }}" data-empty-display="Sem data"
+                                {% if is_google_meeting %}data-entry-type="google_meeting"{% endif %}>
                                 {{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else 'Sem data' }}
                             </span>
+                            {% endif %}
                         </td>
-                        <td class="etapa-row-text etapa-v4-cell-responsavel {{ 'text-decoration-line-through text-muted' if etapa.done else '' }}">
+                        <td class="etapa-row-text etapa-v4-cell-responsavel {{ 'text-decoration-line-through text-muted' if etapa.done and not is_google_meeting else '' }}">
+                            {% if is_google_meeting %}
+                            <span class="etapa-meeting-owner{% if not ((meeting.google_owner_email if meeting else '') or etapa.responsavel) %} editable-field-empty{% endif %}">
+                                {{ meeting.google_owner_email if meeting and meeting.google_owner_email else (etapa.responsavel if etapa.responsavel else 'Conta Google vinculada') }}
+                            </span>
+                            {% else %}
                             <span class="editable-field{% if not etapa.responsavel %} editable-field-empty{% endif %}" data-field="responsavel" data-etapa-id="{{ etapa.id }}" data-empty-display="Sem responsável">
                                 {{ etapa.responsavel if etapa.responsavel else 'Sem responsável' }}
                             </span>
+                            {% endif %}
                         </td>
                         <td class="text-center etapa-v4-cell-status">
+                            {% if is_google_meeting %}
+                            <span class="etapa-meeting-status-pill">Informativa</span>
+                            {% else %}
                             <button type="button" class="btn btn-sm etapa-status-toggle toggle-iniciada etapa-status-toggle-{{ 'started' if etapa.iniciada else 'idle' }}"
                                 data-etapa-id="{{ etapa.id }}"
                                 data-state="{{ 'started' if etapa.iniciada else 'idle' }}"
@@ -552,8 +612,14 @@
                                 <span>Iniciar</span>
                                 {% endif %}
                             </button>
+                            {% endif %}
                         </td>
                         <td class="text-center etapa-v4-cell-status">
+                            {% if is_google_meeting %}
+                            <span class="etapa-meeting-status-pill etapa-meeting-status-pill-lock">
+                                <i class="fas fa-lock me-1"></i>Somente data
+                            </span>
+                            {% else %}
                             <button type="button" class="btn btn-sm etapa-status-toggle toggle-done etapa-status-toggle-{{ 'done' if etapa.done else ('ready' if etapa.iniciada else 'blocked') }}"
                                 data-etapa-id="{{ etapa.id }}" {{ 'disabled' if (not etapa.iniciada and not etapa.done)
                                 or not (is_admin_user or (current_user_obj and
@@ -568,10 +634,20 @@
                                 <span>Concluir</span>
                                 {% endif %}
                             </button>
+                            {% endif %}
                         </td>
                         <td class="actions text-center etapa-v4-actions-cell">
-                            {% if is_admin_user or (current_user_obj and
-                            current_user_obj.has_access_to_area(project.area_responsavel)) %}
+                            {% if is_google_meeting and can_manage_meeting %}
+                            <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post"
+                                class="inline-form" data-etapa-delete-form
+                                onsubmit="return confirm('Tem certeza que deseja excluir esta reunião?');">
+                                <button type="submit" class="btn btn-sm btn-floating" data-etapa-delete-btn
+                                    title="Excluir reunião">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% elif not is_google_meeting and (is_admin_user or (current_user_obj and
+                            current_user_obj.has_access_to_area(project.area_responsavel))) %}
                             <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post"
                                 class="inline-form" data-etapa-delete-form
                                 onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
@@ -580,6 +656,10 @@
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </form>
+                            {% elif is_google_meeting %}
+                            <span class="etapa-meeting-action-lock" title="Somente a mesma conta Google conectada pode excluir esta reunião.">
+                                <i class="fas fa-lock"></i>
+                            </span>
                             {% else %}
                             <span class="text-muted small">-</span>
                             {% endif %}
@@ -587,12 +667,20 @@
                     </tr>
                     {% endfor %}
                     {% if can_edit_etapas %}
-                    <tr id="etapaInlineAddEntryRow">
+                    <tr id="etapaInlineAddEntryRow" class="{% if can_add_google_meeting %}etapa-inline-entry-row has-meeting-action{% endif %}">
                         <td colspan="9" class="etapa-inline-entry-cell">
-                            <button type="button" class="etapa-inline-entry-btn">
-                                <i class="fas fa-plus-circle"></i>
-                                <span>Adicionar nova etapa</span>
-                            </button>
+                            <div class="etapa-inline-entry-actions{% if can_add_google_meeting %} has-meeting-action{% endif %}">
+                                <button type="button" class="etapa-inline-entry-btn etapa-inline-entry-btn-stage">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span>Adicionar nova etapa</span>
+                                </button>
+                                {% if can_add_google_meeting %}
+                                <button type="button" class="etapa-inline-entry-btn etapa-inline-entry-btn-meeting" id="btnOpenInlineMeetingAdd">
+                                    <i class="fab fa-google me-1"></i>
+                                    <span>Adicionar reunião</span>
+                                </button>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     <tr id="etapaInlineAddFormRow" class="ds-hidden etapa-inline-form-row">
@@ -721,6 +809,16 @@
         </div>
     </div>
 </div>
+
+{% if can_edit_etapas and can_add_google_meeting %}
+{% set calendar_modal_id = 'projectMeetingModal' %}
+{% set calendar_form_id = 'projectMeetingForm' %}
+{% set calendar_form_action = url_for('main.add_project_meeting', project_id=project.id) %}
+{% set calendar_modal_title = 'Nova reunião Google' %}
+{% set calendar_show_meet = true %}
+{% set calendar_delete_button_id = 'btnDeleteProjectMeeting' %}
+{% include 'partials/calendar_event_modal.html' %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -735,9 +833,14 @@
         canEditAreaResponsavel: {{ (is_admin_user or (current_user_obj and current_user_obj.get_areas()|length > 1))|tojson }},
         availableAreas: {{ (AREAS_RESPONSAVEIS_CHOICES if is_admin_user else (current_user_obj.get_areas() if current_user_obj else []))|tojson }},
         abepIndicatorsOptions: {{ ABEP_INDICADORES_OPTIONS|tojson }},
+        canAddGoogleMeeting: {{ can_add_google_meeting|tojson }},
+        addMeetingUrl: {{ url_for('main.add_project_meeting', project_id=project.id)|tojson }},
+        currentGoogleAccountId: {{ current_google_account_id|tojson }},
+        projectMeetingModalId: 'projectMeetingModal',
         stageDeleteFormSelector: "form[data-etapa-delete-form]",
     };
 </script>
+<script src="{{ url_for('static', filename='js/modules/calendar-event-modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/project-detail/01-main.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/project-detail/02-import-model.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/project-detail/03-etapa-comments.js') }}"></script>

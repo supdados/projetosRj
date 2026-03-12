@@ -1,8 +1,20 @@
 import datetime
 
-from flask import flash, g, jsonify, redirect, render_template, request, url_for
+from flask import current_app, flash, g, jsonify, redirect, render_template, request, url_for
 
-from models import Etapa, Project, StageTemplate, db
+from models import CalendarEvent, Etapa, Project, ProjectStageMeeting, StageTemplate, UserCalendarConnection, db
+from services.calendar_core import parse_event_form, to_local_datetime
+from services.calendar_sync import delete_remote_event, sync_local_event_to_google
+from services.project_meetings import (
+    MEETING_ENTRY_TYPE,
+    can_manage_project_meeting,
+    delete_local_calendar_event_mirrors,
+    is_google_meeting_stage,
+    meeting_time_summary,
+    sync_etapa_from_meeting,
+    sync_local_calendar_event_mirrors,
+    update_meeting_from_calendar_event,
+)
 
 from .blueprint import main_bp
 from .decorators import login_required
@@ -61,17 +73,69 @@ def _business_days_between(start_date, end_date):
     return business_days
 
 
+def _is_ajax_request():
+    requested_with = request.headers.get('X-Requested-With', '').lower() == 'xmlhttprequest'
+    accepts_json = 'application/json' in request.headers.get('Accept', '').lower()
+    return requested_with or accepts_json
+
+
+def _connection_for_current_user():
+    if not getattr(g, 'user', None):
+        return None
+    return UserCalendarConnection.query.filter_by(user_id=g.user.id).first()
+
+
+def _next_etapa_order(project_id):
+    ultima_etapa = (
+        db.session.query(Etapa)
+        .filter(Etapa.project_id == project_id)
+        .order_by(Etapa.ordem.desc())
+        .first()
+    )
+    return (ultima_etapa.ordem + 1) if ultima_etapa else 0
+
+
+def _serialize_etapa_payload(etapa, *, connection=None):
+    payload = {
+        'id': etapa.id,
+        'descricao': etapa.descricao,
+        'comentarios': etapa.comentarios or '',
+        'responsavel': etapa.responsavel or '',
+        'data_inicio': etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else '',
+        'data_inicio_display': etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else 'Sem data',
+        'data_fim': etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '',
+        'data_fim_display': etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else 'Sem data',
+        'iniciada': bool(etapa.iniciada),
+        'done': bool(etapa.done),
+        'ordem': int(etapa.ordem or 0),
+        'entry_type': etapa.entry_type or 'manual',
+    }
+
+    if is_google_meeting_stage(etapa) and etapa.meeting is not None:
+        can_manage = can_manage_project_meeting(connection, etapa.meeting)
+        payload['meeting'] = {
+            'time_summary': meeting_time_summary(etapa.meeting),
+            'sync_status': etapa.meeting.sync_status,
+            'sync_error': etapa.meeting.sync_error or '',
+            'location': etapa.meeting.location or '',
+            'meet_link': etapa.meeting.meet_link or '',
+            'owner_email': etapa.meeting.google_owner_email or '',
+            'can_manage': can_manage,
+            'can_edit_dates': can_manage and etapa.meeting.sync_status != 'error',
+        }
+    return payload
+
+
+def _current_user_can_edit_project(project):
+    return g.user.is_admin or g.user.has_access_to_area(project.area_responsavel)
+
+
 @main_bp.route('/project/<int:project_id>/etapa/add', methods=['POST'])
 @login_required
 def add_etapa(project_id):
-    def is_ajax_request():
-        requested_with = request.headers.get('X-Requested-With', '').lower() == 'xmlhttprequest'
-        accepts_json = 'application/json' in request.headers.get('Accept', '').lower()
-        return requested_with or accepts_json
-
-    ajax_request = is_ajax_request()
+    ajax_request = _is_ajax_request()
     project = get_or_404(Project, project_id)
-    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+    if not _current_user_can_edit_project(project):
         if ajax_request:
             return jsonify({'success': False, 'message': 'Você não tem permissão para adicionar etapas a este projeto.'}), 403
         flash('Você não tem permissão para adicionar etapas a este projeto.', 'danger')
@@ -122,13 +186,7 @@ def add_etapa(project_id):
         return redirect(url_for('main.project_detail', project_id=project_id))
 
     # Calcular a ordem da nova etapa
-    ultima_etapa = (
-        db.session.query(Etapa)
-        .filter(Etapa.project_id == project.id)
-        .order_by(Etapa.ordem.desc())
-        .first()
-    )
-    nova_ordem = (ultima_etapa.ordem + 1) if ultima_etapa else 0
+    nova_ordem = _next_etapa_order(project.id)
 
     new_etapa = Etapa(
         descricao=descricao, data_inicio=data_inicio, data_fim=data_fim,
@@ -170,19 +228,7 @@ def add_etapa(project_id):
                     'project_status': project.status,
                     'project_reactivated': project_was_reactivated,
                     'reload_page': project_was_reactivated,
-                    'etapa': {
-                        'id': new_etapa.id,
-                        'descricao': new_etapa.descricao,
-                        'comentarios': new_etapa.comentarios or '',
-                        'responsavel': new_etapa.responsavel or '',
-                        'data_inicio': new_etapa.data_inicio.strftime('%Y-%m-%d') if new_etapa.data_inicio else '',
-                        'data_inicio_display': new_etapa.data_inicio.strftime('%d/%m/%Y') if new_etapa.data_inicio else 'Sem data',
-                        'data_fim': new_etapa.data_fim.strftime('%Y-%m-%d') if new_etapa.data_fim else '',
-                        'data_fim_display': new_etapa.data_fim.strftime('%d/%m/%Y') if new_etapa.data_fim else 'Sem data',
-                        'iniciada': bool(new_etapa.iniciada),
-                        'done': bool(new_etapa.done),
-                        'ordem': int(new_etapa.ordem or 0),
-                    },
+                    'etapa': _serialize_etapa_payload(new_etapa, connection=_connection_for_current_user()),
                 }
             )
     except Exception:
@@ -193,6 +239,127 @@ def add_etapa(project_id):
         return redirect(url_for('main.project_detail', project_id=project_id))
 
     flash(success_message, 'success')
+    return redirect(url_for('main.project_detail', project_id=project_id))
+
+
+@main_bp.route('/project/<int:project_id>/meeting/add', methods=['POST'])
+@login_required
+def add_project_meeting(project_id):
+    ajax_request = _is_ajax_request()
+    project = get_or_404(Project, project_id)
+    if not _current_user_can_edit_project(project):
+        message = 'Você não tem permissão para adicionar reuniões a este projeto.'
+        if ajax_request:
+            return jsonify({'success': False, 'message': message}), 403
+        flash(message, 'danger')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+
+    connection = _connection_for_current_user()
+    if connection is None or not (connection.google_account_id or '').strip():
+        message = 'Conecte novamente sua conta Google antes de adicionar reuniões ao projeto.'
+        if ajax_request:
+            return jsonify({'success': False, 'message': message}), 400
+        flash(message, 'warning')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+
+    try:
+        payload = parse_event_form(request.form)
+    except ValueError as exc:
+        if ajax_request:
+            return jsonify({'success': False, 'message': str(exc)}), 400
+        flash(str(exc), 'warning')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+
+    nova_ordem = _next_etapa_order(project.id)
+    event = CalendarEvent(
+        user_id=g.user.id,
+        title=payload['title'],
+        description=payload['description'],
+        location=payload['location'],
+        starts_at=payload['starts_at'],
+        ends_at=payload['ends_at'],
+        is_all_day=payload['is_all_day'],
+        timezone='America/Sao_Paulo',
+        source='app',
+    )
+    etapa = Etapa(
+        descricao=payload['title'],
+        project_id=project.id,
+        ordem=nova_ordem,
+        entry_type=MEETING_ENTRY_TYPE,
+    )
+    db.session.add_all([event, etapa])
+    db.session.flush()
+
+    sync_warning = None
+    try:
+        sync_local_event_to_google(
+            current_app.config,
+            event,
+            connection,
+            create_conference=payload['create_conference'],
+        )
+    except Exception as exc:
+        event.sync_status = 'error'
+        event.sync_error = str(exc)
+        sync_warning = str(exc)
+
+    meeting = ProjectStageMeeting(
+        etapa_id=etapa.id,
+        project_id=project.id,
+        calendar_event_id=event.id,
+        creator_user_id=g.user.id,
+        google_owner_account_id=connection.google_account_id,
+        google_owner_email=connection.google_account_email,
+        google_event_id=event.google_event_id,
+        google_calendar_id=event.google_calendar_id or connection.calendar_id or 'primary',
+        starts_at=event.starts_at,
+        ends_at=event.ends_at,
+        is_all_day=bool(event.is_all_day),
+        timezone=event.timezone or 'America/Sao_Paulo',
+        description=event.description,
+        location=event.location,
+        meet_link=event.meet_link,
+        sync_status=event.sync_status,
+        sync_error=event.sync_error,
+    )
+    db.session.add(meeting)
+    update_meeting_from_calendar_event(meeting, event)
+    sync_etapa_from_meeting(etapa, meeting, title=event.title)
+    sync_local_calendar_event_mirrors(meeting, title=event.title)
+
+    try:
+        log_project_action(
+            project_id=project.id,
+            action_type='add_google_meeting',
+            description=f'Adicionou a reunião "{event.title}"',
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        message = 'Erro ao adicionar reunião ao projeto.'
+        if ajax_request:
+            return jsonify({'success': False, 'message': message}), 500
+        flash(message, 'danger')
+        return redirect(url_for('main.project_detail', project_id=project_id))
+
+    success_message = 'Reunião adicionada ao projeto com sucesso!'
+    if sync_warning:
+        success_message = 'Reunião adicionada ao projeto, mas houve falha na sincronização com o Google Calendar.'
+
+    if ajax_request:
+        return jsonify(
+            {
+                'success': True,
+                'message': success_message,
+                'warning': sync_warning,
+                'etapa': _serialize_etapa_payload(etapa, connection=connection),
+            }
+        )
+
+    flash(success_message, 'warning' if sync_warning else 'success')
+    if sync_warning:
+        flash(sync_warning, 'warning')
     return redirect(url_for('main.project_detail', project_id=project_id))
 
 @main_bp.route('/project/<int:project_id>/import_model', methods=['POST'])
@@ -280,8 +447,12 @@ def import_model_to_project(project_id):
 def edit_etapa(etapa_id):
     etapa = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa.project # Projeto pai da etapa
-    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
+    if not _current_user_can_edit_project(project_of_etapa):
         flash('Você não tem permissão para editar etapas deste projeto.', 'danger')
+        return redirect(url_for('main.project_detail', project_id=project_of_etapa.id))
+
+    if is_google_meeting_stage(etapa):
+        flash('Reuniões do Google devem ser editadas pelo fluxo de calendário ou pelo ajuste rápido de datas.', 'warning')
         return redirect(url_for('main.project_detail', project_id=project_of_etapa.id))
 
     if request.method == 'POST':
@@ -321,17 +492,12 @@ def edit_etapa(etapa_id):
 @main_bp.route('/etapa/<int:etapa_id>/delete', methods=['POST'])
 @login_required
 def delete_etapa(etapa_id):
-    def is_ajax_request():
-        requested_with = request.headers.get('X-Requested-With', '').lower() == 'xmlhttprequest'
-        accepts_json = 'application/json' in request.headers.get('Accept', '').lower()
-        return requested_with or accepts_json
-
-    ajax_request = is_ajax_request()
+    ajax_request = _is_ajax_request()
     etapa_to_delete = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa_to_delete.project
     project_id_for_redirect = etapa_to_delete.project_id
 
-    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
+    if not _current_user_can_edit_project(project_of_etapa):
         message = 'Você não tem permissão para excluir etapas deste projeto.'
         if ajax_request:
             return jsonify({
@@ -342,6 +508,65 @@ def delete_etapa(etapa_id):
             }), 403
         flash('Você não tem permissão para excluir etapas deste projeto.', 'danger')
         return redirect(url_for('main.project_detail', project_id=project_of_etapa.id))
+
+    meeting = etapa_to_delete.meeting if is_google_meeting_stage(etapa_to_delete) else None
+    if meeting is not None:
+        connection = _connection_for_current_user()
+        if not can_manage_project_meeting(connection, meeting):
+            message = 'Somente quem estiver com a mesma conta Google conectada pode excluir esta reunião.'
+            if ajax_request:
+                return jsonify({'success': False, 'message': message, 'etapa_id': etapa_id}), 403
+            flash(message, 'warning')
+            return redirect(url_for('main.project_detail', project_id=project_id_for_redirect))
+
+        remote_warning = None
+        if meeting.google_event_id and meeting.sync_status != 'error':
+            try:
+                delete_remote_event(
+                    current_app.config,
+                    connection,
+                    google_event_id=meeting.google_event_id,
+                    google_calendar_id=meeting.google_calendar_id,
+                )
+            except Exception as exc:
+                remote_warning = str(exc)
+
+        if remote_warning:
+            if ajax_request:
+                return jsonify({'success': False, 'message': remote_warning, 'etapa_id': etapa_id}), 502
+            flash(remote_warning, 'warning')
+            return redirect(url_for('main.project_detail', project_id=project_id_for_redirect))
+
+        etapa_descricao = etapa_to_delete.descricao
+        try:
+            log_project_action(
+                project_id=project_id_for_redirect,
+                action_type='delete_google_meeting',
+                description=f'Excluiu a reunião "{etapa_descricao}"',
+            )
+            delete_local_calendar_event_mirrors(meeting)
+            db.session.delete(etapa_to_delete)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            if ajax_request:
+                return jsonify({'success': False, 'message': 'Erro ao excluir reunião.', 'etapa_id': etapa_id}), 500
+            flash('Erro ao excluir reunião.', 'danger')
+            return redirect(url_for('main.project_detail', project_id=project_id_for_redirect))
+
+        if ajax_request:
+            project = db.session.get(Project, project_id_for_redirect)
+            total_etapas = project.total_workflow_etapas if project is not None else 0
+            return jsonify({
+                'success': True,
+                'message': 'Reunião excluída com sucesso.',
+                'etapa_id': etapa_id,
+                'project_id': project_id_for_redirect,
+                'total_etapas': total_etapas,
+            })
+
+        flash('Reunião excluída com sucesso.', 'success')
+        return redirect(url_for('main.project_detail', project_id=project_id_for_redirect))
 
     etapa_descricao = etapa_to_delete.descricao
 
@@ -368,7 +593,8 @@ def delete_etapa(etapa_id):
         return redirect(url_for('main.project_detail', project_id=project_id_for_redirect))
 
     if ajax_request:
-        total_etapas = Etapa.query.filter_by(project_id=project_id_for_redirect).count()
+        project = db.session.get(Project, project_id_for_redirect)
+        total_etapas = project.total_workflow_etapas if project is not None else 0
         return jsonify({
             'success': True,
             'message': 'Etapa excluída com sucesso.',
@@ -418,8 +644,10 @@ def reorder_etapas(project_id):
 def toggle_iniciada_etapa(etapa_id):
     etapa = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa.project
-    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
+    if not _current_user_can_edit_project(project_of_etapa):
         return jsonify({'success': False, 'message': 'Permissão negada para alterar esta etapa.'}), 403
+    if is_google_meeting_stage(etapa):
+        return jsonify({'success': False, 'message': 'Reuniões Google não participam do fluxo de início/conclusão.'}), 400
 
     etapa.iniciada = not etapa.iniciada
     ajax_flash_message = None
@@ -446,8 +674,10 @@ def toggle_iniciada_etapa(etapa_id):
 def toggle_etapa(etapa_id): # Renomeada para evitar conflito, mas a URL é a mesma
     etapa = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa.project
-    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
+    if not _current_user_can_edit_project(project_of_etapa):
         return jsonify({'success': False, 'message': 'Permissão negada para alterar esta etapa.'}), 403
+    if is_google_meeting_stage(etapa):
+        return jsonify({'success': False, 'message': 'Reuniões Google não participam do fluxo de início/conclusão.'}), 400
 
     if not etapa.iniciada and not etapa.done: # Tentando marcar como 'done' sem estar 'iniciada'
         return jsonify({
@@ -477,12 +707,110 @@ def update_etapa_field(etapa_id):
     etapa = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa.project
     
-    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
+    if not _current_user_can_edit_project(project_of_etapa):
         return jsonify({'success': False, 'message': 'Permissão negada.'}), 403
 
     data = request.get_json()
     field = data.get('field')
     value = data.get('value')
+
+    if is_google_meeting_stage(etapa):
+        meeting = etapa.meeting
+        connection = _connection_for_current_user()
+        if field not in ['data_inicio', 'data_fim']:
+            return jsonify({'success': False, 'message': 'Nesta reunião só é permitido ajustar as datas.'}), 400
+        if meeting is None or not can_manage_project_meeting(connection, meeting):
+            return jsonify({'success': False, 'message': 'Somente a mesma conta Google conectada pode editar esta reunião.'}), 403
+        if meeting.sync_status == 'error':
+            return jsonify({
+                'success': False,
+                'message': 'Esta reunião está somente leitura porque o evento não está mais disponível no Google Calendar.',
+            }), 409
+
+        try:
+            new_date = datetime.datetime.strptime(value, '%Y-%m-%d').date() if value else None
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Formato de data inválido.'}), 400
+
+        if new_date is None:
+            return jsonify({'success': False, 'message': 'A data da reunião é obrigatória.'}), 400
+
+        start_local = to_local_datetime(meeting.starts_at)
+        end_local = to_local_datetime(meeting.ends_at)
+        if start_local is None or end_local is None:
+            return jsonify({'success': False, 'message': 'A reunião não possui horário válido para ajuste.'}), 400
+
+        if field == 'data_inicio':
+            duration = meeting.ends_at - meeting.starts_at
+            new_start_local = datetime.datetime.combine(new_date, start_local.timetz())
+            new_start_utc = new_start_local.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+            new_end_utc = new_start_utc + duration
+            old_value_str = start_local.strftime('%d/%m/%Y')
+            new_value_str = new_start_local.strftime('%d/%m/%Y')
+            meeting.starts_at = new_start_utc
+            meeting.ends_at = new_end_utc
+        else:
+            new_end_local = datetime.datetime.combine(new_date, end_local.timetz())
+            new_end_utc = new_end_local.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+            if new_end_utc <= meeting.starts_at:
+                return jsonify({'success': False, 'message': 'A data final precisa ser posterior ao início da reunião.'}), 400
+            old_value_str = end_local.strftime('%d/%m/%Y')
+            new_value_str = new_end_local.strftime('%d/%m/%Y')
+            meeting.ends_at = new_end_utc
+
+        event = meeting.calendar_event
+        if event is not None:
+            event.starts_at = meeting.starts_at
+            event.ends_at = meeting.ends_at
+            event.is_all_day = meeting.is_all_day
+            event.timezone = meeting.timezone
+            try:
+                sync_local_event_to_google(
+                    current_app.config,
+                    event,
+                    connection,
+                    create_conference=False,
+                )
+            except Exception as exc:
+                event.sync_status = 'error'
+                event.sync_error = str(exc)
+            update_meeting_from_calendar_event(meeting, event)
+        sync_etapa_from_meeting(etapa, meeting, title=etapa.descricao)
+        sync_local_calendar_event_mirrors(meeting, title=etapa.descricao)
+
+        log_project_action(
+            project_id=etapa.project_id,
+            action_type='reschedule_google_meeting',
+            description=f'Reagendou a reunião "{etapa.descricao}"',
+            old_value=old_value_str,
+            new_value=new_value_str,
+        )
+
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': 'Erro ao salvar a alteração da reunião.'}), 500
+
+        response_data = {
+            'success': True,
+            'newValue': (
+                etapa.data_inicio.strftime('%Y-%m-%d')
+                if field == 'data_inicio' and etapa.data_inicio
+                else (etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '')
+            ),
+            'displayValue': (
+                etapa.data_inicio.strftime('%d/%m/%Y')
+                if field == 'data_inicio' and etapa.data_inicio
+                else (etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else 'Sem data')
+            ),
+            'isMeeting': True,
+            'message': 'Data da reunião atualizada com sucesso.',
+        }
+        if field == 'data_inicio' and etapa.data_fim:
+            response_data['updatedEndDate'] = etapa.data_fim.strftime('%Y-%m-%d')
+            response_data['updatedEndDateDisplay'] = etapa.data_fim.strftime('%d/%m/%Y')
+        return jsonify(response_data)
 
     if field not in ['descricao', 'data_inicio', 'data_fim', 'responsavel']:
         return jsonify({'success': False, 'message': 'Campo inválido.'}), 400
@@ -596,8 +924,10 @@ def update_etapa_comentario(etapa_id):
     etapa = get_or_404(Etapa, etapa_id)
     project_of_etapa = etapa.project
     
-    if not g.user.is_admin and not g.user.has_access_to_area(project_of_etapa.area_responsavel):
+    if not _current_user_can_edit_project(project_of_etapa):
         return jsonify({'success': False, 'message': 'Permissão negada.'}), 403
+    if is_google_meeting_stage(etapa):
+        return jsonify({'success': False, 'message': 'Reuniões Google não aceitam comentários de etapa.'}), 400
 
     if etapa.done:
         return jsonify({'success': False, 'message': 'Não é possível editar comentários de uma etapa concluída.'}), 403
@@ -638,7 +968,7 @@ def update_etapa_comentario(etapa_id):
 @login_required
 def cascade_date_update(project_id):
     project = get_or_404(Project, project_id)
-    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+    if not _current_user_can_edit_project(project):
         return jsonify({'success': False, 'message': 'Permissão negada.'}), 403
 
     data = request.get_json() or {}
@@ -657,10 +987,13 @@ def cascade_date_update(project_id):
         base_etapa = db.session.get(Etapa, base_etapa_id)
         if not base_etapa or base_etapa.project_id != project_id:
             return jsonify({'success': False, 'message': 'Etapa base não encontrada.'}), 404
+        if is_google_meeting_stage(base_etapa):
+            return jsonify({'success': False, 'message': 'Reuniões Google não participam da cascata de datas.'}), 400
         
         subsequent_etapas = Etapa.query.filter(
             Etapa.project_id == project_id,
-            Etapa.ordem > base_etapa.ordem
+            Etapa.ordem > base_etapa.ordem,
+            Etapa.entry_type != MEETING_ENTRY_TYPE,
         ).order_by(Etapa.ordem.asc(), Etapa.id.asc()).all()
 
         for etapa in subsequent_etapas:

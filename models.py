@@ -117,6 +117,7 @@ class Project(db.Model):
     documentation_link = db.Column(db.String(500), nullable=True)  # Link da Documentação
     
     etapas = db.relationship('Etapa', backref='project', lazy=True, cascade="all, delete-orphan", order_by="Etapa.ordem")
+    meeting_items = db.relationship('ProjectStageMeeting', back_populates='project', lazy=True, cascade="all, delete-orphan")
     objetivo = db.relationship('Objetivo', backref='projetos')
     resultado_esperado = db.relationship('ResultadoEsperado', backref='projetos')
     indicadores = db.relationship('IndicadorProjeto', backref='project', lazy=True, cascade="all, delete-orphan")
@@ -142,9 +143,18 @@ class Project(db.Model):
     @property
     def todas_etapas_concluidas(self):
         """Verifica se todas as etapas do projeto estão iniciadas e concluídas"""
-        if not self.etapas:  # Se não há etapas, retorna False
+        workflow_etapas = self.workflow_etapas
+        if not workflow_etapas:  # Se não há etapas de workflow, retorna False
             return False
-        return all(etapa.iniciada and etapa.done for etapa in self.etapas)
+        return all(etapa.iniciada and etapa.done for etapa in workflow_etapas)
+
+    @property
+    def workflow_etapas(self):
+        return [etapa for etapa in self.etapas if etapa.entry_type != 'google_meeting']
+
+    @property
+    def total_workflow_etapas(self):
+        return len(self.workflow_etapas)
 
     def __repr__(self):
         return f'<Project {self.titulo}>'
@@ -160,6 +170,17 @@ class Etapa(db.Model):
     comentarios = db.Column(db.Text)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     ordem = db.Column(db.Integer, nullable=False, default=0) # Novo campo para ordenação
+    entry_type = db.Column(db.String(30), nullable=False, default='manual', index=True)
+    meeting = db.relationship(
+        'ProjectStageMeeting',
+        back_populates='etapa',
+        uselist=False,
+        cascade='all, delete-orphan',
+    )
+
+    @property
+    def is_google_meeting(self):
+        return self.entry_type == 'google_meeting'
 
     def __repr__(self):
         return f'<Etapa {self.descricao[:50]}>'
@@ -303,6 +324,8 @@ class UserCalendarConnection(db.Model):
     refresh_token = db.Column(db.Text, nullable=False)
     token_expires_at = db.Column(db.DateTime, nullable=True)
     scope = db.Column(db.String(500), nullable=True)
+    google_account_id = db.Column(db.String(255), nullable=True, index=True)
+    google_account_email = db.Column(db.String(255), nullable=True)
     watch_channel_id = db.Column(db.String(255), nullable=True, unique=True)
     watch_resource_id = db.Column(db.String(255), nullable=True)
     watch_expiration = db.Column(db.DateTime, nullable=True)
@@ -342,6 +365,11 @@ class CalendarEvent(db.Model):
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
     user = db.relationship('User', backref='calendar_events')
+    project_stage_meeting = db.relationship(
+        'ProjectStageMeeting',
+        back_populates='calendar_event',
+        uselist=False,
+    )
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'google_event_id', name='uq_calendar_event_user_google_event'),
@@ -350,6 +378,48 @@ class CalendarEvent(db.Model):
 
     def __repr__(self):
         return f'<CalendarEvent {self.id} user={self.user_id} title={self.title}>'
+
+
+class ProjectStageMeeting(db.Model):
+    """Vínculo compartilhado entre uma etapa de projeto e um evento Google Calendar."""
+    __tablename__ = 'project_stage_meeting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    etapa_id = db.Column(db.Integer, db.ForeignKey('etapa.id'), nullable=False, unique=True, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False, index=True)
+    calendar_event_id = db.Column(db.Integer, db.ForeignKey('calendar_event.id'), nullable=True, unique=True, index=True)
+    creator_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    google_owner_account_id = db.Column(db.String(255), nullable=False, index=True)
+    google_owner_email = db.Column(db.String(255), nullable=True)
+    google_event_id = db.Column(db.String(255), nullable=True, index=True)
+    google_calendar_id = db.Column(db.String(255), nullable=True, default='primary')
+    starts_at = db.Column(db.DateTime, nullable=False, index=True)
+    ends_at = db.Column(db.DateTime, nullable=False)
+    is_all_day = db.Column(db.Boolean, nullable=False, default=False)
+    timezone = db.Column(db.String(64), nullable=False, default='America/Sao_Paulo')
+    description = db.Column(db.Text, nullable=True)
+    location = db.Column(db.String(255), nullable=True)
+    meet_link = db.Column(db.String(512), nullable=True)
+    sync_status = db.Column(db.String(20), nullable=False, default='pending')
+    sync_error = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    etapa = db.relationship('Etapa', back_populates='meeting')
+    project = db.relationship('Project', back_populates='meeting_items')
+    calendar_event = db.relationship('CalendarEvent', back_populates='project_stage_meeting')
+    creator = db.relationship('User', backref='project_stage_meetings')
+
+    __table_args__ = (
+        db.Index(
+            'ix_project_stage_meeting_owner_google_event',
+            'google_owner_account_id',
+            'google_event_id',
+        ),
+    )
+
+    def __repr__(self):
+        return f'<ProjectStageMeeting etapa={self.etapa_id} project={self.project_id}>'
 
 
 class Task(db.Model):

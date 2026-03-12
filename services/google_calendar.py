@@ -8,6 +8,7 @@ from urllib.request import Request, urlopen
 
 GOOGLE_OAUTH_AUTH_URI = 'https://accounts.google.com/o/oauth2/v2/auth'
 GOOGLE_OAUTH_TOKEN_URI = 'https://oauth2.googleapis.com/token'
+GOOGLE_OAUTH_USERINFO_URI = 'https://openidconnect.googleapis.com/v1/userinfo'
 GOOGLE_CALENDAR_SCOPE_EVENTS = 'https://www.googleapis.com/auth/calendar.events'
 GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3'
 
@@ -224,6 +225,19 @@ def refresh_google_access_token(config, *, refresh_token, redirect_uri=None):
     )
     if 'access_token' not in payload:
         raise GoogleCalendarError('Resposta de refresh sem access_token.')
+    return payload
+
+
+def get_google_userinfo(config, *, access_token):
+    settings = get_google_calendar_settings(config)
+    payload = _http_json_request(
+        method='GET',
+        url=GOOGLE_OAUTH_USERINFO_URI,
+        timeout_seconds=settings.timeout_seconds,
+        headers=_authorized_headers(access_token),
+    )
+    if 'sub' not in payload:
+        raise GoogleCalendarError('Resposta do userinfo sem identificador da conta Google.')
     return payload
 
 

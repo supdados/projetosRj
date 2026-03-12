@@ -1,0 +1,148 @@
+{% set calendar_modal_id = calendar_modal_id|default('eventModal') %}
+{% set calendar_form_id = calendar_form_id|default('eventForm') %}
+{% set calendar_form_action = calendar_form_action|default('') %}
+{% set calendar_modal_title = calendar_modal_title|default('Novo evento') %}
+{% set calendar_show_meet = calendar_show_meet if calendar_show_meet is defined else false %}
+{% set calendar_delete_button_id = calendar_delete_button_id|default('btnDelete') %}
+
+<div class="cal-modal-overlay" id="{{ calendar_modal_id }}">
+  <div class="cal-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="cal-modal-header">
+      <h2 class="cal-modal-title" id="modalTitle">{{ calendar_modal_title }}</h2>
+      <button class="cal-modal-close" type="button" data-calendar-modal-close aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form method="POST" id="{{ calendar_form_id }}" action="{{ calendar_form_action }}">
+      <div class="cal-modal-body">
+
+        <div class="cal-field-title">
+          <input type="text" name="title" id="fieldTitle" placeholder="Título do evento" required maxlength="200" autocomplete="off">
+        </div>
+
+        <div class="cal-field-row">
+          <div class="cal-field-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div class="cal-field-content">
+            <label class="cal-allday-row">
+              <div class="cal-switch">
+                <input type="checkbox" name="all_day" id="fieldAllDay">
+                <span class="cal-switch-track"></span>
+              </div>
+              <span class="cal-allday-label">Dia inteiro</span>
+            </label>
+            <div id="datetimePair" class="cal-datetime-pair">
+              <div class="cal-datetime-col">
+                <span class="cal-datetime-sublabel">Início</span>
+                <input type="datetime-local" name="starts_at" id="fieldStartsAt" class="cal-field-input" required>
+              </div>
+              <div class="cal-datetime-col">
+                <span class="cal-datetime-sublabel">Fim</span>
+                <input type="datetime-local" name="ends_at" id="fieldEndsAt" class="cal-field-input" required>
+              </div>
+            </div>
+            <div id="datePair" class="cal-datetime-pair" style="display:none">
+              <div class="cal-datetime-col">
+                <span class="cal-datetime-sublabel">Data início</span>
+                <input type="date" id="fieldStartsAtDate" class="cal-field-input">
+              </div>
+              <div class="cal-datetime-col" id="fieldEndsAtDateCol">
+                <span class="cal-datetime-sublabel">Data fim</span>
+                <input type="date" id="fieldEndsAtDate" class="cal-field-input">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if calendar_show_meet %}
+        <div class="cal-field-row">
+          <div class="cal-field-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+            </svg>
+          </div>
+          <div class="cal-field-content">
+            <label class="cal-meet-row" id="meetGenerateRow">
+              <div class="cal-meet-icon-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+              </div>
+              <div class="cal-meet-text">
+                <span class="cal-meet-label">Google Meet</span>
+                <span class="cal-meet-sub" id="meetSub">Adicionar videochamada</span>
+              </div>
+              <div class="cal-switch">
+                <input type="checkbox" name="create_conference" id="fieldMeet">
+                <span class="cal-switch-track"></span>
+              </div>
+            </label>
+
+            <div class="cal-meet-existing" id="meetExistingRow" style="display:none">
+              <div class="cal-meet-existing-info">
+                <div class="cal-meet-icon-wrap">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                </div>
+                <div>
+                  <span class="cal-meet-label">Google Meet</span>
+                  <span class="cal-meet-url" id="meetUrlDisplay"></span>
+                </div>
+              </div>
+              <div class="cal-meet-existing-actions" id="meetExistingActions">
+                <a id="meetOpenLink" href="#" target="_blank" rel="noopener noreferrer" class="cal-meet-action-btn">Abrir Meet</a>
+                <button type="button" class="cal-meet-action-btn" data-calendar-modal-action="copy-meet">Copiar link</button>
+                <button type="button" class="cal-meet-action-btn cal-meet-action-btn--subtle" data-calendar-modal-action="regen-meet">Gerar novo link</button>
+              </div>
+              <div class="cal-meet-regen-msg" id="meetRegenMsg" style="display:none">
+                <span>Novo link será gerado ao salvar.</span>
+                <button type="button" class="cal-meet-action-btn cal-meet-action-btn--subtle" data-calendar-modal-action="cancel-regen-meet">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="cal-field-row">
+          <div class="cal-field-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+          <div class="cal-field-content">
+            <input type="text" name="location" id="fieldLocation" placeholder="Adicionar local" class="cal-field-input" maxlength="255" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="cal-field-row">
+          <div class="cal-field-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/>
+              <line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/>
+            </svg>
+          </div>
+          <div class="cal-field-content">
+            <textarea name="description" id="fieldDescription" placeholder="Adicionar descrição" class="cal-field-textarea" rows="3"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="cal-modal-footer">
+        <div>
+          <button type="button" class="cal-btn-delete" id="{{ calendar_delete_button_id }}" data-calendar-modal-action="delete-current" style="display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+            Excluir
+          </button>
+        </div>
+        <div class="cal-modal-footer-right">
+          <button type="button" class="cal-btn-cancel" data-calendar-modal-close>Cancelar</button>
+          <button type="submit" class="cal-btn-save">Salvar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

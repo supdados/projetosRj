@@ -669,6 +669,13 @@
         padding: 0.35rem 0.65rem !important;
     }
 
+    .etapa-inline-entry-actions {
+        display: flex;
+        align-items: stretch;
+        gap: 0.55rem;
+        width: 100%;
+    }
+
     .etapa-inline-entry-btn {
         width: 100%;
         display: inline-flex;
@@ -682,6 +689,7 @@
         padding: 0.6rem 0.75rem;
         font-size: var(--ds-font-size-sm);
         font-weight: var(--ds-font-weight-semibold);
+        min-width: 0;
         transition: border-color 0.16s ease, color 0.16s ease, background-color 0.16s ease;
     }
 
@@ -691,6 +699,65 @@
         color: #244c76;
         background: #eaf3ff;
         outline: none;
+    }
+
+    .etapa-inline-entry-btn-meeting {
+        background: linear-gradient(180deg, #f5fbff 0%, #edf7ff 100%);
+        color: #28577e;
+        border-style: solid;
+    }
+
+    @media (min-width: 768px) {
+        .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-stage {
+            flex: 1 1 100%;
+        }
+
+        .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-meeting {
+            flex: 0 0 0;
+            max-width: 0;
+            opacity: 0;
+            visibility: hidden;
+            padding-inline: 0;
+            border-width: 0;
+            overflow: hidden;
+            pointer-events: none;
+            transform: translateX(10px);
+            transition:
+                max-width 0.18s ease,
+                opacity 0.18s ease,
+                transform 0.18s ease,
+                padding 0.18s ease,
+                border-width 0.18s ease;
+        }
+
+        .etapa-inline-entry-row:hover .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-stage,
+        .etapa-inline-entry-row:focus-within .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-stage {
+            flex-basis: calc(50% - 0.28rem);
+        }
+
+        .etapa-inline-entry-row:hover .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-meeting,
+        .etapa-inline-entry-row:focus-within .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-meeting {
+            flex: 1 1 calc(50% - 0.28rem);
+            max-width: 420px;
+            opacity: 1;
+            visibility: visible;
+            padding-inline: 0.75rem;
+            border-width: 1px;
+            pointer-events: auto;
+            transform: translateX(0);
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .etapa-inline-entry-actions.has-meeting-action {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn {
+            font-size: var(--ds-font-size-xs);
+            padding: 0.58rem 0.55rem;
+        }
     }
 
     #etapaInlineAddFormRow td {
@@ -922,4 +989,3 @@
         border-color: #c6d9ec;
         color: #2f455d;
     }
-

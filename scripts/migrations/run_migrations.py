@@ -108,10 +108,17 @@ TASK_TEMP_TABLES = (
 )
 CALENDAR_INCREMENTAL_COLUMNS = {
     'user_calendar_connection': [
+        ('google_account_id', 'VARCHAR(255)'),
+        ('google_account_email', 'VARCHAR(255)'),
         ('watch_channel_token', 'VARCHAR(255)'),
     ],
     'calendar_event': [
         ('meet_link', 'VARCHAR(512)'),
+    ],
+}
+STAGE_INCREMENTAL_COLUMNS = {
+    'etapa': [
+        ('entry_type', "VARCHAR(30) NOT NULL DEFAULT 'manual'"),
     ],
 }
 
@@ -1144,7 +1151,7 @@ def ensure_calendar_schema(emit_output=True):
         db.create_all()
         inspector = inspect(db.engine)
 
-        for table_name, required_columns in CALENDAR_INCREMENTAL_COLUMNS.items():
+        for table_name, required_columns in {**STAGE_INCREMENTAL_COLUMNS, **CALENDAR_INCREMENTAL_COLUMNS}.items():
             if not _table_exists(inspector, table_name):
                 continue
             table_columns = _column_names(inspector, table_name)
