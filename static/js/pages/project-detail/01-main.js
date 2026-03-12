@@ -367,22 +367,13 @@
         function buildMeetingDateHtml(etapaId, field, rawValue, displayValue, timeDisplay, meetingInfo) {
             const hasValue = Boolean((rawValue || '').trim());
             const safeDisplay = escapeHtml(buildMeetingDateDisplay(displayValue || 'Sem data', timeDisplay || ''));
-            const safeRawValue = escapeHtml(rawValue || '');
-            const safeTimeDisplay = escapeHtml(timeDisplay || '');
-            const canEditDates = Boolean(meetingInfo && meetingInfo.can_edit_dates);
             const syncStatus = String(meetingInfo?.sync_status || '').trim();
-            const lockTitle = syncStatus === 'error'
+            const tooltip = syncStatus === 'error'
                 ? (meetingInfo?.sync_error || 'Evento indisponível no Google Calendar.')
-                : 'Somente a mesma conta Google conectada pode editar a data.';
-
-            if (!canEditDates) {
-                return `
-                    <span class="etapa-meeting-readonly-field${hasValue ? '' : ' editable-field-empty'}" title="${escapeHtml(lockTitle)}">${safeDisplay}</span>
-                `;
-            }
+                : 'Clique para abrir os detalhes da reunião.';
 
             return `
-                <span class="editable-field${hasValue ? '' : ' editable-field-empty'}" data-field="${field}" data-etapa-id="${etapaId}" data-original-value="${safeRawValue}" data-empty-display="Sem data" data-entry-type="google_meeting" data-time-display="${safeTimeDisplay}">${safeDisplay}</span>
+                <span class="etapa-meeting-readonly-field${hasValue ? '' : ' editable-field-empty'}" title="${escapeHtml(tooltip)}">${safeDisplay}</span>
             `;
         }
 

@@ -235,4 +235,6 @@ def test_project_detail_renders_google_meeting_row_as_informational_item(app, cl
     assert 'toggle-iniciada' not in meeting_row
     assert 'toggle-done' not in meeting_row
     assert 'data-field="descricao"' not in meeting_row
+    assert 'data-field="data_inicio"' not in meeting_row
+    assert 'data-field="data_fim"' not in meeting_row
     assert 'data-field="responsavel"' not in meeting_row

@@ -540,32 +540,16 @@
                                 data-comentario=""></button>
                         </td>
                         <td class="etapa-row-text etapa-v4-cell-date etapa-meeting-date-cell">
-                            {% if not can_edit_meeting_dates %}
                             <span class="etapa-meeting-readonly-field{% if not etapa.data_inicio %} editable-field-empty{% endif %}"
-                                title="{% if meeting and meeting_sync_status == 'error' %}{{ meeting.sync_error or 'Evento indisponível no Google Calendar.' }}{% else %}Somente a mesma conta Google conectada pode editar a data.{% endif %}">
+                                title="{% if meeting and meeting_sync_status == 'error' %}{{ meeting.sync_error or 'Evento indisponível no Google Calendar.' }}{% else %}Clique para abrir os detalhes da reunião.{% endif %}">
                                 {{ meeting_start_full }}
                             </span>
-                            {% else %}
-                            <span class="editable-field{% if not etapa.data_inicio %} editable-field-empty{% endif %}" data-field="data_inicio" data-etapa-id="{{ etapa.id }}"
-                                data-original-value="{{ etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else '' }}" data-empty-display="Sem data"
-                                data-entry-type="google_meeting" data-time-display="{{ meeting_start_time }}">
-                                {{ meeting_start_full }}
-                            </span>
-                            {% endif %}
                         </td>
                         <td class="etapa-row-text etapa-v4-cell-date etapa-meeting-date-cell">
-                            {% if not can_edit_meeting_dates %}
                             <span class="etapa-meeting-readonly-field{% if not etapa.data_fim %} editable-field-empty{% endif %}"
-                                title="{% if meeting and meeting_sync_status == 'error' %}{{ meeting.sync_error or 'Evento indisponível no Google Calendar.' }}{% else %}Somente a mesma conta Google conectada pode editar a data.{% endif %}">
+                                title="{% if meeting and meeting_sync_status == 'error' %}{{ meeting.sync_error or 'Evento indisponível no Google Calendar.' }}{% else %}Clique para abrir os detalhes da reunião.{% endif %}">
                                 {{ meeting_end_full }}
                             </span>
-                            {% else %}
-                            <span class="editable-field{% if not etapa.data_fim %} editable-field-empty{% endif %}" data-field="data_fim" data-etapa-id="{{ etapa.id }}"
-                                data-original-value="{{ etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else '' }}" data-empty-display="Sem data"
-                                data-entry-type="google_meeting" data-time-display="{{ meeting_end_time }}">
-                                {{ meeting_end_full }}
-                            </span>
-                            {% endif %}
                         </td>
                         <td class="etapa-row-text etapa-v4-cell-responsavel text-muted small">-</td>
                         <td class="text-center etapa-v4-cell-status text-muted small">-</td>

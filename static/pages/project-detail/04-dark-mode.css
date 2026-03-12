@@ -782,8 +782,8 @@ html[data-theme="dark"] body.is-authenticated .etapa-meeting-owner {
 
 html[data-theme="dark"] body.is-authenticated .etapa-meeting-readonly-field {
     color: #d7e4f0;
-    background: rgba(54, 79, 106, 0.24);
-    border-color: rgba(126, 184, 232, 0.22);
+    background: transparent;
+    border-color: transparent;
 }
 
 html[data-theme="dark"] body.is-authenticated .etapa-meeting-readonly-field.editable-field-empty {
