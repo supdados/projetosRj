@@ -720,52 +720,71 @@
     @media (min-width: 768px) {
         .etapa-inline-entry-actions.has-meeting-action {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 0fr;
-            gap: 0;
-            min-height: 42px;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 0fr);
+            gap: calc(var(--etapa-inline-entry-gap) * 0.18);
+            min-height: 44px;
             transition:
-                grid-template-columns 0.34s var(--etapa-inline-entry-ease),
-                gap 0.34s var(--etapa-inline-entry-ease);
+                grid-template-columns 0.52s cubic-bezier(0.16, 1, 0.3, 1),
+                gap 0.42s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-stage {
             grid-column: 1;
+            transform: translateX(0) scale(1);
+            transform-origin: center left;
+            transition:
+                transform 0.44s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.24s var(--etapa-inline-entry-ease),
+                background-color 0.24s var(--etapa-inline-entry-ease),
+                box-shadow 0.28s var(--etapa-inline-entry-ease);
         }
 
         .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-meeting {
             grid-column: 2;
             min-width: 0;
+            max-width: 100%;
             opacity: 0;
-            visibility: hidden;
             pointer-events: none;
             overflow: hidden;
             white-space: nowrap;
             padding-inline: 0;
             border-color: transparent;
-            transform: translateX(12px) scale(0.985);
+            box-shadow: 0 10px 24px rgba(44, 82, 124, 0);
+            filter: blur(2px);
+            clip-path: inset(0 18% 0 0 round 8px);
+            transform: translateX(14px) scale(0.965);
+            transform-origin: center right;
             transition:
-                opacity 0.24s var(--etapa-inline-entry-ease),
-                transform 0.34s var(--etapa-inline-entry-ease),
-                padding 0.28s var(--etapa-inline-entry-ease),
+                opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.48s cubic-bezier(0.16, 1, 0.3, 1),
+                filter 0.44s cubic-bezier(0.22, 1, 0.36, 1),
+                clip-path 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                padding 0.38s cubic-bezier(0.22, 1, 0.36, 1),
                 border-color 0.24s var(--etapa-inline-entry-ease),
-                visibility 0s linear 0.34s;
+                box-shadow 0.34s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        .etapa-inline-entry-row:hover .etapa-inline-entry-actions.has-meeting-action,
-        .etapa-inline-entry-row:focus-within .etapa-inline-entry-actions.has-meeting-action {
-            grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+        .etapa-inline-entry-actions.has-meeting-action:hover,
+        .etapa-inline-entry-actions.has-meeting-action:focus-within {
+            grid-template-columns: minmax(0, 6.5fr) minmax(0, 3.5fr);
             gap: var(--etapa-inline-entry-gap);
         }
 
-        .etapa-inline-entry-row:hover .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-meeting,
-        .etapa-inline-entry-row:focus-within .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-meeting {
+        .etapa-inline-entry-actions.has-meeting-action:hover .etapa-inline-entry-btn-stage,
+        .etapa-inline-entry-actions.has-meeting-action:focus-within .etapa-inline-entry-btn-stage {
+            transform: translateX(-2px) scale(0.995);
+        }
+
+        .etapa-inline-entry-actions.has-meeting-action:hover .etapa-inline-entry-btn-meeting,
+        .etapa-inline-entry-actions.has-meeting-action:focus-within .etapa-inline-entry-btn-meeting {
             opacity: 1;
-            visibility: visible;
             pointer-events: auto;
-            padding-inline: 0.75rem;
+            padding-inline: 0.78rem;
             border-color: #a7bfd9;
+            box-shadow: 0 12px 24px rgba(44, 82, 124, 0.12);
+            filter: blur(0);
+            clip-path: inset(0 0 0 0 round 8px);
             transform: translateX(0) scale(1);
-            transition-delay: 0s;
         }
     }
 
