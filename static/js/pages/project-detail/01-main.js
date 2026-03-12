@@ -457,7 +457,7 @@
                 inlineEmptyRow.classList.add('ds-hidden');
             }
             requestAnimationFrame(() => {
-                inlineAddFormRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                ensureInlineComposerVisible();
                 if (inlineDescricaoInput) {
                     inlineDescricaoInput.focus();
                 }
@@ -467,6 +467,32 @@
             } else {
                 inlineAddFormRow.dataset.openedFrom = 'button';
             }
+        }
+
+        function ensureInlineComposerVisible() {
+            if (!inlineAddFormRow) {
+                return;
+            }
+
+            const rect = inlineAddFormRow.getBoundingClientRect();
+            const topPadding = (typeof getTopNavOffset === 'function' ? getTopNavOffset() : 74) + 12;
+            const bottomPadding = 24;
+            let targetTop = null;
+
+            if (rect.top < topPadding) {
+                targetTop = window.scrollY + rect.top - topPadding;
+            } else if (rect.bottom > window.innerHeight - bottomPadding) {
+                targetTop = window.scrollY + rect.bottom - window.innerHeight + bottomPadding;
+            }
+
+            if (targetTop === null) {
+                return;
+            }
+
+            window.scrollTo({
+                top: Math.max(0, Math.round(targetTop)),
+                behavior: 'auto'
+            });
         }
 
         function closeInlineEtapaComposer(reset = true) {
@@ -575,7 +601,7 @@
                     syncInlineStatusControls();
                     resizeInlineDescricaoTextarea();
                     requestAnimationFrame(() => {
-                        inlineAddFormRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                        ensureInlineComposerVisible();
                         if (inlineDescricaoInput) {
                             inlineDescricaoInput.focus();
                         }
