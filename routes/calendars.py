@@ -348,8 +348,13 @@ def _parse_google_event_datetime(payload):
     raw_date = payload.get('date')
     if raw_date:
         date_value = datetime.date.fromisoformat(str(raw_date))
-        dt = datetime.datetime.combine(date_value, datetime.time.min, tzinfo=datetime.UTC)
-        return dt.replace(tzinfo=None), True
+        timezone_name = str(payload.get('timeZone') or TIMEZONE_BR.key).strip() or TIMEZONE_BR.key
+        try:
+            event_tz = ZoneInfo(timezone_name)
+        except Exception:
+            event_tz = TIMEZONE_BR
+        dt = datetime.datetime.combine(date_value, datetime.time.min, tzinfo=event_tz)
+        return dt.astimezone(datetime.UTC).replace(tzinfo=None), True
 
     return None, None
 
@@ -372,10 +377,17 @@ def _upsert_local_event_from_google(connection, item):
 
     starts_at, starts_all_day = _parse_google_event_datetime(item.get('start'))
     ends_at, ends_all_day = _parse_google_event_datetime(item.get('end'))
+    is_all_day = bool(starts_all_day and ends_all_day)
     if starts_at is None or ends_at is None:
         return 'ignored'
-    if ends_at <= starts_at:
-        ends_at = starts_at + datetime.timedelta(hours=1)
+
+    if is_all_day and ends_at > starts_at:
+        # Google envia all-day com fim exclusivo (00:00 do dia seguinte).
+        # Internamente usamos fim inclusivo (23:59 do último dia).
+        ends_at -= datetime.timedelta(minutes=1)
+    elif ends_at <= starts_at:
+        default_duration = datetime.timedelta(minutes=1439) if is_all_day else datetime.timedelta(hours=1)
+        ends_at = starts_at + default_duration
 
     event = existing
     if event is None:
@@ -392,7 +404,7 @@ def _upsert_local_event_from_google(connection, item):
     event.location = item.get('location') or None
     event.starts_at = starts_at
     event.ends_at = ends_at
-    event.is_all_day = bool(starts_all_day and ends_all_day)
+    event.is_all_day = is_all_day
     event.timezone = str((item.get('start') or {}).get('timeZone') or 'UTC')
     event.source = 'google'
     event.google_calendar_id = connection.calendar_id or 'primary'

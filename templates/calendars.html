@@ -150,7 +150,7 @@
                 <span class="cal-datetime-sublabel">Data início</span>
                 <input type="date" id="fieldStartsAtDate" class="cal-field-input">
               </div>
-              <div class="cal-datetime-col">
+              <div class="cal-datetime-col" id="fieldEndsAtDateCol">
                 <span class="cal-datetime-sublabel">Data fim</span>
                 <input type="date" id="fieldEndsAtDate" class="cal-field-input">
               </div>
@@ -359,7 +359,8 @@ function buildWeekRow(week) {
   const weekEndMs   = new Date(week[6].y, week[6].m, week[6].d, 23, 59, 59).getTime();
 
   const spanEvs = CAL_EVENTS.filter(ev => {
-    if (!isMultiDay(ev)) return false;
+    const isSpanLike = isMultiDay(ev) || ev.is_all_day;
+    if (!isSpanLike) return false;
     return new Date(ev.starts_at).getTime() <= weekEndMs &&
            new Date(ev.ends_at).getTime()   >  weekStartMs;
   });
@@ -406,7 +407,7 @@ function buildWeekRow(week) {
 
   week.forEach((day, dayIdx) => {
     const singleEvs = day.outside ? [] : CAL_EVENTS.filter(ev => {
-      if (isMultiDay(ev)) return false;
+      if (isMultiDay(ev) || ev.is_all_day) return false;
       return dayTs(ev.starts_at) === new Date(day.y, day.m, day.d, 0, 0, 0).getTime();
     }).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 
@@ -486,7 +487,10 @@ function makeCell(day, singleEvs, spanH = 0, nLanes = 0) {
     singleEvs.slice(0, MAX_PILLS).forEach(ev => {
       const pill = document.createElement('div');
       pill.className = 'cal-event-pill ' + pillClass(ev);
-      const showTime = !ev.is_all_day && ev.starts_at.slice(11) !== '00:00';
+      const occupiesFullDay = eventCoversFullDayOn(dayStartMs, ev);
+      const isAllDayBar = ev.is_all_day || occupiesFullDay;
+      if (isAllDayBar) pill.classList.add('cal-event-pill--all-day');
+      const showTime = !isAllDayBar && ev.starts_at.slice(11) !== '00:00';
       const hm = showTime ? new Date(ev.starts_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ' : '';
       pill.textContent = hm + ev.title;
       pill.title = ev.title;
@@ -1008,23 +1012,29 @@ function handleOverlayClick(e) {
 }
 
 function toggleAllDay(checked) {
+  const fStart = document.getElementById('fieldStartsAt');
+  const fEnd = document.getElementById('fieldEndsAt');
+  const fStartD = document.getElementById('fieldStartsAtDate');
+  const fEndD = document.getElementById('fieldEndsAtDate');
+
   document.getElementById('datetimePair').style.display = checked ? 'none' : '';
   document.getElementById('datePair').style.display     = checked ? ''     : 'none';
-  document.getElementById('fieldStartsAt').required     = !checked;
-  document.getElementById('fieldEndsAt').required       = !checked;
+  fStart.required = !checked;
+  fEnd.required   = !checked;
 
   if (checked) {
     // Copy date portion from datetime fields → date-only fields
-    const sVal = document.getElementById('fieldStartsAt').value;
-    const eVal = document.getElementById('fieldEndsAt').value;
-    if (sVal) document.getElementById('fieldStartsAtDate').value = sVal.slice(0, 10);
-    if (eVal) document.getElementById('fieldEndsAtDate').value   = eVal.slice(0, 10);
+    const sVal = fStart.value;
+    const eVal = fEnd.value;
+    if (sVal) fStartD.value = sVal.slice(0, 10);
+    if (eVal) fEndD.value   = eVal.slice(0, 10);
+    fEndD.min = fStartD.value || '';
   } else {
     // Copy date portion from date-only fields → datetime fields (keep existing time)
-    const sDate = document.getElementById('fieldStartsAtDate').value;
-    const eDate = document.getElementById('fieldEndsAtDate').value;
-    const sAt = document.getElementById('fieldStartsAt');
-    const eAt = document.getElementById('fieldEndsAt');
+    const sDate = fStartD.value;
+    const eDate = fEndD.value;
+    const sAt = fStart;
+    const eAt = fEnd;
     if (sDate) sAt.value = sDate + (sAt.value ? 'T' + sAt.value.slice(11) : 'T09:00');
     if (eDate) eAt.value = eDate + (eAt.value ? 'T' + eAt.value.slice(11) : 'T10:00');
   }

@@ -338,6 +338,29 @@ html[data-theme="dark"] .cal-toggle-btn.is-active { background: #005a92 !importa
 .cal-event-pill.cal-pill--pending::before { background: #94a3b8; }
 .cal-event-pill.cal-pill--error::before   { background: var(--app-color-danger); }
 
+/* Full-day events in month cells use bar-style background and right inset */
+.cal-event-pill--all-day {
+  display: block;
+  box-sizing: border-box;
+  background: var(--app-color-primary);
+  color: #fff;
+  min-height: 1.2rem;
+  height: 1.2rem;
+  line-height: 1.2rem;
+  gap: 0;
+  padding: 0 0.35rem;
+  margin-right: 0.5rem;
+  border-radius: 0.22rem;
+}
+.cal-event-pill--all-day::before { display: none; }
+.cal-event-pill--all-day:hover {
+  background: var(--app-color-primary);
+  filter: brightness(1.06);
+}
+.cal-event-pill--all-day.cal-pill--google  { background: #0f9d58; }
+.cal-event-pill--all-day.cal-pill--pending { background: #94a3b8; }
+.cal-event-pill--all-day.cal-pill--error   { background: var(--app-color-danger); }
+
 .cal-more-pills {
   font-size: 0.67rem;
   color: var(--app-color-text-muted);

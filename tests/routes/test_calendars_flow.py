@@ -14,6 +14,7 @@ def test_calendars_page_renders_core_actions(client_user):
     assert 'Conectar' in html
     assert 'action="/calendarios/eventos"' in html
     assert 'href="/calendar/oauth/start"' in html
+    assert 'id="fieldEndsAtDateCol"' in html
 
 
 def test_calendars_connected_view_hides_calendar_watch_subtext(app, client_user, seed_data, monkeypatch):
@@ -95,6 +96,40 @@ def test_create_calendar_event_without_google_connection_marks_pending(app, clie
         assert event is not None
         assert event.sync_status == 'pending'
         assert event.google_event_id is None
+
+
+def test_upsert_google_all_day_event_normalizes_exclusive_end(app, seed_data):
+    with app.app_context():
+        connection = UserCalendarConnection(
+            user_id=seed_data['user_id'],
+            provider='google',
+            calendar_id='primary',
+            refresh_token='refresh-token',
+        )
+        db.session.add(connection)
+        db.session.commit()
+
+        action = calendar_routes._upsert_local_event_from_google(
+            connection,
+            {
+                'id': 'google-all-day-1',
+                'status': 'confirmed',
+                'summary': 'Feriado',
+                'start': {'date': '2026-03-22'},
+                'end': {'date': '2026-03-23'},
+            },
+        )
+
+        event = CalendarEvent.query.filter_by(
+            user_id=seed_data['user_id'],
+            google_event_id='google-all-day-1',
+        ).first()
+
+        assert action == 'upserted'
+        assert event is not None
+        assert event.is_all_day is True
+        assert calendar_routes._format_input_datetime(event.starts_at) == '2026-03-22T00:00'
+        assert calendar_routes._format_input_datetime(event.ends_at) == '2026-03-22T23:59'
 
 
 def test_google_calendar_oauth_callback_persists_refresh_token(app, client_user, seed_data, monkeypatch):
