@@ -5,6 +5,7 @@ from services.google_calendar import (
     GoogleCalendarError,
     create_google_calendar_event,
     delete_google_calendar_event,
+    get_google_userinfo,
     refresh_google_access_token,
     update_google_calendar_event,
 )
@@ -104,3 +105,14 @@ def delete_remote_event(config, connection, *, google_event_id, google_calendar_
         calendar_id=google_calendar_id or connection.calendar_id or 'primary',
         event_id=google_event_id,
     )
+
+
+def hydrate_google_connection_identity(config, connection):
+    if connection is None:
+        return None
+
+    access_token = ensure_google_access_token(config, connection)
+    userinfo = get_google_userinfo(config, access_token=access_token)
+    connection.google_account_id = (userinfo.get('sub') or '').strip() or None
+    connection.google_account_email = (userinfo.get('email') or '').strip() or None
+    return userinfo

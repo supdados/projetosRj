@@ -1,11 +1,13 @@
 import datetime
 from collections import defaultdict
 
-from flask import flash, g, jsonify, redirect, render_template, request, url_for
+from flask import current_app, flash, g, jsonify, redirect, render_template, request, url_for
 
 from abep_catalog import normalize_abep_indicator
 from models import Etapa, IndicadorProjeto, Project, ProjectHistory, Task, UserCalendarConnection, db
 from objective_catalog import normalize_goal_selection
+from services.calendar_sync import hydrate_google_connection_identity
+from services.google_calendar import is_google_calendar_enabled
 from services.project_meetings import meeting_time_summary
 
 from .blueprint import main_bp
@@ -633,6 +635,21 @@ def project_detail(project_id):
 
     active_task_count = Task.query.filter_by(project_id=project.id, is_archived=False).count()
     calendar_connection = UserCalendarConnection.query.filter_by(user_id=g.user.id).first()
+    if (
+        calendar_connection is not None
+        and not (calendar_connection.google_account_id or '').strip()
+        and is_google_calendar_enabled(current_app.config)
+    ):
+        try:
+            hydrate_google_connection_identity(current_app.config, calendar_connection)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning(
+                'Nao foi possivel hidratar a identidade Google da conexao %s na tela do projeto: %s',
+                calendar_connection.id,
+                exc,
+            )
 
     return render_template(
         'project_detail.html',

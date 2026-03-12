@@ -1,6 +1,7 @@
 import datetime
 import re
 
+import routes.projects as project_routes
 from models import CalendarEvent, Etapa, ProjectStageMeeting, UserCalendarConnection, db
 
 
@@ -110,7 +111,42 @@ def test_project_detail_with_google_identity_shows_split_inline_add_actions(app,
     assert 'id="btnOpenInlineMeetingAdd"' in html
     assert 'etapa-inline-entry-actions has-meeting-action' in html
     assert 'id="projectMeetingModal"' in html
+    assert 'pages/shared/calendar-event-modal.css' in html
     assert f'action="/project/{seed_data["project_id"]}/meeting/add"' in html
+
+
+def test_project_detail_hydrates_legacy_google_connection_and_shows_split_actions(app, client_user, seed_data, monkeypatch):
+    with app.app_context():
+        db.session.add(
+            UserCalendarConnection(
+                user_id=seed_data['user_id'],
+                provider='google',
+                calendar_id='primary',
+                refresh_token='refresh-token',
+            )
+        )
+        db.session.commit()
+
+    monkeypatch.setattr(project_routes, 'is_google_calendar_enabled', lambda _config: True)
+    monkeypatch.setattr(
+        project_routes,
+        'hydrate_google_connection_identity',
+        lambda _config, connection: (
+            setattr(connection, 'google_account_id', 'google-shared-legacy'),
+            setattr(connection, 'google_account_email', 'legacy@example.com'),
+        ),
+    )
+
+    response = client_user.get(f"/project/{seed_data['project_id']}")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'id="btnOpenInlineMeetingAdd"' in html
+
+    with app.app_context():
+        connection = UserCalendarConnection.query.filter_by(user_id=seed_data['user_id']).first()
+        assert connection is not None
+        assert connection.google_account_id == 'google-shared-legacy'
 
 
 def test_project_detail_renders_google_meeting_row_as_informational_item(app, client_user, seed_data):

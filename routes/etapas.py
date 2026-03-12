@@ -4,7 +4,8 @@ from flask import current_app, flash, g, jsonify, redirect, render_template, req
 
 from models import CalendarEvent, Etapa, Project, ProjectStageMeeting, StageTemplate, UserCalendarConnection, db
 from services.calendar_core import parse_event_form, to_local_datetime
-from services.calendar_sync import delete_remote_event, sync_local_event_to_google
+from services.calendar_sync import delete_remote_event, hydrate_google_connection_identity, sync_local_event_to_google
+from services.google_calendar import is_google_calendar_enabled
 from services.project_meetings import (
     MEETING_ENTRY_TYPE,
     can_manage_project_meeting,
@@ -82,7 +83,21 @@ def _is_ajax_request():
 def _connection_for_current_user():
     if not getattr(g, 'user', None):
         return None
-    return UserCalendarConnection.query.filter_by(user_id=g.user.id).first()
+    connection = UserCalendarConnection.query.filter_by(user_id=g.user.id).first()
+    if (
+        connection is not None
+        and not (connection.google_account_id or '').strip()
+        and is_google_calendar_enabled(current_app.config)
+    ):
+        try:
+            hydrate_google_connection_identity(current_app.config, connection)
+        except Exception as exc:
+            current_app.logger.warning(
+                'Nao foi possivel hidratar a identidade Google da conexao %s para a rota de etapas: %s',
+                connection.id,
+                exc,
+            )
+    return connection
 
 
 def _next_etapa_order(project_id):

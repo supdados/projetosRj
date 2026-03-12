@@ -670,9 +670,11 @@
     }
 
     .etapa-inline-entry-actions {
+        --etapa-inline-entry-gap: 0.55rem;
+        --etapa-inline-entry-gap-half: calc(var(--etapa-inline-entry-gap) / 2);
         display: flex;
         align-items: stretch;
-        gap: 0.55rem;
+        gap: var(--etapa-inline-entry-gap);
         width: 100%;
     }
 
@@ -686,11 +688,20 @@
         background: #f2f8ff;
         color: #3e6084;
         border-radius: 8px;
-        padding: 0.6rem 0.75rem;
+        padding: 0.52rem 0.75rem;
         font-size: var(--ds-font-size-sm);
         font-weight: var(--ds-font-weight-semibold);
         min-width: 0;
-        transition: border-color 0.16s ease, color 0.16s ease, background-color 0.16s ease;
+        min-height: 42px;
+        transition:
+            border-color 0.16s ease,
+            color 0.16s ease,
+            background-color 0.16s ease,
+            opacity 0.18s ease,
+            transform 0.18s ease,
+            padding-right 0.18s ease,
+            clip-path 0.18s ease,
+            -webkit-clip-path 0.18s ease;
     }
 
     .etapa-inline-entry-btn:hover,
@@ -708,41 +719,45 @@
     }
 
     @media (min-width: 768px) {
+        .etapa-inline-entry-actions.has-meeting-action {
+            position: relative;
+            display: block;
+            min-height: 42px;
+        }
+
         .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-stage {
-            flex: 1 1 100%;
+            position: relative;
+            z-index: 1;
         }
 
         .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-meeting {
-            flex: 0 0 0;
-            max-width: 0;
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: calc(50% - var(--etapa-inline-entry-gap-half));
+            z-index: 2;
             opacity: 0;
             visibility: hidden;
-            padding-inline: 0;
-            border-width: 0;
-            overflow: hidden;
             pointer-events: none;
             transform: translateX(10px);
             transition:
-                max-width 0.18s ease,
                 opacity 0.18s ease,
                 transform 0.18s ease,
-                padding 0.18s ease,
-                border-width 0.18s ease;
+                visibility 0s linear 0.18s;
         }
 
         .etapa-inline-entry-row:hover .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-stage,
         .etapa-inline-entry-row:focus-within .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-stage {
-            flex-basis: calc(50% - 0.28rem);
+            padding-right: calc(50% + 0.95rem);
+            -webkit-clip-path: inset(0 calc(50% + var(--etapa-inline-entry-gap-half)) 0 0 round 8px);
+            clip-path: inset(0 calc(50% + var(--etapa-inline-entry-gap-half)) 0 0 round 8px);
         }
 
         .etapa-inline-entry-row:hover .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-meeting,
         .etapa-inline-entry-row:focus-within .etapa-inline-entry-actions.has-meeting-action .etapa-inline-entry-btn-meeting {
-            flex: 1 1 calc(50% - 0.28rem);
-            max-width: 420px;
             opacity: 1;
             visibility: visible;
-            padding-inline: 0.75rem;
-            border-width: 1px;
             pointer-events: auto;
             transform: translateX(0);
         }
