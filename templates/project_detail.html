@@ -586,11 +586,6 @@
                         </td>
                     </tr>
                     {% endfor %}
-                    {% if can_edit_etapas and not project.etapas %}
-                    <tr id="etapaInlineEmptyRow" class="etapa-inline-empty-row">
-                        <td colspan="9">Nenhuma etapa adicionada ainda.</td>
-                    </tr>
-                    {% endif %}
                     {% if can_edit_etapas %}
                     <tr id="etapaInlineAddEntryRow">
                         <td colspan="9" class="etapa-inline-entry-cell">

@@ -21,7 +21,6 @@
         const inlineAddEntryBtn = inlineAddEntryRow ? inlineAddEntryRow.querySelector('.etapa-inline-entry-btn') : null;
         const inlineAddCancelBtn = document.getElementById('btnCancelInlineEtapaAdd');
         const inlineAddSubmitBtn = document.getElementById('btnSubmitInlineEtapaAdd');
-        const inlineEmptyRow = document.getElementById('etapaInlineEmptyRow');
         const inlineDescricaoInput = document.getElementById('etapa_inline_descricao');
         const inlineDateInputs = inlineAddFormRow
             ? Array.from(inlineAddFormRow.querySelectorAll('[data-empty-state-input]'))
@@ -247,30 +246,6 @@
             verificarEAtualizarBotaoConcluir();
         }
 
-        function ensureInlineEmptyRowVisible() {
-            if (!tbody) {
-                return;
-            }
-
-            let emptyRow = document.getElementById('etapaInlineEmptyRow');
-            if (!emptyRow) {
-                emptyRow = document.createElement('tr');
-                emptyRow.id = 'etapaInlineEmptyRow';
-                emptyRow.className = 'etapa-inline-empty-row';
-                emptyRow.innerHTML = '<td colspan="9">Nenhuma etapa adicionada ainda.</td>';
-
-                if (inlineAddEntryRow && inlineAddEntryRow.parentNode === tbody) {
-                    tbody.insertBefore(emptyRow, inlineAddEntryRow);
-                } else if (inlineAddFormRow && inlineAddFormRow.parentNode === tbody) {
-                    tbody.insertBefore(emptyRow, inlineAddFormRow);
-                } else {
-                    tbody.appendChild(emptyRow);
-                }
-            }
-
-            emptyRow.classList.remove('ds-hidden');
-        }
-
         function syncInlineStatusControls() {
             const isIniciada = Boolean(inlineIniciadaCheckbox && inlineIniciadaCheckbox.checked);
             const isDone = Boolean(inlineDoneCheckbox && inlineDoneCheckbox.checked);
@@ -421,9 +396,6 @@
             }
 
             const row = buildEtapaRow(etapaPayload);
-            if (inlineEmptyRow && inlineEmptyRow.parentNode) {
-                inlineEmptyRow.remove();
-            }
             if (inlineAddEntryRow && inlineAddEntryRow.parentNode === tbody) {
                 tbody.insertBefore(row, inlineAddEntryRow);
             } else if (inlineAddFormRow && inlineAddFormRow.parentNode === tbody) {
@@ -452,9 +424,6 @@
             inlineAddFormRow.classList.remove('ds-hidden');
             if (inlineAddEntryRow) {
                 inlineAddEntryRow.classList.add('ds-hidden');
-            }
-            if (inlineEmptyRow) {
-                inlineEmptyRow.classList.add('ds-hidden');
             }
             requestAnimationFrame(() => {
                 ensureInlineComposerVisible();
@@ -508,9 +477,6 @@
                 resetInlineComposerDateValues();
                 syncInlineStatusControls();
                 resizeInlineDescricaoTextarea();
-            }
-            if (inlineEmptyRow && tbody && tbody.querySelectorAll('tr.etapa-draggable-row').length === 0) {
-                inlineEmptyRow.classList.remove('ds-hidden');
             }
             delete inlineAddFormRow.dataset.openedFrom;
         }
@@ -1920,11 +1886,6 @@
 
                     renumberEtapaRows();
                     refreshConcludeButtonCounters();
-
-                    const remainingRows = tbody.querySelectorAll('tr.etapa-draggable-row').length;
-                    if (remainingRows === 0) {
-                        ensureInlineEmptyRowVisible();
-                    }
 
                     showAjaxFlashMessage(data.message || 'Etapa excluída com sucesso.', 'success');
                 } catch (error) {
