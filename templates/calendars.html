@@ -949,6 +949,19 @@ if (document.fonts && document.fonts.ready) {
   });
 }
 
+// Re-render quando page-ready é adicionado ao body (main-content sai de display:none).
+// Necessário pois o primeiro RAF dispara antes de app-shell.js aplicar page-ready,
+// fazendo host.clientHeight = 0 em todos os cells e exibindo "+N mais" indevidamente.
+if (!document.body.classList.contains('page-ready')) {
+  const _pageReadyObserver = new MutationObserver(() => {
+    if (document.body.classList.contains('page-ready')) {
+      _pageReadyObserver.disconnect();
+      if (curView === 'calendar') scheduleCalendarCellEventDensitySync();
+    }
+  });
+  _pageReadyObserver.observe(document.body, { attributeFilter: ['class'] });
+}
+
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('eventModal').classList.contains('is-open'))
