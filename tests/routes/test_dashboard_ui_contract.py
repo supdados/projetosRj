@@ -57,7 +57,7 @@ def test_dashboard_template_contains_layout_and_scroll_hooks(client_user):
 
 
 def test_dashboard_css_keeps_desktop_section_spacing_consistent():
-    css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'index.css'
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'index.css'
     css = css_path.read_text(encoding='utf-8')
 
     assert '.dashboard-page-v2 .dashboard-welcome-strip,\n        .dashboard-page-v2 .dashboard-kpi-row {\n            margin-bottom: 0.4rem !important;' in css

@@ -6,7 +6,7 @@ def _read(path):
 
 
 def test_project_detail_inline_js_contains_searchable_abep_combobox():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'project-detail' / '01-main.js'
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
     content = _read(file_path)
 
     required_fragments = [
@@ -21,8 +21,8 @@ def test_project_detail_inline_js_contains_searchable_abep_combobox():
 
 
 def test_project_detail_inline_editor_supports_multiline_responsavel():
-    js_file = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'project-detail' / '01-main.js'
-    css_file = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'project-detail' / '03-stages-and-interactions.css'
+    js_file = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
+    css_file = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'projects' / 'detail' / '03-stages-and-interactions.css'
 
     js_content = _read(js_file)
     css_content = _read(css_file)
@@ -36,7 +36,7 @@ def test_project_detail_inline_editor_supports_multiline_responsavel():
 
 
 def test_project_detail_inline_stage_composer_avoids_smooth_scroll_hitbox_bug():
-    js_file = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'project-detail' / '01-main.js'
+    js_file = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
     js_content = _read(js_file)
 
     assert 'function ensureInlineComposerVisible()' in js_content
@@ -45,7 +45,7 @@ def test_project_detail_inline_stage_composer_avoids_smooth_scroll_hitbox_bug():
 
 
 def test_project_detail_inline_stage_composer_syncs_next_stage_preview_id():
-    js_file = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'project-detail' / '01-main.js'
+    js_file = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
     js_content = _read(js_file)
 
     assert "document.getElementById('etapaInlineOrderPreview')" in js_content
@@ -54,7 +54,7 @@ def test_project_detail_inline_stage_composer_syncs_next_stage_preview_id():
 
 
 def test_task_detail_dark_css_styles_responsavel_picker_more():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'task-detail-dark.css'
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'detail' / 'dark.css'
     content = _read(file_path)
 
     assert '.task-detail-v2 .responsavel-picker-more' in content

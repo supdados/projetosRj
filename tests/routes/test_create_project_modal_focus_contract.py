@@ -5,8 +5,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_create_project_buttons_use_focus_visible_instead_of_focus_hover_lock():
-    projects_list_css = (PROJECT_ROOT / 'static' / 'pages' / 'projects-list.css').read_text(encoding='utf-8')
-    dashboard_css = (PROJECT_ROOT / 'static' / 'pages' / 'index.css').read_text(encoding='utf-8')
+    projects_list_css = (PROJECT_ROOT / 'static' / 'css' / 'projects' / 'list.css').read_text(encoding='utf-8')
+    dashboard_css = (PROJECT_ROOT / 'static' / 'css' / 'index.css').read_text(encoding='utf-8')
 
     assert '.btn-projects-v4-primary:focus-visible' in projects_list_css
     assert '.btn-projects-v4-secondary:focus-visible' in projects_list_css

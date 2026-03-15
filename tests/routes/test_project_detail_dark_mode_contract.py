@@ -6,7 +6,7 @@ def _read(path):
 
 
 def test_project_detail_dark_mode_contains_refined_action_overrides():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'theme-dark.css'
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'theme-dark.css'
     content = _read(file_path)
 
     required_fragments = [
@@ -24,7 +24,7 @@ def test_project_detail_dark_mode_contains_refined_action_overrides():
 
 
 def test_project_detail_dark_mode_import_button_matches_secondary_pattern():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'theme-dark.css'
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'theme-dark.css'
     content = _read(file_path)
 
     assert '.main-content .btn-import-model,' in content

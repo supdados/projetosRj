@@ -1,5 +1,0 @@
-/* Legacy stylesheet manifest. Preserve import order to keep existing cascade behavior. */
-@import url('styles/legacy/00-foundation.css');
-@import url('styles/legacy/10-skeleton.css');
-@import url('styles/legacy/20-glass-forms-and-admin.css');
-@import url('styles/legacy/30-task-detail-v2-legacy.css');

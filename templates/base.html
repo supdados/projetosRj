@@ -50,12 +50,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
     <!-- CSS Customizado -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='design-system.css') }}">
-    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+
     {% block head_extra %}{% endblock %}
     {% if current_user_obj %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='theme-dark.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme-dark.css') }}">
     {% endif %}
 </head>
 <body class="loading-active{% if current_user_obj %} is-authenticated{% endif %}">

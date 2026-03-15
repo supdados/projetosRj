@@ -163,7 +163,7 @@ def test_tasks_hub_inline_add_js_reuses_existing_group_and_skips_focus_jump():
 
 
 def test_tasks_hub_global_placeholder_css_keeps_extra_spacing_before_area_line():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'tarefas.css'
+    file_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'hub.css'
     content = file_path.read_text(encoding='utf-8')
 
     assert '.task-hub-page .task-hub-group-global-placeholder .task-hub-group-project-wrap {' in content
@@ -193,9 +193,9 @@ def test_tasks_hub_kanban_js_blocks_restricted_drawer_fields_and_shows_banner():
 
 
 def test_tasks_hub_drawer_css_marks_locked_controls_as_not_allowed():
-    drawer_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'task-detail-drawer.css'
+    drawer_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'detail' / 'drawer.css'
     drawer_css_content = drawer_css_path.read_text(encoding='utf-8')
-    dark_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'task-detail-dark.css'
+    dark_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'detail' / 'dark.css'
     dark_css_content = dark_css_path.read_text(encoding='utf-8')
 
     assert '.task-detail-v2 .task-item-drawer-permission-banner {' in drawer_css_content
@@ -219,7 +219,7 @@ def test_tasks_hub_kanban_js_keeps_grouped_list_rows_inside_project_sections():
 def test_tasks_hub_kanban_project_link_disables_native_link_drag():
     js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'kanban-manager.js'
     js_content = js_path.read_text(encoding='utf-8')
-    css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'tarefas.css'
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'hub.css'
     css_content = css_path.read_text(encoding='utf-8')
 
     assert "link.setAttribute('draggable', 'false');" in js_content
@@ -227,9 +227,9 @@ def test_tasks_hub_kanban_project_link_disables_native_link_drag():
 
 
 def test_tasks_hub_kanban_project_link_keeps_drag_cursor_on_hold():
-    tarefas_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'tarefas.css'
+    tarefas_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'hub.css'
     tarefas_css_content = tarefas_css_path.read_text(encoding='utf-8')
-    kanban_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'task-detail-kanban.css'
+    kanban_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'detail' / 'kanban.css'
     kanban_css_content = kanban_css_path.read_text(encoding='utf-8')
 
     assert 'cursor: pointer;' in tarefas_css_content
@@ -238,9 +238,9 @@ def test_tasks_hub_kanban_project_link_keeps_drag_cursor_on_hold():
 
 
 def test_tasks_hub_view_toggle_hover_only_affects_hovered_button():
-    pages_root = Path(__file__).resolve().parents[2] / 'static' / 'pages'
-    light_css = (pages_root / 'task-detail-view-toggle.css').read_text(encoding='utf-8')
-    dark_css = (pages_root / 'task-detail-dark.css').read_text(encoding='utf-8')
+    pages_root = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'detail'
+    light_css = (pages_root / 'view-toggle.css').read_text(encoding='utf-8')
+    dark_css = (pages_root / 'dark.css').read_text(encoding='utf-8')
 
     assert '.task-detail-v2 .task-items-view-btn:hover .task-items-view-label:not(.is-active),' in light_css
     assert '.task-detail-v2 .task-items-view-toggle:hover .task-items-view-label:not(.is-active)' not in light_css
@@ -249,7 +249,7 @@ def test_tasks_hub_view_toggle_hover_only_affects_hovered_button():
 
 
 def test_tasks_hub_dark_mode_uses_neutral_text_tokens_for_structural_copy():
-    tarefas_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'tarefas.css'
+    tarefas_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'hub.css'
     tarefas_css_content = tarefas_css_path.read_text(encoding='utf-8')
 
     assert 'html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-title {\n    color: var(--app-color-text-primary);' in tarefas_css_content
@@ -259,7 +259,7 @@ def test_tasks_hub_dark_mode_uses_neutral_text_tokens_for_structural_copy():
 
 
 def test_tasks_hub_inline_add_action_buttons_use_square_corners():
-    list_css_path = Path(__file__).resolve().parents[2] / 'static' / 'pages' / 'task-detail-list.css'
+    list_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'detail' / 'list.css'
     list_css_content = list_css_path.read_text(encoding='utf-8')
 
     assert '.task-detail-v2 .task-hub-add-cancel {\n    color: #6b7280;\n    width: 26px;\n    height: 26px;\n    min-width: 26px;\n    border-radius: 8px;' in list_css_content

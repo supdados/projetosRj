@@ -114,7 +114,7 @@ def test_project_detail_with_google_identity_shows_split_inline_add_actions(app,
     assert 'id="btnOpenInlineMeetingAdd"' in html
     assert 'etapa-inline-entry-actions has-meeting-action' in html
     assert 'id="projectMeetingModal"' in html
-    assert 'pages/shared/calendar-event-modal.css' in html
+    assert 'css/partials/calendar-event-modal.css' in html
     assert f'action="/project/{seed_data["project_id"]}/meeting/add"' in html
 
 

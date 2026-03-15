@@ -3,18 +3,18 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROJECT_DETAIL_CSS_BUNDLE = [
-    PROJECT_ROOT / 'static' / 'pages' / 'project-detail.css',
-    *sorted((PROJECT_ROOT / 'static' / 'pages' / 'project-detail').glob('*.css')),
+    PROJECT_ROOT / 'static' / 'css' / 'projects' / 'detail.css',
+    *sorted((PROJECT_ROOT / 'static' / 'css' / 'projects' / 'detail').glob('*.css')),
 ]
 DARK_MODE_CSS_ASSETS = [
-    PROJECT_ROOT / 'static' / 'theme-dark.css',
-    PROJECT_ROOT / 'static' / 'pages' / 'tarefas.css',
-    PROJECT_ROOT / 'static' / 'pages' / 'task-detail-dark.css',
-    PROJECT_ROOT / 'static' / 'pages' / 'search-results.css',
+    PROJECT_ROOT / 'static' / 'css' / 'theme-dark.css',
+    PROJECT_ROOT / 'static' / 'css' / 'tasks' / 'hub.css',
+    PROJECT_ROOT / 'static' / 'css' / 'tasks' / 'detail' / 'dark.css',
+    PROJECT_ROOT / 'static' / 'css' / 'search' / 'results.css',
     *PROJECT_DETAIL_CSS_BUNDLE,
-    PROJECT_ROOT / 'static' / 'pages' / 'project-history.css',
-    PROJECT_ROOT / 'static' / 'pages' / 'template-list.css',
-    PROJECT_ROOT / 'static' / 'pages' / 'template-form.css',
+    PROJECT_ROOT / 'static' / 'css' / 'projects' / 'history.css',
+    PROJECT_ROOT / 'static' / 'css' / 'admin' / 'template-list.css',
+    PROJECT_ROOT / 'static' / 'css' / 'admin' / 'template-form.css',
 ]
 
 

@@ -3,8 +3,8 @@
 {% block title %}Detalhes: {{ project.titulo }}{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='pages/project-detail.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='pages/shared/calendar-event-modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/projects/detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/partials/calendar-event-modal.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -848,8 +848,8 @@
     };
 </script>
 <script src="{{ url_for('static', filename='js/modules/calendar-event-modal.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/project-detail/01-main.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/project-detail/02-import-model.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/project-detail/03-etapa-comments.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pages/project-detail/04-focus-etapa.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/projects/detail/01-main.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/projects/detail/02-import-model.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/projects/detail/03-etapa-comments.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/projects/detail/04-focus-etapa.js') }}"></script>
 {% endblock %}
