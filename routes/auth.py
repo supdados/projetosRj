@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
-from models import User, db
+from models import AreaCatalog, Project, Task, User, db
 from services.govbr_oidc import (
     GovBrOIDCError,
     build_authorization_url,
@@ -116,13 +116,23 @@ def login_page():
 
     safe_next = _resolve_safe_next_url(request.args.get('next') or request.form.get('next'))
 
+    def _login_stats():
+        count_vigente = Project.query.filter_by(status='Vigente').count()
+        count_finalizado = Project.query.filter_by(status='Finalizado').count()
+        total_tasks = Task.query.count()
+        count_areas = AreaCatalog.query.count()
+        return count_vigente, count_finalizado, total_tasks, count_areas
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
 
         if not username or not password:
             flash('Usuário e senha são obrigatórios.', 'warning')
-            return render_template('login.html', next_page=safe_next)
+            cv, cf, tt, ca = _login_stats()
+            return render_template('login.html', next_page=safe_next,
+                                   show_local_form=True,
+                                   count_vigente=cv, count_finalizado=cf, total_tasks=tt, count_areas=ca)
 
         user = User.query.filter_by(username=username).first()
 
@@ -134,8 +144,14 @@ def login_page():
             return redirect(_login_redirect_target())
         else:
             flash('Credenciais inválidas. Tente novamente.', 'danger')
-            return render_template('login.html', next_page=safe_next)
-    return render_template('login.html', next_page=safe_next)
+            cv, cf, tt, ca = _login_stats()
+            return render_template('login.html', next_page=safe_next,
+                                   show_local_form=True,
+                                   count_vigente=cv, count_finalizado=cf, total_tasks=tt, count_areas=ca)
+
+    cv, cf, tt, ca = _login_stats()
+    return render_template('login.html', next_page=safe_next,
+                           count_vigente=cv, count_finalizado=cf, total_tasks=tt, count_areas=ca)
 
 
 @main_bp.route('/login/govbr', methods=['GET'])
