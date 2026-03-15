@@ -23,7 +23,7 @@ from models import (
     UserArea,
     db,
 )
-from objective_catalog import sync_goal_catalog_to_db
+from catalogs.objectives import sync_goal_catalog_to_db
 from routes.shared import ensure_area_catalog_seeded
 
 TEST_PASSWORD = 'senha123'

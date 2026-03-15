@@ -1,8 +1,8 @@
 from flask import flash, g, jsonify, redirect, render_template, request, url_for
 
-from abep_catalog import normalize_abep_indicator
+from catalogs.abep import normalize_abep_indicator
 from models import Etapa, IndicadorProjeto, Project, db
-from objective_catalog import normalize_goal_selection
+from catalogs.objectives import normalize_goal_selection
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required

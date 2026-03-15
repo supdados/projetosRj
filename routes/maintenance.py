@@ -4,7 +4,7 @@ from flask import current_app, jsonify, request, send_from_directory, url_for
 from sqlalchemy import inspect, text
 
 from models import db
-from objective_catalog import sync_goal_catalog_to_db
+from catalogs.objectives import sync_goal_catalog_to_db
 
 from .blueprint import main_bp
 # Rota específica para servir o favicon

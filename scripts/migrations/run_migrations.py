@@ -23,7 +23,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from sqlalchemy import MetaData, Table, inspect, select, text
 
 from models import Project, ProjectHistory, User, UserArea, db
-from objective_catalog import sync_goal_catalog_to_db
+from catalogs.objectives import sync_goal_catalog_to_db
 from routes.shared import ensure_area_catalog_seeded
 from time_utils import utc_now
 

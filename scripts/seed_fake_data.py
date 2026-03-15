@@ -21,7 +21,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from abep_catalog import ABEP_INDICADORES_OPTIONS
+from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from app import create_app
 from models import (
     Etapa,
@@ -36,7 +36,7 @@ from models import (
     UserArea,
     db,
 )
-from objective_catalog import GOAL_CATALOG, sync_goal_catalog_to_db
+from catalogs.objectives import GOAL_CATALOG, sync_goal_catalog_to_db
 from routes.shared import ensure_area_catalog_seeded, get_area_catalog_choices
 
 PRIORITIES = ['urgente', 'alta', 'media', 'baixa']

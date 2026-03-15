@@ -1,6 +1,6 @@
 import datetime
 
-from abep_catalog import ABEP_INDICADORES_OPTIONS
+from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from models import Etapa, Indicador, IndicadorProjeto, Project, ProjectHistory, User, UserArea, db
 
 

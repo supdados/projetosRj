@@ -18,7 +18,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app import app, db
 from models import Objetivo, ResultadoEsperado, Indicador
-from objective_catalog import sync_goal_catalog_to_db
+from catalogs.objectives import sync_goal_catalog_to_db
 
 
 def _masked_db_uri(uri):

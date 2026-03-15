@@ -1,7 +1,7 @@
 from flask import g, jsonify
 
 from models import Project, StageTemplate
-from objective_catalog import (
+from catalogs.objectives import (
     OBJETIVO_IDS,
     RESULTADO_IDS,
     get_indicadores_for_resultado,

@@ -5,9 +5,9 @@ from zoneinfo import ZoneInfo
 from flask import abort, g, redirect, request, url_for
 from sqlalchemy import func, inspect
 
-from abep_catalog import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
+from catalogs.abep import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
 from models import AreaCatalog, Project, ProjectHistory, UserArea, db
-from objective_catalog import (
+from catalogs.objectives import (
     OBJETIVO_IDS,
     get_indicadores_por_resultado,
     get_objetivos_choices,
