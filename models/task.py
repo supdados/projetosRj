@@ -1,0 +1,307 @@
+from time_utils import utc_now
+
+from .base import TaskItemQuery, TaskQuery, db
+
+
+class Task(db.Model):
+    __tablename__ = 'task'
+    query_class = TaskQuery
+    id = db.Column(db.Integer, primary_key=True)
+    descricao = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='nao_iniciada')
+    responsavel = db.Column(db.String(100), nullable=True)
+    ordem = db.Column(db.Integer, nullable=False, default=0)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
+    legacy_parent_task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    prioridade = db.Column(db.String(20), nullable=True)
+    tipo_pedido = db.Column(db.String(30), nullable=True)
+    is_archived = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    archived_at = db.Column(db.DateTime, nullable=True)
+
+    project = db.relationship('Project', backref=db.backref('tasks', lazy=True))
+    created_by = db.relationship('User', backref='created_tasks')
+    comments = db.relationship(
+        'TaskComment',
+        backref='task',
+        lazy=True,
+        cascade='all, delete-orphan',
+        order_by='TaskComment.created_at'
+    )
+    anexos = db.relationship(
+        'TaskAnexo',
+        backref='task',
+        lazy=True,
+        cascade='all, delete-orphan',
+        order_by='TaskAnexo.created_at'
+    )
+
+    def __init__(self, **kwargs):
+        legacy_titulo = kwargs.pop('titulo', None)
+        legacy_task_id = kwargs.pop('task_id', None)
+
+        if legacy_titulo is not None and 'descricao' not in kwargs:
+            kwargs['descricao'] = legacy_titulo
+
+        if legacy_task_id is not None:
+            try:
+                anchor_id = int(legacy_task_id)
+            except (TypeError, ValueError):
+                anchor_id = None
+
+            if anchor_id:
+                anchor = db.session.get(Task, anchor_id)
+                if anchor:
+                    kwargs.setdefault('project_id', anchor.project_id)
+                    kwargs.setdefault('legacy_parent_task_id', anchor.id)
+                    kwargs.setdefault('created_by_id', anchor.created_by_id)
+
+                    if 'ordem' not in kwargs:
+                        next_ordem = (
+                            db.session.query(db.func.max(Task.ordem))
+                            .filter(
+                                Task.project_id == anchor.project_id,
+                                Task.is_archived.is_(False),
+                            )
+                            .scalar()
+                            or 0
+                        )
+                        kwargs['ordem'] = next_ordem + 1
+
+        kwargs.setdefault('status', 'nao_iniciada')
+        super().__init__(**kwargs)
+
+    def __repr__(self):
+        return f'<Task {self.descricao[:50]}>'
+
+    @property
+    def titulo(self):
+        return self.descricao
+
+    @titulo.setter
+    def titulo(self, value):
+        self.descricao = value
+
+    @property
+    def is_finalized(self):
+        return self.is_archived
+
+    @is_finalized.setter
+    def is_finalized(self, value):
+        self.is_archived = bool(value)
+
+    @property
+    def finalized_at(self):
+        return self.archived_at
+
+    @finalized_at.setter
+    def finalized_at(self, value):
+        self.archived_at = value
+
+    @property
+    def task_id(self):
+        return self.id
+
+    @task_id.setter
+    def task_id(self, value):
+        try:
+            anchor_id = int(value)
+        except (TypeError, ValueError):
+            return
+
+        anchor = db.session.get(Task, anchor_id)
+        if not anchor:
+            return
+
+        self.project_id = anchor.project_id
+        self.legacy_parent_task_id = anchor.id
+        if not self.created_by_id:
+            self.created_by_id = anchor.created_by_id
+
+    @property
+    def task(self):
+        return self
+
+    @property
+    def items(self):
+        return [self]
+
+
+class TaskItem(db.Model):
+    __table__ = Task.__table__
+    query_class = TaskItemQuery
+
+    def __init__(self, **kwargs):
+        legacy_titulo = kwargs.pop('titulo', None)
+        legacy_task_id = kwargs.pop('task_id', None)
+
+        if legacy_titulo is not None and 'descricao' not in kwargs:
+            kwargs['descricao'] = legacy_titulo
+
+        if legacy_task_id is not None:
+            try:
+                anchor_id = int(legacy_task_id)
+            except (TypeError, ValueError):
+                anchor_id = None
+
+            if anchor_id:
+                anchor = db.session.get(Task, anchor_id)
+                if anchor:
+                    kwargs.setdefault('project_id', anchor.project_id)
+                    kwargs.setdefault('legacy_parent_task_id', anchor.id)
+                    kwargs.setdefault('created_by_id', anchor.created_by_id)
+
+                    if 'ordem' not in kwargs:
+                        next_ordem = (
+                            db.session.query(db.func.max(Task.ordem))
+                            .filter(
+                                Task.project_id == anchor.project_id,
+                                Task.is_archived.is_(False),
+                            )
+                            .scalar()
+                            or 0
+                        )
+                        kwargs['ordem'] = next_ordem + 1
+
+        kwargs.setdefault('status', 'nao_iniciada')
+        super().__init__(**kwargs)
+
+    @property
+    def titulo(self):
+        return self.descricao
+
+    @titulo.setter
+    def titulo(self, value):
+        self.descricao = value
+
+    @property
+    def is_finalized(self):
+        return self.is_archived
+
+    @is_finalized.setter
+    def is_finalized(self, value):
+        self.is_archived = bool(value)
+
+    @property
+    def finalized_at(self):
+        return self.archived_at
+
+    @finalized_at.setter
+    def finalized_at(self, value):
+        self.archived_at = value
+
+    @property
+    def task_id(self):
+        return self.id
+
+    @task_id.setter
+    def task_id(self, value):
+        try:
+            anchor_id = int(value)
+        except (TypeError, ValueError):
+            return
+
+        anchor = db.session.get(Task, anchor_id)
+        if not anchor:
+            return
+
+        self.project_id = anchor.project_id
+        self.legacy_parent_task_id = anchor.id
+        if not self.created_by_id:
+            self.created_by_id = anchor.created_by_id
+
+    @property
+    def task(self):
+        return self
+
+    @property
+    def items(self):
+        return [self]
+
+
+class TaskAnexo(db.Model):
+    __tablename__ = 'task_anexo'
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    stored_filename = db.Column(db.String(255), nullable=False)
+    content_type = db.Column(db.String(100), nullable=True)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+    uploaded_by = db.relationship('User', backref='task_anexos')
+
+    @property
+    def task_item(self):
+        return self.task
+
+    @property
+    def task_item_id(self):
+        return self.task_id
+
+    def __repr__(self):
+        return f'<TaskAnexo {self.filename}>'
+
+
+class TaskComment(db.Model):
+    __tablename__ = 'task_comment'
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, onupdate=utc_now, nullable=True)
+
+    author = db.relationship('User', backref='task_comments')
+
+    @property
+    def task_item(self):
+        return self.task
+
+    @property
+    def task_item_id(self):
+        return self.task_id
+
+    @task_item_id.setter
+    def task_item_id(self, value):
+        self.task_id = value
+
+    def __repr__(self):
+        return f'<TaskComment {self.id} by user {self.user_id}>'
+
+
+class TaskAccessAudit(db.Model):
+    __tablename__ = 'task_access_audit'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, nullable=False, index=True)
+    project_id = db.Column(db.Integer, nullable=True, index=True)
+    actor_user_id = db.Column(db.Integer, nullable=False, index=True)
+    actor_name = db.Column(db.String(100), nullable=False)
+    task_author_user_id = db.Column(db.Integer, nullable=True, index=True)
+    action_type = db.Column(db.String(50), nullable=False, index=True)
+    reason = db.Column(db.String(120), nullable=False)
+    attempted_status = db.Column(db.String(20), nullable=True)
+    task_description = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False, index=True)
+
+    def __repr__(self):
+        return f'<TaskAccessAudit {self.action_type} task={self.task_id} actor={self.actor_user_id}>'
+
+
+class LegacyTaskRedirect(db.Model):
+    __tablename__ = 'legacy_task_redirect'
+    id = db.Column(db.Integer, primary_key=True)
+    legacy_task_id = db.Column(db.Integer, nullable=False, index=True, unique=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
+    sample_task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+    project = db.relationship('Project', backref='legacy_task_redirects')
+    sample_task = db.relationship('Task', backref='legacy_redirect_sources')
+
+
+# Aliases de compatibilidade para rotas legadas (/tarefas/itens/...).
+TaskItemComment = TaskComment
+TaskItemAnexo = TaskAnexo

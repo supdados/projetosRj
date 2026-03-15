@@ -55,9 +55,9 @@ def _decode_bytes(raw_body):
 
 
 def _resolve_client_secret_path(config):
-    configured = str(config.get('GOOGLE_CALENDAR_CLIENT_SECRET_FILE', 'client_secret.json')).strip()
+    configured = str(config.get('GOOGLE_CALENDAR_CLIENT_SECRET_FILE', 'config/client_secret.json')).strip()
     if not configured:
-        configured = 'client_secret.json'
+        configured = 'config/client_secret.json'
     if os.path.isabs(configured):
         return configured
     return os.path.abspath(configured)

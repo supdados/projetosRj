@@ -1,10 +1,13 @@
-venv
-__pycache__
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
 .env
 .DS_Store
 .pytest_cache/
-*.pyc
+.coverage
 dumps/
 migrations/
 instance/
-/client_secret.json
+config/client_secret.json

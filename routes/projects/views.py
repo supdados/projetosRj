@@ -1,0 +1,544 @@
+import datetime
+from collections import defaultdict
+
+from flask import current_app, flash, g, redirect, render_template, request, url_for
+
+from models import Etapa, Project, ProjectHistory, Task, UserCalendarConnection, db
+from services.calendar_sync import hydrate_google_connection_identity
+from services.google_calendar import is_google_calendar_enabled
+from services.calendar_core import format_input_datetime
+from services.project_meetings import meeting_time_display, meeting_time_summary
+
+from routes.blueprint import main_bp
+from routes.decorators import login_required
+from routes.shared import (
+    get_area_catalog_choices,
+    sanitize_area_filter_for_current_user,
+    redirect_to_current_route_without_area,
+    get_or_404,
+    get_goal_catalog_context,
+    parse_abep_indicator_filter,
+    parse_objetivo_filter,
+)
+@main_bp.route('/projects')
+@login_required
+def list_projects():
+    selected_priority = request.args.get('prioridade')
+    selected_status = request.args.get('status')
+    selected_area_filter, invalid_area_filter = sanitize_area_filter_for_current_user(request.args.get('area'))
+    selected_atraso = request.args.get('atraso')
+    selected_special_project = request.args.get('special_project')  # Novo filtro
+    selected_delivery_type = request.args.get('delivery_type')  # Novo filtro
+    selected_abep_indicator = request.args.get('abep_indicator')  # Novo filtro
+    selected_objetivo = request.args.get('objetivo')  # Novo filtro
+    search_query = request.args.get('search', '').strip()  # Busca
+    
+    # Paginação
+    page = request.args.get('page', 1, type=int)
+    per_page = 40
+
+    # Se nenhum status for especificado na URL, define 'Vigente' como padrão.
+    # A verificação `is None` é importante para permitir que o usuário selecione
+    # "Todos os status", que envia uma string vazia ("").
+    if selected_status is None:
+        selected_status = 'Vigente'
+
+    if invalid_area_filter:
+        return redirect_to_current_route_without_area()
+
+    query = Project.query
+    user_areas = sorted(g.user.get_areas()) if not g.user.is_admin else []
+    can_filter_by_area = g.user.is_admin or len(user_areas) > 1
+
+    # Filtro de área baseado no perfil do usuário E no filtro do formulário
+    if not g.user.is_admin:
+        if user_areas:
+            # Usuário não-admin com áreas: filtra pelas suas áreas
+            query = query.filter(Project.area_responsavel.in_(user_areas))
+            # Se o usuário aplicou um filtro de área e essa área está nas suas áreas, aplica o filtro
+            if selected_area_filter and selected_area_filter in user_areas:
+                query = query.filter(Project.area_responsavel == selected_area_filter)
+            # Se não, mostra todas as suas áreas (já filtrado acima)
+    elif selected_area_filter and selected_area_filter != "": # Admin pode filtrar por qualquer área
+        query = query.filter(Project.area_responsavel == selected_area_filter)
+    # Se for admin e não houver filtro de área, mostra todas as áreas.
+
+    if selected_priority and selected_priority != "":
+        query = query.filter(Project.prioridade == selected_priority)
+    if selected_status and selected_status != "":
+        query = query.filter(Project.status == selected_status)
+    if selected_special_project and selected_special_project != "":
+        query = query.filter(Project.special_project == selected_special_project)
+    if selected_delivery_type and selected_delivery_type != "":
+        query = query.filter(Project.delivery_type == selected_delivery_type)
+    selected_abep_indicator = parse_abep_indicator_filter(selected_abep_indicator)
+    if selected_abep_indicator:
+        query = query.filter(Project.abep_indicator == selected_abep_indicator)
+    objetivo_filter_id = parse_objetivo_filter(selected_objetivo)
+    if selected_objetivo and objetivo_filter_id is None:
+        selected_objetivo = ""
+    if selected_objetivo and objetivo_filter_id is not None:
+        query = query.filter(Project.objetivo_id == objetivo_filter_id)
+    
+    # Filtro de busca (título, área, órgão, indicador ABEP)
+    if search_query:
+        search_pattern = f"%{search_query}%"
+        try:
+            search_id = int(search_query)
+        except ValueError:
+            search_id = None
+        text_filters = db.or_(
+            Project.titulo.ilike(search_pattern),
+            Project.area_responsavel.ilike(search_pattern),
+            Project.orgao.ilike(search_pattern),
+            Project.abep_indicator.ilike(search_pattern),
+        )
+        query = query.filter(
+            db.or_(Project.id == search_id, text_filters) if search_id is not None else text_filters
+        )
+        
+    # Aplicar filtros de DB antes de filtrar por atraso (que é feito em Python)
+    projects_after_db_filters = query.order_by(Project.id).all()
+    
+    # Filtro de Atraso (aplicado em Python)
+    if selected_atraso and selected_atraso != "":
+        data_atual = datetime.date.today()
+        filtered_by_delay = []
+        for projeto in projects_after_db_filters:
+            if projeto.status == 'Vigente': # Apenas projetos vigentes são considerados para "atraso" ou "no prazo"
+                etapas_atrasadas_count = Etapa.query.filter(
+                    Etapa.project_id == projeto.id,
+                    Etapa.done == False,
+                    Etapa.entry_type != 'google_meeting',
+                    Etapa.data_fim < data_atual
+                ).count()
+                if selected_atraso == "atrasado" and etapas_atrasadas_count > 0:
+                    filtered_by_delay.append(projeto)
+                elif selected_atraso == "no_prazo" and etapas_atrasadas_count == 0:
+                    filtered_by_delay.append(projeto)
+        all_projects_filtered = filtered_by_delay
+    else:
+        all_projects_filtered = projects_after_db_filters
+    
+    # Aplicar paginação manualmente (já que alguns filtros são em Python)
+    total_projects = len(all_projects_filtered)
+    total_pages = (total_projects + per_page - 1) // per_page  # Ceiling division
+    
+    # Calcular índices para slice
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    
+    # Paginar os projetos
+    projects_paginated = all_projects_filtered[start_idx:end_idx]
+    
+    # Opções para os dropdowns de filtro
+    area_catalog_choices = get_area_catalog_choices()
+
+    # Áreas: admin vê o catálogo completo; usuário com múltiplas áreas vê apenas as áreas dele.
+    if g.user.is_admin:
+        areas_options_for_dropdown = area_catalog_choices
+    elif can_filter_by_area:
+        areas_options_for_dropdown = user_areas
+    else:
+        areas_options_for_dropdown = []
+
+    priorities_options = sorted(list(set(p.prioridade for p in Project.query.all() if p.prioridade)))
+    statuses_options = sorted(list(set(p.status for p in Project.query.all() if p.status)))
+    atrasos_options = [("no_prazo", "No prazo"), ("atrasado", "Atrasado")]
+    objetivos, _, _ = get_goal_catalog_context()  # Para o modal de adicionar projeto e filtro
+    
+    # Novas opções para filtros
+    special_projects_options = ['ABEP', 'TCE']
+    delivery_types_options = ['Sistema', 'Painel', 'Norma', 'Instrumento de parceria', 'Fluxo Processual', 'Outro']
+    has_advanced_filters_active = any([
+        selected_atraso,
+        selected_special_project,
+        selected_delivery_type,
+        selected_abep_indicator,
+        selected_objetivo,
+    ])
+
+    # Verificar se há filtros ativos (para mostrar botão "Limpar")
+    has_active_filters = False
+    if search_query:
+        has_active_filters = True
+    if selected_priority:
+        has_active_filters = True
+    if selected_status and selected_status != 'Vigente':  # Vigente é o padrão
+        has_active_filters = True
+    if has_advanced_filters_active:
+        has_active_filters = True
+    # Área conta como filtro ativo apenas quando o usuário pode escolher entre múltiplas áreas.
+    if can_filter_by_area and selected_area_filter:
+        has_active_filters = True
+
+    return render_template(
+        'projects_list.html', 
+        projects=projects_paginated,
+        page=page,
+        total_pages=total_pages,
+        total_projects=total_projects,
+        search_query=search_query,
+        can_filter_by_area=can_filter_by_area,
+        selected_priority=selected_priority,
+        selected_status=selected_status,
+        selected_area=selected_area_filter, 
+        selected_atraso=selected_atraso,
+        selected_special_project=selected_special_project,
+        selected_delivery_type=selected_delivery_type,
+        selected_abep_indicator=selected_abep_indicator,
+        selected_objetivo=selected_objetivo,
+        areas=areas_options_for_dropdown,
+        priorities=priorities_options,
+        statuses=statuses_options,
+        atrasos_options=atrasos_options,
+        objetivos=objetivos,
+        special_projects_options=special_projects_options,
+        delivery_types_options=delivery_types_options,
+        has_active_filters=has_active_filters,
+        has_advanced_filters_active=has_advanced_filters_active,
+        AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices
+    )
+@main_bp.route('/projetos_pendentes')
+@login_required
+def list_projetos_pendentes():
+    selected_area_filter, invalid_area_filter = sanitize_area_filter_for_current_user(request.args.get('area'))
+    filtro_periodo = (request.args.get('periodo') or 'atrasados').strip()
+    selected_responsavel = (request.args.get('responsavel') or '').strip()
+    pending_page = request.args.get('page', 1, type=int)
+    pending_per_page = 15
+
+    valid_periods = {'atrasados', '7dias', '14dias', '21dias'}
+    if filtro_periodo not in valid_periods:
+        filtro_periodo = 'atrasados'
+
+    if invalid_area_filter:
+        return redirect_to_current_route_without_area()
+
+    data_atual = datetime.date.today()
+    data_7_dias = data_atual + datetime.timedelta(days=7)
+    data_14_dias = data_atual + datetime.timedelta(days=14)
+    data_21_dias = data_atual + datetime.timedelta(days=21)
+
+    def resolve_reference_date(etapa):
+        return etapa.data_inicio if etapa.data_inicio else etapa.data_fim
+
+    def classify_bucket(etapa):
+        reference_date = resolve_reference_date(etapa)
+        if not reference_date:
+            return 'sem_data'
+        if reference_date < data_atual:
+            return 'atrasada'
+        if reference_date <= data_7_dias:
+            return '7dias'
+        if reference_date <= data_14_dias:
+            return '14dias'
+        if reference_date <= data_21_dias:
+            return '21dias'
+        return 'futuro'
+
+    visible_buckets_by_period = {
+        'atrasados': {'atrasada'},
+        '7dias': {'atrasada', '7dias'},
+        '14dias': {'atrasada', '7dias', '14dias'},
+        '21dias': {'atrasada', '7dias', '14dias', '21dias'},
+    }
+    visible_buckets = visible_buckets_by_period[filtro_periodo]
+
+    query_projetos_base = Project.query.filter(Project.status == 'Vigente')
+    user_areas = sorted(g.user.get_areas()) if not g.user.is_admin else []
+    can_filter_by_area = g.user.is_admin or len(user_areas) > 1
+
+    if g.user.is_admin:
+        if selected_area_filter:
+            query_projetos_base = query_projetos_base.filter(Project.area_responsavel == selected_area_filter)
+    else:
+        if user_areas:
+            query_projetos_base = query_projetos_base.filter(Project.area_responsavel.in_(user_areas))
+            if selected_area_filter and selected_area_filter in user_areas:
+                query_projetos_base = query_projetos_base.filter(Project.area_responsavel == selected_area_filter)
+        else:
+            query_projetos_base = query_projetos_base.filter(Project.id == -1)
+
+    projetos_vigentes = query_projetos_base.order_by(Project.titulo.asc()).all()
+    project_ids = [p.id for p in projetos_vigentes]
+    area_catalog_choices = get_area_catalog_choices()
+
+    areas_options_for_dropdown = []
+    if g.user.is_admin:
+        areas_options_for_dropdown = area_catalog_choices
+    elif can_filter_by_area:
+        areas_options_for_dropdown = user_areas
+
+    objetivos, _, _ = get_goal_catalog_context()
+
+    if not project_ids:
+        return render_template(
+            'projetos_pendentes.html',
+            projetos_com_etapas=[],
+            objetivos=objetivos,
+            AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
+            can_filter_by_area=can_filter_by_area,
+            areas_options=areas_options_for_dropdown,
+            selected_area=selected_area_filter,
+            filtro_periodo=filtro_periodo,
+            selected_responsavel=selected_responsavel,
+            responsaveis_options=[],
+            period_options=[
+                ('atrasados', 'Projetos Atrasados'),
+                ('7dias', 'Próximos 7 Dias'),
+                ('14dias', 'Próximos 14 Dias'),
+                ('21dias', 'Próximos 21 Dias'),
+            ],
+            period_label_map={
+                'atrasados': 'Atrasados',
+                '7dias': 'Próximos 7 Dias',
+                '14dias': 'Próximos 14 Dias',
+                '21dias': 'Próximos 21 Dias',
+            },
+            etapa_bucket_map={},
+            summary_counts={
+                'total_projects': 0,
+                'atrasada': 0,
+                '7dias': 0,
+                '14dias': 0,
+                '21dias': 0,
+                'sem_data': 0,
+            },
+            pending_page=1,
+            pending_total_pages=0,
+            pending_per_page=pending_per_page,
+            pending_total_projects=0,
+        )
+
+    responsaveis_query = Etapa.query.filter(
+        Etapa.project_id.in_(project_ids),
+        Etapa.done.is_(False),
+        Etapa.entry_type != 'google_meeting',
+        Etapa.responsavel.isnot(None),
+    ).with_entities(Etapa.responsavel).distinct().all()
+    responsaveis_options = sorted(
+        [r[0].strip() for r in responsaveis_query if r[0] and r[0].strip()],
+        key=lambda value: value.casefold(),
+    )
+
+    etapas_query = Etapa.query.filter(
+        Etapa.project_id.in_(project_ids),
+        Etapa.done.is_(False),
+        Etapa.entry_type != 'google_meeting',
+    )
+    if selected_responsavel:
+        etapas_query = etapas_query.filter(Etapa.responsavel.ilike(f"%{selected_responsavel}%"))
+
+    etapas_abertas = etapas_query.order_by(
+        Etapa.project_id.asc(),
+        Etapa.ordem.asc(),
+        Etapa.id.asc(),
+    ).all()
+
+    etapas_por_projeto = defaultdict(list)
+    etapa_bucket_map = {}
+    summary_counts = {
+        'total_projects': 0,
+        'atrasada': 0,
+        '7dias': 0,
+        '14dias': 0,
+        '21dias': 0,
+        'sem_data': 0,
+    }
+
+    for etapa in etapas_abertas:
+        bucket = classify_bucket(etapa)
+        etapa_bucket_map[etapa.id] = bucket
+        etapas_por_projeto[etapa.project_id].append(etapa)
+        if bucket in summary_counts:
+            summary_counts[bucket] += 1
+
+    projetos_pendentes_com_etapas = []
+    project_by_id = {p.id: p for p in projetos_vigentes}
+
+    for project_id, etapas_project in etapas_por_projeto.items():
+        projeto = project_by_id.get(project_id)
+        if not projeto:
+            continue
+
+        etapas_project_sorted = sorted(
+            etapas_project,
+            key=lambda etapa: (
+                etapa.data_fim is None,
+                etapa.data_fim or datetime.date.max,
+                etapa.data_inicio is None,
+                etapa.data_inicio or datetime.date.max,
+                etapa.ordem if etapa.ordem is not None else 10**9,
+                etapa.id,
+            ),
+        )
+
+        etapas_visiveis = []
+        etapas_outras = []
+        counts = {
+            'qtd_atrasadas': 0,
+            'bucket_7dias': 0,
+            'bucket_14dias': 0,
+            'bucket_21dias': 0,
+            'qtd_sem_data': 0,
+        }
+        max_overdue_days = 0
+
+        for etapa in etapas_project_sorted:
+            bucket = etapa_bucket_map.get(etapa.id, 'futuro')
+
+            if bucket == 'atrasada':
+                counts['qtd_atrasadas'] += 1
+                reference_date = resolve_reference_date(etapa)
+                if reference_date:
+                    overdue_days = (data_atual - reference_date).days
+                    if overdue_days > max_overdue_days:
+                        max_overdue_days = overdue_days
+            elif bucket == '7dias':
+                counts['bucket_7dias'] += 1
+            elif bucket == '14dias':
+                counts['bucket_14dias'] += 1
+            elif bucket == '21dias':
+                counts['bucket_21dias'] += 1
+            elif bucket == 'sem_data':
+                counts['qtd_sem_data'] += 1
+
+            if bucket in visible_buckets:
+                etapas_visiveis.append(etapa)
+            else:
+                etapas_outras.append(etapa)
+
+        if not etapas_visiveis:
+            continue
+
+        qtd_7dias = counts['bucket_7dias']
+        qtd_14dias = counts['bucket_7dias'] + counts['bucket_14dias']
+        qtd_21dias = counts['bucket_7dias'] + counts['bucket_14dias'] + counts['bucket_21dias']
+
+        projetos_pendentes_com_etapas.append({
+            'projeto': projeto,
+            'etapas_visiveis': etapas_visiveis,
+            'etapas_outras': etapas_outras,
+            'qtd_visiveis': len(etapas_visiveis),
+            'qtd_outras': len(etapas_outras),
+            'qtd_atrasadas': counts['qtd_atrasadas'],
+            'qtd_7dias': qtd_7dias,
+            'qtd_14dias': qtd_14dias,
+            'qtd_21dias': qtd_21dias,
+            'qtd_sem_data': counts['qtd_sem_data'],
+            'max_overdue_days': max_overdue_days,
+        })
+
+    projetos_pendentes_com_etapas.sort(
+        key=lambda item: (
+            -item['max_overdue_days'],
+            -item['qtd_visiveis'],
+            (item['projeto'].titulo or '').casefold(),
+        )
+    )
+    pending_total_projects = len(projetos_pendentes_com_etapas)
+    summary_counts['total_projects'] = pending_total_projects
+
+    pending_total_pages = (
+        (pending_total_projects + pending_per_page - 1) // pending_per_page
+        if pending_total_projects > 0 else 0
+    )
+    if pending_total_pages == 0:
+        pending_page = 1
+    else:
+        pending_page = max(1, min(pending_page or 1, pending_total_pages))
+
+    start_idx = (pending_page - 1) * pending_per_page
+    end_idx = start_idx + pending_per_page
+    projetos_pendentes_paginated = projetos_pendentes_com_etapas[start_idx:end_idx]
+
+    return render_template(
+        'projetos_pendentes.html',
+        projetos_com_etapas=projetos_pendentes_paginated,
+        objetivos=objetivos,
+        AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
+        can_filter_by_area=can_filter_by_area,
+        areas_options=areas_options_for_dropdown,
+        selected_area=selected_area_filter,
+        filtro_periodo=filtro_periodo,
+        selected_responsavel=selected_responsavel,
+        responsaveis_options=responsaveis_options,
+        period_options=[
+            ('atrasados', 'Projetos Atrasados'),
+            ('7dias', 'Próximos 7 Dias'),
+            ('14dias', 'Próximos 14 Dias'),
+            ('21dias', 'Próximos 21 Dias'),
+        ],
+        period_label_map={
+            'atrasados': 'Atrasados',
+            '7dias': 'Próximos 7 Dias',
+            '14dias': 'Próximos 14 Dias',
+            '21dias': 'Próximos 21 Dias',
+        },
+        etapa_bucket_map=etapa_bucket_map,
+        summary_counts=summary_counts,
+        pending_page=pending_page,
+        pending_total_pages=pending_total_pages,
+        pending_per_page=pending_per_page,
+        pending_total_projects=pending_total_projects,
+    )
+@main_bp.route('/project/<int:project_id>')
+@login_required
+def project_detail(project_id):
+    project = get_or_404(Project, project_id)
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+        flash('Você não tem permissão para visualizar este projeto.', 'danger')
+        return redirect(url_for('main.list_projects'))
+
+    # O cálculo do índice de exibição dinâmico foi removido.
+    # O ID real do projeto (project.id) será usado diretamente no template.
+
+    active_task_count = Task.query.filter_by(project_id=project.id, is_archived=False).count()
+    calendar_connection = UserCalendarConnection.query.filter_by(user_id=g.user.id).first()
+    if (
+        calendar_connection is not None
+        and not (calendar_connection.google_account_id or '').strip()
+        and is_google_calendar_enabled(current_app.config)
+    ):
+        try:
+            hydrate_google_connection_identity(current_app.config, calendar_connection)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning(
+                'Nao foi possivel hidratar a identidade Google da conexao %s na tela do projeto: %s',
+                calendar_connection.id,
+                exc,
+            )
+
+    return render_template(
+        'project_detail.html',
+        project=project,
+        active_task_count=active_task_count,
+        calendar_connection=calendar_connection,
+        can_add_google_meeting=bool(calendar_connection and (calendar_connection.google_account_id or '').strip()),
+        current_google_account_id=(calendar_connection.google_account_id or '') if calendar_connection else '',
+        calendar_input_datetime=format_input_datetime,
+        meeting_time_display=meeting_time_display,
+        meeting_time_summary=meeting_time_summary,
+    )
+
+
+@main_bp.route('/project/<int:project_id>/history')
+@login_required
+def project_history(project_id):
+    """Visualizar histórico de ações de um projeto"""
+    project = get_or_404(Project, project_id)
+    
+    # Verificar permissão
+    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+        flash('Você não tem permissão para visualizar este projeto.', 'danger')
+        return redirect(url_for('main.list_projects'))
+    
+    # Buscar histórico ordenado por data (mais recente primeiro)
+    history_entries = ProjectHistory.query.filter_by(project_id=project_id)\
+        .order_by(ProjectHistory.timestamp.desc())\
+        .all()
+    
+    return render_template('project_history.html', project=project, history=history_entries)
