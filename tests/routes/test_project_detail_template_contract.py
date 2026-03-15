@@ -1,7 +1,7 @@
 import datetime
 import re
 
-import routes.projects as project_routes
+import routes.projects.views as project_views
 from models import CalendarEvent, Etapa, ProjectStageMeeting, UserCalendarConnection, db
 
 
@@ -130,9 +130,9 @@ def test_project_detail_hydrates_legacy_google_connection_and_shows_split_action
         )
         db.session.commit()
 
-    monkeypatch.setattr(project_routes, 'is_google_calendar_enabled', lambda _config: True)
+    monkeypatch.setattr(project_views, 'is_google_calendar_enabled', lambda _config: True)
     monkeypatch.setattr(
-        project_routes,
+        project_views,
         'hydrate_google_connection_identity',
         lambda _config, connection: (
             setattr(connection, 'google_account_id', 'google-shared-legacy'),

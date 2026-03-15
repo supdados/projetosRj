@@ -1,12 +1,12 @@
 import io
 from pathlib import Path
 
-import routes.tasks as task_routes
+import routes.tasks.helpers as task_helpers
 from models import TaskAnexo, db
 
 
 def test_task_attachment_flow_covers_upload_list_view_delete_and_cleanup(app, client_user, seed_data, monkeypatch, tmp_path):
-    monkeypatch.setattr(task_routes, '_get_upload_folder', lambda: str(tmp_path))
+    monkeypatch.setattr(task_helpers, '_get_upload_folder', lambda: str(tmp_path))
 
     upload_response = client_user.post(
         f"/tarefas/{seed_data['task_id']}/anexos/add",
@@ -53,7 +53,7 @@ def test_task_attachment_flow_covers_upload_list_view_delete_and_cleanup(app, cl
 
 
 def test_task_item_attachment_alias_and_invalid_extension_are_handled(client_user, seed_data, monkeypatch, tmp_path):
-    monkeypatch.setattr(task_routes, '_get_upload_folder', lambda: str(tmp_path))
+    monkeypatch.setattr(task_helpers, '_get_upload_folder', lambda: str(tmp_path))
 
     alias_upload_response = client_user.post(
         f"/tarefas/itens/{seed_data['task_item_id']}/anexos/add",

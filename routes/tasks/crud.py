@@ -1,34 +1,22 @@
-import os
-import uuid
-
-from flask import flash, g, jsonify, redirect, request, send_file, url_for
-from werkzeug.utils import secure_filename
+from flask import flash, g, jsonify, request, url_for
 
 from models import (
-    LegacyTaskRedirect,
-    Project,
     Task,
-    TaskAnexo,
-    TaskComment,
     db,
 )
 from services.notifications import notify_task_assignment_change, notify_task_event
 from time_utils import utc_now
 
-from .blueprint import main_bp
-from .decorators import login_required
-from .shared import format_local_time
+from routes.blueprint import main_bp
+from routes.decorators import login_required
 
-from .tasks_helpers import (
+from routes.tasks.helpers import (
     LEGACY_TIPOS,
     VALID_PRIORIDADES,
     VALID_STATUSES,
     VALID_TIPOS,
     _audit_denied_task_action,
-    _allowed_attachment,
-    _build_legacy_query_args,
     _build_visible_tasks_query,
-    _can_access_project_in_tasks,
     _can_manage_task_restricted_actions,
     _can_transition_task_to_status,
     _can_view_task,
@@ -36,13 +24,11 @@ from .tasks_helpers import (
     _format_invalid_responsavel_message,
     _get_assignable_users_for_area,
     _get_assignable_users_for_project,
-    _get_upload_folder,
     _merge_task_filter_values,
     _normalize_responsavel_value,
     _preview_text,
     _read_task_filter_values,
     _redirect_back_or,
-    _render_task_hub,
     _resolve_project_token,
     _resolve_responsavel_for_edit,
     _serialize_task_payload,
@@ -112,22 +98,9 @@ def _apply_task_order(scope_query, ordered_ids):
         task.ordem = index
 
 
-@main_bp.route('/tarefas', methods=['GET'])
-@login_required
-def list_tasks():
-    return _render_task_hub()
-
-
-@main_bp.route('/tarefas/arquivadas', methods=['GET'])
-@login_required
-def list_tasks_archived():
-    return _render_task_hub(include_archived=True)
-
-
-@main_bp.route('/tarefas/finalizadas', methods=['GET'])
-@login_required
-def list_tasks_finalized():
-    return redirect(f'{url_for("main.list_tasks_archived")}{_build_legacy_query_args()}')
+def _archive_task(task):
+    task.is_archived = True
+    task.archived_at = utc_now()
 
 
 @main_bp.route('/tarefas/add', methods=['POST'])
@@ -175,32 +148,6 @@ def reorder_tasks_hub():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@main_bp.route('/tarefas/<int:task_id>', methods=['GET'])
-@login_required
-def task_detail(task_id):
-    task = db.session.get(Task, task_id)
-
-    if task and _can_view_task(g.user, task):
-        if task.project_id:
-            return redirect(url_for('main.project_tasks', project_id=task.project_id, focus_task=task.id))
-        return redirect(url_for('main.list_tasks', focus_task=task.id))
-
-    legacy = LegacyTaskRedirect.query.filter_by(legacy_task_id=task_id).first()
-    if legacy:
-        if legacy.project_id:
-            params = {}
-            if legacy.sample_task_id:
-                params['focus_task'] = legacy.sample_task_id
-            return redirect(url_for('main.project_tasks', project_id=legacy.project_id, **params))
-        params = {}
-        if legacy.sample_task_id:
-            params['focus_task'] = legacy.sample_task_id
-        return redirect(url_for('main.list_tasks', **params))
-
-    flash('Tarefa não encontrada.', 'warning')
-    return redirect(url_for('main.list_tasks'))
 
 
 @main_bp.route('/tarefas/<int:task_id>/edit', methods=['POST'])
@@ -521,11 +468,6 @@ def update_task_tipo(task_id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-def _archive_task(task):
-    task.is_archived = True
-    task.archived_at = utc_now()
-
-
 @main_bp.route('/tarefas/<int:task_id>/finalizar', methods=['POST'])
 @login_required
 def finalize_task(task_id):
@@ -734,437 +676,3 @@ def get_task_assignable_users(task_id):
         payload = [user for user in payload if q in (user['name'] or '').lower()]
 
     return jsonify({'users': payload})
-
-
-@main_bp.route('/tarefas/<int:task_id>/comentarios/add', methods=['POST'])
-@login_required
-def add_task_comment(task_id):
-    task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({'success': False, 'message': 'Tarefa não encontrada'}), 404
-
-    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
-
-    if not _can_view_task(g.user, task):
-        if is_ajax:
-            return jsonify({'success': False, 'message': 'Sem permissão para comentar.'}), 403
-        flash('Você não tem permissão para comentar nesta tarefa.', 'danger')
-        return redirect(url_for('main.list_tasks'))
-
-    content = request.form.get('content', '').strip()
-    if not content:
-        if is_ajax:
-            return jsonify({'success': False, 'message': 'O comentário não pode estar vazio.'}), 400
-        flash('O comentário não pode estar vazio.', 'warning')
-        return redirect(url_for('main.list_tasks'))
-
-    comment = TaskComment(content=content, user_id=g.user.id, task_id=task_id)
-
-    try:
-        db.session.add(comment)
-        db.session.flush()
-        notify_task_event(
-            task,
-            actor_user_id=g.user.id,
-            event_type='task_comment_added',
-            title='Novo comentário em tarefa',
-            message=f'{g.user.name} comentou: "{_preview_text(comment.content, 120)}".',
-        )
-        db.session.commit()
-
-        if is_ajax:
-            return jsonify({
-                'success': True,
-                'comment': {
-                    'id': comment.id,
-                    'content': comment.content,
-                    'author_name': g.user.name,
-                    'user_id': g.user.id,
-                    'created_at': format_local_time(comment.created_at),
-                    'is_own': True,
-                },
-            })
-
-        flash('Comentário adicionado.', 'success')
-        return redirect(url_for('main.list_tasks'))
-    except Exception as e:
-        db.session.rollback()
-        if is_ajax:
-            return jsonify({'success': False, 'message': str(e)}), 500
-        flash(f'Erro ao adicionar comentário: {str(e)}', 'danger')
-        return redirect(url_for('main.list_tasks'))
-
-
-@main_bp.route('/tarefas/comentarios/<int:comment_id>/edit', methods=['POST'])
-@login_required
-def edit_task_item_comment(comment_id):
-    comment = db.session.get(TaskComment, comment_id)
-    if not comment:
-        return jsonify({'success': False, 'message': 'Comentário não encontrado.'}), 404
-
-    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
-
-    if comment.user_id != g.user.id:
-        if is_ajax:
-            return jsonify({'success': False, 'message': 'Você só pode editar seus próprios comentários.'}), 403
-        flash('Você só pode editar seus próprios comentários.', 'danger')
-        return redirect(url_for('main.list_tasks'))
-
-    content = request.form.get('content', '').strip()
-    if not content:
-        if is_ajax:
-            return jsonify({'success': False, 'message': 'O comentário não pode estar vazio.'}), 400
-        flash('O comentário não pode estar vazio.', 'warning')
-        return redirect(url_for('main.list_tasks'))
-
-    old_content = comment.content
-    comment.content = content
-    comment.updated_at = utc_now()
-
-    try:
-        notify_task_event(
-            comment.task,
-            actor_user_id=g.user.id,
-            event_type='task_comment_updated',
-            title='Comentário atualizado em tarefa',
-            message=(
-                f'{g.user.name} editou um comentário na tarefa "{_preview_text(comment.task.descricao, 90)}": '
-                f'"{_preview_text(old_content, 70)}" -> "{_preview_text(comment.content, 70)}".'
-            ),
-        )
-        db.session.commit()
-
-        if is_ajax:
-            return jsonify({
-                'success': True,
-                'comment': {
-                    'id': comment.id,
-                    'content': comment.content,
-                    'updated_at': format_local_time(comment.updated_at) if comment.updated_at else None,
-                },
-            })
-
-        flash('Comentário atualizado.', 'success')
-        return redirect(url_for('main.list_tasks'))
-    except Exception as e:
-        db.session.rollback()
-        if is_ajax:
-            return jsonify({'success': False, 'message': str(e)}), 500
-        flash(f'Erro ao atualizar comentário: {str(e)}', 'danger')
-        return redirect(url_for('main.list_tasks'))
-
-
-@main_bp.route('/tarefas/comentarios/<int:comment_id>/delete', methods=['POST'])
-@login_required
-def delete_task_item_comment(comment_id):
-    comment = db.session.get(TaskComment, comment_id)
-    if not comment:
-        return jsonify({'success': False, 'message': 'Comentário não encontrado.', 'comment_id': comment_id}), 404
-
-    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
-
-    if comment.user_id != g.user.id:
-        message = 'Você só pode excluir seus próprios comentários.'
-        if is_ajax:
-            return jsonify({'success': False, 'message': message, 'comment_id': comment_id}), 403
-        flash(message, 'danger')
-        return redirect(url_for('main.list_tasks'))
-
-    try:
-        notify_task_event(
-            comment.task,
-            actor_user_id=g.user.id,
-            event_type='task_comment_deleted',
-            title='Comentário removido em tarefa',
-            message=f'{g.user.name} removeu um comentário na tarefa "{_preview_text(comment.task.descricao, 90)}".',
-        )
-        db.session.delete(comment)
-        db.session.commit()
-
-        if is_ajax:
-            return jsonify({'success': True, 'message': 'Comentário excluído.', 'comment_id': comment_id})
-
-        flash('Comentário excluído.', 'success')
-        return redirect(url_for('main.list_tasks'))
-    except Exception as e:
-        db.session.rollback()
-        if is_ajax:
-            return jsonify({'success': False, 'message': str(e), 'comment_id': comment_id}), 500
-        flash(f'Erro ao excluir comentário: {str(e)}', 'danger')
-        return redirect(url_for('main.list_tasks'))
-
-
-@main_bp.route('/tarefas/<int:task_id>/anexos', methods=['GET'])
-@login_required
-def list_task_anexos(task_id):
-    task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({'success': False, 'message': 'Tarefa não encontrada'}), 404
-    if not _can_view_task(g.user, task):
-        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
-
-    return jsonify({
-        'success': True,
-        'anexos': [
-            {
-                'id': a.id,
-                'filename': a.filename,
-                'content_type': a.content_type or '',
-                'uploaded_by': a.uploaded_by.name,
-                'created_at': format_local_time(a.created_at),
-                'is_image': (a.content_type or '').startswith('image/'),
-                'url': url_for('main.view_task_item_anexo', anexo_id=a.id),
-            }
-            for a in task.anexos
-        ],
-        'count': len(task.anexos),
-    })
-
-
-@main_bp.route('/tarefas/<int:task_id>/anexos/add', methods=['POST'])
-@login_required
-def add_task_anexo(task_id):
-    task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({'success': False, 'message': 'Tarefa não encontrada'}), 404
-    if not _can_view_task(g.user, task):
-        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
-
-    if 'file' not in request.files:
-        return jsonify({'success': False, 'message': 'Nenhum arquivo enviado.'}), 400
-
-    file = request.files['file']
-    if not file or not file.filename:
-        return jsonify({'success': False, 'message': 'Arquivo inválido.'}), 400
-
-    if not _allowed_attachment(file.filename):
-        return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido.'}), 400
-
-    original_name = file.filename[:255]
-    safe_name = secure_filename(file.filename)
-    ext = safe_name.rsplit('.', 1)[1].lower() if '.' in safe_name else ''
-    stored_name = str(uuid.uuid4()) + ('.' + ext if ext else '')
-    content_type = file.content_type or 'application/octet-stream'
-
-    upload_folder = _get_upload_folder()
-    file_path = os.path.join(upload_folder, stored_name)
-
-    try:
-        file.save(file_path)
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Erro ao salvar arquivo: {str(e)}'}), 500
-
-    anexo = TaskAnexo(
-        task_id=task_id,
-        filename=original_name,
-        stored_filename=stored_name,
-        content_type=content_type,
-        uploaded_by_id=g.user.id,
-    )
-
-    try:
-        db.session.add(anexo)
-        db.session.flush()
-        notify_task_event(
-            task,
-            actor_user_id=g.user.id,
-            event_type='task_attachment_added',
-            title='Novo anexo em tarefa',
-            message=f'{g.user.name} anexou "{_preview_text(anexo.filename, 90)}" à tarefa "{_preview_text(task.descricao, 90)}".',
-        )
-        db.session.commit()
-        return jsonify({
-            'success': True,
-            'anexo': {
-                'id': anexo.id,
-                'filename': anexo.filename,
-                'content_type': content_type,
-                'uploaded_by': g.user.name,
-                'created_at': format_local_time(anexo.created_at),
-                'is_image': content_type.startswith('image/'),
-                'url': url_for('main.view_task_item_anexo', anexo_id=anexo.id),
-            },
-            'anexos_count': len(task.anexos),
-        })
-    except Exception as e:
-        db.session.rollback()
-        try:
-            os.remove(file_path)
-        except OSError:
-            pass
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@main_bp.route('/tarefas/anexos/<int:anexo_id>', methods=['GET'])
-@login_required
-def view_task_item_anexo(anexo_id):
-    anexo = db.session.get(TaskAnexo, anexo_id)
-    if not anexo:
-        return jsonify({'success': False, 'message': 'Anexo não encontrado.'}), 404
-    if not _can_view_task(g.user, anexo.task):
-        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
-
-    upload_folder = _get_upload_folder()
-    file_path = os.path.join(upload_folder, anexo.stored_filename)
-    if not os.path.exists(file_path):
-        return jsonify({'success': False, 'message': 'Arquivo não encontrado.'}), 404
-
-    return send_file(file_path, download_name=anexo.filename, as_attachment=False)
-
-
-@main_bp.route('/tarefas/anexos/<int:anexo_id>/delete', methods=['POST'])
-@login_required
-def delete_task_item_anexo(anexo_id):
-    anexo = db.session.get(TaskAnexo, anexo_id)
-    if not anexo:
-        return jsonify({'success': False, 'message': 'Anexo não encontrado.'}), 404
-
-    task = anexo.task
-    if not _can_view_task(g.user, task):
-        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
-
-    upload_folder = _get_upload_folder()
-    file_path = os.path.join(upload_folder, anexo.stored_filename)
-
-    try:
-        notify_task_event(
-            task,
-            actor_user_id=g.user.id,
-            event_type='task_attachment_deleted',
-            title='Anexo removido em tarefa',
-            message=f'{g.user.name} removeu o anexo "{_preview_text(anexo.filename, 90)}" da tarefa "{_preview_text(task.descricao, 90)}".',
-        )
-        db.session.delete(anexo)
-        db.session.commit()
-        try:
-            os.remove(file_path)
-        except OSError:
-            pass
-        return jsonify({'success': True, 'message': 'Anexo excluído.', 'anexos_count': len(task.anexos)})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@main_bp.route('/projeto/<int:project_id>/tarefas', methods=['GET'])
-@login_required
-def project_tasks(project_id):
-    project = db.session.get(Project, project_id)
-    if not project:
-        flash('Projeto não encontrado.', 'warning')
-        return redirect(url_for('main.list_projects'))
-
-    if not _can_access_project_in_tasks(project):
-        flash('Você não tem permissão para acessar este projeto.', 'danger')
-        return redirect(url_for('main.list_projects'))
-
-    return _render_task_hub(locked_project=project, template_name='project_tasks.html')
-
-
-# ==============================
-# Aliases legados (/tarefas/itens/...)
-# ==============================
-
-@main_bp.route('/tarefas/itens/add', methods=['POST'])
-@login_required
-def add_task_item_global():
-    return _create_task_common()
-
-
-@main_bp.route('/tarefas/<int:task_id>/itens/add', methods=['POST'])
-@login_required
-def add_task_item(task_id):
-    anchor = db.session.get(Task, task_id)
-    is_ajax = (
-        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        or request.accept_mimetypes.best == 'application/json'
-    )
-    if not anchor:
-        if is_ajax:
-            return jsonify({'success': False, 'message': 'Tarefa não encontrada.'}), 404
-        flash('Tarefa não encontrada.', 'warning')
-        return redirect(url_for('main.list_tasks'))
-    if not _can_view_task(g.user, anchor):
-        if is_ajax:
-            return jsonify({'success': False, 'message': 'Sem permissão para este projeto.'}), 403
-        flash('Sem permissão para este projeto.', 'danger')
-        return redirect(url_for('main.list_tasks'))
-    default_project = anchor.project
-    return _create_task_common(default_project=default_project)
-
-
-@main_bp.route('/tarefas/itens/<int:item_id>/edit', methods=['POST'])
-@login_required
-def edit_task_item(item_id):
-    return edit_task(item_id)
-
-
-@main_bp.route('/tarefas/itens/<int:item_id>/delete', methods=['POST'])
-@login_required
-def delete_task_item(item_id):
-    return delete_task(item_id)
-
-
-@main_bp.route('/tarefas/itens/<int:item_id>/update_status', methods=['POST'])
-@login_required
-def update_task_item_status(item_id):
-    return update_task_status(item_id)
-
-
-@main_bp.route('/tarefas/itens/<int:item_id>/update_prioridade', methods=['POST'])
-@login_required
-def update_task_item_prioridade(item_id):
-    return update_task_prioridade(item_id)
-
-
-@main_bp.route('/tarefas/itens/<int:item_id>/update_tipo', methods=['POST'])
-@login_required
-def update_task_item_tipo(item_id):
-    return update_task_tipo(item_id)
-
-
-@main_bp.route('/tarefas/<int:task_id>/itens/reordenar', methods=['POST'])
-@login_required
-def reorder_task_items(task_id):
-    anchor = db.session.get(Task, task_id)
-    if not anchor:
-        return jsonify({'success': False, 'message': 'Tarefa não encontrada'}), 404
-    if not _can_view_task(g.user, anchor):
-        return jsonify({'success': False, 'message': 'Sem permissão'}), 403
-
-    payload = request.get_json(silent=True) or {}
-    ordem_ids = _parse_unique_task_order_ids(payload.get('ordem', []))
-
-    scope_query = Task.query.filter(
-        Task.project_id == anchor.project_id,
-        Task.is_archived.is_(False),
-    ).order_by(Task.ordem.asc(), Task.id.asc())
-
-    if anchor.project_id is None and not g.user.is_admin:
-        scope_query = scope_query.filter(Task.created_by_id == g.user.id)
-
-    try:
-        _apply_task_order(scope_query, ordem_ids)
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Ordem atualizada'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@main_bp.route('/tarefas/itens/<int:item_id>/comentarios/add', methods=['POST'])
-@login_required
-def add_task_item_comment(item_id):
-    return add_task_comment(item_id)
-
-
-@main_bp.route('/tarefas/itens/<int:item_id>/anexos', methods=['GET'])
-@login_required
-def list_task_item_anexos(item_id):
-    return list_task_anexos(item_id)
-
-
-@main_bp.route('/tarefas/itens/<int:item_id>/anexos/add', methods=['POST'])
-@login_required
-def add_task_item_anexo(item_id):
-    return add_task_anexo(item_id)

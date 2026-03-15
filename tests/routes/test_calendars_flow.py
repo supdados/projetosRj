@@ -1,6 +1,11 @@
 import datetime
 
-import routes.calendars as calendar_routes
+import routes.calendars.helpers as calendar_helpers
+import routes.calendars.oauth as calendar_oauth
+import routes.calendars.sync as calendar_sync
+import routes.calendars.views as calendar_views
+import routes.calendars.webhook as calendar_webhook
+import routes.calendars.events as calendar_events
 from models import CalendarEvent, Etapa, ProjectStageMeeting, UserCalendarConnection, db
 from services.google_calendar import GoogleCalendarError
 
@@ -28,7 +33,7 @@ def test_calendars_connected_view_hides_calendar_watch_subtext(app, client_user,
         db.session.add(connection)
         db.session.commit()
 
-    monkeypatch.setattr(calendar_routes, '_run_auto_calendar_maintenance', lambda _connection: [])
+    monkeypatch.setattr(calendar_helpers, '_run_auto_calendar_maintenance', lambda _connection: [])
 
     response = client_user.get('/calendarios')
     assert response.status_code == 200
@@ -60,13 +65,13 @@ def test_calendars_hub_runs_auto_maintenance_when_connected(app, client_user, se
         connection.last_sync_at = datetime.datetime(2026, 3, 6, 20, 0)
         return []
 
-    monkeypatch.setattr(calendar_routes, '_run_auto_calendar_maintenance', fake_auto_maintenance)
+    monkeypatch.setattr(calendar_helpers, '_run_auto_calendar_maintenance', fake_auto_maintenance)
 
     response = client_user.get('/calendarios')
     assert response.status_code == 200
     assert calls['count'] == 1
     html = response.get_data(as_text=True)
-    expected_sync = calendar_routes._format_human_datetime(datetime.datetime(2026, 3, 6, 20, 0))
+    expected_sync = calendar_helpers._format_human_datetime(datetime.datetime(2026, 3, 6, 20, 0))
     assert expected_sync in html
 
 
@@ -109,7 +114,7 @@ def test_upsert_google_all_day_event_normalizes_exclusive_end(app, seed_data):
         db.session.add(connection)
         db.session.commit()
 
-        action = calendar_routes._upsert_local_event_from_google(
+        action = calendar_helpers._upsert_local_event_from_google(
             connection,
             {
                 'id': 'google-all-day-1',
@@ -128,8 +133,8 @@ def test_upsert_google_all_day_event_normalizes_exclusive_end(app, seed_data):
         assert action == 'upserted'
         assert event is not None
         assert event.is_all_day is True
-        assert calendar_routes._format_input_datetime(event.starts_at) == '2026-03-22T00:00'
-        assert calendar_routes._format_input_datetime(event.ends_at) == '2026-03-22T23:59'
+        assert calendar_helpers._format_input_datetime(event.starts_at) == '2026-03-22T00:00'
+        assert calendar_helpers._format_input_datetime(event.ends_at) == '2026-03-22T23:59'
 
 
 def test_google_calendar_oauth_callback_persists_refresh_token(app, client_user, seed_data, monkeypatch):
@@ -140,7 +145,7 @@ def test_google_calendar_oauth_callback_persists_refresh_token(app, client_user,
     )
 
     monkeypatch.setattr(
-        calendar_routes,
+        calendar_oauth,
         'exchange_google_code_for_tokens',
         lambda _config, *, code, redirect_uri=None: {
             'access_token': f'access-{code}',
@@ -150,12 +155,12 @@ def test_google_calendar_oauth_callback_persists_refresh_token(app, client_user,
         },
     )
     monkeypatch.setattr(
-        calendar_routes,
+        calendar_helpers,
         '_sync_events_from_google',
         lambda connection, force_full=False: {'upserted': 0, 'deleted': 0, 'ignored': 0, 'full_sync': True},
     )
     monkeypatch.setattr(
-        calendar_routes,
+        calendar_helpers,
         'get_google_userinfo',
         lambda _config, *, access_token: {'sub': 'google-user-123', 'email': 'user@example.com'},
     )
@@ -166,7 +171,7 @@ def test_google_calendar_oauth_callback_persists_refresh_token(app, client_user,
         connection.watch_expiration = datetime.datetime(2026, 4, 1, 12, 0)
         return {'channel_id': 'channel-1', 'resource_id': 'resource-1', 'expires_at': connection.watch_expiration}
 
-    monkeypatch.setattr(calendar_routes, '_renew_watch_channel', fake_renew_watch)
+    monkeypatch.setattr(calendar_helpers, '_renew_watch_channel', fake_renew_watch)
 
     with client_user.session_transaction() as session:
         session['google_calendar_auth_state'] = 'state-abc'
@@ -209,7 +214,7 @@ def test_calendar_webhook_processes_known_channel(app, client, seed_data, monkey
         connection.last_sync_at = datetime.datetime(2026, 3, 6, 12, 0)
         return {'upserted': 0, 'deleted': 0, 'ignored': 0, 'full_sync': False}
 
-    monkeypatch.setattr(calendar_routes, '_sync_events_from_google', fake_sync)
+    monkeypatch.setattr(calendar_helpers, '_sync_events_from_google', fake_sync)
 
     response = client.post(
         '/webhook',
@@ -264,7 +269,7 @@ def test_resolve_webhook_address_prefers_forwarded_https_on_ngrok(app):
             'X-Forwarded-Host': 'reverberative-dawn-syndetically.ngrok-free.dev',
         },
     ):
-        address = calendar_routes._resolve_webhook_address()
+        address = calendar_helpers._resolve_webhook_address()
 
     assert address == 'https://reverberative-dawn-syndetically.ngrok-free.dev/webhook'
 
@@ -274,7 +279,7 @@ def test_resolve_webhook_address_prefers_public_base_url_config(app):
     app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = 'https://projetos.proderj.rj.gov.br'
 
     with app.test_request_context('/calendarios', base_url='http://127.0.0.1:5002'):
-        address = calendar_routes._resolve_webhook_address()
+        address = calendar_helpers._resolve_webhook_address()
 
     assert address == 'https://projetos.proderj.rj.gov.br/webhook'
 
@@ -284,7 +289,7 @@ def test_resolve_runtime_google_redirect_uri_prefers_public_base_url(app, monkey
     app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = 'https://projetos.proderj.rj.gov.br'
 
     monkeypatch.setattr(
-        calendar_routes,
+        calendar_helpers,
         'get_google_client_redirect_uris',
         lambda _config: [
             'http://127.0.0.1:5002/calendar/oauth/callback',
@@ -293,7 +298,7 @@ def test_resolve_runtime_google_redirect_uri_prefers_public_base_url(app, monkey
     )
 
     with app.test_request_context('/calendarios', base_url='http://127.0.0.1:5002'):
-        redirect_uri = calendar_routes._resolve_runtime_google_redirect_uri()
+        redirect_uri = calendar_helpers._resolve_runtime_google_redirect_uri()
 
     assert redirect_uri == 'https://projetos.proderj.rj.gov.br/calendar/oauth/callback'
 
@@ -303,13 +308,13 @@ def test_resolve_runtime_google_redirect_uri_forces_public_base_url_when_configu
     app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = 'https://projetos.proderj.rj.gov.br'
 
     monkeypatch.setattr(
-        calendar_routes,
+        calendar_helpers,
         'get_google_client_redirect_uris',
         lambda _config: ['http://127.0.0.1:5002/calendar/oauth/callback'],
     )
 
     with app.test_request_context('/calendarios', base_url='http://127.0.0.1:5002'):
-        redirect_uri = calendar_routes._resolve_runtime_google_redirect_uri()
+        redirect_uri = calendar_helpers._resolve_runtime_google_redirect_uri()
 
     assert redirect_uri == 'https://projetos.proderj.rj.gov.br/calendar/oauth/callback'
 
@@ -321,7 +326,7 @@ def test_describe_calendar_issue_normalizes_webhook_https_error():
         response_body='{"error":{"errors":[{"reason":"push.webhookUrlNotHttps"}]}}',
     )
 
-    message = calendar_routes._describe_calendar_issue(error)
+    message = calendar_helpers._describe_calendar_issue(error)
     assert 'Webhook do Google precisa ser HTTPS' in message
 
 
@@ -377,7 +382,7 @@ def test_edit_calendar_event_updates_linked_project_meeting(app, client_user, se
         etapa_id = etapa.id
 
     monkeypatch.setattr(
-        calendar_routes,
+        calendar_helpers,
         '_sync_local_event_to_google',
         lambda event, connection, create_conference=False: event,
     )
@@ -403,7 +408,7 @@ def test_edit_calendar_event_updates_linked_project_meeting(app, client_user, se
         assert etapa.data_inicio == datetime.date(2026, 3, 21)
         assert etapa.data_fim == datetime.date(2026, 3, 21)
         assert meeting.location == 'Sala 202'
-        assert calendar_routes._format_human_datetime(meeting.starts_at) == '21/03/2026 10:00'
+        assert calendar_helpers._format_human_datetime(meeting.starts_at) == '21/03/2026 10:00'
 
 
 def test_upsert_google_cancelled_event_marks_linked_project_meeting_as_error(app, seed_data):
@@ -456,7 +461,7 @@ def test_upsert_google_cancelled_event_marks_linked_project_meeting_as_error(app
         db.session.commit()
         etapa_id = etapa.id
 
-        action = calendar_routes._upsert_local_event_from_google(
+        action = calendar_helpers._upsert_local_event_from_google(
             connection,
             {
                 'id': 'google-cancelled-linked',

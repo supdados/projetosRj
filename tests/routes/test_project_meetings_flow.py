@@ -1,6 +1,6 @@
 import datetime
 
-import routes.etapas as etapa_routes
+import routes.etapas.meetings as etapa_meetings
 from models import CalendarEvent, Etapa, Project, ProjectHistory, ProjectStageMeeting, User, UserArea, UserCalendarConnection, db
 
 
@@ -99,7 +99,7 @@ def test_add_project_meeting_ajax_success_creates_shared_stage_and_link(app, cli
         event.meet_link = 'https://meet.google.com/aaa-bbbb-ccc' if create_conference else None
         return event
 
-    monkeypatch.setattr(etapa_routes, 'sync_local_event_to_google', fake_sync)
+    monkeypatch.setattr(etapa_meetings, 'sync_local_event_to_google', fake_sync)
 
     response = client_user.post(
         f"/project/{seed_data['project_id']}/meeting/add",
@@ -178,7 +178,7 @@ def test_same_google_account_on_another_internal_user_can_reschedule_project_mee
 
     _login(client, shared_user_id)
 
-    monkeypatch.setattr(etapa_routes, 'sync_local_event_to_google', lambda *_args, **_kwargs: _args[1])
+    monkeypatch.setattr(etapa_meetings, 'sync_local_event_to_google', lambda *_args, **_kwargs: _args[1])
 
     response = client.post(
         f"/etapa/{meeting_etapa_id}/update_field",
@@ -222,7 +222,7 @@ def test_same_google_account_can_edit_project_meeting_via_modal_route(app, clien
             event.meet_link = 'https://meet.google.com/edited-room'
         return event
 
-    monkeypatch.setattr(etapa_routes, 'sync_local_event_to_google', fake_sync)
+    monkeypatch.setattr(etapa_meetings, 'sync_local_event_to_google', fake_sync)
 
     response = client.post(
         f"/etapa/{meeting_etapa_id}/meeting/edit",
