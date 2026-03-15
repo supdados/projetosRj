@@ -40,7 +40,7 @@ def calendars_hub():
     event_rows = [_event_view_row(event) for event in events]
 
     return render_template(
-        'calendars.html',
+        'calendars/calendars.html',
         calendar_events=event_rows,
         events_json=[_event_json(e) for e in events],
         connection=connection,

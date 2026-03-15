@@ -20,7 +20,7 @@ def test_create_project_buttons_use_focus_visible_instead_of_focus_hover_lock():
 
 
 def test_add_project_modal_tracks_trigger_and_clears_pointer_focus_on_close():
-    modal_js = (PROJECT_ROOT / 'templates' / 'project_add_form_js.html').read_text(encoding='utf-8')
+    modal_js = (PROJECT_ROOT / 'templates' / 'projects' / 'add_form_js.html').read_text(encoding='utf-8')
 
     required_fragments = [
         'let modalTriggerElement = null;',

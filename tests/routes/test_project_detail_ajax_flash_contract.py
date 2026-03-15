@@ -14,7 +14,7 @@ def test_project_detail_ajax_flash_stack_is_limited_to_three():
 
 
 def test_project_detail_ajax_flash_uses_compact_app_flash_markup():
-    template_path = Path(__file__).resolve().parents[2] / 'templates' / 'project_detail.html'
+    template_path = Path(__file__).resolve().parents[2] / 'templates' / 'projects' / 'detail.html'
     main_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'project-detail' / '01-main.js'
     pages_root = Path(__file__).resolve().parents[2] / 'static' / 'pages'
     css_bundle_paths = [

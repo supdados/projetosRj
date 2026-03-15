@@ -173,7 +173,7 @@ def list_projects():
         has_active_filters = True
 
     return render_template(
-        'projects_list.html', 
+        'projects/list.html', 
         projects=projects_paginated,
         page=page,
         total_pages=total_pages,
@@ -274,7 +274,7 @@ def list_projetos_pendentes():
 
     if not project_ids:
         return render_template(
-            'projetos_pendentes.html',
+            'projects/pendentes.html',
             projetos_com_etapas=[],
             objetivos=objetivos,
             AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
@@ -454,7 +454,7 @@ def list_projetos_pendentes():
     projetos_pendentes_paginated = projetos_pendentes_com_etapas[start_idx:end_idx]
 
     return render_template(
-        'projetos_pendentes.html',
+        'projects/pendentes.html',
         projetos_com_etapas=projetos_pendentes_paginated,
         objetivos=objetivos,
         AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
@@ -513,7 +513,7 @@ def project_detail(project_id):
             )
 
     return render_template(
-        'project_detail.html',
+        'projects/detail.html',
         project=project,
         active_task_count=active_task_count,
         calendar_connection=calendar_connection,
@@ -541,4 +541,4 @@ def project_history(project_id):
         .order_by(ProjectHistory.timestamp.desc())\
         .all()
     
-    return render_template('project_history.html', project=project, history=history_entries)
+    return render_template('projects/history.html', project=project, history=history_entries)

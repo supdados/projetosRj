@@ -480,7 +480,7 @@ def global_search_page():
         search_payload = _empty_global_search_payload(search_term)
 
     return render_template(
-        'search_results.html',
+        'search/results.html',
         search_query=search_term,
         search_payload=search_payload,
     )

@@ -74,4 +74,4 @@ def project_tasks(project_id):
         flash('Você não tem permissão para acessar este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
 
-    return _render_task_hub(locked_project=project, template_name='project_tasks.html')
+    return _render_task_hub(locked_project=project, template_name='projects/tasks.html')

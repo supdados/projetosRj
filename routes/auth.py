@@ -130,7 +130,7 @@ def login_page():
         if not username or not password:
             flash('Usuário e senha são obrigatórios.', 'warning')
             cv, cf, tt, ca = _login_stats()
-            return render_template('login.html', next_page=safe_next,
+            return render_template('auth/login.html', next_page=safe_next,
                                    show_local_form=True,
                                    count_vigente=cv, count_finalizado=cf, total_tasks=tt, count_areas=ca)
 
@@ -145,12 +145,12 @@ def login_page():
         else:
             flash('Credenciais inválidas. Tente novamente.', 'danger')
             cv, cf, tt, ca = _login_stats()
-            return render_template('login.html', next_page=safe_next,
+            return render_template('auth/login.html', next_page=safe_next,
                                    show_local_form=True,
                                    count_vigente=cv, count_finalizado=cf, total_tasks=tt, count_areas=ca)
 
     cv, cf, tt, ca = _login_stats()
-    return render_template('login.html', next_page=safe_next,
+    return render_template('auth/login.html', next_page=safe_next,
                            count_vigente=cv, count_finalizado=cf, total_tasks=tt, count_areas=ca)
 
 
@@ -356,7 +356,7 @@ def change_password():
         name = (submitted_name if submitted_name is not None else g.user.name or '').strip()
         if not name:
             flash('O nome é obrigatório.', 'danger')
-            return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+            return render_template('auth/change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
         new_cpf = g.user.cpf_govbr
         if not is_govbr_linked and 'cpf_govbr' in request.form:
@@ -368,14 +368,14 @@ def change_password():
                     new_cpf = normalize_cpf(raw_cpf)
                 except ValueError as exc:
                     flash(f'CPF gov.br inválido: {exc}', 'danger')
-                    return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+                    return render_template('auth/change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
             if (
                 new_cpf
                 and User.query.filter(User.cpf_govbr == new_cpf, User.id != g.user.id).first()
             ):
                 flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
-                return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+                return render_template('auth/change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
         current_password = request.form.get('current_password')
         new_password = request.form.get('new_password')
@@ -384,19 +384,19 @@ def change_password():
         should_update_password = bool(current_password or new_password or confirm_new_password)
         if should_update_password and (not current_password or not new_password or not confirm_new_password):
             flash('Para alterar a senha, preencha senha atual, nova senha e confirmação.', 'danger')
-            return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+            return render_template('auth/change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
         if should_update_password and not g.user.check_password(current_password):
             flash('Senha atual incorreta.', 'danger')
-            return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+            return render_template('auth/change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
         if should_update_password and new_password != confirm_new_password:
             flash('A nova senha e a confirmação não correspondem.', 'danger')
-            return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+            return render_template('auth/change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
         if should_update_password and len(new_password) < 6:
             flash('A nova senha deve ter no mínimo 6 caracteres.', 'danger')
-            return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+            return render_template('auth/change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
         g.user.name = name
         if not is_govbr_linked and 'cpf_govbr' in request.form:
@@ -410,4 +410,4 @@ def change_password():
             flash('Conta atualizada com sucesso!', 'success')
         return redirect(url_for('main.dashboard'))
 
-    return render_template('change_password.html', hide_govbr_link_fields=is_govbr_linked)
+    return render_template('auth/change_password.html', hide_govbr_link_fields=is_govbr_linked)

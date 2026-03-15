@@ -92,7 +92,7 @@ def list_users():
     page = request.args.get('page', 1, type=int)
     # Ordenar por nome ou ID, por exemplo
     users_pagination = User.query.order_by(User.name).paginate(page=page, per_page=10)
-    return render_template('list_users.html', users=users_pagination)
+    return render_template('admin/list_users.html', users=users_pagination)
 
 @main_bp.route('/admin/users/add', methods=['GET', 'POST'])
 @login_required
@@ -145,7 +145,7 @@ def add_user():
         # Se caiu aqui, houve erro, então renderiza o form novamente com os dados (se o template suportar)
         # ou apenas renderiza o form vazio.
         return render_template(
-            'user_form.html',
+            'admin/user_form.html',
             user=request.form,
             user_areas=selected_areas,
             user_area_keys=_area_choice_keys(selected_areas),
@@ -156,7 +156,7 @@ def add_user():
 
     # Método GET: exibe o formulário para adicionar novo usuário
     return render_template(
-        'user_form.html',
+        'admin/user_form.html',
         user=User(),
         user_areas=[],
         action_verb="Adicionar",
@@ -206,7 +206,7 @@ def edit_user(user_id):
                 flash('Não é possível remover o status de administrador do único administrador existente.', 'danger')
                 # Não altera user_to_edit.is_admin e recarrega o form
                 return render_template(
-                    'user_form.html',
+                    'admin/user_form.html',
                     user=user_to_edit,
                     user_areas=_normalize_selected_areas_for_form(
                         user_to_edit.get_areas(),
@@ -229,7 +229,7 @@ def edit_user(user_id):
                 'danger',
             )
             return render_template(
-                'user_form.html',
+                'admin/user_form.html',
                 user=user_to_edit,
                 user_areas=normalized_selected_areas,
                 user_area_keys=selected_area_keys,
@@ -241,7 +241,7 @@ def edit_user(user_id):
         if cpf_error:
             flash(f'CPF gov.br inválido: {cpf_error}', 'danger')
             return render_template(
-                'user_form.html',
+                'admin/user_form.html',
                 user=user_to_edit,
                 user_areas=normalized_selected_areas,
                 user_area_keys=selected_area_keys,
@@ -257,7 +257,7 @@ def edit_user(user_id):
         ):
             flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
             return render_template(
-                'user_form.html',
+                'admin/user_form.html',
                 user=user_to_edit,
                 user_areas=normalized_selected_areas,
                 user_area_keys=selected_area_keys,
@@ -294,7 +294,7 @@ def edit_user(user_id):
         area_catalog_choices,
     )
     return render_template(
-        'user_form.html',
+        'admin/user_form.html',
         user=user_to_edit,
         user_areas=selected_areas,
         user_area_keys=_area_choice_keys(selected_areas),

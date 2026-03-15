@@ -644,7 +644,7 @@ def _build_task_hub_project_options(include_archived=False, selected_area=''):
     return options
 
 
-def _render_task_hub(locked_project=None, template_name='task_hub.html', include_archived=False):
+def _render_task_hub(locked_project=None, template_name='tasks/hub.html', include_archived=False):
     filter_values = _read_task_filter_values(request.args)
     selected_area, invalid_area_filter = sanitize_area_filter_for_current_user(filter_values['selected_area'])
     if invalid_area_filter and locked_project is None:

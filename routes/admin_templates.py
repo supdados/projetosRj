@@ -13,7 +13,7 @@ def list_templates():
     # Usar joinedload para carregar os 'items' de forma eficiente (Eager Loading)
     # Isso garante que template.items esteja populado sem a necessidade de queries adicionais.
     templates = StageTemplate.query.options(joinedload(StageTemplate.items)).order_by(StageTemplate.name).all()
-    return render_template('template_list.html', templates=templates)
+    return render_template('admin/template_list.html', templates=templates)
 
 @main_bp.route('/admin/templates/new', methods=['GET', 'POST'])
 @login_required
@@ -27,7 +27,7 @@ def create_template():
 
         if not name or not stage_names:
             flash('O nome do modelo e pelo menos uma etapa são obrigatórios.', 'danger')
-            return render_template('template_form.html')
+            return render_template('admin/template_form.html')
 
         new_template = StageTemplate(name=name, description=description)
         db.session.add(new_template)
@@ -49,7 +49,7 @@ def create_template():
         flash('Modelo de etapas criado com sucesso!', 'success')
         return redirect(url_for('main.list_templates'))
 
-    return render_template('template_form.html')
+    return render_template('admin/template_form.html')
 
 @main_bp.route('/admin/templates/<int:template_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -65,7 +65,7 @@ def edit_template(template_id):
 
         if not name or not stage_names:
             flash('O nome do modelo e pelo menos uma etapa são obrigatórios.', 'danger')
-            return render_template('template_form.html', template=template)
+            return render_template('admin/template_form.html', template=template)
 
         # Atualiza os dados do template
         template.name = name
@@ -90,7 +90,7 @@ def edit_template(template_id):
         flash('Modelo de etapas atualizado com sucesso!', 'success')
         return redirect(url_for('main.list_templates'))
 
-    return render_template('template_form.html', template=template)
+    return render_template('admin/template_form.html', template=template)
 
 @main_bp.route('/admin/templates/<int:template_id>/delete', methods=['POST'])
 @login_required

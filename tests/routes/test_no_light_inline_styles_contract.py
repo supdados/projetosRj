@@ -7,7 +7,7 @@ def _read(path):
 
 
 def test_project_detail_has_no_light_inline_editor_styles():
-    file_path = Path(__file__).resolve().parents[2] / 'templates' / 'project_detail.html'
+    file_path = Path(__file__).resolve().parents[2] / 'templates' / 'projects' / 'detail.html'
     content = _read(file_path)
 
     forbidden_patterns = [
@@ -25,7 +25,7 @@ def test_project_detail_has_no_light_inline_editor_styles():
 
 
 def test_project_add_form_js_has_no_inline_color_hints():
-    file_path = Path(__file__).resolve().parents[2] / 'templates' / 'project_add_form_js.html'
+    file_path = Path(__file__).resolve().parents[2] / 'templates' / 'projects' / 'add_form_js.html'
     content = _read(file_path)
 
     forbidden_patterns = [

@@ -32,7 +32,7 @@ def list_areas():
         )
 
     return render_template(
-        'area_list.html',
+        'admin/area_list.html',
         areas=areas,
         project_counts=project_counts,
         user_counts=user_counts,
@@ -48,7 +48,7 @@ def add_area():
         if error_message:
             flash(error_message, 'danger')
             return render_template(
-                'area_form.html',
+                'admin/area_form.html',
                 area={'name': request.form.get('name', '')},
                 action_verb='Adicionar',
             )
@@ -60,7 +60,7 @@ def add_area():
             db.session.rollback()
             flash(f'Erro ao criar área: {exc}', 'danger')
             return render_template(
-                'area_form.html',
+                'admin/area_form.html',
                 area={'name': request.form.get('name', '')},
                 action_verb='Adicionar',
             )
@@ -68,7 +68,7 @@ def add_area():
         flash(f'Área "{normalized_name}" criada com sucesso.', 'success')
         return redirect(url_for('main.list_areas'))
 
-    return render_template('area_form.html', area=AreaCatalog(), action_verb='Adicionar')
+    return render_template('admin/area_form.html', area=AreaCatalog(), action_verb='Adicionar')
 
 
 @main_bp.route('/admin/areas/<int:area_id>/edit', methods=['GET', 'POST'])
@@ -85,7 +85,7 @@ def edit_area(area_id):
         if error_message:
             flash(error_message, 'danger')
             return render_template(
-                'area_form.html',
+                'admin/area_form.html',
                 area={'id': area.id, 'name': request.form.get('name', '')},
                 action_verb='Editar',
             )
@@ -113,7 +113,7 @@ def edit_area(area_id):
         except Exception as exc:
             db.session.rollback()
             flash(f'Erro ao atualizar área: {exc}', 'danger')
-            return render_template('area_form.html', area=area, action_verb='Editar')
+            return render_template('admin/area_form.html', area=area, action_verb='Editar')
 
         flash(
             (
@@ -124,7 +124,7 @@ def edit_area(area_id):
         )
         return redirect(url_for('main.list_areas'))
 
-    return render_template('area_form.html', area=area, action_verb='Editar')
+    return render_template('admin/area_form.html', area=area, action_verb='Editar')
 
 
 @main_bp.route('/admin/areas/<int:area_id>/delete', methods=['POST'])

@@ -254,7 +254,7 @@ def edit_project(project_id):
         return redirect(url_for('main.project_detail', project_id=project_id))
     
     return render_template(
-        'project_form.html', 
+        'projects/form.html', 
         project=project_to_edit, 
         areas_responsaveis=get_area_catalog_choices(),
         objetivos=objetivos,

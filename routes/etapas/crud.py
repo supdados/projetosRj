@@ -187,7 +187,7 @@ def edit_etapa(etapa_id):
 
     data_inicio_f = etapa.data_inicio.strftime('%Y-%m-%d') if etapa.data_inicio else ''
     data_fim_f = etapa.data_fim.strftime('%Y-%m-%d') if etapa.data_fim else ''
-    return render_template('etapa_form.html', etapa=etapa, action=url_for('main.edit_etapa', etapa_id=etapa_id), data_inicio_form=data_inicio_f, data_fim_form=data_fim_f)
+    return render_template('etapas/form.html', etapa=etapa, action=url_for('main.edit_etapa', etapa_id=etapa_id), data_inicio_form=data_inicio_f, data_fim_form=data_fim_f)
 
 @main_bp.route('/etapa/<int:etapa_id>/delete', methods=['POST'])
 @login_required
