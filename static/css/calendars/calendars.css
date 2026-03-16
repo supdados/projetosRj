@@ -125,19 +125,6 @@ html[data-theme="dark"] .cal-toggle-btn.is-active { background: #005a92 !importa
 .cal-btn-sm--danger { color: var(--app-color-danger); border-color: transparent; }
 .cal-btn-sm--danger:hover { background: rgba(220, 38, 38, 0.07); border-color: rgba(220, 38, 38, 0.18); }
 
-/* ── Alert ───────────────────────────────────────────────────────────────── */
-.cal-alert {
-  padding: 0.6rem 0.85rem;
-  border-radius: 0.55rem;
-  font-size: 0.855rem;
-  border: 1px solid transparent;
-}
-.cal-alert--warning {
-  color: #854d0e;
-  background: rgba(202, 138, 4, 0.09);
-  border-color: rgba(202, 138, 4, 0.22);
-}
-
 /* ── Views ───────────────────────────────────────────────────────────────── */
 .cal-view { display: none; }
 .cal-view.is-active { display: block; }

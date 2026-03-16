@@ -645,32 +645,6 @@ html[data-theme="dark"] body.is-authenticated .page-item.disabled .page-link {
 }
 
 
-html[data-theme="dark"] body.is-authenticated .alert {
-    border-color: rgba(99, 166, 219, 0.28);
-    color: var(--app-color-text-primary);
-    background: #2d3c51;
-}
-
-
-html[data-theme="dark"] body.is-authenticated .alert-success {
-    border-color: rgba(73, 185, 135, 0.42);
-    background: rgba(73, 185, 135, 0.16);
-}
-
-
-html[data-theme="dark"] body.is-authenticated .alert-warning {
-    border-color: rgba(216, 162, 77, 0.42);
-    background: rgba(216, 162, 77, 0.16);
-}
-
-
-html[data-theme="dark"] body.is-authenticated .alert-danger,
-html[data-theme="dark"] body.is-authenticated .alert-error {
-    border-color: rgba(217, 122, 122, 0.42);
-    background: rgba(217, 122, 122, 0.16);
-}
-
-
 html[data-theme="dark"] body.is-authenticated .btn-close {
     filter: invert(0.86) sepia(0.03) saturate(0.8);
 }

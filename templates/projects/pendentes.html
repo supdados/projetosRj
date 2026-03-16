@@ -354,7 +354,6 @@
     </div>
 </div>
 
-<div id="pending-ajax-toast" role="status" aria-live="polite" aria-atomic="true"></div>
 {% endblock %}
 
 {% block scripts %}
@@ -364,39 +363,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const storageKey = 'pendingExpandedProjects';
     const projectList = document.getElementById('pendingProjectList');
     const emptyState = document.getElementById('pendingEmptyState');
-    const toast = document.getElementById('pending-ajax-toast');
 
     const summaryElements = {
         total_projects: document.getElementById('summary-total-projects')
     };
 
-    function readExpandedSet() {
-        try {
-            const parsed = JSON.parse(sessionStorage.getItem(storageKey) || '[]');
-            return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
-        } catch (error) {
-            return new Set();
-        }
-    }
-
-    function saveExpandedSet(setData) {
-        sessionStorage.setItem(storageKey, JSON.stringify(Array.from(setData)));
-    }
-
     function showToast(message, type) {
-        if (!toast || !message) {
-            return;
-        }
-        toast.textContent = message;
-        toast.classList.remove('danger');
-        if (type === 'danger') {
-            toast.classList.add('danger');
-        }
-        toast.classList.add('show');
-        window.clearTimeout(showToast._timer);
-        showToast._timer = window.setTimeout(function() {
-            toast.classList.remove('show');
-        }, 2600);
+        if (typeof window.showFlash === 'function') window.showFlash(message, type);
     }
 
     function getIntValue(value) {

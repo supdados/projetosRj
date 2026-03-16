@@ -5,29 +5,34 @@ def _read(path):
     return path.read_text(encoding='utf-8')
 
 
-def test_project_detail_ajax_flash_stack_is_limited_to_three():
-    main_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
-    content = _read(main_js_path)
+def test_project_detail_ajax_flash_stack_is_limited_to_three_in_app_shell():
+    app_shell_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell.js'
+    content = _read(app_shell_js_path)
 
-    assert 'const MAX_NOTIFICATIONS = 3;' in content
-    assert 'const MAX_NOTIFICATIONS = 5;' not in content
+    assert 'while (stack.children.length >= 3)' in content
+    assert 'while (stack.children.length >= 5)' not in content
 
 
-def test_project_detail_ajax_flash_uses_compact_app_flash_markup():
-    template_path = Path(__file__).resolve().parents[2] / 'templates' / 'projects' / 'detail.html'
-    main_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
-    pages_root = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'projects'
-    css_bundle_paths = [
-        pages_root / 'detail.css',
-        *sorted((pages_root / 'detail').glob('*.css')),
-    ]
+def test_project_detail_ajax_flash_uses_global_app_flash_system():
+    detail_template_path = Path(__file__).resolve().parents[2] / 'templates' / 'projects' / 'detail.html'
+    base_template_path = Path(__file__).resolve().parents[2] / 'templates' / 'base.html'
+    detail_main_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
+    app_shell_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell.js'
+    flash_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'partials' / 'flash.css'
 
-    template_content = _read(template_path)
-    main_js_content = _read(main_js_path)
-    css_content = '\n'.join(_read(path) for path in css_bundle_paths)
+    detail_template_content = _read(detail_template_path)
+    base_template_content = _read(base_template_path)
+    detail_main_js_content = _read(detail_main_js_path)
+    app_shell_js_content = _read(app_shell_js_path)
+    flash_css_content = _read(flash_css_path)
 
-    assert "js/pages/projects/detail/01-main.js" in template_content
-    assert 'app-flash-alert app-flash-alert-compact' in main_js_content
-    assert 'app-flash-text' in main_js_content
-    assert 'app-flash-icon' not in main_js_content
-    assert '.app-flash-alert-compact' in css_content
+    assert "js/pages/projects/detail/01-main.js" in detail_template_content
+    assert "css/partials/flash.css" in base_template_content
+    assert "js/app-shell.js" in base_template_content
+    assert "typeof window.showFlash === 'function'" in detail_main_js_content
+    assert "window.showFlash(message, type || 'info');" in detail_main_js_content
+    assert "stack.className = 'app-flash-stack';" in app_shell_js_content
+    assert "el.className = 'app-flash-alert alert-' + t;" in app_shell_js_content
+    assert '.app-flash-stack' in flash_css_content
+    assert '.app-flash-alert' in flash_css_content
+    assert '.app-flash-alert-compact' not in flash_css_content

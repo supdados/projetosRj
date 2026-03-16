@@ -492,10 +492,6 @@ h6 {
     border-radius: var(--ds-radius-lg);
 }
 
-.app-flash-alert {
-    border-radius: var(--ds-radius-md);
-}
-
 /* Utilities */
 .ds-hidden {
     display: none !important;

@@ -705,42 +705,6 @@ html[data-theme="dark"] body:not(.is-authenticated) footer p {
   color: #7a9db8;
 }
 
-/* Dark: flash alerts */
-html[data-theme="dark"] body:not(.is-authenticated) .alert-danger,
-html[data-theme="dark"] body:not(.is-authenticated) .alert-error {
-  border-color: rgba(217, 122, 122, 0.34);
-  background: rgba(123, 33, 43, 0.28);
-  color: #ffd9df;
-}
-
-html[data-theme="dark"] body:not(.is-authenticated) .alert-warning {
-  border-color: rgba(216, 162, 77, 0.34);
-  background: rgba(160, 112, 33, 0.22);
-  color: #ffe9c2;
-}
-
-html[data-theme="dark"] body:not(.is-authenticated) .alert-success {
-  border-color: rgba(101, 186, 133, 0.34);
-  background: rgba(50, 125, 82, 0.2);
-  color: #def6e7;
-}
-
-html[data-theme="dark"] body:not(.is-authenticated) .app-flash-alert {
-  border-color: rgba(99, 166, 219, 0.24);
-  background: linear-gradient(180deg, rgba(43, 58, 79, 0.96) 0%, rgba(36, 51, 70, 0.98) 100%);
-  box-shadow: 0 14px 30px rgba(4, 10, 17, 0.32);
-  color: #dbe8f6;
-}
-
-html[data-theme="dark"] body:not(.is-authenticated) .app-flash-icon,
-html[data-theme="dark"] body:not(.is-authenticated) .app-flash-text {
-  color: inherit;
-}
-
-html[data-theme="dark"] body:not(.is-authenticated) .app-flash-alert .btn-close {
-  filter: invert(0.86) sepia(0.03) saturate(0.8);
-}
-
 /* Loading/skeleton states */
 body:not(.is-authenticated).loading-active footer {
   display: block !important;

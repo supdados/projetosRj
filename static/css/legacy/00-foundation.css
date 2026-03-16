@@ -1860,48 +1860,6 @@ footer p {
     font-weight: var(--ds-font-weight-medium);
 }
 
-.app-flash-stack {
-    position: fixed;
-    top: 76px;
-    right: 0.9rem;
-    width: min(360px, calc(100vw - 1.8rem));
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    z-index: 1400;
-    pointer-events: none;
-}
-
-body.is-authenticated .app-flash-stack {
-    top: 73px;
-}
-
-.app-flash-alert {
-    margin: 0;
-    padding: 0.56rem 0.74rem;
-    border: 1px solid #d7e4f1;
-    border-radius: 10px;
-    box-shadow: 0 8px 22px rgba(21, 34, 55, 0.14);
-    font-size: var(--ds-font-size-md);
-    line-height: var(--ds-line-height-snug);
-    pointer-events: auto;
-}
-
-.app-flash-alert .btn-close {
-    padding: 0.5rem;
-}
-
-.app-flash-icon {
-    margin-top: 0.12rem;
-    font-size: var(--ds-font-size-md);
-    flex: 0 0 auto;
-}
-
-.app-flash-text {
-    min-width: 0;
-    word-break: break-word;
-}
-
 /* Componentes específicos */
 .icon-shape {
     display: inline-flex;

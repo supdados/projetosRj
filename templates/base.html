@@ -52,6 +52,7 @@
     <!-- CSS Customizado -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/flash.css') }}">
 
     {% block head_extra %}{% endblock %}
     {% if current_user_obj %}
@@ -956,27 +957,14 @@
                     {% if messages %}
                         <div class="app-flash-stack" role="status" aria-live="polite" aria-atomic="true">
                             {% for category, message in messages %}
-                                {% set flash_category = category if category != 'message' else 'info' %}
-                                {% set flash_timeout = 2600 %}
-                                {% if flash_category == 'warning' %}
-                                    {% set flash_timeout = 3200 %}
-                                {% elif flash_category == 'danger' or flash_category == 'error' %}
-                                    {% set flash_timeout = 4200 %}
-                                {% endif %}
-                                <div class="alert alert-{{ flash_category }} alert-dismissible fade show app-flash-alert" role="alert" data-auto-dismiss="{{ flash_timeout }}">
-                                    <div class="d-flex align-items-start gap-2">
-                                        {% if flash_category == 'success' %}
-                                            <i class="fas fa-check-circle app-flash-icon"></i>
-                                        {% elif flash_category == 'danger' or flash_category == 'error' %}
-                                            <i class="fas fa-exclamation-circle app-flash-icon"></i>
-                                        {% elif flash_category == 'warning' %}
-                                            <i class="fas fa-exclamation-triangle app-flash-icon"></i>
-                                        {% else %}
-                                            <i class="fas fa-info-circle app-flash-icon"></i>
-                                        {% endif %}
-                                        <span class="app-flash-text">{{ message }}</span>
-                                    </div>
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                {% set cat = category if category != 'message' else 'info' %}
+                                <div class="app-flash-alert alert-{{ cat }}" role="alert" data-flash-type="{{ cat }}">
+                                    {% if cat == 'success' %}<i class="fas fa-check-circle app-flash-icon"></i>
+                                    {% elif cat in ('danger', 'error') %}<i class="fas fa-exclamation-circle app-flash-icon"></i>
+                                    {% elif cat == 'warning' %}<i class="fas fa-exclamation-triangle app-flash-icon"></i>
+                                    {% else %}<i class="fas fa-info-circle app-flash-icon"></i>
+                                    {% endif %}
+                                    <span>{{ message }}</span>
                                 </div>
                             {% endfor %}
                         </div>

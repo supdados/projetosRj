@@ -536,35 +536,7 @@
         // Delete project via AJAX (preserva filtros ativos)
         (function () {
             function showFlash(msg, type) {
-                var stack = document.querySelector('.app-flash-stack');
-                if (!stack) {
-                    stack = document.createElement('div');
-                    stack.className = 'app-flash-stack';
-                    stack.setAttribute('role', 'status');
-                    stack.setAttribute('aria-live', 'polite');
-                    stack.setAttribute('aria-atomic', 'true');
-                    document.body.appendChild(stack);
-                }
-                var icons = { success: 'fa-check-circle', danger: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle' };
-                var iconClass = icons[type] || 'fa-info-circle';
-                var timeout = type === 'danger' ? 4200 : 2600;
-                var el = document.createElement('div');
-                el.className = 'alert alert-' + type + ' alert-dismissible fade show app-flash-alert';
-                el.setAttribute('role', 'alert');
-                el.innerHTML =
-                    '<div class="d-flex align-items-start gap-2">' +
-                        '<i class="fas ' + iconClass + ' app-flash-icon"></i>' +
-                        '<span class="app-flash-text">' + msg + '</span>' +
-                    '</div>' +
-                    '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
-                stack.appendChild(el);
-                setTimeout(function () {
-                    if (window.bootstrap && bootstrap.Alert) {
-                        bootstrap.Alert.getOrCreateInstance(el).close();
-                    } else {
-                        el.remove();
-                    }
-                }, timeout);
+                if (typeof window.showFlash === 'function') window.showFlash(msg, type);
             }
 
             document.querySelectorAll('.js-delete-project-form').forEach(function (form) {

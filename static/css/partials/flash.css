@@ -1,0 +1,115 @@
+/* ── Flash / Toast unificado ─────────────────────────────────────────────────
+   Único sistema de notificação do app.
+   Centralizado no topo, pill compacto, sem botão de fechar, auto-dismiss.
+   window.showFlash(message, type) — use em qualquer lugar via JS.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.app-flash-stack {
+    position: fixed;
+    top: 68px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    z-index: 1500;
+    pointer-events: none;
+    width: max-content;
+    max-width: calc(100vw - 2rem);
+}
+
+.app-flash-alert {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    margin: 0;
+    padding: 0.42rem 0.92rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 0.84rem;
+    font-weight: 500;
+    line-height: 1.35;
+    pointer-events: none;
+    white-space: nowrap;
+    max-width: calc(100vw - 2rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+    animation: flash-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.app-flash-alert.flash-hiding {
+    opacity: 0;
+    transform: translateY(-8px);
+}
+
+.app-flash-icon {
+    font-size: 0.76rem;
+    flex-shrink: 0;
+}
+
+/* ── Cores — light ───────────────────────────────────────────────────────── */
+.app-flash-alert.alert-success {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
+
+.app-flash-alert.alert-danger,
+.app-flash-alert.alert-error {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+.app-flash-alert.alert-warning {
+    background: #fef9c3;
+    border-color: #fde047;
+    color: #854d0e;
+}
+
+.app-flash-alert.alert-info {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1e40af;
+}
+
+/* ── Cores — dark ────────────────────────────────────────────────────────── */
+html[data-theme="dark"] .app-flash-alert.alert-success {
+    background: #1a4731;
+    border-color: #2f7a50;
+    color: #86efac;
+}
+
+html[data-theme="dark"] .app-flash-alert.alert-danger,
+html[data-theme="dark"] .app-flash-alert.alert-error {
+    background: #4a1c1c;
+    border-color: #8b3a3a;
+    color: #fca5a5;
+}
+
+html[data-theme="dark"] .app-flash-alert.alert-warning {
+    background: #4a3010;
+    border-color: #8a5e1a;
+    color: #fde047;
+}
+
+html[data-theme="dark"] .app-flash-alert.alert-info {
+    background: #1a3158;
+    border-color: #2d5490;
+    color: #93c5fd;
+}
+
+/* ── Animação ────────────────────────────────────────────────────────────── */
+@keyframes flash-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
