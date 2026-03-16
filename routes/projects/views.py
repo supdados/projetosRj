@@ -1,7 +1,9 @@
+import csv
 import datetime
+import io
 from collections import defaultdict
 
-from flask import current_app, flash, g, redirect, render_template, request, url_for
+from flask import current_app, flash, g, make_response, redirect, render_template, request, url_for
 
 from models import Etapa, Project, ProjectHistory, Task, UserCalendarConnection, db
 from services.calendar_sync import hydrate_google_connection_identity
@@ -542,3 +544,44 @@ def project_history(project_id):
         .all()
     
     return render_template('projects/history.html', project=project, history=history_entries)
+
+
+@main_bp.route('/projects/download')
+@login_required
+def download_projects_csv():
+    """Download CSV com dados dos projetos (apenas admin)."""
+    if not g.user.is_admin:
+        flash('Acesso restrito a administradores.', 'danger')
+        return redirect(url_for('main.list_projects'))
+
+    projects = Project.query.order_by(Project.id).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_ALL)
+    writer.writerow([
+        'ID',
+        'Nome',
+        'Status',
+        'Data Início',
+        'Data Fim',
+        'Objetivo EEGD',
+        'Resultado EEGD',
+        'Indicador EEGD',
+    ])
+
+    for p in projects:
+        data_inicio = p.data_inicio_projeto.strftime('%d/%m/%Y') if p.data_inicio_projeto else ''
+        data_fim = p.data_fim_projeto.strftime('%d/%m/%Y') if p.data_fim_projeto else ''
+        objetivo = p.objetivo.descricao if p.objetivo else ''
+        resultado = p.resultado_esperado.descricao if p.resultado_esperado else ''
+        indicadores = '; '.join(
+            ip.indicador.descricao for ip in p.indicadores if ip.indicador
+        )
+        writer.writerow([p.id, p.titulo, p.status, data_inicio, data_fim, objetivo, resultado, indicadores])
+
+    timestamp = datetime.datetime.now().strftime('%d%m%Y%H%M')
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    response.headers['Content-Disposition'] = f'attachment; filename="projetos{timestamp}.csv"'
+    output.close()
+    return response

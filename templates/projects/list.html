@@ -20,6 +20,15 @@
         </div>
 
         <div class="projects-v4-header-actions">
+            {% if is_admin_user %}
+            <a href="{{ url_for('main.download_projects_csv') }}"
+               class="btn-projects-v4 btn-projects-v4-secondary"
+               title="Exportar projetos (CSV)"
+               aria-label="Exportar projetos"
+               download>
+                <i class="fas fa-download" aria-hidden="true"></i>
+            </a>
+            {% endif %}
             <button type="button" class="btn-projects-v4 btn-projects-v4-primary" data-bs-toggle="modal" data-bs-target="#addProjectModal">
                 <i class="fas fa-plus" aria-hidden="true"></i>
                 Novo projeto
