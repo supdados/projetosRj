@@ -20,13 +20,9 @@
                         </h1>
                         <p class="dashboard-welcome-context mb-0">
                             {% if user_areas %}
-                                {% if user_areas|length == 1 %}
-                                    Área: {{ user_areas[0] }}
-                                {% else %}
-                                    Áreas: {{ user_areas|join(', ') }}
-                                {% endif %}
+                                Unidade(s): {{ user_areas|join(' | ') }}
                             {% else %}
-                                Sem área vinculada
+                                Sem unidade vinculada
                             {% endif %}
                         </p>
                     </div>

@@ -563,6 +563,7 @@ function openEventPopover(ev, anchor) {
 
   const title = document.createElement('div');
   title.className = 'cal-event-popover-title';
+  title.style.fontWeight = 'bold';
   title.textContent = ev.title || 'Sem titulo';
   head.appendChild(title);
 
@@ -730,7 +731,14 @@ function openDayPopover(day, evs, anchor) {
     const hm = showTime ? new Date(ev.starts_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' ' : '';
     const label = document.createElement('span');
     label.className = 'cal-popover-item-label';
-    label.textContent = hm + ev.title;
+    if (hm) {
+      const timeSpan = document.createElement('span');
+      timeSpan.textContent = hm;
+      label.appendChild(timeSpan);
+    }
+    const titleStrong = document.createElement('strong');
+    titleStrong.textContent = ev.title;
+    label.appendChild(titleStrong);
     item.appendChild(label);
     item.title = ev.title;
     item.addEventListener('click', e => { e.stopPropagation(); openEventPopover(ev, item); });
