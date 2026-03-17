@@ -14,6 +14,10 @@
         const fieldAllDay = modal.querySelector('#fieldAllDay');
         const fieldStartsAt = modal.querySelector('#fieldStartsAt');
         const fieldEndsAt = modal.querySelector('#fieldEndsAt');
+        const fieldStartsAtDatePart = modal.querySelector('#fieldStartsAtDatePart');
+        const fieldStartsAtTimePart = modal.querySelector('#fieldStartsAtTimePart');
+        const fieldEndsAtDatePart = modal.querySelector('#fieldEndsAtDatePart');
+        const fieldEndsAtTimePart = modal.querySelector('#fieldEndsAtTimePart');
         const fieldStartsAtDate = modal.querySelector('#fieldStartsAtDate');
         const fieldEndsAtDate = modal.querySelector('#fieldEndsAtDate');
         const datetimePair = modal.querySelector('#datetimePair');
@@ -120,38 +124,42 @@
             }
         }
 
-        function toggleAllDay(checked) {
-            if (datetimePair) datetimePair.style.display = checked ? 'none' : '';
-            if (datePair) datePair.style.display = checked ? '' : 'none';
-            if (fieldStartsAt) fieldStartsAt.required = !checked;
-            if (fieldEndsAt) fieldEndsAt.required = !checked;
-
-            if (!checked) {
-                const startDate = fieldStartsAtDate ? fieldStartsAtDate.value : '';
-                const endDate = fieldEndsAtDate ? fieldEndsAtDate.value : '';
-                if (startDate && fieldStartsAt) {
-                    fieldStartsAt.value = startDate + (fieldStartsAt.value ? 'T' + fieldStartsAt.value.slice(11) : 'T09:00');
-                }
-                if (endDate && fieldEndsAt) {
-                    fieldEndsAt.value = endDate + (fieldEndsAt.value ? 'T' + fieldEndsAt.value.slice(11) : 'T10:00');
-                }
-                return;
-            }
-
-            if (fieldStartsAt && fieldStartsAt.value && fieldStartsAtDate) {
-                fieldStartsAtDate.value = fieldStartsAt.value.slice(0, 10);
-            }
-            if (fieldEndsAt && fieldEndsAt.value && fieldEndsAtDate) {
-                fieldEndsAtDate.value = fieldEndsAt.value.slice(0, 10);
-            }
-            if (fieldEndsAtDate && fieldStartsAtDate) {
-                fieldEndsAtDate.min = fieldStartsAtDate.value || '';
-            }
-        }
-
         function toggleMeet(checked) {
             if (meetGenerateRow) meetGenerateRow.classList.toggle('is-active', checked);
             if (meetSub) meetSub.textContent = checked ? 'Link será gerado ao salvar' : 'Adicionar videochamada';
+        }
+
+        function splitDatetimeValue(value) {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return { date: '', time: '' };
+            }
+            const chunks = raw.split('T');
+            return {
+                date: chunks[0] || '',
+                time: (chunks[1] || '').slice(0, 5),
+            };
+        }
+
+        function composeDatetimeValue(dateValue, timeValue) {
+            const datePart = String(dateValue || '').trim();
+            const timePart = String(timeValue || '').trim().slice(0, 5);
+            if (!datePart || !timePart) {
+                return '';
+            }
+            return datePart + 'T' + timePart;
+        }
+
+        function parseDateTimeParts(dateValue, timeValue) {
+            const combined = composeDatetimeValue(dateValue, timeValue);
+            if (!combined) {
+                return null;
+            }
+            const parsed = new Date(combined);
+            if (isNaN(parsed.getTime())) {
+                return null;
+            }
+            return parsed;
         }
 
         function toDatetimeLocal(date) {
@@ -160,34 +168,132 @@
                 + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
         }
 
+        function setTimedStartParts(value) {
+            const parts = splitDatetimeValue(value);
+            if (fieldStartsAtDatePart) fieldStartsAtDatePart.value = parts.date;
+            if (fieldStartsAtTimePart) fieldStartsAtTimePart.value = parts.time;
+        }
+
+        function setTimedEndParts(value) {
+            const parts = splitDatetimeValue(value);
+            if (fieldEndsAtDatePart) fieldEndsAtDatePart.value = parts.date;
+            if (fieldEndsAtTimePart) fieldEndsAtTimePart.value = parts.time;
+        }
+
+        function syncHiddenDatetimeFields() {
+            if (fieldStartsAt) {
+                fieldStartsAt.value = composeDatetimeValue(
+                    fieldStartsAtDatePart ? fieldStartsAtDatePart.value : '',
+                    fieldStartsAtTimePart ? fieldStartsAtTimePart.value : ''
+                );
+            }
+            if (fieldEndsAt) {
+                fieldEndsAt.value = composeDatetimeValue(
+                    fieldEndsAtDatePart ? fieldEndsAtDatePart.value : '',
+                    fieldEndsAtTimePart ? fieldEndsAtTimePart.value : ''
+                );
+            }
+        }
+
+        function syncTimedMinConstraints() {
+            const startDate = fieldStartsAtDatePart ? fieldStartsAtDatePart.value : '';
+            const startTime = fieldStartsAtTimePart ? fieldStartsAtTimePart.value : '';
+            const endDate = fieldEndsAtDatePart ? fieldEndsAtDatePart.value : '';
+
+            if (fieldEndsAtDatePart) {
+                fieldEndsAtDatePart.min = startDate || '';
+            }
+            if (fieldEndsAtTimePart) {
+                if (startDate && endDate && startDate === endDate) {
+                    fieldEndsAtTimePart.min = startTime || '';
+                } else {
+                    fieldEndsAtTimePart.min = '';
+                }
+            }
+        }
+
+        function toggleAllDay(checked) {
+            if (datetimePair) datetimePair.style.display = checked ? 'none' : '';
+            if (datePair) datePair.style.display = checked ? '' : 'none';
+            if (fieldStartsAt) fieldStartsAt.required = true;
+            if (fieldEndsAt) fieldEndsAt.required = true;
+
+            if (checked) {
+                if (fieldStartsAtDatePart && fieldStartsAtDate && fieldStartsAtDatePart.value) {
+                    fieldStartsAtDate.value = fieldStartsAtDatePart.value;
+                }
+                if (fieldEndsAtDatePart && fieldEndsAtDate && fieldEndsAtDatePart.value) {
+                    fieldEndsAtDate.value = fieldEndsAtDatePart.value;
+                }
+                if (fieldEndsAtDate && fieldStartsAtDate) {
+                    fieldEndsAtDate.min = fieldStartsAtDate.value || '';
+                }
+                return;
+            }
+
+            const startDate = fieldStartsAtDate ? fieldStartsAtDate.value : '';
+            const endDate = fieldEndsAtDate ? fieldEndsAtDate.value : '';
+            if (startDate && fieldStartsAtDatePart) {
+                fieldStartsAtDatePart.value = startDate;
+            }
+            if (endDate && fieldEndsAtDatePart) {
+                fieldEndsAtDatePart.value = endDate;
+            }
+            if (fieldStartsAtTimePart && !fieldStartsAtTimePart.value) {
+                fieldStartsAtTimePart.value = '09:00';
+            }
+            if (fieldEndsAtTimePart && !fieldEndsAtTimePart.value) {
+                fieldEndsAtTimePart.value = '10:00';
+            }
+            syncTimedMinConstraints();
+            syncHiddenDatetimeFields();
+        }
+
         function setupDateSync() {
             if (!fieldStartsAt || !fieldEndsAt || !fieldStartsAtDate || !fieldEndsAtDate) {
                 return;
             }
 
-            fieldStartsAt.addEventListener('focus', function () { fieldStartsAt._prev = fieldStartsAt.value; });
-            fieldStartsAt.addEventListener('change', function () {
-                if (!fieldStartsAt.value) return;
-                const newStart = new Date(fieldStartsAt.value);
-                if (!fieldEndsAt.value) {
-                    fieldEndsAt.value = toDatetimeLocal(new Date(newStart.getTime() + 3600000));
-                } else {
-                    const oldStart = fieldStartsAt._prev ? new Date(fieldStartsAt._prev) : null;
-                    const currentEnd = new Date(fieldEndsAt.value);
-                    let duration = (oldStart && !isNaN(oldStart.getTime())) ? currentEnd - oldStart : 3600000;
-                    if (duration <= 0) duration = 3600000;
-                    fieldEndsAt.value = toDatetimeLocal(new Date(newStart.getTime() + duration));
-                }
-                fieldStartsAt._prev = fieldStartsAt.value;
-                fieldEndsAt.min = fieldStartsAt.value;
-            });
+            const hasTimedSplitInputs = fieldStartsAtDatePart && fieldStartsAtTimePart && fieldEndsAtDatePart && fieldEndsAtTimePart;
 
-            fieldEndsAt.addEventListener('change', function () {
-                if (!fieldEndsAt.value || !fieldStartsAt.value) return;
-                if (new Date(fieldEndsAt.value) <= new Date(fieldStartsAt.value)) {
-                    fieldEndsAt.value = toDatetimeLocal(new Date(new Date(fieldStartsAt.value).getTime() + 3600000));
-                }
-            });
+            if (hasTimedSplitInputs) {
+                const handleTimedStartChange = function () {
+                    const newStart = parseDateTimeParts(fieldStartsAtDatePart.value, fieldStartsAtTimePart.value);
+                    if (!newStart) {
+                        syncHiddenDatetimeFields();
+                        return;
+                    }
+
+                    const oldStart = fieldStartsAt.value ? new Date(fieldStartsAt.value) : null;
+                    const currentEnd = parseDateTimeParts(fieldEndsAtDatePart.value, fieldEndsAtTimePart.value);
+
+                    if (!currentEnd) {
+                        setTimedEndParts(toDatetimeLocal(new Date(newStart.getTime() + 3600000)));
+                    } else {
+                        let duration = (oldStart && !isNaN(oldStart.getTime())) ? currentEnd - oldStart : 3600000;
+                        if (duration <= 0) duration = 3600000;
+                        setTimedEndParts(toDatetimeLocal(new Date(newStart.getTime() + duration)));
+                    }
+
+                    syncTimedMinConstraints();
+                    syncHiddenDatetimeFields();
+                };
+
+                const handleTimedEndChange = function () {
+                    const start = parseDateTimeParts(fieldStartsAtDatePart.value, fieldStartsAtTimePart.value);
+                    const end = parseDateTimeParts(fieldEndsAtDatePart.value, fieldEndsAtTimePart.value);
+                    if (start && end && end <= start) {
+                        setTimedEndParts(toDatetimeLocal(new Date(start.getTime() + 3600000)));
+                    }
+                    syncTimedMinConstraints();
+                    syncHiddenDatetimeFields();
+                };
+
+                fieldStartsAtDatePart.addEventListener('change', handleTimedStartChange);
+                fieldStartsAtTimePart.addEventListener('change', handleTimedStartChange);
+                fieldEndsAtDatePart.addEventListener('change', handleTimedEndChange);
+                fieldEndsAtTimePart.addEventListener('change', handleTimedEndChange);
+            }
 
             fieldStartsAtDate.addEventListener('focus', function () { fieldStartsAtDate._prev = fieldStartsAtDate.value; });
             fieldStartsAtDate.addEventListener('change', function () {
@@ -233,8 +339,13 @@
                 return true;
             }
 
+            syncHiddenDatetimeFields();
             const startValue = fieldStartsAt ? fieldStartsAt.value : '';
             const endValue = fieldEndsAt ? fieldEndsAt.value : '';
+            if (!startValue || !endValue) {
+                notifyInvalid('Informe data e hora de início e fim.');
+                return false;
+            }
             if (startValue && endValue && new Date(endValue) <= new Date(startValue)) {
                 notifyInvalid('O horário de fim deve ser posterior ao horário de início.');
                 return false;
@@ -254,15 +365,28 @@
                 const now = new Date();
                 return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
             })();
-            if (fieldStartsAt) {
-                fieldStartsAt.value = baseDate + 'T09:00';
-                fieldStartsAt.min = '';
-                fieldStartsAt._prev = fieldStartsAt.value;
+            if (fieldStartsAtDatePart) {
+                fieldStartsAtDatePart.value = baseDate;
             }
-            if (fieldEndsAt) {
-                fieldEndsAt.value = baseDate + 'T10:00';
-                fieldEndsAt.min = baseDate + 'T09:00';
+            if (fieldStartsAtTimePart) {
+                fieldStartsAtTimePart.value = '09:00';
             }
+            if (fieldEndsAtDatePart) {
+                fieldEndsAtDatePart.value = baseDate;
+            }
+            if (fieldEndsAtTimePart) {
+                fieldEndsAtTimePart.value = '10:00';
+            }
+            if (fieldStartsAtDate) {
+                fieldStartsAtDate.value = baseDate;
+                fieldStartsAtDate._prev = baseDate;
+            }
+            if (fieldEndsAtDate) {
+                fieldEndsAtDate.value = baseDate;
+                fieldEndsAtDate.min = baseDate;
+            }
+            syncTimedMinConstraints();
+            syncHiddenDatetimeFields();
             toggleAllDay(false);
             resetMeetUI(null);
             modal.classList.add('is-open');
@@ -280,8 +404,6 @@
             if (fieldTitle) fieldTitle.value = eventData.title || '';
             if (fieldLocation) fieldLocation.value = eventData.location || '';
             if (fieldDescription) fieldDescription.value = eventData.description || '';
-            if (fieldAllDay) fieldAllDay.checked = !!eventData.is_all_day;
-            toggleAllDay(!!eventData.is_all_day);
 
             if (eventData.is_all_day) {
                 const startDate = (eventData.starts_at || '').slice(0, 10);
@@ -294,19 +416,28 @@
                     fieldEndsAtDate.value = endDate;
                     fieldEndsAtDate.min = startDate;
                 }
+
+                setTimedStartParts(startDate + 'T09:00');
+                setTimedEndParts((endDate || startDate) + 'T10:00');
             } else {
                 const startValue = eventData.starts_at && eventData.starts_at.length === 16 ? eventData.starts_at : String(eventData.starts_at || '').slice(0, 16);
                 const endValue = eventData.ends_at && eventData.ends_at.length === 16 ? eventData.ends_at : String(eventData.ends_at || '').slice(0, 16);
-                if (fieldStartsAt) {
-                    fieldStartsAt.value = startValue;
-                    fieldStartsAt._prev = startValue;
+                if (fieldStartsAtDate) {
+                    fieldStartsAtDate.value = startValue.slice(0, 10);
+                    fieldStartsAtDate._prev = startValue.slice(0, 10);
                 }
-                if (fieldEndsAt) {
-                    fieldEndsAt.value = endValue;
-                    fieldEndsAt.min = startValue;
+                if (fieldEndsAtDate) {
+                    fieldEndsAtDate.value = endValue.slice(0, 10);
+                    fieldEndsAtDate.min = startValue.slice(0, 10);
                 }
+                setTimedStartParts(startValue);
+                setTimedEndParts(endValue);
             }
 
+            syncTimedMinConstraints();
+            syncHiddenDatetimeFields();
+            if (fieldAllDay) fieldAllDay.checked = !!eventData.is_all_day;
+            toggleAllDay(!!eventData.is_all_day);
             resetMeetUI(eventData.meet_link || null);
             modal.classList.add('is-open');
             window.setTimeout(function () {

@@ -34,23 +34,31 @@
               </div>
               <span class="cal-allday-label">Dia inteiro</span>
             </label>
-            <div id="datetimePair" class="cal-datetime-pair">
+            <div id="datetimePair" class="cal-datetime-pair cal-datetime-pair--timed">
               <div class="cal-datetime-col">
                 <span class="cal-datetime-sublabel">Início</span>
-                <input type="datetime-local" name="starts_at" id="fieldStartsAt" class="cal-field-input" required>
+                <div class="cal-datetime-inline">
+                  <input type="date" id="fieldStartsAtDatePart" class="cal-field-input" aria-label="Data de início">
+                  <input type="time" id="fieldStartsAtTimePart" class="cal-field-input cal-field-time" step="300" aria-label="Hora de início">
+                </div>
+                <input type="hidden" name="starts_at" id="fieldStartsAt" required>
               </div>
               <div class="cal-datetime-col">
                 <span class="cal-datetime-sublabel">Fim</span>
-                <input type="datetime-local" name="ends_at" id="fieldEndsAt" class="cal-field-input" required>
+                <div class="cal-datetime-inline">
+                  <input type="date" id="fieldEndsAtDatePart" class="cal-field-input" aria-label="Data de fim">
+                  <input type="time" id="fieldEndsAtTimePart" class="cal-field-input cal-field-time" step="300" aria-label="Hora de fim">
+                </div>
+                <input type="hidden" name="ends_at" id="fieldEndsAt" required>
               </div>
             </div>
-            <div id="datePair" class="cal-datetime-pair" style="display:none">
+            <div id="datePair" class="cal-datetime-pair cal-datetime-pair--all-day" style="display:none">
               <div class="cal-datetime-col">
-                <span class="cal-datetime-sublabel">Data início</span>
+                <span class="cal-datetime-sublabel">Início</span>
                 <input type="date" id="fieldStartsAtDate" class="cal-field-input">
               </div>
               <div class="cal-datetime-col" id="fieldEndsAtDateCol">
-                <span class="cal-datetime-sublabel">Data fim</span>
+                <span class="cal-datetime-sublabel">Fim</span>
                 <input type="date" id="fieldEndsAtDate" class="cal-field-input">
               </div>
             </div>
