@@ -219,6 +219,12 @@
   cursor: pointer;
 }
 
+input.cdp-trigger,
+.etapa-v4-cell-date .cdp-trigger,
+.etapa-v4-cell-date .editable-field-input.cdp-trigger {
+  text-align: left;
+}
+
 .cdp-trigger.cdp-active {
   border-color: var(--app-color-primary);
   box-shadow: 0 0 0 3px rgba(0, 90, 146, 0.09);

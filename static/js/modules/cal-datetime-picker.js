@@ -21,6 +21,18 @@
         return p[2] + '/' + p[1] + '/' + p[0];
     }
 
+    function parseDateBR(display) {
+        var raw = (display || '').trim();
+        if (!raw) return '';
+        var m = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+        if (!m) return '';
+        var day = parseInt(m[1], 10);
+        var mon = parseInt(m[2], 10);
+        var year = parseInt(m[3], 10);
+        if (mon < 1 || mon > 12 || day < 1 || day > 31 || year < 1900) return '';
+        return year + '-' + pad(mon) + '-' + pad(day);
+    }
+
     var nativeValueDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
 
     function wrapDateInputValue(inputEl) {
@@ -36,6 +48,21 @@
             },
             configurable: true
         });
+    }
+
+    function syncDateFromDisplay(inputEl) {
+        var display = nativeValueDesc.get.call(inputEl);
+        var iso = parseDateBR(display);
+        if (iso) {
+            inputEl.dataset.cdpValue = iso;
+            nativeValueDesc.set.call(inputEl, formatDateBR(iso));
+            dispatchChange(inputEl);
+        } else if (!display.trim()) {
+            inputEl.dataset.cdpValue = '';
+            dispatchChange(inputEl);
+        } else {
+            nativeValueDesc.set.call(inputEl, formatDateBR(inputEl.dataset.cdpValue));
+        }
     }
 
     function dispatchChange(el) {
@@ -206,11 +233,14 @@
 
     function selectDate(dateStr) {
         dateState.selected = dateStr;
-        if (dateAnchor) {
-            dateAnchor.value = dateStr;
-            dispatchChange(dateAnchor);
-        }
+        var anchor = dateAnchor;
         closeDatePicker();
+        if (anchor) {
+            anchor.value = dateStr;
+            dispatchChange(anchor);
+            anchor.focus();
+            anchor.blur();
+        }
     }
 
     function openDatePicker(inputEl) {
@@ -246,8 +276,9 @@
     function initDatePicker(inputEl) {
         if (!inputEl) return;
         inputEl.type = 'text';
-        inputEl.readOnly = true;
         inputEl.classList.add('cdp-trigger');
+        inputEl.setAttribute('placeholder', 'DD/MM/AAAA');
+        inputEl.setAttribute('maxlength', '10');
         wrapDateInputValue(inputEl);
 
         inputEl.addEventListener('click', function (e) {
@@ -260,10 +291,38 @@
         });
 
         inputEl.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                openDatePicker(inputEl);
+            if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                closeDatePicker();
             }
+        });
+
+        inputEl.addEventListener('input', function () {
+            var raw = nativeValueDesc.get.call(inputEl).replace(/\D/g, '');
+            var formatted = '';
+            if (raw.length > 8) raw = raw.slice(0, 8);
+            if (raw.length > 4) {
+                formatted = raw.slice(0, 2) + '/' + raw.slice(2, 4) + '/' + raw.slice(4);
+            } else if (raw.length > 2) {
+                formatted = raw.slice(0, 2) + '/' + raw.slice(2);
+            } else {
+                formatted = raw;
+            }
+            nativeValueDesc.set.call(inputEl, formatted);
+
+            var cursorPos = formatted.length;
+            inputEl.setSelectionRange(cursorPos, cursorPos);
+
+            if (formatted.length === 10) {
+                var iso = parseDateBR(formatted);
+                if (iso) {
+                    inputEl.dataset.cdpValue = iso;
+                    dispatchChange(inputEl);
+                }
+            }
+        });
+
+        inputEl.addEventListener('blur', function () {
+            syncDateFromDisplay(inputEl);
         });
     }
 
@@ -342,11 +401,14 @@
     }
 
     function selectTime(timeStr) {
-        if (timeAnchor) {
-            timeAnchor.value = timeStr;
-            dispatchChange(timeAnchor);
-        }
+        var anchor = timeAnchor;
         closeTimePicker();
+        if (anchor) {
+            anchor.value = timeStr;
+            dispatchChange(anchor);
+            anchor.focus();
+            anchor.blur();
+        }
     }
 
     function openTimePicker(inputEl) {
@@ -372,12 +434,29 @@
         }
     }
 
+    function validateTimeValue(inputEl) {
+        var raw = (inputEl.value || '').trim();
+        if (!raw) return;
+        var match = raw.match(/^(\d{1,2}):?(\d{2})$/);
+        if (match) {
+            var h = Math.min(23, Math.max(0, parseInt(match[1], 10)));
+            var m = Math.min(59, Math.max(0, parseInt(match[2], 10)));
+            inputEl.value = pad(h) + ':' + pad(m);
+            dispatchChange(inputEl);
+        } else {
+            var prev = inputEl.dataset.cdpPrev || '';
+            inputEl.value = prev;
+        }
+    }
+
     function initTimePicker(inputEl) {
         if (!inputEl) return;
         inputEl.type = 'text';
-        inputEl.readOnly = true;
         inputEl.removeAttribute('step');
         inputEl.classList.add('cdp-trigger');
+        inputEl.setAttribute('placeholder', 'HH:MM');
+        inputEl.setAttribute('maxlength', '5');
+        inputEl.dataset.cdpPrev = inputEl.value || '';
 
         inputEl.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -389,10 +468,18 @@
         });
 
         inputEl.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                openTimePicker(inputEl);
+            if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                closeTimePicker();
             }
+        });
+
+        inputEl.addEventListener('blur', function () {
+            validateTimeValue(inputEl);
+            inputEl.dataset.cdpPrev = inputEl.value || '';
+        });
+
+        inputEl.addEventListener('change', function () {
+            inputEl.dataset.cdpPrev = inputEl.value || '';
         });
     }
 
@@ -435,9 +522,16 @@
     }, true);
 
     /* ── Public API ─────────────────────────────────────────────────── */
+    function isOpen() {
+        var dOpen = datePopover && datePopover.classList.contains('is-open');
+        var tOpen = timePopover && timePopover.classList.contains('is-open');
+        return !!(dOpen || tOpen);
+    }
+
     window.CalDatetimePicker = {
         initDatePicker: initDatePicker,
         initTimePicker: initTimePicker,
-        closeAll: closeAll
+        closeAll: closeAll,
+        isOpen: isOpen
     };
 })();

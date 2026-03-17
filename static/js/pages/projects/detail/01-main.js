@@ -1238,44 +1238,49 @@
         }
 
         inlineDateInputs.forEach(input => {
+            if (window.CalDatetimePicker) {
+                CalDatetimePicker.initDatePicker(input);
+            }
             input.addEventListener('input', function () {
                 syncInlineDateEmptyState(input);
             });
             input.addEventListener('change', function () {
                 syncInlineDateEmptyState(input);
             });
-            input.addEventListener('pointerdown', function (event) {
-                if (!isInlineComposerOpen() || event.button !== 0 || inlineDatePickerOpening) {
-                    return;
-                }
-                const missingSpace = missingDatePickerViewportSpace(input);
-                if (missingSpace <= 0) {
-                    return;
-                }
-                event.preventDefault();
-                const maxDelta = Math.round(window.innerHeight * 0.72);
-                const delta = Math.min(maxDelta, missingSpace + 22);
-                window.scrollBy(0, delta);
-                inlineDatePickerOpening = true;
-                requestAnimationFrame(function () {
-                    openInlineDatePicker(input);
-                    window.setTimeout(function () {
-                        inlineDatePickerOpening = false;
-                    }, 180);
+            if (!window.CalDatetimePicker) {
+                input.addEventListener('pointerdown', function (event) {
+                    if (!isInlineComposerOpen() || event.button !== 0 || inlineDatePickerOpening) {
+                        return;
+                    }
+                    const missingSpace = missingDatePickerViewportSpace(input);
+                    if (missingSpace <= 0) {
+                        return;
+                    }
+                    event.preventDefault();
+                    const maxDelta = Math.round(window.innerHeight * 0.72);
+                    const delta = Math.min(maxDelta, missingSpace + 22);
+                    window.scrollBy(0, delta);
+                    inlineDatePickerOpening = true;
+                    requestAnimationFrame(function () {
+                        openInlineDatePicker(input);
+                        window.setTimeout(function () {
+                            inlineDatePickerOpening = false;
+                        }, 180);
+                    });
                 });
-            });
-            input.addEventListener('focus', function () {
-                if (!isInlineComposerOpen() || inlineDatePickerOpening) {
-                    return;
-                }
-                const missingSpace = missingDatePickerViewportSpace(input);
-                if (missingSpace <= 0) {
-                    return;
-                }
-                const maxDelta = Math.round(window.innerHeight * 0.72);
-                const delta = Math.min(maxDelta, missingSpace + 22);
-                window.scrollBy(0, delta);
-            });
+                input.addEventListener('focus', function () {
+                    if (!isInlineComposerOpen() || inlineDatePickerOpening) {
+                        return;
+                    }
+                    const missingSpace = missingDatePickerViewportSpace(input);
+                    if (missingSpace <= 0) {
+                        return;
+                    }
+                    const maxDelta = Math.round(window.innerHeight * 0.72);
+                    const delta = Math.min(maxDelta, missingSpace + 22);
+                    window.scrollBy(0, delta);
+                });
+            }
         });
         syncAllInlineDateEmptyState();
         syncInlineStatusControls();
@@ -1780,6 +1785,9 @@
                     if (field.includes('data')) {
                         input.type = 'date';
                         input.value = originalDateValue;
+                        if (window.CalDatetimePicker) {
+                            CalDatetimePicker.initDatePicker(input);
+                        }
                     } else {
                         input.type = 'text';
                         input.value = originalValue === '-' ? '' : originalValue;
@@ -1869,7 +1877,10 @@
                         });
                 }
 
-                input.addEventListener('blur', saveChanges);
+                input.addEventListener('blur', function () {
+                    if (window.CalDatetimePicker && CalDatetimePicker.isOpen()) return;
+                    saveChanges();
+                });
 
                 input.addEventListener('keydown', function (event) {
                     if (event.key === 'Enter' && field !== 'descricao' && !event.shiftKey) {

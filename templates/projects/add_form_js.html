@@ -761,5 +761,10 @@
 
         resetResultadoEIndicadores();
         updateSubmitState();
+
+        if (window.CalDatetimePicker) {
+            var psd = document.getElementById('project_start_date');
+            if (psd) CalDatetimePicker.initDatePicker(psd);
+        }
     });
 </script> 

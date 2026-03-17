@@ -4,6 +4,7 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/projects/list.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/partials/cal-datetime-picker.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -571,5 +572,6 @@
         })();
     });
 </script>
+<script src="{{ url_for('static', filename='js/modules/cal-datetime-picker.js') }}"></script>
 {% include "projects/add_form_js.html" %}
 {% endblock %}
