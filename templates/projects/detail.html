@@ -5,6 +5,7 @@
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/projects/detail.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/calendar-event-modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/partials/cal-datetime-picker.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -839,6 +840,7 @@
         stageDeleteFormSelector: "form[data-etapa-delete-form]",
     };
 </script>
+<script src="{{ url_for('static', filename='js/modules/cal-datetime-picker.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modules/calendar-event-modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/projects/detail/01-main.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/projects/detail/02-import-model.js') }}"></script>

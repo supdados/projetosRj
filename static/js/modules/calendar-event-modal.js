@@ -115,6 +115,7 @@
         }
 
         function closeModal() {
+            if (window.CalDatetimePicker) window.CalDatetimePicker.closeAll();
             modal.classList.remove('is-open');
         }
 
@@ -491,6 +492,16 @@
         }
 
         setupDateSync();
+
+        if (window.CalDatetimePicker) {
+            var CDP = window.CalDatetimePicker;
+            if (fieldStartsAtDatePart) CDP.initDatePicker(fieldStartsAtDatePart);
+            if (fieldEndsAtDatePart) CDP.initDatePicker(fieldEndsAtDatePart);
+            if (fieldStartsAtDate) CDP.initDatePicker(fieldStartsAtDate);
+            if (fieldEndsAtDate) CDP.initDatePicker(fieldEndsAtDate);
+            if (fieldStartsAtTimePart) CDP.initTimePicker(fieldStartsAtTimePart);
+            if (fieldEndsAtTimePart) CDP.initTimePicker(fieldEndsAtTimePart);
+        }
 
         const api = {
             closeModal: closeModal,
