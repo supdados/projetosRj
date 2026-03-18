@@ -1,10 +1,5 @@
 // === task-item-helpers.js — Funções utilitárias globais (htmlEncode, getTaskItem*, setTaskItem*, etc.) ===
-    // Utilidade global de escape HTML (usada fora de IIFEs)
-    function htmlEncode(s) {
-        var d = document.createElement('div');
-        d.textContent = String(s == null ? '' : s);
-        return d.innerHTML;
-    }
+    var htmlEncode = window.escapeHtml;
 
     function getTaskItemRowById(itemId) {
         return document.querySelector('.task-item-row[data-item-id="' + itemId + '"]');
@@ -179,11 +174,7 @@
         return removed;
     }
 
-    function escapeTaskItemHtml(text) {
-        var div = document.createElement('div');
-        div.textContent = text == null ? '' : String(text);
-        return div.innerHTML;
-    }
+    var escapeTaskItemHtml = window.escapeHtml;
 
     function getTaskItemStatus(row) {
         if (!row) return 'nao_iniciada';

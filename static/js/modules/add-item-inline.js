@@ -18,11 +18,7 @@
         ? config.projectOptions.map(normalizeProjectOption).filter(function (option) { return !!option; })
         : [];
 
-    function escapeHtml(text) {
-        var div = document.createElement('div');
-        div.textContent = text == null ? '' : String(text);
-        return div.innerHTML;
-    }
+    var escapeHtml = window.escapeHtml;
 
     function normalizeProjectValue(value) {
         var normalized = String(value == null ? '' : value).trim();

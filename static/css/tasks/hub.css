@@ -153,19 +153,6 @@
     padding: 0 0.36rem;
 }
 
-.tasks-chip {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    border: 1px solid #d7e4f1;
-    background: #f7fbff;
-    color: #4f6d8f;
-    font-size: var(--ds-font-size-xs);
-    font-weight: var(--ds-font-weight-semibold);
-    padding: 0.26rem 0.62rem;
-    white-space: nowrap;
-}
-
 .tasks-filters {
     background: var(--tasks-card);
     border: 1px solid var(--tasks-border);
@@ -191,10 +178,6 @@
     gap: 0.26rem;
     min-width: 0;
     flex: 1 1 0;
-}
-
-.tasks-field-search {
-    flex: 1.35 1 0;
 }
 
 .tasks-field-project {
@@ -476,10 +459,6 @@
         flex: 1.7 1 0;
     }
 
-    .tasks-field-search {
-        flex: 1.15 1 0;
-    }
-
     .tasks-label {
         font-size: 11px;
     }
@@ -504,9 +483,6 @@
         flex: 1.55 1 0;
     }
 
-    .tasks-field-search {
-        flex: 1 1 0;
-    }
 
     .tasks-input {
         padding-inline: 0.4rem;
@@ -774,26 +750,6 @@
     z-index: 0;
 }
 
-.task-hub-page .task-hub-item-context {
-    margin: 0.24rem 0 0;
-    color: #72859a;
-    font-size: var(--ds-font-size-2xs);
-    display: inline-flex;
-    gap: 0.24rem;
-    flex-wrap: wrap;
-}
-
-.task-hub-page .task-hub-item-context a {
-    color: #466687;
-    text-decoration: none;
-    font-weight: var(--ds-font-weight-semibold);
-}
-
-.task-hub-page .task-hub-item-context a:hover {
-    text-decoration: underline;
-    color: #1f4f7e;
-}
-
 .task-hub-page .task-hub-add-row {
     border-top: 1px dashed #d6e4f2;
     margin: 0;
@@ -811,7 +767,6 @@
     align-items: center;
 }
 
-.task-hub-page .task-hub-add-row .task-item-add-responsavel-picker,
 .task-hub-page .task-hub-add-row .responsavel-picker-trigger {
     width: 100%;
     justify-content: space-between;
@@ -1232,13 +1187,6 @@ html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-cou
     color: var(--app-color-text-secondary);
 }
 
-html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-item-context {
-    color: var(--app-color-text-muted);
-}
-
-html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-item-context a {
-    color: var(--app-color-text-secondary);
-}
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-add-row {
     border-top-color: #2a4258;

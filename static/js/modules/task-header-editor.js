@@ -25,11 +25,7 @@
         var lastSnapshot = null;
         var hideProjectDropdown = function () {};
 
-        function escapeHtml(s) {
-            var div = document.createElement('div');
-            div.textContent = s;
-            return div.innerHTML;
-        }
+        var escapeHtml = window.escapeHtml;
 
         function normalizeProjectId(value) {
             return String(value || '').trim();

@@ -230,14 +230,6 @@
   margin-bottom: 36px;
 }
 
-.lp-panel-title {
-  font-family: var(--ds-font-family-heading);
-  font-size: 1.75rem;
-  font-weight: var(--ds-font-weight-bold);
-  color: var(--app-color-text-primary);
-  margin-bottom: 8px;
-  letter-spacing: var(--ds-letter-spacing-tight);
-}
 
 .lp-panel-subtitle {
   font-size: var(--ds-font-size-sm);
@@ -597,10 +589,6 @@ html[data-theme="dark"] .lp-panel-edge {
 }
 
 /* Dark: panel titles */
-html[data-theme="dark"] body:not(.is-authenticated) .lp-panel-title {
-  color: #dbe8f6;
-}
-
 html[data-theme="dark"] body:not(.is-authenticated) .lp-panel-subtitle {
   color: #8faec9;
 }

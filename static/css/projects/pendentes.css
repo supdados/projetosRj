@@ -249,8 +249,7 @@
         border-color: #cfe0f7;
     }
 
-    .pending-chip-sem_data,
-    .pending-chip-outras {
+    .pending-chip-sem_data {
         color: #4c5563;
         background: #edf0f4;
         border-color: #d8dee7;

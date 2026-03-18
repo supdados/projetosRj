@@ -777,110 +777,6 @@
    GLASS TEMPLATE FORM STYLES
    ==================================== */
 
-/* Glass Form Container */
-.glass-form-container {
-    background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.95) 0%, 
-        rgba(255, 255, 255, 0.9) 100%);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 20px;
-    box-shadow: 
-        0 20px 60px rgba(0, 90, 146, 0.15),
-        0 8px 32px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.6);
-    overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    opacity: 0;
-    transform: translateY(30px);
-}
-
-.glass-form-container.form-animate-in {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Form Header Glass */
-.glass-form-header {
-    background: linear-gradient(135deg, 
-        rgba(0, 90, 146, 0.9) 0%, 
-        rgba(0, 75, 121, 0.85) 100%);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 2rem 2.5rem;
-    color: white;
-    position: relative;
-    overflow: hidden;
-}
-
-.glass-form-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.15) 0%, 
-        transparent 50%);
-    pointer-events: none;
-}
-
-.glass-form-header .header-content {
-    display: flex;
-    align-items: center;
-    position: relative;
-    z-index: 1;
-}
-
-.glass-form-header .header-icon-wrapper {
-    width: 60px;
-    height: 60px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.25) 0%, 
-        rgba(255, 255, 255, 0.1) 100%);
-    backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.glass-form-header .header-icon {
-    font-size: var(--ds-font-size-2xl);
-    color: rgba(255, 255, 255, 0.95);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.glass-form-header .form-title {
-    margin: 0;
-    font-size: var(--ds-font-size-3xl);
-    font-weight: var(--ds-font-weight-bold);
-    color: white;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.glass-form-header .form-subtitle {
-    margin: 0.5rem 0 0 0;
-    font-size: var(--ds-font-size-base);
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: var(--ds-font-weight-regular);
-}
-
-/* Form Body Glass */
-.glass-form-body {
-    padding: 2.5rem;
-    background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.1) 0%, 
-        rgba(248, 250, 252, 0.8) 100%);
-    backdrop-filter: blur(15px);
-    position: relative;
-}
-
 /* Template Stage Items */
 .stages-container-template {
     display: flex;
@@ -1054,34 +950,6 @@
     color: var(--text-muted);
 }
 
-/* Form Footer Glass */
-.glass-form-footer {
-    background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.9) 0%, 
-        rgba(248, 250, 252, 0.8) 100%);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid rgba(0, 90, 146, 0.15);
-    padding: 1.8rem 2.5rem;
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    position: relative;
-}
-
-.glass-form-footer::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 2.5rem;
-    right: 2.5rem;
-    height: 1px;
-    background: linear-gradient(90deg, 
-        transparent 0%, 
-        rgba(0, 90, 146, 0.2) 50%, 
-        transparent 100%);
-}
-
 /* Enhanced Card Header for template form */
 .glass-card-header {
     display: flex;
@@ -1139,12 +1007,6 @@
     font-weight: var(--ds-font-weight-bold);
 }
 
-.project-create-subtitle {
-    margin: 0.2rem 0 0;
-    color: #647a95;
-    font-size: var(--ds-font-size-md);
-}
-
 .project-create-close {
     margin: 0.05rem 0 0 auto !important;
     opacity: 0.68;
@@ -1185,12 +1047,6 @@
     font-weight: var(--ds-font-weight-bold);
     text-transform: uppercase;
     letter-spacing: var(--ds-letter-spacing-wide);
-}
-
-.project-create-helper {
-    margin: 0.4rem 0 0;
-    color: #647a95;
-    font-size: var(--ds-font-size-md);
 }
 
 /* Normaliza o espaçamento dos campos da criação rápida (inclui Prioridade). */

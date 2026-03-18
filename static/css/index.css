@@ -92,11 +92,6 @@
         max-width: 100%;
     }
 
-    .dashboard-page-v2 .dashboard-welcome-separator {
-        color: #88a2bd;
-        margin: 0 0.35rem;
-    }
-
     .dashboard-page-v2 .dashboard-welcome-date-wrap {
         display: flex;
         flex-direction: column;
@@ -333,20 +328,6 @@
         box-shadow: 0 7px 20px rgba(0, 90, 146, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.26);
     }
 
-    .dashboard-page-v2 .glass-btn-sm {
-        background: linear-gradient(135deg, rgba(0, 90, 146, 0.1) 0%, rgba(0, 90, 146, 0.05) 100%);
-        border: 1px solid rgba(0, 90, 146, 0.22) !important;
-        color: var(--ds-color-primary-600) !important;
-        transition: background var(--ds-transition-slow) ease, border-color var(--ds-transition-slow) ease;
-    }
-
-    .dashboard-page-v2 .glass-btn-sm:hover {
-        background: linear-gradient(135deg, rgba(0, 90, 146, 0.16) 0%, rgba(0, 90, 146, 0.09) 100%);
-        border-color: rgba(0, 90, 146, 0.32) !important;
-        transform: none;
-        color: var(--ds-color-primary-700) !important;
-    }
-
     .dashboard-page-v2 .glass-table-wrapper {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
         border-radius: 0 0 14px 14px;
@@ -529,43 +510,6 @@
         gap: 0.5rem;
     }
 
-    .dashboard-page-v2 .tasks-kpi-number-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 0.4rem 0.25rem;
-        border-radius: 8px;
-        border: 1px solid #dce7f3;
-        background: rgba(255, 255, 255, 0.64);
-        gap: 0.1rem;
-    }
-
-    .dashboard-page-v2 .tasks-kpi-number-card.tasks-kpi-done-card {
-        border-color: rgba(22, 163, 74, 0.25);
-        background: rgba(22, 163, 74, 0.06);
-    }
-
-    .dashboard-page-v2 .tasks-kpi-big-number {
-        font-size: var(--ds-font-size-xl);
-        font-weight: var(--ds-font-weight-extrabold);
-        color: #1a4d7a;
-        line-height: var(--ds-line-height-tight);
-    }
-
-    .dashboard-page-v2 .tasks-kpi-done-card .tasks-kpi-big-number {
-        color: #16a34a;
-    }
-
-    .dashboard-page-v2 .tasks-kpi-big-label {
-        font-size: var(--ds-font-size-2xs);
-        font-weight: var(--ds-font-weight-semibold);
-        color: #6a869f;
-        text-transform: uppercase;
-        letter-spacing: var(--ds-letter-spacing-wide);
-        text-align: center;
-    }
-
     /* Stacked progress bar */
     .dashboard-page-v2 .tasks-kpi-progress-section {
         display: flex;
@@ -671,21 +615,6 @@
     .dashboard-page-v2 .bar-nao-iniciada { background: #8198b1; }
     .dashboard-page-v2 .bar-empty { background: #e0e8f0; }
 
-    /* Urgente / Atenção KPI cards */
-    .dashboard-page-v2 .tasks-kpi-number-card.tasks-kpi-urgente-card {
-        border-color: rgba(220, 38, 38, 0.22);
-        background: rgba(220, 38, 38, 0.05);
-    }
-    .dashboard-page-v2 .tasks-kpi-urgente-card .tasks-kpi-big-number {
-        color: #b91c1c;
-    }
-    .dashboard-page-v2 .tasks-kpi-number-card.tasks-kpi-atencao-card {
-        border-color: rgba(234, 88, 12, 0.22);
-        background: rgba(234, 88, 12, 0.05);
-    }
-    .dashboard-page-v2 .tasks-kpi-atencao-card .tasks-kpi-big-number {
-        color: #c2410c;
-    }
 
     /* Priority breakdown */
     .dashboard-page-v2 .tasks-kpi-priority-section {
@@ -1248,31 +1177,6 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .glass-badge.pr
 
 /* KPI de tarefas da dashboard */
 
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-number-card {
-    background: rgba(35, 48, 66, 0.76);
-    border-color: rgba(99, 166, 219, 0.3);
-}
-
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-number-card.tasks-kpi-done-card {
-    background: rgba(73, 185, 135, 0.16);
-    border-color: rgba(73, 185, 135, 0.44);
-}
-
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-number-card.tasks-kpi-urgente-card {
-    background: rgba(220, 38, 38, 0.14);
-    border-color: rgba(220, 38, 38, 0.36);
-}
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-urgente-card .tasks-kpi-big-number {
-    color: #f2a5a5;
-}
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-number-card.tasks-kpi-atencao-card {
-    background: rgba(224, 119, 64, 0.14);
-    border-color: rgba(224, 119, 64, 0.36);
-}
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-atencao-card .tasks-kpi-big-number {
-    color: #e07740;
-}
-
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-priority-row {
     background: rgba(35, 48, 66, 0.6);
     border-color: rgba(99, 166, 219, 0.2);
@@ -1335,9 +1239,6 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-big-
     color: var(--app-color-text-primary);
 }
 
-html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-done-card .tasks-kpi-big-number {
-    color: #66d9a9;
-}
 
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-big-label,
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .tasks-kpi-progress-total,

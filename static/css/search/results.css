@@ -176,11 +176,6 @@
         background: #e7eefb;
     }
 
-    .search-result-badge-task-item {
-        color: #5f3f8a;
-        background: #ede3ff;
-    }
-
     .search-result-title {
         margin: 0;
         font-size: var(--ds-font-size-base);
@@ -333,12 +328,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .search-result-badge
     color: #f5dfbf;
 }
 
-html[data-theme="dark"] body.is-authenticated .main-content .search-result-badge-task-item {
-    background: rgba(217, 122, 122, 0.22);
-    border-color: rgba(217, 122, 122, 0.44);
-    color: #f6d0d0;
-}
-
 html[data-theme="dark"] body.is-authenticated .main-content .search-result-badge-project {
     background: rgba(78, 149, 204, 0.2);
     border-color: rgba(99, 166, 219, 0.42);
@@ -350,8 +339,7 @@ html[data-theme="dark"] body.is-authenticated .main-content .search-result-badge
 html[data-theme="dark"] body.is-authenticated .search-result-badge-project,
 html[data-theme="dark"] body.is-authenticated .search-result-badge-stage,
 html[data-theme="dark"] body.is-authenticated .search-result-badge-task,
-html[data-theme="dark"] body.is-authenticated .search-result-badge-event,
-html[data-theme="dark"] body.is-authenticated .search-result-badge-task-item {
+html[data-theme="dark"] body.is-authenticated .search-result-badge-event {
     border: 1px solid transparent;
 }
 

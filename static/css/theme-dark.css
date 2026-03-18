@@ -931,8 +931,7 @@ html[data-theme="dark"] body.is-authenticated .main-content .project-create-btn-
 html[data-theme="dark"] body.is-authenticated .main-content .btn-glass-primary,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-new-clean,
 html[data-theme="dark"] body.is-authenticated .main-content .dashboard-new-project-btn,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-task-save-edit,
-html[data-theme="dark"] body.is-authenticated .main-content .task-modal-submit-primary {
+html[data-theme="dark"] body.is-authenticated .main-content .btn-task-save-edit {
     background: linear-gradient(135deg, #4f95cc 0%, #3f84b9 100%);
     border-color: #3f84b9;
     color: #f8fbff;
@@ -964,8 +963,7 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-new-clean:hover
 html[data-theme="dark"] body.is-authenticated .main-content .btn-new-clean:focus,
 html[data-theme="dark"] body.is-authenticated .main-content .dashboard-new-project-btn:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .dashboard-new-project-btn:focus,
-html[data-theme="dark"] body.is-authenticated .main-content .btn-task-save-edit:hover,
-html[data-theme="dark"] body.is-authenticated .main-content .task-modal-submit-primary:hover {
+html[data-theme="dark"] body.is-authenticated .main-content .btn-task-save-edit:hover {
     background: linear-gradient(135deg, #63a6db 0%, #4f95cc 100%);
     border-color: #63a6db;
     color: #ffffff;
@@ -1087,19 +1085,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-action-
     background: rgba(217, 122, 122, 0.3);
     border-color: rgba(217, 122, 122, 0.66);
     color: #ffe3e3;
-}
-
-html[data-theme="dark"] body.is-authenticated .main-content .task-detail-v2 .task-item-del {
-    background: transparent;
-    border-color: transparent;
-    color: #a4b7cb;
-}
-
-html[data-theme="dark"] body.is-authenticated .main-content .task-detail-v2 .task-item-del:hover,
-html[data-theme="dark"] body.is-authenticated .main-content .task-detail-v2 .task-item-del:focus-visible {
-    background: rgba(217, 122, 122, 0.16);
-    border-color: transparent;
-    color: #ffb8b8;
 }
 
 

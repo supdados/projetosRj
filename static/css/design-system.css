@@ -259,18 +259,10 @@ h6 {
     font-weight: var(--ds-font-weight-semibold);
 }
 
-.ds-type-display,
 .ds-type-page-title,
 .ds-type-section-title,
 .ds-type-card-title {
     font-family: var(--ds-font-family-heading);
-}
-
-.ds-type-display {
-    font-size: var(--ds-font-size-4xl);
-    font-weight: var(--ds-font-weight-extrabold);
-    line-height: var(--ds-line-height-tight);
-    letter-spacing: var(--ds-letter-spacing-tight);
 }
 
 .ds-type-page-title {
@@ -310,179 +302,12 @@ h6 {
     letter-spacing: var(--ds-letter-spacing-normal);
 }
 
-.ds-type-caption {
-    font-family: var(--ds-font-family-body);
-    font-size: var(--ds-font-size-xs);
-    font-weight: var(--ds-font-weight-medium);
-    line-height: var(--ds-line-height-normal);
-    letter-spacing: var(--ds-letter-spacing-wide);
-}
-
 .ds-type-label {
     font-family: var(--ds-font-family-body);
     font-size: var(--ds-font-size-sm);
     font-weight: var(--ds-font-weight-semibold);
     line-height: var(--ds-line-height-normal);
     letter-spacing: var(--ds-letter-spacing-normal);
-}
-
-.ds-type-overline {
-    font-family: var(--ds-font-family-body);
-    font-size: var(--ds-font-size-2xs);
-    font-weight: var(--ds-font-weight-bold);
-    line-height: var(--ds-line-height-tight);
-    letter-spacing: var(--ds-letter-spacing-caps);
-    text-transform: uppercase;
-}
-
-.ds-type-code {
-    font-family: var(--ds-font-family-mono);
-    font-size: var(--ds-font-size-sm);
-    font-weight: var(--ds-font-weight-medium);
-    line-height: var(--ds-line-height-normal);
-    letter-spacing: var(--ds-letter-spacing-normal);
-}
-
-/* Components */
-.ds-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--ds-space-2);
-    border-radius: var(--ds-radius-md);
-    border: 1px solid transparent;
-    font-weight: var(--ds-font-weight-semibold);
-    font-size: var(--ds-font-size-md);
-    line-height: var(--ds-line-height-tight);
-    padding: 0.55rem 0.9rem;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background-color var(--ds-transition-base) ease, border-color var(--ds-transition-base) ease,
-        color var(--ds-transition-base) ease, box-shadow var(--ds-transition-base) ease,
-        transform var(--ds-transition-fast) ease;
-}
-
-.ds-btn:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.16);
-}
-
-.ds-btn:disabled,
-.ds-btn.is-disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.ds-btn-primary {
-    background: var(--ds-color-primary-600);
-    color: #fff;
-    border-color: var(--ds-color-primary-600);
-}
-
-.ds-btn-primary:hover {
-    background: var(--ds-color-primary-700);
-    border-color: var(--ds-color-primary-700);
-    color: #fff;
-}
-
-.ds-btn-secondary {
-    background: #fff;
-    color: var(--ds-color-primary-600);
-    border-color: #c8d8ed;
-}
-
-.ds-btn-secondary:hover {
-    background: #f6fbff;
-    color: var(--ds-color-primary-700);
-    border-color: #afc7e3;
-}
-
-.ds-btn-danger {
-    background: #fff1f1;
-    color: var(--ds-color-danger-600);
-    border-color: #fecaca;
-}
-
-.ds-btn-danger:hover {
-    background: #fef2f2;
-    color: #972d2d;
-    border-color: #f1c0c6;
-}
-
-.ds-field,
-.ds-input,
-.ds-select,
-.ds-textarea {
-    width: 100%;
-    border: 1px solid var(--ds-color-border-subtle);
-    border-radius: var(--ds-radius-md);
-    color: var(--ds-color-text-primary);
-    background: #fff;
-    padding: 0.55rem 0.75rem;
-    font-size: var(--ds-font-size-base);
-    transition: border-color var(--ds-transition-base) ease, box-shadow var(--ds-transition-base) ease;
-}
-
-.ds-input:focus,
-.ds-select:focus,
-.ds-textarea:focus,
-.ds-field:focus {
-    border-color: var(--ds-color-primary-500);
-    box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.12);
-    outline: none;
-}
-
-.ds-card {
-    background: var(--ds-color-bg-surface);
-    border: 1px solid var(--ds-color-border-subtle);
-    border-radius: var(--ds-radius-lg);
-    box-shadow: var(--ds-shadow-sm);
-}
-
-.ds-badge,
-.ds-chip {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    padding: 0.2rem 0.55rem;
-    font-size: var(--ds-font-size-xs);
-    font-weight: var(--ds-font-weight-bold);
-}
-
-.ds-badge-success {
-    color: #1f629a;
-    background: #e2f0fc;
-}
-
-.ds-badge-warning {
-    color: #6b4d00;
-    background: #fdf2d4;
-}
-
-.ds-badge-danger {
-    color: #972d2d;
-    background: #fef2f2;
-}
-
-.ds-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.ds-table th,
-.ds-table td {
-    border-bottom: 1px solid var(--ds-color-border-subtle);
-    vertical-align: middle;
-}
-
-.ds-empty-state {
-    border: 1px dashed #cbd5e1;
-    border-radius: var(--ds-radius-lg);
-    background: var(--ds-color-bg-muted);
-    color: var(--ds-color-text-secondary);
-    padding: var(--ds-space-6);
-    text-align: center;
 }
 
 /* Bridge (temporary/deprecated): keep old classes visually consistent while migration is in progress */
@@ -508,39 +333,6 @@ h6 {
 .ds-cursor-default {
     cursor: default;
 }
-
-.ds-text-muted-soft {
-    color: #94a3b8;
-}
-
-.ds-inline-flex-center {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.ds-flex-row-center {
-    display: flex;
-    align-items: center;
-}
-
-.ds-border-top-soft {
-    border-top: 1px solid rgba(0, 90, 146, 0.1);
-    padding-top: 1rem;
-    margin-top: 1rem;
-}
-
-/* Generic width helpers used in migrated tables */
-.col-w-3 { width: 3%; }
-.col-w-5 { width: 5%; }
-.col-w-8 { width: 8%; }
-.col-w-9 { width: 9%; }
-.col-w-10 { width: 10%; }
-.col-w-12 { width: 12%; }
-.col-w-14 { width: 14%; }
-.col-w-15 { width: 15%; }
-.col-w-18 { width: 18%; }
-.col-min-w-35 { min-width: 35%; }
 
 /* Skeleton utilities migrated from inline styles */
 .skeleton-flex-035 { flex: 0.35; }
@@ -583,10 +375,6 @@ h6 {
     margin-top: 1rem;
 }
 
-.project-modal-input {
-    border: 1px solid #ced4da !important;
-}
-
 .preview-item-main {
     display: flex;
     align-items: center;
@@ -610,20 +398,3 @@ td.etapa-drag-handle {
     text-align: center;
 }
 
-.task-modal-icon-primary {
-    background: rgba(0, 90, 146, 0.15);
-}
-
-.task-modal-icon-symbol {
-    color: var(--primary-color);
-}
-
-.task-modal-submit-primary {
-    background: var(--primary-color);
-    color: #fff;
-}
-
-.task-modal-submit-primary:hover,
-.task-modal-submit-primary:focus-visible {
-    color: #fff;
-}

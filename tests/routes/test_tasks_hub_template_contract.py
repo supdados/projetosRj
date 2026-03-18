@@ -254,7 +254,6 @@ def test_tasks_hub_dark_mode_uses_neutral_text_tokens_for_structural_copy():
 
     assert 'html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-title {\n    color: var(--app-color-text-primary);' in tarefas_css_content
     assert 'html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-meta {\n    color: var(--app-color-text-muted);' in tarefas_css_content
-    assert 'html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-item-context {\n    color: var(--app-color-text-muted);' in tarefas_css_content
     assert 'html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-kanban-context {\n    color: var(--app-color-text-muted);' in tarefas_css_content
 
 

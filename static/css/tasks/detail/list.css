@@ -621,13 +621,14 @@
     border-radius: 8px;
     padding: 0;
     background: transparent;
+    box-shadow: inset 0 0 0 1px rgba(107, 114, 128, 0.25);
     transition: color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .task-detail-v2 .task-hub-add-cancel:hover {
     color: #9a3a3a;
     background: transparent;
-    box-shadow: inset 0 0 0 1px rgba(154, 58, 58, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(154, 58, 58, 0.45);
     transform: translateY(-0.5px);
 }
 
@@ -639,13 +640,14 @@
     border-radius: 8px;
     padding: 0;
     background: transparent;
+    box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.25);
     transition: color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .task-detail-v2 .task-item-btn-confirm:hover {
     color: #0d8a37;
     background: transparent;
-    box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.32);
+    box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.5);
     transform: translateY(-0.5px);
 }
 

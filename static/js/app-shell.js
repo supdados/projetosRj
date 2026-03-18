@@ -1,3 +1,10 @@
+        /* Shared HTML-escape utility — single source of truth for all modules */
+        window.escapeHtml = function escapeHtml(value) {
+            var div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        };
+
         document.addEventListener('DOMContentLoaded', function() {
             const baseAppConfig = window.__BASE_APP_CONFIG__ || {};
             const body = document.body;
@@ -311,11 +318,7 @@
                 let currentResultLinks = [];
                 let selectedIndex = -1;
 
-                function escapeHtml(value) {
-                    const helper = document.createElement('div');
-                    helper.textContent = value == null ? '' : String(value);
-                    return helper.innerHTML;
-                }
+                var escapeHtml = window.escapeHtml;
 
                 function openSearchDropdown() {
                     if (!searchDropdown) {

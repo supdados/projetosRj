@@ -372,12 +372,6 @@
     z-index: 1200;
 }
 
-.projects-v4-abep-dropdown.projects-v4-abep-dropdown-up {
-    top: auto;
-    bottom: calc(100% + 3px);
-    margin-top: 0;
-}
-
 .projects-v4-abep-dropdown[hidden] {
     display: none !important;
 }
