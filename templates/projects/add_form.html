@@ -125,7 +125,7 @@
                                             data-bs-target="#projectCreateSectionPlanning"
                                             aria-expanded="false"
                                             aria-controls="projectCreateSectionPlanning">
-                                        <i class="fas fa-sliders-h me-2"></i>Planejamento e Classificação
+                                        <i class="fas fa-sliders-h me-2"></i>Classificação
                                     </button>
                                 </h2>
                                 <div id="projectCreateSectionPlanning"
@@ -164,65 +164,6 @@
                                                     </select>
                                                 </div>
                                             </div>
-                                            <div class="col-md-4">
-                                                <div class="form-group-glass">
-                                                    <label for="project_sei_process" class="form-label-glass">
-                                                        <i class="fas fa-file-alt label-icon"></i>
-                                                        Processo SEI
-                                                    </label>
-                                                    <input type="text"
-                                                           class="form-control-glass form-control-glass-enhanced"
-                                                           id="project_sei_process"
-                                                           name="project_sei_process"
-                                                           placeholder="SEI-000000/000000/0000"
-                                                           maxlength="25">
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row g-3 mt-0">
-                                            <div class="col-12">
-                                                <div class="form-group-glass">
-                                                    <label for="project_abep_indicator_input" class="form-label-glass">
-                                                        <i class="fas fa-list-ol label-icon"></i>
-                                                        Indicadores ABEP
-                                                    </label>
-                                                    <div class="project-search-wrap project-create-abep-combobox">
-                                                        <input
-                                                            type="text"
-                                                            class="form-control-glass form-control-glass-enhanced project-search-input"
-                                                            id="project_abep_indicator_input"
-                                                            placeholder="Busque por número ou título do indicador ABEP"
-                                                            autocomplete="off"
-                                                            role="combobox"
-                                                            aria-expanded="false"
-                                                            aria-controls="projectAbepIndicatorDropdown"
-                                                            aria-haspopup="listbox">
-                                                        <input type="hidden"
-                                                               id="project_abep_indicator"
-                                                               name="project_abep_indicator"
-                                                               value="">
-                                                        <div class="project-search-dropdown project-create-abep-dropdown"
-                                                             id="projectAbepIndicatorDropdown"
-                                                             role="listbox"
-                                                             hidden>
-                                                            {% for item in ABEP_INDICADORES_OPTIONS %}
-                                                                <div class="project-search-option"
-                                                                     data-value="{{ item.value }}"
-                                                                     data-label="{{ item.label }}"
-                                                                     role="option">
-                                                                    {{ item.label }}
-                                                                </div>
-                                                            {% endfor %}
-                                                            <div class="project-search-option project-search-empty"
-                                                                 data-abep-empty="1"
-                                                                 hidden>
-                                                                Nenhum indicador encontrado
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -236,7 +177,7 @@
                                             data-bs-target="#projectCreateSectionGoals"
                                             aria-expanded="false"
                                             aria-controls="projectCreateSectionGoals">
-                                        <i class="fas fa-bullseye me-2"></i>Indicadores EEGD
+                                        <i class="fas fa-bullseye me-2"></i>Objetivos, resultados e indicadores
                                     </button>
                                 </h2>
                                 <div id="projectCreateSectionGoals"
@@ -249,7 +190,7 @@
                                                 <div class="form-group-glass">
                                                     <label for="project_objetivo" class="form-label-glass">
                                                         <i class="fas fa-target label-icon"></i>
-                                                        Objetivo
+                                                        Objetivo EEGD
                                                     </label>
                                                     <select class="form-select-glass form-select-glass-enhanced" id="project_objetivo" name="project_objetivo">
                                                         <option value="" selected>Selecione um objetivo</option>
@@ -263,7 +204,7 @@
                                                 <div class="form-group-glass">
                                                     <label for="project_resultado" class="form-label-glass">
                                                         <i class="fas fa-chart-line label-icon"></i>
-                                                        Resultado Esperado
+                                                        Resultado Esperado EEGD
                                                     </label>
                                                     <select class="form-select-glass form-select-glass-enhanced" id="project_resultado" name="project_resultado" disabled>
                                                         <option value="" selected>Selecione um resultado esperado</option>
@@ -275,12 +216,53 @@
                                         <div class="form-group-glass mt-3">
                                             <label class="form-label-glass">
                                                 <i class="fas fa-chart-bar label-icon"></i>
-                                                Indicadores
+                                                Indicadores EEGD
                                             </label>
                                             <div id="indicadores-container" class="glass-indicators-container">
                                                 <div class="indicator-placeholder">
                                                     <i class="fas fa-info-circle"></i>
                                                     <span>Selecione um resultado esperado para ver os indicadores disponíveis</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group-glass mt-3">
+                                            <label for="project_abep_indicator_input" class="form-label-glass">
+                                                <i class="fas fa-list-ol label-icon"></i>
+                                                Indicadores ABEP
+                                            </label>
+                                            <div class="project-search-wrap project-create-abep-combobox">
+                                                <input
+                                                    type="text"
+                                                    class="form-control-glass form-control-glass-enhanced project-search-input"
+                                                    id="project_abep_indicator_input"
+                                                    placeholder="Busque por número ou título do indicador ABEP"
+                                                    autocomplete="off"
+                                                    role="combobox"
+                                                    aria-expanded="false"
+                                                    aria-controls="projectAbepIndicatorDropdown"
+                                                    aria-haspopup="listbox">
+                                                <input type="hidden"
+                                                       id="project_abep_indicator"
+                                                       name="project_abep_indicator"
+                                                       value="">
+                                                <div class="project-search-dropdown project-create-abep-dropdown"
+                                                     id="projectAbepIndicatorDropdown"
+                                                     role="listbox"
+                                                     hidden>
+                                                    {% for item in ABEP_INDICADORES_OPTIONS %}
+                                                        <div class="project-search-option"
+                                                             data-value="{{ item.value }}"
+                                                             data-label="{{ item.label }}"
+                                                             role="option">
+                                                            {{ item.label }}
+                                                        </div>
+                                                    {% endfor %}
+                                                    <div class="project-search-option project-search-empty"
+                                                         data-abep-empty="1"
+                                                         hidden>
+                                                        Nenhum indicador encontrado
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -305,7 +287,21 @@
                                      data-bs-parent="#projectCreateAccordion">
                                     <div class="accordion-body project-create-accordion-body">
                                         <div class="row g-3 mb-2">
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
+                                                <div class="form-group-glass">
+                                                    <label for="project_sei_process" class="form-label-glass">
+                                                        <i class="fas fa-file-alt label-icon"></i>
+                                                        Processo SEI-RJ
+                                                    </label>
+                                                    <input type="text"
+                                                           class="form-control-glass form-control-glass-enhanced"
+                                                           id="project_sei_process"
+                                                           name="project_sei_process"
+                                                           placeholder="SEI-000000/000000/0000"
+                                                           maxlength="25">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
                                                 <div class="form-group-glass">
                                                     <label for="project_github_link" class="form-label-glass">
                                                         <i class="fab fa-github label-icon"></i>
@@ -314,7 +310,7 @@
                                                     <input type="text" class="form-control-glass form-control-glass-enhanced" id="project_github_link" name="project_github_link" placeholder="https://github.com/...">
                                                 </div>
                                             </div>
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
                                                 <div class="form-group-glass">
                                                     <label for="project_documentation_link" class="form-label-glass">
                                                         <i class="fas fa-book label-icon"></i>
