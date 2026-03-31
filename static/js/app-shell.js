@@ -143,6 +143,7 @@
             };
 
             function dismissFlash(el) {
+                if (el.classList.contains('flash-hiding')) return;
                 el.classList.add('flash-hiding');
                 window.setTimeout(function() { el.remove(); }, 300);
             }
@@ -159,8 +160,14 @@
                     stack.setAttribute('aria-atomic', 'true');
                     document.body.appendChild(stack);
                 }
-                while (stack.children.length >= 3) {
-                    dismissFlash(stack.children[0]);
+                // Usa snapshot estático para evitar loop infinito:
+                // dismissFlash() é assíncrono (remove após 300ms), então
+                // stack.children.length nunca diminui no mesmo tick.
+                var activeFlashes = Array.from(stack.children).filter(function(c) {
+                    return !c.classList.contains('flash-hiding');
+                });
+                while (activeFlashes.length >= 3) {
+                    dismissFlash(activeFlashes.shift());
                 }
                 const el = document.createElement('div');
                 el.className = 'app-flash-alert alert-' + t;

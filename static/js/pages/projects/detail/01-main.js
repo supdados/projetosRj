@@ -2476,6 +2476,8 @@
 
                 const iniciadaButton = event.target.closest('.toggle-iniciada');
                 if (iniciadaButton && tbody.contains(iniciadaButton)) {
+                    if (iniciadaButton.dataset.inFlight === '1') return;
+                    iniciadaButton.dataset.inFlight = '1';
                     const etapaId = iniciadaButton.dataset.etapaId;
 
                     fetch(`/etapa/${etapaId}/toggle_iniciada`, {
@@ -2512,6 +2514,9 @@
                         .catch(error => {
                             console.error('Erro ao alternar iniciada:', error);
                             showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
+                        })
+                        .finally(function() {
+                            delete iniciadaButton.dataset.inFlight;
                         });
                     return;
                 }
@@ -2519,6 +2524,8 @@
                 const doneButton = event.target.closest('.toggle-done');
                 if (doneButton && tbody.contains(doneButton)) {
                     if (doneButton.disabled) return;
+                    if (doneButton.dataset.inFlight === '1') return;
+                    doneButton.dataset.inFlight = '1';
                     const etapaId = doneButton.dataset.etapaId;
 
                     fetch(`/etapa/${etapaId}/toggle`, {
@@ -2547,6 +2554,9 @@
                         .catch(error => {
                             console.error('Erro ao alternar concluída:', error);
                             showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
+                        })
+                        .finally(function() {
+                            delete doneButton.dataset.inFlight;
                         });
                 }
             });
