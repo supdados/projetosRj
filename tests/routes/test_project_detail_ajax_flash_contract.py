@@ -9,8 +9,8 @@ def test_project_detail_ajax_flash_stack_is_limited_to_three_in_app_shell():
     app_shell_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell.js'
     content = _read(app_shell_js_path)
 
-    assert 'while (stack.children.length >= 3)' in content
-    assert 'while (stack.children.length >= 5)' not in content
+    assert 'while (activeFlashes.length >= 3)' in content
+    assert 'while (activeFlashes.length >= 5)' not in content
 
 
 def test_project_detail_ajax_flash_uses_global_app_flash_system():

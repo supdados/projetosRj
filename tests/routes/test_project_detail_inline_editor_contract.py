@@ -6,22 +6,25 @@ def _read(path):
 
 
 def test_project_detail_inline_js_contains_searchable_abep_combobox():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
-    content = _read(file_path)
+    bootstrap_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
+    editor_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '09-project-inline-editor.js'
+    bootstrap_content = _read(bootstrap_path)
+    editor_content = _read(editor_path)
 
     required_fragments = [
         'createAbepIndicatorCombobox',
         'project-detail-abep-combobox',
         'Busque por número ou título...',
-        "field === 'abep_indicator'",
     ]
 
     for fragment in required_fragments:
-        assert fragment in content
+        assert fragment in bootstrap_content
+
+    assert "field === 'abep_indicator'" in editor_content
 
 
 def test_project_detail_inline_editor_supports_multiline_responsavel():
-    js_file = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
+    js_file = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '07-stage-dnd.js'
     css_file = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'projects' / 'detail' / '03-stages-and-interactions.css'
 
     js_content = _read(js_file)
