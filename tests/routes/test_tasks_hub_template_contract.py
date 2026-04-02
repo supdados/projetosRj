@@ -5,6 +5,21 @@ from models import Task, db
 from time_utils import utc_now
 
 
+def _read_kanban_js(*relative_paths):
+    modules_root = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules'
+    paths = relative_paths or (
+        'kanban-manager.js',
+        'kanban/board-render.js',
+        'kanban/drawer-comments.js',
+        'kanban/drawer-anexos.js',
+        'kanban/drawer-core.js',
+        'kanban/board-dnd.js',
+        'kanban/composer.js',
+        'kanban/view-toggle.js',
+    )
+    return '\n'.join((modules_root / path).read_text(encoding='utf-8') for path in paths)
+
+
 def test_tasks_hub_template_contains_view_toggle_and_project_filter(client_user):
     response = client_user.get('/tarefas')
     assert response.status_code == 200
@@ -171,8 +186,7 @@ def test_tasks_hub_global_placeholder_css_keeps_extra_spacing_before_area_line()
 
 
 def test_tasks_hub_kanban_js_persists_visual_order_per_url():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'kanban-manager.js'
-    content = file_path.read_text(encoding='utf-8')
+    content = _read_kanban_js('kanban-manager.js', 'kanban/board-render.js')
 
     assert 'function buildKanbanOrderStorageKey()' in content
     assert "return 'task-hub-kanban-order:' + window.location.pathname + window.location.search;" in content
@@ -182,11 +196,10 @@ def test_tasks_hub_kanban_js_persists_visual_order_per_url():
 
 
 def test_tasks_hub_kanban_js_blocks_restricted_drawer_fields_and_shows_banner():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'kanban-manager.js'
-    content = file_path.read_text(encoding='utf-8')
+    content = _read_kanban_js('kanban-manager.js', 'kanban/drawer-core.js')
 
     assert "var DRAWER_RESTRICTED_EDIT_MESSAGE = 'Somente o autor da tarefa ou um administrador pode editar descrição, prioridade e responsável.';" in content
-    assert "var drawerPermissionBanner = document.getElementById('taskItemDrawerPermissionBanner');" in content
+    assert "drawerPermissionBanner: document.getElementById('taskItemDrawerPermissionBanner')," in content
     assert 'function setDrawerRestrictedFieldLocks(canEditRestricted)' in content
     assert 'function handleDrawerRestrictedInteraction(event)' in content
     assert "drawerPrioridade.addEventListener('pointerdown'" in content
@@ -206,19 +219,17 @@ def test_tasks_hub_drawer_css_marks_locked_controls_as_not_allowed():
 
 
 def test_tasks_hub_kanban_js_keeps_grouped_list_rows_inside_project_sections():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'kanban-manager.js'
-    content = file_path.read_text(encoding='utf-8')
+    content = _read_kanban_js('kanban-manager.js', 'kanban/board-render.js')
 
     assert 'function syncGroupedListOrder(orderIds)' in content
-    assert "var groups = listEl.querySelectorAll('.task-hub-group');" in content
+    assert "var groups = refs.listEl.querySelectorAll('.task-hub-group');" in content
     assert "var row = group.querySelector('.task-item-row[data-item-id=\"' + id + '\"]');" in content
-    assert "if (isTaskHubGroupedList()) {" in content
+    assert "if (ctx.isTaskHubGroupedList()) {" in content
     assert 'syncGroupedListOrder(orderIds);' in content
 
 
 def test_tasks_hub_kanban_project_link_disables_native_link_drag():
-    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'kanban-manager.js'
-    js_content = js_path.read_text(encoding='utf-8')
+    js_content = _read_kanban_js('kanban-manager.js', 'kanban/board-render.js')
     css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'hub.css'
     css_content = css_path.read_text(encoding='utf-8')
 
