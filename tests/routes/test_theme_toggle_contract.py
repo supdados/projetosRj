@@ -28,6 +28,17 @@ def test_theme_toggle_is_not_rendered_on_login_page(client):
     assert 'data-skeleton-template="login"' in html
 
 
+def test_login_page_allows_static_skeleton_preview_mode(client):
+    response = client.get('/login?preview_skeleton=login')
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert 'skeletonPreviewEnabled: true' in html
+    assert 'skeletonPreviewType: "login"' in html
+    assert 'data-skeleton-active="login"' in html
+
+
 def test_login_route_is_mapped_to_login_skeleton_in_app_shell():
     app_shell_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell.js'
     app_shell_content = _read(app_shell_path)
@@ -39,13 +50,18 @@ def test_login_route_is_mapped_to_login_skeleton_in_app_shell():
     assert "return 'login';" in app_shell_content
 
 
-def test_login_skeleton_template_tracks_govbr_layout_contract():
+def test_login_skeleton_template_tracks_new_layout_contract():
     base_template_path = Path(__file__).resolve().parents[2] / 'templates' / 'base.html'
     base_template_content = _read(base_template_path)
 
-    assert 'skeleton-login-brand-logo' in base_template_content
+    assert 'skeleton-login-layout' in base_template_content
+    assert 'skeleton-login-showcase' in base_template_content
+    assert 'skeleton-login-panel-logo' in base_template_content
     assert 'skeleton-login-govbr-btn' in base_template_content
+    assert 'skeleton-login-toggle-pill' in base_template_content
     assert '{% if govbr_login_enabled %}' in base_template_content
+    assert 'skeleton-login-card' not in base_template_content
+    assert 'skeleton-login-brand-logo' not in base_template_content
 
 
 def test_theme_toggle_is_after_notifications_and_account(client_user):

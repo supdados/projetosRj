@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}ProjetosRJ | Panorama Público{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public-overview.css', v='20260402a') }}">
+{% endblock %}
+
+{% block content %}
+<div class="public-overview-page">
+  <div class="public-overview-bg" aria-hidden="true">
+    <div class="public-orb public-orb-a"></div>
+    <div class="public-orb public-orb-b"></div>
+    <div class="public-grid-glow"></div>
+  </div>
+
+  <section class="public-hero-panel">
+    <div class="public-hero-copy">
+      <span class="public-eyebrow">Visão pública do portfólio</span>
+      <h1 class="public-hero-title">Indicadores, distribuição operacional e sinais de execução do ProjetosRJ.</h1>
+      <p class="public-hero-text">
+        Consulte um panorama consolidado da aplicação antes do login. A área autenticada continua dedicada à gestão detalhada,
+        edição, histórico e acompanhamento por unidade.
+      </p>
+
+      <div class="public-hero-actions">
+        <a href="#public-panorama" class="public-cta public-cta-primary">Explorar indicadores</a>
+        <a href="{{ url_for('main.login_page') }}" class="public-cta public-cta-secondary">Entrar na plataforma</a>
+      </div>
+    </div>
+
+    <aside class="public-command-card" aria-label="Resumo do panorama atual">
+      <div class="public-command-topline">
+        <span class="public-command-label">Atualizado em</span>
+        <strong>{{ public_snapshot_date }}</strong>
+      </div>
+
+      <div class="public-command-grid">
+        {% for insight in insight_cards %}
+        <div class="public-command-stat">
+          <span class="public-command-stat-value">{{ insight.display_value }}</span>
+          <span class="public-command-stat-label">{{ insight.label }}</span>
+          <span class="public-command-stat-helper">{{ insight.suffix }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="public-command-footer">
+        <span>Áreas catalogadas: {{ total_areas }}</span>
+        <span>Etapas mapeadas: {{ total_stages }}</span>
+      </div>
+    </aside>
+  </section>
+
+  <section class="public-kpi-strip" aria-label="Indicadores principais">
+    <article class="public-kpi-card">
+      <span class="public-kpi-label">Projetos monitorados</span>
+      <strong class="public-kpi-value">{{ total_projects }}</strong>
+      <p class="public-kpi-helper">Base consolidada da aplicação.</p>
+    </article>
+    <article class="public-kpi-card">
+      <span class="public-kpi-label">Portfólio vigente</span>
+      <strong class="public-kpi-value">{{ count_vigente }}</strong>
+      <p class="public-kpi-helper">Frentes ativas neste momento.</p>
+    </article>
+    <article class="public-kpi-card public-kpi-card-attention">
+      <span class="public-kpi-label">Projetos em atraso</span>
+      <strong class="public-kpi-value">{{ overdue_projects }}</strong>
+      <p class="public-kpi-helper">Com etapa vigente fora da data planejada.</p>
+    </article>
+    <article class="public-kpi-card">
+      <span class="public-kpi-label">Tarefas abertas</span>
+      <strong class="public-kpi-value">{{ open_tasks }}</strong>
+      <p class="public-kpi-helper">Dentro de um total de {{ total_tasks }} tarefas.</p>
+    </article>
+  </section>
+
+  <section class="public-panorama-grid" id="public-panorama">
+    <article class="public-card public-card-wide">
+      <div class="public-card-header">
+        <div>
+          <span class="public-section-kicker">Tabela</span>
+          <h2 class="public-card-title">Radar por área responsável</h2>
+        </div>
+        <p class="public-card-note">Ranking das áreas com maior concentração de projetos e pressão operacional.</p>
+      </div>
+
+      {% if area_rows %}
+      <div class="public-table-shell">
+        <table class="public-table">
+          <thead>
+            <tr>
+              <th>Área</th>
+              <th>Projetos</th>
+              <th>Vigentes</th>
+              <th>Atraso</th>
+              <th>Tarefas abertas</th>
+              <th>Participação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in area_rows %}
+            <tr>
+              <td>
+                <div class="public-area-cell">
+                  <span class="public-area-name">{{ row.name }}</span>
+                  <span class="public-area-health public-area-health-{{ row.health_tone }}">{{ row.health_label }}</span>
+                </div>
+              </td>
+              <td>{{ row.projects }}</td>
+              <td>{{ row.active_projects }}</td>
+              <td>{{ row.overdue_projects }}</td>
+              <td>{{ row.open_tasks }}</td>
+              <td>
+                <div class="public-share-cell">
+                  <span>{{ row.portfolio_share }}%</span>
+                  <span class="public-share-bar" style="--share: {{ row.portfolio_share }}%;"></span>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="public-empty-state">
+        <strong>Sem dados suficientes para o radar por área.</strong>
+        <span>Assim que houver projetos vinculados a áreas responsáveis, a tabela será preenchida automaticamente.</span>
+      </div>
+      {% endif %}
+    </article>
+
+    <article class="public-card">
+      <div class="public-card-header">
+        <div>
+          <span class="public-section-kicker">Gráfico</span>
+          <h2 class="public-card-title">Status do portfólio</h2>
+        </div>
+        <p class="public-card-note">Leitura rápida do equilíbrio entre frentes ativas, concluídas e exceções.</p>
+      </div>
+
+      <div class="public-donut-layout">
+        <div class="public-donut-chart" style="--donut-chart: {{ project_status_chart }};" aria-label="Distribuição dos projetos por status">
+          <div class="public-donut-center">
+            <strong>{{ total_projects }}</strong>
+            <span>projetos</span>
+          </div>
+        </div>
+
+        <div class="public-donut-legend">
+          {% for segment in project_status_segments %}
+          <div class="public-legend-row">
+            <span class="public-legend-swatch" style="--legend-color: {{ segment.color }};"></span>
+            <div class="public-legend-copy">
+              <span class="public-legend-title">{{ segment.label }}</span>
+              <span class="public-legend-meta">{{ segment.value }} itens · {{ segment.share }}%</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </article>
+
+    <article class="public-card">
+      <div class="public-card-header">
+        <div>
+          <span class="public-section-kicker">Gráfico</span>
+          <h2 class="public-card-title">Andamento das etapas</h2>
+        </div>
+        <p class="public-card-note">Execução consolidada das etapas manuais cadastradas na plataforma.</p>
+      </div>
+
+      {% if total_stages %}
+      <div class="public-stage-meter" aria-hidden="true">
+        {% for item in stage_status_items %}
+        <span class="public-stage-segment" style="--segment-share: {{ item.share }}%; --segment-color: {{ item.color }};"></span>
+        {% endfor %}
+      </div>
+      <div class="public-stage-list">
+        {% for item in stage_status_items %}
+        <div class="public-stage-row">
+          <div class="public-stage-copy">
+            <span class="public-stage-name">{{ item.label }}</span>
+            <span class="public-stage-meta">{{ item.value }} etapas</span>
+          </div>
+          <strong class="public-stage-share">{{ item.share }}%</strong>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="public-empty-state public-empty-state-compact">
+        <strong>Nenhuma etapa cadastrada.</strong>
+        <span>O gráfico aparecerá assim que a aplicação tiver etapas manuais associadas aos projetos.</span>
+      </div>
+      {% endif %}
+    </article>
+
+    <article class="public-card">
+      <div class="public-card-header">
+        <div>
+          <span class="public-section-kicker">Gráfico</span>
+          <h2 class="public-card-title">Prioridade operacional</h2>
+        </div>
+        <p class="public-card-note">Volume de tarefas abertas por criticidade de atendimento.</p>
+      </div>
+
+      {% if open_tasks %}
+      <div class="public-bar-list">
+        {% for item in task_priority_items %}
+        <div class="public-bar-row">
+          <div class="public-bar-head">
+            <span class="public-bar-label">{{ item.label }}</span>
+            <span class="public-bar-value">{{ item.value }}{% if item.share %} · {{ item.share }}%{% endif %}</span>
+          </div>
+          <div class="public-bar-track" aria-hidden="true">
+            <span class="public-bar-fill" style="--bar-width: {{ item.width }}%; --bar-color: {{ item.color }};"></span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="public-empty-state public-empty-state-compact">
+        <strong>Sem tarefas abertas no momento.</strong>
+        <span>Quando houver backlog operacional, o gráfico exibirá a distribuição por prioridade.</span>
+      </div>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="public-bottom-strip">
+    <div class="public-bottom-copy">
+      <span class="public-section-kicker">Acesso autenticado</span>
+      <h2 class="public-bottom-title">A área privada permanece dedicada à operação.</h2>
+      <p class="public-bottom-text">
+        Entre para editar projetos, interagir com etapas, filtrar por unidade, acompanhar tarefas e consultar o histórico detalhado de execução.
+      </p>
+    </div>
+    <div class="public-bottom-actions">
+      <a href="{{ url_for('main.login_page') }}" class="public-cta public-cta-primary">Ir para o login</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

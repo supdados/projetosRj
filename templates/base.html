@@ -50,7 +50,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
     <!-- CSS Customizado -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260402b') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/flash.css') }}">
 
@@ -391,8 +391,13 @@
             </nav>
             {% endif %}
 
+            {% set available_skeleton_types = ['dashboard', 'projects', 'pending', 'tasks', 'project_tasks', 'search', 'templates_list', 'templates_form', 'login', 'project_detail', 'task_detail', 'generic'] %}
+            {% set requested_skeleton_preview = request.args.get('preview_skeleton', '')|trim %}
+            {% set skeleton_preview_enabled = requested_skeleton_preview in available_skeleton_types %}
             {% set skeleton_endpoint = request.endpoint or '' %}
-            {% if skeleton_endpoint == 'main.dashboard' %}
+            {% if skeleton_preview_enabled %}
+                {% set skeleton_type = requested_skeleton_preview %}
+            {% elif skeleton_endpoint == 'main.dashboard' %}
                 {% set skeleton_type = 'dashboard' %}
             {% elif skeleton_endpoint == 'main.list_projects' %}
                 {% set skeleton_type = 'projects' %}
@@ -861,40 +866,84 @@
                     </div>
                 </div>
                 {% elif kind == 'login' %}
-                <div class="skeleton-page login-page skeleton-login-page">
-                    <div class="login-card skeleton-card skeleton-login-card">
-                        <div class="login-brand skeleton-login-brand">
-                            <div class="login-brand-logo skeleton-login-brand-logo" aria-hidden="true"></div>
-                            <div class="login-title skeleton-login-title" aria-hidden="true"></div>
-                        </div>
+                <div class="skeleton-page skeleton-login-shell">
+                    <div class="skeleton-login-layout">
+                        <div class="skeleton-login-showcase" aria-hidden="true">
+                            <div class="skeleton-login-hero">
+                                <div class="skeleton-login-hero-line skeleton-login-hero-line-lg"></div>
+                                <div class="skeleton-login-hero-line skeleton-login-hero-line-md"></div>
+                                <div class="skeleton-login-hero-copy"></div>
+                                <div class="skeleton-login-hero-copy skeleton-login-hero-copy-short"></div>
+                            </div>
 
-                        <div class="login-field skeleton-login-field">
-                            <div class="login-field-label skeleton-login-label" aria-hidden="true"></div>
-                            <div class="login-input-group skeleton-login-input-group">
-                                <span class="login-input-icon skeleton-login-input-icon" aria-hidden="true"></span>
-                                <div class="login-input skeleton-login-input" aria-hidden="true"></div>
+                            <div class="skeleton-login-stats">
+                                {% for i in range(4) %}
+                                <div class="skeleton-login-stat">
+                                    <div class="skeleton-login-stat-number"></div>
+                                    <div class="skeleton-login-stat-label"></div>
+                                </div>
+                                {% endfor %}
                             </div>
                         </div>
 
-                        <div class="login-field skeleton-login-field">
-                            <div class="login-field-label skeleton-login-label" aria-hidden="true"></div>
-                            <div class="login-input-group skeleton-login-input-group">
-                                <span class="login-input-icon skeleton-login-input-icon" aria-hidden="true"></span>
-                                <div class="login-input skeleton-login-input" aria-hidden="true"></div>
+                        <div class="skeleton-login-panel">
+                            <svg class="skeleton-login-panel-clip" viewBox="0 0 160 1000" preserveAspectRatio="none" aria-hidden="true">
+                                <path d="M160,0 L160,1000 L80,1000
+                                    C85,920 40,860 55,800
+                                    C70,740 30,700 50,640
+                                    C70,580 35,530 55,470
+                                    C75,410 40,360 60,300
+                                    C80,240 45,190 60,130
+                                    C75,70 50,30 80,0 Z"
+                                    class="skeleton-login-panel-clip-fill"/>
+                            </svg>
+                            <div class="skeleton-login-panel-surface"></div>
+                            <div class="skeleton-login-panel-edge"></div>
+
+                            <div class="skeleton-login-panel-content">
+                                <div class="skeleton-login-panel-brand">
+                                    <div class="skeleton-login-panel-logo" aria-hidden="true"></div>
+                                </div>
+
+                                <div class="skeleton-login-panel-header">
+                                    <div class="skeleton-login-panel-subtitle" aria-hidden="true"></div>
+                                </div>
+
+                                {% if govbr_login_enabled %}
+                                <div class="skeleton-login-govbr-btn" aria-hidden="true">
+                                    <span class="skeleton-login-govbr-text"></span>
+                                    <span class="skeleton-login-govbr-logo"></span>
+                                </div>
+
+                                <div class="skeleton-login-toggle-row" aria-hidden="true">
+                                    <span class="skeleton-login-toggle-rule"></span>
+                                    <span class="skeleton-login-toggle-pill"></span>
+                                    <span class="skeleton-login-toggle-rule"></span>
+                                </div>
+                                {% endif %}
+
+                                <div class="skeleton-login-form" aria-hidden="true">
+                                    <div class="skeleton-login-field">
+                                        <div class="skeleton-login-field-label"></div>
+                                        <div class="skeleton-login-field-wrap">
+                                            <span class="skeleton-login-field-icon"></span>
+                                            <span class="skeleton-login-field-input"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="skeleton-login-field">
+                                        <div class="skeleton-login-field-label skeleton-login-field-label-short"></div>
+                                        <div class="skeleton-login-field-wrap">
+                                            <span class="skeleton-login-field-icon"></span>
+                                            <span class="skeleton-login-field-input"></span>
+                                            <span class="skeleton-login-field-toggle"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="skeleton-login-submit"></div>
+                                </div>
                             </div>
                         </div>
-
-                        <div class="btn login-submit skeleton-login-submit" aria-hidden="true"></div>
-
-                        {% if govbr_login_enabled %}
-                        <div class="login-divider skeleton-login-divider" role="separator" aria-hidden="true">
-                            <span class="skeleton-login-divider-text" aria-hidden="true"></span>
-                        </div>
-                        <div class="btn login-govbr-btn skeleton-login-govbr-btn" aria-hidden="true">
-                            <span class="skeleton-login-govbr-text" aria-hidden="true"></span>
-                            <span class="skeleton-login-govbr-logo" aria-hidden="true"></span>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
                 {% else %}
@@ -943,7 +992,7 @@
                     {{ render_skeleton(skeleton_type) }}
                 </div>
                 <div id="skeleton-template-store" hidden aria-hidden="true">
-                    {% for kind in ['dashboard', 'projects', 'pending', 'tasks', 'project_tasks', 'search', 'templates_list', 'templates_form', 'login', 'project_detail', 'task_detail', 'generic'] %}
+                    {% for kind in available_skeleton_types %}
                     <template data-skeleton-template="{{ kind }}">
                         {{ render_skeleton(kind) }}
                     </template>
@@ -989,6 +1038,8 @@
     <script>
         window.__BASE_APP_CONFIG__ = {
             notificationsApiUrl: {{ url_for('main.notifications_dropdown_api')|tojson }},
+            skeletonPreviewEnabled: {{ skeleton_preview_enabled|tojson }},
+            skeletonPreviewType: {{ skeleton_type|tojson }},
         };
     </script>
     <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>

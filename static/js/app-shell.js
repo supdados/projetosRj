@@ -10,6 +10,8 @@
             const body = document.body;
             const root = document.documentElement;
             const isAuthenticatedPage = body.classList.contains('is-authenticated');
+            const skeletonPreviewEnabled = Boolean(baseAppConfig.skeletonPreviewEnabled);
+            const skeletonPreviewType = baseAppConfig.skeletonPreviewType || null;
             const loadingOverlay = document.querySelector('.loading-overlay');
             const skeletonContent = document.querySelector('.skeleton-content');
             const skeletonTemplateStore = document.getElementById('skeleton-template-store');
@@ -124,6 +126,10 @@
                         skeletonTemplates[templateType] = templateEl.innerHTML.trim();
                     }
                 });
+            }
+
+            if (skeletonPreviewEnabled && skeletonPreviewType) {
+                setSkeletonType(skeletonPreviewType);
             }
 
             if (hasBootstrap && bootstrap.Tooltip) {
@@ -909,6 +915,9 @@
             });
 
             window.addEventListener('load', function() {
+                if (skeletonPreviewEnabled) {
+                    return;
+                }
                 setTimeout(() => {
                     hideLoadingOverlay();
                 }, 800);
@@ -917,6 +926,9 @@
             // Corrige retorno via histórico do navegador (BFCache):
             // garante que a página não fique presa em estado "loading-active".
             window.addEventListener('pageshow', function(event) {
+                if (skeletonPreviewEnabled) {
+                    return;
+                }
                 if (event.persisted || body.classList.contains('loading-active')) {
                     hideLoadingOverlay();
                 }
@@ -925,5 +937,9 @@
             showLoadingOverlay();
             if (loadingOverlay) {
                 loadingOverlay.classList.remove('active');
+            }
+            if (skeletonPreviewEnabled) {
+                body.classList.remove('page-ready');
+                body.classList.add('loading-active');
             }
         });
