@@ -9,37 +9,8 @@
 | 3 | `routes/tasks/helpers.py` | 969 → 58 linhas (fachada). Desmembrado em `constants.py`, `permissions.py`, `queries.py`, `hub.py`, `creation.py`. |
 | 4 | `templates/base.html` | 1.123 → 277 linhas. Extraído `partials/app_topnav.html` (273 linhas) e `partials/skeleton_macros.html` (576 linhas). |
 | 5 | `templates/calendars/calendars.html` | 986 → 128 linhas. JS inline movido para `static/js/pages/calendars.js` (870 linhas). Config via `window.__CALENDAR_PAGE_CONFIG__`. |
-
----
-
-## Passo 6 — `static/js/modules/add-item-inline.js` (Prioridade 2)
-
-**O que é:** 1.075 linhas misturando fábrica de markup, project picker, inserção ordenada e controle de formulário.
-
-**Corte sugerido:**
-1. `dom-factories.js` — criação de elementos HTML
-2. `project-picker.js` — seletor de projeto
-3. `group-manager.js` — inserção ordenada em grupos
-4. `inline-form-controller.js` — lógica de formulário inline
-5. `add-item-inline.js` vira orquestrador leve
-
-**Cuidados:**
-- Fluxo de criação inline e global no hub de tarefas
-
----
-
-## Passo 7 — `routes/etapas/crud.py` (Prioridade 2)
-
-**O que é:** 712 linhas misturando endpoints, validação, reativação, exclusão com Google, update inline e cascata de datas.
-
-**Corte sugerido:**
-1. Manter rotas finas em `crud.py`
-2. Extrair `services/etapas_mutation.py` — lógica de criação/edição/exclusão
-3. Extrair `services/etapas_cascade.py` — cascata e recalculo de datas
-
-**Cuidados:**
-- Preservar transações de banco e rollback
-- Testar fluxo completo: add/edit/delete etapa, reorder, cascata, reunião Google
+| 6 | `static/js/modules/add-item-inline.js` | 1.075 → 138 linhas (orquestrador). Desmembrado em `add-item-inline/dom-factories.js`, `project-picker.js`, `inline-form-controller.js`, `group-manager.js`. Scripts adicionados em `tasks/hub.html`. |
+| 7 | `routes/etapas/crud.py` | 712 → 452 linhas (rotas finas). Lógica extraída para `services/etapas_mutation.py` (311 linhas) e `services/etapas_cascade.py` (25 linhas). |
 
 ---
 
