@@ -8,21 +8,7 @@
 | 2 | `static/js/modules/kanban-manager.js` | 3.231 → 541 linhas. Desmembrado em 7 módulos em `kanban/`. |
 | 3 | `routes/tasks/helpers.py` | 969 → 58 linhas (fachada). Desmembrado em `constants.py`, `permissions.py`, `queries.py`, `hub.py`, `creation.py`. |
 | 4 | `templates/base.html` | 1.123 → 277 linhas. Extraído `partials/app_topnav.html` (273 linhas) e `partials/skeleton_macros.html` (576 linhas). |
-
----
-
-## Passo 5 — `templates/calendars/calendars.html` (Prioridade 2)
-
-**O que é:** 986 linhas com quase toda a lógica JS de calendário inline no template Jinja.
-
-**Corte sugerido:**
-1. Mover o JS para `static/js/pages/calendars.js`
-2. No template, deixar só markup + bloco `<script>` com `window.__CALENDAR_PAGE_CONFIG__`
-3. Extrair parcial de header/views se necessário
-
-**Cuidados:**
-- Manter variáveis Jinja passadas via `__CALENDAR_PAGE_CONFIG__` em vez de inline
-- Testar render mensal/lista, popovers, CRUD de evento e estados Google conectado/desconectado
+| 5 | `templates/calendars/calendars.html` | 986 → 128 linhas. JS inline movido para `static/js/pages/calendars.js` (870 linhas). Config via `window.__CALENDAR_PAGE_CONFIG__`. |
 
 ---
 
