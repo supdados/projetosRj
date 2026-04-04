@@ -1,0 +1,273 @@
+            <nav class="navbar navbar-expand-lg app-topnav">
+                <div class="container-fluid app-topnav-container">
+                    <div class="app-topnav-left">
+                        <a href="{{ url_for('main.dashboard') }}" class="navbar-brand app-brand" data-area-nav>
+                            <img src="{{ url_for('static', filename='img/brand/logo-blue.png', v='20260304h') }}" class="app-brand-logo" alt="Logo ProjetosRJ">
+                        </a>
+
+                        <div class="app-nav-icons" role="navigation" aria-label="Navegação principal">
+                            <a
+                                href="{{ url_for('main.dashboard') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.dashboard' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                data-area-nav
+                                title="Início"
+                                aria-label="Início"
+                            >
+                                <i class="fas fa-home"></i>
+                            </a>
+                            <a
+                                href="{{ url_for('main.list_projects') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projects' or endpoint == 'main.project_detail' or endpoint == 'main.project_history' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                data-area-nav
+                                title="Todos os projetos"
+                                aria-label="Todos os projetos"
+                            >
+                                <i class="fas fa-folder-open"></i>
+                            </a>
+                            <a
+                                href="{{ url_for('main.list_tasks') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_tasks' or endpoint == 'main.list_tasks_archived' or endpoint == 'main.list_tasks_finalized' or endpoint == 'main.project_tasks' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                data-area-nav
+                                title="Tarefas"
+                                aria-label="Tarefas"
+                            >
+                                <i class="fas fa-tasks"></i>
+                            </a>
+                            <a
+                                href="{{ url_for('main.list_projetos_pendentes') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projetos_pendentes' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                data-area-nav
+                                title="Projetos pendentes"
+                                aria-label="Projetos pendentes"
+                            >
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </a>
+                            <a
+                                href="{{ url_for('main.calendars_hub') }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.calendars_hub' else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                data-area-nav
+                                title="Calendário"
+                                aria-label="Calendário"
+                            >
+                                <i class="fas fa-calendar-alt"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="app-topnav-center">
+                        {% if available_areas|length == 1 %}
+                        <a href="{{ url_for('main.list_projects', area=available_areas[0]) }}" class="app-area-single-link app-nav-link">
+                            <i class="fas fa-layer-group"></i>
+                            <span>{{ available_areas[0] }}</span>
+                        </a>
+                        {% elif available_areas|length > 1 %}
+                        <div class="btn-group app-area-control" role="group" aria-label="Seleção de área do projeto">
+                            <a href="{{ active_area_href }}" class="btn app-area-main-btn app-nav-link">
+                                <i class="fas fa-layer-group"></i>
+                                <span>{{ active_area }}</span>
+                            </a>
+                            <button type="button" class="btn app-area-dropdown-btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" aria-label="Abrir lista de áreas">
+                                <span class="visually-hidden">Alternar áreas</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end app-area-dropdown-menu">
+                                <li class="app-dropdown-header" aria-hidden="true">
+                                    <span class="app-dropdown-title">Áreas do Projeto</span>
+                                    <span class="app-dropdown-subtitle">Selecione o escopo da listagem</span>
+                                </li>
+                                <li><hr class="dropdown-divider app-dropdown-divider"></li>
+                                <li>
+                                    <a href="#" class="dropdown-item app-dropdown-item {{ 'active' if not active_area_param else '' }}" data-area-select="">
+                                        <span class="app-dropdown-item-main">
+                                            <i class="fas fa-layer-group"></i>
+                                            <span>{{ all_projects_label }}</span>
+                                        </span>
+                                        <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% for area_item in available_areas %}
+                                <li>
+                                    <a href="#" class="dropdown-item app-dropdown-item {{ 'active' if area_item == active_area else '' }}" data-area-select="{{ area_item }}">
+                                        <span class="app-dropdown-item-main">
+                                            <i class="fas fa-building"></i>
+                                            <span>{{ area_item }}</span>
+                                        </span>
+                                        <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% else %}
+                        <span class="app-area-empty" aria-disabled="true">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Sem área</span>
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="app-topnav-right">
+                        <div class="app-global-search" data-global-search data-search-url="{{ url_for('main.global_search_api') }}">
+                            <form
+                                class="app-global-search-form"
+                                id="appGlobalSearchForm"
+                                action="{{ url_for('main.global_search_page') }}"
+                                method="GET"
+                                role="search"
+                                autocomplete="off"
+                            >
+                                <i class="fas fa-search app-global-search-icon"></i>
+                                <input
+                                    type="search"
+                                    class="app-global-search-input"
+                                    id="appGlobalSearchInput"
+                                    name="q"
+                                    placeholder="Buscar projetos, etapas, tarefas e eventos..."
+                                    autocomplete="off"
+                                    aria-label="Busca global"
+                                    aria-expanded="false"
+                                    aria-controls="appGlobalSearchDropdown"
+                                >
+                            </form>
+                            <div class="app-global-search-dropdown" id="appGlobalSearchDropdown" hidden>
+                                <div class="app-global-search-state" data-role="state">Digite ao menos 2 caracteres.</div>
+                                <div class="app-global-search-results" data-role="results"></div>
+                                <div class="app-global-search-footer" data-role="footer" hidden></div>
+                            </div>
+                        </div>
+
+                        {% set unread_notifications_display = '99+' if unread_notifications_count > 99 else unread_notifications_count %}
+                        <div class="dropdown app-notifications-menu">
+                            <button
+                                class="btn app-nav-icon-btn app-notifications-trigger dropdown-toggle"
+                                type="button"
+                                id="appNotificationsDesktop"
+                                data-bs-toggle="dropdown"
+                                data-bs-display="static"
+                                title="Notificações"
+                                aria-expanded="false"
+                                aria-label="Notificações"
+                            >
+                                <i class="fas fa-bell"></i>
+                                <span
+                                    class="app-notifications-badge {% if unread_notifications_count == 0 %}is-hidden{% endif %}"
+                                    id="appNotificationsBadge"
+                                >{{ unread_notifications_display }}</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end app-notifications-dropdown" aria-labelledby="appNotificationsDesktop">
+                                <div class="app-dropdown-header app-notifications-dropdown-header" aria-hidden="true">
+                                    <span class="app-dropdown-title">Notificações</span>
+                                    <span class="app-dropdown-subtitle" id="appNotificationsUnreadCount">{{ unread_notifications_count }} não lida(s)</span>
+                                </div>
+                                <div class="app-notifications-list" id="appNotificationsList">
+                                    <div class="app-notifications-state" id="appNotificationsState">Abra o painel para carregar as notificações.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="app-account-tooltip">
+                            <div class="dropdown app-account-menu">
+                                <button
+                                    class="btn app-nav-icon-btn app-account-trigger dropdown-toggle {{ 'active' if endpoint == 'main.change_password' or endpoint == 'main.list_users' or endpoint == 'main.list_areas' or endpoint == 'main.add_area' or endpoint == 'main.edit_area' or endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') or endpoint == 'main.edit_user' else '' }}"
+                                    type="button"
+                                    id="appAccountMenuDesktop"
+                                    data-bs-toggle="dropdown"
+                                    data-bs-display="static"
+                                    title="Conta e administração"
+                                    aria-expanded="false"
+                                    aria-label="Conta e administração"
+                                >
+                                    <i class="fas fa-user-circle"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end app-account-dropdown" aria-labelledby="appAccountMenuDesktop">
+                                    <li class="app-dropdown-header app-account-dropdown-header" aria-hidden="true">
+                                        <span class="app-dropdown-title">{{ current_user_obj.name or current_user_obj.username }}</span>
+                                        <span class="app-dropdown-subtitle">{{ 'Administrador' if is_admin_user else 'Usuário' }}</span>
+                                    </li>
+                                    <li><hr class="dropdown-divider app-dropdown-divider"></li>
+                                    {% if is_admin_user %}
+                                    <li>
+                                        <a href="{{ url_for('main.list_users') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.list_users' or (endpoint == 'main.edit_user' and request.args.get('user_id') != current_user_obj.id|string) else '' }}">
+                                            <span class="app-dropdown-item-main">
+                                                <i class="fas fa-users-cog"></i>
+                                                <span>Gerenciar Usuários</span>
+                                            </span>
+                                            <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('main.list_areas') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.list_areas' or endpoint == 'main.add_area' or endpoint == 'main.edit_area' else '' }}">
+                                            <span class="app-dropdown-item-main">
+                                                <i class="fas fa-layer-group"></i>
+                                                <span>Gerenciar Áreas</span>
+                                            </span>
+                                            <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('main.list_templates') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') else '' }}">
+                                            <span class="app-dropdown-item-main">
+                                                <i class="fas fa-layer-group"></i>
+                                                <span>Modelos de Etapas</span>
+                                            </span>
+                                            <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('main.edit_user', user_id=current_user_obj.id) }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.edit_user' and request.args.get('user_id') == current_user_obj.id|string else '' }}">
+                                            <span class="app-dropdown-item-main">
+                                                <i class="fas fa-user-edit"></i>
+                                                <span>Meu Perfil (Admin)</span>
+                                            </span>
+                                            <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    {% endif %}
+                                    <li>
+                                        <a href="{{ url_for('main.change_password') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.change_password' else '' }}">
+                                            <span class="app-dropdown-item-main">
+                                                <i class="fas {{ 'fa-key' if is_admin_user else 'fa-user-cog' }}"></i>
+                                                <span>{{ 'Alterar Senha' if is_admin_user else 'Gerenciar Conta' }}</span>
+                                            </span>
+                                            <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('main.logout') }}" class="dropdown-item app-dropdown-item app-dropdown-item-danger">
+                                            <span class="app-dropdown-item-main">
+                                                <i class="fas fa-sign-out-alt"></i>
+                                                <span>Sair</span>
+                                            </span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="app-theme-menu">
+                            <button
+                                class="btn app-nav-icon-btn app-theme-toggle"
+                                type="button"
+                                id="appThemeToggle"
+                                title="Alternar tema"
+                                aria-label="Alternar tema"
+                                aria-pressed="false"
+                            >
+                                <i class="fas fa-moon" id="appThemeToggleIcon"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </nav>

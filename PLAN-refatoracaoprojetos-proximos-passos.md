@@ -7,25 +7,7 @@
 | 1 | `static/js/pages/projects/detail/01-main.js` | 3.535 → 843 linhas. Desmembrado em 9 módulos (`02-import-model` a `10-compact-header`). |
 | 2 | `static/js/modules/kanban-manager.js` | 3.231 → 541 linhas. Desmembrado em 7 módulos em `kanban/`. |
 | 3 | `routes/tasks/helpers.py` | 969 → 58 linhas (fachada). Desmembrado em `constants.py`, `permissions.py`, `queries.py`, `hub.py`, `creation.py`. |
-
----
-
-## Passo 4 — `templates/base.html` (Prioridade 1)
-
-**O que é:** 1.123 linhas centralizando topnav, busca global, notificações, conta/admin, tema e skeletons.
-
-**Corte sugerido:**
-1. Extrair `templates/partials/app_topnav.html` — barra de navegação principal
-2. Extrair `templates/partials/app_search.html` — formulário de busca global
-3. Extrair `templates/partials/app_notifications.html` — dropdown de notificações
-4. Extrair `templates/partials/app_account_menu.html` — menu de conta/admin/tema
-5. Extrair macros de skeletons para arquivo dedicado (ex: `templates/partials/skeleton_macros.html`)
-6. `base.html` fica só com a estrutura HTML, `{% include %}` das parciais e blocos de herança
-
-**Cuidados:**
-- Preservar IDs, classes e `data-*` consumidos por `app-shell.js`
-- Testar todas as páginas autenticadas (qualquer quebra aqui é global)
-- Não alterar URLs/endpoints Flask
+| 4 | `templates/base.html` | 1.123 → 277 linhas. Extraído `partials/app_topnav.html` (273 linhas) e `partials/skeleton_macros.html` (576 linhas). |
 
 ---
 

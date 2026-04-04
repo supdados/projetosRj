@@ -51,17 +51,17 @@ def test_login_route_is_mapped_to_login_skeleton_in_app_shell():
 
 
 def test_login_skeleton_template_tracks_new_layout_contract():
-    base_template_path = Path(__file__).resolve().parents[2] / 'templates' / 'base.html'
-    base_template_content = _read(base_template_path)
+    skeleton_path = Path(__file__).resolve().parents[2] / 'templates' / 'partials' / 'skeleton_macros.html'
+    skeleton_content = _read(skeleton_path)
 
-    assert 'skeleton-login-layout' in base_template_content
-    assert 'skeleton-login-showcase' in base_template_content
-    assert 'skeleton-login-panel-logo' in base_template_content
-    assert 'skeleton-login-govbr-btn' in base_template_content
-    assert 'skeleton-login-toggle-pill' in base_template_content
-    assert '{% if govbr_login_enabled %}' in base_template_content
-    assert 'skeleton-login-card' not in base_template_content
-    assert 'skeleton-login-brand-logo' not in base_template_content
+    assert 'skeleton-login-layout' in skeleton_content
+    assert 'skeleton-login-showcase' in skeleton_content
+    assert 'skeleton-login-panel-logo' in skeleton_content
+    assert 'skeleton-login-govbr-btn' in skeleton_content
+    assert 'skeleton-login-toggle-pill' in skeleton_content
+    assert '{% if govbr_login_enabled %}' in skeleton_content
+    assert 'skeleton-login-card' not in skeleton_content
+    assert 'skeleton-login-brand-logo' not in skeleton_content
 
 
 def test_theme_toggle_is_after_notifications_and_account(client_user):
