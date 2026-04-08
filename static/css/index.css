@@ -1332,29 +1332,43 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-nao-inicia
     z-index: 1040;
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.85rem 1.2rem;
+    justify-content: center;
+    padding: 0.6rem;
     border: 0;
     border-radius: 999px;
-    background: linear-gradient(135deg, #005a92 0%, #0077b6 100%);
-    color: #fff;
-    box-shadow: 0 8px 24px rgba(0, 50, 82, 0.32), 0 2px 6px rgba(0, 50, 82, 0.18);
-    font-size: 0.875rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    background: #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+    transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+.chatbot-launcher-icon {
+    width: 56px;
+    height: 56px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.chatbot-launcher-icon--active {
+    display: none;
+}
+
+.dashboard-chatbot-launcher[aria-expanded="true"] .chatbot-launcher-icon--normal {
+    display: none;
+}
+
+.dashboard-chatbot-launcher[aria-expanded="true"] .chatbot-launcher-icon--active {
+    display: block;
 }
 
 .dashboard-chatbot-launcher:hover,
 .dashboard-chatbot-launcher:focus-visible {
     transform: translateY(-2px);
-    box-shadow: 0 14px 32px rgba(0, 50, 82, 0.36), 0 4px 10px rgba(0, 50, 82, 0.2);
+    background: #cbd5e1;
 }
 
 .dashboard-chatbot-launcher[aria-expanded="true"] {
-    background: linear-gradient(135deg, #0c3a5a 0%, #005a92 100%);
-    box-shadow: 0 6px 18px rgba(0, 50, 82, 0.28);
+    background: #cbd5e1;
 }
 
 /* ── Chatbot panel ───────────────────────────────────────── */
@@ -1363,7 +1377,7 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-nao-inicia
     right: 1.25rem;
     bottom: 5.5rem;
     width: min(26rem, calc(100vw - 1.5rem));
-    height: min(44rem, calc(100vh - 7rem));
+    height: clamp(22rem, 62vh, 36rem);
     z-index: 1040;
     display: flex;
     flex-direction: column;
@@ -1483,7 +1497,7 @@ html[data-theme="dark"] body.is-authenticated .dashboard-chatbot-status.is-error
         left: 0.75rem;
         bottom: 5.25rem;
         width: auto;
-        height: min(80dvh, calc(100vh - 6rem));
+        height: min(65dvh, calc(100vh - 6rem));
         border-radius: 1.1rem;
     }
 

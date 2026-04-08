@@ -326,8 +326,8 @@
     aria-controls="dashboardChatbotPanel"
     aria-expanded="false"
 >
-    <i class="fas fa-comments" aria-hidden="true"></i>
-    <span>Assistente</span>
+    <img src="{{ chatbot_base_url }}/icon-chat.svg"        class="chatbot-launcher-icon chatbot-launcher-icon--normal" alt="" aria-hidden="true">
+    <img src="{{ chatbot_base_url }}/icon-chat-active.svg" class="chatbot-launcher-icon chatbot-launcher-icon--active" alt="" aria-hidden="true">
 </button>
 
 <section
@@ -496,6 +496,7 @@
         const chatbotTokenApiUrl = {{ url_for('main.get_chatbot_token')|tojson }};
         let chatbotFrameLoaded = false;
         let chatbotLoading = false;
+        let chatbotHasConversation = false;
 
         function getChatbotOrigin() {
             if (!chatbotBaseUrl) {
@@ -597,9 +598,25 @@
                 }
             });
 
+            document.addEventListener('click', function (event) {
+                if (chatbotPanel.hidden) return;
+                if (chatbotHasConversation) return;
+                if (chatbotPanel.contains(event.target)) return;
+                if (chatbotLauncher.contains(event.target)) return;
+                setChatbotOpen(false);
+            }, true);
+
             window.addEventListener('message', async function (event) {
-                if (event.origin !== getChatbotOrigin()) return;
                 if (!event.data) return;
+
+                if (event.data.type === 'conversation_started') {
+                    if (chatbotFrame && event.source === chatbotFrame.contentWindow) {
+                        chatbotHasConversation = true;
+                    }
+                    return;
+                }
+
+                if (event.origin !== getChatbotOrigin()) return;
 
                 if (event.data.type === 'close_embed') {
                     setChatbotOpen(false);
