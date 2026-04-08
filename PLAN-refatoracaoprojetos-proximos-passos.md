@@ -17,8 +17,23 @@
 
 ## Passos posteriores (Prioridade 3)
 
-- **`templates/tasks/hub.html`** — parciais para group-list, kanban-column, drawer, anexo-preview
-- **CSS monolítico** (`theme-dark.css`, `tasks/detail/dark.css`, `10-skeleton.css`, `20-glass-forms-and-admin.css`) — cortar por componente/página, não por tamanho
+### Passo 9 — `templates/tasks/hub.html` (885 linhas)
+
+Extrair parciais Jinja: group-list, kanban-column, drawer, anexo-preview.
+Impacto médio — risco baixo, ganho organizacional.
+
+### Passo 10 — CSS monolítico (8.231 linhas total)
+
+Cortar por componente/página, não por tamanho:
+
+| Arquivo | Linhas | Local |
+|---------|--------|-------|
+| `theme-dark.css` | 1.919 | `static/css/` |
+| `tasks/detail/dark.css` | 2.359 | `static/css/tasks/detail/` |
+| `legacy/10-skeleton.css` | 2.000 | `static/css/legacy/` |
+| `legacy/20-glass-forms-and-admin.css` | 1.953 | `static/css/legacy/` |
+
+Impacto alto em volume, baixo em risco funcional (CSS não quebra lógica).
 
 ---
 

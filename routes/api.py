@@ -1,4 +1,8 @@
-from flask import g, jsonify
+import json
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+from flask import current_app, g, jsonify, request
 
 from models import Project, StageTemplate
 from catalogs.objectives import (
@@ -59,3 +63,47 @@ def get_user_projects_api():
         }
         for p in projects
     ])
+
+
+@main_bp.route('/api/chatbot-token', methods=['GET'])
+@login_required
+def get_chatbot_token():
+    if not current_app.config.get('CHATBOT_ENABLED'):
+        return jsonify({'error': 'Chatbot desabilitado'}), 404
+
+    chatbot_base_url = str(current_app.config.get('CHATBOT_BASE_URL', '')).strip().rstrip('/')
+    portal_api_key = str(current_app.config.get('CHATBOT_PORTAL_API_KEY', '')).strip()
+    timeout_seconds = int(current_app.config.get('CHATBOT_TIMEOUT_SECONDS', 10) or 10)
+
+    if not chatbot_base_url or not portal_api_key:
+        current_app.logger.error('Configuracao do chatbot incompleta no portal.')
+        return jsonify({'error': 'Chatbot indisponivel'}), 503
+
+    portal_origin = request.host_url.rstrip('/')
+    upstream_request = Request(
+        f'{chatbot_base_url}/api/token',
+        data=b'',
+        method='POST',
+        headers={
+            'X-Portal-API-Key': portal_api_key,
+            'X-Portal-Origin': portal_origin,
+        },
+    )
+
+    try:
+        with urlopen(upstream_request, timeout=timeout_seconds) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+    except HTTPError as exc:
+        current_app.logger.warning('Chatbot token upstream retornou HTTP %s', exc.code)
+        return jsonify({'error': 'Falha ao obter token do chatbot'}), 502
+    except (URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
+        current_app.logger.warning('Falha ao obter token do chatbot: %s', exc)
+        return jsonify({'error': 'Falha ao obter token do chatbot'}), 502
+
+    token = str(payload.get('token') or '').strip()
+    expires_in = payload.get('expires_in')
+    if not token or not isinstance(expires_in, int):
+        current_app.logger.warning('Payload invalido ao obter token do chatbot.')
+        return jsonify({'error': 'Resposta invalida do chatbot'}), 502
+
+    return jsonify({'token': token, 'expires_in': expires_in})

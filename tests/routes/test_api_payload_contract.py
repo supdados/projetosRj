@@ -1,3 +1,5 @@
+import json
+
 from models import Project, StageTemplate, StageTemplateItem, db
 
 
@@ -102,3 +104,58 @@ def test_api_user_projects_respects_user_scope_and_admin_sees_all(app, seed_data
     admin_titles = [item['titulo'] for item in admin_payload]
     assert 'Projeto Auditoria' in admin_titles
     assert 'Projeto VPD' in admin_titles
+
+
+def test_api_chatbot_token_returns_upstream_token_payload(app, seed_data, monkeypatch):
+    app.config.update(
+        CHATBOT_ENABLED=True,
+        CHATBOT_BASE_URL='https://chatbot.proderj.rj.gov.br',
+        CHATBOT_PORTAL_API_KEY='portal-secret',
+        CHATBOT_TIMEOUT_SECONDS=7,
+        SERVER_NAME='projetos.proderj.rj.gov.br',
+    )
+
+    captured = {}
+
+    class _FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return json.dumps({'token': 'jwt-teste', 'expires_in': 900}).encode('utf-8')
+
+    def fake_urlopen(request, timeout):
+        captured['url'] = request.full_url
+        captured['timeout'] = timeout
+        captured['api_key'] = request.headers.get('X-portal-api-key')
+        captured['portal_origin'] = request.headers.get('X-portal-origin')
+        return _FakeResponse()
+
+    monkeypatch.setattr('routes.api.urlopen', fake_urlopen)
+
+    user_client = _client_for_user(app, seed_data['user_id'])
+    response = user_client.get(
+        '/api/chatbot-token',
+        environ_overrides={
+            'wsgi.url_scheme': 'https',
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.get_json() == {'token': 'jwt-teste', 'expires_in': 900}
+    assert captured == {
+        'url': 'https://chatbot.proderj.rj.gov.br/api/token',
+        'timeout': 7,
+        'api_key': 'portal-secret',
+        'portal_origin': 'https://projetos.proderj.rj.gov.br',
+    }
+
+
+def test_api_chatbot_token_returns_404_when_feature_is_disabled(client_user):
+    response = client_user.get('/api/chatbot-token')
+
+    assert response.status_code == 404
+    assert response.get_json() == {'error': 'Chatbot desabilitado'}

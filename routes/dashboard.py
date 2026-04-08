@@ -1,6 +1,6 @@
 import datetime
 
-from flask import g, render_template, request
+from flask import current_app, g, render_template, request
 from sqlalchemy import and_, or_
 
 from models import Etapa, Project, Task, db
@@ -189,4 +189,6 @@ def dashboard():
         recent_tasks=recent_tasks,
         objetivos=objetivos,
         AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
+        chatbot_enabled=bool(current_app.config.get('CHATBOT_ENABLED')),
+        chatbot_base_url=str(current_app.config.get('CHATBOT_BASE_URL', '')).strip().rstrip('/'),
     )

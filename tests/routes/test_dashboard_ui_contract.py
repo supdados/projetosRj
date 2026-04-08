@@ -56,6 +56,28 @@ def test_dashboard_template_contains_layout_and_scroll_hooks(client_user):
         assert hook in html
 
 
+def test_dashboard_renders_chatbot_launcher_when_enabled(app, client_user):
+    app.config.update(
+        CHATBOT_ENABLED=True,
+        CHATBOT_BASE_URL='https://chatbot.proderj.rj.gov.br',
+    )
+
+    response = client_user.get('/dashboard')
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    required_hooks = [
+        'dashboardChatbotLauncher',
+        'dashboardChatbotPanel',
+        'dashboardChatbotFrame',
+        '/api/chatbot-token',
+        'https://chatbot.proderj.rj.gov.br',
+    ]
+
+    for hook in required_hooks:
+        assert hook in html
+
+
 def test_dashboard_css_keeps_desktop_section_spacing_consistent():
     css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'index.css'
     css = css_path.read_text(encoding='utf-8')
@@ -63,3 +85,5 @@ def test_dashboard_css_keeps_desktop_section_spacing_consistent():
     assert '.dashboard-page-v2 .dashboard-welcome-strip,\n        .dashboard-page-v2 .dashboard-kpi-row {\n            margin-bottom: 0.4rem !important;' in css
     assert '.dashboard-page-v2 .dashboard-welcome-strip,\n        .dashboard-page-v2 .dashboard-welcome-strip {\n            margin-bottom: 0.28rem !important;' not in css
     assert '.dashboard-page-v2 .dashboard-welcome-strip,\n        .dashboard-page-v2 .dashboard-kpi-row {\n            margin-bottom: 0.28rem !important;' in css
+    assert '.dashboard-chatbot-launcher {' in css
+    assert '.dashboard-chatbot-panel {' in css

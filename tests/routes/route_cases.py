@@ -97,6 +97,16 @@ ROUTE_CASES = [
         'requires_login': True,
         'requires_admin': False,
     },
+    {
+        'id': 'chatbot_token_get',
+        'method': 'GET',
+        'rule': '/api/chatbot-token',
+        'path': '/api/chatbot-token',
+        'role': 'user',
+        'expected_status': 404,
+        'requires_login': True,
+        'requires_admin': False,
+    },
     # Projects
     {
         'id': 'projects_get',
@@ -1225,4 +1235,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 108
+assert len(ROUTE_CASES) == 109
