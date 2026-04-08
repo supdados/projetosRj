@@ -337,26 +337,6 @@
     hidden
     aria-hidden="true"
 >
-    <header class="dashboard-chatbot-panel-header">
-        <div class="dashboard-chatbot-header-info">
-            <div class="dashboard-chatbot-header-icon" aria-hidden="true">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div>
-                <p class="dashboard-chatbot-eyebrow">Atendimento guiado</p>
-                <h2 class="dashboard-chatbot-title">Assistente de serviços</h2>
-            </div>
-        </div>
-        <button
-            type="button"
-            class="dashboard-chatbot-close"
-            data-chatbot-close
-            aria-label="Fechar assistente"
-        >
-            <i class="fas fa-times" aria-hidden="true"></i>
-        </button>
-    </header>
-
     <div class="dashboard-chatbot-status is-loading" data-chatbot-status>
         Conectando ao assistente&hellip;
     </div>
@@ -619,7 +599,14 @@
 
             window.addEventListener('message', async function (event) {
                 if (event.origin !== getChatbotOrigin()) return;
-                if (!event.data || event.data.type !== 'token_request') return;
+                if (!event.data) return;
+
+                if (event.data.type === 'close_embed') {
+                    setChatbotOpen(false);
+                    return;
+                }
+
+                if (event.data.type !== 'token_request') return;
 
                 try {
                     const renewedToken = await fetchChatbotToken();
