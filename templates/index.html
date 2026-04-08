@@ -338,9 +338,14 @@
     aria-hidden="true"
 >
     <header class="dashboard-chatbot-panel-header">
-        <div>
-            <p class="dashboard-chatbot-eyebrow mb-1">Atendimento guiado</p>
-            <h2 class="dashboard-chatbot-title mb-0">Assistente de serviços</h2>
+        <div class="dashboard-chatbot-header-info">
+            <div class="dashboard-chatbot-header-icon" aria-hidden="true">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div>
+                <p class="dashboard-chatbot-eyebrow">Atendimento guiado</p>
+                <h2 class="dashboard-chatbot-title">Assistente de serviços</h2>
+            </div>
         </div>
         <button
             type="button"
@@ -352,8 +357,8 @@
         </button>
     </header>
 
-    <div class="dashboard-chatbot-status" data-chatbot-status>
-        Clique em "Assistente" para carregar o atendimento.
+    <div class="dashboard-chatbot-status is-loading" data-chatbot-status>
+        Conectando ao assistente&hellip;
     </div>
 
     <div class="dashboard-chatbot-frame-shell" data-chatbot-frame-shell hidden>
@@ -533,12 +538,13 @@
             document.body.classList.toggle('dashboard-chatbot-open', isOpen);
         }
 
-        function setChatbotStatus(message, isError) {
+        function setChatbotStatus(message, isError, isLoading) {
             if (!chatbotStatus) {
                 return;
             }
             chatbotStatus.textContent = message;
             chatbotStatus.classList.toggle('is-error', Boolean(isError));
+            chatbotStatus.classList.toggle('is-loading', Boolean(isLoading));
             chatbotStatus.hidden = false;
         }
 
@@ -577,7 +583,7 @@
             }
 
             chatbotLoading = true;
-            setChatbotStatus('Conectando ao assistente...', false);
+            setChatbotStatus('Conectando ao assistente...', false, true);
             try {
                 const token = await fetchChatbotToken();
                 chatbotFrame.src = chatbotBaseUrl + '/embed?token=' + encodeURIComponent(token);
