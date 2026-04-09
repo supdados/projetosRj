@@ -62,6 +62,7 @@ def app(tmp_path):
             'SQLALCHEMY_TRACK_MODIFICATIONS': False,
             'SQLALCHEMY_ENGINE_OPTIONS': {'poolclass': NullPool},
             'SKIP_STARTUP_DB_INIT': True,
+            'WTF_CSRF_ENABLED': False,
         }
     )
 

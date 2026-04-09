@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from flask import Flask, g, redirect, request, session, url_for
 
 from config import build_app_config, _env_flag_is_true
-from extensions import db, migrate  # noqa: F401 — db re-exported for scripts
+from extensions import csrf, db, limiter, migrate  # noqa: F401 — db re-exported for scripts
 from models import User, UserNotification
 from routes import inject_current_year, main_bp
 from services.govbr_oidc import GovBrOIDCError, is_govbr_oidc_enabled, refresh_access_token
@@ -72,6 +72,15 @@ def _register_request_hooks(app):
         if new_refresh_token:
             g.govbr_new_refresh_token = new_refresh_token
             g.govbr_new_refresh_max_age = int(refresh_expires_in) if refresh_expires_in else None
+
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        if app.config.get('SESSION_COOKIE_SECURE'):
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        return response
 
     @app.after_request
     def apply_govbr_refresh_cookie(response):
@@ -163,6 +172,8 @@ def create_app(test_config=None):
 
     db.init_app(app)
     migrate.init_app(app, db)
+    csrf.init_app(app)
+    limiter.init_app(app)
 
     app.register_blueprint(main_bp)
     _register_request_hooks(app)

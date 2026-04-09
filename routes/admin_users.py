@@ -303,6 +303,18 @@ def edit_user(user_id):
         hide_govbr_link_fields=hide_govbr_link_fields,
     )
 
+@main_bp.route('/admin/users/remove-cpf/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def remove_cpf(user_id):
+    user_to_edit = get_or_404(User, user_id)
+    user_to_edit.cpf_govbr = None
+    user_to_edit.govbr_sub = None
+    db.session.commit()
+    flash(f'CPF e vínculo gov.br do usuário "{user_to_edit.name}" foram removidos.', 'success')
+    return redirect(url_for('main.edit_user', user_id=user_id))
+
+
 @main_bp.route('/admin/users/delete/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required

@@ -7,6 +7,7 @@ from models import db
 from catalogs.objectives import sync_goal_catalog_to_db
 
 from .blueprint import main_bp
+from .decorators import admin_required, login_required
 # Rota específica para servir o favicon
 @main_bp.route('/favicon.ico')
 def favicon():
@@ -21,8 +22,8 @@ def favicon():
     response.headers['Expires'] = '0'
     return response
 @main_bp.route('/setup_db')
-# @login_required # Opcional: proteger esta rota
-# @admin_required # Opcional: proteger esta rota
+@login_required
+@admin_required
 def setup_db():
     # Lembre-se que a tabela 'user' foi criada manualmente.
     # db.create_all() aqui NÃO vai recriar 'user' se ela já existir.
@@ -43,7 +44,6 @@ def setup_db():
                 "tabelas_existentes": tabelas_existentes,
                 "tabela_project_existe": tabela_project_existe,
                 "tabela_user_existe": tabela_user_existe,
-                "banco_de_dados": current_app.config['SQLALCHEMY_DATABASE_URI'],
                 "ambiente": "Google App Engine" if os.getenv('GAE_ENV', '').startswith('standard') else "Desenvolvimento Local"
             }
         }
@@ -86,7 +86,6 @@ def setup_db():
         <p><strong>Mensagem:</strong> {resultado['mensagem']}</p>
         <h2>Detalhes</h2><ul>
             <li><strong>Ambiente:</strong> {resultado['detalhes']['ambiente']}</li>
-            <li><strong>Banco de Dados:</strong> {resultado['detalhes']['banco_de_dados']}</li>
             <li><strong>Tabela 'project' Existe:</strong> {resultado['detalhes']['tabela_project_existe']}</li>
             <li><strong>Tabela 'user' Existe:</strong> {resultado['detalhes']['tabela_user_existe']}</li>
             <li><strong>Tabelas Existentes:</strong> {', '.join(resultado['detalhes']['tabelas_existentes'])}</li>

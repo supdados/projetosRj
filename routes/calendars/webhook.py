@@ -1,5 +1,6 @@
 from flask import current_app, request
 
+from extensions import csrf
 from models import db
 
 from routes.blueprint import main_bp
@@ -10,6 +11,7 @@ from routes.calendars.helpers import (
 
 
 @main_bp.route('/webhook', methods=['POST'])
+@csrf.exempt
 def calendar_webhook():
     channel_id = request.headers.get('X-Goog-Channel-ID')
     if not channel_id:

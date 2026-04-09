@@ -57,16 +57,21 @@
                         {% endif %}
                     </div>
 
-                    {% if hide_govbr_link_fields %}
+                    {% if user.id and user.cpf_govbr %}
                     <div class="col-12 account-field-compact">
-                        <label for="govbr_link_status" class="account-label">Vínculo gov.br</label>
-                        <input
-                            type="text"
-                            class="form-control account-input account-input-readonly"
-                            id="govbr_link_status"
-                            value="Vinculado por gov.br"
-                            readonly
-                        >
+                        <label class="account-label">CPF gov.br</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="form-control account-input account-input-readonly" style="width: auto; flex: 1;">
+                                CPF já cadastrado{% if user.govbr_sub %} — Vinculado ao gov.br{% else %} — Vínculo pendente{% endif %}
+                            </span>
+                            <form action="{{ url_for('main.remove_cpf', user_id=user.id) }}" method="POST"
+                                  onsubmit="return confirm('Tem certeza que deseja retirar o CPF e o vínculo gov.br deste usuário? Esta ação não pode ser desfeita.');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-times me-1"></i>Retirar
+                                </button>
+                            </form>
+                        </div>
+                        <div class="account-help-text">Ao retirar, o CPF e o vínculo gov.br serão apagados.</div>
                     </div>
                     {% else %}
                     <div class="col-12 account-field-compact">
@@ -76,7 +81,7 @@
                             class="form-control account-input"
                             id="cpf_govbr"
                             name="cpf_govbr"
-                            value="{{ user.cpf_govbr or request.form.cpf_govbr or '' }}"
+                            value="{{ request.form.cpf_govbr or '' }}"
                             placeholder="Somente números ou com máscara"
                         >
                         <div class="account-help-text">Campo opcional. Use CPF com 11 dígitos para habilitar login gov.br.</div>
@@ -96,14 +101,14 @@
                         id="password"
                         name="password"
                         placeholder="{{ 'Deixe em branco para não alterar a senha existente' if user.id else 'Crie uma senha forte' }}"
-                        {% if not user.id %}required minlength="6"{% else %}minlength="6"{% endif %}
+                        {% if not user.id %}required minlength="8"{% else %}minlength="8"{% endif %}
                     >
                     <button type="button" class="btn account-password-toggle" data-password-target="password" aria-label="Mostrar ou ocultar senha">
                         <i class="fas fa-eye"></i>
                     </button>
                 </div>
-                <div class="account-help-text">Mínimo de 6 caracteres. {% if user.id %}Preencha apenas se desejar alterar.{% endif %}</div>
-                <div class="invalid-feedback">A senha deve ter no mínimo 6 caracteres.</div>
+                <div class="account-help-text">Mínimo de 8 caracteres. {% if user.id %}Preencha apenas se desejar alterar.{% endif %}</div>
+                <div class="invalid-feedback">A senha deve ter no mínimo 8 caracteres.</div>
             </div>
             {% endif %}
 

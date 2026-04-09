@@ -17,6 +17,8 @@ from services.govbr_oidc import (
     normalize_cpf,
 )
 
+from extensions import limiter
+
 from .blueprint import main_bp
 from .decorators import login_required
 
@@ -110,6 +112,7 @@ def home():
     return redirect(url_for('main.login_page'))
 
 @main_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute", methods=["POST"])
 def login_page():
     if 'user_id' in session and g.user: # Se já logado e usuário válido
         return redirect(url_for('main.dashboard'))
@@ -348,6 +351,7 @@ def logout():
 
 @main_bp.route('/profile/change-password', methods=['GET', 'POST'])
 @login_required
+@limiter.limit("5 per minute", methods=["POST"])
 def change_password():
     is_govbr_linked = bool(g.user and g.user.cpf_govbr and g.user.govbr_sub)
 
@@ -394,8 +398,8 @@ def change_password():
             flash('A nova senha e a confirmação não correspondem.', 'danger')
             return render_template('auth/change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
-        if should_update_password and len(new_password) < 6:
-            flash('A nova senha deve ter no mínimo 6 caracteres.', 'danger')
+        if should_update_password and len(new_password) < 8:
+            flash('A nova senha deve ter no mínimo 8 caracteres.', 'danger')
             return render_template('auth/change_password.html', hide_govbr_link_fields=is_govbr_linked)
 
         g.user.name = name

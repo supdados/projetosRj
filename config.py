@@ -62,6 +62,8 @@ def build_app_config(*, is_testing=False, is_debug=False):
         SECRET_KEY=_resolve_secret_key(is_testing=is_testing, is_debug=is_debug),
         SQLALCHEMY_DATABASE_URI=_resolve_database_uri(),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        MAX_CONTENT_LENGTH=10 * 1024 * 1024,  # 10 MB
+        WTF_CSRF_ENABLED=_env_flag_is_true('WTF_CSRF_ENABLED', default='true'),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SECURE=_env_flag_is_true('SESSION_COOKIE_SECURE', default='false'),
         SESSION_COOKIE_SAMESITE='Lax',
