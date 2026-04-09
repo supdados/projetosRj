@@ -134,6 +134,8 @@ def _register_context_processors(app):
             'is_admin_user': is_admin,
             'unread_notifications_count': unread_notifications_count,
             'govbr_login_enabled': is_govbr_oidc_enabled(app.config),
+            'chatbot_enabled': bool(app.config.get('CHATBOT_ENABLED')),
+            'chatbot_base_url': str(app.config.get('CHATBOT_BASE_URL', '')).strip().rstrip('/'),
         }
 
 
