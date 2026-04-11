@@ -15,6 +15,7 @@ from .task import (
     TaskItemComment,
     TaskItemAnexo,
 )
+from .caderno import CadernoBlock
 
 __all__ = [
     'db',
@@ -44,4 +45,5 @@ __all__ = [
     'LegacyTaskRedirect',
     'TaskItemComment',
     'TaskItemAnexo',
+    'CadernoBlock',
 ]

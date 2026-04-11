@@ -1,0 +1,761 @@
+/* ── Caderno – variáveis ─────────────────────────────────── */
+:root {
+  --caderno-paper-bg:        #fdfaf3;
+  --caderno-line-color:      #e0d9c6;
+  --caderno-margin-color:    #e8b4b8;
+  --caderno-margin-width:    52px;
+  --caderno-line-height:     2.5rem;
+  --caderno-content-font:    var(--ds-font-family-body, 'Inter', sans-serif);
+
+  --caderno-nota-bg:         #fffde7;
+  --caderno-nota-border:     #f9a825;
+  --caderno-nota-icon:       #f9a825;
+
+  --caderno-project-bg:      #eff6ff;
+  --caderno-project-border:  var(--ds-color-primary-600, #005a92);
+  --caderno-project-icon:    var(--ds-color-primary-600, #005a92);
+
+  --caderno-etapa-bg:        #f0fdf4;
+  --caderno-etapa-border:    var(--ds-color-success-600, #16a34a);
+  --caderno-etapa-icon:      var(--ds-color-success-600, #16a34a);
+
+  --caderno-tarefa-bg:       #faf5ff;
+  --caderno-tarefa-border:   #7c3aed;
+  --caderno-tarefa-icon:     #7c3aed;
+}
+
+html[data-theme="dark"] body.is-authenticated {
+  --caderno-paper-bg:       #1c2332;
+  --caderno-line-color:     #2a3347;
+  --caderno-margin-color:   #5a3a3a;
+
+  --caderno-nota-bg:        #2d2600;
+  --caderno-nota-border:    #b38600;
+  --caderno-nota-icon:      #f9c23c;
+
+  --caderno-project-bg:     rgba(0, 90, 146, 0.15);
+  --caderno-project-icon:   #4e95cc;
+
+  --caderno-etapa-bg:       rgba(22, 163, 74, 0.1);
+  --caderno-etapa-icon:     #4ade80;
+
+  --caderno-tarefa-bg:      rgba(124, 58, 237, 0.12);
+  --caderno-tarefa-border:  #a78bfa;
+  --caderno-tarefa-icon:    #a78bfa;
+}
+
+/* ── Layout da página ──────────────────────────────────────── */
+.caderno-page {
+  width: 100%;
+  padding: 1.5rem 1.25rem 4rem;
+}
+
+/* ── Cabeçalho ─────────────────────────────────────────────── */
+.caderno-header {
+  margin-bottom: 1.25rem;
+  padding-left: calc(var(--caderno-margin-width) + 1.25rem);
+}
+
+.caderno-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.caderno-title-icon {
+  font-size: 1.6rem;
+  color: var(--caderno-project-icon);
+}
+
+.caderno-title {
+  font-family: var(--ds-font-family-heading, 'Manrope', sans-serif);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 800;
+  margin: 0;
+  color: var(--app-color-text-primary, #1a1a2e);
+  letter-spacing: -0.02em;
+}
+
+.caderno-date {
+  font-size: 0.8125rem;
+  color: var(--app-color-text-muted, #6b7280);
+  margin: 0.25rem 0 0;
+  letter-spacing: 0.01em;
+}
+
+/* ── Papel do caderno ──────────────────────────────────────── */
+.caderno-paper {
+  position: relative;
+  background-color: var(--caderno-paper-bg);
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.06);
+  min-height: 560px;
+  transition: min-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+
+  /* Linha da margem + pontos (dot grid) */
+  background-image:
+    linear-gradient(90deg, var(--caderno-margin-color) 1px, transparent 1px),
+    radial-gradient(circle, var(--caderno-line-color) 1.3px, transparent 1.3px);
+  background-size:
+    var(--caderno-margin-width) 100%,
+    26px 26px;
+  background-position:
+    0 0,
+    calc(var(--caderno-margin-width) + 13px) 13px;
+  background-repeat:
+    no-repeat,
+    repeat;
+  background-attachment: local;
+
+  padding: 1.75rem 1.75rem 2.5rem calc(var(--caderno-margin-width) + 1.25rem);
+}
+
+/* ── Dica vazia ─────────────────────────────────────────────── */
+.caderno-empty-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--app-color-text-muted, #9ca3af);
+  font-size: 0.9rem;
+  font-style: italic;
+  padding: 0.75rem 0;
+  cursor: text;
+}
+
+.caderno-empty-hint.is-hidden {
+  display: none;
+}
+
+.caderno-empty-hint kbd {
+  font-style: normal;
+  font-family: monospace;
+  font-size: 0.8rem;
+  padding: 1px 5px;
+  border: 1px solid var(--app-color-border, #d1d5db);
+  border-radius: 4px;
+  background: rgba(0,0,0,.04);
+}
+
+/* ── Bloco base ─────────────────────────────────────────────── */
+.caderno-block {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.caderno-block-actions {
+  position: absolute;
+  top: 50%;
+  left: calc(-1 * (var(--caderno-margin-width) + 0.5rem));
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.caderno-block:hover .caderno-block-actions,
+.caderno-block:focus-within .caderno-block-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.caderno-block-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--app-color-text-muted, #6b7280);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  transition: background 0.1s, color 0.1s;
+  padding: 0;
+}
+
+.caderno-block-btn:hover {
+  background: rgba(0,0,0,.08);
+  color: var(--app-color-text-primary, #111827);
+}
+
+.caderno-block-btn--delete:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+/* ── Bloco de texto ─────────────────────────────────────────── */
+.caderno-block--text .caderno-text-editor {
+  display: block;
+  width: 100%;
+  min-height: calc(var(--caderno-line-height));
+  padding: 0.125rem 0;
+  font-family: var(--caderno-content-font);
+  font-size: 0.9375rem;
+  line-height: var(--caderno-line-height);
+  color: var(--app-color-text-primary, #1f2937);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+[contenteditable]:empty:before {
+  content: attr(data-placeholder);
+  color: var(--app-color-text-muted, #9ca3af);
+  pointer-events: none;
+}
+
+/* ── Bloco de nota (post-it) ─────────────────────────────────── */
+.caderno-block--nota .caderno-nota-card {
+  background: var(--caderno-nota-bg);
+  border-left: 4px solid var(--caderno-nota-border);
+  border-radius: 0 8px 8px 0;
+  padding: 0.75rem 1rem;
+  box-shadow: 2px 2px 6px var(--caderno-nota-shadow, rgba(249,168,37,.15));
+}
+
+.caderno-nota-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--caderno-nota-icon);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.375rem;
+}
+
+.caderno-block--nota .caderno-text-editor {
+  display: block;
+  width: 100%;
+  min-height: 1.5rem;
+  padding: 0;
+  font-family: var(--caderno-content-font);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--app-color-text-primary, #1f2937);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Card de referência (base) ───────────────────────────────── */
+.caderno-ref-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border-left-width: 4px;
+  border-left-style: solid;
+  text-decoration: none;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+}
+
+.caderno-ref-card:hover {
+  opacity: 0.88;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
+
+.caderno-ref-card-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.caderno-ref-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.caderno-ref-card-type {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+  opacity: 0.7;
+}
+
+.caderno-ref-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--app-color-text-primary, #1f2937);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.25rem;
+}
+
+.caderno-ref-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--app-color-text-muted, #6b7280);
+}
+
+.caderno-ref-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(0,0,0,.06);
+  color: inherit;
+}
+
+.caderno-ref-card-link-hint {
+  font-size: 0.75rem;
+  color: var(--app-color-text-muted, #9ca3af);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Null state para referência não encontrada */
+.caderno-ref-null {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 8px;
+  border: 1px dashed var(--app-color-border, #d1d5db);
+  color: var(--app-color-text-muted, #9ca3af);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+/* ── Card de Projeto ─────────────────────────────────────────── */
+.caderno-block--project .caderno-ref-card {
+  background: var(--caderno-project-bg);
+  border-left-color: var(--caderno-project-border);
+}
+
+.caderno-block--project .caderno-ref-card-icon {
+  color: var(--caderno-project-icon);
+}
+
+.caderno-block--project .caderno-ref-card-type {
+  color: var(--caderno-project-icon);
+}
+
+.caderno-project-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+}
+
+.caderno-progress-bar-wrap {
+  flex: 1;
+  height: 5px;
+  background: rgba(0,0,0,.1);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.caderno-progress-bar {
+  height: 100%;
+  background: var(--caderno-project-border);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+.caderno-progress-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--caderno-project-icon);
+  flex-shrink: 0;
+}
+
+/* ── Card de Etapa ───────────────────────────────────────────── */
+.caderno-block--etapa .caderno-ref-card {
+  background: var(--caderno-etapa-bg);
+  border-left-color: var(--caderno-etapa-border);
+}
+
+.caderno-block--etapa .caderno-ref-card-icon {
+  color: var(--caderno-etapa-icon);
+}
+
+.caderno-block--etapa .caderno-ref-card-type {
+  color: var(--caderno-etapa-icon);
+}
+
+.caderno-etapa-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+.caderno-etapa-status--done {
+  background: rgba(22,163,74,.15);
+  color: #16a34a;
+}
+
+.caderno-etapa-status--iniciada {
+  background: rgba(234,179,8,.15);
+  color: #ca8a04;
+}
+
+.caderno-etapa-status--pendente {
+  background: rgba(107,114,128,.12);
+  color: #6b7280;
+}
+
+/* ── Card de Tarefa ─────────────────────────────────────────── */
+.caderno-block--tarefa .caderno-ref-card {
+  background: var(--caderno-tarefa-bg);
+  border-left-color: var(--caderno-tarefa-border);
+}
+
+.caderno-block--tarefa .caderno-ref-card-icon {
+  color: var(--caderno-tarefa-icon);
+}
+
+.caderno-block--tarefa .caderno-ref-card-type {
+  color: var(--caderno-tarefa-icon);
+}
+
+/* Status badges de tarefas */
+.caderno-task-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+.caderno-task-status--nao_iniciada  { background: rgba(107,114,128,.12); color: #6b7280; }
+.caderno-task-status--em_andamento  { background: rgba(59,130,246,.12); color: #2563eb; }
+.caderno-task-status--para_validacao{ background: rgba(234,179,8,.15); color: #ca8a04; }
+.caderno-task-status--para_ajustes  { background: rgba(249,115,22,.12); color: #ea580c; }
+.caderno-task-status--finalizada    { background: rgba(22,163,74,.12); color: #16a34a; }
+
+/* Prioridade badge */
+.caderno-prio { font-size: 0.7rem; font-weight: 700; text-transform: capitalize; }
+.caderno-prio--urgente { color: #dc2626; }
+.caderno-prio--alta    { color: #ea580c; }
+.caderno-prio--media   { color: #ca8a04; }
+.caderno-prio--baixa   { color: #6b7280; }
+
+/* ── Zona de adição ─────────────────────────────────────────── */
+.caderno-add-zone {
+  min-height: 3rem;
+  margin-top: 0.5rem;
+  cursor: text;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.caderno-add-zone:hover,
+.caderno-add-zone:focus {
+  background: rgba(0,0,0,.025);
+  outline: none;
+}
+
+/* ── Expandir página ─────────────────────────────────────────── */
+.caderno-expand-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1rem 0 0.5rem;
+  margin-top: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--app-color-text-muted, #9ca3af);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  transition: opacity 0.2s, color 0.2s;
+  border-top: 1px dashed var(--caderno-line-color, #e0d9c6);
+}
+
+.caderno-expand-zone:hover {
+  opacity: 1;
+  color: var(--caderno-project-icon, #005a92);
+}
+
+.caderno-expand-zone-icon {
+  font-size: 0.65rem;
+  animation: caderno-bounce 1.8s ease-in-out infinite;
+}
+
+@keyframes caderno-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(3px); }
+}
+
+/* ── Menu slash ─────────────────────────────────────────────── */
+.slash-menu {
+  position: fixed;
+  z-index: 1050;
+  background: var(--app-color-surface, #fff);
+  border: 1px solid var(--app-color-border, #e5e7eb);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.08);
+  min-width: 220px;
+  padding: 0.375rem 0.375rem 0.5rem;
+  animation: slashMenuIn 0.12s ease;
+}
+
+@keyframes slashMenuIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.slash-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--app-color-text-muted, #6b7280);
+  padding: 0.25rem 0.625rem 0.5rem;
+}
+
+.slash-menu-header-icon {
+  font-size: 0.65rem;
+}
+
+.slash-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.slash-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.slash-menu-item:hover,
+.slash-menu-item.is-active {
+  background: var(--ds-color-primary-100, #eff6ff);
+}
+
+.slash-menu-icon-wrap {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.slash-menu-icon--text    { background: #f3f4f6; color: #374151; }
+.slash-menu-icon--nota    { background: #fffde7; color: #f9a825; }
+.slash-menu-icon--project { background: #eff6ff; color: var(--ds-color-primary-600, #005a92); }
+.slash-menu-icon--etapa   { background: #f0fdf4; color: #16a34a; }
+.slash-menu-icon--tarefa  { background: #faf5ff; color: #7c3aed; }
+
+.slash-menu-info { display: flex; flex-direction: column; }
+.slash-menu-label { font-size: 0.875rem; font-weight: 600; color: var(--app-color-text-primary, #111827); }
+.slash-menu-desc  { font-size: 0.75rem; color: var(--app-color-text-muted, #6b7280); }
+
+/* ── Modal de busca ─────────────────────────────────────────── */
+.caderno-search-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 1060;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.caderno-search-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1070;
+  background: var(--app-color-surface, #fff);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  width: min(480px, 95vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: modalIn 0.18s ease;
+  overflow: hidden;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translate(-50%, calc(-50% - 8px)) scale(0.97); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.caderno-search-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem 0.875rem;
+  border-bottom: 1px solid var(--app-color-border, #e5e7eb);
+  flex-shrink: 0;
+}
+
+.caderno-search-modal-icon { font-size: 1rem; }
+.caderno-search-modal-title {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  flex: 1;
+  color: var(--app-color-text-primary, #111827);
+}
+
+.caderno-search-modal-close {
+  width: 28px; height: 28px;
+  border: none; border-radius: 6px; background: transparent;
+  color: var(--app-color-text-muted, #6b7280);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; transition: background 0.1s;
+}
+.caderno-search-modal-close:hover { background: rgba(0,0,0,.08); color: #111827; }
+
+.caderno-search-modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.caderno-search-input {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9375rem;
+  border: none;
+  border-bottom: 1px solid var(--app-color-border, #e5e7eb);
+  outline: none;
+  background: transparent;
+  color: var(--app-color-text-primary, #111827);
+}
+
+.caderno-search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.5rem;
+}
+
+.caderno-search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: var(--app-color-text-muted, #9ca3af);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.caderno-search-empty i { font-size: 1.5rem; opacity: 0.4; }
+
+.caderno-search-result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.caderno-search-result-item:hover,
+.caderno-search-result-item.is-active {
+  background: var(--ds-color-primary-100, #eff6ff);
+}
+
+.caderno-search-result-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.caderno-search-result-icon--project { background: #eff6ff; color: var(--ds-color-primary-600, #005a92); }
+.caderno-search-result-icon--stage   { background: #f0fdf4; color: #16a34a; }
+.caderno-search-result-icon--task    { background: #faf5ff; color: #7c3aed; }
+
+.caderno-search-result-body { flex: 1; min-width: 0; }
+.caderno-search-result-title {
+  font-size: 0.875rem; font-weight: 600;
+  color: var(--app-color-text-primary, #111827);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.caderno-search-result-sub {
+  font-size: 0.78rem; color: var(--app-color-text-muted, #6b7280);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── Spinner de carregamento ───────────────────────────────── */
+.caderno-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 2.5rem;
+  color: var(--app-color-text-muted, #9ca3af);
+  font-size: 0.875rem;
+}
+
+.caderno-spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--app-color-border, #e5e7eb);
+  border-top-color: var(--ds-color-primary-600, #005a92);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Responsivo ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .caderno-page { padding: 1rem 0.5rem 3rem; }
+  .caderno-header { padding-left: calc(var(--caderno-margin-width) + 0.75rem); }
+  .caderno-paper { padding: 1.25rem 1rem 2rem calc(var(--caderno-margin-width) + 0.75rem); }
+  .caderno-block-actions { left: calc(-1 * var(--caderno-margin-width) + 4px); }
+  .slash-menu { min-width: 190px; }
+}
