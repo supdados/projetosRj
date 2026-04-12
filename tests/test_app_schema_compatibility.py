@@ -126,6 +126,7 @@ def test_schema_compatibility_upgrades_legacy_project_and_task_tables(tmp_path):
         inspector = inspect(db.engine)
         project_columns = {column['name'] for column in inspector.get_columns('project')}
         assert 'abep_indicator' in project_columns
+        assert 'product_link' in project_columns
 
         task_columns = {column['name'] for column in inspector.get_columns('task')}
         assert 'titulo' not in task_columns
@@ -165,6 +166,7 @@ def test_schema_compatibility_upgrades_legacy_project_and_task_tables(tmp_path):
         assert migrated_task['created_by_id'] == 1
 
         assert summary['column_added'] is False
+        assert 'project.product_link' in summary['project_columns_added']
         assert 'task.rebuilt_task_only' in summary['task_core_cols']
         assert 'Auditoria' in summary['area_catalog_choices']
 

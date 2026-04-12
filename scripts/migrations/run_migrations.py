@@ -27,7 +27,7 @@ from catalogs.objectives import sync_goal_catalog_to_db
 from routes.shared import ensure_area_catalog_seeded
 from time_utils import utc_now
 
-ALEMBIC_HEAD = 'e5f6a7b8c9d0'
+ALEMBIC_HEAD = 'f7a9c3e1b2d4'
 VALID_TASK_STATUSES = {
     'nao_iniciada',
     'em_andamento',
@@ -67,6 +67,7 @@ PROJECT_COLUMNS = [
     ('abep_indicator', 'VARCHAR(255)'),
     ('github_link', 'VARCHAR(500)'),
     ('documentation_link', 'VARCHAR(500)'),
+    ('product_link', 'VARCHAR(500)'),
 ]
 USER_AUTH_COLUMNS = [
     ('cpf_govbr', 'VARCHAR(11)'),

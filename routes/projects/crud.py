@@ -61,6 +61,7 @@ def add_project():
         abep_indicator = normalize_abep_indicator(request.form.get('project_abep_indicator'))
         github_link = request.form.get('project_github_link') or None
         documentation_link = request.form.get('project_documentation_link') or None
+        product_link = request.form.get('project_product_link') or None
         
         # Etapas importadas do modelo
         etapa_descricoes = request.form.getlist('etapa_descricao')
@@ -82,7 +83,8 @@ def add_project():
             delivery_type=delivery_type,
             abep_indicator=abep_indicator,
             github_link=github_link,
-            documentation_link=documentation_link
+            documentation_link=documentation_link,
+            product_link=product_link,
         )
         db.session.add(new_project)
         db.session.flush()  # Para obter o new_project.id para as etapas e indicadores
@@ -212,6 +214,7 @@ def edit_project(project_id):
         project_to_edit.delivery_type = request.form.get('project_delivery_type') or None
         project_to_edit.github_link = request.form.get('project_github_link') or None
         project_to_edit.documentation_link = request.form.get('project_documentation_link') or None
+        project_to_edit.product_link = request.form.get('project_product_link') or None
         
         try:
             old_abep_indicator = project_to_edit.abep_indicator

@@ -208,6 +208,16 @@
                         <small class="form-text text-muted">URL da documentação do projeto</small>
                     </div>
                 </div>
+
+                <div class="mb-3">
+                    <label for="project_product_link" class="form-label fw-bold">
+                        <i class="fas fa-box-open me-1"></i>Link para o Produto:
+                    </label>
+                    <input type="text" class="form-control" id="project_product_link" name="project_product_link"
+                           value="{{ project.product_link if project.product_link }}"
+                           placeholder="https://...">
+                    <small class="form-text text-muted">URL do produto publicado ou homologado</small>
+                </div>
                 
                 <!-- Observação (Campo original de descrição detalhada) -->
                 <div class="mb-3">

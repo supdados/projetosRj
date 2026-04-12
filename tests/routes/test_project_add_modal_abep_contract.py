@@ -44,3 +44,19 @@ def test_project_add_modal_distributes_fields_in_updated_sections(client_user):
 
     assert 'Processo SEI-RJ' in details_html
     assert 'id="project_sei_process"' in details_html
+    assert 'id="project_github_link"' in details_html
+    assert 'id="project_documentation_link"' in details_html
+    assert 'id="project_product_link"' in details_html
+
+    link_rows_html = details_html[:details_html.index('id="project_observacao"')]
+    assert link_rows_html.count('<div class="row g-3 mb-2">') == 2
+
+    first_row_start = link_rows_html.index('<div class="row g-3 mb-2">')
+    second_row_start = link_rows_html.index('<div class="row g-3 mb-2">', first_row_start + 1)
+    first_row_html = link_rows_html[first_row_start:second_row_start]
+    second_row_html = link_rows_html[second_row_start:]
+
+    assert 'id="project_sei_process"' in first_row_html
+    assert 'id="project_github_link"' in first_row_html
+    assert 'id="project_documentation_link"' in second_row_html
+    assert 'id="project_product_link"' in second_row_html

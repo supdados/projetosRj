@@ -160,6 +160,7 @@ def test_add_project_creates_stages_indicators_and_history(app, client_user):
             'project_abep_indicator': abep_value,
             'project_github_link': 'https://github.com/exemplo/projeto',
             'project_documentation_link': 'https://docs.example.com/projeto',
+            'project_product_link': 'https://produto.example.com/projeto',
             'etapa_descricao': ['Etapa 1', 'Etapa 2'],
             'etapa_duration': ['2', '3'],
             'project_start_date': '2026-03-10',
@@ -176,6 +177,7 @@ def test_add_project_creates_stages_indicators_and_history(app, client_user):
         assert project.delivery_type == 'Sistema'
         assert project.abep_indicator == abep_value
         assert project.special_project == 'ABEP'
+        assert project.product_link == 'https://produto.example.com/projeto'
 
         etapas = Etapa.query.filter_by(project_id=project.id).order_by(Etapa.ordem.asc()).all()
         assert [etapa.descricao for etapa in etapas] == ['Etapa 1', 'Etapa 2']
@@ -215,6 +217,7 @@ def test_edit_project_updates_fields_and_history(app, client_user, seed_data):
             'project_abep_indicator': ABEP_INDICADORES_OPTIONS[1]['value'],
             'project_github_link': 'https://github.com/exemplo/editado',
             'project_documentation_link': 'https://docs.example.com/editado',
+            'project_product_link': 'https://produto.example.com/editado',
             'project_objetivo': '1',
             'project_resultado': '1',
             'project_indicadores': [selected_indicator],
@@ -235,6 +238,7 @@ def test_edit_project_updates_fields_and_history(app, client_user, seed_data):
         assert project.special_project == 'TCE'
         assert project.delivery_type == 'Painel'
         assert project.abep_indicator == ABEP_INDICADORES_OPTIONS[1]['value']
+        assert project.product_link == 'https://produto.example.com/editado'
 
         indicator_ids = [
             row.indicador_id

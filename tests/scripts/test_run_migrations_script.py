@@ -96,3 +96,29 @@ def test_ensure_abep_indicator_column_reports_success_when_column_already_exists
 
         inspector = inspect(db.engine)
         assert 'abep_indicator' in {column['name'] for column in inspector.get_columns('project')}
+
+
+def test_ensure_project_columns_adds_product_link_to_legacy_project_table(app):
+    with app.app_context():
+        db.drop_all()
+        db.session.execute(
+            text(
+                """
+                CREATE TABLE project (
+                    id INTEGER PRIMARY KEY,
+                    titulo VARCHAR(200) NOT NULL
+                )
+                """
+            )
+        )
+        db.session.commit()
+
+        result = run_migrations.ensure_project_columns(emit_output=False)
+
+        inspector = inspect(db.engine)
+        project_columns = {column['name'] for column in inspector.get_columns('project')}
+
+        assert result['success'] is True
+        assert 'project.product_link' in result['added_columns']
+        assert 'product_link' in project_columns
+        assert run_migrations.ALEMBIC_HEAD == 'f7a9c3e1b2d4'

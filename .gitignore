@@ -8,6 +8,9 @@ __pycache__/
 .pytest_cache/
 .coverage
 dumps/
-migrations/
+migrations/*
+!migrations/versions/
+migrations/versions/*
+!migrations/versions/f7a9c3e1b2d4_project_product_link.py
 instance/
 config/client_secret.json

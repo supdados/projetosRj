@@ -21,6 +21,7 @@ class Project(db.Model):
     abep_indicator = db.Column(db.String(255), nullable=True)
     github_link = db.Column(db.String(500), nullable=True)
     documentation_link = db.Column(db.String(500), nullable=True)
+    product_link = db.Column(db.String(500), nullable=True)
 
     etapas = db.relationship('Etapa', backref='project', lazy=True, cascade="all, delete-orphan", order_by="Etapa.ordem")
     meeting_items = db.relationship('ProjectStageMeeting', back_populates='project', lazy=True, cascade="all, delete-orphan")

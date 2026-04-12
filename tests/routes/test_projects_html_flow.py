@@ -35,6 +35,7 @@ def test_edit_project_form_renders_full_html_contract_for_single_area_user(clien
         'id="indicadores-container"',
         'id="project_github_link"',
         'id="project_documentation_link"',
+        'id="project_product_link"',
         'id="project_observacao"',
         f'href="/project/{seed_data["project_id"]}"',
         'Salvar Alterações',
