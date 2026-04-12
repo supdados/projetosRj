@@ -29,6 +29,7 @@
   const GRID_COLUMNS = 12;
   const GRID_GAP_PX = 16;
   const GRID_ROW_HEIGHT = 36;
+  const GRID_TRACK_HEIGHT = GRID_ROW_HEIGHT + GRID_GAP_PX;
   const MOBILE_BREAKPOINT = 960;
   const BASE_CANVAS_MIN_HEIGHT = 760;
   const EXPAND_STEP_PX = 320;
@@ -563,17 +564,22 @@
   }
 
   function getMinimumGridHeight(block) {
-    return getPresetLayout(block.size_preset).grid_h;
+    return block.block_type === 'text' || block.block_type === 'nota' ? 2 : 1;
   }
 
   function measureRequiredGridHeight(blockId) {
     const block = getBlockById(blockId);
     const blockEl = findBlockElement(blockId);
     if (!block || !blockEl || !isDesktopLayout()) return null;
-    const toolbar = blockEl.querySelector('.caderno-block-toolbar');
-    const body = blockEl.querySelector('.caderno-widget-body');
-    const baseHeight = (toolbar ? toolbar.offsetHeight : 0) + (body ? body.scrollHeight : blockEl.scrollHeight) + 18;
-    return Math.max(getMinimumGridHeight(block), Math.ceil(baseHeight / GRID_ROW_HEIGHT));
+    const measureRoot = blockEl.querySelector(
+      '.caderno-text-editor, .caderno-nota-card, .caderno-ref-card, .caderno-ref-null'
+    );
+    const measuredHeight = Math.max(
+      measureRoot ? measureRoot.scrollHeight : 0,
+      Math.ceil(measureRoot ? measureRoot.getBoundingClientRect().height : blockEl.getBoundingClientRect().height),
+    );
+    const requiredRows = Math.ceil((measuredHeight + GRID_GAP_PX) / GRID_TRACK_HEIGHT);
+    return Math.max(getMinimumGridHeight(block), requiredRows);
   }
 
   function persistLayoutNow() {
@@ -1204,7 +1210,6 @@
     const presetLayout = getPresetLayout(sizePreset);
     target.size_preset = sizePreset;
     target.grid_w = presetLayout.grid_w;
-    target.grid_h = Math.max(presetLayout.grid_h, target.grid_h);
     blocks = normalizeLayout(nextBlocks, blockId);
     renderAllBlocks();
     setActiveBlock(blockId);
