@@ -188,8 +188,8 @@ html[data-theme="dark"] body.is-authenticated {
   transition: opacity 160ms ease, transform 180ms ease-out, visibility 0s linear 160ms;
 }
 
-.caderno-block.is-active .caderno-block-toolbar,
-.caderno-block:focus-within .caderno-block-toolbar {
+.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar,
+.caderno-block:focus-within:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -613,11 +613,23 @@ html[data-theme="dark"] body.is-authenticated {
   position: fixed;
   z-index: 1050;
   min-width: 220px;
+  width: min(280px, calc(100vw - 24px));
+  max-height: min(360px, calc(100vh - 24px));
+  overflow: auto;
+  overscroll-behavior: contain;
   padding: 0.4rem;
   border: 1px solid var(--app-color-border, #e5e7eb);
   border-radius: 12px;
   background: var(--app-color-surface, #fff);
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16), 0 3px 10px rgba(15, 23, 42, 0.08);
+}
+
+.slash-menu[data-side="top"] {
+  transform-origin: left bottom;
+}
+
+.slash-menu[data-side="bottom"] {
+  transform-origin: left top;
 }
 
 .slash-menu-header {

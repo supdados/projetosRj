@@ -49,3 +49,19 @@ def test_caderno_sheet_starts_with_compact_viewport_bound_height():
     assert 'DESKTOP_BASE_CANVAS_MIN_HEIGHT' in js_content
     assert 'MOBILE_BASE_CANVAS_MIN_HEIGHT' in js_content
     assert 'BASE_CANVAS_MIN_HEIGHT = 760' not in js_content
+
+
+def test_caderno_slash_menu_anchors_to_caret_and_hides_empty_toolbar():
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
+    css_content = _read(css_path)
+
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
+    js_content = _read(js_path)
+
+    assert 'getEditorCaretRect' in js_content
+    assert 'positionSlashMenu(editorEl);' in js_content
+    assert 'window.scrollY' not in js_content
+    assert 'window.scrollX' not in js_content
+    assert 'syncSlashMenuState()' in js_content
+    assert '.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar' in css_content
+    assert '.slash-menu[data-side="top"]' in css_content

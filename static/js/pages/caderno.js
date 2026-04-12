@@ -34,6 +34,8 @@
   const DESKTOP_BASE_CANVAS_MIN_HEIGHT = { min: 420, max: 560, ratio: 0.54 };
   const MOBILE_BASE_CANVAS_MIN_HEIGHT = { min: 280, max: 420, ratio: 0.42 };
   const EXPAND_STEP_PX = 320;
+  const SLASH_MENU_OFFSET_PX = 10;
+  const SLASH_MENU_VIEWPORT_GAP = 12;
   const DEFAULT_SIZE_PRESET = 'M';
   const DEFAULT_SHEET = { expand_steps: 0, max_expand_steps: 3 };
   const SIZE_PRESET_LAYOUTS = {
@@ -243,6 +245,41 @@
     return blocksContainer.querySelector(`.caderno-block[data-block-id="${blockId}"]`);
   }
 
+  function findBlockEditor(blockId) {
+    return blocksContainer.querySelector(`[contenteditable][data-block-id="${blockId}"]`);
+  }
+
+  function getEditorText(editorEl) {
+    return String(editorEl ? (editorEl.textContent || '') : '')
+      .replace(/\u200b/g, '')
+      .replace(/\u00a0/g, ' ');
+  }
+
+  function isSlashTriggerText(text) {
+    return String(text || '').replace(/\s/g, '') === '/';
+  }
+
+  function syncSlashMenuState() {
+    const isMenuOpen = !!slashMenu && !slashMenu.hidden && slashTargetBlockId != null;
+    blocksContainer.querySelectorAll('.caderno-block').forEach(blockEl => {
+      const blockId = coerceInt(blockEl.dataset.blockId, null);
+      blockEl.classList.toggle('is-slash-menu-open', isMenuOpen && blockId === slashTargetBlockId);
+    });
+  }
+
+  function syncEditorInteractionState(editorEl) {
+    const blockEl = editorEl ? editorEl.closest('.caderno-block') : null;
+    if (!blockEl) return;
+    const text = getEditorText(editorEl);
+    blockEl.classList.toggle('is-editor-empty', text.trim() === '');
+    blockEl.classList.toggle('is-slash-trigger', isSlashTriggerText(text));
+  }
+
+  function syncAllEditorInteractionStates() {
+    blocksContainer.querySelectorAll('[contenteditable]').forEach(syncEditorInteractionState);
+    syncSlashMenuState();
+  }
+
   function layoutsDiffer(nextBlocks, currentBlocks) {
     if (nextBlocks.length !== currentBlocks.length) return true;
     const currentMap = new Map(currentBlocks.map(block => [block.id, block]));
@@ -262,6 +299,82 @@
 
   function isDesktopLayout() {
     return window.innerWidth >= MOBILE_BREAKPOINT;
+  }
+
+  function getFallbackCaretRect(editorEl) {
+    const rect = editorEl.getBoundingClientRect();
+    const lineHeight = parseFloat(window.getComputedStyle(editorEl).lineHeight) || 24;
+    return {
+      top: rect.top,
+      bottom: rect.top + lineHeight,
+      left: rect.left,
+      right: rect.left,
+      width: 0,
+      height: lineHeight,
+    };
+  }
+
+  function getEditorCaretRect(editorEl) {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return getFallbackCaretRect(editorEl);
+
+    const activeRange = selection.getRangeAt(0);
+    if (!editorEl.contains(activeRange.startContainer)) return getFallbackCaretRect(editorEl);
+
+    const caretRange = activeRange.cloneRange();
+    caretRange.collapse(false);
+
+    const directRect = caretRange.getBoundingClientRect();
+    if (directRect && (directRect.height || directRect.width)) return directRect;
+
+    const marker = document.createElement('span');
+    marker.textContent = '\u200b';
+    marker.setAttribute('aria-hidden', 'true');
+    caretRange.insertNode(marker);
+
+    const markerRect = marker.getBoundingClientRect();
+    const restoreRange = document.createRange();
+    restoreRange.setStartAfter(marker);
+    restoreRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(restoreRange);
+    marker.remove();
+
+    if (markerRect && (markerRect.height || markerRect.width)) return markerRect;
+    return getFallbackCaretRect(editorEl);
+  }
+
+  function positionSlashMenu(editorEl) {
+    if (!slashMenu || !editorEl) return;
+
+    const anchorRect = getEditorCaretRect(editorEl);
+    const menuRect = slashMenu.getBoundingClientRect();
+    const shouldPlaceAbove = (
+      (window.innerHeight - anchorRect.bottom) < (menuRect.height + SLASH_MENU_VIEWPORT_GAP) &&
+      anchorRect.top > (menuRect.height + SLASH_MENU_VIEWPORT_GAP)
+    );
+    const desiredTop = shouldPlaceAbove
+      ? anchorRect.top - menuRect.height - SLASH_MENU_OFFSET_PX
+      : anchorRect.bottom + SLASH_MENU_OFFSET_PX;
+    const desiredLeft = anchorRect.left;
+    const maxTop = Math.max(SLASH_MENU_VIEWPORT_GAP, window.innerHeight - menuRect.height - SLASH_MENU_VIEWPORT_GAP);
+    const maxLeft = Math.max(SLASH_MENU_VIEWPORT_GAP, window.innerWidth - menuRect.width - SLASH_MENU_VIEWPORT_GAP);
+    const top = Math.min(Math.max(desiredTop, SLASH_MENU_VIEWPORT_GAP), maxTop);
+    const left = Math.min(Math.max(desiredLeft, SLASH_MENU_VIEWPORT_GAP), maxLeft);
+
+    slashMenu.style.top = `${Math.round(top)}px`;
+    slashMenu.style.left = `${Math.round(left)}px`;
+    slashMenu.dataset.side = shouldPlaceAbove ? 'top' : 'bottom';
+  }
+
+  function repositionOpenSlashMenu() {
+    if (!slashMenu || slashMenu.hidden || slashTargetBlockId == null) return;
+    const editorEl = findBlockEditor(slashTargetBlockId);
+    if (!editorEl) {
+      closeSlashMenu();
+      return;
+    }
+    positionSlashMenu(editorEl);
   }
 
   function getBaseCanvasMinHeight() {
@@ -545,6 +658,7 @@
     bindBlockEvents();
     updateEmptyHint();
     syncActiveBlockState();
+    syncAllEditorInteractionStates();
     scheduleMeasureAllBlocks();
   }
 
@@ -554,7 +668,7 @@
   }
 
   function focusBlock(blockId) {
-    const editorEl = blocksContainer.querySelector(`[contenteditable][data-block-id="${blockId}"]`);
+    const editorEl = findBlockEditor(blockId);
     if (editorEl) {
       editorEl.focus();
       try {
@@ -799,19 +913,30 @@
   }
 
   function openSlashMenu(editorEl, blockId) {
+    if (!slashMenu || !editorEl || blockId == null) return;
     slashTargetBlockId = blockId;
     slashMenuActiveIdx = -1;
-    const rect = editorEl.getBoundingClientRect();
-    slashMenu.style.top = `${rect.bottom + window.scrollY + 8}px`;
-    slashMenu.style.left = `${rect.left + window.scrollX}px`;
     slashMenu.hidden = false;
+    syncSlashMenuState();
+    positionSlashMenu(editorEl);
+    requestAnimationFrame(() => {
+      const activeEditor = findBlockEditor(blockId);
+      if (activeEditor && !slashMenu.hidden && slashTargetBlockId === blockId) {
+        positionSlashMenu(activeEditor);
+      }
+    });
     updateSlashMenuActive();
   }
 
   function closeSlashMenu() {
+    if (!slashMenu) return;
     slashMenu.hidden = true;
+    slashMenu.style.top = '';
+    slashMenu.style.left = '';
+    slashMenu.removeAttribute('data-side');
     slashTargetBlockId = null;
     slashMenuActiveIdx = -1;
+    syncSlashMenuState();
   }
 
   function updateSlashMenuActive() {
@@ -1140,10 +1265,11 @@
     const editorEl = event.target;
     const blockId = coerceInt(editorEl.dataset.blockId, null);
     autoResizeEditor(editorEl);
+    syncEditorInteractionState(editorEl);
     if (blockId != null) scheduleMeasureBlock(blockId, 80);
 
-    const text = editorEl.textContent || '';
-    if (text === '/') {
+    const text = getEditorText(editorEl);
+    if (isSlashTriggerText(text)) {
       openSlashMenu(editorEl, blockId);
     } else {
       closeSlashMenu();
@@ -1153,9 +1279,11 @@
   function onEditorBlur(event) {
     const editorEl = event.target;
     const blockId = coerceInt(editorEl.dataset.blockId, null);
-    const content = editorEl.textContent || '';
+    const content = getEditorText(editorEl);
     const block = getBlockById(blockId);
     if (!block) return;
+
+    syncEditorInteractionState(editorEl);
 
     if (!content.trim() && (block.block_type === 'text' || block.block_type === 'nota')) {
       setTimeout(() => {
@@ -1170,10 +1298,14 @@
   }
 
   function onEditorKeydown(event) {
+    if (!slashMenu.hidden && (event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Escape')) {
+      return;
+    }
+
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       const blockId = coerceInt(event.target.dataset.blockId, null);
-      const content = event.target.textContent || '';
+      const content = getEditorText(event.target);
       saveBlockContent(blockId, content);
       createTextBlockAfter(blockId);
     }
@@ -1185,9 +1317,10 @@
     closeSlashMenu();
     if (savedTargetId == null) return;
 
-    const editorEl = blocksContainer.querySelector(`[contenteditable][data-block-id="${savedTargetId}"]`);
+    const editorEl = findBlockEditor(savedTargetId);
     if (editorEl) {
       editorEl.textContent = '';
+      syncEditorInteractionState(editorEl);
       saveBlockContent(savedTargetId, '');
     }
 
@@ -1236,10 +1369,14 @@
 
     blocksContainer.querySelectorAll('[contenteditable]').forEach(editorEl => {
       autoResizeEditor(editorEl);
+      syncEditorInteractionState(editorEl);
       editorEl.addEventListener('input', onEditorInput);
       editorEl.addEventListener('blur', onEditorBlur);
       editorEl.addEventListener('keydown', onEditorKeydown);
-      editorEl.addEventListener('focus', event => setActiveBlock(coerceInt(event.target.dataset.blockId, null)));
+      editorEl.addEventListener('focus', event => {
+        setActiveBlock(coerceInt(event.target.dataset.blockId, null));
+        syncEditorInteractionState(event.target);
+      });
     });
 
     blocksContainer.querySelectorAll('.caderno-block-btn[data-action="delete"]').forEach(btn => {
@@ -1258,6 +1395,7 @@
   function onWindowResize() {
     applyCanvasSizing();
     renderAllBlocks();
+    repositionOpenSlashMenu();
   }
 
   function init() {
@@ -1295,6 +1433,7 @@
     });
 
     window.addEventListener('resize', onWindowResize);
+    window.addEventListener('scroll', repositionOpenSlashMenu, { passive: true });
   }
 
   if (document.readyState === 'loading') {
