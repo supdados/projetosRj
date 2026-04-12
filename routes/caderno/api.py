@@ -1,11 +1,19 @@
 from flask import g, jsonify, request, url_for
 
-from models import CadernoBlock, Etapa, Project, Task
+from models import CadernoBlock, CadernoState, Etapa, Project, Task
 from models.base import db
-from models.caderno import CADERNO_BLOCK_TYPES
+from models.caderno import CADERNO_BLOCK_TYPES, CADERNO_SIZE_PRESETS, MAX_CADERNO_EXPAND_STEPS
 
 from ..blueprint import main_bp
 from ..decorators import login_required
+
+GRID_COLUMNS = 12
+DEFAULT_SIZE_PRESET = 'M'
+SIZE_PRESET_LAYOUTS = {
+    'P': {'grid_w': 3, 'grid_h': 4},
+    'M': {'grid_w': 6, 'grid_h': 5},
+    'G': {'grid_w': 12, 'grid_h': 6},
+}
 
 
 def _next_position(user_id):
@@ -15,62 +23,206 @@ def _next_position(user_id):
     return (max_pos or 0.0) + 1000.0
 
 
+def _normalize_size_preset(value, *, default=DEFAULT_SIZE_PRESET):
+    preset = str(value or '').strip().upper()
+    if preset in CADERNO_SIZE_PRESETS:
+        return preset
+    return default
+
+
+def _coerce_int(value, *, default=None, minimum=None, maximum=None):
+    try:
+        coerced = int(value)
+    except (TypeError, ValueError):
+        return default
+    if minimum is not None and coerced < minimum:
+        return minimum
+    if maximum is not None and coerced > maximum:
+        return maximum
+    return coerced
+
+
+def _clamp_grid_width(value):
+    return _coerce_int(value, default=SIZE_PRESET_LAYOUTS[DEFAULT_SIZE_PRESET]['grid_w'], minimum=1, maximum=GRID_COLUMNS)
+
+
+def _clamp_grid_height(value):
+    return _coerce_int(value, default=SIZE_PRESET_LAYOUTS[DEFAULT_SIZE_PRESET]['grid_h'], minimum=1)
+
+
+def _layout_defaults_for_preset(size_preset):
+    return dict(SIZE_PRESET_LAYOUTS.get(size_preset, SIZE_PRESET_LAYOUTS[DEFAULT_SIZE_PRESET]))
+
+
+def _occupy_cells(occupied, grid_x, grid_y, grid_w, grid_h):
+    for offset_y in range(grid_h):
+        for offset_x in range(grid_w):
+            occupied.add((grid_x + offset_x, grid_y + offset_y))
+
+
+def _find_next_available_slot(blocks, grid_w, grid_h):
+    occupied = set()
+    for block in sorted(blocks, key=lambda item: (item.grid_y, item.grid_x, item.id)):
+        _occupy_cells(
+            occupied,
+            max(0, _coerce_int(block.grid_x, default=0) or 0),
+            max(0, _coerce_int(block.grid_y, default=0) or 0),
+            _clamp_grid_width(block.grid_w),
+            _clamp_grid_height(block.grid_h),
+        )
+
+    y = 0
+    max_x = max(0, GRID_COLUMNS - grid_w)
+    while True:
+        for x in range(0, max_x + 1):
+            fits = True
+            for offset_y in range(grid_h):
+                for offset_x in range(grid_w):
+                    if (x + offset_x, y + offset_y) in occupied:
+                        fits = False
+                        break
+                if not fits:
+                    break
+            if fits:
+                return x, y
+        y += 1
+
+
+def _build_layout_payload(data, *, block_type='text', current_block=None, for_create=False):
+    current_preset = current_block.size_preset if current_block else DEFAULT_SIZE_PRESET
+    size_preset = _normalize_size_preset(data.get('size_preset'), default=current_preset)
+    defaults = _layout_defaults_for_preset(size_preset)
+
+    if for_create and 'size_preset' not in data:
+        size_preset = DEFAULT_SIZE_PRESET
+        defaults = _layout_defaults_for_preset(size_preset)
+
+    if current_block is not None and 'size_preset' in data and 'grid_w' not in data:
+        grid_w = defaults['grid_w']
+    else:
+        grid_w = _clamp_grid_width(
+            data.get('grid_w', current_block.grid_w if current_block else defaults['grid_w'])
+        )
+
+    if current_block is not None and 'size_preset' in data and 'grid_h' not in data:
+        grid_h = defaults['grid_h']
+    else:
+        grid_h = _clamp_grid_height(
+            data.get('grid_h', current_block.grid_h if current_block else defaults['grid_h'])
+        )
+
+    grid_x = _coerce_int(
+        data.get('grid_x', current_block.grid_x if current_block else None),
+        default=None,
+        minimum=0,
+    )
+    max_grid_x = max(0, GRID_COLUMNS - grid_w)
+    if grid_x is not None:
+        grid_x = min(grid_x, max_grid_x)
+
+    grid_y = _coerce_int(
+        data.get('grid_y', current_block.grid_y if current_block else None),
+        default=None,
+        minimum=0,
+    )
+
+    if current_block is None and (grid_x is None or grid_y is None):
+        existing_blocks = CadernoBlock.query.filter(
+            CadernoBlock.user_id == g.user.id
+        ).all()
+        next_grid_x, next_grid_y = _find_next_available_slot(existing_blocks, grid_w, grid_h)
+        grid_x = next_grid_x if grid_x is None else grid_x
+        grid_y = next_grid_y if grid_y is None else grid_y
+
+    return {
+        'size_preset': size_preset,
+        'grid_x': grid_x if grid_x is not None else 0,
+        'grid_y': grid_y if grid_y is not None else 0,
+        'grid_w': grid_w,
+        'grid_h': grid_h,
+    }
+
+
+def _serialize_sheet(state):
+    expand_steps = 0
+    if state is not None:
+        expand_steps = _coerce_int(state.expand_steps, default=0, minimum=0, maximum=MAX_CADERNO_EXPAND_STEPS)
+    return {
+        'expand_steps': expand_steps,
+        'max_expand_steps': MAX_CADERNO_EXPAND_STEPS,
+    }
+
+
 def _serialize_block(block):
     base = {
-        'id':           block.id,
-        'block_type':   block.block_type,
-        'content':      block.content or '',
+        'id': block.id,
+        'block_type': block.block_type,
+        'content': block.content or '',
         'reference_id': block.reference_id,
-        'position':     block.position,
-        'created_at':   block.created_at.isoformat() if block.created_at else None,
-        'updated_at':   block.updated_at.isoformat() if block.updated_at else None,
-        'ref_data':     None,
+        'position': block.position,
+        'size_preset': _normalize_size_preset(block.size_preset),
+        'grid_x': _coerce_int(block.grid_x, default=0, minimum=0),
+        'grid_y': _coerce_int(block.grid_y, default=0, minimum=0),
+        'grid_w': _clamp_grid_width(block.grid_w),
+        'grid_h': _clamp_grid_height(block.grid_h),
+        'created_at': block.created_at.isoformat() if block.created_at else None,
+        'updated_at': block.updated_at.isoformat() if block.updated_at else None,
+        'ref_data': None,
     }
 
     if block.block_type == 'project' and block.reference_id:
         proj = db.session.get(Project, block.reference_id)
         if proj:
             base['ref_data'] = {
-                'id':                proj.id,
-                'titulo':            proj.titulo,
-                'status':            proj.status,
-                'area':              proj.area_responsavel or '',
-                'orgao':             proj.orgao or '',
-                'prioridade':        proj.prioridade or '',
-                'url':               url_for('main.project_detail', project_id=proj.id),
-                'total_etapas':      proj.total_workflow_etapas,
-                'etapas_concluidas': sum(1 for e in proj.workflow_etapas if e.done),
+                'id': proj.id,
+                'titulo': proj.titulo,
+                'status': proj.status,
+                'area': proj.area_responsavel or '',
+                'orgao': proj.orgao or '',
+                'prioridade': proj.prioridade or '',
+                'url': url_for('main.project_detail', project_id=proj.id),
+                'total_etapas': proj.total_workflow_etapas,
+                'etapas_concluidas': sum(1 for etapa in proj.workflow_etapas if etapa.done),
             }
 
     elif block.block_type == 'etapa' and block.reference_id:
         etapa = db.session.get(Etapa, block.reference_id)
         if etapa:
             base['ref_data'] = {
-                'id':             etapa.id,
-                'descricao':      etapa.descricao,
-                'done':           etapa.done,
-                'iniciada':       etapa.iniciada,
-                'data_inicio':    etapa.data_inicio.isoformat() if etapa.data_inicio else None,
-                'data_fim':       etapa.data_fim.isoformat() if etapa.data_fim else None,
-                'responsavel':    etapa.responsavel or '',
+                'id': etapa.id,
+                'descricao': etapa.descricao,
+                'done': etapa.done,
+                'iniciada': etapa.iniciada,
+                'data_inicio': etapa.data_inicio.isoformat() if etapa.data_inicio else None,
+                'data_fim': etapa.data_fim.isoformat() if etapa.data_fim else None,
+                'responsavel': etapa.responsavel or '',
                 'project_titulo': etapa.project.titulo if etapa.project else '',
-                'url':            url_for('main.project_detail', project_id=etapa.project_id, _anchor=f'etapa-{etapa.id}'),
+                'url': url_for('main.project_detail', project_id=etapa.project_id, _anchor=f'etapa-{etapa.id}'),
             }
 
     elif block.block_type == 'tarefa' and block.reference_id:
         task = db.session.get(Task, block.reference_id)
         if task:
             base['ref_data'] = {
-                'id':             task.id,
-                'descricao':      task.descricao,
-                'status':         task.status,
-                'prioridade':     task.prioridade or '',
-                'responsavel':    task.responsavel or '',
+                'id': task.id,
+                'descricao': task.descricao,
+                'status': task.status,
+                'prioridade': task.prioridade or '',
+                'responsavel': task.responsavel or '',
                 'project_titulo': task.project.titulo if task.project else 'Sem projeto',
-                'url':            url_for('main.task_detail', task_id=task.id),
+                'url': url_for('main.task_detail', task_id=task.id),
             }
 
     return base
+
+
+def _get_or_create_state():
+    state = CadernoState.query.filter_by(user_id=g.user.id).first()
+    if state is None:
+        state = CadernoState(user_id=g.user.id, expand_steps=0)
+        db.session.add(state)
+        db.session.flush()
+    return state
 
 
 @main_bp.route('/api/caderno/blocks', methods=['GET'])
@@ -79,10 +231,14 @@ def caderno_api_blocks():
     blocks = (
         CadernoBlock.query
         .filter(CadernoBlock.user_id == g.user.id)
-        .order_by(CadernoBlock.position.asc(), CadernoBlock.id.asc())
+        .order_by(CadernoBlock.grid_y.asc(), CadernoBlock.grid_x.asc(), CadernoBlock.id.asc())
         .all()
     )
-    return jsonify({'blocks': [_serialize_block(b) for b in blocks]})
+    state = CadernoState.query.filter_by(user_id=g.user.id).first()
+    return jsonify({
+        'sheet': _serialize_sheet(state),
+        'blocks': [_serialize_block(block) for block in blocks],
+    })
 
 
 @main_bp.route('/api/caderno/blocks', methods=['POST'])
@@ -101,13 +257,14 @@ def caderno_api_blocks_create():
 
         if block_type == 'project' and not db.session.get(Project, reference_id):
             return jsonify({'error': 'Projeto não encontrado.'}), 404
-        elif block_type == 'etapa' and not db.session.get(Etapa, reference_id):
+        if block_type == 'etapa' and not db.session.get(Etapa, reference_id):
             return jsonify({'error': 'Etapa não encontrada.'}), 404
-        elif block_type == 'tarefa' and not db.session.get(Task, reference_id):
+        if block_type == 'tarefa' and not db.session.get(Task, reference_id):
             return jsonify({'error': 'Tarefa não encontrada.'}), 404
     else:
         reference_id = None
 
+    layout = _build_layout_payload(data, block_type=block_type, for_create=True)
     position = data.get('position')
     if position is None:
         position = _next_position(g.user.id)
@@ -118,10 +275,15 @@ def caderno_api_blocks_create():
         content=data.get('content', ''),
         reference_id=reference_id,
         position=float(position),
+        size_preset=layout['size_preset'],
+        grid_x=layout['grid_x'],
+        grid_y=layout['grid_y'],
+        grid_w=layout['grid_w'],
+        grid_h=layout['grid_h'],
     )
     db.session.add(block)
     db.session.commit()
-    return jsonify({'block': _serialize_block(block)}), 201
+    return jsonify({'block': _serialize_block(block), 'sheet': _serialize_sheet(None)}), 201
 
 
 @main_bp.route('/api/caderno/blocks/reorder', methods=['POST'])
@@ -134,8 +296,8 @@ def caderno_api_blocks_reorder():
 
     ids = [item['id'] for item in items if isinstance(item.get('id'), int)]
     blocks_map = {
-        b.id: b
-        for b in CadernoBlock.query.filter(
+        block.id: block
+        for block in CadernoBlock.query.filter(
             CadernoBlock.user_id == g.user.id,
             CadernoBlock.id.in_(ids),
         ).all()
@@ -143,14 +305,40 @@ def caderno_api_blocks_reorder():
 
     updated = 0
     for item in items:
-        block_id = item.get('id')
-        pos = item.get('position')
-        if block_id in blocks_map and pos is not None:
-            blocks_map[block_id].position = float(pos)
-            updated += 1
+        block = blocks_map.get(item.get('id'))
+        if block is None:
+            continue
+
+        layout = _build_layout_payload(item, current_block=block)
+        block.size_preset = layout['size_preset']
+        block.grid_x = layout['grid_x']
+        block.grid_y = layout['grid_y']
+        block.grid_w = layout['grid_w']
+        block.grid_h = layout['grid_h']
+
+        if item.get('position') is not None:
+            block.position = float(item['position'])
+        updated += 1
 
     db.session.commit()
     return jsonify({'success': True, 'updated': updated})
+
+
+@main_bp.route('/api/caderno/state', methods=['PATCH'])
+@login_required
+def caderno_api_state_update():
+    data = request.get_json(silent=True) or {}
+    if 'expand_steps' not in data:
+        return jsonify({'error': 'expand_steps é obrigatório.'}), 400
+
+    expand_steps = _coerce_int(data.get('expand_steps'))
+    if expand_steps is None or expand_steps < 0 or expand_steps > MAX_CADERNO_EXPAND_STEPS:
+        return jsonify({'error': f'expand_steps deve estar entre 0 e {MAX_CADERNO_EXPAND_STEPS}.'}), 400
+
+    state = _get_or_create_state()
+    state.expand_steps = expand_steps
+    db.session.commit()
+    return jsonify({'sheet': _serialize_sheet(state)})
 
 
 @main_bp.route('/api/caderno/blocks/<int:block_id>', methods=['PATCH'])
@@ -165,6 +353,14 @@ def caderno_api_block_update(block_id):
         block.content = data['content']
     if 'position' in data:
         block.position = float(data['position'])
+
+    if {'size_preset', 'grid_x', 'grid_y', 'grid_w', 'grid_h'} & set(data.keys()):
+        layout = _build_layout_payload(data, current_block=block)
+        block.size_preset = layout['size_preset']
+        block.grid_x = layout['grid_x']
+        block.grid_y = layout['grid_y']
+        block.grid_w = layout['grid_w']
+        block.grid_h = layout['grid_h']
 
     db.session.commit()
     return jsonify({'block': _serialize_block(block)})

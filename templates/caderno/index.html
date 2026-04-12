@@ -20,32 +20,36 @@
 
   <!-- Papel do caderno -->
   <div class="caderno-paper" id="cadernoPaper">
+    <div class="caderno-sheet-body" id="cadernoSheetBody">
+      <div class="caderno-canvas-wrap" id="cadernoCanvasWrap">
+        <!-- Dica inicial (oculta quando há blocos) -->
+        <div class="caderno-empty-hint" id="cadernoEmptyHint">
+          <i class="fas fa-lightbulb"></i>
+          <span>Clique aqui para começar a escrever. Digite <kbd>/</kbd> para inserir um bloco.</span>
+        </div>
 
-    <!-- Dica inicial (oculta quando há blocos) -->
-    <div class="caderno-empty-hint" id="cadernoEmptyHint">
-      <i class="fas fa-lightbulb"></i>
-      <span>Clique aqui para começar a escrever. Digite <kbd>/</kbd> para inserir um bloco.</span>
+        <!-- Container dos blocos -->
+        <div class="caderno-blocks" id="cadernoBlocks" role="list" aria-label="Blocos do caderno"></div>
+
+        <!-- Zona de clique para adicionar bloco ao final -->
+        <div
+          class="caderno-add-zone"
+          id="cadernoAddZone"
+          tabindex="0"
+          role="button"
+          aria-label="Adicionar bloco"
+        ></div>
+      </div>
+
+      <div class="caderno-sheet-footer" id="cadernoSheetFooter">
+        <!-- Expandir página -->
+        <button class="caderno-expand-zone" id="cadernoExpandZone" type="button" aria-label="Expandir página">
+          <i class="fas fa-chevron-down caderno-expand-zone-icon"></i>
+          <span id="cadernoExpandZoneLabel">Expandir página</span>
+          <i class="fas fa-chevron-down caderno-expand-zone-icon"></i>
+        </button>
+      </div>
     </div>
-
-    <!-- Container dos blocos -->
-    <div class="caderno-blocks" id="cadernoBlocks" role="list" aria-label="Blocos do caderno"></div>
-
-    <!-- Zona de clique para adicionar bloco ao final -->
-    <div
-      class="caderno-add-zone"
-      id="cadernoAddZone"
-      tabindex="0"
-      role="button"
-      aria-label="Adicionar bloco"
-    ></div>
-
-    <!-- Expandir página -->
-    <button class="caderno-expand-zone" id="cadernoExpandZone" type="button" aria-label="Expandir página">
-      <i class="fas fa-chevron-down caderno-expand-zone-icon"></i>
-      <span>Expandir página</span>
-      <i class="fas fa-chevron-down caderno-expand-zone-icon"></i>
-    </button>
-
   </div><!-- /.caderno-paper -->
 
   <!-- Menu slash command -->
@@ -132,6 +136,7 @@ window.__CADERNO_CONFIG__ = {
   apiBlocksUrl:    "{{ url_for('main.caderno_api_blocks') }}",
   apiBlocksCreate: "{{ url_for('main.caderno_api_blocks_create') }}",
   apiBlocksReorder:"{{ url_for('main.caderno_api_blocks_reorder') }}",
+  apiStateUrl:     "{{ url_for('main.caderno_api_state_update') }}",
   apiBuscarUrl:    "{{ url_for('main.global_search_api') }}",
 };
 </script>

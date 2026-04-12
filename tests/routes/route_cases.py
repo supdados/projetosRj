@@ -98,6 +98,26 @@ ROUTE_CASES = [
         'requires_admin': False,
     },
     {
+        'id': 'caderno_get',
+        'method': 'GET',
+        'rule': '/caderno',
+        'path': '/caderno',
+        'role': 'user',
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
+        'id': 'caderno_blocks_get',
+        'method': 'GET',
+        'rule': '/api/caderno/blocks',
+        'path': '/api/caderno/blocks',
+        'role': 'user',
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
         'id': 'chatbot_token_get',
         'method': 'GET',
         'rule': '/api/chatbot-token',
@@ -1235,4 +1255,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 109
+assert len(ROUTE_CASES) == 111

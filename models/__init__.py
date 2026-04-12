@@ -15,7 +15,7 @@ from .task import (
     TaskItemComment,
     TaskItemAnexo,
 )
-from .caderno import CadernoBlock
+from .caderno import CadernoBlock, CadernoState
 
 __all__ = [
     'db',
@@ -46,4 +46,5 @@ __all__ = [
     'TaskItemComment',
     'TaskItemAnexo',
     'CadernoBlock',
+    'CadernoState',
 ]

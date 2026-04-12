@@ -180,6 +180,14 @@ def ensure_task_core_columns():
     return added
 
 
+def ensure_caderno_schema():
+    """Garante colunas e tabela de estado do caderno em bancos existentes."""
+    from scripts.migrations.run_migrations import ensure_caderno_schema as run_ensure_caderno_schema
+
+    result = run_ensure_caderno_schema(emit_output=False)
+    return result.get('changes', []) if result.get('success') else []
+
+
 def initialize_database():
     """
     Inicializa/normaliza o schema usando a rotina canônica de migração.
