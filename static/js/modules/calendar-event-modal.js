@@ -31,6 +31,7 @@
         const meetUrlDisplay = modal.querySelector('#meetUrlDisplay');
         const meetOpenLink = modal.querySelector('#meetOpenLink');
         let editId = null;
+        let pendingEventId = null;
 
         function makeUrl(tpl, id) {
             return String(tpl || '').replace('/0/', '/' + id + '/');
@@ -52,7 +53,7 @@
 
             if (existingLink) {
                 if (meetGenerateRow) meetGenerateRow.style.display = 'none';
-                if (meetExistingRow) meetExistingRow.style.display = '';
+                if (meetExistingRow) { meetExistingRow.style.display = ''; meetExistingRow.classList.remove('is-regen'); }
                 if (meetOpenLink) meetOpenLink.href = existingLink;
                 if (meetUrlDisplay) {
                     try {
@@ -62,8 +63,6 @@
                         meetUrlDisplay.textContent = existingLink;
                     }
                 }
-                if (meetExistingActions) meetExistingActions.style.display = '';
-                if (meetRegenMsg) meetRegenMsg.style.display = 'none';
                 return;
             }
 
@@ -75,19 +74,20 @@
             if (meetSub) meetSub.textContent = 'Adicionar videochamada';
         }
 
-        function copyMeetLink(trigger) {
-            if (!meetOpenLink) {
-                return;
-            }
+        function showCopyToast() {
+            const prev = modal.querySelector('.cal-meet-toast');
+            if (prev) prev.remove();
+            const toast = document.createElement('div');
+            toast.className = 'cal-meet-toast';
+            toast.textContent = 'Link copiado!';
+            modal.appendChild(toast);
+            window.setTimeout(function () { toast.remove(); }, 1700);
+        }
+
+        function copyMeetLink() {
+            if (!meetOpenLink) return;
             const url = meetOpenLink.href;
-            const button = trigger || document.activeElement;
-            const original = button && button.textContent ? button.textContent : 'Copiar link';
-            navigator.clipboard.writeText(url).then(function () {
-                if (button) button.textContent = 'Copiado!';
-                window.setTimeout(function () {
-                    if (button) button.textContent = original;
-                }, 1500);
-            }).catch(function () {
+            navigator.clipboard.writeText(url).then(showCopyToast).catch(function () {
                 const textarea = document.createElement('textarea');
                 textarea.value = url;
                 textarea.style.cssText = 'position:fixed;opacity:0;';
@@ -95,28 +95,27 @@
                 textarea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textarea);
-                if (button) button.textContent = 'Copiado!';
-                window.setTimeout(function () {
-                    if (button) button.textContent = original;
-                }, 1500);
+                showCopyToast();
             });
         }
 
         function requestNewMeetLink() {
-            if (meetExistingActions) meetExistingActions.style.display = 'none';
-            if (meetRegenMsg) meetRegenMsg.style.display = '';
+            if (meetExistingRow) meetExistingRow.classList.add('is-regen');
             if (fieldMeet) fieldMeet.checked = true;
         }
 
         function cancelNewMeetLink() {
-            if (meetExistingActions) meetExistingActions.style.display = '';
-            if (meetRegenMsg) meetRegenMsg.style.display = 'none';
+            if (meetExistingRow) meetExistingRow.classList.remove('is-regen');
             if (fieldMeet) fieldMeet.checked = false;
         }
 
         function closeModal() {
             if (window.CalDatetimePicker) window.CalDatetimePicker.closeAll();
             modal.classList.remove('is-open');
+            if (pendingEventId !== null && typeof config.onClose === 'function') {
+                config.onClose(pendingEventId);
+            }
+            pendingEventId = null;
         }
 
         function handleOverlayClick(event) {
@@ -127,7 +126,25 @@
 
         function toggleMeet(checked) {
             if (meetGenerateRow) meetGenerateRow.classList.toggle('is-active', checked);
-            if (meetSub) meetSub.textContent = checked ? 'Link será gerado ao salvar' : 'Adicionar videochamada';
+            const willAutoGen = checked && editId === null && pendingEventId === null && typeof config.onMeetToggle === 'function';
+            if (meetSub) meetSub.textContent = checked
+                ? (willAutoGen ? 'Gerando link...' : 'Link será gerado ao salvar')
+                : 'Adicionar videochamada';
+            if (willAutoGen) {
+                config.onMeetToggle(api);
+            }
+        }
+
+        function setPendingEvent(id, editUrlTpl) {
+            pendingEventId = id;
+            editId = id;
+            if (form && editUrlTpl) form.action = makeUrl(editUrlTpl, id);
+            if (modalTitle) modalTitle.textContent = config.editTitle || 'Editar evento';
+            if (deleteButton) deleteButton.style.display = typeof config.onDelete === 'function' ? '' : 'none';
+        }
+
+        function clearPending() {
+            pendingEventId = null;
         }
 
         function splitDatetimeValue(value) {
@@ -356,6 +373,7 @@
 
         function openCreateModal(dateStr) {
             editId = null;
+            pendingEventId = null;
             if (modalTitle) modalTitle.textContent = config.createTitle || 'Novo evento';
             if (form) form.action = config.createUrl || form.action;
             if (deleteButton) deleteButton.style.display = 'none';
@@ -398,6 +416,7 @@
 
         function openEditModal(eventData) {
             editId = eventData.id;
+            pendingEventId = null;
             if (modalTitle) modalTitle.textContent = config.editTitle || 'Editar evento';
             if (form && config.editUrlTemplate) form.action = makeUrl(config.editUrlTemplate, eventData.id);
             if (deleteButton) deleteButton.style.display = typeof config.onDelete === 'function' ? '' : 'none';
@@ -460,7 +479,7 @@
             });
         });
         modal.querySelectorAll('[data-calendar-modal-action="copy-meet"]').forEach(function (button) {
-            button.addEventListener('click', function () { copyMeetLink(button); });
+            button.addEventListener('click', function () { copyMeetLink(); });
         });
         modal.querySelectorAll('[data-calendar-modal-action="regen-meet"]').forEach(function (button) {
             button.addEventListener('click', requestNewMeetLink);
@@ -509,6 +528,8 @@
             openEditModal: openEditModal,
             prepareFormBeforeSubmit: prepareFormBeforeSubmit,
             resetMeetUI: resetMeetUI,
+            setPendingEvent: setPendingEvent,
+            clearPending: clearPending,
             getEditId: function () { return editId; },
             getForm: function () { return form; },
             getModal: function () { return modal; },

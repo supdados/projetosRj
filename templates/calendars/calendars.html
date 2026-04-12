@@ -118,10 +118,12 @@
 <script src="{{ url_for('static', filename='js/modules/calendar-event-modal.js') }}"></script>
 <script>
   window.__CALENDAR_PAGE_CONFIG__ = {
-    events:    {{ events_json | tojson }},
-    urlCreate: {{ url_for('main.create_calendar_event') | tojson }},
-    urlEdit:   {{ url_for('main.edit_calendar_event', event_id=0) | tojson }},
-    urlDelete: {{ url_for('main.delete_calendar_event', event_id=0) | tojson }}
+    events:         {{ events_json | tojson }},
+    urlCreate:      {{ url_for('main.create_calendar_event') | tojson }},
+    urlEdit:        {{ url_for('main.edit_calendar_event', event_id=0) | tojson }},
+    urlDelete:      {{ url_for('main.delete_calendar_event', event_id=0) | tojson }},
+    urlGenMeet:     {{ url_for('main.generate_meet_link', event_id=0) | tojson }},
+    hasGoogleConn:  {{ (connection is not none) | tojson }}
   };
 </script>
 <script src="{{ url_for('static', filename='js/pages/calendars.js') }}"></script>

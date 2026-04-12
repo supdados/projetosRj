@@ -592,18 +592,71 @@ html[data-theme="dark"] .cal-toggle-btn.is-active { background: #005a92 !importa
   white-space: pre-wrap;
   word-break: break-word;
 }
-.cal-event-popover-meet {
+.cal-event-popover-meet-area {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.42rem;
+}
+.cal-event-popover-meet-form {
+  display: contents;
+}
+.cal-event-popover-meet-btn,
+.cal-event-popover-gen-meet-btn {
   display: inline-flex;
   width: fit-content;
   align-items: center;
-  gap: 0.3rem;
-  margin-top: 0.08rem;
+  gap: 0.36rem;
+  padding: 0.3rem 0.7rem 0.3rem 0.55rem;
   font-size: 0.76rem;
   font-weight: 500;
-  color: #1a73e8;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.cal-event-popover-meet-btn {
+  background: #00832d;
+  color: #fff !important;
+  border: none;
+}
+.cal-event-popover-meet-btn:hover {
+  background: #006625;
+  color: #fff !important;
   text-decoration: none;
 }
-.cal-event-popover-meet:hover { text-decoration: underline; }
+.cal-event-popover-gen-meet-btn {
+  background: transparent;
+  color: var(--app-color-primary);
+  border: 1px solid var(--app-color-border);
+}
+.cal-event-popover-gen-meet-btn:hover {
+  background: var(--app-color-surface-muted);
+  border-color: var(--app-color-primary);
+}
+.cal-event-popover-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--app-color-border);
+  background: transparent;
+  color: var(--app-color-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+.cal-event-popover-copy-btn:hover {
+  background: var(--app-color-surface-muted);
+  color: var(--app-color-text-primary);
+}
+.cal-event-popover-copy-btn--copied {
+  color: var(--app-color-success);
+  border-color: var(--app-color-success);
+}
 .cal-event-popover-actions {
   margin-top: 0.32rem;
   display: flex;
@@ -722,12 +775,23 @@ html[data-theme="dark"] .cal-toggle-btn.is-active { background: #005a92 !importa
   color: var(--app-color-text-muted);
 }
 .cal-meta-meet {
-  font-size: 0.76rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.45rem 0.18rem 0.35rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  color: #1a73e8;
+  background: #00832d;
+  color: #fff !important;
+  text-decoration: none;
+  border-radius: 0.3rem;
+  transition: background 0.12s;
+}
+.cal-meta-meet:hover {
+  background: #006625;
+  color: #fff !important;
   text-decoration: none;
 }
-.cal-meta-meet:hover { text-decoration: underline; }
 
 .cal-sync-badge {
   display: inline-flex;

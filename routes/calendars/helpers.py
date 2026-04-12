@@ -155,6 +155,10 @@ def _describe_calendar_issue(error):
                 'Webhook do Google precisa ser HTTPS. Configure '
                 '`GOOGLE_CALENDAR_WEBHOOK_URL` com `https://.../webhook` e recarregue a página.'
             )
+        if 'invalid_grant' in body or 'token has been expired or revoked' in body:
+            return 'invalid_grant'
+        if error.status_code == 401:
+            return 'unauthorized'
     return str(error)
 
 
@@ -519,21 +523,50 @@ def _should_auto_sync(connection, now_utc):
     return connection.last_sync_at <= threshold
 
 
+_EXPIRED_TOKEN_CODES = {'invalid_grant', 'unauthorized'}
+
+_FRIENDLY_CALENDAR_ISSUES = {
+    'invalid_grant': 'Sua conexão com o Google Calendar expirou e foi removida. Conecte novamente para retomar a sincronização.',
+    'unauthorized': 'Sua conexão com o Google Calendar perdeu a autorização e foi removida. Conecte novamente para retomar a sincronização.',
+}
+
+
+def _auto_disconnect(connection):
+    """Remove a conexão quando o token está expirado/revogado."""
+    _stop_watch_channel(connection, suppress_errors=True)
+    db.session.delete(connection)
+
+
 def _run_auto_calendar_maintenance(connection):
     issues = []
     now_utc = utc_now()
+    disconnected = False
 
     if _should_auto_renew_watch(connection, now_utc):
         try:
             _renew_watch_channel(connection)
         except Exception as exc:
-            issues.append(f'Falha na renovação automática do watch: {_describe_calendar_issue(exc)}')
+            desc = _describe_calendar_issue(exc)
+            if desc in _EXPIRED_TOKEN_CODES:
+                _auto_disconnect(connection)
+                disconnected = True
+            issues.append(_FRIENDLY_CALENDAR_ISSUES.get(
+                desc,
+                'Não foi possível atualizar a conexão com o Google Calendar.',
+            ))
 
-    if _should_auto_sync(connection, now_utc):
+    if not disconnected and _should_auto_sync(connection, now_utc):
         try:
             _sync_events_from_google(connection)
         except Exception as exc:
-            issues.append(f'Falha na sincronização automática: {_describe_calendar_issue(exc)}')
+            desc = _describe_calendar_issue(exc)
+            if desc in _EXPIRED_TOKEN_CODES:
+                _auto_disconnect(connection)
+                disconnected = True
+            issues.append(_FRIENDLY_CALENDAR_ISSUES.get(
+                desc,
+                'Não foi possível sincronizar eventos com o Google Calendar.',
+            ))
 
     return issues
 

@@ -3,11 +3,13 @@
    Configuração injetada pelo template via window.__CALENDAR_PAGE_CONFIG__
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const _cfg      = window.__CALENDAR_PAGE_CONFIG__;
-const CAL_EVENTS = _cfg.events;
-const URL_CREATE = _cfg.urlCreate;
-const URL_EDIT_0 = _cfg.urlEdit;
-const URL_DEL_0  = _cfg.urlDelete;
+const _cfg         = window.__CALENDAR_PAGE_CONFIG__;
+const CAL_EVENTS   = _cfg.events;
+const URL_CREATE   = _cfg.urlCreate;
+const URL_EDIT_0   = _cfg.urlEdit;
+const URL_DEL_0    = _cfg.urlDelete;
+const URL_MEET_0   = _cfg.urlGenMeet;
+const HAS_GOOGLE   = _cfg.hasGoogleConn;
 
 function makeUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
@@ -496,16 +498,108 @@ function openEventPopover(ev, anchor) {
     body.appendChild(desc);
   }
 
-  if (ev.meet_link) {
-    const meet = document.createElement('a');
-    meet.className = 'cal-event-popover-meet';
-    meet.href = ev.meet_link;
-    meet.target = '_blank';
-    meet.rel = 'noopener noreferrer';
-    meet.textContent = 'Abrir Meet';
-    meet.addEventListener('click', e => e.stopPropagation());
-    body.appendChild(meet);
+  function _makeCamIcon() {
+    const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    ic.setAttribute('width', '13'); ic.setAttribute('height', '13');
+    ic.setAttribute('viewBox', '0 0 24 24'); ic.setAttribute('fill', 'none');
+    ic.setAttribute('stroke', 'currentColor'); ic.setAttribute('stroke-width', '2.2');
+    ic.setAttribute('stroke-linecap', 'round'); ic.setAttribute('stroke-linejoin', 'round');
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', 'M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.889L15 14');
+    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    r.setAttribute('x', '3'); r.setAttribute('y', '6'); r.setAttribute('width', '12');
+    r.setAttribute('height', '12'); r.setAttribute('rx', '2');
+    ic.appendChild(p); ic.appendChild(r);
+    return ic;
   }
+
+  function _makeCopyIcon() {
+    const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    ic.setAttribute('width', '13'); ic.setAttribute('height', '13');
+    ic.setAttribute('viewBox', '0 0 24 24'); ic.setAttribute('fill', 'none');
+    ic.setAttribute('stroke', 'currentColor'); ic.setAttribute('stroke-width', '2');
+    ic.setAttribute('stroke-linecap', 'round'); ic.setAttribute('stroke-linejoin', 'round');
+    const r1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    r1.setAttribute('x', '9'); r1.setAttribute('y', '9'); r1.setAttribute('width', '13');
+    r1.setAttribute('height', '13'); r1.setAttribute('rx', '2');
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1');
+    ic.appendChild(r1); ic.appendChild(p);
+    return ic;
+  }
+
+  const meetArea = document.createElement('div');
+  meetArea.className = 'cal-event-popover-meet-area';
+
+  function buildMeetArea(meetLink) {
+    while (meetArea.firstChild) meetArea.removeChild(meetArea.firstChild);
+    if (meetLink) {
+      const meet = document.createElement('a');
+      meet.className = 'cal-event-popover-meet-btn';
+      meet.href = meetLink;
+      meet.target = '_blank';
+      meet.rel = 'noopener noreferrer';
+      meet.appendChild(_makeCamIcon());
+      const lbl = document.createElement('span'); lbl.textContent = 'Abrir Meet';
+      meet.appendChild(lbl);
+      meet.addEventListener('click', e => e.stopPropagation());
+      meetArea.appendChild(meet);
+
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'cal-event-popover-copy-btn';
+      copyBtn.title = 'Copiar link do Meet';
+      copyBtn.appendChild(_makeCopyIcon());
+      copyBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(meetLink).then(() => {
+          copyBtn.classList.add('cal-event-popover-copy-btn--copied');
+          window.setTimeout(() => copyBtn.classList.remove('cal-event-popover-copy-btn--copied'), 1500);
+        }).catch(() => {
+          const ta = document.createElement('textarea');
+          ta.value = meetLink; ta.style.cssText = 'position:fixed;opacity:0;';
+          document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+          document.body.removeChild(ta);
+          copyBtn.classList.add('cal-event-popover-copy-btn--copied');
+          window.setTimeout(() => copyBtn.classList.remove('cal-event-popover-copy-btn--copied'), 1500);
+        });
+      });
+      meetArea.appendChild(copyBtn);
+    } else if (HAS_GOOGLE) {
+      const genBtn = document.createElement('button');
+      genBtn.type = 'button';
+      genBtn.className = 'cal-event-popover-gen-meet-btn';
+      genBtn.appendChild(_makeCamIcon());
+      const genLbl = document.createElement('span'); genLbl.textContent = 'Gerar link do Meet';
+      genBtn.appendChild(genLbl);
+      genBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        genBtn.disabled = true;
+        genLbl.textContent = 'Gerando…';
+        fetch(makeUrl(URL_MEET_0, ev.id), {
+          method: 'POST',
+          headers: {'Accept': 'application/json'}
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok && data.event && data.event.meet_link) {
+            const idx = CAL_EVENTS.findIndex(e => e.id === ev.id);
+            if (idx >= 0) CAL_EVENTS[idx].meet_link = data.event.meet_link;
+            ev.meet_link = data.event.meet_link;
+            buildMeetArea(ev.meet_link);
+            if (curView === 'calendar') renderCalendar(); else renderList();
+          } else {
+            genBtn.disabled = false; genLbl.textContent = 'Gerar link do Meet';
+          }
+        })
+        .catch(() => { genBtn.disabled = false; genLbl.textContent = 'Gerar link do Meet'; });
+      });
+      meetArea.appendChild(genBtn);
+    }
+  }
+
+  buildMeetArea(ev.meet_link);
+  body.appendChild(meetArea);
 
   const actions = document.createElement('div');
   actions.className = 'cal-event-popover-actions';
@@ -758,15 +852,22 @@ function renderList() {
         meetA.href = ev.meet_link;
         meetA.target = '_blank';
         meetA.rel = 'noopener noreferrer';
-        meetA.textContent = 'Meet';
+        const mIc = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        mIc.setAttribute('width', '11'); mIc.setAttribute('height', '11');
+        mIc.setAttribute('viewBox', '0 0 24 24'); mIc.setAttribute('fill', 'none');
+        mIc.setAttribute('stroke', 'currentColor'); mIc.setAttribute('stroke-width', '2.2');
+        mIc.setAttribute('stroke-linecap', 'round'); mIc.setAttribute('stroke-linejoin', 'round');
+        const mP = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        mP.setAttribute('d', 'M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.889L15 14');
+        const mR = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        mR.setAttribute('x', '3'); mR.setAttribute('y', '6');
+        mR.setAttribute('width', '12'); mR.setAttribute('height', '12'); mR.setAttribute('rx', '2');
+        mIc.appendChild(mP); mIc.appendChild(mR);
+        const mLbl = document.createElement('span'); mLbl.textContent = 'Meet';
+        meetA.appendChild(mIc); meetA.appendChild(mLbl);
         meetA.addEventListener('click', e => e.stopPropagation());
         meta.appendChild(meetA);
       }
-
-      const badge = document.createElement('span');
-      badge.className = 'cal-sync-badge cal-sync-badge--' + ev.sync_status;
-      badge.textContent = ({ok:'Sync', error:'Erro sync', pending:'Pendente'})[ev.sync_status] || ev.sync_status;
-      meta.appendChild(badge);
       body.appendChild(meta);
       row.appendChild(body);
 
@@ -808,6 +909,56 @@ const calendarModal = window.createCalendarEventModal({
   editTitle: 'Editar evento',
   onDelete: function (id, api) {
     deleteEvent(id, api);
+  },
+  onSubmit: function (event, api) {
+    const form = api.getForm();
+    const formData = new FormData(form);
+    fetch(form.action, {method: 'POST', headers: {'Accept': 'application/json'}, body: formData})
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) { form.submit(); return; }
+        api.clearPending();
+        const ev = data.event;
+        const idx = CAL_EVENTS.findIndex(e => e.id === ev.id);
+        if (idx >= 0) CAL_EVENTS[idx] = ev; else CAL_EVENTS.push(ev);
+        if (curView === 'calendar') renderCalendar(); else renderList();
+        api.closeModal();
+      })
+      .catch(() => form.submit());
+  },
+  onMeetToggle: function (api) {
+    const modal = api.getModal();
+    const titleField = modal.querySelector('#fieldTitle');
+    const fieldMeet  = modal.querySelector('#fieldMeet');
+    function revertToggle() {
+      if (fieldMeet) { fieldMeet.checked = false; fieldMeet.dispatchEvent(new Event('change')); }
+    }
+    if (!titleField || !titleField.value.trim()) {
+      window.alert('Preencha o título do evento antes de gerar o link do Meet.');
+      revertToggle(); return;
+    }
+    if (!api.prepareFormBeforeSubmit()) { revertToggle(); return; }
+    const form = api.getForm();
+    const formData = new FormData(form);
+    formData.set('create_conference', 'on');
+    fetch(URL_CREATE, {method: 'POST', headers: {'Accept': 'application/json'}, body: formData})
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok || !data.event) { revertToggle(); return; }
+        const ev = data.event;
+        const idx = CAL_EVENTS.findIndex(e => e.id === ev.id);
+        if (idx >= 0) CAL_EVENTS[idx] = ev; else CAL_EVENTS.push(ev);
+        if (curView === 'calendar') renderCalendar(); else renderList();
+        api.setPendingEvent(ev.id, URL_EDIT_0);
+        api.resetMeetUI(ev.meet_link || null);
+      })
+      .catch(() => revertToggle());
+  },
+  onClose: function (pendingId) {
+    const idx = CAL_EVENTS.findIndex(e => e.id === pendingId);
+    if (idx >= 0) CAL_EVENTS.splice(idx, 1);
+    if (curView === 'calendar') renderCalendar(); else renderList();
+    fetch(makeUrl(URL_DEL_0, pendingId), {method: 'POST'}).catch(() => {});
   }
 });
 

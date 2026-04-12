@@ -6,7 +6,9 @@ from routes.blueprint import main_bp
 from routes.decorators import login_required
 import routes.calendars.helpers as _cal_helpers
 from routes.calendars.helpers import (
+    _auto_disconnect,
     _connection_for_current_user,
+    _EXPIRED_TOKEN_CODES,
     _stop_watch_channel,
     _describe_calendar_issue,
     _format_human_datetime,
@@ -47,7 +49,16 @@ def sync_google_calendar_now():
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        flash(f'Erro ao sincronizar com Google Calendar: {exc}', 'danger')
+        desc = _describe_calendar_issue(exc)
+        if desc in _EXPIRED_TOKEN_CODES:
+            try:
+                _auto_disconnect(connection)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            flash('Sua conexão com o Google Calendar expirou e foi removida. Conecte novamente para retomar a sincronização.', 'warning')
+        else:
+            flash(f'Erro ao sincronizar com Google Calendar: {exc}', 'danger')
         return redirect(url_for('main.calendars_hub'))
 
     flash(

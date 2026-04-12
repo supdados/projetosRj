@@ -88,21 +88,24 @@
             </label>
 
             <div class="cal-meet-existing" id="meetExistingRow" style="display:none">
-              <div class="cal-meet-existing-info">
-                <div class="cal-meet-icon-wrap">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                </div>
-                <div>
-                  <span class="cal-meet-label">Google Meet</span>
-                  <span class="cal-meet-url" id="meetUrlDisplay"></span>
-                </div>
+              <div class="cal-meet-info-row">
+                <a id="meetOpenLink" href="#" target="_blank" rel="noopener noreferrer" class="cal-meet-existing-info">
+                  <div class="cal-meet-icon-wrap">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                  </div>
+                  <div>
+                    <span class="cal-meet-label">Google Meet</span>
+                    <span class="cal-meet-url" id="meetUrlDisplay"></span>
+                  </div>
+                </a>
+                <button type="button" class="cal-meet-copy-btn" title="Copiar link" data-calendar-modal-action="copy-meet">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
               </div>
               <div class="cal-meet-existing-actions" id="meetExistingActions">
-                <a id="meetOpenLink" href="#" target="_blank" rel="noopener noreferrer" class="cal-meet-action-btn">Abrir Meet</a>
-                <button type="button" class="cal-meet-action-btn" data-calendar-modal-action="copy-meet">Copiar link</button>
-                <button type="button" class="cal-meet-action-btn cal-meet-action-btn--subtle" data-calendar-modal-action="regen-meet">Gerar novo link</button>
+                <button type="button" class="cal-meet-action-btn" data-calendar-modal-action="regen-meet">Gerar novo link</button>
               </div>
-              <div class="cal-meet-regen-msg" id="meetRegenMsg" style="display:none">
+              <div class="cal-meet-regen-msg" id="meetRegenMsg">
                 <span>Novo link será gerado ao salvar.</span>
                 <button type="button" class="cal-meet-action-btn cal-meet-action-btn--subtle" data-calendar-modal-action="cancel-regen-meet">Cancelar</button>
               </div>

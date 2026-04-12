@@ -1,4 +1,4 @@
-from flask import current_app, flash, g, redirect, request, url_for
+from flask import current_app, flash, g, jsonify, redirect, request, url_for
 
 from models import CalendarEvent, db
 from services.calendar_sync import delete_remote_event
@@ -11,12 +11,17 @@ from routes.blueprint import main_bp
 from routes.decorators import login_required
 import routes.calendars.helpers as _cal_helpers
 from routes.calendars.helpers import (
+    _event_json,
     _connection_for_current_user,
     _parse_event_form,
     _sync_project_meeting_from_calendar_event,
     _delete_project_meeting,
     _get_user_event_or_404,
 )
+
+
+def _wants_json():
+    return 'application/json' in request.headers.get('Accept', '')
 
 
 @main_bp.route('/calendarios/eventos', methods=['POST'])
@@ -60,6 +65,9 @@ def create_calendar_event():
         db.session.rollback()
         flash(f'Erro ao salvar evento: {exc}', 'danger')
         return redirect(url_for('main.calendars_hub'))
+
+    if _wants_json():
+        return jsonify({'ok': True, 'event': _event_json(event)})
 
     if sync_warning:
         flash('Evento salvo localmente, mas falhou ao enviar para Google Calendar.', 'warning')
@@ -118,6 +126,9 @@ def edit_calendar_event(event_id):
         flash(f'Erro ao atualizar evento: {exc}', 'danger')
         return redirect(url_for('main.calendars_hub'))
 
+    if _wants_json():
+        return jsonify({'ok': True, 'event': _event_json(event)})
+
     if sync_warning:
         flash('Evento atualizado localmente, mas falhou no sync com Google Calendar.', 'warning')
         flash(sync_warning, 'warning')
@@ -125,6 +136,30 @@ def edit_calendar_event(event_id):
         flash('Evento atualizado localmente.', 'success')
     else:
         flash('Evento atualizado e sincronizado com Google Calendar.', 'success')
+    return redirect(url_for('main.calendars_hub'))
+
+
+@main_bp.route('/calendarios/eventos/<int:event_id>/gerar-meet', methods=['POST'])
+@login_required
+def generate_meet_link(event_id):
+    event = _get_user_event_or_404(event_id)
+    connection = _connection_for_current_user()
+    if connection is None:
+        flash('Conecte o Google Calendar para gerar um link do Meet.', 'warning')
+        return redirect(url_for('main.calendars_hub'))
+
+    try:
+        _cal_helpers._sync_local_event_to_google(event, connection, create_conference=True)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        flash(f'Não foi possível gerar o link do Meet: {exc}', 'danger')
+        return redirect(url_for('main.calendars_hub'))
+
+    if _wants_json():
+        return jsonify({'ok': True, 'event': _event_json(event)})
+
+    flash('Link do Google Meet gerado com sucesso.', 'success')
     return redirect(url_for('main.calendars_hub'))
 
 

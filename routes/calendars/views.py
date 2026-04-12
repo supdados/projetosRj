@@ -26,7 +26,7 @@ def calendars_hub():
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
-            auto_issues.append(f'Falha ao persistir manutenção automática: {exc}')
+            auto_issues.append('Ocorreu um erro interno ao manter o calendário. Tente recarregar a página.')
 
     for issue in auto_issues:
         flash(issue, 'warning')

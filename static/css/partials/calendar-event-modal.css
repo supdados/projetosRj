@@ -290,13 +290,54 @@
   overflow: hidden;
 }
 
+.cal-meet-info-row {
+  position: relative;
+}
+
 .cal-meet-existing-info {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.5rem 0.6rem;
+  padding: 0.5rem 2.4rem 0.5rem 0.6rem;
   background: var(--app-color-surface-muted);
-  border-bottom: 1px solid var(--app-color-border);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: filter 0.12s;
+}
+
+.cal-meet-existing-info:hover {
+  filter: brightness(0.96);
+  text-decoration: none;
+  color: inherit;
+}
+
+.cal-meet-copy-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 0.3rem;
+  border: 1px solid var(--app-color-border);
+  background: var(--app-color-surface);
+  color: var(--app-color-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.cal-meet-info-row:hover .cal-meet-copy-btn {
+  opacity: 1;
+}
+
+.cal-meet-copy-btn:hover {
+  background: var(--app-color-surface-muted);
+  color: var(--app-color-text-primary);
 }
 
 .cal-meet-url {
@@ -310,17 +351,26 @@
   margin-top: 0.05rem;
 }
 
-.cal-meet-existing-actions,
-.cal-meet-regen-msg {
-  display: flex;
+.cal-meet-existing-actions {
+  display: none;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.42rem 0.5rem;
-  flex-wrap: wrap;
+  padding: 0.3rem 0.5rem;
+}
+
+.cal-meet-existing:not(.is-regen) .cal-meet-existing-actions {
+  display: flex;
 }
 
 .cal-meet-regen-msg {
+  display: none;
+  align-items: center;
   gap: 0.55rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.cal-meet-existing.is-regen .cal-meet-regen-msg {
+  display: flex;
 }
 
 .cal-meet-regen-msg span {
@@ -358,6 +408,37 @@
 .cal-meet-action-btn--subtle:hover {
   border-color: var(--app-color-border);
   color: var(--app-color-text-primary);
+}
+
+.cal-meet-action-btn--icon {
+  padding: 0.28rem 0.38rem;
+  position: relative;
+}
+.cal-meet-action-btn--icon svg {
+  display: block;
+}
+
+.cal-meet-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--app-color-text-primary);
+  color: var(--app-color-surface);
+  padding: 0.45rem 1rem;
+  border-radius: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  animation: cal-meet-toast-in 1.6s ease forwards;
+}
+@keyframes cal-meet-toast-in {
+  0%   { opacity: 0; transform: translate(-50%, calc(-50% + 6px)); }
+  15%  { opacity: 1; transform: translate(-50%, -50%); }
+  70%  { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -50%); }
 }
 
 .cal-field-textarea {
