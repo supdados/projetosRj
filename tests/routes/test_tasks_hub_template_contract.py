@@ -259,6 +259,31 @@ def test_tasks_hub_view_toggle_hover_only_affects_hovered_button():
     assert 'html[data-theme="dark"] body.is-authenticated .task-detail-v2 .task-items-view-toggle:hover .task-items-view-label:not(.is-active)' not in dark_css
 
 
+def test_tasks_hub_kanban_light_mode_uses_distinct_validation_and_adjustments_colors():
+    kanban_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'detail' / 'kanban.css'
+    kanban_css_content = kanban_css_path.read_text(encoding='utf-8')
+    list_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'detail' / 'list.css'
+    list_css_content = list_css_path.read_text(encoding='utf-8')
+
+    assert '.task-detail-v2 .task-items-kanban-badge.status-para_validacao {\n    background: #fff2c2;' in kanban_css_content
+    assert 'border-color: #eac35b;' in kanban_css_content
+    assert 'color: #7a4b00;' in kanban_css_content
+
+    assert '.task-detail-v2 .task-items-kanban-badge.status-para_ajustes {\n    background: #fde7eb;' in kanban_css_content
+    assert 'border-color: #efb2bf;' in kanban_css_content
+    assert 'color: #9f1f3a;' in kanban_css_content
+
+    assert '.task-detail-v2 .task-item-status.status-para_validacao,\n.task-detail-v2 .task-item-status-readonly.status-para_validacao {\n    background: #fff2c2;' in list_css_content
+    assert 'border-color: #eac35b;' in list_css_content
+    assert 'color: #7a4b00;' in list_css_content
+    assert '.task-detail-v2 .task-item-bar.status-para_validacao {\n    background: #7a4b00;' in list_css_content
+
+    assert '.task-detail-v2 .task-item-status.status-para_ajustes,\n.task-detail-v2 .task-item-status-readonly.status-para_ajustes {\n    background: #fde7eb;' in list_css_content
+    assert 'border-color: #efb2bf;' in list_css_content
+    assert 'color: #9f1f3a;' in list_css_content
+    assert '.task-detail-v2 .task-item-bar.status-para_ajustes {\n    background: #9f1f3a;' in list_css_content
+
+
 def test_tasks_hub_dark_mode_uses_neutral_text_tokens_for_structural_copy():
     tarefas_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'hub.css'
     tarefas_css_content = tarefas_css_path.read_text(encoding='utf-8')

@@ -100,11 +100,11 @@
 }
 
 .task-detail-v2 .task-item-bar.status-para_validacao {
-    background: #8a4f00;
+    background: #7a4b00;
 }
 
 .task-detail-v2 .task-item-bar.status-para_ajustes {
-    background: #c2520a;
+    background: #9f1f3a;
 }
 
 .task-detail-v2 .task-item-bar.status-finalizada {
@@ -330,16 +330,16 @@
 
 .task-detail-v2 .task-item-status.status-para_validacao,
 .task-detail-v2 .task-item-status-readonly.status-para_validacao {
-    background: #fff3df;
-    border-color: #f4dfb8;
-    color: #8a4f00;
+    background: #fff2c2;
+    border-color: #eac35b;
+    color: #7a4b00;
 }
 
 .task-detail-v2 .task-item-status.status-para_ajustes,
 .task-detail-v2 .task-item-status-readonly.status-para_ajustes {
-    background: #fff3e0;
-    border-color: #fdc9a0;
-    color: #7c3210;
+    background: #fde7eb;
+    border-color: #efb2bf;
+    color: #9f1f3a;
 }
 
 .task-detail-v2 .task-item-status.status-finalizada,

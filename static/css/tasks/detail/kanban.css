@@ -282,15 +282,15 @@
 }
 
 .task-detail-v2 .task-items-kanban-badge.status-para_validacao {
-    background: #fff3df;
-    border-color: #f4dfb8;
-    color: #8a4f00;
+    background: #fff2c2;
+    border-color: #eac35b;
+    color: #7a4b00;
 }
 
 .task-detail-v2 .task-items-kanban-badge.status-para_ajustes {
-    background: #ffe7cf;
-    border-color: #efbc8d;
-    color: #7c3210;
+    background: #fde7eb;
+    border-color: #efb2bf;
+    color: #9f1f3a;
 }
 
 .task-detail-v2 .task-items-kanban-badge.status-finalizada {
@@ -697,13 +697,13 @@
 }
 
 .task-detail-v2 .task-items-kanban-column.status-para_validacao .task-items-kanban-col-head {
-    border-bottom-color: #f4dfb8;
-    background: #fff3df;
+    border-bottom-color: #eac35b;
+    background: #fff2c2;
 }
 
 .task-detail-v2 .task-items-kanban-column.status-para_ajustes .task-items-kanban-col-head {
-    border-bottom-color: #efbc8d;
-    background: #ffe7cf;
+    border-bottom-color: #efb2bf;
+    background: #fde7eb;
 }
 
 .task-detail-v2 .task-items-kanban-column.status-finalizada .task-items-kanban-col-head {
