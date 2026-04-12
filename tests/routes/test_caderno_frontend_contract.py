@@ -34,3 +34,18 @@ def test_caderno_drag_measurement_avoids_extra_buffer_rows():
     assert 'measureRoot ? measureRoot.scrollHeight : 0' in content
     assert 'measureRoot ? measureRoot.getBoundingClientRect().height : blockEl.getBoundingClientRect().height' in content
     assert 'scrollHeight) + 8' not in content
+
+
+def test_caderno_sheet_starts_with_compact_viewport_bound_height():
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
+    css_content = _read(css_path)
+    canvas_body = _selector_body(css_content, '.caderno-canvas-wrap')
+
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
+    js_content = _read(js_path)
+
+    assert 'clamp(420px, 54vh, 560px);' in canvas_body
+    assert 'function getBaseCanvasMinHeight() {' in js_content
+    assert 'DESKTOP_BASE_CANVAS_MIN_HEIGHT' in js_content
+    assert 'MOBILE_BASE_CANVAS_MIN_HEIGHT' in js_content
+    assert 'BASE_CANVAS_MIN_HEIGHT = 760' not in js_content

@@ -115,7 +115,7 @@ html[data-theme="dark"] body.is-authenticated {
 }
 
 .caderno-canvas-wrap {
-  min-height: 760px;
+  min-height: clamp(420px, 54vh, 560px);
 }
 
 .caderno-empty-hint {
@@ -872,6 +872,10 @@ html[data-theme="dark"] body.is-authenticated {
 
   .caderno-paper {
     padding: 1.25rem 1rem 1.25rem calc(var(--caderno-margin-width) + 0.75rem);
+  }
+
+  .caderno-canvas-wrap {
+    min-height: clamp(280px, 42vh, 420px);
   }
 
   .caderno-blocks {

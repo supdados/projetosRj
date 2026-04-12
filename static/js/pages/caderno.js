@@ -31,7 +31,8 @@
   const GRID_ROW_HEIGHT = 36;
   const GRID_TRACK_HEIGHT = GRID_ROW_HEIGHT + GRID_GAP_PX;
   const MOBILE_BREAKPOINT = 960;
-  const BASE_CANVAS_MIN_HEIGHT = 760;
+  const DESKTOP_BASE_CANVAS_MIN_HEIGHT = { min: 420, max: 560, ratio: 0.54 };
+  const MOBILE_BASE_CANVAS_MIN_HEIGHT = { min: 280, max: 420, ratio: 0.42 };
   const EXPAND_STEP_PX = 320;
   const DEFAULT_SIZE_PRESET = 'M';
   const DEFAULT_SHEET = { expand_steps: 0, max_expand_steps: 3 };
@@ -263,10 +264,19 @@
     return window.innerWidth >= MOBILE_BREAKPOINT;
   }
 
+  function getBaseCanvasMinHeight() {
+    const baseConfig = isDesktopLayout()
+      ? DESKTOP_BASE_CANVAS_MIN_HEIGHT
+      : MOBILE_BASE_CANVAS_MIN_HEIGHT;
+    const viewportHeight = Math.round(window.innerHeight * baseConfig.ratio);
+    return coerceInt(viewportHeight, baseConfig.max, baseConfig.min, baseConfig.max);
+  }
+
   function applyCanvasSizing() {
     if (!canvasWrap) return;
     const expandSteps = coerceInt(sheet.expand_steps, 0, 0, sheet.max_expand_steps || DEFAULT_SHEET.max_expand_steps);
-    canvasWrap.style.minHeight = `${BASE_CANVAS_MIN_HEIGHT + (expandSteps * EXPAND_STEP_PX)}px`;
+    const baseCanvasMinHeight = getBaseCanvasMinHeight();
+    canvasWrap.style.minHeight = `${baseCanvasMinHeight + (expandSteps * EXPAND_STEP_PX)}px`;
   }
 
   function updateExpandControl() {
