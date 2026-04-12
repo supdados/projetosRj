@@ -1498,6 +1498,10 @@ footer p {
 }
 
 /* Correção para evitar redimensionamento durante carregamento */
+html {
+    scrollbar-gutter: stable;
+}
+
 html, body {
     width: 100%;
     height: 100%;

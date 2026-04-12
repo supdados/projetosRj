@@ -146,6 +146,7 @@
     min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
+    scrollbar-gutter: stable;
     padding-bottom: 0.08rem;
     scrollbar-width: thin;
 }
@@ -704,6 +705,34 @@
 @media (max-width: 1180px) {
     .projects-v4-table {
         min-width: 920px;
+    }
+}
+
+@media (max-width: 1360px) {
+    .projects-v4-filter-essential {
+        flex-wrap: wrap;
+        overflow-x: visible;
+        row-gap: 0.72rem;
+        padding-bottom: 0;
+        scrollbar-gutter: auto;
+    }
+
+    .projects-v4-field-search {
+        flex: 1 1 100%;
+        min-width: 100%;
+    }
+
+    .projects-v4-filter-essential .projects-v4-field:not(.projects-v4-field-search) {
+        flex: 1 1 180px;
+        min-width: 170px;
+        max-width: none;
+    }
+
+    .projects-v4-filter-actions {
+        width: 100%;
+        margin-left: 0;
+        justify-content: flex-start;
+        flex-wrap: wrap;
     }
 }
 

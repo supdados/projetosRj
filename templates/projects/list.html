@@ -369,10 +369,36 @@
             ? toggleAdvancedFiltersBtn.querySelector('.projects-v4-toggle-label')
             : null;
         var densityRaf = null;
-        var densityObserver = null;
+        var densityLocked = false;
+        var densityWrapBreakpoint = 1360;
+        var densityCompactExitSlack = 48;
+
+        function getDensityViewportWidth() {
+            return window.innerWidth || document.documentElement.clientWidth || 0;
+        }
+
+        function shouldUseWrappedFiltersLayout() {
+            return getDensityViewportWidth() <= densityWrapBreakpoint;
+        }
+
+        function measureFilterRowOverflow(compactMode) {
+            if (!filterActions || !filterRow) {
+                return 0;
+            }
+
+            var previousCompactState = filterActions.classList.contains('is-compact');
+            if (typeof compactMode === 'boolean') {
+                filterActions.classList.toggle('is-compact', compactMode);
+            }
+
+            var overflow = filterRow.scrollWidth - filterRow.clientWidth;
+
+            filterActions.classList.toggle('is-compact', previousCompactState);
+            return overflow;
+        }
 
         function scheduleDensitySync() {
-            if (!filterActions || !filterRow) return;
+            if (!filterActions || !filterRow || densityLocked) return;
             if (densityRaf) cancelAnimationFrame(densityRaf);
             densityRaf = requestAnimationFrame(function () {
                 densityRaf = null;
@@ -381,12 +407,27 @@
         }
 
         function syncFilterActionsDensity() {
-            if (!filterActions || !filterRow) return;
-            filterActions.classList.remove('is-compact');
-            var shouldCompact = filterRow.scrollWidth > (filterRow.clientWidth + 1);
-            if (shouldCompact) {
-                filterActions.classList.add('is-compact');
+            if (!filterActions || !filterRow || densityLocked) return;
+            densityLocked = true;
+
+            if (shouldUseWrappedFiltersLayout()) {
+                filterActions.classList.remove('is-compact');
+                densityLocked = false;
+                return;
             }
+
+            var isCompact = filterActions.classList.contains('is-compact');
+            var expandedOverflow = measureFilterRowOverflow(false);
+            var shouldCompact = expandedOverflow > 1;
+
+            // Keep the compact state until there is comfortable spare room
+            // in the expanded layout. This prevents resize thrashing near the breakpoint.
+            if (isCompact && expandedOverflow > -densityCompactExitSlack) {
+                shouldCompact = true;
+            }
+
+            filterActions.classList.toggle('is-compact', shouldCompact);
+            densityLocked = false;
         }
 
         function syncAdvancedFiltersState(isOpen) {
@@ -412,6 +453,8 @@
                 toggleAdvancedFiltersBtn.setAttribute('title', toggleLabel);
                 toggleAdvancedFiltersBtn.setAttribute('aria-label', toggleLabel);
             }
+
+            scheduleDensitySync();
         }
 
         if (advancedFiltersPanel && toggleAdvancedFiltersBtn) {
@@ -424,11 +467,17 @@
         if (filterActions && filterRow) {
             syncFilterActionsDensity();
             window.addEventListener('resize', scheduleDensitySync);
-            if (typeof ResizeObserver === 'function') {
-                densityObserver = new ResizeObserver(scheduleDensitySync);
-                densityObserver.observe(filterRow);
-                densityObserver.observe(filterActions);
+            window.addEventListener('orientationchange', scheduleDensitySync);
+            window.addEventListener('load', scheduleDensitySync);
+            window.addEventListener('pageshow', scheduleDensitySync);
+            if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+                document.fonts.ready.then(function () {
+                    scheduleDensitySync();
+                });
             }
+            requestAnimationFrame(function () {
+                requestAnimationFrame(scheduleDensitySync);
+            });
         }
 
         // ABEP combobox no filtro
