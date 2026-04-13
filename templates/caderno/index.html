@@ -18,6 +18,29 @@
     <p class="caderno-date" id="cadernoDate"></p>
   </div>
 
+  <div class="caderno-composer" id="cadernoComposer" role="toolbar" aria-label="Adicionar ao caderno">
+    <button class="caderno-compose-btn caderno-compose-btn--text" type="button" data-create-type="text">
+      <i class="fas fa-plus"></i>
+      <span>Texto</span>
+    </button>
+    <button class="caderno-compose-btn caderno-compose-btn--nota" type="button" data-create-type="nota">
+      <i class="fas fa-plus"></i>
+      <span>Nota</span>
+    </button>
+    <button class="caderno-compose-btn caderno-compose-btn--project" type="button" data-create-type="project">
+      <i class="fas fa-plus"></i>
+      <span>Projeto</span>
+    </button>
+    <button class="caderno-compose-btn caderno-compose-btn--etapa" type="button" data-create-type="etapa">
+      <i class="fas fa-plus"></i>
+      <span>Etapa</span>
+    </button>
+    <button class="caderno-compose-btn caderno-compose-btn--tarefa" type="button" data-create-type="tarefa">
+      <i class="fas fa-plus"></i>
+      <span>Tarefa</span>
+    </button>
+  </div>
+
   <!-- Papel do caderno -->
   <div class="caderno-paper" id="cadernoPaper">
     <div class="caderno-sheet-body" id="cadernoSheetBody">
@@ -25,20 +48,11 @@
         <!-- Dica inicial (oculta quando há blocos) -->
         <div class="caderno-empty-hint" id="cadernoEmptyHint">
           <i class="fas fa-lightbulb"></i>
-          <span>Clique aqui para começar a escrever. Digite <kbd>/</kbd> para inserir um bloco.</span>
+          <span>Use a barra acima para adicionar um bloco e começar a escrever.</span>
         </div>
 
         <!-- Container dos blocos -->
         <div class="caderno-blocks" id="cadernoBlocks" role="list" aria-label="Blocos do caderno"></div>
-
-        <!-- Zona de clique para adicionar bloco ao final -->
-        <div
-          class="caderno-add-zone"
-          id="cadernoAddZone"
-          tabindex="0"
-          role="button"
-          aria-label="Adicionar bloco"
-        ></div>
       </div>
 
       <div class="caderno-sheet-footer" id="cadernoSheetFooter">

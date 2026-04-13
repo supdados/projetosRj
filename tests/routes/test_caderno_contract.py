@@ -8,11 +8,11 @@ def test_caderno_template_contains_grid_and_expand_contract(client_user):
     html = response.get_data(as_text=True)
 
     required_hooks = [
+        'id="cadernoComposer"',
         'id="cadernoPaper"',
         'id="cadernoCanvasWrap"',
         'id="cadernoSheetFooter"',
         'id="cadernoBlocks"',
-        'id="cadernoAddZone"',
         'id="cadernoExpandZone"',
         'id="cadernoExpandZoneLabel"',
         'apiStateUrl:',

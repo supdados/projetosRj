@@ -67,12 +67,51 @@ def test_caderno_slash_menu_anchors_to_caret_and_hides_empty_toolbar():
     assert '.slash-menu[data-side="top"]' in css_content
 
 
-def test_caderno_canvas_click_creates_or_repositions_text_draft():
+def test_caderno_composer_toolbar_is_the_primary_add_flow():
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
+    js_content = _read(js_path)
+    html_path = Path(__file__).resolve().parents[2] / 'templates' / 'caderno' / 'index.html'
+    html_content = _read(html_path)
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
+    css_content = _read(css_path)
+
+    assert 'id="cadernoComposer"' in html_content
+    assert 'data-create-type="text"' in html_content
+    assert 'data-create-type="project"' in html_content
+    assert '.caderno-composer {' in css_content
+    assert '.caderno-compose-btn {' in css_content
+    assert 'function findReusableDraftTextBlock() {' in js_content
+    assert 'function createTextBlockFromComposer() {' in js_content
+    assert 'function onComposerActionClick(event) {' in js_content
+    assert "composer.querySelectorAll('[data-create-type]')" in js_content
+    assert "btn.addEventListener('click', onComposerActionClick);" in js_content
+    assert 'openSearchModal(type, null);' in js_content
+    assert 'onCanvasInteract(event)' not in js_content
+    assert 'createTextBlockAtPoint(clientX, clientY)' not in js_content
+
+
+def test_caderno_text_blocks_hide_size_and_delete_controls():
     js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
     js_content = _read(js_path)
 
-    assert 'function getCanvasLayoutFromPoint(clientX, clientY, sizePreset = DEFAULT_SIZE_PRESET) {' in js_content
-    assert 'function findReusableDraftTextBlock() {' in js_content
-    assert 'function createTextBlockAtPoint(clientX, clientY) {' in js_content
-    assert 'function onCanvasInteract(event) {' in js_content
-    assert "if (canvasWrap) canvasWrap.addEventListener('click', onCanvasInteract);" in js_content
+    assert "function canMoveBlock(block) {" in js_content
+    assert "function shouldRenderToolbar(block) {" in js_content
+    assert "function canResizeBlock(block) {" in js_content
+    assert "return block.block_type !== 'text';" in js_content
+    assert "function canDeleteBlock(block) {" in js_content
+    assert "if (!shouldRenderToolbar(block)) return '';" in js_content
+    assert "${canMoveBlock(block) ? `" in js_content
+    assert "${canResizeBlock(block) ? `" in js_content
+    assert "${canDeleteBlock(block) ? `" in js_content
+
+
+def test_caderno_existing_pages_reset_expand_state_and_compact_overflow():
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
+    js_content = _read(js_path)
+
+    assert 'function compactLayout(sourceBlocks) {' in js_content
+    assert 'function hasLayoutOverflowForCurrentSheet(sourceBlocks) {' in js_content
+    assert 'const shouldResetSheetSize = persistedSheet.expand_steps > 0;' in js_content
+    assert 'expand_steps: 0,' in js_content
+    assert 'await saveSheetExpandSteps(0);' in js_content
+    assert 'compactLayout(incomingBlocks)' in js_content

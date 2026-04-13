@@ -8,7 +8,7 @@
 
   const blocksContainer = document.getElementById('cadernoBlocks');
   const emptyHint = document.getElementById('cadernoEmptyHint');
-  const addZone = document.getElementById('cadernoAddZone');
+  const composer = document.getElementById('cadernoComposer');
   const dateEl = document.getElementById('cadernoDate');
   const paper = document.getElementById('cadernoPaper');
   const canvasWrap = document.getElementById('cadernoCanvasWrap');
@@ -393,37 +393,54 @@
     positionSlashMenu(editorEl);
   }
 
-  function getCanvasLayoutFromPoint(clientX, clientY, sizePreset = DEFAULT_SIZE_PRESET) {
-    if (!canvasWrap || !blocksContainer || !isDesktopLayout()) return null;
+  function getCurrentSheetPixelHeight() {
+    if (!canvasWrap) return getBaseCanvasMinHeight();
+    const inlineMinHeight = parseFloat(canvasWrap.style.minHeight);
+    if (Number.isFinite(inlineMinHeight) && inlineMinHeight > 0) return inlineMinHeight;
 
-    const defaults = getPresetLayout(sizePreset);
-    const canvasRect = canvasWrap.getBoundingClientRect();
-    const containerRect = blocksContainer.getBoundingClientRect();
-    const usableWidth = Math.max(containerRect.width, 1);
-    const columnWidth = (usableWidth - (GRID_GAP_PX * (GRID_COLUMNS - 1))) / GRID_COLUMNS;
-    if (!Number.isFinite(columnWidth) || columnWidth <= 0) return null;
+    const computedMinHeight = parseFloat(window.getComputedStyle(canvasWrap).minHeight);
+    if (Number.isFinite(computedMinHeight) && computedMinHeight > 0) return computedMinHeight;
 
-    const relativeX = Math.max(0, Math.min(clientX - containerRect.left, usableWidth - 1));
-    const relativeY = Math.max(0, clientY - canvasRect.top);
-    const desiredGridX = coerceInt(
-      Math.floor(relativeX / (columnWidth + GRID_GAP_PX)),
-      0,
-      0,
-      Math.max(0, GRID_COLUMNS - defaults.grid_w),
-    );
-    const desiredGridY = coerceInt(
-      Math.floor(relativeY / GRID_TRACK_HEIGHT),
-      0,
-      0,
-    );
+    return getBaseCanvasMinHeight();
+  }
 
-    return {
-      size_preset: sizePreset,
-      grid_x: desiredGridX,
-      grid_y: desiredGridY,
-      grid_w: defaults.grid_w,
-      grid_h: defaults.grid_h,
-    };
+  function getCurrentSheetUsableHeight() {
+    const reserve = 16;
+    return Math.max(GRID_TRACK_HEIGHT, getCurrentSheetPixelHeight() - reserve);
+  }
+
+  function getCurrentSheetMaxGridY(gridH = getPresetLayout(DEFAULT_SIZE_PRESET).grid_h) {
+    const maxRows = Math.max(1, Math.floor((getCurrentSheetUsableHeight() + GRID_GAP_PX) / GRID_TRACK_HEIGHT));
+    return Math.max(0, maxRows - Math.max(1, gridH));
+  }
+
+  function compactLayout(sourceBlocks) {
+    const normalizedBlocks = sourceBlocks.map(normalizeBlock);
+    const ordered = sortBlocksForLayout(normalizedBlocks);
+    const occupied = new Set();
+
+    const laidOut = ordered.map(block => {
+      const slot = findSlotFrom(
+        occupied,
+        block.grid_w,
+        block.grid_h,
+        block.grid_x,
+        0,
+      );
+      const nextBlock = {
+        ...block,
+        grid_x: slot.grid_x,
+        grid_y: slot.grid_y,
+      };
+      occupyCells(occupied, nextBlock.grid_x, nextBlock.grid_y, nextBlock.grid_w, nextBlock.grid_h);
+      return nextBlock;
+    });
+
+    return assignSequentialPositions(laidOut);
+  }
+
+  function hasLayoutOverflowForCurrentSheet(sourceBlocks) {
+    return sourceBlocks.some(block => block.grid_y > getCurrentSheetMaxGridY(block.grid_h));
   }
 
   function getBaseCanvasMinHeight() {
@@ -526,18 +543,42 @@
     )).join('');
   }
 
+  function canMoveBlock(block) {
+    return block.block_type !== 'text';
+  }
+
+  function canResizeBlock(block) {
+    return block.block_type !== 'text';
+  }
+
+  function canDeleteBlock(block) {
+    return block.block_type !== 'text';
+  }
+
+  function shouldRenderToolbar(block) {
+    return canMoveBlock(block) || canResizeBlock(block) || canDeleteBlock(block);
+  }
+
   function renderToolbar(block) {
+    if (!shouldRenderToolbar(block)) return '';
+
     return `
       <div class="caderno-block-toolbar">
-        <button class="caderno-block-handle" type="button" data-action="drag" aria-label="Mover bloco">
-          <i class="fas fa-grip-lines"></i>
-        </button>
-        <div class="caderno-size-toggle" role="group" aria-label="Tamanho do bloco">
-          ${renderSizeToggle(block)}
-        </div>
-        <button class="caderno-block-btn caderno-block-btn--delete" type="button" data-action="delete" aria-label="Remover bloco">
-          <i class="fas fa-trash-alt"></i>
-        </button>
+        ${canMoveBlock(block) ? `
+          <button class="caderno-block-handle" type="button" data-action="drag" aria-label="Mover bloco">
+            <i class="fas fa-grip-lines"></i>
+          </button>
+        ` : ''}
+        ${canResizeBlock(block) ? `
+          <div class="caderno-size-toggle" role="group" aria-label="Tamanho do bloco">
+            ${renderSizeToggle(block)}
+          </div>
+        ` : ''}
+        ${canDeleteBlock(block) ? `
+          <button class="caderno-block-btn caderno-block-btn--delete" type="button" data-action="delete" aria-label="Remover bloco">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        ` : ''}
       </div>
     `;
   }
@@ -855,62 +896,52 @@
     }
   }
 
-  function moveDraftTextBlock(blockId, layout) {
-    const nextBlocks = cloneBlocks(blocks);
-    const target = nextBlocks.find(block => block.id === blockId);
-    if (!target) return false;
-
-    target.size_preset = layout.size_preset;
-    target.grid_x = layout.grid_x;
-    target.grid_y = layout.grid_y;
-    target.grid_w = layout.grid_w;
-    target.grid_h = layout.grid_h;
-
-    const normalized = normalizeLayout(nextBlocks, blockId);
-    if (!layoutsDiffer(normalized, blocks)) {
-      renderAllBlocks();
-      setActiveBlock(blockId);
-      focusBlock(blockId);
-      return true;
+  async function createTextBlockFromComposer() {
+    const reusableDraft = findReusableDraftTextBlock();
+    if (reusableDraft) {
+      setActiveBlock(reusableDraft.id);
+      focusBlock(reusableDraft.id);
+      return reusableDraft;
     }
 
-    blocks = normalized;
-    renderAllBlocks();
-    setActiveBlock(blockId);
-    focusBlock(blockId);
-    schedulePersistLayout();
-    return true;
+    return createBlock({ block_type: 'text', content: '' });
   }
 
-  async function createTextBlockAtPoint(clientX, clientY) {
-    const layout = getCanvasLayoutFromPoint(clientX, clientY);
-    if (!layout) {
-      await createBlock({ block_type: 'text', content: '' });
+  async function onComposerActionClick(event) {
+    event.preventDefault();
+    const btn = event.currentTarget;
+    const type = btn ? String(btn.dataset.createType || '').trim() : '';
+    if (!type) return;
+
+    closeSlashMenu();
+
+    if (type === 'text') {
+      await createTextBlockFromComposer();
       return;
     }
 
-    const reusableDraft = findReusableDraftTextBlock();
-    if (reusableDraft && moveDraftTextBlock(reusableDraft.id, layout)) {
+    if (type === 'nota') {
+      await createBlock({ block_type: 'nota', content: '' });
       return;
     }
 
-    await createBlock({
-      block_type: 'text',
-      content: '',
-      ...layout,
-    });
+    openSearchModal(type, null);
   }
 
   async function createTextBlockAfter(blockId) {
     const sourceBlock = getBlockById(blockId);
     if (!sourceBlock) return;
     const defaults = getPresetLayout(DEFAULT_SIZE_PRESET);
+    const desiredGridY = Math.min(
+      sourceBlock.grid_y + sourceBlock.grid_h,
+      getCurrentSheetMaxGridY(defaults.grid_h),
+    );
     await createBlock({
       block_type: 'text',
       content: '',
       size_preset: DEFAULT_SIZE_PRESET,
       grid_x: sourceBlock.grid_x,
-      grid_y: sourceBlock.grid_y + sourceBlock.grid_h,
+      grid_y: desiredGridY,
       grid_w: defaults.grid_w,
       grid_h: defaults.grid_h,
     });
@@ -1190,11 +1221,29 @@
       const response = await apiFetch(CFG.apiBlocksUrl);
       if (!response.ok) throw new Error('API error');
       const payload = await response.json();
-      sheet = { ...DEFAULT_SHEET, ...(payload.sheet || {}) };
+      const persistedSheet = { ...DEFAULT_SHEET, ...(payload.sheet || {}) };
+      const shouldResetSheetSize = persistedSheet.expand_steps > 0;
+      sheet = {
+        ...persistedSheet,
+        expand_steps: 0,
+      };
       applyCanvasSizing();
       updateExpandControl();
-      setBlocks((payload.blocks || []).map(normalizeBlock));
+      const incomingBlocks = (payload.blocks || []).map(normalizeBlock);
+      const nextBlocks = (
+        shouldResetSheetSize || hasLayoutOverflowForCurrentSheet(incomingBlocks)
+      )
+        ? compactLayout(incomingBlocks)
+        : normalizeLayout(incomingBlocks);
+      blocks = nextBlocks;
       renderAllBlocks();
+
+      if (shouldResetSheetSize) {
+        await saveSheetExpandSteps(0);
+      }
+      if (layoutsDiffer(nextBlocks, incomingBlocks)) {
+        schedulePersistLayout();
+      }
     } catch (err) {
       console.warn('[caderno] Falha ao carregar blocos', err);
       blocksContainer.textContent = '';
@@ -1222,35 +1271,6 @@
     wrapper.appendChild(spinner);
     wrapper.appendChild(label);
     blocksContainer.appendChild(wrapper);
-  }
-
-  async function onAddZoneInteract(event) {
-    if (event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
-      await createTextBlockAtPoint(event.clientX, event.clientY);
-      return;
-    }
-
-    const reusableDraft = findReusableDraftTextBlock();
-    if (reusableDraft) {
-      focusBlock(reusableDraft.id);
-      return;
-    }
-
-    await createBlock({ block_type: 'text', content: '' });
-  }
-
-  async function onCanvasInteract(event) {
-    if (!canvasWrap) return;
-    if (
-      event.defaultPrevented ||
-      !event.target ||
-      event.target.closest('.caderno-block, .slash-menu, .caderno-search-modal, .caderno-search-backdrop, .caderno-expand-zone, a, button, input, textarea, select, label, [contenteditable]')
-    ) {
-      return;
-    }
-
-    closeSlashMenu();
-    await onAddZoneInteract(event);
   }
 
   async function expandPaper() {
@@ -1295,7 +1315,7 @@
     const draggedBlock = nextBlocks.find(block => block.id === blockId);
     if (!draggedBlock) return;
     draggedBlock.grid_x = coerceInt(desiredX, draggedBlock.grid_x, 0, Math.max(0, GRID_COLUMNS - draggedBlock.grid_w));
-    draggedBlock.grid_y = coerceInt(desiredY, draggedBlock.grid_y, 0);
+    draggedBlock.grid_y = coerceInt(desiredY, draggedBlock.grid_y, 0, getCurrentSheetMaxGridY(draggedBlock.grid_h));
 
     const normalized = normalizeLayout(nextBlocks, blockId);
     if (!layoutsDiffer(normalized, dragState.previewBlocks)) return;
@@ -1517,14 +1537,11 @@
     updateExpandControl();
     loadBlocks();
 
-    if (canvasWrap) canvasWrap.addEventListener('click', onCanvasInteract);
-    addZone.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onAddZoneInteract();
-      }
-    });
-
+    if (composer) {
+      composer.querySelectorAll('[data-create-type]').forEach(btn => {
+        btn.addEventListener('click', onComposerActionClick);
+      });
+    }
     if (expandZone) expandZone.addEventListener('click', expandPaper);
 
     slashMenuList.querySelectorAll('.slash-menu-item').forEach(item => {
