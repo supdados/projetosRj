@@ -65,3 +65,14 @@ def test_caderno_slash_menu_anchors_to_caret_and_hides_empty_toolbar():
     assert 'syncSlashMenuState()' in js_content
     assert '.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar' in css_content
     assert '.slash-menu[data-side="top"]' in css_content
+
+
+def test_caderno_canvas_click_creates_or_repositions_text_draft():
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
+    js_content = _read(js_path)
+
+    assert 'function getCanvasLayoutFromPoint(clientX, clientY, sizePreset = DEFAULT_SIZE_PRESET) {' in js_content
+    assert 'function findReusableDraftTextBlock() {' in js_content
+    assert 'function createTextBlockAtPoint(clientX, clientY) {' in js_content
+    assert 'function onCanvasInteract(event) {' in js_content
+    assert "if (canvasWrap) canvasWrap.addEventListener('click', onCanvasInteract);" in js_content

@@ -280,6 +280,22 @@
     syncSlashMenuState();
   }
 
+  function getBlockCurrentText(blockId) {
+    const editorEl = findBlockEditor(blockId);
+    if (editorEl) return getEditorText(editorEl);
+    const block = getBlockById(blockId);
+    return block ? String(block.content || '') : '';
+  }
+
+  function findReusableDraftTextBlock() {
+    for (let index = blocks.length - 1; index >= 0; index -= 1) {
+      const block = blocks[index];
+      if (block.block_type !== 'text') continue;
+      if (!getBlockCurrentText(block.id).trim()) return block;
+    }
+    return null;
+  }
+
   function layoutsDiffer(nextBlocks, currentBlocks) {
     if (nextBlocks.length !== currentBlocks.length) return true;
     const currentMap = new Map(currentBlocks.map(block => [block.id, block]));
@@ -375,6 +391,39 @@
       return;
     }
     positionSlashMenu(editorEl);
+  }
+
+  function getCanvasLayoutFromPoint(clientX, clientY, sizePreset = DEFAULT_SIZE_PRESET) {
+    if (!canvasWrap || !blocksContainer || !isDesktopLayout()) return null;
+
+    const defaults = getPresetLayout(sizePreset);
+    const canvasRect = canvasWrap.getBoundingClientRect();
+    const containerRect = blocksContainer.getBoundingClientRect();
+    const usableWidth = Math.max(containerRect.width, 1);
+    const columnWidth = (usableWidth - (GRID_GAP_PX * (GRID_COLUMNS - 1))) / GRID_COLUMNS;
+    if (!Number.isFinite(columnWidth) || columnWidth <= 0) return null;
+
+    const relativeX = Math.max(0, Math.min(clientX - containerRect.left, usableWidth - 1));
+    const relativeY = Math.max(0, clientY - canvasRect.top);
+    const desiredGridX = coerceInt(
+      Math.floor(relativeX / (columnWidth + GRID_GAP_PX)),
+      0,
+      0,
+      Math.max(0, GRID_COLUMNS - defaults.grid_w),
+    );
+    const desiredGridY = coerceInt(
+      Math.floor(relativeY / GRID_TRACK_HEIGHT),
+      0,
+      0,
+    );
+
+    return {
+      size_preset: sizePreset,
+      grid_x: desiredGridX,
+      grid_y: desiredGridY,
+      grid_w: defaults.grid_w,
+      grid_h: defaults.grid_h,
+    };
   }
 
   function getBaseCanvasMinHeight() {
@@ -806,6 +855,52 @@
     }
   }
 
+  function moveDraftTextBlock(blockId, layout) {
+    const nextBlocks = cloneBlocks(blocks);
+    const target = nextBlocks.find(block => block.id === blockId);
+    if (!target) return false;
+
+    target.size_preset = layout.size_preset;
+    target.grid_x = layout.grid_x;
+    target.grid_y = layout.grid_y;
+    target.grid_w = layout.grid_w;
+    target.grid_h = layout.grid_h;
+
+    const normalized = normalizeLayout(nextBlocks, blockId);
+    if (!layoutsDiffer(normalized, blocks)) {
+      renderAllBlocks();
+      setActiveBlock(blockId);
+      focusBlock(blockId);
+      return true;
+    }
+
+    blocks = normalized;
+    renderAllBlocks();
+    setActiveBlock(blockId);
+    focusBlock(blockId);
+    schedulePersistLayout();
+    return true;
+  }
+
+  async function createTextBlockAtPoint(clientX, clientY) {
+    const layout = getCanvasLayoutFromPoint(clientX, clientY);
+    if (!layout) {
+      await createBlock({ block_type: 'text', content: '' });
+      return;
+    }
+
+    const reusableDraft = findReusableDraftTextBlock();
+    if (reusableDraft && moveDraftTextBlock(reusableDraft.id, layout)) {
+      return;
+    }
+
+    await createBlock({
+      block_type: 'text',
+      content: '',
+      ...layout,
+    });
+  }
+
   async function createTextBlockAfter(blockId) {
     const sourceBlock = getBlockById(blockId);
     if (!sourceBlock) return;
@@ -1129,15 +1224,33 @@
     blocksContainer.appendChild(wrapper);
   }
 
-  async function onAddZoneInteract() {
-    for (let index = blocks.length - 1; index >= 0; index -= 1) {
-      const block = blocks[index];
-      if (block.block_type === 'text' && !(block.content || '').trim()) {
-        focusBlock(block.id);
-        return;
-      }
+  async function onAddZoneInteract(event) {
+    if (event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+      await createTextBlockAtPoint(event.clientX, event.clientY);
+      return;
     }
+
+    const reusableDraft = findReusableDraftTextBlock();
+    if (reusableDraft) {
+      focusBlock(reusableDraft.id);
+      return;
+    }
+
     await createBlock({ block_type: 'text', content: '' });
+  }
+
+  async function onCanvasInteract(event) {
+    if (!canvasWrap) return;
+    if (
+      event.defaultPrevented ||
+      !event.target ||
+      event.target.closest('.caderno-block, .slash-menu, .caderno-search-modal, .caderno-search-backdrop, .caderno-expand-zone, a, button, input, textarea, select, label, [contenteditable]')
+    ) {
+      return;
+    }
+
+    closeSlashMenu();
+    await onAddZoneInteract(event);
   }
 
   async function expandPaper() {
@@ -1404,7 +1517,7 @@
     updateExpandControl();
     loadBlocks();
 
-    addZone.addEventListener('click', onAddZoneInteract);
+    if (canvasWrap) canvasWrap.addEventListener('click', onCanvasInteract);
     addZone.addEventListener('keydown', event => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
@@ -1412,7 +1525,6 @@
       }
     });
 
-    if (emptyHint) emptyHint.addEventListener('click', onAddZoneInteract);
     if (expandZone) expandZone.addEventListener('click', expandPaper);
 
     slashMenuList.querySelectorAll('.slash-menu-item').forEach(item => {
