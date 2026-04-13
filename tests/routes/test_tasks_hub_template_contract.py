@@ -157,24 +157,30 @@ def test_tasks_hub_project_filter_js_allows_enter_to_clear_empty_selection():
 
 
 def test_tasks_hub_global_placeholder_project_picker_scopes_projects_by_selected_area():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline.js'
-    content = file_path.read_text(encoding='utf-8')
+    orchestrator_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline.js'
+    orchestrator_content = orchestrator_path.read_text(encoding='utf-8')
+    picker_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline' / 'project-picker.js'
+    picker_content = picker_path.read_text(encoding='utf-8')
+    inline_form_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline' / 'inline-form-controller.js'
+    inline_form_content = inline_form_path.read_text(encoding='utf-8')
 
-    assert 'function getProjectOptionsForPicker()' in content
-    assert 'if (!selectedArea) {' in content
-    assert 'optionArea === selectedAreaKey' in content
-    assert "input.addEventListener('focus', showDropdown);" not in content
-    assert "input.addEventListener('click', showDropdown);" in content
-    assert "if (typeof opts.containsTarget === 'function' && opts.containsTarget(event.target)) return;" in content
+    assert 'function getProjectOptionsForPicker()' in orchestrator_content
+    assert 'if (!selectedArea) {' in orchestrator_content
+    assert 'optionArea === selectedAreaKey' in orchestrator_content
+    assert "input.addEventListener('focus', showDropdown);" not in picker_content
+    assert "input.addEventListener('click', showDropdown);" in picker_content
+    assert "if (typeof opts.containsTarget === 'function' && opts.containsTarget(event.target)) return;" in inline_form_content
 
 
 def test_tasks_hub_inline_add_js_reuses_existing_group_and_skips_focus_jump():
-    file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline.js'
-    content = file_path.read_text(encoding='utf-8')
+    group_manager_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline' / 'group-manager.js'
+    group_manager_content = group_manager_path.read_text(encoding='utf-8')
+    inline_form_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline' / 'inline-form-controller.js'
+    inline_form_content = inline_form_path.read_text(encoding='utf-8')
 
-    assert 'return sourceGroup;' in content
-    assert 'if (opts.focusInserted !== false) {' in content
-    assert 'focusInserted: !!opts.isGlobalPlaceholder' in content
+    assert 'return sourceGroup;' in group_manager_content
+    assert 'if (opts.focusInserted !== false) {' in group_manager_content
+    assert 'focusInserted: !!opts.isGlobalPlaceholder' in inline_form_content
 
 
 def test_tasks_hub_global_placeholder_css_keeps_extra_spacing_before_area_line():

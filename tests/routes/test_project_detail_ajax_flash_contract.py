@@ -6,7 +6,7 @@ def _read(path):
 
 
 def test_project_detail_ajax_flash_stack_is_limited_to_three_in_app_shell():
-    app_shell_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell.js'
+    app_shell_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell' / 'flash.js'
     content = _read(app_shell_js_path)
 
     assert 'while (activeFlashes.length >= 3)' in content
@@ -17,7 +17,7 @@ def test_project_detail_ajax_flash_uses_global_app_flash_system():
     detail_template_path = Path(__file__).resolve().parents[2] / 'templates' / 'projects' / 'detail.html'
     base_template_path = Path(__file__).resolve().parents[2] / 'templates' / 'base.html'
     detail_main_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'projects' / 'detail' / '01-main.js'
-    app_shell_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell.js'
+    app_shell_js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell' / 'flash.js'
     flash_css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'partials' / 'flash.css'
 
     detail_template_content = _read(detail_template_path)

@@ -62,7 +62,7 @@
                         <label class="account-label">CPF gov.br</label>
                         <div class="d-flex align-items-center gap-3">
                             <span class="form-control account-input account-input-readonly" style="width: auto; flex: 1;">
-                                CPF já cadastrado{% if user.govbr_sub %} — Vinculado ao gov.br{% else %} — Vínculo pendente{% endif %}
+                                CPF já cadastrado{% if user.govbr_sub %} — Vinculado por gov.br{% else %} — Vínculo pendente{% endif %}
                             </span>
                             <form action="{{ url_for('main.remove_cpf', user_id=user.id) }}" method="POST"
                                   onsubmit="return confirm('Tem certeza que deseja retirar o CPF e o vínculo gov.br deste usuário? Esta ação não pode ser desfeita.');">

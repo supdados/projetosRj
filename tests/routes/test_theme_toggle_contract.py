@@ -40,7 +40,7 @@ def test_login_page_allows_static_skeleton_preview_mode(client):
 
 
 def test_login_route_is_mapped_to_login_skeleton_in_app_shell():
-    app_shell_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell.js'
+    app_shell_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell' / 'skeleton-navigation.js'
     app_shell_content = _read(app_shell_path)
 
     assert "pathname === '/'" in app_shell_content

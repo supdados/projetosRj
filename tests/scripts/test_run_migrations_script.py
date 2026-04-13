@@ -121,4 +121,4 @@ def test_ensure_project_columns_adds_product_link_to_legacy_project_table(app):
         assert result['success'] is True
         assert 'project.product_link' in result['added_columns']
         assert 'product_link' in project_columns
-        assert run_migrations.ALEMBIC_HEAD == 'f7a9c3e1b2d4'
+        assert run_migrations.ALEMBIC_HEAD == '7c1d9e4a2b3f'
