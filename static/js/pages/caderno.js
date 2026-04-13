@@ -588,13 +588,6 @@
 
     return `
       <div class="caderno-block-toolbar">
-        ${canMoveBlock(block) ? `
-          <div class="caderno-block-toolbar-top">
-            <button class="caderno-block-handle" type="button" data-action="drag" aria-label="Mover bloco">
-              <i class="fas fa-grip-lines"></i>
-            </button>
-          </div>
-        ` : ''}
         ${canDeleteBlock(block) ? `
           <div class="caderno-block-toolbar-bottom">
             <button class="caderno-block-btn caderno-block-btn--delete" type="button" data-action="delete" aria-label="Remover bloco">
@@ -625,7 +618,7 @@
     return `
       <div class="caderno-widget-body caderno-widget-body--note">
         <div class="caderno-nota-card">
-          <div class="caderno-nota-card-header">
+          <div class="caderno-nota-card-header" data-drag-surface="note">
             <i class="fas fa-sticky-note"></i> Nota
           </div>
           <div
@@ -643,7 +636,7 @@
   function renderNullRef(block, label) {
     return `
       <div class="caderno-widget-body">
-        <div class="caderno-ref-null">
+        <div class="caderno-ref-null" data-drag-surface="reference">
           <i class="fas fa-unlink"></i>
           <span>${escapeHtml(label)}</span>
         </div>
@@ -657,16 +650,16 @@
     const pct = ref.total_etapas > 0 ? Math.round((ref.etapas_concluidas / ref.total_etapas) * 100) : 0;
     return `
       <div class="caderno-widget-body">
-        <a href="${safeHref(ref.url)}" class="caderno-ref-card" target="_blank" rel="noopener noreferrer" draggable="false">
+        <div class="caderno-ref-card" data-drag-surface="reference">
           <span class="caderno-ref-card-icon"><i class="fas fa-folder"></i></span>
-          <span class="caderno-ref-card-body">
+          <div class="caderno-ref-card-body">
             <span class="caderno-ref-card-type">Projeto</span>
-            <span class="caderno-ref-card-title" title="${escapeHtml(ref.titulo)}">${escapeHtml(ref.titulo)}</span>
-            <span class="caderno-ref-card-meta">
+            <a href="${safeHref(ref.url)}" class="caderno-ref-card-title-link" title="${escapeHtml(ref.titulo)}">${escapeHtml(ref.titulo)}</a>
+            <div class="caderno-ref-card-meta">
               ${ref.area ? `<span>${escapeHtml(ref.area)}</span>` : ''}
               ${ref.status ? `<span class="caderno-ref-badge">${escapeHtml(ref.status)}</span>` : ''}
               ${ref.prioridade ? prioLabel(ref.prioridade) : ''}
-            </span>
+            </div>
             ${ref.total_etapas > 0 ? `
               <div class="caderno-project-progress">
                 <div class="caderno-progress-bar-wrap">
@@ -675,9 +668,8 @@
                 <span class="caderno-progress-label">${escapeHtml(String(ref.etapas_concluidas))}/${escapeHtml(String(ref.total_etapas))}</span>
               </div>
             ` : ''}
-          </span>
-          <span class="caderno-ref-card-link-hint"><i class="fas fa-external-link-alt"></i></span>
-        </a>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -688,20 +680,19 @@
     const dateRange = [formatDate(ref.data_inicio), formatDate(ref.data_fim)].filter(Boolean).join(' → ');
     return `
       <div class="caderno-widget-body">
-        <a href="${safeHref(ref.url)}" class="caderno-ref-card" target="_blank" rel="noopener noreferrer" draggable="false">
+        <div class="caderno-ref-card" data-drag-surface="reference">
           <span class="caderno-ref-card-icon"><i class="fas fa-tasks"></i></span>
-          <span class="caderno-ref-card-body">
+          <div class="caderno-ref-card-body">
             <span class="caderno-ref-card-type">Etapa</span>
-            <span class="caderno-ref-card-title" title="${escapeHtml(ref.descricao)}">${escapeHtml(ref.descricao)}</span>
-            <span class="caderno-ref-card-meta">
+            <a href="${safeHref(ref.url)}" class="caderno-ref-card-title-link" title="${escapeHtml(ref.descricao)}">${escapeHtml(ref.descricao)}</a>
+            <div class="caderno-ref-card-meta">
               ${ref.project_titulo ? `<span>${escapeHtml(ref.project_titulo)}</span>` : ''}
               ${etapaStatusBadge(ref)}
               ${dateRange ? `<span><i class="fas fa-calendar-alt"></i> ${escapeHtml(dateRange)}</span>` : ''}
               ${ref.responsavel ? `<span>${escapeHtml(ref.responsavel)}</span>` : ''}
-            </span>
-          </span>
-          <span class="caderno-ref-card-link-hint"><i class="fas fa-external-link-alt"></i></span>
-        </a>
+            </div>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -711,20 +702,19 @@
     if (!ref) return renderNullRef(block, 'Tarefa removida');
     return `
       <div class="caderno-widget-body">
-        <a href="${safeHref(ref.url)}" class="caderno-ref-card" target="_blank" rel="noopener noreferrer" draggable="false">
+        <div class="caderno-ref-card" data-drag-surface="reference">
           <span class="caderno-ref-card-icon"><i class="fas fa-check-square"></i></span>
-          <span class="caderno-ref-card-body">
+          <div class="caderno-ref-card-body">
             <span class="caderno-ref-card-type">Tarefa</span>
-            <span class="caderno-ref-card-title" title="${escapeHtml(ref.descricao)}">${escapeHtml(ref.descricao)}</span>
-            <span class="caderno-ref-card-meta">
+            <a href="${safeHref(ref.url)}" class="caderno-ref-card-title-link" title="${escapeHtml(ref.descricao)}">${escapeHtml(ref.descricao)}</a>
+            <div class="caderno-ref-card-meta">
               ${ref.project_titulo ? `<span>${escapeHtml(ref.project_titulo)}</span>` : ''}
               ${statusBadge(ref.status)}
               ${ref.prioridade ? prioLabel(ref.prioridade) : ''}
               ${ref.responsavel ? `<span>${escapeHtml(ref.responsavel)}</span>` : ''}
-            </span>
-          </span>
-          <span class="caderno-ref-card-link-hint"><i class="fas fa-external-link-alt"></i></span>
-        </a>
+            </div>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -1604,15 +1594,11 @@
     if (blockId != null) await deleteBlock(blockId);
   }
 
-  function onReferenceCardClick(event) {
+  function onDragSurfacePointerDown(event) {
+    if (event.target.closest('a, button, [contenteditable], input, textarea, select')) return;
     const blockEl = event.currentTarget.closest('.caderno-block');
     if (!blockEl) return;
-    const blockId = coerceInt(blockEl.dataset.blockId, null);
-    const wasActive = activeBlockId === blockId;
-    setActiveBlock(blockId);
-    if (isDesktopLayout() && !wasActive) {
-      event.preventDefault();
-    }
+    onBlockHandlePointerDown(event);
   }
 
   function bindBlockEvents() {
@@ -1638,16 +1624,12 @@
       btn.addEventListener('click', onDeleteActionClick);
     });
 
-    blocksContainer.querySelectorAll('.caderno-ref-card').forEach(card => {
-      card.addEventListener('click', onReferenceCardClick);
+    blocksContainer.querySelectorAll('[data-drag-surface]').forEach(surface => {
+      surface.addEventListener('pointerdown', onDragSurfacePointerDown);
     });
 
     blocksContainer.querySelectorAll('.caderno-block-resize-handle').forEach(handle => {
       handle.addEventListener('pointerdown', onResizeHandlePointerDown);
-    });
-
-    blocksContainer.querySelectorAll('.caderno-block-handle').forEach(handle => {
-      handle.addEventListener('pointerdown', onBlockHandlePointerDown);
     });
   }
 

@@ -109,32 +109,36 @@ def test_caderno_text_blocks_hide_toolbar_and_visual_cards_gain_resize_handles()
     assert "return block.block_type !== 'text';" in js_content
     assert "function canDeleteBlock(block) {" in js_content
     assert "if (!shouldRenderToolbar(block)) return '';" in js_content
-    assert "${canMoveBlock(block) ? `" in js_content
+    assert "${canMoveBlock(block) ? `" not in js_content
     assert 'function renderResizeHandles(block) {' in js_content
     assert 'data-resize-direction="east"' in js_content
     assert 'data-resize-direction="south"' in js_content
     assert 'data-resize-direction="southeast"' in js_content
     assert "${canDeleteBlock(block) ? `" in js_content
-    assert '.caderno-block-toolbar-top {' in css_content
     assert '.caderno-block-toolbar-bottom {' in css_content
     assert '.caderno-block-resize-handle {' in css_content
     assert '.caderno-block.is-active .caderno-nota-card,' in css_content
     assert '.caderno-block-resize-handle--corner {' in css_content
 
 
-def test_caderno_reference_cards_require_first_click_to_select_and_titles_wrap():
+def test_caderno_reference_cards_drag_from_surface_and_link_only_on_title():
     js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
     js_content = _read(js_path)
     css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
     css_content = _read(css_path)
 
-    assert 'function onReferenceCardClick(event) {' in js_content
-    assert 'const wasActive = activeBlockId === blockId;' in js_content
-    assert 'if (isDesktopLayout() && !wasActive) {' in js_content
-    assert 'event.preventDefault();' in js_content
+    assert 'function onDragSurfacePointerDown(event) {' in js_content
+    assert "if (event.target.closest('a, button, [contenteditable], input, textarea, select')) return;" in js_content
+    assert "blocksContainer.querySelectorAll('[data-drag-surface]').forEach(surface => {" in js_content
+    assert 'data-drag-surface="reference"' in js_content
+    assert 'data-drag-surface="note"' in js_content
+    assert 'class="caderno-ref-card-title-link"' in js_content
+    assert 'caderno-ref-card-link-hint' not in js_content
     assert '.caderno-ref-card-body {' in css_content
     assert 'overflow: auto;' in _selector_body(css_content, '.caderno-ref-card-body')
-    assert 'white-space: normal;' in _selector_body(css_content, '.caderno-ref-card-title')
+    assert 'white-space: normal;' in _selector_body(css_content, '.caderno-ref-card-title-link')
+    assert 'cursor: grab;' in _selector_body(css_content, '.caderno-ref-card')
+    assert 'cursor: pointer;' in _selector_body(css_content, '.caderno-ref-card-title-link')
 
 
 def test_caderno_existing_pages_reset_expand_state_and_compact_overflow():

@@ -275,7 +275,6 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   pointer-events: none;
 }
 
-.caderno-block-toolbar-top,
 .caderno-block-toolbar-bottom {
   position: absolute;
   opacity: 0;
@@ -284,19 +283,12 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   transition: opacity 160ms ease, transform 180ms ease-out, visibility 0s linear 160ms;
 }
 
-.caderno-block-toolbar-top {
-  top: 0.85rem;
-  right: 0.85rem;
-  transform: translateY(-0.35rem);
-}
-
 .caderno-block-toolbar-bottom {
   right: 0.85rem;
   bottom: 0.85rem;
   transform: translateY(0.35rem);
 }
 
-.caderno-block-handle,
 .caderno-block-btn,
 .caderno-block-resize-handle {
   border: none;
@@ -305,7 +297,6 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   font: inherit;
 }
 
-.caderno-block-handle,
 .caderno-block-btn {
   width: 2rem;
   height: 2rem;
@@ -319,19 +310,16 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   transition: transform 140ms ease, background-color 160ms ease, color 160ms ease;
 }
 
-.caderno-block-toolbar-top .caderno-block-handle,
 .caderno-block-toolbar-bottom .caderno-block-btn {
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
 
-.caderno-block-handle:active,
 .caderno-block-btn:active,
 .caderno-block-resize-handle:active {
   transform: scale(0.97);
 }
 
-.caderno-block-handle:hover,
 .caderno-block-btn:hover {
   background: rgba(148, 163, 184, 0.22);
   color: var(--app-color-text-primary, #111827);
@@ -409,7 +397,6 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   border-radius: 999px;
 }
 
-.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-top,
 .caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-bottom,
 .caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-resize-handle {
   opacity: 1;
@@ -418,7 +405,6 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   transition-delay: 0s;
 }
 
-.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-top,
 .caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-bottom {
   transform: translateY(0);
 }
@@ -515,6 +501,8 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  cursor: grab;
+  user-select: none;
 }
 
 .caderno-ref-card {
@@ -530,6 +518,8 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   transition: box-shadow 180ms ease, transform 180ms ease-out, opacity 160ms ease;
   color: inherit;
   overflow: hidden;
+  cursor: grab;
+  user-select: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -565,14 +555,22 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   opacity: 0.78;
 }
 
-.caderno-ref-card-title {
+.caderno-ref-card-title-link {
+  display: inline-block;
   margin-bottom: 0.35rem;
   color: var(--app-color-text-primary, #1f2937);
   font-size: 0.96rem;
   font-weight: 700;
   line-height: 1.45;
+  text-decoration: none;
   white-space: normal;
   overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.caderno-ref-card-title-link:hover,
+.caderno-ref-card-title-link:focus-visible {
+  text-decoration: underline;
 }
 
 .caderno-ref-card-meta {
@@ -601,13 +599,6 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   color: inherit;
 }
 
-.caderno-ref-card-link-hint {
-  flex-shrink: 0;
-  color: var(--app-color-text-muted, #9ca3af);
-  font-size: 0.76rem;
-  margin-top: 0.12rem;
-}
-
 .caderno-ref-null {
   display: flex;
   align-items: center;
@@ -620,6 +611,8 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   color: var(--app-color-text-muted, #9ca3af);
   font-size: 0.9rem;
   font-style: italic;
+  cursor: grab;
+  user-select: none;
 }
 
 .caderno-block--project .caderno-ref-card {
@@ -791,6 +784,10 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
 .caderno-is-dragging,
 .caderno-is-dragging * {
   user-select: none;
+}
+
+.caderno-is-dragging [data-drag-surface] {
+  cursor: grabbing;
 }
 
 .slash-menu {
@@ -1100,7 +1097,6 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
     min-height: auto;
   }
 
-  .caderno-block-handle,
   .caderno-block-resize-handle {
     display: none;
   }
