@@ -27,7 +27,7 @@ from catalogs.objectives import sync_goal_catalog_to_db
 from routes.shared import ensure_area_catalog_seeded
 from time_utils import utc_now
 
-ALEMBIC_HEAD = 'f7a9c3e1b2d4'
+ALEMBIC_HEAD = '6a4f6d2c1b90'
 VALID_TASK_STATUSES = {
     'nao_iniciada',
     'em_andamento',
@@ -108,13 +108,7 @@ TASK_TEMP_TABLES = (
     'legacy_task_redirect__migration_tmp',
 )
 CADERNO_GRID_COLUMNS = 12
-CADERNO_SIZE_LAYOUTS = {
-    'P': {'w': 3, 'h': 4},
-    'M': {'w': 6, 'h': 5},
-    'G': {'w': 12, 'h': 6},
-}
 CADERNO_LAYOUT_COLUMNS = {
-    'size_preset': "ALTER TABLE caderno_block ADD COLUMN size_preset VARCHAR(1) NOT NULL DEFAULT 'M'",
     'grid_x': 'ALTER TABLE caderno_block ADD COLUMN grid_x INTEGER NOT NULL DEFAULT 0',
     'grid_y': 'ALTER TABLE caderno_block ADD COLUMN grid_y INTEGER NOT NULL DEFAULT 0',
     'grid_w': 'ALTER TABLE caderno_block ADD COLUMN grid_w INTEGER NOT NULL DEFAULT 6',
@@ -253,12 +247,10 @@ def _find_next_caderno_slot(occupied, width, height, *, start_y=0):
 
 
 def _legacy_caderno_layout_for_block_type(block_type):
-    preset = 'G' if block_type in LEGACY_CADERNO_FULL_WIDTH_TYPES else 'M'
-    layout = CADERNO_SIZE_LAYOUTS[preset]
+    layout = {'grid_w': 12, 'grid_h': 6} if block_type in LEGACY_CADERNO_FULL_WIDTH_TYPES else {'grid_w': 6, 'grid_h': 5}
     return {
-        'size_preset': preset,
-        'grid_w': layout['w'],
-        'grid_h': layout['h'],
+        'grid_w': layout['grid_w'],
+        'grid_h': layout['grid_h'],
     }
 
 
@@ -1219,6 +1211,11 @@ def ensure_caderno_schema(emit_output=True):
             changes.append(f'caderno_block.{column_name}')
             inspector = inspect(db.engine)
 
+        if 'size_preset' in _column_names(inspector, 'caderno_block'):
+            db.session.execute(text('ALTER TABLE caderno_block DROP COLUMN size_preset'))
+            changes.append('caderno_block.size_preset_dropped')
+            inspector = inspect(db.engine)
+
         if _table_exists(inspector, 'caderno_state') and 'expand_steps' not in _column_names(inspector, 'caderno_state'):
             db.session.execute(text('ALTER TABLE caderno_state ADD COLUMN expand_steps INTEGER NOT NULL DEFAULT 0'))
             changes.append('caderno_state.expand_steps')
@@ -1246,7 +1243,7 @@ def ensure_caderno_schema(emit_output=True):
         rows = db.session.execute(
             text(
                 """
-                SELECT id, user_id, block_type, position, size_preset, grid_x, grid_y, grid_w, grid_h
+                SELECT id, user_id, block_type, position, grid_x, grid_y, grid_w, grid_h
                 FROM caderno_block
                 ORDER BY user_id ASC, position ASC, id ASC
                 """
@@ -1269,8 +1266,7 @@ def ensure_caderno_schema(emit_output=True):
                     text(
                         """
                         UPDATE caderno_block
-                        SET size_preset = :size_preset,
-                            grid_x = :grid_x,
+                        SET grid_x = :grid_x,
                             grid_y = :grid_y,
                             grid_w = :grid_w,
                             grid_h = :grid_h
@@ -1279,7 +1275,6 @@ def ensure_caderno_schema(emit_output=True):
                     ),
                     {
                         'block_id': row['id'],
-                        'size_preset': layout['size_preset'],
                         'grid_x': grid_x,
                         'grid_y': grid_y,
                         'grid_w': layout['grid_w'],

@@ -2,18 +2,18 @@ from flask import g, jsonify, request, url_for
 
 from models import CadernoBlock, CadernoState, Etapa, Project, Task
 from models.base import db
-from models.caderno import CADERNO_BLOCK_TYPES, CADERNO_SIZE_PRESETS, MAX_CADERNO_EXPAND_STEPS
+from models.caderno import CADERNO_BLOCK_TYPES, MAX_CADERNO_EXPAND_STEPS
 
 from ..blueprint import main_bp
 from ..decorators import login_required
 
 GRID_COLUMNS = 12
-DEFAULT_SIZE_PRESET = 'M'
-SIZE_PRESET_LAYOUTS = {
-    'P': {'grid_w': 3, 'grid_h': 4},
-    'M': {'grid_w': 6, 'grid_h': 5},
-    'G': {'grid_w': 12, 'grid_h': 6},
-}
+DEFAULT_GRID_W = 6
+TEXT_DEFAULT_GRID_H = 5
+CARD_DEFAULT_GRID_H = 3
+TEXT_MIN_GRID_H = 2
+CARD_MIN_GRID_W = 3
+CARD_MIN_GRID_H = 2
 
 
 def _next_position(user_id):
@@ -21,13 +21,6 @@ def _next_position(user_id):
         CadernoBlock.user_id == user_id
     ).scalar()
     return (max_pos or 0.0) + 1000.0
-
-
-def _normalize_size_preset(value, *, default=DEFAULT_SIZE_PRESET):
-    preset = str(value or '').strip().upper()
-    if preset in CADERNO_SIZE_PRESETS:
-        return preset
-    return default
 
 
 def _coerce_int(value, *, default=None, minimum=None, maximum=None):
@@ -42,16 +35,37 @@ def _coerce_int(value, *, default=None, minimum=None, maximum=None):
     return coerced
 
 
-def _clamp_grid_width(value):
-    return _coerce_int(value, default=SIZE_PRESET_LAYOUTS[DEFAULT_SIZE_PRESET]['grid_w'], minimum=1, maximum=GRID_COLUMNS)
+def _default_layout_for_block_type(_block_type):
+    block_type = str(_block_type or 'text')
+    return {
+        'grid_w': DEFAULT_GRID_W,
+        'grid_h': TEXT_DEFAULT_GRID_H if block_type == 'text' else CARD_DEFAULT_GRID_H,
+    }
 
 
-def _clamp_grid_height(value):
-    return _coerce_int(value, default=SIZE_PRESET_LAYOUTS[DEFAULT_SIZE_PRESET]['grid_h'], minimum=1)
+def _minimum_grid_width(block_type):
+    return CARD_MIN_GRID_W if block_type != 'text' else 1
 
 
-def _layout_defaults_for_preset(size_preset):
-    return dict(SIZE_PRESET_LAYOUTS.get(size_preset, SIZE_PRESET_LAYOUTS[DEFAULT_SIZE_PRESET]))
+def _minimum_grid_height(block_type):
+    return CARD_MIN_GRID_H if block_type != 'text' else TEXT_MIN_GRID_H
+
+
+def _clamp_grid_width(value, *, block_type='text', default=DEFAULT_GRID_W):
+    return _coerce_int(
+        value,
+        default=default,
+        minimum=_minimum_grid_width(block_type),
+        maximum=GRID_COLUMNS,
+    )
+
+
+def _clamp_grid_height(value, *, block_type='text', default=TEXT_DEFAULT_GRID_H):
+    return _coerce_int(
+        value,
+        default=default,
+        minimum=_minimum_grid_height(block_type),
+    )
 
 
 def _occupy_cells(occupied, grid_x, grid_y, grid_w, grid_h):
@@ -89,27 +103,19 @@ def _find_next_available_slot(blocks, grid_w, grid_h):
 
 
 def _build_layout_payload(data, *, block_type='text', current_block=None, for_create=False):
-    current_preset = current_block.size_preset if current_block else DEFAULT_SIZE_PRESET
-    size_preset = _normalize_size_preset(data.get('size_preset'), default=current_preset)
-    defaults = _layout_defaults_for_preset(size_preset)
+    resolved_block_type = current_block.block_type if current_block is not None else block_type
+    defaults = _default_layout_for_block_type(resolved_block_type)
 
-    if for_create and 'size_preset' not in data:
-        size_preset = DEFAULT_SIZE_PRESET
-        defaults = _layout_defaults_for_preset(size_preset)
-
-    if current_block is not None and 'size_preset' in data and 'grid_w' not in data:
-        grid_w = defaults['grid_w']
-    else:
-        grid_w = _clamp_grid_width(
-            data.get('grid_w', current_block.grid_w if current_block else defaults['grid_w'])
-        )
-
-    if current_block is not None and 'size_preset' in data and 'grid_h' not in data:
-        grid_h = defaults['grid_h']
-    else:
-        grid_h = _clamp_grid_height(
-            data.get('grid_h', current_block.grid_h if current_block else defaults['grid_h'])
-        )
+    grid_w = _clamp_grid_width(
+        data.get('grid_w', current_block.grid_w if current_block else defaults['grid_w']),
+        block_type=resolved_block_type,
+        default=defaults['grid_w'],
+    )
+    grid_h = _clamp_grid_height(
+        data.get('grid_h', current_block.grid_h if current_block else defaults['grid_h']),
+        block_type=resolved_block_type,
+        default=defaults['grid_h'],
+    )
 
     grid_x = _coerce_int(
         data.get('grid_x', current_block.grid_x if current_block else None),
@@ -135,7 +141,6 @@ def _build_layout_payload(data, *, block_type='text', current_block=None, for_cr
         grid_y = next_grid_y if grid_y is None else grid_y
 
     return {
-        'size_preset': size_preset,
         'grid_x': grid_x if grid_x is not None else 0,
         'grid_y': grid_y if grid_y is not None else 0,
         'grid_w': grid_w,
@@ -160,11 +165,10 @@ def _serialize_block(block):
         'content': block.content or '',
         'reference_id': block.reference_id,
         'position': block.position,
-        'size_preset': _normalize_size_preset(block.size_preset),
         'grid_x': _coerce_int(block.grid_x, default=0, minimum=0),
         'grid_y': _coerce_int(block.grid_y, default=0, minimum=0),
-        'grid_w': _clamp_grid_width(block.grid_w),
-        'grid_h': _clamp_grid_height(block.grid_h),
+        'grid_w': _clamp_grid_width(block.grid_w, block_type=block.block_type),
+        'grid_h': _clamp_grid_height(block.grid_h, block_type=block.block_type),
         'created_at': block.created_at.isoformat() if block.created_at else None,
         'updated_at': block.updated_at.isoformat() if block.updated_at else None,
         'ref_data': None,
@@ -275,7 +279,6 @@ def caderno_api_blocks_create():
         content=data.get('content', ''),
         reference_id=reference_id,
         position=float(position),
-        size_preset=layout['size_preset'],
         grid_x=layout['grid_x'],
         grid_y=layout['grid_y'],
         grid_w=layout['grid_w'],
@@ -310,7 +313,6 @@ def caderno_api_blocks_reorder():
             continue
 
         layout = _build_layout_payload(item, current_block=block)
-        block.size_preset = layout['size_preset']
         block.grid_x = layout['grid_x']
         block.grid_y = layout['grid_y']
         block.grid_w = layout['grid_w']
@@ -354,9 +356,8 @@ def caderno_api_block_update(block_id):
     if 'position' in data:
         block.position = float(data['position'])
 
-    if {'size_preset', 'grid_x', 'grid_y', 'grid_w', 'grid_h'} & set(data.keys()):
+    if {'grid_x', 'grid_y', 'grid_w', 'grid_h'} & set(data.keys()):
         layout = _build_layout_payload(data, current_block=block)
-        block.size_preset = layout['size_preset']
         block.grid_x = layout['grid_x']
         block.grid_y = layout['grid_y']
         block.grid_w = layout['grid_w']

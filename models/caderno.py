@@ -4,8 +4,6 @@ from .base import db
 
 CADERNO_BLOCK_TYPES = {'text', 'nota', 'project', 'etapa', 'tarefa'}
 MAX_CADERNO_EXPAND_STEPS = 3
-DEFAULT_CADERNO_SIZE_PRESET = 'M'
-CADERNO_SIZE_PRESETS = {'P', 'M', 'G'}
 
 
 class CadernoBlock(db.Model):
@@ -17,7 +15,6 @@ class CadernoBlock(db.Model):
     content      = db.Column(db.Text, nullable=True)
     reference_id = db.Column(db.Integer, nullable=True)
     position     = db.Column(db.Float, nullable=False, default=0.0, index=True)
-    size_preset  = db.Column(db.String(1), nullable=False, default=DEFAULT_CADERNO_SIZE_PRESET)
     grid_x       = db.Column(db.Integer, nullable=False, default=0)
     grid_y       = db.Column(db.Integer, nullable=False, default=0)
     grid_w       = db.Column(db.Integer, nullable=False, default=6)

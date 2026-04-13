@@ -36,13 +36,12 @@
   const EXPAND_STEP_PX = 320;
   const SLASH_MENU_OFFSET_PX = 10;
   const SLASH_MENU_VIEWPORT_GAP = 12;
-  const DEFAULT_SIZE_PRESET = 'M';
   const DEFAULT_SHEET = { expand_steps: 0, max_expand_steps: 3 };
-  const SIZE_PRESET_LAYOUTS = {
-    P: { grid_w: 3, grid_h: 4 },
-    M: { grid_w: 6, grid_h: 5 },
-    G: { grid_w: 12, grid_h: 6 },
-  };
+  const DEFAULT_TEXT_BLOCK_LAYOUT = { grid_w: 6, grid_h: 5 };
+  const DEFAULT_CARD_BLOCK_LAYOUT = { grid_w: 6, grid_h: 3 };
+  const TEXT_MIN_GRID_H = 2;
+  const CARD_MIN_GRID_W = 3;
+  const CARD_MIN_GRID_H = 2;
 
   let blocks = [];
   let sheet = { ...DEFAULT_SHEET };
@@ -53,6 +52,7 @@
   let searchPendingType = null;
   let searchPendingLayout = null;
   let dragState = null;
+  let resizeState = null;
   let persistLayoutTimer = null;
   let measureAllTimer = null;
   const measureTimers = new Map();
@@ -108,26 +108,42 @@
     return next;
   }
 
-  function normalizeSizePreset(value) {
-    const preset = String(value || '').trim().toUpperCase();
-    return SIZE_PRESET_LAYOUTS[preset] ? preset : DEFAULT_SIZE_PRESET;
+  function resolveBlockType(blockOrType) {
+    if (typeof blockOrType === 'string') return blockOrType;
+    return String(blockOrType && blockOrType.block_type ? blockOrType.block_type : 'text');
   }
 
-  function getPresetLayout(sizePreset) {
-    const preset = normalizeSizePreset(sizePreset);
-    return { ...SIZE_PRESET_LAYOUTS[preset] };
+  function getDefaultLayoutForBlockType(_blockOrType) {
+    return isResizableBlockType(_blockOrType)
+      ? { ...DEFAULT_CARD_BLOCK_LAYOUT }
+      : { ...DEFAULT_TEXT_BLOCK_LAYOUT };
+  }
+
+  function isResizableBlockType(blockOrType) {
+    return resolveBlockType(blockOrType) !== 'text';
+  }
+
+  function getMinimumGridWidth(blockOrType) {
+    return isResizableBlockType(blockOrType) ? CARD_MIN_GRID_W : 1;
+  }
+
+  function getMinimumGridHeight(blockOrType) {
+    return isResizableBlockType(blockOrType) ? CARD_MIN_GRID_H : TEXT_MIN_GRID_H;
   }
 
   function normalizeBlock(rawBlock) {
     const block = { ...(rawBlock || {}) };
-    const sizePreset = normalizeSizePreset(block.size_preset);
-    const defaults = getPresetLayout(sizePreset);
-    const gridW = coerceInt(block.grid_w, defaults.grid_w, 1, GRID_COLUMNS);
-    const gridH = coerceInt(block.grid_h, defaults.grid_h, 1);
+    const blockType = resolveBlockType(block);
+    const defaults = getDefaultLayoutForBlockType(blockType);
+    const gridW = coerceInt(block.grid_w, defaults.grid_w, getMinimumGridWidth(blockType), GRID_COLUMNS);
+    let gridH = coerceInt(block.grid_h, defaults.grid_h, getMinimumGridHeight(blockType));
+    if (isResizableBlockType(blockType) && gridW === 6 && gridH === 5) {
+      gridH = defaults.grid_h;
+    }
     return {
       ...block,
+      block_type: blockType,
       content: block.content || '',
-      size_preset: sizePreset,
       grid_x: coerceInt(block.grid_x, 0, 0, Math.max(0, GRID_COLUMNS - gridW)),
       grid_y: coerceInt(block.grid_y, 0, 0),
       grid_w: gridW,
@@ -304,7 +320,6 @@
       if (!current) return true;
       return (
         block.position !== current.position ||
-        block.size_preset !== current.size_preset ||
         block.grid_x !== current.grid_x ||
         block.grid_y !== current.grid_y ||
         block.grid_w !== current.grid_w ||
@@ -409,9 +424,17 @@
     return Math.max(GRID_TRACK_HEIGHT, getCurrentSheetPixelHeight() - reserve);
   }
 
-  function getCurrentSheetMaxGridY(gridH = getPresetLayout(DEFAULT_SIZE_PRESET).grid_h) {
-    const maxRows = Math.max(1, Math.floor((getCurrentSheetUsableHeight() + GRID_GAP_PX) / GRID_TRACK_HEIGHT));
+  function getCurrentSheetTotalRows() {
+    return Math.max(1, Math.floor((getCurrentSheetUsableHeight() + GRID_GAP_PX) / GRID_TRACK_HEIGHT));
+  }
+
+  function getCurrentSheetMaxGridY(gridH = DEFAULT_TEXT_BLOCK_LAYOUT.grid_h) {
+    const maxRows = getCurrentSheetTotalRows();
     return Math.max(0, maxRows - Math.max(1, gridH));
+  }
+
+  function getCurrentSheetMaxGridHeight(gridY = 0) {
+    return Math.max(1, getCurrentSheetTotalRows() - coerceInt(gridY, 0, 0));
   }
 
   function compactLayout(sourceBlocks) {
@@ -535,14 +558,6 @@
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
 
-  function renderSizeToggle(block) {
-    return ['P', 'M', 'G'].map(size => (
-      `<button class="caderno-size-btn${block.size_preset === size ? ' is-active' : ''}" data-action="size" data-size="${size}" type="button" aria-label="Tamanho ${size}">
-        <span>${size}</span>
-      </button>`
-    )).join('');
-  }
-
   function canMoveBlock(block) {
     return block.block_type !== 'text';
   }
@@ -559,18 +574,20 @@
     return canMoveBlock(block) || canResizeBlock(block) || canDeleteBlock(block);
   }
 
+  function renderResizeHandles(block) {
+    if (!canResizeBlock(block)) return '';
+    return `
+      <button class="caderno-block-resize-handle caderno-block-resize-handle--east" type="button" data-action="resize" data-resize-direction="east" aria-label="Ajustar largura"></button>
+      <button class="caderno-block-resize-handle caderno-block-resize-handle--south" type="button" data-action="resize" data-resize-direction="south" aria-label="Ajustar altura"></button>
+      <button class="caderno-block-resize-handle caderno-block-resize-handle--corner" type="button" data-action="resize" data-resize-direction="southeast" aria-label="Ajustar largura e altura"></button>
+    `;
+  }
+
   function renderToolbar(block) {
     if (!shouldRenderToolbar(block)) return '';
 
     return `
       <div class="caderno-block-toolbar">
-        ${canResizeBlock(block) ? `
-          <div class="caderno-block-toolbar-size">
-            <div class="caderno-size-toggle" role="group" aria-label="Tamanho do bloco">
-              ${renderSizeToggle(block)}
-            </div>
-          </div>
-        ` : ''}
         ${canMoveBlock(block) ? `
           <div class="caderno-block-toolbar-top">
             <button class="caderno-block-handle" type="button" data-action="drag" aria-label="Mover bloco">
@@ -585,6 +602,7 @@
             </button>
           </div>
         ` : ''}
+        ${renderResizeHandles(block)}
       </div>
     `;
   }
@@ -728,7 +746,7 @@
     ].filter(Boolean).join(' ');
 
     return `
-      <div class="${classes}" data-block-id="${block.id}" data-size-preset="${block.size_preset}" role="listitem" tabindex="-1" style="${buildBlockStyleAttr(block)}">
+      <div class="${classes}" data-block-id="${block.id}" data-block-type="${block.block_type}" role="listitem" tabindex="-1" style="${buildBlockStyleAttr(block)}">
         <div class="caderno-widget">
           ${renderToolbar(block)}
           ${renderBlockBody(block)}
@@ -783,17 +801,28 @@
     if (blockEl) blockEl.focus();
   }
 
-  function getMinimumGridHeight(block) {
-    return block.block_type === 'text' || block.block_type === 'nota' ? 2 : 1;
+  function shouldAutoMeasureBlock(block) {
+    return !!block && block.block_type === 'text';
+  }
+
+  function syncEditorHeight(editorEl) {
+    if (!editorEl) return;
+    const blockId = coerceInt(editorEl.dataset.blockId, null);
+    const block = getBlockById(blockId);
+    if (!block) return;
+    if (block.block_type === 'text') {
+      editorEl.style.height = 'auto';
+      editorEl.style.height = `${editorEl.scrollHeight}px`;
+      return;
+    }
+    editorEl.style.height = '';
   }
 
   function measureRequiredGridHeight(blockId) {
     const block = getBlockById(blockId);
     const blockEl = findBlockElement(blockId);
-    if (!block || !blockEl || !isDesktopLayout()) return null;
-    const measureRoot = blockEl.querySelector(
-      '.caderno-text-editor, .caderno-nota-card, .caderno-ref-card, .caderno-ref-null'
-    );
+    if (!shouldAutoMeasureBlock(block) || !blockEl || !isDesktopLayout()) return null;
+    const measureRoot = blockEl.querySelector('.caderno-text-editor');
     const measuredHeight = Math.max(
       measureRoot ? measureRoot.scrollHeight : 0,
       Math.ceil(measureRoot ? measureRoot.getBoundingClientRect().height : blockEl.getBoundingClientRect().height),
@@ -813,7 +842,6 @@
         items: sortBlocksForLayout(blocks).map(block => ({
           id: block.id,
           position: block.position,
-          size_preset: block.size_preset,
           grid_x: block.grid_x,
           grid_y: block.grid_y,
           grid_w: block.grid_w,
@@ -832,6 +860,14 @@
   }
 
   function scheduleMeasureBlock(blockId, delay = 90) {
+    const block = getBlockById(blockId);
+    if (!shouldAutoMeasureBlock(block)) {
+      const existingTimer = measureTimers.get(blockId);
+      if (existingTimer) clearTimeout(existingTimer);
+      measureTimers.delete(blockId);
+      return;
+    }
+
     const existingTimer = measureTimers.get(blockId);
     if (existingTimer) clearTimeout(existingTimer);
     const timer = setTimeout(() => {
@@ -859,12 +895,6 @@
       if (!isDesktopLayout()) return;
       sortBlocksForLayout(blocks).forEach(block => scheduleMeasureBlock(block.id, 0));
     }, 30);
-  }
-
-  function autoResizeEditor(editorEl) {
-    if (!editorEl) return;
-    editorEl.style.height = 'auto';
-    editorEl.style.height = `${editorEl.scrollHeight}px`;
   }
 
   async function saveBlockContent(blockId, content) {
@@ -937,7 +967,7 @@
   async function createTextBlockAfter(blockId) {
     const sourceBlock = getBlockById(blockId);
     if (!sourceBlock) return;
-    const defaults = getPresetLayout(DEFAULT_SIZE_PRESET);
+    const defaults = getDefaultLayoutForBlockType('text');
     const desiredGridY = Math.min(
       sourceBlock.grid_y + sourceBlock.grid_h,
       getCurrentSheetMaxGridY(defaults.grid_h),
@@ -945,7 +975,6 @@
     await createBlock({
       block_type: 'text',
       content: '',
-      size_preset: DEFAULT_SIZE_PRESET,
       grid_x: sourceBlock.grid_x,
       grid_y: desiredGridY,
       grid_w: defaults.grid_w,
@@ -1020,10 +1049,9 @@
 
     searchPendingType = type;
     const sourceBlock = getBlockById(sourceBlockId);
-    const defaults = getPresetLayout(DEFAULT_SIZE_PRESET);
+    const defaults = getDefaultLayoutForBlockType(type);
     searchPendingLayout = sourceBlock ? {
       position: sourceBlock.position,
-      size_preset: DEFAULT_SIZE_PRESET,
       grid_x: sourceBlock.grid_x,
       grid_y: sourceBlock.grid_y,
       grid_w: defaults.grid_w,
@@ -1103,7 +1131,6 @@
     if (!block) return;
     const layout = {
       position: block.position,
-      size_preset: block.size_preset,
       grid_x: block.grid_x,
       grid_y: block.grid_y,
       grid_w: block.grid_w,
@@ -1288,13 +1315,23 @@
     await saveSheetExpandSteps(sheet.expand_steps);
   }
 
-  function updatePreviewLayout(previewBlocks, draggedBlockId) {
+  function getGridMetrics() {
+    const containerRect = blocksContainer.getBoundingClientRect();
+    const columnWidth = (containerRect.width - (GRID_GAP_PX * (GRID_COLUMNS - 1))) / GRID_COLUMNS;
+    return {
+      containerRect,
+      columnTrack: columnWidth + GRID_GAP_PX,
+      rowTrack: GRID_TRACK_HEIGHT,
+    };
+  }
+
+  function updatePreviewLayout(previewBlocks, floatingBlockId) {
     const previewMap = new Map(previewBlocks.map(block => [block.id, block]));
     blocksContainer.querySelectorAll('.caderno-block').forEach(blockEl => {
       const blockId = coerceInt(blockEl.dataset.blockId, null);
       const layout = previewMap.get(blockId);
       if (!layout) return;
-      if (blockId === draggedBlockId && dragState && dragState.placeholderEl) {
+      if (blockId === floatingBlockId && dragState && dragState.placeholderEl) {
         dragState.placeholderEl.setAttribute('style', buildBlockStyleAttr(layout));
       } else {
         blockEl.setAttribute('style', buildBlockStyleAttr(layout));
@@ -1312,10 +1349,9 @@
     blockEl.style.left = `${left}px`;
     blockEl.style.top = `${top}px`;
 
-    const containerRect = blocksContainer.getBoundingClientRect();
-    const columnWidth = (containerRect.width - (GRID_GAP_PX * (GRID_COLUMNS - 1))) / GRID_COLUMNS;
-    const desiredX = Math.round((left - containerRect.left) / (columnWidth + GRID_GAP_PX));
-    const desiredY = Math.round((top - containerRect.top) / (GRID_ROW_HEIGHT + GRID_GAP_PX));
+    const { containerRect, columnTrack, rowTrack } = getGridMetrics();
+    const desiredX = Math.round((left - containerRect.left) / columnTrack);
+    const desiredY = Math.round((top - containerRect.top) / rowTrack);
 
     const nextBlocks = cloneBlocks(blocks);
     const draggedBlock = nextBlocks.find(block => block.id === blockId);
@@ -1400,10 +1436,98 @@
     document.addEventListener('pointercancel', onDragEnd);
   }
 
+  function cleanupResizeState() {
+    if (!resizeState) return;
+    document.removeEventListener('pointermove', onResizeMove);
+    document.removeEventListener('pointerup', onResizeEnd);
+    document.removeEventListener('pointercancel', onResizeEnd);
+    resizeState = null;
+    document.body.classList.remove('caderno-is-resizing');
+  }
+
+  function onResizeMove(event) {
+    if (!resizeState) return;
+    event.preventDefault();
+
+    const { blockId, direction, originalBlock } = resizeState;
+    const nextBlocks = cloneBlocks(blocks);
+    const target = nextBlocks.find(block => block.id === blockId);
+    if (!target) return;
+
+    const { columnTrack, rowTrack } = getGridMetrics();
+    const affectsWidth = direction === 'east' || direction === 'southeast';
+    const affectsHeight = direction === 'south' || direction === 'southeast';
+    const deltaCols = Math.round((event.clientX - resizeState.startClientX) / columnTrack);
+    const deltaRows = Math.round((event.clientY - resizeState.startClientY) / rowTrack);
+    const maxGridW = Math.max(getMinimumGridWidth(target), GRID_COLUMNS - originalBlock.grid_x);
+    const maxGridH = Math.max(getMinimumGridHeight(target), getCurrentSheetMaxGridHeight(originalBlock.grid_y));
+
+    target.grid_x = originalBlock.grid_x;
+    target.grid_y = originalBlock.grid_y;
+    if (affectsWidth) {
+      target.grid_w = coerceInt(
+        originalBlock.grid_w + deltaCols,
+        originalBlock.grid_w,
+        getMinimumGridWidth(target),
+        maxGridW,
+      );
+    }
+    if (affectsHeight) {
+      target.grid_h = coerceInt(
+        originalBlock.grid_h + deltaRows,
+        originalBlock.grid_h,
+        getMinimumGridHeight(target),
+        maxGridH,
+      );
+    }
+
+    const normalized = normalizeLayout(nextBlocks, blockId);
+    if (!layoutsDiffer(normalized, resizeState.previewBlocks)) return;
+    resizeState.previewBlocks = normalized;
+    updatePreviewLayout(normalized, null);
+  }
+
+  function onResizeEnd() {
+    if (!resizeState) return;
+    const { blockId, previewBlocks } = resizeState;
+    blocks = previewBlocks;
+    cleanupResizeState();
+    renderAllBlocks();
+    setActiveBlock(blockId);
+    persistLayoutNow();
+  }
+
+  function onResizeHandlePointerDown(event) {
+    if (!isDesktopLayout()) return;
+    const handle = event.currentTarget;
+    const blockEl = handle.closest('.caderno-block');
+    if (!blockEl) return;
+    const blockId = coerceInt(blockEl.dataset.blockId, null);
+    const block = getBlockById(blockId);
+    if (!block || !canResizeBlock(block)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveBlock(blockId);
+    resizeState = {
+      blockId,
+      direction: String(handle.dataset.resizeDirection || ''),
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      originalBlock: { ...block },
+      previewBlocks: cloneBlocks(blocks),
+    };
+
+    document.body.classList.add('caderno-is-resizing');
+    document.addEventListener('pointermove', onResizeMove);
+    document.addEventListener('pointerup', onResizeEnd);
+    document.addEventListener('pointercancel', onResizeEnd);
+  }
+
   function onEditorInput(event) {
     const editorEl = event.target;
     const blockId = coerceInt(editorEl.dataset.blockId, null);
-    autoResizeEditor(editorEl);
+    syncEditorHeight(editorEl);
     syncEditorInteractionState(editorEl);
     if (blockId != null) scheduleMeasureBlock(blockId, 80);
 
@@ -1422,6 +1546,7 @@
     const block = getBlockById(blockId);
     if (!block) return;
 
+    syncEditorHeight(editorEl);
     syncEditorInteractionState(editorEl);
 
     if (!content.trim() && (block.block_type === 'text' || block.block_type === 'nota')) {
@@ -1479,24 +1604,15 @@
     if (blockId != null) await deleteBlock(blockId);
   }
 
-  function onSizeButtonClick(event) {
-    event.preventDefault();
-    const btn = event.currentTarget;
-    const blockEl = btn.closest('.caderno-block');
+  function onReferenceCardClick(event) {
+    const blockEl = event.currentTarget.closest('.caderno-block');
     if (!blockEl) return;
     const blockId = coerceInt(blockEl.dataset.blockId, null);
-    const sizePreset = normalizeSizePreset(btn.dataset.size);
-    const nextBlocks = cloneBlocks(blocks);
-    const target = nextBlocks.find(block => block.id === blockId);
-    if (!target) return;
-    const presetLayout = getPresetLayout(sizePreset);
-    target.size_preset = sizePreset;
-    target.grid_w = presetLayout.grid_w;
-    blocks = normalizeLayout(nextBlocks, blockId);
-    renderAllBlocks();
+    const wasActive = activeBlockId === blockId;
     setActiveBlock(blockId);
-    scheduleMeasureBlock(blockId, 20);
-    schedulePersistLayout();
+    if (isDesktopLayout() && !wasActive) {
+      event.preventDefault();
+    }
   }
 
   function bindBlockEvents() {
@@ -1507,7 +1623,7 @@
     });
 
     blocksContainer.querySelectorAll('[contenteditable]').forEach(editorEl => {
-      autoResizeEditor(editorEl);
+      syncEditorHeight(editorEl);
       syncEditorInteractionState(editorEl);
       editorEl.addEventListener('input', onEditorInput);
       editorEl.addEventListener('blur', onEditorBlur);
@@ -1522,8 +1638,12 @@
       btn.addEventListener('click', onDeleteActionClick);
     });
 
-    blocksContainer.querySelectorAll('.caderno-size-btn').forEach(btn => {
-      btn.addEventListener('click', onSizeButtonClick);
+    blocksContainer.querySelectorAll('.caderno-ref-card').forEach(card => {
+      card.addEventListener('click', onReferenceCardClick);
+    });
+
+    blocksContainer.querySelectorAll('.caderno-block-resize-handle').forEach(handle => {
+      handle.addEventListener('pointerdown', onResizeHandlePointerDown);
     });
 
     blocksContainer.querySelectorAll('.caderno-block-handle').forEach(handle => {

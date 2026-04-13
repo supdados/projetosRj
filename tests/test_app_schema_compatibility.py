@@ -231,14 +231,15 @@ def test_schema_compatibility_upgrades_legacy_caderno_layout(tmp_path):
         caderno_columns = {column['name'] for column in inspector.get_columns('caderno_block')}
         table_names = set(inspector.get_table_names())
 
-        assert {'size_preset', 'grid_x', 'grid_y', 'grid_w', 'grid_h'}.issubset(caderno_columns)
+        assert {'grid_x', 'grid_y', 'grid_w', 'grid_h'}.issubset(caderno_columns)
+        assert 'size_preset' not in caderno_columns
         assert 'caderno_state' in table_names
         assert 'caderno_block.layout_backfilled' in summary['caderno_changes']
 
         blocks = db.session.execute(
             text(
                 """
-                SELECT block_type, size_preset, grid_x, grid_y, grid_w, grid_h
+                SELECT block_type, grid_x, grid_y, grid_w, grid_h
                 FROM caderno_block
                 ORDER BY position ASC
                 """
@@ -246,11 +247,9 @@ def test_schema_compatibility_upgrades_legacy_caderno_layout(tmp_path):
         ).mappings().all()
 
         assert blocks[0]['block_type'] == 'text'
-        assert blocks[0]['size_preset'] == 'G'
         assert blocks[0]['grid_w'] == 12
         assert blocks[0]['grid_h'] == 6
         assert blocks[1]['block_type'] == 'project'
-        assert blocks[1]['size_preset'] == 'M'
         assert blocks[1]['grid_w'] == 6
         assert blocks[1]['grid_y'] >= blocks[0]['grid_y']
 

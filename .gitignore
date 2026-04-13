@@ -12,5 +12,6 @@ migrations/*
 !migrations/versions/
 migrations/versions/*
 !migrations/versions/f7a9c3e1b2d4_project_product_link.py
+!migrations/versions/6a4f6d2c1b90_drop_caderno_size_preset.py
 instance/
 config/client_secret.json

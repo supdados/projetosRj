@@ -32,7 +32,6 @@ def test_caderno_blocks_api_returns_sheet_and_layout_fields(app, client_user, se
                     block_type='text',
                     content='Texto do caderno',
                     position=1000,
-                    size_preset='G',
                     grid_x=0,
                     grid_y=0,
                     grid_w=12,
@@ -43,7 +42,6 @@ def test_caderno_blocks_api_returns_sheet_and_layout_fields(app, client_user, se
                     block_type='project',
                     reference_id=seed_data['project_id'],
                     position=2000,
-                    size_preset='M',
                     grid_x=0,
                     grid_y=6,
                     grid_w=6,
@@ -67,14 +65,13 @@ def test_caderno_blocks_api_returns_sheet_and_layout_fields(app, client_user, se
         'content',
         'reference_id',
         'position',
-        'size_preset',
         'grid_x',
         'grid_y',
         'grid_w',
         'grid_h',
         'ref_data',
     }.issubset(first_block.keys())
-    assert first_block['size_preset'] == 'G'
+    assert 'size_preset' not in first_block
     assert first_block['grid_w'] == 12
     assert first_block['grid_h'] == 6
 
@@ -90,7 +87,6 @@ def test_caderno_block_patch_updates_layout_contract(app, client_user, seed_data
             block_type='text',
             content='Ajustar tamanho',
             position=1000,
-            size_preset='M',
             grid_x=0,
             grid_y=0,
             grid_w=6,
@@ -103,7 +99,6 @@ def test_caderno_block_patch_updates_layout_contract(app, client_user, seed_data
     response = client_user.patch(
         f'/api/caderno/blocks/{block_id}',
         json={
-            'size_preset': 'P',
             'grid_x': 3,
             'grid_y': 4,
             'grid_w': 3,
@@ -113,7 +108,7 @@ def test_caderno_block_patch_updates_layout_contract(app, client_user, seed_data
 
     assert response.status_code == 200
     payload = response.get_json()
-    assert payload['block']['size_preset'] == 'P'
+    assert 'size_preset' not in payload['block']
     assert payload['block']['grid_x'] == 3
     assert payload['block']['grid_y'] == 4
     assert payload['block']['grid_w'] == 3
@@ -121,7 +116,6 @@ def test_caderno_block_patch_updates_layout_contract(app, client_user, seed_data
 
     with app.app_context():
         block = db.session.get(CadernoBlock, block_id)
-        assert block.size_preset == 'P'
         assert block.grid_x == 3
         assert block.grid_y == 4
         assert block.grid_w == 3

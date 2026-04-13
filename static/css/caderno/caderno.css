@@ -250,6 +250,7 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  height: 100%;
   min-height: 100%;
   padding: 0;
   border: none;
@@ -259,6 +260,14 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   backdrop-filter: none;
 }
 
+.caderno-block.is-active .caderno-nota-card,
+.caderno-block.is-active .caderno-ref-card,
+.caderno-block.is-active .caderno-ref-null {
+  box-shadow:
+    0 0 0 2px rgba(59, 130, 246, 0.2),
+    0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
 .caderno-block-toolbar {
   position: absolute;
   inset: 0;
@@ -266,7 +275,6 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   pointer-events: none;
 }
 
-.caderno-block-toolbar-size,
 .caderno-block-toolbar-top,
 .caderno-block-toolbar-bottom {
   position: absolute;
@@ -274,12 +282,6 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   visibility: hidden;
   pointer-events: none;
   transition: opacity 160ms ease, transform 180ms ease-out, visibility 0s linear 160ms;
-}
-
-.caderno-block-toolbar-size {
-  top: -2.55rem;
-  right: 0;
-  transform: translateY(-0.5rem);
 }
 
 .caderno-block-toolbar-top {
@@ -294,33 +296,9 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   transform: translateY(0.35rem);
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open):hover .caderno-block-toolbar-size,
-  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open):hover .caderno-block-toolbar-top,
-  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open):hover .caderno-block-toolbar-bottom {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: translateY(0);
-    transition-delay: 0s;
-  }
-}
-
-@media (hover: none), (pointer: coarse) {
-  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-size,
-  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-top,
-  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-bottom {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: translateY(0);
-    transition-delay: 0s;
-  }
-}
-
 .caderno-block-handle,
 .caderno-block-btn,
-.caderno-size-btn {
+.caderno-block-resize-handle {
   border: none;
   background: none;
   padding: 0;
@@ -349,7 +327,7 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
 
 .caderno-block-handle:active,
 .caderno-block-btn:active,
-.caderno-size-btn:active {
+.caderno-block-resize-handle:active {
   transform: scale(0.97);
 }
 
@@ -364,46 +342,115 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   color: #dc2626;
 }
 
-.caderno-size-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.18rem;
-  padding: 0.2rem;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.14);
+.caderno-block-resize-handle {
+  position: absolute;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 160ms ease, visibility 0s linear 160ms, transform 160ms ease;
 }
 
-.caderno-size-btn {
-  min-width: 2rem;
-  height: 1.9rem;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--app-color-text-muted, #6b7280);
-  cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease;
+.caderno-block-resize-handle::before {
+  content: '';
+  position: absolute;
+  display: block;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
 }
 
-.caderno-size-btn.is-active {
-  background: var(--app-color-surface, rgba(255, 255, 255, 0.94));
-  color: var(--app-color-text-primary, #111827);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+.caderno-block-resize-handle--east {
+  top: 50%;
+  right: -0.6rem;
+  width: 1.1rem;
+  height: 3.4rem;
+  transform: translateY(-50%) scale(0.95);
+  cursor: ew-resize;
+}
+
+.caderno-block-resize-handle--east::before {
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 1.95rem;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.caderno-block-resize-handle--south {
+  left: 50%;
+  bottom: -0.6rem;
+  width: 3.4rem;
+  height: 1.1rem;
+  transform: translateX(-50%) scale(0.95);
+  cursor: ns-resize;
+}
+
+.caderno-block-resize-handle--south::before {
+  top: 50%;
+  left: 50%;
+  width: 1.95rem;
+  height: 4px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.caderno-block-resize-handle--corner {
+  right: -0.2rem;
+  bottom: -0.2rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  transform: scale(0.95);
+  cursor: nwse-resize;
+}
+
+.caderno-block-resize-handle--corner::before {
+  inset: 0;
+  border-radius: 999px;
+}
+
+.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-top,
+.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-bottom,
+.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-resize-handle {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-top,
+.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-bottom {
+  transform: translateY(0);
+}
+
+.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-resize-handle--east {
+  transform: translateY(-50%) scale(1);
+}
+
+.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-resize-handle--south {
+  transform: translateX(-50%) scale(1);
+}
+
+.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-resize-handle--corner {
+  transform: scale(1);
 }
 
 .caderno-widget-body {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
+  height: 100%;
   min-height: 0;
 }
 
 .caderno-widget-body--text,
 .caderno-widget-body--note {
-  display: flex;
-  flex-direction: column;
+  height: 100%;
 }
 
 .caderno-widget-body--note {
   height: 100%;
+  min-height: 0;
 }
 
 .caderno-text-editor {
@@ -429,7 +476,7 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
 }
 
 .caderno-block--nota .caderno-text-editor {
-  min-height: 5rem;
+  min-height: 0;
 }
 
 [contenteditable]:empty:before {
@@ -443,15 +490,20 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   flex-direction: column;
   gap: 0.45rem;
   height: 100%;
+  min-height: 100%;
   padding: 1rem;
   border-radius: 16px;
   background: var(--caderno-nota-bg);
   border: 1px solid rgba(233, 161, 8, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  overflow: hidden;
 }
 
 .caderno-widget-body--note .caderno-text-editor {
   flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.15rem;
 }
 
 .caderno-nota-card-header {
@@ -469,6 +521,7 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   display: flex;
   align-items: flex-start;
   gap: 0.9rem;
+  height: 100%;
   min-height: 100%;
   padding: 1rem;
   border-radius: 16px;
@@ -476,6 +529,7 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   text-decoration: none;
   transition: box-shadow 180ms ease, transform 180ms ease-out, opacity 160ms ease;
   color: inherit;
+  overflow: hidden;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -496,7 +550,10 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   flex: 1;
+  overflow: auto;
+  padding-right: 0.15rem;
 }
 
 .caderno-ref-card-type {
@@ -514,9 +571,8 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   font-size: 0.96rem;
   font-weight: 700;
   line-height: 1.45;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .caderno-ref-card-meta {
@@ -556,6 +612,7 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  height: 100%;
   min-height: 100%;
   padding: 0.9rem 1rem;
   border: 1px dashed var(--app-color-border, #d1d5db);
@@ -1043,7 +1100,8 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
     min-height: auto;
   }
 
-  .caderno-block-handle {
+  .caderno-block-handle,
+  .caderno-block-resize-handle {
     display: none;
   }
 }

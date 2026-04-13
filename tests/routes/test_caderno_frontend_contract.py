@@ -7,7 +7,7 @@ def _read(path):
 
 
 def _selector_body(content, selector):
-    match = re.search(rf'{re.escape(selector)}\s*\{{(?P<body>.*?)\n\}}', content, re.DOTALL)
+    match = re.search(rf'(^|\n){re.escape(selector)}\s*\{{(?P<body>.*?)\n\}}', content, re.DOTALL)
     assert match is not None, f'Seletor não encontrado: {selector}'
     return match.group('body')
 
@@ -35,6 +35,9 @@ def test_caderno_drag_measurement_avoids_extra_buffer_rows():
     file_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
     content = _read(file_path)
 
+    assert "function shouldAutoMeasureBlock(block) {" in content
+    assert "return !!block && block.block_type === 'text';" in content
+    assert "const measureRoot = blockEl.querySelector('.caderno-text-editor');" in content
     assert 'measureRoot ? measureRoot.scrollHeight : 0' in content
     assert 'measureRoot ? measureRoot.getBoundingClientRect().height : blockEl.getBoundingClientRect().height' in content
     assert 'scrollHeight) + 8' not in content
@@ -67,7 +70,7 @@ def test_caderno_slash_menu_anchors_to_caret_and_hides_empty_toolbar():
     assert 'window.scrollY' not in js_content
     assert 'window.scrollX' not in js_content
     assert 'syncSlashMenuState()' in js_content
-    assert '.caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open):hover .caderno-block-toolbar-size' in css_content
+    assert '.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-resize-handle' in css_content
     assert '.slash-menu[data-side="top"]' in css_content
 
 
@@ -94,7 +97,7 @@ def test_caderno_composer_toolbar_is_the_primary_add_flow():
     assert 'createTextBlockAtPoint(clientX, clientY)' not in js_content
 
 
-def test_caderno_text_blocks_hide_size_and_delete_controls():
+def test_caderno_text_blocks_hide_toolbar_and_visual_cards_gain_resize_handles():
     js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
     js_content = _read(js_path)
     css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
@@ -107,11 +110,31 @@ def test_caderno_text_blocks_hide_size_and_delete_controls():
     assert "function canDeleteBlock(block) {" in js_content
     assert "if (!shouldRenderToolbar(block)) return '';" in js_content
     assert "${canMoveBlock(block) ? `" in js_content
-    assert "${canResizeBlock(block) ? `" in js_content
+    assert 'function renderResizeHandles(block) {' in js_content
+    assert 'data-resize-direction="east"' in js_content
+    assert 'data-resize-direction="south"' in js_content
+    assert 'data-resize-direction="southeast"' in js_content
     assert "${canDeleteBlock(block) ? `" in js_content
     assert '.caderno-block-toolbar-top {' in css_content
     assert '.caderno-block-toolbar-bottom {' in css_content
-    assert '.caderno-block-toolbar-size {' in css_content
+    assert '.caderno-block-resize-handle {' in css_content
+    assert '.caderno-block.is-active .caderno-nota-card,' in css_content
+    assert '.caderno-block-resize-handle--corner {' in css_content
+
+
+def test_caderno_reference_cards_require_first_click_to_select_and_titles_wrap():
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
+    js_content = _read(js_path)
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
+    css_content = _read(css_path)
+
+    assert 'function onReferenceCardClick(event) {' in js_content
+    assert 'const wasActive = activeBlockId === blockId;' in js_content
+    assert 'if (isDesktopLayout() && !wasActive) {' in js_content
+    assert 'event.preventDefault();' in js_content
+    assert '.caderno-ref-card-body {' in css_content
+    assert 'overflow: auto;' in _selector_body(css_content, '.caderno-ref-card-body')
+    assert 'white-space: normal;' in _selector_body(css_content, '.caderno-ref-card-title')
 
 
 def test_caderno_existing_pages_reset_expand_state_and_compact_overflow():
