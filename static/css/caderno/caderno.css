@@ -244,6 +244,17 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   z-index: 4;
 }
 
+.caderno-block-drag-companion {
+  pointer-events: none;
+  margin: 0;
+  transform: translateZ(0);
+  will-change: left, top;
+}
+
+.caderno-block.is-drag-child-hidden {
+  opacity: 0;
+}
+
 .caderno-block:focus,
 .caderno-block:focus-visible {
   outline: none;

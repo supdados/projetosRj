@@ -405,6 +405,104 @@
     return canAttachNoteToBlock(targetBlock) ? targetBlockId : null;
   }
 
+  function getAttachedChildBlocks(parentBlockId, sourceBlocks = blocks) {
+    return sourceBlocks
+      .filter(block => block.attached_to_block_id === parentBlockId)
+      .sort((a, b) => a.grid_y - b.grid_y || a.grid_x - b.grid_x || a.id - b.id);
+  }
+
+  function createDragCompanion(sourceEl, rect, zIndex) {
+    if (!sourceEl || !rect) return null;
+    const companionEl = sourceEl.cloneNode(true);
+    companionEl.classList.add('caderno-block-drag-companion');
+    companionEl.classList.remove('is-active', 'is-union-target', 'is-dragging');
+    companionEl.hidden = true;
+    companionEl.style.position = 'fixed';
+    companionEl.style.left = `${rect.left}px`;
+    companionEl.style.top = `${rect.top}px`;
+    companionEl.style.width = `${rect.width}px`;
+    companionEl.style.height = `${rect.height}px`;
+    companionEl.style.zIndex = String(zIndex);
+    document.body.appendChild(companionEl);
+    return companionEl;
+  }
+
+  function buildDragChildCompanions(parentBlockId, parentRect) {
+    const childBlocks = getAttachedChildBlocks(parentBlockId);
+    return childBlocks.map((childBlock, index) => {
+      const sourceEl = findBlockElement(childBlock.id);
+      if (!sourceEl) return null;
+      const rect = sourceEl.getBoundingClientRect();
+      const companionEl = createDragCompanion(sourceEl, rect, 1201 + index);
+      if (!companionEl) return null;
+      return {
+        blockId: childBlock.id,
+        sourceEl,
+        companionEl,
+        offsetLeft: rect.left - parentRect.left,
+        offsetTop: rect.top - parentRect.top,
+      };
+    }).filter(Boolean);
+  }
+
+  function activateDragChildCompanions() {
+    if (!dragState || !dragState.childCompanions || dragState.childCompanionsActive) return;
+    dragState.childCompanions.forEach(companion => {
+      companion.sourceEl.classList.add('is-drag-child-hidden');
+      companion.companionEl.hidden = false;
+    });
+    dragState.childCompanionsActive = true;
+  }
+
+  function updateDragChildCompanions(left, top) {
+    if (!dragState || !dragState.childCompanions || !dragState.childCompanions.length) return;
+    dragState.childCompanions.forEach(companion => {
+      companion.companionEl.style.left = `${left + companion.offsetLeft}px`;
+      companion.companionEl.style.top = `${top + companion.offsetTop}px`;
+    });
+  }
+
+  function cleanupDragChildCompanions(childCompanions) {
+    (childCompanions || []).forEach(companion => {
+      if (companion.sourceEl) companion.sourceEl.classList.remove('is-drag-child-hidden');
+      if (companion.companionEl && companion.companionEl.parentNode) {
+        companion.companionEl.parentNode.removeChild(companion.companionEl);
+      }
+    });
+  }
+
+  function activateDragState() {
+    if (!dragState || dragState.isActive) return;
+    const { blockEl, blockId, startRect, startClientX, startClientY } = dragState;
+    if (!blockEl || !startRect) return;
+    const block = getBlockById(blockId);
+    if (!block) return;
+
+    const placeholderEl = document.createElement('div');
+    placeholderEl.className = 'caderno-block caderno-block-placeholder';
+    placeholderEl.dataset.blockId = String(blockId);
+    placeholderEl.setAttribute('style', buildBlockStyleAttr(block));
+    blockEl.insertAdjacentElement('afterend', placeholderEl);
+
+    const childCompanions = isOverlayBlockType(block) ? [] : buildDragChildCompanions(blockId, startRect);
+
+    blockEl.classList.add('is-dragging');
+    blockEl.style.position = 'fixed';
+    blockEl.style.left = `${startRect.left}px`;
+    blockEl.style.top = `${startRect.top}px`;
+    blockEl.style.width = `${startRect.width}px`;
+    blockEl.style.height = `${startRect.height}px`;
+    blockEl.style.zIndex = '1200';
+    blockEl.style.pointerEvents = 'none';
+
+    dragState.placeholderEl = placeholderEl;
+    dragState.childCompanions = childCompanions;
+    dragState.childCompanionsActive = false;
+    dragState.offsetX = startClientX - startRect.left;
+    dragState.offsetY = startClientY - startRect.top;
+    dragState.isActive = true;
+  }
+
   function getEditorText(editorEl) {
     return String(editorEl ? (editorEl.textContent || '') : '')
       .replace(/\u200b/g, '')
@@ -1492,18 +1590,23 @@
     if (!dragState) return;
     event.preventDefault();
 
-    const { blockEl, offsetX, offsetY, blockId } = dragState;
+    const { blockEl, blockId } = dragState;
     const deltaFromOriginX = event.clientX - dragState.startClientX;
     const deltaFromOriginY = event.clientY - dragState.startClientY;
     if (!dragState.hasMoved && Math.max(Math.abs(deltaFromOriginX), Math.abs(deltaFromOriginY)) < 6) {
       return;
     }
+    if (!dragState.isActive) activateDragState();
+    if (!dragState.isActive) return;
+    if (!dragState.hasMoved) activateDragChildCompanions();
     dragState.hasMoved = true;
+    const { offsetX, offsetY } = dragState;
 
     const left = event.clientX - offsetX;
     const top = event.clientY - offsetY;
     blockEl.style.left = `${left}px`;
     blockEl.style.top = `${top}px`;
+    updateDragChildCompanions(left, top);
 
     const { containerRect, columnTrack, rowTrack } = getGridMetrics();
     const desiredX = Math.round((left - containerRect.left) / columnTrack);
@@ -1533,6 +1636,7 @@
   function cleanupDragState() {
     if (!dragState) return;
     if (dragState.blockEl) dragState.blockEl.style.pointerEvents = '';
+    cleanupDragChildCompanions(dragState.childCompanions);
     document.removeEventListener('pointermove', onDragMove);
     document.removeEventListener('pointerup', onDragEnd);
     document.removeEventListener('pointercancel', onDragEnd);
@@ -1551,6 +1655,11 @@
       previewBlocks,
       unionTargetId,
     } = dragState;
+    if (!dragState.isActive || !dragState.hasMoved) {
+      cleanupDragState();
+      setActiveBlock(blockId);
+      return;
+    }
     blockEl.classList.remove('is-dragging');
     blockEl.style.position = '';
     blockEl.style.left = '';
@@ -1560,12 +1669,6 @@
     blockEl.style.zIndex = '';
     if (placeholderEl && placeholderEl.parentNode) {
       placeholderEl.parentNode.removeChild(placeholderEl);
-    }
-    if (!dragState.hasMoved) {
-      cleanupDragState();
-      renderAllBlocks();
-      setActiveBlock(blockId);
-      return;
     }
     const finalBlocks = cloneBlocks(previewBlocks);
     const draggedBlock = finalBlocks.find(block => block.id === blockId);
@@ -1605,31 +1708,19 @@
     setActiveBlock(blockId);
 
     const rect = blockEl.getBoundingClientRect();
-    const placeholderEl = document.createElement('div');
-    placeholderEl.className = 'caderno-block caderno-block-placeholder';
-    placeholderEl.dataset.blockId = String(blockId);
-    placeholderEl.setAttribute('style', buildBlockStyleAttr(block));
-    blockEl.insertAdjacentElement('afterend', placeholderEl);
-
-    blockEl.classList.add('is-dragging');
-    blockEl.style.position = 'fixed';
-    blockEl.style.left = `${rect.left}px`;
-    blockEl.style.top = `${rect.top}px`;
-    blockEl.style.width = `${rect.width}px`;
-    blockEl.style.height = `${rect.height}px`;
-    blockEl.style.zIndex = '1200';
-    blockEl.style.pointerEvents = 'none';
 
     dragState = {
       blockId,
       blockEl,
-      placeholderEl,
-      offsetX: event.clientX - rect.left,
-      offsetY: event.clientY - rect.top,
+      startRect: rect,
       startClientX: event.clientX,
       startClientY: event.clientY,
       hasMoved: false,
+      isActive: false,
       previewBlocks: cloneBlocks(blocks),
+      placeholderEl: null,
+      childCompanions: [],
+      childCompanionsActive: false,
       unionTargetId: null,
     };
 

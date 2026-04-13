@@ -197,6 +197,28 @@ def test_caderno_note_drag_shows_union_indicator_and_persists_attachment():
     assert '.caderno-union-indicator {' in css_content
 
 
+def test_caderno_dragging_parent_keeps_attached_notes_as_visual_companions():
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
+    js_content = _read(js_path)
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
+    css_content = _read(css_path)
+
+    assert 'function activateDragState() {' in js_content
+    assert 'function getAttachedChildBlocks(parentBlockId, sourceBlocks = blocks) {' in js_content
+    assert 'function buildDragChildCompanions(parentBlockId, parentRect) {' in js_content
+    assert 'function activateDragChildCompanions() {' in js_content
+    assert 'function updateDragChildCompanions(left, top) {' in js_content
+    assert 'cleanupDragChildCompanions(dragState.childCompanions);' in js_content
+    assert "const childCompanions = isOverlayBlockType(block) ? [] : buildDragChildCompanions(blockId, startRect);" in js_content
+    assert 'if (!dragState.isActive) activateDragState();' in js_content
+    assert 'if (!dragState.hasMoved) activateDragChildCompanions();' in js_content
+    assert 'updateDragChildCompanions(left, top);' in js_content
+    assert 'placeholderEl: null,' in js_content
+    assert 'isActive: false,' in js_content
+    assert '.caderno-block-drag-companion {' in css_content
+    assert '.caderno-block.is-drag-child-hidden {' in css_content
+
+
 def test_caderno_existing_pages_reset_expand_state_and_compact_overflow():
     js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
     js_content = _read(js_path)
