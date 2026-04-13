@@ -77,6 +77,8 @@ def _occupy_cells(occupied, grid_x, grid_y, grid_w, grid_h):
 def _find_next_available_slot(blocks, grid_w, grid_h):
     occupied = set()
     for block in sorted(blocks, key=lambda item: (item.grid_y, item.grid_x, item.id)):
+        if block.block_type == 'nota':
+            continue
         _occupy_cells(
             occupied,
             max(0, _coerce_int(block.grid_x, default=0) or 0),
@@ -148,6 +150,68 @@ def _build_layout_payload(data, *, block_type='text', current_block=None, for_cr
     }
 
 
+def _build_attachment_payload(data, *, block_type='text', current_block=None):
+    resolved_block_type = current_block.block_type if current_block is not None else block_type
+    if resolved_block_type != 'nota':
+        return {
+            'attached_to_block_id': None,
+            'attached_offset_x': 0,
+            'attached_offset_y': 0,
+        }
+
+    attached_to_block_id = _coerce_int(
+        data.get(
+            'attached_to_block_id',
+            current_block.attached_to_block_id if current_block is not None else None,
+        ),
+        default=None,
+        minimum=1,
+    )
+
+    if attached_to_block_id is None:
+        return {
+            'attached_to_block_id': None,
+            'attached_offset_x': 0,
+            'attached_offset_y': 0,
+        }
+
+    if current_block is not None and attached_to_block_id == current_block.id:
+        return {
+            'attached_to_block_id': None,
+            'attached_offset_x': 0,
+            'attached_offset_y': 0,
+        }
+
+    parent_block = CadernoBlock.query.filter(
+        CadernoBlock.user_id == g.user.id,
+        CadernoBlock.id == attached_to_block_id,
+    ).first()
+    if parent_block is None or parent_block.block_type == 'nota':
+        return {
+            'attached_to_block_id': None,
+            'attached_offset_x': 0,
+            'attached_offset_y': 0,
+        }
+
+    return {
+        'attached_to_block_id': parent_block.id,
+        'attached_offset_x': _coerce_int(
+            data.get(
+                'attached_offset_x',
+                current_block.attached_offset_x if current_block is not None else 0,
+            ),
+            default=0,
+        ),
+        'attached_offset_y': _coerce_int(
+            data.get(
+                'attached_offset_y',
+                current_block.attached_offset_y if current_block is not None else 0,
+            ),
+            default=0,
+        ),
+    }
+
+
 def _serialize_sheet(state):
     expand_steps = 0
     if state is not None:
@@ -169,6 +233,9 @@ def _serialize_block(block):
         'grid_y': _coerce_int(block.grid_y, default=0, minimum=0),
         'grid_w': _clamp_grid_width(block.grid_w, block_type=block.block_type),
         'grid_h': _clamp_grid_height(block.grid_h, block_type=block.block_type),
+        'attached_to_block_id': _coerce_int(block.attached_to_block_id, default=None, minimum=1),
+        'attached_offset_x': _coerce_int(block.attached_offset_x, default=0),
+        'attached_offset_y': _coerce_int(block.attached_offset_y, default=0),
         'created_at': block.created_at.isoformat() if block.created_at else None,
         'updated_at': block.updated_at.isoformat() if block.updated_at else None,
         'ref_data': None,
@@ -284,6 +351,10 @@ def caderno_api_blocks_create():
         grid_w=layout['grid_w'],
         grid_h=layout['grid_h'],
     )
+    attachment = _build_attachment_payload(data, block_type=block_type)
+    block.attached_to_block_id = attachment['attached_to_block_id']
+    block.attached_offset_x = attachment['attached_offset_x']
+    block.attached_offset_y = attachment['attached_offset_y']
     db.session.add(block)
     db.session.commit()
     return jsonify({'block': _serialize_block(block), 'sheet': _serialize_sheet(None)}), 201
@@ -317,6 +388,10 @@ def caderno_api_blocks_reorder():
         block.grid_y = layout['grid_y']
         block.grid_w = layout['grid_w']
         block.grid_h = layout['grid_h']
+        attachment = _build_attachment_payload(item, current_block=block)
+        block.attached_to_block_id = attachment['attached_to_block_id']
+        block.attached_offset_x = attachment['attached_offset_x']
+        block.attached_offset_y = attachment['attached_offset_y']
 
         if item.get('position') is not None:
             block.position = float(item['position'])
@@ -363,6 +438,12 @@ def caderno_api_block_update(block_id):
         block.grid_w = layout['grid_w']
         block.grid_h = layout['grid_h']
 
+    if {'attached_to_block_id', 'attached_offset_x', 'attached_offset_y'} & set(data.keys()):
+        attachment = _build_attachment_payload(data, current_block=block)
+        block.attached_to_block_id = attachment['attached_to_block_id']
+        block.attached_offset_x = attachment['attached_offset_x']
+        block.attached_offset_y = attachment['attached_offset_y']
+
     db.session.commit()
     return jsonify({'block': _serialize_block(block)})
 
@@ -373,6 +454,17 @@ def caderno_api_block_delete(block_id):
     block = db.session.get(CadernoBlock, block_id)
     if not block or block.user_id != g.user.id:
         return jsonify({'error': 'Bloco não encontrado.'}), 404
+
+    if block.block_type != 'nota':
+        attached_notes = CadernoBlock.query.filter(
+            CadernoBlock.user_id == g.user.id,
+            CadernoBlock.block_type == 'nota',
+            CadernoBlock.attached_to_block_id == block.id,
+        ).all()
+        for attached_note in attached_notes:
+            attached_note.attached_to_block_id = None
+            attached_note.attached_offset_x = 0
+            attached_note.attached_offset_y = 0
 
     db.session.delete(block)
     db.session.commit()

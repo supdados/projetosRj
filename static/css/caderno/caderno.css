@@ -237,6 +237,11 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   grid-column: var(--caderno-grid-column) / span var(--caderno-grid-span);
   grid-row: var(--caderno-grid-row) / span var(--caderno-grid-height);
   outline: none;
+  z-index: 1;
+}
+
+.caderno-block--nota {
+  z-index: 4;
 }
 
 .caderno-block:focus,
@@ -266,6 +271,31 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   box-shadow:
     0 0 0 2px rgba(59, 130, 246, 0.2),
     0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
+.caderno-block.is-union-target .caderno-nota-card,
+.caderno-block.is-union-target .caderno-ref-card,
+.caderno-block.is-union-target .caderno-ref-null {
+  box-shadow:
+    0 0 0 2px rgba(16, 185, 129, 0.24),
+    0 22px 42px rgba(15, 23, 42, 0.14);
+}
+
+.caderno-union-indicator {
+  position: fixed;
+  z-index: 1301;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.7rem;
+  height: 2.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.16);
+  color: #059669;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: none;
 }
 
 .caderno-block-toolbar {

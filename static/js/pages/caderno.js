@@ -55,6 +55,7 @@
   let resizeState = null;
   let persistLayoutTimer = null;
   let measureAllTimer = null;
+  let unionIndicatorEl = null;
   const measureTimers = new Map();
 
   function escapeHtml(str) {
@@ -123,6 +124,27 @@
     return resolveBlockType(blockOrType) !== 'text';
   }
 
+  function isOverlayBlockType(blockOrType) {
+    return resolveBlockType(blockOrType) === 'nota';
+  }
+
+  function canAttachNoteToBlock(block) {
+    return !!block && !isOverlayBlockType(block);
+  }
+
+  function isAttachedOverlayBlock(block) {
+    return isOverlayBlockType(block) && Number.isInteger(block.attached_to_block_id) && block.attached_to_block_id > 0;
+  }
+
+  function clearBlockAttachment(block) {
+    return {
+      ...block,
+      attached_to_block_id: null,
+      attached_offset_x: 0,
+      attached_offset_y: 0,
+    };
+  }
+
   function getMinimumGridWidth(blockOrType) {
     return isResizableBlockType(blockOrType) ? CARD_MIN_GRID_W : 1;
   }
@@ -148,6 +170,15 @@
       grid_y: coerceInt(block.grid_y, 0, 0),
       grid_w: gridW,
       grid_h: gridH,
+      attached_to_block_id: isOverlayBlockType(blockType)
+        ? coerceInt(block.attached_to_block_id, null, 1)
+        : null,
+      attached_offset_x: isOverlayBlockType(blockType)
+        ? coerceInt(block.attached_offset_x, 0)
+        : 0,
+      attached_offset_y: isOverlayBlockType(blockType)
+        ? coerceInt(block.attached_offset_y, 0)
+        : 0,
       position: Number.isFinite(Number(block.position)) ? Number(block.position) : 0,
     };
   }
@@ -162,6 +193,13 @@
       a.grid_x - b.grid_x ||
       a.id - b.id
     ));
+  }
+
+  function sortBlocksForRender(sourceBlocks) {
+    const ordered = sortBlocksForLayout(sourceBlocks);
+    const regularBlocks = ordered.filter(block => !isOverlayBlockType(block));
+    const overlayBlocks = ordered.filter(block => isOverlayBlockType(block));
+    return [...regularBlocks, ...overlayBlocks];
   }
 
   function assignSequentialPositions(sourceBlocks) {
@@ -217,10 +255,56 @@
     return { grid_x: 0, grid_y: startY };
   }
 
+  function resolveOverlayBlocksLayout(overlayBlocks, regularBlocks) {
+    const parentBlocks = new Map(regularBlocks.map(block => [block.id, block]));
+
+    return overlayBlocks.map(block => {
+      if (!isAttachedOverlayBlock(block)) {
+        return {
+          ...block,
+          grid_x: coerceInt(block.grid_x, 0, 0, Math.max(0, GRID_COLUMNS - block.grid_w)),
+          grid_y: coerceInt(block.grid_y, 0, 0, getCurrentSheetMaxGridY(block.grid_h)),
+        };
+      }
+
+      const parentBlock = parentBlocks.get(block.attached_to_block_id);
+      if (!canAttachNoteToBlock(parentBlock)) {
+        return {
+          ...clearBlockAttachment(block),
+          grid_x: coerceInt(block.grid_x, 0, 0, Math.max(0, GRID_COLUMNS - block.grid_w)),
+          grid_y: coerceInt(block.grid_y, 0, 0, getCurrentSheetMaxGridY(block.grid_h)),
+        };
+      }
+
+      return {
+        ...block,
+        grid_x: coerceInt(
+          parentBlock.grid_x + block.attached_offset_x,
+          block.grid_x,
+          0,
+          Math.max(0, GRID_COLUMNS - block.grid_w),
+        ),
+        grid_y: coerceInt(
+          parentBlock.grid_y + block.attached_offset_y,
+          block.grid_y,
+          0,
+          getCurrentSheetMaxGridY(block.grid_h),
+        ),
+      };
+    });
+  }
+
   function normalizeLayout(sourceBlocks, preferredBlockId) {
     const normalizedBlocks = sourceBlocks.map(normalizeBlock);
-    const ordered = sortBlocksForLayout(normalizedBlocks);
-    if (preferredBlockId != null) {
+    const overlayBlocks = [];
+    const ordered = sortBlocksForLayout(normalizedBlocks).filter(block => {
+      if (isOverlayBlockType(block)) {
+        overlayBlocks.push(block);
+        return false;
+      }
+      return true;
+    });
+    if (preferredBlockId != null && !overlayBlocks.some(block => block.id === preferredBlockId)) {
       ordered.sort((a, b) => {
         if (a.id === preferredBlockId) return -1;
         if (b.id === preferredBlockId) return 1;
@@ -246,7 +330,9 @@
       return nextBlock;
     });
 
-    return assignSequentialPositions(laidOut);
+    const overlayLaidOut = resolveOverlayBlocksLayout(overlayBlocks, laidOut);
+
+    return assignSequentialPositions([...laidOut, ...overlayLaidOut]);
   }
 
   function setBlocks(nextBlocks, preferredBlockId) {
@@ -263,6 +349,60 @@
 
   function findBlockEditor(blockId) {
     return blocksContainer.querySelector(`[contenteditable][data-block-id="${blockId}"]`);
+  }
+
+  function getUnionIndicator() {
+    if (unionIndicatorEl) return unionIndicatorEl;
+    unionIndicatorEl = document.createElement('div');
+    unionIndicatorEl.className = 'caderno-union-indicator';
+    unionIndicatorEl.setAttribute('aria-hidden', 'true');
+    unionIndicatorEl.hidden = true;
+    unionIndicatorEl.innerHTML = '<i class="fas fa-link"></i>';
+    document.body.appendChild(unionIndicatorEl);
+    return unionIndicatorEl;
+  }
+
+  function syncUnionTargetState() {
+    const unionTargetId = dragState && dragState.unionTargetId != null ? dragState.unionTargetId : null;
+    blocksContainer.querySelectorAll('.caderno-block').forEach(blockEl => {
+      const blockId = coerceInt(blockEl.dataset.blockId, null);
+      blockEl.classList.toggle('is-union-target', blockId === unionTargetId);
+    });
+
+    const indicatorEl = getUnionIndicator();
+    if (unionTargetId == null) {
+      indicatorEl.hidden = true;
+      indicatorEl.style.left = '';
+      indicatorEl.style.top = '';
+      return;
+    }
+
+    const targetEl = findBlockElement(unionTargetId);
+    if (!targetEl) {
+      indicatorEl.hidden = true;
+      return;
+    }
+
+    const rect = targetEl.getBoundingClientRect();
+    indicatorEl.hidden = false;
+    indicatorEl.style.left = `${Math.round(rect.left + (rect.width / 2))}px`;
+    indicatorEl.style.top = `${Math.round(rect.top + (rect.height / 2))}px`;
+  }
+
+  function setDragUnionTarget(unionTargetId) {
+    if (!dragState) return;
+    dragState.unionTargetId = unionTargetId == null ? null : unionTargetId;
+    syncUnionTargetState();
+  }
+
+  function findAttachTargetBlockId(clientX, clientY, draggingBlockId) {
+    const hoveredEl = document.elementFromPoint(clientX, clientY);
+    const targetBlockEl = hoveredEl ? hoveredEl.closest('.caderno-block') : null;
+    if (!targetBlockEl || targetBlockEl.classList.contains('caderno-block-placeholder')) return null;
+    const targetBlockId = coerceInt(targetBlockEl.dataset.blockId, null);
+    if (targetBlockId == null || targetBlockId === draggingBlockId) return null;
+    const targetBlock = getBlockById(targetBlockId);
+    return canAttachNoteToBlock(targetBlock) ? targetBlockId : null;
   }
 
   function getEditorText(editorEl) {
@@ -323,7 +463,10 @@
         block.grid_x !== current.grid_x ||
         block.grid_y !== current.grid_y ||
         block.grid_w !== current.grid_w ||
-        block.grid_h !== current.grid_h
+        block.grid_h !== current.grid_h ||
+        block.attached_to_block_id !== current.attached_to_block_id ||
+        block.attached_offset_x !== current.attached_offset_x ||
+        block.attached_offset_y !== current.attached_offset_y
       );
     });
   }
@@ -439,7 +582,14 @@
 
   function compactLayout(sourceBlocks) {
     const normalizedBlocks = sourceBlocks.map(normalizeBlock);
-    const ordered = sortBlocksForLayout(normalizedBlocks);
+    const overlayBlocks = [];
+    const ordered = sortBlocksForLayout(normalizedBlocks).filter(block => {
+      if (isOverlayBlockType(block)) {
+        overlayBlocks.push(block);
+        return false;
+      }
+      return true;
+    });
     const occupied = new Set();
 
     const laidOut = ordered.map(block => {
@@ -459,7 +609,9 @@
       return nextBlock;
     });
 
-    return assignSequentialPositions(laidOut);
+    const overlayLaidOut = resolveOverlayBlocksLayout(overlayBlocks, laidOut);
+
+    return assignSequentialPositions([...laidOut, ...overlayLaidOut]);
   }
 
   function hasLayoutOverflowForCurrentSheet(sourceBlocks) {
@@ -758,10 +910,11 @@
   }
 
   function renderAllBlocks() {
-    blocksContainer.innerHTML = sortBlocksForLayout(blocks).map(renderBlockHTML).join('');
+    blocksContainer.innerHTML = sortBlocksForRender(blocks).map(renderBlockHTML).join('');
     bindBlockEvents();
     updateEmptyHint();
     syncActiveBlockState();
+    syncUnionTargetState();
     syncAllEditorInteractionStates();
     scheduleMeasureAllBlocks();
   }
@@ -836,6 +989,9 @@
           grid_y: block.grid_y,
           grid_w: block.grid_w,
           grid_h: block.grid_h,
+          attached_to_block_id: block.attached_to_block_id,
+          attached_offset_x: block.attached_offset_x,
+          attached_offset_y: block.attached_offset_y,
         })),
       }),
     }).catch(async err => {
@@ -973,7 +1129,9 @@
   }
 
   async function deleteBlock(blockId) {
-    blocks = blocks.filter(block => block.id !== blockId);
+    blocks = normalizeLayout(blocks
+      .filter(block => block.id !== blockId)
+      .map(block => (block.attached_to_block_id === blockId ? clearBlockAttachment(block) : block)));
     if (activeBlockId === blockId) activeBlockId = null;
     renderAllBlocks();
 
@@ -1327,6 +1485,7 @@
         blockEl.setAttribute('style', buildBlockStyleAttr(layout));
       }
     });
+    syncUnionTargetState();
   }
 
   function onDragMove(event) {
@@ -1334,6 +1493,13 @@
     event.preventDefault();
 
     const { blockEl, offsetX, offsetY, blockId } = dragState;
+    const deltaFromOriginX = event.clientX - dragState.startClientX;
+    const deltaFromOriginY = event.clientY - dragState.startClientY;
+    if (!dragState.hasMoved && Math.max(Math.abs(deltaFromOriginX), Math.abs(deltaFromOriginY)) < 6) {
+      return;
+    }
+    dragState.hasMoved = true;
+
     const left = event.clientX - offsetX;
     const top = event.clientY - offsetY;
     blockEl.style.left = `${left}px`;
@@ -1346,6 +1512,15 @@
     const nextBlocks = cloneBlocks(blocks);
     const draggedBlock = nextBlocks.find(block => block.id === blockId);
     if (!draggedBlock) return;
+    const isDraggingNote = isOverlayBlockType(draggedBlock);
+    if (isDraggingNote) {
+      draggedBlock.attached_to_block_id = null;
+      draggedBlock.attached_offset_x = 0;
+      draggedBlock.attached_offset_y = 0;
+      setDragUnionTarget(findAttachTargetBlockId(event.clientX, event.clientY, blockId));
+    } else if (dragState.unionTargetId != null) {
+      setDragUnionTarget(null);
+    }
     draggedBlock.grid_x = coerceInt(desiredX, draggedBlock.grid_x, 0, Math.max(0, GRID_COLUMNS - draggedBlock.grid_w));
     draggedBlock.grid_y = coerceInt(desiredY, draggedBlock.grid_y, 0, getCurrentSheetMaxGridY(draggedBlock.grid_h));
 
@@ -1357,16 +1532,25 @@
 
   function cleanupDragState() {
     if (!dragState) return;
+    if (dragState.blockEl) dragState.blockEl.style.pointerEvents = '';
     document.removeEventListener('pointermove', onDragMove);
     document.removeEventListener('pointerup', onDragEnd);
     document.removeEventListener('pointercancel', onDragEnd);
+    dragState.unionTargetId = null;
     dragState = null;
     document.body.classList.remove('caderno-is-dragging');
+    syncUnionTargetState();
   }
 
   function onDragEnd() {
     if (!dragState) return;
-    const { blockEl, placeholderEl, blockId, previewBlocks } = dragState;
+    const {
+      blockEl,
+      placeholderEl,
+      blockId,
+      previewBlocks,
+      unionTargetId,
+    } = dragState;
     blockEl.classList.remove('is-dragging');
     blockEl.style.position = '';
     blockEl.style.left = '';
@@ -1377,7 +1561,31 @@
     if (placeholderEl && placeholderEl.parentNode) {
       placeholderEl.parentNode.removeChild(placeholderEl);
     }
-    blocks = previewBlocks;
+    if (!dragState.hasMoved) {
+      cleanupDragState();
+      renderAllBlocks();
+      setActiveBlock(blockId);
+      return;
+    }
+    const finalBlocks = cloneBlocks(previewBlocks);
+    const draggedBlock = finalBlocks.find(block => block.id === blockId);
+    if (draggedBlock && isOverlayBlockType(draggedBlock)) {
+      if (unionTargetId != null) {
+        const parentBlock = finalBlocks.find(block => block.id === unionTargetId);
+        if (canAttachNoteToBlock(parentBlock)) {
+          draggedBlock.attached_to_block_id = parentBlock.id;
+          draggedBlock.attached_offset_x = draggedBlock.grid_x - parentBlock.grid_x;
+          draggedBlock.attached_offset_y = draggedBlock.grid_y - parentBlock.grid_y;
+        } else {
+          Object.assign(draggedBlock, clearBlockAttachment(draggedBlock));
+        }
+      } else {
+        Object.assign(draggedBlock, clearBlockAttachment(draggedBlock));
+      }
+      blocks = normalizeLayout(finalBlocks, blockId);
+    } else {
+      blocks = previewBlocks;
+    }
     cleanupDragState();
     renderAllBlocks();
     setActiveBlock(blockId);
@@ -1410,6 +1618,7 @@
     blockEl.style.width = `${rect.width}px`;
     blockEl.style.height = `${rect.height}px`;
     blockEl.style.zIndex = '1200';
+    blockEl.style.pointerEvents = 'none';
 
     dragState = {
       blockId,
@@ -1417,7 +1626,11 @@
       placeholderEl,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      hasMoved: false,
       previewBlocks: cloneBlocks(blocks),
+      unionTargetId: null,
     };
 
     document.body.classList.add('caderno-is-dragging');
@@ -1636,6 +1849,7 @@
   function onWindowResize() {
     applyCanvasSizing();
     renderAllBlocks();
+    syncUnionTargetState();
     repositionOpenSlashMenu();
   }
 

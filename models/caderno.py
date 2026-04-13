@@ -19,6 +19,9 @@ class CadernoBlock(db.Model):
     grid_y       = db.Column(db.Integer, nullable=False, default=0)
     grid_w       = db.Column(db.Integer, nullable=False, default=6)
     grid_h       = db.Column(db.Integer, nullable=False, default=5)
+    attached_to_block_id = db.Column(db.Integer, nullable=True, index=True)
+    attached_offset_x = db.Column(db.Integer, nullable=False, default=0)
+    attached_offset_y = db.Column(db.Integer, nullable=False, default=0)
     created_at   = db.Column(db.DateTime, default=utc_now, nullable=False)
     updated_at   = db.Column(db.DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 

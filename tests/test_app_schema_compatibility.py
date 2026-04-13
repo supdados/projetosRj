@@ -231,7 +231,15 @@ def test_schema_compatibility_upgrades_legacy_caderno_layout(tmp_path):
         caderno_columns = {column['name'] for column in inspector.get_columns('caderno_block')}
         table_names = set(inspector.get_table_names())
 
-        assert {'grid_x', 'grid_y', 'grid_w', 'grid_h'}.issubset(caderno_columns)
+        assert {
+            'grid_x',
+            'grid_y',
+            'grid_w',
+            'grid_h',
+            'attached_to_block_id',
+            'attached_offset_x',
+            'attached_offset_y',
+        }.issubset(caderno_columns)
         assert 'size_preset' not in caderno_columns
         assert 'caderno_state' in table_names
         assert 'caderno_block.layout_backfilled' in summary['caderno_changes']

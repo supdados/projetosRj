@@ -154,6 +154,49 @@ def test_caderno_click_outside_clears_selection_and_delete_uses_hover():
     assert '.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-delete' not in css_content
 
 
+def test_caderno_notes_render_above_and_skip_collision_layout():
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
+    js_content = _read(js_path)
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
+    css_content = _read(css_path)
+
+    assert "function isOverlayBlockType(blockOrType) {" in js_content
+    assert "return resolveBlockType(blockOrType) === 'nota';" in js_content
+    assert 'function canAttachNoteToBlock(block) {' in js_content
+    assert "return !!block && !isOverlayBlockType(block);" in js_content
+    assert 'function resolveOverlayBlocksLayout(overlayBlocks, regularBlocks) {' in js_content
+    assert 'const parentBlocks = new Map(regularBlocks.map(block => [block.id, block]));' in js_content
+    assert 'attached_to_block_id: null,' in js_content
+    assert 'function sortBlocksForRender(sourceBlocks) {' in js_content
+    assert 'const overlayBlocks = [];' in js_content
+    assert 'if (isOverlayBlockType(block)) {' in js_content
+    assert 'if (!isAttachedOverlayBlock(block)) {' in js_content
+    assert 'parentBlock.grid_x + block.attached_offset_x' in js_content
+    assert 'parentBlock.grid_y + block.attached_offset_y' in js_content
+    assert 'return assignSequentialPositions([...laidOut, ...overlayLaidOut]);' in js_content
+    assert 'blocksContainer.innerHTML = sortBlocksForRender(blocks).map(renderBlockHTML).join(\'\');' in js_content
+    assert 'z-index: 4;' in _selector_body(css_content, '.caderno-block--nota')
+
+
+def test_caderno_note_drag_shows_union_indicator_and_persists_attachment():
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
+    js_content = _read(js_path)
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
+    css_content = _read(css_path)
+
+    assert 'function getUnionIndicator() {' in js_content
+    assert "unionIndicatorEl.className = 'caderno-union-indicator';" in js_content
+    assert 'function setDragUnionTarget(unionTargetId) {' in js_content
+    assert 'function findAttachTargetBlockId(clientX, clientY, draggingBlockId) {' in js_content
+    assert "draggedBlock.attached_to_block_id = parentBlock.id;" in js_content
+    assert 'draggedBlock.attached_offset_x = draggedBlock.grid_x - parentBlock.grid_x;' in js_content
+    assert 'draggedBlock.attached_offset_y = draggedBlock.grid_y - parentBlock.grid_y;' in js_content
+    assert "blockEl.style.pointerEvents = 'none';" in js_content
+    assert 'attached_to_block_id: block.attached_to_block_id,' in js_content
+    assert '.caderno-block.is-union-target .caderno-ref-card,' in css_content
+    assert '.caderno-union-indicator {' in css_content
+
+
 def test_caderno_existing_pages_reset_expand_state_and_compact_overflow():
     js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
     js_content = _read(js_path)

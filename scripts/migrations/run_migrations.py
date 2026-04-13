@@ -27,7 +27,7 @@ from catalogs.objectives import sync_goal_catalog_to_db
 from routes.shared import ensure_area_catalog_seeded
 from time_utils import utc_now
 
-ALEMBIC_HEAD = '6a4f6d2c1b90'
+ALEMBIC_HEAD = '7c1d9e4a2b3f'
 VALID_TASK_STATUSES = {
     'nao_iniciada',
     'em_andamento',
@@ -113,7 +113,11 @@ CADERNO_LAYOUT_COLUMNS = {
     'grid_y': 'ALTER TABLE caderno_block ADD COLUMN grid_y INTEGER NOT NULL DEFAULT 0',
     'grid_w': 'ALTER TABLE caderno_block ADD COLUMN grid_w INTEGER NOT NULL DEFAULT 6',
     'grid_h': 'ALTER TABLE caderno_block ADD COLUMN grid_h INTEGER NOT NULL DEFAULT 5',
+    'attached_to_block_id': 'ALTER TABLE caderno_block ADD COLUMN attached_to_block_id INTEGER',
+    'attached_offset_x': 'ALTER TABLE caderno_block ADD COLUMN attached_offset_x INTEGER NOT NULL DEFAULT 0',
+    'attached_offset_y': 'ALTER TABLE caderno_block ADD COLUMN attached_offset_y INTEGER NOT NULL DEFAULT 0',
 }
+CADERNO_GRID_LAYOUT_COLUMN_NAMES = {'grid_x', 'grid_y', 'grid_w', 'grid_h'}
 LEGACY_CADERNO_FULL_WIDTH_TYPES = {'text', 'nota'}
 CALENDAR_INCREMENTAL_COLUMNS = {
     'user_calendar_connection': [
@@ -1250,7 +1254,10 @@ def ensure_caderno_schema(emit_output=True):
             )
         ).mappings().all()
 
-        should_backfill_layout = bool(layout_columns_added)
+        should_backfill_layout = any(
+            column_name.split('.')[-1] in CADERNO_GRID_LAYOUT_COLUMN_NAMES
+            for column_name in layout_columns_added
+        )
         if rows and should_backfill_layout:
             occupied_by_user = {}
             for row in rows:

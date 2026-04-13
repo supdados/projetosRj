@@ -69,6 +69,9 @@ def test_caderno_blocks_api_returns_sheet_and_layout_fields(app, client_user, se
         'grid_y',
         'grid_w',
         'grid_h',
+        'attached_to_block_id',
+        'attached_offset_x',
+        'attached_offset_y',
         'ref_data',
     }.issubset(first_block.keys())
     assert 'size_preset' not in first_block
@@ -120,6 +123,112 @@ def test_caderno_block_patch_updates_layout_contract(app, client_user, seed_data
         assert block.grid_y == 4
         assert block.grid_w == 3
         assert block.grid_h == 7
+
+
+def test_caderno_notes_do_not_block_new_grid_slots(app, client_user, seed_data):
+    with app.app_context():
+        db.session.add(
+            CadernoBlock(
+                user_id=seed_data['user_id'],
+                block_type='nota',
+                content='Nota sobreposta',
+                position=1000,
+                grid_x=0,
+                grid_y=0,
+                grid_w=6,
+                grid_h=3,
+            )
+        )
+        db.session.commit()
+
+    response = client_user.post(
+        '/api/caderno/blocks',
+        json={
+            'block_type': 'project',
+            'reference_id': seed_data['project_id'],
+            'content': '',
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.get_json()
+    assert payload['block']['block_type'] == 'project'
+    assert payload['block']['grid_x'] == 0
+    assert payload['block']['grid_y'] == 0
+
+
+def test_caderno_note_attachment_persists_and_parent_delete_detaches_child(app, client_user, seed_data):
+    with app.app_context():
+        parent = CadernoBlock(
+            user_id=seed_data['user_id'],
+            block_type='project',
+            reference_id=seed_data['project_id'],
+            position=1000,
+            grid_x=0,
+            grid_y=0,
+            grid_w=6,
+            grid_h=3,
+        )
+        note = CadernoBlock(
+            user_id=seed_data['user_id'],
+            block_type='nota',
+            content='Nota presa',
+            position=2000,
+            grid_x=1,
+            grid_y=1,
+            grid_w=3,
+            grid_h=2,
+        )
+        db.session.add_all([parent, note])
+        db.session.commit()
+        parent_id = parent.id
+        note_id = note.id
+
+    reorder_response = client_user.post(
+        '/api/caderno/blocks/reorder',
+        json={
+            'items': [
+                {
+                    'id': parent_id,
+                    'position': 1000,
+                    'grid_x': 2,
+                    'grid_y': 1,
+                    'grid_w': 6,
+                    'grid_h': 3,
+                },
+                {
+                    'id': note_id,
+                    'position': 2000,
+                    'grid_x': 3,
+                    'grid_y': 2,
+                    'grid_w': 3,
+                    'grid_h': 2,
+                    'attached_to_block_id': parent_id,
+                    'attached_offset_x': 1,
+                    'attached_offset_y': 1,
+                },
+            ],
+        },
+    )
+
+    assert reorder_response.status_code == 200
+
+    with app.app_context():
+        note = db.session.get(CadernoBlock, note_id)
+        assert note.attached_to_block_id == parent_id
+        assert note.attached_offset_x == 1
+        assert note.attached_offset_y == 1
+
+    delete_response = client_user.delete(f'/api/caderno/blocks/{parent_id}')
+
+    assert delete_response.status_code == 200
+
+    with app.app_context():
+        note = db.session.get(CadernoBlock, note_id)
+        assert note is not None
+        assert note.attached_to_block_id is None
+        assert note.attached_offset_x == 0
+        assert note.attached_offset_y == 0
 
 
 def test_caderno_state_patch_persists_expand_steps_and_rejects_invalid_values(app, client_user, seed_data):
