@@ -564,20 +564,26 @@
 
     return `
       <div class="caderno-block-toolbar">
-        ${canMoveBlock(block) ? `
-          <button class="caderno-block-handle" type="button" data-action="drag" aria-label="Mover bloco">
-            <i class="fas fa-grip-lines"></i>
-          </button>
-        ` : ''}
         ${canResizeBlock(block) ? `
-          <div class="caderno-size-toggle" role="group" aria-label="Tamanho do bloco">
-            ${renderSizeToggle(block)}
+          <div class="caderno-block-toolbar-size">
+            <div class="caderno-size-toggle" role="group" aria-label="Tamanho do bloco">
+              ${renderSizeToggle(block)}
+            </div>
+          </div>
+        ` : ''}
+        ${canMoveBlock(block) ? `
+          <div class="caderno-block-toolbar-top">
+            <button class="caderno-block-handle" type="button" data-action="drag" aria-label="Mover bloco">
+              <i class="fas fa-grip-lines"></i>
+            </button>
           </div>
         ` : ''}
         ${canDeleteBlock(block) ? `
-          <button class="caderno-block-btn caderno-block-btn--delete" type="button" data-action="delete" aria-label="Remover bloco">
-            <i class="fas fa-trash-alt"></i>
-          </button>
+          <div class="caderno-block-toolbar-bottom">
+            <button class="caderno-block-btn caderno-block-btn--delete" type="button" data-action="delete" aria-label="Remover bloco">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
         ` : ''}
       </div>
     `;

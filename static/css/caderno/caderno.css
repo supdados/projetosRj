@@ -236,6 +236,13 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   min-width: 0;
   grid-column: var(--caderno-grid-column) / span var(--caderno-grid-span);
   grid-row: var(--caderno-grid-row) / span var(--caderno-grid-height);
+  outline: none;
+}
+
+.caderno-block:focus,
+.caderno-block:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .caderno-widget {
@@ -254,27 +261,61 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
 
 .caderno-block-toolbar {
   position: absolute;
-  top: -2.55rem;
-  right: 0;
+  inset: 0;
   z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.caderno-block-toolbar-size,
+.caderno-block-toolbar-top,
+.caderno-block-toolbar-bottom {
+  position: absolute;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateY(-0.55rem);
   transition: opacity 160ms ease, transform 180ms ease-out, visibility 0s linear 160ms;
 }
 
-.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar,
-.caderno-block:focus-within:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateY(0);
-  transition-delay: 0s;
+.caderno-block-toolbar-size {
+  top: -2.55rem;
+  right: 0;
+  transform: translateY(-0.5rem);
+}
+
+.caderno-block-toolbar-top {
+  top: 0.85rem;
+  right: 0.85rem;
+  transform: translateY(-0.35rem);
+}
+
+.caderno-block-toolbar-bottom {
+  right: 0.85rem;
+  bottom: 0.85rem;
+  transform: translateY(0.35rem);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open):hover .caderno-block-toolbar-size,
+  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open):hover .caderno-block-toolbar-top,
+  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open):hover .caderno-block-toolbar-bottom {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition-delay: 0s;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-size,
+  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-top,
+  .caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-bottom {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition-delay: 0s;
+  }
 }
 
 .caderno-block-handle,
@@ -298,6 +339,12 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   background: rgba(148, 163, 184, 0.12);
   cursor: pointer;
   transition: transform 140ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.caderno-block-toolbar-top .caderno-block-handle,
+.caderno-block-toolbar-bottom .caderno-block-btn {
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
 
 .caderno-block-handle:active,

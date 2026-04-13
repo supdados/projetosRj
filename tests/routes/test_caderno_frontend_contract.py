@@ -16,15 +16,19 @@ def test_caderno_cards_keep_visual_shell_aligned_with_grid_slot():
     file_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
     content = _read(file_path)
 
+    block_body = _selector_body(content, '.caderno-block')
     widget_body = _selector_body(content, '.caderno-widget')
     note_body = _selector_body(content, '.caderno-nota-card')
     ref_body = _selector_body(content, '.caderno-ref-card')
     null_body = _selector_body(content, '.caderno-ref-null')
 
+    assert 'outline: none;' in block_body
     assert 'min-height: 100%;' in widget_body
     assert 'height: 100%;' in note_body
     assert 'min-height: 100%;' in ref_body
     assert 'min-height: 100%;' in null_body
+    assert 'padding-right: 3.85rem;' not in content
+    assert 'padding-bottom: 3.7rem;' not in content
 
 
 def test_caderno_drag_measurement_avoids_extra_buffer_rows():
@@ -63,7 +67,7 @@ def test_caderno_slash_menu_anchors_to_caret_and_hides_empty_toolbar():
     assert 'window.scrollY' not in js_content
     assert 'window.scrollX' not in js_content
     assert 'syncSlashMenuState()' in js_content
-    assert '.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar' in css_content
+    assert '.caderno-block:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open):hover .caderno-block-toolbar-size' in css_content
     assert '.slash-menu[data-side="top"]' in css_content
 
 
@@ -93,6 +97,8 @@ def test_caderno_composer_toolbar_is_the_primary_add_flow():
 def test_caderno_text_blocks_hide_size_and_delete_controls():
     js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
     js_content = _read(js_path)
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
+    css_content = _read(css_path)
 
     assert "function canMoveBlock(block) {" in js_content
     assert "function shouldRenderToolbar(block) {" in js_content
@@ -103,6 +109,9 @@ def test_caderno_text_blocks_hide_size_and_delete_controls():
     assert "${canMoveBlock(block) ? `" in js_content
     assert "${canResizeBlock(block) ? `" in js_content
     assert "${canDeleteBlock(block) ? `" in js_content
+    assert '.caderno-block-toolbar-top {' in css_content
+    assert '.caderno-block-toolbar-bottom {' in css_content
+    assert '.caderno-block-toolbar-size {' in css_content
 
 
 def test_caderno_existing_pages_reset_expand_state_and_compact_overflow():
