@@ -589,7 +589,7 @@
     return `
       <div class="caderno-block-toolbar">
         ${canDeleteBlock(block) ? `
-          <div class="caderno-block-toolbar-bottom">
+          <div class="caderno-block-toolbar-delete">
             <button class="caderno-block-btn caderno-block-btn--delete" type="button" data-action="delete" aria-label="Remover bloco">
               <i class="fas fa-trash-alt"></i>
             </button>
@@ -1657,6 +1657,9 @@
     });
     document.addEventListener('keydown', handleSlashMenuNavigation);
     document.addEventListener('click', event => {
+      if (!event.target.closest('.caderno-block')) {
+        setActiveBlock(null);
+      }
       if (!slashMenu.contains(event.target) && !event.target.closest('[contenteditable]')) {
         closeSlashMenu();
       }

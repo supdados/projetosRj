@@ -115,7 +115,7 @@ def test_caderno_text_blocks_hide_toolbar_and_visual_cards_gain_resize_handles()
     assert 'data-resize-direction="south"' in js_content
     assert 'data-resize-direction="southeast"' in js_content
     assert "${canDeleteBlock(block) ? `" in js_content
-    assert '.caderno-block-toolbar-bottom {' in css_content
+    assert '.caderno-block-toolbar-delete {' in css_content
     assert '.caderno-block-resize-handle {' in css_content
     assert '.caderno-block.is-active .caderno-nota-card,' in css_content
     assert '.caderno-block-resize-handle--corner {' in css_content
@@ -137,8 +137,21 @@ def test_caderno_reference_cards_drag_from_surface_and_link_only_on_title():
     assert '.caderno-ref-card-body {' in css_content
     assert 'overflow: auto;' in _selector_body(css_content, '.caderno-ref-card-body')
     assert 'white-space: normal;' in _selector_body(css_content, '.caderno-ref-card-title-link')
+    assert 'align-self: flex-start;' in _selector_body(css_content, '.caderno-ref-card-title-link')
     assert 'cursor: grab;' in _selector_body(css_content, '.caderno-ref-card')
     assert 'cursor: pointer;' in _selector_body(css_content, '.caderno-ref-card-title-link')
+
+
+def test_caderno_click_outside_clears_selection_and_delete_uses_hover():
+    js_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'pages' / 'caderno.js'
+    js_content = _read(js_path)
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'caderno' / 'caderno.css'
+    css_content = _read(css_path)
+
+    assert "if (!event.target.closest('.caderno-block')) {" in js_content
+    assert 'setActiveBlock(null);' in js_content
+    assert '.caderno-block:hover .caderno-block-toolbar-delete,' in css_content
+    assert '.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-delete' not in css_content
 
 
 def test_caderno_existing_pages_reset_expand_state_and_compact_overflow():

@@ -275,7 +275,7 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   pointer-events: none;
 }
 
-.caderno-block-toolbar-bottom {
+.caderno-block-toolbar-delete {
   position: absolute;
   opacity: 0;
   visibility: hidden;
@@ -283,10 +283,10 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   transition: opacity 160ms ease, transform 180ms ease-out, visibility 0s linear 160ms;
 }
 
-.caderno-block-toolbar-bottom {
+.caderno-block-toolbar-delete {
   right: 0.85rem;
-  bottom: 0.85rem;
-  transform: translateY(0.35rem);
+  top: 0.85rem;
+  transform: translateY(-0.35rem);
 }
 
 .caderno-block-btn,
@@ -310,7 +310,7 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   transition: transform 140ms ease, background-color 160ms ease, color 160ms ease;
 }
 
-.caderno-block-toolbar-bottom .caderno-block-btn {
+.caderno-block-toolbar-delete .caderno-block-btn {
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
@@ -397,16 +397,11 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
   border-radius: 999px;
 }
 
-.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-bottom,
 .caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-resize-handle {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transition-delay: 0s;
-}
-
-.caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-toolbar-bottom {
-  transform: translateY(0);
 }
 
 .caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-resize-handle--east {
@@ -419,6 +414,17 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
 
 .caderno-block.is-active:not(.is-editor-empty):not(.is-slash-trigger):not(.is-slash-menu-open) .caderno-block-resize-handle--corner {
   transform: scale(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .caderno-block:hover .caderno-block-toolbar-delete,
+  .caderno-block:focus-within .caderno-block-toolbar-delete {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition-delay: 0s;
+  }
 }
 
 .caderno-widget-body {
@@ -557,6 +563,8 @@ html[data-theme="dark"] body.is-authenticated .caderno-compose-btn {
 
 .caderno-ref-card-title-link {
   display: inline-block;
+  align-self: flex-start;
+  max-width: 100%;
   margin-bottom: 0.35rem;
   color: var(--app-color-text-primary, #1f2937);
   font-size: 0.96rem;
