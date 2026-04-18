@@ -393,7 +393,7 @@ html[data-theme="dark"] body.is-authenticated .app-global-search-form {
 
 html[data-theme="dark"] body.is-authenticated .app-global-search-form:focus-within {
     border-color: rgba(99, 166, 219, 0.52);
-    box-shadow: 0 0 0 0.2rem rgba(78, 149, 204, 0.2);
+    box-shadow: 0 0 0 1px rgba(78, 149, 204, 0.28);
 }
 
 
