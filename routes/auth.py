@@ -1,10 +1,12 @@
 import secrets
 import time
+from datetime import timedelta
 from urllib.parse import urlparse
 
 from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
 from models import AreaCatalog, Project, Task, User, db
+from time_utils import utc_now
 from services.govbr_oidc import (
     GovBrOIDCError,
     build_authorization_url,
@@ -21,6 +23,46 @@ from extensions import limiter
 
 from .blueprint import main_bp
 from .decorators import login_required
+
+
+LOCAL_LOGIN_MAX_ATTEMPTS = 5
+LOCAL_LOGIN_LOCKOUT_MINUTES = 15
+
+
+def _user_is_locked_out(user):
+    if not user or not user.lockout_until:
+        return False
+    return user.lockout_until > utc_now()
+
+
+def _register_failed_login(user):
+    if user is None:
+        return
+    user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+    if user.failed_login_attempts >= LOCAL_LOGIN_MAX_ATTEMPTS:
+        user.lockout_until = utc_now() + timedelta(minutes=LOCAL_LOGIN_LOCKOUT_MINUTES)
+        user.failed_login_attempts = 0
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+def _register_successful_login(user):
+    if user is None:
+        return
+    dirty = False
+    if user.failed_login_attempts:
+        user.failed_login_attempts = 0
+        dirty = True
+    if user.lockout_until is not None:
+        user.lockout_until = None
+        dirty = True
+    if dirty:
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 
 def _resolve_safe_next_url(raw_next):
@@ -139,13 +181,33 @@ def login_page():
 
         user = User.query.filter_by(username=username).first()
 
+        if user and _user_is_locked_out(user):
+            remaining = user.lockout_until - utc_now()
+            minutes = max(1, int(remaining.total_seconds() // 60) + 1)
+            flash(
+                f'Conta temporariamente bloqueada por excesso de tentativas. Tente novamente em {minutes} min.',
+                'danger',
+            )
+            cv, cf, tt, ca = _login_stats()
+            return render_template('auth/login.html', next_page=safe_next,
+                                   show_local_form=True,
+                                   count_vigente=cv, count_finalizado=cf, total_tasks=tt, count_areas=ca)
+
         if user and user.check_password(password):
+            if user.needs_password_rehash():
+                user.set_password(password)
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+            _register_successful_login(user)
             _remember_auth_session(user, provider='local')
             g.user = user
 
             flash(f'Login bem-sucedido, {user.name}!', 'success')
             return redirect(_login_redirect_target())
         else:
+            _register_failed_login(user)
             flash('Credenciais inválidas. Tente novamente.', 'danger')
             cv, cf, tt, ca = _login_stats()
             return render_template('auth/login.html', next_page=safe_next,
@@ -158,6 +220,7 @@ def login_page():
 
 
 @main_bp.route('/login/govbr', methods=['GET'])
+@limiter.limit("30 per minute")
 def login_govbr():
     if 'user_id' in session and g.user:
         return redirect(url_for('main.dashboard'))
@@ -198,6 +261,7 @@ def login_govbr():
 
 
 @main_bp.route('/auth/govbr/callback', methods=['GET'])
+@limiter.limit("30 per minute")
 def login_govbr_callback():
     if not is_govbr_oidc_enabled(current_app.config):
         flash('Login gov.br indisponível no momento.', 'warning')

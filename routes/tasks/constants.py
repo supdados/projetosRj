@@ -6,7 +6,23 @@ VALID_PRIORIDADES = {'baixa', 'media', 'alta', 'urgente'}
 VALID_TIPOS = {'bug', 'melhoria', 'duvida', 'outros'}
 LEGACY_TIPOS = {'implementacao'}
 VALID_STATUSES = {'nao_iniciada', 'em_andamento', 'para_validacao', 'para_ajustes', 'finalizada'}
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'}
+
+# Assinaturas (magic bytes) nos primeiros bytes do arquivo. Office moderno (docx/xlsx)
+# é container ZIP (PK\x03\x04); Office legado (doc/xls) usa OLE2 (D0 CF 11 E0).
+# TXT não tem assinatura determinística — validado por ausência de bytes NUL.
+_MAGIC_SIGNATURES = {
+    'png': [b'\x89PNG\r\n\x1a\n'],
+    'jpg': [b'\xff\xd8\xff'],
+    'jpeg': [b'\xff\xd8\xff'],
+    'gif': [b'GIF87a', b'GIF89a'],
+    'webp': [b'RIFF'],  # complementar: verifica 'WEBP' no offset 8
+    'pdf': [b'%PDF-'],
+    'docx': [b'PK\x03\x04'],
+    'xlsx': [b'PK\x03\x04'],
+    'doc': [b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'],
+    'xls': [b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'],
+}
 TASK_PRIORIDADE_ORDER = ('baixa', 'media', 'alta', 'urgente')
 TASK_TIPO_ORDER = ('bug', 'melhoria', 'duvida', 'outros', 'implementacao')
 TASK_STATUS_ORDER = ('nao_iniciada', 'em_andamento', 'para_validacao', 'para_ajustes', 'finalizada')
@@ -21,6 +37,43 @@ def _get_upload_folder():
 
 def _allowed_attachment(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _extension_of(filename):
+    return filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+
+
+def _file_content_matches_extension(file_storage, extension):
+    """Lê os primeiros 16 bytes e valida contra a assinatura esperada da extensão.
+
+    Retorna True para `txt` se o conteúdo não tiver NUL bytes (heurística simples
+    para evitar que binários sejam enviados com extensão .txt).
+    """
+    extension = (extension or '').lower()
+    try:
+        head = file_storage.stream.read(16)
+    except Exception:
+        return False
+    finally:
+        try:
+            file_storage.stream.seek(0)
+        except Exception:
+            pass
+
+    if not head:
+        return False
+
+    if extension == 'txt':
+        return b'\x00' not in head
+
+    signatures = _MAGIC_SIGNATURES.get(extension)
+    if not signatures:
+        return False
+
+    if extension == 'webp':
+        return head.startswith(b'RIFF') and len(head) >= 12 and head[8:12] == b'WEBP'
+
+    return any(head.startswith(sig) for sig in signatures)
 
 
 def _task_status_label(status):

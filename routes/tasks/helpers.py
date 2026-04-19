@@ -8,6 +8,8 @@ from routes.tasks.constants import (  # noqa: F401
     VALID_STATUSES,
     VALID_TIPOS,
     _allowed_attachment,
+    _extension_of,
+    _file_content_matches_extension,
     _get_upload_folder,
     _normalize_person_name,
     _normalize_responsavel_value,

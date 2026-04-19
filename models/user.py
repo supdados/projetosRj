@@ -14,15 +14,21 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     cpf_govbr = db.Column(db.String(11), unique=True, nullable=True, index=True)
     govbr_sub = db.Column(db.String(255), unique=True, nullable=True, index=True)
+    failed_login_attempts = db.Column(db.Integer, nullable=False, default=0)
+    lockout_until = db.Column(db.DateTime, nullable=True)
 
     # Relacionamento com multiplas areas
     areas = db.relationship('UserArea', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+        self.password_hash = generate_password_hash(password, method='scrypt')
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def needs_password_rehash(self):
+        """True se o hash atual usa algoritmo legado (pré-scrypt)."""
+        return not (self.password_hash or '').startswith('scrypt:')
 
     def get_areas(self):
         return [ua.area for ua in self.areas]

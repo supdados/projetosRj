@@ -19,6 +19,8 @@ import routes.tasks.helpers as _task_helpers
 from routes.tasks.helpers import (
     _allowed_attachment,
     _can_view_task,
+    _extension_of,
+    _file_content_matches_extension,
     _preview_text,
 )
 
@@ -68,6 +70,13 @@ def add_task_anexo(task_id):
 
     if not _allowed_attachment(file.filename):
         return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido.'}), 400
+
+    extension = _extension_of(file.filename)
+    if not _file_content_matches_extension(file, extension):
+        return jsonify({
+            'success': False,
+            'message': 'Conteúdo do arquivo não corresponde à extensão informada.',
+        }), 400
 
     original_name = file.filename[:255]
     safe_name = secure_filename(file.filename)

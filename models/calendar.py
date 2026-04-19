@@ -1,3 +1,4 @@
+from services.token_crypto import EncryptedText
 from time_utils import utc_now
 
 from .base import db
@@ -10,8 +11,8 @@ class UserCalendarConnection(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True, index=True)
     provider = db.Column(db.String(30), nullable=False, default='google')
     calendar_id = db.Column(db.String(255), nullable=False, default='primary')
-    access_token = db.Column(db.Text, nullable=True)
-    refresh_token = db.Column(db.Text, nullable=False)
+    access_token = db.Column(EncryptedText, nullable=True)
+    refresh_token = db.Column(EncryptedText, nullable=False)
     token_expires_at = db.Column(db.DateTime, nullable=True)
     scope = db.Column(db.String(500), nullable=True)
     google_account_id = db.Column(db.String(255), nullable=True, index=True)

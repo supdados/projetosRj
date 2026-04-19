@@ -72,6 +72,8 @@ PROJECT_COLUMNS = [
 USER_AUTH_COLUMNS = [
     ('cpf_govbr', 'VARCHAR(11)'),
     ('govbr_sub', 'VARCHAR(255)'),
+    ('failed_login_attempts', 'INTEGER NOT NULL DEFAULT 0'),
+    ('lockout_until', 'DATETIME NULL'),
 ]
 USER_AUTH_INDEXES = {
     'uq_user_cpf_govbr': {
@@ -1335,6 +1337,56 @@ def ensure_calendar_schema(emit_output=True):
         return {'success': False, 'changes': changes}
 
 
+def encrypt_plaintext_oauth_tokens(emit_output=True):
+    """Re-encripta tokens do Google Calendar que ainda estejam em plaintext no banco."""
+    from services.token_crypto import encrypt_value, looks_like_fernet
+
+    _emit("\n-- [10/10] Criptografando tokens OAuth existentes (se necessário)...", emit_output)
+    changes = 0
+    try:
+        inspector = inspect(db.engine)
+        if not _table_exists(inspector, 'user_calendar_connection'):
+            _emit('   ✓ Tabela user_calendar_connection não existe; nada a migrar.', emit_output)
+            return {'success': True, 'rows_encrypted': 0}
+
+        columns = _column_names(inspector, 'user_calendar_connection')
+        if 'access_token' not in columns or 'refresh_token' not in columns:
+            return {'success': True, 'rows_encrypted': 0}
+
+        rows = db.session.execute(
+            text('SELECT id, access_token, refresh_token FROM user_calendar_connection')
+        ).all()
+
+        for row in rows:
+            conn_id, access, refresh = row
+            updates = {}
+            if access and not looks_like_fernet(access):
+                updates['access_token'] = encrypt_value(access)
+            if refresh and not looks_like_fernet(refresh):
+                updates['refresh_token'] = encrypt_value(refresh)
+            if not updates:
+                continue
+
+            set_clause = ', '.join(f'{col} = :{col}' for col in updates)
+            updates['conn_id'] = conn_id
+            db.session.execute(
+                text(f'UPDATE user_calendar_connection SET {set_clause} WHERE id = :conn_id'),
+                updates,
+            )
+            changes += 1
+
+        if changes:
+            db.session.commit()
+            _emit(f'   ✓ Re-encriptadas {changes} linha(s) de tokens OAuth.', emit_output)
+        else:
+            _emit('   ✓ Nenhum token em plaintext encontrado.', emit_output)
+        return {'success': True, 'rows_encrypted': changes}
+    except Exception as exc:
+        db.session.rollback()
+        _emit(f'   ✗ ERRO ao criptografar tokens: {exc}', emit_output)
+        return {'success': False, 'rows_encrypted': changes}
+
+
 def stamp_alembic_head(emit_output=True):
     if db.engine.dialect.name != 'mysql':
         return {'success': True, 'stamped': False}
@@ -1385,6 +1437,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         sync_area_catalog(emit_output=emit_output),
         ensure_caderno_schema(emit_output=emit_output),
         ensure_calendar_schema(emit_output=emit_output),
+        encrypt_plaintext_oauth_tokens(emit_output=emit_output),
     ]
 
     if not all(step.get('success') for step in steps):

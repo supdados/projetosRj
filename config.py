@@ -49,10 +49,10 @@ def _resolve_secret_key(*, is_testing=False, is_debug=False):
     secret = os.getenv('SECRET_KEY', '').strip()
     if secret:
         return secret
-    if is_testing or is_debug:
+    if is_testing:
         return 'dev-only-insecure-key'
     raise RuntimeError(
-        'SECRET_KEY não definida. Configure via variável de ambiente antes de rodar em produção.'
+        'SECRET_KEY não definida. Configure via variável de ambiente antes de rodar a aplicação.'
     )
 
 
@@ -65,7 +65,7 @@ def build_app_config(*, is_testing=False, is_debug=False):
         MAX_CONTENT_LENGTH=10 * 1024 * 1024,  # 10 MB
         WTF_CSRF_ENABLED=_env_flag_is_true('WTF_CSRF_ENABLED', default='true'),
         SESSION_COOKIE_HTTPONLY=True,
-        SESSION_COOKIE_SECURE=_env_flag_is_true('SESSION_COOKIE_SECURE', default='false'),
+        SESSION_COOKIE_SECURE=_env_flag_is_true('SESSION_COOKIE_SECURE', default='true'),
         SESSION_COOKIE_SAMESITE='Lax',
         PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
         SKIP_STARTUP_DB_INIT=_env_flag_is_true('SKIP_STARTUP_DB_INIT', default='false'),
