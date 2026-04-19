@@ -12,6 +12,7 @@ from models import (
     Etapa,
     IndicadorProjeto,
     AreaCatalog,
+    OrgaoUnidade,
     Project,
     ProjectHistory,
     StageTemplate,
@@ -255,6 +256,17 @@ def seed_data(app):
                 action_description='Seed inicial de teste',
             )
         )
+
+        orgao_root = OrgaoUnidade(nome='Estado do Rio de Janeiro', sigla='ERJ', tipo='Estado', pai_id=None, ordem=0, ativo=True)
+        db.session.add(orgao_root)
+        db.session.flush()
+        orgao_secretaria = OrgaoUnidade(
+            nome='Secretaria de Testes', sigla='SECT', tipo='Secretaria',
+            pai_id=orgao_root.id, ordem=0, ativo=True,
+        )
+        db.session.add(orgao_secretaria)
+        db.session.flush()
+
         db.session.commit()
 
         auditoria_area = AreaCatalog.query.filter_by(name='Auditoria').first()
@@ -283,6 +295,8 @@ def seed_data(app):
             'template_id': template.id,
             'auditoria_area_id': auditoria_area.id if auditoria_area else None,
             'vpe_area_id': vpe_area.id if vpe_area else None,
+            'orgao_root_id': orgao_root.id,
+            'orgao_child_id': orgao_secretaria.id,
             'user_username': user.username,
             'user_password': TEST_PASSWORD,
             'admin_username': admin.username,
