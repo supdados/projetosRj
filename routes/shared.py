@@ -6,7 +6,12 @@ from flask import abort, g, redirect, request, url_for
 from sqlalchemy import func, inspect
 
 from catalogs.abep import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
-from models import AreaCatalog, Project, ProjectHistory, UserArea, db
+from models import AreaCatalog, OrgaoUnidade, Project, ProjectHistory, UserArea, db
+from models.orgao import (
+    ALLOWED_TIPOS as ALLOWED_ORGAO_TIPOS,
+    MAX_DEPTH as ORGAO_MAX_DEPTH,
+    TIPO_RANK as ORGAO_TIPO_RANK,
+)
 from catalogs.objectives import (
     OBJETIVO_IDS,
     get_indicadores_por_resultado,
@@ -278,3 +283,157 @@ def get_or_404(model, object_id):
     if instance is None:
         abort(404)
     return instance
+
+
+def is_valid_parent_tipo(parent_tipo, child_tipo):
+    """Pai precisa ter rank ESTRITAMENTE menor que o filho."""
+    parent_rank = ORGAO_TIPO_RANK.get(parent_tipo)
+    child_rank = ORGAO_TIPO_RANK.get(child_tipo)
+    if parent_rank is None or child_rank is None:
+        return True
+    return parent_rank < child_rank
+
+
+def normalize_orgao_form(form, *, is_root=False):
+    nome = (form.get('nome') or '').strip()
+    sigla = (form.get('sigla') or '').strip().upper()
+    tipo = (form.get('tipo') or '').strip()
+    pai_id_raw = form.get('pai_id')
+    ordem_raw = form.get('ordem')
+    ativo_raw = form.get('ativo')
+
+    if not nome:
+        return None, 'O nome do órgão é obrigatório.'
+    if len(nome) > 255:
+        return None, 'O nome do órgão deve ter no máximo 255 caracteres.'
+    if not sigla:
+        return None, 'A sigla do órgão é obrigatória.'
+    if len(sigla) > 50:
+        return None, 'A sigla deve ter no máximo 50 caracteres.'
+    if tipo not in ALLOWED_ORGAO_TIPOS:
+        return None, 'Tipo de órgão inválido.'
+    if not is_root and tipo == 'Estado':
+        return None, 'O tipo "Estado" é reservado para o órgão raiz.'
+    if is_root and tipo != 'Estado':
+        return None, 'O órgão raiz deve ter o tipo "Estado".'
+
+    if is_root:
+        pai_id = None
+    else:
+        if pai_id_raw in (None, '', 'None'):
+            return None, 'O órgão pai é obrigatório.'
+        try:
+            pai_id = int(pai_id_raw)
+        except (TypeError, ValueError):
+            return None, 'Órgão pai inválido.'
+        pai = db.session.get(OrgaoUnidade, pai_id)
+        if pai is None:
+            return None, 'Órgão pai não encontrado.'
+        if not is_valid_parent_tipo(pai.tipo, tipo):
+            return None, f'Um órgão do tipo "{pai.tipo}" não pode ser pai de "{tipo}".'
+
+    try:
+        ordem = int(ordem_raw) if ordem_raw not in (None, '') else 0
+    except (TypeError, ValueError):
+        ordem = 0
+
+    ativo = True
+    if ativo_raw is not None:
+        ativo_str = str(ativo_raw).strip().lower()
+        ativo = ativo_str in ('1', 'true', 'on', 'yes', 'sim')
+
+    return (
+        {
+            'nome': nome,
+            'sigla': sigla,
+            'tipo': tipo,
+            'pai_id': pai_id,
+            'ordem': ordem,
+            'ativo': ativo,
+        },
+        None,
+    )
+
+
+def compute_orgao_depth(orgao):
+    """Profundidade do nó na árvore (raiz = 1)."""
+    if orgao is None:
+        return 0
+    depth = 1
+    seen = set()
+    current = orgao.pai
+    while current is not None and current.id not in seen:
+        seen.add(current.id)
+        depth += 1
+        current = current.pai
+    return depth
+
+
+def compute_subtree_height(orgao):
+    """Altura da subárvore: 1 para folha, +1 a cada nível abaixo."""
+    if orgao is None:
+        return 0
+    max_child = 0
+    for child in orgao.filhos:
+        h = compute_subtree_height(child)
+        if h > max_child:
+            max_child = h
+    return 1 + max_child
+
+
+def get_orgao_descendants(orgao_id):
+    """IDs de todos os descendentes (BFS)."""
+    descendants = []
+    frontier = [orgao_id]
+    seen = {orgao_id}
+    while frontier:
+        next_frontier = []
+        rows = (
+            db.session.query(OrgaoUnidade.id, OrgaoUnidade.pai_id)
+            .filter(OrgaoUnidade.pai_id.in_(frontier))
+            .all()
+        )
+        for row_id, _ in rows:
+            if row_id in seen:
+                continue
+            seen.add(row_id)
+            descendants.append(row_id)
+            next_frontier.append(row_id)
+        frontier = next_frontier
+    return descendants
+
+
+def would_create_cycle(orgao_id, new_pai_id):
+    if new_pai_id is None:
+        return False
+    if new_pai_id == orgao_id:
+        return True
+    return new_pai_id in get_orgao_descendants(orgao_id)
+
+
+def validate_orgao_move(orgao, new_pai_id):
+    """Retorna mensagem de erro ou None."""
+    if orgao is None:
+        return 'Órgão não encontrado.'
+
+    if new_pai_id is None:
+        if orgao.tipo != 'Estado':
+            return 'Apenas o órgão raiz (Estado) pode ficar sem pai.'
+        return None
+
+    if would_create_cycle(orgao.id, new_pai_id):
+        return 'Não é possível mover um órgão para dentro de si mesmo.'
+
+    new_pai = db.session.get(OrgaoUnidade, new_pai_id)
+    if new_pai is None:
+        return 'Órgão pai não encontrado.'
+
+    if not is_valid_parent_tipo(new_pai.tipo, orgao.tipo):
+        return f'Um órgão do tipo "{new_pai.tipo}" não pode ser pai de "{orgao.tipo}".'
+
+    new_pai_depth = compute_orgao_depth(new_pai)
+    subtree_height = compute_subtree_height(orgao)
+    if new_pai_depth + subtree_height > ORGAO_MAX_DEPTH:
+        return f'Profundidade máxima de {ORGAO_MAX_DEPTH} níveis excedida.'
+
+    return None

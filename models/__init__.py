@@ -16,6 +16,7 @@ from .task import (
     TaskItemAnexo,
 )
 from .caderno import CadernoBlock, CadernoState
+from .orgao import OrgaoUnidade, ALLOWED_TIPOS, MAX_DEPTH, TIPO_RANK
 
 __all__ = [
     'db',
@@ -47,4 +48,7 @@ __all__ = [
     'TaskItemAnexo',
     'CadernoBlock',
     'CadernoState',
+    'OrgaoUnidade',
+    'ALLOWED_TIPOS',
+    'MAX_DEPTH',
 ]

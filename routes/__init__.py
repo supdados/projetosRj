@@ -3,6 +3,7 @@ from .shared import inject_current_year
 
 # Importa módulos para registrar rotas no blueprint compartilhado
 from . import admin_areas  # noqa: F401,E402
+from . import admin_orgaos  # noqa: F401,E402
 from . import admin_templates  # noqa: F401,E402
 from . import admin_users  # noqa: F401,E402
 from . import api  # noqa: F401,E402

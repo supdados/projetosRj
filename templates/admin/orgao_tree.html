@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from 'admin/_orgao_node.html' import render_orgao_node %}
+
+{% block title %}Hierarquia de Órgãos - ProjetosRJ{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/orgao_tree.css', v='20260418b') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-2 admin-users-shell">
+    <section class="admin-users-header">
+        <div class="admin-users-header-main">
+            <div class="admin-users-header-icon">
+                <i class="fas fa-sitemap"></i>
+            </div>
+            <div class="admin-users-header-copy">
+                <h1 class="admin-users-title ds-type-page-title">Hierarquia de Órgãos</h1>
+                <p class="admin-users-subtitle mb-0 ds-type-body-sm">
+                    Organize órgãos, autarquias e suas áreas em até {{ max_depth }} níveis.
+                </p>
+            </div>
+        </div>
+        <a href="{{ url_for('main.add_orgao') }}" class="btn admin-users-create-btn">
+            <i class="fas fa-plus me-2"></i>{% if total_unidades == 0 %}Criar Órgão Raiz{% else %}Nova Unidade{% endif %}
+        </a>
+    </section>
+
+    <section class="admin-users-meta-row">
+        <span class="admin-users-meta-chip">
+            <i class="fas fa-sitemap me-1"></i>{{ total_unidades }} unidade{{ 's' if total_unidades != 1 else '' }}
+        </span>
+        <span class="admin-users-meta-chip">
+            <i class="fas fa-layer-group me-1"></i>Profundidade máxima: {{ max_depth }}
+        </span>
+    </section>
+
+    {% if raizes %}
+    <section class="orgao-tree-card">
+        <div class="orgao-tree-toolbar">
+            <div class="orgao-search">
+                <i class="fas fa-search orgao-search-icon"></i>
+                <input type="search"
+                       id="orgaoTreeSearch"
+                       class="orgao-search-input"
+                       placeholder="Buscar por sigla ou nome…"
+                       autocomplete="off">
+            </div>
+            <div class="orgao-tree-toolbar-actions">
+                <button type="button" class="orgao-toolbar-link" data-orgao-expand-all>
+                    <i class="fas fa-angle-double-down me-1"></i>Expandir tudo
+                </button>
+                <button type="button" class="orgao-toolbar-link" data-orgao-collapse-all>
+                    <i class="fas fa-angle-double-up me-1"></i>Recolher tudo
+                </button>
+            </div>
+        </div>
+
+        <ul class="orgao-tree" id="orgaoTree">
+            {% for raiz in raizes %}
+                {{ render_orgao_node(raiz, 0) }}
+            {% endfor %}
+        </ul>
+
+        <div class="orgao-tree-footnote">
+            <i class="fas fa-arrows-alt me-1"></i>
+            Arraste uma unidade sobre outra para mudar o pai.
+        </div>
+    </section>
+    {% else %}
+    <section class="admin-users-empty-state">
+        <div class="admin-users-empty-icon">
+            <i class="fas fa-sitemap"></i>
+        </div>
+        <h2 class="admin-users-empty-title">Nenhum órgão cadastrado</h2>
+        <p class="admin-users-empty-text">
+            Comece criando o órgão raiz "Estado do Rio de Janeiro" para depois adicionar secretarias e suas áreas.
+        </p>
+        <a href="{{ url_for('main.add_orgao') }}" class="btn admin-users-create-btn">
+            <i class="fas fa-plus me-2"></i>Criar Órgão Raiz
+        </a>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script id="orgaoTipoRanks" type="application/json">{{ tipo_rank|tojson }}</script>
+<script src="{{ url_for('static', filename='js/admin/orgao_tree.js', v='20260418b') }}" defer></script>
+{% endblock %}
