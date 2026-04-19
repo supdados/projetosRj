@@ -140,7 +140,9 @@ def _resolve_runtime_govbr_redirect_uri():
 
 
 def _remember_auth_session(user, *, provider, id_token=None):
+    # Garante cookie de sessão novo após autenticar (mitigação de session fixation).
     session.clear()
+    session["_sid_rotation"] = secrets.token_urlsafe(16)
     session["user_id"] = user.id
     session["auth_provider"] = provider
     if provider == "govbr" and id_token:
