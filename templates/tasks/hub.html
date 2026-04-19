@@ -53,7 +53,7 @@
                         action="{{ url_for('main.archive_finalized_tasks') }}"
                         id="archiveFinalizedTasksForm"
                         class="inline-form"
-                        onsubmit="return confirm('Arquivar tarefas finalizadas do escopo atual?');">
+                        data-confirm="Arquivar tarefas finalizadas do escopo atual?">
                         {% if selected_area %}
                         <input type="hidden" name="area" value="{{ selected_area }}">
                         {% endif %}
@@ -367,7 +367,7 @@
                                         <span class="task-item-responsavel">{% if item.responsavel %}{{ item.responsavel }}{% else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
                                         <div class="task-item-actions">
                                             <button type="button" class="task-item-comments-btn" aria-expanded="false"
-                                                data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)"
+                                                data-target="comments-body-{{ item.id }}" data-action="toggleComments"
                                                 title="Comentários">
                                                 <i class="far fa-comment-alt" aria-hidden="true"></i>
                                                 <span class="task-item-comments-num">{{ item.comments|length }}</span>
@@ -376,7 +376,7 @@
                                                 action="{{ url_for('main.unarchive_task', task_id=item.id) }}"
                                                 method="POST"
                                                 class="inline-form task-item-unarchive-form"
-                                                onsubmit="return confirm('Desarquivar esta tarefa?');">
+                                                data-confirm="Desarquivar esta tarefa?">
                                                 <input type="hidden" name="next" value="{{ active_url }}">
                                                 <button type="submit" class="task-item-btn task-item-btn-secondary" title="Desarquivar" aria-label="Desarquivar">
                                                     <i class="fas fa-rotate-left" aria-hidden="true"></i>
@@ -427,7 +427,7 @@
                                         <select class="task-item-prioridade-select prioridade-{{ item.prioridade or 'none' }}"
                                             data-item-id="{{ item.id }}"
                                             title="Prioridade"
-                                            onchange="updateItemPrioridade({{ item.id }}, this.value, this)">
+                                            data-action-change="updateItemPrioridade" data-action-args="{{ item.id }}">
                                             <option value="">—</option>
                                             <option value="baixa" {% if item.prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
                                             <option value="media" {% if item.prioridade == 'media' %}selected{% endif %}>Média</option>
@@ -437,7 +437,7 @@
                                         <select class="task-item-tipo-select"
                                             data-item-id="{{ item.id }}"
                                             title="Tipo"
-                                            onchange="updateItemTipo({{ item.id }}, this.value)">
+                                            data-action-change="updateItemTipo" data-action-args="{{ item.id }}">
                                             <option value="">—</option>
                                             {% if item.tipo_pedido == 'implementacao' %}
                                             <option value="implementacao" selected hidden>Implementação (legado)</option>
@@ -448,7 +448,7 @@
                                             <option value="outros" {% if item.tipo_pedido == 'outros' %}selected{% endif %}>Outros</option>
                                         </select>
                                         <select class="task-item-status status-{{ item.status }}"
-                                            onchange="updateItemStatus({{ item.id }}, this.value)"
+                                            data-action-change="updateItemStatus" data-action-args="{{ item.id }}"
                                             title="Status">
                                             <option value="nao_iniciada" {% if item.status == 'nao_iniciada' %}selected{% endif %}>Não iniciada</option>
                                             <option value="em_andamento" {% if item.status == 'em_andamento' %}selected{% endif %}>Em andamento</option>
@@ -463,7 +463,7 @@
                                         <span class="task-item-responsavel" data-item-id="{{ item.id }}">{% if item.responsavel %}{{ item.responsavel }}{% else %}<em class="responsavel-placeholder">Responsável não informado</em>{% endif %}</span>
                                         <div class="task-item-actions">
                                             <button type="button" class="task-item-comments-btn" aria-expanded="false"
-                                                data-target="comments-body-{{ item.id }}" onclick="toggleComments(this)"
+                                                data-target="comments-body-{{ item.id }}" data-action="toggleComments"
                                                 title="Comentários">
                                                 <i class="far fa-comment-alt" aria-hidden="true"></i>
                                                 <span class="task-item-comments-num">{{ item.comments|length }}</span>
@@ -500,7 +500,7 @@
                                                         action="{{ url_for('main.delete_task_item_comment', comment_id=comment.id) }}"
                                                         method="POST"
                                                         class="d-inline"
-                                                        onsubmit="return confirm('Excluir comentário?');">
+                                                        data-confirm="Excluir comentário?">
                                                         <button type="submit" class="task-comment-btn task-comment-btn-del"
                                                             title="Excluir">Excluir</button>
                                                     </form>
@@ -852,7 +852,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
+<script nonce="{{ csp_nonce }}">
 window.TASK_HUB_CONFIG = {
     selectedProject: {{ (selected_project or '')|tojson }},
     selectedProjectLabel: {{ (selected_project_label or '')|tojson }},

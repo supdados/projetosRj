@@ -62,7 +62,7 @@
             action="{{ url_for('main.delete_orgao', orgao_id=o.id) }}"
             class="orgao-action-form"
             data-orgao-delete-form
-            onsubmit="return confirm('Excluir o órgão {{ o.sigla }}?');">
+            data-confirm="Excluir o órgão {{ o.sigla }}?">
         <button type="submit" class="orgao-action-btn is-delete" title="Excluir">
           <i class="fas fa-trash"></i>
         </button>

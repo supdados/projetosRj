@@ -279,7 +279,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   var toggleBtn = document.getElementById('lpToggleBtn');
   var divider   = document.getElementById('lpDivider');

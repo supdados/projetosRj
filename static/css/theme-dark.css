@@ -560,7 +560,15 @@ html[data-theme="dark"] body.is-authenticated .modal-footer {
 
 html[data-theme="dark"] body.is-authenticated .table,
 html[data-theme="dark"] body.is-authenticated table {
+    /* Bootstrap 5.3+ injeta --bs-table-bg sólido via data-bs-theme.
+       Neutralizamos para que o fundo do card (ou surface) apareça. */
+    --bs-table-bg: transparent;
+    --bs-table-color: inherit;
+    --bs-table-striped-bg: rgba(78, 149, 204, 0.05);
+    --bs-table-hover-bg: rgba(78, 149, 204, 0.1);
+    --bs-table-hover-color: var(--app-color-text-primary);
     color: var(--app-color-text-secondary);
+    background-color: transparent;
 }
 
 

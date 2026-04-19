@@ -45,6 +45,7 @@
         function applyTheme(themeName, persistChoice) {
             var normalizedTheme = normalizeTheme(themeName);
             root.setAttribute('data-theme', normalizedTheme);
+            root.setAttribute('data-bs-theme', normalizedTheme);
             updateThemeColor(normalizedTheme);
             updateThemeToggle(normalizedTheme);
 

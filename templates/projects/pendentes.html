@@ -358,7 +358,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const storageKey = 'pendingExpandedProjects';
     const projectList = document.getElementById('pendingProjectList');

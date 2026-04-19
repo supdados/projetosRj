@@ -112,7 +112,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
     function navigateToTemplate(card) {
         var url = card.getAttribute('data-template-url');

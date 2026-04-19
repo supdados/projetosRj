@@ -77,7 +77,7 @@
                                 <form action="{{ url_for('main.delete_area', area_id=area.id) }}"
                                       method="POST"
                                       class="d-inline-block"
-                                      onsubmit="return confirm('Tem certeza que deseja excluir a área {{ area.name }}?');">
+                                      data-confirm="Tem certeza que deseja excluir a área {{ area.name }}?">
                                     <button type="submit" class="btn admin-users-action-btn is-delete" title="Excluir Área">
                                         <i class="fas fa-trash"></i>
                                     </button>

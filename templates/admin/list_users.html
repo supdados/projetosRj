@@ -112,7 +112,7 @@
                                 <form action="{{ url_for('main.delete_user', user_id=user_item.id) }}"
                                       method="POST"
                                       class="d-inline-block"
-                                      onsubmit="return confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.');">
+                                      data-confirm="Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.">
                                     <button type="submit" class="btn admin-users-action-btn is-delete" title="Excluir Usuário">
                                         <i class="fas fa-trash"></i>
                                     </button>

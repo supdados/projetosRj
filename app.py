@@ -1,5 +1,7 @@
 import os
+import secrets
 import time
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from flask import Flask, g, redirect, request, session, url_for
@@ -18,11 +20,47 @@ from startup import ensure_caderno_schema, ensure_project_abep_indicator_column,
 TIMEZONE_BR = ZoneInfo('America/Sao_Paulo')
 
 
+def _extract_origin(url):
+    """Extrai o scheme://host[:port] de uma URL; vazio se inválida."""
+    if not url:
+        return ''
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return ''
+    if not parsed.scheme or not parsed.netloc:
+        return ''
+    return f'{parsed.scheme}://{parsed.netloc}'
+
+
+def _build_csp_header(nonce, chatbot_origin):
+    """CSP restritiva: só executa JS com nonce ou de 'self'; iframes/imgs do chatbot permitidos."""
+    frame_extra = f' {chatbot_origin}' if chatbot_origin else ''
+    img_extra = f' {chatbot_origin}' if chatbot_origin else ''
+    return (
+        "default-src 'self'; "
+        f"script-src 'self' 'nonce-{nonce}'; "
+        "style-src 'self' 'unsafe-inline'; "
+        f"img-src 'self' data:{img_extra}; "
+        "font-src 'self'; "
+        f"frame-src 'self'{frame_extra}; "
+        "connect-src 'self'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "object-src 'none'; "
+        "frame-ancestors 'none'"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Request hooks
 # ---------------------------------------------------------------------------
 
 def _register_request_hooks(app):
+    @app.before_request
+    def assign_csp_nonce():
+        g.csp_nonce = secrets.token_urlsafe(16)
+
     @app.before_request
     def load_logged_in_user():
         session.permanent = True
@@ -81,6 +119,10 @@ def _register_request_hooks(app):
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         if app.config.get('SESSION_COOKIE_SECURE'):
             response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        nonce = getattr(g, 'csp_nonce', None)
+        if nonce:
+            chatbot_origin = _extract_origin(app.config.get('CHATBOT_BASE_URL', ''))
+            response.headers['Content-Security-Policy'] = _build_csp_header(nonce, chatbot_origin)
         return response
 
     @app.after_request
@@ -124,6 +166,10 @@ def _register_template_filters(app):
 
 def _register_context_processors(app):
     app.context_processor(inject_current_year)
+
+    @app.context_processor
+    def inject_csp_nonce():
+        return {'csp_nonce': getattr(g, 'csp_nonce', '')}
 
     @app.context_processor
     def inject_user_info_to_templates():

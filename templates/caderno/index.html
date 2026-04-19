@@ -145,7 +145,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 window.__CADERNO_CONFIG__ = {
   apiBlocksUrl:    "{{ url_for('main.caderno_api_blocks') }}",
   apiBlocksCreate: "{{ url_for('main.caderno_api_blocks_create') }}",

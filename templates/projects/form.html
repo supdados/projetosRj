@@ -242,7 +242,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
+<script nonce="{{ csp_nonce }}">
 // Validação do formulário
 (function () {
   'use strict'

@@ -322,7 +322,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
+<script nonce="{{ csp_nonce }}">
     document.addEventListener('DOMContentLoaded', function() {
         const dateEl = document.getElementById('dashboardWelcomeDate');
         const dashboardPage = document.querySelector('.dashboard-page-v2[data-dashboard-density]');

@@ -294,7 +294,7 @@
         if (meetingInfo && meetingInfo.can_manage) {
             return `
                 <form action="/etapa/${etapaId}/delete" method="post" class="inline-form" data-etapa-delete-form
-                    onsubmit="return confirm('Tem certeza que deseja excluir esta reunião?');">
+                    data-confirm="Tem certeza que deseja excluir esta reunião?">
                     <button type="submit" class="btn btn-sm btn-floating" data-etapa-delete-btn title="Excluir reunião">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -406,7 +406,7 @@
         const actionHtml = page.shared.canEditEtapas
             ? `
                 <form action="/etapa/${etapaId}/delete" method="post" class="inline-form" data-etapa-delete-form
-                    onsubmit="return confirm('Tem certeza que deseja excluir esta etapa?');">
+                    data-confirm="Tem certeza que deseja excluir esta etapa?">
                     <button type="submit" class="btn btn-sm btn-floating" data-etapa-delete-btn title="Excluir Etapa">
                         <i class="fas fa-trash"></i>
                     </button>

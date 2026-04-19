@@ -54,7 +54,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   var forms = document.querySelectorAll('.needs-validation');

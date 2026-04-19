@@ -330,7 +330,7 @@
             html += '<span class="task-comment-acts">' +
                 '<button type="button" class="task-comment-btn btn-edit-comment" data-comment-id="' + commentId +
                 '" data-comment-content="' + escapeTaskItemHtml(item.content || '') + '" title="Editar">Editar</button>' +
-                '<form action="/tarefas/comentarios/' + commentId + '/delete" method="POST" class="d-inline" onsubmit="return confirm(\'Excluir comentário?\');">' +
+                '<form action="/tarefas/comentarios/' + commentId + '/delete" method="POST" class="d-inline" data-confirm="Excluir comentário?">' +
                 '<button type="submit" class="task-comment-btn task-comment-btn-del" title="Excluir">Excluir</button>' +
                 '</form></span>';
         }

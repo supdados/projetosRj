@@ -102,7 +102,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <button type="button" class="btn-glass-remove" onclick="removeStageItem(this)" aria-label="Remover etapa">
+                            <button type="button" class="btn-glass-remove" data-action="removeStageItem" aria-label="Remover etapa">
                                 <i class="fas fa-trash" aria-hidden="true"></i>
                             </button>
                         </div>
@@ -148,7 +148,7 @@
                 </div>
             </div>
         </div>
-        <button type="button" class="btn-glass-remove" onclick="removeStageItem(this)" aria-label="Remover etapa">
+        <button type="button" class="btn-glass-remove" data-action="removeStageItem" aria-label="Remover etapa">
             <i class="fas fa-trash" aria-hidden="true"></i>
         </button>
     </div>
@@ -157,7 +157,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function () {
     var container = document.getElementById('stage-items-container');
     var addButton = document.getElementById('add-stage-item');

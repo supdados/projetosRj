@@ -74,7 +74,7 @@
 {% block scripts %}
 {{ super() }}
 <script src="{{ url_for('static', filename='js/modules/cal-datetime-picker.js') }}"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 // Example starter JavaScript for disabling form submissions if there are invalid fields
 (function () {
   'use strict'

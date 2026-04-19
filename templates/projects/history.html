@@ -178,7 +178,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const list = document.getElementById('historyEntriesList');
     if (!list) {
