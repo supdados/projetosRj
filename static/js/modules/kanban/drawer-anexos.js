@@ -5,6 +5,11 @@
         var refs = ctx.refs;
         var state = ctx.state;
 
+        function getCsrfToken() {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? (meta.getAttribute('content') || '') : '';
+        }
+
         function openDrawerAnexos(itemId) {
             ctx.openDrawer(itemId);
             setTimeout(function () {
@@ -279,7 +284,7 @@
 
             fetch('/tarefas/anexos/' + anexoId + '/delete', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify({}),
             })
                 .then(function (r) { return r.json(); })

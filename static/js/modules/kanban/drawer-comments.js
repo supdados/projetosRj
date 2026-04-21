@@ -6,6 +6,11 @@
         var state = ctx.state;
         var drawerAuthorToneMap = Object.create(null);
         var drawerAuthorToneCursor = 0;
+
+        function getCsrfToken() {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? (meta.getAttribute('content') || '') : '';
+        }
         var DRAWER_AUTHOR_TONE_TOTAL = 5;
 
         function clearDrawerCommentsStatusTimer() {
@@ -285,6 +290,7 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
                 },
                 body: JSON.stringify({}),
             }).then(function (response) {

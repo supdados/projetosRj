@@ -347,12 +347,18 @@
             }
         }
 
+        function getCsrfToken() {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? (meta.getAttribute('content') || '') : '';
+        }
+
         function deleteTaskItemAjax(itemId) {
             return fetch('/tarefas/' + itemId + '/delete', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
                 },
                 body: JSON.stringify({}),
             }).then(function (response) {
