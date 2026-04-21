@@ -279,7 +279,8 @@
 
             fetch('/tarefas/anexos/' + anexoId + '/delete', {
                 method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({}),
             })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {

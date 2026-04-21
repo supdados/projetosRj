@@ -283,9 +283,10 @@
             return fetch('/tarefas/comentarios/' + commentId + '/delete', {
                 method: 'POST',
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
                     'Accept': 'application/json',
                 },
+                body: JSON.stringify({}),
             }).then(function (response) {
                 return response.json().catch(function () { return {}; }).then(function (data) {
                     if (!response.ok || !data.success) {
