@@ -5,13 +5,8 @@ from models.orgao import ALLOWED_TIPOS, MAX_DEPTH, TIPO_RANK
 
 from .blueprint import main_bp
 from .decorators import admin_required, login_required
-from .shared import (
-    compute_orgao_depth,
-    get_or_404,
-    get_orgao_descendants,
-    normalize_orgao_form,
-    validate_orgao_move,
-)
+from .orgao_tree import compute_orgao_depth, get_orgao_descendants, normalize_orgao_form, validate_orgao_move
+from .shared import get_or_404
 
 
 def _serialize_orgao(orgao):

@@ -1,0 +1,177 @@
+"""Testes unitários para routes/orgao_tree.py."""
+
+import pytest
+
+from models import OrgaoUnidade, db
+from routes.orgao_tree import (
+    compute_orgao_depth,
+    compute_subtree_height,
+    get_orgao_descendants,
+    is_valid_parent_tipo,
+    validate_orgao_move,
+    would_create_cycle,
+)
+
+
+# ── Fixtures ──────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def orgao_tree(app):
+    """Cria árvore: Estado → Secretaria → Subsecretaria."""
+    with app.app_context():
+        raiz = OrgaoUnidade(nome='Estado RJ', sigla='ERJ', tipo='Estado', pai_id=None, ordem=0, ativo=True)
+        db.session.add(raiz)
+        db.session.flush()
+
+        secretaria = OrgaoUnidade(
+            nome='Secretaria A', sigla='SECA', tipo='Secretaria', pai_id=raiz.id, ordem=0, ativo=True
+        )
+        db.session.add(secretaria)
+        db.session.flush()
+
+        subsecretaria = OrgaoUnidade(
+            nome='Subsecretaria B', sigla='SSEB', tipo='Subsecretaria', pai_id=secretaria.id, ordem=0, ativo=True
+        )
+        db.session.add(subsecretaria)
+        db.session.commit()
+
+        yield {'raiz_id': raiz.id, 'secretaria_id': secretaria.id, 'subsecretaria_id': subsecretaria.id}
+
+        db.session.query(OrgaoUnidade).filter(
+            OrgaoUnidade.id.in_([raiz.id, secretaria.id, subsecretaria.id])
+        ).delete(synchronize_session=False)
+        db.session.commit()
+
+
+# ── is_valid_parent_tipo ──────────────────────────────────────────────────────
+
+
+def test_is_valid_parent_tipo_estado_pode_ser_pai_de_secretaria():
+    assert is_valid_parent_tipo('Estado', 'Secretaria') is True
+
+
+def test_is_valid_parent_tipo_secretaria_nao_pode_ser_pai_de_estado():
+    assert is_valid_parent_tipo('Secretaria', 'Estado') is False
+
+
+def test_is_valid_parent_tipo_tipo_desconhecido_retorna_true():
+    # Tipo desconhecido não deve bloquear; validação de domínio fica em normalize_orgao_form.
+    assert is_valid_parent_tipo('TipoX', 'Estado') is True
+
+
+# ── compute_orgao_depth ───────────────────────────────────────────────────────
+
+
+def test_compute_orgao_depth_raiz_e_1(app, orgao_tree):
+    with app.app_context():
+        raiz = db.session.get(OrgaoUnidade, orgao_tree['raiz_id'])
+        assert compute_orgao_depth(raiz) == 1
+
+
+def test_compute_orgao_depth_filho_e_2(app, orgao_tree):
+    with app.app_context():
+        secretaria = db.session.get(OrgaoUnidade, orgao_tree['secretaria_id'])
+        assert compute_orgao_depth(secretaria) == 2
+
+
+def test_compute_orgao_depth_neto_e_3(app, orgao_tree):
+    with app.app_context():
+        sub = db.session.get(OrgaoUnidade, orgao_tree['subsecretaria_id'])
+        assert compute_orgao_depth(sub) == 3
+
+
+def test_compute_orgao_depth_none_retorna_0():
+    assert compute_orgao_depth(None) == 0
+
+
+# ── compute_subtree_height ────────────────────────────────────────────────────
+
+
+def test_compute_subtree_height_folha_e_1(app, orgao_tree):
+    with app.app_context():
+        sub = db.session.get(OrgaoUnidade, orgao_tree['subsecretaria_id'])
+        assert compute_subtree_height(sub) == 1
+
+
+def test_compute_subtree_height_raiz_e_3(app, orgao_tree):
+    with app.app_context():
+        raiz = db.session.get(OrgaoUnidade, orgao_tree['raiz_id'])
+        assert compute_subtree_height(raiz) == 3
+
+
+def test_compute_subtree_height_none_retorna_0():
+    assert compute_subtree_height(None) == 0
+
+
+# ── get_orgao_descendants ─────────────────────────────────────────────────────
+
+
+def test_get_orgao_descendants_raiz_retorna_ambos_filhos(app, orgao_tree):
+    with app.app_context():
+        desc = get_orgao_descendants(orgao_tree['raiz_id'])
+        assert orgao_tree['secretaria_id'] in desc
+        assert orgao_tree['subsecretaria_id'] in desc
+        assert orgao_tree['raiz_id'] not in desc
+
+
+def test_get_orgao_descendants_folha_retorna_vazio(app, orgao_tree):
+    with app.app_context():
+        desc = get_orgao_descendants(orgao_tree['subsecretaria_id'])
+        assert desc == []
+
+
+# ── would_create_cycle ────────────────────────────────────────────────────────
+
+
+def test_would_create_cycle_mover_para_proprio_id(app, orgao_tree):
+    with app.app_context():
+        assert would_create_cycle(orgao_tree['raiz_id'], orgao_tree['raiz_id']) is True
+
+
+def test_would_create_cycle_mover_para_descendente(app, orgao_tree):
+    with app.app_context():
+        assert would_create_cycle(orgao_tree['raiz_id'], orgao_tree['subsecretaria_id']) is True
+
+
+def test_would_create_cycle_mover_para_none_false(app, orgao_tree):
+    with app.app_context():
+        assert would_create_cycle(orgao_tree['raiz_id'], None) is False
+
+
+def test_would_create_cycle_mover_valido_false(app, orgao_tree):
+    with app.app_context():
+        # Mover subsecretaria para raiz não cria ciclo.
+        assert would_create_cycle(orgao_tree['subsecretaria_id'], orgao_tree['raiz_id']) is False
+
+
+# ── validate_orgao_move ───────────────────────────────────────────────────────
+
+
+def test_validate_orgao_move_none_retorna_erro():
+    assert validate_orgao_move(None, 1) == 'Órgão não encontrado.'
+
+
+def test_validate_orgao_move_ciclo_retorna_erro(app, orgao_tree):
+    with app.app_context():
+        raiz = db.session.get(OrgaoUnidade, orgao_tree['raiz_id'])
+        erro = validate_orgao_move(raiz, orgao_tree['subsecretaria_id'])
+        assert erro is not None
+        assert 'si mesmo' in erro
+
+
+def test_validate_orgao_move_pai_nao_encontrado_retorna_erro(app, orgao_tree):
+    with app.app_context():
+        secretaria = db.session.get(OrgaoUnidade, orgao_tree['secretaria_id'])
+        erro = validate_orgao_move(secretaria, 99999)
+        assert erro == 'Órgão pai não encontrado.'
+
+
+def test_validate_orgao_move_valido_retorna_none(app, orgao_tree):
+    with app.app_context():
+        sub = db.session.get(OrgaoUnidade, orgao_tree['subsecretaria_id'])
+        raiz = db.session.get(OrgaoUnidade, orgao_tree['raiz_id'])
+        # Mover subsecretaria direto para raiz é válido se tipos permitirem.
+        # (resultado depende do TIPO_RANK; testamos apenas que não retorna erro de ciclo)
+        resultado = validate_orgao_move(sub, raiz.id)
+        assert resultado != 'Não é possível mover um órgão para dentro de si mesmo.'

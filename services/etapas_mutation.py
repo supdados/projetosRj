@@ -200,84 +200,108 @@ _FIELD_DISPLAY_NAMES = {
 }
 
 
-def update_regular_field(etapa, field, value):
+def _parse_and_normalize_date(value: str | None) -> 'datetime.date | None':
+    if not value:
+        return None
+    raw = datetime.datetime.strptime(value, '%Y-%m-%d').date()
+    return _normalize_to_business_day(raw, forward=True)
+
+
+def _date_iso(d: 'datetime.date | None') -> str:
+    return d.strftime('%Y-%m-%d') if d else ''
+
+
+def _date_br(d: 'datetime.date | None', empty: str = 'Sem data') -> str:
+    return d.strftime('%d/%m/%Y') if d else empty
+
+
+def _log_etapa_field_change(etapa, field_display: str, old_str: str, new_str: str) -> None:
+    log_project_action(
+        project_id=etapa.project_id,
+        action_type='edit_etapa_inline',
+        description=f'Alterou {field_display} da etapa "{etapa.descricao}"',
+        old_value=old_str,
+        new_value=new_str,
+    )
+
+
+def _update_data_inicio(etapa, value: str | None, out: dict) -> None:
+    old_date = etapa.data_inicio
+    new_date = _parse_and_normalize_date(value)
+    _log_etapa_field_change(
+        etapa, _FIELD_DISPLAY_NAMES['data_inicio'],
+        _date_br(old_date, 'vazio'), _date_br(new_date, 'vazio'),
+    )
+    etapa.data_inicio = new_date
+    out['newValue'] = _date_iso(new_date)
+    out['displayValue'] = _date_br(new_date)
+
+    if old_date and new_date:
+        days_diff = _business_days_between(old_date, new_date)
+        out['daysDiff'] = days_diff
+        if etapa.data_fim:
+            etapa.data_fim = _normalize_to_business_day(
+                _add_business_days(etapa.data_fim, days_diff), forward=True
+            )
+            out['updatedEndDate'] = _date_iso(etapa.data_fim)
+            out['updatedEndDateDisplay'] = _date_br(etapa.data_fim)
+
+
+def _update_data_fim(etapa, value: str | None, out: dict) -> None:
+    old_date = etapa.data_fim
+    new_date = _parse_and_normalize_date(value)
+    _log_etapa_field_change(
+        etapa, _FIELD_DISPLAY_NAMES['data_fim'],
+        _date_br(old_date, 'vazio'), _date_br(new_date, 'vazio'),
+    )
+    etapa.data_fim = new_date
+    out['newValue'] = _date_iso(new_date)
+    out['displayValue'] = _date_br(new_date)
+
+
+def _update_descricao(etapa, value: str | None, out: dict) -> None:
+    old_value = etapa.descricao
+    log_project_action(
+        project_id=etapa.project_id,
+        action_type='edit_etapa_inline',
+        description=f'Alterou {_FIELD_DISPLAY_NAMES["descricao"]} da etapa',
+        old_value=old_value or 'vazio',
+        new_value=value or 'vazio',
+    )
+    etapa.descricao = value
+    out['newValue'] = value
+    out['displayValue'] = value if value else '-'
+
+
+def _update_responsavel(etapa, value: str | None, out: dict) -> None:
+    old_value = etapa.responsavel
+    _log_etapa_field_change(
+        etapa, _FIELD_DISPLAY_NAMES['responsavel'],
+        old_value or 'vazio', value or 'vazio',
+    )
+    etapa.responsavel = value
+    out['newValue'] = value
+    out['displayValue'] = value if value else 'Sem responsável'
+
+
+_FIELD_UPDATERS = {
+    'data_inicio': _update_data_inicio,
+    'data_fim': _update_data_fim,
+    'descricao': _update_descricao,
+    'responsavel': _update_responsavel,
+}
+
+
+def update_regular_field(etapa, field: str, value: str | None) -> dict:
     """Atualiza um campo de uma etapa regular (não-reunião).
 
     Não faz commit.
     Retorna ``response_data`` dict para jsonify.
     """
-    field_display = _FIELD_DISPLAY_NAMES.get(field, field)
-    response_data = {'success': True}
-
-    if field == 'data_inicio':
-        old_date = etapa.data_inicio
-        raw_new_date = datetime.datetime.strptime(value, '%Y-%m-%d').date() if value else None
-        new_date = _normalize_to_business_day(raw_new_date, forward=True) if raw_new_date else None
-
-        log_project_action(
-            project_id=etapa.project_id,
-            action_type='edit_etapa_inline',
-            description=f'Alterou {field_display} da etapa "{etapa.descricao}"',
-            old_value=old_date.strftime('%d/%m/%Y') if old_date else 'vazio',
-            new_value=new_date.strftime('%d/%m/%Y') if new_date else 'vazio',
-        )
-
-        etapa.data_inicio = new_date
-        response_data['newValue'] = new_date.strftime('%Y-%m-%d') if new_date else ''
-        response_data['displayValue'] = new_date.strftime('%d/%m/%Y') if new_date else 'Sem data'
-
-        if old_date and new_date:
-            days_diff = _business_days_between(old_date, new_date)
-            if etapa.data_fim:
-                etapa.data_fim = _add_business_days(etapa.data_fim, days_diff)
-                etapa.data_fim = _normalize_to_business_day(etapa.data_fim, forward=True)
-                response_data['updatedEndDate'] = etapa.data_fim.strftime('%Y-%m-%d')
-                response_data['updatedEndDateDisplay'] = etapa.data_fim.strftime('%d/%m/%Y')
-            response_data['daysDiff'] = days_diff
-
-    elif field == 'data_fim':
-        old_date = etapa.data_fim
-        raw_new_date = datetime.datetime.strptime(value, '%Y-%m-%d').date() if value else None
-        new_date = _normalize_to_business_day(raw_new_date, forward=True) if raw_new_date else None
-
-        log_project_action(
-            project_id=etapa.project_id,
-            action_type='edit_etapa_inline',
-            description=f'Alterou {field_display} da etapa "{etapa.descricao}"',
-            old_value=old_date.strftime('%d/%m/%Y') if old_date else 'vazio',
-            new_value=new_date.strftime('%d/%m/%Y') if new_date else 'vazio',
-        )
-
-        etapa.data_fim = new_date
-        response_data['newValue'] = new_date.strftime('%Y-%m-%d') if new_date else ''
-        response_data['displayValue'] = new_date.strftime('%d/%m/%Y') if new_date else 'Sem data'
-
-    elif field == 'descricao':
-        old_value = etapa.descricao
-        log_project_action(
-            project_id=etapa.project_id,
-            action_type='edit_etapa_inline',
-            description=f'Alterou {field_display} da etapa',
-            old_value=old_value or 'vazio',
-            new_value=value or 'vazio',
-        )
-        etapa.descricao = value
-        response_data['newValue'] = value
-        response_data['displayValue'] = value if value else '-'
-
-    elif field == 'responsavel':
-        old_value = etapa.responsavel
-        log_project_action(
-            project_id=etapa.project_id,
-            action_type='edit_etapa_inline',
-            description=f'Alterou {field_display} da etapa "{etapa.descricao}"',
-            old_value=old_value or 'vazio',
-            new_value=value or 'vazio',
-        )
-        etapa.responsavel = value
-        response_data['newValue'] = value
-        response_data['displayValue'] = value if value else 'Sem responsável'
-
+    response_data: dict = {'success': True}
+    updater = _FIELD_UPDATERS.get(field)
+    if updater:
+        updater(etapa, value, response_data)
     return response_data
 
 

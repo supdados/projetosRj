@@ -169,6 +169,8 @@ def test_task_properties_aliases(app):
         db.session.commit()
 
         task = Task(descricao='Descricao', created_by_id=user.id)
+        db.session.add(task)
+        db.session.flush()  # aplica default=False de is_archived via SQLAlchemy
         assert task.titulo == 'Descricao'
         task.titulo = 'Novo'
         assert task.descricao == 'Novo'

@@ -3,6 +3,43 @@ from time_utils import utc_now
 from .base import TaskItemQuery, TaskQuery, db
 
 
+def _resolve_legacy_kwargs(kwargs: dict) -> None:
+    """Normaliza kwargs legados (titulo→descricao, task_id→anchor) in-place.
+
+    Exemplo: Task(titulo='foo', task_id=3) cria uma subtarefa herdando project/ordem do task 3.
+    """
+    legacy_titulo = kwargs.pop('titulo', None)
+    legacy_task_id = kwargs.pop('task_id', None)
+
+    if legacy_titulo is not None and 'descricao' not in kwargs:
+        kwargs['descricao'] = legacy_titulo
+
+    if legacy_task_id is None:
+        return
+
+    try:
+        anchor_id = int(legacy_task_id)
+    except (TypeError, ValueError):
+        return
+
+    anchor = db.session.get(Task, anchor_id)
+    if anchor is None:
+        return
+
+    kwargs.setdefault('project_id', anchor.project_id)
+    kwargs.setdefault('legacy_parent_task_id', anchor.id)
+    kwargs.setdefault('created_by_id', anchor.created_by_id)
+
+    if 'ordem' not in kwargs:
+        next_ordem = (
+            db.session.query(db.func.max(Task.ordem))
+            .filter(Task.project_id == anchor.project_id, Task.is_archived.is_(False))
+            .scalar()
+            or 0
+        )
+        kwargs['ordem'] = next_ordem + 1
+
+
 class Task(db.Model):
     __tablename__ = 'task'
     query_class = TaskQuery
@@ -27,53 +64,26 @@ class Task(db.Model):
         backref='task',
         lazy=True,
         cascade='all, delete-orphan',
-        order_by='TaskComment.created_at'
+        order_by='TaskComment.created_at',
     )
     anexos = db.relationship(
         'TaskAnexo',
         backref='task',
         lazy=True,
         cascade='all, delete-orphan',
-        order_by='TaskAnexo.created_at'
+        order_by='TaskAnexo.created_at',
     )
 
     def __init__(self, **kwargs):
-        legacy_titulo = kwargs.pop('titulo', None)
-        legacy_task_id = kwargs.pop('task_id', None)
-
-        if legacy_titulo is not None and 'descricao' not in kwargs:
-            kwargs['descricao'] = legacy_titulo
-
-        if legacy_task_id is not None:
-            try:
-                anchor_id = int(legacy_task_id)
-            except (TypeError, ValueError):
-                anchor_id = None
-
-            if anchor_id:
-                anchor = db.session.get(Task, anchor_id)
-                if anchor:
-                    kwargs.setdefault('project_id', anchor.project_id)
-                    kwargs.setdefault('legacy_parent_task_id', anchor.id)
-                    kwargs.setdefault('created_by_id', anchor.created_by_id)
-
-                    if 'ordem' not in kwargs:
-                        next_ordem = (
-                            db.session.query(db.func.max(Task.ordem))
-                            .filter(
-                                Task.project_id == anchor.project_id,
-                                Task.is_archived.is_(False),
-                            )
-                            .scalar()
-                            or 0
-                        )
-                        kwargs['ordem'] = next_ordem + 1
-
+        _resolve_legacy_kwargs(kwargs)
         kwargs.setdefault('status', 'nao_iniciada')
         super().__init__(**kwargs)
 
     def __repr__(self):
         return f'<Task {self.descricao[:50]}>'
+
+    # ── Aliases de compatibilidade legada ─────────────────────────────────────
+    # Mantidos porque templates e rotas legadas ainda referenciam esses nomes.
 
     @property
     def titulo(self):
@@ -109,11 +119,9 @@ class Task(db.Model):
             anchor_id = int(value)
         except (TypeError, ValueError):
             return
-
         anchor = db.session.get(Task, anchor_id)
         if not anchor:
             return
-
         self.project_id = anchor.project_id
         self.legacy_parent_task_id = anchor.id
         if not self.created_by_id:
@@ -129,95 +137,22 @@ class Task(db.Model):
 
 
 class TaskItem(db.Model):
+    # Maps to the same table as Task; TaskItemQuery.count() scopes to child rows only.
     __table__ = Task.__table__
     query_class = TaskItemQuery
 
     def __init__(self, **kwargs):
-        legacy_titulo = kwargs.pop('titulo', None)
-        legacy_task_id = kwargs.pop('task_id', None)
-
-        if legacy_titulo is not None and 'descricao' not in kwargs:
-            kwargs['descricao'] = legacy_titulo
-
-        if legacy_task_id is not None:
-            try:
-                anchor_id = int(legacy_task_id)
-            except (TypeError, ValueError):
-                anchor_id = None
-
-            if anchor_id:
-                anchor = db.session.get(Task, anchor_id)
-                if anchor:
-                    kwargs.setdefault('project_id', anchor.project_id)
-                    kwargs.setdefault('legacy_parent_task_id', anchor.id)
-                    kwargs.setdefault('created_by_id', anchor.created_by_id)
-
-                    if 'ordem' not in kwargs:
-                        next_ordem = (
-                            db.session.query(db.func.max(Task.ordem))
-                            .filter(
-                                Task.project_id == anchor.project_id,
-                                Task.is_archived.is_(False),
-                            )
-                            .scalar()
-                            or 0
-                        )
-                        kwargs['ordem'] = next_ordem + 1
-
+        _resolve_legacy_kwargs(kwargs)
         kwargs.setdefault('status', 'nao_iniciada')
         super().__init__(**kwargs)
 
-    @property
-    def titulo(self):
-        return self.descricao
-
-    @titulo.setter
-    def titulo(self, value):
-        self.descricao = value
-
-    @property
-    def is_finalized(self):
-        return self.is_archived
-
-    @is_finalized.setter
-    def is_finalized(self, value):
-        self.is_archived = bool(value)
-
-    @property
-    def finalized_at(self):
-        return self.archived_at
-
-    @finalized_at.setter
-    def finalized_at(self, value):
-        self.archived_at = value
-
-    @property
-    def task_id(self):
-        return self.id
-
-    @task_id.setter
-    def task_id(self, value):
-        try:
-            anchor_id = int(value)
-        except (TypeError, ValueError):
-            return
-
-        anchor = db.session.get(Task, anchor_id)
-        if not anchor:
-            return
-
-        self.project_id = anchor.project_id
-        self.legacy_parent_task_id = anchor.id
-        if not self.created_by_id:
-            self.created_by_id = anchor.created_by_id
-
-    @property
-    def task(self):
-        return self
-
-    @property
-    def items(self):
-        return [self]
+    # Reuse property descriptors from Task — avoids duplicating all alias definitions.
+    titulo = Task.titulo
+    is_finalized = Task.is_finalized
+    finalized_at = Task.finalized_at
+    task_id = Task.task_id
+    task = Task.task
+    items = Task.items
 
 
 class TaskAnexo(db.Model):

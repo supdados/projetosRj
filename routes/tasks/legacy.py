@@ -12,10 +12,9 @@ from routes.tasks.crud import (
     update_task_status,
     update_task_prioridade,
     update_task_tipo,
-    _parse_unique_task_order_ids,
-    _apply_task_order,
 )
 from routes.tasks.comments import add_task_comment
+from services.task_mutation import apply_task_order as _apply_task_order, parse_unique_task_order_ids as _parse_unique_task_order_ids
 from routes.tasks.attachments import list_task_anexos, add_task_anexo
 
 
