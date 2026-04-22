@@ -78,29 +78,29 @@ def test_tutorial_start_redirects_to_dashboard_for_criar_projeto(app, client, us
     assert '/dashboard' in resp.headers['Location']
 
 
-def test_tutorial_start_creates_demo_project_for_section_needing_project(app, client, user_with_area):
+def test_tutorial_start_section_needing_project_without_project_redirects_to_dashboard(app, client, user_with_area):
+    """Sem projeto tutorial criado, seções que precisam de projeto redirecionam ao dashboard."""
+    _login(client, user_with_area)
+    resp = client.post('/tutorial/start', data={'section': 'criar_etapa'})
+    assert resp.status_code == 302
+    assert '/dashboard' in resp.headers['Location']
+
+
+def test_tutorial_start_section_needing_project_with_session_id_redirects_to_project(app, client, user_with_area):
+    """Com tutorial_project_id na sessão, redireciona para o projeto do usuário."""
     _login(client, user_with_area)
     with app.app_context():
-        count_before = Project.query.filter_by(is_tutorial=True).count()
+        p = Project(titulo='Meu Projeto Real', area_responsavel='Auditoria', status='Vigente', is_tutorial=True)
+        db.session.add(p)
+        db.session.commit()
+        pid = p.id
+
+    with client.session_transaction() as sess:
+        sess['tutorial_project_id'] = pid
 
     resp = client.post('/tutorial/start', data={'section': 'criar_etapa'})
     assert resp.status_code == 302
-
-    with app.app_context():
-        count_after = Project.query.filter_by(is_tutorial=True).count()
-    assert count_after == count_before + 1
-
-
-def test_tutorial_start_reuses_existing_demo_project(app, client, user_with_area):
-    _login(client, user_with_area)
-    # Primeira chamada cria o projeto
-    client.post('/tutorial/start', data={'section': 'criar_etapa'})
-    # Segunda chamada deve reutilizar, não criar novo
-    client.post('/tutorial/start', data={'section': 'criar_etapa'})
-
-    with app.app_context():
-        count = Project.query.filter_by(is_tutorial=True).count()
-    assert count == 1
+    assert f'/project/{pid}' in resp.headers['Location']
 
 
 def test_tutorial_start_unknown_section_falls_back_to_criar_projeto(app, client, user_with_area):
@@ -127,10 +127,11 @@ def test_tutorial_pause_clears_session_flag(app, client, user_with_area):
 
 def test_cleanup_deletes_tutorial_projects(app, client, user_with_area):
     _login(client, user_with_area)
-    # Cria projeto de demo via start
-    client.post('/tutorial/start', data={'section': 'criar_etapa'})
-
     with app.app_context():
+        from models import db as _db
+        p = Project(titulo='Projeto Tutorial', area_responsavel='Auditoria', status='Vigente', is_tutorial=True)
+        _db.session.add(p)
+        _db.session.commit()
         assert Project.query.filter_by(is_tutorial=True).count() == 1
 
     resp = client.post('/tutorial/cleanup')

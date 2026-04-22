@@ -138,7 +138,11 @@ def add_project():
         )
         
         db.session.commit()
-        
+
+        # Guarda o ID do projeto criado durante o tutorial para usar nas seções seguintes
+        if session.get('tutorial_active'):
+            session['tutorial_project_id'] = new_project.id
+
         flash('Projeto adicionado com sucesso!', 'success')
         return redirect(url_for('main.project_detail', project_id=new_project.id))
 

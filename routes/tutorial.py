@@ -1,4 +1,4 @@
-from flask import flash, g, jsonify, redirect, render_template, request, session, url_for
+from flask import flash, g, redirect, render_template, request, session, url_for
 
 from models import Project, db
 
@@ -6,44 +6,35 @@ from .blueprint import main_bp
 from .decorators import login_required
 
 _SECTION_START_URLS = {
-    'criar_projeto': lambda _project_id: url_for('main.dashboard'),
-    'explorar_projeto': lambda project_id: url_for('main.project_detail', project_id=project_id),
-    'criar_etapa': lambda project_id: url_for('main.project_detail', project_id=project_id),
-    'criar_tarefa': lambda project_id: url_for('main.project_tasks', project_id=project_id),
-    'navegar': lambda _project_id: url_for('main.dashboard'),
+    'criar_projeto':    lambda _pid: url_for('main.dashboard'),
+    'criar_etapa':      lambda pid: url_for('main.project_detail', project_id=pid),
+    'explorar_projeto': lambda pid: url_for('main.project_detail', project_id=pid),
+    'criar_tarefa':     lambda _pid: url_for('main.list_tasks'),
+    'navegar':          lambda _pid: url_for('main.dashboard'),
 }
 
-_SECTIONS_NEEDING_PROJECT = {'explorar_projeto', 'criar_etapa', 'criar_tarefa'}
+# Seções que precisam de um projeto criado pelo usuário durante o tutorial
+_SECTIONS_NEEDING_PROJECT = {'criar_etapa', 'explorar_projeto'}
 
 
-def _get_or_create_tutorial_project() -> Project:
-    """Retorna projeto tutorial existente ou cria um novo para o usuário atual."""
-    existing = Project.query.filter_by(is_tutorial=True).first()
-    if existing:
-        return existing
-
-    areas = g.user.get_areas()
-    area = areas[0] if areas else None
-    project = Project(
-        titulo='[Tutorial] Projeto de Demonstração',
-        area_responsavel=area,
-        orgao=g.user.orgao,
-        prioridade='media',
-        status='Vigente',
-        is_tutorial=True,
-        observacao='Projeto criado automaticamente pelo tutorial. Pode ser apagado ao final.',
-    )
-    db.session.add(project)
-    db.session.commit()
-    return project
+def _get_tutorial_project_id() -> int | None:
+    """Retorna o ID do projeto criado pelo usuário durante o tutorial."""
+    pid = session.get('tutorial_project_id')
+    if pid:
+        return pid
+    # Fallback: projeto mais recente marcado como tutorial
+    p = Project.query.filter_by(is_tutorial=True).order_by(Project.id.desc()).first()
+    return p.id if p else None
 
 
 @main_bp.route('/tutorial/begin')
 @login_required
 def tutorial_begin():
-    """Inicia o tutorial do zero, sempre da seção 1. Chamado pelo ícone no topnav."""
+    """Inicia o tutorial do zero. Chamado pelo ícone no topnav."""
     session['tutorial_active'] = True
     session['tutorial_section'] = 'criar_projeto'
+    session['tutorial_reset'] = True
+    session.pop('tutorial_project_id', None)
     return redirect(url_for('main.dashboard'))
 
 
@@ -70,17 +61,20 @@ def tutorial_start():
 
     project_id = None
     if section in _SECTIONS_NEEDING_PROJECT:
-        project = _get_or_create_tutorial_project()
-        project_id = project.id
+        project_id = _get_tutorial_project_id()
+        if not project_id:
+            flash('Crie um projeto primeiro para continuar o tutorial.', 'info')
+            session['tutorial_section'] = 'criar_projeto'
+            return redirect(url_for('main.dashboard'))
 
-    start_url = _SECTION_START_URLS[section](project_id)
-    return redirect(start_url)
+    return redirect(_SECTION_START_URLS[section](project_id))
 
 
 @main_bp.route('/tutorial/pause', methods=['POST'])
 @login_required
 def tutorial_pause():
     session.pop('tutorial_active', None)
+    session['tutorial_reset'] = True   # garante que o próximo início recomece do zero
     return ('', 204) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' else redirect(request.referrer or url_for('main.dashboard'))
 
 
@@ -96,7 +90,7 @@ def tutorial_finish():
 @main_bp.route('/tutorial/finish-redirect')
 @login_required
 def tutorial_finish_redirect():
-    """Destino de navegação após o runner encerrar o último step via JS."""
+    """Destino de navegação após o runner JS encerrar o último step."""
     session.pop('tutorial_active', None)
     session.pop('tutorial_section', None)
     has_data = Project.query.filter_by(is_tutorial=True).count() > 0
@@ -111,6 +105,7 @@ def tutorial_cleanup():
     for p in projects:
         db.session.delete(p)
     db.session.commit()
+    session.pop('tutorial_project_id', None)
     flash(f'{count} projeto(s) de demonstração apagado(s).', 'success')
     return redirect(url_for('main.tutorial_index'))
 

@@ -343,6 +343,7 @@
     <script nonce="{{ csp_nonce }}">
     window.__TUTORIAL_ACTIVE__  = true;
     window.__TUTORIAL_SECTION__ = {{ tutorial_section|tojson }};
+    window.__TUTORIAL_RESET__   = {{ tutorial_reset|tojson }};
     </script>
     <script src="{{ url_for('static', filename='js/tutorial/steps.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tutorial/runner.js') }}"></script>

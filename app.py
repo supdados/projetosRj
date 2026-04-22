@@ -195,6 +195,7 @@ def _register_context_processors(app):
             'chatbot_base_url': str(app.config.get('CHATBOT_BASE_URL', '')).strip().rstrip('/'),
             'tutorial_active': bool(flask_session.get('tutorial_active')),
             'tutorial_section': flask_session.get('tutorial_section', ''),
+            'tutorial_reset': bool(flask_session.pop('tutorial_reset', False)),
         }
 
 
