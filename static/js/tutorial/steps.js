@@ -60,9 +60,10 @@ window.TUTORIAL_SECTIONS = {
       {
         pagePattern: '/dashboard',
         id: 'cp-submit',
-        text: 'Preencha os campos que quiser e clique em <strong>Adicionar Projeto</strong>. Você será redirecionado para a página do projeto.',
-        attachTo: { element: '#addProjectModal .btn-primary', on: 'top' },
-        buttons: [_skip, _prev, _next],
+        text: 'Preencha os campos que quiser e clique em <strong>Criar Projeto</strong> para salvar. Você será redirecionado para a página do projeto.',
+        attachTo: { element: '#createProjectSubmitBtn', on: 'top' },
+        advanceOn: { selector: '#createProjectSubmitBtn', event: 'click' },
+        buttons: [_skip, _prev],
       },
       {
         pagePattern: '/project/',
