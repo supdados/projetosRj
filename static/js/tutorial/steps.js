@@ -75,16 +75,9 @@ window.TUTORIAL_SECTIONS = {
     ],
   },
 
-  /* ── 2. Criar etapa ───────────────────────────────────────────────
-     Todos os steps em /project/<id> — a criação é inline, sem troca de página.
-     Fluxo:
-       ce-intro     → visão geral das etapas
-       ce-add-btn   → usuário CLICA no botão real (#btnOpenInlineEtapaAdd)
-                       → advanceOn dispara → próximo step (waitMs espera o form aparecer)
-       ce-form      → destaque do textarea inline
-       ce-save-hint → instrução para salvar; usuário clica no ✓ real
-                       → form submete → page reload
-       ce-done      → aparece após o reload (global step já passou ce-save-hint)
+
+  /* ── 3. Criar etapa ───────────────────────────────────────────────
+     Criação inline de etapa, logo após explorar a página do projeto.
   ──────────────────────────────────────────────────────────────────── */
   criar_etapa: {
     label: 'Criar etapa',
@@ -92,33 +85,20 @@ window.TUTORIAL_SECTIONS = {
     steps: [
       {
         pagePattern: '/project/',
-        id: 'ce-intro',
-        text: 'Etapas representam as <strong>fases do projeto</strong>. Você pode definir datas, responsáveis e acompanhar o progresso de cada uma.',
-        attachTo: { element: 'section.etapa-list', on: 'top' },
-        buttons: [_skip, _next],
-      },
-      {
-        pagePattern: '/project/',
         id: 'ce-add-btn',
-        text: 'Clique no botão <strong>Adicionar Etapa</strong> para abrir o formulário inline.',
+        text: 'Para começar a organizar seu projeto, clique no botão <strong>Adicionar Etapa</strong>.',
         attachTo: { element: '#btnOpenInlineEtapaAdd', on: 'bottom' },
         advanceOn: { selector: '#btnOpenInlineEtapaAdd', event: 'click' },
-        buttons: [_skip, _prev],
+        buttons: [_skip],
       },
       {
         pagePattern: '/project/',
-        id: 'ce-form',
-        text: 'Digite a <strong>descrição</strong> da etapa. Você também pode definir datas e responsável.',
+        id: 'ce-fill-and-save',
+        text: 'Escreva o nome da etapa e clique no ícone <strong>✓</strong> real para salvar.',
         attachTo: { element: '#etapa_inline_descricao', on: 'top' },
         waitMs: 500,
+        advanceOn: { selector: '#btnSubmitInlineEtapaAdd', event: 'click' },
         buttons: [_skip, _next],
-      },
-      {
-        pagePattern: '/project/',
-        id: 'ce-save-hint',
-        text: 'Clique no ícone <strong>✓</strong> para salvar a etapa. O tutorial retomará automaticamente.',
-        attachTo: { element: '#btnSubmitInlineEtapaAdd', on: 'left' },
-        buttons: [_skip],
       },
       {
         pagePattern: '/project/',
@@ -126,38 +106,6 @@ window.TUTORIAL_SECTIONS = {
         text: 'Etapa criada com sucesso! Ela aparece na lista abaixo. Você pode adicionar quantas etapas quiser.',
         attachTo: { element: 'section.etapa-list', on: 'top' },
         buttons: [_skip, _nextSection],
-      },
-    ],
-  },
-
-  /* ── 3. Explorar projeto ──────────────────────────────────────────
-     Vem DEPOIS de criar etapa, então o projeto de demo já tem etapas.
-     Mostra o que existe — não cria nada novo.
-  ──────────────────────────────────────────────────────────────────── */
-  explorar_projeto: {
-    label: 'Explorar projeto',
-    startUrl: '/project/',
-    steps: [
-      {
-        pagePattern: '/project/',
-        id: 'ep-overview',
-        text: 'Esta é a <strong>página do projeto</strong>. Aqui você acompanha status, datas, objetivos e indicadores.',
-        attachTo: { element: 'h1', on: 'bottom' },
-        buttons: [_skip, _next],
-      },
-      {
-        pagePattern: '/project/',
-        id: 'ep-etapas',
-        text: 'Na seção de <strong>Etapas</strong> você vê o cronograma. Clique nos ícones de cada etapa para marcá-la como iniciada ou concluída.',
-        attachTo: { element: 'section.etapa-list', on: 'top' },
-        buttons: [_skip, _prev, _next],
-      },
-      {
-        pagePattern: '/project/',
-        id: 'ep-add-etapa-btn',
-        text: 'O botão <strong>Adicionar Etapa</strong> cria uma nova fase no projeto, de forma inline — sem sair desta página.',
-        attachTo: { element: '#btnOpenInlineEtapaAdd', on: 'bottom' },
-        buttons: [_skip, _prev, _nextSection],
       },
     ],
   },

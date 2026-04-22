@@ -17,7 +17,6 @@
   var SECTION_ORDER = [
     'criar_projeto',
     'criar_etapa',
-    'explorar_projeto',
     'criar_tarefa',
     'navegar',
   ];

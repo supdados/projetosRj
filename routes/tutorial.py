@@ -8,13 +8,12 @@ from .decorators import login_required
 _SECTION_START_URLS = {
     'criar_projeto':    lambda _pid: url_for('main.dashboard'),
     'criar_etapa':      lambda pid: url_for('main.project_detail', project_id=pid),
-    'explorar_projeto': lambda pid: url_for('main.project_detail', project_id=pid),
     'criar_tarefa':     lambda _pid: url_for('main.list_tasks'),
     'navegar':          lambda _pid: url_for('main.dashboard'),
 }
 
 # Seções que precisam de um projeto criado pelo usuário durante o tutorial
-_SECTIONS_NEEDING_PROJECT = {'criar_etapa', 'explorar_projeto'}
+_SECTIONS_NEEDING_PROJECT = {'criar_etapa'}
 
 
 def _get_tutorial_project_id() -> int | None:
