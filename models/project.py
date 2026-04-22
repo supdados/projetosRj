@@ -14,6 +14,8 @@ class Project(db.Model):
     objetivo_id = db.Column(db.Integer, db.ForeignKey('objetivo.id'), nullable=True)
     resultado_esperado_id = db.Column(db.Integer, db.ForeignKey('resultado_esperado.id'), nullable=True)
 
+    is_tutorial = db.Column(db.Boolean, default=False, nullable=False, server_default='0')
+
     special_project = db.Column(db.String(20), nullable=True)
     sei_process = db.Column(db.String(50), nullable=True)
     short_description = db.Column(db.Text, nullable=True)

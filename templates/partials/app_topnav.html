@@ -275,6 +275,17 @@
                             </div>
                         </div>
 
+                        <a
+                            href="{{ url_for('main.tutorial_index') }}"
+                            class="btn app-nav-icon-btn app-tutorial-link {{ 'active' if endpoint == 'main.tutorial_index' else '' }}"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="bottom"
+                            title="Tutorial"
+                            aria-label="Tutorial"
+                        >
+                            <i class="fas fa-graduation-cap"></i>
+                        </a>
+
                         <div class="app-theme-menu">
                             <button
                                 class="btn app-nav-icon-btn app-theme-toggle"

@@ -1,4 +1,4 @@
-from flask import flash, g, jsonify, redirect, render_template, request, url_for
+from flask import flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from catalogs.abep import normalize_abep_indicator
 from models import Etapa, IndicadorProjeto, Project, db
@@ -77,6 +77,7 @@ def add_project():
             resultado_esperado_id=resultado_esperado_id,
             observacao=observacao,
             status='Vigente',  # Definir status padrão
+            is_tutorial=bool(session.get('tutorial_active')),
             special_project=special_project,
             sei_process=sei_process,
             short_description=short_description,

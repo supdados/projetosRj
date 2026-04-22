@@ -15,7 +15,7 @@ from startup import initialize_database
 from time_utils import register_sqlite_adapters
 
 # Re-exportações para compatibilidade com scripts e testes existentes
-from startup import ensure_caderno_schema, ensure_project_abep_indicator_column, ensure_task_core_columns  # noqa: F401
+from startup import ensure_caderno_schema, ensure_project_abep_indicator_column, ensure_task_core_columns, ensure_tutorial_columns  # noqa: F401
 
 TIMEZONE_BR = ZoneInfo('America/Sao_Paulo')
 
@@ -173,6 +173,7 @@ def _register_context_processors(app):
 
     @app.context_processor
     def inject_user_info_to_templates():
+        from flask import session as flask_session
         current_user_obj = g.user if hasattr(g, 'user') else None
         is_admin = bool(current_user_obj and current_user_obj.is_admin)
         unread_notifications_count = 0
@@ -192,6 +193,8 @@ def _register_context_processors(app):
             'govbr_login_enabled': is_govbr_oidc_enabled(app.config),
             'chatbot_enabled': bool(app.config.get('CHATBOT_ENABLED')),
             'chatbot_base_url': str(app.config.get('CHATBOT_BASE_URL', '')).strip().rstrip('/'),
+            'tutorial_active': bool(flask_session.get('tutorial_active')),
+            'tutorial_section': flask_session.get('tutorial_section', ''),
         }
 
 
@@ -234,6 +237,9 @@ def create_app(test_config=None):
                 if startup_summary['column_added']:
                     print('Coluna project.abep_indicator criada com sucesso.')
                 print(f"Catalogo de objetivos sincronizado: {startup_summary['sync_summary']}")
+                tutorial_cols = ensure_tutorial_columns()
+                if tutorial_cols:
+                    print(f"Colunas de tutorial criadas: {tutorial_cols}")
             except Exception as exc:
                 print(f'Erro durante a inicialização/verificação do banco de dados em app.py: {exc}')
 

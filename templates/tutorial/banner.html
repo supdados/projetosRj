@@ -1,0 +1,30 @@
+{% set section_labels = {
+    'criar_projeto': 'Criar projeto',
+    'explorar_projeto': 'Explorar projeto',
+    'criar_etapa': 'Criar etapa',
+    'criar_tarefa': 'Criar tarefa',
+    'navegar': 'Navegar pelo app',
+} %}
+<div class="tutorial-banner" id="tutorialBanner" role="status" aria-label="Tutorial em andamento">
+    <div class="tutorial-banner-left">
+        <i class="fas fa-graduation-cap tutorial-banner-icon"></i>
+        <div>
+            <span class="tutorial-banner-label">Tutorial</span>
+            {% if tutorial_section %}
+            <span class="tutorial-banner-section ms-2">
+                — {{ section_labels.get(tutorial_section, tutorial_section) }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="tutorial-banner-actions">
+        <a href="{{ url_for('main.tutorial_index') }}" class="tutorial-banner-btn">
+            <i class="fas fa-th-list me-1"></i>Seções
+        </a>
+        <form method="POST" action="{{ url_for('main.tutorial_pause') }}" style="display:inline;">
+            <button type="submit" class="tutorial-banner-btn is-danger">
+                <i class="fas fa-pause me-1"></i>Pausar
+            </button>
+        </form>
+    </div>
+</div>

@@ -318,11 +318,68 @@
 </div>
 
 {% include "projects/add_form.html" %}
+
+{% if current_user_obj and not current_user_obj.tutorial_visto %}
+<div class="modal fade" id="tutorialWelcomeModal" tabindex="-1" aria-labelledby="tutorialWelcomeModalLabel" aria-modal="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="tutorialWelcomeModalLabel">
+                    <i class="fas fa-graduation-cap me-2 text-primary"></i>Bem-vindo ao ProjetosRJ!
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar" id="tutorialWelcomeDismissBtn"></button>
+            </div>
+            <div class="modal-body" style="font-size:.9rem;">
+                <p>Parece que é sua primeira vez aqui. Que tal fazer um tour rápido para conhecer as principais funcionalidades?</p>
+                <ul style="color:var(--ds-text-secondary,#6b7280); line-height:1.8;">
+                    <li>Criar e gerenciar projetos</li>
+                    <li>Adicionar etapas e acompanhar o cronograma</li>
+                    <li>Criar e monitorar tarefas</li>
+                    <li>Navegar pelo dashboard e usar a busca global</li>
+                </ul>
+            </div>
+            <div class="modal-footer border-0 pt-0 gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal" id="tutorialWelcomeSkipBtn">
+                    Agora não
+                </button>
+                <a href="{{ url_for('main.tutorial_index') }}" class="btn btn-primary glass-btn btn-sm" id="tutorialWelcomeStartBtn">
+                    <i class="fas fa-play me-1"></i>Iniciar tutorial
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script nonce="{{ csp_nonce }}">
+    {% if current_user_obj and not current_user_obj.tutorial_visto %}
+    (function () {
+        function dismissTutorialWelcome() {
+            fetch('/tutorial/dismiss', {
+                method: 'POST',
+                credentials: 'same-origin',
+            }).catch(function () {});
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var modal = document.getElementById('tutorialWelcomeModal');
+            if (!modal) return;
+            var bsModal = new bootstrap.Modal(modal, { backdrop: 'static', keyboard: false });
+            bsModal.show();
+
+            var skipBtn = document.getElementById('tutorialWelcomeSkipBtn');
+            var dismissBtn = document.getElementById('tutorialWelcomeDismissBtn');
+            var startBtn = document.getElementById('tutorialWelcomeStartBtn');
+            if (skipBtn) skipBtn.addEventListener('click', dismissTutorialWelcome);
+            if (dismissBtn) dismissBtn.addEventListener('click', dismissTutorialWelcome);
+            if (startBtn) startBtn.addEventListener('click', dismissTutorialWelcome);
+        });
+    })();
+    {% endif %}
+
     document.addEventListener('DOMContentLoaded', function() {
         const dateEl = document.getElementById('dashboardWelcomeDate');
         const dashboardPage = document.querySelector('.dashboard-page-v2[data-dashboard-density]');

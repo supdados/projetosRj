@@ -1432,10 +1432,72 @@ ROUTE_CASES = [
         'requires_login': True,
         'requires_admin': False,
     },
+    # Tutorial
+    {
+        'id': 'tutorial_index_get',
+        'method': 'GET',
+        'rule': '/tutorial',
+        'path': '/tutorial',
+        'role': 'user',
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
+        'id': 'tutorial_start_post',
+        'method': 'POST',
+        'rule': '/tutorial/start',
+        'path': '/tutorial/start',
+        'role': 'user',
+        'data': {'section': 'criar_projeto'},
+        'expected_status': 302,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
+        'id': 'tutorial_pause_post',
+        'method': 'POST',
+        'rule': '/tutorial/pause',
+        'path': '/tutorial/pause',
+        'role': 'user',
+        'expected_status': 302,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
+        'id': 'tutorial_finish_post',
+        'method': 'POST',
+        'rule': '/tutorial/finish',
+        'path': '/tutorial/finish',
+        'role': 'user',
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
+        'id': 'tutorial_cleanup_post',
+        'method': 'POST',
+        'rule': '/tutorial/cleanup',
+        'path': '/tutorial/cleanup',
+        'role': 'user',
+        'expected_status': 302,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
+        'id': 'tutorial_dismiss_post',
+        'method': 'POST',
+        'rule': '/tutorial/dismiss',
+        'path': '/tutorial/dismiss',
+        'role': 'user',
+        'expected_status': 302,
+        'requires_login': True,
+        'requires_admin': False,
+    },
 ]
 
 LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 127
+assert len(ROUTE_CASES) == 133

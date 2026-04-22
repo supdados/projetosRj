@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Tutorial — ProjetosRJ{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tutorial.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="app-page-shell">
+    <div class="tutorial-page-header">
+        <h1 class="tutorial-page-title">
+            <i class="fas fa-graduation-cap me-2"></i>Tutorial do ProjetosRJ
+        </h1>
+        <p class="tutorial-page-subtitle">
+            Escolha uma seção para aprender com guia passo a passo. Você pode pular, refazer e navegar livremente.
+        </p>
+        {% if tutorial_active %}
+        <div class="alert alert-info d-flex align-items-center gap-2 mt-3" style="font-size:.875rem;">
+            <i class="fas fa-info-circle"></i>
+            <span>Tutorial em andamento. Selecione uma seção abaixo para mudar de área ou
+            <form method="POST" action="{{ url_for('main.tutorial_finish') }}" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-danger ms-1">encerrar</button>
+            </form>.
+            </span>
+        </div>
+        {% endif %}
+        {% if has_tutorial_projects %}
+        <div class="alert alert-warning d-flex align-items-center gap-2 mt-2" style="font-size:.875rem;">
+            <i class="fas fa-database"></i>
+            <span>Você tem dados de demonstração no sistema.
+            <form method="POST" action="{{ url_for('main.tutorial_cleanup') }}" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-warning ms-1"
+                    onclick="return confirm('Apagar todos os projetos de demonstração?')">
+                    Apagar dados de demo
+                </button>
+            </form>
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="tutorial-section-grid">
+
+        <div class="tutorial-section-card">
+            <div class="tutorial-section-icon"><i class="fas fa-plus-circle"></i></div>
+            <div class="tutorial-section-title">1. Criar projeto</div>
+            <p class="tutorial-section-desc">Aprenda a criar um novo projeto preenchendo o formulário passo a passo.</p>
+            <form method="POST" action="{{ url_for('main.tutorial_start') }}">
+                <input type="hidden" name="section" value="criar_projeto">
+                <button type="submit" class="btn btn-primary glass-btn tutorial-section-start-btn">
+                    Iniciar aqui <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </form>
+        </div>
+
+        <div class="tutorial-section-card">
+            <div class="tutorial-section-icon"><i class="fas fa-folder-open"></i></div>
+            <div class="tutorial-section-title">2. Explorar projeto</div>
+            <p class="tutorial-section-desc">Navegue pela página de detalhes de um projeto e conheça todas as seções.</p>
+            <form method="POST" action="{{ url_for('main.tutorial_start') }}">
+                <input type="hidden" name="section" value="explorar_projeto">
+                <button type="submit" class="btn btn-primary glass-btn tutorial-section-start-btn">
+                    Iniciar aqui <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </form>
+        </div>
+
+        <div class="tutorial-section-card">
+            <div class="tutorial-section-icon"><i class="fas fa-list-ol"></i></div>
+            <div class="tutorial-section-title">3. Criar etapa</div>
+            <p class="tutorial-section-desc">Entenda como adicionar etapas ao projeto e gerenciar o cronograma.</p>
+            <form method="POST" action="{{ url_for('main.tutorial_start') }}">
+                <input type="hidden" name="section" value="criar_etapa">
+                <button type="submit" class="btn btn-primary glass-btn tutorial-section-start-btn">
+                    Iniciar aqui <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </form>
+        </div>
+
+        <div class="tutorial-section-card">
+            <div class="tutorial-section-icon"><i class="fas fa-tasks"></i></div>
+            <div class="tutorial-section-title">4. Criar tarefa</div>
+            <p class="tutorial-section-desc">Crie tarefas, defina responsáveis e acompanhe o status de cada uma.</p>
+            <form method="POST" action="{{ url_for('main.tutorial_start') }}">
+                <input type="hidden" name="section" value="criar_tarefa">
+                <button type="submit" class="btn btn-primary glass-btn tutorial-section-start-btn">
+                    Iniciar aqui <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </form>
+        </div>
+
+        <div class="tutorial-section-card">
+            <div class="tutorial-section-icon"><i class="fas fa-compass"></i></div>
+            <div class="tutorial-section-title">5. Navegar pelo app</div>
+            <p class="tutorial-section-desc">Conheça o dashboard, busca global, notificações e o menu de navegação.</p>
+            <form method="POST" action="{{ url_for('main.tutorial_start') }}">
+                <input type="hidden" name="section" value="navegar">
+                <button type="submit" class="btn btn-primary glass-btn tutorial-section-start-btn">
+                    Iniciar aqui <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
