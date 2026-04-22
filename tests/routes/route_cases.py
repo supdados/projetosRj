@@ -1434,6 +1434,26 @@ ROUTE_CASES = [
     },
     # Tutorial
     {
+        'id': 'tutorial_begin_get',
+        'method': 'GET',
+        'rule': '/tutorial/begin',
+        'path': '/tutorial/begin',
+        'role': 'user',
+        'expected_status': 302,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
+        'id': 'tutorial_finish_redirect_get',
+        'method': 'GET',
+        'rule': '/tutorial/finish-redirect',
+        'path': '/tutorial/finish-redirect',
+        'role': 'user',
+        'expected_status': 200,
+        'requires_login': True,
+        'requires_admin': False,
+    },
+    {
         'id': 'tutorial_index_get',
         'method': 'GET',
         'rule': '/tutorial',
@@ -1500,4 +1520,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_login']]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case['requires_admin']]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 133
+assert len(ROUTE_CASES) == 135

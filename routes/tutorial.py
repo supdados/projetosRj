@@ -38,6 +38,15 @@ def _get_or_create_tutorial_project() -> Project:
     return project
 
 
+@main_bp.route('/tutorial/begin')
+@login_required
+def tutorial_begin():
+    """Inicia o tutorial do zero, sempre da seção 1. Chamado pelo ícone no topnav."""
+    session['tutorial_active'] = True
+    session['tutorial_section'] = 'criar_projeto'
+    return redirect(url_for('main.dashboard'))
+
+
 @main_bp.route('/tutorial')
 @login_required
 def tutorial_index():
@@ -78,6 +87,16 @@ def tutorial_pause():
 @main_bp.route('/tutorial/finish', methods=['POST'])
 @login_required
 def tutorial_finish():
+    session.pop('tutorial_active', None)
+    session.pop('tutorial_section', None)
+    has_data = Project.query.filter_by(is_tutorial=True).count() > 0
+    return render_template('tutorial/finish.html', has_tutorial_data=has_data)
+
+
+@main_bp.route('/tutorial/finish-redirect')
+@login_required
+def tutorial_finish_redirect():
+    """Destino de navegação após o runner encerrar o último step via JS."""
     session.pop('tutorial_active', None)
     session.pop('tutorial_section', None)
     has_data = Project.query.filter_by(is_tutorial=True).count() > 0

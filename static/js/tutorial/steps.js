@@ -1,9 +1,24 @@
 /**
- * Definição declarativa de todos os steps do tutorial.
- * Cada seção é uma lista de steps com `pagePattern` para filtragem por rota.
- * O runner usa `pagePattern` para mostrar apenas os steps da página atual.
+ * Definição declarativa dos steps do tutorial.
+ *
+ * Botões padrão por tipo de step:
+ *   - Intermediário : [Pular seção (skip), Próximo (next)]
+ *   - Último da seção: [Pular seção (skip), Próxima seção → (next-section)]
+ *   - Último de tudo : [Encerrar (complete)]
+ *
+ * "Pular seção" e "Próxima seção" disparam goToNextSection() no runner,
+ * que navega automaticamente para a seção seguinte sem passar pela tela de menu.
  */
+
+var _skip  = { text: 'Pular seção', action: 'skip', classes: 'shepherd-button-secondary' };
+var _next  = { text: 'Próximo →', action: 'next' };
+var _prev  = { text: '← Voltar', action: 'back', classes: 'shepherd-button-secondary' };
+var _nextSection = { text: 'Próxima seção →', action: 'next-section' };
+var _finish = { text: 'Concluir tutorial', action: 'complete' };
+
 window.TUTORIAL_SECTIONS = {
+
+  /* ── 1. Criar projeto ────────────────────────────────────────────── */
   criar_projeto: {
     label: 'Criar projeto',
     startUrl: '/dashboard',
@@ -11,59 +26,48 @@ window.TUTORIAL_SECTIONS = {
       {
         pagePattern: '/dashboard',
         id: 'cp-welcome',
-        title: 'Criar um novo projeto',
-        text: 'Para começar, clique no botão <strong>Novo Projeto</strong> no canto superior direito da tela.',
+        title: '1/5 · Criar projeto',
+        text: 'Clique em <strong>Novo Projeto</strong> para abrir o formulário de criação.',
         attachTo: { element: '.dashboard-new-project-btn', on: 'bottom' },
         advanceOn: { selector: '.dashboard-new-project-btn', event: 'click' },
-        buttons: [{ text: 'Pular seção', action: 'skip', classes: 'shepherd-button-secondary' }],
+        buttons: [_skip],
       },
       {
         pagePattern: '/dashboard',
         id: 'cp-titulo',
-        title: 'Nome do projeto',
-        text: 'Preencha o título do projeto. Use um nome claro e descritivo.',
+        title: '1/5 · Criar projeto',
+        text: 'Preencha o <strong>título</strong> do projeto. Use um nome claro e descritivo.',
         attachTo: { element: '#project_titulo', on: 'bottom' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        buttons: [_skip, _next],
       },
       {
         pagePattern: '/dashboard',
         id: 'cp-area',
-        title: 'Área responsável',
-        text: 'Selecione a área responsável pelo projeto.',
+        title: '1/5 · Criar projeto',
+        text: 'Selecione a <strong>área responsável</strong> pelo projeto.',
         attachTo: { element: '#project_area_responsavel', on: 'bottom' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        buttons: [_skip, _prev, _next],
       },
       {
         pagePattern: '/dashboard',
         id: 'cp-submit',
-        title: 'Salvar projeto',
-        text: 'Quando preencher os campos desejados, clique em <strong>Adicionar Projeto</strong> para criar. Você será redirecionado para a página do projeto.',
+        title: '1/5 · Criar projeto',
+        text: 'Preencha os demais campos que quiser e clique em <strong>Adicionar Projeto</strong>. Você será redirecionado para a página do projeto criado.',
         attachTo: { element: '#addProjectModal .btn-primary', on: 'top' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Entendido', action: 'complete' },
-        ],
+        buttons: [_skip, _prev, _next],
       },
       {
         pagePattern: '/project/',
         id: 'cp-done',
-        title: 'Projeto criado!',
-        text: 'Seu projeto foi criado. Aqui você vê todos os detalhes, etapas e tarefas vinculadas a ele.',
-        attachTo: { element: '.page-hero-title, h1', on: 'bottom' },
-        buttons: [
-          { text: 'Encerrar', action: 'complete', classes: 'shepherd-button-secondary' },
-          { text: 'Próxima seção →', action: 'next-section' },
-        ],
+        title: '1/5 · Criar projeto',
+        text: 'Projeto criado! Aqui você vê todos os detalhes, etapas e tarefas vinculadas.',
+        attachTo: { element: 'h1', on: 'bottom' },
+        buttons: [_skip, _nextSection],
       },
     ],
   },
 
+  /* ── 2. Explorar projeto ─────────────────────────────────────────── */
   explorar_projeto: {
     label: 'Explorar projeto',
     startUrl: '/project/',
@@ -71,39 +75,31 @@ window.TUTORIAL_SECTIONS = {
       {
         pagePattern: '/project/',
         id: 'ep-overview',
-        title: 'Visão geral do projeto',
-        text: 'Esta é a página principal do projeto. Aqui você vê o status, datas, objetivos e todas as etapas.',
-        attachTo: { element: '.page-hero-title, h1', on: 'bottom' },
-        buttons: [
-          { text: 'Pular seção', action: 'skip', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        title: '2/5 · Explorar projeto',
+        text: 'Esta é a página do projeto. Aqui você acompanha status, datas e objetivos.',
+        attachTo: { element: 'h1', on: 'bottom' },
+        buttons: [_skip, _next],
       },
       {
         pagePattern: '/project/',
         id: 'ep-etapas',
-        title: 'Etapas do projeto',
-        text: 'A seção de etapas mostra o cronograma do projeto. Cada etapa pode ser marcada como iniciada ou concluída.',
-        attachTo: { element: '.etapas-section, #etapas', on: 'top' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        title: '2/5 · Explorar projeto',
+        text: 'A seção de <strong>etapas</strong> mostra o cronograma. Cada etapa pode ser marcada como iniciada ou concluída.',
+        attachTo: { element: '.etapas-section, #etapas, [data-etapas]', on: 'top' },
+        buttons: [_skip, _prev, _next],
       },
       {
         pagePattern: '/project/',
         id: 'ep-tarefas-link',
-        title: 'Tarefas vinculadas',
-        text: 'Clique em <strong>Tarefas</strong> para ver e gerenciar as tarefas deste projeto.',
+        title: '2/5 · Explorar projeto',
+        text: 'Use o link <strong>Tarefas</strong> para ver e gerenciar as tarefas deste projeto.',
         attachTo: { element: 'a[href*="tarefas"]', on: 'bottom' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Encerrar seção', action: 'complete' },
-        ],
+        buttons: [_skip, _prev, _nextSection],
       },
     ],
   },
 
+  /* ── 3. Criar etapa ──────────────────────────────────────────────── */
   criar_etapa: {
     label: 'Criar etapa',
     startUrl: '/project/',
@@ -111,60 +107,48 @@ window.TUTORIAL_SECTIONS = {
       {
         pagePattern: '/project/',
         id: 'ce-intro',
-        title: 'Etapas do projeto',
-        text: 'Etapas são as fases do seu projeto. Vamos adicionar uma nova etapa.',
-        attachTo: { element: '.etapas-section, #etapas', on: 'top' },
-        buttons: [
-          { text: 'Pular seção', action: 'skip', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        title: '3/5 · Criar etapa',
+        text: 'Etapas representam as fases do projeto. Vamos adicionar uma nova.',
+        attachTo: { element: '.etapas-section, #etapas, [data-etapas]', on: 'top' },
+        buttons: [_skip, _next],
       },
       {
         pagePattern: '/project/',
         id: 'ce-add-btn',
-        title: 'Adicionar etapa',
+        title: '3/5 · Criar etapa',
         text: 'Clique em <strong>+ Adicionar Etapa</strong> para abrir o formulário.',
-        attachTo: { element: '.add-etapa-btn, [data-add-etapa]', on: 'bottom' },
-        advanceOn: { selector: '.add-etapa-btn, [data-add-etapa]', event: 'click' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-        ],
+        attachTo: { element: '.add-etapa-btn, [data-add-etapa], a[href*="etapa/add"]', on: 'bottom' },
+        advanceOn: { selector: '.add-etapa-btn, [data-add-etapa], a[href*="etapa/add"]', event: 'click' },
+        buttons: [_skip, _prev],
       },
       {
         pagePattern: '/etapa/',
         id: 'ce-form',
-        title: 'Formulário da etapa',
-        text: 'Preencha a descrição, datas de início e fim, e o responsável pela etapa.',
-        attachTo: { element: '#descricao, input[name="descricao"]', on: 'bottom' },
-        buttons: [
-          { text: 'Próximo', action: 'next' },
-        ],
+        title: '3/5 · Criar etapa',
+        text: 'Preencha a <strong>descrição</strong> e, se quiser, as datas e o responsável.',
+        attachTo: { element: '#descricao, textarea[name="descricao"]', on: 'bottom' },
+        buttons: [_skip, _next],
       },
       {
         pagePattern: '/etapa/',
         id: 'ce-save',
-        title: 'Salvar etapa',
-        text: 'Clique em <strong>Salvar</strong> para criar a etapa no projeto.',
-        attachTo: { element: 'button[type="submit"], input[type="submit"]', on: 'top' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Entendido', action: 'complete' },
-        ],
+        title: '3/5 · Criar etapa',
+        text: 'Clique em <strong>Salvar</strong> para criar a etapa.',
+        attachTo: { element: 'button[type="submit"]', on: 'top' },
+        buttons: [_skip, _prev, _next],
       },
       {
         pagePattern: '/project/',
         id: 'ce-done',
-        title: 'Etapa criada!',
-        text: 'A etapa aparece agora no cronograma do projeto. Você pode marcar etapas como iniciadas ou concluídas clicando nos ícones.',
-        attachTo: { element: '.etapas-section, #etapas', on: 'top' },
-        buttons: [
-          { text: 'Encerrar', action: 'complete', classes: 'shepherd-button-secondary' },
-          { text: 'Próxima seção →', action: 'next-section' },
-        ],
+        title: '3/5 · Criar etapa',
+        text: 'Etapa criada! Clique nos ícones ao lado de cada etapa para marcá-la como iniciada ou concluída.',
+        attachTo: { element: '.etapas-section, #etapas, [data-etapas]', on: 'top' },
+        buttons: [_skip, _nextSection],
       },
     ],
   },
 
+  /* ── 4. Criar tarefa ─────────────────────────────────────────────── */
   criar_tarefa: {
     label: 'Criar tarefa',
     startUrl: '/tarefas',
@@ -172,39 +156,31 @@ window.TUTORIAL_SECTIONS = {
       {
         pagePattern: '/tarefas',
         id: 'ct-intro',
-        title: 'Hub de tarefas',
-        text: 'Aqui você gerencia todas as tarefas — independentes ou vinculadas a projetos. Vamos criar uma nova.',
+        title: '4/5 · Criar tarefa',
+        text: 'Aqui ficam todas as tarefas — independentes ou vinculadas a projetos. Vamos criar uma.',
         attachTo: { element: '.add-task-btn, [data-add-task], button[data-bs-target*="tarefa"]', on: 'bottom' },
-        buttons: [
-          { text: 'Pular seção', action: 'skip', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        buttons: [_skip, _next],
       },
       {
         pagePattern: '/tarefas',
         id: 'ct-descricao',
-        title: 'Descrição da tarefa',
-        text: 'Preencha a descrição da tarefa. Seja específico sobre o que precisa ser feito.',
+        title: '4/5 · Criar tarefa',
+        text: 'Preencha a <strong>descrição</strong> da tarefa. Seja específico sobre o que precisa ser feito.',
         attachTo: { element: 'textarea[name="descricao"], input[name="descricao"]', on: 'bottom' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        buttons: [_skip, _prev, _next],
       },
       {
         pagePattern: '/tarefas',
         id: 'ct-status',
-        title: 'Status da tarefa',
-        text: 'Depois de criar, você pode alterar o status da tarefa: <em>Não iniciada</em>, <em>Em andamento</em> ou <em>Finalizada</em>.',
+        title: '4/5 · Criar tarefa',
+        text: 'Após criar, você pode alterar o status: <em>Não iniciada</em>, <em>Em andamento</em> ou <em>Finalizada</em>.',
         attachTo: { element: 'select[name="status"]', on: 'bottom' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Encerrar seção', action: 'complete' },
-        ],
+        buttons: [_skip, _prev, _nextSection],
       },
     ],
   },
 
+  /* ── 5. Navegar pelo app ─────────────────────────────────────────── */
   navegar: {
     label: 'Navegar pelo app',
     startUrl: '/dashboard',
@@ -212,57 +188,42 @@ window.TUTORIAL_SECTIONS = {
       {
         pagePattern: '/dashboard',
         id: 'nav-dashboard',
-        title: 'Dashboard',
-        text: 'O dashboard mostra um resumo dos seus projetos, tarefas e indicadores. É a sua página inicial.',
+        title: '5/5 · Navegar pelo app',
+        text: 'O <strong>dashboard</strong> resume seus projetos e tarefas. É sua página inicial.',
         attachTo: { element: '.dashboard-kpi-row, .dashboard-welcome-strip', on: 'bottom' },
-        buttons: [
-          { text: 'Pular seção', action: 'skip', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        buttons: [_next],
       },
       {
         pagePattern: '/dashboard',
         id: 'nav-topnav',
-        title: 'Navegação principal',
-        text: 'Use os ícones do menu superior para navegar entre Projetos, Tarefas e Calendário.',
+        title: '5/5 · Navegar pelo app',
+        text: 'Use os ícones do menu superior para acessar Projetos, Tarefas e Calendário.',
         attachTo: { element: '.app-nav-icons', on: 'bottom' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        buttons: [_prev, _next],
       },
       {
         pagePattern: '/dashboard',
         id: 'nav-search',
-        title: 'Busca global',
-        text: 'Use a barra de busca para encontrar qualquer projeto, etapa, tarefa ou evento rapidamente.',
+        title: '5/5 · Navegar pelo app',
+        text: 'Use a <strong>busca global</strong> para encontrar qualquer projeto, etapa ou tarefa rapidamente.',
         attachTo: { element: '.app-global-search', on: 'bottom' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        buttons: [_prev, _next],
       },
       {
         pagePattern: '/dashboard',
         id: 'nav-notifications',
-        title: 'Notificações',
-        text: 'O sino exibe notificações sobre tarefas atribuídas a você, mudanças de status e outros eventos.',
+        title: '5/5 · Navegar pelo app',
+        text: 'O <strong>sino</strong> exibe notificações sobre tarefas atribuídas a você e mudanças de status.',
         attachTo: { element: '.app-notifications-menu', on: 'bottom' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Próximo', action: 'next' },
-        ],
+        buttons: [_prev, _next],
       },
       {
         pagePattern: '/dashboard',
-        id: 'nav-tutorial-link',
-        title: 'Este tutorial',
-        text: 'Você pode revisitar qualquer seção do tutorial a qualquer momento pelo ícone <i class="fas fa-graduation-cap"></i> no menu.',
+        id: 'nav-tutorial-icon',
+        title: '5/5 · Navegar pelo app',
+        text: 'Este ícone reinicia o tutorial a qualquer momento. Você pode refazer quantas vezes quiser.',
         attachTo: { element: '.app-tutorial-link', on: 'bottom' },
-        buttons: [
-          { text: 'Voltar', action: 'back', classes: 'shepherd-button-secondary' },
-          { text: 'Concluir tutorial', action: 'complete' },
-        ],
+        buttons: [_prev, _finish],
       },
     ],
   },
