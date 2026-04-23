@@ -22,7 +22,6 @@ var _next            = { text: 'Próximo →',   action: 'next' };
 var _prev            = { text: '← Voltar',    action: 'back',         classes: 'shepherd-button-secondary' };
 var _nextSection     = { text: 'Próxima seção →', action: 'next-section' };
 var _finish          = { text: 'Concluir',    action: 'complete' };
-var _saveEtapaAndNext = { text: 'Continuar →', action: 'save-etapa-and-next' };
 
 window.TUTORIAL_SECTIONS = {
 
@@ -78,8 +77,10 @@ window.TUTORIAL_SECTIONS = {
   },
 
 
-  /* ── 3. Criar etapa ───────────────────────────────────────────────
-     Criação inline de etapa, logo após explorar a página do projeto.
+  /* ── 2. Criar etapa ───────────────────────────────────────────────
+     Tour informacional. Apresenta a área de etapas, o botão de criação
+     e as colunas da tabela. Não dirige o fluxo de save — o usuário
+     experimenta criar etapas por conta própria depois.
   ──────────────────────────────────────────────────────────────────── */
   criar_etapa: {
     label: 'Criar etapa',
@@ -87,28 +88,24 @@ window.TUTORIAL_SECTIONS = {
     steps: [
       {
         pagePattern: '/project/',
-        id: 'ce-add-btn',
-        text: 'Para começar a organizar seu projeto, clique no botão <strong>Adicionar Etapa</strong>.',
-        attachTo: { element: '#btnOpenInlineEtapaAdd', on: 'bottom' },
-        advanceOn: { selector: '#btnOpenInlineEtapaAdd', event: 'click' },
-        buttons: [_skip],
+        id: 'ce-overview',
+        text: 'As <strong>etapas</strong> dividem o projeto em partes com início, fim, responsável e status próprios. É aqui embaixo que elas ficam listadas.',
+        attachTo: { element: 'section.etapa-list', on: 'top' },
+        buttons: [_skip, _next],
       },
       {
         pagePattern: '/project/',
-        id: 'ce-fill-and-save',
-        text: 'Escreva o nome da etapa e clique em <strong>Continuar</strong>. A etapa é salva automaticamente.',
-        attachTo: { element: '#etapa_inline_descricao', on: 'top' },
-        waitMs: 500,
-        // Ação customizada: dispara o submit do form inline, aguarda a etapa
-        // ser renderizada via MutationObserver e então avança para ce-done.
-        buttons: [_skip, _prev, _saveEtapaAndNext],
+        id: 'ce-add-btn',
+        text: 'Para criar uma etapa, clique em <strong>Adicionar Etapa</strong>. Uma linha editável aparece no final da lista — é só preencher a descrição e clicar em confirmar (<i class="fas fa-check"></i>) ou pressionar Enter. Datas, responsável e status são opcionais e podem ser ajustados depois.',
+        attachTo: { element: '#btnOpenInlineEtapaAdd', on: 'bottom' },
+        buttons: [_skip, _prev, _next],
       },
       {
         pagePattern: '/project/',
         id: 'ce-done',
-        text: 'Etapa criada com sucesso! Ela aparece na lista abaixo. Você pode adicionar quantas etapas quiser.',
+        text: 'Pronto! Crie quantas etapas precisar. Você pode editar cada campo direto na tabela, reordenar arrastando, iniciar/concluir com os botões de status e acompanhar o progresso conforme avançam.',
         attachTo: { element: 'section.etapa-list', on: 'top' },
-        buttons: [_skip, _nextSection],
+        buttons: [_skip, _prev, _nextSection],
       },
     ],
   },

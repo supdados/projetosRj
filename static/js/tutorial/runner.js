@@ -178,8 +178,6 @@
           return { text: btn.text, action: function () { return this.back(); }, classes: btn.classes || '' };
         case 'complete':
           return { text: btn.text, action: function () { return this.complete(); }, classes: btn.classes || '' };
-        case 'save-etapa-and-next':
-          return { text: btn.text, action: function () { return _saveEtapaAndNext(this); }, classes: btn.classes || '' };
         case 'skip':
         case 'next-section':
           return { text: btn.text, action: function () { goToNextSection(section); }, classes: btn.classes || '' };
@@ -187,77 +185,6 @@
           return { text: btn.text, action: function () { return this.next(); }, classes: btn.classes || '' };
       }
     });
-  }
-
-  /**
-   * Dispara o submit do form inline de etapa e avança para ce-done assim que a
-   * nova etapa é renderizada. Observa o tbody (#etapas-tbody) especificamente
-   * para pegar a inserção feita por appendEtapaRow. Usa tour.show('ce-done')
-   * diretamente (não tour.next()) para evitar qualquer estado interno ambíguo
-   * do Shepherd quando o target do step corrente fica oculto.
-   */
-  function _saveEtapaAndNext(tour) {
-    var form = document.getElementById('etapaInlineAddForm');
-    var desc = document.getElementById('etapa_inline_descricao');
-    var tbody = document.getElementById('etapas-tbody');
-    var hasText = desc && desc.value.trim().length > 0;
-
-    // Input vazio: não avança — mantém o step, foca o input e sinaliza visualmente.
-    if (desc && !hasText) {
-      try { desc.focus(); } catch (e) {}
-      return;
-    }
-
-    // Form/tbody ausentes (página renderizada parcialmente): só aí pula para ce-done.
-    if (!form || !tbody) {
-      return tour.show('ce-done');
-    }
-
-    // Feedback visual: desabilita botão e troca label para "Salvando…"
-    var shepherdBtn = document.querySelector('.shepherd-element .shepherd-button:last-child');
-    if (shepherdBtn) {
-      shepherdBtn.disabled = true;
-      shepherdBtn.textContent = 'Salvando…';
-    }
-
-    var advanced = false;
-    var advance = function () {
-      if (advanced) return;
-      advanced = true;
-      try { observer.disconnect(); } catch (e) {}
-      // requestAnimationFrame para dar 1 frame à Shepherd/Popper antes de
-      // forçar a transição — evita race com mutações DOM em andamento
-      // (appendEtapaRow, closeInlineEtapaComposer).
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          try {
-            tour.show('ce-done');
-          } catch (e) {
-            tour.next();
-          }
-        });
-      });
-    };
-
-    var observer = new MutationObserver(function (mutations) {
-      // Só avança se houve insertion de <tr> real (ignora reorderings).
-      for (var i = 0; i < mutations.length; i++) {
-        var m = mutations[i];
-        if (m.addedNodes && m.addedNodes.length > 0) {
-          advance();
-          return;
-        }
-      }
-    });
-    observer.observe(tbody, { childList: true });
-
-    setTimeout(advance, 1500);
-
-    if (typeof form.requestSubmit === 'function') {
-      form.requestSubmit();
-    } else {
-      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-    }
   }
 
   /* ── init ──────────────────────────────────────────────────────── */
