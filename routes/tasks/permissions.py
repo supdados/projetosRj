@@ -4,15 +4,18 @@ from models import (
     TaskAccessAudit,
     db,
 )
+from routes.orgao_scope import get_user_orgao_subtree_ids, user_can_access_project
 from routes.tasks.constants import _preview_text
 
 
 def _can_view_task(user, task):
-    return (
-        user.is_admin
-        or (task.project_id is None and task.created_by_id == user.id)
-        or (task.project_id and task.project and task.project.area_responsavel in user.get_areas())
-    )
+    if user.is_admin:
+        return True
+    if task.project_id is None:
+        return task.created_by_id == user.id
+    if task.project is None or task.project.orgao_id is None:
+        return False
+    return task.project.orgao_id in get_user_orgao_subtree_ids(user)
 
 
 def _can_manage_task_restricted_actions(user, task):
@@ -70,6 +73,4 @@ def _task_permission_flags(task, user=None):
 def _can_access_project_in_tasks(project):
     if project is None:
         return True
-    if g.user.is_admin:
-        return True
-    return g.user.has_access_to_area(project.area_responsavel)
+    return user_can_access_project(g.user, project)

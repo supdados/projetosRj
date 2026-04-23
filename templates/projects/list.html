@@ -47,20 +47,20 @@
                         <input
                             type="text"
                             class="projects-v4-input"
-                            placeholder="Digite título, área ou indicador..."
+                            placeholder="Digite título, órgão ou indicador..."
                             id="searchProject"
                             name="search"
                             value="{{ search_query }}">
                     </div>
                 </div>
 
-                {% if can_filter_by_area %}
+                {% if ORGAOS_DISPONIVEIS %}
                 <div class="projects-v4-field">
-                    <label for="filterArea" class="projects-v4-label ds-type-label">Área</label>
-                    <select class="projects-v4-input" name="area" id="filterArea">
-                        <option value="">Todas as áreas</option>
-                        {% for area in areas %}
-                        <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
+                    <label for="filterOrgao" class="projects-v4-label ds-type-label">Órgão</label>
+                    <select class="projects-v4-input" name="orgao" id="filterOrgao">
+                        <option value="">Todos os órgãos</option>
+                        {% for orgao_id, orgao_sigla, orgao_nome in ORGAOS_DISPONIVEIS %}
+                        <option value="{{ orgao_id }}" {% if orgao_id == selected_orgao %}selected{% endif %}>{{ orgao_sigla }}{% if orgao_nome and orgao_nome != orgao_sigla %} — {{ orgao_nome }}{% endif %}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -222,7 +222,7 @@
                     <tr>
                         <th class="projects-v4-col-id text-center">ID</th>
                         <th class="projects-v4-col-title">Título</th>
-                        <th class="projects-v4-col-area">Área</th>
+                        <th class="projects-v4-col-area">Órgão</th>
                         <th class="projects-v4-col-delivery text-center">Tipo Entrega</th>
                         <th class="projects-v4-col-priority">Prioridade</th>
                         <th class="projects-v4-col-status">Status</th>
@@ -242,7 +242,7 @@
                                 {{ project.titulo }}
                             </a>
                         </td>
-                        <td>{{ project.area_responsavel if project.area_responsavel else '-' }}</td>
+                        <td>{{ project.orgao_ref.sigla if project.orgao_ref else '-' }}</td>
                         <td class="projects-v4-cell-delivery text-center">
                             {% if project.delivery_type %}
                             <span class="projects-v4-badge projects-v4-badge-delivery">{{ project.delivery_type }}</span>
@@ -267,7 +267,7 @@
                         <td class="projects-v4-date-cell">{{ project.data_inicio_projeto.strftime('%d/%m/%Y') if project.data_inicio_projeto else '-' }}</td>
                         <td class="projects-v4-date-cell">{{ project.data_fim_projeto.strftime('%d/%m/%Y') if project.data_fim_projeto else '-' }}</td>
                         <td class="projects-v4-actions-cell text-center">
-                            {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
+                            {% if is_admin_user %}
                             <div class="projects-v4-actions">
                                 <a href="{{ url_for('main.project_detail', project_id=project.id) }}?edit=true" class="projects-v4-action-btn is-edit" title="Editar projeto">
                                     <i class="fas fa-pen" aria-hidden="true"></i>
@@ -300,7 +300,7 @@
             <ul class="pagination projects-v4-pagination mb-0">
                 {% if page > 1 %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('main.list_projects', page=1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Primeira">
+                    <a class="page-link" href="{{ url_for('main.list_projects', page=1, search=search_query, prioridade=selected_priority, status=selected_status, orgao=selected_orgao, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Primeira">
                         <span aria-hidden="true">««</span>
                     </a>
                 </li>
@@ -308,7 +308,7 @@
 
                 {% if page > 1 %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('main.list_projects', page=page-1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Anterior">
+                    <a class="page-link" href="{{ url_for('main.list_projects', page=page-1, search=search_query, prioridade=selected_priority, status=selected_status, orgao=selected_orgao, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Anterior">
                         <span aria-hidden="true">«</span>
                     </a>
                 </li>
@@ -316,13 +316,13 @@
 
                 {% for p in range([1, page - 2]|max, [total_pages + 1, page + 3]|min) %}
                 <li class="page-item {% if p == page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for('main.list_projects', page=p, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}">{{ p }}</a>
+                    <a class="page-link" href="{{ url_for('main.list_projects', page=p, search=search_query, prioridade=selected_priority, status=selected_status, orgao=selected_orgao, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}">{{ p }}</a>
                 </li>
                 {% endfor %}
 
                 {% if page < total_pages %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('main.list_projects', page=page+1, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Próxima">
+                    <a class="page-link" href="{{ url_for('main.list_projects', page=page+1, search=search_query, prioridade=selected_priority, status=selected_status, orgao=selected_orgao, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Próxima">
                         <span aria-hidden="true">»</span>
                     </a>
                 </li>
@@ -330,7 +330,7 @@
 
                 {% if page < total_pages %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('main.list_projects', page=total_pages, search=search_query, prioridade=selected_priority, status=selected_status, area=selected_area, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Última">
+                    <a class="page-link" href="{{ url_for('main.list_projects', page=total_pages, search=search_query, prioridade=selected_priority, status=selected_status, orgao=selected_orgao, atraso=selected_atraso, special_project=selected_special_project, delivery_type=selected_delivery_type, abep_indicator=selected_abep_indicator, objetivo=selected_objetivo) }}" aria-label="Última">
                         <span aria-hidden="true">»»</span>
                     </a>
                 </li>

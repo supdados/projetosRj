@@ -1,6 +1,7 @@
 from html import unescape
 
 from models import Project, ProjectHistory, db
+from tests._orgao_helpers import ensure_orgao
 
 
 def _follow_redirect_and_get_html(client, response):
@@ -21,8 +22,8 @@ def test_edit_project_form_renders_full_html_contract_for_single_area_user(clien
         f'action="/project/{seed_data["project_id"]}/edit"',
         'id="project_titulo"',
         'value="Projeto Auditoria"',
-        'id="project_area_responsavel"',
-        'name="project_area_responsavel" value="Auditoria"',
+        'id="project_orgao_id"',
+        'name="project_orgao_id"',
         'id="project_orgao"',
         'value="Orgao A"',
         'id="project_special_project"',
@@ -44,15 +45,18 @@ def test_edit_project_form_renders_full_html_contract_for_single_area_user(clien
     for hook in required_hooks:
         assert hook in html
 
-    assert 'id="project_area_responsavel" name="project_area_responsavel" disabled' in html
+    assert 'name="project_orgao_id" required' in html
     assert '<option value="Vigente" selected>Vigente</option>' in html
 
 
 def test_delete_project_html_redirects_with_flash_and_removes_project(app, client_user):
     with app.app_context():
+        from models import OrgaoUnidade
+        auditoria = OrgaoUnidade.query.filter_by(sigla='Auditoria').first()
         project = Project(
             titulo='Projeto Para Excluir HTML',
-            area_responsavel='Auditoria',
+            orgao_id=ensure_orgao('Auditoria').id,
+            orgao_id=auditoria.id if auditoria else None,
             orgao='Orgao Delete',
             prioridade='baixa',
             status='Vigente',

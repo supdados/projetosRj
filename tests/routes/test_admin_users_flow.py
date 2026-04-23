@@ -1,7 +1,16 @@
-from models import User, db
+from models import OrgaoUnidade, User, db
+
+
+def _orgao_ids_for_siglas(app, *siglas):
+    with app.app_context():
+        return [
+            str(OrgaoUnidade.query.filter_by(sigla=sigla).first().id)
+            for sigla in siglas
+        ]
 
 
 def test_admin_can_create_user_with_multiple_areas_and_password_hash(app, client_admin):
+    orgao_ids = _orgao_ids_for_siglas(app, 'Auditoria', 'VPE')
     response = client_admin.post(
         '/admin/users/add',
         data={
@@ -9,7 +18,7 @@ def test_admin_can_create_user_with_multiple_areas_and_password_hash(app, client
             'name': 'Novo Multi Area',
             'password': 'senhaNova123',
             'orgao': 'Orgao Novo',
-            'areas_responsavel': ['Auditoria', 'VPE'],
+            'orgaos_responsavel': orgao_ids,
             'is_admin': 'on',
         },
         follow_redirects=False,
@@ -29,25 +38,25 @@ def test_admin_can_create_user_with_multiple_areas_and_password_hash(app, client
         assert user.check_password('senhaNova123') is True
 
 
-def test_admin_user_create_rejects_invalid_area(app, client_admin):
+def test_admin_user_create_rejects_invalid_orgao(app, client_admin):
     response = client_admin.post(
         '/admin/users/add',
         data={
-            'username': 'usuario_area_invalida',
-            'name': 'Usuario Area Invalida',
+            'username': 'usuario_orgao_invalido',
+            'name': 'Usuario Orgao Invalido',
             'password': 'senhaNova123',
             'orgao': 'Orgao Novo',
-            'areas_responsavel': ['Area Inexistente'],
+            'orgaos_responsavel': ['99999999'],
         },
         follow_redirects=False,
     )
 
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    assert 'Área(s) inválida(s): Area Inexistente.' in html
+    assert 'Órgão(s) inválido(s):' in html
 
     with app.app_context():
-        assert User.query.filter_by(username='usuario_area_invalida').first() is None
+        assert User.query.filter_by(username='usuario_orgao_invalido').first() is None
 
 
 def test_admin_can_edit_user_areas_password_and_profile(app, client_admin, seed_data):
@@ -56,7 +65,10 @@ def test_admin_can_edit_user_areas_password_and_profile(app, client_admin, seed_
         data={
             'name': 'Usuario Editado com Permissoes',
             'orgao': 'Orgao Atualizado',
-            'areas_responsavel': ['Auditoria', 'VPE'],
+            'orgaos_responsavel': [
+                str(seed_data['auditoria_orgao_id']),
+                str(seed_data['vpe_orgao_id']),
+            ],
             'is_admin': 'on',
             'password': 'senhaAtualizada123',
         },
@@ -82,7 +94,7 @@ def test_admin_edit_blocks_demoting_the_only_admin(app, client_admin, seed_data)
         data={
             'name': 'Administrador',
             'orgao': 'Orgao Teste',
-            'areas_responsavel': ['Auditoria'],
+            'orgaos_responsavel': [str(seed_data['auditoria_orgao_id'])],
         },
         follow_redirects=False,
     )
@@ -118,7 +130,7 @@ def test_admin_can_create_user_with_valid_cpf_govbr(app, client_admin):
             'name': 'Usuario CPF',
             'password': 'senhaNova123',
             'orgao': 'Orgao Novo',
-            'areas_responsavel': ['Auditoria'],
+            'orgaos_responsavel': _orgao_ids_for_siglas(app, 'Auditoria'),
             'cpf_govbr': '123.456.789-01',
         },
         follow_redirects=False,
@@ -142,7 +154,7 @@ def test_admin_user_create_rejects_invalid_cpf_govbr(app, client_admin):
             'name': 'Usuario CPF Invalido',
             'password': 'senhaNova123',
             'orgao': 'Orgao Novo',
-            'areas_responsavel': ['Auditoria'],
+            'orgaos_responsavel': _orgao_ids_for_siglas(app, 'Auditoria'),
             'cpf_govbr': '12345',
         },
         follow_redirects=False,
@@ -176,7 +188,7 @@ def test_admin_user_create_rejects_duplicate_cpf_govbr(app, client_admin):
             'name': 'Usuario CPF Duplicado',
             'password': 'senhaNova123',
             'orgao': 'Orgao Novo',
-            'areas_responsavel': ['Auditoria'],
+            'orgaos_responsavel': _orgao_ids_for_siglas(app, 'Auditoria'),
             'cpf_govbr': '123.456.789-01',
         },
         follow_redirects=False,
@@ -218,7 +230,7 @@ def test_admin_edit_linked_user_preserves_cpf_and_sub_when_fields_are_hidden(app
         data={
             'name': 'Usuario Editado Sem Mexer Vínculo GovBR',
             'orgao': 'Orgao Atualizado',
-            'areas_responsavel': ['Auditoria'],
+            'orgaos_responsavel': _orgao_ids_for_siglas(app, 'Auditoria'),
         },
         follow_redirects=False,
     )

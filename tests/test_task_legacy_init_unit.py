@@ -9,7 +9,8 @@ Cobre:
     ignoram escopo em queries com where e contam corretamente em queries planas.
 """
 
-from models import Project, Task, TaskItem, User, UserArea, db
+from models import Project, Task, TaskItem, User, db
+from tests._orgao_helpers import ensure_orgao, link_user_to_orgao
 
 
 def _user(username='tk_user'):
@@ -17,14 +18,15 @@ def _user(username='tk_user'):
     user.set_password('senha123')
     db.session.add(user)
     db.session.flush()
-    db.session.add(UserArea(user_id=user.id, area='Auditoria'))
+    link_user_to_orgao(user.id, 'Auditoria')
     return user
 
 
 def _project(titulo='Projeto TK'):
+    orgao = ensure_orgao('Auditoria')
     project = Project(
         titulo=titulo,
-        area_responsavel='Auditoria',
+        orgao_id=orgao.id,
         orgao='Orgao A',
         prioridade='media',
         status='Vigente',

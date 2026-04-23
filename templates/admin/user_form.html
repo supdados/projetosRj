@@ -117,22 +117,22 @@
 
                 <div class="row g-3">
                     <div class="col-12">
-                        <label class="account-label mb-1">Áreas Responsáveis</label>
-                        <div class="account-help-text mb-2">Selecione as áreas que o usuário pode acessar. Administradores sem áreas selecionadas visualizam todas.</div>
+                        <label class="account-label mb-1">Órgãos Responsáveis</label>
+                        <div class="account-help-text mb-2">Selecione os órgãos que o usuário pode acessar (herança descendente: órgão-pai dá acesso aos filhos). Administradores sem órgãos selecionados visualizam todos.</div>
                         <div class="row g-2">
-                            {% for area_choice in areas_responsaveis_choices %}
+                            {% for orgao_id, orgao_sigla, orgao_nome, orgao_depth in orgaos_with_depth|default([]) %}
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="account-area-item">
+                                <div class="account-area-item" style="padding-left: {{ (orgao_depth - 1) * 16 }}px;">
                                     <input
                                         class="account-area-checkbox"
                                         type="checkbox"
-                                        name="areas_responsavel"
-                                        value="{{ area_choice }}"
-                                        id="area_{{ loop.index }}"
-                                        {% if area_choice|lower in (user_area_keys|default([])) or area_choice in user_areas %}checked{% endif %}
+                                        name="orgaos_responsavel"
+                                        value="{{ orgao_id }}"
+                                        id="orgao_{{ loop.index }}"
+                                        {% if orgao_id in (user_orgao_ids|default([])) %}checked{% endif %}
                                     >
-                                    <label class="account-area-label" for="area_{{ loop.index }}">
-                                        {{ area_choice }}
+                                    <label class="account-area-label" for="orgao_{{ loop.index }}">
+                                        {{ orgao_sigla }}{% if orgao_nome and orgao_nome != orgao_sigla %} — {{ orgao_nome }}{% endif %}
                                     </label>
                                 </div>
                             </div>

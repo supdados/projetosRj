@@ -12,6 +12,7 @@ from services.project_meetings import (
     meeting_time_display,
     meeting_time_summary,
 )
+from routes.orgao_scope import user_can_access_project
 
 
 def _is_business_day(date_value):
@@ -142,4 +143,4 @@ def _serialize_etapa_payload(etapa, *, connection=None):
 
 
 def _current_user_can_edit_project(project):
-    return g.user.is_admin or g.user.has_access_to_area(project.area_responsavel)
+    return user_can_access_project(g.user, project)

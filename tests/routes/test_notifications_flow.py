@@ -207,7 +207,7 @@ def test_legacy_project_without_owner_notifies_area_admin(app):
 
         legacy_project = Project(
             titulo='Projeto Legado Sem Dono',
-            area_responsavel='CHEGAB',
+            orgao_id=ensure_orgao('CHEGAB').id,
             orgao='Orgao Legado',
             prioridade='media',
             status='Vigente',

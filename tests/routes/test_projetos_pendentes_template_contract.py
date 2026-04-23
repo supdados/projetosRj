@@ -1,4 +1,5 @@
-from models import User, UserArea, db
+from models import User, db
+from tests._orgao_helpers import link_user_to_orgao
 
 
 def test_projetos_pendentes_template_uses_short_done_toast(client_user):
@@ -11,23 +12,19 @@ def test_projetos_pendentes_template_uses_short_done_toast(client_user):
     assert 'removida da triagem' not in html
 
 
-def test_projetos_pendentes_shows_area_filter_for_non_admin_with_multiple_areas(app, client, seed_data):
+def test_projetos_pendentes_shows_orgao_filter_for_non_admin_with_multiple_orgaos(app, client, seed_data):
     with app.app_context():
         user = User(
-            username='user_multi_area_pending',
-            name='Usuario Multi Area Pending',
+            username='user_multi_orgao_pending',
+            name='Usuario Multi Orgao Pending',
             orgao='Orgao Multi',
             is_admin=False,
         )
         user.set_password('senha123')
         db.session.add(user)
         db.session.flush()
-        db.session.add_all(
-            [
-                UserArea(user_id=user.id, area='Auditoria'),
-                UserArea(user_id=user.id, area='VPD'),
-            ]
-        )
+        link_user_to_orgao(user.id, 'Auditoria')
+        link_user_to_orgao(user.id, 'VPD')
         db.session.commit()
         user_id = user.id
 
@@ -38,9 +35,7 @@ def test_projetos_pendentes_shows_area_filter_for_non_admin_with_multiple_areas(
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'id="areaFilter"' in html
-    assert '<option value="Auditoria"' in html
-    assert '<option value="VPD"' in html
+    assert 'id="orgaoFilter"' in html
     assert 'Projeto Auditoria' in html
     assert 'Projeto VPD' in html
 

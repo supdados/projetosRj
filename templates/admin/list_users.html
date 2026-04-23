@@ -38,7 +38,7 @@
                         <th>Nome Completo</th>
                         <th>Login</th>
                         <th>Órgão</th>
-                        <th>Áreas Responsáveis</th>
+                        <th>Órgãos Vinculados</th>
                         <th>CPF gov.br</th>
                         <th class="text-center">Perfil</th>
                         <th class="text-center">Ações</th>
@@ -46,7 +46,7 @@
                 </thead>
                 <tbody>
                     {% for user_item in users.items %}
-                    {% set areas = user_item.get_areas() %}
+                    {% set user_orgao_siglas = user_item.orgaos | map(attribute='orgao') | select | map(attribute='sigla') | list %}
                     <tr>
                         <td>
                             <span class="admin-users-id-chip">#{{ user_item.id }}</span>
@@ -66,14 +66,14 @@
                             <span class="admin-users-orgao">{{ user_item.orgao if user_item.orgao else 'Não informado' }}</span>
                         </td>
                         <td>
-                            {% if areas %}
+                            {% if user_orgao_siglas %}
                             <div class="admin-users-areas-wrap">
-                                {% for area in areas %}
-                                <span class="admin-users-area-chip">{{ area }}</span>
+                                {% for sigla in user_orgao_siglas %}
+                                <span class="admin-users-area-chip">{{ sigla }}</span>
                                 {% endfor %}
                             </div>
                             {% else %}
-                            <span class="admin-users-muted">Sem área definida</span>
+                            <span class="admin-users-muted">Sem órgão definido</span>
                             {% endif %}
                         </td>
                         <td>

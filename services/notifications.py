@@ -9,7 +9,7 @@ from models import (
     Task,
     TaskComment,
     User,
-    UserArea,
+    UserOrgao,
     UserNotification,
     db,
 )
@@ -87,21 +87,29 @@ def create_user_notifications(recipient_user_ids, actor_user_id, event_type, tit
     return len(notifications)
 
 
-def _resolve_admin_ids_for_area(area):
+def _resolve_admin_ids_for_orgao(orgao_id):
+    """Admins com escopo ao orgao (via UserOrgao + ancestrais). Fallback: todos admins."""
     admin_ids = {
         user_id
         for (user_id,) in User.query.with_entities(User.id).filter(User.is_admin.is_(True)).all()
     }
     if not admin_ids:
         return set()
-    if not area:
+    if not orgao_id:
         return admin_ids
 
-    area_user_ids = {
+    from routes.orgao_tree import get_orgao_ancestors
+    scope_ids = {orgao_id, *get_orgao_ancestors(orgao_id)}
+    orgao_user_ids = {
         user_id
-        for (user_id,) in UserArea.query.with_entities(UserArea.user_id).filter(UserArea.area == area).all()
+        for (user_id,) in (
+            UserOrgao.query
+            .with_entities(UserOrgao.user_id)
+            .filter(UserOrgao.orgao_id.in_(scope_ids))
+            .all()
+        )
     }
-    scoped_admin_ids = admin_ids.intersection(area_user_ids)
+    scoped_admin_ids = admin_ids.intersection(orgao_user_ids)
     if scoped_admin_ids:
         return scoped_admin_ids
     return admin_ids
@@ -134,10 +142,10 @@ def resolve_project_owner_user_ids(project):
             .count()
         )
         if total_history_count == 1 and first_history_entry.action_type not in {'create', 'seed_create'}:
-            return _resolve_admin_ids_for_area(project.area_responsavel)
+            return _resolve_admin_ids_for_orgao(project.orgao_id)
         return {first_history_entry.user_id}
 
-    return _resolve_admin_ids_for_area(project.area_responsavel)
+    return _resolve_admin_ids_for_orgao(project.orgao_id)
 
 
 def _get_task_responsavel_user_ids(task_id):

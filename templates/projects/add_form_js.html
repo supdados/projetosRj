@@ -67,7 +67,7 @@
 
         function getAreaFieldForValidation() {
             if (!addProjectForm) return null;
-            const areaFields = Array.from(addProjectForm.querySelectorAll('[name="project_area_responsavel"]'));
+            const areaFields = Array.from(addProjectForm.querySelectorAll('[name="project_orgao_id"]'));
             if (!areaFields.length) return null;
             return areaFields.find(field => !field.disabled) || areaFields[0];
         }
@@ -631,7 +631,7 @@
         }
 
         if (addProjectForm) {
-            const areaFields = Array.from(addProjectForm.querySelectorAll('[name="project_area_responsavel"]'));
+            const areaFields = Array.from(addProjectForm.querySelectorAll('[name="project_orgao_id"]'));
             areaFields.forEach(field => {
                 const eventName = field.tagName === 'SELECT' ? 'change' : 'input';
                 field.addEventListener(eventName, updateSubmitState);

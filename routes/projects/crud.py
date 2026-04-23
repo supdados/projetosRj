@@ -1,19 +1,38 @@
 from flask import flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from catalogs.abep import normalize_abep_indicator
-from models import Etapa, IndicadorProjeto, Project, db
+from models import Etapa, IndicadorProjeto, OrgaoUnidade, Project, db
 from catalogs.objectives import normalize_goal_selection
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
+from routes.orgao_scope import get_user_orgao_subtree_ids, user_can_access_project
 from routes.shared import (
-    get_area_catalog_choices,
-    is_area_in_catalog,
-    resolve_catalog_area_name,
     get_or_404,
     get_goal_catalog_context,
     log_project_action,
 )
+
+
+def _resolve_orgao_from_form(form_value):
+    """Parseia project_orgao_id do form e valida contra o subtree do usuario.
+
+    Retorna ``(orgao_unidade, erro_msg)`` - um deles sempre None.
+    Usuario admin pode escolher qualquer orgao ativo; nao-admin so dentro do seu subtree.
+    """
+    if not form_value:
+        return None, 'Você deve selecionar um órgão para o projeto.'
+    try:
+        orgao_id = int(form_value)
+    except (TypeError, ValueError):
+        return None, 'Órgão inválido.'
+    orgao = db.session.get(OrgaoUnidade, orgao_id)
+    if orgao is None:
+        return None, 'Órgão não encontrado.'
+    if not g.user.is_admin:
+        if orgao_id not in get_user_orgao_subtree_ids(g.user):
+            return None, 'Você não tem permissão para criar/editar projetos neste órgão.'
+    return orgao, None
 @main_bp.route('/add_project', methods=['POST'])
 @login_required
 def add_project():
@@ -24,22 +43,11 @@ def add_project():
             # Redirecionar para o painel pode ser uma boa opção de fallback
             return redirect(request.referrer or url_for('main.dashboard'))
 
-        area_responsavel = request.form.get('project_area_responsavel')
-        if area_responsavel and not is_area_in_catalog(area_responsavel):
-            flash('A área selecionada é inválida ou não está mais disponível.', 'danger')
+        orgao_unidade, orgao_error = _resolve_orgao_from_form(request.form.get('project_orgao_id'))
+        if orgao_error:
+            flash(orgao_error, 'danger')
             return redirect(request.referrer or url_for('main.dashboard'))
-        if area_responsavel:
-            area_responsavel = resolve_catalog_area_name(area_responsavel)
-        
-        # Verificação de permissão: usuário pode criar projeto apenas em suas áreas
-        if not g.user.is_admin:
-            if not area_responsavel:
-                flash('Você deve selecionar uma área para o projeto.', 'danger')
-                return redirect(request.referrer or url_for('main.dashboard'))
-            if not g.user.has_access_to_area(area_responsavel):
-                flash('Você não tem permissão para criar projetos nesta área.', 'danger')
-                return redirect(request.referrer or url_for('main.dashboard'))
-        
+
         orgao = request.form.get('project_orgao')
         prioridade = request.form.get('project_prioridade')
         objetivo_id_raw = request.form.get('project_objetivo')
@@ -70,7 +78,7 @@ def add_project():
 
         new_project = Project(
             titulo=titulo,
-            area_responsavel=area_responsavel,
+            orgao_id=orgao_unidade.id,
             orgao=orgao,
             prioridade=prioridade,
             objetivo_id=objetivo_id,
@@ -159,7 +167,7 @@ def add_project():
 @login_required
 def edit_project(project_id):
     project_to_edit = get_or_404(Project, project_id)
-    if not g.user.is_admin and not g.user.has_access_to_area(project_to_edit.area_responsavel):
+    if not user_can_access_project(g.user, project_to_edit):
         flash('Você não tem permissão para editar este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
 
@@ -184,19 +192,15 @@ def edit_project(project_id):
             changes.append(f'órgão de "{old_orgao or "vazio"}" para "{new_orgao or "vazio"}"')
         project_to_edit.orgao = new_orgao
 
-        # Admin ou usuário com múltiplas áreas pode alterar área
-        new_area = request.form.get('project_area_responsavel')
-        if new_area:
-            if not is_area_in_catalog(new_area):
-                flash('A área selecionada é inválida ou não está mais disponível.', 'warning')
-                return redirect(url_for('main.edit_project', project_id=project_id))
-            new_area = resolve_catalog_area_name(new_area)
-            old_area = project_to_edit.area_responsavel
-            user_areas = g.user.get_areas()
-            if g.user.is_admin or (len(user_areas) > 1 and new_area in user_areas):
-                if old_area != new_area:
-                    changes.append(f'área responsável de "{old_area}" para "{new_area}"')
-                project_to_edit.area_responsavel = new_area
+        orgao_unidade, orgao_error = _resolve_orgao_from_form(request.form.get('project_orgao_id'))
+        if orgao_error:
+            flash(orgao_error, 'warning')
+            return redirect(url_for('main.edit_project', project_id=project_id))
+        old_orgao_id = project_to_edit.orgao_id
+        if old_orgao_id != orgao_unidade.id:
+            old_sigla = project_to_edit.orgao_ref.sigla if project_to_edit.orgao_ref else 'vazio'
+            changes.append(f'órgão responsável de "{old_sigla}" para "{orgao_unidade.sigla}"')
+        project_to_edit.orgao_id = orgao_unidade.id
 
         old_prioridade = project_to_edit.prioridade
         new_prioridade = request.form.get('project_prioridade')
@@ -262,9 +266,8 @@ def edit_project(project_id):
         return redirect(url_for('main.project_detail', project_id=project_id))
     
     return render_template(
-        'projects/form.html', 
-        project=project_to_edit, 
-        areas_responsaveis=get_area_catalog_choices(),
+        'projects/form.html',
+        project=project_to_edit,
         objetivos=objetivos,
         resultados_por_objetivo=resultados_por_objetivo,
         indicadores_por_resultado=indicadores_por_resultado,
@@ -280,7 +283,7 @@ def delete_project(project_id):
 
     # Permissão para excluir: Admin pode excluir qualquer um.
     # Usuário não-admin só pode excluir projetos de suas áreas.
-    if not g.user.is_admin and not g.user.has_access_to_area(project_to_delete.area_responsavel):
+    if not user_can_access_project(g.user, project_to_delete):
         if is_ajax:
             from flask import jsonify
             return jsonify({'ok': False, 'message': 'Você não tem permissão para excluir este projeto.'}), 403
@@ -323,7 +326,7 @@ def concluir_project(project_id):
         return redirect(redirect_url)
     
     # Verificar permissão
-    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+    if not user_can_access_project(g.user, project):
         return respond_error('Você não tem permissão para concluir este projeto.', category='danger', status_code=403)
     
     # Verificar se o projeto está Vigente

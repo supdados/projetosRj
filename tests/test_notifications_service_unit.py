@@ -1,10 +1,11 @@
-from models import Project, ProjectHistory, Task, TaskComment, User, UserArea, UserNotification, db
+from models import Project, ProjectHistory, Task, TaskComment, User, UserNotification, db
 from services.notifications import (
-    _resolve_admin_ids_for_area,
+    _resolve_admin_ids_for_orgao,
     create_user_notifications,
     resolve_project_owner_user_ids,
     resolve_task_collaborator_user_ids,
 )
+from tests._orgao_helpers import ensure_orgao, link_user_to_orgao
 
 
 def _create_user(username, name, *, is_admin=False, areas=None):
@@ -19,15 +20,16 @@ def _create_user(username, name, *, is_admin=False, areas=None):
     db.session.flush()
 
     for area in areas or []:
-        db.session.add(UserArea(user_id=user.id, area=area))
+        link_user_to_orgao(user.id, area)
 
     return user
 
 
 def _create_project(title='Projeto Notificacoes', area='Auditoria'):
+    orgao = ensure_orgao(area)
     project = Project(
         titulo=title,
-        area_responsavel=area,
+        orgao_id=orgao.id,
         orgao='Orgao Teste',
         prioridade='media',
         status='Vigente',
@@ -68,7 +70,7 @@ def test_create_user_notifications_deduplicates_discards_actor_and_ignores_unkno
         assert all(notification.target_url == '/alvo' for notification in notifications)
 
 
-def test_resolve_admin_ids_for_area_scopes_when_possible_and_falls_back_to_all_admins(app):
+def test_resolve_admin_ids_for_orgao_scopes_when_possible_and_falls_back_to_all_admins(app):
     with app.app_context():
         auditoria_admin = _create_user(
             'admin_auditoria',
@@ -85,9 +87,11 @@ def test_resolve_admin_ids_for_area_scopes_when_possible_and_falls_back_to_all_a
         _create_user('usuario_comum', 'Usuario Comum', areas=['Auditoria'])
         db.session.commit()
 
-        assert _resolve_admin_ids_for_area('Auditoria') == {auditoria_admin.id}
-        assert _resolve_admin_ids_for_area('CHEGAB') == {auditoria_admin.id, vpd_admin.id}
-        assert _resolve_admin_ids_for_area(None) == {auditoria_admin.id, vpd_admin.id}
+        auditoria_id = ensure_orgao('Auditoria').id
+        chegab_id = ensure_orgao('CHEGAB').id
+        assert _resolve_admin_ids_for_orgao(auditoria_id) == {auditoria_admin.id}
+        assert _resolve_admin_ids_for_orgao(chegab_id) == {auditoria_admin.id, vpd_admin.id}
+        assert _resolve_admin_ids_for_orgao(None) == {auditoria_admin.id, vpd_admin.id}
 
 
 def test_resolve_project_owner_prefers_explicit_create_history_entry(app):

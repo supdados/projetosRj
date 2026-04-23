@@ -36,11 +36,9 @@ from routes.tasks.queries import (  # noqa: F401
     _merge_task_filter_values,
     _ordered_task_filter_values,
     _read_task_filter_values,
-    _resolve_task_hub_area_scope,
     _task_active_target_url,
 )
 from routes.tasks.hub import (  # noqa: F401
-    _build_task_hub_area_options,
     _build_task_hub_project_options,
     _group_hub_tasks_by_project,
     _render_task_hub,
@@ -49,7 +47,7 @@ from routes.tasks.creation import (  # noqa: F401
     _create_task_common,
     _extract_creation_payload,
     _format_invalid_responsavel_message,
-    _get_assignable_users_for_area,
+    _get_assignable_users_for_orgao,
     _get_assignable_users_for_project,
     _get_safe_next_url,
     _redirect_back_or,

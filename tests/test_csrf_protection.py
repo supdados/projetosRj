@@ -22,7 +22,6 @@ from sqlalchemy.pool import NullPool
 from app import create_app
 from catalogs.objectives import sync_goal_catalog_to_db
 from models import db
-from routes.shared import ensure_area_catalog_seeded
 
 
 # ── Fixture com CSRF ativo ────────────────────────────────────────────────────
@@ -45,7 +44,6 @@ def csrf_app(tmp_path_factory):
     with flask_app.app_context():
         db.drop_all()
         db.create_all()
-        ensure_area_catalog_seeded()
         sync_goal_catalog_to_db(commit=True)
     yield flask_app
     with flask_app.app_context():

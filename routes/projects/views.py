@@ -13,10 +13,14 @@ from services.project_meetings import meeting_time_display, meeting_time_summary
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
+from routes.orgao_scope import (
+    expand_orgao_filter_ids,
+    get_user_orgao_subtree_ids,
+    redirect_to_current_route_without_orgao,
+    sanitize_orgao_filter_for_current_user,
+    user_can_access_project,
+)
 from routes.shared import (
-    get_area_catalog_choices,
-    sanitize_area_filter_for_current_user,
-    redirect_to_current_route_without_area,
     get_or_404,
     get_goal_catalog_context,
     parse_abep_indicator_filter,
@@ -27,14 +31,14 @@ from routes.shared import (
 def list_projects():
     selected_priority = request.args.get('prioridade')
     selected_status = request.args.get('status')
-    selected_area_filter, invalid_area_filter = sanitize_area_filter_for_current_user(request.args.get('area'))
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(request.args.get('orgao'))
     selected_atraso = request.args.get('atraso')
     selected_special_project = request.args.get('special_project')  # Novo filtro
     selected_delivery_type = request.args.get('delivery_type')  # Novo filtro
     selected_abep_indicator = request.args.get('abep_indicator')  # Novo filtro
     selected_objetivo = request.args.get('objetivo')  # Novo filtro
     search_query = request.args.get('search', '').strip()  # Busca
-    
+
     # Paginação
     page = request.args.get('page', 1, type=int)
     per_page = 40
@@ -45,25 +49,22 @@ def list_projects():
     if selected_status is None:
         selected_status = 'Vigente'
 
-    if invalid_area_filter:
-        return redirect_to_current_route_without_area()
+    if invalid_orgao_filter:
+        return redirect_to_current_route_without_orgao()
 
     query = Project.query
-    user_areas = sorted(g.user.get_areas()) if not g.user.is_admin else []
-    can_filter_by_area = g.user.is_admin or len(user_areas) > 1
 
-    # Filtro de área baseado no perfil do usuário E no filtro do formulário
     if not g.user.is_admin:
-        if user_areas:
-            # Usuário não-admin com áreas: filtra pelas suas áreas
-            query = query.filter(Project.area_responsavel.in_(user_areas))
-            # Se o usuário aplicou um filtro de área e essa área está nas suas áreas, aplica o filtro
-            if selected_area_filter and selected_area_filter in user_areas:
-                query = query.filter(Project.area_responsavel == selected_area_filter)
-            # Se não, mostra todas as suas áreas (já filtrado acima)
-    elif selected_area_filter and selected_area_filter != "": # Admin pode filtrar por qualquer área
-        query = query.filter(Project.area_responsavel == selected_area_filter)
-    # Se for admin e não houver filtro de área, mostra todas as áreas.
+        user_orgao_subtree_ids = get_user_orgao_subtree_ids(g.user)
+        if user_orgao_subtree_ids:
+            query = query.filter(Project.orgao_id.in_(user_orgao_subtree_ids))
+        else:
+            query = query.filter(Project.id == -1)
+
+    if selected_orgao_id is not None:
+        subtree_ids = expand_orgao_filter_ids(selected_orgao_id)
+        if subtree_ids:
+            query = query.filter(Project.orgao_id.in_(subtree_ids))
 
     if selected_priority and selected_priority != "":
         query = query.filter(Project.prioridade == selected_priority)
@@ -82,7 +83,7 @@ def list_projects():
     if selected_objetivo and objetivo_filter_id is not None:
         query = query.filter(Project.objetivo_id == objetivo_filter_id)
     
-    # Filtro de busca (título, área, órgão, indicador ABEP)
+    # Filtro de busca (título, órgão, indicador ABEP)
     if search_query:
         search_pattern = f"%{search_query}%"
         try:
@@ -91,7 +92,6 @@ def list_projects():
             search_id = None
         text_filters = db.or_(
             Project.titulo.ilike(search_pattern),
-            Project.area_responsavel.ilike(search_pattern),
             Project.orgao.ilike(search_pattern),
             Project.abep_indicator.ilike(search_pattern),
         )
@@ -133,17 +133,6 @@ def list_projects():
     # Paginar os projetos
     projects_paginated = all_projects_filtered[start_idx:end_idx]
     
-    # Opções para os dropdowns de filtro
-    area_catalog_choices = get_area_catalog_choices()
-
-    # Áreas: admin vê o catálogo completo; usuário com múltiplas áreas vê apenas as áreas dele.
-    if g.user.is_admin:
-        areas_options_for_dropdown = area_catalog_choices
-    elif can_filter_by_area:
-        areas_options_for_dropdown = user_areas
-    else:
-        areas_options_for_dropdown = []
-
     priorities_options = sorted(list(set(p.prioridade for p in Project.query.all() if p.prioridade)))
     statuses_options = sorted(list(set(p.status for p in Project.query.all() if p.status)))
     atrasos_options = [("no_prazo", "No prazo"), ("atrasado", "Atrasado")]
@@ -170,27 +159,24 @@ def list_projects():
         has_active_filters = True
     if has_advanced_filters_active:
         has_active_filters = True
-    # Área conta como filtro ativo apenas quando o usuário pode escolher entre múltiplas áreas.
-    if can_filter_by_area and selected_area_filter:
+    if selected_orgao_id:
         has_active_filters = True
 
     return render_template(
-        'projects/list.html', 
+        'projects/list.html',
         projects=projects_paginated,
         page=page,
         total_pages=total_pages,
         total_projects=total_projects,
         search_query=search_query,
-        can_filter_by_area=can_filter_by_area,
         selected_priority=selected_priority,
         selected_status=selected_status,
-        selected_area=selected_area_filter, 
         selected_atraso=selected_atraso,
         selected_special_project=selected_special_project,
         selected_delivery_type=selected_delivery_type,
         selected_abep_indicator=selected_abep_indicator,
         selected_objetivo=selected_objetivo,
-        areas=areas_options_for_dropdown,
+        selected_orgao=selected_orgao_id,
         priorities=priorities_options,
         statuses=statuses_options,
         atrasos_options=atrasos_options,
@@ -199,12 +185,11 @@ def list_projects():
         delivery_types_options=delivery_types_options,
         has_active_filters=has_active_filters,
         has_advanced_filters_active=has_advanced_filters_active,
-        AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices
     )
 @main_bp.route('/projetos_pendentes')
 @login_required
 def list_projetos_pendentes():
-    selected_area_filter, invalid_area_filter = sanitize_area_filter_for_current_user(request.args.get('area'))
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(request.args.get('orgao'))
     filtro_periodo = (request.args.get('periodo') or 'atrasados').strip()
     selected_responsavel = (request.args.get('responsavel') or '').strip()
     pending_page = request.args.get('page', 1, type=int)
@@ -214,8 +199,8 @@ def list_projetos_pendentes():
     if filtro_periodo not in valid_periods:
         filtro_periodo = 'atrasados'
 
-    if invalid_area_filter:
-        return redirect_to_current_route_without_area()
+    if invalid_orgao_filter:
+        return redirect_to_current_route_without_orgao()
 
     data_atual = datetime.date.today()
     data_7_dias = data_atual + datetime.timedelta(days=7)
@@ -248,29 +233,21 @@ def list_projetos_pendentes():
     visible_buckets = visible_buckets_by_period[filtro_periodo]
 
     query_projetos_base = Project.query.filter(Project.status == 'Vigente')
-    user_areas = sorted(g.user.get_areas()) if not g.user.is_admin else []
-    can_filter_by_area = g.user.is_admin or len(user_areas) > 1
 
-    if g.user.is_admin:
-        if selected_area_filter:
-            query_projetos_base = query_projetos_base.filter(Project.area_responsavel == selected_area_filter)
-    else:
-        if user_areas:
-            query_projetos_base = query_projetos_base.filter(Project.area_responsavel.in_(user_areas))
-            if selected_area_filter and selected_area_filter in user_areas:
-                query_projetos_base = query_projetos_base.filter(Project.area_responsavel == selected_area_filter)
+    if not g.user.is_admin:
+        user_orgao_subtree_ids = get_user_orgao_subtree_ids(g.user)
+        if user_orgao_subtree_ids:
+            query_projetos_base = query_projetos_base.filter(Project.orgao_id.in_(user_orgao_subtree_ids))
         else:
             query_projetos_base = query_projetos_base.filter(Project.id == -1)
 
+    if selected_orgao_id is not None:
+        orgao_subtree = expand_orgao_filter_ids(selected_orgao_id)
+        if orgao_subtree:
+            query_projetos_base = query_projetos_base.filter(Project.orgao_id.in_(orgao_subtree))
+
     projetos_vigentes = query_projetos_base.order_by(Project.titulo.asc()).all()
     project_ids = [p.id for p in projetos_vigentes]
-    area_catalog_choices = get_area_catalog_choices()
-
-    areas_options_for_dropdown = []
-    if g.user.is_admin:
-        areas_options_for_dropdown = area_catalog_choices
-    elif can_filter_by_area:
-        areas_options_for_dropdown = user_areas
 
     objetivos, _, _ = get_goal_catalog_context()
 
@@ -279,10 +256,7 @@ def list_projetos_pendentes():
             'projects/pendentes.html',
             projetos_com_etapas=[],
             objetivos=objetivos,
-            AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
-            can_filter_by_area=can_filter_by_area,
-            areas_options=areas_options_for_dropdown,
-            selected_area=selected_area_filter,
+            selected_orgao=selected_orgao_id,
             filtro_periodo=filtro_periodo,
             selected_responsavel=selected_responsavel,
             responsaveis_options=[],
@@ -459,10 +433,7 @@ def list_projetos_pendentes():
         'projects/pendentes.html',
         projetos_com_etapas=projetos_pendentes_paginated,
         objetivos=objetivos,
-        AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
-        can_filter_by_area=can_filter_by_area,
-        areas_options=areas_options_for_dropdown,
-        selected_area=selected_area_filter,
+        selected_orgao=selected_orgao_id,
         filtro_periodo=filtro_periodo,
         selected_responsavel=selected_responsavel,
         responsaveis_options=responsaveis_options,
@@ -489,7 +460,7 @@ def list_projetos_pendentes():
 @login_required
 def project_detail(project_id):
     project = get_or_404(Project, project_id)
-    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+    if not user_can_access_project(g.user, project):
         flash('Você não tem permissão para visualizar este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
 
@@ -534,7 +505,7 @@ def project_history(project_id):
     project = get_or_404(Project, project_id)
     
     # Verificar permissão
-    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+    if not user_can_access_project(g.user, project):
         flash('Você não tem permissão para visualizar este projeto.', 'danger')
         return redirect(url_for('main.list_projects'))
     

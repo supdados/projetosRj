@@ -217,6 +217,18 @@
             </div>
             {% endif %}
 
+            {% if ORGAOS_DISPONIVEIS and not project_locked %}
+            <div class="tasks-field">
+                <label for="filter_orgao" class="tasks-label ds-type-label">Órgão</label>
+                <select id="filter_orgao" name="orgao" class="form-control tasks-input">
+                    <option value="">Todos os órgãos</option>
+                    {% for orgao_id, orgao_sigla, orgao_nome in ORGAOS_DISPONIVEIS %}
+                    <option value="{{ orgao_id }}" {% if orgao_id == selected_orgao %}selected{% endif %}>{{ orgao_sigla }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
             <div class="tasks-field">
                 <label for="filter_prioridade" class="tasks-label ds-type-label">Prioridade</label>
                 <select id="filter_prioridade" name="prioridade" class="form-control tasks-input">

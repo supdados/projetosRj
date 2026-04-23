@@ -1,35 +1,41 @@
 from flask import flash, g, redirect, render_template, request, url_for
 
-from models import User, UserArea, db
+from models import OrgaoUnidade, User, db
 from services.govbr_oidc import normalize_cpf
 
 from .blueprint import main_bp
 from .decorators import admin_required, login_required
-from .shared import get_area_catalog_choices, get_or_404, normalize_area_name
+from .orgao_tree import compute_orgao_depth
+from .shared import get_or_404
 
 
-def _parse_selected_areas(raw_areas):
-    area_catalog_choices = get_area_catalog_choices()
-    catalog_map = {name.casefold(): name for name in area_catalog_choices}
-    selected_areas = []
-    invalid_areas = []
+def _list_orgaos_with_depth():
+    """[(orgao_id, sigla, nome, depth)] ordenado por (depth, sigla) para UI de arvore."""
+    orgaos = OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True)).all()
+    rows = [(o.id, o.sigla, o.nome, compute_orgao_depth(o)) for o in orgaos]
+    rows.sort(key=lambda row: (row[3], row[1].lower()))
+    return rows
+
+
+def _parse_selected_orgaos(raw_ids):
+    selected_ids = []
+    invalid = []
     seen = set()
-
-    for raw_area in raw_areas:
-        normalized = normalize_area_name(raw_area)
-        if not normalized:
+    for raw in raw_ids:
+        try:
+            orgao_id = int(raw)
+        except (TypeError, ValueError):
+            invalid.append(raw)
             continue
-        key = normalized.casefold()
-        canonical_name = catalog_map.get(key)
-        if canonical_name is None:
-            invalid_areas.append(normalized)
+        if orgao_id in seen:
             continue
-        if key in seen:
+        orgao = db.session.get(OrgaoUnidade, orgao_id)
+        if orgao is None:
+            invalid.append(str(raw))
             continue
-        seen.add(key)
-        selected_areas.append(canonical_name)
-
-    return selected_areas, invalid_areas, area_catalog_choices
+        seen.add(orgao_id)
+        selected_ids.append(orgao_id)
+    return selected_ids, invalid
 
 
 def _parse_cpf_govbr(raw_cpf):
@@ -39,50 +45,6 @@ def _parse_cpf_govbr(raw_cpf):
         return normalize_cpf(raw_cpf), None
     except ValueError as exc:
         return None, str(exc)
-
-
-def _normalize_selected_areas_for_form(selected_areas, area_catalog_choices):
-    catalog_map = {
-        normalize_area_name(area_name).casefold(): area_name
-        for area_name in area_catalog_choices
-        if normalize_area_name(area_name)
-    }
-
-    normalized_user_areas = []
-    seen = set()
-
-    for area in selected_areas:
-        normalized_area = normalize_area_name(area)
-        if not normalized_area:
-            continue
-
-        normalized_key = normalized_area.casefold()
-        if normalized_key in seen:
-            continue
-        seen.add(normalized_key)
-
-        normalized_user_areas.append(catalog_map.get(normalized_key, normalized_area))
-
-    return normalized_user_areas
-
-
-def _area_choice_keys(selected_areas):
-    keys = []
-    seen = set()
-
-    for area in selected_areas:
-        normalized = normalize_area_name(area)
-        if not normalized:
-            continue
-
-        key = normalized.casefold()
-        if key in seen:
-            continue
-
-        seen.add(key)
-        keys.append(key)
-
-    return keys
 
 
 @main_bp.route('/admin/users')
@@ -99,8 +61,8 @@ def list_users():
 @admin_required
 def add_user():
     if request.method == 'POST':
-        selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
-            request.form.getlist('areas_responsavel')
+        selected_orgao_ids, invalid_orgaos = _parse_selected_orgaos(
+            request.form.getlist('orgaos_responsavel')
         )
         username = request.form.get('username')
         name = request.form.get('name')
@@ -113,9 +75,9 @@ def add_user():
             flash('Username, Nome Completo e Senha são obrigatórios.', 'danger')
         elif cpf_error:
             flash(f'CPF gov.br inválido: {cpf_error}', 'danger')
-        elif invalid_areas:
+        elif invalid_orgaos:
             flash(
-                f'Área(s) inválida(s): {", ".join(invalid_areas)}. Atualize o formulário e tente novamente.',
+                f'Órgão(s) inválido(s): {", ".join(invalid_orgaos)}. Atualize o formulário e tente novamente.',
                 'danger',
             )
         elif User.query.filter_by(username=username).first():
@@ -124,43 +86,36 @@ def add_user():
             flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
         else:
             new_user = User(
-                username=username, 
-                name=name, 
-                orgao=orgao if orgao else None, 
+                username=username,
+                name=name,
+                orgao=orgao if orgao else None,
                 is_admin=is_admin_form,
                 cpf_govbr=cpf_govbr,
             )
             new_user.set_password(password)
             db.session.add(new_user)
-            db.session.flush()  # Para obter o ID do usuário
-            
-            # Adicionar áreas selecionadas
-            for area in selected_areas:
-                user_area = UserArea(user_id=new_user.id, area=area)
-                db.session.add(user_area)
-            
+            db.session.flush()
+
+            new_user.set_orgaos(selected_orgao_ids)
+
             db.session.commit()
             flash(f'Usuário "{name}" ({username}) criado com sucesso!', 'success')
             return redirect(url_for('main.list_users'))
-        # Se caiu aqui, houve erro, então renderiza o form novamente com os dados (se o template suportar)
-        # ou apenas renderiza o form vazio.
         return render_template(
             'admin/user_form.html',
             user=request.form,
-            user_areas=selected_areas,
-            user_area_keys=_area_choice_keys(selected_areas),
+            user_orgao_ids=selected_orgao_ids,
+            orgaos_with_depth=_list_orgaos_with_depth(),
             action_verb="Adicionar",
-            areas_responsaveis_choices=area_catalog_choices,
         )
-
 
     # Método GET: exibe o formulário para adicionar novo usuário
     return render_template(
         'admin/user_form.html',
         user=User(),
-        user_areas=[],
+        user_orgao_ids=[],
+        orgaos_with_depth=_list_orgaos_with_depth(),
         action_verb="Adicionar",
-        areas_responsaveis_choices=get_area_catalog_choices(),
     )
 
 
@@ -174,23 +129,15 @@ def edit_user(user_id):
         # Username geralmente não é editável ou requer cuidados especiais de unicidade
         user_to_edit.name = request.form.get('name')
         user_to_edit.orgao = request.form.get('orgao') if request.form.get('orgao') else None
-        areas_form_submitted = 'areas_responsavel' in request.form
-        selected_areas = user_to_edit.get_areas()
-        invalid_areas = []
-        area_catalog_choices = get_area_catalog_choices()
-        normalized_selected_areas = _normalize_selected_areas_for_form(selected_areas, area_catalog_choices)
-
-        if areas_form_submitted:
-            selected_areas, invalid_areas, area_catalog_choices = _parse_selected_areas(
-                request.form.getlist('areas_responsavel')
+        orgaos_form_submitted = 'orgaos_responsavel' in request.form
+        current_orgao_ids = [uo.orgao_id for uo in user_to_edit.orgaos]
+        invalid_orgaos = []
+        if orgaos_form_submitted:
+            selected_orgao_ids, invalid_orgaos = _parse_selected_orgaos(
+                request.form.getlist('orgaos_responsavel')
             )
-            normalized_selected_areas = _normalize_selected_areas_for_form(
-                selected_areas,
-                area_catalog_choices,
-            )
-            selected_area_keys = _area_choice_keys(normalized_selected_areas)
         else:
-            selected_area_keys = _area_choice_keys(normalized_selected_areas)
+            selected_orgao_ids = current_orgao_ids
         should_update_cpf = not hide_govbr_link_fields and 'cpf_govbr' in request.form
         cpf_govbr = user_to_edit.cpf_govbr
         cpf_error = None
@@ -199,56 +146,33 @@ def edit_user(user_id):
         
         is_admin_form_val = request.form.get('is_admin') == 'on'
 
+        def _render_edit_form():
+            return render_template(
+                'admin/user_form.html',
+                user=user_to_edit,
+                user_orgao_ids=selected_orgao_ids,
+                orgaos_with_depth=_list_orgaos_with_depth(),
+                action_verb="Editar",
+                hide_govbr_link_fields=hide_govbr_link_fields,
+            )
+
         # Lógica para impedir que o último admin se despromova
-        if user_to_edit.is_admin and not is_admin_form_val: # Tentando remover status de admin
+        if user_to_edit.is_admin and not is_admin_form_val:
             admin_count = User.query.filter_by(is_admin=True).count()
             if admin_count <= 1:
                 flash('Não é possível remover o status de administrador do único administrador existente.', 'danger')
-                # Não altera user_to_edit.is_admin e recarrega o form
-                return render_template(
-                    'admin/user_form.html',
-                    user=user_to_edit,
-                    user_areas=_normalize_selected_areas_for_form(
-                        user_to_edit.get_areas(),
-                        area_catalog_choices,
-                    ),
-                    user_area_keys=_area_choice_keys(
-                        _normalize_selected_areas_for_form(
-                            user_to_edit.get_areas(),
-                            area_catalog_choices,
-                        )
-                    ),
-                    action_verb="Editar",
-                    areas_responsaveis_choices=area_catalog_choices,
-                    hide_govbr_link_fields=hide_govbr_link_fields,
-                )
+                return _render_edit_form()
 
-        if invalid_areas:
+        if invalid_orgaos:
             flash(
-                f'Área(s) inválida(s): {", ".join(invalid_areas)}. Atualize o formulário e tente novamente.',
+                f'Órgão(s) inválido(s): {", ".join(invalid_orgaos)}. Atualize o formulário e tente novamente.',
                 'danger',
             )
-            return render_template(
-                'admin/user_form.html',
-                user=user_to_edit,
-                user_areas=normalized_selected_areas,
-                user_area_keys=selected_area_keys,
-                action_verb="Editar",
-                areas_responsaveis_choices=area_catalog_choices,
-                hide_govbr_link_fields=hide_govbr_link_fields,
-            )
+            return _render_edit_form()
 
         if cpf_error:
             flash(f'CPF gov.br inválido: {cpf_error}', 'danger')
-            return render_template(
-                'admin/user_form.html',
-                user=user_to_edit,
-                user_areas=normalized_selected_areas,
-                user_area_keys=selected_area_keys,
-                action_verb="Editar",
-                areas_responsaveis_choices=area_catalog_choices,
-                hide_govbr_link_fields=hide_govbr_link_fields,
-            )
+            return _render_edit_form()
 
         if (
             should_update_cpf
@@ -256,16 +180,8 @@ def edit_user(user_id):
             and User.query.filter(User.cpf_govbr == cpf_govbr, User.id != user_to_edit.id).first()
         ):
             flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
-            return render_template(
-                'admin/user_form.html',
-                user=user_to_edit,
-                user_areas=normalized_selected_areas,
-                user_area_keys=selected_area_keys,
-                action_verb="Editar",
-                areas_responsaveis_choices=area_catalog_choices,
-                hide_govbr_link_fields=hide_govbr_link_fields,
-            )
-        
+            return _render_edit_form()
+
         user_to_edit.is_admin = is_admin_form_val
         if should_update_cpf:
             old_cpf = user_to_edit.cpf_govbr
@@ -273,11 +189,8 @@ def edit_user(user_id):
             if not cpf_govbr or (old_cpf and old_cpf != cpf_govbr):
                 user_to_edit.govbr_sub = None
 
-        if areas_form_submitted:
-            # Atualizar áreas do usuário apenas quando o grupo de áreas foi submetido.
-            # Caso o formulário venha sem a lista (por exemplo, em fluxo legado/compatibilidade),
-            # mantém as áreas previamente cadastradas.
-            user_to_edit.set_areas(selected_areas)
+        if orgaos_form_submitted:
+            user_to_edit.set_orgaos(selected_orgao_ids)
 
         new_password = request.form.get('password')
         if new_password: # Só atualiza a senha se uma nova for fornecida
@@ -288,18 +201,12 @@ def edit_user(user_id):
         return redirect(url_for('main.list_users'))
     
     # Método GET
-    area_catalog_choices = get_area_catalog_choices()
-    selected_areas = _normalize_selected_areas_for_form(
-        user_to_edit.get_areas(),
-        area_catalog_choices,
-    )
     return render_template(
         'admin/user_form.html',
         user=user_to_edit,
-        user_areas=selected_areas,
-        user_area_keys=_area_choice_keys(selected_areas),
+        user_orgao_ids=[uo.orgao_id for uo in user_to_edit.orgaos],
+        orgaos_with_depth=_list_orgaos_with_depth(),
         action_verb="Editar",
-        areas_responsaveis_choices=area_catalog_choices,
         hide_govbr_link_fields=hide_govbr_link_fields,
     )
 

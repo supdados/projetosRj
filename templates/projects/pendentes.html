@@ -19,7 +19,6 @@
             <p class="pending-subtitle">
                 Janela ativa: <strong>{{ period_label_map.get(filtro_periodo, 'Atrasados') }}</strong>
                 {% if selected_responsavel %} · Responsável contém: <strong>{{ selected_responsavel }}</strong>{% endif %}
-                {% if selected_area %} · Área: <strong>{{ selected_area }}</strong>{% endif %}
             </p>
         </div>
     </header>
@@ -35,13 +34,13 @@
                 </select>
             </div>
 
-            {% if can_filter_by_area and areas_options %}
+            {% if ORGAOS_DISPONIVEIS %}
             <div class="pending-field">
-                <label for="areaFilter">Área</label>
-                <select name="area" id="areaFilter">
-                    <option value="">Todas as áreas</option>
-                    {% for area in areas_options %}
-                    <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
+                <label for="orgaoFilter">Órgão</label>
+                <select name="orgao" id="orgaoFilter">
+                    <option value="">Todos os órgãos</option>
+                    {% for orgao_id, orgao_sigla, orgao_nome in ORGAOS_DISPONIVEIS %}
+                    <option value="{{ orgao_id }}" {% if orgao_id == selected_orgao %}selected{% endif %}>{{ orgao_sigla }}{% if orgao_nome and orgao_nome != orgao_sigla %} — {{ orgao_nome }}{% endif %}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -61,7 +60,7 @@
                 <button type="submit" class="btn-pending btn-pending-primary">
                     <i class="fas fa-filter"></i> Filtrar
                 </button>
-                <a href="{{ url_for('main.list_projetos_pendentes') }}" class="btn-pending text-decoration-none d-inline-flex align-items-center" data-area-clear>
+                <a href="{{ url_for('main.list_projetos_pendentes') }}" class="btn-pending text-decoration-none d-inline-flex align-items-center">
                     <i class="fas fa-rotate-left"></i> Limpar
                 </a>
             </div>
@@ -100,7 +99,7 @@
                         <span>{{ item.projeto.titulo }}</span>
                     </a>
                     <p class="pending-project-meta">
-                        Área: <strong>{{ item.projeto.area_responsavel or 'Não informada' }}</strong>
+                        Órgão: <strong>{{ item.projeto.orgao_ref.sigla if item.projeto.orgao_ref else 'Não informado' }}</strong>
                         {% if item.max_overdue_days > 0 %}
                         · Maior atraso: <strong>{{ item.max_overdue_days }} dia(s)</strong>
                         {% endif %}
@@ -281,7 +280,7 @@
                 <li class="page-item">
                     <a
                         class="page-link"
-                        href="{{ url_for('main.list_projetos_pendentes', page=1, periodo=filtro_periodo, area=selected_area, responsavel=selected_responsavel) }}"
+                        href="{{ url_for('main.list_projetos_pendentes', page=1, periodo=filtro_periodo, orgao=selected_orgao, responsavel=selected_responsavel) }}"
                         aria-label="Primeira página"
                     >
                         <span aria-hidden="true">««</span>
@@ -290,7 +289,7 @@
                 <li class="page-item">
                     <a
                         class="page-link"
-                        href="{{ url_for('main.list_projetos_pendentes', page=pending_page - 1, periodo=filtro_periodo, area=selected_area, responsavel=selected_responsavel) }}"
+                        href="{{ url_for('main.list_projetos_pendentes', page=pending_page - 1, periodo=filtro_periodo, orgao=selected_orgao, responsavel=selected_responsavel) }}"
                         aria-label="Página anterior"
                     >
                         <span aria-hidden="true">«</span>
@@ -304,7 +303,7 @@
                 <li class="page-item {% if p == pending_page %}active{% endif %}">
                     <a
                         class="page-link"
-                        href="{{ url_for('main.list_projetos_pendentes', page=p, periodo=filtro_periodo, area=selected_area, responsavel=selected_responsavel) }}"
+                        href="{{ url_for('main.list_projetos_pendentes', page=p, periodo=filtro_periodo, orgao=selected_orgao, responsavel=selected_responsavel) }}"
                     >
                         {{ p }}
                     </a>
@@ -315,7 +314,7 @@
                 <li class="page-item">
                     <a
                         class="page-link"
-                        href="{{ url_for('main.list_projetos_pendentes', page=pending_page + 1, periodo=filtro_periodo, area=selected_area, responsavel=selected_responsavel) }}"
+                        href="{{ url_for('main.list_projetos_pendentes', page=pending_page + 1, periodo=filtro_periodo, orgao=selected_orgao, responsavel=selected_responsavel) }}"
                         aria-label="Próxima página"
                     >
                         <span aria-hidden="true">»</span>
@@ -324,7 +323,7 @@
                 <li class="page-item">
                     <a
                         class="page-link"
-                        href="{{ url_for('main.list_projetos_pendentes', page=pending_total_pages, periodo=filtro_periodo, area=selected_area, responsavel=selected_responsavel) }}"
+                        href="{{ url_for('main.list_projetos_pendentes', page=pending_total_pages, periodo=filtro_periodo, orgao=selected_orgao, responsavel=selected_responsavel) }}"
                         aria-label="Última página"
                     >
                         <span aria-hidden="true">»»</span>

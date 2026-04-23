@@ -14,6 +14,7 @@ from catalogs.objectives import (
 
 from .blueprint import main_bp
 from .decorators import login_required
+from .orgao_scope import get_user_orgao_subtree_ids
 from .shared import get_or_404
 @main_bp.route('/api/resultados/<int:objetivo_id>')
 @login_required
@@ -52,14 +53,22 @@ def get_user_projects_api():
     if g.user.is_admin:
         projects = Project.query.order_by(Project.titulo).all()
     else:
-        user_areas = g.user.get_areas()
-        projects = Project.query.filter(Project.area_responsavel.in_(user_areas)).order_by(Project.titulo).all()
-    
+        subtree_ids = get_user_orgao_subtree_ids(g.user)
+        if subtree_ids:
+            projects = (
+                Project.query
+                .filter(Project.orgao_id.in_(subtree_ids))
+                .order_by(Project.titulo)
+                .all()
+            )
+        else:
+            projects = []
+
     return jsonify([
         {
             'id': p.id,
             'titulo': p.titulo,
-            'area_responsavel': p.area_responsavel
+            'orgao_sigla': p.orgao_ref.sigla if p.orgao_ref else None,
         }
         for p in projects
     ])

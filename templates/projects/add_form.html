@@ -33,38 +33,31 @@
                             </div>
                             <div class="col-lg-3">
                                 <div class="form-group-glass">
-                                    <label for="project_area_responsavel" class="form-label-glass">
-                                        <i class="fas fa-users label-icon"></i>
-                                        Área Responsável
+                                    <label for="project_orgao_id" class="form-label-glass">
+                                        <i class="fas fa-sitemap label-icon"></i>
+                                        Órgão Responsável
                                     </label>
-                                    {% if is_admin_user %}
-                                        <select class="form-select-glass form-select-glass-enhanced" id="project_area_responsavel" name="project_area_responsavel">
-                                            <option value="" selected>Selecione uma área</option>
-                                            {% for area_item in AREAS_RESPONSAVEIS_CHOICES %}
-                                                <option value="{{ area_item }}">{{ area_item }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    {% elif current_user_obj and current_user_obj.get_areas() %}
-                                        {% if current_user_obj.get_areas()|length == 1 %}
+                                    {% if ORGAOS_DISPONIVEIS %}
+                                        {% if ORGAOS_DISPONIVEIS|length == 1 %}
                                             <input type="text"
                                                    class="form-control-glass form-control-glass-enhanced"
-                                                   value="{{ current_user_obj.get_areas()[0] }}"
+                                                   value="{{ ORGAOS_DISPONIVEIS[0][1] }}"
                                                    disabled>
                                             <input type="hidden"
-                                                   id="project_area_responsavel_hidden"
-                                                   name="project_area_responsavel"
-                                                   value="{{ current_user_obj.get_areas()[0] }}">
+                                                   id="project_orgao_id"
+                                                   name="project_orgao_id"
+                                                   value="{{ ORGAOS_DISPONIVEIS[0][0] }}">
                                         {% else %}
-                                            <select class="form-select-glass form-select-glass-enhanced" id="project_area_responsavel" name="project_area_responsavel" required>
-                                                <option value="" selected disabled>Selecione uma de suas áreas</option>
-                                                {% for area_item in current_user_obj.get_areas() %}
-                                                    <option value="{{ area_item }}">{{ area_item }}</option>
+                                            <select class="form-select-glass form-select-glass-enhanced" id="project_orgao_id" name="project_orgao_id" required>
+                                                <option value="" selected disabled>Selecione um órgão</option>
+                                                {% for orgao_opt_id, orgao_opt_sigla, orgao_opt_nome in ORGAOS_DISPONIVEIS %}
+                                                    <option value="{{ orgao_opt_id }}">{{ orgao_opt_sigla }}{% if orgao_opt_nome and orgao_opt_nome != orgao_opt_sigla %} — {{ orgao_opt_nome }}{% endif %}</option>
                                                 {% endfor %}
                                             </select>
                                         {% endif %}
                                     {% else %}
-                                        <select class="form-select-glass form-select-glass-enhanced" id="project_area_responsavel" name="project_area_responsavel" disabled>
-                                            <option value="" selected disabled>Nenhuma área atribuída</option>
+                                        <select class="form-select-glass form-select-glass-enhanced" id="project_orgao_id" name="project_orgao_id" disabled>
+                                            <option value="" selected disabled>Nenhum órgão atribuído</option>
                                         </select>
                                     {% endif %}
                                 </div>

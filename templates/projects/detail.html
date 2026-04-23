@@ -20,7 +20,7 @@
                     {{ project.short_description if project.short_description else '' }}
                 </p>
             </div>
-            <a href="{{ url_for('main.list_projects') }}" class="btn btn-sm back-button ms-3 btn-back-to-list" data-area-nav>
+            <a href="{{ url_for('main.list_projects') }}" class="btn btn-sm back-button ms-3 btn-back-to-list">
                 <i class="fas fa-arrow-left me-1"></i>Voltar
             </a>
         </div>
@@ -50,7 +50,7 @@
                         }}</span>
                 </div>
             </div>
-            <a href="{{ url_for('main.list_projects') }}" class="project-compact-back" data-area-nav>
+            <a href="{{ url_for('main.list_projects') }}" class="project-compact-back">
                 <i class="fas fa-arrow-left"></i>
                 <span>Voltar</span>
             </a>
@@ -139,18 +139,16 @@
                 </div>
             </div>
 
-            <!-- Segunda linha: Área Responsável, Órgão, Processo SEI, Indicador ABEP -->
+            <!-- Segunda linha: Órgão Responsável, Órgão (texto livre), Processo SEI, Indicador ABEP -->
             <div class="row g-2 mb-2">
                 <div class="col-md-3">
                     <div class="detail-item">
-                        <strong>Área Responsável{% if not is_admin_user and current_user_obj and current_user_obj.get_areas()|length <= 1 %} <i class="fas fa-lock text-muted small"
-                                title="Você possui apenas uma área"></i>{% endif %}</strong>
-                        <span class="project-area-value{% if not is_admin_user and current_user_obj and current_user_obj.get_areas()|length <= 1 %} ds-cursor-default{% endif %}" data-field="area_responsavel" data-value="{{ project.area_responsavel or '' }}">
-                            {% if project.area_responsavel %}
-                            <div class="small"><i class="fas fa-users me-1 text-primary"></i> {{
-                                project.area_responsavel }}</div>
+                        <strong>Órgão Responsável <i class="fas fa-lock text-muted small" title="Definido via edição do projeto"></i></strong>
+                        <span class="project-area-value ds-cursor-default" data-field="orgao_sigla" data-value="{{ project.orgao_ref.sigla if project.orgao_ref else '' }}">
+                            {% if project.orgao_ref %}
+                            <div class="small"><i class="fas fa-sitemap me-1 text-primary"></i> {{ project.orgao_ref.sigla }}</div>
                             {% else %}
-                            <div class="text-muted small"><i class="fas fa-users me-1"></i> Não informada</div>
+                            <div class="text-muted small"><i class="fas fa-sitemap me-1"></i> Não informado</div>
                             {% endif %}
                         </span>
                     </div>
@@ -312,7 +310,7 @@
             <a href="{{ url_for('main.project_history', project_id=project.id) }}" class="btn btn-sm btn-history">
                 <i class="fas fa-history me-1"></i>Ver Histórico
             </a>
-            {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel))
+            {% if current_user_obj
             %}
             <button type="button" class="btn btn-warning btn-sm btn-edit-project">
                 <i class="fas fa-edit me-1"></i>Editar Projeto
@@ -345,7 +343,7 @@
         <h2 class="ds-type-section-title">Etapas do Projeto</h2>
     </div>
 
-    {% set can_edit_etapas = is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
+    {% set can_edit_etapas = current_user_obj %}
     {% if can_edit_etapas %}
     <div class="d-flex justify-content-end gap-2 mb-3">
         <button type="button" class="btn btn-import-model{% if project.workflow_etapas %} ds-hidden{% endif %}" id="btnImportModel" data-bs-toggle="modal" data-bs-target="#importModelModal">
@@ -586,8 +584,7 @@
                                 <i class="fas fa-comment-alt me-1"></i> {{ etapa.comentarios }}
                             </div>
                             {% else %}
-                            {% if is_admin_user or (current_user_obj and
-                            current_user_obj.has_access_to_area(project.area_responsavel)) %}
+                            {% if current_user_obj %}
                             <div class="small text-muted mt-1 etapa-comentario-placeholder ds-cursor-pointer"
                                 data-etapa-id="{{ etapa.id }}" data-comentario="">
                                 <i class="fas fa-comment-medical me-1"></i> adicionar comentário
@@ -621,8 +618,7 @@
                                 data-etapa-id="{{ etapa.id }}"
                                 data-state="{{ 'started' if etapa.iniciada else 'idle' }}"
                                 title="{{ 'Marcar como não iniciada' if etapa.iniciada else 'Marcar como iniciada' }}"
-                                {% if not (is_admin_user or (current_user_obj and
-                                current_user_obj.has_access_to_area(project.area_responsavel))) %}disabled{% endif %}>
+                                {% if not current_user_obj %}disabled{% endif %}>
                                 {% if etapa.iniciada %}
                                 <i class="fas fa-stop-circle"></i>
                                 <span>Iniciada</span>
@@ -635,8 +631,7 @@
                         <td class="text-center etapa-v4-cell-status">
                             <button type="button" class="btn btn-sm etapa-status-toggle toggle-done etapa-status-toggle-{{ 'done' if etapa.done else ('ready' if etapa.iniciada else 'blocked') }}"
                                 data-etapa-id="{{ etapa.id }}" {{ 'disabled' if (not etapa.iniciada and not etapa.done)
-                                or not (is_admin_user or (current_user_obj and
-                                current_user_obj.has_access_to_area(project.area_responsavel))) else '' }}
+                                or not current_user_obj else '' }}
                                 data-state="{{ 'done' if etapa.done else ('ready' if etapa.iniciada else 'blocked') }}"
                                 title="{{ 'Marcar como pendente' if etapa.done else ('Marcar como concluída (necessário iniciar primeiro)' if not etapa.iniciada else 'Marcar como concluída') }}">
                                 {% if etapa.done %}
@@ -649,7 +644,7 @@
                             </button>
                         </td>
                         <td class="actions text-center etapa-v4-actions-cell">
-                            {% if is_admin_user or (current_user_obj and current_user_obj.has_access_to_area(project.area_responsavel)) %}
+                            {% if current_user_obj %}
                             <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post"
                                 class="inline-form" data-etapa-delete-form
                                 data-confirm="Tem certeza que deseja excluir esta etapa?">
@@ -829,8 +824,8 @@
         concludeProjectUrl: {{ url_for('main.concluir_project', project_id=project.id)|tojson }},
         projectTitle: {{ (project.titulo or '')|tojson }},
         csrfToken: {{ (csrf_token() if csrf_token else '')|tojson }},
-        canEditAreaResponsavel: {{ (is_admin_user or (current_user_obj and current_user_obj.get_areas()|length > 1))|tojson }},
-        availableAreas: {{ (AREAS_RESPONSAVEIS_CHOICES if is_admin_user else (current_user_obj.get_areas() if current_user_obj else []))|tojson }},
+        canEditAreaResponsavel: false,
+        availableAreas: [],
         abepIndicatorsOptions: {{ ABEP_INDICADORES_OPTIONS|tojson }},
         canAddGoogleMeeting: {{ can_add_google_meeting|tojson }},
         addMeetingUrl: {{ url_for('main.add_project_meeting', project_id=project.id)|tojson }},

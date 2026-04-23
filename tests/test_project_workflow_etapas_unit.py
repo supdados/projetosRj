@@ -9,12 +9,13 @@ rotas e templates — regredir seu comportamento corromperia a barra de progress
 import datetime
 
 from models import Etapa, Project, db
+from tests._orgao_helpers import ensure_orgao
 
 
 def _project(titulo='Projeto WF'):
     project = Project(
         titulo=titulo,
-        area_responsavel='Auditoria',
+        orgao_id=ensure_orgao('Auditoria').id,
         orgao='Orgao A',
         prioridade='media',
         status='Vigente',

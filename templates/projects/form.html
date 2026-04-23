@@ -28,22 +28,19 @@
                     <textarea class="form-control" id="project_short_description" name="project_short_description" rows="2" placeholder="Breve descrição do projeto">{{ project.short_description if project.short_description }}</textarea>
                 </div>
                 
-                <!-- Linha: Área Responsável e Órgão -->
+                <!-- Linha: Órgão Responsável e Órgão livre (legado) -->
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="project_area_responsavel" class="form-label fw-bold">Área Responsável:</label>
-                        <select class="form-select" id="project_area_responsavel" name="project_area_responsavel" {% if not is_admin_user %}disabled{% endif %}>
-                            <option value="" {% if not project.area_responsavel %}selected{% endif %} disabled>Selecione uma área</option>
-                            {% for area in areas_responsaveis %}
-                                <option value="{{ area }}" {% if area == project.area_responsavel %}selected{% endif %}>{{ area }}</option>
+                        <label for="project_orgao_id" class="form-label fw-bold">Órgão Responsável:</label>
+                        <select class="form-select" id="project_orgao_id" name="project_orgao_id" required>
+                            <option value="" {% if not project.orgao_id %}selected{% endif %}>Selecione um órgão</option>
+                            {% for orgao_opt_id, orgao_opt_sigla, orgao_opt_nome in ORGAOS_DISPONIVEIS %}
+                                <option value="{{ orgao_opt_id }}" {% if orgao_opt_id == project.orgao_id %}selected{% endif %}>{{ orgao_opt_sigla }}{% if orgao_opt_nome and orgao_opt_nome != orgao_opt_sigla %} — {{ orgao_opt_nome }}{% endif %}</option>
                             {% endfor %}
                         </select>
-                        {% if not is_admin_user and project.area_responsavel %}
-                            <input type="hidden" name="project_area_responsavel" value="{{ project.area_responsavel }}">
-                        {% endif %}
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="project_orgao" class="form-label fw-bold">Órgão:</label>
+                        <label for="project_orgao" class="form-label fw-bold">Órgão (texto livre):</label>
                         <input type="text" class="form-control" id="project_orgao" name="project_orgao" value="{{ project.orgao if project.orgao }}">
                     </div>
                 </div>

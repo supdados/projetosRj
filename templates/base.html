@@ -80,33 +80,6 @@
         <div id="content" class="content {% if not current_user_obj %}no-sidebar{% endif %}">
             {% if current_user_obj %}
             {% set endpoint = request.endpoint or '' %}
-            {% set user_areas = current_user_obj.get_areas() %}
-            {% if user_areas %}
-                {% set available_areas = user_areas %}
-            {% elif is_admin_user %}
-                {% set available_areas = AREAS_RESPONSAVEIS_CHOICES %}
-            {% else %}
-                {% set available_areas = [] %}
-            {% endif %}
-            {% set all_projects_label = 'Todos os projetos' %}
-            {% set show_all_projects_option = available_areas|length > 1 %}
-            {% set active_area_param = request.args.get('area') %}
-            {% if show_all_projects_option %}
-                {% if active_area_param in available_areas %}
-                    {% set active_area = active_area_param %}
-                    {% set active_area_href = url_for('main.list_projects', area=active_area_param) %}
-                {% else %}
-                    {% set active_area = all_projects_label %}
-                    {% set active_area_href = url_for('main.list_projects') %}
-                {% endif %}
-            {% elif available_areas %}
-                {% set active_area = available_areas[0] %}
-                {% set active_area_href = url_for('main.list_projects', area=available_areas[0]) %}
-            {% else %}
-                {% set active_area = None %}
-                {% set active_area_href = '#' %}
-            {% endif %}
-
             {% include "partials/app_topnav.html" %}
             {% if tutorial_active %}
             {% include "tutorial/banner.html" %}
@@ -213,79 +186,6 @@
     <script src="{{ url_for('static', filename='js/app-shell/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
     
-    <!-- Seleção de área persistente no header -->
-    <script nonce="{{ csp_nonce }}">
-    (function () {
-        var STORAGE_KEY = 'projetosrj.selected_area';
-        var AVAILABLE_AREAS = {{ (available_areas if current_user_obj else [])|tojson }};
-
-        function getStoredArea() {
-            try { return localStorage.getItem(STORAGE_KEY) || ''; } catch (e) { return ''; }
-        }
-
-        function setStoredArea(area) {
-            try {
-                if (area) { localStorage.setItem(STORAGE_KEY, area); }
-                else { localStorage.removeItem(STORAGE_KEY); }
-            } catch (e) {}
-        }
-
-        function urlWithArea(href, area) {
-            var url = new URL(href, window.location.origin);
-            if (area) { url.searchParams.set('area', area); }
-            else { url.searchParams.delete('area'); }
-            return url.toString();
-        }
-
-        // Sincroniza o param da URL com o localStorage
-        var params = new URLSearchParams(window.location.search);
-        if (params.has('area')) {
-            setStoredArea(params.get('area'));
-        }
-
-        // Expõe a área globalmente para app-shell.js e outros scripts
-        var initialStoredArea = getStoredArea();
-        if (initialStoredArea && AVAILABLE_AREAS.indexOf(initialStoredArea) === -1) {
-            setStoredArea('');
-            initialStoredArea = '';
-        }
-        window.__APP_SELECTED_AREA__ = initialStoredArea;
-
-        document.addEventListener('DOMContentLoaded', function () {
-            var storedArea = getStoredArea();
-            window.__APP_SELECTED_AREA__ = storedArea;
-
-            // Intercepta cliques em botões que limpam a área (ex: "Limpar filtros")
-            document.querySelectorAll('[data-area-clear]').forEach(function (el) {
-                el.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    setStoredArea('');
-                    window.__APP_SELECTED_AREA__ = '';
-                    window.location.href = el.getAttribute('href');
-                });
-            });
-
-            // Intercepta cliques nos itens do dropdown de área
-            document.querySelectorAll('[data-area-select]').forEach(function (el) {
-                el.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    var area = el.getAttribute('data-area-select');
-                    setStoredArea(area);
-                    window.__APP_SELECTED_AREA__ = area;
-                    window.location.href = urlWithArea(window.location.href, area);
-                });
-            });
-
-            // Injeta a área salva nos links de navegação
-            if (storedArea) {
-                document.querySelectorAll('[data-area-nav]').forEach(function (el) {
-                    el.href = urlWithArea(el.getAttribute('href') || el.href, storedArea);
-                });
-            }
-        });
-    })();
-    </script>
-
     <script nonce="{{ csp_nonce }}">
     (function () {
         var csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content');

@@ -16,6 +16,7 @@ from services.project_meetings import (
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
+from routes.orgao_scope import user_can_access_project
 from routes.shared import get_or_404, log_project_action
 from routes.etapas.helpers import (
     _connection_for_current_user,
@@ -281,7 +282,7 @@ def import_model_to_project(project_id):
     project = get_or_404(Project, project_id)
 
     # Verificar permissão
-    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+    if not user_can_access_project(g.user, project):
         flash('Você não tem permissão para importar modelos neste projeto.', 'danger')
         return redirect(url_for('main.project_detail', project_id=project_id))
 

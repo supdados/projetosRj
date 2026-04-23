@@ -4,6 +4,7 @@ from flask import jsonify
 
 import routes.dashboard as dashboard_routes
 from models import CalendarEvent, Etapa, Project, ProjectStageMeeting, Task, db
+from tests._orgao_helpers import ensure_orgao
 
 
 def _capture_dashboard_context(monkeypatch):
@@ -23,7 +24,7 @@ def test_dashboard_context_for_user_scopes_projects_tasks_and_overdue(app, clien
         db.session.add(
             Project(
                 titulo='Projeto Auditoria Finalizado',
-                area_responsavel='Auditoria',
+                orgao_id=ensure_orgao('Auditoria').id,
                 orgao='Orgao Dashboard',
                 prioridade='baixa',
                 status='Finalizado',
@@ -151,7 +152,7 @@ def test_dashboard_overdue_count_ignores_google_meeting_only_project(app, client
     with app.app_context():
         project = Project(
             titulo='Projeto Apenas Reuniao',
-            area_responsavel='Auditoria',
+            orgao_id=ensure_orgao('Auditoria').id,
             orgao='Orgao Dashboard',
             prioridade='media',
             status='Vigente',

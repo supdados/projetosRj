@@ -22,9 +22,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from sqlalchemy import MetaData, Table, inspect, select, text
 
-from models import Project, ProjectHistory, User, UserArea, db
+from models import Project, ProjectHistory, User, db
 from catalogs.objectives import sync_goal_catalog_to_db
-from routes.shared import ensure_area_catalog_seeded
 from time_utils import utc_now
 
 ALEMBIC_HEAD = '7c1d9e4a2b3f'
@@ -948,35 +947,8 @@ def _migrate_user_areas_step(emit_output=True):
                 emit_output,
             )
 
-        if 'area_responsavel' not in _column_names(inspector, 'user'):
-            _emit("   ✓ Coluna legada 'user.area_responsavel' não existe; nada para migrar.", emit_output)
-            return {
-                'success': True,
-                'migrated_count': migrated_count,
-                'auth_columns_added': auth_columns_added,
-                'auth_indexes_added': auth_indexes_added,
-            }
-
-        user_table = Table('user', MetaData(), autoload_with=db.engine)
-        existing_links = {
-            (user_id, area)
-            for user_id, area in db.session.query(UserArea.user_id, UserArea.area).all()
-        }
-
-        for user_id, legacy_area in db.session.execute(
-            select(user_table.c.id, user_table.c.area_responsavel)
-        ).all():
-            normalized_area = (legacy_area or '').strip()
-            if not normalized_area:
-                continue
-            if (user_id, normalized_area) in existing_links:
-                continue
-            db.session.add(UserArea(user_id=user_id, area=normalized_area))
-            existing_links.add((user_id, normalized_area))
-            migrated_count += 1
-
-        db.session.commit()
-        _emit(f"   ✓ Sucesso: {migrated_count} novas áreas foram migradas.", emit_output)
+        # Migração legada de user.area_responsavel -> user_areas removida em 2026-04-23.
+        # Tabela user_areas e coluna user.area_responsavel foram dropadas.
         return {
             'success': True,
             'migrated_count': migrated_count,
@@ -1179,15 +1151,15 @@ def sync_goal_catalog(emit_output=True):
 
 
 def sync_area_catalog(emit_output=True):
-    _emit("\n-- [7/7] Sincronizando catálogo de áreas...", emit_output)
+    _emit("\n-- [7/7] Catálogo de áreas (legado removido)...", emit_output)
+    # Tabela area_catalog dropada em 2026-04-23 (migration c5f8a1b2d9e0).
+    # Hierarquia de órgãos (orgao_unidade) substitui o catálogo plano de áreas.
     try:
         db.create_all()
-        areas = ensure_area_catalog_seeded()
-        _emit(f"   ✓ Sucesso: catálogo com {len(areas)} área(s).", emit_output)
-        return {'success': True, 'areas': areas}
+        return {'success': True, 'areas': []}
     except Exception as exc:
         db.session.rollback()
-        _emit(f'   ✗ ERRO ao sincronizar catálogo de áreas: {exc}', emit_output)
+        _emit(f'   ✗ ERRO ao executar create_all: {exc}', emit_output)
         return {'success': False, 'areas': None}
 
 

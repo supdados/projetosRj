@@ -6,10 +6,11 @@ from models import (
     Project,
     Task,
     User,
-    UserArea,
+    UserOrgao,
     db,
 )
 from services.notifications import notify_task_assignment_change, notify_task_event
+from routes.orgao_tree import get_orgao_ancestors
 from routes.tasks.constants import (
     VALID_PRIORIDADES,
     VALID_STATUSES,
@@ -56,18 +57,26 @@ def _resolve_project_token(raw_project_value, allow_empty=False):
     return project, None, 200
 
 
-def _get_assignable_users_for_area(area):
+def _get_assignable_users_for_orgao(orgao_id):
     candidate_ids = {g.user.id}
 
     admin_ids = [user_id for (user_id,) in User.query.with_entities(User.id).filter(User.is_admin.is_(True)).all()]
     candidate_ids.update(admin_ids)
 
-    if area:
-        area_user_ids = [
+    if orgao_id is not None:
+        # Usuário é assignável se está vinculado ao próprio órgão ou a um ancestral
+        # (herança descendente: vínculo no pai dá acesso ao filho).
+        scope_ids = {orgao_id, *get_orgao_ancestors(orgao_id)}
+        orgao_user_ids = [
             user_id
-            for (user_id,) in UserArea.query.with_entities(UserArea.user_id).filter_by(area=area).all()
+            for (user_id,) in (
+                UserOrgao.query
+                .with_entities(UserOrgao.user_id)
+                .filter(UserOrgao.orgao_id.in_(scope_ids))
+                .all()
+            )
         ]
-        candidate_ids.update(area_user_ids)
+        candidate_ids.update(orgao_user_ids)
 
     if not candidate_ids:
         return []
@@ -76,8 +85,8 @@ def _get_assignable_users_for_area(area):
 
 
 def _get_assignable_users_for_project(project):
-    area = project.area_responsavel if project is not None else None
-    return _get_assignable_users_for_area(area)
+    orgao_id = project.orgao_id if project is not None else None
+    return _get_assignable_users_for_orgao(orgao_id)
 
 
 def _validate_task_responsavel(project, raw_value):
@@ -133,7 +142,7 @@ def _serialize_task_payload(task):
         'task_titulo': task.descricao,
         'project_id': project_id,
         'project_titulo': project.titulo if project else 'Sem projeto',
-        'project_area': project.area_responsavel if project else '',
+        'project_orgao_sigla': (project.orgao_ref.sigla if project and project.orgao_ref else '') if project else '',
         'project_value': str(project_id) if project_id else 'sem_projeto',
         'comments_count': len(task.comments),
         'anexos_count': len(task.anexos),

@@ -24,7 +24,6 @@ from routes.tasks.constants import (
 
 def _read_task_filter_values(source):
     return {
-        'selected_area': (source.get('area') or '').strip(),
         'project_filter': (source.get('project') or '').strip(),
         'prioridade_filter': (source.get('prioridade') or '').strip(),
         'tipo_filter': (source.get('tipo') or '').strip(),
@@ -35,7 +34,6 @@ def _read_task_filter_values(source):
 
 def _merge_task_filter_values(*values_list):
     merged = {
-        'selected_area': '',
         'project_filter': '',
         'prioridade_filter': '',
         'tipo_filter': '',
@@ -131,7 +129,6 @@ def _build_task_filter_options(tasks, selected_filters=None):
 def _build_task_listing_url(
     endpoint,
     *,
-    selected_area='',
     project_filter='',
     prioridade_filter='',
     tipo_filter='',
@@ -143,8 +140,6 @@ def _build_task_listing_url(
     kwargs = {}
     if project_id is not None:
         kwargs['project_id'] = project_id
-    if selected_area:
-        kwargs['area'] = selected_area
     if project_filter:
         kwargs['project'] = project_filter
     if prioridade_filter:
@@ -175,37 +170,17 @@ def _task_active_target_url(task):
     return url_for('main.list_tasks')
 
 
-def _resolve_task_hub_area_scope(selected_area):
-    area = (selected_area or '').strip()
-
-    if g.user.is_admin:
-        if area:
-            return [area], area
-        return None, ''
-
-    user_areas = g.user.get_areas()
-    if not user_areas:
-        return [], area
-
-    if area:
-        if area in user_areas:
-            return [area], area
-        return [], area
-
-    return user_areas, ''
-
-
 def _build_visible_tasks_query(
     include_archived=False,
-    selected_area='',
     project_filter='',
     prioridade_filter='',
     tipo_filter='',
     status_filter='',
     responsavel_filter='',
     include_relations=True,
+    orgao_filter_id=None,
 ):
-    area_scope, normalized_area = _resolve_task_hub_area_scope(selected_area)
+    from routes.orgao_scope import expand_orgao_filter_ids, get_user_orgao_subtree_ids
 
     query = Task.query
     if include_relations:
@@ -218,16 +193,21 @@ def _build_visible_tasks_query(
     query = query.outerjoin(Project, Task.project_id == Project.id)
 
     if not g.user.is_admin:
+        user_subtree_ids = get_user_orgao_subtree_ids(g.user)
         visibility_filters = [and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)]
-        if area_scope:
+        if user_subtree_ids:
             visibility_filters.insert(
                 0,
-                and_(Task.project_id.isnot(None), Project.area_responsavel.in_(area_scope)),
+                and_(Task.project_id.isnot(None), Project.orgao_id.in_(user_subtree_ids)),
             )
         query = query.filter(or_(*visibility_filters))
 
-    if normalized_area:
-        query = query.filter(Task.project_id.isnot(None), Project.area_responsavel == normalized_area)
+    if orgao_filter_id is not None:
+        subtree_ids = expand_orgao_filter_ids(orgao_filter_id)
+        if subtree_ids:
+            query = query.filter(Task.project_id.isnot(None), Project.orgao_id.in_(subtree_ids))
+        else:
+            query = query.filter(db.false())
 
     if project_filter:
         if project_filter == 'sem_projeto':

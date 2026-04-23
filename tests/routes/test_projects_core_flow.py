@@ -1,7 +1,8 @@
 import datetime
 
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
-from models import Etapa, Indicador, IndicadorProjeto, Project, ProjectHistory, User, UserArea, db
+from models import Etapa, Indicador, IndicadorProjeto, Project, ProjectHistory, User, db
+from tests._orgao_helpers import ensure_orgao, link_user_to_orgao
 
 
 def _valid_indicator_ids():
@@ -15,7 +16,7 @@ def test_projects_list_defaults_to_vigente_and_current_user_area(app, client_use
         db.session.add(
             Project(
                 titulo='Projeto Auditoria Finalizado',
-                area_responsavel='Auditoria',
+                orgao_id=ensure_orgao('Auditoria').id,
                 orgao='Orgao Finalizado',
                 prioridade='media',
                 status='Finalizado',
@@ -34,25 +35,22 @@ def test_projects_list_defaults_to_vigente_and_current_user_area(app, client_use
     assert 'Projeto Auditoria Finalizado' not in html
 
 
-def test_projects_list_shows_area_filter_for_non_admin_with_multiple_areas(app, client, seed_data):
+def test_projects_list_shows_orgao_filter_for_non_admin_with_multiple_orgaos(app, client, seed_data):
     with app.app_context():
         user = User(
-            username='user_multi_area',
-            name='Usuario Multi Area',
+            username='user_multi_orgao',
+            name='Usuario Multi Orgao',
             orgao='Orgao Multi',
             is_admin=False,
         )
         user.set_password('senha123')
         db.session.add(user)
         db.session.flush()
-        db.session.add_all(
-            [
-                UserArea(user_id=user.id, area='Auditoria'),
-                UserArea(user_id=user.id, area='VPD'),
-            ]
-        )
+        link_user_to_orgao(user.id, 'Auditoria')
+        link_user_to_orgao(user.id, 'VPD')
         db.session.commit()
         user_id = user.id
+        vpd_orgao_id = ensure_orgao('VPD').id
 
     with client.session_transaction() as session:
         session['user_id'] = user_id
@@ -61,26 +59,26 @@ def test_projects_list_shows_area_filter_for_non_admin_with_multiple_areas(app, 
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'id="filterArea"' in html
-    assert '<option value="Auditoria"' in html
-    assert '<option value="VPD"' in html
+    assert 'id="filterOrgao"' in html
     assert 'Projeto Auditoria' in html
     assert 'Projeto VPD' in html
 
-    response = client.get('/projects', query_string={'area': 'VPD'})
+    response = client.get('/projects', query_string={'orgao': str(vpd_orgao_id)})
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'id="filterArea"' in html
+    assert 'id="filterOrgao"' in html
     assert 'Projeto VPD' in html
     assert 'Projeto Auditoria' not in html
-    assert '<option value="VPD" selected' in html
 
 
-def test_projects_list_redirects_when_non_admin_forces_foreign_area(client_user):
+def test_projects_list_redirects_when_non_admin_forces_foreign_orgao(app, client_user):
+    with app.app_context():
+        vpd_orgao_id = ensure_orgao('VPD').id
+
     response = client_user.get(
         '/projects',
-        query_string={'area': 'VPD', 'status': 'Vigente'},
+        query_string={'orgao': str(vpd_orgao_id), 'status': 'Vigente'},
         follow_redirects=False,
     )
 
@@ -96,7 +94,7 @@ def test_projects_list_applies_admin_advanced_filters(app, client_admin):
             [
                 Project(
                     titulo='Projeto Painel ABEP',
-                    area_responsavel='VPD',
+                    orgao_id=ensure_orgao('VPD').id,
                     orgao='Orgao Filtro',
                     prioridade='alta',
                     status='Vigente',
@@ -107,7 +105,7 @@ def test_projects_list_applies_admin_advanced_filters(app, client_admin):
                 ),
                 Project(
                     titulo='Projeto Norma ABEP',
-                    area_responsavel='VPD',
+                    orgao_id=ensure_orgao('VPD').id,
                     orgao='Orgao Filtro',
                     prioridade='alta',
                     status='Vigente',
@@ -120,10 +118,13 @@ def test_projects_list_applies_admin_advanced_filters(app, client_admin):
         )
         db.session.commit()
 
+    with app.app_context():
+        vpd_orgao_id = ensure_orgao('VPD').id
+
     response = client_admin.get(
         '/projects',
         query_string={
-            'area': 'VPD',
+            'orgao': str(vpd_orgao_id),
             'status': 'Vigente',
             'delivery_type': 'Painel',
             'abep_indicator': abep_value,
@@ -139,14 +140,14 @@ def test_projects_list_applies_admin_advanced_filters(app, client_admin):
     assert 'Projeto Auditoria' not in html
 
 
-def test_add_project_creates_stages_indicators_and_history(app, client_user):
+def test_add_project_creates_stages_indicators_and_history(app, client_user, seed_data):
     abep_value = ABEP_INDICADORES_OPTIONS[0]['value']
 
     response = client_user.post(
         '/add_project',
         data={
             'project_titulo': 'Projeto Criado Completo',
-            'project_area_responsavel': 'Auditoria',
+            'project_orgao_id': str(seed_data['auditoria_orgao_id']),
             'project_orgao': 'Orgao Novo',
             'project_prioridade': 'media',
             'project_objetivo': '1',
@@ -173,7 +174,7 @@ def test_add_project_creates_stages_indicators_and_history(app, client_user):
     with app.app_context():
         project = Project.query.filter_by(titulo='Projeto Criado Completo').first()
         assert project is not None
-        assert project.area_responsavel == 'Auditoria'
+        assert project.orgao_ref.sigla == 'Auditoria'
         assert project.delivery_type == 'Sistema'
         assert project.abep_indicator == abep_value
         assert project.special_project == 'ABEP'
@@ -207,7 +208,7 @@ def test_edit_project_updates_fields_and_history(app, client_user, seed_data):
         data={
             'project_titulo': 'Projeto Auditoria Editado',
             'project_orgao': 'Orgao Editado',
-            'project_area_responsavel': 'Auditoria',
+            'project_orgao_id': str(seed_data['auditoria_orgao_id']),
             'project_prioridade': 'urgente',
             'project_status': 'Suspenso',
             'project_special_project': 'TCE',
@@ -315,18 +316,6 @@ def test_update_project_inline_updates_abep_goal_and_history(app, client_user, s
         assert 'Editou o projeto (inline)' in history.action_description
 
 
-def test_update_project_inline_rejects_invalid_area(client_user, seed_data):
-    response = client_user.post(
-        f"/project/{seed_data['project_id']}/update_inline",
-        json={'area_responsavel': 'Area Inexistente'},
-    )
-
-    assert response.status_code == 400
-    payload = response.get_json()
-    assert payload['success'] is False
-    assert 'área selecionada é inválida' in payload['message'].lower()
-
-
 def test_concluir_project_json_requires_all_stages_completed(client_user, seed_data):
     response = client_user.post(
         f"/project/{seed_data['project_id']}/concluir",
@@ -368,7 +357,7 @@ def test_delete_project_ajax_removes_project_from_database(app, client_user):
     with app.app_context():
         project = Project(
             titulo='Projeto Para Excluir',
-            area_responsavel='Auditoria',
+            orgao_id=ensure_orgao('Auditoria').id,
             orgao='Orgao Delete',
             prioridade='baixa',
             status='Vigente',

@@ -1,6 +1,7 @@
 import datetime
 
 from models import CalendarEvent, Etapa, Project, Task, db
+from tests._orgao_helpers import ensure_orgao
 
 
 def _client_for_user(app, user_id):
@@ -15,7 +16,7 @@ def test_global_search_api_returns_grouped_payload_limits_and_has_more(app, clie
         for index in range(1, 4):
             project = Project(
                 titulo=f'Alvo Projeto {index}',
-                area_responsavel='Auditoria',
+                orgao_id=ensure_orgao('Auditoria').id,
                 orgao='Orgao Busca',
                 prioridade='media',
                 status='Vigente',
@@ -88,7 +89,7 @@ def test_global_search_api_prefers_prefix_matches_and_respects_area_scope(app, s
     with app.app_context():
         prefix_project = Project(
             titulo='Busca Especial Prefixo',
-            area_responsavel='Auditoria',
+            orgao_id=ensure_orgao('Auditoria').id,
             orgao='Orgao Busca',
             prioridade='media',
             status='Vigente',
@@ -97,7 +98,7 @@ def test_global_search_api_prefers_prefix_matches_and_respects_area_scope(app, s
         )
         contained_project = Project(
             titulo='Projeto com Busca Especial no meio',
-            area_responsavel='Auditoria',
+            orgao_id=ensure_orgao('Auditoria').id,
             orgao='Orgao Busca',
             prioridade='media',
             status='Vigente',
@@ -106,7 +107,7 @@ def test_global_search_api_prefers_prefix_matches_and_respects_area_scope(app, s
         )
         foreign_project = Project(
             titulo='Busca Especial VPD',
-            area_responsavel='VPD',
+            orgao_id=ensure_orgao('VPD').id,
             orgao='Orgao Busca',
             prioridade='media',
             status='Vigente',

@@ -48,9 +48,7 @@
             var searchPageUrl = searchForm.getAttribute('action') || window.location.pathname;
             var trimmed = (query || '').trim();
             if (!trimmed) return searchPageUrl;
-            var area = (global.__APP_SELECTED_AREA__ || '').trim();
-            var areaParam = area ? '&area=' + encodeURIComponent(area) : '';
-            return searchPageUrl + '?q=' + encodeURIComponent(trimmed) + areaParam;
+            return searchPageUrl + '?q=' + encodeURIComponent(trimmed);
         }
 
         function clearSearchFooter() {
@@ -192,9 +190,7 @@
             renderSearchState('Buscando...');
             openSearchDropdown();
 
-            var _searchArea = (global.__APP_SELECTED_AREA__ || '').trim();
-            var _areaParam = _searchArea ? '&area=' + encodeURIComponent(_searchArea) : '';
-            fetch(searchApiUrl + '?q=' + encodeURIComponent(query) + '&limit=5' + _areaParam, {
+            fetch(searchApiUrl + '?q=' + encodeURIComponent(query) + '&limit=5', {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
                 signal: requestController.signal,

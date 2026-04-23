@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 
 from models import Project, db
+from tests._orgao_helpers import ensure_orgao
 
 
 def test_dashboard_recent_projects_renders_maximum_9_rows(app, client_user):
@@ -9,7 +10,7 @@ def test_dashboard_recent_projects_renders_maximum_9_rows(app, client_user):
         for index in range(1, 19):
             project = Project(
                 titulo=f'Dashboard Limit Test {index:02d}',
-                area_responsavel='Auditoria',
+                orgao_id=ensure_orgao('Auditoria').id,
                 orgao='Orgao Teste',
                 prioridade='media',
                 status='Vigente',

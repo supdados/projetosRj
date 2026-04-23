@@ -6,8 +6,14 @@ from .base import db
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     titulo = db.Column(db.String(200), nullable=False)
-    area_responsavel = db.Column(db.String(100))
     orgao = db.Column(db.String(100))
+    orgao_id = db.Column(
+        db.Integer,
+        db.ForeignKey('orgao_unidade.id', ondelete='SET NULL'),
+        nullable=True,
+        index=True,
+    )
+    orgao_ref = db.relationship('OrgaoUnidade')
     prioridade = db.Column(db.String(20))
     status = db.Column(db.String(20), default='Vigente', nullable=False)
     observacao = db.Column(db.Text)

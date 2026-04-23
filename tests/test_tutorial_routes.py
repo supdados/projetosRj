@@ -3,6 +3,7 @@
 import pytest
 
 from models import Project, User, db
+from tests._orgao_helpers import ensure_orgao
 
 
 def _login(client, user_id):
@@ -22,12 +23,12 @@ def _set_tutorial_active(client):
 @pytest.fixture
 def user_with_area(app):
     with app.app_context():
-        from models import UserArea
+        from tests._orgao_helpers import link_user_to_orgao
         u = User(username='tut_user', name='Tutorial User', orgao='Orgao T', is_admin=False)
         u.set_password('senha123')
         db.session.add(u)
         db.session.flush()
-        db.session.add(UserArea(user_id=u.id, area='Auditoria'))
+        link_user_to_orgao(u.id, 'Auditoria')
         db.session.commit()
         return u.id
 
@@ -90,7 +91,7 @@ def test_tutorial_start_section_needing_project_with_session_id_redirects_to_pro
     """Com tutorial_project_id na sessão, redireciona para o projeto do usuário."""
     _login(client, user_with_area)
     with app.app_context():
-        p = Project(titulo='Meu Projeto Real', area_responsavel='Auditoria', status='Vigente', is_tutorial=True)
+        p = Project(titulo='Meu Projeto Real', orgao_id=ensure_orgao('Auditoria').id, status='Vigente', is_tutorial=True)
         db.session.add(p)
         db.session.commit()
         pid = p.id
@@ -129,7 +130,7 @@ def test_cleanup_deletes_tutorial_projects(app, client, user_with_area):
     _login(client, user_with_area)
     with app.app_context():
         from models import db as _db
-        p = Project(titulo='Projeto Tutorial', area_responsavel='Auditoria', status='Vigente', is_tutorial=True)
+        p = Project(titulo='Projeto Tutorial', orgao_id=ensure_orgao('Auditoria').id, status='Vigente', is_tutorial=True)
         _db.session.add(p)
         _db.session.commit()
         assert Project.query.filter_by(is_tutorial=True).count() == 1
@@ -145,9 +146,9 @@ def test_cleanup_does_not_delete_real_projects(app, client, user_with_area):
     _login(client, user_with_area)
 
     with app.app_context():
-        real = Project(titulo='Projeto Real', area_responsavel='Auditoria', status='Vigente', is_tutorial=False)
+        real = Project(titulo='Projeto Real', orgao_id=ensure_orgao('Auditoria').id, status='Vigente', is_tutorial=False)
         db.session.add(real)
-        demo = Project(titulo='Demo', area_responsavel='Auditoria', status='Vigente', is_tutorial=True)
+        demo = Project(titulo='Demo', orgao_id=ensure_orgao('Auditoria').id, status='Vigente', is_tutorial=True)
         db.session.add(demo)
         db.session.commit()
 

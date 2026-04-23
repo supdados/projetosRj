@@ -1,4 +1,5 @@
 from models import Project, ProjectHistory, db
+from tests._orgao_helpers import ensure_orgao
 
 
 def test_project_history_page_renders_filters_and_category_markers(app, client_user, seed_data):
@@ -60,7 +61,7 @@ def test_project_history_empty_state_for_project_without_entries(app, client_use
     with app.app_context():
         project = Project(
             titulo='Projeto Sem Historico',
-            area_responsavel='Auditoria',
+            orgao_id=ensure_orgao('Auditoria').id,
             orgao='Orgao Limpo',
             prioridade='media',
             status='Vigente',

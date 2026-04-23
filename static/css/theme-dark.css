@@ -85,6 +85,13 @@ html[data-theme="dark"] body.is-authenticated .app-nav-icon-btn:focus-visible {
     border-color: rgba(99, 166, 219, 0.52);
 }
 
+html[data-theme="dark"] body.is-authenticated .app-nav-icon-btn:active {
+    color: #ecf4fb;
+    background: rgba(78, 149, 204, 0.3);
+    border-color: rgba(99, 166, 219, 0.58);
+    box-shadow: none;
+}
+
 
 html[data-theme="dark"] body.is-authenticated .app-nav-icon-btn.active,
 html[data-theme="dark"] body.is-authenticated .app-nav-icon-btn.show {

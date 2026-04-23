@@ -220,7 +220,7 @@ ROUTE_CASES = [
         'role': 'user',
         'data': {
             'project_titulo': 'Projeto Criado no Teste',
-            'project_area_responsavel': 'Auditoria',
+            'project_orgao_id': '{auditoria_orgao_id}',
             'project_orgao': 'Orgao Teste',
             'project_prioridade': 'media',
             'project_observacao': 'Observacao de teste',
@@ -258,7 +258,7 @@ ROUTE_CASES = [
         'data': {
             'project_titulo': 'Projeto Editado',
             'project_orgao': 'Orgao Editado',
-            'project_area_responsavel': 'Auditoria',
+            'project_orgao_id': '{auditoria_orgao_id}',
             'project_prioridade': 'alta',
             'project_status': 'Vigente',
             'project_observacao': 'Obs atualizada',

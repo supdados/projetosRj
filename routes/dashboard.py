@@ -7,40 +7,42 @@ from models import Etapa, Project, Task, db
 
 from .blueprint import main_bp
 from .decorators import login_required
-from .shared import (
-    get_area_catalog_choices,
-    get_goal_catalog_context,
-    redirect_to_current_route_without_area,
-    sanitize_area_filter_for_current_user,
+from .orgao_scope import (
+    expand_orgao_filter_ids,
+    get_user_orgao_subtree_ids,
+    redirect_to_current_route_without_orgao,
+    sanitize_orgao_filter_for_current_user,
 )
+from .shared import get_goal_catalog_context
 
 
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    selected_area, invalid_area_filter = sanitize_area_filter_for_current_user(request.args.get('area'))
-    user_areas = g.user.get_areas() if not g.user.is_admin else []
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(request.args.get('orgao'))
+    if invalid_orgao_filter:
+        return redirect_to_current_route_without_orgao()
 
-    if invalid_area_filter:
-        return redirect_to_current_route_without_area()
+    user_subtree_ids = set() if g.user.is_admin else get_user_orgao_subtree_ids(g.user)
+    selected_subtree_ids = expand_orgao_filter_ids(selected_orgao_id) if selected_orgao_id else set()
 
-    project_query_base = Project.query
-    if not g.user.is_admin:
-        if user_areas:
-            project_query_base = project_query_base.filter(Project.area_responsavel.in_(user_areas))
-    if selected_area:
-        project_query_base = project_query_base.filter(Project.area_responsavel == selected_area)
+    def apply_project_scope(query):
+        if not g.user.is_admin:
+            if user_subtree_ids:
+                query = query.filter(Project.orgao_id.in_(user_subtree_ids))
+            else:
+                query = query.filter(Project.id == -1)
+        if selected_subtree_ids:
+            query = query.filter(Project.orgao_id.in_(selected_subtree_ids))
+        return query
+
+    project_query_base = apply_project_scope(Project.query)
 
     RECENT_PROJECTS_LIMIT = 15
     recent_projects = project_query_base.order_by(Project.id.desc()).limit(RECENT_PROJECTS_LIMIT).all()
 
     def count_projects_for_user(filter_expression=None):
-        query = Project.query
-        if not g.user.is_admin:
-            if user_areas:
-                query = query.filter(Project.area_responsavel.in_(user_areas))
-        if selected_area:
-            query = query.filter(Project.area_responsavel == selected_area)
+        query = apply_project_scope(Project.query)
         if filter_expression is not None:
             query = query.filter(filter_expression)
         return query.count()
@@ -56,12 +58,7 @@ def dashboard():
     data_atual = datetime.date.today()
     projetos_em_atraso = 0
 
-    projetos_vigentes_query = Project.query.filter(Project.status == 'Vigente')
-    if not g.user.is_admin:
-        if user_areas:
-            projetos_vigentes_query = projetos_vigentes_query.filter(Project.area_responsavel.in_(user_areas))
-    if selected_area:
-        projetos_vigentes_query = projetos_vigentes_query.filter(Project.area_responsavel == selected_area)
+    projetos_vigentes_query = apply_project_scope(Project.query.filter(Project.status == 'Vigente'))
 
     for projeto in projetos_vigentes_query.all():
         if Etapa.query.filter(
@@ -73,38 +70,40 @@ def dashboard():
             projetos_em_atraso += 1
 
     objetivos, _, _ = get_goal_catalog_context()
-    area_catalog_choices = get_area_catalog_choices()
 
     def apply_task_visibility_rules(query, include_archived=False):
         if not include_archived:
             query = query.filter(Task.is_archived.is_(False))
 
+        query = query.outerjoin(Project, Task.project_id == Project.id)
+
         if g.user.is_admin:
-            if selected_area:
-                query = query.outerjoin(Project, Task.project_id == Project.id).filter(
+            if selected_subtree_ids:
+                query = query.filter(
                     Task.project_id.isnot(None),
-                    Project.area_responsavel == selected_area,
+                    Project.orgao_id.in_(selected_subtree_ids),
                 )
             return query
 
-        if selected_area and user_areas:
-            effective_areas = [selected_area] if selected_area in user_areas else []
-        else:
-            effective_areas = user_areas
+        effective_subtree_ids = (
+            selected_subtree_ids & user_subtree_ids
+            if selected_subtree_ids
+            else user_subtree_ids
+        )
 
         visibility_filters = [
             and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)
         ]
-        if effective_areas:
+        if effective_subtree_ids:
             visibility_filters.insert(
                 0,
                 and_(
                     Task.project_id.isnot(None),
-                    Project.area_responsavel.in_(effective_areas)
-                )
+                    Project.orgao_id.in_(effective_subtree_ids),
+                ),
             )
 
-        return query.outerjoin(Project, Task.project_id == Project.id).filter(or_(*visibility_filters))
+        return query.filter(or_(*visibility_filters))
 
     open_tasks_count_query = db.session.query(db.func.count(Task.id)).select_from(Task).filter(Task.status != 'finalizada')
     open_tasks_count_query = apply_task_visibility_rules(open_tasks_count_query, include_archived=False)
@@ -188,7 +187,7 @@ def dashboard():
         task_atencao_count=task_atencao_count,
         recent_tasks=recent_tasks,
         objetivos=objetivos,
-        AREAS_RESPONSAVEIS_CHOICES=area_catalog_choices,
+        selected_orgao=selected_orgao_id,
         chatbot_enabled=bool(current_app.config.get('CHATBOT_ENABLED')),
         chatbot_base_url=str(current_app.config.get('CHATBOT_BASE_URL', '')).strip().rstrip('/'),
     )

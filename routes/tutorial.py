@@ -4,6 +4,7 @@ from models import Project, db
 
 from .blueprint import main_bp
 from .decorators import login_required
+from .orgao_scope import get_user_orgao_subtree_ids
 
 _SECTION_START_URLS = {
     'criar_projeto':    lambda _pid: url_for('main.dashboard'),
@@ -19,16 +20,17 @@ _SECTIONS_NEEDING_PROJECT = {'criar_etapa'}
 def _tutorial_projects_query():
     """Query de projetos de tutorial escopada ao usuário atual.
 
-    Admin vê todos; usuário comum só vê projetos em áreas às quais tem acesso.
-    Evita que cleanup/listagem vaze ou apague dados de outros tenants.
+    Admin vê todos; usuário comum só vê projetos dentro do subtree dos órgãos
+    aos quais tem acesso. Evita que cleanup/listagem vaze ou apague dados de
+    outros tenants.
     """
     q = Project.query.filter_by(is_tutorial=True)
     if g.user.is_admin:
         return q
-    areas = g.user.get_areas() or []
-    if not areas:
+    subtree_ids = get_user_orgao_subtree_ids(g.user)
+    if not subtree_ids:
         return q.filter(db.false())
-    return q.filter(Project.area_responsavel.in_(areas))
+    return q.filter(Project.orgao_id.in_(subtree_ids))
 
 
 def _get_tutorial_project_id() -> int | None:

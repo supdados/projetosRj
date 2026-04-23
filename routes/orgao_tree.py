@@ -116,6 +116,21 @@ def get_orgao_descendants(orgao_id: int) -> list[int]:
     return descendants
 
 
+def get_orgao_ancestors(orgao_id: int) -> list[int]:
+    """IDs de todos os ancestrais (do pai até a raiz, sem incluir o próprio orgao_id)."""
+    ancestors: list[int] = []
+    orgao = db.session.get(OrgaoUnidade, orgao_id)
+    if orgao is None:
+        return ancestors
+    seen = {orgao_id}
+    current = orgao.pai
+    while current is not None and current.id not in seen:
+        seen.add(current.id)
+        ancestors.append(current.id)
+        current = current.pai
+    return ancestors
+
+
 def would_create_cycle(orgao_id: int, new_pai_id: int | None) -> bool:
     if new_pai_id is None:
         return False

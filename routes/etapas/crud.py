@@ -19,6 +19,7 @@ from services.project_meetings import (
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
+from routes.orgao_scope import user_can_access_project
 from routes.shared import get_or_404, log_project_action
 from routes.etapas.helpers import (
     _connection_for_current_user,
@@ -252,7 +253,7 @@ def delete_etapa(etapa_id):
 @login_required
 def reorder_etapas(project_id):
     project = get_or_404(Project, project_id)
-    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+    if not user_can_access_project(g.user, project):
         return jsonify({'success': False, 'message': 'Você não tem permissão para reordenar etapas deste projeto.'}), 403
 
     data = request.get_json() or {}

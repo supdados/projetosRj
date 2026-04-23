@@ -11,7 +11,6 @@ from models import (
     CalendarEvent,
     Etapa,
     IndicadorProjeto,
-    AreaCatalog,
     OrgaoUnidade,
     Project,
     ProjectHistory,
@@ -21,16 +20,37 @@ from models import (
     TaskItem,
     TaskItemComment,
     User,
-    UserArea,
+    UserOrgao,
     db,
 )
 from catalogs.objectives import sync_goal_catalog_to_db
-from routes.shared import ensure_area_catalog_seeded
 
 TEST_PASSWORD = 'senha123'
 
 
-def _create_user(username, name, *, is_admin=False, areas=None, orgao='Orgao Teste'):
+def _ensure_setd():
+    setd = OrgaoUnidade.query.filter_by(sigla='SETD').first()
+    if setd is None:
+        setd = OrgaoUnidade(sigla='SETD', nome='SETD', tipo='Secretaria', pai_id=None, ordem=0)
+        db.session.add(setd)
+        db.session.flush()
+    return setd
+
+
+def _ensure_orgao(sigla):
+    existing = OrgaoUnidade.query.filter(db.func.lower(OrgaoUnidade.sigla) == sigla.lower()).first()
+    if existing is not None:
+        return existing
+    setd = _ensure_setd()
+    orgao = OrgaoUnidade(
+        sigla=sigla, nome=sigla, tipo='Subsecretaria', pai_id=setd.id, ordem=0,
+    )
+    db.session.add(orgao)
+    db.session.flush()
+    return orgao
+
+
+def _create_user(username, name, *, is_admin=False, orgao_siglas=None, orgao='Orgao Teste'):
     user = User(
         username=username,
         name=name,
@@ -41,8 +61,9 @@ def _create_user(username, name, *, is_admin=False, areas=None, orgao='Orgao Tes
     db.session.add(user)
     db.session.flush()
 
-    for area in areas or []:
-        db.session.add(UserArea(user_id=user.id, area=area))
+    for sigla in orgao_siglas or []:
+        orgao_unit = _ensure_orgao(sigla)
+        db.session.add(UserOrgao(user_id=user.id, orgao_id=orgao_unit.id))
 
     return user
 
@@ -70,7 +91,6 @@ def app(tmp_path):
     with flask_app.app_context():
         db.drop_all()
         db.create_all()
-        ensure_area_catalog_seeded()
         sync_goal_catalog_to_db(commit=True)
 
     yield flask_app
@@ -89,11 +109,11 @@ def client(app):
 @pytest.fixture
 def seed_data(app):
     with app.app_context():
-        admin = _create_user('admin', 'Administrador', is_admin=True, areas=['Auditoria'])
-        user = _create_user('user_auditoria', 'Usuario Auditoria', areas=['Auditoria'])
-        outsider = _create_user('user_vpd', 'Usuario VPD', areas=['VPD'])
-        editable = _create_user('user_editavel', 'Usuario Editavel', areas=['Auditoria'])
-        deletable = _create_user('user_deletavel', 'Usuario Deletavel', areas=['SUPDADOS'])
+        admin = _create_user('admin', 'Administrador', is_admin=True, orgao_siglas=['Auditoria'])
+        user = _create_user('user_auditoria', 'Usuario Auditoria', orgao_siglas=['Auditoria'])
+        outsider = _create_user('user_vpd', 'Usuario VPD', orgao_siglas=['VPD'])
+        editable = _create_user('user_editavel', 'Usuario Editavel', orgao_siglas=['Auditoria'])
+        deletable = _create_user('user_deletavel', 'Usuario Deletavel', orgao_siglas=['SUPDADOS'])
 
         template = StageTemplate(name='Template Base', description='Template inicial de teste')
         db.session.add(template)
@@ -105,9 +125,10 @@ def seed_data(app):
             ]
         )
 
+        auditoria_orgao = _ensure_orgao('Auditoria')
         project = Project(
             titulo='Projeto Auditoria',
-            area_responsavel='Auditoria',
+            orgao_id=auditoria_orgao.id,
             orgao='Orgao A',
             prioridade='alta',
             status='Vigente',
@@ -145,7 +166,7 @@ def seed_data(app):
 
         project_complete = Project(
             titulo='Projeto Concluivel',
-            area_responsavel='Auditoria',
+            orgao_id=auditoria_orgao.id,
             orgao='Orgao A',
             prioridade='media',
             status='Vigente',
@@ -169,9 +190,11 @@ def seed_data(app):
             )
         )
 
+        vpd_orgao = _ensure_orgao('VPD')
+        vpe_orgao = _ensure_orgao('VPE')
         foreign_project = Project(
             titulo='Projeto VPD',
-            area_responsavel='VPD',
+            orgao_id=vpd_orgao.id,
             orgao='Orgao B',
             prioridade='baixa',
             status='Vigente',
@@ -269,9 +292,6 @@ def seed_data(app):
 
         db.session.commit()
 
-        auditoria_area = AreaCatalog.query.filter_by(name='Auditoria').first()
-        vpe_area = AreaCatalog.query.filter_by(name='VPE').first()
-
         return {
             'admin_id': admin.id,
             'user_id': user.id,
@@ -293,8 +313,9 @@ def seed_data(app):
             'comment_id': comment.id,
             'foreign_comment_id': foreign_comment.id,
             'template_id': template.id,
-            'auditoria_area_id': auditoria_area.id if auditoria_area else None,
-            'vpe_area_id': vpe_area.id if vpe_area else None,
+            'auditoria_orgao_id': auditoria_orgao.id,
+            'vpd_orgao_id': vpd_orgao.id,
+            'vpe_orgao_id': vpe_orgao.id,
             'orgao_root_id': orgao_root.id,
             'orgao_child_id': orgao_secretaria.id,
             'user_username': user.username,

@@ -9,6 +9,8 @@ Usamos a rota /dashboard para garantir que o parcial é renderizado no
 contexto real (com endpoint e usuário autenticado).
 """
 
+from pathlib import Path
+
 
 def _topnav_html(client_admin):
     response = client_admin.get('/dashboard')
@@ -101,6 +103,16 @@ def test_topnav_theme_toggle_button_is_rendered(client_admin):
     assert 'id="appThemeToggle"' in html
     assert 'id="appThemeToggleIcon"' in html
     assert 'aria-label="Alternar tema"' in html
+
+
+def test_topnav_icon_buttons_define_pressed_state_contract():
+    css_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'legacy' / '00-foundation.css'
+    css = css_path.read_text(encoding='utf-8')
+
+    assert '--bs-btn-active-color: #ffffff;' in css
+    assert '--bs-btn-active-bg: rgba(255, 255, 255, 0.18);' in css
+    assert '.app-nav-icon-btn:active,' in css
+    assert '.app-nav-icon-btn.show {' in css
 
 
 def test_topnav_area_dropdown_includes_user_areas(client_admin):

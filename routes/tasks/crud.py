@@ -455,7 +455,6 @@ def archive_finalized_tasks():
     finalized_tasks = (
         _build_visible_tasks_query(
             include_archived=False,
-            selected_area=filter_values['selected_area'],
             project_filter=filter_values['project_filter'],
             prioridade_filter=filter_values['prioridade_filter'],
             tipo_filter=filter_values['tipo_filter'],

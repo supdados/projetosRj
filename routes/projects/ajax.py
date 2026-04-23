@@ -6,10 +6,8 @@ from catalogs.objectives import normalize_goal_selection
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
+from routes.orgao_scope import user_can_access_project
 from routes.shared import (
-    get_area_catalog_choices,
-    is_area_in_catalog,
-    resolve_catalog_area_name,
     get_or_404,
     get_goal_catalog_context,
     log_project_action,
@@ -23,7 +21,7 @@ def get_project_edit_data(project_id):
     project = get_or_404(Project, project_id)
 
     # Verificar permissão
-    if not g.user.is_admin and not g.user.has_access_to_area(project.area_responsavel):
+    if not user_can_access_project(g.user, project):
         return jsonify({'success': False, 'message': 'Você não tem permissão para editar este projeto.'}), 403
 
     try:
@@ -37,7 +35,6 @@ def get_project_edit_data(project_id):
             'resultados_por_objetivo': resultados_por_objetivo,
             'indicadores_por_resultado': indicadores_por_resultado,
             'indicadores_do_projeto': indicadores_do_projeto_ids,
-            'areas_responsaveis': get_area_catalog_choices(),
             'is_admin': g.user.is_admin
         })
 
@@ -52,7 +49,7 @@ def update_project_inline(project_id):
     project_to_edit = get_or_404(Project, project_id)
 
     # Verificar permissão
-    if not g.user.is_admin and not g.user.has_access_to_area(project_to_edit.area_responsavel):
+    if not user_can_access_project(g.user, project_to_edit):
         return jsonify({'success': False, 'message': 'Você não tem permissão para editar este projeto.'}), 403
 
     try:
@@ -78,21 +75,6 @@ def update_project_inline(project_id):
             if old_orgao != new_orgao:
                 changes.append(f'órgão de "{old_orgao or "vazio"}" para "{new_orgao or "vazio"}"')
             project_to_edit.orgao = data['orgao'] or None
-
-        # Admin ou usuário com múltiplas áreas pode alterar área
-        if 'area_responsavel' in data:
-            new_area = data['area_responsavel']
-            if new_area != project_to_edit.area_responsavel:
-                if not is_area_in_catalog(new_area):
-                    return jsonify({
-                        'success': False,
-                        'message': 'A área selecionada é inválida ou não está mais disponível.',
-                    }), 400
-                new_area = resolve_catalog_area_name(new_area)
-                user_areas = g.user.get_areas()
-                if g.user.is_admin or (len(user_areas) > 1 and new_area in user_areas):
-                    changes.append(f'área de "{project_to_edit.area_responsavel}" para "{new_area}"')
-                    project_to_edit.area_responsavel = new_area
 
         # Novos campos
         if 'special_project' in data:

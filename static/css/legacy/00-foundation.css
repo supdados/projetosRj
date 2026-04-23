@@ -205,6 +205,17 @@ html[data-theme="dark"] .app-brand {
 }
 
 .app-nav-icon-btn {
+    --bs-btn-color: rgba(255, 255, 255, 0.78);
+    --bs-btn-bg: transparent;
+    --bs-btn-border-color: transparent;
+    --bs-btn-hover-color: #ffffff;
+    --bs-btn-hover-bg: rgba(255, 255, 255, 0.1);
+    --bs-btn-hover-border-color: transparent;
+    --bs-btn-focus-shadow-rgb: 255, 255, 255;
+    --bs-btn-active-color: #ffffff;
+    --bs-btn-active-bg: rgba(255, 255, 255, 0.18);
+    --bs-btn-active-border-color: transparent;
+    --bs-btn-active-shadow: none;
     width: 1.95rem;
     height: 1.95rem;
     border-radius: 8px;
@@ -225,6 +236,14 @@ html[data-theme="dark"] .app-brand {
     color: #ffffff;
     background: rgba(255, 255, 255, 0.1);
     border-color: transparent;
+}
+
+.app-nav-icon-btn:active,
+.app-nav-icon-btn.show {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.18);
+    border-color: transparent;
+    box-shadow: none;
 }
 
 .app-nav-icon-btn.active {

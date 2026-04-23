@@ -248,7 +248,7 @@ def _serialize_block(block):
                 'id': proj.id,
                 'titulo': proj.titulo,
                 'status': proj.status,
-                'area': proj.area_responsavel or '',
+                'orgao_sigla': proj.orgao_ref.sigla if proj.orgao_ref else '',
                 'orgao': proj.orgao or '',
                 'prioridade': proj.prioridade or '',
                 'url': url_for('main.project_detail', project_id=proj.id),

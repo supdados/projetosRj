@@ -18,8 +18,7 @@ class User(db.Model):
     lockout_until = db.Column(db.DateTime, nullable=True)
     tutorial_visto = db.Column(db.Boolean, default=False, nullable=False, server_default='0')
 
-    # Relacionamento com multiplas areas
-    areas = db.relationship('UserArea', backref='user', lazy=True, cascade="all, delete-orphan")
+    orgaos = db.relationship('UserOrgao', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method='scrypt')
@@ -31,42 +30,44 @@ class User(db.Model):
         """True se o hash atual usa algoritmo legado (pré-scrypt)."""
         return not (self.password_hash or '').startswith('scrypt:')
 
-    def get_areas(self):
-        return [ua.area for ua in self.areas]
-
-    def has_access_to_area(self, area):
-        if self.is_admin:
-            return True
-        return area in self.get_areas()
-
-    def set_areas(self, area_list):
-        UserArea.query.filter_by(user_id=self.id).delete()
-        for area in area_list:
-            if area:
-                user_area = UserArea(user_id=self.id, area=area)
-                db.session.add(user_area)
+    def set_orgaos(self, orgao_ids):
+        """Substitui os vinculos em user_orgao."""
+        UserOrgao.query.filter_by(user_id=self.id).delete()
+        seen = set()
+        for orgao_id in orgao_ids:
+            if orgao_id in seen:
+                continue
+            seen.add(orgao_id)
+            db.session.add(UserOrgao(user_id=self.id, orgao_id=orgao_id))
 
     def __repr__(self):
         return f'<User {self.username}>'
 
 
-class UserArea(db.Model):
-    __tablename__ = 'user_areas'
+class UserOrgao(db.Model):
+    __tablename__ = 'user_orgao'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    area = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('user.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    orgao_id = db.Column(
+        db.Integer,
+        db.ForeignKey('orgao_unidade.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+
+    orgao = db.relationship('OrgaoUnidade')
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'orgao_id', name='uq_user_orgao_user_orgao'),
+        db.Index('ix_user_orgao_user_id', 'user_id'),
+        db.Index('ix_user_orgao_orgao_id', 'orgao_id'),
+    )
 
     def __repr__(self):
-        return f'<UserArea user_id={self.user_id} area={self.area}>'
-
-
-class AreaCatalog(db.Model):
-    __tablename__ = 'area_catalog'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)
-
-    def __repr__(self):
-        return f'<AreaCatalog {self.name}>'
+        return f'<UserOrgao user_id={self.user_id} orgao_id={self.orgao_id}>'
 
 
 class UserNotification(db.Model):

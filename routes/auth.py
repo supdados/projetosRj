@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
-from models import AreaCatalog, Project, Task, User, db
+from models import OrgaoUnidade, Project, Task, User, db
 from time_utils import utc_now
 from services.govbr_oidc import (
     GovBrOIDCError,
@@ -167,7 +167,7 @@ def login_page():
         count_vigente = Project.query.filter_by(status='Vigente').count()
         count_finalizado = Project.query.filter_by(status='Finalizado').count()
         total_tasks = Task.query.count()
-        count_areas = AreaCatalog.query.count()
+        count_areas = OrgaoUnidade.query.filter_by(ativo=True).count()
         return count_vigente, count_finalizado, total_tasks, count_areas
 
     if request.method == 'POST':

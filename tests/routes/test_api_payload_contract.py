@@ -1,6 +1,7 @@
 import json
 
 from models import Project, StageTemplate, StageTemplateItem, db
+from tests._orgao_helpers import ensure_orgao
 
 
 def _client_for_user(app, user_id):
@@ -76,7 +77,7 @@ def test_api_user_projects_respects_user_scope_and_admin_sees_all(app, seed_data
         db.session.add(
             Project(
                 titulo='Projeto Adicional Auditoria',
-                area_responsavel='Auditoria',
+                orgao_id=ensure_orgao('Auditoria').id,
                 orgao='Orgao A',
                 prioridade='media',
                 status='Vigente',
@@ -96,7 +97,7 @@ def test_api_user_projects_respects_user_scope_and_admin_sees_all(app, seed_data
     assert 'Projeto Auditoria' in user_titles
     assert 'Projeto Adicional Auditoria' in user_titles
     assert 'Projeto VPD' not in user_titles
-    assert all(item['area_responsavel'] == 'Auditoria' for item in user_payload)
+    assert all(item['orgao_sigla'] == 'Auditoria' for item in user_payload)
 
     admin_response = admin_client.get('/api/projetos_usuario')
     assert admin_response.status_code == 200

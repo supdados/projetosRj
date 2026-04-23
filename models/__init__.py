@@ -1,5 +1,5 @@
 from .base import db, TaskQuery, TaskItemQuery
-from .user import User, UserArea, AreaCatalog, UserNotification
+from .user import User, UserOrgao, UserNotification
 from .project import Project, ProjectHistory
 from .etapa import Etapa, ProjectStageMeeting
 from .catalog import Objetivo, ResultadoEsperado, Indicador, IndicadorProjeto
@@ -23,8 +23,7 @@ __all__ = [
     'TaskQuery',
     'TaskItemQuery',
     'User',
-    'UserArea',
-    'AreaCatalog',
+    'UserOrgao',
     'UserNotification',
     'Project',
     'ProjectHistory',
@@ -51,4 +50,5 @@ __all__ = [
     'OrgaoUnidade',
     'ALLOWED_TIPOS',
     'MAX_DEPTH',
+    'TIPO_RANK',
 ]

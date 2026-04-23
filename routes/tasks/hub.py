@@ -5,14 +5,17 @@ from models import (
     Task,
     db,
 )
-from routes.shared import redirect_to_current_route_without_area, sanitize_area_filter_for_current_user
+from routes.orgao_scope import (
+    get_user_orgao_subtree_ids,
+    redirect_to_current_route_without_orgao,
+    sanitize_orgao_filter_for_current_user,
+)
 from routes.tasks.permissions import _task_permission_flags
 from routes.tasks.queries import (
     _build_task_filter_options,
     _build_task_listing_url,
     _build_visible_tasks_query,
     _read_task_filter_values,
-    _resolve_task_hub_area_scope,
 )
 
 
@@ -23,7 +26,7 @@ def _group_hub_tasks_by_project(tasks):
         project = task.project
         project_id = project.id if project else None
         project_title = (project.titulo if project else 'Sem projeto') or 'Sem projeto'
-        project_area = project.area_responsavel if project else None
+        project_orgao_sigla = (project.orgao_ref.sigla if project and project.orgao_ref else None)
         project_value = str(project_id) if project_id else 'sem_projeto'
         group_key = f'project:{project_id}' if project_id else 'sem_projeto'
 
@@ -33,7 +36,7 @@ def _group_hub_tasks_by_project(tasks):
                 'project_id': project_id,
                 'project_value': project_value,
                 'project_titulo': project_title,
-                'project_area': project_area,
+                'project_orgao_sigla': project_orgao_sigla,
                 'tasks': [],
                 # Compatibilidade com template/JS legado.
                 'items': [],
@@ -62,46 +65,22 @@ def _group_hub_tasks_by_project(tasks):
     return ordered_groups
 
 
-def _build_task_hub_area_options(include_archived=False):
-    base_query = (
-        db.session.query(Project.area_responsavel)
-        .join(Task, Task.project_id == Project.id)
-        .filter(
-            Task.is_archived.is_(bool(include_archived)),
-            Project.area_responsavel.isnot(None),
-        )
-    )
-
-    if not g.user.is_admin:
-        user_areas = g.user.get_areas()
-        if not user_areas:
-            return []
-        base_query = base_query.filter(Project.area_responsavel.in_(user_areas))
-
-    rows = base_query.distinct().all()
-    return sorted({(area or '').strip() for (area,) in rows if (area or '').strip()})
-
-
-def _build_task_hub_project_options(include_archived=False, selected_area=''):
-    area_scope, normalized_area = _resolve_task_hub_area_scope(selected_area)
-
+def _build_task_hub_project_options(include_archived=False):
     query = Project.query
 
     if not g.user.is_admin:
-        if area_scope:
-            query = query.filter(Project.area_responsavel.in_(area_scope))
+        subtree_ids = get_user_orgao_subtree_ids(g.user)
+        if subtree_ids:
+            query = query.filter(Project.orgao_id.in_(subtree_ids))
         else:
             query = query.filter(db.false())
-
-    if normalized_area:
-        query = query.filter(Project.area_responsavel == normalized_area)
 
     projects = query.order_by(db.func.lower(Project.titulo), Project.titulo.asc(), Project.id.asc()).all()
     options = [
         {
             'value': str(project.id),
             'label': project.titulo,
-            'area': project.area_responsavel,
+            'orgao_sigla': project.orgao_ref.sigla if project.orgao_ref else '',
         }
         for project in projects
     ]
@@ -109,7 +88,6 @@ def _build_task_hub_project_options(include_archived=False, selected_area=''):
     has_orphan_tasks = (
         _build_visible_tasks_query(
             include_archived=include_archived,
-            selected_area=selected_area,
             project_filter='sem_projeto',
             include_relations=False,
         )
@@ -122,7 +100,7 @@ def _build_task_hub_project_options(include_archived=False, selected_area=''):
             {
                 'value': 'sem_projeto',
                 'label': 'Sem projeto',
-                'area': '',
+                'orgao_sigla': '',
             }
         )
 
@@ -131,9 +109,13 @@ def _build_task_hub_project_options(include_archived=False, selected_area=''):
 
 def _render_task_hub(locked_project=None, template_name='tasks/hub.html', include_archived=False):
     filter_values = _read_task_filter_values(request.args)
-    selected_area, invalid_area_filter = sanitize_area_filter_for_current_user(filter_values['selected_area'])
-    if invalid_area_filter and locked_project is None:
-        return redirect_to_current_route_without_area()
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+        request.args.get('orgao')
+    )
+    if invalid_orgao_filter and locked_project is None:
+        return redirect_to_current_route_without_orgao()
+    if locked_project is not None:
+        selected_orgao_id = None
     project_filter = filter_values['project_filter']
     prioridade_filter = filter_values['prioridade_filter']
     tipo_filter = filter_values['tipo_filter']
@@ -141,17 +123,16 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
     responsavel_filter = filter_values['responsavel_filter']
 
     if locked_project is not None:
-        selected_area = ''
         project_filter = str(locked_project.id)
 
     tasks = _build_visible_tasks_query(
         include_archived=include_archived,
-        selected_area=selected_area,
         project_filter=project_filter,
         prioridade_filter=prioridade_filter,
         tipo_filter=tipo_filter,
         status_filter=status_filter,
         responsavel_filter=responsavel_filter,
+        orgao_filter_id=selected_orgao_id,
     ).all()
     groups = _group_hub_tasks_by_project(tasks)
     if locked_project is not None and not include_archived and not groups:
@@ -161,16 +142,13 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
                 'project_id': locked_project.id,
                 'project_value': str(locked_project.id),
                 'project_titulo': locked_project.titulo,
-                'project_area': locked_project.area_responsavel,
+                'project_orgao_sigla': locked_project.orgao_ref.sigla if locked_project.orgao_ref else None,
                 'tasks': [],
                 'items': [],
             }
         ]
 
-    project_options = _build_task_hub_project_options(
-        include_archived=include_archived,
-        selected_area=selected_area,
-    )
+    project_options = _build_task_hub_project_options(include_archived=include_archived)
 
     project_label_map = {opt['value']: opt['label'] for opt in project_options}
     selected_project_label = project_label_map.get(project_filter, '')
@@ -181,7 +159,6 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
 
     attribute_scope_tasks = _build_visible_tasks_query(
         include_archived=include_archived,
-        selected_area=selected_area,
         project_filter=project_filter,
         include_relations=False,
     ).all()
@@ -195,17 +172,10 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
         },
     )
 
-    user_areas = g.user.get_areas()
-    show_area_selector = (locked_project is None) and (g.user.is_admin or len(user_areas) > 1)
-    area_options = _build_task_hub_area_options(include_archived=include_archived) if show_area_selector else []
     filter_form_endpoint = 'main.list_tasks_archived' if include_archived else 'main.list_tasks'
-    filter_form_action = _build_task_listing_url(
-        filter_form_endpoint,
-    )
+    filter_form_action = _build_task_listing_url(filter_form_endpoint)
     clear_endpoint = 'main.list_tasks_archived' if include_archived else 'main.list_tasks'
-    clear_url = _build_task_listing_url(
-        clear_endpoint,
-    )
+    clear_url = _build_task_listing_url(clear_endpoint)
 
     archived_url = None
     active_url = None
@@ -213,7 +183,6 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
     if include_archived:
         active_url = _build_task_listing_url(
             'main.list_tasks',
-            selected_area=selected_area,
             project_filter=project_filter,
             prioridade_filter=prioridade_filter,
             tipo_filter=tipo_filter,
@@ -222,7 +191,6 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
         )
         active_count = _build_visible_tasks_query(
             include_archived=False,
-            selected_area=selected_area,
             project_filter=project_filter,
             prioridade_filter=prioridade_filter,
             tipo_filter=tipo_filter,
@@ -233,7 +201,6 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
     else:
         archived_url = _build_task_listing_url(
             'main.list_tasks_archived',
-            selected_area=selected_area,
             project_filter=project_filter,
             prioridade_filter=prioridade_filter,
             tipo_filter=tipo_filter,
@@ -267,8 +234,7 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
         project_options=project_options,
         selected_project=project_filter,
         selected_project_label=selected_project_label,
-        selected_area=selected_area,
-        area_options=area_options,
+        selected_orgao=selected_orgao_id,
         selected_prioridade=prioridade_filter,
         selected_tipo=tipo_filter,
         selected_status=status_filter,
@@ -277,7 +243,6 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
         tipo_options=filter_options['tipo_options'],
         status_options=filter_options['status_options'],
         responsavel_options=filter_options['responsavel_options'],
-        show_area_selector=show_area_selector,
         total_items=len(tasks),
         project_locked=bool(locked_project),
         project_locked_obj=locked_project,

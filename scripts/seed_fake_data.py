@@ -26,18 +26,43 @@ from app import create_app
 from models import (
     Etapa,
     IndicadorProjeto,
-    AreaCatalog,
+    OrgaoUnidade,
     Project,
     ProjectHistory,
     Task,
     TaskItem,
     TaskItemComment,
     User,
-    UserArea,
+    UserOrgao,
     db,
 )
 from catalogs.objectives import GOAL_CATALOG, sync_goal_catalog_to_db
-from routes.shared import ensure_area_catalog_seeded, get_area_catalog_choices
+
+
+SEED_ORGAO_SIGLAS = [
+    'Auditoria', 'CHEGAB', 'SUPDADOS', 'SUBDGD', 'SUPEST', 'SUPIM',
+    'SUPPAE', 'PRODERJ', 'ASSESP', 'ECENTRAL', 'SUBEDD', 'VPD', 'VPE', 'VPT',
+]
+
+
+def _ensure_seed_orgaos():
+    setd = OrgaoUnidade.query.filter_by(sigla='SETD').first()
+    if setd is None:
+        setd = OrgaoUnidade(sigla='SETD', nome='SETD', tipo='Secretaria', pai_id=None, ordem=0, ativo=True)
+        db.session.add(setd)
+        db.session.flush()
+    orgaos = []
+    for idx, sigla in enumerate(SEED_ORGAO_SIGLAS):
+        existing = OrgaoUnidade.query.filter_by(sigla=sigla).first()
+        if existing is None:
+            existing = OrgaoUnidade(
+                sigla=sigla, nome=sigla, tipo='Subsecretaria',
+                pai_id=setd.id, ordem=idx, ativo=True,
+            )
+            db.session.add(existing)
+            db.session.flush()
+        orgaos.append(existing)
+    return orgaos
 
 PRIORITIES = ['urgente', 'alta', 'media', 'baixa']
 PROJECT_STATUSES = ['Vigente', 'Vigente', 'Vigente', 'Finalizado', 'Suspenso']
@@ -58,16 +83,7 @@ def _choose_goal_ids(index):
     return objetivo['id'], resultado['id'], indicador_ids
 
 
-def _create_seed_users():
-    area_names = get_area_catalog_choices()
-    if not area_names:
-        ensure_area_catalog_seeded()
-        area_names = get_area_catalog_choices()
-    if not area_names:
-        area_names = ['Auditoria']
-        db.session.add(AreaCatalog(name='Auditoria'))
-        db.session.flush()
-
+def _create_seed_users(orgaos):
     admin = User(
         username='admin_seed',
         name='Administrador Seed',
@@ -77,25 +93,25 @@ def _create_seed_users():
     admin.set_password('seed123')
     db.session.add(admin)
     db.session.flush()
-    db.session.add(UserArea(user_id=admin.id, area='Auditoria'))
+    db.session.add(UserOrgao(user_id=admin.id, orgao_id=orgaos[0].id))
 
-    users_by_area = {}
-    for index, area in enumerate(area_names, start=1):
-        suffix = _sanitize_username_suffix(area) or f'area{index:02d}'
+    users_by_sigla = {}
+    for index, orgao in enumerate(orgaos, start=1):
+        suffix = _sanitize_username_suffix(orgao.sigla) or f'orgao{index:02d}'
         user = User(
             username=f'user_seed_{index:02d}_{suffix}',
-            name=f'Responsavel {area}',
+            name=f'Responsavel {orgao.sigla}',
             orgao='SEED',
             is_admin=False,
         )
         user.set_password('seed123')
         db.session.add(user)
         db.session.flush()
-        db.session.add(UserArea(user_id=user.id, area=area))
-        users_by_area[area] = user
+        db.session.add(UserOrgao(user_id=user.id, orgao_id=orgao.id))
+        users_by_sigla[orgao.sigla] = user
 
     db.session.flush()
-    return admin, users_by_area
+    return admin, users_by_sigla
 
 
 def seed_fake_data(
@@ -126,16 +142,15 @@ def seed_fake_data(
             db.drop_all()
 
         db.create_all()
-        ensure_area_catalog_seeded()
         sync_goal_catalog_to_db(commit=True)
 
-        admin, users_by_area = _create_seed_users()
-        area_names = list(get_area_catalog_choices())
+        orgaos = _ensure_seed_orgaos()
+        admin, users_by_sigla = _create_seed_users(orgaos)
         base_date = datetime.date(2026, 1, 1)
 
         for project_index in range(projects):
-            area = area_names[project_index % len(area_names)]
-            owner = users_by_area[area]
+            orgao = orgaos[project_index % len(orgaos)]
+            owner = users_by_sigla[orgao.sigla]
             objetivo_id, resultado_id, indicador_ids = _choose_goal_ids(project_index)
             project_status = PROJECT_STATUSES[project_index % len(PROJECT_STATUSES)]
             priority = PRIORITIES[project_index % len(PRIORITIES)]
@@ -145,7 +160,7 @@ def seed_fake_data(
 
             project = Project(
                 titulo=f'Projeto Fake {project_index + 1:03d}',
-                area_responsavel=area,
+                orgao_id=orgao.id,
                 orgao=f'Orgao {(project_index % 12) + 1:02d}',
                 prioridade=priority,
                 status=project_status,
@@ -154,7 +169,7 @@ def seed_fake_data(
                 resultado_esperado_id=resultado_id,
                 special_project=special_project,
                 sei_process=f'SEI-{project_index + 1:06d}/2026',
-                short_description=f'Projeto fake {project_index + 1:03d} da area {area}.',
+                short_description=f'Projeto fake {project_index + 1:03d} do orgao {orgao.sigla}.',
                 delivery_type=delivery_type,
                 abep_indicator=abep_indicator,
                 github_link=f'https://github.com/fake-org/projeto-{project_index + 1:03d}',
@@ -246,9 +261,9 @@ def seed_fake_data(
             )
             counters['project_history'] += 1
 
-        area_users = list(users_by_area.values())
+        orgao_users = list(users_by_sigla.values())
         for orphan_index in range(orphan_tasks):
-            creator = area_users[orphan_index % len(area_users)]
+            creator = orgao_users[orphan_index % len(orgao_users)]
             task = Task(
                 titulo=f'Tarefa sem projeto {orphan_index + 1:03d}',
                 project_id=None,

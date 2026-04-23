@@ -9,7 +9,12 @@ from models import CalendarEvent, Etapa, Project, Task
 
 from .blueprint import main_bp
 from .decorators import login_required
-from .shared import redirect_to_current_route_without_area, sanitize_area_filter_for_current_user, sanitize_area_filter_for_user
+from .orgao_scope import (
+    expand_orgao_filter_ids,
+    get_user_orgao_subtree_ids,
+    redirect_to_current_route_without_orgao,
+    sanitize_orgao_filter_for_current_user,
+)
 
 GLOBAL_SEARCH_DEFAULT_LIMIT = 5
 GLOBAL_SEARCH_API_MAX_LIMIT = 20
@@ -155,7 +160,10 @@ def _normalize_global_search_limit(raw_limit, default_limit=GLOBAL_SEARCH_DEFAUL
     return max(1, min(parsed, max_limit))
 
 
-def build_global_search_results(term, user, limit_per_type=None, include_has_more=False, selected_area=''):
+def build_global_search_results(
+    term, user, limit_per_type=None, include_has_more=False,
+    selected_orgao_id=None,
+):
     normalized_term = (term or '').strip()
     if not normalized_term:
         return _empty_global_search_payload(normalized_term)
@@ -163,24 +171,15 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
     search_pattern = f'%{normalized_term}%'
     prefix_pattern = f'{normalized_term.lower()}%'
 
-    user_areas = user.get_areas() if (user and not user.is_admin) else []
-
-    # Compute effective area restriction
-    selected_area, invalid_area_filter = sanitize_area_filter_for_user(user, selected_area)
-    if invalid_area_filter:
-        selected_area = ''
-
-    if selected_area:
-        if user.is_admin:
-            filter_areas = [selected_area]
-        elif selected_area in user_areas:
-            filter_areas = [selected_area]
-        else:
-            filter_areas = []
-        area_restricted = True
+    # Escopo de visibilidade por subtree de órgão.
+    if user and not user.is_admin:
+        user_subtree_ids = get_user_orgao_subtree_ids(user)
+        user_scope_restricted = True
     else:
-        filter_areas = user_areas
-        area_restricted = not user.is_admin
+        user_subtree_ids = set()
+        user_scope_restricted = False
+
+    selected_subtree_ids = expand_orgao_filter_ids(selected_orgao_id) if selected_orgao_id else set()
 
     effective_limit = limit_per_type
     if include_has_more and limit_per_type is not None:
@@ -213,17 +212,18 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
         Project.orgao.ilike(search_pattern),
         Project.short_description.ilike(search_pattern),
         Project.observacao.ilike(search_pattern),
-        Project.area_responsavel.ilike(search_pattern),
     )
 
     project_query = Project.query.filter(
         or_(project_id_filter, project_text_filters) if project_id_filter is not None else project_text_filters
     )
-    if area_restricted:
-        if filter_areas:
-            project_query = project_query.filter(Project.area_responsavel.in_(filter_areas))
+    if user_scope_restricted:
+        if user_subtree_ids:
+            project_query = project_query.filter(Project.orgao_id.in_(user_subtree_ids))
         else:
             project_query = project_query.filter(Project.id == -1)
+    if selected_subtree_ids:
+        project_query = project_query.filter(Project.orgao_id.in_(selected_subtree_ids))
     project_query = apply_optional_limit(project_query.order_by(prefix_order_for(Project.titulo), Project.id.desc()))
     projects = project_query.all()
     projects, projects_has_more = trim_limited_rows(projects)
@@ -235,11 +235,13 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
             Etapa.responsavel.ilike(search_pattern),
         )
     )
-    if area_restricted:
-        if filter_areas:
-            stage_query = stage_query.filter(Project.area_responsavel.in_(filter_areas))
+    if user_scope_restricted:
+        if user_subtree_ids:
+            stage_query = stage_query.filter(Project.orgao_id.in_(user_subtree_ids))
         else:
             stage_query = stage_query.filter(Project.id == -1)
+    if selected_subtree_ids:
+        stage_query = stage_query.filter(Project.orgao_id.in_(selected_subtree_ids))
     stage_query = apply_optional_limit(stage_query.order_by(prefix_order_for(Etapa.descricao), Etapa.id.desc()))
     stages = stage_query.all()
     stages, stages_has_more = trim_limited_rows(stages)
@@ -253,22 +255,20 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
             Task.tipo_pedido.ilike(search_pattern),
         )
     )
-    if area_restricted:
-        if filter_areas:
-            if user.is_admin:
-                task_query = task_query.filter(
-                    Task.project_id.isnot(None),
-                    Project.area_responsavel.in_(filter_areas),
+    if user_scope_restricted:
+        if user_subtree_ids:
+            task_query = task_query.filter(
+                or_(
+                    and_(Task.project_id.isnot(None), Project.orgao_id.in_(user_subtree_ids)),
+                    and_(Task.project_id.is_(None), Task.created_by_id == user.id),
                 )
-            else:
-                task_query = task_query.filter(
-                    or_(
-                        and_(Task.project_id.isnot(None), Project.area_responsavel.in_(filter_areas)),
-                        and_(Task.project_id.is_(None), Task.created_by_id == user.id),
-                    )
-                )
+            )
         else:
-            task_query = task_query.filter(Task.id == -1)
+            task_query = task_query.filter(
+                and_(Task.project_id.is_(None), Task.created_by_id == user.id)
+            )
+    if selected_subtree_ids:
+        task_query = task_query.filter(Task.project_id.isnot(None), Project.orgao_id.in_(selected_subtree_ids))
     task_query = apply_optional_limit(task_query.order_by(prefix_order_for(Task.descricao), Task.id.desc()))
     tasks = task_query.all()
     tasks, tasks_has_more = trim_limited_rows(tasks)
@@ -308,14 +308,16 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
             'title': _truncate_text(project.titulo or f'Projeto #{project.id}', 120),
             'display_title': _build_project_display_title(project),
             'subtitle': f'Orgao: {_truncate_text(project.orgao, 90)}' if project.orgao else '',
-            'meta': f'Area: {project.area_responsavel}' if project.area_responsavel else 'Area nao informada',
+            'meta': (
+                f'Orgao responsavel: {project.orgao_ref.sigla}'
+                if project.orgao_ref else 'Orgao responsavel nao informado'
+            ),
             'url': url_for('main.project_detail', project_id=project.id),
             **_resolve_match_info(normalized_term, [
                 ('titulo', 'Titulo', project.titulo),
                 ('orgao', 'Orgao', project.orgao),
                 ('short_description', 'Descricao curta', project.short_description),
                 ('observacao', 'Observacao', project.observacao),
-                ('area_responsavel', 'Area', project.area_responsavel),
             ]),
         }
         for project in projects
@@ -442,7 +444,7 @@ def build_global_search_results(term, user, limit_per_type=None, include_has_mor
 @login_required
 def global_search_api():
     search_term = (request.args.get('q') or '').strip()
-    selected_area, _ = sanitize_area_filter_for_current_user(request.args.get('area'))
+    selected_orgao_id, _ = sanitize_orgao_filter_for_current_user(request.args.get('orgao'))
     limit_per_type = _normalize_global_search_limit(
         request.args.get('limit'),
         default_limit=GLOBAL_SEARCH_DEFAULT_LIMIT,
@@ -457,7 +459,7 @@ def global_search_api():
         g.user,
         limit_per_type=limit_per_type,
         include_has_more=True,
-        selected_area=selected_area,
+        selected_orgao_id=selected_orgao_id,
     )
     return jsonify(payload)
 
@@ -466,15 +468,15 @@ def global_search_api():
 @login_required
 def global_search_page():
     search_term = (request.args.get('q') or '').strip()
-    selected_area, invalid_area_filter = sanitize_area_filter_for_current_user(request.args.get('area'))
-    if invalid_area_filter:
-        return redirect_to_current_route_without_area()
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(request.args.get('orgao'))
+    if invalid_orgao_filter:
+        return redirect_to_current_route_without_orgao()
     if search_term:
         search_payload = build_global_search_results(
             search_term,
             g.user,
             limit_per_type=GLOBAL_SEARCH_PAGE_LIMIT,
-            selected_area=selected_area,
+            selected_orgao_id=selected_orgao_id,
         )
     else:
         search_payload = _empty_global_search_payload(search_term)
