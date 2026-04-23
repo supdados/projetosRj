@@ -358,9 +358,12 @@
     {% if current_user_obj and not current_user_obj.tutorial_visto %}
     (function () {
         function dismissTutorialWelcome() {
+            // keepalive garante que o POST completa mesmo quando o clique
+            // dispara navegação (ex: link "Iniciar tutorial" muda de página).
             fetch('/tutorial/dismiss', {
                 method: 'POST',
                 credentials: 'same-origin',
+                keepalive: true,
             }).catch(function () {});
         }
 

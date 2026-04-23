@@ -1434,8 +1434,8 @@ ROUTE_CASES = [
     },
     # Tutorial
     {
-        'id': 'tutorial_begin_get',
-        'method': 'GET',
+        'id': 'tutorial_begin_post',
+        'method': 'POST',
         'rule': '/tutorial/begin',
         'path': '/tutorial/begin',
         'role': 'user',

@@ -16,17 +16,32 @@ _SECTION_START_URLS = {
 _SECTIONS_NEEDING_PROJECT = {'criar_etapa'}
 
 
+def _tutorial_projects_query():
+    """Query de projetos de tutorial escopada ao usuário atual.
+
+    Admin vê todos; usuário comum só vê projetos em áreas às quais tem acesso.
+    Evita que cleanup/listagem vaze ou apague dados de outros tenants.
+    """
+    q = Project.query.filter_by(is_tutorial=True)
+    if g.user.is_admin:
+        return q
+    areas = g.user.get_areas() or []
+    if not areas:
+        return q.filter(db.false())
+    return q.filter(Project.area_responsavel.in_(areas))
+
+
 def _get_tutorial_project_id() -> int | None:
     """Retorna o ID do projeto criado pelo usuário durante o tutorial."""
     pid = session.get('tutorial_project_id')
     if pid:
         return pid
-    # Fallback: projeto mais recente marcado como tutorial
-    p = Project.query.filter_by(is_tutorial=True).order_by(Project.id.desc()).first()
+    # Fallback: projeto mais recente do próprio usuário marcado como tutorial
+    p = _tutorial_projects_query().order_by(Project.id.desc()).first()
     return p.id if p else None
 
 
-@main_bp.route('/tutorial/begin')
+@main_bp.route('/tutorial/begin', methods=['POST'])
 @login_required
 def tutorial_begin():
     """Inicia o tutorial do zero. Chamado pelo ícone no topnav."""
@@ -40,7 +55,7 @@ def tutorial_begin():
 @main_bp.route('/tutorial')
 @login_required
 def tutorial_index():
-    has_tutorial_projects = Project.query.filter_by(is_tutorial=True).count() > 0
+    has_tutorial_projects = _tutorial_projects_query().count() > 0
     return render_template(
         'tutorial/index.html',
         has_tutorial_projects=has_tutorial_projects,
@@ -57,6 +72,7 @@ def tutorial_start():
 
     session['tutorial_active'] = True
     session['tutorial_section'] = section
+    session['tutorial_reset'] = True
 
     project_id = None
     if section in _SECTIONS_NEEDING_PROJECT:
@@ -82,7 +98,8 @@ def tutorial_pause():
 def tutorial_finish():
     session.pop('tutorial_active', None)
     session.pop('tutorial_section', None)
-    has_data = Project.query.filter_by(is_tutorial=True).count() > 0
+    session.pop('tutorial_project_id', None)
+    has_data = _tutorial_projects_query().count() > 0
     return render_template('tutorial/finish.html', has_tutorial_data=has_data)
 
 
@@ -92,14 +109,15 @@ def tutorial_finish_redirect():
     """Destino de navegação após o runner JS encerrar o último step."""
     session.pop('tutorial_active', None)
     session.pop('tutorial_section', None)
-    has_data = Project.query.filter_by(is_tutorial=True).count() > 0
+    session.pop('tutorial_project_id', None)
+    has_data = _tutorial_projects_query().count() > 0
     return render_template('tutorial/finish.html', has_tutorial_data=has_data)
 
 
 @main_bp.route('/tutorial/cleanup', methods=['POST'])
 @login_required
 def tutorial_cleanup():
-    projects = Project.query.filter_by(is_tutorial=True).all()
+    projects = _tutorial_projects_query().all()
     count = len(projects)
     for p in projects:
         db.session.delete(p)

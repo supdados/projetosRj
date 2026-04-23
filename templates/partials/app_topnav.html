@@ -275,16 +275,18 @@
                             </div>
                         </div>
 
-                        <a
-                            href="{{ url_for('main.tutorial_begin') }}"
-                            class="btn app-nav-icon-btn app-tutorial-link {{ 'active' if tutorial_active else '' }}"
-                            data-bs-toggle="tooltip"
-                            data-bs-placement="bottom"
-                            title="Iniciar tutorial"
-                            aria-label="Iniciar tutorial"
-                        >
-                            <i class="fas fa-graduation-cap"></i>
-                        </a>
+                        <form method="POST" action="{{ url_for('main.tutorial_begin') }}" class="d-inline">
+                            <button
+                                type="submit"
+                                class="btn app-nav-icon-btn app-tutorial-link {{ 'active' if tutorial_active else '' }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                title="Iniciar tutorial"
+                                aria-label="Iniciar tutorial"
+                            >
+                                <i class="fas fa-graduation-cap"></i>
+                            </button>
+                        </form>
 
                         <div class="app-theme-menu">
                             <button

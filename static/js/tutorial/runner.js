@@ -36,8 +36,11 @@
   /* ── URL matching ──────────────────────────────────────────────── */
 
   function matchesPage(pattern) {
+    // Boundary em '/': '/project' deve casar com '/project/42' mas NÃO com '/projection'.
     var p = window.location.pathname;
-    return p === pattern || p.startsWith(pattern);
+    if (p === pattern) return true;
+    var withSlash = pattern.endsWith('/') ? pattern : pattern + '/';
+    return p.startsWith(withSlash);
   }
 
   /* ── server → localStorage sync ────────────────────────────────── */
@@ -199,7 +202,14 @@
     var tbody = document.getElementById('etapas-tbody');
     var hasText = desc && desc.value.trim().length > 0;
 
-    if (!form || !hasText || !tbody) {
+    // Input vazio: não avança — mantém o step, foca o input e sinaliza visualmente.
+    if (desc && !hasText) {
+      try { desc.focus(); } catch (e) {}
+      return;
+    }
+
+    // Form/tbody ausentes (página renderizada parcialmente): só aí pula para ce-done.
+    if (!form || !tbody) {
       return tour.show('ce-done');
     }
 

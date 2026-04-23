@@ -77,7 +77,7 @@ def add_project():
             resultado_esperado_id=resultado_esperado_id,
             observacao=observacao,
             status='Vigente',  # Definir status padrão
-            is_tutorial=bool(session.get('tutorial_active')),
+            is_tutorial=bool(session.get('tutorial_active') and not session.get('tutorial_project_id')),
             special_project=special_project,
             sei_process=sei_process,
             short_description=short_description,
