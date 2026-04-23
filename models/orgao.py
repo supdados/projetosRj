@@ -5,6 +5,7 @@ ALLOWED_TIPOS = (
     'Estado',
     'Secretaria',
     'Subsecretaria',
+    'Superintendência',
     'Autarquia',
     'Fundação',
     'Empresa Pública',
@@ -22,13 +23,14 @@ TIPO_RANK = {
     'Estado': 0,
     'Secretaria': 1,
     'Subsecretaria': 2,
+    'Superintendência': 3,
     'Autarquia': 2,
     'Fundação': 2,
     'Empresa Pública': 2,
-    'Assessoria': 3,
-    'Coordenação': 4,
-    'Departamento': 5,
-    'Núcleo': 6,
+    'Assessoria': 4,
+    'Coordenação': 5,
+    'Departamento': 6,
+    'Núcleo': 7,
 }
 
 MAX_DEPTH = 5

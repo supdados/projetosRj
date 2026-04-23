@@ -139,7 +139,7 @@ def would_create_cycle(orgao_id: int, new_pai_id: int | None) -> bool:
     return new_pai_id in get_orgao_descendants(orgao_id)
 
 
-def validate_orgao_move(orgao, new_pai_id: int | None) -> str | None:
+def validate_orgao_move(orgao, new_pai_id: int | None, *, child_tipo: str | None = None) -> str | None:
     """Valida se mover ``orgao`` para ``new_pai_id`` é permitido.
 
     Retorna mensagem de erro ou ``None`` se a operação é válida.
@@ -147,8 +147,10 @@ def validate_orgao_move(orgao, new_pai_id: int | None) -> str | None:
     if orgao is None:
         return 'Órgão não encontrado.'
 
+    effective_child_tipo = child_tipo or getattr(orgao, 'tipo', None)
+
     if new_pai_id is None:
-        if orgao.tipo != 'Estado':
+        if effective_child_tipo != 'Estado':
             return 'Apenas o órgão raiz (Estado) pode ficar sem pai.'
         return None
 
@@ -159,8 +161,8 @@ def validate_orgao_move(orgao, new_pai_id: int | None) -> str | None:
     if new_pai is None:
         return 'Órgão pai não encontrado.'
 
-    if not is_valid_parent_tipo(new_pai.tipo, orgao.tipo):
-        return f'Um órgão do tipo "{new_pai.tipo}" não pode ser pai de "{orgao.tipo}".'
+    if not is_valid_parent_tipo(new_pai.tipo, effective_child_tipo):
+        return f'Um órgão do tipo "{new_pai.tipo}" não pode ser pai de "{effective_child_tipo}".'
 
     if compute_orgao_depth(new_pai) + compute_subtree_height(orgao) > MAX_DEPTH:
         return f'Profundidade máxima de {MAX_DEPTH} níveis excedida.'

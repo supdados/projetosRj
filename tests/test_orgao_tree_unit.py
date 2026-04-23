@@ -55,6 +55,10 @@ def test_is_valid_parent_tipo_secretaria_nao_pode_ser_pai_de_estado():
     assert is_valid_parent_tipo('Secretaria', 'Estado') is False
 
 
+def test_is_valid_parent_tipo_subsecretaria_pode_ser_pai_de_superintendencia():
+    assert is_valid_parent_tipo('Subsecretaria', 'Superintendência') is True
+
+
 def test_is_valid_parent_tipo_tipo_desconhecido_retorna_true():
     # Tipo desconhecido não deve bloquear; validação de domínio fica em normalize_orgao_form.
     assert is_valid_parent_tipo('TipoX', 'Estado') is True

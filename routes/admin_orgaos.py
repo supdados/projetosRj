@@ -162,7 +162,7 @@ def edit_orgao(orgao_id):
             )
 
         if not is_root and data['pai_id'] != orgao.pai_id:
-            move_error = validate_orgao_move(orgao, data['pai_id'])
+            move_error = validate_orgao_move(orgao, data['pai_id'], child_tipo=data['tipo'])
             if move_error:
                 flash(move_error, 'danger')
                 return redirect(url_for('main.edit_orgao', orgao_id=orgao.id))

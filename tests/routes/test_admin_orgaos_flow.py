@@ -78,6 +78,36 @@ def test_create_child_with_valid_parent(client_admin, app, seed_data):
         assert novo.pai_id == seed_data['orgao_child_id']
 
 
+def test_create_superintendencia_below_subsecretaria(client_admin, app, seed_data):
+    with app.app_context():
+        sub = OrgaoUnidade(
+            nome='Subsecretaria Base', sigla='SUBB', tipo='Subsecretaria',
+            pai_id=seed_data['orgao_child_id'], ordem=0, ativo=True,
+        )
+        db.session.add(sub)
+        db.session.commit()
+        sub_id = sub.id
+
+    response = client_admin.post(
+        '/admin/orgaos/new',
+        data={
+            'nome': 'Superintendencia X',
+            'sigla': 'SUPX',
+            'tipo': 'Superintendência',
+            'pai_id': str(sub_id),
+            'ordem': '0',
+            'ativo': '1',
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    with app.app_context():
+        novo = OrgaoUnidade.query.filter_by(sigla='SUPX').one()
+        assert novo.tipo == 'Superintendência'
+        assert novo.pai_id == sub_id
+
+
 def test_create_rejects_invalid_parent_rank(client_admin, app, seed_data):
     # Tenta criar Secretaria (rank 1) como filho de Secretaria (rank 1) — inválido.
     response = client_admin.post(
@@ -152,6 +182,42 @@ def test_edit_preserves_fields_and_updates(client_admin, app, seed_data):
         assert orgao.nome == 'Secretaria Renomeada'
         assert orgao.sigla == 'SREN'
         assert orgao.ordem == 2
+
+
+def test_edit_allows_changing_type_and_parent_together(client_admin, app, seed_data):
+    with app.app_context():
+        sub_pai = OrgaoUnidade(
+            nome='Subsecretaria Pai', sigla='SUBP', tipo='Subsecretaria',
+            pai_id=seed_data['orgao_child_id'], ordem=0, ativo=True,
+        )
+        sub_filha = OrgaoUnidade(
+            nome='Subsecretaria Filha', sigla='SUBF', tipo='Subsecretaria',
+            pai_id=seed_data['orgao_child_id'], ordem=1, ativo=True,
+        )
+        db.session.add_all([sub_pai, sub_filha])
+        db.session.commit()
+        sub_pai_id = sub_pai.id
+        sub_filha_id = sub_filha.id
+
+    response = client_admin.post(
+        f'/admin/orgaos/{sub_filha_id}/edit',
+        data={
+            'nome': 'Superintendencia Filha',
+            'sigla': 'SUBF',
+            'tipo': 'Superintendência',
+            'pai_id': str(sub_pai_id),
+            'ordem': '1',
+            'ativo': '1',
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    with app.app_context():
+        orgao = db.session.get(OrgaoUnidade, sub_filha_id)
+        assert orgao is not None
+        assert orgao.tipo == 'Superintendência'
+        assert orgao.pai_id == sub_pai_id
 
 
 def test_move_orgao_prevents_cycle(client_admin, app, seed_data):
