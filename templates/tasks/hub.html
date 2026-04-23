@@ -16,7 +16,7 @@
     id="taskHubPage"
     data-current-user-id="{{ current_user_obj.id if current_user_obj else '' }}"
     data-selected-project="{{ selected_project or '' }}"
-    data-selected-area="{{ selected_area or '' }}"
+    data-selected-orgao="{{ selected_orgao or '' }}"
     data-project-locked="{{ '1' if project_locked else '0' }}"
     data-archived-mode="{{ '1' if archived_mode else '0' }}"
     data-empty-title="{{ empty_title }}"
@@ -54,8 +54,8 @@
                         id="archiveFinalizedTasksForm"
                         class="inline-form"
                         data-confirm="Arquivar tarefas finalizadas do escopo atual?">
-                        {% if selected_area %}
-                        <input type="hidden" name="area" value="{{ selected_area }}">
+                        {% if selected_orgao %}
+                        <input type="hidden" name="orgao" value="{{ selected_orgao }}">
                         {% endif %}
                         {% if selected_project %}
                         <input type="hidden" name="project" value="{{ selected_project }}">
@@ -205,18 +205,6 @@
                 </div>
             </div>
 
-            {% if show_area_selector and not project_locked %}
-            <div class="tasks-field">
-                <label for="filter_area" class="tasks-label ds-type-label">Área</label>
-                <select id="filter_area" name="area" class="form-control tasks-input">
-                    <option value="">Todas as áreas</option>
-                    {% for area in area_options %}
-                    <option value="{{ area }}" {% if area == selected_area %}selected{% endif %}>{{ area }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            {% endif %}
-
             {% if ORGAOS_DISPONIVEIS and not project_locked %}
             <div class="tasks-field">
                 <label for="filter_orgao" class="tasks-label ds-type-label">Órgão</label>
@@ -306,7 +294,7 @@
                                     <h6 class="task-hub-group-title">{{ group['project_titulo'] }}</h6>
                                     {% endif %}
                                     <p class="task-hub-group-meta">
-                                        Area: <strong>{{ group['project_area'] or 'Nao informada' }}</strong>
+                                        Órgão: <strong>{{ group['project_orgao_sigla'] or 'Não informado' }}</strong>
                                     </p>
                                 </div>
                             </div>
@@ -866,9 +854,10 @@
 {{ super() }}
 <script nonce="{{ csp_nonce }}">
 window.TASK_HUB_CONFIG = {
+    selectedOrgao: {{ (selected_orgao or '')|tojson }},
+    selectedOrgaoSigla: {{ (selected_orgao_sigla or '')|tojson }},
     selectedProject: {{ (selected_project or '')|tojson }},
     selectedProjectLabel: {{ (selected_project_label or '')|tojson }},
-    selectedArea: {{ (selected_area or '')|tojson }},
     projectOptions: {{ project_options|tojson }},
     projectLocked: {{ project_locked|tojson }},
     archivedMode: {{ archived_mode|tojson }},

@@ -6,6 +6,7 @@ from models import (
     db,
 )
 from routes.orgao_scope import (
+    expand_orgao_filter_ids,
     get_user_orgao_subtree_ids,
     redirect_to_current_route_without_orgao,
     sanitize_orgao_filter_for_current_user,
@@ -65,13 +66,20 @@ def _group_hub_tasks_by_project(tasks):
     return ordered_groups
 
 
-def _build_task_hub_project_options(include_archived=False):
+def _build_task_hub_project_options(include_archived=False, orgao_filter_id=None):
     query = Project.query
 
     if not g.user.is_admin:
         subtree_ids = get_user_orgao_subtree_ids(g.user)
         if subtree_ids:
             query = query.filter(Project.orgao_id.in_(subtree_ids))
+        else:
+            query = query.filter(db.false())
+
+    if orgao_filter_id is not None:
+        filter_subtree_ids = expand_orgao_filter_ids(orgao_filter_id)
+        if filter_subtree_ids:
+            query = query.filter(Project.orgao_id.in_(filter_subtree_ids))
         else:
             query = query.filter(db.false())
 
@@ -86,14 +94,17 @@ def _build_task_hub_project_options(include_archived=False):
     ]
 
     has_orphan_tasks = (
-        _build_visible_tasks_query(
-            include_archived=include_archived,
-            project_filter='sem_projeto',
-            include_relations=False,
+        orgao_filter_id is None
+        and (
+            _build_visible_tasks_query(
+                include_archived=include_archived,
+                project_filter='sem_projeto',
+                include_relations=False,
+            )
+            .limit(1)
+            .first()
+            is not None
         )
-        .limit(1)
-        .first()
-        is not None
     )
     if has_orphan_tasks:
         options.append(
@@ -110,12 +121,15 @@ def _build_task_hub_project_options(include_archived=False):
 def _render_task_hub(locked_project=None, template_name='tasks/hub.html', include_archived=False):
     filter_values = _read_task_filter_values(request.args)
     selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
-        request.args.get('orgao')
+        filter_values['orgao_filter']
     )
     if invalid_orgao_filter and locked_project is None:
         return redirect_to_current_route_without_orgao()
     if locked_project is not None:
         selected_orgao_id = None
+    orgaos_disponiveis = list(g.get('ORGAOS_DISPONIVEIS') or [])
+    orgao_label_map = {str(orgao_id): orgao_sigla for orgao_id, orgao_sigla, _orgao_nome in orgaos_disponiveis}
+    selected_orgao_sigla = orgao_label_map.get(str(selected_orgao_id), '') if selected_orgao_id is not None else ''
     project_filter = filter_values['project_filter']
     prioridade_filter = filter_values['prioridade_filter']
     tipo_filter = filter_values['tipo_filter']
@@ -148,7 +162,10 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
             }
         ]
 
-    project_options = _build_task_hub_project_options(include_archived=include_archived)
+    project_options = _build_task_hub_project_options(
+        include_archived=include_archived,
+        orgao_filter_id=selected_orgao_id,
+    )
 
     project_label_map = {opt['value']: opt['label'] for opt in project_options}
     selected_project_label = project_label_map.get(project_filter, '')
@@ -183,6 +200,7 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
     if include_archived:
         active_url = _build_task_listing_url(
             'main.list_tasks',
+            orgao_filter=str(selected_orgao_id or ''),
             project_filter=project_filter,
             prioridade_filter=prioridade_filter,
             tipo_filter=tipo_filter,
@@ -196,11 +214,13 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
             tipo_filter=tipo_filter,
             status_filter=status_filter,
             responsavel_filter=responsavel_filter,
+            orgao_filter_id=selected_orgao_id,
             include_relations=False,
         ).count()
     else:
         archived_url = _build_task_listing_url(
             'main.list_tasks_archived',
+            orgao_filter=str(selected_orgao_id or ''),
             project_filter=project_filter,
             prioridade_filter=prioridade_filter,
             tipo_filter=tipo_filter,
@@ -235,6 +255,7 @@ def _render_task_hub(locked_project=None, template_name='tasks/hub.html', includ
         selected_project=project_filter,
         selected_project_label=selected_project_label,
         selected_orgao=selected_orgao_id,
+        selected_orgao_sigla=selected_orgao_sigla,
         selected_prioridade=prioridade_filter,
         selected_tipo=tipo_filter,
         selected_status=status_filter,

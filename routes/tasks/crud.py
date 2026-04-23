@@ -1,9 +1,10 @@
 from flask import flash, g, jsonify, request, url_for
 
-from models import Task, db
+from models import OrgaoUnidade, Task, db
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
+from routes.orgao_scope import sanitize_orgao_filter_for_current_user
 from routes.tasks.constants import VALID_PRIORIDADES, VALID_STATUSES, VALID_TIPOS
 from routes.tasks.helpers import (
     _audit_denied_task_action,
@@ -13,7 +14,7 @@ from routes.tasks.helpers import (
     _can_view_task,
     _create_task_common,
     _format_invalid_responsavel_message,
-    _get_assignable_users_for_area,
+    _get_assignable_users_for_orgao,
     _get_assignable_users_for_project,
     _merge_task_filter_values,
     _normalize_responsavel_value,
@@ -455,6 +456,7 @@ def archive_finalized_tasks():
     finalized_tasks = (
         _build_visible_tasks_query(
             include_archived=False,
+            orgao_filter_id=filter_values['orgao_filter'] or None,
             project_filter=filter_values['project_filter'],
             prioridade_filter=filter_values['prioridade_filter'],
             tipo_filter=filter_values['tipo_filter'],
@@ -499,17 +501,31 @@ def archive_finalized_tasks():
 @login_required
 def get_hub_assignable_users():
     project_raw = (request.args.get('project') or '').strip()
-    area_raw = (request.args.get('area') or '').strip()
+    orgao_raw = (request.args.get('orgao') or request.args.get('area') or '').strip()
 
     if project_raw:
         project, project_error, status_code = _resolve_project_token(project_raw, allow_empty=False)
         if project_error:
             return jsonify({'success': False, 'message': project_error}), status_code
         users = _get_assignable_users_for_project(project)
-    elif area_raw:
-        users = _get_assignable_users_for_area(area_raw)
+    elif orgao_raw:
+        resolved_orgao_raw = orgao_raw
+        if not orgao_raw.isdigit():
+            orgao = (
+                OrgaoUnidade.query
+                .filter(db.func.lower(OrgaoUnidade.sigla) == orgao_raw.lower())
+                .first()
+            )
+            if not orgao:
+                return jsonify({'success': False, 'message': 'Órgão inválido.'}), 400
+            resolved_orgao_raw = str(orgao.id)
+
+        orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(resolved_orgao_raw)
+        if invalid_orgao_filter:
+            return jsonify({'success': False, 'message': 'Sem permissão para este órgão.'}), 403
+        users = _get_assignable_users_for_orgao(orgao_id)
     else:
-        return jsonify({'success': False, 'message': 'Informe um projeto ou área.'}), 400
+        return jsonify({'success': False, 'message': 'Informe um projeto ou órgão.'}), 400
 
     return jsonify({'users': _filter_users_by_query(users, request.args.get('q'))})
 

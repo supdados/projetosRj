@@ -30,11 +30,11 @@
         return {
             value: value,
             label: String(option.label || '').trim() || 'Projeto',
-            area: String(option.area || '').trim(),
+            orgaoSigla: String(option.orgao_sigla || '').trim(),
         };
     }
 
-    var selectedArea = String(hubConfig.selectedArea || '').trim();
+    var selectedOrgaoSigla = String(hubConfig.selectedOrgaoSigla || '').trim();
     var selectedProject = normalizeProjectValue(hubConfig.selectedProject || '');
     var selectedProjectLabel = String(hubConfig.selectedProjectLabel || '').trim();
     var projectOptions = Array.isArray(hubConfig.projectOptions)
@@ -53,23 +53,23 @@
     }
 
     function getProjectOptionsForPicker() {
-        if (!selectedArea) {
+        if (!selectedOrgaoSigla) {
             return projectOptions.slice();
         }
-        var selectedAreaKey = selectedArea.toLowerCase();
+        var selectedOrgaoKey = selectedOrgaoSigla.toLowerCase();
         return projectOptions.filter(function (option) {
-            var optionArea = String(option && option.area || '').trim().toLowerCase();
-            return !!optionArea && optionArea === selectedAreaKey;
+            var optionOrgaoSigla = String(option && option.orgaoSigla || '').trim().toLowerCase();
+            return !!optionOrgaoSigla && optionOrgaoSigla === selectedOrgaoKey;
         });
     }
 
-    function getProjectInfo(projectValue, fallbackLabel, fallbackArea) {
+    function getProjectInfo(projectValue, fallbackLabel, fallbackOrgaoSigla) {
         var normalized = normalizeProjectValue(projectValue);
         var option = getProjectOptionByValue(normalized);
         return {
             value: normalized,
             label: option ? option.label : (fallbackLabel || (normalized === 'sem_projeto' ? 'Sem projeto' : 'Projeto')),
-            area: option ? option.area : String(fallbackArea || '').trim(),
+            orgaoSigla: option ? option.orgaoSigla : String(fallbackOrgaoSigla || '').trim(),
         };
     }
 
@@ -90,7 +90,7 @@
         config: {
             addUrl: addUrl,
             sugestoesUrl: sugestoesUrl,
-            selectedArea: selectedArea,
+            selectedOrgaoSigla: selectedOrgaoSigla,
             selectedProject: selectedProject,
             selectedProjectLabel: selectedProjectLabel,
             escapeHtml: global.escapeHtml,

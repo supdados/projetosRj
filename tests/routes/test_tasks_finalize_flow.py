@@ -346,20 +346,22 @@ def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(app,
     assert f'data-project-id="{seed_data["project_complete_id"]}"'.encode() in hub_with_item.data
 
 
-def test_tasks_hub_hides_area_selector_for_single_area_user_and_shows_for_admin(client, seed_data):
+def test_tasks_hub_uses_orgao_selector_instead_of_area_selector(client, seed_data):
     with client.session_transaction() as session:
         session['user_id'] = seed_data['user_id']
 
     user_response = client.get('/tarefas')
     assert user_response.status_code == 200
     assert b'name="area"' not in user_response.data
+    assert b'name="orgao"' in user_response.data
 
     with client.session_transaction() as session:
         session['user_id'] = seed_data['admin_id']
 
     admin_response = client.get('/tarefas')
     assert admin_response.status_code == 200
-    assert b'name="area"' in admin_response.data
+    assert b'name="area"' not in admin_response.data
+    assert b'name="orgao"' in admin_response.data
 
 
 def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(app, client_user, seed_data):

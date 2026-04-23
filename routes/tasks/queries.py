@@ -24,6 +24,7 @@ from routes.tasks.constants import (
 
 def _read_task_filter_values(source):
     return {
+        'orgao_filter': (source.get('orgao') or source.get('area') or '').strip(),
         'project_filter': (source.get('project') or '').strip(),
         'prioridade_filter': (source.get('prioridade') or '').strip(),
         'tipo_filter': (source.get('tipo') or '').strip(),
@@ -34,6 +35,7 @@ def _read_task_filter_values(source):
 
 def _merge_task_filter_values(*values_list):
     merged = {
+        'orgao_filter': '',
         'project_filter': '',
         'prioridade_filter': '',
         'tipo_filter': '',
@@ -129,6 +131,7 @@ def _build_task_filter_options(tasks, selected_filters=None):
 def _build_task_listing_url(
     endpoint,
     *,
+    orgao_filter='',
     project_filter='',
     prioridade_filter='',
     tipo_filter='',
@@ -140,6 +143,8 @@ def _build_task_listing_url(
     kwargs = {}
     if project_id is not None:
         kwargs['project_id'] = project_id
+    if orgao_filter:
+        kwargs['orgao'] = orgao_filter
     if project_filter:
         kwargs['project'] = project_filter
     if prioridade_filter:

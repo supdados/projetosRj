@@ -77,10 +77,10 @@ def test_finalized_listing_filters_by_priority_type_status_and_responsavel(app, 
     assert 'Arquivada fora do filtro' not in html
 
 
-def test_tasks_hub_redirects_when_non_admin_forces_foreign_area(client_user):
+def test_tasks_hub_redirects_when_non_admin_forces_foreign_orgao(client_user, seed_data):
     response = client_user.get(
         '/tarefas',
-        query_string={'area': 'VPD', 'status': 'em_andamento'},
+        query_string={'orgao': str(seed_data['vpd_orgao_id']), 'status': 'em_andamento'},
         follow_redirects=False,
     )
 
@@ -88,8 +88,8 @@ def test_tasks_hub_redirects_when_non_admin_forces_foreign_area(client_user):
     assert response.headers['Location'].endswith('/tarefas?status=em_andamento')
 
 
-def test_tasks_hub_project_filter_respects_selected_area_for_admin(client_admin, seed_data):
-    response = client_admin.get('/tarefas', query_string={'area': 'VPD'})
+def test_tasks_hub_project_filter_respects_selected_orgao_for_admin(client_admin, seed_data):
+    response = client_admin.get('/tarefas', query_string={'orgao': str(seed_data['vpd_orgao_id'])})
     assert response.status_code == 200
 
     html = response.get_data(as_text=True)

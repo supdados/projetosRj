@@ -149,7 +149,7 @@
                 return null;
             }
 
-            var projectInfo = ctx.getProjectInfo(preferredValue, ctx.config.selectedProjectLabel, ctx.config.selectedArea);
+            var projectInfo = ctx.getProjectInfo(preferredValue, ctx.config.selectedProjectLabel, ctx.config.selectedOrgaoSigla);
             var groupEl = ctx.createElementFromMarkup(ctx.buildGlobalPlaceholderMarkup(projectInfo, { lockProject: !!ctx.config.selectedProject }));
             listEl.insertBefore(groupEl, listEl.firstChild);
 
@@ -183,7 +183,7 @@
 
         function resolveTargetGroupForItem(item, options) {
             var opts = options || {};
-            var projectInfo = ctx.getProjectInfo(item.project_value || item.project_id || opts.projectValue || '', item.project_titulo, item.project_area);
+            var projectInfo = ctx.getProjectInfo(item.project_value || item.project_id || opts.projectValue || '', item.project_titulo, item.project_orgao_sigla);
             var sourceGroup = opts.sourceGroup || null;
             var existingGroup = getGroupByProject(projectInfo.value, {
                 includePlaceholder: false,

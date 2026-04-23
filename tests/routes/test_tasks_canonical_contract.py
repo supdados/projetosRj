@@ -138,7 +138,7 @@ def test_add_and_edit_task_comment_on_canonical_routes(app, client_user, seed_da
         assert comment.content == 'Comentario canonico editado'
 
 
-def test_task_assignable_users_routes_return_area_scoped_names(client_user, seed_data):
+def test_task_assignable_users_routes_return_orgao_scoped_names(client_user, seed_data):
     task_response = client_user.get(
         f"/tarefas/{seed_data['task_id']}/sugestoes-responsavel",
         query_string={'q': 'Usuario'},
@@ -152,7 +152,7 @@ def test_task_assignable_users_routes_return_area_scoped_names(client_user, seed
 
     hub_response = client_user.get(
         '/tarefas/sugestoes-responsavel',
-        query_string={'area': 'Auditoria', 'q': 'Admin'},
+        query_string={'orgao': str(seed_data['auditoria_orgao_id']), 'q': 'Admin'},
     )
 
     assert hub_response.status_code == 200

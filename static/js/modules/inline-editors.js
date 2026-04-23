@@ -389,7 +389,7 @@
             }, typeof delay === 'number' ? delay : 220);
         }
 
-        Array.prototype.slice.call(form.querySelectorAll('select[name="area"], select[name="prioridade"], select[name="tipo"], select[name="status"], select[name="responsavel"]'))
+        Array.prototype.slice.call(form.querySelectorAll('select[name="orgao"], select[name="prioridade"], select[name="tipo"], select[name="status"], select[name="responsavel"]'))
             .forEach(function (field) {
                 field.addEventListener('change', submitFilters);
             });

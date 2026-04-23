@@ -4,10 +4,10 @@
 
     registry.projectPicker = function (ctx) {
 
-        function setGlobalPlaceholderProject(groupEl, projectValue, projectLabel, projectArea) {
+        function setGlobalPlaceholderProject(groupEl, projectValue, projectLabel, projectOrgaoSigla) {
             if (!groupEl) return;
 
-            var projectInfo = ctx.getProjectInfo(projectValue, projectLabel, projectArea);
+            var projectInfo = ctx.getProjectInfo(projectValue, projectLabel, projectOrgaoSigla);
             groupEl.setAttribute('data-project-value', projectInfo.value);
             groupEl.setAttribute('data-project-id', projectInfo.value === 'sem_projeto' ? '' : projectInfo.value);
 
@@ -21,9 +21,9 @@
                 input.value = projectInfo.value ? projectInfo.label : '';
             }
 
-            var areaEl = groupEl.querySelector('[data-role="project-area"]');
-            if (areaEl) {
-                areaEl.textContent = projectInfo.area || ctx.config.selectedArea || 'Selecione um projeto';
+            var orgaoEl = groupEl.querySelector('[data-role="project-orgao"]');
+            if (orgaoEl) {
+                orgaoEl.textContent = projectInfo.orgaoSigla || ctx.config.selectedOrgaoSigla || 'Selecione um projeto';
             }
 
             var addRow = groupEl.querySelector('.task-hub-add-row');
@@ -74,7 +74,7 @@
                 var value = ctx.normalizeProjectValue(optionEl.getAttribute('data-value'));
                 var label = optionEl.getAttribute('data-label') || optionEl.textContent || '';
                 var info = ctx.getProjectInfo(value, label);
-                setGlobalPlaceholderProject(groupEl, info.value, info.label, info.area);
+                setGlobalPlaceholderProject(groupEl, info.value, info.label, info.orgaoSigla);
                 hideDropdown();
 
                 var addRow = groupEl.querySelector('.task-hub-add-row');
@@ -87,7 +87,7 @@
             input.addEventListener('input', function () {
                 if (!(input.value || '').trim()) {
                     hiddenValue.value = '';
-                    setGlobalPlaceholderProject(groupEl, '', '', ctx.config.selectedArea);
+                    setGlobalPlaceholderProject(groupEl, '', '', ctx.config.selectedOrgaoSigla);
                 }
                 showDropdown();
             });

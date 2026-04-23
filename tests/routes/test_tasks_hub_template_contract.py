@@ -100,14 +100,14 @@ def test_tasks_hub_kanban_composer_uses_filtered_project_without_project_input(c
     assert 'task-items-kanban-add-project-value' in html
 
 
-def test_tasks_hub_admin_renders_project_filter_before_area_filter(client_admin):
+def test_tasks_hub_admin_renders_project_filter_before_orgao_filter(client_admin):
     response = client_admin.get('/tarefas')
     assert response.status_code == 200
 
     html = response.get_data(as_text=True)
     assert 'id="filter_project_input"' in html
-    assert 'id="filter_area"' in html
-    assert html.index('id="filter_project_input"') < html.index('id="filter_area"')
+    assert 'id="filter_orgao"' in html
+    assert html.index('id="filter_project_input"') < html.index('id="filter_orgao"')
 
 
 def test_tasks_hub_uses_project_links_and_not_duplicate_task_detail_link(client_user, seed_data):
@@ -156,7 +156,7 @@ def test_tasks_hub_project_filter_js_allows_enter_to_clear_empty_selection():
     assert 'clearProjectFilter(true);' in content
 
 
-def test_tasks_hub_global_placeholder_project_picker_scopes_projects_by_selected_area():
+def test_tasks_hub_global_placeholder_project_picker_scopes_projects_by_selected_orgao():
     orchestrator_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline.js'
     orchestrator_content = orchestrator_path.read_text(encoding='utf-8')
     picker_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'modules' / 'add-item-inline' / 'project-picker.js'
@@ -165,8 +165,8 @@ def test_tasks_hub_global_placeholder_project_picker_scopes_projects_by_selected
     inline_form_content = inline_form_path.read_text(encoding='utf-8')
 
     assert 'function getProjectOptionsForPicker()' in orchestrator_content
-    assert 'if (!selectedArea) {' in orchestrator_content
-    assert 'optionArea === selectedAreaKey' in orchestrator_content
+    assert 'if (!selectedOrgaoSigla) {' in orchestrator_content
+    assert 'optionOrgaoSigla === selectedOrgaoKey' in orchestrator_content
     assert "input.addEventListener('focus', showDropdown);" not in picker_content
     assert "input.addEventListener('click', showDropdown);" in picker_content
     assert "if (typeof opts.containsTarget === 'function' && opts.containsTarget(event.target)) return;" in inline_form_content
@@ -183,7 +183,7 @@ def test_tasks_hub_inline_add_js_reuses_existing_group_and_skips_focus_jump():
     assert 'focusInserted: !!opts.isGlobalPlaceholder' in inline_form_content
 
 
-def test_tasks_hub_global_placeholder_css_keeps_extra_spacing_before_area_line():
+def test_tasks_hub_global_placeholder_css_keeps_extra_spacing_before_orgao_line():
     file_path = Path(__file__).resolve().parents[2] / 'static' / 'css' / 'tasks' / 'hub.css'
     content = file_path.read_text(encoding='utf-8')
 

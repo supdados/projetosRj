@@ -52,14 +52,14 @@
         triggerEl.setAttribute('data-selected-count', String((selectedNames || []).length || 0));
     }
 
-    function fetchAssignableUsers(taskId, sugestoesUrl, projectValue, areaValue) {
+    function fetchAssignableUsers(taskId, sugestoesUrl, projectValue, orgaoValue) {
         if (!sugestoesUrl) return Promise.resolve([]);
         var normalizedProject = String(projectValue == null ? '' : projectValue).trim();
-        var normalizedArea = String(areaValue == null ? '' : areaValue).trim();
-        if (!normalizedProject && !normalizedArea) return Promise.resolve([]);
+        var normalizedOrgao = String(orgaoValue == null ? '' : orgaoValue).trim();
+        if (!normalizedProject && !normalizedOrgao) return Promise.resolve([]);
         var param = normalizedProject
             ? 'project=' + encodeURIComponent(normalizedProject)
-            : 'area=' + encodeURIComponent(normalizedArea);
+            : 'orgao=' + encodeURIComponent(normalizedOrgao);
         var requestUrl = sugestoesUrl + (sugestoesUrl.indexOf('?') >= 0 ? '&' : '?') + param;
         var cacheKey = requestUrl;
         if (responsavelAssignableUsersCache[cacheKey]) {
@@ -276,7 +276,7 @@
             setLoading(true, 'Carregando usuários...', false);
             positionPopover();
 
-            fetchAssignableUsers(options.taskId, options.sugestoesUrl, options.projectValue, options.areaValue)
+            fetchAssignableUsers(options.taskId, options.sugestoesUrl, options.projectValue, options.orgaoValue)
                 .then(function (users) {
                     if (!state || token !== openToken) return;
 

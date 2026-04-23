@@ -10,13 +10,13 @@
             var titleMarkup = projectUrl
                 ? '<a href="' + escapeHtml(projectUrl) + '" class="task-hub-group-title task-hub-group-title-link">' + escapeHtml(projectInfo.label) + '</a>'
                 : '<h6 class="task-hub-group-title">' + escapeHtml(projectInfo.label) + '</h6>';
-            var areaLabel = projectInfo.area || 'N\u00e3o informada';
+            var orgaoLabel = projectInfo.orgaoSigla || 'N\u00e3o informado';
 
             return [
                 '<div class="task-hub-group-title-wrap">',
                 '<div class="task-hub-group-heading">',
                 titleMarkup,
-                '<p class="task-hub-group-meta">Area: <strong>' + escapeHtml(areaLabel) + '</strong></p>',
+                '<p class="task-hub-group-meta">\u00d3rg\u00e3o: <strong>' + escapeHtml(orgaoLabel) + '</strong></p>',
                 '</div>',
                 '</div>',
                 '<span class="task-hub-group-count">0 tarefas</span>',
@@ -134,7 +134,7 @@
 
         function buildGlobalPlaceholderMarkup(projectInfo, options) {
             var opts = options || {};
-            var areaLabel = projectInfo.area || ctx.config.selectedArea || 'Selecione um projeto';
+            var orgaoLabel = projectInfo.orgaoSigla || ctx.config.selectedOrgaoSigla || 'Selecione um projeto';
             var titleMarkup = opts.lockProject
                 ? '<h6 class="task-hub-group-title task-hub-group-title-static" data-role="project-title-static">' + escapeHtml(projectInfo.label || ctx.config.selectedProjectLabel || 'Projeto') + '</h6><input type="hidden" data-role="project-value" value="' + escapeHtml(projectInfo.value) + '">'
                 : buildProjectPickerMarkup(projectInfo);
@@ -145,7 +145,7 @@
                 '<div class="task-hub-group-title-wrap">',
                 '<div class="task-hub-group-heading task-hub-group-heading-composer">',
                 titleMarkup,
-                '<p class="task-hub-group-meta">Area: <strong data-role="project-area">' + escapeHtml(areaLabel) + '</strong></p>',
+                '<p class="task-hub-group-meta">\u00d3rg\u00e3o: <strong data-role="project-orgao">' + escapeHtml(orgaoLabel) + '</strong></p>',
                 '</div>',
                 '</div>',
                 '<span class="task-hub-group-count">0 tarefas</span>',
@@ -207,7 +207,7 @@
             var tipoPedido = item.tipo_pedido || '';
             var taskId = item.task_id || item.id || '';
             var taskTitulo = item.task_titulo || item.descricao || '';
-            var projectInfo = ctx.getProjectInfo(item.project_value || item.project_id || '', item.project_titulo, item.project_area);
+            var projectInfo = ctx.getProjectInfo(item.project_value || item.project_id || '', item.project_titulo, item.project_orgao_sigla);
             var commentsCount = Number(item.comments_count || 0);
             var anexosCount = Number(item.anexos_count || 0);
             var canDelete = canDeleteTaskItem(item);

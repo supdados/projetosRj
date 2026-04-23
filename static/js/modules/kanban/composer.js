@@ -12,9 +12,9 @@
                 window.TASK_HUB_CONFIG &&
                 String(window.TASK_HUB_CONFIG.selectedProject || '').trim()
             ) || '';
-            var selectedAreaFromFilter = (
+            var selectedOrgaoFromFilter = (
                 window.TASK_HUB_CONFIG &&
-                String(window.TASK_HUB_CONFIG.selectedArea || '').trim()
+                String(window.TASK_HUB_CONFIG.selectedOrgao || '').trim()
             ) || '';
 
             function ensureComposerVisible(composerEl, focusEl, attempt) {
@@ -305,7 +305,7 @@
                     event.stopPropagation();
                     if (isSaving || state.isDeleting || state.isPersisting) return;
                     var composerProject = getComposerProjectValue();
-                    if (!composerProject && !selectedAreaFromFilter) {
+                    if (!composerProject && !selectedOrgaoFromFilter) {
                         if (projectInput) projectInput.focus();
                         alert('Selecione um projeto para escolher responsáveis.');
                         return;
@@ -315,7 +315,7 @@
                         taskId: ctx.taskId,
                         sugestoesUrl: refs.listEl.getAttribute('data-sugestoes-url') || '',
                         projectValue: composerProject,
-                        areaValue: !composerProject ? selectedAreaFromFilter : '',
+                        orgaoValue: !composerProject ? selectedOrgaoFromFilter : '',
                         initialRawValue: selectedNames.join(', '),
                         onApply: function (payload) {
                             selectedNames = payload.names.slice();
