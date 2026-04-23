@@ -15,6 +15,7 @@
         var searchResultsContainer = globalSearchWidget.querySelector('[data-role="results"]');
         var searchFooter = globalSearchWidget.querySelector('[data-role="footer"]');
         var searchApiUrl = globalSearchWidget.dataset.searchUrl;
+        var searchOrgaoInput = searchForm ? searchForm.querySelector('input[name="orgao"]') : null;
         var groupConfig = [
             { key: 'projects', label: 'Projetos', icon: 'fa-folder-open', badgeClass: 'type-project' },
             { key: 'stages', label: 'Etapas', icon: 'fa-list-check', badgeClass: 'type-stage' },
@@ -47,8 +48,16 @@
         function getSearchPageDestination(query) {
             var searchPageUrl = searchForm.getAttribute('action') || window.location.pathname;
             var trimmed = (query || '').trim();
-            if (!trimmed) return searchPageUrl;
-            return searchPageUrl + '?q=' + encodeURIComponent(trimmed);
+            var url = new URL(searchPageUrl, window.location.origin);
+            var params = new URLSearchParams();
+            if (searchOrgaoInput && (searchOrgaoInput.value || '').trim()) {
+                params.set('orgao', (searchOrgaoInput.value || '').trim());
+            }
+            if (trimmed) {
+                params.set('q', trimmed);
+            }
+            var queryString = params.toString();
+            return url.pathname + (queryString ? '?' + queryString : '');
         }
 
         function clearSearchFooter() {
@@ -190,7 +199,14 @@
             renderSearchState('Buscando...');
             openSearchDropdown();
 
-            fetch(searchApiUrl + '?q=' + encodeURIComponent(query) + '&limit=5', {
+            var requestUrl = new URL(searchApiUrl, window.location.origin);
+            requestUrl.searchParams.set('q', query);
+            requestUrl.searchParams.set('limit', '5');
+            if (searchOrgaoInput && (searchOrgaoInput.value || '').trim()) {
+                requestUrl.searchParams.set('orgao', (searchOrgaoInput.value || '').trim());
+            }
+
+            fetch(requestUrl.pathname + requestUrl.search, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
                 signal: requestController.signal,

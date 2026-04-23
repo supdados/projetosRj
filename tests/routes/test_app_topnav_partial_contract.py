@@ -1,9 +1,10 @@
 """Contrato do parcial templates/partials/app_topnav.html.
 
 Esse parcial é incluído em todas as páginas logadas e contém a navegação
-global (home, projetos, tarefas, pendentes, calendário) + dropdown de conta
-+ busca global. JS de áreas/notificações depende dos hooks data-* listados
-abaixo; um refactor que os renomeie quebraria silenciosamente a top-nav.
+global (home, projetos, tarefas, pendentes, calendário) + seletor global
+de órgão + dropdown de conta + busca global. JS de navegação/notificações
+depende dos hooks data-* listados abaixo; um refactor que os renomeie
+quebraria silenciosamente a top-nav.
 
 Usamos a rota /dashboard para garantir que o parcial é renderizado no
 contexto real (com endpoint e usuário autenticado).
@@ -27,8 +28,9 @@ def test_topnav_has_brand_and_nav_icons(client_admin):
     assert 'app-brand-logo' in html
     assert 'class="app-nav-icons"' in html
 
-    # Hooks data-area-nav que o JS inspeciona para injetar a área ativa.
+    # Hooks de navegação para preservar o filtro global de órgão.
     assert html.count('data-area-nav') >= 5
+    assert html.count('data-orgao-nav') >= 5
 
 
 def test_topnav_marks_dashboard_active_when_on_home(client_admin):
@@ -64,6 +66,15 @@ def test_topnav_renders_global_search_form_hooks(client_admin):
     assert 'name="q"' in html
 
 
+def test_topnav_global_search_preserves_selected_orgao(client_admin, seed_data):
+    response = client_admin.get('/dashboard', query_string={'orgao': str(seed_data['vpd_orgao_id'])})
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    assert 'name="orgao"' in html
+    assert f'value="{seed_data["vpd_orgao_id"]}"' in html
+
+
 def test_topnav_renders_notifications_dropdown_hooks(client_admin):
     html = _topnav_html(client_admin)
 
@@ -78,7 +89,6 @@ def test_topnav_admin_dropdown_has_admin_entries(client_admin):
     html = _topnav_html(client_admin)
 
     assert 'Gerenciar Usuários' in html
-    assert 'Gerenciar Áreas' in html
     assert 'Hierarquia de Órgãos' in html
     assert 'Modelos de Etapas' in html
     assert 'Meu Perfil (Admin)' in html
@@ -91,7 +101,6 @@ def test_topnav_user_dropdown_hides_admin_entries(client_user):
     html = response.get_data(as_text=True)
 
     assert 'Gerenciar Usuários' not in html
-    assert 'Gerenciar Áreas' not in html
     assert 'Hierarquia de Órgãos' not in html
     assert 'Modelos de Etapas' not in html
     # Usuário comum vê apenas "Gerenciar Conta" + Sair.
@@ -115,10 +124,12 @@ def test_topnav_icon_buttons_define_pressed_state_contract():
     assert '.app-nav-icon-btn.show {' in css
 
 
-def test_topnav_area_dropdown_includes_user_areas(client_admin):
+def test_topnav_orgao_dropdown_is_rendered(client_admin):
     html = _topnav_html(client_admin)
-    # Admin vê todas as áreas via dropdown; confere que a UI renderiza o widget.
+    # O topo global voltou a renderizar o seletor de órgão.
     assert 'data-area-select' in html or 'app-area-single-link' in html or 'app-area-empty' in html
+    assert 'data-orgao-select' in html
+    assert 'Todos os órgãos' in html
 
 
 def test_topnav_logout_link_present(client_admin):

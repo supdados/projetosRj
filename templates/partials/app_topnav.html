@@ -7,8 +7,10 @@
 
                         <div class="app-nav-icons" role="navigation" aria-label="Navegação principal">
                             <a
-                                href="{{ url_for('main.dashboard') }}"
+                                href="{{ build_orgao_nav_url('main.dashboard') }}"
                                 class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.dashboard' else '' }}"
+                                data-area-nav="1"
+                                data-orgao-nav="1"
                                 data-bs-toggle="tooltip"
                                 data-bs-placement="bottom"
 
@@ -18,8 +20,10 @@
                                 <i class="fas fa-home"></i>
                             </a>
                             <a
-                                href="{{ url_for('main.list_projects') }}"
+                                href="{{ build_orgao_nav_url('main.list_projects') }}"
                                 class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projects' or endpoint == 'main.project_detail' or endpoint == 'main.project_history' else '' }}"
+                                data-area-nav="1"
+                                data-orgao-nav="1"
                                 data-bs-toggle="tooltip"
                                 data-bs-placement="bottom"
 
@@ -29,8 +33,10 @@
                                 <i class="fas fa-folder-open"></i>
                             </a>
                             <a
-                                href="{{ url_for('main.list_tasks') }}"
+                                href="{{ build_orgao_nav_url('main.list_tasks') }}"
                                 class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_tasks' or endpoint == 'main.list_tasks_archived' or endpoint == 'main.list_tasks_finalized' or endpoint == 'main.project_tasks' else '' }}"
+                                data-area-nav="1"
+                                data-orgao-nav="1"
                                 data-bs-toggle="tooltip"
                                 data-bs-placement="bottom"
 
@@ -40,8 +46,10 @@
                                 <i class="fas fa-tasks"></i>
                             </a>
                             <a
-                                href="{{ url_for('main.list_projetos_pendentes') }}"
+                                href="{{ build_orgao_nav_url('main.list_projetos_pendentes') }}"
                                 class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projetos_pendentes' else '' }}"
+                                data-area-nav="1"
+                                data-orgao-nav="1"
                                 data-bs-toggle="tooltip"
                                 data-bs-placement="bottom"
 
@@ -62,8 +70,10 @@
                                 <i class="fas fa-book"></i>
                             </a> #}
                             <a
-                                href="{{ url_for('main.calendars_hub') }}"
+                                href="{{ build_orgao_nav_url('main.calendars_hub') }}"
                                 class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.calendars_hub' else '' }}"
+                                data-area-nav="1"
+                                data-orgao-nav="1"
                                 data-bs-toggle="tooltip"
                                 data-bs-placement="bottom"
 
@@ -75,7 +85,64 @@
                         </div>
                     </div>
 
-                    <div class="app-topnav-center"></div>
+                    <div class="app-topnav-center">
+                        {% if ORGAOS_DISPONIVEIS|length > 1 %}
+                        <div class="dropdown app-area-control" data-area-select data-orgao-select>
+                            <a
+                                href="{{ build_current_orgao_url(None) }}"
+                                class="app-area-main-btn"
+                                aria-label="Filtro de órgão"
+                                title="Todos os órgãos"
+                            >
+                                <i class="fas fa-sitemap"></i>
+                                <span>{{ selected_orgao_global_sigla or 'Todos os órgãos' }}</span>
+                            </a>
+                            <button
+                                class="app-area-dropdown-btn dropdown-toggle"
+                                type="button"
+                                id="appOrgaoMenuDesktop"
+                                data-bs-toggle="dropdown"
+                                data-bs-display="static"
+                                aria-expanded="false"
+                                aria-label="Selecionar órgão"
+                            ></button>
+                            <div class="dropdown-menu app-area-dropdown-menu" aria-labelledby="appOrgaoMenuDesktop">
+                                <div class="app-dropdown-header" aria-hidden="true">
+                                    <span class="app-dropdown-title">Órgão</span>
+                                    <span class="app-dropdown-subtitle">{{ selected_orgao_global_sigla or 'Todos os órgãos' }}</span>
+                                </div>
+                                <a href="{{ build_current_orgao_url(None) }}" class="dropdown-item app-dropdown-item {{ 'active' if not selected_orgao_global else '' }}">
+                                    <span class="app-dropdown-item-main">
+                                        <i class="fas fa-layer-group"></i>
+                                        <span>Todos os órgãos</span>
+                                    </span>
+                                    <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
+                                </a>
+                                <div class="dropdown-divider app-dropdown-divider"></div>
+                                {% for orgao_id, orgao_sigla, orgao_nome in ORGAOS_DISPONIVEIS %}
+                                <a href="{{ build_current_orgao_url(orgao_id) }}" class="dropdown-item app-dropdown-item {{ 'active' if orgao_id == selected_orgao_global else '' }}">
+                                    <span class="app-dropdown-item-main">
+                                        <i class="fas fa-sitemap"></i>
+                                        <span>{{ orgao_sigla }}{% if orgao_nome and orgao_nome != orgao_sigla %} — {{ orgao_nome }}{% endif %}</span>
+                                    </span>
+                                    <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% elif ORGAOS_DISPONIVEIS %}
+                        {% set orgao_id, orgao_sigla, orgao_nome = ORGAOS_DISPONIVEIS[0] %}
+                        <a href="{{ build_current_orgao_url(orgao_id) }}" class="app-area-single-link" data-area-select data-orgao-select aria-label="Órgão atual">
+                            <i class="fas fa-sitemap"></i>
+                            <span>{{ orgao_sigla }}{% if orgao_nome and orgao_nome != orgao_sigla %} — {{ orgao_nome }}{% endif %}</span>
+                        </a>
+                        {% else %}
+                        <div class="app-area-empty" data-area-select data-orgao-select aria-hidden="true">
+                            <i class="fas fa-sitemap"></i>
+                            <span>Sem órgão</span>
+                        </div>
+                        {% endif %}
+                    </div>
 
                     <div class="app-topnav-right">
                         <div class="app-global-search" data-global-search data-search-url="{{ url_for('main.global_search_api') }}">
@@ -87,6 +154,9 @@
                                 role="search"
                                 autocomplete="off"
                             >
+                                {% if selected_orgao_global %}
+                                <input type="hidden" name="orgao" value="{{ selected_orgao_global }}">
+                                {% endif %}
                                 <i class="fas fa-search app-global-search-icon"></i>
                                 <input
                                     type="search"
