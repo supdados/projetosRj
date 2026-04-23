@@ -55,20 +55,8 @@
         </div>
 
         <div class="tutorial-section-card">
-            <div class="tutorial-section-icon"><i class="fas fa-folder-open"></i></div>
-            <div class="tutorial-section-title">2. Explorar projeto</div>
-            <p class="tutorial-section-desc">Navegue pela página de detalhes de um projeto e conheça todas as seções.</p>
-            <form method="POST" action="{{ url_for('main.tutorial_start') }}">
-                <input type="hidden" name="section" value="explorar_projeto">
-                <button type="submit" class="btn btn-primary glass-btn tutorial-section-start-btn">
-                    Iniciar aqui <i class="fas fa-arrow-right ms-1"></i>
-                </button>
-            </form>
-        </div>
-
-        <div class="tutorial-section-card">
             <div class="tutorial-section-icon"><i class="fas fa-list-ol"></i></div>
-            <div class="tutorial-section-title">3. Criar etapa</div>
+            <div class="tutorial-section-title">2. Criar etapa</div>
             <p class="tutorial-section-desc">Entenda como adicionar etapas ao projeto e gerenciar o cronograma.</p>
             <form method="POST" action="{{ url_for('main.tutorial_start') }}">
                 <input type="hidden" name="section" value="criar_etapa">
@@ -80,7 +68,7 @@
 
         <div class="tutorial-section-card">
             <div class="tutorial-section-icon"><i class="fas fa-tasks"></i></div>
-            <div class="tutorial-section-title">4. Criar tarefa</div>
+            <div class="tutorial-section-title">3. Criar tarefa</div>
             <p class="tutorial-section-desc">Crie tarefas, defina responsáveis e acompanhe o status de cada uma.</p>
             <form method="POST" action="{{ url_for('main.tutorial_start') }}">
                 <input type="hidden" name="section" value="criar_tarefa">
@@ -92,7 +80,7 @@
 
         <div class="tutorial-section-card">
             <div class="tutorial-section-icon"><i class="fas fa-compass"></i></div>
-            <div class="tutorial-section-title">5. Navegar pelo app</div>
+            <div class="tutorial-section-title">4. Navegar pelo app</div>
             <p class="tutorial-section-desc">Conheça o dashboard, busca global, notificações e o menu de navegação.</p>
             <form method="POST" action="{{ url_for('main.tutorial_start') }}">
                 <input type="hidden" name="section" value="navegar">

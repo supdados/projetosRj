@@ -17,11 +17,12 @@
  * Os títulos aqui são apenas o nome da seção.
  */
 
-var _skip        = { text: 'Pular seção', action: 'skip',         classes: 'shepherd-button-secondary' };
-var _next        = { text: 'Próximo →',   action: 'next' };
-var _prev        = { text: '← Voltar',    action: 'back',         classes: 'shepherd-button-secondary' };
-var _nextSection = { text: 'Próxima seção →', action: 'next-section' };
-var _finish      = { text: 'Concluir',    action: 'complete' };
+var _skip            = { text: 'Pular seção', action: 'skip',         classes: 'shepherd-button-secondary' };
+var _next            = { text: 'Próximo →',   action: 'next' };
+var _prev            = { text: '← Voltar',    action: 'back',         classes: 'shepherd-button-secondary' };
+var _nextSection     = { text: 'Próxima seção →', action: 'next-section' };
+var _finish          = { text: 'Concluir',    action: 'complete' };
+var _saveEtapaAndNext = { text: 'Continuar →', action: 'save-etapa-and-next' };
 
 window.TUTORIAL_SECTIONS = {
 
@@ -62,7 +63,8 @@ window.TUTORIAL_SECTIONS = {
         id: 'cp-submit',
         text: 'Preencha os campos que quiser e clique em <strong>Criar Projeto</strong> para salvar. Você será redirecionado para a página do projeto.',
         attachTo: { element: '#createProjectSubmitBtn', on: 'top' },
-        advanceOn: { selector: '#createProjectSubmitBtn', event: 'click' },
+        // Sem advanceOn: o submit do form já navega para /project/<id>
+        // e o próximo step (cp-done) aparece automaticamente lá.
         buttons: [_skip, _prev],
       },
       {
@@ -94,11 +96,12 @@ window.TUTORIAL_SECTIONS = {
       {
         pagePattern: '/project/',
         id: 'ce-fill-and-save',
-        text: 'Escreva o nome da etapa e clique no ícone <strong>✓</strong> real para salvar.',
+        text: 'Escreva o nome da etapa e clique em <strong>Continuar</strong>. A etapa é salva automaticamente.',
         attachTo: { element: '#etapa_inline_descricao', on: 'top' },
         waitMs: 500,
-        advanceOn: { selector: '#btnSubmitInlineEtapaAdd', event: 'click' },
-        buttons: [_skip, _next],
+        // Ação customizada: dispara o submit do form inline, aguarda a etapa
+        // ser renderizada via MutationObserver e então avança para ce-done.
+        buttons: [_skip, _prev, _saveEtapaAndNext],
       },
       {
         pagePattern: '/project/',
@@ -120,8 +123,8 @@ window.TUTORIAL_SECTIONS = {
       {
         pagePattern: '/tarefas',
         id: 'ct-intro',
-        text: 'O <strong>hub de tarefas</strong> reúne todas as tarefas — independentes ou vinculadas a projetos.',
-        attachTo: { element: '.app-page-shell, main', on: 'bottom' },
+        text: 'O <strong>hub de tarefas</strong> reúne todas as tarefas — independentes ou vinculadas a projetos. Use-o para acompanhar tudo em um só lugar.',
+        // Sem attachTo: step centralizado para apresentação do hub
         buttons: [_skip, _next],
       },
       {

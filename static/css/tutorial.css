@@ -1,3 +1,27 @@
+/* ── Destaque visual do elemento ancorado ──
+   Shepherd recorta o overlay ao redor do `shepherd-target`; adicionamos
+   borda/halo para reforçar visualmente o item em foco. */
+.shepherd-enabled.shepherd-target,
+.tutorial-highlight {
+  position: relative;
+  z-index: 9998;
+  border-radius: 6px;
+  box-shadow: 0 0 0 3px var(--ds-brand, #005A92),
+              0 0 0 6px rgba(0, 90, 146, 0.35),
+              0 8px 24px rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+/* Garante que inputs/botões destacados fiquem clicáveis sobre o overlay */
+.shepherd-enabled.shepherd-target {
+  pointer-events: auto !important;
+}
+
+/* Ajusta opacidade do overlay modal */
+.shepherd-modal-overlay-container.shepherd-modal-is-visible {
+  opacity: 0.55;
+}
+
 /* ── Shepherd step customizado para o design do ProjetosRJ ── */
 .tutorial-shepherd-step.shepherd-has-title .shepherd-content .shepherd-header {
   background: var(--ds-surface-elevated, #fff);
