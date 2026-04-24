@@ -18,60 +18,69 @@ def is_valid_parent_tipo(parent_tipo: str, child_tipo: str) -> bool:
     return parent_rank < child_rank
 
 
-def normalize_orgao_form(form, *, is_root: bool = False) -> tuple[dict | None, str | None]:
+def normalize_orgao_form(
+    form, *, is_root: bool = False
+) -> tuple[dict | None, str | None]:
     """Valida e normaliza dados do formulário de órgão.
 
     Retorna ``(dados_dict, None)`` em sucesso ou ``(None, mensagem_de_erro)``.
     Exemplo: ``data, err = normalize_orgao_form(request.form)``
     """
-    nome = (form.get('nome') or '').strip()
-    sigla = (form.get('sigla') or '').strip().upper()
-    tipo = (form.get('tipo') or '').strip()
-    pai_id_raw = form.get('pai_id')
-    ordem_raw = form.get('ordem')
-    ativo_raw = form.get('ativo')
+    nome = (form.get("nome") or "").strip()
+    sigla = (form.get("sigla") or "").strip().upper()
+    tipo = (form.get("tipo") or "").strip()
+    pai_id_raw = form.get("pai_id")
+    ordem_raw = form.get("ordem")
+    ativo_raw = form.get("ativo")
 
     if not nome:
-        return None, 'O nome do órgão é obrigatório.'
+        return None, "O nome do órgão é obrigatório."
     if len(nome) > 255:
-        return None, 'O nome do órgão deve ter no máximo 255 caracteres.'
+        return None, "O nome do órgão deve ter no máximo 255 caracteres."
     if not sigla:
-        return None, 'A sigla do órgão é obrigatória.'
+        return None, "A sigla do órgão é obrigatória."
     if len(sigla) > 50:
-        return None, 'A sigla deve ter no máximo 50 caracteres.'
+        return None, "A sigla deve ter no máximo 50 caracteres."
     if tipo not in ALLOWED_TIPOS:
-        return None, 'Tipo de órgão inválido.'
-    if not is_root and tipo == 'Estado':
+        return None, "Tipo de órgão inválido."
+    if not is_root and tipo == "Estado":
         return None, 'O tipo "Estado" é reservado para o órgão raiz.'
-    if is_root and tipo != 'Estado':
+    if is_root and tipo != "Estado":
         return None, 'O órgão raiz deve ter o tipo "Estado".'
 
     if is_root:
         pai_id = None
     else:
-        if pai_id_raw in (None, '', 'None'):
-            return None, 'O órgão pai é obrigatório.'
+        if pai_id_raw in (None, "", "None"):
+            return None, "O órgão pai é obrigatório."
         try:
             pai_id = int(pai_id_raw)
         except (TypeError, ValueError):
-            return None, 'Órgão pai inválido.'
+            return None, "Órgão pai inválido."
         pai = db.session.get(OrgaoUnidade, pai_id)
         if pai is None:
-            return None, 'Órgão pai não encontrado.'
+            return None, "Órgão pai não encontrado."
         if not is_valid_parent_tipo(pai.tipo, tipo):
             return None, f'Um órgão do tipo "{pai.tipo}" não pode ser pai de "{tipo}".'
 
     try:
-        ordem = int(ordem_raw) if ordem_raw not in (None, '') else 0
+        ordem = int(ordem_raw) if ordem_raw not in (None, "") else 0
     except (TypeError, ValueError):
         ordem = 0
 
     ativo = True
     if ativo_raw is not None:
         ativo_str = str(ativo_raw).strip().lower()
-        ativo = ativo_str in ('1', 'true', 'on', 'yes', 'sim')
+        ativo = ativo_str in ("1", "true", "on", "yes", "sim")
 
-    return {'nome': nome, 'sigla': sigla, 'tipo': tipo, 'pai_id': pai_id, 'ordem': ordem, 'ativo': ativo}, None
+    return {
+        "nome": nome,
+        "sigla": sigla,
+        "tipo": tipo,
+        "pai_id": pai_id,
+        "ordem": ordem,
+        "ativo": ativo,
+    }, None
 
 
 def compute_orgao_depth(orgao) -> int:
@@ -139,32 +148,34 @@ def would_create_cycle(orgao_id: int, new_pai_id: int | None) -> bool:
     return new_pai_id in get_orgao_descendants(orgao_id)
 
 
-def validate_orgao_move(orgao, new_pai_id: int | None, *, child_tipo: str | None = None) -> str | None:
+def validate_orgao_move(
+    orgao, new_pai_id: int | None, *, child_tipo: str | None = None
+) -> str | None:
     """Valida se mover ``orgao`` para ``new_pai_id`` é permitido.
 
     Retorna mensagem de erro ou ``None`` se a operação é válida.
     """
     if orgao is None:
-        return 'Órgão não encontrado.'
+        return "Órgão não encontrado."
 
-    effective_child_tipo = child_tipo or getattr(orgao, 'tipo', None)
+    effective_child_tipo = child_tipo or getattr(orgao, "tipo", None)
 
     if new_pai_id is None:
-        if effective_child_tipo != 'Estado':
-            return 'Apenas o órgão raiz (Estado) pode ficar sem pai.'
+        if effective_child_tipo != "Estado":
+            return "Apenas o órgão raiz (Estado) pode ficar sem pai."
         return None
 
     if would_create_cycle(orgao.id, new_pai_id):
-        return 'Não é possível mover um órgão para dentro de si mesmo.'
+        return "Não é possível mover um órgão para dentro de si mesmo."
 
     new_pai = db.session.get(OrgaoUnidade, new_pai_id)
     if new_pai is None:
-        return 'Órgão pai não encontrado.'
+        return "Órgão pai não encontrado."
 
     if not is_valid_parent_tipo(new_pai.tipo, effective_child_tipo):
         return f'Um órgão do tipo "{new_pai.tipo}" não pode ser pai de "{effective_child_tipo}".'
 
     if compute_orgao_depth(new_pai) + compute_subtree_height(orgao) > MAX_DEPTH:
-        return f'Profundidade máxima de {MAX_DEPTH} níveis excedida.'
+        return f"Profundidade máxima de {MAX_DEPTH} níveis excedida."
 
     return None

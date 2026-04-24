@@ -11,105 +11,118 @@ from services.google_calendar import GoogleCalendarError
 
 
 def test_calendars_page_renders_core_actions(client_user):
-    response = client_user.get('/calendarios')
+    response = client_user.get("/calendarios")
     assert response.status_code == 200
 
     html = response.get_data(as_text=True)
-    assert 'Calendário' in html
-    assert 'Conectar' in html
+    assert "Calendário" in html
+    assert "Conectar" in html
     assert 'action="/calendarios/eventos"' in html
     assert 'href="/calendar/oauth/start"' in html
     assert 'id="fieldEndsAtDateCol"' in html
 
 
-def test_calendars_connected_view_hides_calendar_watch_subtext(app, client_user, seed_data, monkeypatch):
+def test_calendars_connected_view_hides_calendar_watch_subtext(
+    app, client_user, seed_data, monkeypatch
+):
     with app.app_context():
         connection = UserCalendarConnection(
-            user_id=seed_data['user_id'],
-            provider='google',
-            calendar_id='primary',
-            refresh_token='refresh-token',
+            user_id=seed_data["user_id"],
+            provider="google",
+            calendar_id="primary",
+            refresh_token="refresh-token",
         )
         db.session.add(connection)
         db.session.commit()
 
-    monkeypatch.setattr(calendar_helpers, '_run_auto_calendar_maintenance', lambda _connection: [])
+    monkeypatch.setattr(
+        calendar_helpers, "_run_auto_calendar_maintenance", lambda _connection: []
+    )
 
-    response = client_user.get('/calendarios')
+    response = client_user.get("/calendarios")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'cal-google-badge--on' in html
-    assert 'Desconectar' in html
+    assert "cal-google-badge--on" in html
+    assert "Desconectar" in html
     assert 'href="/calendar/oauth/start"' not in html
-    assert 'Calendário:' not in html
-    assert 'Watch expira em:' not in html
-    assert 'Renovar watch' not in html
+    assert "Calendário:" not in html
+    assert "Watch expira em:" not in html
+    assert "Renovar watch" not in html
 
 
-def test_calendars_hub_runs_auto_maintenance_when_connected(app, client_user, seed_data, monkeypatch):
+def test_calendars_hub_runs_auto_maintenance_when_connected(
+    app, client_user, seed_data, monkeypatch
+):
     with app.app_context():
         connection = UserCalendarConnection(
-            user_id=seed_data['user_id'],
-            provider='google',
-            calendar_id='primary',
-            refresh_token='refresh-token',
+            user_id=seed_data["user_id"],
+            provider="google",
+            calendar_id="primary",
+            refresh_token="refresh-token",
         )
         db.session.add(connection)
         db.session.commit()
 
-    calls = {'count': 0}
+    calls = {"count": 0}
 
     def fake_auto_maintenance(connection):
-        calls['count'] += 1
+        calls["count"] += 1
         connection.last_sync_at = datetime.datetime(2026, 3, 6, 20, 0)
         return []
 
-    monkeypatch.setattr(calendar_helpers, '_run_auto_calendar_maintenance', fake_auto_maintenance)
+    monkeypatch.setattr(
+        calendar_helpers, "_run_auto_calendar_maintenance", fake_auto_maintenance
+    )
 
-    response = client_user.get('/calendarios')
+    response = client_user.get("/calendarios")
     assert response.status_code == 200
-    assert calls['count'] == 1
+    assert calls["count"] == 1
     html = response.get_data(as_text=True)
-    expected_sync = calendar_helpers._format_human_datetime(datetime.datetime(2026, 3, 6, 20, 0))
+    expected_sync = calendar_helpers._format_human_datetime(
+        datetime.datetime(2026, 3, 6, 20, 0)
+    )
     assert expected_sync in html
 
 
-def test_create_calendar_event_without_google_connection_marks_pending(app, client_user, seed_data):
+def test_create_calendar_event_without_google_connection_marks_pending(
+    app, client_user, seed_data
+):
     response = client_user.post(
-        '/calendarios/eventos',
+        "/calendarios/eventos",
         data={
-            'title': 'Evento sem conexao',
-            'location': 'Sala 2',
-            'starts_at': '2026-03-22T09:00',
-            'ends_at': '2026-03-22T10:00',
-            'description': 'Evento local',
+            "title": "Evento sem conexao",
+            "location": "Sala 2",
+            "starts_at": "2026-03-22T09:00",
+            "ends_at": "2026-03-22T10:00",
+            "description": "Evento local",
         },
         follow_redirects=False,
     )
 
     assert response.status_code == 302
-    assert response.headers['Location'].endswith('/calendarios')
+    assert response.headers["Location"].endswith("/calendarios")
 
     with app.app_context():
         event = (
-            CalendarEvent.query
-            .filter_by(user_id=seed_data['user_id'], title='Evento sem conexao')
+            CalendarEvent.query.filter_by(
+                user_id=seed_data["user_id"], title="Evento sem conexao"
+            )
             .order_by(CalendarEvent.id.desc())
             .first()
         )
         assert event is not None
-        assert event.sync_status == 'pending'
+        assert event.sync_status == "pending"
         assert event.google_event_id is None
 
 
 def test_upsert_google_all_day_event_normalizes_exclusive_end(app, seed_data):
     with app.app_context():
         connection = UserCalendarConnection(
-            user_id=seed_data['user_id'],
-            provider='google',
-            calendar_id='primary',
-            refresh_token='refresh-token',
+            user_id=seed_data["user_id"],
+            provider="google",
+            calendar_id="primary",
+            refresh_token="refresh-token",
         )
         db.session.add(connection)
         db.session.commit()
@@ -117,140 +130,165 @@ def test_upsert_google_all_day_event_normalizes_exclusive_end(app, seed_data):
         action = calendar_helpers._upsert_local_event_from_google(
             connection,
             {
-                'id': 'google-all-day-1',
-                'status': 'confirmed',
-                'summary': 'Feriado',
-                'start': {'date': '2026-03-22'},
-                'end': {'date': '2026-03-23'},
+                "id": "google-all-day-1",
+                "status": "confirmed",
+                "summary": "Feriado",
+                "start": {"date": "2026-03-22"},
+                "end": {"date": "2026-03-23"},
             },
         )
 
         event = CalendarEvent.query.filter_by(
-            user_id=seed_data['user_id'],
-            google_event_id='google-all-day-1',
+            user_id=seed_data["user_id"],
+            google_event_id="google-all-day-1",
         ).first()
 
-        assert action == 'upserted'
+        assert action == "upserted"
         assert event is not None
         assert event.is_all_day is True
-        assert calendar_helpers._format_input_datetime(event.starts_at) == '2026-03-22T00:00'
-        assert calendar_helpers._format_input_datetime(event.ends_at) == '2026-03-22T23:59'
+        assert (
+            calendar_helpers._format_input_datetime(event.starts_at)
+            == "2026-03-22T00:00"
+        )
+        assert (
+            calendar_helpers._format_input_datetime(event.ends_at) == "2026-03-22T23:59"
+        )
 
 
-def test_google_calendar_oauth_callback_persists_refresh_token(app, client_user, seed_data, monkeypatch):
+def test_google_calendar_oauth_callback_persists_refresh_token(
+    app, client_user, seed_data, monkeypatch
+):
     app.config.update(
         GOOGLE_CALENDAR_ENABLED=True,
-        GOOGLE_CALENDAR_REDIRECT_URI='http://localhost:5002/calendar/oauth/callback',
-        GOOGLE_CALENDAR_DEFAULT_ID='primary',
+        GOOGLE_CALENDAR_REDIRECT_URI="http://localhost:5002/calendar/oauth/callback",
+        GOOGLE_CALENDAR_DEFAULT_ID="primary",
     )
 
     monkeypatch.setattr(
         calendar_oauth,
-        'exchange_google_code_for_tokens',
+        "exchange_google_code_for_tokens",
         lambda _config, *, code, redirect_uri=None: {
-            'access_token': f'access-{code}',
-            'refresh_token': 'refresh-token-abc',
-            'scope': 'https://www.googleapis.com/auth/calendar.events',
-            'expires_in': 3600,
+            "access_token": f"access-{code}",
+            "refresh_token": "refresh-token-abc",
+            "scope": "https://www.googleapis.com/auth/calendar.events",
+            "expires_in": 3600,
         },
     )
     monkeypatch.setattr(
         calendar_helpers,
-        '_sync_events_from_google',
-        lambda connection, force_full=False: {'upserted': 0, 'deleted': 0, 'ignored': 0, 'full_sync': True},
+        "_sync_events_from_google",
+        lambda connection, force_full=False: {
+            "upserted": 0,
+            "deleted": 0,
+            "ignored": 0,
+            "full_sync": True,
+        },
     )
     monkeypatch.setattr(
         calendar_helpers,
-        'get_google_userinfo',
-        lambda _config, *, access_token: {'sub': 'google-user-123', 'email': 'user@example.com'},
+        "get_google_userinfo",
+        lambda _config, *, access_token: {
+            "sub": "google-user-123",
+            "email": "user@example.com",
+        },
     )
 
     def fake_renew_watch(connection):
-        connection.watch_channel_id = 'channel-1'
-        connection.watch_resource_id = 'resource-1'
+        connection.watch_channel_id = "channel-1"
+        connection.watch_resource_id = "resource-1"
         connection.watch_expiration = datetime.datetime(2026, 4, 1, 12, 0)
-        return {'channel_id': 'channel-1', 'resource_id': 'resource-1', 'expires_at': connection.watch_expiration}
+        return {
+            "channel_id": "channel-1",
+            "resource_id": "resource-1",
+            "expires_at": connection.watch_expiration,
+        }
 
-    monkeypatch.setattr(calendar_helpers, '_renew_watch_channel', fake_renew_watch)
+    monkeypatch.setattr(calendar_helpers, "_renew_watch_channel", fake_renew_watch)
 
     with client_user.session_transaction() as session:
-        session['google_calendar_auth_state'] = 'state-abc'
-        session['google_calendar_auth_redirect_uri'] = 'http://localhost:5002/calendar/oauth/callback'
+        session["google_calendar_auth_state"] = "state-abc"
+        session["google_calendar_auth_redirect_uri"] = (
+            "http://localhost:5002/calendar/oauth/callback"
+        )
 
-    response = client_user.get('/calendar/oauth/callback?code=ok&state=state-abc', follow_redirects=False)
+    response = client_user.get(
+        "/calendar/oauth/callback?code=ok&state=state-abc", follow_redirects=False
+    )
     assert response.status_code == 302
-    assert response.headers['Location'].endswith('/calendarios')
+    assert response.headers["Location"].endswith("/calendarios")
 
     with app.app_context():
-        connection = UserCalendarConnection.query.filter_by(user_id=seed_data['user_id']).first()
+        connection = UserCalendarConnection.query.filter_by(
+            user_id=seed_data["user_id"]
+        ).first()
         assert connection is not None
-        assert connection.refresh_token == 'refresh-token-abc'
-        assert connection.access_token == 'access-ok'
-        assert connection.calendar_id == 'primary'
-        assert connection.google_account_id == 'google-user-123'
-        assert connection.google_account_email == 'user@example.com'
-        assert connection.watch_channel_id == 'channel-1'
-        assert connection.watch_resource_id == 'resource-1'
+        assert connection.refresh_token == "refresh-token-abc"
+        assert connection.access_token == "access-ok"
+        assert connection.calendar_id == "primary"
+        assert connection.google_account_id == "google-user-123"
+        assert connection.google_account_email == "user@example.com"
+        assert connection.watch_channel_id == "channel-1"
+        assert connection.watch_resource_id == "resource-1"
 
 
 def test_calendar_webhook_processes_known_channel(app, client, seed_data, monkeypatch):
     with app.app_context():
         connection = UserCalendarConnection(
-            user_id=seed_data['user_id'],
-            provider='google',
-            calendar_id='primary',
-            refresh_token='refresh-token',
-            watch_channel_id='watch-1',
-            watch_resource_id='resource-1',
-            watch_channel_token='token-1',
+            user_id=seed_data["user_id"],
+            provider="google",
+            calendar_id="primary",
+            refresh_token="refresh-token",
+            watch_channel_id="watch-1",
+            watch_resource_id="resource-1",
+            watch_channel_token="token-1",
         )
         db.session.add(connection)
         db.session.commit()
 
-    calls = {'count': 0}
+    calls = {"count": 0}
 
     def fake_sync(connection, force_full=False):
-        calls['count'] += 1
+        calls["count"] += 1
         connection.last_sync_at = datetime.datetime(2026, 3, 6, 12, 0)
-        return {'upserted': 0, 'deleted': 0, 'ignored': 0, 'full_sync': False}
+        return {"upserted": 0, "deleted": 0, "ignored": 0, "full_sync": False}
 
-    monkeypatch.setattr(calendar_helpers, '_sync_events_from_google', fake_sync)
+    monkeypatch.setattr(calendar_helpers, "_sync_events_from_google", fake_sync)
 
     response = client.post(
-        '/webhook',
+        "/webhook",
         headers={
-            'X-Goog-Channel-ID': 'watch-1',
-            'X-Goog-Resource-ID': 'resource-1',
-            'X-Goog-Channel-Token': 'token-1',
-            'X-Goog-Resource-State': 'exists',
+            "X-Goog-Channel-ID": "watch-1",
+            "X-Goog-Resource-ID": "resource-1",
+            "X-Goog-Channel-Token": "token-1",
+            "X-Goog-Resource-State": "exists",
         },
     )
 
     assert response.status_code == 200
-    assert calls['count'] == 1
+    assert calls["count"] == 1
 
 
 def test_calendar_webhook_rejects_invalid_channel_token(app, client, seed_data):
     with app.app_context():
         connection = UserCalendarConnection(
-            user_id=seed_data['user_id'],
-            provider='google',
-            calendar_id='primary',
-            refresh_token='refresh-token',
-            watch_channel_id='watch-2',
-            watch_resource_id='resource-2',
-            watch_channel_token='token-right',
+            user_id=seed_data["user_id"],
+            provider="google",
+            calendar_id="primary",
+            refresh_token="refresh-token",
+            watch_channel_id="watch-2",
+            watch_resource_id="resource-2",
+            watch_channel_token="token-right",
         )
         db.session.add(connection)
         db.session.commit()
 
     response = client.post(
-        '/webhook',
+        "/webhook",
         headers={
-            'X-Goog-Channel-ID': 'watch-2',
-            'X-Goog-Resource-ID': 'resource-2',
-            'X-Goog-Channel-Token': 'token-wrong',
-            'X-Goog-Resource-State': 'exists',
+            "X-Goog-Channel-ID": "watch-2",
+            "X-Goog-Resource-ID": "resource-2",
+            "X-Goog-Channel-Token": "token-wrong",
+            "X-Goog-Resource-State": "exists",
         },
     )
 
@@ -258,123 +296,127 @@ def test_calendar_webhook_rejects_invalid_channel_token(app, client, seed_data):
 
 
 def test_resolve_webhook_address_prefers_forwarded_https_on_ngrok(app):
-    app.config['GOOGLE_CALENDAR_WEBHOOK_URL'] = ''
-    app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = ''
+    app.config["GOOGLE_CALENDAR_WEBHOOK_URL"] = ""
+    app.config["GOOGLE_CALENDAR_PUBLIC_BASE_URL"] = ""
 
     with app.test_request_context(
-        '/calendarios',
-        base_url='http://127.0.0.1:5002',
+        "/calendarios",
+        base_url="http://127.0.0.1:5002",
         headers={
-            'X-Forwarded-Proto': 'https',
-            'X-Forwarded-Host': 'reverberative-dawn-syndetically.ngrok-free.dev',
+            "X-Forwarded-Proto": "https",
+            "X-Forwarded-Host": "reverberative-dawn-syndetically.ngrok-free.dev",
         },
     ):
         address = calendar_helpers._resolve_webhook_address()
 
-    assert address == 'https://reverberative-dawn-syndetically.ngrok-free.dev/webhook'
+    assert address == "https://reverberative-dawn-syndetically.ngrok-free.dev/webhook"
 
 
 def test_resolve_webhook_address_prefers_public_base_url_config(app):
-    app.config['GOOGLE_CALENDAR_WEBHOOK_URL'] = ''
-    app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = 'https://projetos.proderj.rj.gov.br'
+    app.config["GOOGLE_CALENDAR_WEBHOOK_URL"] = ""
+    app.config["GOOGLE_CALENDAR_PUBLIC_BASE_URL"] = "https://projetos.proderj.rj.gov.br"
 
-    with app.test_request_context('/calendarios', base_url='http://127.0.0.1:5002'):
+    with app.test_request_context("/calendarios", base_url="http://127.0.0.1:5002"):
         address = calendar_helpers._resolve_webhook_address()
 
-    assert address == 'https://projetos.proderj.rj.gov.br/webhook'
+    assert address == "https://projetos.proderj.rj.gov.br/webhook"
 
 
 def test_resolve_runtime_google_redirect_uri_prefers_public_base_url(app, monkeypatch):
-    app.config['GOOGLE_CALENDAR_REDIRECT_URI'] = ''
-    app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = 'https://projetos.proderj.rj.gov.br'
+    app.config["GOOGLE_CALENDAR_REDIRECT_URI"] = ""
+    app.config["GOOGLE_CALENDAR_PUBLIC_BASE_URL"] = "https://projetos.proderj.rj.gov.br"
 
     monkeypatch.setattr(
         calendar_helpers,
-        'get_google_client_redirect_uris',
+        "get_google_client_redirect_uris",
         lambda _config: [
-            'http://127.0.0.1:5002/calendar/oauth/callback',
-            'https://projetos.proderj.rj.gov.br/calendar/oauth/callback',
+            "http://127.0.0.1:5002/calendar/oauth/callback",
+            "https://projetos.proderj.rj.gov.br/calendar/oauth/callback",
         ],
     )
 
-    with app.test_request_context('/calendarios', base_url='http://127.0.0.1:5002'):
+    with app.test_request_context("/calendarios", base_url="http://127.0.0.1:5002"):
         redirect_uri = calendar_helpers._resolve_runtime_google_redirect_uri()
 
-    assert redirect_uri == 'https://projetos.proderj.rj.gov.br/calendar/oauth/callback'
+    assert redirect_uri == "https://projetos.proderj.rj.gov.br/calendar/oauth/callback"
 
 
-def test_resolve_runtime_google_redirect_uri_forces_public_base_url_when_configured(app, monkeypatch):
-    app.config['GOOGLE_CALENDAR_REDIRECT_URI'] = ''
-    app.config['GOOGLE_CALENDAR_PUBLIC_BASE_URL'] = 'https://projetos.proderj.rj.gov.br'
+def test_resolve_runtime_google_redirect_uri_forces_public_base_url_when_configured(
+    app, monkeypatch
+):
+    app.config["GOOGLE_CALENDAR_REDIRECT_URI"] = ""
+    app.config["GOOGLE_CALENDAR_PUBLIC_BASE_URL"] = "https://projetos.proderj.rj.gov.br"
 
     monkeypatch.setattr(
         calendar_helpers,
-        'get_google_client_redirect_uris',
-        lambda _config: ['http://127.0.0.1:5002/calendar/oauth/callback'],
+        "get_google_client_redirect_uris",
+        lambda _config: ["http://127.0.0.1:5002/calendar/oauth/callback"],
     )
 
-    with app.test_request_context('/calendarios', base_url='http://127.0.0.1:5002'):
+    with app.test_request_context("/calendarios", base_url="http://127.0.0.1:5002"):
         redirect_uri = calendar_helpers._resolve_runtime_google_redirect_uri()
 
-    assert redirect_uri == 'https://projetos.proderj.rj.gov.br/calendar/oauth/callback'
+    assert redirect_uri == "https://projetos.proderj.rj.gov.br/calendar/oauth/callback"
 
 
 def test_describe_calendar_issue_normalizes_webhook_https_error():
     error = GoogleCalendarError(
-        'bad request',
+        "bad request",
         status_code=400,
         response_body='{"error":{"errors":[{"reason":"push.webhookUrlNotHttps"}]}}',
     )
 
     message = calendar_helpers._describe_calendar_issue(error)
-    assert 'Webhook do Google precisa ser HTTPS' in message
+    assert "Webhook do Google precisa ser HTTPS" in message
 
 
-def test_edit_calendar_event_updates_linked_project_meeting(app, client_user, seed_data, monkeypatch):
+def test_edit_calendar_event_updates_linked_project_meeting(
+    app, client_user, seed_data, monkeypatch
+):
     with app.app_context():
         connection = UserCalendarConnection(
-            user_id=seed_data['user_id'],
-            provider='google',
-            calendar_id='primary',
-            refresh_token='refresh-token',
-            google_account_id='google-owner-1',
-            google_account_email='user@example.com',
+            user_id=seed_data["user_id"],
+            provider="google",
+            calendar_id="primary",
+            refresh_token="refresh-token",
+            google_account_id="google-owner-1",
+            google_account_email="user@example.com",
         )
         event = CalendarEvent(
-            user_id=seed_data['user_id'],
-            title='Reunião inicial',
+            user_id=seed_data["user_id"],
+            title="Reunião inicial",
             starts_at=datetime.datetime(2026, 3, 20, 13, 0),
             ends_at=datetime.datetime(2026, 3, 20, 14, 0),
-            source='app',
-            google_event_id='google-linked-calendar-edit',
-            google_calendar_id='primary',
-            sync_status='ok',
+            source="app",
+            google_event_id="google-linked-calendar-edit",
+            google_calendar_id="primary",
+            sync_status="ok",
         )
         etapa = Etapa(
-            descricao='Reunião inicial',
+            descricao="Reunião inicial",
             data_inicio=datetime.date(2026, 3, 20),
             data_fim=datetime.date(2026, 3, 20),
-            responsavel='user@example.com',
-            project_id=seed_data['project_id'],
+            responsavel="user@example.com",
+            project_id=seed_data["project_id"],
             ordem=50,
-            entry_type='google_meeting',
+            entry_type="google_meeting",
         )
         db.session.add_all([connection, event, etapa])
         db.session.flush()
         db.session.add(
             ProjectStageMeeting(
                 etapa_id=etapa.id,
-                project_id=seed_data['project_id'],
+                project_id=seed_data["project_id"],
                 calendar_event_id=event.id,
-                creator_user_id=seed_data['user_id'],
-                google_owner_account_id='google-owner-1',
-                google_owner_email='user@example.com',
+                creator_user_id=seed_data["user_id"],
+                google_owner_account_id="google-owner-1",
+                google_owner_email="user@example.com",
                 google_event_id=event.google_event_id,
-                google_calendar_id='primary',
+                google_calendar_id="primary",
                 starts_at=event.starts_at,
                 ends_at=event.ends_at,
-                timezone='America/Sao_Paulo',
-                sync_status='ok',
+                timezone="America/Sao_Paulo",
+                sync_status="ok",
             )
         )
         db.session.commit()
@@ -383,18 +425,18 @@ def test_edit_calendar_event_updates_linked_project_meeting(app, client_user, se
 
     monkeypatch.setattr(
         calendar_helpers,
-        '_sync_local_event_to_google',
+        "_sync_local_event_to_google",
         lambda event, connection, create_conference=False: event,
     )
 
     response = client_user.post(
-        f'/calendarios/eventos/{event_id}/editar',
+        f"/calendarios/eventos/{event_id}/editar",
         data={
-            'title': 'Reunião atualizada',
-            'starts_at': '2026-03-21T10:00',
-            'ends_at': '2026-03-21T11:00',
-            'location': 'Sala 202',
-            'description': 'Atualizada no calendário',
+            "title": "Reunião atualizada",
+            "starts_at": "2026-03-21T10:00",
+            "ends_at": "2026-03-21T11:00",
+            "location": "Sala 202",
+            "description": "Atualizada no calendário",
         },
         follow_redirects=False,
     )
@@ -404,58 +446,63 @@ def test_edit_calendar_event_updates_linked_project_meeting(app, client_user, se
     with app.app_context():
         etapa = db.session.get(Etapa, etapa_id)
         meeting = ProjectStageMeeting.query.filter_by(etapa_id=etapa_id).first()
-        assert etapa.descricao == 'Reunião atualizada'
+        assert etapa.descricao == "Reunião atualizada"
         assert etapa.data_inicio == datetime.date(2026, 3, 21)
         assert etapa.data_fim == datetime.date(2026, 3, 21)
-        assert meeting.location == 'Sala 202'
-        assert calendar_helpers._format_human_datetime(meeting.starts_at) == '21/03/2026 10:00'
+        assert meeting.location == "Sala 202"
+        assert (
+            calendar_helpers._format_human_datetime(meeting.starts_at)
+            == "21/03/2026 10:00"
+        )
 
 
-def test_upsert_google_cancelled_event_marks_linked_project_meeting_as_error(app, seed_data):
+def test_upsert_google_cancelled_event_marks_linked_project_meeting_as_error(
+    app, seed_data
+):
     with app.app_context():
         connection = UserCalendarConnection(
-            user_id=seed_data['user_id'],
-            provider='google',
-            calendar_id='primary',
-            refresh_token='refresh-token',
-            google_account_id='google-owner-1',
-            google_account_email='user@example.com',
+            user_id=seed_data["user_id"],
+            provider="google",
+            calendar_id="primary",
+            refresh_token="refresh-token",
+            google_account_id="google-owner-1",
+            google_account_email="user@example.com",
         )
         event = CalendarEvent(
-            user_id=seed_data['user_id'],
-            title='Reunião cancelada',
+            user_id=seed_data["user_id"],
+            title="Reunião cancelada",
             starts_at=datetime.datetime(2026, 3, 22, 13, 0),
             ends_at=datetime.datetime(2026, 3, 22, 14, 0),
-            source='google',
-            google_event_id='google-cancelled-linked',
-            google_calendar_id='primary',
-            sync_status='ok',
+            source="google",
+            google_event_id="google-cancelled-linked",
+            google_calendar_id="primary",
+            sync_status="ok",
         )
         etapa = Etapa(
-            descricao='Reunião cancelada',
+            descricao="Reunião cancelada",
             data_inicio=datetime.date(2026, 3, 22),
             data_fim=datetime.date(2026, 3, 22),
-            responsavel='user@example.com',
-            project_id=seed_data['project_id'],
+            responsavel="user@example.com",
+            project_id=seed_data["project_id"],
             ordem=60,
-            entry_type='google_meeting',
+            entry_type="google_meeting",
         )
         db.session.add_all([connection, event, etapa])
         db.session.flush()
         db.session.add(
             ProjectStageMeeting(
                 etapa_id=etapa.id,
-                project_id=seed_data['project_id'],
+                project_id=seed_data["project_id"],
                 calendar_event_id=event.id,
-                creator_user_id=seed_data['user_id'],
-                google_owner_account_id='google-owner-1',
-                google_owner_email='user@example.com',
-                google_event_id='google-cancelled-linked',
-                google_calendar_id='primary',
+                creator_user_id=seed_data["user_id"],
+                google_owner_account_id="google-owner-1",
+                google_owner_email="user@example.com",
+                google_event_id="google-cancelled-linked",
+                google_calendar_id="primary",
                 starts_at=event.starts_at,
                 ends_at=event.ends_at,
-                timezone='America/Sao_Paulo',
-                sync_status='ok',
+                timezone="America/Sao_Paulo",
+                sync_status="ok",
             )
         )
         db.session.commit()
@@ -464,17 +511,22 @@ def test_upsert_google_cancelled_event_marks_linked_project_meeting_as_error(app
         action = calendar_helpers._upsert_local_event_from_google(
             connection,
             {
-                'id': 'google-cancelled-linked',
-                'status': 'cancelled',
+                "id": "google-cancelled-linked",
+                "status": "cancelled",
             },
         )
 
-        assert action == 'deleted'
+        assert action == "deleted"
 
         etapa = db.session.get(Etapa, etapa_id)
         meeting = ProjectStageMeeting.query.filter_by(etapa_id=etapa_id).first()
         assert etapa is not None
         assert meeting is not None
-        assert meeting.sync_status == 'error'
-        assert 'removido' in (meeting.sync_error or '').lower()
-        assert CalendarEvent.query.filter_by(google_event_id='google-cancelled-linked').count() == 0
+        assert meeting.sync_status == "error"
+        assert "removido" in (meeting.sync_error or "").lower()
+        assert (
+            CalendarEvent.query.filter_by(
+                google_event_id="google-cancelled-linked"
+            ).count()
+            == 0
+        )

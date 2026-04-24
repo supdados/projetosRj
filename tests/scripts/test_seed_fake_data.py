@@ -22,17 +22,17 @@ def test_seed_fake_data_creates_expected_volume(app):
     expected_stages = 5 * 3
     expected_users = len(SEED_ORGAO_SIGLAS) + 1
 
-    assert summary['projects'] == 5
-    assert summary['stages'] == expected_stages
-    assert summary['project_tasks'] == expected_project_tasks
-    assert summary['orphan_tasks'] == 2
-    assert summary['task_items'] == expected_items
-    assert summary['task_item_comments'] == expected_comments
-    assert summary['users'] == expected_users
-    assert summary['projects_total_in_db'] == 5
-    assert summary['tasks_total_in_db'] == expected_total_tasks
-    assert summary['task_items_total_in_db'] == expected_items
-    assert summary['task_item_comments_total_in_db'] == expected_comments
+    assert summary["projects"] == 5
+    assert summary["stages"] == expected_stages
+    assert summary["project_tasks"] == expected_project_tasks
+    assert summary["orphan_tasks"] == 2
+    assert summary["task_items"] == expected_items
+    assert summary["task_item_comments"] == expected_comments
+    assert summary["users"] == expected_users
+    assert summary["projects_total_in_db"] == 5
+    assert summary["tasks_total_in_db"] == expected_total_tasks
+    assert summary["task_items_total_in_db"] == expected_items
+    assert summary["task_item_comments_total_in_db"] == expected_comments
 
     with app.app_context():
         assert User.query.count() == expected_users
@@ -68,12 +68,12 @@ def test_seed_fake_data_reset_replaces_previous_data(app):
         rng_seed=2,
     )
 
-    assert second_summary['projects_total_in_db'] == 2
-    assert second_summary['project_tasks'] == 2
-    assert second_summary['orphan_tasks'] == 1
-    assert second_summary['tasks_total_in_db'] == 3
-    assert second_summary['task_items_total_in_db'] == 3
-    assert second_summary['task_item_comments_total_in_db'] == 0
+    assert second_summary["projects_total_in_db"] == 2
+    assert second_summary["project_tasks"] == 2
+    assert second_summary["orphan_tasks"] == 1
+    assert second_summary["tasks_total_in_db"] == 3
+    assert second_summary["task_items_total_in_db"] == 3
+    assert second_summary["task_item_comments_total_in_db"] == 0
 
     with app.app_context():
         assert Project.query.count() == 2

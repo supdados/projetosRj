@@ -2,7 +2,7 @@ from models import CadernoBlock, CadernoState, db
 
 
 def test_caderno_template_contains_grid_and_expand_contract(client_user):
-    response = client_user.get('/caderno')
+    response = client_user.get("/caderno")
 
     assert response.status_code == 200
     html = response.get_data(as_text=True)
@@ -15,22 +15,24 @@ def test_caderno_template_contains_grid_and_expand_contract(client_user):
         'id="cadernoBlocks"',
         'id="cadernoExpandZone"',
         'id="cadernoExpandZoneLabel"',
-        'apiStateUrl:',
+        "apiStateUrl:",
     ]
 
     for hook in required_hooks:
         assert hook in html
 
 
-def test_caderno_blocks_api_returns_sheet_and_layout_fields(app, client_user, seed_data):
+def test_caderno_blocks_api_returns_sheet_and_layout_fields(
+    app, client_user, seed_data
+):
     with app.app_context():
-        db.session.add(CadernoState(user_id=seed_data['user_id'], expand_steps=2))
+        db.session.add(CadernoState(user_id=seed_data["user_id"], expand_steps=2))
         db.session.add_all(
             [
                 CadernoBlock(
-                    user_id=seed_data['user_id'],
-                    block_type='text',
-                    content='Texto do caderno',
+                    user_id=seed_data["user_id"],
+                    block_type="text",
+                    content="Texto do caderno",
                     position=1000,
                     grid_x=0,
                     grid_y=0,
@@ -38,9 +40,9 @@ def test_caderno_blocks_api_returns_sheet_and_layout_fields(app, client_user, se
                     grid_h=6,
                 ),
                 CadernoBlock(
-                    user_id=seed_data['user_id'],
-                    block_type='project',
-                    reference_id=seed_data['project_id'],
+                    user_id=seed_data["user_id"],
+                    block_type="project",
+                    reference_id=seed_data["project_id"],
                     position=2000,
                     grid_x=0,
                     grid_y=6,
@@ -51,44 +53,46 @@ def test_caderno_blocks_api_returns_sheet_and_layout_fields(app, client_user, se
         )
         db.session.commit()
 
-    response = client_user.get('/api/caderno/blocks')
+    response = client_user.get("/api/caderno/blocks")
 
     assert response.status_code == 200
     payload = response.get_json()
-    assert payload['sheet'] == {'expand_steps': 2, 'max_expand_steps': 3}
-    assert len(payload['blocks']) == 2
+    assert payload["sheet"] == {"expand_steps": 2, "max_expand_steps": 3}
+    assert len(payload["blocks"]) == 2
 
-    first_block = payload['blocks'][0]
+    first_block = payload["blocks"][0]
     assert {
-        'id',
-        'block_type',
-        'content',
-        'reference_id',
-        'position',
-        'grid_x',
-        'grid_y',
-        'grid_w',
-        'grid_h',
-        'attached_to_block_id',
-        'attached_offset_x',
-        'attached_offset_y',
-        'ref_data',
+        "id",
+        "block_type",
+        "content",
+        "reference_id",
+        "position",
+        "grid_x",
+        "grid_y",
+        "grid_w",
+        "grid_h",
+        "attached_to_block_id",
+        "attached_offset_x",
+        "attached_offset_y",
+        "ref_data",
     }.issubset(first_block.keys())
-    assert 'size_preset' not in first_block
-    assert first_block['grid_w'] == 12
-    assert first_block['grid_h'] == 6
+    assert "size_preset" not in first_block
+    assert first_block["grid_w"] == 12
+    assert first_block["grid_h"] == 6
 
-    project_block = next(block for block in payload['blocks'] if block['block_type'] == 'project')
-    assert project_block['ref_data']['id'] == seed_data['project_id']
-    assert project_block['ref_data']['titulo'] == 'Projeto Auditoria'
+    project_block = next(
+        block for block in payload["blocks"] if block["block_type"] == "project"
+    )
+    assert project_block["ref_data"]["id"] == seed_data["project_id"]
+    assert project_block["ref_data"]["titulo"] == "Projeto Auditoria"
 
 
 def test_caderno_block_patch_updates_layout_contract(app, client_user, seed_data):
     with app.app_context():
         block = CadernoBlock(
-            user_id=seed_data['user_id'],
-            block_type='text',
-            content='Ajustar tamanho',
+            user_id=seed_data["user_id"],
+            block_type="text",
+            content="Ajustar tamanho",
             position=1000,
             grid_x=0,
             grid_y=0,
@@ -100,22 +104,22 @@ def test_caderno_block_patch_updates_layout_contract(app, client_user, seed_data
         block_id = block.id
 
     response = client_user.patch(
-        f'/api/caderno/blocks/{block_id}',
+        f"/api/caderno/blocks/{block_id}",
         json={
-            'grid_x': 3,
-            'grid_y': 4,
-            'grid_w': 3,
-            'grid_h': 7,
+            "grid_x": 3,
+            "grid_y": 4,
+            "grid_w": 3,
+            "grid_h": 7,
         },
     )
 
     assert response.status_code == 200
     payload = response.get_json()
-    assert 'size_preset' not in payload['block']
-    assert payload['block']['grid_x'] == 3
-    assert payload['block']['grid_y'] == 4
-    assert payload['block']['grid_w'] == 3
-    assert payload['block']['grid_h'] == 7
+    assert "size_preset" not in payload["block"]
+    assert payload["block"]["grid_x"] == 3
+    assert payload["block"]["grid_y"] == 4
+    assert payload["block"]["grid_w"] == 3
+    assert payload["block"]["grid_h"] == 7
 
     with app.app_context():
         block = db.session.get(CadernoBlock, block_id)
@@ -129,9 +133,9 @@ def test_caderno_notes_do_not_block_new_grid_slots(app, client_user, seed_data):
     with app.app_context():
         db.session.add(
             CadernoBlock(
-                user_id=seed_data['user_id'],
-                block_type='nota',
-                content='Nota sobreposta',
+                user_id=seed_data["user_id"],
+                block_type="nota",
+                content="Nota sobreposta",
                 position=1000,
                 grid_x=0,
                 grid_y=0,
@@ -142,27 +146,29 @@ def test_caderno_notes_do_not_block_new_grid_slots(app, client_user, seed_data):
         db.session.commit()
 
     response = client_user.post(
-        '/api/caderno/blocks',
+        "/api/caderno/blocks",
         json={
-            'block_type': 'project',
-            'reference_id': seed_data['project_id'],
-            'content': '',
+            "block_type": "project",
+            "reference_id": seed_data["project_id"],
+            "content": "",
         },
     )
 
     assert response.status_code == 201
     payload = response.get_json()
-    assert payload['block']['block_type'] == 'project'
-    assert payload['block']['grid_x'] == 0
-    assert payload['block']['grid_y'] == 0
+    assert payload["block"]["block_type"] == "project"
+    assert payload["block"]["grid_x"] == 0
+    assert payload["block"]["grid_y"] == 0
 
 
-def test_caderno_note_attachment_persists_and_parent_delete_detaches_child(app, client_user, seed_data):
+def test_caderno_note_attachment_persists_and_parent_delete_detaches_child(
+    app, client_user, seed_data
+):
     with app.app_context():
         parent = CadernoBlock(
-            user_id=seed_data['user_id'],
-            block_type='project',
-            reference_id=seed_data['project_id'],
+            user_id=seed_data["user_id"],
+            block_type="project",
+            reference_id=seed_data["project_id"],
             position=1000,
             grid_x=0,
             grid_y=0,
@@ -170,9 +176,9 @@ def test_caderno_note_attachment_persists_and_parent_delete_detaches_child(app, 
             grid_h=3,
         )
         note = CadernoBlock(
-            user_id=seed_data['user_id'],
-            block_type='nota',
-            content='Nota presa',
+            user_id=seed_data["user_id"],
+            block_type="nota",
+            content="Nota presa",
             position=2000,
             grid_x=1,
             grid_y=1,
@@ -185,27 +191,27 @@ def test_caderno_note_attachment_persists_and_parent_delete_detaches_child(app, 
         note_id = note.id
 
     reorder_response = client_user.post(
-        '/api/caderno/blocks/reorder',
+        "/api/caderno/blocks/reorder",
         json={
-            'items': [
+            "items": [
                 {
-                    'id': parent_id,
-                    'position': 1000,
-                    'grid_x': 2,
-                    'grid_y': 1,
-                    'grid_w': 6,
-                    'grid_h': 3,
+                    "id": parent_id,
+                    "position": 1000,
+                    "grid_x": 2,
+                    "grid_y": 1,
+                    "grid_w": 6,
+                    "grid_h": 3,
                 },
                 {
-                    'id': note_id,
-                    'position': 2000,
-                    'grid_x': 3,
-                    'grid_y': 2,
-                    'grid_w': 3,
-                    'grid_h': 2,
-                    'attached_to_block_id': parent_id,
-                    'attached_offset_x': 1,
-                    'attached_offset_y': 1,
+                    "id": note_id,
+                    "position": 2000,
+                    "grid_x": 3,
+                    "grid_y": 2,
+                    "grid_w": 3,
+                    "grid_h": 2,
+                    "attached_to_block_id": parent_id,
+                    "attached_offset_x": 1,
+                    "attached_offset_y": 1,
                 },
             ],
         },
@@ -219,7 +225,7 @@ def test_caderno_note_attachment_persists_and_parent_delete_detaches_child(app, 
         assert note.attached_offset_x == 1
         assert note.attached_offset_y == 1
 
-    delete_response = client_user.delete(f'/api/caderno/blocks/{parent_id}')
+    delete_response = client_user.delete(f"/api/caderno/blocks/{parent_id}")
 
     assert delete_response.status_code == 200
 
@@ -231,17 +237,19 @@ def test_caderno_note_attachment_persists_and_parent_delete_detaches_child(app, 
         assert note.attached_offset_y == 0
 
 
-def test_caderno_state_patch_persists_expand_steps_and_rejects_invalid_values(app, client_user, seed_data):
-    ok_response = client_user.patch('/api/caderno/state', json={'expand_steps': 3})
+def test_caderno_state_patch_persists_expand_steps_and_rejects_invalid_values(
+    app, client_user, seed_data
+):
+    ok_response = client_user.patch("/api/caderno/state", json={"expand_steps": 3})
 
     assert ok_response.status_code == 200
-    assert ok_response.get_json()['sheet'] == {'expand_steps': 3, 'max_expand_steps': 3}
+    assert ok_response.get_json()["sheet"] == {"expand_steps": 3, "max_expand_steps": 3}
 
     with app.app_context():
-        state = CadernoState.query.filter_by(user_id=seed_data['user_id']).first()
+        state = CadernoState.query.filter_by(user_id=seed_data["user_id"]).first()
         assert state is not None
         assert state.expand_steps == 3
 
-    bad_response = client_user.patch('/api/caderno/state', json={'expand_steps': 4})
+    bad_response = client_user.patch("/api/caderno/state", json={"expand_steps": 4})
     assert bad_response.status_code == 400
-    assert bad_response.get_json() == {'error': 'expand_steps deve estar entre 0 e 3.'}
+    assert bad_response.get_json() == {"error": "expand_steps deve estar entre 0 e 3."}

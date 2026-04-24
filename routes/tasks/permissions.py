@@ -23,20 +23,20 @@ def _can_manage_task_restricted_actions(user, task):
 
 
 def _can_transition_task_to_status(user, task, next_status, previous_status=None):
-    normalized_next_status = (next_status or '').strip()
-    normalized_previous_status = (previous_status or task.status or '').strip()
+    normalized_next_status = (next_status or "").strip()
+    normalized_previous_status = (previous_status or task.status or "").strip()
 
-    if normalized_next_status != 'finalizada':
+    if normalized_next_status != "finalizada":
         return True
 
-    if normalized_previous_status == 'finalizada':
+    if normalized_previous_status == "finalizada":
         return True
 
     return _can_manage_task_restricted_actions(user, task)
 
 
 def _audit_denied_task_action(task, action_type, *, attempted_status=None):
-    actor = getattr(g, 'user', None)
+    actor = getattr(g, "user", None)
     if not task or not actor:
         return
 
@@ -46,27 +46,28 @@ def _audit_denied_task_action(task, action_type, *, attempted_status=None):
                 task_id=task.id,
                 project_id=task.project_id,
                 actor_user_id=actor.id,
-                actor_name=actor.name or actor.username or 'Usuário',
+                actor_name=actor.name or actor.username or "Usuário",
                 task_author_user_id=task.created_by_id,
                 action_type=action_type,
-                reason='not_task_author',
+                reason="not_task_author",
                 attempted_status=attempted_status,
-                task_description=_preview_text(task.descricao, 240) or f'Tarefa #{task.id}',
+                task_description=_preview_text(task.descricao, 240)
+                or f"Tarefa #{task.id}",
             )
         )
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        print(f'Erro ao auditar tentativa negada em tarefa: {exc}')
+        print(f"Erro ao auditar tentativa negada em tarefa: {exc}")
 
 
 def _task_permission_flags(task, user=None):
-    actor = user or getattr(g, 'user', None)
+    actor = user or getattr(g, "user", None)
     can_manage = _can_manage_task_restricted_actions(actor, task)
     return {
-        'can_delete': can_manage,
-        'can_finalize': can_manage,
-        'is_author': bool(actor and task and task.created_by_id == actor.id),
+        "can_delete": can_manage,
+        "can_finalize": can_manage,
+        "is_author": bool(actor and task and task.created_by_id == actor.id),
     }
 
 

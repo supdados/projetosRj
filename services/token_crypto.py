@@ -7,6 +7,7 @@ vazado, os tokens seguem opacos sem acesso ao `SECRET_KEY`.
 Expõe um `EncryptedText` (SQLAlchemy TypeDecorator) para uso transparente nos
 modelos — a aplicação continua lendo/escrevendo strings comuns.
 """
+
 import base64
 import hashlib
 import os
@@ -15,14 +16,15 @@ import threading
 from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy.types import Text, TypeDecorator
 
-
-_FERNET_PREFIX = 'gAAAAA'  # Token Fernet em base64 começa com esse marcador (versão 0x80).
+_FERNET_PREFIX = (
+    "gAAAAA"  # Token Fernet em base64 começa com esse marcador (versão 0x80).
+)
 _fernet_cache = {}
 _fernet_cache_lock = threading.Lock()
 
 
 def _derive_fernet_key(secret_key: str) -> bytes:
-    digest = hashlib.sha256(secret_key.encode('utf-8')).digest()
+    digest = hashlib.sha256(secret_key.encode("utf-8")).digest()
     return base64.urlsafe_b64encode(digest)
 
 
@@ -35,16 +37,17 @@ def _get_fernet() -> Fernet:
     secret = None
     try:
         from flask import current_app
-        secret = current_app.config.get('SECRET_KEY')
+
+        secret = current_app.config.get("SECRET_KEY")
     except Exception:
         secret = None
 
     if not secret:
-        secret = os.getenv('SECRET_KEY', '').strip()
+        secret = os.getenv("SECRET_KEY", "").strip()
 
     if not secret:
         raise RuntimeError(
-            'SECRET_KEY indisponível — necessário para criptografar campos sensíveis.'
+            "SECRET_KEY indisponível — necessário para criptografar campos sensíveis."
         )
 
     with _fernet_cache_lock:
@@ -67,8 +70,8 @@ def encrypt_value(plaintext: str) -> str:
         return None
     if not isinstance(plaintext, str):
         plaintext = str(plaintext)
-    token = _get_fernet().encrypt(plaintext.encode('utf-8'))
-    return token.decode('ascii')
+    token = _get_fernet().encrypt(plaintext.encode("utf-8"))
+    return token.decode("ascii")
 
 
 def decrypt_value(ciphertext: str) -> str:
@@ -79,7 +82,7 @@ def decrypt_value(ciphertext: str) -> str:
         # não quebrar o fluxo; o startup migra para ciphertext posteriormente.
         return ciphertext
     try:
-        return _get_fernet().decrypt(ciphertext.encode('ascii')).decode('utf-8')
+        return _get_fernet().decrypt(ciphertext.encode("ascii")).decode("utf-8")
     except InvalidToken:
         # Se o SECRET_KEY mudou, o valor antigo é irrecuperável. Retorna None
         # para que o fluxo trate como "token ausente" e force nova conexão.
@@ -92,7 +95,9 @@ class EncryptedText(TypeDecorator):
     impl = Text
     cache_ok = True
 
-    def process_bind_param(self, value, dialect):  # noqa: D401 — interface do SQLAlchemy
+    def process_bind_param(
+        self, value, dialect
+    ):  # noqa: D401 — interface do SQLAlchemy
         if value is None:
             return None
         if looks_like_fernet(value):

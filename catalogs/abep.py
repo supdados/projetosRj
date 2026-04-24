@@ -70,7 +70,9 @@ ABEP_INDICADORES_OPTIONS = [
 
 ABEP_INDICADORES_VALUES = set(item["value"] for item in ABEP_INDICADORES_OPTIONS)
 ABEP_INDICADORES_LEGACY_ALIASES = {
-    build_legacy_abep_indicator_label(code, title): build_abep_indicator_label(code, title)
+    build_legacy_abep_indicator_label(code, title): build_abep_indicator_label(
+        code, title
+    )
     for code, title in ABEP_INDICATOR_PAIRS
 }
 

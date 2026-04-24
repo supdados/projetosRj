@@ -66,7 +66,7 @@ def unarchive_task(task) -> None:
     """Desarquiva e reseta status para 'nao_iniciada'. Não faz commit."""
     task.is_archived = False
     task.archived_at = None
-    task.status = 'nao_iniciada'
+    task.status = "nao_iniciada"
 
 
 def bulk_archive_finalized(tasks) -> list[int]:

@@ -56,43 +56,47 @@ def extract_edit_inputs(task, form, payload) -> EditInputs:
     fallback mais "seguro" (status atual, prioridade None, etc).
     """
     descricao = _first_non_none(
-        form.get('descricao'),
-        payload.get('descricao'),
-        form.get('titulo'),
-        payload.get('titulo'),
+        form.get("descricao"),
+        payload.get("descricao"),
+        form.get("titulo"),
+        payload.get("titulo"),
         task.descricao,
     )
-    descricao = (descricao or '').strip()
+    descricao = (descricao or "").strip()
 
-    status = _first_non_none(form.get('status'), payload.get('status'), task.status)
-    status = (status or '').strip()
+    status = _first_non_none(form.get("status"), payload.get("status"), task.status)
+    status = (status or "").strip()
     if status not in VALID_STATUSES:
         status = task.status
 
     project_raw = _first_non_none(
-        form.get('project'),
-        form.get('project_id'),
-        payload.get('project'),
-        payload.get('project_id'),
+        form.get("project"),
+        form.get("project_id"),
+        payload.get("project"),
+        payload.get("project_id"),
     )
 
-    has_responsavel = 'responsavel' in form or 'responsavel' in payload
+    has_responsavel = "responsavel" in form or "responsavel" in payload
     responsavel_raw = (
-        (form.get('responsavel') or payload.get('responsavel') or '').strip()
+        (form.get("responsavel") or payload.get("responsavel") or "").strip()
         if has_responsavel
-        else (task.responsavel or '')
+        else (task.responsavel or "")
     )
 
-    has_prioridade = 'prioridade' in form or 'prioridade' in payload
+    has_prioridade = "prioridade" in form or "prioridade" in payload
     if has_prioridade:
-        raw = (form.get('prioridade') or payload.get('prioridade') or '').strip() or None
+        raw = (
+            form.get("prioridade") or payload.get("prioridade") or ""
+        ).strip() or None
         prioridade = raw if raw in VALID_PRIORIDADES else None
     else:
         prioridade = task.prioridade
 
-    has_tipo = 'tipo_pedido' in form or 'tipo_pedido' in payload
+    has_tipo = "tipo_pedido" in form or "tipo_pedido" in payload
     if has_tipo:
-        raw = (form.get('tipo_pedido') or payload.get('tipo_pedido') or '').strip() or None
+        raw = (
+            form.get("tipo_pedido") or payload.get("tipo_pedido") or ""
+        ).strip() or None
         tipo_pedido = _coerce_tipo(raw, task.tipo_pedido)
     else:
         tipo_pedido = task.tipo_pedido

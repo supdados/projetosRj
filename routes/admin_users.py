@@ -47,43 +47,44 @@ def _parse_cpf_govbr(raw_cpf):
         return None, str(exc)
 
 
-@main_bp.route('/admin/users')
+@main_bp.route("/admin/users")
 @login_required
 @admin_required
 def list_users():
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get("page", 1, type=int)
     # Ordenar por nome ou ID, por exemplo
     users_pagination = User.query.order_by(User.name).paginate(page=page, per_page=10)
-    return render_template('admin/list_users.html', users=users_pagination)
+    return render_template("admin/list_users.html", users=users_pagination)
 
-@main_bp.route('/admin/users/add', methods=['GET', 'POST'])
+
+@main_bp.route("/admin/users/add", methods=["GET", "POST"])
 @login_required
 @admin_required
 def add_user():
-    if request.method == 'POST':
+    if request.method == "POST":
         selected_orgao_ids, invalid_orgaos = _parse_selected_orgaos(
-            request.form.getlist('orgaos_responsavel')
+            request.form.getlist("orgaos_responsavel")
         )
-        username = request.form.get('username')
-        name = request.form.get('name')
-        password = request.form.get('password')
-        orgao = request.form.get('orgao')
-        is_admin_form = request.form.get('is_admin') == 'on'
-        cpf_govbr, cpf_error = _parse_cpf_govbr(request.form.get('cpf_govbr'))
+        username = request.form.get("username")
+        name = request.form.get("name")
+        password = request.form.get("password")
+        orgao = request.form.get("orgao")
+        is_admin_form = request.form.get("is_admin") == "on"
+        cpf_govbr, cpf_error = _parse_cpf_govbr(request.form.get("cpf_govbr"))
 
         if not username or not name or not password:
-            flash('Username, Nome Completo e Senha são obrigatórios.', 'danger')
+            flash("Username, Nome Completo e Senha são obrigatórios.", "danger")
         elif cpf_error:
-            flash(f'CPF gov.br inválido: {cpf_error}', 'danger')
+            flash(f"CPF gov.br inválido: {cpf_error}", "danger")
         elif invalid_orgaos:
             flash(
                 f'Órgão(s) inválido(s): {", ".join(invalid_orgaos)}. Atualize o formulário e tente novamente.',
-                'danger',
+                "danger",
             )
         elif User.query.filter_by(username=username).first():
-            flash('Este nome de usuário já está em uso. Escolha outro.', 'danger')
+            flash("Este nome de usuário já está em uso. Escolha outro.", "danger")
         elif cpf_govbr and User.query.filter_by(cpf_govbr=cpf_govbr).first():
-            flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
+            flash("Já existe um usuário vinculado a este CPF gov.br.", "danger")
         else:
             new_user = User(
                 username=username,
@@ -99,10 +100,10 @@ def add_user():
             new_user.set_orgaos(selected_orgao_ids)
 
             db.session.commit()
-            flash(f'Usuário "{name}" ({username}) criado com sucesso!', 'success')
-            return redirect(url_for('main.list_users'))
+            flash(f'Usuário "{name}" ({username}) criado com sucesso!', "success")
+            return redirect(url_for("main.list_users"))
         return render_template(
-            'admin/user_form.html',
+            "admin/user_form.html",
             user=request.form,
             user_orgao_ids=selected_orgao_ids,
             orgaos_with_depth=_list_orgaos_with_depth(),
@@ -111,7 +112,7 @@ def add_user():
 
     # Método GET: exibe o formulário para adicionar novo usuário
     return render_template(
-        'admin/user_form.html',
+        "admin/user_form.html",
         user=User(),
         user_orgao_ids=[],
         orgaos_with_depth=_list_orgaos_with_depth(),
@@ -119,36 +120,38 @@ def add_user():
     )
 
 
-@main_bp.route('/admin/users/edit/<int:user_id>', methods=['GET', 'POST'])
+@main_bp.route("/admin/users/edit/<int:user_id>", methods=["GET", "POST"])
 @login_required
 @admin_required
 def edit_user(user_id):
     user_to_edit = get_or_404(User, user_id)
     hide_govbr_link_fields = bool(user_to_edit.cpf_govbr and user_to_edit.govbr_sub)
-    if request.method == 'POST':
+    if request.method == "POST":
         # Username geralmente não é editável ou requer cuidados especiais de unicidade
-        user_to_edit.name = request.form.get('name')
-        user_to_edit.orgao = request.form.get('orgao') if request.form.get('orgao') else None
-        orgaos_form_submitted = 'orgaos_responsavel' in request.form
+        user_to_edit.name = request.form.get("name")
+        user_to_edit.orgao = (
+            request.form.get("orgao") if request.form.get("orgao") else None
+        )
+        orgaos_form_submitted = "orgaos_responsavel" in request.form
         current_orgao_ids = [uo.orgao_id for uo in user_to_edit.orgaos]
         invalid_orgaos = []
         if orgaos_form_submitted:
             selected_orgao_ids, invalid_orgaos = _parse_selected_orgaos(
-                request.form.getlist('orgaos_responsavel')
+                request.form.getlist("orgaos_responsavel")
             )
         else:
             selected_orgao_ids = current_orgao_ids
-        should_update_cpf = not hide_govbr_link_fields and 'cpf_govbr' in request.form
+        should_update_cpf = not hide_govbr_link_fields and "cpf_govbr" in request.form
         cpf_govbr = user_to_edit.cpf_govbr
         cpf_error = None
         if should_update_cpf:
-            cpf_govbr, cpf_error = _parse_cpf_govbr(request.form.get('cpf_govbr'))
-        
-        is_admin_form_val = request.form.get('is_admin') == 'on'
+            cpf_govbr, cpf_error = _parse_cpf_govbr(request.form.get("cpf_govbr"))
+
+        is_admin_form_val = request.form.get("is_admin") == "on"
 
         def _render_edit_form():
             return render_template(
-                'admin/user_form.html',
+                "admin/user_form.html",
                 user=user_to_edit,
                 user_orgao_ids=selected_orgao_ids,
                 orgaos_with_depth=_list_orgaos_with_depth(),
@@ -160,26 +163,31 @@ def edit_user(user_id):
         if user_to_edit.is_admin and not is_admin_form_val:
             admin_count = User.query.filter_by(is_admin=True).count()
             if admin_count <= 1:
-                flash('Não é possível remover o status de administrador do único administrador existente.', 'danger')
+                flash(
+                    "Não é possível remover o status de administrador do único administrador existente.",
+                    "danger",
+                )
                 return _render_edit_form()
 
         if invalid_orgaos:
             flash(
                 f'Órgão(s) inválido(s): {", ".join(invalid_orgaos)}. Atualize o formulário e tente novamente.',
-                'danger',
+                "danger",
             )
             return _render_edit_form()
 
         if cpf_error:
-            flash(f'CPF gov.br inválido: {cpf_error}', 'danger')
+            flash(f"CPF gov.br inválido: {cpf_error}", "danger")
             return _render_edit_form()
 
         if (
             should_update_cpf
             and cpf_govbr
-            and User.query.filter(User.cpf_govbr == cpf_govbr, User.id != user_to_edit.id).first()
+            and User.query.filter(
+                User.cpf_govbr == cpf_govbr, User.id != user_to_edit.id
+            ).first()
         ):
-            flash('Já existe um usuário vinculado a este CPF gov.br.', 'danger')
+            flash("Já existe um usuário vinculado a este CPF gov.br.", "danger")
             return _render_edit_form()
 
         user_to_edit.is_admin = is_admin_form_val
@@ -192,17 +200,17 @@ def edit_user(user_id):
         if orgaos_form_submitted:
             user_to_edit.set_orgaos(selected_orgao_ids)
 
-        new_password = request.form.get('password')
-        if new_password: # Só atualiza a senha se uma nova for fornecida
+        new_password = request.form.get("password")
+        if new_password:  # Só atualiza a senha se uma nova for fornecida
             user_to_edit.set_password(new_password)
-            
+
         db.session.commit()
-        flash(f'Usuário "{user_to_edit.name}" atualizado com sucesso!', 'success')
-        return redirect(url_for('main.list_users'))
-    
+        flash(f'Usuário "{user_to_edit.name}" atualizado com sucesso!', "success")
+        return redirect(url_for("main.list_users"))
+
     # Método GET
     return render_template(
-        'admin/user_form.html',
+        "admin/user_form.html",
         user=user_to_edit,
         user_orgao_ids=[uo.orgao_id for uo in user_to_edit.orgaos],
         orgaos_with_depth=_list_orgaos_with_depth(),
@@ -210,7 +218,8 @@ def edit_user(user_id):
         hide_govbr_link_fields=hide_govbr_link_fields,
     )
 
-@main_bp.route('/admin/users/remove-cpf/<int:user_id>', methods=['POST'])
+
+@main_bp.route("/admin/users/remove-cpf/<int:user_id>", methods=["POST"])
 @login_required
 @admin_required
 def remove_cpf(user_id):
@@ -218,30 +227,33 @@ def remove_cpf(user_id):
     user_to_edit.cpf_govbr = None
     user_to_edit.govbr_sub = None
     db.session.commit()
-    flash(f'CPF e vínculo gov.br do usuário "{user_to_edit.name}" foram removidos.', 'success')
-    return redirect(url_for('main.edit_user', user_id=user_id))
+    flash(
+        f'CPF e vínculo gov.br do usuário "{user_to_edit.name}" foram removidos.',
+        "success",
+    )
+    return redirect(url_for("main.edit_user", user_id=user_id))
 
 
-@main_bp.route('/admin/users/delete/<int:user_id>', methods=['POST'])
+@main_bp.route("/admin/users/delete/<int:user_id>", methods=["POST"])
 @login_required
 @admin_required
 def delete_user(user_id):
     user_to_delete = get_or_404(User, user_id)
 
-    if user_to_delete.id == g.user.id: # Admin não pode se auto-excluir
-        flash('Você não pode excluir sua própria conta de administrador.', 'danger')
-        return redirect(url_for('main.list_users'))
+    if user_to_delete.id == g.user.id:  # Admin não pode se auto-excluir
+        flash("Você não pode excluir sua própria conta de administrador.", "danger")
+        return redirect(url_for("main.list_users"))
 
     if user_to_delete.is_admin and User.query.filter_by(is_admin=True).count() == 1:
-        flash('Não é possível excluir o único administrador do sistema.', 'danger')
-        return redirect(url_for('main.list_users'))
-    
+        flash("Não é possível excluir o único administrador do sistema.", "danger")
+        return redirect(url_for("main.list_users"))
+
     try:
         db.session.delete(user_to_delete)
         db.session.commit()
-        flash(f'Usuário {user_to_delete.username} excluído com sucesso.', 'success')
+        flash(f"Usuário {user_to_delete.username} excluído com sucesso.", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f'Erro ao excluir o usuário: {str(e)}', 'danger')
+        flash(f"Erro ao excluir o usuário: {str(e)}", "danger")
 
-    return redirect(url_for('main.list_users'))
+    return redirect(url_for("main.list_users"))

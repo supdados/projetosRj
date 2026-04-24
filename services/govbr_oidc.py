@@ -36,11 +36,15 @@ class GovBrOIDCSettings:
 
     @property
     def userinfo_endpoint(self):
-        return f"{self.base_url}/auth/realms/{self.realm}/protocol/openid-connect/userinfo"
+        return (
+            f"{self.base_url}/auth/realms/{self.realm}/protocol/openid-connect/userinfo"
+        )
 
     @property
     def logout_endpoint(self):
-        return f"{self.base_url}/auth/realms/{self.realm}/protocol/openid-connect/logout"
+        return (
+            f"{self.base_url}/auth/realms/{self.realm}/protocol/openid-connect/logout"
+        )
 
     @property
     def jwks_uri(self):
@@ -95,9 +99,14 @@ def get_govbr_oidc_settings(config):
         client_id=str(config.get("GOVBR_OIDC_CLIENT_ID", "")).strip(),
         client_secret=str(config.get("GOVBR_OIDC_CLIENT_SECRET", "")).strip(),
         redirect_uri=str(config.get("GOVBR_OIDC_REDIRECT_URI", "")).strip(),
-        post_logout_redirect_uri=str(config.get("GOVBR_OIDC_POST_LOGOUT_REDIRECT_URI", "")).strip(),
-        scope=str(config.get("GOVBR_OIDC_SCOPE", "openid profile email")).strip() or "openid profile email",
-        timeout_seconds=_normalize_timeout(config.get("GOVBR_OIDC_TIMEOUT_SECONDS", 10)),
+        post_logout_redirect_uri=str(
+            config.get("GOVBR_OIDC_POST_LOGOUT_REDIRECT_URI", "")
+        ).strip(),
+        scope=str(config.get("GOVBR_OIDC_SCOPE", "openid profile email")).strip()
+        or "openid profile email",
+        timeout_seconds=_normalize_timeout(
+            config.get("GOVBR_OIDC_TIMEOUT_SECONDS", 10)
+        ),
     )
 
 
@@ -253,14 +262,20 @@ def _http_json_request(*, method, url, timeout_seconds, headers=None, form_data=
             f"Erro HTTP do provedor OIDC ({exc.code}) em {url}: {body[:300]}"
         ) from exc
     except URLError as exc:
-        raise GovBrOIDCError(f"Falha de conectividade com o provedor OIDC: {exc}") from exc
+        raise GovBrOIDCError(
+            f"Falha de conectividade com o provedor OIDC: {exc}"
+        ) from exc
     except Exception as exc:
-        raise GovBrOIDCError(f"Erro inesperado ao chamar o provedor OIDC: {exc}") from exc
+        raise GovBrOIDCError(
+            f"Erro inesperado ao chamar o provedor OIDC: {exc}"
+        ) from exc
 
     try:
         payload = json.loads(body or "{}")
     except json.JSONDecodeError as exc:
-        raise GovBrOIDCError("Resposta do provedor OIDC não está em JSON válido.") from exc
+        raise GovBrOIDCError(
+            "Resposta do provedor OIDC não está em JSON válido."
+        ) from exc
 
     if not isinstance(payload, dict):
         raise GovBrOIDCError("Resposta do provedor OIDC em formato inválido.")
@@ -320,7 +335,9 @@ def refresh_access_token(config, *, refresh_token):
 
 def build_logout_url(config, *, id_token_hint, post_logout_redirect_uri=None):
     settings = get_govbr_oidc_settings(config)
-    redirect_uri = (post_logout_redirect_uri or settings.post_logout_redirect_uri).strip()
+    redirect_uri = (
+        post_logout_redirect_uri or settings.post_logout_redirect_uri
+    ).strip()
     if not redirect_uri:
         raise GovBrOIDCError("post_logout_redirect_uri não configurado.")
 

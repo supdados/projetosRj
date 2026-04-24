@@ -18,4 +18,4 @@ from . import tasks  # noqa: F401,E402
 from . import caderno  # noqa: F401
 from . import tutorial  # noqa: F401,E402
 
-__all__ = ['main_bp', 'inject_current_year']
+__all__ = ["main_bp", "inject_current_year"]

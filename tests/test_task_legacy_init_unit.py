@@ -13,23 +13,23 @@ from models import Project, Task, TaskItem, User, db
 from tests._orgao_helpers import ensure_orgao, link_user_to_orgao
 
 
-def _user(username='tk_user'):
-    user = User(username=username, name='Test', orgao='Orgao Teste', is_admin=False)
-    user.set_password('senha123')
+def _user(username="tk_user"):
+    user = User(username=username, name="Test", orgao="Orgao Teste", is_admin=False)
+    user.set_password("senha123")
     db.session.add(user)
     db.session.flush()
-    link_user_to_orgao(user.id, 'Auditoria')
+    link_user_to_orgao(user.id, "Auditoria")
     return user
 
 
-def _project(titulo='Projeto TK'):
-    orgao = ensure_orgao('Auditoria')
+def _project(titulo="Projeto TK"):
+    orgao = ensure_orgao("Auditoria")
     project = Project(
         titulo=titulo,
         orgao_id=orgao.id,
-        orgao='Orgao A',
-        prioridade='media',
-        status='Vigente',
+        orgao="Orgao A",
+        prioridade="media",
+        status="Vigente",
         objetivo_id=1,
         resultado_esperado_id=1,
     )
@@ -48,8 +48,8 @@ def test_task_legacy_titulo_maps_to_descricao(app):
         user = _user()
         db.session.commit()
 
-        task = Task(titulo='Legacy Titulo', created_by_id=user.id, project_id=None)
-        assert task.descricao == 'Legacy Titulo'
+        task = Task(titulo="Legacy Titulo", created_by_id=user.id, project_id=None)
+        assert task.descricao == "Legacy Titulo"
 
 
 def test_task_explicit_descricao_wins_over_legacy_titulo(app):
@@ -58,11 +58,11 @@ def test_task_explicit_descricao_wins_over_legacy_titulo(app):
         db.session.commit()
 
         task = Task(
-            titulo='Legacy',
-            descricao='Descricao explicita',
+            titulo="Legacy",
+            descricao="Descricao explicita",
             created_by_id=user.id,
         )
-        assert task.descricao == 'Descricao explicita'
+        assert task.descricao == "Descricao explicita"
 
 
 def test_task_task_id_inherits_anchor_fields_and_computes_ordem(app):
@@ -71,7 +71,7 @@ def test_task_task_id_inherits_anchor_fields_and_computes_ordem(app):
         project = _project()
 
         anchor = Task(
-            descricao='Anchor',
+            descricao="Anchor",
             created_by_id=user.id,
             project_id=project.id,
             ordem=5,
@@ -79,11 +79,11 @@ def test_task_task_id_inherits_anchor_fields_and_computes_ordem(app):
         db.session.add(anchor)
         db.session.commit()
 
-        child = Task(titulo='Child', task_id=anchor.id)
+        child = Task(titulo="Child", task_id=anchor.id)
         db.session.add(child)
         db.session.commit()
 
-        assert child.descricao == 'Child'
+        assert child.descricao == "Child"
         assert child.project_id == project.id
         assert child.legacy_parent_task_id == anchor.id
         assert child.created_by_id == anchor.created_by_id
@@ -96,9 +96,11 @@ def test_task_task_id_ignores_archived_when_computing_ordem(app):
         user = _user()
         project = _project()
 
-        anchor = Task(descricao='Anchor', created_by_id=user.id, project_id=project.id, ordem=2)
+        anchor = Task(
+            descricao="Anchor", created_by_id=user.id, project_id=project.id, ordem=2
+        )
         archived = Task(
-            descricao='Archived',
+            descricao="Archived",
             created_by_id=user.id,
             project_id=project.id,
             ordem=99,
@@ -107,7 +109,7 @@ def test_task_task_id_ignores_archived_when_computing_ordem(app):
         db.session.add_all([anchor, archived])
         db.session.commit()
 
-        child = Task(titulo='Child', task_id=anchor.id)
+        child = Task(titulo="Child", task_id=anchor.id)
         db.session.add(child)
         db.session.commit()
 
@@ -120,9 +122,9 @@ def test_task_task_id_invalid_integer_is_ignored(app):
         user = _user()
         db.session.commit()
 
-        task = Task(titulo='X', task_id='nao-numerico', created_by_id=user.id)
+        task = Task(titulo="X", task_id="nao-numerico", created_by_id=user.id)
         assert task.legacy_parent_task_id is None
-        assert task.descricao == 'X'
+        assert task.descricao == "X"
 
 
 def test_task_task_id_missing_anchor_leaves_fields_untouched(app):
@@ -130,7 +132,7 @@ def test_task_task_id_missing_anchor_leaves_fields_untouched(app):
         user = _user()
         db.session.commit()
 
-        task = Task(titulo='X', task_id=99999, created_by_id=user.id)
+        task = Task(titulo="X", task_id=99999, created_by_id=user.id)
         assert task.legacy_parent_task_id is None
 
 
@@ -140,14 +142,14 @@ def test_task_task_id_setter_after_construction(app):
         project = _project()
 
         anchor = Task(
-            descricao='Anchor',
+            descricao="Anchor",
             created_by_id=user.id,
             project_id=project.id,
         )
         db.session.add(anchor)
         db.session.commit()
 
-        fresh = Task(descricao='Fresh', created_by_id=user.id)
+        fresh = Task(descricao="Fresh", created_by_id=user.id)
         fresh.task_id = anchor.id
 
         assert fresh.project_id == project.id
@@ -159,8 +161,8 @@ def test_task_task_id_setter_with_invalid_value_is_noop(app):
         user = _user()
         db.session.commit()
 
-        fresh = Task(descricao='Fresh', created_by_id=user.id)
-        fresh.task_id = 'bogus'
+        fresh = Task(descricao="Fresh", created_by_id=user.id)
+        fresh.task_id = "bogus"
         assert fresh.legacy_parent_task_id is None
 
 
@@ -170,12 +172,12 @@ def test_task_properties_aliases(app):
         user = _user()
         db.session.commit()
 
-        task = Task(descricao='Descricao', created_by_id=user.id)
+        task = Task(descricao="Descricao", created_by_id=user.id)
         db.session.add(task)
         db.session.flush()  # aplica default=False de is_archived via SQLAlchemy
-        assert task.titulo == 'Descricao'
-        task.titulo = 'Novo'
-        assert task.descricao == 'Novo'
+        assert task.titulo == "Descricao"
+        task.titulo = "Novo"
+        assert task.descricao == "Novo"
         assert task.is_finalized is False
         task.is_finalized = True
         assert task.is_archived is True
@@ -194,15 +196,15 @@ def test_task_item_legacy_kwargs_populate_from_anchor(app):
         user = _user()
         project = _project()
 
-        anchor = Task(descricao='Anchor', created_by_id=user.id, project_id=project.id)
+        anchor = Task(descricao="Anchor", created_by_id=user.id, project_id=project.id)
         db.session.add(anchor)
         db.session.commit()
 
-        item = TaskItem(titulo='Sub', task_id=anchor.id)
+        item = TaskItem(titulo="Sub", task_id=anchor.id)
         db.session.add(item)
         db.session.commit()
 
-        assert item.descricao == 'Sub'
+        assert item.descricao == "Sub"
         assert item.project_id == project.id
         assert item.legacy_parent_task_id == anchor.id
 
@@ -218,13 +220,13 @@ def test_task_query_count_restricts_to_root_rows(app):
         user = _user()
         project = _project()
 
-        root_a = Task(descricao='A', created_by_id=user.id, project_id=project.id)
-        root_b = Task(descricao='B', created_by_id=user.id, project_id=project.id)
+        root_a = Task(descricao="A", created_by_id=user.id, project_id=project.id)
+        root_b = Task(descricao="B", created_by_id=user.id, project_id=project.id)
         db.session.add_all([root_a, root_b])
         db.session.commit()
 
         # Adiciona filha (TaskItem) do root_a.
-        item = TaskItem(titulo='Filha', task_id=root_a.id)
+        item = TaskItem(titulo="Filha", task_id=root_a.id)
         db.session.add(item)
         db.session.commit()
 
@@ -238,11 +240,11 @@ def test_task_query_count_with_filter_ignores_scope(app):
         user = _user()
         project = _project()
 
-        root = Task(descricao='X', created_by_id=user.id, project_id=project.id)
+        root = Task(descricao="X", created_by_id=user.id, project_id=project.id)
         db.session.add(root)
         db.session.commit()
 
-        item = TaskItem(titulo='Filha', task_id=root.id)
+        item = TaskItem(titulo="Filha", task_id=root.id)
         db.session.add(item)
         db.session.commit()
 
@@ -257,14 +259,14 @@ def test_task_item_query_count_with_filter_ignores_scope(app):
         user = _user()
         project = _project()
 
-        root = Task(descricao='X', created_by_id=user.id, project_id=project.id)
+        root = Task(descricao="X", created_by_id=user.id, project_id=project.id)
         db.session.add(root)
         db.session.commit()
 
-        item = TaskItem(titulo='Filha', task_id=root.id)
+        item = TaskItem(titulo="Filha", task_id=root.id)
         db.session.add(item)
         db.session.commit()
 
-        filtered = TaskItem.query.filter(TaskItem.descricao == 'X').count()
+        filtered = TaskItem.query.filter(TaskItem.descricao == "X").count()
         # With where: retorna só a raiz (não escopa em filha).
         assert filtered == 1

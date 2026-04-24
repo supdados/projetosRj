@@ -26,9 +26,9 @@ def ensure_google_access_token(config, connection, *, force_refresh=False):
         config,
         refresh_token=connection.refresh_token,
     )
-    connection.access_token = refreshed.get('access_token')
+    connection.access_token = refreshed.get("access_token")
 
-    expires_in = refreshed.get('expires_in')
+    expires_in = refreshed.get("expires_in")
     if expires_in is not None:
         try:
             seconds = max(int(expires_in), 0)
@@ -36,22 +36,24 @@ def ensure_google_access_token(config, connection, *, force_refresh=False):
             seconds = 0
         connection.token_expires_at = now + datetime.timedelta(seconds=seconds)
 
-    maybe_refresh = refreshed.get('refresh_token')
+    maybe_refresh = refreshed.get("refresh_token")
     if maybe_refresh:
         connection.refresh_token = maybe_refresh
 
     return connection.access_token
 
 
-def sync_local_event_to_google(config, local_event, connection, *, create_conference=False):
+def sync_local_event_to_google(
+    config, local_event, connection, *, create_conference=False
+):
     if connection is None:
-        local_event.sync_status = 'pending'
-        local_event.sync_error = 'Conexão com Google Calendar não configurada.'
+        local_event.sync_status = "pending"
+        local_event.sync_error = "Conexão com Google Calendar não configurada."
         return None
 
     access_token = ensure_google_access_token(config, connection)
     payload = google_event_payload(local_event, create_conference=create_conference)
-    calendar_id = connection.calendar_id or 'primary'
+    calendar_id = connection.calendar_id or "primary"
     conference_version = 1 if create_conference else 0
 
     if local_event.google_event_id:
@@ -84,17 +86,19 @@ def sync_local_event_to_google(config, local_event, connection, *, create_confer
             conference_data_version=conference_version,
         )
 
-    local_event.google_event_id = remote.get('id')
+    local_event.google_event_id = remote.get("id")
     local_event.google_calendar_id = calendar_id
-    local_event.source = 'app'
-    local_event.sync_status = 'ok'
+    local_event.source = "app"
+    local_event.sync_status = "ok"
     local_event.sync_error = None
     local_event.last_synced_at = utc_now()
     local_event.meet_link = extract_meet_link(remote)
     return remote
 
 
-def delete_remote_event(config, connection, *, google_event_id, google_calendar_id=None):
+def delete_remote_event(
+    config, connection, *, google_event_id, google_calendar_id=None
+):
     if connection is None or not google_event_id:
         return False
 
@@ -102,7 +106,7 @@ def delete_remote_event(config, connection, *, google_event_id, google_calendar_
     return delete_google_calendar_event(
         config,
         access_token=access_token,
-        calendar_id=google_calendar_id or connection.calendar_id or 'primary',
+        calendar_id=google_calendar_id or connection.calendar_id or "primary",
         event_id=google_event_id,
     )
 
@@ -113,6 +117,6 @@ def hydrate_google_connection_identity(config, connection):
 
     access_token = ensure_google_access_token(config, connection)
     userinfo = get_google_userinfo(config, access_token=access_token)
-    connection.google_account_id = (userinfo.get('sub') or '').strip() or None
-    connection.google_account_email = (userinfo.get('email') or '').strip() or None
+    connection.google_account_id = (userinfo.get("sub") or "").strip() or None
+    connection.google_account_email = (userinfo.get("email") or "").strip() or None
     return userinfo

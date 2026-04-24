@@ -17,9 +17,9 @@ def _format_payload(value, context):
 
 def _resolve_request(case, seed_data):
     context = dict(seed_data)
-    path = case['path'].format(**context)
+    path = case["path"].format(**context)
     request_kwargs = {}
-    for key in ('data', 'json', 'headers', 'query_string'):
+    for key in ("data", "json", "headers", "query_string"):
         if key in case:
             request_kwargs[key] = _format_payload(case[key], context)
     return path, request_kwargs
@@ -27,22 +27,22 @@ def _resolve_request(case, seed_data):
 
 def _login(client, user_id):
     with client.session_transaction() as session:
-        session['user_id'] = user_id
+        session["user_id"] = user_id
 
 
 def _build_client(case, app, seed_data):
     client = app.test_client()
-    role = case['role']
-    if role == 'anon':
+    role = case["role"]
+    if role == "anon":
         return client
-    if role == 'user':
-        _login(client, seed_data['user_id'])
+    if role == "user":
+        _login(client, seed_data["user_id"])
         return client
-    if role == 'admin':
-        _login(client, seed_data['admin_id'])
+    if role == "admin":
+        _login(client, seed_data["admin_id"])
         return client
-    if role == 'outsider':
-        _login(client, seed_data['outsider_id'])
+    if role == "outsider":
+        _login(client, seed_data["outsider_id"])
         return client
     raise ValueError(f'Role nao suportado no caso {case["id"]}: {role}')
 
@@ -54,17 +54,17 @@ def _assert_expected_status(response, expected_status):
     assert response.status_code in set(expected_status)
 
 
-@pytest.mark.parametrize('case', ROUTE_CASES, ids=[case['id'] for case in ROUTE_CASES])
+@pytest.mark.parametrize("case", ROUTE_CASES, ids=[case["id"] for case in ROUTE_CASES])
 def test_routes_smoke(case, app, seed_data):
     http_client = _build_client(case, app, seed_data)
     path, request_kwargs = _resolve_request(case, seed_data)
 
     response = http_client.open(
         path,
-        method=case['method'],
+        method=case["method"],
         follow_redirects=False,
         **request_kwargs,
     )
 
-    _assert_expected_status(response, case['expected_status'])
+    _assert_expected_status(response, case["expected_status"])
     assert response.status_code < 500

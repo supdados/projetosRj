@@ -24,23 +24,23 @@ from routes.tasks.constants import (
 
 def _read_task_filter_values(source):
     return {
-        'orgao_filter': (source.get('orgao') or source.get('area') or '').strip(),
-        'project_filter': (source.get('project') or '').strip(),
-        'prioridade_filter': (source.get('prioridade') or '').strip(),
-        'tipo_filter': (source.get('tipo') or '').strip(),
-        'status_filter': (source.get('status') or '').strip(),
-        'responsavel_filter': _normalize_person_name(source.get('responsavel') or ''),
+        "orgao_filter": (source.get("orgao") or source.get("area") or "").strip(),
+        "project_filter": (source.get("project") or "").strip(),
+        "prioridade_filter": (source.get("prioridade") or "").strip(),
+        "tipo_filter": (source.get("tipo") or "").strip(),
+        "status_filter": (source.get("status") or "").strip(),
+        "responsavel_filter": _normalize_person_name(source.get("responsavel") or ""),
     }
 
 
 def _merge_task_filter_values(*values_list):
     merged = {
-        'orgao_filter': '',
-        'project_filter': '',
-        'prioridade_filter': '',
-        'tipo_filter': '',
-        'status_filter': '',
-        'responsavel_filter': '',
+        "orgao_filter": "",
+        "project_filter": "",
+        "prioridade_filter": "",
+        "tipo_filter": "",
+        "status_filter": "",
+        "responsavel_filter": "",
     }
 
     for values in values_list:
@@ -57,131 +57,138 @@ def _merge_task_filter_values(*values_list):
 def _ordered_task_filter_values(values, preferred_order):
     present = {value for value in values if value}
     ordered = [value for value in preferred_order if value in present]
-    ordered.extend(sorted((value for value in present if value not in preferred_order), key=lambda item: item.casefold()))
+    ordered.extend(
+        sorted(
+            (value for value in present if value not in preferred_order),
+            key=lambda item: item.casefold(),
+        )
+    )
     return ordered
 
 
 def _ensure_filter_option(options, selected_value, label):
     if not selected_value:
         return
-    if any(option['value'] == selected_value for option in options):
+    if any(option["value"] == selected_value for option in options):
         return
-    options.append({'value': selected_value, 'label': label})
+    options.append({"value": selected_value, "label": label})
 
 
 def _build_task_filter_options(tasks, selected_filters=None):
     selected_filters = selected_filters or {}
 
     prioridade_options = [
-        {'value': value, 'label': _task_prioridade_label(value)}
+        {"value": value, "label": _task_prioridade_label(value)}
         for value in _ordered_task_filter_values(
             [task.prioridade for task in tasks if task.prioridade],
             TASK_PRIORIDADE_ORDER,
         )
     ]
     tipo_options = [
-        {'value': value, 'label': _task_tipo_label(value)}
+        {"value": value, "label": _task_tipo_label(value)}
         for value in _ordered_task_filter_values(
             [task.tipo_pedido for task in tasks if task.tipo_pedido],
             TASK_TIPO_ORDER,
         )
     ]
     status_options = [
-        {'value': value, 'label': _task_status_label(value)}
+        {"value": value, "label": _task_status_label(value)}
         for value in TASK_STATUS_ORDER
     ]
 
     responsavel_values = []
     for task in tasks:
-        responsavel_values.extend(_split_responsavel_names(task.responsavel or ''))
+        responsavel_values.extend(_split_responsavel_names(task.responsavel or ""))
     responsavel_options = [
-        {'value': value, 'label': value}
+        {"value": value, "label": value}
         for value in sorted(set(responsavel_values), key=lambda item: item.casefold())
     ]
 
     _ensure_filter_option(
         prioridade_options,
-        selected_filters.get('prioridade_filter', ''),
-        _task_prioridade_label(selected_filters.get('prioridade_filter', '')),
+        selected_filters.get("prioridade_filter", ""),
+        _task_prioridade_label(selected_filters.get("prioridade_filter", "")),
     )
     _ensure_filter_option(
         tipo_options,
-        selected_filters.get('tipo_filter', ''),
-        _task_tipo_label(selected_filters.get('tipo_filter', '')),
+        selected_filters.get("tipo_filter", ""),
+        _task_tipo_label(selected_filters.get("tipo_filter", "")),
     )
     _ensure_filter_option(
         status_options,
-        selected_filters.get('status_filter', ''),
-        _task_status_label(selected_filters.get('status_filter', '')),
+        selected_filters.get("status_filter", ""),
+        _task_status_label(selected_filters.get("status_filter", "")),
     )
     _ensure_filter_option(
         responsavel_options,
-        selected_filters.get('responsavel_filter', ''),
-        selected_filters.get('responsavel_filter', ''),
+        selected_filters.get("responsavel_filter", ""),
+        selected_filters.get("responsavel_filter", ""),
     )
 
     return {
-        'prioridade_options': prioridade_options,
-        'tipo_options': tipo_options,
-        'status_options': status_options,
-        'responsavel_options': responsavel_options,
+        "prioridade_options": prioridade_options,
+        "tipo_options": tipo_options,
+        "status_options": status_options,
+        "responsavel_options": responsavel_options,
     }
 
 
 def _build_task_listing_url(
     endpoint,
     *,
-    orgao_filter='',
-    project_filter='',
-    prioridade_filter='',
-    tipo_filter='',
-    status_filter='',
-    responsavel_filter='',
+    orgao_filter="",
+    project_filter="",
+    prioridade_filter="",
+    tipo_filter="",
+    status_filter="",
+    responsavel_filter="",
     page=None,
     project_id=None,
 ):
     kwargs = {}
     if project_id is not None:
-        kwargs['project_id'] = project_id
+        kwargs["project_id"] = project_id
     if orgao_filter:
-        kwargs['orgao'] = orgao_filter
+        kwargs["orgao"] = orgao_filter
     if project_filter:
-        kwargs['project'] = project_filter
+        kwargs["project"] = project_filter
     if prioridade_filter:
-        kwargs['prioridade'] = prioridade_filter
+        kwargs["prioridade"] = prioridade_filter
     if tipo_filter:
-        kwargs['tipo'] = tipo_filter
+        kwargs["tipo"] = tipo_filter
     if status_filter:
-        kwargs['status'] = status_filter
+        kwargs["status"] = status_filter
     if responsavel_filter:
-        kwargs['responsavel'] = responsavel_filter
+        kwargs["responsavel"] = responsavel_filter
     if page is not None:
-        kwargs['page'] = page
+        kwargs["page"] = page
     return url_for(endpoint, **kwargs)
 
 
 def _build_legacy_query_args():
     query_args = request.args.to_dict(flat=True)
     if query_args:
-        return '?' + urlencode(query_args)
-    return ''
+        return "?" + urlencode(query_args)
+    return ""
 
 
 def _task_active_target_url(task):
     if task and task.project_id:
-        return url_for('main.project_tasks', project_id=task.project_id, focus_task=task.id)
+        return url_for(
+            "main.project_tasks", project_id=task.project_id, focus_task=task.id
+        )
     if task:
-        return url_for('main.list_tasks', focus_task=task.id)
-    return url_for('main.list_tasks')
+        return url_for("main.list_tasks", focus_task=task.id)
+    return url_for("main.list_tasks")
 
 
 def _build_visible_tasks_query(
     include_archived=False,
-    project_filter='',
-    prioridade_filter='',
-    tipo_filter='',
-    status_filter='',
-    responsavel_filter='',
+    project_filter="",
+    prioridade_filter="",
+    tipo_filter="",
+    status_filter="",
+    responsavel_filter="",
     include_relations=True,
     orgao_filter_id=None,
 ):
@@ -199,23 +206,29 @@ def _build_visible_tasks_query(
 
     if not g.user.is_admin:
         user_subtree_ids = get_user_orgao_subtree_ids(g.user)
-        visibility_filters = [and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)]
+        visibility_filters = [
+            and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)
+        ]
         if user_subtree_ids:
             visibility_filters.insert(
                 0,
-                and_(Task.project_id.isnot(None), Project.orgao_id.in_(user_subtree_ids)),
+                and_(
+                    Task.project_id.isnot(None), Project.orgao_id.in_(user_subtree_ids)
+                ),
             )
         query = query.filter(or_(*visibility_filters))
 
     if orgao_filter_id is not None:
         subtree_ids = expand_orgao_filter_ids(orgao_filter_id)
         if subtree_ids:
-            query = query.filter(Task.project_id.isnot(None), Project.orgao_id.in_(subtree_ids))
+            query = query.filter(
+                Task.project_id.isnot(None), Project.orgao_id.in_(subtree_ids)
+            )
         else:
             query = query.filter(db.false())
 
     if project_filter:
-        if project_filter == 'sem_projeto':
+        if project_filter == "sem_projeto":
             query = query.filter(Task.project_id.is_(None))
         else:
             try:
@@ -234,9 +247,13 @@ def _build_visible_tasks_query(
         query = query.filter(Task.status == status_filter)
 
     if responsavel_filter:
-        escaped_responsavel = responsavel_filter.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        escaped_responsavel = (
+            responsavel_filter.replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        )
         pattern = f"%{escaped_responsavel}%"
-        query = query.filter(Task.responsavel.ilike(pattern, escape='\\'))
+        query = query.filter(Task.responsavel.ilike(pattern, escape="\\"))
 
     query = query.filter(Task.is_archived.is_(bool(include_archived)))
 

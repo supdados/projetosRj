@@ -7,19 +7,21 @@ from tests._orgao_helpers import ensure_orgao
 def _client_for_user(app, user_id):
     client = app.test_client()
     with client.session_transaction() as session:
-        session['user_id'] = user_id
+        session["user_id"] = user_id
     return client
 
 
-def test_global_search_api_returns_grouped_payload_limits_and_has_more(app, client_user, seed_data):
+def test_global_search_api_returns_grouped_payload_limits_and_has_more(
+    app, client_user, seed_data
+):
     with app.app_context():
         for index in range(1, 4):
             project = Project(
-                titulo=f'Alvo Projeto {index}',
-                orgao_id=ensure_orgao('Auditoria').id,
-                orgao='Orgao Busca',
-                prioridade='media',
-                status='Vigente',
+                titulo=f"Alvo Projeto {index}",
+                orgao_id=ensure_orgao("Auditoria").id,
+                orgao="Orgao Busca",
+                prioridade="media",
+                status="Vigente",
                 objetivo_id=1,
                 resultado_esperado_id=1,
             )
@@ -27,155 +29,166 @@ def test_global_search_api_returns_grouped_payload_limits_and_has_more(app, clie
             db.session.flush()
             db.session.add(
                 Etapa(
-                    descricao=f'Alvo Etapa {index}',
+                    descricao=f"Alvo Etapa {index}",
                     project_id=project.id,
                     ordem=0,
                 )
             )
             db.session.add(
                 Task(
-                    descricao=f'Alvo Tarefa {index}',
-                    status='nao_iniciada',
+                    descricao=f"Alvo Tarefa {index}",
+                    status="nao_iniciada",
                     ordem=index,
                     project_id=project.id,
-                    created_by_id=seed_data['user_id'],
+                    created_by_id=seed_data["user_id"],
                 )
             )
             db.session.add(
                 CalendarEvent(
-                    user_id=seed_data['user_id'],
-                    title=f'Alvo Evento {index}',
-                    description=f'Descricao do evento alvo {index}',
-                    location=f'Sala {index}',
-                    starts_at=datetime.datetime(2026, 3, 10, 9, 0) + datetime.timedelta(days=index),
-                    ends_at=datetime.datetime(2026, 3, 10, 10, 0) + datetime.timedelta(days=index),
-                    source='app',
-                    sync_status='pending',
+                    user_id=seed_data["user_id"],
+                    title=f"Alvo Evento {index}",
+                    description=f"Descricao do evento alvo {index}",
+                    location=f"Sala {index}",
+                    starts_at=datetime.datetime(2026, 3, 10, 9, 0)
+                    + datetime.timedelta(days=index),
+                    ends_at=datetime.datetime(2026, 3, 10, 10, 0)
+                    + datetime.timedelta(days=index),
+                    source="app",
+                    sync_status="pending",
                 )
             )
         db.session.commit()
 
-    response = client_user.get('/api/busca-global', query_string={'q': 'Alvo', 'limit': 2})
+    response = client_user.get(
+        "/api/busca-global", query_string={"q": "Alvo", "limit": 2}
+    )
     assert response.status_code == 200
     payload = response.get_json()
 
-    assert payload['query'] == 'Alvo'
-    assert payload['meta']['limit_per_type'] == 2
-    assert payload['meta']['has_more']['projects'] is True
-    assert payload['meta']['has_more']['stages'] is True
-    assert payload['meta']['has_more']['tasks'] is True
-    assert payload['meta']['has_more']['events'] is True
-    assert payload['meta']['has_more']['any'] is True
+    assert payload["query"] == "Alvo"
+    assert payload["meta"]["limit_per_type"] == 2
+    assert payload["meta"]["has_more"]["projects"] is True
+    assert payload["meta"]["has_more"]["stages"] is True
+    assert payload["meta"]["has_more"]["tasks"] is True
+    assert payload["meta"]["has_more"]["events"] is True
+    assert payload["meta"]["has_more"]["any"] is True
 
-    assert payload['counts'] == {
-        'projects': 2,
-        'stages': 2,
-        'tasks': 2,
-        'events': 2,
-        'total': 8,
+    assert payload["counts"] == {
+        "projects": 2,
+        "stages": 2,
+        "tasks": 2,
+        "events": 2,
+        "total": 8,
     }
 
-    assert payload['results']['projects'][0]['type'] == 'project'
-    assert payload['results']['projects'][0]['display_title'] == f"{payload['results']['projects'][0]['url'].split('/project/')[1]}-{payload['results']['projects'][0]['title']}"
-    assert payload['results']['stages'][0]['type'] == 'stage'
-    assert payload['results']['tasks'][0]['type'] == 'task'
-    assert payload['results']['events'][0]['type'] == 'event'
-    assert payload['results']['projects'][0]['url'].startswith('/project/')
-    assert payload['results']['tasks'][0]['url'].startswith('/tarefas/')
-    assert payload['results']['events'][0]['url'].startswith('/calendarios')
+    assert payload["results"]["projects"][0]["type"] == "project"
+    assert (
+        payload["results"]["projects"][0]["display_title"]
+        == f"{payload['results']['projects'][0]['url'].split('/project/')[1]}-{payload['results']['projects'][0]['title']}"
+    )
+    assert payload["results"]["stages"][0]["type"] == "stage"
+    assert payload["results"]["tasks"][0]["type"] == "task"
+    assert payload["results"]["events"][0]["type"] == "event"
+    assert payload["results"]["projects"][0]["url"].startswith("/project/")
+    assert payload["results"]["tasks"][0]["url"].startswith("/tarefas/")
+    assert payload["results"]["events"][0]["url"].startswith("/calendarios")
 
 
-def test_global_search_api_prefers_prefix_matches_and_respects_area_scope(app, seed_data):
+def test_global_search_api_prefers_prefix_matches_and_respects_area_scope(
+    app, seed_data
+):
     with app.app_context():
         prefix_project = Project(
-            titulo='Busca Especial Prefixo',
-            orgao_id=ensure_orgao('Auditoria').id,
-            orgao='Orgao Busca',
-            prioridade='media',
-            status='Vigente',
+            titulo="Busca Especial Prefixo",
+            orgao_id=ensure_orgao("Auditoria").id,
+            orgao="Orgao Busca",
+            prioridade="media",
+            status="Vigente",
             objetivo_id=1,
             resultado_esperado_id=1,
         )
         contained_project = Project(
-            titulo='Projeto com Busca Especial no meio',
-            orgao_id=ensure_orgao('Auditoria').id,
-            orgao='Orgao Busca',
-            prioridade='media',
-            status='Vigente',
+            titulo="Projeto com Busca Especial no meio",
+            orgao_id=ensure_orgao("Auditoria").id,
+            orgao="Orgao Busca",
+            prioridade="media",
+            status="Vigente",
             objetivo_id=1,
             resultado_esperado_id=1,
         )
         foreign_project = Project(
-            titulo='Busca Especial VPD',
-            orgao_id=ensure_orgao('VPD').id,
-            orgao='Orgao Busca',
-            prioridade='media',
-            status='Vigente',
+            titulo="Busca Especial VPD",
+            orgao_id=ensure_orgao("VPD").id,
+            orgao="Orgao Busca",
+            prioridade="media",
+            status="Vigente",
             objetivo_id=1,
             resultado_esperado_id=1,
         )
         db.session.add_all([prefix_project, contained_project, foreign_project])
         db.session.commit()
 
-    user_client = _client_for_user(app, seed_data['user_id'])
-    admin_client = _client_for_user(app, seed_data['admin_id'])
+    user_client = _client_for_user(app, seed_data["user_id"])
+    admin_client = _client_for_user(app, seed_data["admin_id"])
 
-    user_response = user_client.get('/api/busca-global', query_string={'q': 'Busca Especial'})
+    user_response = user_client.get(
+        "/api/busca-global", query_string={"q": "Busca Especial"}
+    )
     assert user_response.status_code == 200
     user_payload = user_response.get_json()
-    user_titles = [item['title'] for item in user_payload['results']['projects']]
-    assert user_titles[0] == 'Busca Especial Prefixo'
-    assert 'Busca Especial VPD' not in user_titles
+    user_titles = [item["title"] for item in user_payload["results"]["projects"]]
+    assert user_titles[0] == "Busca Especial Prefixo"
+    assert "Busca Especial VPD" not in user_titles
 
     blocked_user_response = user_client.get(
-        '/api/busca-global',
-        query_string={'q': 'Busca Especial', 'area': 'VPD'},
+        "/api/busca-global",
+        query_string={"q": "Busca Especial", "area": "VPD"},
     )
     assert blocked_user_response.status_code == 200
     blocked_payload = blocked_user_response.get_json()
-    blocked_titles = [item['title'] for item in blocked_payload['results']['projects']]
-    assert 'Busca Especial Prefixo' in blocked_titles
-    assert 'Busca Especial VPD' not in blocked_titles
+    blocked_titles = [item["title"] for item in blocked_payload["results"]["projects"]]
+    assert "Busca Especial Prefixo" in blocked_titles
+    assert "Busca Especial VPD" not in blocked_titles
 
     admin_response = admin_client.get(
-        '/api/busca-global',
-        query_string={'q': 'Busca Especial', 'area': 'VPD'},
+        "/api/busca-global",
+        query_string={"q": "Busca Especial", "area": "VPD"},
     )
     assert admin_response.status_code == 200
     admin_payload = admin_response.get_json()
-    admin_titles = [item['title'] for item in admin_payload['results']['projects']]
-    assert admin_titles == ['Busca Especial VPD']
+    admin_titles = [item["title"] for item in admin_payload["results"]["projects"]]
+    assert admin_titles == ["Busca Especial VPD"]
 
 
 def test_global_search_api_returns_empty_payload_for_short_query(client_user):
-    response = client_user.get('/api/busca-global', query_string={'q': 'A'})
+    response = client_user.get("/api/busca-global", query_string={"q": "A"})
     assert response.status_code == 200
     payload = response.get_json()
 
     assert payload == {
-        'query': 'A',
-        'meta': {
-            'limit_per_type': None,
-            'has_more': {
-                'projects': False,
-                'stages': False,
-                'tasks': False,
-                'events': False,
-                'any': False,
+        "query": "A",
+        "meta": {
+            "limit_per_type": None,
+            "has_more": {
+                "projects": False,
+                "stages": False,
+                "tasks": False,
+                "events": False,
+                "any": False,
             },
         },
-        'counts': {
-            'projects': 0,
-            'stages': 0,
-            'tasks': 0,
-            'events': 0,
-            'total': 0,
+        "counts": {
+            "projects": 0,
+            "stages": 0,
+            "tasks": 0,
+            "events": 0,
+            "total": 0,
         },
-        'results': {
-            'projects': [],
-            'stages': [],
-            'tasks': [],
-            'events': [],
+        "results": {
+            "projects": [],
+            "stages": [],
+            "tasks": [],
+            "events": [],
         },
     }
 
@@ -184,169 +197,192 @@ def test_global_search_api_includes_only_events_of_current_user(app, seed_data):
     with app.app_context():
         db.session.add(
             CalendarEvent(
-                user_id=seed_data['user_id'],
-                title='Evento Exclusivo Auditoria',
-                description='Visivel apenas para o usuario Auditoria',
-                location='Sala Auditoria',
+                user_id=seed_data["user_id"],
+                title="Evento Exclusivo Auditoria",
+                description="Visivel apenas para o usuario Auditoria",
+                location="Sala Auditoria",
                 starts_at=datetime.datetime(2026, 4, 10, 9, 0),
                 ends_at=datetime.datetime(2026, 4, 10, 10, 0),
-                source='app',
-                sync_status='pending',
+                source="app",
+                sync_status="pending",
             )
         )
         db.session.add(
             CalendarEvent(
-                user_id=seed_data['outsider_id'],
-                title='Evento Exclusivo VPD',
-                description='Nao deve aparecer para Auditoria',
-                location='Sala VPD',
+                user_id=seed_data["outsider_id"],
+                title="Evento Exclusivo VPD",
+                description="Nao deve aparecer para Auditoria",
+                location="Sala VPD",
                 starts_at=datetime.datetime(2026, 4, 11, 9, 0),
                 ends_at=datetime.datetime(2026, 4, 11, 10, 0),
-                source='app',
-                sync_status='pending',
+                source="app",
+                sync_status="pending",
             )
         )
         db.session.commit()
 
-    user_client = _client_for_user(app, seed_data['user_id'])
-    outsider_client = _client_for_user(app, seed_data['outsider_id'])
+    user_client = _client_for_user(app, seed_data["user_id"])
+    outsider_client = _client_for_user(app, seed_data["outsider_id"])
 
-    user_response = user_client.get('/api/busca-global', query_string={'q': 'Evento Exclusivo'})
+    user_response = user_client.get(
+        "/api/busca-global", query_string={"q": "Evento Exclusivo"}
+    )
     assert user_response.status_code == 200
-    user_titles = [item['title'] for item in user_response.get_json()['results']['events']]
-    assert 'Evento Exclusivo Auditoria' in user_titles
-    assert 'Evento Exclusivo VPD' not in user_titles
+    user_titles = [
+        item["title"] for item in user_response.get_json()["results"]["events"]
+    ]
+    assert "Evento Exclusivo Auditoria" in user_titles
+    assert "Evento Exclusivo VPD" not in user_titles
 
-    outsider_response = outsider_client.get('/api/busca-global', query_string={'q': 'Evento Exclusivo'})
+    outsider_response = outsider_client.get(
+        "/api/busca-global", query_string={"q": "Evento Exclusivo"}
+    )
     assert outsider_response.status_code == 200
-    outsider_titles = [item['title'] for item in outsider_response.get_json()['results']['events']]
-    assert 'Evento Exclusivo VPD' in outsider_titles
-    assert 'Evento Exclusivo Auditoria' not in outsider_titles
+    outsider_titles = [
+        item["title"] for item in outsider_response.get_json()["results"]["events"]
+    ]
+    assert "Evento Exclusivo VPD" in outsider_titles
+    assert "Evento Exclusivo Auditoria" not in outsider_titles
 
 
-def test_global_search_api_formats_single_day_all_day_event_without_next_day_suffix(app, seed_data):
+def test_global_search_api_formats_single_day_all_day_event_without_next_day_suffix(
+    app, seed_data
+):
     with app.app_context():
         db.session.add(
             CalendarEvent(
-                user_id=seed_data['user_id'],
-                title='Evento Dia Inteiro Busca',
-                description='Evento de um dia inteiro',
+                user_id=seed_data["user_id"],
+                title="Evento Dia Inteiro Busca",
+                description="Evento de um dia inteiro",
                 starts_at=datetime.datetime(2026, 3, 11, 3, 0),
                 ends_at=datetime.datetime(2026, 3, 12, 2, 59),
                 is_all_day=True,
-                source='google',
-                sync_status='ok',
+                source="google",
+                sync_status="ok",
             )
         )
         db.session.commit()
 
-    response = _client_for_user(app, seed_data['user_id']).get(
-        '/api/busca-global',
-        query_string={'q': 'Evento Dia Inteiro Busca'},
+    response = _client_for_user(app, seed_data["user_id"]).get(
+        "/api/busca-global",
+        query_string={"q": "Evento Dia Inteiro Busca"},
     )
 
     assert response.status_code == 200
-    event_results = response.get_json()['results']['events']
+    event_results = response.get_json()["results"]["events"]
     assert len(event_results) == 1
-    assert 'Quando: 11/03/2026' in event_results[0]['meta']
-    assert 'ate 12/03/2026' not in event_results[0]['meta']
+    assert "Quando: 11/03/2026" in event_results[0]["meta"]
+    assert "ate 12/03/2026" not in event_results[0]["meta"]
 
 
-def test_global_search_api_formats_multi_day_all_day_event_with_inclusive_end_date(app, seed_data):
+def test_global_search_api_formats_multi_day_all_day_event_with_inclusive_end_date(
+    app, seed_data
+):
     with app.app_context():
         db.session.add(
             CalendarEvent(
-                user_id=seed_data['user_id'],
-                title='Evento Multi Dia Busca',
-                description='Evento de varios dias inteiros',
+                user_id=seed_data["user_id"],
+                title="Evento Multi Dia Busca",
+                description="Evento de varios dias inteiros",
                 starts_at=datetime.datetime(2026, 3, 11, 3, 0),
                 ends_at=datetime.datetime(2026, 3, 13, 2, 59),
                 is_all_day=True,
-                source='google',
-                sync_status='ok',
+                source="google",
+                sync_status="ok",
             )
         )
         db.session.commit()
 
-    response = _client_for_user(app, seed_data['user_id']).get(
-        '/api/busca-global',
-        query_string={'q': 'Evento Multi Dia Busca'},
+    response = _client_for_user(app, seed_data["user_id"]).get(
+        "/api/busca-global",
+        query_string={"q": "Evento Multi Dia Busca"},
     )
 
     assert response.status_code == 200
-    event_results = response.get_json()['results']['events']
+    event_results = response.get_json()["results"]["events"]
     assert len(event_results) == 1
-    assert 'Quando: 11/03/2026 ate 12/03/2026' in event_results[0]['meta']
+    assert "Quando: 11/03/2026 ate 12/03/2026" in event_results[0]["meta"]
 
 
-def test_global_search_api_formats_utc_full_day_duration_as_single_local_day(app, seed_data):
+def test_global_search_api_formats_utc_full_day_duration_as_single_local_day(
+    app, seed_data
+):
     with app.app_context():
         db.session.add(
             CalendarEvent(
-                user_id=seed_data['user_id'],
-                title='Evento Duracao Dia Local',
-                description='Mesmo caso exibido no calendario em um unico dia local',
+                user_id=seed_data["user_id"],
+                title="Evento Duracao Dia Local",
+                description="Mesmo caso exibido no calendario em um unico dia local",
                 starts_at=datetime.datetime(2026, 3, 12, 3, 0),
                 ends_at=datetime.datetime(2026, 3, 13, 2, 59),
                 is_all_day=False,
-                source='google',
-                sync_status='ok',
+                source="google",
+                sync_status="ok",
             )
         )
         db.session.commit()
 
-    response = _client_for_user(app, seed_data['user_id']).get(
-        '/api/busca-global',
-        query_string={'q': 'Evento Duracao Dia Local'},
+    response = _client_for_user(app, seed_data["user_id"]).get(
+        "/api/busca-global",
+        query_string={"q": "Evento Duracao Dia Local"},
     )
 
     assert response.status_code == 200
-    event_results = response.get_json()['results']['events']
+    event_results = response.get_json()["results"]["events"]
     assert len(event_results) == 1
-    assert 'Quando: 12/03/2026 00:00 - 23:59' in event_results[0]['meta']
-    assert '13/03/2026' not in event_results[0]['meta']
+    assert "Quando: 12/03/2026 00:00 - 23:59" in event_results[0]["meta"]
+    assert "13/03/2026" not in event_results[0]["meta"]
 
 
-def test_search_page_renders_grouped_sections_and_hides_foreign_area_results(client_user, seed_data):
-    response = client_user.get('/busca', query_string={'q': 'Auditoria'})
+def test_search_page_renders_grouped_sections_and_hides_foreign_area_results(
+    client_user, seed_data
+):
+    response = client_user.get("/busca", query_string={"q": "Auditoria"})
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'Busca Global' in html
-    assert 'search-results-section-title' in html
-    assert 'Projetos' in html
-    assert 'Etapas' in html
-    assert 'Tarefas' in html
-    assert 'Projeto Auditoria' in html
-    assert 'Projeto VPD' not in html
+    assert "Busca Global" in html
+    assert "search-results-section-title" in html
+    assert "Projetos" in html
+    assert "Etapas" in html
+    assert "Tarefas" in html
+    assert "Projeto Auditoria" in html
+    assert "Projeto VPD" not in html
     assert 'class="search-result-item search-result-item-square"' in html
 
 
 def test_search_page_renders_events_section_when_matches_exist(client_user):
-    response = client_user.get('/busca', query_string={'q': 'Evento Seed'})
+    response = client_user.get("/busca", query_string={"q": "Evento Seed"})
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'Eventos' in html
-    assert 'Evento Seed' in html
+    assert "Eventos" in html
+    assert "Evento Seed" in html
 
 
 def test_search_page_empty_state_without_query_and_without_results(client_user):
-    empty_query_response = client_user.get('/busca')
+    empty_query_response = client_user.get("/busca")
     assert empty_query_response.status_code == 200
-    assert 'Digite um termo para iniciar a busca.' in empty_query_response.get_data(as_text=True)
+    assert "Digite um termo para iniciar a busca." in empty_query_response.get_data(
+        as_text=True
+    )
 
-    no_results_response = client_user.get('/busca', query_string={'q': 'TermoInexistenteXYZ'})
+    no_results_response = client_user.get(
+        "/busca", query_string={"q": "TermoInexistenteXYZ"}
+    )
     assert no_results_response.status_code == 200
-    assert 'Nenhuma referencia encontrada para "<strong>TermoInexistenteXYZ</strong>".' in no_results_response.get_data(as_text=True)
+    assert (
+        'Nenhuma referencia encontrada para "<strong>TermoInexistenteXYZ</strong>".'
+        in no_results_response.get_data(as_text=True)
+    )
 
 
 def test_search_page_redirects_when_non_admin_forces_foreign_area(client_user):
     response = client_user.get(
-        '/busca',
-        query_string={'q': 'Auditoria', 'area': 'VPD'},
+        "/busca",
+        query_string={"q": "Auditoria", "area": "VPD"},
         follow_redirects=False,
     )
 
     assert response.status_code == 302
-    assert response.headers['Location'].endswith('/busca?q=Auditoria')
+    assert response.headers["Location"].endswith("/busca?q=Auditoria")

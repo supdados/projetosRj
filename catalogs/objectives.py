@@ -17,7 +17,10 @@ GOAL_CATALOG = [
                 "id": 1,
                 "descricao": "Gestao e governanca da politica de governo digital estadual qualificadas",
                 "indicadores": [
-                    {"id": 1, "descricao": "N de orgaos/entidades com pontos focais de governo digital indicados"},
+                    {
+                        "id": 1,
+                        "descricao": "N de orgaos/entidades com pontos focais de governo digital indicados",
+                    },
                 ],
             },
             {
@@ -25,15 +28,24 @@ GOAL_CATALOG = [
                 "descricao": "Colaboracao interfederativa promovida",
                 "indicadores": [
                     {"id": 2, "descricao": "% de municipios no Programa RJ Digital"},
-                    {"id": 3, "descricao": "% de orgaos e entidades com nivel de maturidade digital intermediario ou avancado"},
+                    {
+                        "id": 3,
+                        "descricao": "% de orgaos e entidades com nivel de maturidade digital intermediario ou avancado",
+                    },
                 ],
             },
             {
                 "id": 3,
                 "descricao": "Beneficios ambientais e economicos alcancados",
                 "indicadores": [
-                    {"id": 4, "descricao": "Valor financeiro economizado em razao da transformacao digital"},
-                    {"id": 5, "descricao": "Quantidade de CO2 evitado em razao da transformacao digital"},
+                    {
+                        "id": 4,
+                        "descricao": "Valor financeiro economizado em razao da transformacao digital",
+                    },
+                    {
+                        "id": 5,
+                        "descricao": "Quantidade de CO2 evitado em razao da transformacao digital",
+                    },
                 ],
             },
         ],
@@ -46,8 +58,14 @@ GOAL_CATALOG = [
                 "id": 4,
                 "descricao": "Qualidade dos servicos publicos aprimorada",
                 "indicadores": [
-                    {"id": 6, "descricao": "Media da nota obtida na avaliacao da satisfacao do cidadao com os servicos"},
-                    {"id": 7, "descricao": "Tempo medio de atendimento de demandas do cidadao"},
+                    {
+                        "id": 6,
+                        "descricao": "Media da nota obtida na avaliacao da satisfacao do cidadao com os servicos",
+                    },
+                    {
+                        "id": 7,
+                        "descricao": "Tempo medio de atendimento de demandas do cidadao",
+                    },
                 ],
             },
         ],
@@ -60,7 +78,10 @@ GOAL_CATALOG = [
                 "id": 5,
                 "descricao": "Identificacao e autenticacao unicas implementadas",
                 "indicadores": [
-                    {"id": 8, "descricao": "N de sistemas autenticados via Portal RJ Digital"},
+                    {
+                        "id": 8,
+                        "descricao": "N de sistemas autenticados via Portal RJ Digital",
+                    },
                     {"id": 9, "descricao": "N de identificacoes unicas realizadas"},
                 ],
             },
@@ -74,8 +95,14 @@ GOAL_CATALOG = [
                 "id": 6,
                 "descricao": "Seguranca da informacao e privacidade de dados fortalecidas",
                 "indicadores": [
-                    {"id": 10, "descricao": "% de orgaos e entidades com nivel de maturidade intermediario ou avancado em seguranca da informacao"},
-                    {"id": 11, "descricao": "% de orgaos e entidades com nivel de maturidade intermediario ou avancado na implementacao da LGPD"},
+                    {
+                        "id": 10,
+                        "descricao": "% de orgaos e entidades com nivel de maturidade intermediario ou avancado em seguranca da informacao",
+                    },
+                    {
+                        "id": 11,
+                        "descricao": "% de orgaos e entidades com nivel de maturidade intermediario ou avancado na implementacao da LGPD",
+                    },
                 ],
             },
         ],
@@ -88,14 +115,20 @@ GOAL_CATALOG = [
                 "id": 7,
                 "descricao": "Compartilhamento e interoperabilidade de dados ampliados",
                 "indicadores": [
-                    {"id": 12, "descricao": "N de sistemas integrados recebendo dados de repositorio central de dados"},
+                    {
+                        "id": 12,
+                        "descricao": "N de sistemas integrados recebendo dados de repositorio central de dados",
+                    },
                 ],
             },
             {
                 "id": 8,
                 "descricao": "Produtos de dados e analises desenvolvidos",
                 "indicadores": [
-                    {"id": 13, "descricao": "% de orgaos e entidades com nivel de maturidade intermediario ou avancado em governanca de dados"},
+                    {
+                        "id": 13,
+                        "descricao": "% de orgaos e entidades com nivel de maturidade intermediario ou avancado em governanca de dados",
+                    },
                 ],
             },
         ],
@@ -108,7 +141,10 @@ GOAL_CATALOG = [
                 "id": 9,
                 "descricao": "Integracao tecnologica entre Estado e municipios fortalecida",
                 "indicadores": [
-                    {"id": 14, "descricao": "% de municipios com solucoes fornecidas pelo Estado"},
+                    {
+                        "id": 14,
+                        "descricao": "% de municipios com solucoes fornecidas pelo Estado",
+                    },
                 ],
             },
         ],
@@ -121,7 +157,10 @@ GOAL_CATALOG = [
                 "id": 10,
                 "descricao": "Ecossistema de inovacao em governo digital desenvolvido",
                 "indicadores": [
-                    {"id": 15, "descricao": "Indice de maturidade do ecossistema de inovacao"},
+                    {
+                        "id": 15,
+                        "descricao": "Indice de maturidade do ecossistema de inovacao",
+                    },
                 ],
             },
         ],
@@ -136,8 +175,14 @@ GOAL_CATALOG = [
                 "indicadores": [
                     {"id": 16, "descricao": "Tempo medio dos processos (em dias)"},
                     {"id": 17, "descricao": "Custo medio dos processos (em reais)"},
-                    {"id": 18, "descricao": "N de sistemas e servicos integrados ao sistema SEI"},
-                    {"id": 19, "descricao": "% de municipios com tempo de abertura de empresas inferior a 15 horas"},
+                    {
+                        "id": 18,
+                        "descricao": "N de sistemas e servicos integrados ao sistema SEI",
+                    },
+                    {
+                        "id": 19,
+                        "descricao": "% de municipios com tempo de abertura de empresas inferior a 15 horas",
+                    },
                 ],
             },
         ],
@@ -150,15 +195,24 @@ GOAL_CATALOG = [
                 "id": 12,
                 "descricao": "Abertura e transparencia governamental ampliadas",
                 "indicadores": [
-                    {"id": 20, "descricao": "N de conjuntos de dados disponibilizados no Portal de Dados Abertos"},
-                    {"id": 21, "descricao": "N de orgaos/entidades/municipios que disponibilizam dados no Portal de Dados Abertos"},
+                    {
+                        "id": 20,
+                        "descricao": "N de conjuntos de dados disponibilizados no Portal de Dados Abertos",
+                    },
+                    {
+                        "id": 21,
+                        "descricao": "N de orgaos/entidades/municipios que disponibilizam dados no Portal de Dados Abertos",
+                    },
                 ],
             },
             {
                 "id": 13,
                 "descricao": "Participacao e controle social fortalecidos",
                 "indicadores": [
-                    {"id": 22, "descricao": "N de manifestacoes do cidadao na Ouvidoria RJ"},
+                    {
+                        "id": 22,
+                        "descricao": "N de manifestacoes do cidadao na Ouvidoria RJ",
+                    },
                 ],
             },
         ],
@@ -191,8 +245,14 @@ GOAL_CATALOG = [
                 "id": 16,
                 "descricao": "Engajamento do cidadao com o Portal RJ Digital ampliado",
                 "indicadores": [
-                    {"id": 25, "descricao": "N de cidadaos acessando o Portal RJ Digital"},
-                    {"id": 26, "descricao": "N de cidadaos demandando servicos no Portal RJ Digital"},
+                    {
+                        "id": 25,
+                        "descricao": "N de cidadaos acessando o Portal RJ Digital",
+                    },
+                    {
+                        "id": 26,
+                        "descricao": "N de cidadaos demandando servicos no Portal RJ Digital",
+                    },
                 ],
             },
         ],
@@ -201,12 +261,18 @@ GOAL_CATALOG = [
 
 
 def get_objetivos_choices():
-    return [{"id": objetivo["id"], "descricao": objetivo["descricao"]} for objetivo in GOAL_CATALOG]
+    return [
+        {"id": objetivo["id"], "descricao": objetivo["descricao"]}
+        for objetivo in GOAL_CATALOG
+    ]
 
 
 def get_resultados_por_objetivo():
     return {
-        objetivo["id"]: [{"id": resultado["id"], "descricao": resultado["descricao"]} for resultado in objetivo["resultados"]]
+        objetivo["id"]: [
+            {"id": resultado["id"], "descricao": resultado["descricao"]}
+            for resultado in objetivo["resultados"]
+        ]
         for objetivo in GOAL_CATALOG
     }
 
@@ -215,7 +281,10 @@ def get_indicadores_por_resultado():
     mapping = {}
     for objetivo in GOAL_CATALOG:
         for resultado in objetivo["resultados"]:
-            mapping[resultado["id"]] = [{"id": indicador["id"], "descricao": indicador["descricao"]} for indicador in resultado["indicadores"]]
+            mapping[resultado["id"]] = [
+                {"id": indicador["id"], "descricao": indicador["descricao"]}
+                for indicador in resultado["indicadores"]
+            ]
     return mapping
 
 
@@ -257,7 +326,12 @@ def _parse_optional_int(value, field_name):
         raise ValueError(f"{field_name} invalido.") from exc
 
 
-def normalize_goal_selection(objetivo_id, resultado_esperado_id, indicador_ids, max_indicadores=MAX_INDICADORES_POR_PROJETO):
+def normalize_goal_selection(
+    objetivo_id,
+    resultado_esperado_id,
+    indicador_ids,
+    max_indicadores=MAX_INDICADORES_POR_PROJETO,
+):
     """
     Normaliza e valida selecao de objetivo/resultado/indicadores.
 
@@ -265,7 +339,9 @@ def normalize_goal_selection(objetivo_id, resultado_esperado_id, indicador_ids, 
         tuple(objetivo_id_normalizado, resultado_id_normalizado, lista_indicadores_normalizada)
     """
     objetivo_id = _parse_optional_int(objetivo_id, "Objetivo")
-    resultado_esperado_id = _parse_optional_int(resultado_esperado_id, "Resultado esperado")
+    resultado_esperado_id = _parse_optional_int(
+        resultado_esperado_id, "Resultado esperado"
+    )
 
     if objetivo_id is not None and objetivo_id not in OBJETIVO_IDS:
         raise ValueError("Objetivo selecionado nao existe no catalogo.")
@@ -289,12 +365,18 @@ def normalize_goal_selection(objetivo_id, resultado_esperado_id, indicador_ids, 
             normalized_indicadores.append(indicador_id)
 
     if len(normalized_indicadores) > max_indicadores:
-        raise ValueError(f"Voce pode selecionar no maximo {max_indicadores} indicadores.")
+        raise ValueError(
+            f"Voce pode selecionar no maximo {max_indicadores} indicadores."
+        )
 
     if resultado_esperado_id is None and normalized_indicadores:
-        resultados_dos_indicadores = {INDICADOR_PARA_RESULTADO[ind_id] for ind_id in normalized_indicadores}
+        resultados_dos_indicadores = {
+            INDICADOR_PARA_RESULTADO[ind_id] for ind_id in normalized_indicadores
+        }
         if len(resultados_dos_indicadores) > 1:
-            raise ValueError("Os indicadores selecionados pertencem a resultados diferentes.")
+            raise ValueError(
+                "Os indicadores selecionados pertencem a resultados diferentes."
+            )
         resultado_esperado_id = resultados_dos_indicadores.pop()
 
     if resultado_esperado_id is not None:
@@ -302,14 +384,18 @@ def normalize_goal_selection(objetivo_id, resultado_esperado_id, indicador_ids, 
         if objetivo_id is None:
             objetivo_id = objetivo_do_resultado
         elif objetivo_id != objetivo_do_resultado:
-            raise ValueError("O resultado esperado selecionado nao pertence ao objetivo informado.")
+            raise ValueError(
+                "O resultado esperado selecionado nao pertence ao objetivo informado."
+            )
 
     if normalized_indicadores and resultado_esperado_id is None:
         raise ValueError("Selecione um resultado esperado para os indicadores.")
 
     for indicador_id in normalized_indicadores:
         if INDICADOR_PARA_RESULTADO[indicador_id] != resultado_esperado_id:
-            raise ValueError("Um ou mais indicadores nao pertencem ao resultado esperado selecionado.")
+            raise ValueError(
+                "Um ou mais indicadores nao pertencem ao resultado esperado selecionado."
+            )
 
     if resultado_esperado_id is None:
         normalized_indicadores = []

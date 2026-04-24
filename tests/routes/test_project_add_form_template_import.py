@@ -7,7 +7,7 @@ preview read-only, exibir o contador e a dica "Selecione um modelo".
 
 
 def test_project_add_form_renders_template_import_preview(client_admin):
-    response = client_admin.get('/projects')
+    response = client_admin.get("/projects")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
@@ -24,7 +24,7 @@ def test_project_add_form_renders_template_import_preview(client_admin):
 
     # Empty state quando nenhum modelo está selecionado
     assert 'id="tpl-import-empty"' in html
-    assert 'Selecione um modelo' in html
+    assert "Selecione um modelo" in html
 
     # Data de início continua sendo opcional
     assert 'id="project_start_date"' in html

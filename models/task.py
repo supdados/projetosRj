@@ -8,11 +8,11 @@ def _resolve_legacy_kwargs(kwargs: dict) -> None:
 
     Exemplo: Task(titulo='foo', task_id=3) cria uma subtarefa herdando project/ordem do task 3.
     """
-    legacy_titulo = kwargs.pop('titulo', None)
-    legacy_task_id = kwargs.pop('task_id', None)
+    legacy_titulo = kwargs.pop("titulo", None)
+    legacy_task_id = kwargs.pop("task_id", None)
 
-    if legacy_titulo is not None and 'descricao' not in kwargs:
-        kwargs['descricao'] = legacy_titulo
+    if legacy_titulo is not None and "descricao" not in kwargs:
+        kwargs["descricao"] = legacy_titulo
 
     if legacy_task_id is None:
         return
@@ -26,61 +26,63 @@ def _resolve_legacy_kwargs(kwargs: dict) -> None:
     if anchor is None:
         return
 
-    kwargs.setdefault('project_id', anchor.project_id)
-    kwargs.setdefault('legacy_parent_task_id', anchor.id)
-    kwargs.setdefault('created_by_id', anchor.created_by_id)
+    kwargs.setdefault("project_id", anchor.project_id)
+    kwargs.setdefault("legacy_parent_task_id", anchor.id)
+    kwargs.setdefault("created_by_id", anchor.created_by_id)
 
-    if 'ordem' not in kwargs:
+    if "ordem" not in kwargs:
         next_ordem = (
             db.session.query(db.func.max(Task.ordem))
             .filter(Task.project_id == anchor.project_id, Task.is_archived.is_(False))
             .scalar()
             or 0
         )
-        kwargs['ordem'] = next_ordem + 1
+        kwargs["ordem"] = next_ordem + 1
 
 
 class Task(db.Model):
-    __tablename__ = 'task'
+    __tablename__ = "task"
     query_class = TaskQuery
     id = db.Column(db.Integer, primary_key=True)
     descricao = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default='nao_iniciada')
+    status = db.Column(db.String(20), nullable=False, default="nao_iniciada")
     responsavel = db.Column(db.String(100), nullable=True)
     ordem = db.Column(db.Integer, nullable=False, default=0)
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
-    legacy_parent_task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
-    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey("project.id"), nullable=True)
+    legacy_parent_task_id = db.Column(
+        db.Integer, db.ForeignKey("task.id"), nullable=True
+    )
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
     prioridade = db.Column(db.String(20), nullable=True)
     tipo_pedido = db.Column(db.String(30), nullable=True)
     is_archived = db.Column(db.Boolean, nullable=False, default=False, index=True)
     archived_at = db.Column(db.DateTime, nullable=True)
 
-    project = db.relationship('Project', backref=db.backref('tasks', lazy=True))
-    created_by = db.relationship('User', backref='created_tasks')
+    project = db.relationship("Project", backref=db.backref("tasks", lazy=True))
+    created_by = db.relationship("User", backref="created_tasks")
     comments = db.relationship(
-        'TaskComment',
-        backref='task',
+        "TaskComment",
+        backref="task",
         lazy=True,
-        cascade='all, delete-orphan',
-        order_by='TaskComment.created_at',
+        cascade="all, delete-orphan",
+        order_by="TaskComment.created_at",
     )
     anexos = db.relationship(
-        'TaskAnexo',
-        backref='task',
+        "TaskAnexo",
+        backref="task",
         lazy=True,
-        cascade='all, delete-orphan',
-        order_by='TaskAnexo.created_at',
+        cascade="all, delete-orphan",
+        order_by="TaskAnexo.created_at",
     )
 
     def __init__(self, **kwargs):
         _resolve_legacy_kwargs(kwargs)
-        kwargs.setdefault('status', 'nao_iniciada')
+        kwargs.setdefault("status", "nao_iniciada")
         super().__init__(**kwargs)
 
     def __repr__(self):
-        return f'<Task {self.descricao[:50]}>'
+        return f"<Task {self.descricao[:50]}>"
 
     # ── Aliases de compatibilidade legada ─────────────────────────────────────
     # Mantidos porque templates e rotas legadas ainda referenciam esses nomes.
@@ -143,7 +145,7 @@ class TaskItem(db.Model):
 
     def __init__(self, **kwargs):
         _resolve_legacy_kwargs(kwargs)
-        kwargs.setdefault('status', 'nao_iniciada')
+        kwargs.setdefault("status", "nao_iniciada")
         super().__init__(**kwargs)
 
     # Reuse property descriptors from Task — avoids duplicating all alias definitions.
@@ -156,16 +158,16 @@ class TaskItem(db.Model):
 
 
 class TaskAnexo(db.Model):
-    __tablename__ = 'task_anexo'
+    __tablename__ = "task_anexo"
     id = db.Column(db.Integer, primary_key=True)
-    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey("task.id"), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     stored_filename = db.Column(db.String(255), nullable=False)
     content_type = db.Column(db.String(100), nullable=True)
-    uploaded_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
 
-    uploaded_by = db.relationship('User', backref='task_anexos')
+    uploaded_by = db.relationship("User", backref="task_anexos")
 
     @property
     def task_item(self):
@@ -176,19 +178,19 @@ class TaskAnexo(db.Model):
         return self.task_id
 
     def __repr__(self):
-        return f'<TaskAnexo {self.filename}>'
+        return f"<TaskAnexo {self.filename}>"
 
 
 class TaskComment(db.Model):
-    __tablename__ = 'task_comment'
+    __tablename__ = "task_comment"
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey("task.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
     updated_at = db.Column(db.DateTime, onupdate=utc_now, nullable=True)
 
-    author = db.relationship('User', backref='task_comments')
+    author = db.relationship("User", backref="task_comments")
 
     @property
     def task_item(self):
@@ -203,11 +205,11 @@ class TaskComment(db.Model):
         self.task_id = value
 
     def __repr__(self):
-        return f'<TaskComment {self.id} by user {self.user_id}>'
+        return f"<TaskComment {self.id} by user {self.user_id}>"
 
 
 class TaskAccessAudit(db.Model):
-    __tablename__ = 'task_access_audit'
+    __tablename__ = "task_access_audit"
 
     id = db.Column(db.Integer, primary_key=True)
     task_id = db.Column(db.Integer, nullable=False, index=True)
@@ -222,19 +224,19 @@ class TaskAccessAudit(db.Model):
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False, index=True)
 
     def __repr__(self):
-        return f'<TaskAccessAudit {self.action_type} task={self.task_id} actor={self.actor_user_id}>'
+        return f"<TaskAccessAudit {self.action_type} task={self.task_id} actor={self.actor_user_id}>"
 
 
 class LegacyTaskRedirect(db.Model):
-    __tablename__ = 'legacy_task_redirect'
+    __tablename__ = "legacy_task_redirect"
     id = db.Column(db.Integer, primary_key=True)
     legacy_task_id = db.Column(db.Integer, nullable=False, index=True, unique=True)
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True)
-    sample_task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("project.id"), nullable=True)
+    sample_task_id = db.Column(db.Integer, db.ForeignKey("task.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
 
-    project = db.relationship('Project', backref='legacy_task_redirects')
-    sample_task = db.relationship('Task', backref='legacy_redirect_sources')
+    project = db.relationship("Project", backref="legacy_task_redirects")
+    sample_task = db.relationship("Task", backref="legacy_redirect_sources")
 
 
 # Aliases de compatibilidade para rotas legadas (/tarefas/itens/...).

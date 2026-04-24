@@ -17,15 +17,14 @@ from services.task_mutation import (
     unarchive_task,
 )
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
 @dataclass
 class FakeTask:
     id: int = 1
-    descricao: str = 'Descricao original'
-    status: str = 'nao_iniciada'
+    descricao: str = "Descricao original"
+    status: str = "nao_iniciada"
     responsavel: str | None = None
     prioridade: str | None = None
     tipo_pedido: str | None = None
@@ -54,7 +53,7 @@ class FakeScopeQuery:
 
 
 def test_parse_ids_returns_empty_for_non_list():
-    assert parse_unique_task_order_ids('nao-lista') == []
+    assert parse_unique_task_order_ids("nao-lista") == []
     assert parse_unique_task_order_ids(None) == []
     assert parse_unique_task_order_ids(123) == []
 
@@ -64,11 +63,11 @@ def test_parse_ids_returns_empty_list_unchanged():
 
 
 def test_parse_ids_converts_strings_to_int():
-    assert parse_unique_task_order_ids(['1', '2', '3']) == [1, 2, 3]
+    assert parse_unique_task_order_ids(["1", "2", "3"]) == [1, 2, 3]
 
 
 def test_parse_ids_skips_non_numeric():
-    assert parse_unique_task_order_ids([1, 'abc', 2, None]) == [1, 2]
+    assert parse_unique_task_order_ids([1, "abc", 2, None]) == [1, 2]
 
 
 def test_parse_ids_deduplicates_preserving_first_occurrence():
@@ -77,7 +76,7 @@ def test_parse_ids_deduplicates_preserving_first_occurrence():
 
 def test_parse_ids_handles_float_strings():
     # int('1.5') raises ValueError — deve ser ignorado
-    assert parse_unique_task_order_ids(['1', '1.5', '2']) == [1, 2]
+    assert parse_unique_task_order_ids(["1", "1.5", "2"]) == [1, 2]
 
 
 # ── apply_task_edits ──────────────────────────────────────────────────────────
@@ -85,27 +84,27 @@ def test_parse_ids_handles_float_strings():
 
 def test_apply_task_edits_returns_snapshot_of_old_values():
     task = FakeTask(
-        descricao='Antes',
-        status='nao_iniciada',
-        responsavel='Ana',
-        prioridade='baixa',
-        tipo_pedido='bug',
+        descricao="Antes",
+        status="nao_iniciada",
+        responsavel="Ana",
+        prioridade="baixa",
+        tipo_pedido="bug",
         project_id=7,
     )
     diff = apply_task_edits(
         task,
-        descricao='Depois',
-        status='em_andamento',
-        responsavel='Bruno',
-        prioridade='alta',
-        tipo_pedido='melhoria',
+        descricao="Depois",
+        status="em_andamento",
+        responsavel="Bruno",
+        prioridade="alta",
+        tipo_pedido="melhoria",
         project=FakeProject(id=99),
     )
-    assert diff.old_descricao == 'Antes'
-    assert diff.old_status == 'nao_iniciada'
-    assert diff.old_responsavel == 'Ana'
-    assert diff.old_prioridade == 'baixa'
-    assert diff.old_tipo == 'bug'
+    assert diff.old_descricao == "Antes"
+    assert diff.old_status == "nao_iniciada"
+    assert diff.old_responsavel == "Ana"
+    assert diff.old_prioridade == "baixa"
+    assert diff.old_tipo == "bug"
     assert diff.old_project_id == 7
 
 
@@ -114,26 +113,31 @@ def test_apply_task_edits_mutates_task_attributes():
     project = FakeProject(id=55)
     apply_task_edits(
         task,
-        descricao='Nova',
-        status='em_andamento',
-        responsavel='Carlos',
-        prioridade='urgente',
-        tipo_pedido='outros',
+        descricao="Nova",
+        status="em_andamento",
+        responsavel="Carlos",
+        prioridade="urgente",
+        tipo_pedido="outros",
         project=project,
     )
-    assert task.descricao == 'Nova'
-    assert task.status == 'em_andamento'
-    assert task.responsavel == 'Carlos'
-    assert task.prioridade == 'urgente'
-    assert task.tipo_pedido == 'outros'
+    assert task.descricao == "Nova"
+    assert task.status == "em_andamento"
+    assert task.responsavel == "Carlos"
+    assert task.prioridade == "urgente"
+    assert task.tipo_pedido == "outros"
     assert task.project_id == 55
 
 
 def test_apply_task_edits_clears_responsavel_when_falsy():
-    task = FakeTask(responsavel='Alguem')
+    task = FakeTask(responsavel="Alguem")
     apply_task_edits(
-        task, descricao='X', status='nao_iniciada',
-        responsavel='', prioridade=None, tipo_pedido=None, project=None,
+        task,
+        descricao="X",
+        status="nao_iniciada",
+        responsavel="",
+        prioridade=None,
+        tipo_pedido=None,
+        project=None,
     )
     assert task.responsavel is None
 
@@ -141,8 +145,13 @@ def test_apply_task_edits_clears_responsavel_when_falsy():
 def test_apply_task_edits_clears_project_when_none():
     task = FakeTask(project_id=10)
     apply_task_edits(
-        task, descricao='X', status='nao_iniciada',
-        responsavel=None, prioridade=None, tipo_pedido=None, project=None,
+        task,
+        descricao="X",
+        status="nao_iniciada",
+        responsavel=None,
+        prioridade=None,
+        tipo_pedido=None,
+        project=None,
     )
     assert task.project_id is None
 
@@ -172,15 +181,15 @@ def test_unarchive_task_clears_is_archived():
 
 
 def test_unarchive_task_clears_archived_at():
-    task = FakeTask(archived_at='2025-01-01')
+    task = FakeTask(archived_at="2025-01-01")
     unarchive_task(task)
     assert task.archived_at is None
 
 
 def test_unarchive_task_resets_status_to_nao_iniciada():
-    task = FakeTask(status='finalizada', is_archived=True)
+    task = FakeTask(status="finalizada", is_archived=True)
     unarchive_task(task)
-    assert task.status == 'nao_iniciada'
+    assert task.status == "nao_iniciada"
 
 
 # ── bulk_archive_finalized ────────────────────────────────────────────────────

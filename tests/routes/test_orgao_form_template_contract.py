@@ -43,7 +43,7 @@ def test_orgao_form_options_expose_rank_tipo_and_label(client_admin, seed_data):
 
 
 def test_orgao_form_new_renders_combobox(client_admin, seed_data):
-    response = client_admin.get('/admin/orgaos/new')
+    response = client_admin.get("/admin/orgaos/new")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     assert 'id="paiCombo"' in html

@@ -19,11 +19,11 @@ def notify_task_created(task) -> None:
     notify_task_event(
         task,
         actor_user_id=g.user.id,
-        event_type='task_created',
-        title='Nova tarefa',
+        event_type="task_created",
+        title="Nova tarefa",
         message=(
             f'{g.user.name} criou a tarefa "{_preview_text(task.descricao, 90)}" '
-            f'com status {_task_status_label(task.status)}.'
+            f"com status {_task_status_label(task.status)}."
         ),
     )
     if task.responsavel:
@@ -43,15 +43,15 @@ def notify_task_edited(task, diff: TaskEditDiff) -> None:
         notify_task_event(
             task,
             actor_user_id=g.user.id,
-            event_type='task_updated',
-            title='Tarefa atualizada',
+            event_type="task_updated",
+            title="Tarefa atualizada",
             message=(
                 f'{g.user.name} atualizou "{_preview_text(task.descricao, 90)}": '
                 f'{", ".join(changes)}.'
             ),
         )
 
-    if (diff.old_responsavel or '') != (task.responsavel or ''):
+    if (diff.old_responsavel or "") != (task.responsavel or ""):
         notify_task_assignment_change(
             task,
             task,
@@ -64,15 +64,15 @@ def notify_task_edited(task, diff: TaskEditDiff) -> None:
 def _edit_change_descriptions(task, diff: TaskEditDiff) -> list[str]:
     changes: list[str] = []
     if diff.old_descricao != task.descricao:
-        changes.append('descrição')
+        changes.append("descrição")
     if diff.old_status != task.status:
-        changes.append(f'status para {_task_status_label(task.status)}')
+        changes.append(f"status para {_task_status_label(task.status)}")
     if diff.old_prioridade != task.prioridade:
         changes.append(f'prioridade para "{task.prioridade or "vazio"}"')
     if diff.old_tipo != task.tipo_pedido:
         changes.append(f'tipo para "{task.tipo_pedido or "vazio"}"')
     if diff.old_project_id != task.project_id:
-        changes.append('projeto')
+        changes.append("projeto")
     return changes
 
 
@@ -82,12 +82,12 @@ def notify_status_change(task, old_status: str) -> None:
     notify_task_event(
         task,
         actor_user_id=g.user.id,
-        event_type='task_status_updated',
-        title='Status atualizado',
+        event_type="task_status_updated",
+        title="Status atualizado",
         message=(
-            f'{g.user.name} alterou o status da tarefa '
+            f"{g.user.name} alterou o status da tarefa "
             f'"{_preview_text(task.descricao, 90)}" '
-            f'de {_task_status_label(old_status)} para {_task_status_label(task.status)}.'
+            f"de {_task_status_label(old_status)} para {_task_status_label(task.status)}."
         ),
     )
 
@@ -98,10 +98,10 @@ def notify_prioridade_change(task, old_prioridade: str | None) -> None:
     notify_task_event(
         task,
         actor_user_id=g.user.id,
-        event_type='task_priority_updated',
-        title='Prioridade atualizada',
+        event_type="task_priority_updated",
+        title="Prioridade atualizada",
         message=(
-            f'{g.user.name} alterou a prioridade da tarefa '
+            f"{g.user.name} alterou a prioridade da tarefa "
             f'"{_preview_text(task.descricao, 90)}" '
             f'de "{old_prioridade or "vazio"}" para "{task.prioridade or "vazio"}".'
         ),
@@ -114,10 +114,10 @@ def notify_tipo_change(task, old_tipo: str | None) -> None:
     notify_task_event(
         task,
         actor_user_id=g.user.id,
-        event_type='task_type_updated',
-        title='Tipo atualizado',
+        event_type="task_type_updated",
+        title="Tipo atualizado",
         message=(
-            f'{g.user.name} alterou o tipo da tarefa '
+            f"{g.user.name} alterou o tipo da tarefa "
             f'"{_preview_text(task.descricao, 90)}" '
             f'de "{old_tipo or "vazio"}" para "{task.tipo_pedido or "vazio"}".'
         ),
@@ -128,8 +128,8 @@ def notify_task_finalized(task) -> None:
     notify_task_event(
         task,
         actor_user_id=g.user.id,
-        event_type='task_finalized',
-        title='Tarefa finalizada',
+        event_type="task_finalized",
+        title="Tarefa finalizada",
         message=f'{g.user.name} finalizou a tarefa "{_preview_text(task.descricao, 90)}".',
         target_url=_task_active_target_url(task),
     )
@@ -139,10 +139,10 @@ def notify_task_unarchived(task) -> None:
     notify_task_event(
         task,
         actor_user_id=g.user.id,
-        event_type='task_unarchived',
-        title='Tarefa desarquivada',
+        event_type="task_unarchived",
+        title="Tarefa desarquivada",
         message=f'{g.user.name} desarquivou "{_preview_text(task.descricao, 90)}".',
-        target_url=url_for('main.list_tasks'),
+        target_url=url_for("main.list_tasks"),
     )
 
 
@@ -150,10 +150,10 @@ def notify_task_deleted(task) -> None:
     notify_task_event(
         task,
         actor_user_id=g.user.id,
-        event_type='task_deleted',
-        title='Tarefa excluída',
+        event_type="task_deleted",
+        title="Tarefa excluída",
         message=f'{g.user.name} excluiu "{_preview_text(task.descricao, 90)}".',
-        target_url=url_for('main.list_tasks'),
+        target_url=url_for("main.list_tasks"),
     )
 
 
@@ -161,8 +161,8 @@ def notify_task_archived_in_batch(task) -> None:
     notify_task_event(
         task,
         actor_user_id=g.user.id,
-        event_type='task_archived',
-        title='Tarefa arquivada',
+        event_type="task_archived",
+        title="Tarefa arquivada",
         message=f'{g.user.name} arquivou a tarefa "{_preview_text(task.descricao, 90)}".',
-        target_url=url_for('main.list_tasks_archived'),
+        target_url=url_for("main.list_tasks_archived"),
     )

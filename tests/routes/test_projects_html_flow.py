@@ -5,20 +5,22 @@ from tests._orgao_helpers import ensure_orgao
 
 
 def _follow_redirect_and_get_html(client, response):
-    location = response.headers['Location']
+    location = response.headers["Location"]
     followed = client.get(location)
     assert followed.status_code == 200
     return unescape(followed.get_data(as_text=True))
 
 
-def test_edit_project_form_renders_full_html_contract_for_single_area_user(client_user, seed_data):
+def test_edit_project_form_renders_full_html_contract_for_single_area_user(
+    client_user, seed_data
+):
     response = client_user.get(f"/project/{seed_data['project_id']}/edit")
 
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
     required_hooks = [
-        'Editar Projeto:',
+        "Editar Projeto:",
         f'action="/project/{seed_data["project_id"]}/edit"',
         'id="project_titulo"',
         'value="Projeto Auditoria"',
@@ -39,7 +41,7 @@ def test_edit_project_form_renders_full_html_contract_for_single_area_user(clien
         'id="project_product_link"',
         'id="project_observacao"',
         f'href="/project/{seed_data["project_id"]}"',
-        'Salvar Alterações',
+        "Salvar Alterações",
     ]
 
     for hook in required_hooks:
@@ -52,11 +54,11 @@ def test_edit_project_form_renders_full_html_contract_for_single_area_user(clien
 def test_delete_project_html_redirects_with_flash_and_removes_project(app, client_user):
     with app.app_context():
         project = Project(
-            titulo='Projeto Para Excluir HTML',
-            orgao_id=ensure_orgao('Auditoria').id,
-            orgao='Orgao Delete',
-            prioridade='baixa',
-            status='Vigente',
+            titulo="Projeto Para Excluir HTML",
+            orgao_id=ensure_orgao("Auditoria").id,
+            orgao="Orgao Delete",
+            prioridade="baixa",
+            status="Vigente",
             objetivo_id=1,
             resultado_esperado_id=1,
         )
@@ -64,10 +66,10 @@ def test_delete_project_html_redirects_with_flash_and_removes_project(app, clien
         db.session.commit()
         project_id = project.id
 
-    response = client_user.post(f'/project/{project_id}/delete', follow_redirects=False)
+    response = client_user.post(f"/project/{project_id}/delete", follow_redirects=False)
 
     assert response.status_code == 302
-    assert response.headers['Location'].endswith('/projects')
+    assert response.headers["Location"].endswith("/projects")
 
     html = _follow_redirect_and_get_html(client_user, response)
     assert 'Projeto "Projeto Para Excluir HTML" e suas etapas foram excluídos.' in html
@@ -76,46 +78,56 @@ def test_delete_project_html_redirects_with_flash_and_removes_project(app, clien
         assert db.session.get(Project, project_id) is None
 
 
-def test_concluir_project_html_redirects_back_with_warning_flash_when_incomplete(app, client_user, seed_data):
+def test_concluir_project_html_redirects_back_with_warning_flash_when_incomplete(
+    app, client_user, seed_data
+):
     response = client_user.post(
         f"/project/{seed_data['project_id']}/concluir",
         follow_redirects=False,
     )
 
     assert response.status_code == 302
-    assert response.headers['Location'].endswith(f"/project/{seed_data['project_id']}")
+    assert response.headers["Location"].endswith(f"/project/{seed_data['project_id']}")
 
     html = _follow_redirect_and_get_html(client_user, response)
-    assert 'Todas as etapas devem estar iniciadas e concluídas para finalizar o projeto.' in html
+    assert (
+        "Todas as etapas devem estar iniciadas e concluídas para finalizar o projeto."
+        in html
+    )
 
     with app.app_context():
-        project = db.session.get(Project, seed_data['project_id'])
+        project = db.session.get(Project, seed_data["project_id"])
         assert project is not None
-        assert project.status == 'Vigente'
+        assert project.status == "Vigente"
 
 
-def test_concluir_project_html_redirects_back_with_success_flash_and_finalizes_project(app, client_user, seed_data):
+def test_concluir_project_html_redirects_back_with_success_flash_and_finalizes_project(
+    app, client_user, seed_data
+):
     response = client_user.post(
         f"/project/{seed_data['project_complete_id']}/concluir",
         follow_redirects=False,
     )
 
     assert response.status_code == 302
-    assert response.headers['Location'].endswith(f"/project/{seed_data['project_complete_id']}")
+    assert response.headers["Location"].endswith(
+        f"/project/{seed_data['project_complete_id']}"
+    )
 
     html = _follow_redirect_and_get_html(client_user, response)
     assert 'Projeto "Projeto Concluivel" foi concluído com sucesso!' in html
 
     with app.app_context():
-        project = db.session.get(Project, seed_data['project_complete_id'])
+        project = db.session.get(Project, seed_data["project_complete_id"])
         assert project is not None
-        assert project.status == 'Finalizado'
+        assert project.status == "Finalizado"
 
         history = (
-            ProjectHistory.query
-            .filter_by(project_id=project.id, action_type='finalize')
+            ProjectHistory.query.filter_by(
+                project_id=project.id, action_type="finalize"
+            )
             .order_by(ProjectHistory.id.desc())
             .first()
         )
         assert history is not None
-        assert 'Concluiu o projeto' in history.action_description
+        assert "Concluiu o projeto" in history.action_description

@@ -13,7 +13,7 @@ def _adapt_sqlite_datetime(value):
     """Serializa datetime sem depender do adaptador padrão depreciado do sqlite3."""
     if value.tzinfo is not None:
         value = value.astimezone(datetime.UTC).replace(tzinfo=None)
-    return value.isoformat(sep=' ')
+    return value.isoformat(sep=" ")
 
 
 def _adapt_sqlite_date(value):
@@ -37,11 +37,11 @@ def format_relative_time_pt(value, *, now=None):
     Retorna string vazia quando ``value`` é None ou no futuro.
     """
     if value is None:
-        return ''
+        return ""
     if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
         value = datetime.datetime(value.year, value.month, value.day)
     if not isinstance(value, datetime.datetime):
-        return ''
+        return ""
     reference = now if now is not None else utc_now()
     if value.tzinfo is not None:
         value = value.astimezone(datetime.UTC).replace(tzinfo=None)
@@ -51,9 +51,9 @@ def format_relative_time_pt(value, *, now=None):
     delta = reference - value
     seconds = int(delta.total_seconds())
     if seconds < 0:
-        return ''
+        return ""
     if seconds < 60:
-        return 'há instantes'
+        return "há instantes"
     minutes = seconds // 60
     if minutes < 60:
         return f'há {minutes} minuto{"s" if minutes != 1 else ""}'

@@ -27,11 +27,13 @@ def get_user_orgao_subtree_ids(user) -> set[int]:
     if user is None:
         return set()
 
-    if getattr(user, 'is_admin', False):
-        rows = db.session.query(OrgaoUnidade.id).filter(OrgaoUnidade.ativo.is_(True)).all()
+    if getattr(user, "is_admin", False):
+        rows = (
+            db.session.query(OrgaoUnidade.id).filter(OrgaoUnidade.ativo.is_(True)).all()
+        )
         return {row_id for (row_id,) in rows}
 
-    vinculos = getattr(user, 'orgaos', None) or []
+    vinculos = getattr(user, "orgaos", None) or []
     subtree: set[int] = set()
     for uo in vinculos:
         root_id = uo.orgao_id
@@ -46,7 +48,7 @@ def sanitize_orgao_filter_for_user(user, selected_orgao_id):
     Retorna ``(orgao_id|None, invalid: bool)``. Invalido quando o id nao esta
     no subtree de um nao-admin - nesse caso caller redireciona.
     """
-    if selected_orgao_id in (None, '', 'None'):
+    if selected_orgao_id in (None, "", "None"):
         return None, False
     try:
         orgao_id = int(selected_orgao_id)
@@ -55,7 +57,7 @@ def sanitize_orgao_filter_for_user(user, selected_orgao_id):
 
     if user is None:
         return orgao_id, False
-    if getattr(user, 'is_admin', False):
+    if getattr(user, "is_admin", False):
         return orgao_id, False
 
     subtree = get_user_orgao_subtree_ids(user)
@@ -65,7 +67,7 @@ def sanitize_orgao_filter_for_user(user, selected_orgao_id):
 
 
 def sanitize_orgao_filter_for_current_user(selected_orgao_id):
-    return sanitize_orgao_filter_for_user(getattr(g, 'user', None), selected_orgao_id)
+    return sanitize_orgao_filter_for_user(getattr(g, "user", None), selected_orgao_id)
 
 
 def redirect_to_current_route_without_orgao():
@@ -75,11 +77,11 @@ def redirect_to_current_route_without_orgao():
         target_url = request.path
 
     query_args = request.args.to_dict(flat=False)
-    query_args.pop('orgao', None)
+    query_args.pop("orgao", None)
     query_string = urlencode(query_args, doseq=True)
 
     if query_string:
-        target_url = f'{target_url}?{query_string}'
+        target_url = f"{target_url}?{query_string}"
 
     return redirect(target_url)
 
@@ -98,7 +100,7 @@ def get_user_primary_orgao(user):
     """Retorna o primeiro vinculo OrgaoUnidade do usuario (ou None)."""
     if user is None:
         return None
-    vinculos = getattr(user, 'orgaos', None) or []
+    vinculos = getattr(user, "orgaos", None) or []
     if not vinculos:
         return None
     return vinculos[0].orgao
@@ -122,13 +124,15 @@ def get_user_orgao_breadcrumb(user) -> list[dict]:
         node = by_id.get(orgao_id)
         if node is None:
             continue
-        breadcrumb.append({
-            'id': node.id,
-            'sigla': node.sigla,
-            'nome': node.nome,
-            'tipo': node.tipo,
-            'is_self': node.id == primary.id,
-        })
+        breadcrumb.append(
+            {
+                "id": node.id,
+                "sigla": node.sigla,
+                "nome": node.nome,
+                "tipo": node.tipo,
+                "is_self": node.id == primary.id,
+            }
+        )
     return breadcrumb
 
 
@@ -138,12 +142,12 @@ def build_nested_orgao_tree(flat_nodes: list[dict]) -> list[dict]:
     Raizes sao os nos cujo ``pai_id`` nao esta presente entre os ids da lista
     (cobre admin com raiz RJ e nao-admin onde a "raiz" visivel pode ser interna).
     """
-    by_id = {node['id']: dict(node, children=[]) for node in flat_nodes}
+    by_id = {node["id"]: dict(node, children=[]) for node in flat_nodes}
     roots: list[dict] = []
     for node in by_id.values():
-        pai_id = node.get('pai_id')
+        pai_id = node.get("pai_id")
         if pai_id in by_id:
-            by_id[pai_id]['children'].append(node)
+            by_id[pai_id]["children"].append(node)
         else:
             roots.append(node)
     return roots
@@ -161,16 +165,25 @@ def get_visible_orgao_tree(user) -> list[dict]:
     if user is None:
         return []
 
-    if getattr(user, 'is_admin', False):
+    if getattr(user, "is_admin", False):
         rows = (
             OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True))
-            .order_by(OrgaoUnidade.pai_id.is_(None).desc(), OrgaoUnidade.ordem, OrgaoUnidade.sigla)
+            .order_by(
+                OrgaoUnidade.pai_id.is_(None).desc(),
+                OrgaoUnidade.ordem,
+                OrgaoUnidade.sigla,
+            )
             .all()
         )
         return [
             {
-                'id': r.id, 'sigla': r.sigla, 'nome': r.nome, 'tipo': r.tipo,
-                'pai_id': r.pai_id, 'is_user_orgao': False, 'is_user_ancestor': False,
+                "id": r.id,
+                "sigla": r.sigla,
+                "nome": r.nome,
+                "tipo": r.tipo,
+                "pai_id": r.pai_id,
+                "is_user_orgao": False,
+                "is_user_ancestor": False,
             }
             for r in rows
         ]
@@ -184,15 +197,20 @@ def get_visible_orgao_tree(user) -> list[dict]:
     rows = (
         OrgaoUnidade.query.filter(OrgaoUnidade.id.in_(visible_ids))
         .filter(OrgaoUnidade.ativo.is_(True))
-        .order_by(OrgaoUnidade.pai_id.is_(None).desc(), OrgaoUnidade.ordem, OrgaoUnidade.sigla)
+        .order_by(
+            OrgaoUnidade.pai_id.is_(None).desc(), OrgaoUnidade.ordem, OrgaoUnidade.sigla
+        )
         .all()
     )
     return [
         {
-            'id': r.id, 'sigla': r.sigla, 'nome': r.nome, 'tipo': r.tipo,
-            'pai_id': r.pai_id,
-            'is_user_orgao': r.id == primary.id,
-            'is_user_ancestor': r.id in ancestor_ids,
+            "id": r.id,
+            "sigla": r.sigla,
+            "nome": r.nome,
+            "tipo": r.tipo,
+            "pai_id": r.pai_id,
+            "is_user_orgao": r.id == primary.id,
+            "is_user_ancestor": r.id in ancestor_ids,
         }
         for r in rows
     ]
@@ -207,7 +225,7 @@ def user_can_access_project(user, project) -> bool:
     """
     if user is None:
         return False
-    if getattr(user, 'is_admin', False):
+    if getattr(user, "is_admin", False):
         return True
     if project is None or project.orgao_id is None:
         return False

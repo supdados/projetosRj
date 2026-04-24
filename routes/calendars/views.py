@@ -14,7 +14,7 @@ from routes.calendars.helpers import (
 )
 
 
-@main_bp.route('/calendarios', methods=['GET'])
+@main_bp.route("/calendarios", methods=["GET"])
 @login_required
 def calendars_hub():
     connection = _connection_for_current_user()
@@ -26,24 +26,29 @@ def calendars_hub():
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
-            auto_issues.append('Ocorreu um erro interno ao manter o calendário. Tente recarregar a página.')
+            auto_issues.append(
+                "Ocorreu um erro interno ao manter o calendário. Tente recarregar a página."
+            )
 
     for issue in auto_issues:
-        flash(issue, 'warning')
+        flash(issue, "warning")
 
     events = (
-        CalendarEvent.query
-        .filter_by(user_id=g.user.id)
+        CalendarEvent.query.filter_by(user_id=g.user.id)
         .order_by(CalendarEvent.starts_at.asc(), CalendarEvent.id.asc())
         .all()
     )
     event_rows = [_event_view_row(event) for event in events]
 
     return render_template(
-        'calendars/calendars.html',
+        "calendars/calendars.html",
         calendar_events=event_rows,
         events_json=[_event_json(e) for e in events],
         connection=connection,
         google_calendar_enabled=is_google_calendar_enabled(current_app.config),
-        last_sync_display=_format_human_datetime(connection.last_sync_at) if connection and connection.last_sync_at else None,
+        last_sync_display=(
+            _format_human_datetime(connection.last_sync_at)
+            if connection and connection.last_sync_at
+            else None
+        ),
     )

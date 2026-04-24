@@ -3,7 +3,16 @@ import datetime
 import io
 from collections import defaultdict
 
-from flask import current_app, flash, g, make_response, redirect, render_template, request, url_for
+from flask import (
+    current_app,
+    flash,
+    g,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from models import Etapa, Project, ProjectHistory, Task, UserCalendarConnection, db
 from services.calendar_sync import hydrate_google_connection_identity
@@ -26,28 +35,32 @@ from routes.shared import (
     parse_abep_indicator_filter,
     parse_objetivo_filter,
 )
-@main_bp.route('/projects')
+
+
+@main_bp.route("/projects")
 @login_required
 def list_projects():
-    selected_priority = request.args.get('prioridade')
-    selected_status = request.args.get('status')
-    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(request.args.get('orgao'))
-    selected_atraso = request.args.get('atraso')
-    selected_special_project = request.args.get('special_project')  # Novo filtro
-    selected_delivery_type = request.args.get('delivery_type')  # Novo filtro
-    selected_abep_indicator = request.args.get('abep_indicator')  # Novo filtro
-    selected_objetivo = request.args.get('objetivo')  # Novo filtro
-    search_query = request.args.get('search', '').strip()  # Busca
+    selected_priority = request.args.get("prioridade")
+    selected_status = request.args.get("status")
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+        request.args.get("orgao")
+    )
+    selected_atraso = request.args.get("atraso")
+    selected_special_project = request.args.get("special_project")  # Novo filtro
+    selected_delivery_type = request.args.get("delivery_type")  # Novo filtro
+    selected_abep_indicator = request.args.get("abep_indicator")  # Novo filtro
+    selected_objetivo = request.args.get("objetivo")  # Novo filtro
+    search_query = request.args.get("search", "").strip()  # Busca
 
     # Paginação
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get("page", 1, type=int)
     per_page = 40
 
     # Se nenhum status for especificado na URL, define 'Vigente' como padrão.
     # A verificação `is None` é importante para permitir que o usuário selecione
     # "Todos os status", que envia uma string vazia ("").
     if selected_status is None:
-        selected_status = 'Vigente'
+        selected_status = "Vigente"
 
     if invalid_orgao_filter:
         return redirect_to_current_route_without_orgao()
@@ -82,7 +95,7 @@ def list_projects():
         selected_objetivo = ""
     if selected_objetivo and objetivo_filter_id is not None:
         query = query.filter(Project.objetivo_id == objetivo_filter_id)
-    
+
     # Filtro de busca (título, órgão, indicador ABEP)
     if search_query:
         search_pattern = f"%{search_query}%"
@@ -96,23 +109,27 @@ def list_projects():
             Project.abep_indicator.ilike(search_pattern),
         )
         query = query.filter(
-            db.or_(Project.id == search_id, text_filters) if search_id is not None else text_filters
+            db.or_(Project.id == search_id, text_filters)
+            if search_id is not None
+            else text_filters
         )
-        
+
     # Aplicar filtros de DB antes de filtrar por atraso (que é feito em Python)
     projects_after_db_filters = query.order_by(Project.id).all()
-    
+
     # Filtro de Atraso (aplicado em Python)
     if selected_atraso and selected_atraso != "":
         data_atual = datetime.date.today()
         filtered_by_delay = []
         for projeto in projects_after_db_filters:
-            if projeto.status == 'Vigente': # Apenas projetos vigentes são considerados para "atraso" ou "no prazo"
+            if (
+                projeto.status == "Vigente"
+            ):  # Apenas projetos vigentes são considerados para "atraso" ou "no prazo"
                 etapas_atrasadas_count = Etapa.query.filter(
                     Etapa.project_id == projeto.id,
                     Etapa.done == False,
-                    Etapa.entry_type != 'google_meeting',
-                    Etapa.data_fim < data_atual
+                    Etapa.entry_type != "google_meeting",
+                    Etapa.data_fim < data_atual,
                 ).count()
                 if selected_atraso == "atrasado" and etapas_atrasadas_count > 0:
                     filtered_by_delay.append(projeto)
@@ -121,33 +138,48 @@ def list_projects():
         all_projects_filtered = filtered_by_delay
     else:
         all_projects_filtered = projects_after_db_filters
-    
+
     # Aplicar paginação manualmente (já que alguns filtros são em Python)
     total_projects = len(all_projects_filtered)
     total_pages = (total_projects + per_page - 1) // per_page  # Ceiling division
-    
+
     # Calcular índices para slice
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
-    
+
     # Paginar os projetos
     projects_paginated = all_projects_filtered[start_idx:end_idx]
-    
-    priorities_options = sorted(list(set(p.prioridade for p in Project.query.all() if p.prioridade)))
-    statuses_options = sorted(list(set(p.status for p in Project.query.all() if p.status)))
+
+    priorities_options = sorted(
+        list(set(p.prioridade for p in Project.query.all() if p.prioridade))
+    )
+    statuses_options = sorted(
+        list(set(p.status for p in Project.query.all() if p.status))
+    )
     atrasos_options = [("no_prazo", "No prazo"), ("atrasado", "Atrasado")]
-    objetivos, _, _ = get_goal_catalog_context()  # Para o modal de adicionar projeto e filtro
-    
+    objetivos, _, _ = (
+        get_goal_catalog_context()
+    )  # Para o modal de adicionar projeto e filtro
+
     # Novas opções para filtros
-    special_projects_options = ['ABEP', 'TCE']
-    delivery_types_options = ['Sistema', 'Painel', 'Norma', 'Instrumento de parceria', 'Fluxo Processual', 'Outro']
-    has_advanced_filters_active = any([
-        selected_atraso,
-        selected_special_project,
-        selected_delivery_type,
-        selected_abep_indicator,
-        selected_objetivo,
-    ])
+    special_projects_options = ["ABEP", "TCE"]
+    delivery_types_options = [
+        "Sistema",
+        "Painel",
+        "Norma",
+        "Instrumento de parceria",
+        "Fluxo Processual",
+        "Outro",
+    ]
+    has_advanced_filters_active = any(
+        [
+            selected_atraso,
+            selected_special_project,
+            selected_delivery_type,
+            selected_abep_indicator,
+            selected_objetivo,
+        ]
+    )
 
     # Verificar se há filtros ativos (para mostrar botão "Limpar")
     has_active_filters = False
@@ -155,7 +187,7 @@ def list_projects():
         has_active_filters = True
     if selected_priority:
         has_active_filters = True
-    if selected_status and selected_status != 'Vigente':  # Vigente é o padrão
+    if selected_status and selected_status != "Vigente":  # Vigente é o padrão
         has_active_filters = True
     if has_advanced_filters_active:
         has_active_filters = True
@@ -163,7 +195,7 @@ def list_projects():
         has_active_filters = True
 
     return render_template(
-        'projects/list.html',
+        "projects/list.html",
         projects=projects_paginated,
         page=page,
         total_pages=total_pages,
@@ -186,18 +218,22 @@ def list_projects():
         has_active_filters=has_active_filters,
         has_advanced_filters_active=has_advanced_filters_active,
     )
-@main_bp.route('/projetos_pendentes')
+
+
+@main_bp.route("/projetos_pendentes")
 @login_required
 def list_projetos_pendentes():
-    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(request.args.get('orgao'))
-    filtro_periodo = (request.args.get('periodo') or 'atrasados').strip()
-    selected_responsavel = (request.args.get('responsavel') or '').strip()
-    pending_page = request.args.get('page', 1, type=int)
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+        request.args.get("orgao")
+    )
+    filtro_periodo = (request.args.get("periodo") or "atrasados").strip()
+    selected_responsavel = (request.args.get("responsavel") or "").strip()
+    pending_page = request.args.get("page", 1, type=int)
     pending_per_page = 15
 
-    valid_periods = {'atrasados', '7dias', '14dias', '21dias'}
+    valid_periods = {"atrasados", "7dias", "14dias", "21dias"}
     if filtro_periodo not in valid_periods:
-        filtro_periodo = 'atrasados'
+        filtro_periodo = "atrasados"
 
     if invalid_orgao_filter:
         return redirect_to_current_route_without_orgao()
@@ -213,38 +249,42 @@ def list_projetos_pendentes():
     def classify_bucket(etapa):
         reference_date = resolve_reference_date(etapa)
         if not reference_date:
-            return 'sem_data'
+            return "sem_data"
         if reference_date < data_atual:
-            return 'atrasada'
+            return "atrasada"
         if reference_date <= data_7_dias:
-            return '7dias'
+            return "7dias"
         if reference_date <= data_14_dias:
-            return '14dias'
+            return "14dias"
         if reference_date <= data_21_dias:
-            return '21dias'
-        return 'futuro'
+            return "21dias"
+        return "futuro"
 
     visible_buckets_by_period = {
-        'atrasados': {'atrasada'},
-        '7dias': {'atrasada', '7dias'},
-        '14dias': {'atrasada', '7dias', '14dias'},
-        '21dias': {'atrasada', '7dias', '14dias', '21dias'},
+        "atrasados": {"atrasada"},
+        "7dias": {"atrasada", "7dias"},
+        "14dias": {"atrasada", "7dias", "14dias"},
+        "21dias": {"atrasada", "7dias", "14dias", "21dias"},
     }
     visible_buckets = visible_buckets_by_period[filtro_periodo]
 
-    query_projetos_base = Project.query.filter(Project.status == 'Vigente')
+    query_projetos_base = Project.query.filter(Project.status == "Vigente")
 
     if not g.user.is_admin:
         user_orgao_subtree_ids = get_user_orgao_subtree_ids(g.user)
         if user_orgao_subtree_ids:
-            query_projetos_base = query_projetos_base.filter(Project.orgao_id.in_(user_orgao_subtree_ids))
+            query_projetos_base = query_projetos_base.filter(
+                Project.orgao_id.in_(user_orgao_subtree_ids)
+            )
         else:
             query_projetos_base = query_projetos_base.filter(Project.id == -1)
 
     if selected_orgao_id is not None:
         orgao_subtree = expand_orgao_filter_ids(selected_orgao_id)
         if orgao_subtree:
-            query_projetos_base = query_projetos_base.filter(Project.orgao_id.in_(orgao_subtree))
+            query_projetos_base = query_projetos_base.filter(
+                Project.orgao_id.in_(orgao_subtree)
+            )
 
     projetos_vigentes = query_projetos_base.order_by(Project.titulo.asc()).all()
     project_ids = [p.id for p in projetos_vigentes]
@@ -253,7 +293,7 @@ def list_projetos_pendentes():
 
     if not project_ids:
         return render_template(
-            'projects/pendentes.html',
+            "projects/pendentes.html",
             projetos_com_etapas=[],
             objetivos=objetivos,
             selected_orgao=selected_orgao_id,
@@ -261,25 +301,25 @@ def list_projetos_pendentes():
             selected_responsavel=selected_responsavel,
             responsaveis_options=[],
             period_options=[
-                ('atrasados', 'Projetos Atrasados'),
-                ('7dias', 'Próximos 7 Dias'),
-                ('14dias', 'Próximos 14 Dias'),
-                ('21dias', 'Próximos 21 Dias'),
+                ("atrasados", "Projetos Atrasados"),
+                ("7dias", "Próximos 7 Dias"),
+                ("14dias", "Próximos 14 Dias"),
+                ("21dias", "Próximos 21 Dias"),
             ],
             period_label_map={
-                'atrasados': 'Atrasados',
-                '7dias': 'Próximos 7 Dias',
-                '14dias': 'Próximos 14 Dias',
-                '21dias': 'Próximos 21 Dias',
+                "atrasados": "Atrasados",
+                "7dias": "Próximos 7 Dias",
+                "14dias": "Próximos 14 Dias",
+                "21dias": "Próximos 21 Dias",
             },
             etapa_bucket_map={},
             summary_counts={
-                'total_projects': 0,
-                'atrasada': 0,
-                '7dias': 0,
-                '14dias': 0,
-                '21dias': 0,
-                'sem_data': 0,
+                "total_projects": 0,
+                "atrasada": 0,
+                "7dias": 0,
+                "14dias": 0,
+                "21dias": 0,
+                "sem_data": 0,
             },
             pending_page=1,
             pending_total_pages=0,
@@ -287,12 +327,17 @@ def list_projetos_pendentes():
             pending_total_projects=0,
         )
 
-    responsaveis_query = Etapa.query.filter(
-        Etapa.project_id.in_(project_ids),
-        Etapa.done.is_(False),
-        Etapa.entry_type != 'google_meeting',
-        Etapa.responsavel.isnot(None),
-    ).with_entities(Etapa.responsavel).distinct().all()
+    responsaveis_query = (
+        Etapa.query.filter(
+            Etapa.project_id.in_(project_ids),
+            Etapa.done.is_(False),
+            Etapa.entry_type != "google_meeting",
+            Etapa.responsavel.isnot(None),
+        )
+        .with_entities(Etapa.responsavel)
+        .distinct()
+        .all()
+    )
     responsaveis_options = sorted(
         [r[0].strip() for r in responsaveis_query if r[0] and r[0].strip()],
         key=lambda value: value.casefold(),
@@ -301,10 +346,12 @@ def list_projetos_pendentes():
     etapas_query = Etapa.query.filter(
         Etapa.project_id.in_(project_ids),
         Etapa.done.is_(False),
-        Etapa.entry_type != 'google_meeting',
+        Etapa.entry_type != "google_meeting",
     )
     if selected_responsavel:
-        etapas_query = etapas_query.filter(Etapa.responsavel.ilike(f"%{selected_responsavel}%"))
+        etapas_query = etapas_query.filter(
+            Etapa.responsavel.ilike(f"%{selected_responsavel}%")
+        )
 
     etapas_abertas = etapas_query.order_by(
         Etapa.project_id.asc(),
@@ -315,12 +362,12 @@ def list_projetos_pendentes():
     etapas_por_projeto = defaultdict(list)
     etapa_bucket_map = {}
     summary_counts = {
-        'total_projects': 0,
-        'atrasada': 0,
-        '7dias': 0,
-        '14dias': 0,
-        '21dias': 0,
-        'sem_data': 0,
+        "total_projects": 0,
+        "atrasada": 0,
+        "7dias": 0,
+        "14dias": 0,
+        "21dias": 0,
+        "sem_data": 0,
     }
 
     for etapa in etapas_abertas:
@@ -353,32 +400,32 @@ def list_projetos_pendentes():
         etapas_visiveis = []
         etapas_outras = []
         counts = {
-            'qtd_atrasadas': 0,
-            'bucket_7dias': 0,
-            'bucket_14dias': 0,
-            'bucket_21dias': 0,
-            'qtd_sem_data': 0,
+            "qtd_atrasadas": 0,
+            "bucket_7dias": 0,
+            "bucket_14dias": 0,
+            "bucket_21dias": 0,
+            "qtd_sem_data": 0,
         }
         max_overdue_days = 0
 
         for etapa in etapas_project_sorted:
-            bucket = etapa_bucket_map.get(etapa.id, 'futuro')
+            bucket = etapa_bucket_map.get(etapa.id, "futuro")
 
-            if bucket == 'atrasada':
-                counts['qtd_atrasadas'] += 1
+            if bucket == "atrasada":
+                counts["qtd_atrasadas"] += 1
                 reference_date = resolve_reference_date(etapa)
                 if reference_date:
                     overdue_days = (data_atual - reference_date).days
                     if overdue_days > max_overdue_days:
                         max_overdue_days = overdue_days
-            elif bucket == '7dias':
-                counts['bucket_7dias'] += 1
-            elif bucket == '14dias':
-                counts['bucket_14dias'] += 1
-            elif bucket == '21dias':
-                counts['bucket_21dias'] += 1
-            elif bucket == 'sem_data':
-                counts['qtd_sem_data'] += 1
+            elif bucket == "7dias":
+                counts["bucket_7dias"] += 1
+            elif bucket == "14dias":
+                counts["bucket_14dias"] += 1
+            elif bucket == "21dias":
+                counts["bucket_21dias"] += 1
+            elif bucket == "sem_data":
+                counts["qtd_sem_data"] += 1
 
             if bucket in visible_buckets:
                 etapas_visiveis.append(etapa)
@@ -388,37 +435,42 @@ def list_projetos_pendentes():
         if not etapas_visiveis:
             continue
 
-        qtd_7dias = counts['bucket_7dias']
-        qtd_14dias = counts['bucket_7dias'] + counts['bucket_14dias']
-        qtd_21dias = counts['bucket_7dias'] + counts['bucket_14dias'] + counts['bucket_21dias']
+        qtd_7dias = counts["bucket_7dias"]
+        qtd_14dias = counts["bucket_7dias"] + counts["bucket_14dias"]
+        qtd_21dias = (
+            counts["bucket_7dias"] + counts["bucket_14dias"] + counts["bucket_21dias"]
+        )
 
-        projetos_pendentes_com_etapas.append({
-            'projeto': projeto,
-            'etapas_visiveis': etapas_visiveis,
-            'etapas_outras': etapas_outras,
-            'qtd_visiveis': len(etapas_visiveis),
-            'qtd_outras': len(etapas_outras),
-            'qtd_atrasadas': counts['qtd_atrasadas'],
-            'qtd_7dias': qtd_7dias,
-            'qtd_14dias': qtd_14dias,
-            'qtd_21dias': qtd_21dias,
-            'qtd_sem_data': counts['qtd_sem_data'],
-            'max_overdue_days': max_overdue_days,
-        })
+        projetos_pendentes_com_etapas.append(
+            {
+                "projeto": projeto,
+                "etapas_visiveis": etapas_visiveis,
+                "etapas_outras": etapas_outras,
+                "qtd_visiveis": len(etapas_visiveis),
+                "qtd_outras": len(etapas_outras),
+                "qtd_atrasadas": counts["qtd_atrasadas"],
+                "qtd_7dias": qtd_7dias,
+                "qtd_14dias": qtd_14dias,
+                "qtd_21dias": qtd_21dias,
+                "qtd_sem_data": counts["qtd_sem_data"],
+                "max_overdue_days": max_overdue_days,
+            }
+        )
 
     projetos_pendentes_com_etapas.sort(
         key=lambda item: (
-            -item['max_overdue_days'],
-            -item['qtd_visiveis'],
-            (item['projeto'].titulo or '').casefold(),
+            -item["max_overdue_days"],
+            -item["qtd_visiveis"],
+            (item["projeto"].titulo or "").casefold(),
         )
     )
     pending_total_projects = len(projetos_pendentes_com_etapas)
-    summary_counts['total_projects'] = pending_total_projects
+    summary_counts["total_projects"] = pending_total_projects
 
     pending_total_pages = (
         (pending_total_projects + pending_per_page - 1) // pending_per_page
-        if pending_total_projects > 0 else 0
+        if pending_total_projects > 0
+        else 0
     )
     if pending_total_pages == 0:
         pending_page = 1
@@ -430,7 +482,7 @@ def list_projetos_pendentes():
     projetos_pendentes_paginated = projetos_pendentes_com_etapas[start_idx:end_idx]
 
     return render_template(
-        'projects/pendentes.html',
+        "projects/pendentes.html",
         projetos_com_etapas=projetos_pendentes_paginated,
         objetivos=objetivos,
         selected_orgao=selected_orgao_id,
@@ -438,16 +490,16 @@ def list_projetos_pendentes():
         selected_responsavel=selected_responsavel,
         responsaveis_options=responsaveis_options,
         period_options=[
-            ('atrasados', 'Projetos Atrasados'),
-            ('7dias', 'Próximos 7 Dias'),
-            ('14dias', 'Próximos 14 Dias'),
-            ('21dias', 'Próximos 21 Dias'),
+            ("atrasados", "Projetos Atrasados"),
+            ("7dias", "Próximos 7 Dias"),
+            ("14dias", "Próximos 14 Dias"),
+            ("21dias", "Próximos 21 Dias"),
         ],
         period_label_map={
-            'atrasados': 'Atrasados',
-            '7dias': 'Próximos 7 Dias',
-            '14dias': 'Próximos 14 Dias',
-            '21dias': 'Próximos 21 Dias',
+            "atrasados": "Atrasados",
+            "7dias": "Próximos 7 Dias",
+            "14dias": "Próximos 14 Dias",
+            "21dias": "Próximos 21 Dias",
         },
         etapa_bucket_map=etapa_bucket_map,
         summary_counts=summary_counts,
@@ -456,22 +508,28 @@ def list_projetos_pendentes():
         pending_per_page=pending_per_page,
         pending_total_projects=pending_total_projects,
     )
-@main_bp.route('/project/<int:project_id>')
+
+
+@main_bp.route("/project/<int:project_id>")
 @login_required
 def project_detail(project_id):
     project = get_or_404(Project, project_id)
     if not user_can_access_project(g.user, project):
-        flash('Você não tem permissão para visualizar este projeto.', 'danger')
-        return redirect(url_for('main.list_projects'))
+        flash("Você não tem permissão para visualizar este projeto.", "danger")
+        return redirect(url_for("main.list_projects"))
 
     # O cálculo do índice de exibição dinâmico foi removido.
     # O ID real do projeto (project.id) será usado diretamente no template.
 
-    active_task_count = Task.query.filter_by(project_id=project.id, is_archived=False).count()
-    calendar_connection = UserCalendarConnection.query.filter_by(user_id=g.user.id).first()
+    active_task_count = Task.query.filter_by(
+        project_id=project.id, is_archived=False
+    ).count()
+    calendar_connection = UserCalendarConnection.query.filter_by(
+        user_id=g.user.id
+    ).first()
     if (
         calendar_connection is not None
-        and not (calendar_connection.google_account_id or '').strip()
+        and not (calendar_connection.google_account_id or "").strip()
         and is_google_calendar_enabled(current_app.config)
     ):
         try:
@@ -480,79 +538,105 @@ def project_detail(project_id):
         except Exception as exc:
             db.session.rollback()
             current_app.logger.warning(
-                'Nao foi possivel hidratar a identidade Google da conexao %s na tela do projeto: %s',
+                "Nao foi possivel hidratar a identidade Google da conexao %s na tela do projeto: %s",
                 calendar_connection.id,
                 exc,
             )
 
     return render_template(
-        'projects/detail.html',
+        "projects/detail.html",
         project=project,
         active_task_count=active_task_count,
         calendar_connection=calendar_connection,
-        can_add_google_meeting=bool(calendar_connection and (calendar_connection.google_account_id or '').strip()),
-        current_google_account_id=(calendar_connection.google_account_id or '') if calendar_connection else '',
+        can_add_google_meeting=bool(
+            calendar_connection
+            and (calendar_connection.google_account_id or "").strip()
+        ),
+        current_google_account_id=(
+            (calendar_connection.google_account_id or "") if calendar_connection else ""
+        ),
         calendar_input_datetime=format_input_datetime,
         meeting_time_display=meeting_time_display,
         meeting_time_summary=meeting_time_summary,
     )
 
 
-@main_bp.route('/project/<int:project_id>/history')
+@main_bp.route("/project/<int:project_id>/history")
 @login_required
 def project_history(project_id):
     """Visualizar histórico de ações de um projeto"""
     project = get_or_404(Project, project_id)
-    
+
     # Verificar permissão
     if not user_can_access_project(g.user, project):
-        flash('Você não tem permissão para visualizar este projeto.', 'danger')
-        return redirect(url_for('main.list_projects'))
-    
+        flash("Você não tem permissão para visualizar este projeto.", "danger")
+        return redirect(url_for("main.list_projects"))
+
     # Buscar histórico ordenado por data (mais recente primeiro)
-    history_entries = ProjectHistory.query.filter_by(project_id=project_id)\
-        .order_by(ProjectHistory.timestamp.desc())\
+    history_entries = (
+        ProjectHistory.query.filter_by(project_id=project_id)
+        .order_by(ProjectHistory.timestamp.desc())
         .all()
-    
-    return render_template('projects/history.html', project=project, history=history_entries)
+    )
+
+    return render_template(
+        "projects/history.html", project=project, history=history_entries
+    )
 
 
-@main_bp.route('/projects/download')
+@main_bp.route("/projects/download")
 @login_required
 def download_projects_csv():
     """Download CSV com dados dos projetos (apenas admin)."""
     if not g.user.is_admin:
-        flash('Acesso restrito a administradores.', 'danger')
-        return redirect(url_for('main.list_projects'))
+        flash("Acesso restrito a administradores.", "danger")
+        return redirect(url_for("main.list_projects"))
 
     projects = Project.query.order_by(Project.id).all()
 
     output = io.StringIO()
-    writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_ALL)
-    writer.writerow([
-        'ID',
-        'Nome',
-        'Status',
-        'Data Início',
-        'Data Fim',
-        'Objetivo EEGD',
-        'Resultado EEGD',
-        'Indicador EEGD',
-    ])
+    writer = csv.writer(output, delimiter=";", quoting=csv.QUOTE_ALL)
+    writer.writerow(
+        [
+            "ID",
+            "Nome",
+            "Status",
+            "Data Início",
+            "Data Fim",
+            "Objetivo EEGD",
+            "Resultado EEGD",
+            "Indicador EEGD",
+        ]
+    )
 
     for p in projects:
-        data_inicio = p.data_inicio_projeto.strftime('%d/%m/%Y') if p.data_inicio_projeto else ''
-        data_fim = p.data_fim_projeto.strftime('%d/%m/%Y') if p.data_fim_projeto else ''
-        objetivo = p.objetivo.descricao if p.objetivo else ''
-        resultado = p.resultado_esperado.descricao if p.resultado_esperado else ''
-        indicadores = '; '.join(
+        data_inicio = (
+            p.data_inicio_projeto.strftime("%d/%m/%Y") if p.data_inicio_projeto else ""
+        )
+        data_fim = p.data_fim_projeto.strftime("%d/%m/%Y") if p.data_fim_projeto else ""
+        objetivo = p.objetivo.descricao if p.objetivo else ""
+        resultado = p.resultado_esperado.descricao if p.resultado_esperado else ""
+        indicadores = "; ".join(
             ip.indicador.descricao for ip in p.indicadores if ip.indicador
         )
-        writer.writerow([p.id, p.titulo, p.status, data_inicio, data_fim, objetivo, resultado, indicadores])
+        writer.writerow(
+            [
+                p.id,
+                p.titulo,
+                p.status,
+                data_inicio,
+                data_fim,
+                objetivo,
+                resultado,
+                indicadores,
+            ]
+        )
 
-    timestamp = datetime.datetime.now().strftime('%d%m%Y%H%M')
+    timestamp = datetime.datetime.now().strftime("%d%m%Y%H%M")
     response = make_response(output.getvalue())
-    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
-    response.headers['Content-Disposition'] = f'attachment; filename="projetos{timestamp}.csv"'
+    response.headers["Content-Type"] = "text/csv; charset=utf-8"
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="projetos{timestamp}.csv"'
+    )
     output.close()
     return response

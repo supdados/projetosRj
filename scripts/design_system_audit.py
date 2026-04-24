@@ -74,16 +74,37 @@ DESKTOP_ONLY_TEMPLATE_PATTERNS = [
     ("view-cards", re.compile(r"view-cards", re.IGNORECASE)),
     ("view-table", re.compile(r"view-table", re.IGNORECASE)),
     ("window.innerWidth < 768", re.compile(r"window\.innerWidth\s*<\s*768")),
-    ("matchMedia('(max-width", re.compile(r"matchMedia\(\s*['\"]\(max-width", re.IGNORECASE)),
+    (
+        "matchMedia('(max-width",
+        re.compile(r"matchMedia\(\s*['\"]\(max-width", re.IGNORECASE),
+    ),
 ]
 
 DESKTOP_ONLY_CSS_PATTERNS = [
-    ("@media (max-width: 991.98px)", re.compile(r"@media\s*\(\s*max-width:\s*991\.98px\s*\)", re.IGNORECASE)),
-    ("@media (max-width: 992px)", re.compile(r"@media\s*\(\s*max-width:\s*992px\s*\)", re.IGNORECASE)),
-    ("@media (max-width: 768px)", re.compile(r"@media\s*\(\s*max-width:\s*768px\s*\)", re.IGNORECASE)),
-    ("@media (max-width: 767.98px)", re.compile(r"@media\s*\(\s*max-width:\s*767\.98px\s*\)", re.IGNORECASE)),
-    ("@media (max-width: 576px)", re.compile(r"@media\s*\(\s*max-width:\s*576px\s*\)", re.IGNORECASE)),
-    ("@media (max-width: 575.98px)", re.compile(r"@media\s*\(\s*max-width:\s*575\.98px\s*\)", re.IGNORECASE)),
+    (
+        "@media (max-width: 991.98px)",
+        re.compile(r"@media\s*\(\s*max-width:\s*991\.98px\s*\)", re.IGNORECASE),
+    ),
+    (
+        "@media (max-width: 992px)",
+        re.compile(r"@media\s*\(\s*max-width:\s*992px\s*\)", re.IGNORECASE),
+    ),
+    (
+        "@media (max-width: 768px)",
+        re.compile(r"@media\s*\(\s*max-width:\s*768px\s*\)", re.IGNORECASE),
+    ),
+    (
+        "@media (max-width: 767.98px)",
+        re.compile(r"@media\s*\(\s*max-width:\s*767\.98px\s*\)", re.IGNORECASE),
+    ),
+    (
+        "@media (max-width: 576px)",
+        re.compile(r"@media\s*\(\s*max-width:\s*576px\s*\)", re.IGNORECASE),
+    ),
+    (
+        "@media (max-width: 575.98px)",
+        re.compile(r"@media\s*\(\s*max-width:\s*575\.98px\s*\)", re.IGNORECASE),
+    ),
     ("mobile selector", re.compile(r"\.mobile-[a-z0-9_-]*", re.IGNORECASE)),
     ("app-mobile selector", re.compile(r"\.app-mobile-[a-z0-9_-]*", re.IGNORECASE)),
 ]
@@ -112,7 +133,10 @@ def find_line_number(content: str, index: int) -> int:
 
 
 def scan_forbidden_patterns(
-    rel: Path, content: str, checks: list[tuple[str, re.Pattern[str]]], failures: list[str]
+    rel: Path,
+    content: str,
+    checks: list[tuple[str, re.Pattern[str]]],
+    failures: list[str],
 ) -> None:
     for label, pattern in checks:
         match = pattern.search(content)
@@ -125,8 +149,12 @@ def css_files() -> list[Path]:
     legacy_css = []
     legacy_root = ROOT / "static/styles"
     if legacy_root.exists():
-        legacy_css = sorted(path.relative_to(ROOT) for path in legacy_root.rglob("*.css"))
-    page_css = sorted(path.relative_to(ROOT) for path in (ROOT / "static/pages").rglob("*.css"))
+        legacy_css = sorted(
+            path.relative_to(ROOT) for path in legacy_root.rglob("*.css")
+        )
+    page_css = sorted(
+        path.relative_to(ROOT) for path in (ROOT / "static/pages").rglob("*.css")
+    )
     return [
         Path("static/style.css"),
         Path("static/design-system.css"),
@@ -203,7 +231,9 @@ def main() -> int:
         template_counts.append((rel, style_tag_count, inline_count))
 
         if style_tag_count != 0:
-            failures.append(f"{rel}: possui {style_tag_count} bloco(s) <style> (esperado 0)")
+            failures.append(
+                f"{rel}: possui {style_tag_count} bloco(s) <style> (esperado 0)"
+            )
 
     if inline_total > INLINE_STYLE_THRESHOLD:
         failures.append(
@@ -224,7 +254,9 @@ def main() -> int:
     # Desktop-only template contract
     for tpl in all_templates:
         content = tpl.read_text(encoding="utf-8")
-        scan_forbidden_patterns(tpl.relative_to(ROOT), content, DESKTOP_ONLY_TEMPLATE_PATTERNS, failures)
+        scan_forbidden_patterns(
+            tpl.relative_to(ROOT), content, DESKTOP_ONLY_TEMPLATE_PATTERNS, failures
+        )
 
     # Desktop-only CSS contract
     for rel in css_files():
@@ -249,7 +281,9 @@ def main() -> int:
         base_content = base_template.read_text(encoding="utf-8")
         for preload in EXPECTED_BASE_PRELOADS:
             if preload not in base_content:
-                failures.append(f"templates/base.html: preload tipografico ausente para {preload}")
+                failures.append(
+                    f"templates/base.html: preload tipografico ausente para {preload}"
+                )
 
     # Check local font assets are not empty
     for rel in [
@@ -271,7 +305,9 @@ def main() -> int:
         ds_content = ds_file.read_text(encoding="utf-8")
         for fragment in EXPECTED_FONT_FACE_FRAGMENTS:
             if fragment not in ds_content:
-                failures.append(f"static/design-system.css: @font-face ausente/invalido para {fragment}")
+                failures.append(
+                    f"static/design-system.css: @font-face ausente/invalido para {fragment}"
+                )
 
     # Check token density
     if ds_file.exists():

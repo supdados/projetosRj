@@ -2,35 +2,41 @@ from pathlib import Path
 
 
 def _read(path):
-    return path.read_text(encoding='utf-8')
+    return path.read_text(encoding="utf-8")
 
 
 def test_notifications_dropdown_contains_semantic_render_hooks(client_user):
-    response = client_user.get('/dashboard')
+    response = client_user.get("/dashboard")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    notifications_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell' / 'notifications.js'
+    notifications_path = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "js"
+        / "app-shell"
+        / "notifications.js"
+    )
     notifications_content = _read(notifications_path)
 
     required_fragments = [
-        'function resolveNotificationVisual(eventType)',
-        'app-notification-leading',
-        'app-notification-main',
-        'app-notification-row',
-        'app-notification-time',
-        'app-notification-subline',
-        'app-notification-unread-dot',
-        'app-notification-icon-wrap',
-        'is-unread',
-        'item && item.event_type',
-        'item && item.is_unread',
+        "function resolveNotificationVisual(eventType)",
+        "app-notification-leading",
+        "app-notification-main",
+        "app-notification-row",
+        "app-notification-time",
+        "app-notification-subline",
+        "app-notification-unread-dot",
+        "app-notification-icon-wrap",
+        "is-unread",
+        "item && item.event_type",
+        "item && item.is_unread",
         "safeEventType.endsWith('_deleted')",
         "safeEventType === 'task_finalized'",
         "safeEventType === 'task_item_assignment'",
         "safeEventType.startsWith('task_item_comment_')",
         "safeEventType.startsWith('project_')",
         "safeEventType.startsWith('task_')",
-        'fa-bell',
+        "fa-bell",
         "var titleRaw = item && item.title ? item.title : 'Atualização';",
         '<span class="app-notification-title">',
     ]
@@ -39,18 +45,24 @@ def test_notifications_dropdown_contains_semantic_render_hooks(client_user):
         assert fragment in notifications_content
 
     assert "static/js/app-shell.js" in html
-    assert 'app-notification-chip' not in notifications_content
-    assert 'app-notification-tone-' not in notifications_content
+    assert "app-notification-chip" not in notifications_content
+    assert "app-notification-tone-" not in notifications_content
 
 
 def test_notifications_dropdown_navigation_contract_is_preserved(client_user):
-    response = client_user.get('/dashboard')
+    response = client_user.get("/dashboard")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    notifications_path = Path(__file__).resolve().parents[2] / 'static' / 'js' / 'app-shell' / 'notifications.js'
+    notifications_path = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "js"
+        / "app-shell"
+        / "notifications.js"
+    )
     notifications_content = _read(notifications_path)
 
-    assert '.app-notification-item[data-notification-url]' in notifications_content
+    assert ".app-notification-item[data-notification-url]" in notifications_content
     assert "notificationsList.addEventListener('mousedown'" in notifications_content
-    assert 'navigateWithSkeleton(targetUrl);' in notifications_content
+    assert "navigateWithSkeleton(targetUrl);" in notifications_content
     assert "window.__BASE_APP_CONFIG__" in html

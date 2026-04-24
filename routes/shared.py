@@ -14,23 +14,25 @@ from catalogs.objectives import (
 )
 from services.notifications import notify_project_history_action
 
-TIMEZONE_BR = ZoneInfo('America/Sao_Paulo')
+TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
 
 
-def format_local_time(dt, fmt='%d/%m %H:%M'):
+def format_local_time(dt, fmt="%d/%m %H:%M"):
     """Converte datetime UTC (naive) para horário do Brasil e retorna string."""
     if dt is None:
         return None
-    utc = dt.replace(tzinfo=ZoneInfo('UTC')) if dt.tzinfo is None else dt
+    utc = dt.replace(tzinfo=ZoneInfo("UTC")) if dt.tzinfo is None else dt
     return utc.astimezone(TIMEZONE_BR).strftime(fmt)
 
 
-def log_project_action(project_id, action_type, description, old_value=None, new_value=None):
+def log_project_action(
+    project_id, action_type, description, old_value=None, new_value=None
+):
     """
     Registra uma ação no histórico do projeto.
     """
     try:
-        if not getattr(g, 'user', None):
+        if not getattr(g, "user", None):
             return
 
         history_entry = ProjectHistory(
@@ -53,9 +55,11 @@ def log_project_action(project_id, action_type, description, old_value=None, new
                 new_value=new_value,
             )
         except Exception as notification_error:
-            current_app.logger.warning('Falha ao notificar histórico de projeto: %s', notification_error)
+            current_app.logger.warning(
+                "Falha ao notificar histórico de projeto: %s", notification_error
+            )
     except Exception as e:
-        current_app.logger.error('Falha ao registrar histórico de projeto: %s', e)
+        current_app.logger.error("Falha ao registrar histórico de projeto: %s", e)
 
 
 def get_goal_catalog_context():
@@ -96,12 +100,12 @@ def _get_orgaos_disponiveis_for_current_user():
     - admin: todos os orgaos ativos, ordenados por sigla.
     - demais: apenas os orgaos no subtree dos vinculos do usuario.
     """
-    user = getattr(g, 'user', None)
+    user = getattr(g, "user", None)
     if user is None:
         return []
 
     inspector = inspect(db.engine)
-    if 'orgao_unidade' not in inspector.get_table_names():
+    if "orgao_unidade" not in inspector.get_table_names():
         return []
 
     from models import OrgaoUnidade
@@ -112,8 +116,7 @@ def _get_orgaos_disponiveis_for_current_user():
         return []
 
     rows = (
-        OrgaoUnidade.query
-        .filter(OrgaoUnidade.id.in_(subtree_ids))
+        OrgaoUnidade.query.filter(OrgaoUnidade.id.in_(subtree_ids))
         .filter(OrgaoUnidade.ativo.is_(True))
         .order_by(OrgaoUnidade.sigla)
         .all()
@@ -130,25 +133,36 @@ def inject_current_year():
     )
 
     orgaos_disponiveis = _get_orgaos_disponiveis_for_current_user()
-    user = getattr(g, 'user', None)
-    has_orgao_table = bool(orgaos_disponiveis) or (user is not None and getattr(user, 'is_admin', False))
-    user_orgao_breadcrumb = get_user_orgao_breadcrumb(user) if (user and has_orgao_table) else []
-    orgao_visible_tree = get_visible_orgao_tree(user) if (user and has_orgao_table) else []
+    user = getattr(g, "user", None)
+    has_orgao_table = bool(orgaos_disponiveis) or (
+        user is not None and getattr(user, "is_admin", False)
+    )
+    user_orgao_breadcrumb = (
+        get_user_orgao_breadcrumb(user) if (user and has_orgao_table) else []
+    )
+    orgao_visible_tree = (
+        get_visible_orgao_tree(user) if (user and has_orgao_table) else []
+    )
     orgao_visible_tree_nested = build_nested_orgao_tree(orgao_visible_tree)
-    selected_orgao_raw = request.args.get('orgao') or request.args.get('area')
-    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(selected_orgao_raw)
+    selected_orgao_raw = request.args.get("orgao") or request.args.get("area")
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+        selected_orgao_raw
+    )
     if invalid_orgao_filter:
         selected_orgao_id = None
-    orgao_label_map = {str(orgao_id): orgao_sigla for orgao_id, orgao_sigla, _orgao_nome in orgaos_disponiveis}
+    orgao_label_map = {
+        str(orgao_id): orgao_sigla
+        for orgao_id, orgao_sigla, _orgao_nome in orgaos_disponiveis
+    }
 
     def build_current_orgao_url(orgao_id=None):
         query_args = request.args.to_dict(flat=False)
-        query_args.pop('orgao', None)
-        query_args.pop('area', None)
-        query_args.pop('page', None)
+        query_args.pop("orgao", None)
+        query_args.pop("area", None)
+        query_args.pop("page", None)
 
-        if orgao_id not in (None, '', 'None'):
-            query_args['orgao'] = [str(orgao_id)]
+        if orgao_id not in (None, "", "None"):
+            query_args["orgao"] = [str(orgao_id)]
 
         kwargs = dict(request.view_args or {})
         for key, values in query_args.items():
@@ -160,29 +174,31 @@ def inject_current_year():
             except Exception:
                 pass
 
-        query_string = '&'.join(
-            f'{key}={value}'
-            for key, values in query_args.items()
-            for value in values
+        query_string = "&".join(
+            f"{key}={value}" for key, values in query_args.items() for value in values
         )
-        return f'{request.path}?{query_string}' if query_string else request.path
+        return f"{request.path}?{query_string}" if query_string else request.path
 
     def build_orgao_nav_url(endpoint, **kwargs):
-        if selected_orgao_id not in (None, '', 'None'):
-            kwargs.setdefault('orgao', selected_orgao_id)
+        if selected_orgao_id not in (None, "", "None"):
+            kwargs.setdefault("orgao", selected_orgao_id)
         return url_for(endpoint, **kwargs)
 
     return {
-        'current_year': datetime.datetime.now(datetime.UTC).year,
-        'ABEP_INDICADORES_OPTIONS': ABEP_INDICADORES_OPTIONS,
-        'ORGAOS_DISPONIVEIS': orgaos_disponiveis,
-        'USER_ORGAO_BREADCRUMB': user_orgao_breadcrumb,
-        'ORGAO_VISIBLE_TREE': orgao_visible_tree,
-        'ORGAO_VISIBLE_TREE_NESTED': orgao_visible_tree_nested,
-        'selected_orgao_global': selected_orgao_id,
-        'selected_orgao_global_sigla': orgao_label_map.get(str(selected_orgao_id), '') if selected_orgao_id is not None else '',
-        'build_current_orgao_url': build_current_orgao_url,
-        'build_orgao_nav_url': build_orgao_nav_url,
+        "current_year": datetime.datetime.now(datetime.UTC).year,
+        "ABEP_INDICADORES_OPTIONS": ABEP_INDICADORES_OPTIONS,
+        "ORGAOS_DISPONIVEIS": orgaos_disponiveis,
+        "USER_ORGAO_BREADCRUMB": user_orgao_breadcrumb,
+        "ORGAO_VISIBLE_TREE": orgao_visible_tree,
+        "ORGAO_VISIBLE_TREE_NESTED": orgao_visible_tree_nested,
+        "selected_orgao_global": selected_orgao_id,
+        "selected_orgao_global_sigla": (
+            orgao_label_map.get(str(selected_orgao_id), "")
+            if selected_orgao_id is not None
+            else ""
+        ),
+        "build_current_orgao_url": build_current_orgao_url,
+        "build_orgao_nav_url": build_orgao_nav_url,
     }
 
 
@@ -191,4 +207,3 @@ def get_or_404(model, object_id):
     if instance is None:
         abort(404)
     return instance
-

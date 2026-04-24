@@ -16,19 +16,23 @@ class User(db.Model):
     govbr_sub = db.Column(db.String(255), unique=True, nullable=True, index=True)
     failed_login_attempts = db.Column(db.Integer, nullable=False, default=0)
     lockout_until = db.Column(db.DateTime, nullable=True)
-    tutorial_visto = db.Column(db.Boolean, default=False, nullable=False, server_default='0')
+    tutorial_visto = db.Column(
+        db.Boolean, default=False, nullable=False, server_default="0"
+    )
 
-    orgaos = db.relationship('UserOrgao', backref='user', lazy=True, cascade="all, delete-orphan")
+    orgaos = db.relationship(
+        "UserOrgao", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password, method='scrypt')
+        self.password_hash = generate_password_hash(password, method="scrypt")
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
     def needs_password_rehash(self):
         """True se o hash atual usa algoritmo legado (pré-scrypt)."""
-        return not (self.password_hash or '').startswith('scrypt:')
+        return not (self.password_hash or "").startswith("scrypt:")
 
     def set_orgaos(self, orgao_ids):
         """Substitui os vinculos em user_orgao."""
@@ -41,41 +45,45 @@ class User(db.Model):
             db.session.add(UserOrgao(user_id=self.id, orgao_id=orgao_id))
 
     def __repr__(self):
-        return f'<User {self.username}>'
+        return f"<User {self.username}>"
 
 
 class UserOrgao(db.Model):
-    __tablename__ = 'user_orgao'
+    __tablename__ = "user_orgao"
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey('user.id', ondelete='CASCADE'),
+        db.ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False,
     )
     orgao_id = db.Column(
         db.Integer,
-        db.ForeignKey('orgao_unidade.id', ondelete='CASCADE'),
+        db.ForeignKey("orgao_unidade.id", ondelete="CASCADE"),
         nullable=False,
     )
 
-    orgao = db.relationship('OrgaoUnidade')
+    orgao = db.relationship("OrgaoUnidade")
 
     __table_args__ = (
-        db.UniqueConstraint('user_id', 'orgao_id', name='uq_user_orgao_user_orgao'),
-        db.Index('ix_user_orgao_user_id', 'user_id'),
-        db.Index('ix_user_orgao_orgao_id', 'orgao_id'),
+        db.UniqueConstraint("user_id", "orgao_id", name="uq_user_orgao_user_orgao"),
+        db.Index("ix_user_orgao_user_id", "user_id"),
+        db.Index("ix_user_orgao_orgao_id", "orgao_id"),
     )
 
     def __repr__(self):
-        return f'<UserOrgao user_id={self.user_id} orgao_id={self.orgao_id}>'
+        return f"<UserOrgao user_id={self.user_id} orgao_id={self.orgao_id}>"
 
 
 class UserNotification(db.Model):
-    __tablename__ = 'user_notification'
+    __tablename__ = "user_notification"
 
     id = db.Column(db.Integer, primary_key=True)
-    recipient_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    actor_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    recipient_user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=False, index=True
+    )
+    actor_user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=True, index=True
+    )
     event_type = db.Column(db.String(80), nullable=False, index=True)
     title = db.Column(db.String(200), nullable=False)
     message = db.Column(db.Text, nullable=False)
@@ -84,17 +92,21 @@ class UserNotification(db.Model):
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
     read_at = db.Column(db.DateTime, nullable=True)
 
-    recipient = db.relationship('User', foreign_keys=[recipient_user_id], backref='received_notifications')
-    actor = db.relationship('User', foreign_keys=[actor_user_id], backref='sent_notifications')
+    recipient = db.relationship(
+        "User", foreign_keys=[recipient_user_id], backref="received_notifications"
+    )
+    actor = db.relationship(
+        "User", foreign_keys=[actor_user_id], backref="sent_notifications"
+    )
 
     __table_args__ = (
         db.Index(
-            'ix_user_notification_recipient_read_created',
-            'recipient_user_id',
-            'is_read',
-            'created_at',
+            "ix_user_notification_recipient_read_created",
+            "recipient_user_id",
+            "is_read",
+            "created_at",
         ),
     )
 
     def __repr__(self):
-        return f'<UserNotification {self.event_type} to user {self.recipient_user_id}>'
+        return f"<UserNotification {self.event_type} to user {self.recipient_user_id}>"

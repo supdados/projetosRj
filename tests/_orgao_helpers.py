@@ -5,15 +5,31 @@ from models import OrgaoUnidade, UserOrgao, db
 
 def ensure_orgao(sigla):
     """Garante que o orgao existe e retorna a instancia. Cria sob SETD se novo."""
-    existing = OrgaoUnidade.query.filter(db.func.lower(OrgaoUnidade.sigla) == sigla.lower()).first()
+    existing = OrgaoUnidade.query.filter(
+        db.func.lower(OrgaoUnidade.sigla) == sigla.lower()
+    ).first()
     if existing is not None:
         return existing
-    setd = OrgaoUnidade.query.filter_by(sigla='SETD').first()
+    setd = OrgaoUnidade.query.filter_by(sigla="SETD").first()
     if setd is None:
-        setd = OrgaoUnidade(sigla='SETD', nome='SETD', tipo='Secretaria', pai_id=None, ordem=0, ativo=True)
+        setd = OrgaoUnidade(
+            sigla="SETD",
+            nome="SETD",
+            tipo="Secretaria",
+            pai_id=None,
+            ordem=0,
+            ativo=True,
+        )
         db.session.add(setd)
         db.session.flush()
-    orgao = OrgaoUnidade(sigla=sigla, nome=sigla, tipo='Subsecretaria', pai_id=setd.id, ordem=0, ativo=True)
+    orgao = OrgaoUnidade(
+        sigla=sigla,
+        nome=sigla,
+        tipo="Subsecretaria",
+        pai_id=setd.id,
+        ordem=0,
+        ativo=True,
+    )
     db.session.add(orgao)
     db.session.flush()
     return orgao

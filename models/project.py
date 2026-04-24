@@ -9,18 +9,22 @@ class Project(db.Model):
     orgao = db.Column(db.String(100))
     orgao_id = db.Column(
         db.Integer,
-        db.ForeignKey('orgao_unidade.id', ondelete='SET NULL'),
+        db.ForeignKey("orgao_unidade.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
-    orgao_ref = db.relationship('OrgaoUnidade')
+    orgao_ref = db.relationship("OrgaoUnidade")
     prioridade = db.Column(db.String(20))
-    status = db.Column(db.String(20), default='Vigente', nullable=False)
+    status = db.Column(db.String(20), default="Vigente", nullable=False)
     observacao = db.Column(db.Text)
-    objetivo_id = db.Column(db.Integer, db.ForeignKey('objetivo.id'), nullable=True)
-    resultado_esperado_id = db.Column(db.Integer, db.ForeignKey('resultado_esperado.id'), nullable=True)
+    objetivo_id = db.Column(db.Integer, db.ForeignKey("objetivo.id"), nullable=True)
+    resultado_esperado_id = db.Column(
+        db.Integer, db.ForeignKey("resultado_esperado.id"), nullable=True
+    )
 
-    is_tutorial = db.Column(db.Boolean, default=False, nullable=False, server_default='0')
+    is_tutorial = db.Column(
+        db.Boolean, default=False, nullable=False, server_default="0"
+    )
 
     special_project = db.Column(db.String(20), nullable=True)
     sei_process = db.Column(db.String(50), nullable=True)
@@ -31,17 +35,32 @@ class Project(db.Model):
     documentation_link = db.Column(db.String(500), nullable=True)
     product_link = db.Column(db.String(500), nullable=True)
 
-    etapas = db.relationship('Etapa', backref='project', lazy=True, cascade="all, delete-orphan", order_by="Etapa.ordem")
-    meeting_items = db.relationship('ProjectStageMeeting', back_populates='project', lazy=True, cascade="all, delete-orphan")
-    objetivo = db.relationship('Objetivo', backref='projetos')
-    resultado_esperado = db.relationship('ResultadoEsperado', backref='projetos')
-    indicadores = db.relationship('IndicadorProjeto', backref='project', lazy=True, cascade="all, delete-orphan")
+    etapas = db.relationship(
+        "Etapa",
+        backref="project",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="Etapa.ordem",
+    )
+    meeting_items = db.relationship(
+        "ProjectStageMeeting",
+        back_populates="project",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+    objetivo = db.relationship("Objetivo", backref="projetos")
+    resultado_esperado = db.relationship("ResultadoEsperado", backref="projetos")
+    indicadores = db.relationship(
+        "IndicadorProjeto", backref="project", lazy=True, cascade="all, delete-orphan"
+    )
 
     @property
     def data_inicio_projeto(self):
         if not self.etapas:
             return None
-        datas_inicio_etapas = [etapa.data_inicio for etapa in self.etapas if etapa.data_inicio]
+        datas_inicio_etapas = [
+            etapa.data_inicio for etapa in self.etapas if etapa.data_inicio
+        ]
         return min(datas_inicio_etapas) if datas_inicio_etapas else None
 
     @property
@@ -60,29 +79,31 @@ class Project(db.Model):
 
     @property
     def workflow_etapas(self):
-        return [etapa for etapa in self.etapas if etapa.entry_type != 'google_meeting']
+        return [etapa for etapa in self.etapas if etapa.entry_type != "google_meeting"]
 
     @property
     def total_workflow_etapas(self):
         return len(self.workflow_etapas)
 
     def __repr__(self):
-        return f'<Project {self.titulo}>'
+        return f"<Project {self.titulo}>"
 
 
 class ProjectHistory(db.Model):
-    __tablename__ = 'project_history'
+    __tablename__ = "project_history"
     id = db.Column(db.Integer, primary_key=True)
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey("project.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     action_type = db.Column(db.String(50), nullable=False)
     action_description = db.Column(db.Text, nullable=False)
     old_value = db.Column(db.Text, nullable=True)
     new_value = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=utc_now, nullable=False)
 
-    project = db.relationship('Project', backref=db.backref('history', cascade='all, delete-orphan'))
-    user = db.relationship('User', backref='project_actions')
+    project = db.relationship(
+        "Project", backref=db.backref("history", cascade="all, delete-orphan")
+    )
+    user = db.relationship("User", backref="project_actions")
 
     def __repr__(self):
-        return f'<ProjectHistory {self.action_type} by user {self.user_id} at {self.timestamp}>'
+        return f"<ProjectHistory {self.action_type} by user {self.user_id} at {self.timestamp}>"
