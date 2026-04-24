@@ -39,20 +39,21 @@ def test_projetos_pendentes_shows_orgao_filter_for_non_admin_with_multiple_orgao
     assert 'Projeto Auditoria' in html
     assert 'Projeto VPD' in html
 
-    response = client.get('/projetos_pendentes', query_string={'area': 'VPD'})
+    vpd_orgao_id = seed_data['vpd_orgao_id']
+    response = client.get('/projetos_pendentes', query_string={'orgao': str(vpd_orgao_id)})
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert 'id="areaFilter"' in html
+    assert 'id="orgaoFilter"' in html
     assert 'Projeto VPD' in html
     assert 'Projeto Auditoria' not in html
-    assert '<option value="VPD" selected' in html
+    assert f'<option value="{vpd_orgao_id}" selected' in html
 
 
-def test_projetos_pendentes_redirects_when_non_admin_forces_foreign_area(client_user):
+def test_projetos_pendentes_redirects_when_non_admin_forces_foreign_area(client_user, seed_data):
     response = client_user.get(
         '/projetos_pendentes',
-        query_string={'area': 'VPD', 'periodo': '7dias'},
+        query_string={'orgao': str(seed_data['vpe_orgao_id']), 'periodo': '7dias'},
         follow_redirects=False,
     )
 

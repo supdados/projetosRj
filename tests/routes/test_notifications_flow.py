@@ -1,4 +1,5 @@
-from models import Etapa, Project, TaskItem, TaskItemComment, User, UserArea, UserNotification, db
+from models import Etapa, Project, TaskItem, TaskItemComment, User, UserNotification, db
+from tests._orgao_helpers import ensure_orgao, link_user_to_orgao
 
 
 def _create_user(username, name, *, areas=None, is_admin=False):
@@ -13,7 +14,7 @@ def _create_user(username, name, *, areas=None, is_admin=False):
     db.session.flush()
 
     for area in areas or []:
-        db.session.add(UserArea(user_id=user.id, area=area))
+        link_user_to_orgao(user.id, area)
 
     return user
 

@@ -33,7 +33,7 @@ def test_admin_create_user_persists_user_orgao_and_mirrors_user_area(app, seed_d
         assert linked_ids == sorted([
             seed_data['auditoria_orgao_id'], seed_data['vpe_orgao_id'],
         ])
-        assert sorted(user.get_areas()) == ['Auditoria', 'VPE']
+        assert sorted(uo.orgao.sigla for uo in user.orgaos) == ['Auditoria', 'VPE']
 
 
 def test_admin_edit_user_swaps_orgaos(app, seed_data):
@@ -60,7 +60,7 @@ def test_admin_edit_user_swaps_orgaos(app, seed_data):
         user = db.session.get(User, seed_data['editable_user_id'])
         linked_ids = [uo.orgao_id for uo in user.orgaos]
         assert linked_ids == [seed_data['vpd_orgao_id']]
-        assert user.get_areas() == ['VPD']
+        assert [uo.orgao.sigla for uo in user.orgaos] == ['VPD']
 
 
 def test_admin_edit_user_rejects_invalid_orgao_id(app, seed_data):

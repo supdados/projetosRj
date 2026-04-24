@@ -1,6 +1,5 @@
 from models import Etapa, Project, Task, TaskItem, TaskItemComment, User
-from routes.shared import AREAS_RESPONSAVEIS_CHOICES
-from scripts.seed_fake_data import seed_fake_data
+from scripts.seed_fake_data import SEED_ORGAO_SIGLAS, seed_fake_data
 
 
 def test_seed_fake_data_creates_expected_volume(app):
@@ -21,7 +20,7 @@ def test_seed_fake_data_creates_expected_volume(app):
     expected_items = expected_total_tasks * 2
     expected_comments = expected_items * 1
     expected_stages = 5 * 3
-    expected_users = len(AREAS_RESPONSAVEIS_CHOICES) + 1
+    expected_users = len(SEED_ORGAO_SIGLAS) + 1
 
     assert summary['projects'] == 5
     assert summary['stages'] == expected_stages

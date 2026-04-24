@@ -267,7 +267,6 @@ def test_project_edit_data_returns_goal_payload(client_user, seed_data):
     assert payload['is_admin'] is False
     assert payload['indicadores_do_projeto'] == [1]
     assert any(item['id'] == 1 for item in payload['objetivos'])
-    assert 'Auditoria' in payload['areas_responsaveis']
 
 
 def test_update_project_inline_updates_abep_goal_and_history(app, client_user, seed_data):

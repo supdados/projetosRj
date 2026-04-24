@@ -267,7 +267,7 @@
                         <td class="projects-v4-date-cell">{{ project.data_inicio_projeto.strftime('%d/%m/%Y') if project.data_inicio_projeto else '-' }}</td>
                         <td class="projects-v4-date-cell">{{ project.data_fim_projeto.strftime('%d/%m/%Y') if project.data_fim_projeto else '-' }}</td>
                         <td class="projects-v4-actions-cell text-center">
-                            {% if is_admin_user %}
+                            {% if is_admin_user or current_user_obj %}
                             <div class="projects-v4-actions">
                                 <a href="{{ url_for('main.project_detail', project_id=project.id) }}?edit=true" class="projects-v4-action-btn is-edit" title="Editar projeto">
                                     <i class="fas fa-pen" aria-hidden="true"></i>

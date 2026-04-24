@@ -49,6 +49,36 @@
             return select;
         }
 
+        async function createOrgaoSelect(currentValue) {
+            const data = await loadEditData();
+            const orgaos = (data && data.available_orgaos) || [];
+
+            const select = document.createElement('select');
+            select.className = 'form-select form-select-sm';
+            select.dataset.field = 'orgao_id';
+            select.dataset.originalValue = currentValue || '';
+
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = orgaos.length ? 'Selecione um órgão' : 'Nenhum órgão disponível';
+            select.appendChild(placeholder);
+
+            const currentId = currentValue ? String(currentValue) : '';
+            orgaos.forEach(orgao => {
+                const option = document.createElement('option');
+                option.value = String(orgao.id);
+                option.textContent = orgao.nome && orgao.nome !== orgao.sigla
+                    ? `${orgao.sigla} — ${orgao.nome}`
+                    : orgao.sigla;
+                if (option.value === currentId) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+
+            return select;
+        }
+
         async function createObjetivoSelect(currentValue) {
             const data = await loadEditData();
             if (!data) {
@@ -413,7 +443,9 @@
                 }
 
                 let input;
-                if (field === 'objetivo_id') {
+                if (field === 'orgao_id') {
+                    input = await createOrgaoSelect(currentValue);
+                } else if (field === 'objetivo_id') {
                     input = await createObjetivoSelect(currentValue);
                 } else if (field === 'resultado_esperado_id') {
                     input = await createResultadoSelect(currentValue, objetivoOriginal);

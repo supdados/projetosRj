@@ -6,7 +6,8 @@ from catalogs.objectives import normalize_goal_selection
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
-from routes.orgao_scope import user_can_access_project
+from routes.orgao_scope import get_user_orgao_subtree_ids, user_can_access_project
+from models import OrgaoUnidade
 from routes.shared import (
     get_or_404,
     get_goal_catalog_context,
@@ -29,12 +30,32 @@ def get_project_edit_data(project_id):
 
         indicadores_do_projeto_ids = [ip.indicador_id for ip in project.indicadores]
 
+        if g.user.is_admin:
+            orgao_rows = (
+                OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True))
+                .order_by(OrgaoUnidade.sigla)
+                .all()
+            )
+        else:
+            subtree_ids = get_user_orgao_subtree_ids(g.user)
+            orgao_rows = (
+                OrgaoUnidade.query.filter(OrgaoUnidade.id.in_(subtree_ids))
+                .filter(OrgaoUnidade.ativo.is_(True))
+                .order_by(OrgaoUnidade.sigla)
+                .all()
+            ) if subtree_ids else []
+        available_orgaos = [
+            {'id': o.id, 'sigla': o.sigla, 'nome': o.nome} for o in orgao_rows
+        ]
+
         return jsonify({
             'success': True,
             'objetivos': objetivos,
             'resultados_por_objetivo': resultados_por_objetivo,
             'indicadores_por_resultado': indicadores_por_resultado,
             'indicadores_do_projeto': indicadores_do_projeto_ids,
+            'available_orgaos': available_orgaos,
+            'current_orgao_id': project.orgao_id,
             'is_admin': g.user.is_admin
         })
 
@@ -75,6 +96,24 @@ def update_project_inline(project_id):
             if old_orgao != new_orgao:
                 changes.append(f'órgão de "{old_orgao or "vazio"}" para "{new_orgao or "vazio"}"')
             project_to_edit.orgao = data['orgao'] or None
+
+        if 'orgao_id' in data and data['orgao_id'] not in (None, '', 'None'):
+            try:
+                new_orgao_id = int(data['orgao_id'])
+            except (TypeError, ValueError):
+                return jsonify({'success': False, 'message': 'Órgão inválido.'}), 400
+            new_orgao_obj = db.session.get(OrgaoUnidade, new_orgao_id)
+            if new_orgao_obj is None:
+                return jsonify({'success': False, 'message': 'Órgão não encontrado.'}), 400
+            if not g.user.is_admin and new_orgao_id not in get_user_orgao_subtree_ids(g.user):
+                return jsonify({
+                    'success': False,
+                    'message': 'Você não tem permissão para mover o projeto para este órgão.',
+                }), 403
+            if project_to_edit.orgao_id != new_orgao_id:
+                old_sigla = project_to_edit.orgao_ref.sigla if project_to_edit.orgao_ref else 'vazio'
+                changes.append(f'órgão responsável de "{old_sigla}" para "{new_orgao_obj.sigla}"')
+                project_to_edit.orgao_id = new_orgao_id
 
         # Novos campos
         if 'special_project' in data:

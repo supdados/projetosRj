@@ -23,7 +23,6 @@ def test_initialize_database_is_idempotent_on_current_schema(app):
 
         assert summary['column_added'] is False
         assert isinstance(summary['task_core_cols'], list)
-        assert 'Auditoria' in summary['area_catalog_choices']
         assert set(summary['sync_summary'].keys()) == {
             'objetivos_created',
             'objetivos_updated',
@@ -168,7 +167,6 @@ def test_schema_compatibility_upgrades_legacy_project_and_task_tables(tmp_path):
         assert summary['column_added'] is False
         assert 'project.product_link' in summary['project_columns_added']
         assert 'task.rebuilt_task_only' in summary['task_core_cols']
-        assert 'Auditoria' in summary['area_catalog_choices']
 
 
 def test_schema_compatibility_upgrades_legacy_caderno_layout(tmp_path):

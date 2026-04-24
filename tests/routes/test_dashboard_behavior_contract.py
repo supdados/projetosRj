@@ -118,7 +118,7 @@ def test_dashboard_admin_area_filter_restricts_projects_and_tasks(app, client_ad
 
     captured = _capture_dashboard_context(monkeypatch)
 
-    response = client_admin.get('/dashboard', query_string={'area': 'VPD'})
+    response = client_admin.get('/dashboard', query_string={'orgao': str(seed_data['vpd_orgao_id'])})
 
     assert response.status_code == 200
     context = captured['context']
@@ -142,7 +142,7 @@ def test_dashboard_redirects_when_non_admin_forces_foreign_area(client, seed_dat
     with client.session_transaction() as session:
         session['user_id'] = seed_data['deletable_user_id']
 
-    response = client.get('/dashboard', query_string={'area': 'SUBEDD'}, follow_redirects=False)
+    response = client.get('/dashboard', query_string={'orgao': str(seed_data['vpe_orgao_id'])}, follow_redirects=False)
 
     assert response.status_code == 302
     assert response.headers['Location'].endswith('/dashboard')

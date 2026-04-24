@@ -51,12 +51,9 @@ def test_edit_project_form_renders_full_html_contract_for_single_area_user(clien
 
 def test_delete_project_html_redirects_with_flash_and_removes_project(app, client_user):
     with app.app_context():
-        from models import OrgaoUnidade
-        auditoria = OrgaoUnidade.query.filter_by(sigla='Auditoria').first()
         project = Project(
             titulo='Projeto Para Excluir HTML',
             orgao_id=ensure_orgao('Auditoria').id,
-            orgao_id=auditoria.id if auditoria else None,
             orgao='Orgao Delete',
             prioridade='baixa',
             status='Vigente',

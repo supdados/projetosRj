@@ -1,7 +1,8 @@
 import datetime
 
 import routes.etapas.meetings as etapa_meetings
-from models import CalendarEvent, Etapa, Project, ProjectHistory, ProjectStageMeeting, User, UserArea, UserCalendarConnection, db
+from models import CalendarEvent, Etapa, Project, ProjectHistory, ProjectStageMeeting, User, UserCalendarConnection, db
+from tests._orgao_helpers import link_user_to_orgao
 
 
 AJAX_HEADERS = {
@@ -25,7 +26,7 @@ def _create_area_user(username, name, area):
     user.set_password('senha123')
     db.session.add(user)
     db.session.flush()
-    db.session.add(UserArea(user_id=user.id, area=area))
+    link_user_to_orgao(user.id, area)
     return user
 
 

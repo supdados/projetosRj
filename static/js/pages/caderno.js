@@ -906,7 +906,7 @@
             <span class="caderno-ref-card-type">Projeto</span>
             <a href="${safeHref(ref.url)}" class="caderno-ref-card-title-link" title="${escapeHtml(ref.titulo)}">${escapeHtml(ref.titulo)}</a>
             <div class="caderno-ref-card-meta">
-              ${ref.area ? `<span>${escapeHtml(ref.area)}</span>` : ''}
+              ${ref.orgao_sigla ? `<span>${escapeHtml(ref.orgao_sigla)}</span>` : ''}
               ${ref.status ? `<span class="caderno-ref-badge">${escapeHtml(ref.status)}</span>` : ''}
               ${ref.prioridade ? prioLabel(ref.prioridade) : ''}
             </div>

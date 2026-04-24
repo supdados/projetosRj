@@ -5,7 +5,13 @@ from models.orgao import ALLOWED_TIPOS, MAX_DEPTH, TIPO_RANK
 
 from .blueprint import main_bp
 from .decorators import admin_required, login_required
-from .orgao_tree import compute_orgao_depth, get_orgao_descendants, normalize_orgao_form, validate_orgao_move
+from .orgao_tree import (
+    compute_orgao_depth,
+    get_orgao_descendants,
+    is_valid_parent_tipo,
+    normalize_orgao_form,
+    validate_orgao_move,
+)
 from .shared import get_or_404
 
 
@@ -166,6 +172,16 @@ def edit_orgao(orgao_id):
             if move_error:
                 flash(move_error, 'danger')
                 return redirect(url_for('main.edit_orgao', orgao_id=orgao.id))
+
+        if data['tipo'] != orgao.tipo:
+            for filho in orgao.filhos:
+                if not is_valid_parent_tipo(data['tipo'], filho.tipo):
+                    flash(
+                        f'Tipo "{data["tipo"]}" inválido: o filho "{filho.sigla}" '
+                        f'é do tipo "{filho.tipo}".',
+                        'danger',
+                    )
+                    return redirect(url_for('main.edit_orgao', orgao_id=orgao.id))
 
         try:
             orgao.nome = data['nome']

@@ -143,8 +143,8 @@
             <div class="row g-2 mb-2">
                 <div class="col-md-3">
                     <div class="detail-item">
-                        <strong>Órgão Responsável <i class="fas fa-lock text-muted small" title="Definido via edição do projeto"></i></strong>
-                        <span class="project-area-value ds-cursor-default" data-field="orgao_sigla" data-value="{{ project.orgao_ref.sigla if project.orgao_ref else '' }}">
+                        <strong>Órgão Responsável</strong>
+                        <span class="project-area-value" data-field="orgao_id" data-value="{{ project.orgao_id if project.orgao_id else '' }}">
                             {% if project.orgao_ref %}
                             <div class="small"><i class="fas fa-sitemap me-1 text-primary"></i> {{ project.orgao_ref.sigla }}</div>
                             {% else %}

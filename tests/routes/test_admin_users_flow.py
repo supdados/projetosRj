@@ -33,7 +33,7 @@ def test_admin_can_create_user_with_multiple_areas_and_password_hash(app, client
         assert user.name == 'Novo Multi Area'
         assert user.orgao == 'Orgao Novo'
         assert user.is_admin is True
-        assert sorted(user.get_areas()) == ['Auditoria', 'VPE']
+        assert sorted(uo.orgao.sigla for uo in user.orgaos) == ['Auditoria', 'VPE']
         assert user.password_hash != 'senhaNova123'
         assert user.check_password('senhaNova123') is True
 
@@ -84,7 +84,7 @@ def test_admin_can_edit_user_areas_password_and_profile(app, client_admin, seed_
         assert user.name == 'Usuario Editado com Permissoes'
         assert user.orgao == 'Orgao Atualizado'
         assert user.is_admin is True
-        assert sorted(user.get_areas()) == ['Auditoria', 'VPE']
+        assert sorted(uo.orgao.sigla for uo in user.orgaos) == ['Auditoria', 'VPE']
         assert user.check_password('senhaAtualizada123') is True
 
 
