@@ -142,7 +142,7 @@ def test_global_search_api_prefers_prefix_matches_and_respects_area_scope(
 
     blocked_user_response = user_client.get(
         "/api/busca-global",
-        query_string={"q": "Busca Especial", "area": "VPD"},
+        query_string={"q": "Busca Especial", "orgao": seed_data["vpd_orgao_id"]},
     )
     assert blocked_user_response.status_code == 200
     blocked_payload = blocked_user_response.get_json()
@@ -152,7 +152,7 @@ def test_global_search_api_prefers_prefix_matches_and_respects_area_scope(
 
     admin_response = admin_client.get(
         "/api/busca-global",
-        query_string={"q": "Busca Especial", "area": "VPD"},
+        query_string={"q": "Busca Especial", "orgao": seed_data["vpd_orgao_id"]},
     )
     assert admin_response.status_code == 200
     admin_payload = admin_response.get_json()
@@ -377,10 +377,12 @@ def test_search_page_empty_state_without_query_and_without_results(client_user):
     )
 
 
-def test_search_page_redirects_when_non_admin_forces_foreign_area(client_user):
+def test_search_page_redirects_when_non_admin_forces_foreign_area(
+    client_user, seed_data
+):
     response = client_user.get(
         "/busca",
-        query_string={"q": "Auditoria", "area": "VPD"},
+        query_string={"q": "Auditoria", "orgao": seed_data["vpd_orgao_id"]},
         follow_redirects=False,
     )
 

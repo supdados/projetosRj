@@ -69,9 +69,20 @@ def test_api_templates_and_template_stages_return_sorted_shape(
     templates_response = client_user.get("/api/templates")
     assert templates_response.status_code == 200
     templates_payload = templates_response.get_json()
-    assert templates_payload[0]["name"] == "AAA Template"
+    assert templates_payload[0] == {
+        "id": template_id,
+        "name": "AAA Template",
+        "stage_count": 2,
+        "total_duration_days": 7,
+    }
     assert any(
-        item == {"id": seed_data["template_id"], "name": "Template Base"}
+        item
+        == {
+            "id": seed_data["template_id"],
+            "name": "Template Base",
+            "stage_count": 2,
+            "total_duration_days": 5,
+        }
         for item in templates_payload
     )
 

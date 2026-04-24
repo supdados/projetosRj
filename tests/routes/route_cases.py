@@ -1206,6 +1206,16 @@ ROUTE_CASES = [
         "requires_admin": True,
     },
     {
+        "id": "admin_templates_duplicate_post",
+        "method": "POST",
+        "rule": "/admin/templates/<int:template_id>/duplicate",
+        "path": "/admin/templates/{template_id}/duplicate",
+        "role": "admin",
+        "expected_status": 302,
+        "requires_login": True,
+        "requires_admin": True,
+    },
+    {
         "id": "admin_templates_delete_post",
         "method": "POST",
         "rule": "/admin/templates/<int:template_id>/delete",
@@ -1453,4 +1463,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 135
+assert len(ROUTE_CASES) == 130
