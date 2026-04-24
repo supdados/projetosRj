@@ -341,62 +341,179 @@
             });
         }
 
-        function loadTemplateStages() {
-            const templateId = templateSelect.value;
-            stagesContainer.innerHTML = '';
-            
-            if (!templateId) {
+        // --- Import de modelo de etapas (preview read-only) ---------------
+        const templateImportPreview = document.getElementById('tpl-import-preview');
+        const templateImportEmpty = document.getElementById('tpl-import-empty');
+        const templateImportList = document.getElementById('tpl-import-preview-list');
+        const templateImportStageCount = document.getElementById('tpl-import-stage-count');
+        const templateImportTotalDuration = document.getElementById('tpl-import-total-duration');
+        const templateImportFooter = document.getElementById('tpl-import-preview-footer');
+        const templateImportFooterStart = document.getElementById('tpl-import-preview-start');
+        const templateImportFooterEnd = document.getElementById('tpl-import-preview-end');
+        const templateImportHiddenId = document.getElementById('project_template_id');
+        let templateImportCurrentStages = [];
+
+        function parseIsoDate(iso) {
+            if (!iso || typeof iso !== 'string') return null;
+            const parts = iso.split('-').map(Number);
+            if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+            return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+        }
+
+        function addDaysUtc(date, days) {
+            const copy = new Date(date.getTime());
+            copy.setUTCDate(copy.getUTCDate() + days);
+            return copy;
+        }
+
+        function formatIsoDate(date) {
+            if (!date) return '';
+            const y = date.getUTCFullYear();
+            const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const d = String(date.getUTCDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function formatBrDate(date) {
+            if (!date) return '';
+            const d = String(date.getUTCDate()).padStart(2, '0');
+            const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const y = date.getUTCFullYear();
+            return `${d}/${m}/${y}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function clearTemplateImportPreview() {
+            templateImportCurrentStages = [];
+            if (templateImportHiddenId) templateImportHiddenId.value = '';
+            if (templateImportList) templateImportList.innerHTML = '';
+            if (stagesContainer) stagesContainer.innerHTML = '';
+            if (templateImportPreview) templateImportPreview.hidden = true;
+            if (templateImportFooter) templateImportFooter.hidden = true;
+            if (templateImportEmpty) templateImportEmpty.hidden = false;
+        }
+
+        function renderTemplateImportPreview() {
+            if (!templateImportList) return;
+            const stages = templateImportCurrentStages;
+            templateImportList.innerHTML = '';
+            if (stagesContainer) stagesContainer.innerHTML = '';
+
+            if (!stages.length) {
+                clearTemplateImportPreview();
                 return;
             }
-            
-            // Adiciona loading state
-            stagesContainer.innerHTML = `
-                <div class="stages-loading">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <span>Carregando etapas do modelo...</span>
-                </div>
-            `;
-            
+
+            const startInput = document.getElementById('project_start_date');
+            const startDate = startInput ? parseIsoDate(startInput.value) : null;
+            let cursor = startDate ? new Date(startDate.getTime()) : null;
+            let totalDuration = 0;
+            let lastEnd = null;
+
+            stages.forEach((etapa, index) => {
+                const duration = Math.max(1, parseInt(etapa.duration, 10) || 1);
+                totalDuration += duration;
+
+                let rangeText = `${duration}d`;
+                if (cursor) {
+                    const stageStart = new Date(cursor.getTime());
+                    const stageEnd = addDaysUtc(stageStart, duration - 1);
+                    rangeText = `${formatBrDate(stageStart)} → ${formatBrDate(stageEnd)} · ${duration}d`;
+                    cursor = addDaysUtc(stageEnd, 1);
+                    lastEnd = stageEnd;
+                }
+
+                const card = document.createElement('div');
+                card.className = 'tpl-import-stage';
+                card.innerHTML = `
+                    <span class="tpl-import-stage-number">${index + 1}</span>
+                    <div class="tpl-import-stage-body">
+                        <div class="tpl-import-stage-name">${escapeHtml(etapa.name)}</div>
+                        <div class="tpl-import-stage-range">${escapeHtml(rangeText)}</div>
+                    </div>
+                `;
+                templateImportList.appendChild(card);
+
+                if (stagesContainer) {
+                    const hiddenName = document.createElement('input');
+                    hiddenName.type = 'hidden';
+                    hiddenName.name = 'etapa_descricao';
+                    hiddenName.value = etapa.name || '';
+                    stagesContainer.appendChild(hiddenName);
+
+                    const hiddenDuration = document.createElement('input');
+                    hiddenDuration.type = 'hidden';
+                    hiddenDuration.name = 'etapa_duration';
+                    hiddenDuration.value = String(duration);
+                    stagesContainer.appendChild(hiddenDuration);
+                }
+            });
+
+            if (templateImportStageCount) templateImportStageCount.textContent = String(stages.length);
+            if (templateImportTotalDuration) templateImportTotalDuration.textContent = String(totalDuration);
+            if (templateImportPreview) templateImportPreview.hidden = false;
+            if (templateImportEmpty) templateImportEmpty.hidden = true;
+
+            if (templateImportFooter) {
+                if (startDate && lastEnd) {
+                    if (templateImportFooterStart) templateImportFooterStart.textContent = formatBrDate(startDate);
+                    if (templateImportFooterEnd) templateImportFooterEnd.textContent = formatBrDate(lastEnd);
+                    templateImportFooter.hidden = false;
+                } else {
+                    templateImportFooter.hidden = true;
+                }
+            }
+        }
+
+        function loadTemplateStages() {
+            const templateId = templateSelect ? templateSelect.value : '';
+            if (templateImportHiddenId) templateImportHiddenId.value = templateId || '';
+
+            if (!templateId) {
+                clearTemplateImportPreview();
+                return;
+            }
+
+            if (templateImportEmpty) templateImportEmpty.hidden = true;
+            if (templateImportPreview) {
+                templateImportPreview.hidden = false;
+                if (templateImportList) {
+                    templateImportList.innerHTML = '<div class="tpl-import-loading"><i class="fas fa-spinner fa-spin"></i><span>Carregando etapas…</span></div>';
+                }
+            }
+
             fetch(`/api/templates/${templateId}`)
                 .then(response => response.json())
                 .then(data => {
-                    stagesContainer.innerHTML = '';
-                    
-                    if(data && data.length > 0){
-                        data.forEach((etapa, index) => {
-                            const stageDiv = document.createElement('div');
-                            stageDiv.className = 'glass-stage-item';
-                            stageDiv.innerHTML = `
-                                <div class="stage-number">${index + 1}</div>
-                                <div class="stage-content">
-                                    <label class="form-label-glass">
-                                        <i class="fas fa-tasks label-icon"></i>
-                                        Etapa ${index + 1} <span class="template-stage-duration-hint">(${etapa.duration || 1} dias)</span>
-                                    </label>
-                                    <input type="text" class="form-control-glass" 
-                                           name="etapa_descricao" value="${etapa.name}" 
-                                           placeholder="Descrição da etapa">
-                                    <input type="hidden" name="etapa_duration" value="${etapa.duration || 1}">
-                                </div>
-                            `;
-                            stagesContainer.appendChild(stageDiv);
-                            
-                            // Animação escalonada
-                            setTimeout(() => {
-                                stageDiv.classList.add('animate-in');
-                            }, index * 150);
-                        });
-                    }
+                    templateImportCurrentStages = Array.isArray(data) ? data.slice() : [];
+                    templateImportCurrentStages.sort((a, b) => (a.order || 0) - (b.order || 0));
+                    renderTemplateImportPreview();
                 })
                 .catch(error => {
                     console.error('Erro ao carregar etapas do template:', error);
-                    stagesContainer.innerHTML = `
-                        <div class="stages-error">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <span>Erro ao carregar etapas do modelo</span>
-                        </div>
-                    `;
+                    if (templateImportList) {
+                        templateImportList.innerHTML = '<div class="tpl-import-error"><i class="fas fa-exclamation-triangle"></i><span>Erro ao carregar etapas do modelo.</span></div>';
+                    }
+                    templateImportCurrentStages = [];
+                    if (stagesContainer) stagesContainer.innerHTML = '';
                 });
+        }
+
+        const templateStartInputEl = document.getElementById('project_start_date');
+        if (templateStartInputEl) {
+            templateStartInputEl.addEventListener('change', function () {
+                if (templateImportCurrentStages.length) {
+                    renderTemplateImportPreview();
+                }
+            });
         }
 
         // Função para mostrar notificações
@@ -721,6 +838,9 @@
                 }
                 if (templateSelect) {
                     templateSelect.innerHTML = '<option value="">Não importar / Limpar etapas</option>';
+                }
+                if (typeof clearTemplateImportPreview === 'function') {
+                    clearTemplateImportPreview();
                 }
 
                 templatesLoaded = false;

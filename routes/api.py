@@ -4,7 +4,8 @@ from urllib.request import Request, urlopen
 
 from flask import current_app, g, jsonify, request
 
-from models import Project, StageTemplate
+from models import Project, StageTemplate, StageTemplateItem
+from sqlalchemy import func
 from catalogs.objectives import (
     OBJETIVO_IDS,
     RESULTADO_IDS,
@@ -37,8 +38,30 @@ def get_indicadores(resultado_id):
 @main_bp.route('/api/templates')
 @login_required
 def get_templates():
+    from models import db
+
+    stats_rows = (
+        db.session.query(
+            StageTemplateItem.templateId,
+            func.count(StageTemplateItem.id),
+            func.coalesce(func.sum(StageTemplateItem.duration_days), 0),
+        )
+        .group_by(StageTemplateItem.templateId)
+        .all()
+    )
+    stats_by_template = {tid: (count, int(total)) for tid, count, total in stats_rows}
+
     templates = StageTemplate.query.order_by(StageTemplate.name).all()
-    return jsonify([{'id': t.id, 'name': t.name} for t in templates])
+    payload = []
+    for t in templates:
+        count, total = stats_by_template.get(t.id, (0, 0))
+        payload.append({
+            'id': t.id,
+            'name': t.name,
+            'stage_count': count,
+            'total_duration_days': total,
+        })
+    return jsonify(payload)
 
 @main_bp.route('/api/templates/<int:template_id>')
 @login_required

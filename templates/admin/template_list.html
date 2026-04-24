@@ -6,135 +6,280 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/template-list.css') }}">
 {% endblock %}
 
-{% block content %}
-<div class="app-page-shell app-page-shell--raised templates-page">
-            <!-- Header Clean -->
-            <div class="templates-header-clean">
-                <div class="header-info">
-                    <h4 class="header-title-clean ds-type-page-title">
-                        <i class="fas fa-layer-group"></i>
-                        Modelos de Etapas
-                    </h4>
-                    <span class="header-count">{{ templates|length }} modelo{{ 's' if templates|length != 1 else '' }}</span>
-                </div>
-                <a href="{{ url_for('main.create_template') }}" class="btn-new-clean">
-                    <i class="fas fa-plus"></i>
-                    Novo Modelo
-                </a>
-            </div>
+{% set order_labels = {
+    'mais_usados': 'mais usados',
+    'nome': 'nome (A-Z)',
+    'mais_etapas': 'mais etapas',
+    'maior_duracao': 'maior duração',
+    'edicao_recente': 'edição recente',
+} %}
 
-            <!-- Templates List Clean -->
-            <div class="templates-list-clean">
-                {% for template in templates %}
-                <div
-                    class="template-item-clean template-item-clickable"
-                    data-template-url="{{ url_for('main.edit_template', template_id=template.id) }}"
+{% block content %}
+<div class="app-page-shell templates-page-v2">
+
+    <nav class="tpl-breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ url_for('main.dashboard') }}">Início</a>
+        <span class="tpl-breadcrumb-sep" aria-hidden="true">/</span>
+        <span class="tpl-breadcrumb-current">Modelos de Etapas</span>
+    </nav>
+
+    <header class="tpl-hero">
+        <div class="tpl-hero-icon" aria-hidden="true">
+            <i class="fas fa-layer-group"></i>
+        </div>
+        <div class="tpl-hero-body">
+            <div class="tpl-hero-title-row">
+                <h1 class="tpl-hero-title ds-type-page-title">Modelos de Etapas</h1>
+                <span class="tpl-hero-count">{{ total_all }} modelo{{ 's' if total_all != 1 else '' }}</span>
+            </div>
+            <p class="tpl-hero-subtitle ds-type-body-sm">
+                Padronize os ciclos dos projetos — use, duplique ou edite conforme a necessidade da secretaria.
+            </p>
+        </div>
+        <a href="{{ url_for('main.create_template') }}" class="tpl-new-btn">
+            <i class="fas fa-plus"></i>
+            <span>Novo modelo</span>
+        </a>
+    </header>
+
+    <form method="GET" action="{{ url_for('main.list_templates') }}" class="tpl-toolbar" id="tplToolbar">
+        <div class="tpl-search-wrap">
+            <i class="fas fa-search tpl-search-icon" aria-hidden="true"></i>
+            <input
+                type="search"
+                name="q"
+                value="{{ q }}"
+                placeholder="Buscar modelo por nome ou descrição..."
+                class="tpl-search-input"
+                id="tplSearchInput"
+                autocomplete="off">
+        </div>
+        <label class="tpl-order-wrap">
+            <i class="fas fa-sliders-h tpl-order-icon" aria-hidden="true"></i>
+            <span class="tpl-order-label">Ordenar por:</span>
+            <select name="order" id="tplOrderSelect" class="tpl-order-select">
+                {% for opt in order_options %}
+                <option value="{{ opt }}" {% if opt == order %}selected{% endif %}>{{ order_labels[opt] }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <noscript><button type="submit" class="tpl-submit-fallback">Aplicar</button></noscript>
+    </form>
+
+    {% if rows %}
+    <div class="tpl-table-wrap">
+        <table class="tpl-table" role="table">
+            <thead>
+                <tr>
+                    <th scope="col" class="tpl-col-modelo">Modelo</th>
+                    <th scope="col" class="tpl-col-num">Etapas</th>
+                    <th scope="col" class="tpl-col-num">Duração</th>
+                    <th scope="col" class="tpl-col-sil">Silhueta</th>
+                    <th scope="col" class="tpl-col-num">Usado em</th>
+                    <th scope="col" class="tpl-col-edit">Última edição</th>
+                    <th scope="col" class="tpl-col-actions"><span class="visually-hidden">Ações</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr class="tpl-row"
+                    data-template-url="{{ url_for('main.edit_template', template_id=row.id) }}"
                     tabindex="0"
                     role="link"
-                    aria-label="Editar modelo {{ template.name }}"
-                >
-                    <div class="template-icon-clean">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                    
-                    <div class="template-content-clean">
-                        <div class="template-main-info">
-                            <h5 class="template-name-clean">{{ template.name }}</h5>
-                            <span class="template-stages-count">
-                                <i class="fas fa-list-ol"></i>
-                                {{ template.items|length }} etapa{{ 's' if template.items|length != 1 else '' }}
-                            </span>
+                    aria-label="Editar modelo {{ row.name }}">
+                    <td class="tpl-cell-modelo">
+                        <span class="tpl-avatar" aria-hidden="true">{{ row.initials }}</span>
+                        <div class="tpl-modelo-text">
+                            <div class="tpl-modelo-name-row">
+                                <span class="tpl-modelo-name">{{ row.name }}</span>
+                                {% if row.is_new %}<span class="tpl-badge-new">novo</span>{% endif %}
+                            </div>
+                            {% if row.description %}
+                            <p class="tpl-modelo-desc">{{ row.description }}</p>
+                            {% endif %}
                         </div>
-                        
-                        {% if template.description %}
-                        <p class="template-desc-clean">{{ template.description }}</p>
+                    </td>
+                    <td class="tpl-cell-num">{{ row.stage_count }}</td>
+                    <td class="tpl-cell-num">
+                        <span class="tpl-duration-val">{{ row.total_duration }}</span><span class="tpl-duration-unit">d</span>
+                    </td>
+                    <td class="tpl-cell-sil">
+                        {% if row.silhouette %}
+                        <svg class="tpl-silhouette" viewBox="0 0 {{ (row.silhouette|length * 6) - 2 }} 28" role="img" aria-label="Distribuição de duração das etapas">
+                            {% for height, dur in row.silhouette %}
+                            <rect x="{{ loop.index0 * 6 }}" y="{{ 28 - height }}" width="4" height="{{ height }}" rx="1.2" ry="1.2">
+                                <title>{{ dur }} dia{{ 's' if dur != 1 else '' }}</title>
+                            </rect>
+                            {% endfor %}
+                        </svg>
+                        {% else %}
+                        <span class="tpl-silhouette-empty">—</span>
                         {% endif %}
-                    </div>
-                    
-                    <div class="template-actions-clean" data-stop-row-click="1">
-                        <button type="button" class="btn-action-clean btn-delete-clean" 
-                                data-bs-toggle="modal" data-bs-target="#deleteModal-{{ template.id }}"
-                                title="Excluir">
-                            <i class="fas fa-trash-alt"></i>
+                    </td>
+                    <td class="tpl-cell-num">
+                        <span class="tpl-usage-val">{{ row.usage_count }}</span>
+                        <span class="tpl-usage-unit">projeto{{ 's' if row.usage_count != 1 else '' }}</span>
+                    </td>
+                    <td class="tpl-cell-edit">
+                        {% if row.updated_relative %}
+                        <span class="tpl-edit-when">{{ row.updated_relative }}</span>
+                        {% if row.editor_name %}
+                        <span class="tpl-edit-who">por {{ row.editor_name }}</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="tpl-edit-empty">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="tpl-cell-actions" data-stop-row-click="1">
+                        <form method="POST" action="{{ url_for('main.duplicate_template', template_id=row.id) }}" class="inline-form">
+                            <button type="submit" class="tpl-action-btn tpl-action-duplicate" title="Duplicar modelo" aria-label="Duplicar modelo">
+                                <i class="far fa-copy"></i>
+                            </button>
+                        </form>
+                        <button type="button" class="tpl-action-btn tpl-action-delete"
+                                data-bs-toggle="modal" data-bs-target="#deleteModal-{{ row.id }}"
+                                title="Excluir modelo" aria-label="Excluir modelo">
+                            <i class="far fa-trash-alt"></i>
                         </button>
-                    </div>
-                </div>
-
-                <!-- Modal de Exclusão Clean -->
-                <div class="modal fade" id="deleteModal-{{ template.id }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content modal-clean">
-                            <div class="modal-header-clean">
-                                <div class="modal-icon-clean">
-                                    <i class="fas fa-exclamation-circle"></i>
-                                </div>
-                                <div>
-                                    <h5 class="modal-title-clean ds-type-section-title">Excluir Modelo</h5>
-                                    <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
-                                </div>
-                                <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="modal-body-clean">
-                                <p>Confirma a exclusão do modelo <strong>{{ template.name }}</strong>?</p>
-                            </div>
-                            <div class="modal-footer-clean">
-                                <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
-                                    Cancelar
-                                </button>
-                                <form action="{{ url_for('main.delete_template', template_id=template.id) }}" 
-                                      method="POST" class="inline-form">
-                                    <button type="submit" class="btn-modal-clean btn-confirm-delete">
-                                        Excluir
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <!-- Empty State Clean -->
-                <div class="empty-state-clean">
-                    <i class="fas fa-clipboard-list"></i>
-                    <h5>Nenhum modelo cadastrado</h5>
-                    <p>Crie seu primeiro modelo de etapas</p>
-                    <a href="{{ url_for('main.create_template') }}" class="btn-new-clean">
-                        <i class="fas fa-plus"></i>
-                        Criar Primeiro Modelo
-                    </a>
-                </div>
+                    </td>
+                </tr>
                 {% endfor %}
-            </div>
-</div>
+            </tbody>
+        </table>
+    </div>
 
+    <footer class="tpl-footer">
+        <span class="tpl-footer-count">
+            Mostrando <strong>{{ rows|length }}</strong> de <strong>{{ total }}</strong> modelo{{ 's' if total != 1 else '' }}
+        </span>
+        {% if total_pages > 1 %}
+        <nav class="tpl-pagination" aria-label="Paginação">
+            {% set prev_page = page - 1 %}
+            {% set next_page = page + 1 %}
+            <a class="tpl-page-btn {% if page <= 1 %}is-disabled{% endif %}"
+               href="{% if page > 1 %}{{ url_for('main.list_templates', q=q, order=order, page=prev_page) }}{% else %}#{% endif %}"
+               aria-label="Página anterior"
+               {% if page <= 1 %}aria-disabled="true" tabindex="-1"{% endif %}>
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% for p in range(1, total_pages + 1) %}
+            <a class="tpl-page-num {% if p == page %}is-current{% endif %}"
+               href="{{ url_for('main.list_templates', q=q, order=order, page=p) }}"
+               {% if p == page %}aria-current="page"{% endif %}>{{ p }}</a>
+            {% endfor %}
+            <a class="tpl-page-btn {% if page >= total_pages %}is-disabled{% endif %}"
+               href="{% if page < total_pages %}{{ url_for('main.list_templates', q=q, order=order, page=next_page) }}{% else %}#{% endif %}"
+               aria-label="Próxima página"
+               {% if page >= total_pages %}aria-disabled="true" tabindex="-1"{% endif %}>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </nav>
+        {% endif %}
+    </footer>
+
+    {% for row in rows %}
+    <div class="modal fade" id="deleteModal-{{ row.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-clean">
+                <div class="modal-header-clean">
+                    <div class="modal-icon-clean">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title-clean ds-type-section-title">Excluir modelo</h5>
+                        <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
+                    </div>
+                    <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body-clean">
+                    <p>Confirma a exclusão do modelo <strong>{{ row.name }}</strong>?</p>
+                </div>
+                <div class="modal-footer-clean">
+                    <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <form action="{{ url_for('main.delete_template', template_id=row.id) }}" method="POST" class="inline-form">
+                        <button type="submit" class="btn-modal-clean btn-confirm-delete">Excluir</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="tpl-empty">
+        {% if q %}
+        <i class="fas fa-search"></i>
+        <h5>Nenhum modelo encontrado para "{{ q }}"</h5>
+        <p>Tente outra busca ou <a href="{{ url_for('main.list_templates') }}">veja todos os modelos</a>.</p>
+        {% else %}
+        <i class="fas fa-clipboard-list"></i>
+        <h5>Nenhum modelo cadastrado</h5>
+        <p>Crie seu primeiro modelo de etapas.</p>
+        <a href="{{ url_for('main.create_template') }}" class="tpl-new-btn">
+            <i class="fas fa-plus"></i>
+            <span>Criar primeiro modelo</span>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script nonce="{{ csp_nonce }}">
 (function () {
-    function navigateToTemplate(card) {
-        var url = card.getAttribute('data-template-url');
+    function navigateToTemplate(row) {
+        var url = row.getAttribute('data-template-url');
         if (url) {
             window.location.href = url;
         }
     }
 
-    var cards = document.querySelectorAll('.template-item-clickable[data-template-url]');
-    cards.forEach(function (card) {
-        card.addEventListener('click', function (event) {
+    document.querySelectorAll('.tpl-row[data-template-url]').forEach(function (row) {
+        row.addEventListener('click', function (event) {
             if (event.target.closest('[data-stop-row-click="1"]')) return;
-            navigateToTemplate(card);
+            if (event.target.closest('button, a, input, select, textarea, [role="button"]')) return;
+            navigateToTemplate(row);
         });
-
-        card.addEventListener('keydown', function (event) {
+        row.addEventListener('keydown', function (event) {
             if (event.key !== 'Enter' && event.key !== ' ') return;
             if (event.target.closest('[data-stop-row-click="1"]')) return;
             event.preventDefault();
-            navigateToTemplate(card);
+            navigateToTemplate(row);
         });
     });
+
+    var form = document.getElementById('tplToolbar');
+    var searchInput = document.getElementById('tplSearchInput');
+    var orderSelect = document.getElementById('tplOrderSelect');
+    if (!form) return;
+
+    if (orderSelect) {
+        orderSelect.addEventListener('change', function () {
+            form.submit();
+        });
+    }
+
+    if (searchInput) {
+        var searchTimer = null;
+        searchInput.addEventListener('input', function () {
+            if (searchTimer) clearTimeout(searchTimer);
+            searchTimer = setTimeout(function () { form.submit(); }, 350);
+        });
+        searchInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (searchTimer) clearTimeout(searchTimer);
+                form.submit();
+            }
+        });
+    }
 })();
 </script>
 {% endblock %}

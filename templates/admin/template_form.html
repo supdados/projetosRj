@@ -7,148 +7,138 @@
 {% endblock %}
 
 {% block content %}
-<div class="app-page-shell app-page-shell--raised template-form-page">
-    <header class="template-form-header">
-        <div class="template-form-header-main">
-            <h1 class="template-form-title ds-type-page-title">{% if template %}Editar Modelo de Etapas{% else %}Criar Modelo de Etapas{% endif %}</h1>
-            <p class="template-form-subtitle ds-type-body-sm">Defina nome, descrição e a sequência de etapas deste modelo.</p>
-        </div>
-        <a href="{{ url_for('main.list_templates') }}" class="template-form-header-back">
-            <i class="fas fa-arrow-left" aria-hidden="true"></i>
-            <span>Voltar</span>
-        </a>
-    </header>
+{% set is_edit = template is not none %}
+<div class="app-page-shell app-page-shell--raised tpl-form-page">
+    <nav class="tpl-form-breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ url_for('main.dashboard') }}">Início</a>
+        <span class="tpl-form-breadcrumb-sep" aria-hidden="true">/</span>
+        <a href="{{ url_for('main.list_templates') }}">Modelos de Etapas</a>
+        <span class="tpl-form-breadcrumb-sep" aria-hidden="true">/</span>
+        <span class="tpl-form-breadcrumb-current">{% if is_edit %}Editar{% else %}Novo modelo{% endif %}</span>
+    </nav>
 
-    <form method="POST" action="" id="templateForm" class="template-form-main">
-        <section class="template-form-card">
-            <div class="template-form-card-head">
-                <h2 class="template-form-card-title ds-type-section-title">
-                    <i class="fas fa-info-circle" aria-hidden="true"></i>
-                    Informações do Modelo
-                </h2>
+    <form method="POST" action="" id="templateForm" class="tpl-form" novalidate>
+        <header class="tpl-form-header">
+            <div class="tpl-form-header-text">
+                <h1 class="tpl-form-title">{% if is_edit %}Editar modelo{% else %}Novo modelo{% endif %}</h1>
+                <p class="tpl-form-subtitle">Defina nome, descrição e a sequência de etapas deste modelo.</p>
             </div>
-            <div class="template-form-card-body">
-                <div class="template-form-field">
-                    <label class="template-form-label" for="template_name">
-                        Nome do Modelo <span class="required-star">*</span>
-                    </label>
-                    <input
-                        id="template_name"
-                        type="text"
-                        name="name"
-                        class="form-control-glass form-control-glass-full"
-                        value="{{ template.name if template else '' }}"
-                        placeholder="Digite o nome do modelo"
-                        required>
-                </div>
-
-                <div class="template-form-field">
-                    <label class="template-form-label" for="template_description">Descrição (Opcional)</label>
-                    <textarea
-                        id="template_description"
-                        name="description"
-                        class="form-control-glass textarea-glass textarea-glass-full"
-                        rows="3"
-                        placeholder="Descreva o propósito deste modelo...">{{ template.description if template else '' }}</textarea>
-                </div>
-            </div>
-        </section>
-
-        <section class="template-form-card">
-            <div class="template-form-card-head template-form-card-head-stages">
-                <h2 class="template-form-card-title ds-type-section-title">
-                    <i class="fas fa-list-ol" aria-hidden="true"></i>
-                    Etapas do Modelo
-                </h2>
-                <button type="button" id="add-stage-item" class="template-add-stage-btn">
-                    <i class="fas fa-plus" aria-hidden="true"></i>
-                    <span>Adicionar Etapa</span>
+            <div class="tpl-form-header-actions">
+                <a href="{{ url_for('main.list_templates') }}" class="tpl-btn tpl-btn-secondary">Cancelar</a>
+                <button type="submit" class="tpl-btn tpl-btn-primary">
+                    {% if is_edit %}Salvar alterações{% else %}Criar modelo{% endif %}
                 </button>
             </div>
-            <div class="template-form-card-body">
-                <div id="stage-items-container" class="stages-container-template">
-                    {% if template and template.items %}
-                        {% for item in template.items %}
-                        <div class="glass-stage-item-template animate-in">
-                            <div class="stage-drag-handle" aria-hidden="true">
-                                <i class="fas fa-grip-vertical"></i>
-                            </div>
-                            <div class="stage-number">{{ loop.index }}</div>
-                            <div class="stage-content-template">
-                                <div class="form-group-glass">
-                                    <label class="template-stage-label" for="stage_name_{{ loop.index }}">Nome da etapa</label>
-                                    <input
-                                        id="stage_name_{{ loop.index }}"
-                                        type="text"
-                                        name="stage_name"
-                                        class="form-control-glass"
-                                        placeholder="Ex.: Planejamento"
-                                        value="{{ item.name }}"
-                                        required>
-                                </div>
-                                <div class="form-group-glass stage-duration-offset">
-                                    <label class="template-stage-label" for="stage_duration_{{ loop.index }}">Duração (dias)</label>
-                                    <div class="stage-duration-wrap">
-                                        <input
-                                            id="stage_duration_{{ loop.index }}"
-                                            type="number"
-                                            name="stage_duration"
-                                            class="form-control-glass form-control-duration"
-                                            placeholder="Dias"
-                                            value="{{ item.duration_days }}"
-                                            min="1"
-                                            required>
-                                        <span class="duration-label">dias</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-glass-remove" data-action="removeStageItem" aria-label="Remover etapa">
-                                <i class="fas fa-trash" aria-hidden="true"></i>
-                            </button>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="stages-empty-state">
-                            <i class="fas fa-list-ul" aria-hidden="true"></i>
-                            <p>Nenhuma etapa adicionada ainda</p>
-                            <span>Clique em "Adicionar Etapa" para começar.</span>
-                        </div>
-                    {% endif %}
-                </div>
+        </header>
+
+        <section class="tpl-form-card">
+            <div class="tpl-form-identity">
+                <label class="tpl-form-label" for="template_name">Nome do modelo</label>
+                <input
+                    id="template_name"
+                    type="text"
+                    name="name"
+                    class="tpl-form-name-input"
+                    value="{{ template.name if template else '' }}"
+                    placeholder="Ex.: Aquisição simples"
+                    required>
+
+                <label class="tpl-form-label tpl-form-label-spaced" for="template_description">Descrição (opcional)</label>
+                <textarea
+                    id="template_description"
+                    name="description"
+                    class="tpl-form-description-input"
+                    rows="2"
+                    placeholder="Para que serve este modelo? Ex.: Fluxo padrão de compras diretas com dispensa de licitação.">{{ template.description if template else '' }}</textarea>
             </div>
+
+            <div class="tpl-form-stages-bar">
+                <div class="tpl-form-stages-bar-main">
+                    <span class="tpl-form-stages-title">ETAPAS</span>
+                    <span class="tpl-form-stages-counter" data-stage-counter>
+                        <span data-stage-count>0</span> etapas
+                        <span class="tpl-form-stages-counter-sep">·</span>
+                        <span data-stage-duration>0</span> dias no total
+                    </span>
+                </div>
+                <button type="button" class="tpl-form-clear-all" data-clear-all>
+                    <i class="fas fa-broom" aria-hidden="true"></i>
+                    <span>Limpar tudo</span>
+                </button>
+            </div>
+
+            <div class="tpl-form-stages-list" id="stage-items-container" data-stage-list>
+                {% if template and template.items %}
+                    {% for item in template.items %}
+                    <div class="tpl-stage-item" data-stage-item draggable="false">
+                        <button type="button" class="tpl-stage-drag" data-drag-handle draggable="true" aria-label="Arraste para reordenar" title="Arraste para reordenar">
+                            <i class="fas fa-grip-vertical" aria-hidden="true"></i>
+                        </button>
+                        <span class="tpl-stage-number" data-stage-number>{{ loop.index }}</span>
+                        <div class="tpl-stage-fields">
+                            <input
+                                type="text"
+                                name="stage_name"
+                                class="tpl-stage-name-input"
+                                placeholder="Nome da etapa"
+                                value="{{ item.name }}"
+                                required>
+                            <div class="tpl-stage-duration">
+                                <input
+                                    type="number"
+                                    name="stage_duration"
+                                    class="tpl-stage-duration-input"
+                                    value="{{ item.duration_days }}"
+                                    min="1"
+                                    inputmode="numeric"
+                                    required>
+                                <span class="tpl-stage-duration-suffix">dias</span>
+                            </div>
+                        </div>
+                        <button type="button" class="tpl-stage-remove" data-remove-stage aria-label="Remover etapa">
+                            <i class="fas fa-trash" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <button type="button" class="tpl-form-add-stage" data-add-stage>
+                <i class="fas fa-plus" aria-hidden="true"></i>
+                <span>Adicionar etapa</span>
+                <span class="tpl-form-add-stage-hint">— ou pressione Enter na última linha</span>
+            </button>
         </section>
 
-        <div class="template-form-actions">
-            <a href="{{ url_for('main.list_templates') }}" class="btn-template-action btn-template-secondary">
-                Cancelar
-            </a>
-            <button type="submit" class="btn-template-action btn-template-primary">
-                {% if template %}Atualizar Modelo{% else %}Salvar Modelo{% endif %}
-            </button>
-        </div>
+        <footer class="tpl-form-footer">
+            <p class="tpl-form-footer-tip">
+                <i class="fas fa-grip-vertical" aria-hidden="true"></i>
+                Arraste pelo <span class="tpl-form-footer-tip-icon">::</span> para reordenar as etapas.
+            </p>
+            <div class="tpl-form-footer-actions">
+                <a href="{{ url_for('main.list_templates') }}" class="tpl-btn tpl-btn-secondary">Cancelar</a>
+                <button type="submit" class="tpl-btn tpl-btn-primary">
+                    {% if is_edit %}Salvar alterações{% else %}Criar modelo{% endif %}
+                </button>
+            </div>
+        </footer>
     </form>
 </div>
 
 <template id="stage-item-template">
-    <div class="glass-stage-item-template">
-        <div class="stage-drag-handle" aria-hidden="true">
-            <i class="fas fa-grip-vertical"></i>
-        </div>
-        <div class="stage-number">1</div>
-        <div class="stage-content-template">
-            <div class="form-group-glass">
-                <label class="template-stage-label">Nome da etapa</label>
-                <input type="text" name="stage_name" class="form-control-glass" placeholder="Ex.: Planejamento" required>
-            </div>
-            <div class="form-group-glass stage-duration-offset">
-                <label class="template-stage-label">Duração (dias)</label>
-                <div class="stage-duration-wrap">
-                    <input type="number" name="stage_duration" class="form-control-glass form-control-duration" placeholder="Dias" value="1" min="1" required>
-                    <span class="duration-label">dias</span>
-                </div>
+    <div class="tpl-stage-item" data-stage-item draggable="false">
+        <button type="button" class="tpl-stage-drag" data-drag-handle draggable="true" aria-label="Arraste para reordenar" title="Arraste para reordenar">
+            <i class="fas fa-grip-vertical" aria-hidden="true"></i>
+        </button>
+        <span class="tpl-stage-number" data-stage-number>1</span>
+        <div class="tpl-stage-fields">
+            <input type="text" name="stage_name" class="tpl-stage-name-input" placeholder="Nome da etapa" required>
+            <div class="tpl-stage-duration">
+                <input type="number" name="stage_duration" class="tpl-stage-duration-input" value="1" min="1" inputmode="numeric" required>
+                <span class="tpl-stage-duration-suffix">dias</span>
             </div>
         </div>
-        <button type="button" class="btn-glass-remove" data-action="removeStageItem" aria-label="Remover etapa">
+        <button type="button" class="tpl-stage-remove" data-remove-stage aria-label="Remover etapa">
             <i class="fas fa-trash" aria-hidden="true"></i>
         </button>
     </div>
@@ -157,73 +147,5 @@
 
 {% block scripts %}
 {{ super() }}
-<script nonce="{{ csp_nonce }}">
-document.addEventListener('DOMContentLoaded', function () {
-    var container = document.getElementById('stage-items-container');
-    var addButton = document.getElementById('add-stage-item');
-    var itemTemplate = document.getElementById('stage-item-template');
-
-    if (!container || !addButton || !itemTemplate) return;
-
-    function removeEmptyState() {
-        var emptyState = container.querySelector('.stages-empty-state');
-        if (emptyState) {
-            emptyState.remove();
-        }
-    }
-
-    function updateStageNumbers() {
-        var stages = container.querySelectorAll('.glass-stage-item-template');
-        stages.forEach(function (stage, index) {
-            var numberElement = stage.querySelector('.stage-number');
-            if (numberElement) {
-                numberElement.textContent = index + 1;
-            }
-        });
-    }
-
-    addButton.addEventListener('click', function () {
-        removeEmptyState();
-
-        var clone = itemTemplate.content.cloneNode(true);
-        var stageItem = clone.querySelector('.glass-stage-item-template');
-        container.appendChild(clone);
-
-        requestAnimationFrame(function () {
-            if (stageItem) {
-                stageItem.classList.add('animate-in');
-            }
-            updateStageNumbers();
-
-            var newInput = container.lastElementChild && container.lastElementChild.querySelector('input[name="stage_name"]');
-            if (newInput) {
-                newInput.focus();
-            }
-        });
-    });
-
-    window.removeStageItem = function (button) {
-        var stageItem = button.closest('.glass-stage-item-template');
-        if (!stageItem) return;
-
-        stageItem.classList.add('is-removing');
-
-        setTimeout(function () {
-            stageItem.remove();
-            updateStageNumbers();
-
-            if (!container.querySelector('.glass-stage-item-template')) {
-                container.innerHTML = '' +
-                    '<div class="stages-empty-state">' +
-                        '<i class="fas fa-list-ul" aria-hidden="true"></i>' +
-                        '<p>Nenhuma etapa adicionada ainda</p>' +
-                        '<span>Clique em "Adicionar Etapa" para começar.</span>' +
-                    '</div>';
-            }
-        }, 180);
-    };
-
-    updateStageNumbers();
-});
-</script>
+<script src="{{ url_for('static', filename='js/admin/template_form.js', v='20260424a') }}" defer></script>
 {% endblock %}

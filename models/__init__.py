@@ -3,7 +3,7 @@ from .user import User, UserOrgao, UserNotification
 from .project import Project, ProjectHistory
 from .etapa import Etapa, ProjectStageMeeting
 from .catalog import Objetivo, ResultadoEsperado, Indicador, IndicadorProjeto
-from .template import StageTemplate, StageTemplateItem
+from .template import StageTemplate, StageTemplateItem, StageTemplateUsage
 from .calendar import UserCalendarConnection, CalendarEvent
 from .task import (
     Task,
@@ -35,6 +35,7 @@ __all__ = [
     'IndicadorProjeto',
     'StageTemplate',
     'StageTemplateItem',
+    'StageTemplateUsage',
     'UserCalendarConnection',
     'CalendarEvent',
     'Task',

@@ -1,6 +1,14 @@
 from flask import current_app, flash, g, jsonify, redirect, request, url_for
 
-from models import CalendarEvent, Etapa, Project, ProjectStageMeeting, StageTemplate, db
+from models import (
+    CalendarEvent,
+    Etapa,
+    Project,
+    ProjectStageMeeting,
+    StageTemplate,
+    StageTemplateUsage,
+    db,
+)
 from services.calendar_core import parse_event_form
 from services.calendar_sync import sync_local_event_to_google
 from services.project_meetings import (
@@ -345,6 +353,14 @@ def import_model_to_project(project_id):
             action_type='import_model',
             description=f'Importou {etapas_criadas} etapa(s) do modelo "{template.name}"'
         )
+
+        usage = StageTemplateUsage(
+            template_id=template.id,
+            project_id=project.id,
+            created_by_id=g.user.id if g.user else None,
+            source='post_import',
+        )
+        db.session.add(usage)
 
         db.session.commit()
         flash(f'{etapas_criadas} etapa(s) importada(s) com sucesso do modelo "{template.name}"!', 'success')

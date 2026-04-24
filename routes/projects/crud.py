@@ -1,7 +1,15 @@
 from flask import flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from catalogs.abep import normalize_abep_indicator
-from models import Etapa, IndicadorProjeto, OrgaoUnidade, Project, db
+from models import (
+    Etapa,
+    IndicadorProjeto,
+    OrgaoUnidade,
+    Project,
+    StageTemplate,
+    StageTemplateUsage,
+    db,
+)
 from catalogs.objectives import normalize_goal_selection
 
 from routes.blueprint import main_bp
@@ -33,6 +41,30 @@ def _resolve_orgao_from_form(form_value):
         if orgao_id not in get_user_orgao_subtree_ids(g.user):
             return None, 'Você não tem permissão para criar/editar projetos neste órgão.'
     return orgao, None
+
+
+def _register_template_usage_on_creation(form_value, project_id):
+    """Registra StageTemplateUsage quando o projeto é criado a partir de um modelo.
+
+    Retorna silenciosamente se form_value ausente ou inválido — o campo é opcional.
+    """
+    if not form_value:
+        return
+    try:
+        template_id = int(form_value)
+    except (TypeError, ValueError):
+        return
+    if db.session.get(StageTemplate, template_id) is None:
+        return
+    usage = StageTemplateUsage(
+        template_id=template_id,
+        project_id=project_id,
+        created_by_id=g.user.id if g.user else None,
+        source='creation',
+    )
+    db.session.add(usage)
+
+
 @main_bp.route('/add_project', methods=['POST'])
 @login_required
 def add_project():
@@ -137,6 +169,11 @@ def add_project():
             for ind_id in indicador_ids:
                 indicador_projeto = IndicadorProjeto(project_id=new_project.id, indicador_id=ind_id)
                 db.session.add(indicador_projeto)
+
+        _register_template_usage_on_creation(
+            request.form.get('project_template_id'),
+            new_project.id,
+        )
 
         # Registrar no histórico
         log_project_action(

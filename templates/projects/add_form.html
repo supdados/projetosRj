@@ -356,7 +356,7 @@
                                      class="accordion-collapse collapse"
                                      aria-labelledby="projectCreateHeadingTemplate"
                                      data-bs-parent="#projectCreateAccordion">
-                                    <div class="accordion-body project-create-accordion-body">
+                                    <div class="accordion-body project-create-accordion-body tpl-import">
                                         <div class="row g-3">
                                             <div class="col-md-8">
                                                 <div class="form-group-glass">
@@ -367,25 +367,48 @@
                                                     <select class="form-select-glass form-select-glass-enhanced" id="template_select">
                                                         <option value="">Não importar / Limpar etapas</option>
                                                     </select>
+                                                    <input type="hidden" name="project_template_id" id="project_template_id" value="">
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="form-group-glass">
                                                     <label for="project_start_date" class="form-label-glass">
                                                         <i class="fas fa-calendar-day label-icon"></i>
-                                                        Data de Início
+                                                        Data de Início (opcional)
                                                     </label>
                                                     <input type="date"
                                                            class="form-control-glass form-control-glass-enhanced"
                                                            id="project_start_date"
                                                            name="project_start_date"
-                                                           title="Defina a data de início para calcular automaticamente as datas das etapas">
+                                                           title="Sem data, o preview mostra só a duração de cada etapa.">
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div id="dynamic-stages-container" class="stages-container mt-3">
-                                            <!-- Etapas do modelo serão inseridas aqui -->
+                                        <div class="tpl-import-preview" id="tpl-import-preview" hidden>
+                                            <div class="tpl-import-preview-header">
+                                                <span class="tpl-import-preview-title">ETAPAS IMPORTADAS</span>
+                                                <span class="tpl-import-preview-counter">
+                                                    <span id="tpl-import-stage-count">0</span> etapas · total
+                                                    <span id="tpl-import-total-duration">0</span> dias
+                                                </span>
+                                            </div>
+                                            <div class="tpl-import-preview-list" id="tpl-import-preview-list"></div>
+                                            <p class="tpl-import-preview-footer" id="tpl-import-preview-footer" hidden>
+                                                Previsão de término com início em
+                                                <strong id="tpl-import-preview-start"></strong>
+                                                →
+                                                <strong id="tpl-import-preview-end"></strong>.
+                                            </p>
+                                        </div>
+
+                                        <div class="tpl-import-empty" id="tpl-import-empty">
+                                            <i class="fas fa-layer-group" aria-hidden="true"></i>
+                                            <span>Selecione um modelo para visualizar as etapas importadas.</span>
+                                        </div>
+
+                                        <div id="dynamic-stages-container" hidden aria-hidden="true">
+                                            <!-- Hidden inputs sincronizados pelo JS para compat com o backend -->
                                         </div>
                                     </div>
                                 </div>
