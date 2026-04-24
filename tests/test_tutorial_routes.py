@@ -200,13 +200,13 @@ def test_dismiss_sets_tutorial_visto(app, client, user_with_area):
     _login(client, user_with_area)
 
     with app.app_context():
-        u = User.query.get(user_with_area)
+        u = db.session.get(User, user_with_area)
         assert u.tutorial_visto is False
 
     client.post("/tutorial/dismiss", headers={"X-Requested-With": "XMLHttpRequest"})
 
     with app.app_context():
-        u = User.query.get(user_with_area)
+        u = db.session.get(User, user_with_area)
         assert u.tutorial_visto is True
 
 
