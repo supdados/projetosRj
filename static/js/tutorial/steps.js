@@ -53,8 +53,8 @@ window.TUTORIAL_SECTIONS = {
       {
         pagePattern: '/dashboard',
         id: 'cp-area',
-        text: 'Selecione a <strong>área responsável</strong> pelo projeto.',
-        attachTo: { element: '#project_area_responsavel', on: 'bottom' },
+        text: 'Selecione o <strong>órgão responsável</strong> pelo projeto.',
+        attachTo: { element: '#project_orgao_id', on: 'bottom' },
         buttons: [_skip, _prev, _next],
       },
       {

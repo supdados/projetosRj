@@ -26,7 +26,7 @@ from models import Project, ProjectHistory, User, db
 from catalogs.objectives import sync_goal_catalog_to_db
 from time_utils import utc_now
 
-ALEMBIC_HEAD = "7c1d9e4a2b3f"
+ALEMBIC_HEAD = "d2e4f6a8b1c0"
 VALID_TASK_STATUSES = {
     "nao_iniciada",
     "em_andamento",
@@ -135,6 +135,13 @@ STAGE_INCREMENTAL_COLUMNS = {
         ("entry_type", "VARCHAR(30) NOT NULL DEFAULT 'manual'"),
     ],
 }
+STAGE_TEMPLATE_AUDIT_COLUMNS = [
+    ("created_at", "DATETIME"),
+    ("updated_at", "DATETIME"),
+    ("created_by_id", "INTEGER"),
+    ("updated_by_id", "INTEGER"),
+]
+PROJECT_ORGAO_COLUMN = ("orgao_id", "INTEGER")
 
 
 def _emit(message, emit_output=True):
@@ -1397,6 +1404,86 @@ def encrypt_plaintext_oauth_tokens(emit_output=True):
         return {"success": False, "rows_encrypted": changes}
 
 
+def ensure_orgao_and_template_schema(emit_output=True):
+    """Garante colunas/tabelas das migrações `a1b2c3d4e5f6` → `d2e4f6a8b1c0`.
+
+    `db.create_all()` cria as tabelas novas (`orgao_unidade`, `user_orgao`,
+    `stage_template_usage`) quando ainda não existem, mas **não adiciona
+    colunas em tabelas já existentes**. Este step cobre esse gap em bancos
+    legados: `project.orgao_id` e as 4 colunas de auditoria em `StageTemplate`.
+    """
+    _emit(
+        "\n-- [11/11] Garantindo schema de órgãos e auditoria de templates...",
+        emit_output,
+    )
+    changes = []
+    try:
+        db.create_all()
+        inspector = inspect(db.engine)
+        dialect = db.engine.dialect.name
+
+        if _table_exists(inspector, "project"):
+            column_name, column_type = PROJECT_ORGAO_COLUMN
+            if column_name not in _column_names(inspector, "project"):
+                db.session.execute(
+                    text(f"ALTER TABLE project ADD COLUMN {column_name} {column_type}")
+                )
+                changes.append(f"project.{column_name}")
+                inspector = inspect(db.engine)
+
+            project_indexes = _index_names(inspector, "project")
+            if "ix_project_orgao_id" not in project_indexes:
+                db.session.execute(
+                    text("CREATE INDEX ix_project_orgao_id ON project (orgao_id)")
+                )
+                changes.append("project.ix_project_orgao_id")
+                inspector = inspect(db.engine)
+
+            if dialect == "mysql":
+                existing_fks = {
+                    fk.get("name") for fk in inspector.get_foreign_keys("project")
+                }
+                if "fk_project_orgao_id" not in existing_fks and _table_exists(
+                    inspector, "orgao_unidade"
+                ):
+                    db.session.execute(
+                        text(
+                            "ALTER TABLE project ADD CONSTRAINT fk_project_orgao_id "
+                            "FOREIGN KEY (orgao_id) REFERENCES orgao_unidade(id) "
+                            "ON DELETE SET NULL"
+                        )
+                    )
+                    changes.append("project.fk_project_orgao_id")
+                    inspector = inspect(db.engine)
+
+        if _table_exists(inspector, "StageTemplate"):
+            existing_columns = _column_names(inspector, "StageTemplate")
+            for column_name, column_type in STAGE_TEMPLATE_AUDIT_COLUMNS:
+                if column_name in existing_columns:
+                    continue
+                db.session.execute(
+                    text(
+                        f"ALTER TABLE StageTemplate ADD COLUMN {column_name} {column_type}"
+                    )
+                )
+                changes.append(f"StageTemplate.{column_name}")
+                inspector = inspect(db.engine)
+                existing_columns = _column_names(inspector, "StageTemplate")
+
+        db.session.commit()
+        if changes:
+            _emit(f"   ✓ Ajustes aplicados: {', '.join(changes)}", emit_output)
+        else:
+            _emit(
+                "   ✓ Schema de órgãos e templates já estava atualizado.", emit_output
+            )
+        return {"success": True, "changes": changes}
+    except Exception as exc:
+        db.session.rollback()
+        _emit(f"   ✗ ERRO ao garantir schema de órgãos/templates: {exc}", emit_output)
+        return {"success": False, "changes": changes}
+
+
 def stamp_alembic_head(emit_output=True):
     if db.engine.dialect.name != "mysql":
         return {"success": True, "stamped": False}
@@ -1445,6 +1532,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         sync_area_catalog(emit_output=emit_output),
         ensure_caderno_schema(emit_output=emit_output),
         ensure_calendar_schema(emit_output=emit_output),
+        ensure_orgao_and_template_schema(emit_output=emit_output),
         encrypt_plaintext_oauth_tokens(emit_output=emit_output),
     ]
 
@@ -1461,6 +1549,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
     task_changes = steps[3]["changes"]
     caderno_changes = steps[6]["changes"]
     calendar_changes = steps[7]["changes"]
+    orgao_template_changes = steps[8]["changes"]
 
     return {
         "success": True,
@@ -1468,6 +1557,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         "task_core_cols": task_changes,
         "caderno_changes": caderno_changes,
         "calendar_changes": calendar_changes,
+        "orgao_template_changes": orgao_template_changes,
         "area_catalog_choices": steps[5]["areas"],
         "sync_summary": steps[4]["summary"],
         "user_areas_migrated": steps[0]["migrated_count"],

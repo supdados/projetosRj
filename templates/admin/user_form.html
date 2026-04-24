@@ -119,6 +119,10 @@
                     <div class="col-12">
                         <label class="account-label mb-1">Órgãos Responsáveis</label>
                         <div class="account-help-text mb-2">Selecione os órgãos que o usuário pode acessar (herança descendente: órgão-pai dá acesso aos filhos). Administradores sem órgãos selecionados visualizam todos.</div>
+                        {# Sentinel: distingue "campo não enviado" de "desmarcou todos".
+                           Sem isso, `"orgaos_responsavel" in request.form` é False quando
+                           o admin desmarca tudo e o backend preserva a lista atual. #}
+                        <input type="hidden" name="orgaos_responsavel_submitted" value="1">
                         <div class="row g-2">
                             {% for orgao_id, orgao_sigla, orgao_nome, orgao_depth in orgaos_with_depth|default([]) %}
                             <div class="col-12 col-md-6 col-xl-4">

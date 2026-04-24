@@ -132,7 +132,13 @@ def edit_user(user_id):
         user_to_edit.orgao = (
             request.form.get("orgao") if request.form.get("orgao") else None
         )
-        orgaos_form_submitted = "orgaos_responsavel" in request.form
+        # Sentinel explícito (`orgaos_responsavel_submitted=1`) para detectar
+        # que o form foi submetido mesmo quando o admin desmarcou todos os
+        # checkboxes — caso em que `orgaos_responsavel` some do payload.
+        orgaos_form_submitted = (
+            "orgaos_responsavel_submitted" in request.form
+            or "orgaos_responsavel" in request.form
+        )
         current_orgao_ids = [uo.orgao_id for uo in user_to_edit.orgaos]
         invalid_orgaos = []
         if orgaos_form_submitted:

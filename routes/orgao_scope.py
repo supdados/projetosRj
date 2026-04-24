@@ -12,6 +12,7 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from flask import g, redirect, request, url_for
+from sqlalchemy import or_
 
 from models import OrgaoUnidade, db
 from routes.orgao_tree import get_orgao_ancestors, get_orgao_descendants
@@ -77,7 +78,10 @@ def redirect_to_current_route_without_orgao():
         target_url = request.path
 
     query_args = request.args.to_dict(flat=False)
+    # `area` é alias legado de `orgao` (ver routes/tasks/queries.py:_read_task_filter_values).
+    # Sem remover aqui, um `?area=<inválido>` manda o sanitizer rejeitar → redirect → loop.
     query_args.pop("orgao", None)
+    query_args.pop("area", None)
     query_string = urlencode(query_args, doseq=True)
 
     if query_string:
@@ -184,6 +188,7 @@ def get_visible_orgao_tree(user) -> list[dict]:
                 "pai_id": r.pai_id,
                 "is_user_orgao": False,
                 "is_user_ancestor": False,
+                "is_inactive": False,
             }
             for r in rows
         ]
@@ -194,9 +199,19 @@ def get_visible_orgao_tree(user) -> list[dict]:
     ancestor_ids = set(get_orgao_ancestors(primary.id))
     descendant_ids = set(get_orgao_descendants(primary.id))
     visible_ids = ancestor_ids | {primary.id} | descendant_ids
+    # Ancestrais entram sempre (contexto para montar a árvore); descendentes
+    # só se ativos. Antes o filtro `ativo=True` derrubava pais inativos e
+    # gerava nós órfãos no build_nested_orgao_tree. O primary (órgão do user)
+    # também sempre entra — mesmo que tenha sido desativado após o vínculo.
+    always_visible = ancestor_ids | {primary.id}
     rows = (
         OrgaoUnidade.query.filter(OrgaoUnidade.id.in_(visible_ids))
-        .filter(OrgaoUnidade.ativo.is_(True))
+        .filter(
+            or_(
+                OrgaoUnidade.ativo.is_(True),
+                OrgaoUnidade.id.in_(always_visible),
+            )
+        )
         .order_by(
             OrgaoUnidade.pai_id.is_(None).desc(), OrgaoUnidade.ordem, OrgaoUnidade.sigla
         )
@@ -211,6 +226,7 @@ def get_visible_orgao_tree(user) -> list[dict]:
             "pai_id": r.pai_id,
             "is_user_orgao": r.id == primary.id,
             "is_user_ancestor": r.id in ancestor_ids,
+            "is_inactive": not bool(r.ativo),
         }
         for r in rows
     ]

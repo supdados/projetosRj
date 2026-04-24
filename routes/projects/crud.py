@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from flask import (
     flash,
     g,
@@ -31,11 +33,14 @@ from routes.shared import (
 )
 
 
-def _resolve_orgao_from_form(form_value):
+def _resolve_orgao_from_form(form_value, *, current_orgao_id=None):
     """Parseia project_orgao_id do form e valida contra o subtree do usuario.
 
     Retorna ``(orgao_unidade, erro_msg)`` - um deles sempre None.
-    Usuario admin pode escolher qualquer orgao ativo; nao-admin so dentro do seu subtree.
+    - Admin pode escolher qualquer orgao ativo; nao-admin so dentro do seu subtree.
+    - Orgaos inativos são rejeitados — exceto quando ``current_orgao_id`` aponta para
+      eles (caso de edição de projeto legado vinculado a orgao desligado): nesse
+      cenário preservamos o vínculo se o admin não mexeu no campo.
     """
     if not form_value:
         return None, "Você deve selecionar um órgão para o projeto."
@@ -52,6 +57,8 @@ def _resolve_orgao_from_form(form_value):
                 None,
                 "Você não tem permissão para criar/editar projetos neste órgão.",
             )
+    if not orgao.ativo and orgao_id != current_orgao_id:
+        return None, "Este órgão está inativo e não pode receber novos projetos."
     return orgao, None
 
 
@@ -155,10 +162,8 @@ def add_project():
         current_date = None
         if project_start_date:
             try:
-                from datetime import datetime, timedelta
-
                 current_date = datetime.strptime(project_start_date, "%Y-%m-%d").date()
-            except:
+            except (TypeError, ValueError):
                 current_date = None
 
         for i, descricao in enumerate(etapa_descricoes):
@@ -169,8 +174,6 @@ def add_project():
                 # Se há data de início e duração, calcular automaticamente
                 if current_date and i < len(etapa_durations) and etapa_durations[i]:
                     try:
-                        from datetime import timedelta
-
                         duration = int(etapa_durations[i])
                         data_inicio = current_date
                         data_fim = current_date + timedelta(
@@ -179,7 +182,7 @@ def add_project():
                         current_date = data_fim + timedelta(
                             days=1
                         )  # Próxima etapa começa no dia seguinte
-                    except:
+                    except (TypeError, ValueError):
                         pass
 
                 nova_etapa = Etapa(
@@ -264,7 +267,8 @@ def edit_project(project_id):
         project_to_edit.orgao = new_orgao
 
         orgao_unidade, orgao_error = _resolve_orgao_from_form(
-            request.form.get("project_orgao_id")
+            request.form.get("project_orgao_id"),
+            current_orgao_id=project_to_edit.orgao_id,
         )
         if orgao_error:
             flash(orgao_error, "warning")

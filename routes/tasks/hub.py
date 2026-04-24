@@ -11,6 +11,7 @@ from routes.orgao_scope import (
     redirect_to_current_route_without_orgao,
     sanitize_orgao_filter_for_current_user,
 )
+from routes.shared import _get_orgaos_disponiveis_for_current_user
 from routes.tasks.permissions import _task_permission_flags
 from routes.tasks.queries import (
     _build_task_filter_options,
@@ -130,7 +131,10 @@ def _render_task_hub(
         return redirect_to_current_route_without_orgao()
     if locked_project is not None:
         selected_orgao_id = None
-    orgaos_disponiveis = list(g.get("ORGAOS_DISPONIVEIS") or [])
+    # `ORGAOS_DISPONIVEIS` é injetado no contexto do template pelo context
+    # processor `inject_current_year`, não em `flask.g` — chamamos o helper
+    # diretamente para que `selected_orgao_sigla` não fique sempre vazio.
+    orgaos_disponiveis = _get_orgaos_disponiveis_for_current_user()
     orgao_label_map = {
         str(orgao_id): orgao_sigla
         for orgao_id, orgao_sigla, _orgao_nome in orgaos_disponiveis
