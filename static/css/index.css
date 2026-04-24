@@ -92,6 +92,45 @@
         max-width: 100%;
     }
 
+    .dashboard-page-v2 .dashboard-welcome-context-label {
+        color: #6b839c;
+    }
+
+    .dashboard-page-v2 .dashboard-welcome-context-primary {
+        color: #1f2d3d;
+        font-weight: 700;
+        margin: 0 0.35rem;
+    }
+
+    .dashboard-page-v2 .dashboard-welcome-context-sep {
+        color: #b9c5d3;
+        margin: 0 0.5rem;
+    }
+
+    .dashboard-page-v2 .dashboard-welcome-context-path {
+        color: #8c9bad;
+    }
+
+    .dashboard-page-v2 .dashboard-welcome-context-ancestor {
+        color: #8c9bad;
+        font-weight: 500;
+    }
+
+    .dashboard-page-v2 .dashboard-welcome-context-self {
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .dashboard-page-v2 .dashboard-welcome-context-arrow {
+        color: #c5cdd9;
+        margin: 0 0.3rem;
+    }
+
+    .dashboard-page-v2 .dashboard-welcome-context-admin {
+        color: #2563eb;
+        font-weight: 600;
+    }
+
     .dashboard-page-v2 .dashboard-welcome-date-wrap {
         display: flex;
         flex-direction: column;
@@ -331,17 +370,30 @@
     .dashboard-page-v2 .glass-table-wrapper {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
         border-radius: 0 0 14px 14px;
+        max-height: 480px;
+        overflow-y: auto;
+        position: relative;
     }
 
-    .dashboard-page-v2 .glass-table-header {
-        background: linear-gradient(135deg, rgba(0, 90, 146, 0.08) 0%, rgba(0, 90, 146, 0.03) 100%);
+    .dashboard-page-v2 .glass-table {
+        border-collapse: separate;
+        border-spacing: 0;
     }
 
     .dashboard-page-v2 .glass-table-header th {
         border: none !important;
-        color: var(--ds-color-primary-600);
+        border-bottom: 1px solid rgba(0, 90, 146, 0.18) !important;
+        color: var(--ds-color-primary-700);
         font-weight: var(--ds-font-weight-bold);
         font-size: var(--ds-font-size-sm);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding-top: 0.7rem !important;
+        padding-bottom: 0.7rem !important;
+        background: linear-gradient(180deg, #eef4fb 0%, #e3edf7 100%);
+        position: sticky;
+        top: 0;
+        z-index: 5;
     }
 
     .dashboard-page-v2 .glass-table-row {

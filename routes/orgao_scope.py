@@ -14,7 +14,7 @@ from urllib.parse import urlencode
 from flask import g, redirect, request, url_for
 
 from models import OrgaoUnidade, db
-from routes.orgao_tree import get_orgao_descendants
+from routes.orgao_tree import get_orgao_ancestors, get_orgao_descendants
 
 
 def get_user_orgao_subtree_ids(user) -> set[int]:
@@ -92,6 +92,110 @@ def expand_orgao_filter_ids(orgao_id) -> set[int]:
     if orgao_id is None:
         return set()
     return {int(orgao_id), *get_orgao_descendants(int(orgao_id))}
+
+
+def get_user_primary_orgao(user):
+    """Retorna o primeiro vinculo OrgaoUnidade do usuario (ou None)."""
+    if user is None:
+        return None
+    vinculos = getattr(user, 'orgaos', None) or []
+    if not vinculos:
+        return None
+    return vinculos[0].orgao
+
+
+def get_user_orgao_breadcrumb(user) -> list[dict]:
+    """Lista [{id, sigla, nome, tipo, is_self}] da raiz ate o orgao do usuario.
+
+    Vazio para admin e usuarios sem vinculo. ``is_self`` marca o no terminal
+    (o orgao do usuario); ancestrais ficam ``False``.
+    """
+    primary = get_user_primary_orgao(user)
+    if primary is None:
+        return []
+    ancestor_ids = list(reversed(get_orgao_ancestors(primary.id)))
+    chain_ids = ancestor_ids + [primary.id]
+    rows = OrgaoUnidade.query.filter(OrgaoUnidade.id.in_(chain_ids)).all()
+    by_id = {row.id: row for row in rows}
+    breadcrumb = []
+    for orgao_id in chain_ids:
+        node = by_id.get(orgao_id)
+        if node is None:
+            continue
+        breadcrumb.append({
+            'id': node.id,
+            'sigla': node.sigla,
+            'nome': node.nome,
+            'tipo': node.tipo,
+            'is_self': node.id == primary.id,
+        })
+    return breadcrumb
+
+
+def build_nested_orgao_tree(flat_nodes: list[dict]) -> list[dict]:
+    """Converte lista flat de nos em arvore aninhada (cada no recebe ``children``).
+
+    Raizes sao os nos cujo ``pai_id`` nao esta presente entre os ids da lista
+    (cobre admin com raiz RJ e nao-admin onde a "raiz" visivel pode ser interna).
+    """
+    by_id = {node['id']: dict(node, children=[]) for node in flat_nodes}
+    roots: list[dict] = []
+    for node in by_id.values():
+        pai_id = node.get('pai_id')
+        if pai_id in by_id:
+            by_id[pai_id]['children'].append(node)
+        else:
+            roots.append(node)
+    return roots
+
+
+def get_visible_orgao_tree(user) -> list[dict]:
+    """Retorna nos visiveis ao usuario para montar a arvore do seletor.
+
+    - admin: todos os orgaos ativos.
+    - nao-admin com vinculo: ancestrais do orgao primario + o orgao + descendentes.
+    - sem vinculo: lista vazia.
+
+    Cada no: ``{id, sigla, nome, tipo, pai_id, is_user_orgao, is_user_ancestor}``.
+    """
+    if user is None:
+        return []
+
+    if getattr(user, 'is_admin', False):
+        rows = (
+            OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True))
+            .order_by(OrgaoUnidade.pai_id.is_(None).desc(), OrgaoUnidade.ordem, OrgaoUnidade.sigla)
+            .all()
+        )
+        return [
+            {
+                'id': r.id, 'sigla': r.sigla, 'nome': r.nome, 'tipo': r.tipo,
+                'pai_id': r.pai_id, 'is_user_orgao': False, 'is_user_ancestor': False,
+            }
+            for r in rows
+        ]
+
+    primary = get_user_primary_orgao(user)
+    if primary is None:
+        return []
+    ancestor_ids = set(get_orgao_ancestors(primary.id))
+    descendant_ids = set(get_orgao_descendants(primary.id))
+    visible_ids = ancestor_ids | {primary.id} | descendant_ids
+    rows = (
+        OrgaoUnidade.query.filter(OrgaoUnidade.id.in_(visible_ids))
+        .filter(OrgaoUnidade.ativo.is_(True))
+        .order_by(OrgaoUnidade.pai_id.is_(None).desc(), OrgaoUnidade.ordem, OrgaoUnidade.sigla)
+        .all()
+    )
+    return [
+        {
+            'id': r.id, 'sigla': r.sigla, 'nome': r.nome, 'tipo': r.tipo,
+            'pai_id': r.pai_id,
+            'is_user_orgao': r.id == primary.id,
+            'is_user_ancestor': r.id in ancestor_ids,
+        }
+        for r in rows
+    ]
 
 
 def user_can_access_project(user, project) -> bool:

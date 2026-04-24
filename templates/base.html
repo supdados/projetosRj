@@ -55,6 +55,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260402b') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/flash.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/orgao-tree-picker.css') }}">
 
     {% block head_extra %}{% endblock %}
     {% if current_user_obj %}
@@ -185,6 +186,7 @@
     <script src="{{ url_for('static', filename='js/app-shell/global-search.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app-shell/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/orgao-tree-picker.js') }}"></script>
     
     <script nonce="{{ csp_nonce }}">
     (function () {

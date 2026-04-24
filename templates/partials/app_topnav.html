@@ -87,47 +87,87 @@
 
                     <div class="app-topnav-center">
                         {% if ORGAOS_DISPONIVEIS|length > 1 %}
-                        <div class="dropdown app-area-control" data-area-select data-orgao-select>
-                            <a
-                                href="{{ build_current_orgao_url(None) }}"
-                                class="app-area-main-btn"
-                                aria-label="Filtro de órgão"
-                                title="Todos os órgãos"
-                            >
-                                <i class="fas fa-sitemap"></i>
-                                <span>{{ selected_orgao_global_sigla or 'Todos os órgãos' }}</span>
-                            </a>
+                        <div class="dropdown app-area-control orgao-tree-control" data-area-select data-orgao-select>
                             <button
-                                class="app-area-dropdown-btn dropdown-toggle"
+                                class="orgao-tree-trigger"
                                 type="button"
                                 id="appOrgaoMenuDesktop"
                                 data-bs-toggle="dropdown"
-                                data-bs-display="static"
+                                data-bs-auto-close="outside"
                                 aria-expanded="false"
                                 aria-label="Selecionar órgão"
-                            ></button>
-                            <div class="dropdown-menu app-area-dropdown-menu" aria-labelledby="appOrgaoMenuDesktop">
-                                <div class="app-dropdown-header" aria-hidden="true">
-                                    <span class="app-dropdown-title">Órgão</span>
-                                    <span class="app-dropdown-subtitle">{{ selected_orgao_global_sigla or 'Todos os órgãos' }}</span>
+                            >
+                                <span class="orgao-tree-trigger-icon"><i class="fas fa-sitemap"></i></span>
+                                <span class="orgao-tree-trigger-body">
+                                    <span class="orgao-tree-trigger-title">{{ selected_orgao_global_sigla or 'Todos os órgãos' }}</span>
+                                    {% if USER_ORGAO_BREADCRUMB %}
+                                    <span class="orgao-tree-trigger-path">
+                                        {% for node in USER_ORGAO_BREADCRUMB %}
+                                            <span class="orgao-tree-trigger-path-node {{ 'is-self' if node.is_self else '' }}">{{ node.sigla }}</span>
+                                            {% if not loop.last %}<span class="orgao-tree-trigger-path-sep">›</span>{% endif %}
+                                        {% endfor %}
+                                    </span>
+                                    {% endif %}
+                                </span>
+                                <span class="orgao-tree-trigger-caret"><i class="fas fa-chevron-down"></i></span>
+                            </button>
+                            <div class="dropdown-menu orgao-tree-menu" aria-labelledby="appOrgaoMenuDesktop">
+                                {% if is_admin_user %}
+                                <div class="orgao-tree-search">
+                                    <i class="fas fa-search orgao-tree-search-icon"></i>
+                                    <input
+                                        type="text"
+                                        class="orgao-tree-search-input"
+                                        placeholder="Filtrar por nome ou sigla..."
+                                        data-orgao-tree-filter
+                                        autocomplete="off"
+                                    >
                                 </div>
-                                <a href="{{ build_current_orgao_url(None) }}" class="dropdown-item app-dropdown-item {{ 'active' if not selected_orgao_global else '' }}">
-                                    <span class="app-dropdown-item-main">
+                                {% endif %}
+                                <div class="orgao-tree-body" data-orgao-tree-body>
+                                    <a
+                                        href="{{ build_current_orgao_url(None) }}"
+                                        class="orgao-tree-all {{ 'is-active' if not selected_orgao_global else '' }}"
+                                        data-orgao-tree-all
+                                    >
                                         <i class="fas fa-layer-group"></i>
                                         <span>Todos os órgãos</span>
-                                    </span>
-                                    <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
-                                </a>
-                                <div class="dropdown-divider app-dropdown-divider"></div>
-                                {% for orgao_id, orgao_sigla, orgao_nome in ORGAOS_DISPONIVEIS %}
-                                <a href="{{ build_current_orgao_url(orgao_id) }}" class="dropdown-item app-dropdown-item {{ 'active' if orgao_id == selected_orgao_global else '' }}">
-                                    <span class="app-dropdown-item-main">
-                                        <i class="fas fa-sitemap"></i>
-                                        <span>{{ orgao_sigla }}{% if orgao_nome and orgao_nome != orgao_sigla %} — {{ orgao_nome }}{% endif %}</span>
-                                    </span>
-                                    <span class="app-dropdown-item-check"><i class="fas fa-check"></i></span>
-                                </a>
-                                {% endfor %}
+                                    </a>
+                                    {% macro render_orgao_node(node) %}
+                                        {% set has_children = node.children|length > 0 %}
+                                        {% set is_selected = (selected_orgao_global == node.id) %}
+                                        <li class="orgao-tree-node" data-orgao-node-id="{{ node.id }}" data-orgao-node-sigla="{{ node.sigla|lower }}" data-orgao-node-nome="{{ node.nome|lower }}">
+                                            <div class="orgao-tree-row {{ 'is-user-orgao' if node.is_user_orgao else '' }} {{ 'is-selected' if is_selected else '' }}">
+                                                {% if has_children %}
+                                                <button type="button" class="orgao-tree-toggle" aria-label="Expandir" data-orgao-tree-toggle>
+                                                    <i class="fas fa-chevron-right"></i>
+                                                </button>
+                                                {% else %}
+                                                <span class="orgao-tree-toggle-spacer"></span>
+                                                {% endif %}
+                                                {% set bullet_variant = 'self' if node.is_user_orgao else ('selected' if is_selected else 'muted') %}
+                                                <span class="orgao-tree-bullet orgao-tree-bullet--{{ bullet_variant }}"></span>
+                                                <a href="{{ build_current_orgao_url(node.id) }}" class="orgao-tree-link">
+                                                    <span class="orgao-tree-sigla">{{ node.sigla }}</span>
+                                                    <span class="orgao-tree-nome">{{ node.nome }}</span>
+                                                </a>
+                                            </div>
+                                            {% if has_children %}
+                                            <ul class="orgao-tree-children">
+                                                {% for child in node.children %}
+                                                    {{ render_orgao_node(child) }}
+                                                {% endfor %}
+                                            </ul>
+                                            {% endif %}
+                                        </li>
+                                    {% endmacro %}
+                                    <ul class="orgao-tree-list">
+                                        {% for root in ORGAO_VISIBLE_TREE_NESTED %}
+                                            {{ render_orgao_node(root) }}
+                                        {% endfor %}
+                                    </ul>
+                                    <p class="orgao-tree-empty" data-orgao-tree-empty hidden>Nenhum órgão encontrado.</p>
+                                </div>
                             </div>
                         </div>
                         {% elif ORGAOS_DISPONIVEIS %}

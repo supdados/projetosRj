@@ -20,10 +20,19 @@
                             <span id="dashboardWelcomeName">{{ current_user_obj.name if current_user_obj.name else current_user_obj.username }}</span>
                         </h1>
                         <p class="dashboard-welcome-context mb-0">
-                            {% if user_orgao_siglas %}
-                                Órgão(s): {{ user_orgao_siglas|join(' | ') }}
-                            {% elif is_admin_user %}
-                                Administrador
+                            {% if is_admin_user %}
+                                <span class="dashboard-welcome-context-admin">Administrador</span>
+                            {% elif USER_ORGAO_BREADCRUMB %}
+                                <span class="dashboard-welcome-context-path">
+                                    {% for node in USER_ORGAO_BREADCRUMB %}
+                                        {% if node.is_self %}
+                                            <strong class="dashboard-welcome-context-self">{{ node.sigla }}</strong>
+                                        {% else %}
+                                            <span class="dashboard-welcome-context-ancestor">{{ node.sigla }}</span>
+                                        {% endif %}
+                                        {% if not loop.last %}<span class="dashboard-welcome-context-arrow">›</span>{% endif %}
+                                    {% endfor %}
+                                </span>
                             {% else %}
                                 Sem órgão vinculado
                             {% endif %}

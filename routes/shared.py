@@ -122,9 +122,19 @@ def _get_orgaos_disponiveis_for_current_user():
 
 
 def inject_current_year():
-    from routes.orgao_scope import sanitize_orgao_filter_for_current_user
+    from routes.orgao_scope import (
+        build_nested_orgao_tree,
+        get_user_orgao_breadcrumb,
+        get_visible_orgao_tree,
+        sanitize_orgao_filter_for_current_user,
+    )
 
     orgaos_disponiveis = _get_orgaos_disponiveis_for_current_user()
+    user = getattr(g, 'user', None)
+    has_orgao_table = bool(orgaos_disponiveis) or (user is not None and getattr(user, 'is_admin', False))
+    user_orgao_breadcrumb = get_user_orgao_breadcrumb(user) if (user and has_orgao_table) else []
+    orgao_visible_tree = get_visible_orgao_tree(user) if (user and has_orgao_table) else []
+    orgao_visible_tree_nested = build_nested_orgao_tree(orgao_visible_tree)
     selected_orgao_raw = request.args.get('orgao') or request.args.get('area')
     selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(selected_orgao_raw)
     if invalid_orgao_filter:
@@ -166,6 +176,9 @@ def inject_current_year():
         'current_year': datetime.datetime.now(datetime.UTC).year,
         'ABEP_INDICADORES_OPTIONS': ABEP_INDICADORES_OPTIONS,
         'ORGAOS_DISPONIVEIS': orgaos_disponiveis,
+        'USER_ORGAO_BREADCRUMB': user_orgao_breadcrumb,
+        'ORGAO_VISIBLE_TREE': orgao_visible_tree,
+        'ORGAO_VISIBLE_TREE_NESTED': orgao_visible_tree_nested,
         'selected_orgao_global': selected_orgao_id,
         'selected_orgao_global_sigla': orgao_label_map.get(str(selected_orgao_id), '') if selected_orgao_id is not None else '',
         'build_current_orgao_url': build_current_orgao_url,
