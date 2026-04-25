@@ -102,11 +102,6 @@ html[data-theme="dark"] body.is-authenticated .app-nav-icon-btn.show {
 }
 
 
-html[data-theme="dark"] body.is-authenticated .app-theme-switch__input {
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-
 html[data-theme="dark"] body.is-authenticated .app-notifications-badge {
     background: linear-gradient(180deg, #ff586a 0%, #e11d48 100%);
     color: #fff8fb;

@@ -347,103 +347,154 @@ html[data-theme="dark"] .app-brand {
     position: relative;
 }
 
-/* Theme switch na topnav.
-   Visual dirigido por html[data-theme], que é definido síncrono no <head> antes
-   do primeiro paint — evita flicker ao navegar entre páginas. */
+/* === Theme switch (rolling) ===
+   Adaptado de https://codepen.io/jkantner — "Rolling Theme Switch".
+   Estrutura/animação preservadas: só cores adaptadas à paleta ProjetosRJ.
+   Visual dirigido por html[data-theme] (set síncrono no <head>, sem flicker). */
 .app-theme-switch {
+    --primary: #005A92;
+    --rail-light: #ffffff;
+    --rail-dark: #1f2b3d;
+    --icon-light: rgba(15, 30, 50, 0.45);
+    --icon-dark: rgba(255, 255, 255, 0.40);
+    --trans-dur: 0.6s;
+    --trans-timing: cubic-bezier(0.65, 0, 0.35, 1);
+    font-size: 22px;
     position: relative;
     display: inline-flex;
     align-items: center;
+    margin: 0;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 .app-theme-switch__input {
     appearance: none;
     -webkit-appearance: none;
-    position: relative;
     display: block;
-    width: 54px;
-    height: 28px;
     margin: 0;
-    border: none;
-    border-radius: 999px;
-    background: linear-gradient(120deg, #f5b547 0%, #4ea5e0 100%);
-    box-shadow: 0 3px 8px rgba(7, 28, 47, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.28);
-    outline: none;
+    border: 0;
+    background-color: var(--rail-light);
+    border-radius: 0.75em;
+    box-shadow:
+        0 0 0 0.0625em rgba(0, 90, 146, 0),
+        0 0.125em 0.5em rgba(15, 28, 47, 0.18);
+    outline: transparent;
+    width: 2.75em;
+    height: 1.5em;
     cursor: pointer;
-    transition: background 0.35s cubic-bezier(0.76, 0.05, 0.24, 0.95),
-                box-shadow 0.2s linear;
-}
-
-.app-theme-switch__input::after {
-    content: "";
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 2px 4px rgba(7, 28, 47, 0.24);
-    transition: transform 0.35s cubic-bezier(0.76, 0.05, 0.24, 0.95),
-                background 0.35s;
-    z-index: 1;
+    transition:
+        background-color var(--trans-dur),
+        box-shadow var(--trans-dur);
 }
 
 html[data-theme="dark"] .app-theme-switch__input {
-    background: linear-gradient(120deg, #0d608f 0%, #1f2b3d 100%);
-}
-
-html[data-theme="dark"] .app-theme-switch__input::after {
-    transform: translateX(26px);
-    background: #e8eef6;
+    background-color: var(--rail-dark);
 }
 
 .app-theme-switch__input:focus-visible {
-    box-shadow: 0 0 0 3px rgba(99, 166, 219, 0.5),
-                0 3px 8px rgba(7, 28, 47, 0.22);
+    box-shadow:
+        0 0 0 0.0625em var(--primary),
+        0 0.125em 0.5em rgba(15, 28, 47, 0.18);
 }
 
+/* Ícones do trilho — fixos nas pontas. O lado oposto à pílula fica visível e atua como hint. */
 .app-theme-switch__icon {
-    position: absolute;
-    top: 7px;
-    font-size: 12px;
-    line-height: 1;
-    color: #ffffff;
+    color: var(--icon-light);
     pointer-events: none;
-    transition: opacity 0.25s ease;
-    z-index: 0;
+    position: absolute;
+    top: 0.375em;
+    left: 0.375em;
+    width: 0.75em;
+    height: 0.75em;
+    transition:
+        color var(--trans-dur),
+        transform var(--trans-dur) var(--trans-timing);
 }
 
-/* Ícone do estado ATUAL fica no lado OPOSTO ao knob para não ser tampado:
-   - claro (knob à esquerda) → sol à direita
-   - escuro (knob à direita) → lua à esquerda */
-.app-theme-switch__icon--sun {
-    right: 8px;
-    opacity: 1;
+.app-theme-switch__icon:nth-of-type(2) {
+    right: 0.375em;
+    left: auto;
 }
 
-.app-theme-switch__icon--moon {
-    left: 8px;
-    opacity: 0;
-    color: #dbe7f4;
+html[data-theme="dark"] .app-theme-switch__icon {
+    color: var(--icon-dark);
 }
 
-html[data-theme="dark"] .app-theme-switch__icon--sun {
-    opacity: 0;
+/* Vagão (.inner) e clip de ícones internos (.inner-icons) compartilham geometria e translate. */
+.app-theme-switch__inner,
+.app-theme-switch__inner-icons {
+    border-radius: 0.5em;
+    display: block;
+    overflow: hidden;
+    position: absolute;
+    top: 0.25em;
+    left: 0.25em;
+    width: 2.25em;
+    height: 1em;
 }
 
-html[data-theme="dark"] .app-theme-switch__icon--moon {
-    opacity: 1;
+.app-theme-switch__inner:before,
+.app-theme-switch__inner-icons {
+    transition: transform var(--trans-dur) var(--trans-timing);
+    transform: translateX(-1.25em);
+}
+
+.app-theme-switch__inner:before {
+    background-color: var(--primary);
+    border-radius: inherit;
+    content: "";
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.app-theme-switch__inner-icons {
+    pointer-events: none;
+}
+
+.app-theme-switch__inner-icons .app-theme-switch__icon {
+    color: #ffffff;
+    top: 0.125em;
+    left: 0.125em;
+    transform: translateX(1.25em);
+}
+
+.app-theme-switch__inner-icons .app-theme-switch__icon:nth-of-type(2) {
+    right: 0.125em;
+    left: auto;
+}
+
+/* Em dark: pílula desliza pra DIREITA; ícones internos contra-translam e giram 360° */
+html[data-theme="dark"] .app-theme-switch__inner:before,
+html[data-theme="dark"] .app-theme-switch__inner-icons {
+    transform: translateX(1.25em);
+}
+
+html[data-theme="dark"] .app-theme-switch__inner-icons .app-theme-switch__icon:first-of-type {
+    transform: translateX(-1.25em) rotate(-360deg);
+}
+
+html[data-theme="dark"] .app-theme-switch__inner-icons .app-theme-switch__icon:nth-of-type(2) {
+    transform: translateX(-1.25em) rotate(360deg);
+}
+
+/* Rotação suave dos ícones do trilho ao trocar de estado */
+.app-theme-switch__input:not(:checked) ~ .app-theme-switch__icon:first-of-type,
+html[data-theme="dark"] .app-theme-switch__icon:nth-of-type(2) {
+    transform: rotate(360deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-theme-switch { --trans-dur: 0s; }
 }
 
 .app-theme-switch__sr {
+    overflow: hidden;
     position: absolute;
     width: 1px;
     height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
 }
 
 .app-notifications-menu .dropdown-toggle::after {
