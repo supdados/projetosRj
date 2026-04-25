@@ -21,22 +21,35 @@
     transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
 }
 
+.dashboard-chatbot-launcher::before {
+    content: '\f059';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    color: #0077b6;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
 .chatbot-launcher-icon {
     width: 56px;
     height: 56px;
-    display: block;
+    display: none;
     flex-shrink: 0;
 }
 
-.chatbot-launcher-icon--active {
+.dashboard-chatbot-launcher.is-icon-loaded::before {
     display: none;
 }
 
-.dashboard-chatbot-launcher[aria-expanded="true"] .chatbot-launcher-icon--normal {
+.dashboard-chatbot-launcher.is-icon-loaded .chatbot-launcher-icon--normal {
+    display: block;
+}
+
+.dashboard-chatbot-launcher.is-icon-loaded[aria-expanded="true"] .chatbot-launcher-icon--normal {
     display: none;
 }
 
-.dashboard-chatbot-launcher[aria-expanded="true"] .chatbot-launcher-icon--active {
+.dashboard-chatbot-launcher.is-icon-loaded[aria-expanded="true"] .chatbot-launcher-icon--active {
     display: block;
 }
 

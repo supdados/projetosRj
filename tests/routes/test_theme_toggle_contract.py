@@ -86,3 +86,33 @@ def test_theme_toggle_is_after_notifications_and_account(client_user):
     account_index = html.index('id="appAccountMenuDesktop"')
 
     assert notifications_index < account_index < theme_toggle_index
+
+
+def test_dark_theme_covers_orgao_picker_and_templates_list():
+    css_path = (
+        Path(__file__).resolve().parents[2] / "static" / "css" / "theme-dark.css"
+    )
+    css = _read(css_path)
+
+    assert 'html[data-theme="dark"] body.is-authenticated .orgao-tree-menu' in css
+    assert 'html[data-theme="dark"] body.is-authenticated .orgao-tree-search-input' in css
+    assert (
+        'html[data-theme="dark"] body.is-authenticated .templates-page-v2 .tpl-hero'
+        in css
+    )
+    assert (
+        'html[data-theme="dark"] body.is-authenticated .templates-page-v2 .tpl-table-wrap'
+        in css
+    )
+
+
+def test_chatbot_launcher_has_icon_fallback_contract():
+    css_path = Path(__file__).resolve().parents[2] / "static" / "css" / "style.css"
+    base_path = Path(__file__).resolve().parents[2] / "templates" / "base.html"
+    css = _read(css_path)
+    html = _read(base_path)
+
+    assert ".dashboard-chatbot-launcher::before" in css
+    assert ".dashboard-chatbot-launcher.is-icon-loaded::before" in css
+    assert "chatbotLauncherIcons" in html
+    assert "markChatbotIconLoaded" in html

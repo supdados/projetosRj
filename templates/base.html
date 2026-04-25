@@ -298,6 +298,7 @@
         const chatbotStatus      = document.querySelector('[data-chatbot-status]');
         const chatbotFrameShell  = document.querySelector('[data-chatbot-frame-shell]');
         const chatbotFrame       = document.getElementById('dashboardChatbotFrame');
+        const chatbotLauncherIcons = chatbotLauncher ? chatbotLauncher.querySelectorAll('.chatbot-launcher-icon') : [];
         const chatbotEnabled     = {{ chatbot_enabled|tojson }};
         const chatbotBaseUrl     = {{ chatbot_base_url|tojson }};
         const chatbotTokenApiUrl = {{ url_for('main.get_chatbot_token')|tojson }};
@@ -331,6 +332,18 @@
             chatbotFrameShell.hidden = false;
             if (chatbotStatus) chatbotStatus.hidden = true;
         }
+
+        function markChatbotIconLoaded() {
+            if (chatbotLauncher) chatbotLauncher.classList.add('is-icon-loaded');
+        }
+
+        chatbotLauncherIcons.forEach(function (icon) {
+            if (icon.complete && icon.naturalWidth > 0) {
+                markChatbotIconLoaded();
+            } else {
+                icon.addEventListener('load', markChatbotIconLoaded, { once: true });
+            }
+        });
 
         async function fetchChatbotToken() {
             const response = await fetch(chatbotTokenApiUrl, {
