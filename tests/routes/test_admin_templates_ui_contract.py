@@ -42,12 +42,13 @@ def test_admin_template_form_new_has_counter_clear_and_drag(client_admin):
 
     # Botão de adicionar com dica do Enter
     assert "data-add-stage" in html
-    assert "Enter na última linha" in html
+    assert "Adicionar nova etapa" in html
 
-    # Cancelar + Salvar ficam na linha de ações do card principal; sem card inferior.
+    # Cancelar + Salvar ficam abaixo do item de adicao; sem card inferior.
     assert "tpl-form-stage-actions" in html
     assert html.count("tpl-btn-primary") == 1
     assert html.count("tpl-btn-secondary") == 1
+    assert html.index("</section>") < html.index('class="tpl-form-actions"')
     assert "tpl-form-footer" not in html
     assert "Arraste pelo" not in html
 
@@ -131,8 +132,8 @@ def test_admin_template_form_add_stage_matches_inline_entry_visual_contract():
     css = css_path.read_text(encoding="utf-8")
 
     assert ".tpl-form-stage-actions" in css
-    assert "grid-template-columns: minmax(0, 1fr) auto;" in css
     assert ".tpl-form-add-stage" in css
     assert "border: 1px dashed var(--tf-border-strong);" in css
-    assert "background: #f2f8ff;" in css
+    assert "background: #f6faff;" in css
     assert "min-height: 58px;" in css
+    assert ".tpl-form-icon-btn" not in css

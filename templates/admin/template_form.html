@@ -96,18 +96,18 @@
 
             <div class="tpl-form-stage-actions">
                 <button type="button" class="tpl-form-add-stage" data-add-stage>
-                    <i class="fas fa-plus" aria-hidden="true"></i>
-                    <span>Adicionar etapa</span>
-                    <span class="tpl-form-add-stage-hint">— ou pressione Enter na última linha</span>
+                    <i class="fas fa-plus-circle" aria-hidden="true"></i>
+                    <span>Adicionar nova etapa</span>
                 </button>
-                <div class="tpl-form-actions">
-                    <a href="{{ url_for('main.list_templates') }}" class="tpl-btn tpl-btn-secondary">Cancelar</a>
-                    <button type="submit" class="tpl-btn tpl-btn-primary">
-                        {% if is_edit %}Salvar alterações{% else %}Criar modelo{% endif %}
-                    </button>
-                </div>
             </div>
         </section>
+
+        <div class="tpl-form-actions">
+            <a href="{{ url_for('main.list_templates') }}" class="tpl-btn tpl-btn-secondary">Cancelar</a>
+            <button type="submit" class="tpl-btn tpl-btn-primary">
+                {% if is_edit %}Salvar alterações{% else %}Criar modelo{% endif %}
+            </button>
+        </div>
     </form>
 </div>
 
