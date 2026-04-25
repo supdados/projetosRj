@@ -203,8 +203,7 @@ def test_tasks_hub_global_placeholder_project_picker_scopes_projects_by_selected
     inline_form_content = inline_form_path.read_text(encoding="utf-8")
 
     assert "function getProjectOptionsForPicker()" in orchestrator_content
-    assert "if (!selectedOrgaoSigla) {" in orchestrator_content
-    assert "optionOrgaoSigla === selectedOrgaoKey" in orchestrator_content
+    assert "return projectOptions.slice();" in orchestrator_content
     assert "input.addEventListener('focus', showDropdown);" not in picker_content
     assert "input.addEventListener('click', showDropdown);" in picker_content
     assert (

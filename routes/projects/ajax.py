@@ -143,6 +143,19 @@ def update_project_inline(project_id):
                     jsonify({"success": False, "message": "Órgão não encontrado."}),
                     400,
                 )
+            if (
+                not new_orgao_obj.ativo
+                and new_orgao_id != project_to_edit.orgao_id
+            ):
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": "Este órgão está inativo e não pode receber novos projetos.",
+                        }
+                    ),
+                    400,
+                )
             if not g.user.is_admin and new_orgao_id not in get_user_orgao_subtree_ids(
                 g.user
             ):

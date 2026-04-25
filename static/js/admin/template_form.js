@@ -45,29 +45,7 @@
         updateCounter();
     }
 
-    let activeActionItem = null;
     let draggedItem = null;
-
-    function setActiveActionItem(item) {
-        if (activeActionItem === item) return;
-        getItems().forEach(function (stageItem) {
-            stageItem.classList.toggle('is-hover-active', stageItem === item);
-        });
-        activeActionItem = item || null;
-    }
-
-    function clearActiveActionItem(item) {
-        if (!item || activeActionItem === item) {
-            setActiveActionItem(null);
-        }
-    }
-
-    function getStageItemFromTarget(target) {
-        if (!target || typeof target.closest !== 'function') return null;
-        const item = target.closest('[data-stage-item]');
-        if (!item || !list.contains(item)) return null;
-        return item;
-    }
 
     function createStageItem(options) {
         const opts = options || {};
@@ -107,9 +85,6 @@
 
     function removeStage(item) {
         if (!item || !list.contains(item)) return;
-        if (activeActionItem === item) {
-            clearActiveActionItem(item);
-        }
         item.classList.add('is-removing');
         window.setTimeout(function () {
             item.remove();
@@ -122,7 +97,6 @@
         if (items.length === 0) return;
         const ok = window.confirm('Remover todas as etapas deste modelo? Esta ação só é aplicada quando você salvar.');
         if (!ok) return;
-        clearActiveActionItem();
         items.forEach(function (item) { item.remove(); });
         refresh();
     }
@@ -145,41 +119,6 @@
         }
     });
 
-    list.addEventListener('pointerover', function (event) {
-        const item = getStageItemFromTarget(event.target);
-        if (item) {
-            setActiveActionItem(item);
-        }
-    });
-
-    list.addEventListener('pointerout', function (event) {
-        const item = getStageItemFromTarget(event.target);
-        if (!item || item !== activeActionItem) return;
-        if (item.contains(event.relatedTarget)) return;
-        if (item.contains(document.activeElement)) return;
-        clearActiveActionItem(item);
-    });
-
-    document.addEventListener('pointermove', function (event) {
-        if (draggedItem) return;
-        setActiveActionItem(getStageItemFromTarget(event.target));
-    }, true);
-
-    document.addEventListener('pointerleave', function () {
-        clearActiveActionItem();
-    }, true);
-
-    window.addEventListener('blur', function () {
-        clearActiveActionItem();
-    });
-
-    list.addEventListener('focusin', function (event) {
-        const item = getStageItemFromTarget(event.target);
-        if (item) {
-            setActiveActionItem(item);
-        }
-    });
-
     list.addEventListener('input', function (event) {
         if (event.target.classList.contains('tpl-stage-duration-input')) {
             updateCounter();
@@ -195,18 +134,6 @@
             const nameInput = item.querySelector('.tpl-stage-name-input');
             if (nameInput && !nameInput.value.trim()) {
                 removeStage(item);
-            }
-        }, 0);
-    });
-
-    list.addEventListener('focusout', function (event) {
-        const item = event.target.closest('[data-stage-item]');
-        if (!item) return;
-        window.setTimeout(function () {
-            if (!list.contains(item)) return;
-            if (item.contains(document.activeElement)) return;
-            if (activeActionItem === item) {
-                clearActiveActionItem(item);
             }
         }, 0);
     });
@@ -298,7 +225,6 @@
             event.preventDefault();
             return;
         }
-        clearActiveActionItem();
         draggedItem = item;
         event.dataTransfer.effectAllowed = 'move';
         try {

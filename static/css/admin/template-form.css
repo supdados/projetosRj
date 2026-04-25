@@ -295,7 +295,8 @@
     transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
 }
 
-.tpl-stage-item.is-hover-active .tpl-stage-card {
+.tpl-stage-item:hover .tpl-stage-card,
+.tpl-stage-item:focus-within .tpl-stage-card {
     border-color: #b6cfe8;
     background: #fbfdff;
 }
@@ -466,22 +467,15 @@
     cursor: pointer;
     font-size: 0.72rem;
     font-weight: 700;
-    opacity: 0 !important;
-    visibility: hidden;
-    pointer-events: none !important;
-    transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease, opacity 0.14s ease, visibility 0s linear 0.14s;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.14s ease, background 0.14s ease, color 0.14s ease;
 }
 
-.tpl-stage-item.is-hover-active .tpl-stage-remove {
-    opacity: 1 !important;
-    visibility: visible;
-    pointer-events: auto !important;
-    transition-delay: 0s;
-}
-
-.tpl-stage-item:not(.is-hover-active) .tpl-stage-remove {
-    background: transparent !important;
-    color: var(--tf-muted) !important;
+.tpl-stage-item:hover .tpl-stage-remove,
+.tpl-stage-item:focus-within .tpl-stage-remove {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .tpl-stage-remove:hover,
@@ -577,7 +571,8 @@ html[data-theme="dark"] body.is-authenticated .tpl-stage-card {
     background: var(--app-color-surface-elevated, #243243);
 }
 
-html[data-theme="dark"] body.is-authenticated .tpl-stage-item.is-hover-active .tpl-stage-card {
+html[data-theme="dark"] body.is-authenticated .tpl-stage-item:hover .tpl-stage-card,
+html[data-theme="dark"] body.is-authenticated .tpl-stage-item:focus-within .tpl-stage-card {
     background: rgba(78, 149, 204, 0.1);
     border-color: rgba(99, 166, 219, 0.4);
 }

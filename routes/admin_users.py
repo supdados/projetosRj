@@ -145,6 +145,18 @@ def edit_user(user_id):
             selected_orgao_ids, invalid_orgaos = _parse_selected_orgaos(
                 request.form.getlist("orgaos_responsavel")
             )
+            # Órgãos inativos não aparecem como checkbox (`_list_orgaos_with_depth`
+            # filtra por ativo=True), então um vínculo pré-existente a um órgão
+            # inativo nunca volta no payload. Preserva esses vínculos para não
+            # deletá-los silenciosamente ao editar campos não relacionados.
+            inactive_current_ids = {
+                oid
+                for oid in current_orgao_ids
+                if (o := db.session.get(OrgaoUnidade, oid)) is not None and not o.ativo
+            }
+            for oid in inactive_current_ids:
+                if oid not in selected_orgao_ids:
+                    selected_orgao_ids.append(oid)
         else:
             selected_orgao_ids = current_orgao_ids
         should_update_cpf = not hide_govbr_link_fields and "cpf_govbr" in request.form

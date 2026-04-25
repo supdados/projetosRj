@@ -53,14 +53,7 @@
     }
 
     function getProjectOptionsForPicker() {
-        if (!selectedOrgaoSigla) {
-            return projectOptions.slice();
-        }
-        var selectedOrgaoKey = selectedOrgaoSigla.toLowerCase();
-        return projectOptions.filter(function (option) {
-            var optionOrgaoSigla = String(option && option.orgaoSigla || '').trim().toLowerCase();
-            return !!optionOrgaoSigla && optionOrgaoSigla === selectedOrgaoKey;
-        });
+        return projectOptions.slice();
     }
 
     function getProjectInfo(projectValue, fallbackLabel, fallbackOrgaoSigla) {
