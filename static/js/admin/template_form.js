@@ -45,6 +45,30 @@
         updateCounter();
     }
 
+    let activeActionItem = null;
+    let draggedItem = null;
+
+    function setActiveActionItem(item) {
+        if (activeActionItem === item) return;
+        getItems().forEach(function (stageItem) {
+            stageItem.classList.toggle('is-hover-active', stageItem === item);
+        });
+        activeActionItem = item || null;
+    }
+
+    function clearActiveActionItem(item) {
+        if (!item || activeActionItem === item) {
+            setActiveActionItem(null);
+        }
+    }
+
+    function getStageItemFromTarget(target) {
+        if (!target || typeof target.closest !== 'function') return null;
+        const item = target.closest('[data-stage-item]');
+        if (!item || !list.contains(item)) return null;
+        return item;
+    }
+
     function createStageItem(options) {
         const opts = options || {};
         const fragment = itemTemplate.content.cloneNode(true);
@@ -83,6 +107,9 @@
 
     function removeStage(item) {
         if (!item || !list.contains(item)) return;
+        if (activeActionItem === item) {
+            clearActiveActionItem(item);
+        }
         item.classList.add('is-removing');
         window.setTimeout(function () {
             item.remove();
@@ -95,6 +122,7 @@
         if (items.length === 0) return;
         const ok = window.confirm('Remover todas as etapas deste modelo? Esta ação só é aplicada quando você salvar.');
         if (!ok) return;
+        clearActiveActionItem();
         items.forEach(function (item) { item.remove(); });
         refresh();
     }
@@ -117,6 +145,41 @@
         }
     });
 
+    list.addEventListener('pointerover', function (event) {
+        const item = getStageItemFromTarget(event.target);
+        if (item) {
+            setActiveActionItem(item);
+        }
+    });
+
+    list.addEventListener('pointerout', function (event) {
+        const item = getStageItemFromTarget(event.target);
+        if (!item || item !== activeActionItem) return;
+        if (item.contains(event.relatedTarget)) return;
+        if (item.contains(document.activeElement)) return;
+        clearActiveActionItem(item);
+    });
+
+    document.addEventListener('pointermove', function (event) {
+        if (draggedItem) return;
+        setActiveActionItem(getStageItemFromTarget(event.target));
+    }, true);
+
+    document.addEventListener('pointerleave', function () {
+        clearActiveActionItem();
+    }, true);
+
+    window.addEventListener('blur', function () {
+        clearActiveActionItem();
+    });
+
+    list.addEventListener('focusin', function (event) {
+        const item = getStageItemFromTarget(event.target);
+        if (item) {
+            setActiveActionItem(item);
+        }
+    });
+
     list.addEventListener('input', function (event) {
         if (event.target.classList.contains('tpl-stage-duration-input')) {
             updateCounter();
@@ -136,6 +199,18 @@
         }, 0);
     });
 
+    list.addEventListener('focusout', function (event) {
+        const item = event.target.closest('[data-stage-item]');
+        if (!item) return;
+        window.setTimeout(function () {
+            if (!list.contains(item)) return;
+            if (item.contains(document.activeElement)) return;
+            if (activeActionItem === item) {
+                clearActiveActionItem(item);
+            }
+        }, 0);
+    });
+
     list.addEventListener('keydown', function (event) {
         if (event.key !== 'Enter') return;
         const nameInput = event.target.closest('.tpl-stage-name-input');
@@ -149,7 +224,68 @@
     });
 
     // --- Drag & drop (HTML5 vanilla) -------------------------------------
-    let draggedItem = null;
+    let dropIndicator = null;
+
+    function createDropIndicator() {
+        if (!dropIndicator) {
+            dropIndicator = document.createElement('div');
+            dropIndicator.className = 'tpl-stage-drop-indicator';
+            document.body.appendChild(dropIndicator);
+        }
+        return dropIndicator;
+    }
+
+    function getDropItems() {
+        return getItems().filter(function (item) {
+            return item !== draggedItem;
+        });
+    }
+
+    function getInsertionSlot(clientY) {
+        const items = getDropItems();
+        if (items.length === 0) return null;
+
+        let previousItem = null;
+        for (let index = 0; index < items.length; index += 1) {
+            const item = items[index];
+            const rect = item.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+
+            if (clientY < midpoint) {
+                return {
+                    previousItem: previousItem,
+                    referenceItem: item
+                };
+            }
+
+            previousItem = item;
+        }
+
+        return {
+            previousItem: previousItem,
+            referenceItem: null
+        };
+    }
+
+    function showDropIndicator(slot) {
+        if (!slot || (!slot.referenceItem && !slot.previousItem)) return;
+
+        const indicator = createDropIndicator();
+        const listRect = list.getBoundingClientRect();
+        const anchorRect = (slot.referenceItem || slot.previousItem).getBoundingClientRect();
+        const top = slot.referenceItem ? anchorRect.top - 2 : anchorRect.bottom - 1;
+
+        indicator.style.left = `${listRect.left}px`;
+        indicator.style.width = `${listRect.width}px`;
+        indicator.style.top = `${top}px`;
+        indicator.classList.add('show');
+    }
+
+    function hideDropIndicator() {
+        if (dropIndicator) {
+            dropIndicator.classList.remove('show');
+        }
+    }
 
     list.addEventListener('dragstart', function (event) {
         const handle = event.target.closest('[data-drag-handle]');
@@ -162,6 +298,7 @@
             event.preventDefault();
             return;
         }
+        clearActiveActionItem();
         draggedItem = item;
         event.dataTransfer.effectAllowed = 'move';
         try {
@@ -181,37 +318,39 @@
             draggedItem.classList.remove('is-dragging');
             draggedItem = null;
         }
-        getItems().forEach(function (item) {
-            item.classList.remove('is-drop-target-top', 'is-drop-target-bottom');
-        });
+        hideDropIndicator();
         refresh();
     });
 
     list.addEventListener('dragover', function (event) {
         if (!draggedItem) return;
         event.preventDefault();
-        const target = event.target.closest('[data-stage-item]');
-        if (!target || target === draggedItem) return;
-        const rect = target.getBoundingClientRect();
-        const before = event.clientY < rect.top + rect.height / 2;
-        getItems().forEach(function (item) {
-            item.classList.remove('is-drop-target-top', 'is-drop-target-bottom');
-        });
-        target.classList.add(before ? 'is-drop-target-top' : 'is-drop-target-bottom');
+        const slot = getInsertionSlot(event.clientY);
+        if (!slot) {
+            hideDropIndicator();
+            return;
+        }
+        showDropIndicator(slot);
         event.dataTransfer.dropEffect = 'move';
+    });
+
+    list.addEventListener('dragleave', function (event) {
+        if (!draggedItem) return;
+        if (!list.contains(event.relatedTarget)) {
+            hideDropIndicator();
+        }
     });
 
     list.addEventListener('drop', function (event) {
         if (!draggedItem) return;
         event.preventDefault();
-        const target = event.target.closest('[data-stage-item]');
-        if (!target || target === draggedItem) return;
-        const rect = target.getBoundingClientRect();
-        const before = event.clientY < rect.top + rect.height / 2;
-        if (before) {
-            target.parentNode.insertBefore(draggedItem, target);
+        const slot = getInsertionSlot(event.clientY);
+        hideDropIndicator();
+        if (!slot) return;
+        if (slot.referenceItem) {
+            list.insertBefore(draggedItem, slot.referenceItem);
         } else {
-            target.parentNode.insertBefore(draggedItem, target.nextSibling);
+            list.appendChild(draggedItem);
         }
         refresh();
     });

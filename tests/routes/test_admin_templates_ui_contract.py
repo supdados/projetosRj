@@ -39,6 +39,7 @@ def test_admin_template_form_new_has_counter_clear_and_drag(client_admin):
     # Drag handle funcional (não apenas decorativo)
     assert "data-drag-handle" in html
     assert 'draggable="true"' in html
+    assert "tpl-stage-card" in html
 
     # Botão de adicionar com dica do Enter
     assert "data-add-stage" in html
@@ -55,9 +56,12 @@ def test_admin_template_form_new_has_counter_clear_and_drag(client_admin):
     # Remoção de etapa é um X textual, sem ícone de lixeira.
     assert "fa-trash" not in html
     assert 'data-remove-stage aria-label="Remover etapa">X</button>' in html
+    assert "</div>\n        <button type=\"button\" class=\"tpl-stage-remove\"" in html
 
     # JS externo carregado
     assert "js/admin/template_form.js" in html
+    assert "template-form.css?v=20260424b" in html
+    assert "template_form.js?v=20260424b" in html
 
 
 def test_admin_template_form_edit_renders_existing_stages(client_admin, seed_data):
@@ -70,6 +74,7 @@ def test_admin_template_form_edit_renders_existing_stages(client_admin, seed_dat
     assert "data-stage-number" in html
     assert 'name="stage_name"' in html
     assert 'name="stage_duration"' in html
+    assert "tpl-stage-duration-suffix" not in html
 
 
 def test_admin_templates_list_has_search_and_sort(client_admin):
@@ -133,7 +138,127 @@ def test_admin_template_form_add_stage_matches_inline_entry_visual_contract():
 
     assert ".tpl-form-stage-actions" in css
     assert ".tpl-form-add-stage" in css
+    assert "display: grid;" in css
+    assert "grid-template-columns: minmax(0, 1fr) 24px;" in css
+    assert "grid-column: 1;" in css
     assert "border: 1px dashed var(--tf-border-strong);" in css
     assert "background: #f6faff;" in css
-    assert "min-height: 58px;" in css
+    assert "min-height: 44px;" in css
     assert ".tpl-form-icon-btn" not in css
+
+
+def test_admin_template_form_minimal_stage_fields_contract():
+    css_path = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "css"
+        / "admin"
+        / "template-form.css"
+    )
+    css = css_path.read_text(encoding="utf-8")
+
+    assert "border: 1px solid var(--tf-border);" in css
+    assert "background: #fbfdff;" in css
+    assert ".tpl-stage-card" in css
+    assert "grid-template-columns: minmax(0, 1fr) 24px;" in css
+    assert "grid-template-columns: 22px 30px minmax(0, 1fr);" in css
+    assert "grid-template-columns: minmax(0, 1fr) 68px;" in css
+    assert ".tpl-stage-number" in css
+    assert "background: transparent;" in css
+    assert "-webkit-appearance: none;" in css
+    assert "appearance: textfield;" in css
+    assert ".tpl-stage-remove" in css
+    assert "border: none;" in css
+    assert ".tpl-stage-item.is-hover-active .tpl-stage-remove" in css
+    assert "opacity: 0 !important;" in css
+    assert "visibility: hidden;" in css
+    assert "pointer-events: none !important;" in css
+    assert "opacity: 1 !important;" in css
+    assert "visibility: visible;" in css
+    assert "pointer-events: auto !important;" in css
+
+
+def test_admin_template_form_stage_remove_hover_is_single_active_item_contract():
+    root = Path(__file__).resolve().parents[2]
+    css = (
+        root / "static" / "css" / "admin" / "template-form.css"
+    ).read_text(encoding="utf-8")
+    js = (
+        root / "static" / "js" / "admin" / "template_form.js"
+    ).read_text(encoding="utf-8")
+
+    assert "let activeActionItem = null;" in js
+    assert "function setActiveActionItem(item)" in js
+    assert "function getStageItemFromTarget(target)" in js
+    assert "is-hover-active" in js
+    assert "stageItem.classList.toggle('is-hover-active', stageItem === item)" in js
+    assert "list.addEventListener('pointerover'" in js
+    assert "list.addEventListener('pointerout'" in js
+    assert "document.addEventListener('pointermove'" in js
+    assert "document.addEventListener('pointerleave'" in js
+    assert "window.addEventListener('blur'" in js
+    assert ".tpl-stage-item.is-hover-active .tpl-stage-card" in css
+    assert ".tpl-stage-item:hover .tpl-stage-remove" not in css
+    assert ".tpl-stage-item:focus-within .tpl-stage-remove" not in css
+    assert ".tpl-stage-remove:focus {\n    opacity: 1;" not in css
+    assert ".tpl-stage-item:hover .tpl-stage-card" not in css
+
+
+def test_admin_template_form_drag_uses_single_drop_indicator_contract():
+    root = Path(__file__).resolve().parents[2]
+    css = (
+        root / "static" / "css" / "admin" / "template-form.css"
+    ).read_text(encoding="utf-8")
+    js = (
+        root / "static" / "js" / "admin" / "template_form.js"
+    ).read_text(encoding="utf-8")
+
+    assert ".tpl-stage-drop-indicator" in css
+    assert ".tpl-stage-drop-indicator.show" in css
+    assert "tpl-stage-drop-indicator" in js
+    assert "function getInsertionSlot(clientY)" in js
+    assert "function showDropIndicator(slot)" in js
+    assert "function hideDropIndicator()" in js
+    assert "showDropIndicator(slot)" in js
+    assert "list.insertBefore(draggedItem, slot.referenceItem)" in js
+    assert "is-drop-target-top" not in js
+    assert "is-drop-target-bottom" not in js
+    assert "is-drop-target-top" not in css
+    assert "is-drop-target-bottom" not in css
+
+
+def test_admin_template_form_drag_canonicalizes_adjacent_drop_slots_contract():
+    js_path = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "js"
+        / "admin"
+        / "template_form.js"
+    )
+    js = js_path.read_text(encoding="utf-8")
+
+    assert "function getDropItems()" in js
+    assert "return item !== draggedItem;" in js
+    assert "previousItem: previousItem" in js
+    assert "referenceItem: item" in js
+    assert "referenceItem: null" in js
+    assert "const anchorRect = (slot.referenceItem || slot.previousItem).getBoundingClientRect();" in js
+
+
+def test_admin_template_form_dark_drag_handle_contract():
+    css_path = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "css"
+        / "admin"
+        / "template-form.css"
+    )
+    css = css_path.read_text(encoding="utf-8")
+
+    assert 'html[data-theme="dark"] body.is-authenticated .tpl-stage-drag {' in css
+    assert "color: #9fb2c7;" in css
+    assert (
+        'html[data-theme="dark"] body.is-authenticated .tpl-stage-drag:hover,'
+        in css
+    )
+    assert "background: rgba(148, 163, 184, 0.1);" in css
