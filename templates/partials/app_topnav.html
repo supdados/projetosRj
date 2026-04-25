@@ -328,18 +328,12 @@
 
                         {# Tutorial desabilitado — ver docs/tutorial-desabilitado.md #}
 
-                        <div class="app-theme-menu">
-                            <button
-                                class="btn app-nav-icon-btn app-theme-toggle"
-                                type="button"
-                                id="appThemeToggle"
-                                title="Alternar tema"
-                                aria-label="Alternar tema"
-                                aria-pressed="false"
-                            >
-                                <i class="fas fa-moon" id="appThemeToggleIcon"></i>
-                            </button>
-                        </div>
+                        <label class="app-theme-switch" title="Alternar tema">
+                            <input type="checkbox" class="app-theme-switch__input" id="appThemeToggle" role="switch" aria-label="Alternar tema claro/escuro">
+                            <i class="fas fa-sun app-theme-switch__icon app-theme-switch__icon--sun" aria-hidden="true"></i>
+                            <i class="fas fa-moon app-theme-switch__icon app-theme-switch__icon--moon" aria-hidden="true"></i>
+                            <span class="app-theme-switch__sr">Alternar tema</span>
+                        </label>
 
                     </div>
                 </div>

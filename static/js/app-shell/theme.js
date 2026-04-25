@@ -4,8 +4,7 @@
         var root = document.documentElement;
         var body = document.body;
         var isAuthenticatedPage = body.classList.contains('is-authenticated');
-        var themeToggleButton = document.getElementById('appThemeToggle');
-        var themeToggleIcon = document.getElementById('appThemeToggleIcon');
+        var themeToggleInput = document.getElementById('appThemeToggle');
         var themeColorMeta = document.querySelector('meta[name="theme-color"]');
         var themeStorageKey = 'projetosrj.theme';
         var themeColorByMode = { light: '#005A92', dark: '#273447' };
@@ -32,14 +31,12 @@
         }
 
         function updateThemeToggle(themeName) {
-            if (!themeToggleButton || !themeToggleIcon) return;
+            if (!themeToggleInput) return;
             var isDarkTheme = themeName === 'dark';
-            themeToggleButton.classList.toggle('is-dark', isDarkTheme);
-            themeToggleButton.setAttribute('aria-pressed', isDarkTheme ? 'true' : 'false');
-            themeToggleButton.setAttribute('title', isDarkTheme ? 'Ativar modo claro' : 'Ativar modo escuro');
-            themeToggleButton.setAttribute('aria-label', isDarkTheme ? 'Ativar modo claro' : 'Ativar modo escuro');
-            themeToggleIcon.classList.remove('fa-moon', 'fa-sun');
-            themeToggleIcon.classList.add(isDarkTheme ? 'fa-moon' : 'fa-sun');
+            themeToggleInput.checked = isDarkTheme;
+            themeToggleInput.setAttribute('aria-label', isDarkTheme ? 'Ativar modo claro' : 'Ativar modo escuro');
+            var label = themeToggleInput.closest('.app-theme-switch');
+            if (label) label.setAttribute('title', isDarkTheme ? 'Ativar modo claro' : 'Ativar modo escuro');
         }
 
         function applyTheme(themeName, persistChoice) {
@@ -68,11 +65,9 @@
 
         applyTheme(resolveInitialTheme(), false);
 
-        if (isAuthenticatedPage && themeToggleButton) {
-            themeToggleButton.addEventListener('click', function () {
-                var currentTheme = normalizeTheme(root.getAttribute('data-theme'));
-                var nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                applyTheme(nextTheme, true);
+        if (isAuthenticatedPage && themeToggleInput) {
+            themeToggleInput.addEventListener('change', function () {
+                applyTheme(themeToggleInput.checked ? 'dark' : 'light', true);
             });
         }
 

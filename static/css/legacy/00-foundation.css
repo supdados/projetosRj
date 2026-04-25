@@ -72,6 +72,74 @@ body.is-authenticated .content.expanded {
     margin-left: 0;
 }
 
+/* Confina a barra de rolagem à área abaixo da topnav: body fixo na altura da
+   viewport, main-content vira o único container que rola. */
+body.is-authenticated,
+html:has(body.is-authenticated) {
+    height: 100vh;
+    overflow: hidden;
+}
+
+body.is-authenticated .wrapper {
+    height: 100vh;
+    min-height: 0;
+}
+
+body.is-authenticated .content {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+}
+
+body.is-authenticated .app-topnav {
+    flex: 0 0 auto;
+}
+
+body.is-authenticated .main-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 166, 219, 0.35) transparent;
+}
+
+body.is-authenticated .main-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+body.is-authenticated .main-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+body.is-authenticated .main-content::-webkit-scrollbar-thumb {
+    background: rgba(99, 166, 219, 0.28);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background-color 0.2s ease;
+}
+
+body.is-authenticated .main-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 166, 219, 0.55);
+    background-clip: padding-box;
+}
+
+html[data-theme="dark"] body.is-authenticated .main-content {
+    scrollbar-color: rgba(148, 178, 210, 0.28) transparent;
+}
+
+html[data-theme="dark"] body.is-authenticated .main-content::-webkit-scrollbar-thumb {
+    background: rgba(148, 178, 210, 0.22);
+    background-clip: padding-box;
+}
+
+html[data-theme="dark"] body.is-authenticated .main-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 178, 210, 0.45);
+    background-clip: padding-box;
+}
+
 /* Navbar moderna */
 .navbar {
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
@@ -267,24 +335,103 @@ html[data-theme="dark"] .app-brand {
     position: relative;
 }
 
-.app-theme-menu {
+/* Theme switch na topnav.
+   Visual dirigido por html[data-theme], que é definido síncrono no <head> antes
+   do primeiro paint — evita flicker ao navegar entre páginas. */
+.app-theme-switch {
+    position: relative;
     display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.app-theme-switch__input {
+    appearance: none;
+    -webkit-appearance: none;
     position: relative;
-}
-
-.app-theme-toggle {
-    position: relative;
-}
-
-.app-theme-toggle.is-dark {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.12);
-    border-color: transparent;
-}
-
-.app-theme-toggle:focus-visible {
+    display: block;
+    width: 54px;
+    height: 28px;
+    margin: 0;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(120deg, #f5b547 0%, #4ea5e0 100%);
+    box-shadow: 0 3px 8px rgba(7, 28, 47, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.28);
     outline: none;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    transition: background 0.35s cubic-bezier(0.76, 0.05, 0.24, 0.95),
+                box-shadow 0.2s linear;
+}
+
+.app-theme-switch__input::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(7, 28, 47, 0.24);
+    transition: transform 0.35s cubic-bezier(0.76, 0.05, 0.24, 0.95),
+                background 0.35s;
+    z-index: 1;
+}
+
+html[data-theme="dark"] .app-theme-switch__input {
+    background: linear-gradient(120deg, #0d608f 0%, #1f2b3d 100%);
+}
+
+html[data-theme="dark"] .app-theme-switch__input::after {
+    transform: translateX(26px);
+    background: #e8eef6;
+}
+
+.app-theme-switch__input:focus-visible {
+    box-shadow: 0 0 0 3px rgba(99, 166, 219, 0.5),
+                0 3px 8px rgba(7, 28, 47, 0.22);
+}
+
+.app-theme-switch__icon {
+    position: absolute;
+    top: 7px;
+    font-size: 12px;
+    line-height: 1;
+    color: #ffffff;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 0;
+}
+
+/* Ícone do estado ATUAL fica no lado OPOSTO ao knob para não ser tampado:
+   - claro (knob à esquerda) → sol à direita
+   - escuro (knob à direita) → lua à esquerda */
+.app-theme-switch__icon--sun {
+    right: 8px;
+    opacity: 1;
+}
+
+.app-theme-switch__icon--moon {
+    left: 8px;
+    opacity: 0;
+    color: #dbe7f4;
+}
+
+html[data-theme="dark"] .app-theme-switch__icon--sun {
+    opacity: 0;
+}
+
+html[data-theme="dark"] .app-theme-switch__icon--moon {
+    opacity: 1;
+}
+
+.app-theme-switch__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
 }
 
 .app-notifications-menu .dropdown-toggle::after {
@@ -1076,11 +1223,6 @@ html[data-theme="dark"] .app-brand {
 @media (max-width: 1260px) {
     .app-topnav-right {
         gap: 0.55rem;
-    }
-
-    .app-theme-toggle {
-        width: 2.2rem;
-        height: 2.2rem;
     }
 
     .app-global-search {

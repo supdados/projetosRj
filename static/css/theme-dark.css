@@ -102,19 +102,8 @@ html[data-theme="dark"] body.is-authenticated .app-nav-icon-btn.show {
 }
 
 
-html[data-theme="dark"] body.is-authenticated .app-theme-toggle.is-dark {
-    background: rgba(39, 52, 71, 0.28);
-    border-color: rgba(99, 166, 219, 0.18);
-    color: var(--app-color-text-secondary);
-    box-shadow: none;
-}
-
-
-html[data-theme="dark"] body.is-authenticated .app-theme-toggle:hover,
-html[data-theme="dark"] body.is-authenticated .app-theme-toggle:focus-visible {
-    color: #ecf4fb;
-    background: rgba(78, 149, 204, 0.24);
-    border-color: rgba(99, 166, 219, 0.52);
+html[data-theme="dark"] body.is-authenticated .app-theme-switch__input {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 
