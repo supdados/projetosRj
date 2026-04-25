@@ -1,3 +1,6 @@
+from pathlib import Path
+
+
 def test_admin_templates_list_has_clickable_rows_and_only_duplicate_delete(
     client_admin,
 ):
@@ -31,6 +34,7 @@ def test_admin_template_form_new_has_counter_clear_and_drag(client_admin):
     # Botão "Limpar tudo"
     assert "data-clear-all" in html
     assert "Limpar tudo" in html
+    assert "fa-broom" not in html
 
     # Drag handle funcional (não apenas decorativo)
     assert "data-drag-handle" in html
@@ -40,9 +44,16 @@ def test_admin_template_form_new_has_counter_clear_and_drag(client_admin):
     assert "data-add-stage" in html
     assert "Enter na última linha" in html
 
-    # Cancelar + Salvar no topo (header) E no rodapé
-    assert html.count("tpl-btn-primary") >= 2
-    assert html.count("tpl-btn-secondary") >= 2
+    # Cancelar + Salvar ficam na linha de ações do card principal; sem card inferior.
+    assert "tpl-form-stage-actions" in html
+    assert html.count("tpl-btn-primary") == 1
+    assert html.count("tpl-btn-secondary") == 1
+    assert "tpl-form-footer" not in html
+    assert "Arraste pelo" not in html
+
+    # Remoção de etapa é um X textual, sem ícone de lixeira.
+    assert "fa-trash" not in html
+    assert 'data-remove-stage aria-label="Remover etapa">X</button>' in html
 
     # JS externo carregado
     assert "js/admin/template_form.js" in html
@@ -76,3 +87,52 @@ def test_admin_templates_list_has_search_and_sort(client_admin):
         "edicao_recente",
     ):
         assert f'value="{opt}"' in html
+
+
+def test_admin_template_form_enter_focuses_created_stage_contract():
+    js_path = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "js"
+        / "admin"
+        / "template_form.js"
+    )
+    js = js_path.read_text(encoding="utf-8")
+
+    assert "(!options || options.focus !== false)" in js
+    assert "window.requestAnimationFrame" in js
+    assert "nameInput.focus()" in js
+
+
+def test_admin_template_form_draft_stage_removed_on_blur_contract():
+    js_path = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "js"
+        / "admin"
+        / "template_form.js"
+    )
+    js = js_path.read_text(encoding="utf-8")
+
+    assert "item.dataset.draftStage = '1'" in js
+    assert "addStage({ draft: true })" in js
+    assert "list.addEventListener('focusout'" in js
+    assert "removeStage(item)" in js
+
+
+def test_admin_template_form_add_stage_matches_inline_entry_visual_contract():
+    css_path = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "css"
+        / "admin"
+        / "template-form.css"
+    )
+    css = css_path.read_text(encoding="utf-8")
+
+    assert ".tpl-form-stage-actions" in css
+    assert "grid-template-columns: minmax(0, 1fr) auto;" in css
+    assert ".tpl-form-add-stage" in css
+    assert "border: 1px dashed var(--tf-border-strong);" in css
+    assert "background: #f2f8ff;" in css
+    assert "min-height: 58px;" in css

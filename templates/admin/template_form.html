@@ -23,12 +23,6 @@
                 <h1 class="tpl-form-title">{% if is_edit %}Editar modelo{% else %}Novo modelo{% endif %}</h1>
                 <p class="tpl-form-subtitle">Defina nome, descrição e a sequência de etapas deste modelo.</p>
             </div>
-            <div class="tpl-form-header-actions">
-                <a href="{{ url_for('main.list_templates') }}" class="tpl-btn tpl-btn-secondary">Cancelar</a>
-                <button type="submit" class="tpl-btn tpl-btn-primary">
-                    {% if is_edit %}Salvar alterações{% else %}Criar modelo{% endif %}
-                </button>
-            </div>
         </header>
 
         <section class="tpl-form-card">
@@ -62,7 +56,6 @@
                     </span>
                 </div>
                 <button type="button" class="tpl-form-clear-all" data-clear-all>
-                    <i class="fas fa-broom" aria-hidden="true"></i>
                     <span>Limpar tudo</span>
                 </button>
             </div>
@@ -95,33 +88,26 @@
                                 <span class="tpl-stage-duration-suffix">dias</span>
                             </div>
                         </div>
-                        <button type="button" class="tpl-stage-remove" data-remove-stage aria-label="Remover etapa">
-                            <i class="fas fa-trash" aria-hidden="true"></i>
-                        </button>
+                        <button type="button" class="tpl-stage-remove" data-remove-stage aria-label="Remover etapa">X</button>
                     </div>
                     {% endfor %}
                 {% endif %}
             </div>
 
-            <button type="button" class="tpl-form-add-stage" data-add-stage>
-                <i class="fas fa-plus" aria-hidden="true"></i>
-                <span>Adicionar etapa</span>
-                <span class="tpl-form-add-stage-hint">— ou pressione Enter na última linha</span>
-            </button>
-        </section>
-
-        <footer class="tpl-form-footer">
-            <p class="tpl-form-footer-tip">
-                <i class="fas fa-grip-vertical" aria-hidden="true"></i>
-                Arraste pelo <span class="tpl-form-footer-tip-icon">::</span> para reordenar as etapas.
-            </p>
-            <div class="tpl-form-footer-actions">
-                <a href="{{ url_for('main.list_templates') }}" class="tpl-btn tpl-btn-secondary">Cancelar</a>
-                <button type="submit" class="tpl-btn tpl-btn-primary">
-                    {% if is_edit %}Salvar alterações{% else %}Criar modelo{% endif %}
+            <div class="tpl-form-stage-actions">
+                <button type="button" class="tpl-form-add-stage" data-add-stage>
+                    <i class="fas fa-plus" aria-hidden="true"></i>
+                    <span>Adicionar etapa</span>
+                    <span class="tpl-form-add-stage-hint">— ou pressione Enter na última linha</span>
                 </button>
+                <div class="tpl-form-actions">
+                    <a href="{{ url_for('main.list_templates') }}" class="tpl-btn tpl-btn-secondary">Cancelar</a>
+                    <button type="submit" class="tpl-btn tpl-btn-primary">
+                        {% if is_edit %}Salvar alterações{% else %}Criar modelo{% endif %}
+                    </button>
+                </div>
             </div>
-        </footer>
+        </section>
     </form>
 </div>
 
@@ -138,9 +124,7 @@
                 <span class="tpl-stage-duration-suffix">dias</span>
             </div>
         </div>
-        <button type="button" class="tpl-stage-remove" data-remove-stage aria-label="Remover etapa">
-            <i class="fas fa-trash" aria-hidden="true"></i>
-        </button>
+        <button type="button" class="tpl-stage-remove" data-remove-stage aria-label="Remover etapa">X</button>
     </div>
 </template>
 {% endblock %}

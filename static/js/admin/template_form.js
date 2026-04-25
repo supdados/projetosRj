@@ -50,6 +50,9 @@
         const fragment = itemTemplate.content.cloneNode(true);
         const item = fragment.querySelector('[data-stage-item]');
         if (!item) return null;
+        if (opts.draft) {
+            item.dataset.draftStage = '1';
+        }
         if (opts.name) {
             const nameInput = item.querySelector('.tpl-stage-name-input');
             if (nameInput) nameInput.value = opts.name;
@@ -67,8 +70,13 @@
         list.appendChild(item);
         refresh();
         const nameInput = item.querySelector('.tpl-stage-name-input');
-        if (nameInput && options && options.focus !== false) {
-            nameInput.focus();
+        if (nameInput && (!options || options.focus !== false)) {
+            window.requestAnimationFrame(function () {
+                nameInput.focus();
+                if (typeof nameInput.select === 'function') {
+                    nameInput.select();
+                }
+            });
         }
         return item;
     }
@@ -93,7 +101,7 @@
 
     addButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {
-            addStage();
+            addStage({ draft: true });
         });
     });
 
@@ -115,6 +123,19 @@
         }
     });
 
+    list.addEventListener('focusout', function (event) {
+        const item = event.target.closest('[data-stage-item]');
+        if (!item || item.dataset.draftStage !== '1') return;
+        window.setTimeout(function () {
+            if (!list.contains(item)) return;
+            if (item.contains(document.activeElement)) return;
+            const nameInput = item.querySelector('.tpl-stage-name-input');
+            if (nameInput && !nameInput.value.trim()) {
+                removeStage(item);
+            }
+        }, 0);
+    });
+
     list.addEventListener('keydown', function (event) {
         if (event.key !== 'Enter') return;
         const nameInput = event.target.closest('.tpl-stage-name-input');
@@ -124,7 +145,7 @@
         if (!currentItem) return;
         if (items[items.length - 1] !== currentItem) return;
         event.preventDefault();
-        addStage();
+        addStage({ draft: true });
     });
 
     // --- Drag & drop (HTML5 vanilla) -------------------------------------

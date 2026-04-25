@@ -83,7 +83,7 @@
     font-size: 0.9rem;
 }
 
-.tpl-form-header-actions {
+.tpl-form-actions {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -422,7 +422,15 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.14s ease;
+    font-size: 0.95rem;
+    font-weight: 800;
+    opacity: 0;
+    transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease, opacity 0.14s ease;
+}
+
+.tpl-stage-item:hover .tpl-stage-remove,
+.tpl-stage-item:focus-within .tpl-stage-remove {
+    opacity: 1;
 }
 
 .tpl-stage-remove:hover,
@@ -433,18 +441,26 @@
 }
 
 /* Add stage row */
-.tpl-form-add-stage {
+.tpl-form-stage-actions {
     margin-top: 0.3rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.tpl-form-add-stage {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    align-self: flex-start;
-    height: 40px;
-    padding: 0 0.9rem;
+    justify-content: center;
+    gap: 0.55rem;
+    width: 100%;
+    min-height: 58px;
+    padding: 0.7rem 0.85rem;
     border-radius: 10px;
     border: 1px dashed var(--tf-border-strong);
-    background: transparent;
-    color: var(--tf-primary);
+    background: #f2f8ff;
+    color: #3e6084;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
@@ -453,54 +469,16 @@
 
 .tpl-form-add-stage:hover,
 .tpl-form-add-stage:focus {
-    border-color: var(--tf-primary);
-    background: var(--tf-primary-soft);
+    border-color: #7da0c3;
+    background: #eaf3ff;
+    color: #244c76;
+    outline: none;
 }
 
 .tpl-form-add-stage-hint {
     color: var(--tf-muted);
     font-weight: 500;
     font-size: 0.82rem;
-}
-
-/* Footer */
-.tpl-form-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.8rem;
-    flex-wrap: wrap;
-    background: var(--tf-surface);
-    border: 1px solid var(--tf-border);
-    border-radius: 14px;
-    padding: 0.9rem 1.1rem;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
-}
-
-.tpl-form-footer-tip {
-    margin: 0;
-    font-size: 0.83rem;
-    color: var(--tf-muted);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-
-.tpl-form-footer-tip i {
-    color: #94a3b8;
-}
-
-.tpl-form-footer-tip-icon {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    letter-spacing: -2px;
-    color: #94a3b8;
-    font-weight: 700;
-}
-
-.tpl-form-footer-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
 }
 
 /* Responsive */
@@ -510,8 +488,7 @@
         align-items: stretch;
     }
 
-    .tpl-form-header-actions,
-    .tpl-form-footer-actions {
+    .tpl-form-actions {
         width: 100%;
         justify-content: flex-end;
     }
@@ -533,9 +510,14 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .tpl-form-footer {
-        flex-direction: column;
+    .tpl-form-stage-actions {
+        grid-template-columns: 1fr;
         align-items: stretch;
+    }
+
+    .tpl-form-add-stage {
+        align-self: stretch;
+        justify-content: center;
     }
 }
 
@@ -565,6 +547,39 @@ html[data-theme="dark"] body.is-authenticated .tpl-stage-item:hover {
 html[data-theme="dark"] body.is-authenticated .tpl-stage-duration {
     background: rgba(148, 163, 184, 0.08);
     border-color: var(--app-color-border);
+}
+
+html[data-theme="dark"] body.is-authenticated .tpl-form-add-stage {
+    background: #2a3b50;
+    border-color: rgba(99, 166, 219, 0.34);
+    color: #d0deec;
+}
+
+html[data-theme="dark"] body.is-authenticated .tpl-form-add-stage:hover,
+html[data-theme="dark"] body.is-authenticated .tpl-form-add-stage:focus {
+    background: rgba(78, 149, 204, 0.22);
+    border-color: rgba(99, 166, 219, 0.56);
+    color: #f0f7ff;
+}
+
+html[data-theme="dark"] body.is-authenticated .tpl-stage-name-input,
+html[data-theme="dark"] body.is-authenticated .tpl-stage-duration-input {
+    background: transparent;
+    color: var(--app-color-text-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .tpl-stage-name-input {
+    background: rgba(35, 48, 66, 0.72);
+    border-color: rgba(99, 166, 219, 0.28);
+}
+
+html[data-theme="dark"] body.is-authenticated .tpl-stage-name-input::placeholder {
+    color: #9fb2c7;
+}
+
+html[data-theme="dark"] body.is-authenticated .tpl-stage-name-input:focus {
+    border-color: rgba(99, 166, 219, 0.62);
+    box-shadow: 0 0 0 3px rgba(78, 149, 204, 0.18);
 }
 
 html[data-theme="dark"] body.is-authenticated .tpl-form-name-input:hover,
