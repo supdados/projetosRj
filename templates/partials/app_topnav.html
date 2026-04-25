@@ -145,8 +145,8 @@
                                                 {% else %}
                                                 <span class="orgao-tree-toggle-spacer"></span>
                                                 {% endif %}
-                                                {% set bullet_variant = 'self' if node.is_user_orgao else ('selected' if is_selected else 'muted') %}
-                                                <span class="orgao-tree-bullet orgao-tree-bullet--{{ bullet_variant }}"></span>
+                                                {% set tipo_slug = (node.tipo or '')|lower|replace(' ', '-')|replace('ç', 'c')|replace('ã', 'a')|replace('ú', 'u')|replace('í', 'i')|replace('é', 'e')|replace('á', 'a') %}
+                                                <span class="orgao-tree-bullet tipo-{{ tipo_slug }} {{ 'is-self' if node.is_user_orgao else ('is-selected' if is_selected else '') }}" title="{{ node.tipo }}"></span>
                                                 <a href="{{ build_current_orgao_url(node.id) }}" class="orgao-tree-link">
                                                     <span class="orgao-tree-sigla">{{ node.sigla }}</span>
                                                     <span class="orgao-tree-nome">{{ node.nome }}</span>

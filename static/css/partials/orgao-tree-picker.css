@@ -37,6 +37,15 @@
     background: rgba(255, 255, 255, 0.12);
 }
 
+.orgao-tree-trigger:focus,
+.orgao-tree-trigger:focus-visible,
+.orgao-tree-control:focus,
+.orgao-tree-control:focus-visible,
+.orgao-tree-control:focus-within {
+    outline: none;
+    box-shadow: none;
+}
+
 .orgao-tree-trigger-icon {
     color: rgba(255, 255, 255, 0.9);
     font-size: 0.92rem;
@@ -154,7 +163,7 @@
     gap: 0.6rem;
     padding: 0.55rem 0.7rem;
     border-radius: 8px;
-    color: #1f2d3d;
+    color: #1d4ed8;
     text-decoration: none;
     font-weight: 600;
     font-size: 0.9rem;
@@ -163,7 +172,7 @@
 
 .orgao-tree-all:hover {
     background: #eef4ff;
-    color: #1f2d3d;
+    color: #1d4ed8;
 }
 
 .orgao-tree-all.is-active {
@@ -240,10 +249,20 @@
     flex-shrink: 0;
 }
 
-.orgao-tree-bullet--self,
-.orgao-tree-bullet--selected {
-    background: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+.orgao-tree-bullet.tipo-estado          { background: #0b4d86; }
+.orgao-tree-bullet.tipo-secretaria      { background: #1d4ed8; }
+.orgao-tree-bullet.tipo-subsecretaria   { background: #0891b2; }
+.orgao-tree-bullet.tipo-autarquia       { background: #7c3aed; }
+.orgao-tree-bullet.tipo-fundacao        { background: #db2777; }
+.orgao-tree-bullet.tipo-empresa-publica { background: #be185d; }
+.orgao-tree-bullet.tipo-assessoria      { background: #0d9488; }
+.orgao-tree-bullet.tipo-coordenacao     { background: #b45309; }
+.orgao-tree-bullet.tipo-nucleo          { background: #b45309; }
+.orgao-tree-bullet.tipo-departamento    { background: #6b7280; }
+
+.orgao-tree-bullet.is-selected,
+.orgao-tree-bullet.is-self {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22);
 }
 
 .orgao-tree-link {

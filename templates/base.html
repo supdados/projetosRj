@@ -55,11 +55,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260402b') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/flash.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/orgao-tree-picker.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/orgao-tree-picker.css', v='20260425b') }}">
 
     {% block head_extra %}{% endblock %}
     {% if current_user_obj %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme-dark.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme-dark.css', v='20260425a') }}">
     {% endif %}
     {% if tutorial_active %}
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/shepherd/shepherd.css') }}">

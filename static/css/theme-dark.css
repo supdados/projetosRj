@@ -1989,10 +1989,20 @@ html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet {
     background: #8fa1b5;
 }
 
-html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet--self,
-html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet--selected {
-    background: #7fc0ef;
-    box-shadow: 0 0 0 3px rgba(127, 192, 239, 0.18);
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.tipo-estado          { background: #2f6fb0; }
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.tipo-secretaria      { background: #4a8fe7; }
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.tipo-subsecretaria   { background: #22b8d8; }
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.tipo-autarquia       { background: #a78bfa; }
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.tipo-fundacao        { background: #ec4899; }
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.tipo-empresa-publica { background: #db2777; }
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.tipo-assessoria      { background: #2dd4bf; }
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.tipo-coordenacao     { background: #f59e0b; }
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.tipo-nucleo          { background: #f59e0b; }
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.tipo-departamento    { background: #94a3b8; }
+
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.is-self,
+html[data-theme="dark"] body.is-authenticated .orgao-tree-bullet.is-selected {
+    box-shadow: 0 0 0 3px rgba(127, 192, 239, 0.32);
 }
 
 
