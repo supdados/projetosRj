@@ -17,6 +17,10 @@
     display: none !important;
 }
 
+.loading-active .app-scroll-region {
+    display: none !important;
+}
+
 /* Esconder footer durante carregamento */
 .loading-active footer {
     display: none !important;

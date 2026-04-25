@@ -72,8 +72,9 @@ body.is-authenticated .content.expanded {
     margin-left: 0;
 }
 
-/* Confina a barra de rolagem à área abaixo da topnav: body fixo na altura da
-   viewport, main-content vira o único container que rola. */
+/* Scroll confinado ao .app-scroll-region (main + footer): a topnav fica fora
+   do container de rolagem, então a barra começa abaixo dela e vai até o
+   rodapé na borda direita real da viewport. */
 body.is-authenticated,
 html:has(body.is-authenticated) {
     height: 100vh;
@@ -95,25 +96,36 @@ body.is-authenticated .app-topnav {
     flex: 0 0 auto;
 }
 
-body.is-authenticated .main-content {
+body.is-authenticated .app-scroll-region {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
     scrollbar-width: thin;
     scrollbar-color: rgba(99, 166, 219, 0.35) transparent;
 }
 
-body.is-authenticated .main-content::-webkit-scrollbar {
+body.is-authenticated .app-scroll-region > .main-content {
+    flex: 1 1 auto;
+}
+
+body.is-authenticated .app-scroll-region > footer {
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+body.is-authenticated .app-scroll-region::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
-body.is-authenticated .main-content::-webkit-scrollbar-track {
+body.is-authenticated .app-scroll-region::-webkit-scrollbar-track {
     background: transparent;
 }
 
-body.is-authenticated .main-content::-webkit-scrollbar-thumb {
+body.is-authenticated .app-scroll-region::-webkit-scrollbar-thumb {
     background: rgba(99, 166, 219, 0.28);
     border-radius: 999px;
     border: 2px solid transparent;
@@ -121,21 +133,21 @@ body.is-authenticated .main-content::-webkit-scrollbar-thumb {
     transition: background-color 0.2s ease;
 }
 
-body.is-authenticated .main-content::-webkit-scrollbar-thumb:hover {
+body.is-authenticated .app-scroll-region::-webkit-scrollbar-thumb:hover {
     background: rgba(99, 166, 219, 0.55);
     background-clip: padding-box;
 }
 
-html[data-theme="dark"] body.is-authenticated .main-content {
+html[data-theme="dark"] body.is-authenticated .app-scroll-region {
     scrollbar-color: rgba(148, 178, 210, 0.28) transparent;
 }
 
-html[data-theme="dark"] body.is-authenticated .main-content::-webkit-scrollbar-thumb {
+html[data-theme="dark"] body.is-authenticated .app-scroll-region::-webkit-scrollbar-thumb {
     background: rgba(148, 178, 210, 0.22);
     background-clip: padding-box;
 }
 
-html[data-theme="dark"] body.is-authenticated .main-content::-webkit-scrollbar-thumb:hover {
+html[data-theme="dark"] body.is-authenticated .app-scroll-region::-webkit-scrollbar-thumb:hover {
     background: rgba(148, 178, 210, 0.45);
     background-clip: padding-box;
 }

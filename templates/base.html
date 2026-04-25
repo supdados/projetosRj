@@ -137,6 +137,7 @@
 
             {% include "partials/skeleton_macros.html" %}
 
+            <div class="app-scroll-region">
             <!-- Conteúdo da Página -->
             <main class="main-content">
                 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -165,6 +166,7 @@
             <footer class="py-3 text-center">
                 <p>&copy; {{ current_year }} Secretaria de Transformação Digital - SETD.</p>
             </footer>
+            </div>
         </div>
     </div>
 

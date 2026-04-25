@@ -11,8 +11,14 @@
     min-height: 0;
 }
 
-.wrapper:has(.dashboard-page-breathe) .main-content {
-    flex: 1;
+.wrapper:has(.dashboard-page-breathe) .app-scroll-region {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.wrapper:has(.dashboard-page-breathe) .app-scroll-region > .main-content {
+    flex: 1 1 0;
     min-height: 0;
     overflow: hidden;
 }
@@ -1393,4 +1399,3 @@ html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-para-ajust
 html[data-theme="dark"] body.is-authenticated .dashboard-page-v2 .seg-nao-iniciada {
     stroke: var(--tasks-kpi-nao-iniciada);
 }
-
