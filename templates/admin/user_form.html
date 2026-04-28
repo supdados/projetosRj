@@ -64,12 +64,11 @@
                             <span class="form-control account-input account-input-readonly" style="width: auto; flex: 1;">
                                 CPF já cadastrado{% if user.govbr_sub %} — Vinculado por gov.br{% else %} — Vínculo pendente{% endif %}
                             </span>
-                            <form action="{{ url_for('main.remove_cpf', user_id=user.id) }}" method="POST"
-                                  data-confirm="Tem certeza que deseja retirar o CPF e o vínculo gov.br deste usuário? Esta ação não pode ser desfeita.">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="fas fa-times me-1"></i>Retirar
-                                </button>
-                            </form>
+                            {# Botão associado por HTML5 form="..." ao form fora do form principal,
+                               para evitar nesting de <form> que invalida o submit do botão Salvar. #}
+                            <button type="submit" form="remove-cpf-form" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-times me-1"></i>Retirar
+                            </button>
                         </div>
                         <div class="account-help-text">Ao retirar, o CPF e o vínculo gov.br serão apagados.</div>
                     </div>
@@ -171,6 +170,13 @@
             </button>
         </div>
     </form>
+
+    {% if user.id and user.cpf_govbr %}
+    <form id="remove-cpf-form"
+          action="{{ url_for('main.remove_cpf', user_id=user.id) }}"
+          method="POST"
+          data-confirm="Tem certeza que deseja retirar o CPF e o vínculo gov.br deste usuário? Esta ação não pode ser desfeita."></form>
+    {% endif %}
 </div>
 {% endblock %}
 
