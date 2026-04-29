@@ -561,6 +561,7 @@ def download_projects_csv():
     writer.writerow([
         'ID',
         'Nome',
+        'Descrição',
         'Processo SEI-RJ',
         'Área Responsável',
         'Status',
@@ -590,6 +591,7 @@ def download_projects_csv():
         writer.writerow([
             p.id,
             p.titulo,
+            p.short_description or '',
             p.sei_process or '',
             p.area_responsavel or '',
             p.status,
