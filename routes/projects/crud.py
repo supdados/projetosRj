@@ -212,6 +212,10 @@ def edit_project(project_id):
         
         old_status = project_to_edit.status
         new_status = request.form.get('project_status')
+        if new_status == 'Finalizado' and old_status != 'Finalizado' and not project_to_edit.todas_etapas_concluidas:
+            db.session.rollback()
+            flash('Não é possível finalizar o projeto: todas as etapas devem estar iniciadas e concluídas.', 'warning')
+            return redirect(url_for('main.edit_project', project_id=project_id))
         if old_status != new_status:
             changes.append(f'status de "{old_status}" para "{new_status}"')
         project_to_edit.status = new_status
