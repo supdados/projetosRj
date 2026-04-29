@@ -561,12 +561,15 @@ def download_projects_csv():
     writer.writerow([
         'ID',
         'Nome',
+        'Processo SEI-RJ',
+        'Área Responsável',
         'Status',
         'Data Início',
         'Data Fim',
         'Objetivo EEGD',
         'Resultado EEGD',
         'Indicador EEGD',
+        'Cumprimento (%)',
     ])
 
     for p in projects:
@@ -577,7 +580,26 @@ def download_projects_csv():
         indicadores = '; '.join(
             ip.indicador.descricao for ip in p.indicadores if ip.indicador
         )
-        writer.writerow([p.id, p.titulo, p.status, data_inicio, data_fim, objetivo, resultado, indicadores])
+        workflow_etapas = p.workflow_etapas
+        total_etapas = len(workflow_etapas)
+        if total_etapas:
+            concluidas = sum(1 for e in workflow_etapas if e.iniciada and e.done)
+            cumprimento = f'{round(concluidas * 100 / total_etapas)}%'
+        else:
+            cumprimento = '0%'
+        writer.writerow([
+            p.id,
+            p.titulo,
+            p.sei_process or '',
+            p.area_responsavel or '',
+            p.status,
+            data_inicio,
+            data_fim,
+            objetivo,
+            resultado,
+            indicadores,
+            cumprimento,
+        ])
 
     timestamp = datetime.datetime.now().strftime('%d%m%Y%H%M')
     response = make_response(output.getvalue())
