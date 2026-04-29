@@ -570,6 +570,7 @@ def download_projects_csv():
         'Objetivo EEGD',
         'Resultado EEGD',
         'Indicador EEGD',
+        'Total de Etapas',
         'Cumprimento (%)',
     ])
 
@@ -600,6 +601,7 @@ def download_projects_csv():
             objetivo,
             resultado,
             indicadores,
+            total_etapas,
             cumprimento,
         ])
 
