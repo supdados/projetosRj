@@ -600,12 +600,17 @@ def download_projects_csv():
         [
             "ID",
             "Nome",
+            "Descrição",
+            "Processo SEI-RJ",
+            "Órgão Responsável",
             "Status",
             "Data Início",
             "Data Fim",
             "Objetivo EEGD",
             "Resultado EEGD",
             "Indicador EEGD",
+            "Total de Etapas",
+            "Cumprimento (%)",
         ]
     )
 
@@ -619,16 +624,31 @@ def download_projects_csv():
         indicadores = "; ".join(
             ip.indicador.descricao for ip in p.indicadores if ip.indicador
         )
+        orgao_responsavel = (
+            p.orgao_ref.sigla if p.orgao_ref else (p.orgao or "")
+        )
+        workflow_etapas = p.workflow_etapas
+        total_etapas = len(workflow_etapas)
+        if total_etapas:
+            concluidas = sum(1 for e in workflow_etapas if e.iniciada and e.done)
+            cumprimento = f"{round(concluidas * 100 / total_etapas)}%"
+        else:
+            cumprimento = "0%"
         writer.writerow(
             [
                 p.id,
                 p.titulo,
+                p.short_description or "",
+                p.sei_process or "",
+                orgao_responsavel,
                 p.status,
                 data_inicio,
                 data_fim,
                 objetivo,
                 resultado,
                 indicadores,
+                total_etapas,
+                cumprimento,
             ]
         )
 

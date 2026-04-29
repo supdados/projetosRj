@@ -281,6 +281,15 @@
         inputEl.setAttribute('maxlength', '10');
         wrapDateInputValue(inputEl);
 
+        // Form submission lê o valor nativo (BR), mas o backend espera ISO.
+        // Antes do submit, sincroniza o ISO armazenado em dataset.cdpValue para o valor nativo.
+        if (inputEl.form && !inputEl.dataset.cdpSubmitBound) {
+            inputEl.dataset.cdpSubmitBound = '1';
+            inputEl.form.addEventListener('submit', function () {
+                nativeValueDesc.set.call(inputEl, inputEl.dataset.cdpValue || '');
+            });
+        }
+
         inputEl.addEventListener('click', function (e) {
             e.stopPropagation();
             if (datePopover && datePopover.classList.contains('is-open') && dateAnchor === inputEl) {

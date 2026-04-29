@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from flask import (
+    current_app,
     flash,
     g,
     jsonify,
@@ -164,6 +165,10 @@ def add_project():
             try:
                 current_date = datetime.strptime(project_start_date, "%Y-%m-%d").date()
             except (TypeError, ValueError):
+                current_app.logger.warning(
+                    "add_project: project_start_date inválido (recebido=%r, formato esperado=%%Y-%%m-%%d)",
+                    project_start_date,
+                )
                 current_date = None
 
         for i, descricao in enumerate(etapa_descricoes):
@@ -183,7 +188,10 @@ def add_project():
                             days=1
                         )  # Próxima etapa começa no dia seguinte
                     except (TypeError, ValueError):
-                        pass
+                        current_app.logger.warning(
+                            "add_project: etapa_duration inválido (recebido=%r, esperado int de dias)",
+                            etapa_durations[i],
+                        )
 
                 nova_etapa = Etapa(
                     descricao=descricao,
@@ -293,6 +301,17 @@ def edit_project(project_id):
 
         old_status = project_to_edit.status
         new_status = request.form.get("project_status")
+        if (
+            new_status == "Finalizado"
+            and old_status != "Finalizado"
+            and not project_to_edit.todas_etapas_concluidas
+        ):
+            db.session.rollback()
+            flash(
+                "Não é possível finalizar o projeto: todas as etapas devem estar iniciadas e concluídas.",
+                "warning",
+            )
+            return redirect(url_for("main.edit_project", project_id=project_id))
         if old_status != new_status:
             changes.append(f'status de "{old_status}" para "{new_status}"')
         project_to_edit.status = new_status

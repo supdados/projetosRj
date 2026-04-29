@@ -78,7 +78,9 @@
                         <label for="project_status" class="form-label fw-bold">Status:</label>
                         <select class="form-select" id="project_status" name="project_status">
                             <option value="Vigente" {{ 'selected' if project.status == 'Vigente' else '' }}>Vigente</option>
+                            {% if project.status == 'Finalizado' or project.todas_etapas_concluidas %}
                             <option value="Finalizado" {{ 'selected' if project.status == 'Finalizado' else '' }}>Finalizado</option>
+                            {% endif %}
                             <option value="Suspenso" {{ 'selected' if project.status == 'Suspenso' else '' }}>Suspenso</option>
                         </select>
                     </div>
