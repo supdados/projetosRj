@@ -26,11 +26,16 @@ def test_migrate_user_areas_is_safe_when_legacy_attribute_no_longer_exists(app, 
 
         output = capsys.readouterr().out
         assert result is True
-        assert "Coluna legada 'user.area_responsavel' não existe; nada para migrar." in output
+        assert 'Replicação de área legada desativada' in output
         assert UserArea.query.filter_by(user_id=user.id).count() == 0
 
 
-def test_migrate_user_areas_reads_legacy_db_column_even_without_orm_attribute(app, capsys):
+def test_migrate_user_areas_no_longer_replicates_legacy_db_column(app, capsys):
+    """A replicação a partir de user.area_responsavel foi descontinuada.
+
+    Por quê: a função era one-shot mas rodava em todo boot, ressuscitando vínculos
+    que o admin já tinha removido em user_areas. user_areas passou a ser fonte única.
+    """
     with app.app_context():
         user = _create_user('legacy_area_user', 'Legacy Area User')
         db.session.commit()
@@ -48,11 +53,10 @@ def test_migrate_user_areas_reads_legacy_db_column_even_without_orm_attribute(ap
 
         output = capsys.readouterr().out
         assert result is True
-        assert '1 novas áreas foram migradas.' in output
+        assert 'Replicação de área legada desativada' in output
 
         links = UserArea.query.filter_by(user_id=user.id).all()
-        assert len(links) == 1
-        assert links[0].area == 'Auditoria'
+        assert links == []
 
 
 def test_create_history_table_adds_verification_entry_when_project_and_user_exist(app, capsys):

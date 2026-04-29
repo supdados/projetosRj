@@ -948,35 +948,11 @@ def _migrate_user_areas_step(emit_output=True):
                 emit_output,
             )
 
-        if 'area_responsavel' not in _column_names(inspector, 'user'):
-            _emit("   ✓ Coluna legada 'user.area_responsavel' não existe; nada para migrar.", emit_output)
-            return {
-                'success': True,
-                'migrated_count': migrated_count,
-                'auth_columns_added': auth_columns_added,
-                'auth_indexes_added': auth_indexes_added,
-            }
-
-        user_table = Table('user', MetaData(), autoload_with=db.engine)
-        existing_links = {
-            (user_id, area)
-            for user_id, area in db.session.query(UserArea.user_id, UserArea.area).all()
-        }
-
-        for user_id, legacy_area in db.session.execute(
-            select(user_table.c.id, user_table.c.area_responsavel)
-        ).all():
-            normalized_area = (legacy_area or '').strip()
-            if not normalized_area:
-                continue
-            if (user_id, normalized_area) in existing_links:
-                continue
-            db.session.add(UserArea(user_id=user_id, area=normalized_area))
-            existing_links.add((user_id, normalized_area))
-            migrated_count += 1
-
-        db.session.commit()
-        _emit(f"   ✓ Sucesso: {migrated_count} novas áreas foram migradas.", emit_output)
+        # Replicação da coluna legada `user.area_responsavel` foi descontinuada:
+        # ela é one-shot (já rodou na migração inicial para `user_areas`) e em todo boot
+        # estava ressuscitando vínculos removidos pelo admin. A fonte de verdade
+        # passa a ser apenas a tabela `user_areas`.
+        _emit("   ✓ Replicação de área legada desativada; user_areas é a fonte única.", emit_output)
         return {
             'success': True,
             'migrated_count': migrated_count,
