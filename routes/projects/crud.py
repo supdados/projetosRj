@@ -1,4 +1,4 @@
-from flask import flash, g, jsonify, redirect, render_template, request, session, url_for
+from flask import current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from catalogs.abep import normalize_abep_indicator
 from models import Etapa, IndicadorProjeto, Project, db
@@ -91,29 +91,35 @@ def add_project():
         db.session.flush()  # Para obter o new_project.id para as etapas e indicadores
 
         # Adicionar as etapas ao novo projeto com cálculo automático de datas
+        from datetime import datetime, timedelta
         current_date = None
         if project_start_date:
             try:
-                from datetime import datetime, timedelta
                 current_date = datetime.strptime(project_start_date, '%Y-%m-%d').date()
-            except:
+            except ValueError:
+                current_app.logger.warning(
+                    "add_project: project_start_date inválido (recebido=%r, formato esperado=%%Y-%%m-%%d)",
+                    project_start_date,
+                )
                 current_date = None
-        
+
         for i, descricao in enumerate(etapa_descricoes):
             if descricao.strip():  # Apenas adiciona se não estiver vazio
                 data_inicio = None
                 data_fim = None
-                
+
                 # Se há data de início e duração, calcular automaticamente
                 if current_date and i < len(etapa_durations) and etapa_durations[i]:
                     try:
-                        from datetime import timedelta
                         duration = int(etapa_durations[i])
                         data_inicio = current_date
                         data_fim = current_date + timedelta(days=duration - 1)  # -1 porque o início conta como dia 1
                         current_date = data_fim + timedelta(days=1)  # Próxima etapa começa no dia seguinte
-                    except:
-                        pass
+                    except ValueError:
+                        current_app.logger.warning(
+                            "add_project: etapa_duration inválido (recebido=%r, esperado int de dias)",
+                            etapa_durations[i],
+                        )
                 
                 nova_etapa = Etapa(
                     descricao=descricao,
