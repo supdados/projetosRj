@@ -17,6 +17,7 @@ from routes.calendars.helpers import (
     _sync_project_meeting_from_calendar_event,
     _delete_project_meeting,
     _get_user_event_or_404,
+    _user_can_edit_meeting_project,
 )
 
 
@@ -106,6 +107,11 @@ def edit_calendar_event(event_id):
             "warning",
         )
         return redirect(url_for("main.calendars_hub"))
+    if linked_meeting is not None and not _user_can_edit_meeting_project(
+        g.user, linked_meeting
+    ):
+        flash("Permissão negada.", "warning")
+        return redirect(url_for("main.calendars_hub"))
 
     try:
         payload = _parse_event_form(request.form)
@@ -138,7 +144,9 @@ def edit_calendar_event(event_id):
         )
 
     if linked_meeting is not None:
-        _sync_project_meeting_from_calendar_event(event, connection=connection)
+        _sync_project_meeting_from_calendar_event(
+            event, connection=connection, user=g.user
+        )
 
     try:
         db.session.commit()
@@ -183,13 +191,20 @@ def generate_meet_link(event_id):
             "warning",
         )
         return redirect(url_for("main.calendars_hub"))
+    if linked_meeting is not None and not _user_can_edit_meeting_project(
+        g.user, linked_meeting
+    ):
+        flash("Permissão negada.", "warning")
+        return redirect(url_for("main.calendars_hub"))
 
     try:
         _cal_helpers._sync_local_event_to_google(
             event, connection, create_conference=True
         )
         if linked_meeting is not None:
-            _sync_project_meeting_from_calendar_event(event, connection=connection)
+            _sync_project_meeting_from_calendar_event(
+                event, connection=connection, user=g.user
+            )
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
@@ -218,6 +233,11 @@ def delete_calendar_event(event_id):
             "Somente quem estiver com a mesma conta Google conectada pode excluir esta reunião.",
             "warning",
         )
+        return redirect(url_for("main.calendars_hub"))
+    if linked_meeting is not None and not _user_can_edit_meeting_project(
+        g.user, linked_meeting
+    ):
+        flash("Permissão negada.", "warning")
         return redirect(url_for("main.calendars_hub"))
 
     remote_warning = None

@@ -227,9 +227,26 @@ def _refresh_connection_identity(connection, *, access_token=None):
     return userinfo
 
 
-def _sync_project_meeting_from_calendar_event(event, *, connection=None):
+def _user_can_edit_meeting_project(user, meeting):
+    if (
+        user is None
+        or meeting is None
+        or meeting.etapa is None
+        or meeting.etapa.project is None
+    ):
+        return False
+
+    from routes.orgao_scope import user_can_access_project
+
+    return user_can_access_project(user, meeting.etapa.project)
+
+
+def _sync_project_meeting_from_calendar_event(event, *, connection=None, user=None):
     meeting = find_project_meeting_for_calendar_event(event, connection=connection)
     if meeting is None:
+        return None
+    actor = user if user is not None else getattr(connection, "user", None)
+    if not _user_can_edit_meeting_project(actor, meeting):
         return None
 
     update_meeting_from_calendar_event(meeting, event)
@@ -239,7 +256,11 @@ def _sync_project_meeting_from_calendar_event(event, *, connection=None):
 
 
 def _mark_project_meeting_removed_by_google(
-    *, google_event_id, google_calendar_id=None, google_owner_account_id=None
+    *,
+    google_event_id,
+    google_calendar_id=None,
+    google_owner_account_id=None,
+    user=None,
 ):
     meeting = find_project_meeting_by_google_event(
         google_event_id=google_event_id,
@@ -247,6 +268,9 @@ def _mark_project_meeting_removed_by_google(
         google_owner_account_id=google_owner_account_id,
     )
     if meeting is None:
+        return None
+    actor = user if user is not None else None
+    if not _user_can_edit_meeting_project(actor, meeting):
         return None
 
     delete_local_calendar_event_mirrors(meeting)
@@ -287,6 +311,7 @@ def _upsert_local_event_from_google(connection, item):
             google_event_id=google_event_id,
             google_calendar_id=connection.calendar_id or "primary",
             google_owner_account_id=connection.google_account_id,
+            user=connection.user,
         )
         if existing is not None:
             db.session.delete(existing)
@@ -337,7 +362,9 @@ def _upsert_local_event_from_google(connection, item):
     event.sync_status = "ok"
     event.sync_error = None
     event.last_synced_at = utc_now()
-    _sync_project_meeting_from_calendar_event(event, connection=connection)
+    _sync_project_meeting_from_calendar_event(
+        event, connection=connection, user=connection.user
+    )
 
     return "upserted"
 
