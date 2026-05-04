@@ -55,14 +55,26 @@ def task_detail(task_id):
     legacy = LegacyTaskRedirect.query.filter_by(legacy_task_id=task_id).first()
     if legacy:
         if legacy.project_id:
+            project = db.session.get(Project, legacy.project_id)
+            if not project or not _can_access_project_in_tasks(project):
+                flash("Tarefa não encontrada.", "warning")
+                return redirect(url_for("main.list_tasks"))
             params = {}
-            if legacy.sample_task_id:
+            sample_task = (
+                db.session.get(Task, legacy.sample_task_id)
+                if legacy.sample_task_id
+                else None
+            )
+            if sample_task and _can_view_task(g.user, sample_task):
                 params["focus_task"] = legacy.sample_task_id
             return redirect(
                 url_for("main.project_tasks", project_id=legacy.project_id, **params)
             )
         params = {}
-        if legacy.sample_task_id:
+        sample_task = (
+            db.session.get(Task, legacy.sample_task_id) if legacy.sample_task_id else None
+        )
+        if sample_task and _can_view_task(g.user, sample_task):
             params["focus_task"] = legacy.sample_task_id
         return redirect(url_for("main.list_tasks", **params))
 
