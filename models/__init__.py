@@ -15,7 +15,6 @@ from .task import (
     TaskItemComment,
     TaskItemAnexo,
 )
-from .caderno import CadernoBlock, CadernoState
 from .orgao import OrgaoUnidade, ALLOWED_TIPOS, MAX_DEPTH, TIPO_RANK
 
 __all__ = [
@@ -46,8 +45,6 @@ __all__ = [
     "LegacyTaskRedirect",
     "TaskItemComment",
     "TaskItemAnexo",
-    "CadernoBlock",
-    "CadernoState",
     "OrgaoUnidade",
     "ALLOWED_TIPOS",
     "MAX_DEPTH",

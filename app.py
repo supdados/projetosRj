@@ -25,7 +25,6 @@ from time_utils import register_sqlite_adapters
 
 # Re-exportações para compatibilidade com scripts e testes existentes
 from startup import (
-    ensure_caderno_schema,
     ensure_project_abep_indicator_column,
     ensure_task_core_columns,
     ensure_tutorial_columns,

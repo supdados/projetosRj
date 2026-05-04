@@ -108,18 +108,6 @@ TASK_TEMP_TABLES = (
     "task_anexo__migration_tmp",
     "legacy_task_redirect__migration_tmp",
 )
-CADERNO_GRID_COLUMNS = 12
-CADERNO_LAYOUT_COLUMNS = {
-    "grid_x": "ALTER TABLE caderno_block ADD COLUMN grid_x INTEGER NOT NULL DEFAULT 0",
-    "grid_y": "ALTER TABLE caderno_block ADD COLUMN grid_y INTEGER NOT NULL DEFAULT 0",
-    "grid_w": "ALTER TABLE caderno_block ADD COLUMN grid_w INTEGER NOT NULL DEFAULT 6",
-    "grid_h": "ALTER TABLE caderno_block ADD COLUMN grid_h INTEGER NOT NULL DEFAULT 5",
-    "attached_to_block_id": "ALTER TABLE caderno_block ADD COLUMN attached_to_block_id INTEGER",
-    "attached_offset_x": "ALTER TABLE caderno_block ADD COLUMN attached_offset_x INTEGER NOT NULL DEFAULT 0",
-    "attached_offset_y": "ALTER TABLE caderno_block ADD COLUMN attached_offset_y INTEGER NOT NULL DEFAULT 0",
-}
-CADERNO_GRID_LAYOUT_COLUMN_NAMES = {"grid_x", "grid_y", "grid_w", "grid_h"}
-LEGACY_CADERNO_FULL_WIDTH_TYPES = {"text", "nota"}
 CALENDAR_INCREMENTAL_COLUMNS = {
     "user_calendar_connection": [
         ("google_account_id", "VARCHAR(255)"),
@@ -232,42 +220,6 @@ def _normalize_status(value):
     if normalized not in VALID_TASK_STATUSES:
         return "nao_iniciada"
     return normalized
-
-
-def _occupy_caderno_cells(occupied, x, y, w, h):
-    for offset_y in range(h):
-        for offset_x in range(w):
-            occupied.add((x + offset_x, y + offset_y))
-
-
-def _find_next_caderno_slot(occupied, width, height, *, start_y=0):
-    y = max(0, _coerce_int(start_y) or 0)
-    max_x = max(0, CADERNO_GRID_COLUMNS - width)
-    while True:
-        for x in range(0, max_x + 1):
-            fits = True
-            for offset_y in range(height):
-                for offset_x in range(width):
-                    if (x + offset_x, y + offset_y) in occupied:
-                        fits = False
-                        break
-                if not fits:
-                    break
-            if fits:
-                return x, y
-        y += 1
-
-
-def _legacy_caderno_layout_for_block_type(block_type):
-    layout = (
-        {"grid_w": 12, "grid_h": 6}
-        if block_type in LEGACY_CADERNO_FULL_WIDTH_TYPES
-        else {"grid_w": 6, "grid_h": 5}
-    )
-    return {
-        "grid_w": layout["grid_w"],
-        "grid_h": layout["grid_h"],
-    }
 
 
 def _next_available_id(used_ids):
@@ -1188,124 +1140,6 @@ def sync_area_catalog(emit_output=True):
         return {"success": False, "areas": None}
 
 
-def ensure_caderno_schema(emit_output=True):
-    _emit("\n-- [8/8] Garantindo schema do caderno...", emit_output)
-    changes = []
-    try:
-        inspector = inspect(db.engine)
-        table_names_before = set(inspector.get_table_names())
-
-        db.create_all()
-        inspector = inspect(db.engine)
-
-        if "caderno_state" not in table_names_before and _table_exists(
-            inspector, "caderno_state"
-        ):
-            changes.append("caderno_state.created")
-
-        if not _table_exists(inspector, "caderno_block"):
-            _emit(
-                "   ✓ Estruturas do caderno criadas sem blocos legados para migrar.",
-                emit_output,
-            )
-            return {"success": True, "changes": changes}
-
-        layout_columns_added = []
-        for column_name, ddl in CADERNO_LAYOUT_COLUMNS.items():
-            if column_name in _column_names(inspector, "caderno_block"):
-                continue
-            db.session.execute(text(ddl))
-            layout_columns_added.append(f"caderno_block.{column_name}")
-            changes.append(f"caderno_block.{column_name}")
-            inspector = inspect(db.engine)
-
-        if "size_preset" in _column_names(inspector, "caderno_block"):
-            db.session.execute(
-                text("ALTER TABLE caderno_block DROP COLUMN size_preset")
-            )
-            changes.append("caderno_block.size_preset_dropped")
-            inspector = inspect(db.engine)
-
-        if _table_exists(
-            inspector, "caderno_state"
-        ) and "expand_steps" not in _column_names(inspector, "caderno_state"):
-            db.session.execute(
-                text(
-                    "ALTER TABLE caderno_state ADD COLUMN expand_steps INTEGER NOT NULL DEFAULT 0"
-                )
-            )
-            changes.append("caderno_state.expand_steps")
-            inspector = inspect(db.engine)
-
-        if _table_exists(inspector, "caderno_state"):
-            clamped = db.session.execute(text("""
-                    UPDATE caderno_state
-                    SET expand_steps = CASE
-                        WHEN expand_steps < 0 THEN 0
-                        WHEN expand_steps > 3 THEN 3
-                        ELSE expand_steps
-                    END
-                    WHERE expand_steps < 0 OR expand_steps > 3
-                    """))
-            if clamped.rowcount:
-                changes.append("caderno_state.expand_steps_clamped")
-
-        db.session.commit()
-
-        rows = db.session.execute(text("""
-                SELECT id, user_id, block_type, position, grid_x, grid_y, grid_w, grid_h
-                FROM caderno_block
-                ORDER BY user_id ASC, position ASC, id ASC
-                """)).mappings().all()
-
-        should_backfill_layout = any(
-            column_name.split(".")[-1] in CADERNO_GRID_LAYOUT_COLUMN_NAMES
-            for column_name in layout_columns_added
-        )
-        if rows and should_backfill_layout:
-            occupied_by_user = {}
-            for row in rows:
-                user_occupied = occupied_by_user.setdefault(row["user_id"], set())
-                layout = _legacy_caderno_layout_for_block_type(row["block_type"])
-                grid_x, grid_y = _find_next_caderno_slot(
-                    user_occupied,
-                    layout["grid_w"],
-                    layout["grid_h"],
-                )
-                _occupy_caderno_cells(
-                    user_occupied, grid_x, grid_y, layout["grid_w"], layout["grid_h"]
-                )
-                db.session.execute(
-                    text("""
-                        UPDATE caderno_block
-                        SET grid_x = :grid_x,
-                            grid_y = :grid_y,
-                            grid_w = :grid_w,
-                            grid_h = :grid_h
-                        WHERE id = :block_id
-                        """),
-                    {
-                        "block_id": row["id"],
-                        "grid_x": grid_x,
-                        "grid_y": grid_y,
-                        "grid_w": layout["grid_w"],
-                        "grid_h": layout["grid_h"],
-                    },
-                )
-            db.session.commit()
-            changes.append("caderno_block.layout_backfilled")
-
-        if changes:
-            _emit(f"   ✓ Ajustes aplicados: {', '.join(changes)}", emit_output)
-        else:
-            _emit("   ✓ Schema do caderno já estava atualizado.", emit_output)
-        return {"success": True, "changes": changes}
-    except Exception as exc:
-        db.session.rollback()
-        _emit(f"   ✗ ERRO ao garantir schema do caderno: {exc}", emit_output)
-        return {"success": False, "changes": changes}
-
-
 def ensure_calendar_schema(emit_output=True):
     _emit("\n-- [9/9] Garantindo schema do calendário...", emit_output)
     changes = []
@@ -1530,7 +1364,6 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         ensure_task_schema(emit_output=emit_output),
         sync_goal_catalog(emit_output=emit_output),
         sync_area_catalog(emit_output=emit_output),
-        ensure_caderno_schema(emit_output=emit_output),
         ensure_calendar_schema(emit_output=emit_output),
         ensure_orgao_and_template_schema(emit_output=emit_output),
         encrypt_plaintext_oauth_tokens(emit_output=emit_output),
@@ -1547,15 +1380,13 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
 
     project_columns_added = steps[2]["added_columns"]
     task_changes = steps[3]["changes"]
-    caderno_changes = steps[6]["changes"]
-    calendar_changes = steps[7]["changes"]
-    orgao_template_changes = steps[8]["changes"]
+    calendar_changes = steps[6]["changes"]
+    orgao_template_changes = steps[7]["changes"]
 
     return {
         "success": True,
         "column_added": "project.abep_indicator" in project_columns_added,
         "task_core_cols": task_changes,
-        "caderno_changes": caderno_changes,
         "calendar_changes": calendar_changes,
         "orgao_template_changes": orgao_template_changes,
         "area_catalog_choices": steps[5]["areas"],
