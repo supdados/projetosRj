@@ -35,10 +35,6 @@ def test_calendars_connected_view_hides_calendar_watch_subtext(
         db.session.add(connection)
         db.session.commit()
 
-    monkeypatch.setattr(
-        calendar_helpers, "_run_auto_calendar_maintenance", lambda _connection: []
-    )
-
     response = client_user.get("/calendarios")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
@@ -51,7 +47,7 @@ def test_calendars_connected_view_hides_calendar_watch_subtext(
     assert "Renovar watch" not in html
 
 
-def test_calendars_hub_runs_auto_maintenance_when_connected(
+def test_calendars_hub_does_not_run_auto_maintenance_on_get(
     app, client_user, seed_data, monkeypatch
 ):
     with app.app_context():
@@ -77,12 +73,9 @@ def test_calendars_hub_runs_auto_maintenance_when_connected(
 
     response = client_user.get("/calendarios")
     assert response.status_code == 200
-    assert calls["count"] == 1
+    assert calls["count"] == 0
     html = response.get_data(as_text=True)
-    expected_sync = calendar_helpers._format_human_datetime(
-        datetime.datetime(2026, 3, 6, 20, 0)
-    )
-    assert expected_sync in html
+    assert 'title="Sincronizar"' in html
 
 
 def test_create_calendar_event_without_google_connection_marks_pending(

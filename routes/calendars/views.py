@@ -1,11 +1,10 @@
-from flask import current_app, flash, g, render_template
+from flask import current_app, g, render_template
 
-from models import CalendarEvent, db
+from models import CalendarEvent
 from services.google_calendar import is_google_calendar_enabled
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
-import routes.calendars.helpers as _cal_helpers
 from routes.calendars.helpers import (
     _connection_for_current_user,
     _event_view_row,
@@ -18,21 +17,6 @@ from routes.calendars.helpers import (
 @login_required
 def calendars_hub():
     connection = _connection_for_current_user()
-    auto_issues = []
-
-    if connection is not None:
-        auto_issues = _cal_helpers._run_auto_calendar_maintenance(connection)
-        try:
-            db.session.commit()
-        except Exception as exc:
-            db.session.rollback()
-            auto_issues.append(
-                "Ocorreu um erro interno ao manter o calendário. Tente recarregar a página."
-            )
-
-    for issue in auto_issues:
-        flash(issue, "warning")
-
     events = (
         CalendarEvent.query.filter_by(user_id=g.user.id)
         .order_by(CalendarEvent.starts_at.asc(), CalendarEvent.id.asc())
