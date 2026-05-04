@@ -6,13 +6,13 @@ _SQLITE_ADAPTERS_REGISTERED = False
 
 def utc_now():
     """Retorna UTC naive para manter compatibilidade com colunas DateTime legadas."""
-    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
 def _adapt_sqlite_datetime(value):
     """Serializa datetime sem depender do adaptador padrão depreciado do sqlite3."""
     if value.tzinfo is not None:
-        value = value.astimezone(datetime.UTC).replace(tzinfo=None)
+        value = value.astimezone(datetime.timezone.utc).replace(tzinfo=None)
     return value.isoformat(sep=" ")
 
 
@@ -44,9 +44,9 @@ def format_relative_time_pt(value, *, now=None):
         return ""
     reference = now if now is not None else utc_now()
     if value.tzinfo is not None:
-        value = value.astimezone(datetime.UTC).replace(tzinfo=None)
+        value = value.astimezone(datetime.timezone.utc).replace(tzinfo=None)
     if reference.tzinfo is not None:
-        reference = reference.astimezone(datetime.UTC).replace(tzinfo=None)
+        reference = reference.astimezone(datetime.timezone.utc).replace(tzinfo=None)
 
     delta = reference - value
     seconds = int(delta.total_seconds())

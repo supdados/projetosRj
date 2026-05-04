@@ -64,7 +64,7 @@ def _build_project_display_title(project, max_length=120):
 def _to_local_datetime(utc_naive):
     if utc_naive is None:
         return None
-    return utc_naive.replace(tzinfo=datetime.UTC).astimezone(TIMEZONE_BR)
+    return utc_naive.replace(tzinfo=datetime.timezone.utc).astimezone(TIMEZONE_BR)
 
 
 def _format_calendar_event_period(event):

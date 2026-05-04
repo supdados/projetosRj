@@ -365,7 +365,10 @@ def _sync_events_from_google(connection, *, force_full=False):
         else:
             summary["full_sync"] = True
             time_min = (
-                (utc_now().replace(tzinfo=datetime.UTC) - datetime.timedelta(days=365))
+                (
+                    utc_now().replace(tzinfo=datetime.timezone.utc)
+                    - datetime.timedelta(days=365)
+                )
                 .isoformat()
                 .replace("+00:00", "Z")
             )
@@ -464,7 +467,7 @@ def _renew_watch_channel(connection):
         try:
             expiration_ms = int(expiration_raw)
             watch_expiration = datetime.datetime.fromtimestamp(
-                expiration_ms / 1000, tz=datetime.UTC
+                expiration_ms / 1000, tz=datetime.timezone.utc
             ).replace(tzinfo=None)
         except (TypeError, ValueError, OSError):
             watch_expiration = None

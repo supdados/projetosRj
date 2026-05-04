@@ -8,13 +8,13 @@ TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
 def to_utc_naive(local_dt):
     if local_dt.tzinfo is None:
         local_dt = local_dt.replace(tzinfo=TIMEZONE_BR)
-    return local_dt.astimezone(datetime.UTC).replace(tzinfo=None)
+    return local_dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
 
 
 def to_local_datetime(utc_naive):
     if utc_naive is None:
         return None
-    aware = utc_naive.replace(tzinfo=datetime.UTC)
+    aware = utc_naive.replace(tzinfo=datetime.timezone.utc)
     return aware.astimezone(TIMEZONE_BR)
 
 
@@ -33,7 +33,7 @@ def format_human_datetime(utc_naive):
 
 
 def utc_naive_to_rfc3339(utc_naive):
-    aware = utc_naive.replace(tzinfo=datetime.UTC)
+    aware = utc_naive.replace(tzinfo=datetime.timezone.utc)
     return aware.isoformat().replace("+00:00", "Z")
 
 
@@ -120,8 +120,8 @@ def parse_google_event_datetime(payload):
             try:
                 dt = dt.replace(tzinfo=ZoneInfo(timezone_name))
             except Exception:
-                dt = dt.replace(tzinfo=datetime.UTC)
-        return dt.astimezone(datetime.UTC).replace(tzinfo=None), False
+                dt = dt.replace(tzinfo=datetime.timezone.utc)
+        return dt.astimezone(datetime.timezone.utc).replace(tzinfo=None), False
 
     raw_date = payload.get("date")
     if raw_date:
@@ -134,6 +134,6 @@ def parse_google_event_datetime(payload):
         except Exception:
             event_tz = TIMEZONE_BR
         dt = datetime.datetime.combine(date_value, datetime.time.min, tzinfo=event_tz)
-        return dt.astimezone(datetime.UTC).replace(tzinfo=None), True
+        return dt.astimezone(datetime.timezone.utc).replace(tzinfo=None), True
 
     return None, None

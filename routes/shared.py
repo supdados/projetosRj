@@ -199,7 +199,7 @@ def inject_current_year():
         return url_for(endpoint, **kwargs)
 
     return {
-        "current_year": datetime.datetime.now(datetime.UTC).year,
+        "current_year": datetime.datetime.now(datetime.timezone.utc).year,
         "ABEP_INDICADORES_OPTIONS": ABEP_INDICADORES_OPTIONS,
         "ORGAOS_DISPONIVEIS": orgaos_disponiveis,
         "USER_ORGAO_BREADCRUMB": user_orgao_breadcrumb,
