@@ -135,25 +135,38 @@ function measureMonthCellEventMetrics() {
 
 function getMonthEventRowsHeight(singleEvs, count, dayStartMs, metrics) {
   if (count <= 0) return 0;
-  const rowHeights = singleEvs.map(ev => (
-    eventCoversFullDayOn(dayStartMs, ev) || ev.is_all_day
-      ? metrics.allDay
-      : metrics.regular
-  ));
+
   let needed = 0;
-  for (let i = 0; i < count; i++) needed += rowHeights[i] || 0;
+  for (let i = 0; i < count && i < singleEvs.length; i++) {
+    const ev = singleEvs[i];
+    needed += (eventCoversFullDayOn(dayStartMs, ev) || ev.is_all_day)
+      ? metrics.allDay
+      : metrics.regular;
+  }
+
   if (count > 1) needed += metrics.gap * (count - 1);
   return needed;
 }
 
-function getVisibleMonthEventCount(singleEvs, availableHeight, dayStartMs, metrics) {
-  if (!singleEvs.length || availableHeight <= 0) return 0;
-  for (let count = singleEvs.length; count >= 0; count--) {
-    const needed = getMonthEventRowsHeight(singleEvs, count, dayStartMs, metrics);
-    if (needed <= availableHeight + 0.5) return count;
+function getVisibleMonthEventLayout(singleEvs, availableHeight, dayStartMs, metrics) {
+  if (!singleEvs.length || availableHeight <= 0) return { count: 0, height: 0 };
+
+  let count = 0;
+  let height = 0;
+  const limit = availableHeight + 0.5;
+
+  for (let i = 0; i < singleEvs.length; i++) {
+    const ev = singleEvs[i];
+    const evHeight = (eventCoversFullDayOn(dayStartMs, ev) || ev.is_all_day)
+      ? metrics.allDay
+      : metrics.regular;
+    const nextHeight = height + (count > 0 ? metrics.gap : 0) + evHeight;
+    if (nextHeight > limit) break;
+    height = nextHeight;
+    count += 1;
   }
 
-  return 0;
+  return { count, height };
 }
 
 function renderMonthCellEvents(cell, metrics) {
@@ -165,13 +178,14 @@ function renderMonthCellEvents(cell, metrics) {
 
   if (!singleEvs.length) return;
 
-  const visibleCount = getVisibleMonthEventCount(
+  const visibleLayout = getVisibleMonthEventLayout(
     singleEvs,
     host.clientHeight,
     cell._dayStartMs,
     metrics
   );
-  const visibleHeight = getMonthEventRowsHeight(singleEvs, visibleCount, cell._dayStartMs, metrics);
+  const visibleCount = visibleLayout.count;
+  const visibleHeight = visibleLayout.height;
 
   singleEvs.slice(0, visibleCount).forEach(ev => {
     host.appendChild(makeMonthEventPill(ev, cell._dayStartMs));
