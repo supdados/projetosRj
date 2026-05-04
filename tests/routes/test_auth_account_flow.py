@@ -35,9 +35,7 @@ def test_login_invalid_credentials_keeps_user_logged_out(client, seed_data):
         assert "user_id" not in session
 
 
-def test_login_lockout_does_not_block_owner_or_enumerate_users(
-    app, client, seed_data
-):
+def test_login_lockout_does_not_block_owner_or_enumerate_users(app, client, seed_data):
     for _ in range(5):
         response = client.post(
             "/login",
@@ -151,14 +149,13 @@ def test_change_password_updates_hash_and_accepts_new_password(
         assert user.check_password("novaSenha123") is True
 
 
-def test_manage_account_updates_name_and_cpf_without_changing_login(
+def test_manage_account_updates_name_without_changing_login_or_cpf(
     app, client_user, seed_data
 ):
     response = client_user.post(
         "/profile/change-password",
         data={
             "name": "Usuario Atualizado",
-            "cpf_govbr": "123.456.789-01",
         },
         follow_redirects=False,
     )
@@ -171,7 +168,30 @@ def test_manage_account_updates_name_and_cpf_without_changing_login(
         assert user is not None
         assert user.name == "Usuario Atualizado"
         assert user.username == seed_data["user_username"]
-        assert user.cpf_govbr == "12345678901"
+        assert user.cpf_govbr is None
+
+
+def test_manage_account_rejects_self_service_cpf_change(app, client_user, seed_data):
+    response = client_user.post(
+        "/profile/change-password",
+        data={
+            "name": "Usuario Atualizado",
+            "cpf_govbr": "123.456.789-01",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    assert (
+        "Alteração de CPF gov.br por autoatendimento está desativada."
+        in response.get_data(as_text=True)
+    )
+
+    with app.app_context():
+        user = db.session.get(User, seed_data["user_id"])
+        assert user is not None
+        assert user.name == "Usuario Auditoria"
+        assert user.cpf_govbr is None
 
 
 def test_manage_account_hides_cpf_and_sub_when_user_is_linked_to_govbr(
@@ -205,5 +225,7 @@ def test_manage_account_does_not_render_sub_field_for_unlinked_user(client_user)
 
     assert response.status_code == 200
     page = response.get_data(as_text=True)
+    assert "Para alterar o CPF gov.br, solicite ao administrador." in page
+    assert 'name="cpf_govbr"' not in page
     assert "Identificador gov.br (sub)" not in page
     assert 'id="govbr_sub"' not in page

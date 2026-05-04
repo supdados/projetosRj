@@ -489,31 +489,26 @@ def change_password():
                 "auth/change_password.html", hide_govbr_link_fields=is_govbr_linked
             )
 
-        new_cpf = g.user.cpf_govbr
         if not is_govbr_linked and "cpf_govbr" in request.form:
             raw_cpf = request.form.get("cpf_govbr")
-            if raw_cpf is None or not str(raw_cpf).strip():
-                new_cpf = None
-            else:
+            if raw_cpf and str(raw_cpf).strip():
                 try:
-                    new_cpf = normalize_cpf(raw_cpf)
+                    requested_cpf = normalize_cpf(raw_cpf)
                 except ValueError as exc:
                     flash(f"CPF gov.br inválido: {exc}", "danger")
                     return render_template(
                         "auth/change_password.html",
                         hide_govbr_link_fields=is_govbr_linked,
                     )
-
-            if (
-                new_cpf
-                and User.query.filter(
-                    User.cpf_govbr == new_cpf, User.id != g.user.id
-                ).first()
-            ):
-                flash("Já existe um usuário vinculado a este CPF gov.br.", "danger")
-                return render_template(
-                    "auth/change_password.html", hide_govbr_link_fields=is_govbr_linked
-                )
+                if requested_cpf != (g.user.cpf_govbr or ""):
+                    flash(
+                        "Alteração de CPF gov.br por autoatendimento está desativada. Solicite ao administrador.",
+                        "danger",
+                    )
+                    return render_template(
+                        "auth/change_password.html",
+                        hide_govbr_link_fields=is_govbr_linked,
+                    )
 
         current_password = request.form.get("current_password")
         new_password = request.form.get("new_password")
@@ -552,8 +547,6 @@ def change_password():
             )
 
         g.user.name = name
-        if not is_govbr_linked and "cpf_govbr" in request.form:
-            g.user.cpf_govbr = new_cpf
         if should_update_password:
             g.user.set_password(new_password)
         db.session.commit()
