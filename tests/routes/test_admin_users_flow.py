@@ -88,6 +88,27 @@ def test_admin_can_edit_user_areas_password_and_profile(app, client_admin, seed_
         assert user.check_password("senhaAtualizada123") is True
 
 
+def test_admin_can_clear_all_user_orgaos(app, client_admin, seed_data):
+    response = client_admin.post(
+        f"/admin/users/edit/{seed_data['editable_user_id']}",
+        data={
+            "name": "Usuario Sem Orgaos",
+            "orgao": "Orgao Atualizado",
+            "orgaos_responsavel_submitted": "1",
+            "password": "",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert "/admin/users" in response.headers["Location"]
+
+    with app.app_context():
+        user = db.session.get(User, seed_data["editable_user_id"])
+        assert user is not None
+        assert user.orgaos == []
+
+
 def test_admin_edit_blocks_demoting_the_only_admin(app, client_admin, seed_data):
     response = client_admin.post(
         f"/admin/users/edit/{seed_data['admin_id']}",
