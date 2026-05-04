@@ -5,10 +5,16 @@
     registry.domFactories = function (ctx) {
         var escapeHtml = ctx.config.escapeHtml;
 
+        function escapeAttr(value) {
+            return escapeHtml(value)
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function buildGroupHeaderMarkup(projectInfo) {
             var projectUrl = ctx.buildProjectDetailUrl(projectInfo.value);
             var titleMarkup = projectUrl
-                ? '<a href="' + escapeHtml(projectUrl) + '" class="task-hub-group-title task-hub-group-title-link">' + escapeHtml(projectInfo.label) + '</a>'
+                ? '<a href="' + escapeAttr(projectUrl) + '" class="task-hub-group-title task-hub-group-title-link">' + escapeHtml(projectInfo.label) + '</a>'
                 : '<h6 class="task-hub-group-title">' + escapeHtml(projectInfo.label) + '</h6>';
             var orgaoLabel = projectInfo.orgaoSigla || 'N\u00e3o informado';
 
@@ -49,7 +55,7 @@
             var formHidden = isOpen ? '' : ' hidden';
 
             return [
-                '<div class="task-item-add-row task-hub-add-row' + (opts.isGlobal ? ' task-hub-global-add-row' : '') + '" data-project-value="' + escapeHtml(projectValue) + '"' + (opts.isGlobal ? ' data-global-add="1"' : '') + '>',
+                '<div class="task-item-add-row task-hub-add-row' + (opts.isGlobal ? ' task-hub-global-add-row' : '') + '" data-project-value="' + escapeAttr(projectValue) + '"' + (opts.isGlobal ? ' data-global-add="1"' : '') + '>',
                 '<div class="task-item-add-placeholder" data-role="open-add-form"' + placeholderStyle + '>',
                 '<span class="task-item-add-dashes"><i class="fas fa-plus" aria-hidden="true"></i></span>',
                 '<span class="task-item-add-label">Adicionar nova tarefa</span>',
@@ -103,7 +109,7 @@
 
         function buildRegularGroupMarkup(projectInfo) {
             return [
-                '<section class="task-hub-group" data-project-value="' + escapeHtml(projectInfo.value) + '" data-project-id="' + escapeHtml(projectInfo.value === 'sem_projeto' ? '' : projectInfo.value) + '">',
+                '<section class="task-hub-group" data-project-value="' + escapeAttr(projectInfo.value) + '" data-project-id="' + escapeAttr(projectInfo.value === 'sem_projeto' ? '' : projectInfo.value) + '">',
                 '<header class="task-hub-group-header">',
                 buildGroupHeaderMarkup(projectInfo),
                 '</header>',
@@ -116,14 +122,14 @@
         function buildProjectPickerMarkup(projectInfo) {
             var pickerOptions = ctx.getProjectOptionsForPicker();
             var optionsMarkup = pickerOptions.map(function (option) {
-                return '<div class="project-search-option" data-value="' + escapeHtml(option.value) + '" data-label="' + escapeHtml(option.label) + '">' + escapeHtml(option.label) + '</div>';
+                return '<div class="project-search-option" data-value="' + escapeAttr(option.value) + '" data-label="' + escapeAttr(option.label) + '">' + escapeHtml(option.label) + '</div>';
             }).join('');
 
             return [
                 '<div class="project-search-wrap task-hub-group-project-wrap">',
-                '<input type="text" class="task-items-kanban-add-project-input task-hub-group-project-input project-search-input" data-role="project-input" placeholder="Selecione o projeto" autocomplete="off" aria-haspopup="listbox" aria-expanded="false" value="' + escapeHtml(projectInfo.label && projectInfo.value ? projectInfo.label : '') + '">',
+                '<input type="text" class="task-items-kanban-add-project-input task-hub-group-project-input project-search-input" data-role="project-input" placeholder="Selecione o projeto" autocomplete="off" aria-haspopup="listbox" aria-expanded="false" value="' + escapeAttr(projectInfo.label && projectInfo.value ? projectInfo.label : '') + '">',
                 '<span class="task-hub-kanban-project-caret" aria-hidden="true"><i class="fas fa-chevron-down" aria-hidden="true"></i></span>',
-                '<input type="hidden" data-role="project-value" value="' + escapeHtml(projectInfo.value) + '">',
+                '<input type="hidden" data-role="project-value" value="' + escapeAttr(projectInfo.value) + '">',
                 '<div class="project-search-dropdown task-hub-group-project-dropdown" data-role="project-dropdown" role="listbox" hidden>',
                 optionsMarkup,
                 '<div class="project-search-option project-search-empty" data-empty-state="1" hidden>Nenhum projeto encontrado</div>',
@@ -136,11 +142,11 @@
             var opts = options || {};
             var orgaoLabel = projectInfo.orgaoSigla || ctx.config.selectedOrgaoSigla || 'Selecione um projeto';
             var titleMarkup = opts.lockProject
-                ? '<h6 class="task-hub-group-title task-hub-group-title-static" data-role="project-title-static">' + escapeHtml(projectInfo.label || ctx.config.selectedProjectLabel || 'Projeto') + '</h6><input type="hidden" data-role="project-value" value="' + escapeHtml(projectInfo.value) + '">'
+                ? '<h6 class="task-hub-group-title task-hub-group-title-static" data-role="project-title-static">' + escapeHtml(projectInfo.label || ctx.config.selectedProjectLabel || 'Projeto') + '</h6><input type="hidden" data-role="project-value" value="' + escapeAttr(projectInfo.value) + '">'
                 : buildProjectPickerMarkup(projectInfo);
 
             return [
-                '<section class="task-hub-group task-hub-group-global-placeholder" data-global-placeholder="1" data-project-value="' + escapeHtml(projectInfo.value) + '" data-project-id="' + escapeHtml(projectInfo.value === 'sem_projeto' ? '' : projectInfo.value) + '">',
+                '<section class="task-hub-group task-hub-group-global-placeholder" data-global-placeholder="1" data-project-value="' + escapeAttr(projectInfo.value) + '" data-project-id="' + escapeAttr(projectInfo.value === 'sem_projeto' ? '' : projectInfo.value) + '">',
                 '<header class="task-hub-group-header">',
                 '<div class="task-hub-group-title-wrap">',
                 '<div class="task-hub-group-heading task-hub-group-heading-composer">',
@@ -230,47 +236,47 @@
 
             var rowHtml = [
                 '<div class="task-item-row" ',
-                'data-item-id="' + item.id + '" ',
-                'data-item-status="' + item.status + '" ',
+                'data-item-id="' + escapeAttr(item.id) + '" ',
+                'data-item-status="' + escapeAttr(item.status) + '" ',
                 'data-can-delete="' + (canDelete ? '1' : '0') + '" ',
                 'data-can-finalize="' + (canFinalizeTaskItem(item) ? '1' : '0') + '" ',
                 'data-comments-count="' + commentsCount + '" ',
-                'data-item-prioridade="' + escapeHtml(prioridade) + '" ',
-                'data-item-tipo="' + escapeHtml(tipoPedido) + '" ',
+                'data-item-prioridade="' + escapeAttr(prioridade) + '" ',
+                'data-item-tipo="' + escapeAttr(tipoPedido) + '" ',
                 'data-anexos-count="' + anexosCount + '" ',
-                'data-task-id="' + escapeHtml(taskId) + '" ',
-                'data-task-titulo="' + escapeHtml(taskTitulo) + '" ',
-                'data-project-value="' + escapeHtml(projectInfo.value) + '" ',
-                'data-project-titulo="' + escapeHtml(projectInfo.label) + '">',
-                '<div class="task-item-bar status-' + item.status + '"></div>',
+                'data-task-id="' + escapeAttr(taskId) + '" ',
+                'data-task-titulo="' + escapeAttr(taskTitulo) + '" ',
+                'data-project-value="' + escapeAttr(projectInfo.value) + '" ',
+                'data-project-titulo="' + escapeAttr(projectInfo.label) + '">',
+                '<div class="task-item-bar status-' + escapeAttr(item.status) + '"></div>',
                 '<div class="task-item-main">',
                 '<div class="task-item-line">',
                 '<div class="task-item-desc-wrap">',
                 '<div class="task-item-desc-row">',
-                '<p class="task-item-desc" data-item-id="' + item.id + '">' + htmlEncode(item.descricao) + '</p>',
-                '<button type="button" class="task-item-desc-edit-btn" data-item-id="' + item.id + '" title="Editar descri\u00e7\u00e3o">',
+                '<p class="task-item-desc" data-item-id="' + escapeAttr(item.id) + '">' + htmlEncode(item.descricao) + '</p>',
+                '<button type="button" class="task-item-desc-edit-btn" data-item-id="' + escapeAttr(item.id) + '" title="Editar descri\u00e7\u00e3o">',
                 '<i class="fas fa-pen" aria-hidden="true"></i><span class="visually-hidden">Editar</span></button>',
                 '</div>',
                 '</div>',
                 '<div class="task-item-meta">',
-                '<select class="task-item-prioridade-select prioridade-' + (prioridade || 'none') + '" data-item-id="' + item.id + '" title="Prioridade" data-action-change="updateItemPrioridade" data-action-args="' + item.id + '">' + prioridadeOptions + '</select>',
-                '<select class="task-item-tipo-select" data-item-id="' + item.id + '" title="Tipo" data-action-change="updateItemTipo" data-action-args="' + item.id + '">' + tipoOptions + '</select>',
-                '<select class="task-item-status status-' + item.status + '" data-action-change="updateItemStatus" data-action-args="' + item.id + '" title="Status">',
+                '<select class="task-item-prioridade-select prioridade-' + escapeAttr(prioridade || 'none') + '" data-item-id="' + escapeAttr(item.id) + '" title="Prioridade" data-action-change="updateItemPrioridade" data-action-args="' + escapeAttr(item.id) + '">' + prioridadeOptions + '</select>',
+                '<select class="task-item-tipo-select" data-item-id="' + escapeAttr(item.id) + '" title="Tipo" data-action-change="updateItemTipo" data-action-args="' + escapeAttr(item.id) + '">' + tipoOptions + '</select>',
+                '<select class="task-item-status status-' + escapeAttr(item.status) + '" data-action-change="updateItemStatus" data-action-args="' + escapeAttr(item.id) + '" title="Status">',
                 buildStatusOptionsMarkup(item),
                 '</select>',
-                '<span class="task-item-responsavel" data-item-id="' + item.id + '">',
+                '<span class="task-item-responsavel" data-item-id="' + escapeAttr(item.id) + '">',
                 (item.responsavel ? htmlEncode(item.responsavel) : '<em class="responsavel-placeholder">Respons\u00e1vel n\u00e3o informado</em>'),
                 '</span>',
                 '<div class="task-item-actions">',
-                '<button type="button" class="task-item-comments-btn" aria-expanded="false" data-target="comments-body-' + item.id + '" data-action="toggleComments" title="Coment\u00e1rios">',
-                '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-item-comments-num">' + commentsCount + '</span></button>',
-                '<button type="button" class="task-item-anexos-btn" title="Anexos" data-item-id="' + item.id + '">',
-                '<i class="fas fa-paperclip" aria-hidden="true"></i><span class="task-item-anexos-num">' + anexosCount + '</span></button>',
-                canDelete ? '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + item.id + '" title="Excluir"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>' : '',
+                '<button type="button" class="task-item-comments-btn" aria-expanded="false" data-target="comments-body-' + escapeAttr(item.id) + '" data-action="toggleComments" title="Coment\u00e1rios">',
+                '<i class="far fa-comment-alt" aria-hidden="true"></i><span class="task-item-comments-num">' + escapeHtml(commentsCount) + '</span></button>',
+                '<button type="button" class="task-item-anexos-btn" title="Anexos" data-item-id="' + escapeAttr(item.id) + '">',
+                '<i class="fas fa-paperclip" aria-hidden="true"></i><span class="task-item-anexos-num">' + escapeHtml(anexosCount) + '</span></button>',
+                canDelete ? '<button type="button" class="task-item-btn task-item-del" data-bs-toggle="modal" data-bs-target="#deleteItemModal-' + escapeAttr(item.id) + '" title="Excluir"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>' : '',
                 '</div></div></div>',
-                '<div id="comments-body-' + item.id + '" class="task-item-comments" hidden>',
+                '<div id="comments-body-' + escapeAttr(item.id) + '" class="task-item-comments" hidden>',
                 '<div class="task-item-comments-inner">',
-                '<form class="task-comment-form" action="/tarefas/' + item.id + '/comentarios/add" method="POST" data-item-id="' + item.id + '">',
+                '<form class="task-comment-form" action="/tarefas/' + escapeAttr(item.id) + '/comentarios/add" method="POST" data-item-id="' + escapeAttr(item.id) + '">',
                 '<textarea name="content" rows="1" placeholder="Comentar... (Enter para enviar)" required></textarea>',
                 '<button type="submit" title="Enviar coment\u00e1rio"><i class="fas fa-paper-plane" aria-hidden="true"></i><span class="visually-hidden">Enviar</span></button>',
                 '</form></div></div></div></div>',
@@ -281,13 +287,13 @@
             }
 
             var modalHtml = [
-                '<div class="modal fade task-detail-v2-modal" id="deleteItemModal-' + item.id + '" tabindex="-1" aria-hidden="true">',
+                '<div class="modal fade task-detail-v2-modal" id="deleteItemModal-' + escapeAttr(item.id) + '" tabindex="-1" aria-hidden="true">',
                 '<div class="modal-dialog modal-dialog-centered"><div class="modal-content modal-clean">',
                 '<div class="modal-header-clean"><div><h5 class="modal-title-clean ds-type-section-title">Excluir Tarefa</h5><p class="modal-subtitle-clean ds-type-body-sm">Esta a\u00e7\u00e3o n\u00e3o pode ser desfeita</p></div>',
                 '<button type="button" class="btn-close-clean" data-bs-dismiss="modal">&times;</button></div>',
                 '<div class="modal-body-clean"><p>Confirma a exclus\u00e3o desta tarefa?</p><p class="text-muted small">' + escapeHtml((item.descricao || '').substring(0, 100)) + ((item.descricao || '').length > 100 ? '...' : '') + '</p></div>',
                 '<div class="modal-footer-clean"><button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">Cancelar</button>',
-                '<form action="/tarefas/' + item.id + '/delete" method="POST" class="inline-form">',
+                '<form action="/tarefas/' + escapeAttr(item.id) + '/delete" method="POST" class="inline-form">',
                 '<button type="submit" class="btn-modal-clean btn-confirm-delete">Excluir</button></form></div></div></div></div>',
             ].join('');
 
