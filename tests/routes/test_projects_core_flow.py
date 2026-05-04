@@ -1,4 +1,6 @@
+import csv
 import datetime
+import io
 
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from models import Etapa, Indicador, IndicadorProjeto, Project, ProjectHistory, User, db
@@ -180,6 +182,35 @@ def test_projects_list_ignores_out_of_range_numeric_search_id(client_user):
 
     assert response.status_code == 200
     assert "Projetos" in response.get_data(as_text=True)
+
+
+def test_projects_csv_export_neutralizes_formula_text_cells(app, client_admin):
+    with app.app_context():
+        project = Project(
+            titulo='=HYPERLINK("https://attacker.example","click")',
+            short_description=' +SUM(1,2)',
+            sei_process='@cmd',
+            orgao="-Orgao Legado",
+            prioridade="alta",
+            status="Vigente",
+            objetivo_id=1,
+            resultado_esperado_id=1,
+        )
+        db.session.add(project)
+        db.session.commit()
+        project_id = project.id
+
+    response = client_admin.get("/projects/download")
+
+    assert response.status_code == 200
+    rows = list(csv.reader(io.StringIO(response.get_data(as_text=True)), delimiter=";"))
+    header = rows[0]
+    row = next(row for row in rows[1:] if row[0] == str(project_id))
+
+    assert row[header.index("Nome")].startswith("'=")
+    assert row[header.index("Descrição")].startswith("' +")
+    assert row[header.index("Processo SEI-RJ")].startswith("'@")
+    assert row[header.index("Órgão Responsável")].startswith("'-")
 
 
 def test_add_project_creates_stages_indicators_and_history(app, client_user, seed_data):

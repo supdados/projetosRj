@@ -38,6 +38,16 @@ from routes.shared import (
 )
 
 
+CSV_FORMULA_PREFIXES = ("=", "+", "-", "@")
+
+
+def _safe_csv_text(value):
+    text = "" if value is None else str(value)
+    if text.lstrip().startswith(CSV_FORMULA_PREFIXES):
+        return f"'{text}"
+    return text
+
+
 @main_bp.route("/projects")
 @login_required
 def list_projects():
@@ -635,16 +645,16 @@ def download_projects_csv():
         writer.writerow(
             [
                 p.id,
-                p.titulo,
-                p.short_description or "",
-                p.sei_process or "",
-                orgao_responsavel,
-                p.status,
+                _safe_csv_text(p.titulo),
+                _safe_csv_text(p.short_description),
+                _safe_csv_text(p.sei_process),
+                _safe_csv_text(orgao_responsavel),
+                _safe_csv_text(p.status),
                 data_inicio,
                 data_fim,
-                objetivo,
-                resultado,
-                indicadores,
+                _safe_csv_text(objetivo),
+                _safe_csv_text(resultado),
+                _safe_csv_text(indicadores),
                 total_etapas,
                 cumprimento,
             ]
