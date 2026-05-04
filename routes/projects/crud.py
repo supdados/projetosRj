@@ -499,10 +499,15 @@ def concluir_project(project_id):
         )
 
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
+        current_app.logger.exception(
+            "Falha inesperada ao concluir projeto %s", project.id
+        )
         return respond_error(
-            f"Erro ao concluir projeto: {str(e)}", category="danger", status_code=500
+            "Erro ao concluir projeto. Tente novamente em instantes.",
+            category="danger",
+            status_code=500,
         )
 
     success_message = f'Projeto "{project.titulo}" foi concluído com sucesso!'

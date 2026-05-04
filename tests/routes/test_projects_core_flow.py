@@ -378,6 +378,33 @@ def test_concluir_project_json_finalizes_project_and_logs_history(
         assert "Concluiu o projeto" in history.action_description
 
 
+def test_concluir_project_json_hides_raw_exception_details(
+    client_user, seed_data, monkeypatch
+):
+    sensitive_error = (
+        "(sqlite3.IntegrityError) UNIQUE constraint failed: "
+        "project_history.project_id; DB path /srv/projetosRj/instance/projetosrj.db"
+    )
+
+    def fail_commit():
+        raise RuntimeError(sensitive_error)
+
+    monkeypatch.setattr(db.session, "commit", fail_commit)
+
+    response = client_user.post(
+        f"/project/{seed_data['project_complete_id']}/concluir",
+        headers={"Accept": "application/json"},
+    )
+
+    assert response.status_code == 500
+    payload = response.get_json()
+    assert payload["success"] is False
+    assert payload["message"] == "Erro ao concluir projeto. Tente novamente em instantes."
+    assert "sqlite3" not in payload["message"]
+    assert "project_history" not in payload["message"]
+    assert "/srv/projetosRj" not in payload["message"]
+
+
 def test_delete_project_ajax_removes_project_from_database(app, client_user):
     with app.app_context():
         project = Project(
