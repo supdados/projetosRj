@@ -160,3 +160,15 @@ def test_task_assignable_users_routes_return_orgao_scoped_names(client_user, see
     hub_payload = hub_response.get_json()
     hub_names = [user["name"] for user in hub_payload["users"]]
     assert hub_names == ["Administrador"]
+
+
+def test_task_assignable_users_rejects_cross_orgao_lookup(client_user, seed_data):
+    response = client_user.get(
+        "/tarefas/sugestoes-responsavel",
+        query_string={"orgao": str(seed_data["vpd_orgao_id"])},
+    )
+
+    assert response.status_code == 403
+    payload = response.get_json()
+    assert payload["success"] is False
+    assert "Sem permissão" in payload["message"]
