@@ -52,8 +52,15 @@ def _add_connection(user_id, account_id, email):
 
 
 def _seed_project_meeting(
-    seed_data, *, owner_user_id, owner_account_id, owner_email, sync_status="ok"
+    seed_data,
+    *,
+    owner_user_id,
+    owner_account_id,
+    owner_email,
+    sync_status="ok",
+    project_id=None,
 ):
+    project_id = project_id or seed_data["project_id"]
     starts_at = datetime.datetime(2026, 3, 20, 13, 0)
     ends_at = datetime.datetime(2026, 3, 20, 14, 0)
     event = CalendarEvent(
@@ -71,7 +78,7 @@ def _seed_project_meeting(
         data_inicio=datetime.date(2026, 3, 20),
         data_fim=datetime.date(2026, 3, 20),
         responsavel=owner_email,
-        project_id=seed_data["project_id"],
+        project_id=project_id,
         ordem=40,
         entry_type="google_meeting",
     )
@@ -80,7 +87,7 @@ def _seed_project_meeting(
 
     meeting = ProjectStageMeeting(
         etapa_id=etapa.id,
-        project_id=seed_data["project_id"],
+        project_id=project_id,
         calendar_event_id=event.id,
         creator_user_id=owner_user_id,
         google_owner_account_id=owner_account_id,
@@ -288,6 +295,43 @@ def test_same_google_account_can_edit_project_meeting_via_modal_route(
         assert event is not None
         assert event.title == "Reunião editada"
         assert event.location == "Sala nova"
+
+
+def test_meeting_edit_hides_cross_area_stage_metadata(app, client, seed_data):
+    with app.app_context():
+        foreign_meeting_etapa_id = _seed_project_meeting(
+            seed_data,
+            owner_user_id=seed_data["outsider_id"],
+            owner_account_id="google-vpd-1",
+            owner_email="vpd@example.com",
+            project_id=seed_data["foreign_project_id"],
+        )
+        foreign_regular_etapa_id = seed_data["foreign_etapa_id"]
+
+    _login(client, seed_data["user_id"])
+
+    for etapa_id in (foreign_regular_etapa_id, foreign_meeting_etapa_id, 999999):
+        response = client.post(
+            f"/etapa/{etapa_id}/meeting/edit",
+            data={
+                "title": "Tentativa",
+                "starts_at": "2026-03-20T15:30",
+                "ends_at": "2026-03-20T16:45",
+            },
+            headers=AJAX_HEADERS,
+        )
+        assert response.status_code == 404
+
+    response = client.post(
+        f"/etapa/{foreign_meeting_etapa_id}/meeting/edit",
+        data={
+            "title": "Tentativa",
+            "starts_at": "2026-03-20T15:30",
+            "ends_at": "2026-03-20T16:45",
+        },
+    )
+    assert response.status_code == 404
+    assert "Location" not in response.headers
 
 
 def test_different_google_account_cannot_update_or_delete_project_meeting(

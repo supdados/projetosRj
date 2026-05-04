@@ -1,4 +1,4 @@
-from flask import current_app, flash, g, jsonify, redirect, request, url_for
+from flask import abort, current_app, flash, g, jsonify, redirect, request, url_for
 
 from models import (
     CalendarEvent,
@@ -167,18 +167,14 @@ def edit_project_meeting(etapa_id):
     etapa = get_or_404(Etapa, etapa_id)
     project = etapa.project
 
+    if not _current_user_can_edit_project(project):
+        abort(404)
+
     if not is_google_meeting_stage(etapa) or etapa.meeting is None:
         message = "Esta etapa não é uma reunião Google editável."
         if ajax_request:
             return jsonify({"success": False, "message": message}), 400
         flash(message, "warning")
-        return redirect(url_for("main.project_detail", project_id=project.id))
-
-    if not _current_user_can_edit_project(project):
-        message = "Você não tem permissão para editar reuniões deste projeto."
-        if ajax_request:
-            return jsonify({"success": False, "message": message}), 403
-        flash(message, "danger")
         return redirect(url_for("main.project_detail", project_id=project.id))
 
     meeting = etapa.meeting
