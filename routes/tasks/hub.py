@@ -20,6 +20,8 @@ from routes.tasks.queries import (
     _read_task_filter_values,
 )
 
+ARCHIVED_TASKS_PER_PAGE = 20
+
 
 def _group_hub_tasks_by_project(tasks):
     groups = {}
@@ -153,7 +155,7 @@ def _render_task_hub(
     if locked_project is not None:
         project_filter = str(locked_project.id)
 
-    tasks = _build_visible_tasks_query(
+    tasks_query = _build_visible_tasks_query(
         include_archived=include_archived,
         project_filter=project_filter,
         prioridade_filter=prioridade_filter,
@@ -161,7 +163,20 @@ def _render_task_hub(
         status_filter=status_filter,
         responsavel_filter=responsavel_filter,
         orgao_filter_id=selected_orgao_id,
-    ).all()
+    )
+    archived_pagination = None
+    if include_archived:
+        page = request.args.get("page", 1, type=int)
+        if page < 1:
+            page = 1
+        archived_pagination = tasks_query.paginate(
+            page=page,
+            per_page=ARCHIVED_TASKS_PER_PAGE,
+            error_out=False,
+        )
+        tasks = archived_pagination.items
+    else:
+        tasks = tasks_query.all()
     groups = _group_hub_tasks_by_project(tasks)
     if locked_project is not None and not include_archived and not groups:
         groups = [
@@ -217,7 +232,39 @@ def _render_task_hub(
     archived_url = None
     active_url = None
     active_count = None
+    archived_page_urls = {}
+    archived_page_entries = []
     if include_archived:
+        def archived_page_url(page_number):
+            return _build_task_listing_url(
+                "main.list_tasks_archived",
+                orgao_filter=str(selected_orgao_id or ""),
+                project_filter=project_filter,
+                prioridade_filter=prioridade_filter,
+                tipo_filter=tipo_filter,
+                status_filter=status_filter,
+                responsavel_filter=responsavel_filter,
+                page=page_number,
+            )
+
+        if archived_pagination is not None:
+            archived_page_urls = {
+                "first": archived_page_url(1),
+                "prev": archived_page_url(archived_pagination.prev_num),
+                "next": archived_page_url(archived_pagination.next_num),
+                "last": archived_page_url(archived_pagination.pages or 1),
+            }
+            archived_page_entries = [
+                {"page": page_number, "url": archived_page_url(page_number)}
+                if page_number
+                else None
+                for page_number in archived_pagination.iter_pages(
+                    left_edge=1,
+                    right_edge=1,
+                    left_current=1,
+                    right_current=2,
+                )
+            ]
         active_url = _build_task_listing_url(
             "main.list_tasks",
             orgao_filter=str(selected_orgao_id or ""),
@@ -284,7 +331,11 @@ def _render_task_hub(
         tipo_options=filter_options["tipo_options"],
         status_options=filter_options["status_options"],
         responsavel_options=filter_options["responsavel_options"],
-        total_items=len(tasks),
+        total_items=archived_pagination.total if archived_pagination else len(tasks),
+        archived_pagination=archived_pagination,
+        archived_per_page=ARCHIVED_TASKS_PER_PAGE if include_archived else None,
+        archived_page_urls=archived_page_urls,
+        archived_page_entries=archived_page_entries,
         project_locked=bool(locked_project),
         project_locked_obj=locked_project,
         page_title=page_title,

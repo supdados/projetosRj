@@ -423,6 +423,41 @@ def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(
     assert task_title not in dashboard_page.data
 
 
+def test_archived_tasks_page_paginates_visible_tasks(app, client_user, seed_data):
+    with app.app_context():
+        archived_tasks = [
+            Task(
+                descricao=f"Arquivada paginada {index:02d}",
+                status="finalizada",
+                ordem=100 + index,
+                project_id=seed_data["project_id"],
+                created_by_id=seed_data["user_id"],
+                is_archived=True,
+                archived_at=utc_now(),
+            )
+            for index in range(25)
+        ]
+        db.session.add_all(archived_tasks)
+        db.session.commit()
+
+    page_one = client_user.get("/tarefas/arquivadas")
+    assert page_one.status_code == 200
+    page_one_html = page_one.get_data(as_text=True)
+    assert "Arquivada paginada 00" in page_one_html
+    assert "Arquivada paginada 19" in page_one_html
+    assert "Arquivada paginada 20" not in page_one_html
+    assert "Exibindo 1-20 de 25" in page_one_html
+    assert 'href="/tarefas/arquivadas?page=2"' in page_one_html
+
+    page_two = client_user.get("/tarefas/arquivadas?page=2")
+    assert page_two.status_code == 200
+    page_two_html = page_two.get_data(as_text=True)
+    assert "Arquivada paginada 00" not in page_two_html
+    assert "Arquivada paginada 20" in page_two_html
+    assert "Arquivada paginada 24" in page_two_html
+    assert "Exibindo 21-25 de 25" in page_two_html
+
+
 def test_project_tasks_template_contract_keeps_project_context_but_allows_switching_project_filter(
     client_user, seed_data
 ):

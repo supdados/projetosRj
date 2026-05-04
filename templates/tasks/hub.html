@@ -697,6 +697,39 @@
             {% endif %}
         </div>
 
+        {% if archived_mode and archived_pagination and archived_pagination.pages > 1 %}
+        {% set archived_start = ((archived_pagination.page - 1) * archived_per_page) + 1 %}
+        {% set archived_end = [archived_pagination.page * archived_per_page, archived_pagination.total]|min %}
+        <nav class="tasks-archive-pagination-wrap" aria-label="Paginação de tarefas arquivadas">
+            <div class="tasks-archive-pagination-info">
+                Exibindo {{ archived_start }}-{{ archived_end }} de {{ archived_pagination.total }}
+            </div>
+            <ul class="pagination tasks-archive-pagination mb-0">
+                <li class="page-item {% if not archived_pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ archived_page_urls.first if archived_pagination.has_prev else '#' }}" aria-label="Primeira">«</a>
+                </li>
+                <li class="page-item {% if not archived_pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ archived_page_urls.prev if archived_pagination.has_prev else '#' }}" aria-label="Anterior">‹</a>
+                </li>
+                {% for entry in archived_page_entries %}
+                    {% if entry %}
+                    <li class="page-item {% if entry.page == archived_pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ entry.url }}">{{ entry.page }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not archived_pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ archived_page_urls.next if archived_pagination.has_next else '#' }}" aria-label="Próxima">›</a>
+                </li>
+                <li class="page-item {% if not archived_pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ archived_page_urls.last if archived_pagination.has_next else '#' }}" aria-label="Última">»</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+
         {% if not archived_mode %}
         <div class="task-item-drawer-backdrop" id="taskItemDrawerBackdrop" hidden></div>
         <aside class="task-item-drawer" id="taskItemDrawer" aria-hidden="true" hidden>
