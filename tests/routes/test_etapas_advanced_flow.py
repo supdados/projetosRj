@@ -205,3 +205,17 @@ def test_cascade_date_update_moves_weekend_end_to_next_business_day(
         assert etapa_subsequente is not None
         assert etapa_subsequente.data_inicio == datetime.date(2026, 1, 19)
         assert etapa_subsequente.data_fim == datetime.date(2026, 1, 26)
+
+
+def test_cascade_date_update_rejects_unbounded_business_day_shift(
+    client_user, seed_data
+):
+    response = client_user.post(
+        f"/project/{seed_data['project_id']}/cascade_update",
+        json={"etapa_id": seed_data["etapa_id"], "days_diff": 366},
+    )
+
+    assert response.status_code == 400
+    payload = response.get_json()
+    assert payload["success"] is False
+    assert "365 dias úteis" in payload["message"]

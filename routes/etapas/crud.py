@@ -28,6 +28,8 @@ from routes.etapas.helpers import (
     _serialize_etapa_payload,
 )
 
+MAX_CASCADE_BUSINESS_DAYS = 365
+
 
 @main_bp.route("/project/<int:project_id>/etapa/add", methods=["POST"])
 @login_required
@@ -680,6 +682,19 @@ def cascade_date_update(project_id):
     except (TypeError, ValueError):
         return (
             jsonify({"success": False, "message": "Parâmetro de dias inválido."}),
+            400,
+        )
+    if abs(days_to_add) > MAX_CASCADE_BUSINESS_DAYS:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": (
+                        "A cascata de datas aceita no máximo "
+                        f"{MAX_CASCADE_BUSINESS_DAYS} dias úteis por operação."
+                    ),
+                }
+            ),
             400,
         )
 

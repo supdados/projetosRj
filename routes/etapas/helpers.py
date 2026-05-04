@@ -43,8 +43,17 @@ def _add_business_days(date_value, business_days):
         return _normalize_to_business_day(date_value, forward=True)
 
     current_date = date_value
-    remaining_days = abs(business_days_int)
     step = 1 if business_days_int > 0 else -1
+    remaining_days = abs(business_days_int)
+    while remaining_days > 0 and current_date.weekday() >= 5:
+        current_date += datetime.timedelta(days=step)
+        if _is_business_day(current_date):
+            remaining_days -= 1
+
+    full_weeks, remaining_days = divmod(remaining_days, 5)
+    if full_weeks:
+        current_date += datetime.timedelta(days=full_weeks * 7 * step)
+
     while remaining_days > 0:
         current_date += datetime.timedelta(days=step)
         if _is_business_day(current_date):
