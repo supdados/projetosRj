@@ -15,6 +15,7 @@ from .orgao_scope import (
     redirect_to_current_route_without_orgao,
     sanitize_orgao_filter_for_current_user,
 )
+from .shared import parse_db_integer_id
 
 GLOBAL_SEARCH_DEFAULT_LIMIT = 5
 GLOBAL_SEARCH_API_MAX_LIMIT = 20
@@ -211,10 +212,7 @@ def build_global_search_results(
             (func.lower(func.coalesce(column, "")).like(prefix_pattern), 0), else_=1
         )
 
-    try:
-        search_id = int(normalized_term)
-    except ValueError:
-        search_id = None
+    search_id = parse_db_integer_id(normalized_term)
 
     project_id_filter = (Project.id == search_id) if search_id is not None else None
 

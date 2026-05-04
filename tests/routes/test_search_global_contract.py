@@ -193,6 +193,20 @@ def test_global_search_api_returns_empty_payload_for_short_query(client_user):
     }
 
 
+def test_global_search_ignores_out_of_range_numeric_ids(client_user):
+    huge_numeric_query = "9999999999999999999"
+
+    api_response = client_user.get(
+        "/api/busca-global", query_string={"q": huge_numeric_query}
+    )
+    assert api_response.status_code == 200
+    assert api_response.get_json()["query"] == huge_numeric_query
+
+    page_response = client_user.get("/busca", query_string={"q": huge_numeric_query})
+    assert page_response.status_code == 200
+    assert huge_numeric_query in page_response.get_data(as_text=True)
+
+
 def test_global_search_api_includes_only_events_of_current_user(app, seed_data):
     with app.app_context():
         db.session.add(

@@ -15,6 +15,8 @@ from catalogs.objectives import (
 from services.notifications import notify_project_history_action
 
 TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
+DB_INTEGER_MIN = -(2**63)
+DB_INTEGER_MAX = 2**63 - 1
 
 
 def format_local_time(dt, fmt="%d/%m %H:%M"):
@@ -81,6 +83,18 @@ def parse_objetivo_filter(raw_value):
     if objetivo_id not in OBJETIVO_IDS:
         return None
     return objetivo_id
+
+
+def parse_db_integer_id(raw_value):
+    if raw_value is None:
+        return None
+    try:
+        parsed_id = int(str(raw_value).strip())
+    except (TypeError, ValueError):
+        return None
+    if parsed_id < DB_INTEGER_MIN or parsed_id > DB_INTEGER_MAX:
+        return None
+    return parsed_id
 
 
 def parse_abep_indicator_filter(raw_value):

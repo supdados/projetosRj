@@ -147,6 +147,15 @@ def test_projects_list_applies_admin_advanced_filters(app, client_admin):
     assert "Projeto Auditoria" not in html
 
 
+def test_projects_list_ignores_out_of_range_numeric_search_id(client_user):
+    response = client_user.get(
+        "/projects", query_string={"search": "9999999999999999999"}
+    )
+
+    assert response.status_code == 200
+    assert "Projetos" in response.get_data(as_text=True)
+
+
 def test_add_project_creates_stages_indicators_and_history(app, client_user, seed_data):
     abep_value = ABEP_INDICADORES_OPTIONS[0]["value"]
 

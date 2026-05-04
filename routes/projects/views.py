@@ -32,6 +32,7 @@ from routes.orgao_scope import (
 from routes.shared import (
     get_or_404,
     get_goal_catalog_context,
+    parse_db_integer_id,
     parse_abep_indicator_filter,
     parse_objetivo_filter,
 )
@@ -99,10 +100,7 @@ def list_projects():
     # Filtro de busca (título, órgão, indicador ABEP)
     if search_query:
         search_pattern = f"%{search_query}%"
-        try:
-            search_id = int(search_query)
-        except ValueError:
-            search_id = None
+        search_id = parse_db_integer_id(search_query)
         text_filters = db.or_(
             Project.titulo.ilike(search_pattern),
             Project.orgao.ilike(search_pattern),
