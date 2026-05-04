@@ -195,21 +195,50 @@
             el.setAttribute('data-anexo-id', anexo.id);
 
             var isImg = !!anexo.is_image;
-            var preview = '';
+            var link = document.createElement('a');
+            link.className = 'task-item-drawer-anexo-link';
+            link.setAttribute('href', anexo.url || '');
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener');
+            link.setAttribute('data-filename', anexo.filename || '');
+            link.setAttribute('data-content-type', anexo.content_type || '');
+            link.setAttribute('data-is-image', isImg ? '1' : '0');
+
             if (isImg) {
-                preview = '<img class="task-item-drawer-anexo-thumb" src="' + escapeAnexoHtml(anexo.url) + '" alt="' + escapeAnexoHtml(anexo.filename) + '" loading="lazy">';
+                var img = document.createElement('img');
+                img.className = 'task-item-drawer-anexo-thumb';
+                img.setAttribute('src', anexo.url || '');
+                img.setAttribute('alt', anexo.filename || '');
+                img.setAttribute('loading', 'lazy');
+                link.appendChild(img);
             } else {
-                preview = '<span class="task-item-drawer-anexo-icon"><i class="fas fa-file" aria-hidden="true"></i></span>';
+                var iconSpan = document.createElement('span');
+                iconSpan.className = 'task-item-drawer-anexo-icon';
+                var icon = document.createElement('i');
+                icon.className = 'fas fa-file';
+                icon.setAttribute('aria-hidden', 'true');
+                iconSpan.appendChild(icon);
+                link.appendChild(iconSpan);
             }
 
-            el.innerHTML =
-                '<a class="task-item-drawer-anexo-link" href="' + escapeAnexoHtml(anexo.url) + '" target="_blank" rel="noopener" data-filename="' + escapeAnexoHtml(anexo.filename) + '" data-content-type="' + escapeAnexoHtml(anexo.content_type || '') + '" data-is-image="' + (isImg ? '1' : '0') + '">' +
-                preview +
-                '<span class="task-item-drawer-anexo-name">' + escapeAnexoHtml(anexo.filename) + '</span>' +
-                '</a>' +
-                '<button type="button" class="task-item-drawer-anexo-del" data-action="delete-anexo" data-anexo-id="' + anexo.id + '" title="Remover anexo">' +
-                '<i class="fas fa-times" aria-hidden="true"></i>' +
-                '</button>';
+            var nameSpan = document.createElement('span');
+            nameSpan.className = 'task-item-drawer-anexo-name';
+            nameSpan.textContent = anexo.filename || '';
+            link.appendChild(nameSpan);
+
+            var delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'task-item-drawer-anexo-del';
+            delBtn.setAttribute('data-action', 'delete-anexo');
+            delBtn.setAttribute('data-anexo-id', anexo.id);
+            delBtn.setAttribute('title', 'Remover anexo');
+            var delIcon = document.createElement('i');
+            delIcon.className = 'fas fa-times';
+            delIcon.setAttribute('aria-hidden', 'true');
+            delBtn.appendChild(delIcon);
+
+            el.appendChild(link);
+            el.appendChild(delBtn);
             return el;
         }
 
