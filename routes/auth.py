@@ -204,24 +204,6 @@ def login_page():
 
         user = User.query.filter_by(username=username).first()
 
-        if user and _user_is_locked_out(user):
-            remaining = user.lockout_until - utc_now()
-            minutes = max(1, int(remaining.total_seconds() // 60) + 1)
-            flash(
-                f"Conta temporariamente bloqueada por excesso de tentativas. Tente novamente em {minutes} min.",
-                "danger",
-            )
-            cv, cf, tt, ca = _login_stats()
-            return render_template(
-                "auth/login.html",
-                next_page=safe_next,
-                show_local_form=True,
-                count_vigente=cv,
-                count_finalizado=cf,
-                total_tasks=tt,
-                count_areas=ca,
-            )
-
         if user and user.check_password(password):
             if user.needs_password_rehash():
                 user.set_password(password)
@@ -236,7 +218,8 @@ def login_page():
             flash(f"Login bem-sucedido, {user.name}!", "success")
             return redirect(_login_redirect_target())
         else:
-            _register_failed_login(user)
+            if not _user_is_locked_out(user):
+                _register_failed_login(user)
             flash("Credenciais inválidas. Tente novamente.", "danger")
             cv, cf, tt, ca = _login_stats()
             return render_template(

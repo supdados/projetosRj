@@ -35,6 +35,68 @@ def test_login_invalid_credentials_keeps_user_logged_out(client, seed_data):
         assert "user_id" not in session
 
 
+def test_login_lockout_does_not_block_owner_or_enumerate_users(
+    app, client, seed_data
+):
+    for _ in range(5):
+        response = client.post(
+            "/login",
+            data={
+                "username": seed_data["user_username"],
+                "password": "senha-invalida",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 200
+        assert "Credenciais inválidas. Tente novamente." in response.get_data(
+            as_text=True
+        )
+
+    with app.app_context():
+        user = db.session.get(User, seed_data["user_id"])
+        assert user is not None
+        assert user.lockout_until is not None
+
+    locked_response = client.post(
+        "/login",
+        data={
+            "username": seed_data["user_username"],
+            "password": "outra-senha-invalida",
+        },
+        follow_redirects=False,
+    )
+    locked_html = locked_response.get_data(as_text=True)
+    assert locked_response.status_code == 200
+    assert "Credenciais inválidas. Tente novamente." in locked_html
+    assert "Conta temporariamente bloqueada" not in locked_html
+
+    missing_response = client.post(
+        "/login",
+        data={"username": "usuario-inexistente", "password": "senha-invalida"},
+        follow_redirects=False,
+    )
+    missing_html = missing_response.get_data(as_text=True)
+    assert missing_response.status_code == 200
+    assert "Credenciais inválidas. Tente novamente." in missing_html
+    assert "Conta temporariamente bloqueada" not in missing_html
+
+    success_response = client.post(
+        "/login?next=/projects",
+        data={
+            "username": seed_data["user_username"],
+            "password": seed_data["user_password"],
+        },
+        follow_redirects=False,
+    )
+    assert success_response.status_code == 302
+    assert success_response.headers["Location"].endswith("/projects")
+
+    with app.app_context():
+        user = db.session.get(User, seed_data["user_id"])
+        assert user.lockout_until is None
+        assert user.failed_login_attempts == 0
+
+
 def test_logout_clears_session_and_redirects_to_login(client_user):
     response = client_user.get("/logout", follow_redirects=False)
 
