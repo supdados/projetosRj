@@ -37,7 +37,6 @@ from routes.shared import (
     parse_objetivo_filter,
 )
 
-
 CSV_FORMULA_PREFIXES = ("=", "+", "-", "@")
 
 
@@ -158,12 +157,21 @@ def list_projects():
     # Paginar os projetos
     projects_paginated = all_projects_filtered[start_idx:end_idx]
 
+    options_query = Project.query
+    if not g.user.is_admin:
+        user_orgao_subtree_ids = get_user_orgao_subtree_ids(g.user)
+        if user_orgao_subtree_ids:
+            options_query = options_query.filter(
+                Project.orgao_id.in_(user_orgao_subtree_ids)
+            )
+        else:
+            options_query = options_query.filter(Project.id == -1)
+
+    scoped_option_projects = options_query.all()
     priorities_options = sorted(
-        list(set(p.prioridade for p in Project.query.all() if p.prioridade))
+        {p.prioridade for p in scoped_option_projects if p.prioridade}
     )
-    statuses_options = sorted(
-        list(set(p.status for p in Project.query.all() if p.status))
-    )
+    statuses_options = sorted({p.status for p in scoped_option_projects if p.status})
     atrasos_options = [("no_prazo", "No prazo"), ("atrasado", "Atrasado")]
     objetivos, _, _ = (
         get_goal_catalog_context()
@@ -632,9 +640,7 @@ def download_projects_csv():
         indicadores = "; ".join(
             ip.indicador.descricao for ip in p.indicadores if ip.indicador
         )
-        orgao_responsavel = (
-            p.orgao_ref.sigla if p.orgao_ref else (p.orgao or "")
-        )
+        orgao_responsavel = p.orgao_ref.sigla if p.orgao_ref else (p.orgao or "")
         workflow_etapas = p.workflow_etapas
         total_etapas = len(workflow_etapas)
         if total_etapas:

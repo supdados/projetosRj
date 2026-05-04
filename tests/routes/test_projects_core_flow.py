@@ -7,6 +7,25 @@ from models import Etapa, Indicador, IndicadorProjeto, Project, ProjectHistory, 
 from tests._orgao_helpers import ensure_orgao, link_user_to_orgao
 
 
+def _create_no_orgao_user(app, username="user_sem_orgao"):
+    with app.app_context():
+        user = User(
+            username=username,
+            name="Usuario Sem Orgao",
+            orgao="Auditoria",
+            is_admin=False,
+        )
+        user.set_password("senha123")
+        db.session.add(user)
+        db.session.commit()
+        return user.id
+
+
+def _login_user(client, user_id):
+    with client.session_transaction() as session:
+        session["user_id"] = user_id
+
+
 def _valid_indicator_ids():
     indicator_ids = [
         item.id
@@ -45,20 +64,8 @@ def test_projects_list_defaults_to_vigente_and_current_user_area(app, client_use
 def test_projects_list_fails_closed_for_non_admin_without_orgao_links(
     app, client, seed_data
 ):
-    with app.app_context():
-        user = User(
-            username="user_sem_orgao",
-            name="Usuario Sem Orgao",
-            orgao="Auditoria",
-            is_admin=False,
-        )
-        user.set_password("senha123")
-        db.session.add(user)
-        db.session.commit()
-        user_id = user.id
-
-    with client.session_transaction() as session:
-        session["user_id"] = user_id
+    user_id = _create_no_orgao_user(app)
+    _login_user(client, user_id)
 
     response = client.get("/projects")
 
@@ -66,6 +73,28 @@ def test_projects_list_fails_closed_for_non_admin_without_orgao_links(
     html = response.get_data(as_text=True)
     assert "Projeto Auditoria" not in html
     assert "Projeto VPD" not in html
+
+
+def test_no_orgao_user_metadata_routes_fail_closed(app, client, seed_data):
+    user_id = _create_no_orgao_user(app, username="user_sem_orgao_metadata")
+    _login_user(client, user_id)
+
+    dashboard_response = client.get("/dashboard")
+    assert dashboard_response.status_code == 200
+    dashboard_html = dashboard_response.get_data(as_text=True)
+    assert "Projeto Auditoria" not in dashboard_html
+    assert "Projeto VPD" not in dashboard_html
+
+    projects_response = client.get("/api/projetos_usuario")
+    assert projects_response.status_code == 200
+    assert projects_response.get_json() == []
+
+    search_response = client.get("/api/busca-global", query_string={"q": "Projeto"})
+    assert search_response.status_code == 200
+    search_payload = search_response.get_json()
+    assert search_payload["results"]["projects"] == []
+    assert "Projeto Auditoria" not in search_response.get_data(as_text=True)
+    assert "Projeto VPD" not in search_response.get_data(as_text=True)
 
 
 def test_projects_list_shows_orgao_filter_for_non_admin_with_multiple_orgaos(
@@ -188,8 +217,8 @@ def test_projects_csv_export_neutralizes_formula_text_cells(app, client_admin):
     with app.app_context():
         project = Project(
             titulo='=HYPERLINK("https://attacker.example","click")',
-            short_description=' +SUM(1,2)',
-            sei_process='@cmd',
+            short_description=" +SUM(1,2)",
+            sei_process="@cmd",
             orgao="-Orgao Legado",
             prioridade="alta",
             status="Vigente",
@@ -456,7 +485,9 @@ def test_concluir_project_json_hides_raw_exception_details(
     assert response.status_code == 500
     payload = response.get_json()
     assert payload["success"] is False
-    assert payload["message"] == "Erro ao concluir projeto. Tente novamente em instantes."
+    assert (
+        payload["message"] == "Erro ao concluir projeto. Tente novamente em instantes."
+    )
     assert "sqlite3" not in payload["message"]
     assert "project_history" not in payload["message"]
     assert "/srv/projetosRj" not in payload["message"]
