@@ -73,6 +73,50 @@ def test_notifications_dropdown_marks_as_read(app, client_user, seed_data):
     assert all(item.get("is_unread") is False for item in second_payload["items"])
 
 
+def test_notifications_dropdown_hides_project_notifications_without_current_access(
+    app, client_user, seed_data
+):
+    with app.app_context():
+        hidden = UserNotification(
+            recipient_user_id=seed_data["user_id"],
+            actor_user_id=None,
+            event_type="project_edit",
+            title='Atualizacao no projeto "Segredo VPD"',
+            message='Editou o projeto: alterou título para "Contrato sigiloso"',
+            target_url=f"/project/{seed_data['foreign_project_id']}",
+        )
+        visible = UserNotification(
+            recipient_user_id=seed_data["user_id"],
+            actor_user_id=None,
+            event_type="unit_event",
+            title="Notificacao visivel",
+            message="Mensagem permitida",
+            target_url="/alvo",
+        )
+        db.session.add_all([hidden, visible])
+        db.session.commit()
+        hidden_id = hidden.id
+        visible_id = visible.id
+
+    dropdown_response = client_user.post("/api/notificacoes/dropdown")
+    assert dropdown_response.status_code == 200
+    payload = dropdown_response.get_json()
+    serialized = " ".join(
+        f"{item['title']} {item['message']} {item['target_url']}"
+        for item in payload["items"]
+    )
+
+    assert "Notificacao visivel" in serialized
+    assert "Segredo VPD" not in serialized
+    assert f"/project/{seed_data['foreign_project_id']}" not in serialized
+
+    with app.app_context():
+        hidden = db.session.get(UserNotification, hidden_id)
+        visible = db.session.get(UserNotification, visible_id)
+        assert hidden.is_read is False
+        assert visible.is_read is True
+
+
 def test_comment_reply_notifies_previous_participant(app, client_user, seed_data):
     with app.app_context():
         user_b = _create_user("notif_user_b", "Notif User B", areas=["Auditoria"])

@@ -10,6 +10,7 @@ from models import (
 from services.notifications import (
     _resolve_admin_ids_for_orgao,
     create_user_notifications,
+    notify_project_history_action,
     resolve_project_owner_user_ids,
     resolve_task_collaborator_user_ids,
 )
@@ -146,6 +147,54 @@ def test_resolve_project_owner_prefers_explicit_create_history_entry(app):
         db.session.commit()
 
         assert resolve_project_owner_user_ids(project) == {creator.id}
+
+
+def test_project_owner_resolution_drops_creator_without_current_orgao_access(app):
+    with app.app_context():
+        creator = _create_user(
+            "creator_old_orgao", "Creator Old Orgao", areas=["Auditoria"]
+        )
+        current_area_admin = _create_user(
+            "admin_current_orgao",
+            "Admin Current Orgao",
+            is_admin=True,
+            areas=["VPD"],
+        )
+        actor = _create_user(
+            "actor_current_orgao", "Actor Current Orgao", areas=["VPD"]
+        )
+        project = _create_project(title="Projeto Movido", area="VPD")
+        db.session.add(
+            ProjectHistory(
+                project_id=project.id,
+                user_id=creator.id,
+                action_type="create",
+                action_description="Criou o projeto",
+            )
+        )
+        db.session.commit()
+
+        assert resolve_project_owner_user_ids(project) == {current_area_admin.id}
+
+        with app.test_request_context():
+            created_count = notify_project_history_action(
+                project.id,
+                actor.id,
+                "edit",
+                'Editou o projeto: alterou título para "Sigiloso"',
+            )
+        db.session.commit()
+
+        assert created_count == 1
+        assert (
+            UserNotification.query.filter_by(recipient_user_id=creator.id).count() == 0
+        )
+        assert (
+            UserNotification.query.filter_by(
+                recipient_user_id=current_area_admin.id
+            ).count()
+            == 1
+        )
 
 
 def test_resolve_project_owner_single_non_create_history_falls_back_to_area_admins(app):

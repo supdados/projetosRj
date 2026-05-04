@@ -125,6 +125,16 @@ def _resolve_admin_ids_for_orgao(orgao_id):
     return admin_ids
 
 
+def _filter_project_accessible_user_ids(project, user_ids):
+    if not project or not user_ids:
+        return set()
+
+    from routes.orgao_scope import user_can_access_project
+
+    users = User.query.filter(User.id.in_({int(user_id) for user_id in user_ids})).all()
+    return {user.id for user in users if user_can_access_project(user, project)}
+
+
 def resolve_project_owner_user_ids(project):
     if not project:
         return set()
@@ -136,7 +146,10 @@ def resolve_project_owner_user_ids(project):
         .first()
     )
     if creator_entry and creator_entry.user_id:
-        return {creator_entry.user_id}
+        owner_ids = _filter_project_accessible_user_ids(
+            project, {creator_entry.user_id}
+        )
+        return owner_ids or _resolve_admin_ids_for_orgao(project.orgao_id)
 
     first_history_entry = (
         ProjectHistory.query.filter(ProjectHistory.project_id == project.id)
@@ -152,7 +165,10 @@ def resolve_project_owner_user_ids(project):
             "seed_create",
         }:
             return _resolve_admin_ids_for_orgao(project.orgao_id)
-        return {first_history_entry.user_id}
+        owner_ids = _filter_project_accessible_user_ids(
+            project, {first_history_entry.user_id}
+        )
+        return owner_ids or _resolve_admin_ids_for_orgao(project.orgao_id)
 
     return _resolve_admin_ids_for_orgao(project.orgao_id)
 
