@@ -456,6 +456,155 @@ def test_edit_calendar_event_updates_linked_project_meeting(
         )
 
 
+def test_generate_meet_link_blocks_linked_project_meeting_owner_mismatch(
+    app, client_user, seed_data, monkeypatch
+):
+    with app.app_context():
+        connection = UserCalendarConnection(
+            user_id=seed_data["user_id"],
+            provider="google",
+            calendar_id="primary",
+            refresh_token="refresh-token",
+            google_account_id="google-current-account",
+            google_account_email="current@example.com",
+        )
+        event = CalendarEvent(
+            user_id=seed_data["user_id"],
+            title="Reunião protegida",
+            starts_at=datetime.datetime(2026, 3, 24, 13, 0),
+            ends_at=datetime.datetime(2026, 3, 24, 14, 0),
+            source="app",
+            google_event_id="google-meet-owner-mismatch",
+            google_calendar_id="primary",
+            sync_status="ok",
+        )
+        etapa = Etapa(
+            descricao="Reunião protegida",
+            data_inicio=datetime.date(2026, 3, 24),
+            data_fim=datetime.date(2026, 3, 24),
+            responsavel="owner@example.com",
+            project_id=seed_data["project_id"],
+            ordem=70,
+            entry_type="google_meeting",
+        )
+        db.session.add_all([connection, event, etapa])
+        db.session.flush()
+        db.session.add(
+            ProjectStageMeeting(
+                etapa_id=etapa.id,
+                project_id=seed_data["project_id"],
+                calendar_event_id=event.id,
+                creator_user_id=seed_data["user_id"],
+                google_owner_account_id="google-original-owner",
+                google_owner_email="owner@example.com",
+                google_event_id=event.google_event_id,
+                google_calendar_id="primary",
+                starts_at=event.starts_at,
+                ends_at=event.ends_at,
+                timezone="America/Sao_Paulo",
+                sync_status="ok",
+            )
+        )
+        db.session.commit()
+        event_id = event.id
+
+    calls = []
+
+    def fake_sync(event, connection, create_conference=False):
+        calls.append((event.id, create_conference))
+        event.meet_link = "https://meet.google.com/blocked"
+        return event
+
+    monkeypatch.setattr(calendar_helpers, "_sync_local_event_to_google", fake_sync)
+
+    response = client_user.post(
+        f"/calendarios/eventos/{event_id}/gerar-meet",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert calls == []
+
+    with app.app_context():
+        event = db.session.get(CalendarEvent, event_id)
+        assert event.meet_link is None
+
+
+def test_generate_meet_link_updates_authorized_linked_project_meeting(
+    app, client_user, seed_data, monkeypatch
+):
+    with app.app_context():
+        connection = UserCalendarConnection(
+            user_id=seed_data["user_id"],
+            provider="google",
+            calendar_id="primary",
+            refresh_token="refresh-token",
+            google_account_id="google-owner-allowed",
+            google_account_email="owner@example.com",
+        )
+        event = CalendarEvent(
+            user_id=seed_data["user_id"],
+            title="Reunião com Meet",
+            starts_at=datetime.datetime(2026, 3, 25, 13, 0),
+            ends_at=datetime.datetime(2026, 3, 25, 14, 0),
+            source="app",
+            google_event_id="google-meet-owner-allowed",
+            google_calendar_id="primary",
+            sync_status="ok",
+        )
+        etapa = Etapa(
+            descricao="Reunião com Meet",
+            data_inicio=datetime.date(2026, 3, 25),
+            data_fim=datetime.date(2026, 3, 25),
+            responsavel="owner@example.com",
+            project_id=seed_data["project_id"],
+            ordem=71,
+            entry_type="google_meeting",
+        )
+        db.session.add_all([connection, event, etapa])
+        db.session.flush()
+        db.session.add(
+            ProjectStageMeeting(
+                etapa_id=etapa.id,
+                project_id=seed_data["project_id"],
+                calendar_event_id=event.id,
+                creator_user_id=seed_data["user_id"],
+                google_owner_account_id="google-owner-allowed",
+                google_owner_email="owner@example.com",
+                google_event_id=event.google_event_id,
+                google_calendar_id="primary",
+                starts_at=event.starts_at,
+                ends_at=event.ends_at,
+                timezone="America/Sao_Paulo",
+                sync_status="ok",
+            )
+        )
+        db.session.commit()
+        event_id = event.id
+        etapa_id = etapa.id
+
+    def fake_sync(event, connection, create_conference=False):
+        assert create_conference is True
+        event.meet_link = "https://meet.google.com/allowed"
+        event.sync_status = "ok"
+        return event
+
+    monkeypatch.setattr(calendar_helpers, "_sync_local_event_to_google", fake_sync)
+
+    response = client_user.post(
+        f"/calendarios/eventos/{event_id}/gerar-meet",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+
+    with app.app_context():
+        event = db.session.get(CalendarEvent, event_id)
+        meeting = ProjectStageMeeting.query.filter_by(etapa_id=etapa_id).first()
+        assert event.meet_link == "https://meet.google.com/allowed"
+        assert meeting.meet_link == "https://meet.google.com/allowed"
+
+
 def test_upsert_google_cancelled_event_marks_linked_project_meeting_as_error(
     app, seed_data
 ):

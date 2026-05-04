@@ -172,10 +172,24 @@ def generate_meet_link(event_id):
         flash("Conecte o Google Calendar para gerar um link do Meet.", "warning")
         return redirect(url_for("main.calendars_hub"))
 
+    linked_meeting = find_project_meeting_for_calendar_event(
+        event, connection=connection
+    )
+    if linked_meeting is not None and not can_manage_project_meeting(
+        connection, linked_meeting
+    ):
+        flash(
+            "Somente quem estiver com a mesma conta Google conectada pode gerar Meet para esta reunião.",
+            "warning",
+        )
+        return redirect(url_for("main.calendars_hub"))
+
     try:
         _cal_helpers._sync_local_event_to_google(
             event, connection, create_conference=True
         )
+        if linked_meeting is not None:
+            _sync_project_meeting_from_calendar_event(event, connection=connection)
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
