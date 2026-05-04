@@ -35,6 +35,32 @@ from .decorators import login_required
 
 LOCAL_LOGIN_MAX_ATTEMPTS = 5
 LOCAL_LOGIN_LOCKOUT_MINUTES = 15
+LOGIN_STATS_CACHE_KEY = "login_public_stats"
+
+
+def _query_login_stats():
+    count_vigente = Project.query.filter_by(status="Vigente").count()
+    count_finalizado = Project.query.filter_by(status="Finalizado").count()
+    total_tasks = Task.query.count()
+    count_areas = OrgaoUnidade.query.filter_by(ativo=True).count()
+    return count_vigente, count_finalizado, total_tasks, count_areas
+
+
+def _login_stats():
+    ttl_seconds = int(current_app.config.get("LOGIN_PUBLIC_STATS_CACHE_SECONDS", 300))
+    if ttl_seconds <= 0:
+        return _query_login_stats()
+
+    cache = current_app.extensions.setdefault(LOGIN_STATS_CACHE_KEY, {})
+    now = time.monotonic()
+    cached_stats = cache.get("stats")
+    if cached_stats is not None and cache.get("expires_at", 0) > now:
+        return cached_stats
+
+    stats = _query_login_stats()
+    cache["stats"] = stats
+    cache["expires_at"] = now + ttl_seconds
+    return stats
 
 
 def _user_is_locked_out(user):
@@ -177,13 +203,6 @@ def login_page():
     safe_next = _resolve_safe_next_url(
         request.args.get("next") or request.form.get("next")
     )
-
-    def _login_stats():
-        count_vigente = Project.query.filter_by(status="Vigente").count()
-        count_finalizado = Project.query.filter_by(status="Finalizado").count()
-        total_tasks = Task.query.count()
-        count_areas = OrgaoUnidade.query.filter_by(ativo=True).count()
-        return count_vigente, count_finalizado, total_tasks, count_areas
 
     if request.method == "POST":
         username = request.form.get("username")

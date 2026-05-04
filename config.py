@@ -113,6 +113,9 @@ def build_app_config(*, is_testing=False, is_debug=False):
         CHATBOT_BASE_URL=os.getenv("CHATBOT_BASE_URL", "").strip().rstrip("/"),
         CHATBOT_PORTAL_API_KEY=os.getenv("CHATBOT_PORTAL_API_KEY", "").strip(),
         CHATBOT_TIMEOUT_SECONDS=_env_int("CHATBOT_TIMEOUT_SECONDS", default=10),
+        LOGIN_PUBLIC_STATS_CACHE_SECONDS=_env_int(
+            "LOGIN_PUBLIC_STATS_CACHE_SECONDS", default=300
+        ),
         RATELIMIT_STORAGE_URI=os.getenv("RATELIMIT_STORAGE_URI", "memory://").strip()
         or "memory://",
     )

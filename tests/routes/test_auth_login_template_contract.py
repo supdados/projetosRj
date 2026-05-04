@@ -7,6 +7,8 @@ removesse o botão gov.br quebraria a experiência de login sem pytest se não
 fosse por este contrato.
 """
 
+from routes import auth as auth_routes
+
 
 def _fetch_login(client):
     response = client.get("/login")
@@ -83,6 +85,25 @@ def test_login_page_stats_placeholders_are_present(client):
     assert "Concluídos" in html
     assert "Tarefas" in html
     assert "Áreas" in html
+
+
+def test_login_page_public_stats_are_cached(app, monkeypatch):
+    calls = []
+
+    def fake_query_login_stats():
+        calls.append(1)
+        return (10, 5, 42, 3)
+
+    monkeypatch.setattr(auth_routes, "_query_login_stats", fake_query_login_stats)
+
+    with app.app_context():
+        app.config["LOGIN_PUBLIC_STATS_CACHE_SECONDS"] = 300
+        app.extensions.pop(auth_routes.LOGIN_STATS_CACHE_KEY, None)
+
+        assert auth_routes._login_stats() == (10, 5, 42, 3)
+        assert auth_routes._login_stats() == (10, 5, 42, 3)
+
+    assert len(calls) == 1
 
 
 def test_login_page_preserves_next_param_in_hidden_input(client):
