@@ -40,6 +40,32 @@ def test_projects_list_defaults_to_vigente_and_current_user_area(app, client_use
     assert "Projeto Auditoria Finalizado" not in html
 
 
+def test_projects_list_fails_closed_for_non_admin_without_orgao_links(
+    app, client, seed_data
+):
+    with app.app_context():
+        user = User(
+            username="user_sem_orgao",
+            name="Usuario Sem Orgao",
+            orgao="Auditoria",
+            is_admin=False,
+        )
+        user.set_password("senha123")
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+
+    with client.session_transaction() as session:
+        session["user_id"] = user_id
+
+    response = client.get("/projects")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Projeto Auditoria" not in html
+    assert "Projeto VPD" not in html
+
+
 def test_projects_list_shows_orgao_filter_for_non_admin_with_multiple_orgaos(
     app, client, seed_data
 ):

@@ -3,7 +3,7 @@ import datetime
 from flask import jsonify
 
 import routes.dashboard as dashboard_routes
-from models import CalendarEvent, Etapa, Project, ProjectStageMeeting, Task, db
+from models import CalendarEvent, Etapa, Project, ProjectStageMeeting, Task, User, db
 from tests._orgao_helpers import ensure_orgao
 
 
@@ -103,6 +103,36 @@ def test_dashboard_context_for_user_scopes_projects_tasks_and_overdue(
     assert "Tarefa Auditoria Ajustes" in recent_task_titles
     assert "Tarefa VPD Oculta Dashboard" not in recent_task_titles
     assert "Tarefa Arquivada Dashboard" not in recent_task_titles
+
+
+def test_dashboard_fails_closed_for_non_admin_without_orgao_links(
+    app, client, seed_data, monkeypatch
+):
+    with app.app_context():
+        user = User(
+            username="dashboard_sem_orgao",
+            name="Dashboard Sem Orgao",
+            orgao="Auditoria",
+            is_admin=False,
+        )
+        user.set_password("senha123")
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+
+    with client.session_transaction() as session:
+        session["user_id"] = user_id
+
+    captured = _capture_dashboard_context(monkeypatch)
+
+    response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    context = captured["context"]
+    assert context["num_projects"] == 0
+    assert context["count_vigente"] == 0
+    assert context["count_finalizado"] == 0
+    assert context["recent_projects"] == []
 
 
 def test_dashboard_admin_area_filter_restricts_projects_and_tasks(
