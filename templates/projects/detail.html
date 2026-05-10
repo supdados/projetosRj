@@ -25,11 +25,12 @@
             </a>
         </div>
         <p class="mb-0 project-header-dates">
-            <span class="me-3"><i class="far fa-calendar-alt me-1"></i> Início: {{
+            <span class="hd-date-item"><i class="far fa-calendar-alt me-1"></i>Início {{
                 project.data_inicio_projeto.strftime('%d/%m/%Y') if project.data_inicio_projeto else 'Não definida'
                 }}</span>
-            <span><i class="far fa-calendar-check me-1"></i> Fim: {{ project.data_fim_projeto.strftime('%d/%m/%Y') if
-                project.data_fim_projeto else 'Não definida' }}</span>
+            <span class="hd-date-sep" aria-hidden="true">·</span>
+            <span class="hd-date-item"><i class="far fa-calendar-check me-1"></i>Fim {{
+                project.data_fim_projeto.strftime('%d/%m/%Y') if project.data_fim_projeto else 'Não definida' }}</span>
         </p>
     </div>
     <div id="projectHeaderSentinel" class="project-header-sentinel" aria-hidden="true"></div>

@@ -26,7 +26,7 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         color: white;
         border-radius: 12px;
-        padding: 1rem 1.25rem;
+        padding: 1.25rem 1.5rem;
         margin-bottom: 1rem;
         box-shadow:
             0 8px 32px rgba(0, 90, 146, 0.15),
@@ -75,22 +75,36 @@
         gap: 0.7rem;
     }
 
-    .project-header p span {
-        display: flex;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 0.28rem 0.65rem;
-        border-radius: 16px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        font-size: var(--ds-font-size-sm);
+    /* Datas inline com separador · */
+    .project-header p.project-header-dates {
+        gap: 0.55rem;
+        align-items: baseline;
+        color: rgba(255, 255, 255, 0.85);
     }
 
-    .project-header p span i {
-        margin-right: 0.375rem;
-        color: rgba(255, 255, 255, 0.8);
+    .project-header p .hd-date-item {
+        display: inline-flex;
+        align-items: center;
+        background: transparent;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        backdrop-filter: none;
+        font-size: var(--ds-font-size-sm);
+        color: inherit;
+    }
+
+    .project-header p .hd-date-item i {
+        margin-right: 0.4rem;
+        color: rgba(255, 255, 255, 0.7);
         font-size: var(--ds-font-size-xs);
     }
+
+    .project-header p .hd-date-sep {
+        color: rgba(255, 255, 255, 0.45);
+        user-select: none;
+    }
+
 
     /* Glass Back Button */
     .back-button {
@@ -118,42 +132,33 @@
         color: white !important;
     }
 
-    /* Glass Info Card */
+    /* Info Card — flat & minimal */
     .info-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(25px);
-        -webkit-backdrop-filter: blur(25px);
-        border: 1px solid var(--glass-border);
-        border-radius: 16px;
+        background: #ffffff;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        border: 1px solid #eef1f5;
+        border-radius: 12px;
         margin-bottom: 2rem;
-        box-shadow:
-            var(--glass-shadow),
-            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        box-shadow: none;
         position: relative;
         overflow: hidden;
-        transition: all var(--ds-transition-slow) ease;
+        transition: border-color var(--ds-transition-slow) ease;
     }
 
     .info-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        content: none;
     }
 
     .info-card:hover {
-        box-shadow:
-            0 12px 40px rgba(0, 90, 146, 0.12),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        box-shadow: none;
+        border-color: #e2e7ee;
     }
 
     .info-card .card-header {
-        background: rgba(248, 250, 252, 0.8);
-        border-bottom: 1px solid rgba(0, 90, 146, 0.1);
-        padding: 0.75rem 1.25rem;
+        background: #ffffff;
+        border-bottom: 1px solid #eef1f5;
+        padding: 0.85rem 1.25rem;
     }
 
     .info-card .card-header h4 {
@@ -178,23 +183,15 @@
     }
 
     .info-card .card-footer {
-        background: linear-gradient(135deg,
-                rgba(255, 255, 255, 0.1) 0%,
-                rgba(255, 255, 255, 0.05) 100%);
-        backdrop-filter: blur(10px);
-        border-top: 1px solid rgba(255, 255, 255, 0.15);
-        padding: 1.5rem 2rem;
+        background: #ffffff;
+        backdrop-filter: none;
+        border-top: 1px solid #eef1f5;
+        padding: 1rem 1.5rem;
         position: relative;
     }
 
     .info-card .card-footer::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 2rem;
-        right: 2rem;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        content: none;
     }
 
     /* Refined Details Grid */
@@ -1020,4 +1017,39 @@
         background: #f4f8fc;
         border-color: #c6d9ec;
         color: #2f455d;
+    }
+
+    /* Ghost overrides — Editar / Cancelar (mantém Salvar e Concluir sólidos) */
+    .btn.btn-edit-project,
+    .btn.btn-edit-project.btn-warning {
+        background-color: #ffffff !important;
+        background-image: none !important;
+        border: 1px solid #d7e4f1 !important;
+        color: #415970 !important;
+        box-shadow: none !important;
+    }
+
+    .btn.btn-edit-project:hover,
+    .btn.btn-edit-project:focus,
+    .btn.btn-edit-project:focus-visible {
+        background-color: #f4f8fc !important;
+        border-color: #c6d9ec !important;
+        color: #2f455d !important;
+    }
+
+    .btn.btn-cancel-edit,
+    .btn.btn-cancel-edit.btn-secondary {
+        background-color: #ffffff !important;
+        background-image: none !important;
+        border: 1px solid #d7e4f1 !important;
+        color: #415970 !important;
+        box-shadow: none !important;
+    }
+
+    .btn.btn-cancel-edit:hover,
+    .btn.btn-cancel-edit:focus,
+    .btn.btn-cancel-edit:focus-visible {
+        background-color: #f4f8fc !important;
+        border-color: #c6d9ec !important;
+        color: #2f455d !important;
     }
