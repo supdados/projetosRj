@@ -33,6 +33,29 @@ def test_project_detail_template_contains_stage_table_hooks(client_user, seed_da
         assert hook in html
 
 
+def test_project_detail_history_button_opens_modal(client_user, seed_data):
+    response = client_user.get(f"/project/{seed_data['project_id']}")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    required_hooks = [
+        'class="btn btn-sm btn-history"',
+        'data-bs-toggle="modal"',
+        'data-bs-target="#projectHistoryModal"',
+        'id="projectHistoryModal"',
+        'id="projectHistoryModalLabel"',
+        'id="historySearch"',
+        'id="historyEntriesList"',
+        "js/pages/projects/history.js",
+    ]
+
+    for hook in required_hooks:
+        assert hook in html
+
+    assert f'href="/project/{seed_data["project_id"]}/history" class="btn btn-sm btn-history"' not in html
+
+
 def test_project_detail_template_contains_inline_add_stage_contract(
     client_user, seed_data
 ):

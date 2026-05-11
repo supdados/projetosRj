@@ -4,6 +4,7 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/projects/detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/projects/history.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/calendar-event-modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/cal-datetime-picker.css') }}">
 {% endblock %}
@@ -308,9 +309,9 @@
             </div>
         </div>
         <div class="card-footer text-end" id="projectActionsFooter">
-            <a href="{{ url_for('main.project_history', project_id=project.id) }}" class="btn btn-sm btn-history">
+            <button type="button" class="btn btn-sm btn-history" data-bs-toggle="modal" data-bs-target="#projectHistoryModal">
                 <i class="fas fa-history me-1"></i>Ver Histórico
-            </a>
+            </button>
             {% if current_user_obj
             %}
             <button type="button" class="btn btn-warning btn-sm btn-edit-project">
@@ -336,6 +337,26 @@
             </form>
             {% endif %}
             {% endif %}
+        </div>
+    </div>
+
+    <div class="modal fade project-history-modal" id="projectHistoryModal" tabindex="-1" aria-labelledby="projectHistoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="projectHistoryModalLabel">Histórico do Projeto</h5>
+                        <p class="project-history-modal-subtitle mb-0">{{ project.titulo }}</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="history-page history-page--modal">
+                        {% set history = project_history_entries %}
+                        {% include "projects/_history_content.html" %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -838,6 +859,7 @@
 </script>
 <script src="{{ url_for('static', filename='js/modules/cal-datetime-picker.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modules/calendar-event-modal.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/projects/history.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/projects/detail/01-main.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/projects/detail/05-stage-composer.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/projects/detail/06-project-meetings.js') }}"></script>

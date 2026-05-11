@@ -540,6 +540,11 @@ def project_detail(project_id):
     active_task_count = Task.query.filter_by(
         project_id=project.id, is_archived=False
     ).count()
+    project_history_entries = (
+        ProjectHistory.query.filter_by(project_id=project.id)
+        .order_by(ProjectHistory.timestamp.desc())
+        .all()
+    )
     calendar_connection = UserCalendarConnection.query.filter_by(
         user_id=g.user.id
     ).first()
@@ -563,6 +568,7 @@ def project_detail(project_id):
         "projects/detail.html",
         project=project,
         active_task_count=active_task_count,
+        project_history_entries=project_history_entries,
         calendar_connection=calendar_connection,
         can_add_google_meeting=bool(
             calendar_connection
