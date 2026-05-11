@@ -1,10 +1,11 @@
 {% macro render_orgao_node(o, depth=0) %}
 {% set children = o.filhos|sort(attribute='ordem') %}
+{% set tipo_nome = o.tipo_nome %}
 <li class="orgao-node {{ 'is-inactive' if not o.ativo else '' }} {{ 'is-leaf' if not children else '' }}"
     id="orgao-{{ o.id }}"
     data-id="{{ o.id }}"
     data-pai-id="{{ o.pai_id or '' }}"
-    data-tipo="{{ o.tipo }}"
+    data-tipo="{{ tipo_nome }}"
     data-sigla="{{ o.sigla }}"
     data-nome="{{ o.nome }}"
     data-depth="{{ depth }}"
@@ -15,12 +16,12 @@
     </button>
     <span class="orgao-toggle is-empty" aria-hidden="true" data-orgao-chevron-empty></span>
 
-    <span class="orgao-tipo-dot tipo-{{ o.tipo|lower|replace(' ', '-')|replace('ç', 'c')|replace('ã', 'a')|replace('ú', 'u')|replace('í', 'i')|replace('é', 'e')|replace('á', 'a') }}"
-          title="{{ o.tipo }}"></span>
+    <span class="orgao-tipo-dot tipo-{{ tipo_nome|lower|replace(' ', '-')|replace('ç', 'c')|replace('ã', 'a')|replace('ú', 'u')|replace('í', 'i')|replace('é', 'e')|replace('á', 'a') }}"
+          title="{{ tipo_nome }}"></span>
 
     <span class="orgao-sigla">{{ o.sigla }}</span>
     <span class="orgao-nome">{{ o.nome }}</span>
-    <span class="orgao-tipo-badge">{{ o.tipo }}</span>
+    <span class="orgao-tipo-badge">{{ tipo_nome }}</span>
 
     <div class="orgao-actions">
       <a href="{{ url_for('main.add_orgao', pai_id=o.id) }}"

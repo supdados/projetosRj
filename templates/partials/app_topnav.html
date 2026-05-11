@@ -238,7 +238,7 @@
                         <div class="app-account-tooltip">
                             <div class="dropdown app-account-menu">
                                 <button
-                                    class="btn app-nav-icon-btn app-account-trigger dropdown-toggle {{ 'active' if endpoint == 'main.change_password' or endpoint == 'main.list_users' or endpoint == 'main.list_orgaos' or endpoint == 'main.add_orgao' or endpoint == 'main.edit_orgao' or endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') or endpoint == 'main.edit_user' else '' }}"
+                                    class="btn app-nav-icon-btn app-account-trigger dropdown-toggle {{ 'active' if endpoint == 'main.change_password' or endpoint == 'main.list_users' or endpoint == 'main.list_orgaos' or endpoint == 'main.add_orgao' or endpoint == 'main.edit_orgao' or endpoint == 'main.list_orgao_tipos' or endpoint == 'main.add_orgao_tipo' or endpoint == 'main.edit_orgao_tipo' or endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') or endpoint == 'main.edit_user' else '' }}"
                                     type="button"
                                     id="appAccountMenuDesktop"
                                     data-bs-toggle="dropdown"
@@ -266,7 +266,7 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="{{ url_for('main.list_orgaos') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.list_orgaos' or endpoint == 'main.add_orgao' or endpoint == 'main.edit_orgao' else '' }}">
+                                        <a href="{{ url_for('main.list_orgaos') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.list_orgaos' or endpoint == 'main.add_orgao' or endpoint == 'main.edit_orgao' or endpoint == 'main.list_orgao_tipos' or endpoint == 'main.add_orgao_tipo' or endpoint == 'main.edit_orgao_tipo' else '' }}">
                                             <span class="app-dropdown-item-main">
                                                 <i class="fas fa-sitemap"></i>
                                                 <span>Hierarquia de Órgãos</span>

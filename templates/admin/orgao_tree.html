@@ -21,9 +21,14 @@
                 </p>
             </div>
         </div>
-        <a href="{{ url_for('main.add_orgao') }}" class="btn admin-users-create-btn">
-            <i class="fas fa-plus me-2"></i>{% if total_unidades == 0 %}Criar Órgão Raiz{% else %}Nova Unidade{% endif %}
-        </a>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.list_orgao_tipos') }}" class="btn account-btn account-btn-secondary">
+                <i class="fas fa-layer-group me-1"></i>Tipos
+            </a>
+            <a href="{{ url_for('main.add_orgao') }}" class="btn admin-users-create-btn">
+                <i class="fas fa-plus me-2"></i>{% if total_unidades == 0 %}Criar Órgão Raiz{% else %}Nova Unidade{% endif %}
+            </a>
+        </div>
     </section>
 
     <section class="admin-users-meta-row">

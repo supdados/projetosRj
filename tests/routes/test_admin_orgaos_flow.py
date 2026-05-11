@@ -1,4 +1,4 @@
-from models import OrgaoUnidade, db
+from models import OrgaoClosure, OrgaoTipo, OrgaoUnidade, db
 
 
 def _reset_orgaos(app):
@@ -76,6 +76,106 @@ def test_create_child_with_valid_parent(client_admin, app, seed_data):
         novo = OrgaoUnidade.query.filter_by(sigla="SUBX").one()
         assert novo.tipo == "Subsecretaria"
         assert novo.pai_id == seed_data["orgao_child_id"]
+
+
+def test_admin_can_create_orgao_tipo(client_admin, app):
+    response = client_admin.post(
+        "/admin/orgaos/tipos/new",
+        data={
+            "nome": "Gerência",
+            "slug": "gerencia",
+            "nivel": "4",
+            "ativo": "1",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    with app.app_context():
+        tipo = OrgaoTipo.query.filter_by(slug="gerencia").one()
+        assert tipo.nome == "Gerência"
+        assert tipo.nivel == 4
+        assert tipo.ativo is True
+
+
+def test_delete_orgao_tipo_blocks_type_in_use(client_admin, app, seed_data):
+    response = client_admin.post(
+        f"/admin/orgaos/tipos/{seed_data['orgao_tipo_secretaria_id']}/delete",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "tipo em uso" in html
+    with app.app_context():
+        assert (
+            db.session.get(OrgaoTipo, seed_data["orgao_tipo_secretaria_id"])
+            is not None
+        )
+
+
+def test_edit_orgao_tipo_blocks_invalid_existing_tree(client_admin, app, seed_data):
+    with app.app_context():
+        tipo = OrgaoTipo.query.filter_by(nome="Secretaria").one()
+        tipo_id = tipo.id
+
+    response = client_admin.post(
+        f"/admin/orgaos/tipos/{tipo_id}/edit",
+        data={
+            "nome": "Secretaria",
+            "slug": "secretaria",
+            "nivel": "3",
+            "ativo": "1",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Alteração bloqueada" in html
+    with app.app_context():
+        assert db.session.get(OrgaoTipo, tipo_id).nivel == 1
+
+
+def test_move_orgao_rebuilds_closure_table(client_admin, app, seed_data):
+    with app.app_context():
+        sub_tipo = OrgaoTipo.query.filter_by(nome="Subsecretaria").one()
+        alt = OrgaoUnidade(
+            nome="Secretaria Alternativa Closure",
+            sigla="SACL",
+            tipo="Secretaria",
+            tipo_id=seed_data["orgao_tipo_secretaria_id"],
+            pai_id=seed_data["orgao_root_id"],
+            ordem=1,
+            ativo=True,
+        )
+        child = OrgaoUnidade(
+            nome="Subsecretaria Closure",
+            sigla="SUBC",
+            tipo="Subsecretaria",
+            tipo_id=sub_tipo.id,
+            pai_id=seed_data["orgao_child_id"],
+            ordem=0,
+            ativo=True,
+        )
+        db.session.add_all([alt, child])
+        db.session.commit()
+        alt_id = alt.id
+        child_id = child.id
+
+    response = client_admin.post(
+        f"/admin/orgaos/{child_id}/move",
+        json={"pai_id": alt_id},
+    )
+
+    assert response.status_code == 200
+    with app.app_context():
+        assert (
+            OrgaoClosure.query.filter_by(
+                ancestor_id=alt_id, descendant_id=child_id, depth=1
+            ).count()
+            == 1
+        )
 
 
 def test_create_superintendencia_below_subsecretaria(client_admin, app, seed_data):

@@ -23,6 +23,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from sqlalchemy import MetaData, Table, inspect, select, text
 
 from models import Project, ProjectHistory, User, db
+from models.orgao import DEFAULT_ORGAO_TIPOS, slugify_orgao_tipo
 from catalogs.objectives import sync_goal_catalog_to_db
 from time_utils import utc_now
 
@@ -130,6 +131,12 @@ STAGE_TEMPLATE_AUDIT_COLUMNS = [
     ("updated_by_id", "INTEGER"),
 ]
 PROJECT_ORGAO_COLUMN = ("orgao_id", "INTEGER")
+ORGAO_UNIDADE_INCREMENTAL_COLUMNS = [
+    ("tipo_id", "INTEGER"),
+    ("codigo_externo", "VARCHAR(80)"),
+    ("data_inicio_vigencia", "DATE"),
+    ("data_fim_vigencia", "DATE"),
+]
 
 
 def _emit(message, emit_output=True):
@@ -1255,6 +1262,212 @@ def ensure_orgao_and_template_schema(emit_output=True):
         db.create_all()
         inspector = inspect(db.engine)
         dialect = db.engine.dialect.name
+
+        if not _table_exists(inspector, "orgao_tipo"):
+            db.session.execute(
+                text("""
+                    CREATE TABLE orgao_tipo (
+                        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                        nome VARCHAR(80) NOT NULL UNIQUE,
+                        slug VARCHAR(100) NOT NULL UNIQUE,
+                        nivel INTEGER NOT NULL,
+                        descricao VARCHAR(255),
+                        ativo BOOLEAN NOT NULL DEFAULT 1,
+                        is_system BOOLEAN NOT NULL DEFAULT 0,
+                        permite_raiz BOOLEAN NOT NULL DEFAULT 0,
+                        created_at DATETIME,
+                        updated_at DATETIME
+                    )
+                    """)
+                if dialect == "mysql"
+                else text("""
+                    CREATE TABLE orgao_tipo (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        nome VARCHAR(80) NOT NULL UNIQUE,
+                        slug VARCHAR(100) NOT NULL UNIQUE,
+                        nivel INTEGER NOT NULL,
+                        descricao VARCHAR(255),
+                        ativo BOOLEAN NOT NULL DEFAULT 1,
+                        is_system BOOLEAN NOT NULL DEFAULT 0,
+                        permite_raiz BOOLEAN NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """)
+            )
+            changes.append("orgao_tipo")
+            inspector = inspect(db.engine)
+
+        orgao_tipo_indexes = _index_names(inspector, "orgao_tipo")
+        if "ix_orgao_tipo_nivel" not in orgao_tipo_indexes:
+            db.session.execute(text("CREATE INDEX ix_orgao_tipo_nivel ON orgao_tipo (nivel)"))
+            changes.append("orgao_tipo.ix_orgao_tipo_nivel")
+        if "ix_orgao_tipo_ativo" not in orgao_tipo_indexes:
+            db.session.execute(text("CREATE INDEX ix_orgao_tipo_ativo ON orgao_tipo (ativo)"))
+            changes.append("orgao_tipo.ix_orgao_tipo_ativo")
+        inspector = inspect(db.engine)
+
+        for item in DEFAULT_ORGAO_TIPOS:
+            existing_id = db.session.execute(
+                text("SELECT id FROM orgao_tipo WHERE nome = :nome OR slug = :slug LIMIT 1"),
+                {"nome": item["nome"], "slug": slugify_orgao_tipo(item["nome"])},
+            ).scalar()
+            if existing_id:
+                db.session.execute(
+                    text(
+                        "UPDATE orgao_tipo SET nivel = :nivel, is_system = 1, "
+                        "permite_raiz = :permite_raiz WHERE id = :id"
+                    ),
+                    {
+                        "id": existing_id,
+                        "nivel": item["nivel"],
+                        "permite_raiz": 1 if item["permite_raiz"] else 0,
+                    },
+                )
+                continue
+            db.session.execute(
+                text(
+                    "INSERT INTO orgao_tipo "
+                    "(nome, slug, nivel, ativo, is_system, permite_raiz, created_at, updated_at) "
+                    "VALUES (:nome, :slug, :nivel, 1, 1, :permite_raiz, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ),
+                {
+                    "nome": item["nome"],
+                    "slug": slugify_orgao_tipo(item["nome"]),
+                    "nivel": item["nivel"],
+                    "permite_raiz": 1 if item["permite_raiz"] else 0,
+                },
+            )
+            changes.append(f"orgao_tipo.seed.{item['nome']}")
+
+        if _table_exists(inspector, "orgao_unidade"):
+            existing_columns = _column_names(inspector, "orgao_unidade")
+            for column_name, column_type in ORGAO_UNIDADE_INCREMENTAL_COLUMNS:
+                if column_name in existing_columns:
+                    continue
+                db.session.execute(
+                    text(
+                        f"ALTER TABLE orgao_unidade ADD COLUMN {column_name} {column_type}"
+                    )
+                )
+                changes.append(f"orgao_unidade.{column_name}")
+                inspector = inspect(db.engine)
+                existing_columns = _column_names(inspector, "orgao_unidade")
+
+            orgao_unidade_indexes = _index_names(inspector, "orgao_unidade")
+            if "ix_orgao_unidade_tipo_id" not in orgao_unidade_indexes:
+                db.session.execute(
+                    text("CREATE INDEX ix_orgao_unidade_tipo_id ON orgao_unidade (tipo_id)")
+                )
+                changes.append("orgao_unidade.ix_orgao_unidade_tipo_id")
+            if "ix_orgao_unidade_codigo_externo" not in orgao_unidade_indexes:
+                db.session.execute(
+                    text(
+                        "CREATE INDEX ix_orgao_unidade_codigo_externo "
+                        "ON orgao_unidade (codigo_externo)"
+                    )
+                )
+                changes.append("orgao_unidade.ix_orgao_unidade_codigo_externo")
+            inspector = inspect(db.engine)
+
+            rows = db.session.execute(
+                text("SELECT id, tipo, pai_id FROM orgao_unidade WHERE tipo_id IS NULL")
+            ).all()
+            for orgao_id, tipo_nome, pai_id in rows:
+                tipo_id = db.session.execute(
+                    text("SELECT id FROM orgao_tipo WHERE nome = :nome LIMIT 1"),
+                    {"nome": tipo_nome},
+                ).scalar()
+                if not tipo_id:
+                    fallback_slug = slugify_orgao_tipo(tipo_nome or "tipo")
+                    db.session.execute(
+                        text(
+                            "INSERT INTO orgao_tipo "
+                            "(nome, slug, nivel, ativo, is_system, permite_raiz, created_at, updated_at) "
+                            "VALUES (:nome, :slug, :nivel, 1, 0, :permite_raiz, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                        ),
+                        {
+                            "nome": tipo_nome,
+                            "slug": fallback_slug,
+                            "nivel": 0 if pai_id is None else 99,
+                            "permite_raiz": 1 if pai_id is None else 0,
+                        },
+                    )
+                    tipo_id = db.session.execute(
+                        text("SELECT id FROM orgao_tipo WHERE slug = :slug LIMIT 1"),
+                        {"slug": fallback_slug},
+                    ).scalar()
+                db.session.execute(
+                    text("UPDATE orgao_unidade SET tipo_id = :tipo_id WHERE id = :id"),
+                    {"tipo_id": tipo_id, "id": orgao_id},
+                )
+                changes.append("orgao_unidade.tipo_id.backfill")
+
+        if not _table_exists(inspector, "orgao_closure"):
+            db.session.execute(
+                text("""
+                    CREATE TABLE orgao_closure (
+                        ancestor_id INTEGER NOT NULL,
+                        descendant_id INTEGER NOT NULL,
+                        depth INTEGER NOT NULL,
+                        PRIMARY KEY (ancestor_id, descendant_id)
+                    )
+                    """)
+            )
+            changes.append("orgao_closure")
+            inspector = inspect(db.engine)
+
+        closure_indexes = _index_names(inspector, "orgao_closure")
+        if "ix_orgao_closure_descendant" not in closure_indexes:
+            db.session.execute(
+                text(
+                    "CREATE INDEX ix_orgao_closure_descendant "
+                    "ON orgao_closure (descendant_id)"
+                )
+            )
+            changes.append("orgao_closure.ix_orgao_closure_descendant")
+        if "ix_orgao_closure_ancestor_depth" not in closure_indexes:
+            db.session.execute(
+                text(
+                    "CREATE INDEX ix_orgao_closure_ancestor_depth "
+                    "ON orgao_closure (ancestor_id, depth)"
+                )
+            )
+            changes.append("orgao_closure.ix_orgao_closure_ancestor_depth")
+
+        if _table_exists(inspector, "orgao_unidade"):
+            db.session.execute(text("DELETE FROM orgao_closure"))
+            rows = db.session.execute(
+                text("SELECT id, pai_id FROM orgao_unidade ORDER BY id")
+            ).all()
+            parents = {row_id: pai_id for row_id, pai_id in rows}
+            for row_id, pai_id in rows:
+                db.session.execute(
+                    text(
+                        "INSERT INTO orgao_closure (ancestor_id, descendant_id, depth) "
+                        "VALUES (:ancestor_id, :descendant_id, 0)"
+                    ),
+                    {"ancestor_id": row_id, "descendant_id": row_id},
+                )
+                depth = 1
+                current = pai_id
+                seen = {row_id}
+                while current is not None and current not in seen:
+                    seen.add(current)
+                    db.session.execute(
+                        text(
+                            "INSERT INTO orgao_closure "
+                            "(ancestor_id, descendant_id, depth) "
+                            "VALUES (:ancestor_id, :descendant_id, :depth)"
+                        ),
+                        {
+                            "ancestor_id": current,
+                            "descendant_id": row_id,
+                            "depth": depth,
+                        },
+                    )
+                    depth += 1
+                    current = parents.get(current)
 
         if _table_exists(inspector, "project"):
             column_name, column_type = PROJECT_ORGAO_COLUMN

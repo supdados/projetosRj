@@ -69,19 +69,22 @@
                 <h2 class="account-section-title">Posição na hierarquia</h2>
                 <div class="row g-3">
                     <div class="col-12 col-lg-6">
-                        <label for="tipo" class="account-label">Tipo <span class="text-danger">*</span></label>
+                        <label for="tipo_id" class="account-label">Tipo <span class="text-danger">*</span></label>
                         {% set current_tipo = orgao.tipo if orgao.tipo is defined else (orgao.get('tipo', '') if orgao is mapping else '') %}
+                        {% set current_tipo_id = orgao.tipo_id if orgao.tipo_id is defined else (orgao.get('tipo_id', '') if orgao is mapping else '') %}
                         {% if is_root %}
-                        <input type="text" class="form-control account-input" id="tipo-display" value="Estado" disabled>
-                        <input type="hidden" name="tipo" value="Estado">
+                        {% set root_tipo = (tipos|selectattr('permite_raiz')|list|first) %}
+                        <input type="text" class="form-control account-input" id="tipo-display" value="{{ root_tipo.nome if root_tipo else current_tipo }}" disabled>
+                        <input type="hidden" name="tipo_id" value="{{ root_tipo.id if root_tipo else current_tipo_id }}">
                         {% else %}
-                        <select id="tipo" name="tipo" class="form-select account-input" required>
-                            <option value="" {{ 'selected' if not current_tipo else '' }}>— selecione —</option>
-                            {% for t in allowed_tipos %}
-                                {% if t != 'Estado' %}
-                                <option value="{{ t }}"
-                                        data-rank="{{ tipo_rank.get(t, 999) }}"
-                                        {{ 'selected' if current_tipo == t else '' }}>{{ t }}</option>
+                        <select id="tipo_id" name="tipo_id" class="form-select account-input" required>
+                            <option value="" {{ 'selected' if not current_tipo_id and not current_tipo else '' }}>— selecione —</option>
+                            {% for t in tipos %}
+                                {% if not t.permite_raiz %}
+                                <option value="{{ t.id }}"
+                                        data-rank="{{ t.nivel }}"
+                                        data-name="{{ t.nome }}"
+                                        {{ 'selected' if (current_tipo_id and (current_tipo_id|string) == (t.id|string)) or (not current_tipo_id and current_tipo == t.nome) else '' }}>{{ t.nome }}</option>
                                 {% endif %}
                             {% endfor %}
                         </select>
@@ -98,7 +101,7 @@
                         {% set selected_pai_label = '' %}
                         {% for p in candidate_pais %}
                             {% if preselected_pai_id and (preselected_pai_id|string) == (p.id|string) %}
-                                {% set selected_pai_label = p.sigla ~ ' — ' ~ p.nome ~ ' (' ~ p.tipo ~ ')' %}
+                                {% set selected_pai_label = p.sigla ~ ' — ' ~ p.nome ~ ' (' ~ p.tipo_nome ~ ')' %}
                             {% endif %}
                         {% endfor %}
                         <div class="pai-combo" id="paiCombo">
@@ -120,10 +123,10 @@
                                     class="pai-combo-option"
                                     role="option"
                                     data-value="{{ p.id }}"
-                                    data-rank="{{ tipo_rank.get(p.tipo, 999) }}"
-                                    data-tipo="{{ p.tipo }}"
-                                    data-label="{{ p.sigla }} — {{ p.nome }} ({{ p.tipo }})">
-                                    {{ p.sigla }} — {{ p.nome }} <span class="pai-combo-tipo">({{ p.tipo }})</span>
+                                    data-rank="{{ p.tipo_nivel if p.tipo_nivel is not none else tipo_rank.get(p.tipo, 999) }}"
+                                    data-tipo="{{ p.tipo_nome }}"
+                                    data-label="{{ p.sigla }} — {{ p.nome }} ({{ p.tipo_nome }})">
+                                    {{ p.sigla }} — {{ p.nome }} <span class="pai-combo-tipo">({{ p.tipo_nome }})</span>
                                 </div>
                                 {% endfor %}
                                 <div class="pai-combo-empty" data-empty-state="1" hidden>Nenhum órgão pai encontrado</div>
@@ -134,6 +137,46 @@
                         </div>
                         <div class="invalid-feedback">Selecione o órgão pai.</div>
                         {% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="account-form-card">
+            <div class="account-section">
+                <h2 class="account-section-title">Referência SIORG e vigência</h2>
+                <div class="row g-3">
+                    <div class="col-12 col-lg-4">
+                        <label for="codigo_externo" class="account-label">Código externo</label>
+                        <input
+                            type="text"
+                            class="form-control account-input"
+                            id="codigo_externo"
+                            name="codigo_externo"
+                            maxlength="80"
+                            value="{{ orgao.codigo_externo if orgao.codigo_externo is defined else (orgao.get('codigo_externo', '') if orgao is mapping else '') }}"
+                            placeholder="SIORG ou outro código"
+                        >
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <label for="data_inicio_vigencia" class="account-label">Início de vigência</label>
+                        <input
+                            type="date"
+                            class="form-control account-input"
+                            id="data_inicio_vigencia"
+                            name="data_inicio_vigencia"
+                            value="{{ orgao.data_inicio_vigencia.isoformat() if orgao.data_inicio_vigencia is defined and orgao.data_inicio_vigencia else (orgao.get('data_inicio_vigencia', '') if orgao is mapping else '') }}"
+                        >
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <label for="data_fim_vigencia" class="account-label">Fim de vigência</label>
+                        <input
+                            type="date"
+                            class="form-control account-input"
+                            id="data_fim_vigencia"
+                            name="data_fim_vigencia"
+                            value="{{ orgao.data_fim_vigencia.isoformat() if orgao.data_fim_vigencia is defined and orgao.data_fim_vigencia else (orgao.get('data_fim_vigencia', '') if orgao is mapping else '') }}"
+                        >
                     </div>
                 </div>
             </div>
@@ -242,7 +285,7 @@ html[data-theme="dark"] .pai-combo-option.active {
   }
 
   // === Combobox de pai com busca + filtro por tipo ===
-  var tipoSelect = document.getElementById('tipo');
+  var tipoSelect = document.getElementById('tipo_id');
   var paiHint = document.getElementById('paiHint');
   var combo = document.getElementById('paiCombo');
   var comboInput = document.getElementById('pai_id_input');

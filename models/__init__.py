@@ -15,7 +15,15 @@ from .task import (
     TaskItemComment,
     TaskItemAnexo,
 )
-from .orgao import OrgaoUnidade, ALLOWED_TIPOS, MAX_DEPTH, TIPO_RANK
+from .orgao import (
+    ALLOWED_TIPOS,
+    DEFAULT_ORGAO_TIPOS,
+    MAX_DEPTH,
+    TIPO_RANK,
+    OrgaoClosure,
+    OrgaoTipo,
+    OrgaoUnidade,
+)
 
 __all__ = [
     "db",
@@ -37,6 +45,8 @@ __all__ = [
     "StageTemplateUsage",
     "UserCalendarConnection",
     "CalendarEvent",
+    "OrgaoClosure",
+    "OrgaoTipo",
     "Task",
     "TaskItem",
     "TaskAnexo",
@@ -47,6 +57,7 @@ __all__ = [
     "TaskItemAnexo",
     "OrgaoUnidade",
     "ALLOWED_TIPOS",
+    "DEFAULT_ORGAO_TIPOS",
     "MAX_DEPTH",
     "TIPO_RANK",
 ]

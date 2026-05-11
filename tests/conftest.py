@@ -12,6 +12,7 @@ from models import (
     Etapa,
     IndicadorProjeto,
     OrgaoUnidade,
+    OrgaoTipo,
     Project,
     ProjectHistory,
     StageTemplate,
@@ -24,6 +25,7 @@ from models import (
     db,
 )
 from catalogs.objectives import sync_goal_catalog_to_db
+from routes.orgao_tree import backfill_orgao_tipo_ids, ensure_default_orgao_tipos
 
 TEST_PASSWORD = "senha123"
 
@@ -119,6 +121,7 @@ def client(app):
 @pytest.fixture
 def seed_data(app):
     with app.app_context():
+        ensure_default_orgao_tipos()
         admin = _create_user(
             "admin", "Administrador", is_admin=True, orgao_siglas=["Auditoria"]
         )
@@ -328,6 +331,9 @@ def seed_data(app):
         db.session.add(orgao_secretaria)
         db.session.flush()
 
+        backfill_orgao_tipo_ids()
+        secretaria_tipo = OrgaoTipo.query.filter_by(nome="Secretaria").first()
+
         db.session.commit()
 
         return {
@@ -356,6 +362,7 @@ def seed_data(app):
             "vpe_orgao_id": vpe_orgao.id,
             "orgao_root_id": orgao_root.id,
             "orgao_child_id": orgao_secretaria.id,
+            "orgao_tipo_secretaria_id": secretaria_tipo.id if secretaria_tipo else 2,
             "user_username": user.username,
             "user_password": TEST_PASSWORD,
             "admin_username": admin.username,

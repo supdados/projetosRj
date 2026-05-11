@@ -1,15 +1,20 @@
 from flask import flash, jsonify, redirect, render_template, request, url_for
 
-from models import OrgaoUnidade, db
-from models.orgao import ALLOWED_TIPOS, MAX_DEPTH, TIPO_RANK
+from models import OrgaoTipo, OrgaoUnidade, db
+from models.orgao import MAX_DEPTH, slugify_orgao_tipo
 
 from .blueprint import main_bp
 from .decorators import admin_required, login_required
 from .orgao_tree import (
+    backfill_orgao_tipo_ids,
     compute_orgao_depth,
     get_orgao_descendants,
+    get_orgao_tipo_options,
+    get_tipo_rank_map,
+    ensure_default_orgao_tipos,
     is_valid_parent_tipo,
     normalize_orgao_form,
+    rebuild_orgao_closure,
     validate_orgao_move,
 )
 from .shared import get_or_404
@@ -21,9 +26,11 @@ def _serialize_orgao(orgao):
         "nome": orgao.nome,
         "sigla": orgao.sigla,
         "tipo": orgao.tipo,
+        "tipo_id": orgao.tipo_id,
         "pai_id": orgao.pai_id,
         "ordem": orgao.ordem,
         "ativo": orgao.ativo,
+        "codigo_externo": orgao.codigo_externo,
     }
 
 
@@ -61,10 +68,23 @@ def _candidate_pais(orgao=None):
     return [o for o in todos if o.id not in excluded]
 
 
+def _prepare_orgao_catalogs():
+    ensure_default_orgao_tipos()
+    backfill_orgao_tipo_ids()
+    db.session.flush()
+
+
+def _render_orgao_form(**context):
+    context.setdefault("tipos", get_orgao_tipo_options())
+    context.setdefault("tipo_rank", get_tipo_rank_map())
+    return render_template("admin/orgao_form.html", **context)
+
+
 @main_bp.route("/admin/orgaos")
 @login_required
 @admin_required
 def list_orgaos():
+    _prepare_orgao_catalogs()
     raizes = (
         OrgaoUnidade.query.filter(OrgaoUnidade.pai_id.is_(None))
         .order_by(OrgaoUnidade.ordem, OrgaoUnidade.sigla)
@@ -76,16 +96,204 @@ def list_orgaos():
         raizes=raizes,
         todos=todos,
         total_unidades=len(todos),
-        allowed_tipos=ALLOWED_TIPOS,
+        tipos=get_orgao_tipo_options(include_inactive=True),
         max_depth=MAX_DEPTH,
-        tipo_rank=TIPO_RANK,
+        tipo_rank=get_tipo_rank_map(),
     )
+
+
+@main_bp.route("/admin/orgaos/tipos")
+@login_required
+@admin_required
+def list_orgao_tipos():
+    _prepare_orgao_catalogs()
+    tipos = get_orgao_tipo_options(include_inactive=True)
+    usage_counts = {
+        tipo_id: count
+        for tipo_id, count in db.session.query(
+            OrgaoUnidade.tipo_id, db.func.count(OrgaoUnidade.id)
+        )
+        .group_by(OrgaoUnidade.tipo_id)
+        .all()
+    }
+    return render_template(
+        "admin/orgao_tipos.html",
+        tipos=tipos,
+        usage_counts=usage_counts,
+    )
+
+
+def _normalize_tipo_form(form, tipo=None):
+    nome = (form.get("nome") or "").strip()
+    slug = slugify_orgao_tipo(form.get("slug") or nome)
+    descricao = (form.get("descricao") or "").strip()
+    try:
+        nivel = int(form.get("nivel") or 0)
+    except (TypeError, ValueError):
+        return None, "Nível inválido."
+    ativo = form.get("ativo") is not None
+    permite_raiz = form.get("permite_raiz") is not None
+    if not nome:
+        return None, "O nome do tipo é obrigatório."
+    if not slug:
+        return None, "O identificador do tipo é obrigatório."
+    if nivel < 0:
+        return None, "O nível deve ser maior ou igual a zero."
+
+    query = OrgaoTipo.query.filter((OrgaoTipo.nome == nome) | (OrgaoTipo.slug == slug))
+    if tipo is not None:
+        query = query.filter(OrgaoTipo.id != tipo.id)
+    if query.first() is not None:
+        return None, "Já existe um tipo com esse nome ou identificador."
+
+    return {
+        "nome": nome,
+        "slug": slug,
+        "nivel": nivel,
+        "descricao": descricao or None,
+        "ativo": ativo,
+        "permite_raiz": permite_raiz,
+    }, None
+
+
+def _invalid_orgao_type_level_changes(tipo, new_nivel, new_permite_raiz):
+    affected = []
+    for orgao in OrgaoUnidade.query.filter_by(tipo_id=tipo.id).all():
+        if orgao.pai_id is None:
+            if not new_permite_raiz:
+                affected.append(orgao)
+            continue
+        pai_tipo = orgao.pai.tipo_ref if orgao.pai else None
+        if pai_tipo is not None and pai_tipo.nivel >= new_nivel:
+            affected.append(orgao)
+        for filho in orgao.filhos:
+            filho_tipo = filho.tipo_ref
+            if filho_tipo is not None and new_nivel >= filho_tipo.nivel:
+                affected.append(filho)
+    return affected
+
+
+@main_bp.route("/admin/orgaos/tipos/new", methods=["GET", "POST"])
+@login_required
+@admin_required
+def add_orgao_tipo():
+    _prepare_orgao_catalogs()
+    if request.method == "POST":
+        data, error = _normalize_tipo_form(request.form)
+        if error:
+            flash(error, "danger")
+            return render_template(
+                "admin/orgao_tipo_form.html",
+                action_verb="Adicionar",
+                tipo=request.form,
+            )
+        tipo = OrgaoTipo(**data, is_system=False)
+        db.session.add(tipo)
+        db.session.commit()
+        flash(f'Tipo "{tipo.nome}" criado com sucesso.', "success")
+        return redirect(url_for("main.list_orgao_tipos"))
+
+    return render_template(
+        "admin/orgao_tipo_form.html",
+        action_verb="Adicionar",
+        tipo={"ativo": True, "nivel": 1},
+    )
+
+
+@main_bp.route("/admin/orgaos/tipos/<int:tipo_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_orgao_tipo(tipo_id):
+    _prepare_orgao_catalogs()
+    tipo = get_or_404(OrgaoTipo, tipo_id)
+    if request.method == "POST":
+        data, error = _normalize_tipo_form(request.form, tipo)
+        if error:
+            flash(error, "danger")
+            return render_template(
+                "admin/orgao_tipo_form.html",
+                action_verb="Editar",
+                tipo=request.form,
+                editing_id=tipo.id,
+            )
+
+        affected = _invalid_orgao_type_level_changes(
+            tipo, data["nivel"], data["permite_raiz"]
+        )
+        if affected:
+            labels = ", ".join(o.sigla for o in affected[:8])
+            if len(affected) > 8:
+                labels += f" e mais {len(affected) - 8}"
+            flash(
+                "Alteração bloqueada: existem órgãos que ficariam fora da regra "
+                f"hierárquica ({labels}).",
+                "danger",
+            )
+            return redirect(url_for("main.edit_orgao_tipo", tipo_id=tipo.id))
+
+        tipo.nome = data["nome"]
+        tipo.slug = data["slug"]
+        tipo.nivel = data["nivel"]
+        tipo.descricao = data["descricao"]
+        tipo.ativo = data["ativo"]
+        tipo.permite_raiz = data["permite_raiz"]
+        for orgao in OrgaoUnidade.query.filter_by(tipo_id=tipo.id).all():
+            orgao.tipo = tipo.nome
+        db.session.commit()
+        flash(f'Tipo "{tipo.nome}" atualizado com sucesso.', "success")
+        return redirect(url_for("main.list_orgao_tipos"))
+
+    return render_template(
+        "admin/orgao_tipo_form.html",
+        action_verb="Editar",
+        tipo=tipo,
+        editing_id=tipo.id,
+    )
+
+
+@main_bp.route("/admin/orgaos/tipos/<int:tipo_id>/toggle-ativo", methods=["POST"])
+@login_required
+@admin_required
+def toggle_orgao_tipo(tipo_id):
+    _prepare_orgao_catalogs()
+    tipo = get_or_404(OrgaoTipo, tipo_id)
+    if tipo.permite_raiz and tipo.ativo:
+        flash("Não é possível desativar o tipo raiz ativo.", "warning")
+        return redirect(url_for("main.list_orgao_tipos"))
+    if tipo.ativo and OrgaoUnidade.query.filter_by(tipo_id=tipo.id).first() is not None:
+        flash("Não é possível desativar tipo em uso por órgãos.", "warning")
+        return redirect(url_for("main.list_orgao_tipos"))
+    tipo.ativo = not tipo.ativo
+    db.session.commit()
+    estado = "ativado" if tipo.ativo else "desativado"
+    flash(f'Tipo "{tipo.nome}" {estado}.', "success")
+    return redirect(url_for("main.list_orgao_tipos"))
+
+
+@main_bp.route("/admin/orgaos/tipos/<int:tipo_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_orgao_tipo(tipo_id):
+    _prepare_orgao_catalogs()
+    tipo = get_or_404(OrgaoTipo, tipo_id)
+    if OrgaoUnidade.query.filter_by(tipo_id=tipo.id).first() is not None:
+        flash("Não é possível excluir tipo em uso por órgãos.", "warning")
+        return redirect(url_for("main.list_orgao_tipos"))
+    if tipo.permite_raiz:
+        flash("Não é possível excluir tipo permitido para raiz.", "warning")
+        return redirect(url_for("main.list_orgao_tipos"))
+    nome = tipo.nome
+    db.session.delete(tipo)
+    db.session.commit()
+    flash(f'Tipo "{nome}" excluído com sucesso.', "success")
+    return redirect(url_for("main.list_orgao_tipos"))
 
 
 @main_bp.route("/admin/orgaos/new", methods=["GET", "POST"])
 @login_required
 @admin_required
 def add_orgao():
+    _prepare_orgao_catalogs()
     has_root = (
         OrgaoUnidade.query.filter(OrgaoUnidade.pai_id.is_(None)).first() is not None
     )
@@ -95,15 +303,12 @@ def add_orgao():
         data, error = normalize_orgao_form(request.form, is_root=is_root)
         if error:
             flash(error, "danger")
-            return render_template(
-                "admin/orgao_form.html",
+            return _render_orgao_form(
                 action_verb="Adicionar",
                 orgao=request.form,
                 is_root=is_root,
                 candidate_pais=_candidate_pais(),
-                allowed_tipos=ALLOWED_TIPOS,
                 preselected_pai_id=request.form.get("pai_id"),
-                tipo_rank=TIPO_RANK,
             )
 
         # Valida profundidade ao inserir
@@ -119,6 +324,8 @@ def add_orgao():
         try:
             novo = OrgaoUnidade(**data)
             db.session.add(novo)
+            db.session.flush()
+            rebuild_orgao_closure()
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
@@ -136,20 +343,19 @@ def add_orgao():
         except (TypeError, ValueError):
             pai_pre_id = None
 
-    return render_template(
-        "admin/orgao_form.html",
+    root_tipo = OrgaoTipo.query.filter_by(permite_raiz=True, ativo=True).first()
+    return _render_orgao_form(
         action_verb="Adicionar",
         orgao={
             "ativo": True,
             "ordem": 0,
             "pai_id": pai_pre_id,
-            "tipo": "Estado" if is_root else "",
+            "tipo": root_tipo.nome if is_root and root_tipo else "",
+            "tipo_id": root_tipo.id if is_root and root_tipo else "",
         },
         is_root=is_root,
         candidate_pais=_candidate_pais(),
-        allowed_tipos=ALLOWED_TIPOS,
         preselected_pai_id=pai_pre_id,
-        tipo_rank=TIPO_RANK,
     )
 
 
@@ -157,6 +363,7 @@ def add_orgao():
 @login_required
 @admin_required
 def edit_orgao(orgao_id):
+    _prepare_orgao_catalogs()
     orgao = get_or_404(OrgaoUnidade, orgao_id)
     is_root = orgao.pai_id is None
 
@@ -164,16 +371,13 @@ def edit_orgao(orgao_id):
         data, error = normalize_orgao_form(request.form, is_root=is_root)
         if error:
             flash(error, "danger")
-            return render_template(
-                "admin/orgao_form.html",
+            return _render_orgao_form(
                 action_verb="Editar",
                 orgao=request.form,
                 is_root=is_root,
                 candidate_pais=_candidate_pais(orgao),
-                allowed_tipos=ALLOWED_TIPOS,
                 preselected_pai_id=request.form.get("pai_id"),
                 editing_id=orgao.id,
-                tipo_rank=TIPO_RANK,
             )
 
         if not is_root and data["pai_id"] != orgao.pai_id:
@@ -198,10 +402,15 @@ def edit_orgao(orgao_id):
             orgao.nome = data["nome"]
             orgao.sigla = data["sigla"]
             orgao.tipo = data["tipo"]
+            orgao.tipo_id = data["tipo_id"]
             if not is_root:
                 orgao.pai_id = data["pai_id"]
             orgao.ordem = data["ordem"]
             orgao.ativo = data["ativo"]
+            orgao.codigo_externo = data["codigo_externo"]
+            orgao.data_inicio_vigencia = data["data_inicio_vigencia"]
+            orgao.data_fim_vigencia = data["data_fim_vigencia"]
+            rebuild_orgao_closure()
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
@@ -211,16 +420,13 @@ def edit_orgao(orgao_id):
         flash(f'Órgão "{orgao.sigla}" atualizado com sucesso.', "success")
         return redirect(url_for("main.list_orgaos") + f"#orgao-{orgao.id}")
 
-    return render_template(
-        "admin/orgao_form.html",
+    return _render_orgao_form(
         action_verb="Editar",
         orgao=orgao,
         is_root=is_root,
         candidate_pais=_candidate_pais(orgao),
-        allowed_tipos=ALLOWED_TIPOS,
         preselected_pai_id=orgao.pai_id,
         editing_id=orgao.id,
-        tipo_rank=TIPO_RANK,
     )
 
 
@@ -242,6 +448,8 @@ def delete_orgao(orgao_id):
     parent_id = orgao.pai_id
     try:
         db.session.delete(orgao)
+        db.session.flush()
+        rebuild_orgao_closure()
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
@@ -291,6 +499,7 @@ def move_orgao(orgao_id):
                 .count()
             )
             orgao.ordem = siblings_count
+        rebuild_orgao_closure()
         db.session.commit()
     except Exception as exc:
         db.session.rollback()

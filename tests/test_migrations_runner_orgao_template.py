@@ -19,6 +19,7 @@ from sqlalchemy import inspect
 from models import db
 from scripts.migrations.run_migrations import (
     ALEMBIC_HEAD,
+    ORGAO_UNIDADE_INCREMENTAL_COLUMNS,
     PROJECT_ORGAO_COLUMN,
     STAGE_TEMPLATE_AUDIT_COLUMNS,
     ensure_orgao_and_template_schema,
@@ -34,6 +35,16 @@ def test_alembic_head_matches_latest_migration():
 def test_stage_template_audit_columns_cover_fase_0_audit_fields():
     expected = {"created_at", "updated_at", "created_by_id", "updated_by_id"}
     assert {name for name, _ in STAGE_TEMPLATE_AUDIT_COLUMNS} == expected
+
+
+def test_orgao_unidade_incremental_columns_cover_tipo_and_siorg_minimum():
+    expected = {
+        "tipo_id",
+        "codigo_externo",
+        "data_inicio_vigencia",
+        "data_fim_vigencia",
+    }
+    assert {name for name, _ in ORGAO_UNIDADE_INCREMENTAL_COLUMNS} == expected
 
 
 def test_ensure_orgao_and_template_schema_smokes_and_is_idempotent(app):
@@ -57,3 +68,9 @@ def test_stage_template_has_all_audit_columns_after_runner(app):
 
         project_columns = {c["name"] for c in inspector.get_columns("project")}
         assert PROJECT_ORGAO_COLUMN[0] in project_columns
+
+        assert "orgao_tipo" in inspector.get_table_names()
+        assert "orgao_closure" in inspector.get_table_names()
+        orgao_columns = {c["name"] for c in inspector.get_columns("orgao_unidade")}
+        for column_name, _ in ORGAO_UNIDADE_INCREMENTAL_COLUMNS:
+            assert column_name in orgao_columns, f"orgao_unidade sem coluna {column_name}"
