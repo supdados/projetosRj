@@ -137,6 +137,46 @@ def test_edit_orgao_tipo_blocks_invalid_existing_tree(client_admin, app, seed_da
         assert db.session.get(OrgaoTipo, tipo_id).nivel == 1
 
 
+def test_prepare_orgao_catalogs_preserves_configured_default_type_level(
+    client_admin, app
+):
+    with app.app_context():
+        tipo = OrgaoTipo.query.filter_by(nome="Secretaria").one()
+        tipo.nivel = 9
+        db.session.commit()
+        tipo_id = tipo.id
+
+    response = client_admin.get("/admin/orgaos")
+
+    assert response.status_code == 200
+    with app.app_context():
+        assert db.session.get(OrgaoTipo, tipo_id).nivel == 9
+
+
+def test_edit_orgao_tipo_blocks_deactivation_when_type_is_in_use(
+    client_admin, app, seed_data
+):
+    tipo_id = seed_data["orgao_tipo_secretaria_id"]
+
+    response = client_admin.post(
+        f"/admin/orgaos/tipos/{tipo_id}/edit",
+        data={
+            "nome": "Secretaria",
+            "slug": "secretaria",
+            "nivel": "1",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith(f"/admin/orgaos/tipos/{tipo_id}/edit")
+    with client_admin.session_transaction() as session:
+        flashes = session.get("_flashes", [])
+    assert any("tipo em uso" in message for _, message in flashes)
+    with app.app_context():
+        assert db.session.get(OrgaoTipo, tipo_id).ativo is True
+
+
 def test_move_orgao_rebuilds_closure_table(client_admin, app, seed_data):
     with app.app_context():
         sub_tipo = OrgaoTipo.query.filter_by(nome="Subsecretaria").one()

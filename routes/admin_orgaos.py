@@ -217,6 +217,14 @@ def edit_orgao_tipo(tipo_id):
                 editing_id=tipo.id,
             )
 
+        if (
+            tipo.ativo
+            and not data["ativo"]
+            and OrgaoUnidade.query.filter_by(tipo_id=tipo.id).first() is not None
+        ):
+            flash("Não é possível desativar tipo em uso por órgãos.", "warning")
+            return redirect(url_for("main.edit_orgao_tipo", tipo_id=tipo.id))
+
         affected = _invalid_orgao_type_level_changes(
             tipo, data["nivel"], data["permite_raiz"]
         )

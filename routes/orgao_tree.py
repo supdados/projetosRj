@@ -39,14 +39,8 @@ def ensure_default_orgao_tipos():
         if not tipo.slug:
             tipo.slug = slugify_orgao_tipo(tipo.nome)
             changed = True
-        if tipo.nivel != item["nivel"]:
-            tipo.nivel = item["nivel"]
-            changed = True
         if not tipo.is_system:
             tipo.is_system = True
-            changed = True
-        if bool(tipo.permite_raiz) != bool(item["permite_raiz"]):
-            tipo.permite_raiz = item["permite_raiz"]
             changed = True
     if changed:
         db.session.flush()
