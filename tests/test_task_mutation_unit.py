@@ -13,6 +13,8 @@ from services.task_mutation import (
     apply_task_order,
     archive_task,
     bulk_archive_finalized,
+    is_task_open,
+    move_task_to_etapa,
     parse_unique_task_order_ids,
     unarchive_task,
 )
@@ -29,6 +31,7 @@ class FakeTask:
     prioridade: str | None = None
     tipo_pedido: str | None = None
     project_id: int | None = None
+    etapa_id: int | None = None
     is_archived: bool = False
     archived_at: object = None
     ordem: int = 1
@@ -37,6 +40,13 @@ class FakeTask:
 @dataclass
 class FakeProject:
     id: int = 42
+
+
+@dataclass
+class FakeEtapa:
+    id: int = 11
+    project_id: int = 42
+    done: bool = False
 
 
 class FakeScopeQuery:
@@ -154,6 +164,104 @@ def test_apply_task_edits_clears_project_when_none():
         project=None,
     )
     assert task.project_id is None
+
+
+def test_apply_task_edits_preserves_etapa_when_not_applied():
+    task = FakeTask(etapa_id=77)
+    apply_task_edits(
+        task,
+        descricao="X",
+        status="nao_iniciada",
+        responsavel=None,
+        prioridade=None,
+        tipo_pedido=None,
+        project=FakeProject(id=42),
+    )
+    assert task.etapa_id == 77
+
+
+def test_apply_task_edits_applies_new_etapa_when_flag_set():
+    task = FakeTask(etapa_id=77)
+    apply_task_edits(
+        task,
+        descricao="X",
+        status="nao_iniciada",
+        responsavel=None,
+        prioridade=None,
+        tipo_pedido=None,
+        project=FakeProject(id=42),
+        etapa=FakeEtapa(id=99, project_id=42),
+        apply_etapa=True,
+    )
+    assert task.etapa_id == 99
+
+
+def test_apply_task_edits_clears_etapa_when_flag_set_and_none():
+    task = FakeTask(etapa_id=77)
+    apply_task_edits(
+        task,
+        descricao="X",
+        status="nao_iniciada",
+        responsavel=None,
+        prioridade=None,
+        tipo_pedido=None,
+        project=FakeProject(id=42),
+        etapa=None,
+        apply_etapa=True,
+    )
+    assert task.etapa_id is None
+
+
+def test_apply_task_edits_diff_carries_old_etapa_id():
+    task = FakeTask(etapa_id=77)
+    diff = apply_task_edits(
+        task,
+        descricao="X",
+        status="nao_iniciada",
+        responsavel=None,
+        prioridade=None,
+        tipo_pedido=None,
+        project=FakeProject(id=42),
+        etapa=FakeEtapa(id=99),
+        apply_etapa=True,
+    )
+    assert diff.old_etapa_id == 77
+
+
+# ── move_task_to_etapa ────────────────────────────────────────────────────────
+
+
+def test_move_task_to_etapa_sets_id_and_returns_previous():
+    task = FakeTask(etapa_id=10)
+    previous = move_task_to_etapa(task, FakeEtapa(id=20))
+    assert task.etapa_id == 20
+    assert previous == 10
+
+
+def test_move_task_to_etapa_with_none_clears_etapa():
+    task = FakeTask(etapa_id=10)
+    previous = move_task_to_etapa(task, None)
+    assert task.etapa_id is None
+    assert previous == 10
+
+
+# ── is_task_open ──────────────────────────────────────────────────────────────
+
+
+def test_is_task_open_returns_false_when_archived():
+    assert is_task_open(FakeTask(is_archived=True)) is False
+
+
+def test_is_task_open_returns_false_when_finalizada():
+    assert is_task_open(FakeTask(status="finalizada")) is False
+
+
+def test_is_task_open_returns_true_for_em_andamento():
+    assert is_task_open(FakeTask(status="em_andamento")) is True
+
+
+def test_is_task_open_returns_true_for_nao_iniciada():
+    assert is_task_open(FakeTask(status="nao_iniciada")) is True
 
 
 # ── archive_task ──────────────────────────────────────────────────────────────

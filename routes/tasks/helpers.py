@@ -51,6 +51,7 @@ from routes.tasks.creation import (  # noqa: F401
     _get_assignable_users_for_project,
     _get_safe_next_url,
     _redirect_back_or,
+    _resolve_etapa_token,
     _resolve_project_token,
     _resolve_responsavel_for_edit,
     _serialize_task_payload,

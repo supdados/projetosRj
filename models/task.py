@@ -49,6 +49,11 @@ class Task(db.Model):
     responsavel = db.Column(db.String(100), nullable=True)
     ordem = db.Column(db.Integer, nullable=False, default=0)
     project_id = db.Column(db.Integer, db.ForeignKey("project.id"), nullable=True)
+    # Tarefas criadas após a migração v4.5 nascem ligadas a uma etapa.
+    # Legadas continuam com etapa_id NULL; o usuário pode reassociá-las.
+    etapa_id = db.Column(
+        db.Integer, db.ForeignKey("etapa.id"), nullable=True, index=True
+    )
     legacy_parent_task_id = db.Column(
         db.Integer, db.ForeignKey("task.id"), nullable=True
     )
@@ -60,6 +65,7 @@ class Task(db.Model):
     archived_at = db.Column(db.DateTime, nullable=True)
 
     project = db.relationship("Project", backref=db.backref("tasks", lazy=True))
+    etapa = db.relationship("Etapa", backref=db.backref("tasks", lazy="dynamic"))
     created_by = db.relationship("User", backref="created_tasks")
     comments = db.relationship(
         "TaskComment",

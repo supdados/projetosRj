@@ -540,6 +540,22 @@ def project_detail(project_id):
     active_task_count = Task.query.filter_by(
         project_id=project.id, is_archived=False
     ).count()
+    # Contagem de tarefas abertas (não arquivadas, não finalizadas) por etapa —
+    # usado pelo badge no botão de criar tarefa em cada linha de etapa.
+    open_task_counts = dict(
+        db.session.query(Task.etapa_id, db.func.count(Task.id))
+        .filter(
+            Task.project_id == project.id,
+            Task.etapa_id.isnot(None),
+            Task.is_archived.is_(False),
+            Task.status != "finalizada",
+        )
+        .group_by(Task.etapa_id)
+        .all()
+    )
+    etapa_open_task_counts = {
+        etapa.id: int(open_task_counts.get(etapa.id, 0)) for etapa in project.etapas
+    }
     project_history_entries = (
         ProjectHistory.query.filter_by(project_id=project.id)
         .order_by(ProjectHistory.timestamp.desc())
@@ -568,6 +584,7 @@ def project_detail(project_id):
         "projects/detail.html",
         project=project,
         active_task_count=active_task_count,
+        etapa_open_task_counts=etapa_open_task_counts,
         project_history_entries=project_history_entries,
         calendar_connection=calendar_connection,
         can_add_google_meeting=bool(

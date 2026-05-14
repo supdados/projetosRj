@@ -4,7 +4,7 @@ import datetime
 
 from flask import current_app
 
-from models import Etapa, db
+from models import Etapa, Task, db
 from routes.shared import log_project_action
 from routes.etapas.helpers import (
     _add_business_days,
@@ -22,6 +22,23 @@ from services.project_meetings import (
     sync_local_calendar_event_mirrors,
     update_meeting_from_calendar_event,
 )
+
+# ── Bloqueio por tarefas abertas ─────────────────────────────────────────────
+
+_ETAPA_OPEN_TASK_STATUSES_EXCLUDED = ("finalizada",)
+
+
+def count_open_tasks_in_etapa(etapa_id: int) -> int:
+    """Quantas tarefas da etapa ainda estão abertas (não arquivadas, não finalizadas)."""
+    return (
+        Task.query.filter(
+            Task.etapa_id == etapa_id,
+            Task.is_archived.is_(False),
+            ~Task.status.in_(_ETAPA_OPEN_TASK_STATUSES_EXCLUDED),
+        )
+        .count()
+    )
+
 
 # ── Criação ──────────────────────────────────────────────────────────────────
 

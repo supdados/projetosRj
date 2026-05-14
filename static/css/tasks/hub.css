@@ -1295,3 +1295,66 @@ html[data-theme="dark"] .tasks-no-tasks-toast {
     border-color: rgba(99, 166, 219, 0.3);
     box-shadow: 0 8px 28px rgba(5, 12, 22, 0.52);
 }
+
+/* Sub-cabeçalho de etapa dentro de um grupo de projeto */
+.task-hub-stage-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.85rem 0 0.35rem;
+    padding: 0.35rem 0.65rem;
+    background: linear-gradient(90deg, #f1f6fb, transparent);
+    border-left: 3px solid #2563eb;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1f3358;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.task-hub-stage-header.is-legacy {
+    border-left-color: #d97706;
+    background: linear-gradient(90deg, #fef6ec, transparent);
+    color: #7a4309;
+}
+
+.task-hub-stage-header-tag {
+    margin-left: auto;
+    padding: 0.12rem 0.55rem;
+    background: rgba(217, 119, 6, 0.12);
+    color: #92400e;
+    border-radius: 999px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.task-hub-stage-header-tag.is-done {
+    background: rgba(16, 185, 129, 0.14);
+    color: #047857;
+}
+
+.task-hub-stage-header.is-drop-target {
+    outline: 2px dashed #2563eb;
+    outline-offset: 2px;
+    background: rgba(37, 99, 235, 0.08);
+}
+
+.task-item-row.is-dragging {
+    opacity: 0.55;
+}
+
+.task-item-row.is-drop-target {
+    box-shadow: inset 0 0 0 2px #2563eb;
+}
+
+html[data-theme="dark"] .task-hub-stage-header {
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.18), transparent);
+    color: #cfe2ff;
+}
+
+html[data-theme="dark"] .task-hub-stage-header.is-legacy {
+    background: linear-gradient(90deg, rgba(217, 119, 6, 0.18), transparent);
+    color: #fde68a;
+}

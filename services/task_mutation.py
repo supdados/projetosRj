@@ -19,6 +19,10 @@ class TaskEditDiff:
     old_prioridade: str | None
     old_tipo: str | None
     old_project_id: int | None
+    old_etapa_id: int | None = None
+
+
+_FINALIZED_TASK_STATUSES = {"finalizada"}
 
 
 def apply_task_edits(
@@ -30,12 +34,14 @@ def apply_task_edits(
     prioridade: str | None,
     tipo_pedido: str | None,
     project,
+    etapa=None,
+    apply_etapa: bool = False,
 ) -> TaskEditDiff:
     """Aplica edições no ``task`` e devolve snapshot pré-mutação.
 
-    Exemplo:
-        diff = apply_task_edits(task, descricao='Nova', status='em_andamento', ...)
-        if diff.old_status != task.status: notify(...)
+    Quando ``apply_etapa=True``, ``task.etapa_id`` recebe ``etapa.id`` (ou None
+    se ``etapa is None``). Caso contrário, o campo é preservado — útil para
+    edições parciais que não tocam na etapa.
     """
     diff = TaskEditDiff(
         old_descricao=task.descricao,
@@ -44,6 +50,7 @@ def apply_task_edits(
         old_prioridade=task.prioridade,
         old_tipo=task.tipo_pedido,
         old_project_id=task.project_id,
+        old_etapa_id=task.etapa_id,
     )
 
     task.descricao = descricao
@@ -52,8 +59,29 @@ def apply_task_edits(
     task.prioridade = prioridade
     task.tipo_pedido = tipo_pedido
     task.project_id = project.id if project else None
+    if apply_etapa:
+        task.etapa_id = etapa.id if etapa else None
 
     return diff
+
+
+def is_task_open(task) -> bool:
+    """Tarefa que ainda 'pesa' na etapa: não arquivada e não finalizada."""
+    if task.is_archived:
+        return False
+    return task.status not in _FINALIZED_TASK_STATUSES
+
+
+def move_task_to_etapa(task, etapa) -> int | None:
+    """Reassocia a tarefa a uma etapa (ou desassocia, se ``etapa is None``).
+
+    Pré-condições devem ser validadas pelo caller: a etapa deve pertencer ao
+    mesmo projeto da tarefa e não estar concluída. Não faz commit. Retorna o
+    ``etapa_id`` anterior.
+    """
+    previous_etapa_id = task.etapa_id
+    task.etapa_id = etapa.id if etapa else None
+    return previous_etapa_id
 
 
 def archive_task(task) -> None:

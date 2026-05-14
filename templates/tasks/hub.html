@@ -318,6 +318,20 @@
                         </div>
 
                         {% for item in group['tasks'] %}
+                        {% if group['project_id'] and item.hub_is_first_of_stage %}
+                        <header class="task-hub-stage-header{% if item.hub_stage_is_legacy_bucket %} is-legacy{% endif %}"
+                                data-stage-drop-zone
+                                data-project-id="{{ group['project_id'] }}"
+                                data-stage-value="{{ item.hub_stage_value }}"
+                                data-stage-id="{{ item.hub_stage_id or '' }}">
+                            <span class="task-hub-stage-header-label">{{ 'Sem etapa' if item.hub_stage_is_legacy_bucket else item.hub_stage_titulo }}</span>
+                            {% if item.hub_stage_is_legacy_bucket %}
+                            <span class="task-hub-stage-header-tag">legado</span>
+                            {% elif item.hub_stage_done %}
+                            <span class="task-hub-stage-header-tag is-done">Etapa concluída</span>
+                            {% endif %}
+                        </header>
+                        {% endif %}
                         <div
                             class="task-item-row"
                             data-item-id="{{ item.id }}"
@@ -331,6 +345,10 @@
                             data-task-id="{{ item.hub_task_id or '' }}"
                             data-task-titulo="{{ item.hub_task_titulo }}"
                             data-project-value="{{ item.hub_project_value }}"
+                            data-project-id="{{ group['project_id'] or '' }}"
+                            data-stage-value="{{ item.hub_stage_value or 'sem_etapa' }}"
+                            data-stage-id="{{ item.hub_stage_id or '' }}"
+                            data-stage-legacy="{{ '1' if item.hub_stage_is_legacy_bucket else '0' }}"
                             data-project-titulo="{{ item.hub_project_titulo }}">
                             <div class="task-item-bar status-{{ item.status }}"></div>
                             <div class="task-item-main">
@@ -563,7 +581,7 @@
                         {% endfor %}
 
                         {% if not archived_mode %}
-                        <div class="task-item-add-row task-hub-add-row" data-project-value="{{ group['project_value'] }}">
+                        <div class="task-item-add-row task-hub-add-row" data-project-value="{{ group['project_value'] }}" data-project-id="{{ group['project_id'] or '' }}">
                             <div class="task-item-add-placeholder" data-role="open-add-form">
                                 <span class="task-item-add-dashes"><i class="fas fa-plus" aria-hidden="true"></i></span>
                                 <span class="task-item-add-label">Adicionar nova tarefa</span>
@@ -895,6 +913,7 @@ window.TASK_HUB_CONFIG = {
     projectLocked: {{ project_locked|tojson }},
     archivedMode: {{ archived_mode|tojson }},
     focusTask: {{ (request.args.get('focus_task') or '')|tojson }},
+    moveTaskEtapaUrlTemplate: "{{ url_for('main.move_task_etapa', task_id=0) }}",
 };
 </script>
 <script src="{{ url_for('static', filename='js/modules/task-item-helpers.js') }}"></script>
@@ -916,4 +935,5 @@ window.TASK_HUB_CONFIG = {
 <script src="{{ url_for('static', filename='js/modules/kanban-manager.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modules/task-archive.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modules/inline-editors.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/tasks/hub-task-dnd.js') }}"></script>
 {% endblock %}

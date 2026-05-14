@@ -667,6 +667,21 @@
                         </td>
                         <td class="actions text-center etapa-v4-actions-cell">
                             {% if current_user_obj %}
+                            {% if not etapa.done %}
+                            {% set open_count = etapa_open_task_counts.get(etapa.id, 0) %}
+                            <button type="button"
+                                class="btn btn-sm btn-floating etapa-action-create-task"
+                                data-stage-quick-add-trigger
+                                data-etapa-id="{{ etapa.id }}"
+                                data-etapa-descricao="{{ etapa.descricao }}"
+                                data-project-id="{{ project.id }}"
+                                title="Criar tarefa nesta etapa"
+                                aria-label="Criar tarefa nesta etapa">
+                                <i class="fas fa-list-check"></i>
+                                <span class="etapa-action-task-count{% if not open_count %} is-empty{% endif %}"
+                                      data-stage-task-count="{{ etapa.id }}">{{ open_count }}</span>
+                            </button>
+                            {% endif %}
                             <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post"
                                 class="inline-form" data-etapa-delete-form
                                 data-confirm="Tem certeza que deseja excluir esta etapa?">
@@ -835,6 +850,91 @@
 {% set calendar_delete_button_id = 'btnDeleteProjectMeeting' %}
 {% include 'partials/calendar_event_modal.html' %}
 {% endif %}
+
+{% if can_edit_etapas %}
+<div class="stage-task-quick-add ds-hidden"
+     id="stageTaskQuickAdd"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="stageTaskQuickAddTitle"
+     aria-hidden="true"
+     data-stage-quick-add-overlay>
+    <div class="stage-task-quick-add__backdrop" data-stage-quick-add-dismiss></div>
+    <div class="stage-task-quick-add__panel task-hub-page" role="document">
+        <header class="stage-task-quick-add__header">
+            <div>
+                <p class="stage-task-quick-add__eyebrow">Criar tarefas na etapa</p>
+                <h2 class="stage-task-quick-add__title" id="stageTaskQuickAddTitle" data-stage-quick-add-title>Etapa</h2>
+            </div>
+            <button type="button" class="stage-task-quick-add__close" data-stage-quick-add-dismiss aria-label="Fechar">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </header>
+        <ul class="stage-task-quick-add__created" data-stage-quick-add-created hidden></ul>
+        <div class="task-item-add-row task-hub-add-row stage-task-quick-add__row"
+             data-stage-quick-add-form-host>
+            <div class="task-item-add-form" data-role="add-form">
+                <div class="task-item-add-bar"></div>
+                <div class="task-item-add-main">
+                    <div class="task-item-add-line">
+                        <textarea class="task-item-add-desc"
+                                  data-role="descricao"
+                                  rows="1"
+                                  placeholder="Descreva a tarefa..."></textarea>
+                        <select class="task-item-add-prioridade" data-role="prioridade">
+                            <option value="">Prioridade</option>
+                            <option value="baixa">Baixa</option>
+                            <option value="media">Média</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                        </select>
+                        <select class="task-item-add-tipo" data-role="tipo_pedido">
+                            <option value="">Tipo</option>
+                            <option value="bug">Bug</option>
+                            <option value="melhoria">Melhoria</option>
+                            <option value="duvida">Dúvida</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                        <select class="task-item-add-status" data-role="status">
+                            <option value="nao_iniciada">Não iniciada</option>
+                            <option value="em_andamento">Em andamento</option>
+                            <option value="para_validacao">Para validação</option>
+                            <option value="para_ajustes">Para ajustes</option>
+                        </select>
+                        <button type="button"
+                                class="responsavel-picker-trigger"
+                                data-role="responsavel-trigger"
+                                aria-haspopup="dialog"
+                                aria-expanded="false">
+                            <span class="responsavel-picker-trigger-content">
+                                <em class="responsavel-placeholder">Responsável</em>
+                            </span>
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        <input type="hidden" data-role="responsavel" value="">
+                        <div class="task-item-add-actions">
+                            <button type="button"
+                                    class="task-item-btn task-hub-add-cancel"
+                                    data-stage-quick-add-dismiss
+                                    title="Cancelar">
+                                <i class="fas fa-xmark" aria-hidden="true"></i>
+                            </button>
+                            <button type="button"
+                                    class="task-item-btn task-item-btn-confirm task-hub-add-submit"
+                                    data-role="submit-add"
+                                    title="Salvar">
+                                <i class="fas fa-check" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="stage-task-quick-add__hint">Enter para salvar e abrir nova linha · clique fora para fechar.</p>
+        <p class="stage-task-quick-add__error" data-stage-quick-add-error hidden></p>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -855,6 +955,7 @@
         currentGoogleAccountId: {{ current_google_account_id|tojson }},
         projectMeetingModalId: 'projectMeetingModal',
         stageDeleteFormSelector: "form[data-etapa-delete-form]",
+        addTaskUrl: {{ url_for('main.add_task')|tojson }},
     };
 </script>
 <script src="{{ url_for('static', filename='js/modules/cal-datetime-picker.js') }}"></script>
@@ -870,4 +971,5 @@
 <script src="{{ url_for('static', filename='js/pages/projects/detail/02-import-model.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/projects/detail/03-etapa-comments.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/projects/detail/04-focus-etapa.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/projects/detail/11-stage-task-quick-add.js') }}"></script>
 {% endblock %}

@@ -24,6 +24,8 @@ class EditInputs:
     prioridade: str | None
     tipo_pedido: str | None
     project_raw: str | None
+    etapa_raw: str | None = None
+    has_etapa_field: bool = False
 
 
 def _first_non_none(*values):
@@ -76,6 +78,23 @@ def extract_edit_inputs(task, form, payload) -> EditInputs:
         payload.get("project_id"),
     )
 
+    has_etapa_field = (
+        "etapa" in form
+        or "etapa_id" in form
+        or "etapa" in payload
+        or "etapa_id" in payload
+    )
+    etapa_raw = (
+        _first_non_none(
+            form.get("etapa"),
+            form.get("etapa_id"),
+            payload.get("etapa"),
+            payload.get("etapa_id"),
+        )
+        if has_etapa_field
+        else None
+    )
+
     has_responsavel = "responsavel" in form or "responsavel" in payload
     responsavel_raw = (
         (form.get("responsavel") or payload.get("responsavel") or "").strip()
@@ -108,4 +127,6 @@ def extract_edit_inputs(task, form, payload) -> EditInputs:
         prioridade=prioridade,
         tipo_pedido=tipo_pedido,
         project_raw=project_raw,
+        etapa_raw=etapa_raw,
+        has_etapa_field=has_etapa_field,
     )

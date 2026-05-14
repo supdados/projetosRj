@@ -5,6 +5,7 @@ from flask import flash, g, jsonify, redirect, render_template, request, url_for
 from models import Etapa, Project, db
 from services.etapas_cascade import cascade_subsequent_dates
 from services.etapas_mutation import (
+    count_open_tasks_in_etapa,
     create_etapa_record,
     delete_meeting_etapa,
     delete_regular_etapa,
@@ -195,6 +196,16 @@ def edit_etapa(etapa_id):
                 "warning",
             )
             etapa.done = False
+        elif etapa_done_form and not etapa.done:
+            open_count = count_open_tasks_in_etapa(etapa.id)
+            if open_count:
+                flash(
+                    f"Finalize as {open_count} tarefa(s) pendente(s) desta etapa antes de concluí-la.",
+                    "warning",
+                )
+                etapa.done = False
+            else:
+                etapa.done = True
         else:
             etapa.done = etapa_done_form
 
@@ -501,6 +512,22 @@ def toggle_etapa(etapa_id):
                 "message": "Não é possível concluir uma etapa que não foi iniciada.",
             }
         )
+
+    if not etapa.done:
+        open_count = count_open_tasks_in_etapa(etapa.id)
+        if open_count:
+            return jsonify(
+                {
+                    "success": False,
+                    "etapa_id": etapa.id,
+                    "iniciada": etapa.iniciada,
+                    "done": etapa.done,
+                    "open_task_count": open_count,
+                    "message": (
+                        f"Finalize as {open_count} tarefa(s) pendente(s) desta etapa antes de concluí-la."
+                    ),
+                }
+            )
 
     etapa.done = not etapa.done
 

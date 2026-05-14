@@ -198,6 +198,7 @@ def _build_visible_tasks_query(
     if include_relations:
         query = query.options(
             joinedload(Task.project),
+            joinedload(Task.etapa),
             joinedload(Task.comments).joinedload(TaskComment.author),
             joinedload(Task.anexos),
         )

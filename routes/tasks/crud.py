@@ -20,6 +20,7 @@ from routes.tasks.helpers import (
     _normalize_responsavel_value,
     _read_task_filter_values,
     _redirect_back_or,
+    _resolve_etapa_token,
     _resolve_project_token,
     _resolve_responsavel_for_edit,
     _serialize_task_payload,
@@ -40,6 +41,7 @@ from services.task_mutation import (
     apply_task_order,
     archive_task as mutate_archive_task,
     bulk_archive_finalized,
+    move_task_to_etapa,
     parse_unique_task_order_ids,
     unarchive_task as mutate_unarchive_task,
 )
@@ -109,6 +111,23 @@ def _resolve_project_for_edit(project_raw, task):
     if error:
         return None, (jsonify({"success": False, "message": error}), status_code)
     return project, None
+
+
+def _resolve_etapa_for_edit(inputs, task, project):
+    """Devolve ``(etapa, apply_etapa, error_response_or_None)``.
+
+    ``apply_etapa`` indica se a edição mexeu no campo (caller deve repassar
+    ``apply_etapa`` para ``apply_task_edits``). Quando o campo não foi enviado,
+    ``apply_etapa`` é False e ``etapa`` é a etapa atual da tarefa.
+    """
+    if not inputs.has_etapa_field:
+        return task.etapa, False, None
+    etapa, error, status_code = _resolve_etapa_token(
+        inputs.etapa_raw, project, allow_empty=True
+    )
+    if error:
+        return None, False, (jsonify({"success": False, "message": error}), status_code)
+    return etapa, True, None
 
 
 def _group_ids_by_reorder_scope(ordem_ids):
@@ -184,6 +203,49 @@ def reorder_tasks_hub():
         return _on_db_error(e)
 
 
+@main_bp.route("/tarefas/<int:task_id>/mover-etapa", methods=["POST"])
+@login_required
+def move_task_etapa(task_id):
+    """Reassocia a tarefa a outra etapa (ou desassocia) — alvo do DnD do hub.
+
+    Valida que a etapa pertence ao mesmo projeto da tarefa e não está
+    concluída. Não permite mover tarefa entre projetos pelo DnD.
+    """
+    task = db.session.get(Task, task_id)
+    if not task:
+        return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
+    if not _can_view_task(g.user, task):
+        return jsonify({"success": False, "message": "Sem permissão"}), 403
+
+    payload = request.get_json(silent=True) or {}
+    etapa_raw = payload.get("etapa")
+    if etapa_raw is None:
+        etapa_raw = payload.get("etapa_id")
+
+    etapa, etapa_error, etapa_status = _resolve_etapa_token(
+        etapa_raw, task.project, allow_empty=True
+    )
+    if etapa_error:
+        return jsonify({"success": False, "message": etapa_error}), etapa_status
+
+    previous_etapa_id = move_task_to_etapa(task, etapa)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        return _on_db_error(e)
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Etapa atualizada",
+            "task_id": task.id,
+            "etapa_id": task.etapa_id,
+            "previous_etapa_id": previous_etapa_id,
+        }
+    )
+
+
 @main_bp.route("/tarefas/<int:task_id>/edit", methods=["POST"])
 @login_required
 def edit_task(task_id):
@@ -201,6 +263,12 @@ def edit_task(task_id):
     )
     if project_error_response:
         return project_error_response
+
+    etapa, apply_etapa, etapa_error_response = _resolve_etapa_for_edit(
+        inputs, task, project
+    )
+    if etapa_error_response:
+        return etapa_error_response
 
     restricted_denied = _check_restricted_fields_permission(task, inputs)
     if restricted_denied:
@@ -241,6 +309,8 @@ def edit_task(task_id):
         prioridade=inputs.prioridade,
         tipo_pedido=inputs.tipo_pedido,
         project=project,
+        etapa=etapa,
+        apply_etapa=apply_etapa,
     )
 
     try:

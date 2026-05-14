@@ -463,6 +463,18 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
+        "id": "task_move_etapa_post",
+        "method": "POST",
+        "rule": "/tarefas/<int:task_id>/mover-etapa",
+        "path": "/tarefas/{task_id}/mover-etapa",
+        "role": "user",
+        "headers": {"X-Requested-With": "XMLHttpRequest"},
+        "json": {"etapa_id": "sem_etapa"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
         "id": "task_delete_post",
         "method": "POST",
         "rule": "/tarefas/<int:task_id>/delete",
@@ -1471,4 +1483,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 130
+assert len(ROUTE_CASES) == 131

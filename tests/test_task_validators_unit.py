@@ -179,3 +179,43 @@ def test_extract_project_raw_form_wins_over_payload():
         FakeTask(), {"project": "form-tok"}, {"project": "payload-tok"}
     )
     assert inputs.project_raw == "form-tok"
+
+
+# ── etapa_raw ─────────────────────────────────────────────────────────────────
+
+
+def test_extract_etapa_absent_marks_field_unset():
+    inputs = extract_edit_inputs(FakeTask(), {}, {})
+    assert inputs.has_etapa_field is False
+    assert inputs.etapa_raw is None
+
+
+def test_extract_etapa_present_in_form_marks_field_set():
+    inputs = extract_edit_inputs(FakeTask(), {"etapa": "5"}, {})
+    assert inputs.has_etapa_field is True
+    assert inputs.etapa_raw == "5"
+
+
+def test_extract_etapa_present_as_etapa_id_alias():
+    inputs = extract_edit_inputs(FakeTask(), {"etapa_id": "9"}, {})
+    assert inputs.has_etapa_field is True
+    assert inputs.etapa_raw == "9"
+
+
+def test_extract_etapa_present_in_payload_when_absent_in_form():
+    inputs = extract_edit_inputs(FakeTask(), {}, {"etapa": "7"})
+    assert inputs.has_etapa_field is True
+    assert inputs.etapa_raw == "7"
+
+
+def test_extract_etapa_empty_string_marks_field_set_with_empty_value():
+    inputs = extract_edit_inputs(FakeTask(), {"etapa": ""}, {})
+    assert inputs.has_etapa_field is True
+    assert inputs.etapa_raw == ""
+
+
+def test_extract_etapa_form_wins_over_payload():
+    inputs = extract_edit_inputs(
+        FakeTask(), {"etapa": "form-etapa"}, {"etapa": "payload-etapa"}
+    )
+    assert inputs.etapa_raw == "form-etapa"

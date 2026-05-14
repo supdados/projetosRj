@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 from flask import flash, g, jsonify, redirect, request, url_for
 
 from models import (
+    Etapa,
     Project,
     Task,
     User,
@@ -30,6 +31,43 @@ from routes.tasks.permissions import (
 def _format_invalid_responsavel_message(invalid_names):
     invalid_str = ", ".join(invalid_names)
     return f"Responsável inválido: {invalid_str}. Selecione somente usuários com permissão de visualização."
+
+
+def _resolve_etapa_token(raw_etapa_value, project, *, allow_empty=True):
+    """Resolve um valor cru (vindo de form/JSON) para uma ``Etapa``.
+
+    Retorna ``(etapa, error_message, status_code)``. Quando ``allow_empty`` e o
+    valor é vazio/``None``/``"sem_etapa"``, retorna ``(None, None, 200)``.
+    Valida que a etapa pertence ao ``project`` informado e que não está
+    concluída — etapas concluídas não devem receber tarefas novas.
+    """
+    if raw_etapa_value is None:
+        if allow_empty:
+            return None, None, 200
+        return None, "Etapa é obrigatória.", 400
+
+    raw = str(raw_etapa_value).strip()
+    if not raw or raw == "sem_etapa":
+        if allow_empty:
+            return None, None, 200
+        return None, "Etapa é obrigatória.", 400
+
+    try:
+        etapa_id = int(raw)
+    except (TypeError, ValueError):
+        return None, "Etapa inválida.", 400
+
+    etapa = db.session.get(Etapa, etapa_id)
+    if etapa is None:
+        return None, "Etapa não encontrada.", 404
+
+    if project is None or etapa.project_id != project.id:
+        return None, "Etapa não pertence a este projeto.", 400
+
+    if etapa.done:
+        return None, "Etapa concluída não aceita novas tarefas.", 400
+
+    return etapa, None, 200
 
 
 def _resolve_project_token(raw_project_value, allow_empty=False):
@@ -134,6 +172,7 @@ def _resolve_responsavel_for_edit(task, incoming_raw_value, project):
 def _serialize_task_payload(task):
     project = task.project
     project_id = project.id if project else None
+    etapa = task.etapa
     permission_flags = _task_permission_flags(task)
     return {
         "id": task.id,
@@ -152,6 +191,9 @@ def _serialize_task_payload(task):
             else ""
         ),
         "project_value": str(project_id) if project_id else "sem_projeto",
+        "etapa_id": etapa.id if etapa else None,
+        "etapa_descricao": etapa.descricao if etapa else "",
+        "etapa_value": str(etapa.id) if etapa else "sem_etapa",
         "comments_count": len(task.comments),
         "anexos_count": len(task.anexos),
         "can_delete": permission_flags["can_delete"],
@@ -208,6 +250,14 @@ def _extract_creation_payload(default_project=None):
     if project_raw is None and default_project is not None:
         project_raw = str(default_project.id)
 
+    etapa_raw = request.form.get("etapa")
+    if etapa_raw is None:
+        etapa_raw = request.form.get("etapa_id")
+    if etapa_raw is None:
+        etapa_raw = payload.get("etapa")
+    if etapa_raw is None:
+        etapa_raw = payload.get("etapa_id")
+
     descricao = (
         request.form.get("descricao") or payload.get("descricao") or ""
     ).strip()
@@ -229,6 +279,7 @@ def _extract_creation_payload(default_project=None):
 
     return {
         "project_raw": project_raw,
+        "etapa_raw": etapa_raw,
         "descricao": descricao,
         "status": status,
         "responsavel": responsavel,
@@ -252,6 +303,15 @@ def _create_task_common(default_project=None):
         if is_ajax:
             return jsonify({"success": False, "message": project_error}), status_code
         flash(project_error, "danger")
+        return redirect(url_for("main.list_tasks"))
+
+    etapa, etapa_error, etapa_status = _resolve_etapa_token(
+        payload["etapa_raw"], project, allow_empty=True
+    )
+    if etapa_error:
+        if is_ajax:
+            return jsonify({"success": False, "message": etapa_error}), etapa_status
+        flash(etapa_error, "danger")
         return redirect(url_for("main.list_tasks"))
 
     status = (
@@ -299,6 +359,7 @@ def _create_task_common(default_project=None):
             prioridade=prioridade,
             tipo_pedido=tipo_pedido,
             project_id=project.id if project else None,
+            etapa_id=etapa.id if etapa else None,
             created_by_id=g.user.id,
             ordem=max_ordem + 1,
         )

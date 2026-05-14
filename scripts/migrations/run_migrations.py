@@ -100,6 +100,7 @@ TASK_INDEXES = {
     "ix_task_project_id": "CREATE INDEX ix_task_project_id ON task (project_id)",
     "ix_task_created_by_id": "CREATE INDEX ix_task_created_by_id ON task (created_by_id)",
     "ix_task_is_archived": "CREATE INDEX ix_task_is_archived ON task (is_archived)",
+    "ix_task_etapa_id": "CREATE INDEX ix_task_etapa_id ON task (etapa_id)",
 }
 TASK_COMMENT_INDEX = "CREATE INDEX ix_task_comment_task_id ON task_comment (task_id)"
 TASK_ANEXO_INDEX = "CREATE INDEX ix_task_anexo_task_id ON task_anexo (task_id)"
@@ -1084,6 +1085,7 @@ def ensure_task_schema(emit_output=True):
                     "ALTER TABLE task ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT 0",
                 ),
                 ("archived_at", "ALTER TABLE task ADD COLUMN archived_at DATETIME"),
+                ("etapa_id", "ALTER TABLE task ADD COLUMN etapa_id INTEGER"),
             ):
                 if required_column in _column_names(inspector, "task"):
                     continue

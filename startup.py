@@ -194,6 +194,9 @@ def ensure_task_core_columns():
                 text("ALTER TABLE task ADD COLUMN archived_at DATETIME NULL")
             )
             added.append("task.archived_at")
+        if "etapa_id" not in columns:
+            db.session.execute(text("ALTER TABLE task ADD COLUMN etapa_id INTEGER"))
+            added.append("task.etapa_id")
         if added:
             db.session.commit()
 
@@ -210,6 +213,12 @@ def ensure_task_core_columns():
             db.session.execute(text("CREATE INDEX ix_task_status ON task (status)"))
             db.session.commit()
             added.append("task.ix_task_status")
+        if "ix_task_etapa_id" not in indexes:
+            db.session.execute(
+                text("CREATE INDEX ix_task_etapa_id ON task (etapa_id)")
+            )
+            db.session.commit()
+            added.append("task.ix_task_etapa_id")
 
     return added
 
