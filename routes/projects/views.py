@@ -14,7 +14,17 @@ from flask import (
     url_for,
 )
 
-from models import Etapa, Project, ProjectHistory, Task, UserCalendarConnection, db
+from sqlalchemy.orm import joinedload
+
+from models import (
+    Etapa,
+    Project,
+    ProjectHistory,
+    Task,
+    TaskComment,
+    UserCalendarConnection,
+    db,
+)
 from services.calendar_sync import hydrate_google_connection_identity
 from services.google_calendar import is_google_calendar_enabled
 from services.calendar_core import format_input_datetime
@@ -36,6 +46,7 @@ from routes.shared import (
     parse_abep_indicator_filter,
     parse_objetivo_filter,
 )
+from routes.tasks.permissions import _task_permission_flags
 
 CSV_FORMULA_PREFIXES = ("=", "+", "-", "@")
 
@@ -556,6 +567,27 @@ def project_detail(project_id):
     etapa_open_task_counts = {
         etapa.id: int(open_task_counts.get(etapa.id, 0)) for etapa in project.etapas
     }
+    stage_tasks = (
+        Task.query.options(
+            joinedload(Task.comments).joinedload(TaskComment.author),
+            joinedload(Task.anexos),
+        )
+        .filter(
+            Task.project_id == project.id,
+            Task.etapa_id.isnot(None),
+            Task.is_archived.is_(False),
+        )
+        .order_by(Task.etapa_id.asc(), Task.ordem.asc(), Task.created_at.asc(), Task.id.asc())
+        .all()
+    )
+    stage_task_groups = {etapa.id: [] for etapa in project.etapas}
+    for task in stage_tasks:
+        permission_flags = _task_permission_flags(task)
+        task.hub_can_delete = permission_flags["can_delete"]
+        task.hub_can_finalize = permission_flags["can_finalize"]
+        task.hub_is_author = permission_flags["is_author"]
+        if task.etapa_id in stage_task_groups:
+            stage_task_groups[task.etapa_id].append(task)
     project_history_entries = (
         ProjectHistory.query.filter_by(project_id=project.id)
         .order_by(ProjectHistory.timestamp.desc())
@@ -585,6 +617,7 @@ def project_detail(project_id):
         project=project,
         active_task_count=active_task_count,
         etapa_open_task_counts=etapa_open_task_counts,
+        stage_task_groups=stage_task_groups,
         project_history_entries=project_history_entries,
         calendar_connection=calendar_connection,
         can_add_google_meeting=bool(

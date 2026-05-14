@@ -102,6 +102,42 @@ def test_project_detail_template_contains_inline_add_stage_contract(
     assert '<th class="etapa-v4-col-number">ID</th>' in html
 
 
+def test_project_detail_stage_task_quick_add_matches_task_hub_contract(
+    client_user, seed_data
+):
+    response = client_user.get(f"/project/{seed_data['project_id']}")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    required_hooks = [
+        "css/tasks/hub.css",
+        "css/tasks/detail.css",
+        'id="stageTaskQuickAdd"',
+        "stage-task-quick-add__panel task-detail-v2 task-hub-page",
+        "task-detail-v2-items task-hub-items",
+        "task-items-list task-hub-items-list",
+        'data-stage-task-list',
+        'data-stage-panel="',
+        'task-hub-group stage-task-quick-add__stage-panel',
+        "task-item-add-row task-hub-add-row stage-task-quick-add__row",
+        'data-role="open-add-form"',
+        'data-role="descricao"',
+        'data-role="prioridade"',
+        'data-role="tipo_pedido"',
+        'data-role="status"',
+        'value="finalizada"',
+        "responsavel-picker-trigger",
+        'data-role="cancel-add"',
+        'data-role="submit-add"',
+        "js/modules/responsavel-picker.js",
+        "assignableUsersUrl",
+    ]
+
+    for hook in required_hooks:
+        assert hook in html
+
+
 def test_project_detail_without_stages_shows_only_inline_add_entry(
     app, client_user, seed_data
 ):
