@@ -24,7 +24,7 @@ from routes.tasks.constants import (
 )
 from routes.tasks.permissions import (
     _can_access_project_in_tasks,
-    _task_permission_flags,
+    task_permission_flags,
 )
 
 
@@ -33,7 +33,7 @@ def _format_invalid_responsavel_message(invalid_names):
     return f"Responsável inválido: {invalid_str}. Selecione somente usuários com permissão de visualização."
 
 
-def _resolve_etapa_token(raw_etapa_value, project, *, allow_empty=True):
+def _resolve_etapa_token(raw_etapa_value, project, *, allow_empty=True, allow_done=False):
     """Resolve um valor cru (vindo de form/JSON) para uma ``Etapa``.
 
     Retorna ``(etapa, error_message, status_code)``. Quando ``allow_empty`` e o
@@ -64,7 +64,7 @@ def _resolve_etapa_token(raw_etapa_value, project, *, allow_empty=True):
     if project is None or etapa.project_id != project.id:
         return None, "Etapa não pertence a este projeto.", 400
 
-    if etapa.done:
+    if etapa.done and not allow_done:
         return None, "Etapa concluída não aceita novas tarefas.", 400
 
     return etapa, None, 200
@@ -173,7 +173,7 @@ def _serialize_task_payload(task):
     project = task.project
     project_id = project.id if project else None
     etapa = task.etapa
-    permission_flags = _task_permission_flags(task)
+    permission_flags = task_permission_flags(task)
     return {
         "id": task.id,
         "descricao": task.descricao,

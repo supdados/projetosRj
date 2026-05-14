@@ -2,7 +2,15 @@ import datetime
 import re
 
 import routes.projects.views as project_views
-from models import CalendarEvent, Etapa, ProjectStageMeeting, UserCalendarConnection, db
+from models import (
+    CalendarEvent,
+    Etapa,
+    ProjectStageMeeting,
+    Task,
+    TaskItemComment,
+    UserCalendarConnection,
+    db,
+)
 
 
 def test_project_detail_template_contains_stage_table_hooks(client_user, seed_data):
@@ -111,31 +119,119 @@ def test_project_detail_stage_task_quick_add_matches_task_hub_contract(
     html = response.get_data(as_text=True)
 
     required_hooks = [
-        "css/tasks/hub.css",
-        "css/tasks/detail.css",
+        "css/projects/detail/stage-task-modal-scoped.css",
+        "css/projects/detail.css",
         'id="stageTaskQuickAdd"',
+        "inert",
         "stage-task-quick-add__panel task-detail-v2 task-hub-page",
-        "task-detail-v2-items task-hub-items",
-        "task-items-list task-hub-items-list",
-        'data-stage-task-list',
-        'data-stage-panel="',
-        'task-hub-group stage-task-quick-add__stage-panel',
-        "task-item-add-row task-hub-add-row stage-task-quick-add__row",
-        'data-role="open-add-form"',
-        'data-role="descricao"',
-        'data-role="prioridade"',
-        'data-role="tipo_pedido"',
-        'data-role="status"',
-        'value="finalizada"',
-        "responsavel-picker-trigger",
-        'data-role="cancel-add"',
-        'data-role="submit-add"',
+        'data-stage-task-content',
+        'data-stage-task-loading',
+        "stageTasksUrlTemplate",
+        "/project/",
+        "/etapa/0/tasks",
         "js/modules/responsavel-picker.js",
         "assignableUsersUrl",
+        'aria-hidden="true"',
     ]
 
     for hook in required_hooks:
         assert hook in html
+
+    assert 'data-stage-panel="' not in html
+    assert "task-item-row" not in html
+
+
+def test_project_stage_tasks_panel_renders_hub_markup_csrf_and_legacy_bucket(
+    app, client_user, seed_data
+):
+    with app.app_context():
+        task = Task(
+            descricao="Tarefa renderizada na etapa",
+            status="nao_iniciada",
+            responsavel="Usuario Auditoria",
+            ordem=2,
+            project_id=seed_data["project_id"],
+            etapa_id=seed_data["etapa_started_id"],
+            created_by_id=seed_data["user_id"],
+        )
+        db.session.add(task)
+        db.session.flush()
+        db.session.add(
+            TaskItemComment(
+                content="Comentario renderizado",
+                user_id=seed_data["user_id"],
+                task_id=task.id,
+            )
+        )
+        db.session.commit()
+        task_id = task.id
+
+    response = client_user.get(
+        f"/project/{seed_data['project_id']}/etapa/{seed_data['etapa_started_id']}/tasks"
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["success"] is True
+    html = payload["html"]
+
+    required_hooks = [
+        "task-detail-v2-items task-hub-items",
+        "task-items-list task-hub-items-list",
+        "task-hub-group stage-task-quick-add__stage-panel",
+        "task-item-header-row task-hub-group-columns",
+        "Tarefa renderizada na etapa",
+        "Comentario renderizado",
+        "Sem etapa",
+        "Item Auditoria",
+        f'id="deleteItemModal-{task_id}"',
+        f'action="/tarefas/{task_id}/delete"',
+        f'action="/tarefas/{task_id}/comentarios/add"',
+        'name="csrf_token"',
+        "task-item-add-row task-hub-add-row stage-task-quick-add__row",
+        'data-role="submit-add"',
+    ]
+
+    for hook in required_hooks:
+        assert hook in html
+
+
+def test_project_stage_tasks_panel_limits_results_and_links_full_task_list(
+    app, client_user, seed_data
+):
+    with app.app_context():
+        db.session.add_all(
+            [
+                Task(
+                    descricao="Tarefa paginada A",
+                    status="nao_iniciada",
+                    ordem=10,
+                    project_id=seed_data["project_id"],
+                    etapa_id=seed_data["etapa_started_id"],
+                    created_by_id=seed_data["user_id"],
+                ),
+                Task(
+                    descricao="Tarefa paginada B",
+                    status="nao_iniciada",
+                    ordem=11,
+                    project_id=seed_data["project_id"],
+                    etapa_id=seed_data["etapa_started_id"],
+                    created_by_id=seed_data["user_id"],
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client_user.get(
+        f"/project/{seed_data['project_id']}/etapa/{seed_data['etapa_started_id']}/tasks",
+        query_string={"limit": 1},
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["stage_has_more"] is True
+    assert "Ver mais na lista completa" in payload["html"]
+    assert f'/projeto/{seed_data["project_id"]}/tarefas' in payload["html"]
 
 
 def test_project_detail_without_stages_shows_only_inline_add_entry(

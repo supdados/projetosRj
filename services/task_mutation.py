@@ -7,6 +7,7 @@ alteram estado de modelos. Isso permite testar a lógica sem subir o app.
 from dataclasses import dataclass
 
 from time_utils import utc_now
+from services.task_status import FINALIZED_TASK_STATUSES
 
 
 @dataclass
@@ -20,9 +21,6 @@ class TaskEditDiff:
     old_tipo: str | None
     old_project_id: int | None
     old_etapa_id: int | None = None
-
-
-_FINALIZED_TASK_STATUSES = {"finalizada"}
 
 
 def apply_task_edits(
@@ -69,7 +67,7 @@ def is_task_open(task) -> bool:
     """Tarefa que ainda 'pesa' na etapa: não arquivada e não finalizada."""
     if task.is_archived:
         return False
-    return task.status not in _FINALIZED_TASK_STATUSES
+    return task.status not in FINALIZED_TASK_STATUSES
 
 
 def move_task_to_etapa(task, etapa) -> int | None:

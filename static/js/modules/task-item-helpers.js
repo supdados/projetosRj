@@ -1,5 +1,12 @@
 // === task-item-helpers.js — Funções utilitárias globais (htmlEncode, getTaskItem*, setTaskItem*, etc.) ===
-    var htmlEncode = window.escapeHtml;
+    var htmlEncode = window.escapeHtml || function (value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
 
     function getTaskItemRowById(itemId) {
         return document.querySelector('.task-item-row[data-item-id="' + itemId + '"]');
@@ -174,7 +181,7 @@
         return removed;
     }
 
-    var escapeTaskItemHtml = window.escapeHtml;
+    var escapeTaskItemHtml = htmlEncode;
 
     function getTaskItemStatus(row) {
         if (!row) return 'nao_iniciada';

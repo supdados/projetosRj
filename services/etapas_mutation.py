@@ -15,6 +15,7 @@ from routes.etapas.helpers import (
 )
 from services.calendar_core import to_local_datetime
 from services.calendar_sync import delete_remote_event, sync_local_event_to_google
+from services.task_status import FINALIZED_TASK_STATUSES
 from services.project_meetings import (
     can_manage_project_meeting,
     delete_local_calendar_event_mirrors,
@@ -25,18 +26,21 @@ from services.project_meetings import (
 
 # ── Bloqueio por tarefas abertas ─────────────────────────────────────────────
 
-_ETAPA_OPEN_TASK_STATUSES_EXCLUDED = ("finalizada",)
-
-
 def count_open_tasks_in_etapa(etapa_id: int) -> int:
     """Quantas tarefas da etapa ainda estão abertas (não arquivadas, não finalizadas)."""
     return (
         Task.query.filter(
             Task.etapa_id == etapa_id,
             Task.is_archived.is_(False),
-            ~Task.status.in_(_ETAPA_OPEN_TASK_STATUSES_EXCLUDED),
+            ~Task.status.in_(FINALIZED_TASK_STATUSES),
         )
         .count()
+    )
+
+
+def _clear_tasks_from_etapa(etapa) -> None:
+    Task.query.filter(Task.etapa_id == etapa.id).update(
+        {Task.etapa_id: None}, synchronize_session=False
     )
 
 
@@ -124,6 +128,7 @@ def delete_meeting_etapa(etapa, connection):
         description=f'Excluiu a reunião "{etapa.descricao}"',
     )
     delete_local_calendar_event_mirrors(meeting)
+    _clear_tasks_from_etapa(etapa)
     db.session.delete(etapa)
     return None
 
@@ -135,6 +140,7 @@ def delete_regular_etapa(etapa):
         action_type="delete_etapa",
         description=f'Excluiu a etapa "{etapa.descricao}"',
     )
+    _clear_tasks_from_etapa(etapa)
     db.session.delete(etapa)
 
 

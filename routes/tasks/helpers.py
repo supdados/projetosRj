@@ -26,6 +26,7 @@ from routes.tasks.permissions import (  # noqa: F401
     _can_transition_task_to_status,
     _can_view_task,
     _task_permission_flags,
+    task_permission_flags,
 )
 from routes.tasks.queries import (  # noqa: F401
     _build_legacy_query_args,

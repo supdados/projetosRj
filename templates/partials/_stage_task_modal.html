@@ -1,0 +1,26 @@
+<div class="stage-task-quick-add ds-hidden"
+     id="stageTaskQuickAdd"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="stageTaskQuickAddTitle"
+     aria-hidden="true"
+     inert
+     data-stage-quick-add-overlay>
+    <div class="stage-task-quick-add__backdrop" data-stage-quick-add-dismiss></div>
+    <div class="stage-task-quick-add__panel task-detail-v2 task-hub-page" role="document">
+        <header class="stage-task-quick-add__header">
+            <div>
+                <p class="stage-task-quick-add__eyebrow">Tarefas da etapa</p>
+                <h2 class="stage-task-quick-add__title" id="stageTaskQuickAddTitle" data-stage-quick-add-title>Etapa</h2>
+            </div>
+            <button type="button" class="stage-task-quick-add__close" data-stage-quick-add-dismiss aria-label="Fechar">
+                <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+        </header>
+        <div class="stage-task-quick-add__body" data-stage-task-content>
+            <p class="stage-task-quick-add__loading" data-stage-task-loading hidden>Carregando tarefas...</p>
+        </div>
+        <p class="stage-task-quick-add__hint">Enter para salvar e abrir nova linha · clique fora para fechar.</p>
+        <p class="stage-task-quick-add__error" data-stage-quick-add-error hidden></p>
+    </div>
+</div>

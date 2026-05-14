@@ -63,7 +63,7 @@
 
 .stage-task-quick-add__panel {
     position: relative;
-    width: min(1040px, 94vw);
+    width: min(1480px, 94vw);
     max-height: 86vh;
     overflow-y: auto;
     background: #ffffff;
@@ -74,6 +74,32 @@
     display: flex;
     flex-direction: column;
     gap: 0.9rem;
+}
+
+.stage-task-quick-add__body {
+    min-height: 180px;
+}
+
+.stage-task-quick-add__loading,
+.task-item-empty-row,
+.task-hub-more-row {
+    margin: 0;
+    padding: 0.9rem 1rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.task-hub-more-row {
+    border-top: 1px solid #dbe6f4;
+}
+
+.task-hub-more-link {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.task-hub-more-link:hover {
+    text-decoration: underline;
 }
 
 .stage-task-quick-add__header {
@@ -188,6 +214,16 @@ html[data-theme="dark"] .stage-task-quick-add__eyebrow {
 
 html[data-theme="dark"] .stage-task-quick-add__title {
     color: #e9f1fb;
+}
+
+html[data-theme="dark"] .stage-task-quick-add__loading,
+html[data-theme="dark"] .task-item-empty-row,
+html[data-theme="dark"] .task-hub-more-row {
+    color: #a3b8d0;
+}
+
+html[data-theme="dark"] .task-hub-more-row {
+    border-top-color: rgba(120, 156, 198, 0.2);
 }
 
 html[data-theme="dark"] .stage-task-quick-add__close {

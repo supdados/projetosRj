@@ -12,7 +12,7 @@ from routes.orgao_scope import (
     sanitize_orgao_filter_for_current_user,
 )
 from routes.shared import _get_orgaos_disponiveis_for_current_user
-from routes.tasks.permissions import _task_permission_flags
+from routes.tasks.permissions import task_permission_flags as _public_task_permission_flags
 from routes.tasks.queries import (
     _build_task_filter_options,
     _build_task_listing_url,
@@ -31,6 +31,12 @@ _NO_STAGE_BUCKET = {
     "etapa_done": False,
     "is_legacy_bucket": True,
 }
+
+_task_permission_flags = _public_task_permission_flags
+
+
+def task_permission_flags(task):
+    return _task_permission_flags(task)
 
 
 def _ensure_stage_bucket(stages_by_id, project_id, etapa):
@@ -106,7 +112,7 @@ def _group_hub_tasks_by_project(tasks):
         task.hub_project_titulo = project_title
         task.hub_task_titulo = task.descricao
         task.hub_task_id = task.id
-        permission_flags = _task_permission_flags(task)
+        permission_flags = task_permission_flags(task)
         task.hub_can_delete = permission_flags["can_delete"]
         task.hub_can_finalize = permission_flags["can_finalize"]
         task.hub_is_author = permission_flags["is_author"]

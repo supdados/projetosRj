@@ -123,7 +123,7 @@ def _resolve_etapa_for_edit(inputs, task, project):
     if not inputs.has_etapa_field:
         return task.etapa, False, None
     etapa, error, status_code = _resolve_etapa_token(
-        inputs.etapa_raw, project, allow_empty=True
+        inputs.etapa_raw, project, allow_empty=True, allow_done=True
     )
     if error:
         return None, False, (jsonify({"success": False, "message": error}), status_code)
@@ -223,27 +223,31 @@ def move_task_etapa(task_id):
         etapa_raw = payload.get("etapa_id")
 
     etapa, etapa_error, etapa_status = _resolve_etapa_token(
-        etapa_raw, task.project, allow_empty=True
+        etapa_raw, task.project, allow_empty=True, allow_done=True
     )
     if etapa_error:
         return jsonify({"success": False, "message": etapa_error}), etapa_status
 
     previous_etapa_id = move_task_to_etapa(task, etapa)
+    warning = None
+    if etapa is not None and etapa.done:
+        warning = "A etapa está concluída; a tarefa foi movida mesmo assim."
 
     try:
         db.session.commit()
     except Exception as e:
         return _on_db_error(e)
 
-    return jsonify(
-        {
-            "success": True,
-            "message": "Etapa atualizada",
-            "task_id": task.id,
-            "etapa_id": task.etapa_id,
-            "previous_etapa_id": previous_etapa_id,
-        }
-    )
+    payload = {
+        "success": True,
+        "message": "Etapa atualizada",
+        "task_id": task.id,
+        "etapa_id": task.etapa_id,
+        "previous_etapa_id": previous_etapa_id,
+    }
+    if warning:
+        payload["warning"] = warning
+    return jsonify(payload)
 
 
 @main_bp.route("/tarefas/<int:task_id>/edit", methods=["POST"])
@@ -269,6 +273,9 @@ def edit_task(task_id):
     )
     if etapa_error_response:
         return etapa_error_response
+    etapa_warning = None
+    if apply_etapa and etapa is not None and etapa.done:
+        etapa_warning = "A etapa está concluída; a tarefa foi movida mesmo assim."
 
     restricted_denied = _check_restricted_fields_permission(task, inputs)
     if restricted_denied:
@@ -320,14 +327,15 @@ def edit_task(task_id):
         return _on_db_error(e)
 
     serialized = _serialize_task_payload(task)
-    return jsonify(
-        {
-            "success": True,
-            "message": "Tarefa atualizada",
-            "task": serialized,
-            "item": serialized,
-        }
-    )
+    payload = {
+        "success": True,
+        "message": "Tarefa atualizada",
+        "task": serialized,
+        "item": serialized,
+    }
+    if etapa_warning:
+        payload["warning"] = etapa_warning
+    return jsonify(payload)
 
 
 @main_bp.route("/tarefas/<int:task_id>/delete", methods=["POST"])

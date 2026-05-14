@@ -61,7 +61,7 @@ def _audit_denied_task_action(task, action_type, *, attempted_status=None):
         print(f"Erro ao auditar tentativa negada em tarefa: {exc}")
 
 
-def _task_permission_flags(task, user=None):
+def task_permission_flags(task, user=None):
     actor = user or getattr(g, "user", None)
     can_manage = _can_manage_task_restricted_actions(actor, task)
     return {
@@ -69,6 +69,9 @@ def _task_permission_flags(task, user=None):
         "can_finalize": can_manage,
         "is_author": bool(actor and task and task.created_by_id == actor.id),
     }
+
+
+_task_permission_flags = task_permission_flags
 
 
 def _can_access_project_in_tasks(project):

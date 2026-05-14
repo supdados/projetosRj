@@ -2,7 +2,14 @@
     // --- Responsável (picker multi-seleção) ---
     var responsavelAssignableUsersCache = {};
 
-    var escapeResponsavelHtml = window.escapeHtml;
+    var escapeResponsavelHtml = window.escapeHtml || function (value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
 
     function normalizeResponsavelName(name) {
         return (name || '').trim().replace(/\s+/g, ' ');

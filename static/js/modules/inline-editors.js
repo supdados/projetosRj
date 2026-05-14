@@ -106,10 +106,19 @@
     function setResponsavelCellText(respSpan, text) {
         if (!respSpan) return;
         var value = normalizeResponsavelName(text || '');
+        var contentEl = respSpan.querySelector('.responsavel-picker-trigger-content');
         if (value) {
-            respSpan.textContent = value;
+            if (contentEl) {
+                contentEl.innerHTML = '<span class="responsavel-picker-chip responsavel-picker-chip-0">' + escapeHtml(value) + '</span>';
+            } else {
+                respSpan.textContent = value;
+            }
         } else {
-            respSpan.innerHTML = '<em class="responsavel-placeholder">Responsável não informado</em>';
+            if (contentEl) {
+                contentEl.innerHTML = '<em class="responsavel-placeholder">Responsável não informado</em>';
+            } else {
+                respSpan.innerHTML = '<em class="responsavel-placeholder">Responsável não informado</em>';
+            }
         }
     }
 

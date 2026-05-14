@@ -1,6 +1,9 @@
+from sqlalchemy import event
+
 from time_utils import utc_now
 
 from .base import TaskItemQuery, TaskQuery, db
+from .etapa import Etapa
 
 
 def _resolve_legacy_kwargs(kwargs: dict) -> None:
@@ -52,7 +55,10 @@ class Task(db.Model):
     # Tarefas criadas após a migração v4.5 nascem ligadas a uma etapa.
     # Legadas continuam com etapa_id NULL; o usuário pode reassociá-las.
     etapa_id = db.Column(
-        db.Integer, db.ForeignKey("etapa.id"), nullable=True, index=True
+        db.Integer,
+        db.ForeignKey("etapa.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     legacy_parent_task_id = db.Column(
         db.Integer, db.ForeignKey("task.id"), nullable=True
@@ -65,7 +71,7 @@ class Task(db.Model):
     archived_at = db.Column(db.DateTime, nullable=True)
 
     project = db.relationship("Project", backref=db.backref("tasks", lazy=True))
-    etapa = db.relationship("Etapa", backref=db.backref("tasks", lazy="dynamic"))
+    etapa = db.relationship("Etapa", backref=db.backref("etapa_tasks", lazy="dynamic"))
     created_by = db.relationship("User", backref="created_tasks")
     comments = db.relationship(
         "TaskComment",
@@ -142,6 +148,15 @@ class Task(db.Model):
     @property
     def items(self):
         return [self]
+
+
+@event.listens_for(Etapa, "before_delete")
+def _clear_task_stage_refs_before_etapa_delete(mapper, connection, target):
+    connection.execute(
+        Task.__table__.update()
+        .where(Task.etapa_id == target.id)
+        .values(etapa_id=None)
+    )
 
 
 class TaskItem(db.Model):

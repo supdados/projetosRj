@@ -68,7 +68,7 @@ def test_move_task_to_other_project_etapa_returns_400(app, client_user, seed_dat
     assert "projeto" in payload["message"].lower()
 
 
-def test_move_task_to_done_etapa_returns_400(app, client_user, seed_data):
+def test_move_task_to_done_etapa_succeeds_with_warning(app, client_user, seed_data):
     task_id = seed_data["task_id"]
     project_id = seed_data["project_id"]
 
@@ -90,10 +90,11 @@ def test_move_task_to_done_etapa_returns_400(app, client_user, seed_data):
         headers=_ajax_headers(),
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 200
     payload = response.get_json()
-    assert payload["success"] is False
-    assert "concluída" in payload["message"].lower()
+    assert payload["success"] is True
+    assert payload["etapa_id"] == done_etapa_id
+    assert "concluída" in payload["warning"].lower()
 
 
 def test_move_task_with_invalid_etapa_id_returns_400(app, client_user, seed_data):
