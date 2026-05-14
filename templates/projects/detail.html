@@ -3,6 +3,8 @@
 {% block title %}Detalhes: {{ project.titulo }}{% endblock %}
 
 {% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tasks/hub.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tasks/detail.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/projects/detail/stage-task-modal-scoped.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/projects/detail.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/projects/history.css') }}">

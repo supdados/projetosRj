@@ -119,6 +119,8 @@ def test_project_detail_stage_task_quick_add_matches_task_hub_contract(
     html = response.get_data(as_text=True)
 
     required_hooks = [
+        "css/tasks/hub.css",
+        "css/tasks/detail.css",
         "css/projects/detail/stage-task-modal-scoped.css",
         "css/projects/detail.css",
         'id="stageTaskQuickAdd"',
