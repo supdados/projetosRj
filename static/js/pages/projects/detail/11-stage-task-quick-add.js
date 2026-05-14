@@ -106,12 +106,34 @@
             rows.updateStageBadge(currentEtapaId, delta);
         }
     }
+    // Modais de delete dos rows injetados precisam viver no <body> para que
+    // o Bootstrap consiga exibi-los sem ser cortado pelo overflow do panel.
+    // Trackeamos os modais "adotados" para limpar ao trocar de painel.
+    const adoptedDeleteModals = [];
+    function adoptDeleteModalsToBody() {
+        if (!contentHost) return;
+        const modals = contentHost.querySelectorAll('.task-detail-v2-modal[id^="deleteItemModal-"]');
+        modals.forEach((modal) => {
+            document.body.appendChild(modal);
+            adoptedDeleteModals.push(modal);
+        });
+    }
+    function cleanupAdoptedDeleteModals() {
+        while (adoptedDeleteModals.length) {
+            const modal = adoptedDeleteModals.pop();
+            if (modal && modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        }
+    }
     function injectHtml(html) {
         // HTML vem do endpoint server-side (Jinja com autoescape).
         // Confiável; equivalente ao SSR original que esse modal substituiu.
+        cleanupAdoptedDeleteModals();
         if (contentHost) {
             contentHost.innerHTML = html || '';
         }
+        adoptDeleteModalsToBody();
     }
     function renderHtml(html, opts) {
         const options = opts || {};
@@ -274,6 +296,7 @@
         currentEtapaId = null;
         currentMode = 'stage';
         responsavelNames = [];
+        cleanupAdoptedDeleteModals();
         clearError();
         if (lastTriggerEl && typeof lastTriggerEl.focus === 'function') {
             lastTriggerEl.focus();
@@ -289,6 +312,67 @@
         } else {
             clearCache();
         }
+    });
+    // Anexos: sem kanban na página de projeto, implementamos upload direto.
+    // Click no botão abre file picker; o arquivo selecionado vai via POST
+    // para /tarefas/<id>/anexos/add. Após sucesso, incrementamos o badge
+    // da row. Limitação consciente: visualizar anexos existentes não está
+    // disponível aqui — para isso o usuário deve abrir a página de tarefas.
+    const anexosFileInput = (() => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.style.display = 'none';
+        input.setAttribute('data-stage-quick-add-anexo-input', '');
+        document.body.appendChild(input);
+        return input;
+    })();
+    let pendingAnexoItemId = null;
+    overlay.addEventListener('click', (event) => {
+        const anexosBtn = event.target.closest('.task-item-anexos-btn[data-item-id]');
+        if (!anexosBtn) return;
+        const itemId = anexosBtn.getAttribute('data-item-id');
+        if (!itemId) return;
+        event.preventDefault();
+        event.stopPropagation();
+        pendingAnexoItemId = itemId;
+        anexosFileInput.value = '';
+        anexosFileInput.click();
+    }, true);
+    anexosFileInput.addEventListener('change', () => {
+        const file = anexosFileInput.files && anexosFileInput.files[0];
+        const itemId = pendingAnexoItemId;
+        pendingAnexoItemId = null;
+        if (!file || !itemId) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        fetch('/tarefas/' + encodeURIComponent(itemId) + '/anexos/add', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRFToken': fetchApi.getCsrfToken(config),
+            },
+            body: formData,
+        })
+            .then((r) => r.json().catch(() => ({})))
+            .then((data) => {
+                if (!data || !data.success) {
+                    showError((data && data.message) || 'Falha ao enviar anexo.');
+                    return;
+                }
+                const row = contentHost && contentHost.querySelector('.task-item-row[data-item-id="' + itemId + '"]');
+                const badge = row && row.querySelector('.task-item-anexos-num');
+                if (badge) {
+                    badge.textContent = String(data.anexos_count != null ? data.anexos_count : (parseInt(badge.textContent || '0', 10) || 0) + 1);
+                }
+                if (typeof window.showFlash === 'function') {
+                    window.showFlash('Anexo enviado.', 'success');
+                }
+                clearCache();
+            })
+            .catch(() => {
+                showError('Erro de rede ao enviar anexo.');
+            });
     });
     document.addEventListener('click', (event) => {
         const trigger = event.target.closest('[data-stage-quick-add-trigger]');
