@@ -41,6 +41,17 @@
     overflow: hidden;
 }
 
+/* O modal de confirmação de exclusão de tarefa (Bootstrap, z-index 1055) é
+   aberto enquanto o quick-add (z-index 1080) está em foreground. Sem este
+   override, o modal de delete ficaria atrás do quick-add. Elevamos ambos
+   (backdrop e modal) acima do quick-add quando a página está nesse estado. */
+.stage-task-quick-add-open .modal-backdrop {
+    z-index: 1090;
+}
+.stage-task-quick-add-open .modal {
+    z-index: 1095;
+}
+
 .stage-task-quick-add {
     position: fixed;
     inset: 0;

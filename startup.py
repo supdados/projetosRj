@@ -21,6 +21,68 @@ def ensure_project_abep_indicator_column():
     return True
 
 
+def _rebuild_task_table_with_etapa_fk() -> None:
+    """SQLite-only: recria task preservando dados e adicionando FK em etapa_id.
+
+    Necessário em bancos onde a coluna `etapa_id` foi criada por uma versão
+    anterior que fazia `ALTER TABLE ADD COLUMN` sem `REFERENCES etapa(id) ON
+    DELETE SET NULL`. SQLite não permite adicionar FK via ALTER, então copia-se
+    a tabela inteira para uma versão nova com a FK e renomeia-se.
+    """
+    inspector = inspect(db.engine)
+    cols = [c["name"] for c in inspector.get_columns("task")]
+    col_list = ", ".join(cols)
+
+    db.session.execute(text("PRAGMA foreign_keys=OFF"))
+    db.session.execute(
+        text(
+            """
+            CREATE TABLE task_with_etapa_fk_tmp AS
+            SELECT * FROM task WHERE 0
+            """
+        )
+    )
+    # CREATE AS SELECT não preserva FKs; usamos a definição declarativa
+    # via reflexão do schema atual + adiciona FK manualmente.
+    db.session.execute(text("DROP TABLE task_with_etapa_fk_tmp"))
+    db.session.execute(
+        text(
+            f"""
+            CREATE TABLE task_new (
+                id INTEGER NOT NULL PRIMARY KEY,
+                titulo VARCHAR(255),
+                descricao TEXT,
+                created_at DATETIME,
+                updated_at DATETIME,
+                status VARCHAR(20) NOT NULL DEFAULT 'nao_iniciada',
+                responsavel VARCHAR(100),
+                ordem INTEGER NOT NULL DEFAULT 0,
+                project_id INTEGER,
+                etapa_id INTEGER,
+                legacy_parent_task_id INTEGER,
+                created_by_id INTEGER NOT NULL,
+                prioridade VARCHAR(20),
+                tipo_pedido VARCHAR(30),
+                is_archived BOOLEAN NOT NULL DEFAULT 0,
+                archived_at DATETIME,
+                FOREIGN KEY(project_id) REFERENCES project(id),
+                FOREIGN KEY(etapa_id) REFERENCES etapa(id) ON DELETE SET NULL,
+                FOREIGN KEY(legacy_parent_task_id) REFERENCES task(id),
+                FOREIGN KEY(created_by_id) REFERENCES user(id)
+            )
+            """
+        )
+    )
+    db.session.execute(text(f"INSERT INTO task_new ({col_list}) SELECT {col_list} FROM task"))
+    db.session.execute(text("DROP TABLE task"))
+    db.session.execute(text("ALTER TABLE task_new RENAME TO task"))
+    db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_task_is_archived ON task (is_archived)"))
+    db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_task_status ON task (status)"))
+    db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_task_etapa_id ON task (etapa_id)"))
+    db.session.execute(text("PRAGMA foreign_keys=ON"))
+    db.session.commit()
+
+
 def ensure_task_core_columns():
     """Garante colunas essenciais do novo modelo único de tarefas."""
     inspector = inspect(db.engine)
@@ -199,6 +261,22 @@ def ensure_task_core_columns():
             added.append("task.etapa_id")
         if added:
             db.session.commit()
+
+        # SQLite não suporta ADD CONSTRAINT FOREIGN KEY via ALTER TABLE — em
+        # bancos onde `etapa_id` foi criado pela versão anterior (sem FK), a
+        # constraint declarada no modelo é só decorativa. Detectamos a ausência
+        # da FK e recriamos a tabela preservando dados; em outros dialetos a
+        # FK já foi criada via ALTER por outro caminho ou nem se aplica.
+        if db.engine.dialect.name == "sqlite":
+            existing_fks = {
+                fk.get("referred_table")
+                for fk in inspector.get_foreign_keys("task")
+                if "etapa_id" in (fk.get("constrained_columns") or [])
+            }
+            if "etapa" not in existing_fks:
+                _rebuild_task_table_with_etapa_fk()
+                added.append("task.etapa_id_fk_restored")
+                inspector = inspect(db.engine)
 
         # Índices para acelerar listagens.
         inspector = inspect(db.engine)

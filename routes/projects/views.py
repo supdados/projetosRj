@@ -15,14 +15,11 @@ from flask import (
     url_for,
 )
 
-from sqlalchemy.orm import selectinload
-
 from models import (
     Etapa,
     Project,
     ProjectHistory,
     Task,
-    TaskComment,
     UserCalendarConnection,
     db,
 )
@@ -47,10 +44,7 @@ from routes.shared import (
     parse_abep_indicator_filter,
     parse_objetivo_filter,
 )
-from routes.tasks.permissions import task_permission_flags
-
 CSV_FORMULA_PREFIXES = ("=", "+", "-", "@")
-STAGE_TASKS_PANEL_LIMIT = 50
 
 
 def _safe_csv_text(value):
@@ -610,77 +604,6 @@ def project_detail(project_id):
         calendar_input_datetime=format_input_datetime,
         meeting_time_display=meeting_time_display,
         meeting_time_summary=meeting_time_summary,
-    )
-
-
-@main_bp.route("/project/<int:project_id>/etapa/<int:etapa_id>/tasks", methods=["GET"])
-@login_required
-def project_stage_tasks_panel(project_id, etapa_id):
-    project = get_or_404(Project, project_id)
-    if not user_can_access_project(g.user, project):
-        return jsonify({"success": False, "message": "Sem permissão."}), 403
-
-    etapa = get_or_404(Etapa, etapa_id)
-    if etapa.project_id != project.id:
-        return jsonify({"success": False, "message": "Etapa inválida."}), 404
-
-    raw_limit = request.args.get("limit", STAGE_TASKS_PANEL_LIMIT, type=int)
-    limit = min(max(raw_limit or STAGE_TASKS_PANEL_LIMIT, 1), 100)
-    offset = max(request.args.get("offset", 0, type=int) or 0, 0)
-
-    def task_query_for_stage(stage_id):
-        return (
-            Task.query.options(
-                selectinload(Task.comments).selectinload(TaskComment.author),
-                selectinload(Task.anexos),
-            )
-            .filter(
-                Task.project_id == project.id,
-                Task.etapa_id == stage_id,
-                Task.is_archived.is_(False),
-            )
-            .order_by(Task.ordem.asc(), Task.created_at.asc(), Task.id.asc())
-        )
-
-    stage_tasks_page = (
-        task_query_for_stage(etapa.id).offset(offset).limit(limit + 1).all()
-    )
-    stage_has_more = len(stage_tasks_page) > limit
-    stage_tasks = stage_tasks_page[:limit]
-
-    legacy_tasks_page = []
-    legacy_has_more = False
-    if offset == 0:
-        legacy_tasks_page = task_query_for_stage(None).limit(limit + 1).all()
-        legacy_has_more = len(legacy_tasks_page) > limit
-    legacy_tasks = legacy_tasks_page[:limit]
-
-    permission_flags_by_task_id = {
-        task.id: task_permission_flags(task)
-        for task in [*stage_tasks, *legacy_tasks]
-    }
-
-    html = render_template(
-        "projects/_stage_tasks_panel.html",
-        project=project,
-        etapa=etapa,
-        stage_tasks=stage_tasks,
-        stage_has_more=stage_has_more,
-        legacy_tasks=legacy_tasks,
-        legacy_has_more=legacy_has_more,
-        limit=limit,
-        offset=offset,
-        permission_flags_by_task_id=permission_flags_by_task_id,
-    )
-    return jsonify(
-        {
-            "success": True,
-            "html": html,
-            "stage_count": len(stage_tasks),
-            "stage_has_more": stage_has_more,
-            "legacy_count": len(legacy_tasks),
-            "legacy_has_more": legacy_has_more,
-        }
     )
 
 

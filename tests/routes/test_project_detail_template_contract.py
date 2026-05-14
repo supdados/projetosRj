@@ -128,7 +128,9 @@ def test_project_detail_stage_task_quick_add_matches_task_hub_contract(
         'data-stage-task-loading',
         "stageTasksUrlTemplate",
         "/project/",
-        "/etapa/0/tasks",
+        "__ETAPA_ID__",
+        "legacyTasksUrl",
+        "tarefas-sem-etapa",
         "js/modules/responsavel-picker.js",
         "assignableUsersUrl",
         'aria-hidden="true"',
@@ -182,8 +184,6 @@ def test_project_stage_tasks_panel_renders_hub_markup_csrf_and_legacy_bucket(
         "task-item-header-row task-hub-group-columns",
         "Tarefa renderizada na etapa",
         "Comentario renderizado",
-        "Sem etapa",
-        "Item Auditoria",
         f'id="deleteItemModal-{task_id}"',
         f'action="/tarefas/{task_id}/delete"',
         f'action="/tarefas/{task_id}/comentarios/add"',
@@ -194,6 +194,24 @@ def test_project_stage_tasks_panel_renders_hub_markup_csrf_and_legacy_bucket(
 
     for hook in required_hooks:
         assert hook in html
+
+    # Tarefas legadas (etapa_id NULL) NÃO devem aparecer no modal de uma etapa
+    # específica — vivem em endpoint próprio para evitar duplicação.
+    assert "Item Auditoria" not in html
+    assert "Sem etapa" not in html
+
+
+def test_project_legacy_tasks_panel_lists_orphan_tasks(client_user, seed_data):
+    response = client_user.get(
+        f"/project/{seed_data['project_id']}/tarefas-sem-etapa"
+    )
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["success"] is True
+    html = payload["html"]
+    assert "Item Auditoria" in html
+    assert "Sem etapa" in html
+    assert "data-legacy-task-list" in html
 
 
 def test_project_stage_tasks_panel_limits_results_and_links_full_task_list(

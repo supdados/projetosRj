@@ -410,7 +410,7 @@
         projectStatus: {{ (project.status or '')|tojson }},
         concludeProjectUrl: {{ url_for('main.concluir_project', project_id=project.id)|tojson }},
         projectTitle: {{ (project.titulo or '')|tojson }},
-        csrfToken: {{ (csrf_token() if csrf_token else '')|tojson }},
+        csrfToken: {{ csrf_token()|tojson }},
         canEditAreaResponsavel: false,
         availableAreas: [],
         abepIndicatorsOptions: {{ ABEP_INDICADORES_OPTIONS|tojson }},
@@ -421,7 +421,8 @@
         projectMeetingModalId: 'projectMeetingModal',
         stageDeleteFormSelector: "form[data-etapa-delete-form]",
         addTaskUrl: {{ url_for('main.add_task')|tojson }},
-        stageTasksUrlTemplate: {{ url_for('main.project_stage_tasks_panel', project_id=project.id, etapa_id=0)|tojson }},
+        stageTasksUrlTemplate: {{ (url_for('main.project_stage_tasks_panel', project_id=project.id, etapa_id=999999999).replace('999999999', '__ETAPA_ID__'))|tojson }},
+        legacyTasksUrl: {{ url_for('main.project_legacy_tasks_panel', project_id=project.id)|tojson }},
         assignableUsersUrl: {{ url_for('main.get_hub_assignable_users')|tojson }},
     };
 </script>

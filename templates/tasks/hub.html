@@ -334,7 +334,23 @@
                             {% endif %}
                         </header>
                         {% endif %}
-                        {{ render_task_item_row(item, item.project, item.hub_project_value, item.hub_project_titulo, item.hub_stage_value, item.hub_stage_id, item.hub_stage_is_legacy_bucket, item.hub_can_delete, item.hub_can_finalize, archived_mode, true, not archived_mode, not archived_mode, not archived_mode, current_url) }}
+                        {{ render_task_item_row(
+                            task=item,
+                            project=item.project,
+                            project_value=item.hub_project_value,
+                            project_titulo=item.hub_project_titulo,
+                            stage_value=item.hub_stage_value,
+                            stage_id=item.hub_stage_id,
+                            stage_legacy=item.hub_stage_is_legacy_bucket,
+                            can_delete=item.hub_can_delete,
+                            can_finalize=item.hub_can_finalize,
+                            archived_mode=archived_mode,
+                            show_delete_modal=true,
+                            show_edit_button=not archived_mode,
+                            show_comments_form=not archived_mode,
+                            show_responsavel_picker=not archived_mode,
+                            next_url=current_url
+                        ) }}
                         {% endfor %}
 
                         {% if not archived_mode %}

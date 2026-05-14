@@ -6,6 +6,15 @@
     {% set can_edit_etapas = current_user_obj %}
     {% if can_edit_etapas %}
     <div class="d-flex justify-content-end gap-2 mb-3">
+        <button type="button"
+                class="btn btn-outline-secondary btn-legacy-tasks"
+                data-stage-quick-add-trigger
+                data-stage-quick-add-mode="legacy"
+                data-project-id="{{ project.id }}"
+                data-etapa-descricao="Tarefas sem etapa"
+                title="Tarefas do projeto que ainda não foram associadas a uma etapa">
+            <i class="fas fa-inbox me-1" aria-hidden="true"></i> Tarefas sem etapa
+        </button>
         <button type="button" class="btn btn-import-model{% if project.workflow_etapas %} ds-hidden{% endif %}" id="btnImportModel" data-bs-toggle="modal" data-bs-target="#importModelModal">
             <i class="fas fa-file-import me-1"></i> Importar Modelo
         </button>

@@ -244,6 +244,26 @@ ROUTE_CASES = [
         "requires_login": True,
         "requires_admin": False,
     },
+    {
+        "id": "project_stage_tasks_panel_get",
+        "method": "GET",
+        "rule": "/project/<int:project_id>/etapa/<int:etapa_id>/tasks",
+        "path": "/project/{project_id}/etapa/{etapa_started_id}/tasks",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "project_legacy_tasks_panel_get",
+        "method": "GET",
+        "rule": "/project/<int:project_id>/tarefas-sem-etapa",
+        "path": "/project/{project_id}/tarefas-sem-etapa",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
     # Etapas
     {
         "id": "etapa_add_post",
@@ -1483,4 +1503,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 131
+assert len(ROUTE_CASES) == 133
