@@ -443,8 +443,48 @@
         const doneTitle = done
             ? 'Marcar como pendente'
             : (iniciada ? 'Marcar como concluída' : 'Marcar como concluída (necessário iniciar primeiro)');
+        // Botão de criar tarefa (mesma estrutura do template Jinja em
+        // _project_stages_section.html). Para etapas concluídas o botão fica
+        // visível mas com aria-disabled — o JS do quick-add ignora o click.
+        const projectTitle = projectDetailConfig.projectTitle || '';
+        const orgaoSigla = projectDetailConfig.projectOrgaoSigla || '';
+        const datasLabel = (function () {
+            if (dataInicioDisplay && dataFimDisplay) return `${dataInicioDisplay} — ${dataFimDisplay}`;
+            if (dataInicioDisplay) return `Início ${dataInicioDisplay}`;
+            if (dataFimDisplay) return `Fim ${dataFimDisplay}`;
+            return 'Etapa sem datas definidas';
+        })();
+        const stageDoneAttr = done ? '1' : '0';
+        const stageDoneClass = done ? ' is-stage-done' : '';
+        const stageDoneAriaAttrs = done ? 'aria-disabled="true" tabindex="-1"' : '';
+        const stageDoneTitle = done
+            ? 'Etapa concluída — desfaça a conclusão para criar tarefas'
+            : 'Criar tarefa nesta etapa';
+        const stageDoneAriaLabel = done
+            ? 'Criar tarefa (etapa concluída)'
+            : 'Criar tarefa nesta etapa';
+        const createTaskBtnHtml = `
+            <button type="button"
+                class="btn btn-sm btn-floating etapa-action-create-task${stageDoneClass}"
+                data-stage-quick-add-trigger
+                data-etapa-id="${etapaId}"
+                data-etapa-descricao="${escapeHtml(descricao)}"
+                data-etapa-datas="${escapeHtml(datasLabel)}"
+                data-project-id="${escapeHtml(String(projectDetailConfig.projectId || ''))}"
+                data-project-titulo="${escapeHtml(projectTitle)}"
+                data-orgao-sigla="${escapeHtml(orgaoSigla)}"
+                data-stage-done="${stageDoneAttr}"
+                ${stageDoneAriaAttrs}
+                title="${escapeHtml(stageDoneTitle)}"
+                aria-label="${escapeHtml(stageDoneAriaLabel)}">
+                <i class="fas fa-list-check" aria-hidden="true"></i>
+                <span class="etapa-action-task-count is-empty"
+                      data-stage-task-count="${etapaId}">0</span>
+            </button>
+        `;
         const actionHtml = page.shared.canEditEtapas
             ? `
+                ${createTaskBtnHtml}
                 <form action="/etapa/${etapaId}/delete" method="post" class="inline-form" data-etapa-delete-form
                     data-confirm="Tem certeza que deseja excluir esta etapa?">
                     <button type="submit" class="btn btn-sm btn-floating" data-etapa-delete-btn title="Excluir Etapa">

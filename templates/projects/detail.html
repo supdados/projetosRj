@@ -420,6 +420,7 @@
         projectStatus: {{ (project.status or '')|tojson }},
         concludeProjectUrl: {{ url_for('main.concluir_project', project_id=project.id)|tojson }},
         projectTitle: {{ (project.titulo or '')|tojson }},
+        projectOrgaoSigla: {{ (project.orgao_ref.sigla if project.orgao_ref else '')|tojson }},
         csrfToken: {{ csrf_token()|tojson }},
         canEditAreaResponsavel: false,
         availableAreas: [],
