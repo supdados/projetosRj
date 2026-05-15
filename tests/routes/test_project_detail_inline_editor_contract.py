@@ -145,11 +145,26 @@ def test_project_header_inline_editors_keep_chip_dimensions():
     assert "const replacement = prepareHeaderChipEditor(input, el, field) || input;" in editor_content
 
     assert "function resizeProjectHeaderTextEditor(input)" in editor_content
+    assert "function measureProjectHeaderTextWidth(input)" in editor_content
     assert "function prepareProjectHeaderTextEditor(input, sourceEl, field)" in editor_content
+    assert "input.classList.contains('project-header-text-editor--short-description')" in editor_content
+    assert "input.classList.contains('project-header-text-editor--short_description')" in editor_content
+    assert "const maxWidth = Number(input.dataset.visualMaxWidth || input.dataset.visualWidth || '0') || 0;" in editor_content
+    assert "const measuredWidth = measureProjectHeaderTextWidth(input);" in editor_content
+    assert "const minWidth = isDescription ? 72 : 180;" in editor_content
+    assert "input.style.setProperty('--ph-text-editor-width', `${nextWidth}px`);" in editor_content
+    assert "input.style.setProperty('--ph-text-editor-max-width', maxWidth ? `${maxWidth}px` : '100%');" in editor_content
+    assert "const verticalPadding = parseFloat(style.paddingTop || '0') + parseFloat(style.paddingBottom || '0');" in editor_content
+    assert "const lineHeight = parseFloat(style.lineHeight || '0') || (parseFloat(style.fontSize || '0') * 1.2) || 18;" in editor_content
+    assert "const contentHeight = input.scrollHeight - verticalPadding;" in editor_content
+    assert "input.style.height = `${Math.max(contentHeight, lineHeight)}px`;" in editor_content
+    assert "context.measureText(text).width" in editor_content
     assert "const sourceWidth = Math.ceil(sourceEl.getBoundingClientRect().width || 0);" in editor_content
+    assert "const sourceContainer = sourceEl.closest('.project-header-main-content');" in editor_content
     assert "const sourceStyle = window.getComputedStyle(sourceEl);" in editor_content
+    assert "replace(/[^a-z0-9]+/gi, '-').toLowerCase()" in editor_content
     assert "input.dataset.visualWidth = String(sourceWidth);" in editor_content
-    assert "input.style.setProperty('--ph-text-editor-visual-width'" in editor_content
+    assert "input.dataset.visualMaxWidth = String(maxWidth);" in editor_content
     assert "input.style.setProperty('--ph-text-editor-font-family', sourceStyle.fontFamily);" in editor_content
     assert "input.style.setProperty('--ph-text-editor-font-size', sourceStyle.fontSize);" in editor_content
     assert "input.style.setProperty('--ph-text-editor-font-weight', sourceStyle.fontWeight);" in editor_content
@@ -159,6 +174,7 @@ def test_project_header_inline_editors_keep_chip_dimensions():
     assert "input.addEventListener('input', function ()" in editor_content
     assert "project-header-text-editor" in editor_content
     assert "input = document.createElement('textarea');\n                    input.className = 'form-control form-control-sm project-inline-input project-inline-input-title';" in editor_content
+    assert "input.className = 'form-control form-control-sm project-inline-input project-inline-input-description';\n                    input.rows = 1;" in editor_content
     assert "project-additional-link-editor" in editor_content
     assert "project-observacao-editor" in editor_content
     assert "function resizeHeaderChipSelect(select)" in editor_content
@@ -166,17 +182,23 @@ def test_project_header_inline_editors_keep_chip_dimensions():
 
     assert ".project-header-chips .project-header-chip-editor.form-select" in header_css
     assert ".project-header-chip-edit-label" in header_css
+    assert "margin-bottom: 0.12rem !important;" in header_css
     assert ".project-header .project-header-text-editor.form-control" in header_css
     assert "box-sizing: content-box;" in header_css
-    assert "width: var(--ph-text-editor-visual-width, 100%);" in header_css
+    assert "width: var(--ph-text-editor-width, 100%);" in header_css
+    assert "max-width: var(--ph-text-editor-max-width, 100%);" in header_css
     assert "min-width: 0;" in header_css
     assert "font-family: var(--ph-text-editor-font-family, inherit);" in header_css
     assert "font-size: var(--ph-text-editor-font-size, inherit);" in header_css
     assert "font-weight: var(--ph-text-editor-font-weight, inherit);" in header_css
     assert "line-height: var(--ph-text-editor-line-height, inherit);" in header_css
     assert "letter-spacing: var(--ph-text-editor-letter-spacing, 0);" in header_css
-    assert "padding: 0.18rem 0;" in header_css
-    assert "padding: 0.14rem 0;" in header_css
+    assert ".project-header .project-header-text-editor--short_description.form-control" in header_css
+    assert "margin: 0 0 0.35rem;" in header_css
+    assert "margin-bottom: 0.18rem;" in header_css
+    assert "padding: 0.14rem 0.32rem;" in header_css
+    assert "padding: 0.12rem 0.28rem;" in header_css
+    assert "min-height: 0 !important;" in header_css
     assert "-webkit-line-clamp: 5;" in header_css
     assert ".project-header .project-header-description" in header_css
     assert "-webkit-line-clamp: 15;" in header_css

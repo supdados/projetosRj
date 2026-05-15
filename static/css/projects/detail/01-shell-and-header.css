@@ -52,7 +52,7 @@
 
     .project-header h1 {
         font-weight: var(--ds-font-weight-bold);
-        margin-bottom: 0.35rem;
+        margin-bottom: 0.12rem !important;
         font-size: var(--ds-font-size-xl);
         color: white;
         background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
@@ -636,8 +636,8 @@
     .project-header .project-header-text-editor.form-control,
     .project-header .project-header-text-editor.form-control-sm {
         box-sizing: content-box;
-        width: var(--ph-text-editor-visual-width, 100%);
-        max-width: 100%;
+        width: var(--ph-text-editor-width, 100%);
+        max-width: var(--ph-text-editor-max-width, 100%);
         min-width: 0;
         margin: 0 0 0.35rem;
         font-family: var(--ph-text-editor-font-family, inherit);
@@ -657,12 +657,15 @@
 
     .project-header .project-header-text-editor--titulo.form-control {
         display: block;
-        padding: 0.18rem 0;
+        margin-bottom: 0.18rem;
+        padding: 0.14rem 0.32rem;
     }
 
-    .project-header .project-header-text-editor--short-description.form-control {
+    .project-header .project-header-text-editor--short-description.form-control,
+    .project-header .project-header-text-editor--short_description.form-control {
         display: block;
-        padding: 0.14rem 0;
+        padding: 0.12rem 0.28rem;
+        min-height: 0 !important;
     }
 
     /* Estilos especiais para campos no header (fundo azul) */

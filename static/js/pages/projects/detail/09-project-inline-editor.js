@@ -416,13 +416,51 @@
                 return;
             }
 
-            const isDescription = input.classList.contains('project-header-text-editor--short-description');
-            const visualWidth = Number(input.dataset.visualWidth || '0') || 0;
-            input.style.setProperty('--ph-text-editor-visual-width', visualWidth ? `${visualWidth}px` : '100%');
+            const isDescription = (
+                input.classList.contains('project-header-text-editor--short-description')
+                || input.classList.contains('project-header-text-editor--short_description')
+            );
+            const maxWidth = Number(input.dataset.visualMaxWidth || input.dataset.visualWidth || '0') || 0;
+            const measuredWidth = measureProjectHeaderTextWidth(input);
+            const minWidth = isDescription ? 72 : 180;
+            const nextWidth = maxWidth
+                ? Math.min(maxWidth, Math.max(minWidth, measuredWidth))
+                : Math.max(minWidth, measuredWidth);
+            input.style.setProperty('--ph-text-editor-width', `${nextWidth}px`);
+            input.style.setProperty('--ph-text-editor-max-width', maxWidth ? `${maxWidth}px` : '100%');
             if (input.tagName === 'TEXTAREA') {
+                const style = window.getComputedStyle(input);
+                const verticalPadding = parseFloat(style.paddingTop || '0') + parseFloat(style.paddingBottom || '0');
+                const lineHeight = parseFloat(style.lineHeight || '0') || (parseFloat(style.fontSize || '0') * 1.2) || 18;
                 input.style.height = 'auto';
-                input.style.height = `${Math.max(input.scrollHeight, isDescription ? 34 : 38)}px`;
+                const contentHeight = input.scrollHeight - verticalPadding;
+                input.style.height = `${Math.max(contentHeight, lineHeight)}px`;
             }
+        }
+
+        function measureProjectHeaderTextWidth(input) {
+            const style = window.getComputedStyle(input);
+            const canvas = measureProjectHeaderTextWidth.canvas || document.createElement('canvas');
+            measureProjectHeaderTextWidth.canvas = canvas;
+            const context = canvas.getContext('2d');
+            if (!context) {
+                return Number(input.dataset.visualMaxWidth || input.dataset.visualWidth || '220') || 220;
+            }
+            context.font = [
+                style.fontStyle,
+                style.fontVariant,
+                style.fontWeight,
+                style.fontSize,
+                style.fontFamily,
+            ].filter(Boolean).join(' ');
+
+            const rawText = input.value || input.getAttribute('placeholder') || '';
+            const lines = rawText.split(/\r?\n/);
+            const longestWidth = lines.reduce((max, line) => {
+                const text = line || ' ';
+                return Math.max(max, context.measureText(text).width);
+            }, 0);
+            return Math.ceil(longestWidth + 24);
         }
 
         function prepareProjectHeaderTextEditor(input, sourceEl, field) {
@@ -430,11 +468,18 @@
                 return;
             }
 
-            const safeField = String(field || 'field').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+            const safeField = String(field || 'field').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
             const sourceWidth = Math.ceil(sourceEl.getBoundingClientRect().width || 0);
+            const sourceContainer = sourceEl.closest('.project-header-main-content');
+            const maxWidth = Math.ceil(
+                (sourceContainer ? sourceContainer.getBoundingClientRect().width : 0) || sourceWidth || 0
+            );
             const sourceStyle = window.getComputedStyle(sourceEl);
             if (sourceWidth) {
                 input.dataset.visualWidth = String(sourceWidth);
+            }
+            if (maxWidth) {
+                input.dataset.visualMaxWidth = String(maxWidth);
             }
             input.style.setProperty('--ph-text-editor-font-family', sourceStyle.fontFamily);
             input.style.setProperty('--ph-text-editor-font-size', sourceStyle.fontSize);
@@ -577,7 +622,7 @@
                 } else if (field === 'short_description') {
                     input = document.createElement('textarea');
                     input.className = 'form-control form-control-sm project-inline-input project-inline-input-description';
-                    input.rows = 2;
+                    input.rows = 1;
                     input.value = currentValue || '';
                     input.placeholder = 'Adicione uma descrição...';
                 } else if (field === 'titulo') {
