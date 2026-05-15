@@ -46,10 +46,6 @@
                         {% endfor %}
                     </div>
 
-                    {% if stage_tasks|length == 0 %}
-                    <div class="task-item-empty-row">Nenhuma tarefa nesta etapa.</div>
-                    {% endif %}
-
                     {% if stage_has_more %}
                     <div class="task-hub-more-row">
                         <a href="{{ url_for('main.project_tasks', project_id=project.id) }}" class="task-hub-more-link">Ver mais na lista completa</a>

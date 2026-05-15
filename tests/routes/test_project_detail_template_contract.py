@@ -143,6 +143,7 @@ def test_project_detail_stage_task_quick_add_matches_task_hub_contract(
 
     assert 'data-stage-panel="' not in html
     assert "task-item-row" not in html
+    assert "Nenhuma tarefa nesta etapa." not in html
 
 
 def test_project_stage_tasks_panel_renders_hub_markup_csrf_and_legacy_bucket(

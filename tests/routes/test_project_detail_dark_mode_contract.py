@@ -53,6 +53,8 @@ def test_project_stage_task_modal_dark_mode_uses_single_surface_base():
 
     assert "--stage-task-modal-bg: #273447;" in quick_add_css
     assert "background: #0f1c2c;" not in quick_add_css
+    assert "height: auto;" in quick_add_css
+    assert "max-height: clamp(420px, 64vh, 620px);" in quick_add_css
     assert "--tasks-bg: var(--stage-task-modal-bg);" in scoped_css
     assert "--tasks-card: var(--stage-task-modal-bg);" in scoped_css
     assert (

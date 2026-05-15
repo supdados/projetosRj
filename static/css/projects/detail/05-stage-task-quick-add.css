@@ -118,9 +118,9 @@
 .stage-task-quick-add__panel {
     position: relative;
     width: min(1280px, 94vw);
-    /* Altura fixa menor — referência mostra panel compacto. Body interno
-       rola; header e rodapé ficam fixos. */
-    height: clamp(420px, 64vh, 620px);
+    /* Cresce conforme o conteúdo e para no teto definido. */
+    height: auto;
+    max-height: clamp(420px, 64vh, 620px);
     background: #ffffff;
     border-radius: var(--td-radius-lg, 14px);
     border: 1px solid #d7e2ef;
