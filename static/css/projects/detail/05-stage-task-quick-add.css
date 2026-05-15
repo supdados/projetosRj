@@ -58,20 +58,32 @@
     display: none;
 }
 
+html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating.etapa-action-create-task,
 html[data-theme="dark"] .etapa-action-create-task {
-    color: #9fb2c7 !important;
+    color: #cdd9e7 !important;
+    background: transparent !important;
+    border-color: transparent !important;
 }
 
+html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating.etapa-action-create-task:hover,
+html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating.etapa-action-create-task:focus,
+html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating.etapa-action-create-task:focus-visible,
 html[data-theme="dark"] .etapa-action-create-task:hover,
 html[data-theme="dark"] .etapa-action-create-task:focus,
 html[data-theme="dark"] .etapa-action-create-task:focus-visible {
-    color: #c9deff !important;
-    background: rgba(99, 166, 219, 0.18) !important;
+    color: #cfe6ff !important;
+    background: rgba(96, 165, 250, 0.16) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
 }
 
+/* Bolinha de notificação no dark: tom âmbar suave (semântica de notificação)
+   com leve brilho — distinto do azul do hover e do verde de sucesso. */
 html[data-theme="dark"] .etapa-action-task-count {
-    background: #3b82f6;
-    box-shadow: 0 0 0 2px var(--app-color-surface, #1f2a3a);
+    background: #f59e0b;
+    color: #1a1206;
+    font-weight: 700;
+    box-shadow: 0 0 0 2px #1f2a3a, 0 1px 3px rgba(245, 158, 11, 0.32);
 }
 
 /* Modal */

@@ -1,6 +1,32 @@
 // === task-item-operations.js — Funções de operações AJAX (updateItemStatus, updateItemPrioridade, etc.) ===
     var TASK_FINALIZADA_STATUS = 'finalizada';
-    var TASK_FINALIZE_CONFETTI_COLORS = ['#f4d35e', '#ee964b', '#f95738', '#0d8b8b', '#4f7cac', '#9c6ade', '#52b788'];
+    // Múltiplas paletas — uma é sorteada a cada celebração para que projetos
+    // diferentes tenham "vibes" visuais distintas (não pareçam copy/paste).
+    var CONFETTI_PALETTES = [
+        ['#f4d35e', '#ee964b', '#f95738', '#0d8b8b', '#4f7cac', '#9c6ade', '#52b788'],
+        ['#ff6b9d', '#f06292', '#c4378b', '#7e57c2', '#5e35b1', '#3949ab', '#ffd54f'],
+        ['#06d6a0', '#118ab2', '#073b4c', '#ffd166', '#ef476f', '#83c5be', '#e29578'],
+        ['#fb8500', '#ffb703', '#fdf0d5', '#8ecae6', '#219ebc', '#023047', '#ff006e'],
+        ['#ffba08', '#faa307', '#f48c06', '#dc2f02', '#9d0208', '#3a86ff', '#8338ec'],
+        ['#caffbf', '#9bf6ff', '#a0c4ff', '#bdb2ff', '#ffc6ff', '#ffadad', '#ffd6a5'],
+        ['#2ec4b6', '#cbf3f0', '#ff9f1c', '#ffbf69', '#e71d36', '#011627', '#fdfffc'],
+    ];
+    // Distribuição de formas por "vibe". Cada vibe sorteia formas diferentes
+    // para variar o aspecto visual entre celebrações.
+    var CONFETTI_SHAPE_MIXES = [
+        // mix balanceado clássico
+        { rect: 0.45, circle: 0.20, triangle: 0.15, streamer: 0.12, star: 0.08 },
+        // dominado por estrelas e círculos (mais "festa")
+        { rect: 0.18, circle: 0.30, triangle: 0.10, streamer: 0.12, star: 0.30 },
+        // muitos streamers (efeito serpentina)
+        { rect: 0.20, circle: 0.10, triangle: 0.15, streamer: 0.45, star: 0.10 },
+        // geométrico (triângulos + retângulos)
+        { rect: 0.40, circle: 0.10, triangle: 0.40, streamer: 0.05, star: 0.05 },
+        // suave / orgânico (círculos + estrelas)
+        { rect: 0.20, circle: 0.45, triangle: 0.05, streamer: 0.10, star: 0.20 },
+    ];
+    var activePalette = CONFETTI_PALETTES[0];
+    var activeShapeMix = CONFETTI_SHAPE_MIXES[0];
 
     var taskFinalizeCelebration = (function () {
         var canvas = null;
@@ -21,7 +47,34 @@
         }
 
         function randomColor() {
-            return TASK_FINALIZE_CONFETTI_COLORS[Math.floor(Math.random() * TASK_FINALIZE_CONFETTI_COLORS.length)];
+            return activePalette[Math.floor(Math.random() * activePalette.length)];
+        }
+
+        function pickShape(circleChanceLegacy) {
+            // Se o caller passou circleChance explicitamente (API antiga),
+            // mantemos o comportamento binário rect/circle para não quebrar.
+            if (Number.isFinite(circleChanceLegacy) && circleChanceLegacy >= 0 && circleChanceLegacy <= 1) {
+                // Mistura binária + chance pequena de variar para fora.
+                var roll = Math.random();
+                if (roll < circleChanceLegacy * 0.78) return 'circle';
+                if (roll < circleChanceLegacy * 0.78 + 0.10) return 'triangle';
+                if (roll < circleChanceLegacy * 0.78 + 0.16) return 'star';
+                if (roll < circleChanceLegacy * 0.78 + 0.22) return 'streamer';
+                return 'rect';
+            }
+            var r = Math.random();
+            var acc = 0;
+            var keys = ['rect', 'circle', 'triangle', 'streamer', 'star'];
+            for (var i = 0; i < keys.length; i += 1) {
+                acc += activeShapeMix[keys[i]] || 0;
+                if (r < acc) return keys[i];
+            }
+            return 'rect';
+        }
+
+        function randomizeVibe() {
+            activePalette = CONFETTI_PALETTES[Math.floor(Math.random() * CONFETTI_PALETTES.length)];
+            activeShapeMix = CONFETTI_SHAPE_MIXES[Math.floor(Math.random() * CONFETTI_SHAPE_MIXES.length)];
         }
 
         function ensureCanvas() {
@@ -111,7 +164,7 @@
                     tiltSpeed: randomBetween(0.08, 0.22),
                     width: randomBetween(4, 9),
                     height: randomBetween(6, 12),
-                    shape: Math.random() < circleChance ? 'circle' : 'rect',
+                    shape: pickShape(circleChance),
                     color: randomColor(),
                     life: life,
                     maxLife: life,
@@ -146,7 +199,7 @@
                     tiltSpeed: randomBetween(0.06, 0.18),
                     width: randomBetween(3, 7),
                     height: randomBetween(5, 10),
-                    shape: Math.random() < circleChance ? 'circle' : 'rect',
+                    shape: pickShape(circleChance),
                     color: randomColor(),
                     life: life,
                     maxLife: life,
@@ -279,6 +332,35 @@
                 ctx.beginPath();
                 ctx.arc(0, 0, Math.max(2, particle.width * 0.48), 0, Math.PI * 2);
                 ctx.fill();
+            } else if (particle.shape === 'triangle') {
+                var ts = Math.max(3, particle.width * 0.95);
+                ctx.beginPath();
+                ctx.moveTo(0, -ts);
+                ctx.lineTo(ts * 0.92, ts * 0.78);
+                ctx.lineTo(-ts * 0.92, ts * 0.78);
+                ctx.closePath();
+                ctx.fill();
+            } else if (particle.shape === 'star') {
+                var spikes = 5;
+                var outer = Math.max(3, particle.width * 0.9);
+                var inner = outer * 0.46;
+                ctx.beginPath();
+                for (var s = 0; s < spikes * 2; s += 1) {
+                    var radius = (s % 2 === 0) ? outer : inner;
+                    var angle = (Math.PI / spikes) * s - Math.PI / 2;
+                    var px = Math.cos(angle) * radius;
+                    var py = Math.sin(angle) * radius;
+                    if (s === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+            } else if (particle.shape === 'streamer') {
+                // Fita ondulada — retângulo longo com curvatura via flip vertical
+                var len = particle.height * 1.8;
+                var thick = Math.max(1.5, particle.width * 0.42);
+                var wave = Math.sin(particle.tilt * 1.3) * 0.6 + 0.4;
+                ctx.scale(1, wave);
+                ctx.fillRect(-thick / 2, -len / 2, thick, len);
             } else {
                 var flip = 0.35 + ((Math.sin(particle.tilt) + 1) * 0.45);
                 ctx.scale(1, flip);
@@ -355,6 +437,7 @@
             ensureCanvas();
             if (!canvas || !ctx) return;
 
+            randomizeVibe();
             var origin = resolveOrigin(originLike);
             var patternKey = pickConfettiPattern();
             if (hideTimer) {
@@ -374,10 +457,141 @@
             }
         }
 
+        function triggerEpic() {
+            if (prefersReducedMotion()) return;
+            ensureCanvas();
+            if (!canvas || !ctx) return;
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+                hideTimer = null;
+            }
+            randomizeVibe();
+            canvas.classList.add('is-active');
+
+            var viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1280;
+            var viewportHeight = window.innerHeight || document.documentElement.clientHeight || 720;
+
+            // Cinco fontes ao longo do topo + dois lados, com fountain central.
+            var sources = [
+                { x: viewportWidth * 0.12, y: viewportHeight * 0.18, angle: -Math.PI / 2 + 0.35 },
+                { x: viewportWidth * 0.30, y: viewportHeight * 0.14, angle: -Math.PI / 2 + 0.18 },
+                { x: viewportWidth * 0.50, y: viewportHeight * 0.22, angle: -Math.PI / 2 },
+                { x: viewportWidth * 0.70, y: viewportHeight * 0.14, angle: -Math.PI / 2 - 0.18 },
+                { x: viewportWidth * 0.88, y: viewportHeight * 0.18, angle: -Math.PI / 2 - 0.35 },
+            ];
+            for (var i = 0; i < sources.length; i += 1) {
+                var src = sources[i];
+                spawnBurst(src, 90, 1.05, 7.0, 14.5, 0.18, 0.36, {
+                    angleCenter: src.angle,
+                    xJitter: 14,
+                    yJitter: 10,
+                    circleChance: 0.22,
+                });
+            }
+
+            // Cascata densa do topo cobrindo a tela inteira.
+            spawnCascade(
+                { x: viewportWidth / 2, y: viewportHeight * 0.05 },
+                260,
+                {
+                    xSpread: viewportWidth * 0.55,
+                    yMin: 20,
+                    yMax: 220,
+                    vxMin: -2.6,
+                    vxMax: 2.6,
+                    vyMin: 2.6,
+                    vyMax: 6.4,
+                    gravityMin: 0.12,
+                    gravityMax: 0.26,
+                    circleChance: 0.2,
+                }
+            );
+
+            // Segundo wave depois de 280ms para prolongar a celebração.
+            window.setTimeout(function () {
+                if (!canvas || !ctx) return;
+                var sideOffset = Math.min(Math.max(viewportWidth * 0.18, 140), 320);
+                spawnBurst(
+                    { x: sideOffset, y: viewportHeight * 0.55 },
+                    100,
+                    0.55,
+                    7.4,
+                    14.6,
+                    0.18,
+                    0.34,
+                    { angleCenter: -0.85, xJitter: 8, yJitter: 8 }
+                );
+                spawnBurst(
+                    { x: viewportWidth - sideOffset, y: viewportHeight * 0.55 },
+                    100,
+                    0.55,
+                    7.4,
+                    14.6,
+                    0.18,
+                    0.34,
+                    { angleCenter: -2.29, xJitter: 8, yJitter: 8 }
+                );
+                spawnCascade(
+                    { x: viewportWidth / 2, y: viewportHeight * 0.08 },
+                    180,
+                    {
+                        xSpread: viewportWidth * 0.50,
+                        yMin: 30,
+                        yMax: 200,
+                        vxMin: -2.2,
+                        vxMax: 2.2,
+                        vyMin: 2.8,
+                        vyMax: 6.8,
+                        gravityMin: 0.13,
+                        gravityMax: 0.26,
+                    }
+                );
+                if (particles.length > 1400) {
+                    particles.splice(0, particles.length - 1400);
+                }
+                if (!rafId) {
+                    rafId = window.requestAnimationFrame(tick);
+                }
+            }, 280);
+
+            // Terceiro wave (fountain do centro inferior) após 620ms.
+            window.setTimeout(function () {
+                if (!canvas || !ctx) return;
+                spawnBurst(
+                    { x: viewportWidth / 2, y: viewportHeight * 0.78 },
+                    160,
+                    0.78,
+                    9.2,
+                    16.0,
+                    0.20,
+                    0.36,
+                    { xJitter: 18, yJitter: 12, circleChance: 0.24 }
+                );
+                if (particles.length > 1400) {
+                    particles.splice(0, particles.length - 1400);
+                }
+                if (!rafId) {
+                    rafId = window.requestAnimationFrame(tick);
+                }
+            }, 620);
+
+            if (particles.length > 1400) {
+                particles.splice(0, particles.length - 1400);
+            }
+            if (!rafId) {
+                rafId = window.requestAnimationFrame(tick);
+            }
+        }
+
         return {
             trigger: trigger,
+            triggerEpic: triggerEpic,
         };
     })();
+
+    if (typeof window !== 'undefined') {
+        window.finalizeCelebration = taskFinalizeCelebration;
+    }
 
     function normalizeTaskStatusValue(status) {
         var normalized = String(status == null ? '' : status).trim();

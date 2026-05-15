@@ -342,8 +342,11 @@
 
                 showConcludeCelebration('Objetivo concluído', data.message || 'Projeto finalizado com sucesso.');
                 playConcludeSuccessChime();
+                if (window.finalizeCelebration && typeof window.finalizeCelebration.triggerEpic === 'function') {
+                    window.finalizeCelebration.triggerEpic();
+                }
 
-                const celebrationDelay = reduceMotionQuery && reduceMotionQuery.matches ? 450 : 1250;
+                const celebrationDelay = reduceMotionQuery && reduceMotionQuery.matches ? 450 : 2400;
                 await waitMs(celebrationDelay);
                 window.location.href = data.redirect_url || concludeProjectForm.action;
             } catch (error) {
