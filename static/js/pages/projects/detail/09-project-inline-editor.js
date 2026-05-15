@@ -417,18 +417,8 @@
             }
 
             const isDescription = input.classList.contains('project-header-text-editor--short-description');
-            const header = input.closest('.project-header');
-            const headerWidth = header ? header.getBoundingClientRect().width : 0;
-            const initialWidth = headerWidth ? Math.round(headerWidth * 0.4) : 320;
-            const maxChars = isDescription ? 88 : 76;
-            const value = input.value || '';
-            const placeholder = input.getAttribute('placeholder') || '';
-            const lines = (value || placeholder || '').split(/\r?\n/);
-            const longestLine = lines.reduce((max, line) => Math.max(max, line.length), 0);
-            const widthChars = Math.min(maxChars, Math.max(12, longestLine + 2));
-
-            input.style.setProperty('--ph-text-editor-initial-width', `${initialWidth}px`);
-            input.style.setProperty('--ph-text-editor-content-width', `${widthChars}ch`);
+            const visualWidth = Number(input.dataset.visualWidth || '0') || 0;
+            input.style.setProperty('--ph-text-editor-visual-width', visualWidth ? `${visualWidth}px` : '100%');
             if (input.tagName === 'TEXTAREA') {
                 input.style.height = 'auto';
                 input.style.height = `${Math.max(input.scrollHeight, isDescription ? 34 : 38)}px`;
@@ -441,6 +431,16 @@
             }
 
             const safeField = String(field || 'field').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+            const sourceWidth = Math.ceil(sourceEl.getBoundingClientRect().width || 0);
+            const sourceStyle = window.getComputedStyle(sourceEl);
+            if (sourceWidth) {
+                input.dataset.visualWidth = String(sourceWidth);
+            }
+            input.style.setProperty('--ph-text-editor-font-family', sourceStyle.fontFamily);
+            input.style.setProperty('--ph-text-editor-font-size', sourceStyle.fontSize);
+            input.style.setProperty('--ph-text-editor-font-weight', sourceStyle.fontWeight);
+            input.style.setProperty('--ph-text-editor-line-height', sourceStyle.lineHeight);
+            input.style.setProperty('--ph-text-editor-letter-spacing', sourceStyle.letterSpacing);
             input.classList.add('project-header-text-editor', `project-header-text-editor--${safeField}`);
             resizeProjectHeaderTextEditor(input);
             input.addEventListener('input', function () {

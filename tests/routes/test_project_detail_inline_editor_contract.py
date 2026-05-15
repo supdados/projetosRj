@@ -146,9 +146,15 @@ def test_project_header_inline_editors_keep_chip_dimensions():
 
     assert "function resizeProjectHeaderTextEditor(input)" in editor_content
     assert "function prepareProjectHeaderTextEditor(input, sourceEl, field)" in editor_content
-    assert "const initialWidth = headerWidth ? Math.round(headerWidth * 0.4) : 320;" in editor_content
-    assert "input.style.setProperty('--ph-text-editor-initial-width'" in editor_content
-    assert "input.style.setProperty('--ph-text-editor-content-width'" in editor_content
+    assert "const sourceWidth = Math.ceil(sourceEl.getBoundingClientRect().width || 0);" in editor_content
+    assert "const sourceStyle = window.getComputedStyle(sourceEl);" in editor_content
+    assert "input.dataset.visualWidth = String(sourceWidth);" in editor_content
+    assert "input.style.setProperty('--ph-text-editor-visual-width'" in editor_content
+    assert "input.style.setProperty('--ph-text-editor-font-family', sourceStyle.fontFamily);" in editor_content
+    assert "input.style.setProperty('--ph-text-editor-font-size', sourceStyle.fontSize);" in editor_content
+    assert "input.style.setProperty('--ph-text-editor-font-weight', sourceStyle.fontWeight);" in editor_content
+    assert "input.style.setProperty('--ph-text-editor-line-height', sourceStyle.lineHeight);" in editor_content
+    assert "input.style.setProperty('--ph-text-editor-letter-spacing', sourceStyle.letterSpacing);" in editor_content
     assert "input.style.height = 'auto';" in editor_content
     assert "input.addEventListener('input', function ()" in editor_content
     assert "project-header-text-editor" in editor_content
@@ -161,7 +167,16 @@ def test_project_header_inline_editors_keep_chip_dimensions():
     assert ".project-header-chips .project-header-chip-editor.form-select" in header_css
     assert ".project-header-chip-edit-label" in header_css
     assert ".project-header .project-header-text-editor.form-control" in header_css
-    assert "width: clamp(var(--ph-text-editor-initial-width, 320px), var(--ph-text-editor-content-width, 40%), 100%);" in header_css
+    assert "box-sizing: content-box;" in header_css
+    assert "width: var(--ph-text-editor-visual-width, 100%);" in header_css
+    assert "min-width: 0;" in header_css
+    assert "font-family: var(--ph-text-editor-font-family, inherit);" in header_css
+    assert "font-size: var(--ph-text-editor-font-size, inherit);" in header_css
+    assert "font-weight: var(--ph-text-editor-font-weight, inherit);" in header_css
+    assert "line-height: var(--ph-text-editor-line-height, inherit);" in header_css
+    assert "letter-spacing: var(--ph-text-editor-letter-spacing, 0);" in header_css
+    assert "padding: 0.18rem 0;" in header_css
+    assert "padding: 0.14rem 0;" in header_css
     assert "-webkit-line-clamp: 5;" in header_css
     assert ".project-header .project-header-description" in header_css
     assert "-webkit-line-clamp: 15;" in header_css
@@ -169,18 +184,33 @@ def test_project_header_inline_editors_keep_chip_dimensions():
     assert "height: var(--ph-editor-height, 1.74rem);" in header_css
     assert "min-width: var(--ph-editor-width);" in header_css
     assert "max-width: var(--ph-editor-width);" in header_css
+    assert "font-family: var(--ds-font-family-heading);" in header_css
+    assert "font-size: var(--ds-font-size-xl);" in header_css
+    assert "font-weight: var(--ds-font-weight-bold);" in header_css
+    assert "input.form-control[data-field]:not(.project-header-text-editor):not(.project-header-chip-editor)" in header_css
+    assert "select.form-select[data-field]:not(.project-header-chip-editor)" in header_css
+    assert "textarea.form-control[data-field]:not(.project-header-text-editor)" in header_css
+    assert ".project-detail-abep-combobox[data-field] .project-detail-abep-input.form-control" in header_css
+    assert "font-family: var(--ds-font-family-body);" in header_css
+    assert "font-size: var(--ds-font-size-sm);" in header_css
+    assert "font-weight: var(--ds-font-weight-regular);" in header_css
     assert ".additional-info-box .project-additional-link-editor.form-control" in header_css
-    assert "width: 60%;" in header_css
+    assert "display: inline-block;" in header_css
+    assert "width: min(60%, 38rem);" in header_css
+    assert "max-width: calc(100% - 8rem);" in header_css
+    assert "margin-left: 0.35rem;" in header_css
     assert ".additional-info-box .project-observacao-editor.form-control" in header_css
     assert "width: 70%;" in header_css
-    assert "border: 1px solid #d7e4f1;" in header_css
+    assert "border: 1px solid #e5e7eb;" in header_css
     assert "html:not([data-theme=\"dark\"]) input.form-control[data-field]:not(.project-header-text-editor):not(.project-header-chip-editor)" in header_css
     assert "html:not([data-theme=\"dark\"]) select.form-select[data-field]:not(.project-header-chip-editor)" in header_css
     assert "html:not([data-theme=\"dark\"]) textarea.form-control[data-field]:not(.project-header-text-editor)" in header_css
     assert "html:not([data-theme=\"dark\"]) .project-detail-abep-combobox[data-field] .project-detail-abep-input.form-control" in header_css
     assert "html:not([data-theme=\"dark\"]) .additional-info-box .project-additional-link-editor.form-control" in header_css
     assert "html:not([data-theme=\"dark\"]) .additional-info-box .project-observacao-editor.form-control" in header_css
-    assert "border: 1px solid #005A92;" in header_css
+    assert "border: 1px solid #e5e7eb !important;" in header_css
+    assert "border-color: #d6dbe2 !important;" in header_css
+    assert "box-shadow: 0 0 0 0.14rem rgba(31, 41, 55, 0.06) !important;" in header_css
 
     assert (
         "html[data-theme=\"dark\"] body.is-authenticated "

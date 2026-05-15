@@ -102,6 +102,23 @@ def test_project_header_meta_chips_stay_transparent_in_dark_mode():
     ) in detail_dark_css
 
 
+def test_project_detail_dark_selects_keep_dropdown_indicator():
+    content = _read(
+        Path(__file__).resolve().parents[2] / "static" / "css" / "theme-dark.css"
+    )
+
+    assert "html[data-theme=\"dark\"] body.is-authenticated .form-select," in content
+    assert "background-image: url(\"data:image/svg+xml" in content
+    assert "stroke='%23cfe3f6'" in content
+    assert "background-position: right 0.75rem center !important;" in content
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header-chips .project-header-chip-editor.form-select"
+    ) in content
+    assert "stroke='%23e6eef7'" in content
+    assert "background-position: right 0.55rem center !important;" in content
+
+
 def test_project_header_meta_chips_render_with_scoped_classes(client_user, seed_data):
     response = client_user.get(f"/project/{seed_data['project_id']}")
 

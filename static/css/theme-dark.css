@@ -602,6 +602,25 @@ html[data-theme="dark"] body.is-authenticated .form-select-glass-enhanced {
 }
 
 
+html[data-theme="dark"] body.is-authenticated .form-select,
+html[data-theme="dark"] body.is-authenticated .form-select-glass,
+html[data-theme="dark"] body.is-authenticated .form-select-glass-enhanced {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23cfe3f6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m4 6 4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header-chips .project-header-chip-editor.form-select,
+html[data-theme="dark"] body.is-authenticated .project-header-chips .project-header-chip-editor.form-select-sm {
+    background-color: transparent !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e6eef7' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='m4 6 4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.55rem center !important;
+    background-size: 0.7rem 0.7rem !important;
+}
+
+
 html[data-theme="dark"] body.is-authenticated .form-control::placeholder,
 html[data-theme="dark"] body.is-authenticated .form-select::placeholder,
 html[data-theme="dark"] body.is-authenticated .form-control-glass::placeholder,

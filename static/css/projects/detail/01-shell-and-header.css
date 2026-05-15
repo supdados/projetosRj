@@ -562,7 +562,7 @@
     [data-field] textarea.form-control {
         font-size: var(--ds-font-size-sm);
         padding: 0.25rem 0.5rem;
-        border: 1px solid #005A92;
+        border: 1px solid #e5e7eb;
         border-radius: 4px;
         transition: all 0.2s ease;
     }
@@ -570,18 +570,29 @@
     [data-field] input.form-control:focus,
     [data-field] select.form-select:focus,
     [data-field] textarea.form-control:focus {
-        border-color: #004b79;
-        box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.1);
+        border-color: #d6dbe2;
+        box-shadow: 0 0 0 0.14rem rgba(31, 41, 55, 0.06);
         outline: none;
+    }
+
+    input.form-control[data-field]:not(.project-header-text-editor):not(.project-header-chip-editor),
+    select.form-select[data-field]:not(.project-header-chip-editor),
+    textarea.form-control[data-field]:not(.project-header-text-editor),
+    .project-detail-abep-combobox[data-field] .project-detail-abep-input.form-control {
+        font-family: var(--ds-font-family-body);
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-regular);
+        line-height: var(--ds-line-height-snug);
     }
 
     html:not([data-theme="dark"]) input.form-control[data-field]:not(.project-header-text-editor):not(.project-header-chip-editor),
     html:not([data-theme="dark"]) select.form-select[data-field]:not(.project-header-chip-editor),
     html:not([data-theme="dark"]) textarea.form-control[data-field]:not(.project-header-text-editor),
     html:not([data-theme="dark"]) .project-detail-abep-combobox[data-field] .project-detail-abep-input.form-control {
-        font-size: var(--ds-font-size-sm);
         padding: 0.25rem 0.5rem;
-        border: 1px solid #005A92;
+        color: #1e293b;
+        background: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
         border-radius: 4px;
         transition: all 0.2s ease;
     }
@@ -590,8 +601,8 @@
     html:not([data-theme="dark"]) select.form-select[data-field]:not(.project-header-chip-editor):focus,
     html:not([data-theme="dark"]) textarea.form-control[data-field]:not(.project-header-text-editor):focus,
     html:not([data-theme="dark"]) .project-detail-abep-combobox[data-field] .project-detail-abep-input.form-control:focus {
-        border-color: #004b79;
-        box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.1);
+        border-color: #d6dbe2 !important;
+        box-shadow: 0 0 0 0.14rem rgba(31, 41, 55, 0.06) !important;
         outline: none;
     }
 
@@ -602,16 +613,19 @@
     }
 
     .project-inline-input-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        line-height: 1.2;
+        font-family: var(--ds-font-family-heading);
+        font-size: var(--ds-font-size-xl);
+        font-weight: var(--ds-font-weight-bold);
+        line-height: var(--ds-line-height-snug);
         border-radius: 8px;
         padding: 0.5rem 0.75rem;
     }
 
     .project-inline-input-description {
-        font-size: 0.875rem;
-        line-height: 1.4;
+        font-family: var(--ds-font-family-body);
+        font-size: var(--ds-font-size-sm);
+        font-weight: var(--ds-font-weight-regular);
+        line-height: var(--ds-line-height-normal);
         border-radius: 6px;
         padding: 0.4rem 0.6rem;
         resize: vertical;
@@ -621,10 +635,16 @@
 
     .project-header .project-header-text-editor.form-control,
     .project-header .project-header-text-editor.form-control-sm {
-        width: clamp(var(--ph-text-editor-initial-width, 320px), var(--ph-text-editor-content-width, 40%), 100%);
+        box-sizing: content-box;
+        width: var(--ph-text-editor-visual-width, 100%);
         max-width: 100%;
-        min-width: min(var(--ph-text-editor-initial-width, 320px), 100%);
+        min-width: 0;
         margin: 0 0 0.35rem;
+        font-family: var(--ph-text-editor-font-family, inherit);
+        font-size: var(--ph-text-editor-font-size, inherit);
+        font-weight: var(--ph-text-editor-font-weight, inherit);
+        line-height: var(--ph-text-editor-line-height, inherit);
+        letter-spacing: var(--ph-text-editor-letter-spacing, 0);
         background: rgba(255, 255, 255, 0.08) !important;
         color: #fff !important;
         border: 1px solid rgba(255, 255, 255, 0.18) !important;
@@ -637,12 +657,12 @@
 
     .project-header .project-header-text-editor--titulo.form-control {
         display: block;
-        padding: 0.32rem 0.5rem;
+        padding: 0.18rem 0;
     }
 
     .project-header .project-header-text-editor--short-description.form-control {
         display: block;
-        padding: 0.26rem 0.45rem;
+        padding: 0.14rem 0;
     }
 
     /* Estilos especiais para campos no header (fundo azul) */
@@ -1309,11 +1329,19 @@
 
 .additional-info-box .project-additional-link-editor.form-control,
 .additional-info-box .project-additional-link-editor.form-control-sm {
-    width: 60%;
-    max-width: 60%;
+    display: inline-block;
+    vertical-align: middle;
+    width: min(60%, 38rem);
+    max-width: calc(100% - 8rem);
     min-width: min(18rem, 100%);
+    margin-left: 0.35rem;
+    font-family: var(--ds-font-family-body);
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-regular);
+    line-height: var(--ds-line-height-normal);
+    color: #005A92;
     background: #ffffff;
-    border: 1px solid #d7e4f1;
+    border: 1px solid #e5e7eb;
     box-shadow: none;
 }
 
@@ -1322,8 +1350,13 @@
     width: 70%;
     max-width: 70%;
     min-width: min(22rem, 100%);
+    font-family: var(--ds-font-family-body);
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-regular);
+    line-height: var(--ds-line-height-normal);
+    color: #64748b;
     background: #ffffff;
-    border: 1px solid #d7e4f1;
+    border: 1px solid #e5e7eb;
     box-shadow: none;
     resize: vertical;
 }
@@ -1332,15 +1365,15 @@
 .additional-info-box .project-additional-link-editor.form-control-sm:focus,
 .additional-info-box .project-observacao-editor.form-control:focus,
 .additional-info-box .project-observacao-editor.form-control-sm:focus {
-    border-color: #9ec4e8;
-    box-shadow: 0 0 0 0.12rem rgba(0, 90, 146, 0.12);
+    border-color: #d6dbe2;
+    box-shadow: 0 0 0 0.12rem rgba(31, 41, 55, 0.06);
 }
 
 html:not([data-theme="dark"]) .additional-info-box .project-additional-link-editor.form-control,
 html:not([data-theme="dark"]) .additional-info-box .project-additional-link-editor.form-control-sm,
 html:not([data-theme="dark"]) .additional-info-box .project-observacao-editor.form-control,
 html:not([data-theme="dark"]) .additional-info-box .project-observacao-editor.form-control-sm {
-    border-color: #005A92;
+    border: 1px solid #e5e7eb !important;
 }
 
 @media (max-width: 767px) {
@@ -1348,6 +1381,9 @@ html:not([data-theme="dark"]) .additional-info-box .project-observacao-editor.fo
     .additional-info-box .project-additional-link-editor.form-control-sm,
     .additional-info-box .project-observacao-editor.form-control,
     .additional-info-box .project-observacao-editor.form-control-sm {
+        display: block;
+        margin-left: 0;
+        margin-top: 0.35rem;
         width: 100%;
         max-width: 100%;
         min-width: 0;
