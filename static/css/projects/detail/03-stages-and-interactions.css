@@ -1282,8 +1282,14 @@
 
     .project-header-description {
         max-height: none;
-        overflow: visible;
         line-height: var(--ds-line-height-normal);
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 15;
+        line-clamp: 15;
+        overflow: hidden;
+        white-space: pre-line;
+        overflow-wrap: anywhere;
     }
 
     .project-compact-header {

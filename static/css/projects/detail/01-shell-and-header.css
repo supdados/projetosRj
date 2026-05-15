@@ -62,6 +62,13 @@
         position: relative;
         z-index: 1;
         line-height: var(--ds-line-height-snug);
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 5;
+        line-clamp: 5;
+        overflow: hidden;
+        white-space: pre-line;
+        overflow-wrap: anywhere;
     }
 
     .project-header p {
@@ -73,6 +80,16 @@
         display: flex;
         flex-wrap: wrap;
         gap: 0.7rem;
+    }
+
+    .project-header .project-header-description {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 15;
+        line-clamp: 15;
+        overflow: hidden;
+        white-space: pre-line;
+        overflow-wrap: anywhere;
     }
 
     /* Datas inline com separador · */
@@ -558,6 +575,26 @@
         outline: none;
     }
 
+    html:not([data-theme="dark"]) input.form-control[data-field]:not(.project-header-text-editor):not(.project-header-chip-editor),
+    html:not([data-theme="dark"]) select.form-select[data-field]:not(.project-header-chip-editor),
+    html:not([data-theme="dark"]) textarea.form-control[data-field]:not(.project-header-text-editor),
+    html:not([data-theme="dark"]) .project-detail-abep-combobox[data-field] .project-detail-abep-input.form-control {
+        font-size: var(--ds-font-size-sm);
+        padding: 0.25rem 0.5rem;
+        border: 1px solid #005A92;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    html:not([data-theme="dark"]) input.form-control[data-field]:not(.project-header-text-editor):not(.project-header-chip-editor):focus,
+    html:not([data-theme="dark"]) select.form-select[data-field]:not(.project-header-chip-editor):focus,
+    html:not([data-theme="dark"]) textarea.form-control[data-field]:not(.project-header-text-editor):focus,
+    html:not([data-theme="dark"]) .project-detail-abep-combobox[data-field] .project-detail-abep-input.form-control:focus {
+        border-color: #004b79;
+        box-shadow: 0 0 0 0.2rem rgba(0, 90, 146, 0.1);
+        outline: none;
+    }
+
     .project-inline-input {
         width: 100%;
         margin-bottom: 0.5rem;
@@ -580,6 +617,32 @@
         resize: vertical;
         min-height: 38px;
         max-height: 80px;
+    }
+
+    .project-header .project-header-text-editor.form-control,
+    .project-header .project-header-text-editor.form-control-sm {
+        width: clamp(var(--ph-text-editor-initial-width, 320px), var(--ph-text-editor-content-width, 40%), 100%);
+        max-width: 100%;
+        min-width: min(var(--ph-text-editor-initial-width, 320px), 100%);
+        margin: 0 0 0.35rem;
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: #fff !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        box-shadow: none !important;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        resize: none;
+        transition: width 0.12s ease, height 0.12s ease, border-color 0.16s ease, background-color 0.16s ease;
+    }
+
+    .project-header .project-header-text-editor--titulo.form-control {
+        display: block;
+        padding: 0.32rem 0.5rem;
+    }
+
+    .project-header .project-header-text-editor--short-description.form-control {
+        display: block;
+        padding: 0.26rem 0.45rem;
     }
 
     /* Estilos especiais para campos no header (fundo azul) */
@@ -630,6 +693,16 @@
         background: rgba(255, 255, 255, 0.3);
         border-color: rgba(255, 255, 255, 0.5);
         box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1);
+    }
+
+    .project-header .project-header-text-editor.form-control:focus,
+    .project-header .project-header-text-editor.form-control:focus-visible,
+    .project-header .project-header-text-editor.form-control-sm:focus,
+    .project-header .project-header-text-editor.form-control-sm:focus-visible {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border-color: rgba(255, 255, 255, 0.18) !important;
+        box-shadow: none !important;
+        outline: 0;
     }
 
     .btn-save-project,
@@ -1069,6 +1142,26 @@
     z-index: 1;
 }
 
+.project-header-chip-edit-wrap {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 0.14rem;
+    width: var(--ph-editor-width);
+    min-width: var(--ph-editor-width);
+}
+
+.project-header-chip-edit-label {
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
 .ph-chip {
     display: inline-flex;
     align-items: center;
@@ -1104,6 +1197,50 @@
     height: auto;
     min-width: 130px;
     max-width: 220px;
+}
+
+.project-header-chips .project-header-chip-editor.form-select,
+.project-header-chips .project-header-chip-editor.form-select-sm,
+.project-header-chips .project-header-chip-editor.form-control,
+.project-header-chips .project-header-chip-editor.form-control-sm {
+    width: var(--ph-editor-width);
+    min-width: var(--ph-editor-width);
+    max-width: var(--ph-editor-width);
+    height: var(--ph-editor-height, 1.74rem);
+    min-height: var(--ph-editor-height, 1.74rem);
+    margin: 0;
+    padding: 0.36rem 1.35rem 0.36rem 0.7rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background-color: rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: none;
+    vertical-align: top;
+}
+
+.project-header-chips .project-header-chip-editor.form-select,
+.project-header-chips .project-header-chip-editor.form-select-sm {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='m4 6 4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.55rem center;
+    background-size: 0.7rem 0.7rem;
+}
+
+.project-header-chips .project-header-chip-editor:focus,
+.project-header-chips .project-header-chip-editor:focus-visible {
+    border-color: rgba(255, 255, 255, 0.18);
+    background-color: rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+    box-shadow: none;
+    outline: 0;
 }
 
 .ph-chip-dot {
@@ -1168,4 +1305,51 @@
 @media (max-width: 575px) {
     .project-header-chips { gap: 0.35rem; }
     .ph-chip-dates { width: 100%; }
+}
+
+.additional-info-box .project-additional-link-editor.form-control,
+.additional-info-box .project-additional-link-editor.form-control-sm {
+    width: 60%;
+    max-width: 60%;
+    min-width: min(18rem, 100%);
+    background: #ffffff;
+    border: 1px solid #d7e4f1;
+    box-shadow: none;
+}
+
+.additional-info-box .project-observacao-editor.form-control,
+.additional-info-box .project-observacao-editor.form-control-sm {
+    width: 70%;
+    max-width: 70%;
+    min-width: min(22rem, 100%);
+    background: #ffffff;
+    border: 1px solid #d7e4f1;
+    box-shadow: none;
+    resize: vertical;
+}
+
+.additional-info-box .project-additional-link-editor.form-control:focus,
+.additional-info-box .project-additional-link-editor.form-control-sm:focus,
+.additional-info-box .project-observacao-editor.form-control:focus,
+.additional-info-box .project-observacao-editor.form-control-sm:focus {
+    border-color: #9ec4e8;
+    box-shadow: 0 0 0 0.12rem rgba(0, 90, 146, 0.12);
+}
+
+html:not([data-theme="dark"]) .additional-info-box .project-additional-link-editor.form-control,
+html:not([data-theme="dark"]) .additional-info-box .project-additional-link-editor.form-control-sm,
+html:not([data-theme="dark"]) .additional-info-box .project-observacao-editor.form-control,
+html:not([data-theme="dark"]) .additional-info-box .project-observacao-editor.form-control-sm {
+    border-color: #005A92;
+}
+
+@media (max-width: 767px) {
+    .additional-info-box .project-additional-link-editor.form-control,
+    .additional-info-box .project-additional-link-editor.form-control-sm,
+    .additional-info-box .project-observacao-editor.form-control,
+    .additional-info-box .project-observacao-editor.form-control-sm {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
 }

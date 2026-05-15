@@ -103,6 +103,120 @@ def test_project_detail_inline_stage_composer_syncs_next_stage_preview_id():
     assert "formatEtapaOrder(getEtapaRows().length + 1)" in js_content
 
 
+def test_project_header_inline_editors_keep_chip_dimensions():
+    root = Path(__file__).resolve().parents[2]
+    editor_content = _read(
+        root
+        / "static"
+        / "js"
+        / "pages"
+        / "projects"
+        / "detail"
+        / "09-project-inline-editor.js"
+    )
+    header_css = _read(
+        root
+        / "static"
+        / "css"
+        / "projects"
+        / "detail"
+        / "01-shell-and-header.css"
+    )
+    dark_css = _read(
+        root
+        / "static"
+        / "css"
+        / "projects"
+        / "detail"
+        / "04-dark-mode.css"
+    )
+
+    assert "function prepareHeaderChipEditor(input, sourceEl, field)" in editor_content
+    assert "const HEADER_CHIP_EDIT_LABELS" in editor_content
+    assert "status: 'Status'" in editor_content
+    assert "prioridade: 'Prioridade'" in editor_content
+    assert "delivery_type: 'Tipo'" in editor_content
+    assert "sourceEl.closest('.project-header-chips')" in editor_content
+    assert "project-header-chip-edit-wrap" in editor_content
+    assert "project-header-chip-edit-label" in editor_content
+    assert "input.classList.add('project-header-chip-editor'" in editor_content
+    assert "wrapper.style.setProperty('--ph-editor-width'" in editor_content
+    assert "wrapper.style.setProperty('--ph-editor-height'" in editor_content
+    assert "const replacement = prepareHeaderChipEditor(input, el, field) || input;" in editor_content
+
+    assert "function resizeProjectHeaderTextEditor(input)" in editor_content
+    assert "function prepareProjectHeaderTextEditor(input, sourceEl, field)" in editor_content
+    assert "const initialWidth = headerWidth ? Math.round(headerWidth * 0.4) : 320;" in editor_content
+    assert "input.style.setProperty('--ph-text-editor-initial-width'" in editor_content
+    assert "input.style.setProperty('--ph-text-editor-content-width'" in editor_content
+    assert "input.style.height = 'auto';" in editor_content
+    assert "input.addEventListener('input', function ()" in editor_content
+    assert "project-header-text-editor" in editor_content
+    assert "input = document.createElement('textarea');\n                    input.className = 'form-control form-control-sm project-inline-input project-inline-input-title';" in editor_content
+    assert "project-additional-link-editor" in editor_content
+    assert "project-observacao-editor" in editor_content
+    assert "function resizeHeaderChipSelect(select)" in editor_content
+    assert "input.addEventListener('change', function ()" in editor_content
+
+    assert ".project-header-chips .project-header-chip-editor.form-select" in header_css
+    assert ".project-header-chip-edit-label" in header_css
+    assert ".project-header .project-header-text-editor.form-control" in header_css
+    assert "width: clamp(var(--ph-text-editor-initial-width, 320px), var(--ph-text-editor-content-width, 40%), 100%);" in header_css
+    assert "-webkit-line-clamp: 5;" in header_css
+    assert ".project-header .project-header-description" in header_css
+    assert "-webkit-line-clamp: 15;" in header_css
+    assert "width: var(--ph-editor-width);" in header_css
+    assert "height: var(--ph-editor-height, 1.74rem);" in header_css
+    assert "min-width: var(--ph-editor-width);" in header_css
+    assert "max-width: var(--ph-editor-width);" in header_css
+    assert ".additional-info-box .project-additional-link-editor.form-control" in header_css
+    assert "width: 60%;" in header_css
+    assert ".additional-info-box .project-observacao-editor.form-control" in header_css
+    assert "width: 70%;" in header_css
+    assert "border: 1px solid #d7e4f1;" in header_css
+    assert "html:not([data-theme=\"dark\"]) input.form-control[data-field]:not(.project-header-text-editor):not(.project-header-chip-editor)" in header_css
+    assert "html:not([data-theme=\"dark\"]) select.form-select[data-field]:not(.project-header-chip-editor)" in header_css
+    assert "html:not([data-theme=\"dark\"]) textarea.form-control[data-field]:not(.project-header-text-editor)" in header_css
+    assert "html:not([data-theme=\"dark\"]) .project-detail-abep-combobox[data-field] .project-detail-abep-input.form-control" in header_css
+    assert "html:not([data-theme=\"dark\"]) .additional-info-box .project-additional-link-editor.form-control" in header_css
+    assert "html:not([data-theme=\"dark\"]) .additional-info-box .project-observacao-editor.form-control" in header_css
+    assert "border: 1px solid #005A92;" in header_css
+
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header-chips .project-header-chip-editor.form-select"
+    ) in dark_css
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header .project-header-chip-edit-wrap,\n"
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header .project-header-chip-edit-label"
+    ) in dark_css
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header .project-header-text-editor.form-control"
+    ) in dark_css
+    assert "background-color: transparent !important;" in dark_css
+    assert "box-shadow: none !important;" in dark_css
+
+
+def test_project_header_description_line_clamp_survives_later_css_import():
+    css_file = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "css"
+        / "projects"
+        / "detail"
+        / "03-stages-and-interactions.css"
+    )
+    content = _read(css_file)
+
+    assert ".project-header-description" in content
+    assert "-webkit-line-clamp: 15;" in content
+    assert "white-space: pre-line;" in content
+    assert "overflow-wrap: anywhere;" in content
+
+
 def test_task_detail_dark_css_styles_responsavel_picker_more():
     file_path = (
         Path(__file__).resolve().parents[2]

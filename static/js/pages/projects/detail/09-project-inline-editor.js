@@ -10,6 +10,12 @@
         const config = currentPage.config;
 
         let editDataCache = null;
+        const HEADER_CHIP_EDIT_LABELS = {
+            status: 'Status',
+            prioridade: 'Prioridade',
+            delivery_type: 'Tipo',
+            special_project: 'Categoria',
+        };
 
         async function loadEditData() {
             if (editDataCache) {
@@ -346,6 +352,102 @@
             return select;
         }
 
+        function prepareHeaderChipEditor(input, sourceEl, field) {
+            if (!input || !sourceEl || !sourceEl.closest('.project-header-chips')) {
+                return null;
+            }
+
+            const rect = sourceEl.getBoundingClientRect();
+            const width = Math.max(1, Math.ceil(rect.width || 0));
+            const height = Math.max(1, Math.ceil(rect.height || 0));
+            const safeField = String(field || 'field').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+            const labelText = HEADER_CHIP_EDIT_LABELS[field] || field;
+
+            const wrapper = document.createElement('span');
+            wrapper.className = `project-header-chip-edit-wrap project-header-chip-edit-wrap--${safeField}`;
+            wrapper.dataset.minWidth = String(width);
+            wrapper.style.setProperty('--ph-editor-width', `${width}px`);
+            wrapper.style.setProperty('--ph-editor-height', `${height}px`);
+
+            const label = document.createElement('span');
+            label.className = 'project-header-chip-edit-label';
+            label.textContent = labelText;
+
+            input.classList.add('project-header-chip-editor', `project-header-chip-editor--${safeField}`);
+            input.setAttribute('aria-label', sourceEl.getAttribute('aria-label') || sourceEl.textContent.trim());
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(input);
+            resizeHeaderChipSelect(input);
+            input.addEventListener('change', function () {
+                resizeHeaderChipSelect(input);
+            });
+            return wrapper;
+        }
+
+        function getSelectedOptionText(select) {
+            if (!select || select.tagName !== 'SELECT') {
+                return '';
+            }
+            const selected = select.options[select.selectedIndex];
+            return selected ? selected.textContent.trim() : '';
+        }
+
+        function resizeHeaderChipSelect(select) {
+            if (!select || !select.classList.contains('project-header-chip-editor')) {
+                return;
+            }
+
+            const wrapper = select.closest('.project-header-chip-edit-wrap');
+            if (!wrapper) {
+                return;
+            }
+
+            const minWidth = Number(wrapper.dataset.minWidth || '0') || 0;
+            const selectedLabel = getSelectedOptionText(select);
+            const estimatedWidth = Math.ceil((selectedLabel.length * 7.4) + 42);
+            const width = Math.max(minWidth, estimatedWidth);
+
+            wrapper.style.setProperty('--ph-editor-width', `${width}px`);
+        }
+
+        function resizeProjectHeaderTextEditor(input) {
+            if (!input) {
+                return;
+            }
+
+            const isDescription = input.classList.contains('project-header-text-editor--short-description');
+            const header = input.closest('.project-header');
+            const headerWidth = header ? header.getBoundingClientRect().width : 0;
+            const initialWidth = headerWidth ? Math.round(headerWidth * 0.4) : 320;
+            const maxChars = isDescription ? 88 : 76;
+            const value = input.value || '';
+            const placeholder = input.getAttribute('placeholder') || '';
+            const lines = (value || placeholder || '').split(/\r?\n/);
+            const longestLine = lines.reduce((max, line) => Math.max(max, line.length), 0);
+            const widthChars = Math.min(maxChars, Math.max(12, longestLine + 2));
+
+            input.style.setProperty('--ph-text-editor-initial-width', `${initialWidth}px`);
+            input.style.setProperty('--ph-text-editor-content-width', `${widthChars}ch`);
+            if (input.tagName === 'TEXTAREA') {
+                input.style.height = 'auto';
+                input.style.height = `${Math.max(input.scrollHeight, isDescription ? 34 : 38)}px`;
+            }
+        }
+
+        function prepareProjectHeaderTextEditor(input, sourceEl, field) {
+            if (!input || !sourceEl || !sourceEl.closest('.project-header')) {
+                return;
+            }
+
+            const safeField = String(field || 'field').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+            input.classList.add('project-header-text-editor', `project-header-text-editor--${safeField}`);
+            resizeProjectHeaderTextEditor(input);
+            input.addEventListener('input', function () {
+                resizeProjectHeaderTextEditor(input);
+            });
+        }
+
         function saveProjectInline() {
             const formData = {};
 
@@ -468,7 +570,7 @@
                     input = createAreaSelect(currentValue);
                 } else if (field === 'observacao') {
                     input = document.createElement('textarea');
-                    input.className = 'form-control form-control-sm';
+                    input.className = 'form-control form-control-sm project-observacao-editor';
                     input.rows = 3;
                     input.value = currentValue === 'Nenhuma observação registrada.' ? '' : (currentValue || '');
                     input.placeholder = 'Nenhuma observação registrada.';
@@ -479,15 +581,17 @@
                     input.value = currentValue || '';
                     input.placeholder = 'Adicione uma descrição...';
                 } else if (field === 'titulo') {
-                    input = document.createElement('input');
-                    input.type = 'text';
+                    input = document.createElement('textarea');
                     input.className = 'form-control form-control-sm project-inline-input project-inline-input-title';
+                    input.rows = 1;
                     input.value = currentValue;
                     input.placeholder = 'Nome do projeto';
                 } else {
                     input = document.createElement('input');
                     input.type = 'text';
-                    input.className = 'form-control form-control-sm';
+                    input.className = field === 'github_link' || field === 'documentation_link'
+                        ? 'form-control form-control-sm project-additional-link-editor'
+                        : 'form-control form-control-sm';
                     input.value = currentValue || '';
                     if (!currentValue || String(currentValue).trim() === '') {
                         input.placeholder = 'Não informado';
@@ -497,7 +601,12 @@
                 if (input) {
                     input.dataset.field = field;
                     input.dataset.originalValue = currentValue;
-                    el.replaceWith(input);
+                    prepareProjectHeaderTextEditor(input, el, field);
+                    const replacement = prepareHeaderChipEditor(input, el, field) || input;
+                    el.replaceWith(replacement);
+                    if (input.classList.contains('project-header-text-editor')) {
+                        resizeProjectHeaderTextEditor(input);
+                    }
                 }
             }
         }

@@ -53,6 +53,46 @@ html[data-theme="dark"] body.is-authenticated .project-header .ph-chip-dates {
     color: rgba(230, 238, 247, 0.92) !important;
 }
 
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-chip-edit-wrap,
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-chip-edit-label {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header-chips .project-header-chip-editor.form-select,
+html[data-theme="dark"] body.is-authenticated .project-header-chips .project-header-chip-editor.form-select-sm,
+html[data-theme="dark"] body.is-authenticated .project-header-chips .project-header-chip-editor.form-control,
+html[data-theme="dark"] body.is-authenticated .project-header-chips .project-header-chip-editor.form-control-sm {
+    background-color: transparent !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #e6eef7 !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header-chips .project-header-chip-editor:focus,
+html[data-theme="dark"] body.is-authenticated .project-header-chips .project-header-chip-editor:focus-visible {
+    background-color: transparent !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #e6eef7 !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-text-editor.form-control,
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-text-editor.form-control-sm {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+    color: #eef5fc !important;
+    -webkit-text-fill-color: #eef5fc;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-text-editor:focus,
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-text-editor:focus-visible {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+    box-shadow: none !important;
+}
+
 html[data-theme="dark"] body.is-authenticated .project-compact-header {
     background: rgba(39, 52, 71, 0.96);
     border-color: var(--app-color-border);
