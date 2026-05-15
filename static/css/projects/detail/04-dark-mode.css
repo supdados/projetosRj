@@ -1059,3 +1059,124 @@ html[data-theme="dark"] body.is-authenticated .project-conclude-celebration__par
 html[data-theme="dark"] body.is-authenticated .project-conclude-celebration__particles span:nth-child(6) {
     background: #8ec6b7;
 }
+
+/* ====================================
+   Ajustes de cores — dark mode (uniformização)
+   ====================================
+   - Ícones azuis dos blocos de detalhe usam o mesmo azul do badge
+     de notificação de tarefas (#0e6aa8 — botão "Novo Projeto")
+   - Github e Observação ficam brancos no dark (estavam preto/cinza)
+   - Botão "Mostrar tarefas do projeto" usa a cor de texto padrão
+   - Botão "Cancelar" mantém a paleta secundária estabelecida
+*/
+
+/* #4 — uniformização dos ícones azuis dos blocos de detalhe.
+   Mesmo no dark, mantemos o tom #0e6aa8 (igual ao badge) para
+   coerência visual do "azul do app". */
+html[data-theme="dark"] body.is-authenticated .info-card .detail-item .text-primary,
+html[data-theme="dark"] body.is-authenticated .info-card .objective-section h5 .text-primary,
+html[data-theme="dark"] body.is-authenticated .info-card .additional-info-box .info-row .text-primary,
+html[data-theme="dark"] body.is-authenticated .info-card .additional-info-box .info-row > i.text-primary,
+.info-card .detail-item .text-primary,
+.info-card .objective-section h5 .text-primary,
+.info-card .additional-info-box .info-row > i.text-primary {
+    color: #0e6aa8 !important;
+}
+
+/* No dark, mantemos o mesmo #0e6aa8 do badge para uniformidade total
+   do "azul do app". Tons mais claros descaracterizariam a paleta. */
+
+/* #5 — github e documentação ficam brancos no dark
+   (light mode mantém comportamento original) */
+html[data-theme="dark"] body.is-authenticated .info-card .additional-info-box .info-row > i.fa-github,
+html[data-theme="dark"] body.is-authenticated .info-card .additional-info-box .info-row > i.fa-book,
+html[data-theme="dark"] body.is-authenticated .info-card .additional-info-box .info-row > i.text-dark {
+    color: var(--app-color-text-primary) !important;
+}
+
+/* Observação (fa-note-sticky) usa o azul padrão do app — light + dark */
+.info-card .additional-info-box .info-row .project-observacao-icon,
+html[data-theme="dark"] body.is-authenticated .info-card .additional-info-box .info-row .project-observacao-icon {
+    color: #0e6aa8 !important;
+}
+
+/* #3 — "Mostrar tarefas do projeto" usa a cor padrão de texto (não azul) */
+html[data-theme="dark"] body.is-authenticated .info-card .btn-ver-tarefas-projeto,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-projeto {
+    color: var(--app-color-text-primary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .info-card .btn-ver-tarefas-projeto:hover,
+html[data-theme="dark"] body.is-authenticated .info-card .btn-ver-tarefas-projeto:focus,
+html[data-theme="dark"] body.is-authenticated .info-card .btn-ver-tarefas-projeto:focus-visible,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-projeto:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-projeto:focus {
+    color: var(--app-color-text-primary) !important;
+}
+
+/* #1 — botão "Cancelar" no modo edição: garantir paleta secundária
+   (estava aparecendo branco em algum estado intermediário) */
+html[data-theme="dark"] body.is-authenticated .info-card .btn-cancel-edit,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-cancel-edit {
+    background: #2a394d !important;
+    border-color: var(--app-color-border) !important;
+    color: var(--app-color-text-secondary) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .info-card .btn-cancel-edit:hover,
+html[data-theme="dark"] body.is-authenticated .info-card .btn-cancel-edit:focus,
+html[data-theme="dark"] body.is-authenticated .info-card .btn-cancel-edit:focus-visible,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-cancel-edit:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-cancel-edit:focus {
+    background: rgba(78, 149, 204, 0.20) !important;
+    border-color: rgba(99, 166, 219, 0.46) !important;
+    color: var(--app-color-text-primary) !important;
+}
+
+/* Datas (Início/Fim) sem fundo escuro pesado — modo escuro
+   No light mode os campos de data não têm bg; o `.editable-field-input`
+   genérico do dark estava aplicando #223144 nos inputs/triggers de data,
+   criando aquele "pill" escurecido. Aqui anulamos só nas células de data. */
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .editable-field-input,
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .cdp-trigger,
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .editable-field {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .editable-field:hover,
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .editable-field-input:hover,
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .cdp-trigger:hover {
+    background: rgba(78, 149, 204, 0.16) !important;
+    border-color: transparent !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .editable-field-input:focus,
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-date .cdp-trigger.cdp-active {
+    background: #223144 !important;
+    border-color: rgba(99, 166, 219, 0.38) !important;
+}
+
+/* Observação (fa-note-sticky) — branco no dark mode */
+html[data-theme="dark"] body.is-authenticated .info-card .additional-info-box .info-row .project-observacao-icon {
+    color: var(--app-color-text-primary) !important;
+}
+
+/* Hover dos botões "Ver Histórico" / "Mostrar tarefas do projeto" no dark
+   alinhado ao padrão dos botões "Iniciar"/"Concluir" da etapa
+   (subtle translucent blue + border + texto claro), substituindo o
+   hover sólido pesado anterior. */
+html[data-theme="dark"] body.is-authenticated .info-card .btn-ver-tarefas-projeto:hover,
+html[data-theme="dark"] body.is-authenticated .info-card .btn-ver-tarefas-projeto:focus-visible,
+html[data-theme="dark"] body.is-authenticated .info-card .btn-history:hover,
+html[data-theme="dark"] body.is-authenticated .info-card .btn-history:focus-visible,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-projeto:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-ver-tarefas-projeto:focus-visible,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-history:hover,
+html[data-theme="dark"] body.is-authenticated .main-content .btn-history:focus-visible {
+    background: rgba(78, 149, 204, 0.18) !important;
+    border-color: rgba(99, 166, 219, 0.48) !important;
+    color: #edf4fb !important;
+    box-shadow: none !important;
+}

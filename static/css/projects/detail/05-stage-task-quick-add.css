@@ -8,14 +8,21 @@
 }
 
 /* Override .btn-floating:hover (que pinta de vermelho — estilo do botão
-   de excluir etapa ao lado). O ícone de tarefas é uma ação positiva. */
+   de excluir etapa ao lado). O ícone de tarefas é uma ação positiva.
+   Usamos :focus-visible (não :focus) para que o re-foco programático
+   após fechar o modal não deixe o botão "preso" no estado azul. */
 .etapa-action-create-task:hover,
-.etapa-action-create-task:focus,
 .etapa-action-create-task:focus-visible {
     color: #1d4ed8 !important;
     background: rgba(37, 99, 235, 0.10) !important;
     border-color: transparent !important;
     box-shadow: none;
+}
+
+.etapa-action-create-task:focus:not(:focus-visible) {
+    outline: none;
+    background: transparent !important;
+    color: #4b6582 !important;
 }
 
 .etapa-action-create-task .fa-clipboard-list,
@@ -66,15 +73,19 @@ html[data-theme="dark"] .etapa-action-create-task {
 }
 
 html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating.etapa-action-create-task:hover,
-html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating.etapa-action-create-task:focus,
 html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating.etapa-action-create-task:focus-visible,
 html[data-theme="dark"] .etapa-action-create-task:hover,
-html[data-theme="dark"] .etapa-action-create-task:focus,
 html[data-theme="dark"] .etapa-action-create-task:focus-visible {
     color: #cfe6ff !important;
     background: rgba(96, 165, 250, 0.16) !important;
     border-color: transparent !important;
     box-shadow: none !important;
+}
+
+html[data-theme="dark"] .etapa-action-create-task:focus:not(:focus-visible) {
+    outline: none;
+    background: transparent !important;
+    color: #cdd9e7 !important;
 }
 
 /* Bolinha de notificação no dark: mesmo azul do botão "Novo Projeto"
