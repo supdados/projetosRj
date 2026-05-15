@@ -401,8 +401,14 @@
 
 {% if can_edit_etapas %}
 {% include 'partials/_stage_task_modal.html' %}
-{% include 'partials/_task_item_drawer.html' %}
-{% include 'partials/_task_anexo_preview_modal.html' %}
+{# Drawer + preview ficam dentro de um escopo `.task-detail-v2` para que o
+   CSS de tasks/detail/drawer.css (todo escopado por esse seletor) seja
+   aplicado. O wrapper não cria layout — só pinta o escopo do CSS. #}
+<div class="task-detail-v2" data-task-detail-scope
+     data-current-user-id="{{ current_user_obj.id if current_user_obj else '' }}">
+    {% include 'partials/_task_item_drawer.html' %}
+    {% include 'partials/_task_anexo_preview_modal.html' %}
+</div>
 {% endif %}
 {% endblock %}
 
