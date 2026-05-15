@@ -195,10 +195,13 @@
     }
     function renderHtml(html, opts) {
         const options = opts || {};
+        // Em recargas (refresh pós-create, refetch silencioso) preservamos a
+        // posição. Em abertura inicial (resetScroll), forçamos topo — caso
+        // contrário, reabrir uma etapa restaura o scroll do fechamento anterior.
         const previousScrollTop = contentHost ? contentHost.scrollTop : 0;
         injectHtml(html);
         if (contentHost) {
-            contentHost.scrollTop = previousScrollTop;
+            contentHost.scrollTop = options.resetScroll ? 0 : previousScrollTop;
         }
         resetFields();
         rows.highlightCreatedRow(contentHost, options.highlightTaskId, {
@@ -392,7 +395,10 @@
         overlay.setAttribute('aria-hidden', 'false');
         lifecycle.setOverlayInert(overlay, false);
         document.body.classList.add('stage-task-quick-add-open');
-        loadPanel({ focusAdd: false });
+        if (contentHost) {
+            contentHost.scrollTop = 0;
+        }
+        loadPanel({ focusAdd: false, resetScroll: true });
         window.setTimeout(() => {
             focusInitialControl();
         }, 0);

@@ -342,7 +342,7 @@
                                 {% if etapa.done %}aria-disabled="true" tabindex="-1"{% endif %}
                                 title="{{ 'Etapa concluída — desfaça a conclusão para criar tarefas' if etapa.done else 'Criar tarefa nesta etapa' }}"
                                 aria-label="{{ 'Criar tarefa (etapa concluída)' if etapa.done else 'Criar tarefa nesta etapa' }}">
-                                <i class="fas fa-list-check" aria-hidden="true"></i>
+                                <i class="fas fa-clipboard-list" aria-hidden="true"></i>
                                 <span class="etapa-action-task-count{% if not open_count %} is-empty{% endif %}"
                                       data-stage-task-count="{{ etapa.id }}">{{ open_count }}</span>
                             </button>

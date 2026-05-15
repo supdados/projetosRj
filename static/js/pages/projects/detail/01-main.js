@@ -477,7 +477,7 @@
                 ${stageDoneAriaAttrs}
                 title="${escapeHtml(stageDoneTitle)}"
                 aria-label="${escapeHtml(stageDoneAriaLabel)}">
-                <i class="fas fa-list-check" aria-hidden="true"></i>
+                <i class="fas fa-clipboard-list" aria-hidden="true"></i>
                 <span class="etapa-action-task-count is-empty"
                       data-stage-task-count="${etapaId}">0</span>
             </button>

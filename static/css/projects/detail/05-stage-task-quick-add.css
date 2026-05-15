@@ -2,49 +2,76 @@
 
 .etapa-action-create-task {
     position: relative;
-    color: #1f4060;
-    background: #eef4fb;
-    border-color: #d2e2f3;
+    color: #4b6582 !important;
+    background: transparent !important;
+    border-color: transparent !important;
 }
 
-.etapa-action-create-task:hover {
-    background: #dbeafe;
-    color: #1d3a5f;
+/* Override .btn-floating:hover (que pinta de vermelho — estilo do botão
+   de excluir etapa ao lado). O ícone de tarefas é uma ação positiva. */
+.etapa-action-create-task:hover,
+.etapa-action-create-task:focus,
+.etapa-action-create-task:focus-visible {
+    color: #1d4ed8 !important;
+    background: rgba(37, 99, 235, 0.10) !important;
+    border-color: transparent !important;
+    box-shadow: none;
+}
+
+.etapa-action-create-task .fa-clipboard-list,
+.etapa-action-create-task .fa-list-check {
+    font-size: 0.95rem;
+    line-height: 1;
 }
 
 .etapa-action-create-task.is-stage-done {
-    opacity: 0.45;
+    opacity: 0.4;
     cursor: not-allowed;
-    background: #eef4fb;
-    color: #1f4060;
 }
 
-.etapa-action-create-task.is-stage-done:hover {
-    background: #eef4fb;
-    color: #1f4060;
+.etapa-action-create-task.is-stage-done:hover,
+.etapa-action-create-task.is-stage-done:focus {
+    color: #4b6582 !important;
+    background: transparent !important;
 }
 
 .etapa-action-task-count {
     position: absolute;
-    top: -5px;
-    right: -6px;
-    min-width: 16px;
-    height: 16px;
+    top: -3px;
+    right: -3px;
+    min-width: 15px;
+    height: 15px;
     padding: 0 4px;
     border-radius: 999px;
     background: #2563eb;
     color: #ffffff;
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 16px;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 15px;
     text-align: center;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+    letter-spacing: 0.01em;
+    box-shadow: 0 0 0 2px var(--app-color-surface, #ffffff);
+    pointer-events: none;
 }
 
 .etapa-action-task-count.is-empty {
-    background: #cbd5e1;
-    color: #475569;
-    box-shadow: none;
+    display: none;
+}
+
+html[data-theme="dark"] .etapa-action-create-task {
+    color: #9fb2c7 !important;
+}
+
+html[data-theme="dark"] .etapa-action-create-task:hover,
+html[data-theme="dark"] .etapa-action-create-task:focus,
+html[data-theme="dark"] .etapa-action-create-task:focus-visible {
+    color: #c9deff !important;
+    background: rgba(99, 166, 219, 0.18) !important;
+}
+
+html[data-theme="dark"] .etapa-action-task-count {
+    background: #3b82f6;
+    box-shadow: 0 0 0 2px var(--app-color-surface, #1f2a3a);
 }
 
 /* Modal */
@@ -88,7 +115,7 @@
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    transition: opacity 280ms ease-out,
                 visibility 0s linear 0s;
 }
 
@@ -98,21 +125,25 @@
     pointer-events: none;
     /* Atrasa o visibility:hidden até o fade terminar, para que o conteúdo
        continue visível durante a saída. */
-    transition: opacity 180ms cubic-bezier(0.4, 0, 1, 1),
-                visibility 0s linear 180ms;
+    transition: opacity 200ms ease-in,
+                visibility 0s linear 200ms;
 }
 
 .stage-task-quick-add__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(2px);
+    background: rgba(15, 23, 42, 0.42);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     opacity: 1;
-    transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 280ms ease-out, backdrop-filter 280ms ease-out;
 }
 
 .stage-task-quick-add.is-closed .stage-task-quick-add__backdrop {
     opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+    transition: opacity 180ms ease-in;
 }
 
 .stage-task-quick-add__panel {
@@ -132,16 +163,18 @@
     overflow: hidden;
     transform: translateY(0) scale(1);
     opacity: 1;
-    transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
-                opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    /* Curva suave (ease-out cúbico) com leve atraso para que o backdrop
+       comece a desfocar antes do painel chegar — evita o "estouro" visual. */
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1) 40ms,
+                opacity 260ms ease-out 40ms;
     will-change: transform, opacity;
 }
 
 .stage-task-quick-add.is-closed .stage-task-quick-add__panel {
-    transform: translateY(12px) scale(0.985);
+    transform: translateY(18px) scale(0.97);
     opacity: 0;
-    transition: transform 180ms cubic-bezier(0.4, 0, 1, 1),
-                opacity 160ms cubic-bezier(0.4, 0, 1, 1);
+    transition: transform 200ms cubic-bezier(0.4, 0, 1, 1),
+                opacity 160ms ease-in;
 }
 
 @media (prefers-reduced-motion: reduce) {
