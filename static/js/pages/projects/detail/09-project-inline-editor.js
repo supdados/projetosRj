@@ -67,9 +67,12 @@
             orgaos.forEach(orgao => {
                 const option = document.createElement('option');
                 option.value = String(orgao.id);
-                option.textContent = orgao.nome && orgao.nome !== orgao.sigla
-                    ? `${orgao.sigla} — ${orgao.nome}`
-                    : orgao.sigla;
+                // Apenas a sigla — coerente com o modo de visualização.
+                // Nome completo fica disponível no `title` para tooltip.
+                option.textContent = orgao.sigla;
+                if (orgao.nome && orgao.nome !== orgao.sigla) {
+                    option.title = orgao.nome;
+                }
                 if (option.value === currentId) {
                     option.selected = true;
                 }
