@@ -70,11 +70,36 @@
         errorEl.textContent = message || 'Não foi possível carregar as tarefas.';
         errorEl.hidden = false;
     }
-    function setLoading() {
-        if (!contentHost) {
-            return;
+    // Indicador de loading "lento": só aparece se a requisição passar de
+    // ~180ms. Evita o flash de "Carregando..." em respostas instantâneas
+    // (cache hit do navegador / queries rápidas).
+    const LOADING_DELAY_MS = 180;
+    let loadingTimer = null;
+    function clearPendingLoading() {
+        if (loadingTimer) {
+            clearTimeout(loadingTimer);
+            loadingTimer = null;
         }
-        contentHost.innerHTML = '<p class="stage-task-quick-add__loading" data-stage-task-loading>Carregando tarefas...</p>';
+    }
+    function scheduleLoadingIndicator() {
+        clearPendingLoading();
+        if (!contentHost) return;
+        loadingTimer = window.setTimeout(() => {
+            loadingTimer = null;
+            if (!contentHost) return;
+            // Soft: marca o host como "reloading" para CSS aplicar opacidade
+            // reduzida; só substitui pelo placeholder se o host estiver vazio.
+            contentHost.classList.add('is-reloading');
+            if (!contentHost.firstElementChild) {
+                contentHost.innerHTML = '<p class="stage-task-quick-add__loading" data-stage-task-loading>Carregando tarefas...</p>';
+            }
+        }, LOADING_DELAY_MS);
+    }
+    function endLoadingIndicator() {
+        clearPendingLoading();
+        if (contentHost) {
+            contentHost.classList.remove('is-reloading');
+        }
     }
     function hasUnsavedDraft() {
         return lifecycle.hasUnsavedDraft(contentHost, rows, responsavelNames);
@@ -114,6 +139,14 @@
         if (!contentHost) return;
         const modals = contentHost.querySelectorAll('.task-detail-v2-modal[id^="deleteItemModal-"]');
         modals.forEach((modal) => {
+            // Marca o form de delete para que o listener de submit em document
+            // (definido mais abaixo) consiga interceptar via AJAX e remover a
+            // row sem reload.
+            const form = modal.querySelector('form.inline-form[action*="/delete"]');
+            if (form) {
+                const idMatch = (modal.id || '').replace('deleteItemModal-', '');
+                form.setAttribute('data-stage-quick-add-delete', idMatch);
+            }
             document.body.appendChild(modal);
             adoptedDeleteModals.push(modal);
         });
@@ -169,13 +202,19 @@
                 return Promise.resolve({ cached: true });
             }
         }
-        setLoading();
+        // Modo silencioso (ex.: refresh pós-create): mantém o conteúdo atual
+        // visível e só substitui quando o novo HTML chegar — sem placeholder
+        // de loading no meio.
+        if (!opts.silent) {
+            scheduleLoadingIndicator();
+        }
         if (requestController) {
             requestController.abort();
         }
         requestController = new AbortController();
         const url = buildRequestUrl();
         if (!url) {
+            endLoadingIndicator();
             showError('URL de carregamento indisponível.');
             return Promise.resolve();
         }
@@ -184,10 +223,12 @@
             .then((payload) => {
                 const html = payload.html || '';
                 setCache(key, html);
+                endLoadingIndicator();
                 renderHtml(html, opts);
                 return payload;
             })
             .catch((error) => {
+                endLoadingIndicator();
                 if (error && error.name === 'AbortError') {
                     return;
                 }
@@ -233,9 +274,12 @@
                     window.showFlash('Tarefa criada com sucesso.', 'success');
                 }
                 clearCache();
+                // Reload silencioso: mantém a UI atual visível enquanto busca
+                // o novo HTML, evitando piscada do placeholder de loading.
                 return loadPanel({
                     focusAdd: true,
                     forceReload: true,
+                    silent: true,
                     highlightTaskId: payload && payload.task ? payload.task.id : null,
                 });
             })
@@ -277,7 +321,7 @@
             const fallback = mode === 'legacy' ? 'Tarefas sem etapa' : 'Etapa';
             stageTitleEl.textContent = trigger.getAttribute('data-etapa-descricao') || fallback;
         }
-        overlay.classList.remove('ds-hidden');
+        overlay.classList.remove('is-closed');
         overlay.setAttribute('aria-hidden', 'false');
         lifecycle.setOverlayInert(overlay, false);
         document.body.classList.add('stage-task-quick-add-open');
@@ -290,7 +334,7 @@
         if (!skipConfirm && hasUnsavedDraft() && !window.confirm('Descartar o que foi digitado?')) {
             return;
         }
-        overlay.classList.add('ds-hidden');
+        overlay.classList.add('is-closed');
         overlay.setAttribute('aria-hidden', 'true');
         lifecycle.setOverlayInert(overlay, true);
         document.body.classList.remove('stage-task-quick-add-open');
@@ -304,6 +348,7 @@
         responsavelNames = [];
         cleanupAdoptedDeleteModals();
         closeAnexosDrawer();
+        endLoadingIndicator();
         clearError();
         if (lastTriggerEl && typeof lastTriggerEl.focus === 'function') {
             lastTriggerEl.focus();
@@ -359,7 +404,7 @@
             close(false);
             return;
         }
-        if (!overlay.contains(event.target) || overlay.classList.contains('ds-hidden')) {
+        if (!overlay.contains(event.target) || overlay.classList.contains('is-closed')) {
             return;
         }
         if (event.target.closest('[data-role="open-add-form"]')) {
@@ -407,6 +452,55 @@
     // ao detectar submit de qualquer form dentro do painel.
     overlay.addEventListener('submit', () => {
         clearCache();
+    });
+    // Exclusão de tarefa: o form vive no modal Bootstrap que foi adotado
+    // pelo <body> (fora do overlay). Interceptamos no document para que o
+    // POST vire AJAX e a row some sem reload da página.
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        const taskId = form.getAttribute('data-stage-quick-add-delete');
+        if (!taskId) return;
+        event.preventDefault();
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+        const formData = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData,
+        })
+            .then((r) => r.json().catch(() => ({ success: r.ok })))
+            .then((data) => {
+                if (data && data.success === false) {
+                    showError(data.message || 'Falha ao excluir tarefa.');
+                    return;
+                }
+                // Fecha o modal Bootstrap antes de remover a row para evitar
+                // backdrop órfão.
+                const modal = document.getElementById('deleteItemModal-' + taskId);
+                if (modal && window.bootstrap && window.bootstrap.Modal) {
+                    const inst = window.bootstrap.Modal.getInstance(modal);
+                    if (inst) inst.hide();
+                }
+                // Remove a row, decrementa contador da etapa.
+                const row = contentHost && contentHost.querySelector('.task-item-row[data-item-id="' + taskId + '"]');
+                if (row && row.parentNode) row.parentNode.removeChild(row);
+                if (currentMode === 'stage') {
+                    rows.updateStageBadge(currentEtapaId, -1);
+                }
+                clearCache();
+                if (typeof window.showFlash === 'function') {
+                    window.showFlash('Tarefa excluída.', 'success');
+                }
+            })
+            .catch(() => showError('Erro de rede ao excluir tarefa.'))
+            .finally(() => {
+                if (submitBtn) submitBtn.disabled = false;
+            });
     });
     overlay.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {

@@ -36,7 +36,7 @@
     }
 
     function trapFocus(overlay, event) {
-        if (overlay.classList.contains('ds-hidden') || event.key !== 'Tab') {
+        if (overlay.classList.contains('is-closed') || event.key !== 'Tab') {
             return;
         }
         const focusables = getFocusableElements(overlay);
