@@ -314,21 +314,21 @@
                         </td>
                         <td class="actions text-center etapa-v4-actions-cell">
                             {% if current_user_obj %}
-                            {% if not etapa.done %}
                             {% set open_count = etapa_open_task_counts.get(etapa.id, 0) %}
                             <button type="button"
-                                class="btn btn-sm btn-floating etapa-action-create-task"
+                                class="btn btn-sm btn-floating etapa-action-create-task{% if etapa.done %} is-stage-done{% endif %}"
                                 data-stage-quick-add-trigger
                                 data-etapa-id="{{ etapa.id }}"
                                 data-etapa-descricao="{{ etapa.descricao }}"
                                 data-project-id="{{ project.id }}"
-                                title="Criar tarefa nesta etapa"
-                                aria-label="Criar tarefa nesta etapa">
+                                data-stage-done="{{ '1' if etapa.done else '0' }}"
+                                {% if etapa.done %}aria-disabled="true" tabindex="-1"{% endif %}
+                                title="{{ 'Etapa concluída — desfaça a conclusão para criar tarefas' if etapa.done else 'Criar tarefa nesta etapa' }}"
+                                aria-label="{{ 'Criar tarefa (etapa concluída)' if etapa.done else 'Criar tarefa nesta etapa' }}">
                                 <i class="fas fa-list-check" aria-hidden="true"></i>
                                 <span class="etapa-action-task-count{% if not open_count %} is-empty{% endif %}"
                                       data-stage-task-count="{{ etapa.id }}">{{ open_count }}</span>
                             </button>
-                            {% endif %}
                             <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post"
                                 class="inline-form" data-etapa-delete-form
                                 data-confirm="Tem certeza que deseja excluir esta etapa?">

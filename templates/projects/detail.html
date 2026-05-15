@@ -401,6 +401,8 @@
 
 {% if can_edit_etapas %}
 {% include 'partials/_stage_task_modal.html' %}
+{% include 'partials/_task_item_drawer.html' %}
+{% include 'partials/_task_anexo_preview_modal.html' %}
 {% endif %}
 {% endblock %}
 
@@ -435,6 +437,16 @@
 <script src="{{ url_for('static', filename='js/modules/task-item-operations.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modules/inline-editors.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modules/task-archive.js') }}"></script>
+<!-- Drawer compartilhado com /tarefas: o kanban-manager opera em modo
+     "drawer-only" quando o board kanban não existe (caso desta página). -->
+<script src="{{ url_for('static', filename='js/modules/kanban/board-render.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/drawer-comments.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/drawer-anexos.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/drawer-core.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/board-dnd.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/composer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/view-toggle.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban-manager.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/projects/history.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/projects/detail/01-main.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/projects/detail/05-stage-composer.js') }}"></script>

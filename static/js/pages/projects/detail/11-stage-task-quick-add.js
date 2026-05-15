@@ -134,6 +134,12 @@
             contentHost.innerHTML = html || '';
         }
         adoptDeleteModalsToBody();
+        // Notifica o kanban-manager sobre o `.task-items-list` injetado, para
+        // que o drawer compartilhado consiga ler `data-sugestoes-url` etc.
+        if (contentHost && window.taskItemsKanban && typeof window.taskItemsKanban.attachListEl === 'function') {
+            const listEl = contentHost.querySelector('.task-items-list');
+            if (listEl) window.taskItemsKanban.attachListEl(listEl);
+        }
     }
     function renderHtml(html, opts) {
         const options = opts || {};
@@ -297,6 +303,7 @@
         currentMode = 'stage';
         responsavelNames = [];
         cleanupAdoptedDeleteModals();
+        closeAnexosDrawer();
         clearError();
         if (lastTriggerEl && typeof lastTriggerEl.focus === 'function') {
             lastTriggerEl.focus();
@@ -313,20 +320,14 @@
             clearCache();
         }
     });
-    // Anexos: sem kanban na página de projeto, implementamos upload direto.
-    // Click no botão abre file picker; o arquivo selecionado vai via POST
-    // para /tarefas/<id>/anexos/add. Após sucesso, incrementamos o badge
-    // da row. Limitação consciente: visualizar anexos existentes não está
-    // disponível aqui — para isso o usuário deve abrir a página de tarefas.
-    const anexosFileInput = (() => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.style.display = 'none';
-        input.setAttribute('data-stage-quick-add-anexo-input', '');
-        document.body.appendChild(input);
-        return input;
-    })();
-    let pendingAnexoItemId = null;
+    // Anexos: reaproveitamos o drawer do hub via window.taskItemsKanban.
+    // O markup do drawer está incluído na página por
+    // templates/partials/_task_item_drawer.html, e o kanban-manager.js opera
+    // em "modo drawer-only" quando não há board kanban presente.
+    function closeAnexosDrawer() {
+        // mantido como hook para o close() do overlay; o drawer real é
+        // controlado pelo kanban-manager via clique no seu próprio backdrop.
+    }
     overlay.addEventListener('click', (event) => {
         const anexosBtn = event.target.closest('.task-item-anexos-btn[data-item-id]');
         if (!anexosBtn) return;
@@ -334,50 +335,21 @@
         if (!itemId) return;
         event.preventDefault();
         event.stopPropagation();
-        pendingAnexoItemId = itemId;
-        anexosFileInput.value = '';
-        anexosFileInput.click();
+        const api = window.taskItemsKanban;
+        if (api && typeof api.openItemAnexoAction === 'function') {
+            api.openItemAnexoAction(itemId);
+        }
     }, true);
-    anexosFileInput.addEventListener('change', () => {
-        const file = anexosFileInput.files && anexosFileInput.files[0];
-        const itemId = pendingAnexoItemId;
-        pendingAnexoItemId = null;
-        if (!file || !itemId) return;
-        const formData = new FormData();
-        formData.append('file', file);
-        fetch('/tarefas/' + encodeURIComponent(itemId) + '/anexos/add', {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-                'X-CSRFToken': fetchApi.getCsrfToken(config),
-            },
-            body: formData,
-        })
-            .then((r) => r.json().catch(() => ({})))
-            .then((data) => {
-                if (!data || !data.success) {
-                    showError((data && data.message) || 'Falha ao enviar anexo.');
-                    return;
-                }
-                const row = contentHost && contentHost.querySelector('.task-item-row[data-item-id="' + itemId + '"]');
-                const badge = row && row.querySelector('.task-item-anexos-num');
-                if (badge) {
-                    badge.textContent = String(data.anexos_count != null ? data.anexos_count : (parseInt(badge.textContent || '0', 10) || 0) + 1);
-                }
-                if (typeof window.showFlash === 'function') {
-                    window.showFlash('Anexo enviado.', 'success');
-                }
-                clearCache();
-            })
-            .catch(() => {
-                showError('Erro de rede ao enviar anexo.');
-            });
-    });
     document.addEventListener('click', (event) => {
         const trigger = event.target.closest('[data-stage-quick-add-trigger]');
         if (trigger) {
             event.preventDefault();
+            if (trigger.getAttribute('data-stage-done') === '1' || trigger.getAttribute('aria-disabled') === 'true') {
+                if (typeof window.showFlash === 'function') {
+                    window.showFlash('Etapa concluída — desfaça a conclusão para criar tarefas.', 'info');
+                }
+                return;
+            }
             open(trigger);
             return;
         }

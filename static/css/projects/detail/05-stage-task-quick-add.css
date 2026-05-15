@@ -12,6 +12,18 @@
     color: #1d3a5f;
 }
 
+.etapa-action-create-task.is-stage-done {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #eef4fb;
+    color: #1f4060;
+}
+
+.etapa-action-create-task.is-stage-done:hover {
+    background: #eef4fb;
+    color: #1f4060;
+}
+
 .etapa-action-task-count {
     position: absolute;
     top: -5px;
@@ -51,6 +63,7 @@
 .stage-task-quick-add-open .modal {
     z-index: 1095;
 }
+
 
 .stage-task-quick-add {
     position: fixed;

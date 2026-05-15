@@ -151,6 +151,23 @@
             button.disabled = !iniciada && !done;
         }
 
+        function updateStageCreateTaskButton(etapaId, done) {
+            const button = document.querySelector(`.etapa-action-create-task[data-etapa-id="${etapaId}"]`);
+            if (!button) return;
+            button.dataset.stageDone = done ? '1' : '0';
+            if (done) {
+                button.classList.add('is-stage-done');
+                button.setAttribute('aria-disabled', 'true');
+                button.setAttribute('tabindex', '-1');
+                button.setAttribute('title', 'Etapa concluída — desfaça a conclusão para criar tarefas');
+            } else {
+                button.classList.remove('is-stage-done');
+                button.removeAttribute('aria-disabled');
+                button.removeAttribute('tabindex');
+                button.setAttribute('title', 'Criar tarefa nesta etapa');
+            }
+        }
+
         function updateRowAppearance(etapaId, iniciada, done) {
             const tableRow = document.querySelector(`#etapas-tbody tr[data-etapa-id="${etapaId}"]`);
             if (tableRow) {
@@ -782,6 +799,7 @@
                                     }
                                 }
                                 updateRowAppearance(etapaId, data.iniciada, data.done);
+                                updateStageCreateTaskButton(etapaId, data.done);
                                 if (data.message) {
                                     shared.showAjaxFlashMessage(data.message, 'info');
                                 } else {
@@ -823,6 +841,7 @@
                             if (data.success) {
                                 updateDoneButton(doneButton, data.done, data.iniciada);
                                 updateRowAppearance(etapaId, data.iniciada, data.done);
+                                updateStageCreateTaskButton(etapaId, data.done);
                                 if (data.message) {
                                     shared.showAjaxFlashMessage(data.message, 'info');
                                 } else {

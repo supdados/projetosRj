@@ -7,7 +7,8 @@
      inert
      data-stage-quick-add-overlay>
     <div class="stage-task-quick-add__backdrop" data-stage-quick-add-dismiss></div>
-    <div class="stage-task-quick-add__panel task-detail-v2 task-hub-page" role="document">
+    <div class="stage-task-quick-add__panel task-detail-v2 task-hub-page" role="document"
+         data-current-user-id="{{ current_user_obj.id if current_user_obj else '' }}">
         <header class="stage-task-quick-add__header">
             <div>
                 <p class="stage-task-quick-add__eyebrow">Tarefas da etapa</p>

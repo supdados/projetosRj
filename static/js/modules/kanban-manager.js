@@ -135,9 +135,16 @@
             openDrawerAnexos: noop,
             openDrawerComments: noop,
             openItemAnexoAction: noop,
+            attachListEl: noop,
         };
 
-        if (!refs.toggleRoot || !refs.listView || !refs.kanbanView || !refs.board || !refs.listEl) {
+        // Modo completo: hub /tarefas — requer toggle + board + listEl.
+        // Modo drawer-only: página de detalhe do projeto — só precisa do
+        // drawer (sem board, sem listEl no load; listEl é injetado depois
+        // pelo modal). Em ambos os modos, o drawer DOM precisa existir.
+        var hasBoardLayout = !!(refs.toggleRoot && refs.listView && refs.kanbanView && refs.board && refs.listEl);
+        var hasDrawerDom = !!refs.drawer;
+        if (!hasBoardLayout && !hasDrawerDom) {
             if (refs.toggleRoot) {
                 refs.toggleRoot.addEventListener('click', function (event) {
                     var button = event.target.closest('.task-items-view-btn[data-no-tasks="1"]');
@@ -498,14 +505,22 @@
         installModule('viewToggle');
 
         function init() {
-            refs.toggleRoot.addEventListener('click', ctx.handleToggleClick);
-            ctx.bindBoardEvents();
-            ctx.bindDropzones();
-            ctx.bindKanbanComposers();
-            ctx.bindDrawerEvents();
-            ctx.bindAnexoPreviewModalEvents();
-            ctx.renderKanbanFromList();
-            ctx.applyView(ctx.readStoredView(), { persist: false, animateToggle: false });
+            if (refs.toggleRoot && typeof ctx.handleToggleClick === 'function') {
+                refs.toggleRoot.addEventListener('click', ctx.handleToggleClick);
+            }
+            if (hasBoardLayout) {
+                if (typeof ctx.bindBoardEvents === 'function') ctx.bindBoardEvents();
+                if (typeof ctx.bindDropzones === 'function') ctx.bindDropzones();
+                if (typeof ctx.bindKanbanComposers === 'function') ctx.bindKanbanComposers();
+            }
+            if (typeof ctx.bindDrawerEvents === 'function') ctx.bindDrawerEvents();
+            if (typeof ctx.bindAnexoPreviewModalEvents === 'function') ctx.bindAnexoPreviewModalEvents();
+            if (hasBoardLayout && typeof ctx.renderKanbanFromList === 'function') {
+                ctx.renderKanbanFromList();
+            }
+            if (hasBoardLayout && typeof ctx.applyView === 'function') {
+                ctx.applyView(ctx.readStoredView(), { persist: false, animateToggle: false });
+            }
         }
 
         init();
@@ -534,6 +549,15 @@
             openDrawerAnexos: ctx.openDrawerAnexos,
             openDrawerComments: ctx.openDrawerComments,
             openItemAnexoAction: ctx.openItemAnexoAction,
+            // Permite que a página de projeto, que injeta a lista de tarefas
+            // dinamicamente via fetch, registre o `.task-items-list` recém
+            // inserido. Sem isso, refs.listEl fica null e o drawer não
+            // consegue ler `data-sugestoes-url` ao abrir o picker de
+            // responsável.
+            attachListEl: function (listEl) {
+                if (!listEl) return;
+                refs.listEl = listEl;
+            },
         };
     })();
 

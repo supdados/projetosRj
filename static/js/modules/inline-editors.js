@@ -184,9 +184,12 @@
     }
 
     // ===== DELEGAÇÃO DE EVENTOS PARA EDIÇÃO INLINE =====
-    var taskItemsListEl = document.querySelector('.task-items-list');
-    if (taskItemsListEl) {
-        taskItemsListEl.addEventListener('click', function (e) {
+    // Delegamos no document para funcionar tanto na página /tarefas quanto em
+    // listas injetadas dinamicamente (modal de etapa na página de projeto).
+    // O `closest()` em cada branch garante que só agimos sobre elementos da
+    // árvore de tarefas.
+    (function () {
+        document.addEventListener('click', function (e) {
             // Edição da descrição somente pelo botão de caneta
             var editBtn = e.target.closest('.task-item-desc-edit-btn[data-item-id]');
             if (editBtn) {
@@ -220,7 +223,7 @@
                 return;
             }
         });
-    }
+    })();
 
     // Enviar comentário via AJAX (sem recarregar e sem recolher a seção)
     function handleCommentFormSubmit(form) {

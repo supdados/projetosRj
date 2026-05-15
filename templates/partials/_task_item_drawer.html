@@ -1,0 +1,125 @@
+<div class="task-item-drawer-backdrop" id="taskItemDrawerBackdrop" hidden></div>
+<aside class="task-item-drawer" id="taskItemDrawer" aria-hidden="true" hidden>
+    <header class="task-item-drawer-header">
+        <div class="task-item-drawer-header-copy">
+            <div class="task-item-drawer-header-meta">
+                <p class="task-item-drawer-kicker">Detalhes da tarefa</p>
+                <p class="task-item-drawer-autosave-status" id="taskItemDrawerAutosaveStatus"
+                    role="status" aria-live="polite"></p>
+            </div>
+            <h6 class="task-item-drawer-title" id="taskItemDrawerTitle">Tarefa</h6>
+        </div>
+        <div class="task-item-drawer-header-actions">
+            <button type="button" class="task-item-drawer-delete-icon" id="taskItemDrawerDeleteIcon"
+                aria-label="Excluir tarefa">
+                <i class="fas fa-trash-alt" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="task-item-drawer-close" id="taskItemDrawerClose"
+                aria-label="Fechar detalhes">&times;</button>
+        </div>
+    </header>
+    <div class="task-item-drawer-body">
+        <div class="task-item-drawer-status-row">
+            <span class="task-items-kanban-badge status-nao_iniciada" id="taskItemDrawerStatusBadge">Não iniciada</span>
+        </div>
+        <p class="task-item-drawer-permission-banner" id="taskItemDrawerPermissionBanner" role="status" aria-live="polite" hidden></p>
+        <div class="task-item-drawer-delete-confirm" id="taskItemDrawerDeleteConfirm" hidden>
+            <p>Deseja excluir esta tarefa?</p>
+            <div class="task-item-drawer-delete-confirm-actions">
+                <button type="button" class="task-item-drawer-delete-cancel" id="taskItemDrawerDeleteCancel">Cancelar</button>
+                <button type="button" class="task-item-drawer-delete-confirm-btn" id="taskItemDrawerDeleteConfirmBtn">Excluir tarefa</button>
+            </div>
+        </div>
+
+        <div class="task-item-drawer-props">
+            <div class="task-item-drawer-prop-group">
+                <label class="task-item-drawer-label" for="taskItemDrawerPrioridade">Prioridade</label>
+                <select id="taskItemDrawerPrioridade" class="task-item-drawer-select task-item-drawer-prioridade-select">
+                    <option value="">— Nenhuma —</option>
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+            <div class="task-item-drawer-prop-group">
+                <label class="task-item-drawer-label" for="taskItemDrawerTipoPedido">Tipo</label>
+                <select id="taskItemDrawerTipoPedido" class="task-item-drawer-select task-item-drawer-tipo-select">
+                    <option value="">— Nenhum —</option>
+                    <option value="bug">Bug</option>
+                    <option value="melhoria">Melhoria</option>
+                    <option value="duvida">Dúvida</option>
+                    <option value="outros">Outros</option>
+                </select>
+            </div>
+        </div>
+
+        <label class="task-item-drawer-label" for="taskItemDrawerDesc">Descrição</label>
+        <textarea id="taskItemDrawerDesc" rows="2" class="task-item-drawer-textarea"
+            placeholder="Descreva a tarefa..."></textarea>
+
+        <label class="task-item-drawer-label">Responsável</label>
+        <button type="button" class="responsavel-picker-trigger task-item-drawer-responsavel-trigger"
+            id="taskItemDrawerResponsavelTrigger" aria-haspopup="dialog" aria-expanded="false">
+            <span class="responsavel-picker-trigger-content">
+                <em class="responsavel-placeholder">Responsável</em>
+            </span>
+            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+        </button>
+
+        <div class="task-item-drawer-comments">
+            <button type="button" class="task-item-drawer-comments-toggle"
+                id="taskItemDrawerCommentsToggle" aria-expanded="false"
+                aria-controls="taskItemDrawerCommentsBody">
+                <span class="task-item-drawer-comments-toggle-main">
+                    <span class="task-item-drawer-comments-title">Comentários</span>
+                    <span class="task-item-drawer-comments-count" id="taskItemDrawerCommentsCount">0</span>
+                </span>
+                <span class="task-item-drawer-comments-toggle-icon" aria-hidden="true">
+                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                </span>
+            </button>
+            <div class="task-item-drawer-comments-body" id="taskItemDrawerCommentsBody"
+                aria-hidden="true" hidden>
+                <p class="task-item-drawer-comments-status" id="taskItemDrawerCommentsStatus" hidden
+                    role="status" aria-live="polite"></p>
+                <div class="task-item-drawer-comments-list" id="taskItemDrawerCommentsList"></div>
+                <form id="taskItemDrawerCommentForm" class="task-item-drawer-comment-form">
+                    <textarea id="taskItemDrawerCommentInput" name="content" rows="2"
+                        placeholder="Escreva um comentário... (Enter para enviar)" required></textarea>
+                    <div class="task-item-drawer-comment-form-footer">
+                        <span class="task-item-drawer-comment-hint">Enter envia · Shift+Enter quebra linha</span>
+                        <button type="submit" title="Comentar" aria-label="Comentar">
+                            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                            <span class="visually-hidden">Comentar</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="task-item-drawer-anexos" id="taskItemDrawerAnexosSection">
+            <button type="button" class="task-item-drawer-anexos-toggle" id="taskItemDrawerAnexosToggle"
+                aria-expanded="false" aria-controls="taskItemDrawerAnexosBody">
+                <span class="task-item-drawer-anexos-toggle-main">
+                    <i class="fas fa-paperclip" aria-hidden="true"></i>
+                    <span class="task-item-drawer-anexos-title">Anexos</span>
+                    <span class="task-item-drawer-anexos-count" id="taskItemDrawerAnexosCount">0</span>
+                </span>
+                <span class="task-item-drawer-anexos-toggle-icon" aria-hidden="true">
+                    <i class="fas fa-chevron-down"></i>
+                </span>
+            </button>
+            <div class="task-item-drawer-anexos-body" id="taskItemDrawerAnexosBody" hidden>
+                <div class="task-item-drawer-anexos-list" id="taskItemDrawerAnexosList"></div>
+                <label class="task-item-drawer-anexos-upload-btn" title="Adicionar anexo">
+                    <i class="fas fa-plus" aria-hidden="true"></i>
+                    <span>Adicionar anexo</span>
+                    <input type="file" id="taskItemDrawerAnexoInput"
+                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                        style="display:none;">
+                </label>
+            </div>
+        </div>
+    </div>
+</aside>
