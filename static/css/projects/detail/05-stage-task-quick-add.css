@@ -365,7 +365,11 @@ html[data-theme="dark"] .stage-task-quick-add__backdrop {
 }
 
 html[data-theme="dark"] .stage-task-quick-add__panel {
-    background: #0f1c2c;
+    --stage-task-modal-bg: #273447;
+    --stage-task-modal-muted-bg: #2b3a4f;
+    --stage-task-modal-border: rgba(120, 156, 198, 0.24);
+    --stage-task-modal-border-strong: rgba(120, 156, 198, 0.34);
+    background: var(--stage-task-modal-bg);
     border-color: rgba(120, 156, 198, 0.22);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
     color: #e3edf7;

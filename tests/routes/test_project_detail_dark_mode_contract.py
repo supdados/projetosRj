@@ -35,3 +35,28 @@ def test_project_detail_dark_mode_import_button_matches_secondary_pattern():
     assert ".main-content .btn-add-etapa," in content
     assert ".main-content .btn-import-model:hover," in content
     assert ".main-content .btn-add-etapa:hover," in content
+
+
+def test_project_stage_task_modal_dark_mode_uses_single_surface_base():
+    root = Path(__file__).resolve().parents[2]
+    quick_add_css = _read(
+        root / "static" / "css" / "projects" / "detail" / "05-stage-task-quick-add.css"
+    )
+    scoped_css = _read(
+        root
+        / "static"
+        / "css"
+        / "projects"
+        / "detail"
+        / "stage-task-modal-scoped.css"
+    )
+
+    assert "--stage-task-modal-bg: #273447;" in quick_add_css
+    assert "background: #0f1c2c;" not in quick_add_css
+    assert "--tasks-bg: var(--stage-task-modal-bg);" in scoped_css
+    assert "--tasks-card: var(--stage-task-modal-bg);" in scoped_css
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".stage-task-quick-add__panel .task-hub-page .task-hub-group {\n"
+        "    background: var(--stage-task-modal-bg);"
+    ) in scoped_css

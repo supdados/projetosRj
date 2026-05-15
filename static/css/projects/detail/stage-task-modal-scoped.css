@@ -881,9 +881,9 @@
 /* Page-specific variable overrides */
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .tasks-page {
-    --tasks-bg: var(--app-color-canvas);
+    --tasks-bg: var(--stage-task-modal-bg);
     --tasks-border: var(--app-color-border);
-    --tasks-card: var(--app-color-surface);
+    --tasks-card: var(--stage-task-modal-bg);
     --tasks-text: var(--app-color-text-primary);
     --tasks-muted: var(--app-color-text-muted);
     --tasks-primary: var(--app-color-primary);
@@ -893,7 +893,8 @@ html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task
     --tasks-danger-hover: #e49393;
     --tasks-success: var(--app-color-success);
     --tasks-success-soft: rgba(73, 185, 135, 0.18);
-    --tasks-shadow: 0 9px 26px rgba(7, 11, 18, 0.34);
+    --tasks-shadow: none;
+    background: var(--stage-task-modal-bg);
 }
 
 /* ====================================
@@ -1144,29 +1145,30 @@ html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task
    ========================================== */
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-items-list.task-hub-items-list {
-    background: transparent;
+    background: var(--stage-task-modal-bg);
     border-color: transparent;
     box-shadow: none;
 }
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-hub-group-header {
-    background: #223042;
-    border-bottom-color: #2d455d;
+    background: var(--stage-task-modal-bg);
+    border-bottom-color: var(--stage-task-modal-border);
 }
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-hub-group {
-    background: #273447;
-    border-color: #24394f;
-    box-shadow: 0 14px 30px rgba(7, 11, 18, 0.22);
+    background: var(--stage-task-modal-bg);
+    border-color: var(--stage-task-modal-border);
+    box-shadow: none;
 }
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-hub-group-global-placeholder {
-    border-color: rgba(99, 166, 219, 0.44);
-    box-shadow: 0 18px 34px rgba(6, 10, 18, 0.28);
+    background: var(--stage-task-modal-bg);
+    border-color: var(--stage-task-modal-border-strong);
+    box-shadow: none;
 }
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-hub-group-global-placeholder .task-hub-group-header {
-    background: linear-gradient(180deg, #24364a 0%, #223144 100%);
+    background: var(--stage-task-modal-bg);
 }
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-hub-group-title {
@@ -1189,7 +1191,8 @@ html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task
 
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-hub-add-row {
-    border-top-color: #2a4258;
+    background: var(--stage-task-modal-bg);
+    border-top-color: var(--stage-task-modal-border);
 }
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-hub-kanban-context {
@@ -1240,7 +1243,7 @@ html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task
 }
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-hub-group-global-placeholder .task-item-add-main {
-    background: linear-gradient(180deg, rgba(34, 49, 68, 0.96) 0%, rgba(39, 52, 71, 0.98) 100%);
+    background: var(--stage-task-modal-bg);
 }
 
 /* ====================================
@@ -1249,7 +1252,7 @@ html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .tasks-page .tasks-empty-state {
     border-color: rgba(99, 166, 219, 0.22);
-    background: rgba(39, 52, 71, 0.45);
+    background: var(--stage-task-modal-bg);
     color: var(--app-color-text-secondary);
 }
 
