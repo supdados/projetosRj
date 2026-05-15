@@ -145,11 +145,11 @@
                 </div>
             </div>
 
-            <!-- Segunda linha: Órgão Responsável, Órgão (texto livre), Processo SEI, Indicador ABEP -->
+            <!-- Segunda linha: Área Responsável, Órgão (texto livre), Processo SEI, Indicador ABEP -->
             <div class="row g-2 mb-2">
                 <div class="col-md-3">
                     <div class="detail-item">
-                        <strong>Órgão Responsável</strong>
+                        <strong>Área Responsável</strong>
                         <span class="project-area-value" data-field="orgao_id" data-value="{{ project.orgao_id if project.orgao_id else '' }}">
                             {% if project.orgao_ref %}
                             <div class="small"><i class="fas fa-sitemap me-1 text-primary"></i> {{ project.orgao_ref.sigla }}</div>

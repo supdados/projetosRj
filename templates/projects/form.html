@@ -28,10 +28,10 @@
                     <textarea class="form-control" id="project_short_description" name="project_short_description" rows="2" placeholder="Breve descrição do projeto">{{ project.short_description if project.short_description }}</textarea>
                 </div>
                 
-                <!-- Linha: Órgão Responsável e Órgão livre (legado) -->
+                <!-- Linha: Área Responsável e Órgão livre (legado) -->
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="project_orgao_id" class="form-label fw-bold">Órgão Responsável:</label>
+                        <label for="project_orgao_id" class="form-label fw-bold">Área Responsável:</label>
                         {% set current_orgao_in_list = project.orgao_id and (project.orgao_id in ORGAOS_DISPONIVEIS|map(attribute=0)|list) %}
                         <select class="form-select" id="project_orgao_id" name="project_orgao_id" required>
                             <option value="" {% if not project.orgao_id %}selected{% endif %}>Selecione um órgão</option>
