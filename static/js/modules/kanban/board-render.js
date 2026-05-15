@@ -208,21 +208,54 @@
         }
 
         function syncGroupedListOrder(orderIds) {
+            // Cada `.task-hub-group` (um por projeto) pode ter MÚLTIPLOS
+            // sub-headers `.task-hub-stage-header`, e cada row vive sob seu
+            // header de etapa. A versão antiga desta função coletava todas as
+            // rows do grupo e despejava em bloco antes do `.task-hub-add-row`,
+            // achatando o agrupamento — os headers de etapa ficavam sem rows
+            // abaixo ("etapa com tarefas exibida vazia"). Agora reordenamos
+            // por etapa, posicionando cada lote logo após seu próprio header,
+            // preservando a hierarquia projeto → etapa → tarefa.
             var groups = refs.listEl.querySelectorAll('.task-hub-group');
             groups.forEach(function (group) {
+                var stageHeaders = Array.prototype.slice.call(
+                    group.querySelectorAll('.task-hub-stage-header')
+                );
+
+                if (stageHeaders.length) {
+                    stageHeaders.forEach(function (header) {
+                        var stageValue = header.getAttribute('data-stage-value') || '';
+                        var fragment = document.createDocumentFragment();
+                        orderIds.forEach(function (id) {
+                            var row = group.querySelector('.task-item-row[data-item-id="' + id + '"]');
+                            if (!row) return;
+                            // Mantém cada row apenas sob o header da sua etapa
+                            // (preserva o agrupamento visual).
+                            if ((row.getAttribute('data-stage-value') || '') !== stageValue) return;
+                            fragment.appendChild(row);
+                            var modal = group.querySelector('#deleteItemModal-' + id);
+                            if (modal) fragment.appendChild(modal);
+                        });
+                        if (!fragment.childNodes.length) return;
+                        if (header.nextSibling) {
+                            header.parentNode.insertBefore(fragment, header.nextSibling);
+                        } else {
+                            header.parentNode.appendChild(fragment);
+                        }
+                    });
+                    return;
+                }
+
+                // Fallback: grupo sem sub-headers de etapa (lista plana).
                 var addRow = group.querySelector('.task-hub-add-row') || group.querySelector('#addItemRow');
                 var fragment = document.createDocumentFragment();
-
                 orderIds.forEach(function (id) {
                     var row = group.querySelector('.task-item-row[data-item-id="' + id + '"]');
                     if (row) fragment.appendChild(row);
-
                     var modal = group.querySelector('#deleteItemModal-' + id);
                     if (modal) fragment.appendChild(modal);
                 });
-
                 if (!fragment.childNodes.length) return;
-
                 if (addRow && addRow.parentNode === group) {
                     group.insertBefore(fragment, addRow);
                 } else {
@@ -233,9 +266,15 @@
 
         function syncListOrderFromKanban() {
             if (!ctx.reorderUrl) return;
-            if (ctx.isTaskHubGroupedList()) return;
             var orderIds = serializeKanbanOrder();
             if (!orderIds.length) return;
+
+            // Lista agrupada (hub padrão): delega para a sync que respeita
+            // a hierarquia projeto → etapa → tarefa.
+            if (ctx.isTaskHubGroupedList()) {
+                syncGroupedListOrder(orderIds);
+                return;
+            }
 
             var addRow = refs.listEl.querySelector('.task-hub-add-row') || refs.listEl.querySelector('#addItemRow');
             var fragment = document.createDocumentFragment();
