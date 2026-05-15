@@ -392,7 +392,7 @@
         overlay.setAttribute('aria-hidden', 'false');
         lifecycle.setOverlayInert(overlay, false);
         document.body.classList.add('stage-task-quick-add-open');
-        loadPanel({ focusAdd: mode === 'stage' });
+        loadPanel({ focusAdd: false });
         window.setTimeout(() => {
             focusInitialControl();
         }, 0);

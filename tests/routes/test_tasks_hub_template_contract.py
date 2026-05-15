@@ -315,8 +315,12 @@ def test_tasks_hub_kanban_js_keeps_grouped_list_rows_inside_project_sections():
         "var row = group.querySelector('.task-item-row[data-item-id=\"' + id + '\"]');"
         in content
     )
-    assert "if (ctx.isTaskHubGroupedList()) {" in content
-    assert "syncGroupedListOrder(orderIds);" in content
+    assert (
+        "function syncListOrderFromKanban() {\n"
+        "            if (!ctx.reorderUrl) return;\n"
+        "            if (ctx.isTaskHubGroupedList()) return;"
+        in content
+    )
 
 
 def test_tasks_hub_kanban_project_link_disables_native_link_drag():

@@ -1,3 +1,4 @@
+from pathlib import Path
 import datetime
 import re
 
@@ -144,6 +145,32 @@ def test_project_detail_stage_task_quick_add_matches_task_hub_contract(
     assert 'data-stage-panel="' not in html
     assert "task-item-row" not in html
     assert "Nenhuma tarefa nesta etapa." not in html
+
+
+def test_project_detail_stage_task_quick_add_defaults_closed_and_keeps_add_row_visible_on_growth():
+    root = Path(__file__).resolve().parents[2]
+    quick_add_js = (
+        root
+        / "static"
+        / "js"
+        / "pages"
+        / "projects"
+        / "detail"
+        / "11-stage-task-quick-add.js"
+    ).read_text(encoding="utf-8")
+    row_factory_js = (
+        root
+        / "static"
+        / "js"
+        / "pages"
+        / "projects"
+        / "detail"
+        / "11-stage-task-quick-add-row-factory.js"
+    ).read_text(encoding="utf-8")
+
+    assert "loadPanel({ focusAdd: false });" in quick_add_js
+    assert "function ensureFormVisible(contentHost)" in row_factory_js
+    assert "scrollIntoView({ block: 'end', inline: 'nearest' });" in row_factory_js
 
 
 def test_project_stage_tasks_panel_renders_hub_markup_csrf_and_legacy_bucket(

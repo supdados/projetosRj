@@ -233,13 +233,9 @@
 
         function syncListOrderFromKanban() {
             if (!ctx.reorderUrl) return;
+            if (ctx.isTaskHubGroupedList()) return;
             var orderIds = serializeKanbanOrder();
             if (!orderIds.length) return;
-
-            if (ctx.isTaskHubGroupedList()) {
-                syncGroupedListOrder(orderIds);
-                return;
-            }
 
             var addRow = refs.listEl.querySelector('.task-hub-add-row') || refs.listEl.querySelector('#addItemRow');
             var fragment = document.createDocumentFragment();

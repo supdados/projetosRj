@@ -25,6 +25,13 @@
         return root ? root.querySelector('[data-role="responsavel-trigger"]') : null;
     }
 
+    function ensureFormVisible(contentHost) {
+        const formWrap = getFormWrap(contentHost);
+        if (formWrap && typeof formWrap.scrollIntoView === 'function') {
+            formWrap.scrollIntoView({ block: 'end', inline: 'nearest' });
+        }
+    }
+
     function resizeTextarea(contentHost) {
         const descricao = getField(contentHost, 'descricao');
         if (!descricao) {
@@ -32,6 +39,7 @@
         }
         descricao.style.height = 'auto';
         descricao.style.height = `${Math.max(32, descricao.scrollHeight)}px`;
+        ensureFormVisible(contentHost);
     }
 
     function renderResponsavel(contentHost, responsavelNames) {
@@ -68,6 +76,7 @@
             descricao.focus({ preventScroll: true });
             resizeTextarea(contentHost);
         }
+        ensureFormVisible(contentHost);
     }
 
     function hideForm(contentHost, closeResponsavelPicker) {
