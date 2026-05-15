@@ -64,37 +64,45 @@ def test_project_stage_task_modal_dark_mode_uses_single_surface_base():
     ) in scoped_css
 
 
-def test_project_header_date_spans_stay_transparent_in_dark_mode():
+def test_project_header_meta_chips_stay_transparent_in_dark_mode():
     root = Path(__file__).resolve().parents[2]
     detail_dark_css = _read(
         root / "static" / "css" / "projects" / "detail" / "04-dark-mode.css"
     )
+    global_dark_css = _read(root / "static" / "css" / "theme-dark.css")
 
+    assert 'body.is-authenticated .main-content [class*="chip"]' in global_dark_css
     assert (
         "html[data-theme=\"dark\"] body.is-authenticated "
-        ".project-header p:not(.project-header-dates) span {\n"
-        "    background: rgba(38, 59, 85, 0.76);"
+        ".project-header .project-header-chips {\n"
+        "    background: transparent !important;\n"
+        "    border: 0 !important;"
     ) in detail_dark_css
     assert (
         "html[data-theme=\"dark\"] body.is-authenticated "
-        ".project-header p span {\n"
-        "    background: rgba(38, 59, 85, 0.76);"
-    ) not in detail_dark_css
-    assert (
-        "html[data-theme=\"dark\"] body.is-authenticated "
-        ".project-header p.project-header-dates .hd-date-item,\n"
-        "html[data-theme=\"dark\"] body.is-authenticated "
-        ".project-header p.project-header-dates .hd-date-sep {\n"
-        "    background: transparent;"
+        ".project-header .ph-chip {\n"
+        "    background: transparent !important;"
     ) in detail_dark_css
     assert (
         "html[data-theme=\"dark\"] body.is-authenticated "
-        ".project-compact-dates span {\n"
-        "    background: transparent;"
+        ".project-header .ph-chip-dot {\n"
+        "    background: #6ee7b7 !important;\n"
+        "    border: 0 !important;"
+    ) in detail_dark_css
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header .ph-chip-dates {\n"
+        "    background: transparent !important;\n"
+        "    border: 0 !important;"
+    ) in detail_dark_css
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header .ph-chip--prio-urgente {\n"
+        "    background: transparent !important;"
     ) in detail_dark_css
 
 
-def test_project_header_dates_render_with_scoped_date_classes(client_user, seed_data):
+def test_project_header_meta_chips_render_with_scoped_classes(client_user, seed_data):
     response = client_user.get(f"/project/{seed_data['project_id']}")
 
     assert response.status_code == 200
@@ -107,9 +115,14 @@ def test_project_header_dates_render_with_scoped_date_classes(client_user, seed_
     assert "css/projects/detail.css" in html
     assert "css/theme-dark.css" in html
     assert html.index("css/projects/detail.css") < html.index("css/theme-dark.css")
-    assert 'class="mb-0 project-header-dates"' in project_header_html
-    assert project_header_html.count('class="hd-date-item"') == 2
-    assert 'class="hd-date-sep"' in project_header_html
+    assert 'class="project-header-chips"' in project_header_html
+    assert 'class="ph-chip ph-chip--status' in project_header_html
+    assert 'class="ph-chip ph-chip--prio' in project_header_html
+    assert 'class="ph-chip ph-chip--delivery"' in project_header_html
+    assert 'class="ph-chip ph-chip--special"' in project_header_html
+    assert 'class="ph-chip-dates"' in project_header_html
+    assert 'class="ph-date-range"' in project_header_html
+    assert 'class="ph-duration"' in project_header_html
 
     compact_start = html.index('id="projectCompactHeader"')
     compact_end = html.index("<!-- Cartão de detalhes do projeto -->")

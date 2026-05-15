@@ -2,10 +2,55 @@
    Dark Mode Overrides
    ==================================== */
 
+/* Header do projeto no dark — navy do tema (combinando com cards/etapas) */
 html[data-theme="dark"] body.is-authenticated .project-header {
-    background: linear-gradient(135deg, #335376 0%, #2f4968 52%, #2a4360 100%);
-    border-color: rgba(157, 192, 226, 0.24);
-    box-shadow: 0 12px 30px rgba(7, 11, 18, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, #1e3a5f 0%, #1a3252 52%, #162a45 100%) !important;
+    border-color: rgba(99, 166, 219, 0.28) !important;
+    box-shadow: 0 12px 30px rgba(7, 11, 18, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header::before {
+    opacity: 0.35;
+}
+
+/* Chips no header precisam herdar o fundo do próprio header. O dark global
+   usa [class*="chip"] e é carregado depois do CSS da página, então estes
+   overrides usam !important para impedir o preenchimento destoante. */
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-chips {
+    background: transparent !important;
+    border: 0 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .ph-chip {
+    background: transparent !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #e6eef7 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .ph-chip-dot {
+    background: #6ee7b7 !important;
+    border: 0 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--status-suspenso {
+    background: transparent !important;
+    border-color: rgba(245, 158, 11, 0.34) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--prio-urgente {
+    background: transparent !important;
+    border-color: rgba(248, 113, 113, 0.36) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--prio-alta {
+    background: transparent !important;
+    border-color: rgba(251, 146, 60, 0.36) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .ph-chip-dates {
+    background: transparent !important;
+    border: 0 !important;
+    color: rgba(230, 238, 247, 0.92) !important;
 }
 
 html[data-theme="dark"] body.is-authenticated .project-compact-header {
@@ -115,11 +160,8 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-close-glass-imp
 
 /* Project detail */
 
-html[data-theme="dark"] body.is-authenticated .project-header {
-    background: linear-gradient(135deg, #2f4968 0%, #2a425f 52%, #243b54 100%);
-    border-color: rgba(99, 166, 219, 0.36);
-    box-shadow: 0 12px 30px rgba(7, 11, 18, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
+/* (regra do .project-header dark vive no topo do arquivo, linha 5.
+   Removida daqui para evitar duplicação que confundia a investigação) */
 
 html[data-theme="dark"] body.is-authenticated .project-header h1 {
     color: #eef5fc;

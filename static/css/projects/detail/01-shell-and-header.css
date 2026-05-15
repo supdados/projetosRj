@@ -1053,3 +1053,119 @@
         border-color: #c6d9ec !important;
         color: #2f455d !important;
     }
+
+/* ====================================
+   Header — chips de meta-informação
+   (status, prioridade, tipo de entrega, projeto especial, datas+duração)
+   ==================================== */
+
+.project-header-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.42rem 0.5rem;
+    margin-top: 0.95rem;
+    position: relative;
+    z-index: 1;
+}
+
+.ph-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    padding: 0.36rem 0.7rem;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.ph-chip i {
+    font-size: 0.74rem;
+    opacity: 0.92;
+}
+
+/* Quando entra em modo edição, o inline editor substitui o chip por um
+   <select>/<input>. Estilizamos para se integrar visualmente ao header. */
+.project-header-chips select.form-select-sm,
+.project-header-chips input.form-control-sm,
+.project-header-chips select.form-select,
+.project-header-chips input.form-control {
+    background: rgba(255, 255, 255, 0.92);
+    color: #1f2d3d;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    padding: 0.28rem 0.55rem;
+    height: auto;
+    min-width: 130px;
+    max-width: 220px;
+}
+
+.ph-chip-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #6ee7b7;
+    box-shadow: 0 0 0 2px rgba(110, 231, 183, 0.22);
+}
+
+.ph-chip--status-vigente .ph-chip-dot { background: #6ee7b7; box-shadow: 0 0 0 2px rgba(110, 231, 183, 0.22); }
+.ph-chip--status-finalizado { background: rgba(255, 255, 255, 0.10); }
+.ph-chip--status-suspenso { background: rgba(245, 158, 11, 0.20); border-color: rgba(245, 158, 11, 0.40); }
+
+.ph-chip--prio-urgente { background: rgba(220, 38, 38, 0.22); border-color: rgba(248, 113, 113, 0.42); }
+.ph-chip--prio-alta { background: rgba(234, 88, 12, 0.20); border-color: rgba(251, 146, 60, 0.42); }
+.ph-chip--prio-media { background: rgba(255, 255, 255, 0.12); }
+.ph-chip--prio-baixa { background: rgba(255, 255, 255, 0.10); }
+
+.ph-chip--delivery { background: rgba(255, 255, 255, 0.10); }
+.ph-chip--special { background: rgba(255, 255, 255, 0.12); }
+.ph-chip--special i { color: #fde68a; }
+
+.ph-chip-dates {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.18rem 0.35rem 0.4rem;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.82rem;
+    line-height: 1;
+}
+
+.ph-chip-dates > i {
+    font-size: 0.92rem;
+    opacity: 0.85;
+}
+
+.ph-date-range {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: rgba(255, 255, 255, 0.92);
+    font-variant-numeric: tabular-nums;
+}
+
+.ph-date-arrow {
+    color: rgba(255, 255, 255, 0.55);
+    margin: 0 0.05rem;
+}
+
+.ph-date-sep {
+    color: rgba(255, 255, 255, 0.4);
+    user-select: none;
+}
+
+.ph-duration {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+@media (max-width: 575px) {
+    .project-header-chips { gap: 0.35rem; }
+    .ph-chip-dates { width: 100%; }
+}

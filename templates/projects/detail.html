@@ -16,6 +16,11 @@
 <div class="container-fluid px-3 py-3">
     {% set can_edit_etapas = current_user_obj %}
     <!-- Cabeçalho do projeto -->
+    {% set ph_has_dates = project.data_inicio_projeto and project.data_fim_projeto %}
+    {% if ph_has_dates %}
+        {% set ph_total_days = (project.data_fim_projeto - project.data_inicio_projeto).days %}
+        {% set ph_duration_label = ph_total_days ~ (' dia' if ph_total_days == 1 else ' dias') %}
+    {% endif %}
     <div class="project-header" id="projectMainHeader">
         <div class="d-flex justify-content-between align-items-start mb-2 project-header-main-row">
             <div class="project-header-main-content">
@@ -29,14 +34,63 @@
                 <i class="fas fa-arrow-left me-1"></i>Voltar
             </a>
         </div>
-        <p class="mb-0 project-header-dates">
-            <span class="hd-date-item"><i class="far fa-calendar-alt me-1"></i>Início {{
-                project.data_inicio_projeto.strftime('%d/%m/%Y') if project.data_inicio_projeto else 'Não definida'
-                }}</span>
-            <span class="hd-date-sep" aria-hidden="true">·</span>
-            <span class="hd-date-item"><i class="far fa-calendar-check me-1"></i>Fim {{
-                project.data_fim_projeto.strftime('%d/%m/%Y') if project.data_fim_projeto else 'Não definida' }}</span>
-        </p>
+        <div class="project-header-chips">
+            {# Status — data-field para inline edit #}
+            <span class="ph-chip ph-chip--status ph-chip--status-{{ project.status|lower if project.status else 'na' }}" data-field="status" data-value="{{ project.status }}">
+                {% if project.status == 'Vigente' %}
+                <span class="ph-chip-dot" aria-hidden="true"></span>Vigente
+                {% elif project.status == 'Finalizado' %}
+                <i class="fas fa-flag-checkered" aria-hidden="true"></i>Finalizado
+                {% elif project.status == 'Suspenso' %}
+                <i class="fas fa-pause" aria-hidden="true"></i>Suspenso
+                {% else %}
+                {{ project.status or 'Sem status' }}
+                {% endif %}
+            </span>
+
+            {# Prioridade #}
+            <span class="ph-chip ph-chip--prio ph-chip--prio-{{ project.prioridade or 'na' }}" data-field="prioridade" data-value="{{ project.prioridade }}">
+                {% if project.prioridade == 'urgente' %}
+                <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>Urgente
+                {% elif project.prioridade == 'alta' %}
+                <i class="fas fa-angle-double-up" aria-hidden="true"></i>Alta
+                {% elif project.prioridade == 'media' %}
+                <i class="fas fa-minus" aria-hidden="true"></i>Média
+                {% elif project.prioridade == 'baixa' %}
+                <i class="fas fa-angle-double-down" aria-hidden="true"></i>Baixa
+                {% else %}
+                Sem prioridade
+                {% endif %}
+            </span>
+
+            {# Tipo de Entrega #}
+            <span class="ph-chip ph-chip--delivery" data-field="delivery_type" data-value="{{ project.delivery_type or '' }}">
+                <i class="fas fa-box" aria-hidden="true"></i>{{ project.delivery_type or 'Sem tipo' }}
+            </span>
+
+            {# Projeto Especial (Norma, etc.) #}
+            <span class="ph-chip ph-chip--special" data-field="special_project" data-value="{{ project.special_project or '' }}">
+                <i class="fas fa-star" aria-hidden="true"></i>{{ project.special_project or 'Sem categoria' }}
+            </span>
+
+            {# Datas + duração total em dias #}
+            {% if ph_has_dates %}
+            <span class="ph-chip-dates">
+                <i class="far fa-calendar-alt" aria-hidden="true"></i>
+                <span class="ph-date-range">{{ project.data_inicio_projeto.strftime('%d/%m/%Y') }} <span class="ph-date-arrow" aria-hidden="true">→</span> {{ project.data_fim_projeto.strftime('%d/%m/%Y') }}</span>
+                <span class="ph-date-sep" aria-hidden="true">·</span>
+                <strong class="ph-duration">{{ ph_duration_label }}</strong>
+            </span>
+            {% elif project.data_inicio_projeto or project.data_fim_projeto %}
+            <span class="ph-chip-dates">
+                <i class="far fa-calendar-alt" aria-hidden="true"></i>
+                <span class="ph-date-range">
+                    {% if project.data_inicio_projeto %}Início {{ project.data_inicio_projeto.strftime('%d/%m/%Y') }}{% endif %}
+                    {% if project.data_fim_projeto %}{% if project.data_inicio_projeto %} · {% endif %}Fim {{ project.data_fim_projeto.strftime('%d/%m/%Y') }}{% endif %}
+                </span>
+            </span>
+            {% endif %}
+        </div>
     </div>
     <div id="projectHeaderSentinel" class="project-header-sentinel" aria-hidden="true"></div>
 
@@ -69,83 +123,9 @@
             <h4><i class="fas fa-info-circle"></i>Detalhes do Projeto</h4>
         </div>
         <div class="card-body">
-            <!-- Primeira linha: Status, Prioridade, Projeto Especial, Tipo de Entrega -->
-            <div class="row g-2 mb-2">
-                <div class="col-md-3">
-                    <div class="detail-item">
-                        <strong>Status</strong>
-                        <span data-field="status" data-value="{{ project.status }}">
-                            {% if project.status == 'Vigente' %}
-                            <span class="badge bg-success text-uppercase"><i
-                                    class="fas fa-check-circle me-1"></i>Vigente</span>
-                            {% elif project.status == 'Finalizado' %}
-                            <span class="badge bg-secondary text-uppercase"><i
-                                    class="fas fa-flag-checkered me-1"></i>Finalizado</span>
-                            {% elif project.status == 'Suspenso' %}
-                            <span class="badge bg-warning text-dark text-uppercase"><i
-                                    class="fas fa-pause-circle me-1"></i>Suspenso</span>
-                            {% else %}
-                            <span class="badge bg-light text-dark">{{ project.status if project.status else 'Não
-                                definido' }}</span>
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="detail-item">
-                        <strong>Prioridade</strong>
-                        <span data-field="prioridade" data-value="{{ project.prioridade }}">
-                            {% if project.prioridade == 'urgente' %}
-                            <span class="priority-badge priority-urgente text-uppercase"><i
-                                    class="fas fa-exclamation-triangle me-1"></i>Urgente</span>
-                            {% elif project.prioridade == 'alta' %}
-                            <span class="priority-badge priority-alta text-uppercase"><i
-                                    class="fas fa-angle-double-up me-1"></i>Alta</span>
-                            {% elif project.prioridade == 'media' %}
-                            <span class="priority-badge priority-media text-uppercase"><i
-                                    class="fas fa-minus me-1"></i>Média</span>
-                            {% elif project.prioridade == 'baixa' %}
-                            <span class="priority-badge priority-baixa text-uppercase"><i
-                                    class="fas fa-angle-double-down me-1"></i>Baixa</span>
-                            {% else %}
-                            <span class="badge bg-light text-dark">{{ project.prioridade if project.prioridade else 'Não
-                                definida' }}</span>
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="detail-item">
-                        <strong>Projeto Especial</strong>
-                        <span data-field="special_project" data-value="{{ project.special_project or '' }}">
-                            {% if project.special_project %}
-                            <span class="badge bg-info text-uppercase"><i class="fas fa-star me-1"></i>{{
-                                project.special_project }}</span>
-                            {% else %}
-                            <span class="badge bg-light text-dark">Nenhum</span>
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="detail-item">
-                        <strong>Tipo de Entrega</strong>
-                        <span data-field="delivery_type" data-value="{{ project.delivery_type or '' }}">
-                            {% if project.delivery_type %}
-                            <div class="small"><i class="fas fa-box me-1 text-primary"></i> {{ project.delivery_type }}
-                            </div>
-                            {% else %}
-                            <div class="text-muted small"><i class="fas fa-box me-1"></i> Não informado</div>
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Segunda linha: Área Responsável, Órgão (texto livre), Processo SEI, Indicador ABEP -->
+            <!-- Segunda linha: Área Responsável, Órgão (texto livre), Processo SEI, Indicador ABEP
+                 (Status, Prioridade, Projeto Especial e Tipo de Entrega agora vivem
+                  como chips no header — edição inline acontece neles diretamente.) -->
             <div class="row g-2 mb-2">
                 <div class="col-md-3">
                     <div class="detail-item">
