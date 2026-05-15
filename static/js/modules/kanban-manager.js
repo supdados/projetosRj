@@ -318,6 +318,7 @@
         }
 
         function getDropzone(status) {
+            if (!refs.board) return null;
             return refs.board.querySelector('.task-items-kanban-dropzone[data-status="' + normalizeStatus(status) + '"]');
         }
 
@@ -532,14 +533,16 @@
             focusComposerForStatus: ctx.focusComposerForStatus,
             syncItemFromRow: function (itemId) {
                 if (itemId) {
-                    ctx.syncCardFromRow(String(itemId));
+                    if (hasBoardLayout && typeof ctx.syncCardFromRow === 'function') {
+                        ctx.syncCardFromRow(String(itemId));
+                    }
                     if (state.drawerState.itemId && state.drawerState.itemId === String(itemId)) {
                         ctx.syncDrawerFromCurrentRow();
                     }
                     return;
                 }
 
-                if (state.currentView === 'kanban') {
+                if (hasBoardLayout && state.currentView === 'kanban' && typeof ctx.renderKanbanFromList === 'function') {
                     ctx.renderKanbanFromList();
                 }
                 if (state.drawerState.itemId) {

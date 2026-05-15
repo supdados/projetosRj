@@ -391,6 +391,33 @@
         );
     }
 
+    function isActiveTaskStatus(status) {
+        return normalizeTaskStatusValue(status) !== TASK_FINALIZADA_STATUS;
+    }
+
+    function getStageIdFromTaskRow(row) {
+        if (!row) return '';
+        if (row.getAttribute('data-stage-legacy') === '1') return '';
+        return String(row.getAttribute('data-stage-id') || '').trim();
+    }
+
+    function syncStageActiveTaskCount(row, previousStatus, nextStatus) {
+        var stageId = getStageIdFromTaskRow(row);
+        if (!stageId) return;
+
+        var wasActive = isActiveTaskStatus(previousStatus);
+        var isActive = isActiveTaskStatus(nextStatus);
+        if (wasActive === isActive) return;
+
+        var delta = isActive ? 1 : -1;
+        if (
+            window.stageTaskQuickAddRows &&
+            typeof window.stageTaskQuickAddRows.updateStageBadge === 'function'
+        ) {
+            window.stageTaskQuickAddRows.updateStageBadge(stageId, delta);
+        }
+    }
+
     function resolveFinalizeCelebrationOrigin(itemId, opts, row) {
         var options = opts || {};
         if (options.celebrationOrigin) return options.celebrationOrigin;
@@ -443,6 +470,7 @@
                 if (row) {
                     setTaskItemRowStatus(row, nextStatus);
                     syncTaskItemRowMetadata(row);
+                    syncStageActiveTaskCount(row, previousStatus, nextStatus);
                 }
 
                 if (!opts.skipKanbanSync && window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {

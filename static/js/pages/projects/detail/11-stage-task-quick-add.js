@@ -301,7 +301,10 @@
             responsavel: responsavel ? responsavel.value : responsavelNames.join(', '),
         })
             .then((payload) => {
-                updateStageBadge(1);
+                const createdStatus = payload && payload.task ? payload.task.status : status ? status.value : '';
+                if (createdStatus !== 'finalizada') {
+                    updateStageBadge(1);
+                }
                 if (typeof window.showFlash === 'function') {
                     window.showFlash('Tarefa criada com sucesso.', 'success');
                 }

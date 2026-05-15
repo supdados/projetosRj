@@ -179,6 +179,7 @@
         }
 
         function updateColumnMeta() {
+            if (!refs.board) return;
             var columns = refs.board.querySelectorAll('.task-items-kanban-column[data-status]');
             columns.forEach(function (column) {
                 var status = ctx.normalizeStatus(column.getAttribute('data-status'));
@@ -194,6 +195,7 @@
 
         function serializeKanbanOrder() {
             var order = [];
+            if (!refs.board) return order;
             statusOrder.forEach(function (status) {
                 var dropzone = ctx.getDropzone(status);
                 if (!dropzone) return;
@@ -276,6 +278,7 @@
         }
 
         function renderKanbanFromList() {
+            if (!refs.board) return;
             var items = ctx.sortItemsForKanban(ctx.collectListItems());
             statusOrder.forEach(function (status) {
                 var dropzone = ctx.getDropzone(status);
@@ -299,6 +302,7 @@
         }
 
         function syncCardFromRow(itemId) {
+            if (!refs.board) return;
             if (!itemId) return;
             var row = getTaskItemRowById(itemId);
             if (!row) {
