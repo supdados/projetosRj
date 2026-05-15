@@ -62,3 +62,57 @@ def test_project_stage_task_modal_dark_mode_uses_single_surface_base():
         ".stage-task-quick-add__panel .task-hub-page .task-hub-group {\n"
         "    background: var(--stage-task-modal-bg);"
     ) in scoped_css
+
+
+def test_project_header_date_spans_stay_transparent_in_dark_mode():
+    root = Path(__file__).resolve().parents[2]
+    detail_dark_css = _read(
+        root / "static" / "css" / "projects" / "detail" / "04-dark-mode.css"
+    )
+
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header p:not(.project-header-dates) span {\n"
+        "    background: rgba(38, 59, 85, 0.76);"
+    ) in detail_dark_css
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header p span {\n"
+        "    background: rgba(38, 59, 85, 0.76);"
+    ) not in detail_dark_css
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header p.project-header-dates .hd-date-item,\n"
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-header p.project-header-dates .hd-date-sep {\n"
+        "    background: transparent;"
+    ) in detail_dark_css
+    assert (
+        "html[data-theme=\"dark\"] body.is-authenticated "
+        ".project-compact-dates span {\n"
+        "    background: transparent;"
+    ) in detail_dark_css
+
+
+def test_project_header_dates_render_with_scoped_date_classes(client_user, seed_data):
+    response = client_user.get(f"/project/{seed_data['project_id']}")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+
+    header_start = html.index('class="project-header"')
+    header_end = html.index('id="projectHeaderSentinel"')
+    project_header_html = html[header_start:header_end]
+
+    assert "css/projects/detail.css" in html
+    assert "css/theme-dark.css" in html
+    assert html.index("css/projects/detail.css") < html.index("css/theme-dark.css")
+    assert 'class="mb-0 project-header-dates"' in project_header_html
+    assert project_header_html.count('class="hd-date-item"') == 2
+    assert 'class="hd-date-sep"' in project_header_html
+
+    compact_start = html.index('id="projectCompactHeader"')
+    compact_end = html.index("<!-- Cartão de detalhes do projeto -->")
+    project_compact_html = html[compact_start:compact_end]
+    assert 'class="project-compact-dates"' in project_compact_html
+    assert project_compact_html.count("<span><i") == 2

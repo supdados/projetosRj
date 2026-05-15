@@ -131,14 +131,26 @@ html[data-theme="dark"] body.is-authenticated .project-header .project-header-de
     color: #d3e2f1;
 }
 
-html[data-theme="dark"] body.is-authenticated .project-header p span {
+html[data-theme="dark"] body.is-authenticated .project-header p:not(.project-header-dates) span {
     background: rgba(38, 59, 85, 0.76);
     border-color: rgba(120, 173, 221, 0.38);
     color: #d6e5f4;
 }
 
-html[data-theme="dark"] body.is-authenticated .project-header p span i {
+html[data-theme="dark"] body.is-authenticated .project-header p:not(.project-header-dates) span i {
     color: #c4d9ee;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header p.project-header-dates .hd-date-item,
+html[data-theme="dark"] body.is-authenticated .project-header p.project-header-dates .hd-date-sep {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    color: inherit;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header p.project-header-dates .hd-date-item i {
+    color: rgba(255, 255, 255, 0.72);
 }
 
 html[data-theme="dark"] body.is-authenticated .project-header .back-button {
@@ -179,8 +191,8 @@ html[data-theme="dark"] body.is-authenticated .project-compact-dates {
 }
 
 html[data-theme="dark"] body.is-authenticated .project-compact-dates span {
-    background: rgba(34, 50, 69, 0.86);
-    border-color: rgba(99, 166, 219, 0.34);
+    background: transparent;
+    border-color: transparent;
     color: #c8dbef;
 }
 
