@@ -100,6 +100,46 @@
         updateEditableFieldDisplay(target, hasValue, resolvedDisplay, emptyDisplay);
     }
 
+    function buildStageDatesLabel(row) {
+        if (!row) {
+            return 'Etapa sem datas definidas';
+        }
+        const startField = row.querySelector('.editable-field[data-field="data_inicio"]');
+        const endField = row.querySelector('.editable-field[data-field="data_fim"]');
+        const startRaw = startField ? String(startField.dataset.originalValue || '').trim() : '';
+        const endRaw = endField ? String(endField.dataset.originalValue || '').trim() : '';
+        const startDisplay = startField ? String(startField.textContent || '').trim() : '';
+        const endDisplay = endField ? String(endField.textContent || '').trim() : '';
+
+        if (startRaw && endRaw) {
+            return `${startDisplay} — ${endDisplay}`;
+        }
+        if (startRaw) {
+            return `Início ${startDisplay}`;
+        }
+        if (endRaw) {
+            return `Fim ${endDisplay}`;
+        }
+        return 'Etapa sem datas definidas';
+    }
+
+    function syncStageQuickAddTriggerFromRow(row) {
+        if (!row) {
+            return;
+        }
+
+        const trigger = row.querySelector('[data-stage-quick-add-trigger]');
+        if (!trigger) {
+            return;
+        }
+
+        const descricaoField = row.querySelector('.editable-field[data-field="descricao"]');
+        const descricao = descricaoField ? String(descricaoField.textContent || '').trim() : '';
+
+        trigger.setAttribute('data-etapa-descricao', descricao || 'Etapa');
+        trigger.setAttribute('data-etapa-datas', buildStageDatesLabel(row));
+    }
+
     function buildProjectStatusBadge(statusValue) {
         if (statusValue === 'Vigente') {
             return '<span class="badge bg-success text-uppercase"><i class="fas fa-check-circle me-1"></i>Vigente</span>';
@@ -820,6 +860,7 @@
         page.shared.updateResponsavelFieldDisplay = updateResponsavelFieldDisplay;
         page.shared.getDateDisplayValue = getDateDisplayValue;
         page.shared.buildMeetingDateDisplay = buildMeetingDateDisplay;
+        page.shared.buildStageDatesLabel = buildStageDatesLabel;
         page.shared.formatMeetingDateTimeRange = formatMeetingDateTimeRange;
         page.shared.buildMeetingEventData = buildMeetingEventData;
         page.shared.getMeetingEventDataFromRow = getMeetingEventDataFromRow;
@@ -827,6 +868,7 @@
         page.shared.replaceEtapaRow = replaceEtapaRow;
         page.shared.ensureInlineComposerVisible = ensureInlineComposerVisible;
         page.shared.lockInlineEditorToDisplayWidth = lockInlineEditorToDisplayWidth;
+        page.shared.syncStageQuickAddTriggerFromRow = syncStageQuickAddTriggerFromRow;
         page.shared.createAbepIndicatorCombobox = createAbepIndicatorCombobox;
         page.shared.availableAreas = Array.isArray(projectDetailConfig.availableAreas) ? projectDetailConfig.availableAreas : [];
         page.shared.abepIndicatorsOptions = Array.isArray(projectDetailConfig.abepIndicatorsOptions)

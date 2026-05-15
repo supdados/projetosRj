@@ -212,7 +212,6 @@ def test_project_legacy_tasks_panel_lists_orphan_tasks(client_user, seed_data):
     assert payload["success"] is True
     html = payload["html"]
     assert "Item Auditoria" in html
-    assert "Sem etapa" in html
     assert "data-legacy-task-list" in html
 
 

@@ -20,18 +20,18 @@
     function focusInitialControl(overlay, contentHost, rows) {
         const descricao = rows.getField(contentHost, 'descricao');
         if (descricao) {
-            descricao.focus();
+            descricao.focus({ preventScroll: true });
             return;
         }
         const formRoot = rows.getFormRoot(contentHost);
         const addButton = formRoot ? formRoot.querySelector('[data-role="open-add-form"]') : null;
         if (addButton) {
-            addButton.focus();
+            addButton.focus({ preventScroll: true });
             return;
         }
         const closeButton = overlay.querySelector('[data-stage-quick-add-dismiss]');
         if (closeButton) {
-            closeButton.focus();
+            closeButton.focus({ preventScroll: true });
         }
     }
 

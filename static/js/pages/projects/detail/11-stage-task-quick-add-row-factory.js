@@ -65,7 +65,7 @@
         renderResponsavel(contentHost, responsavelNames);
         const descricao = getField(contentHost, 'descricao');
         if (descricao) {
-            descricao.focus();
+            descricao.focus({ preventScroll: true });
             resizeTextarea(contentHost);
         }
     }
@@ -102,7 +102,8 @@
         resizeTextarea(contentHost);
     }
 
-    function highlightCreatedRow(contentHost, taskId) {
+    function highlightCreatedRow(contentHost, taskId, options) {
+        const opts = options || {};
         if (!taskId || !contentHost) {
             return;
         }
@@ -114,8 +115,8 @@
         window.setTimeout(() => {
             newRow.classList.remove('is-just-created');
         }, 2000);
-        if (typeof newRow.scrollIntoView === 'function') {
-            newRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        if (opts.scroll !== false && typeof newRow.scrollIntoView === 'function') {
+            newRow.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
         }
     }
 

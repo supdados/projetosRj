@@ -195,9 +195,15 @@
     }
     function renderHtml(html, opts) {
         const options = opts || {};
+        const previousScrollTop = contentHost ? contentHost.scrollTop : 0;
         injectHtml(html);
+        if (contentHost) {
+            contentHost.scrollTop = previousScrollTop;
+        }
         resetFields();
-        rows.highlightCreatedRow(contentHost, options.highlightTaskId);
+        rows.highlightCreatedRow(contentHost, options.highlightTaskId, {
+            scroll: !options.focusAdd,
+        });
         // Lê contagem persistida no markup do painel (data-stage-count / has-more)
         const section = contentHost && contentHost.querySelector('[data-stage-count]');
         if (section) {
@@ -350,11 +356,13 @@
         const etapaDatas = trigger.getAttribute('data-etapa-datas') || '';
         if (stageTitleEl) stageTitleEl.textContent = stageDescricao;
         const eyebrowCtx = overlay.querySelector('[data-stage-quick-add-eyebrow-context]');
+        const eyebrowSep = overlay.querySelector('.stage-task-quick-add__eyebrow-sep');
         if (eyebrowCtx) {
-            const parts = [];
-            if (projectTitle) parts.push(projectTitle);
-            parts.push(stageDescricao);
-            eyebrowCtx.textContent = parts.join(' — ');
+            eyebrowCtx.textContent = projectTitle;
+            eyebrowCtx.hidden = !projectTitle;
+        }
+        if (eyebrowSep) {
+            eyebrowSep.hidden = !projectTitle;
         }
         const orgaoChip = overlay.querySelector('[data-stage-quick-add-orgao]');
         const orgaoLabel = overlay.querySelector('[data-stage-quick-add-orgao-label]');

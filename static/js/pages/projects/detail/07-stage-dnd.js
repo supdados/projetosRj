@@ -350,6 +350,10 @@
                                         }
                                     }
 
+                                    if (typeof shared.syncStageQuickAddTriggerFromRow === 'function') {
+                                        shared.syncStageQuickAddTriggerFromRow(elementToUpdate.closest('tr'));
+                                    }
+
                                     if (field === 'data_inicio' && daysToAdd !== 0) {
                                         showCascadeConfirmModal(etapaId, daysToAdd);
                                     } else {
@@ -468,11 +472,11 @@
                         body: JSON.stringify({ field: field, value: newValue }),
                     })
                         .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                if (field.includes('data')) {
-                                    shared.updateDateFieldDisplay(target, data.newValue || '', data.displayValue || '');
-                                    target.dataset.originalValue = data.newValue || '';
+                            .then(data => {
+                                if (data.success) {
+                                    if (field.includes('data')) {
+                                        shared.updateDateFieldDisplay(target, data.newValue || '', data.displayValue || '');
+                                        target.dataset.originalValue = data.newValue || '';
                                 } else if (field === 'responsavel') {
                                     shared.updateResponsavelFieldDisplay(target, data.newValue || '');
                                 } else {
@@ -486,6 +490,10 @@
                                         shared.updateDateFieldDisplay(endDateElement, data.updatedEndDate || '', data.updatedEndDateDisplay || '');
                                         endDateElement.dataset.originalValue = data.updatedEndDate || '';
                                     }
+                                }
+
+                                if (typeof shared.syncStageQuickAddTriggerFromRow === 'function') {
+                                    shared.syncStageQuickAddTriggerFromRow(target.closest('tr'));
                                 }
 
                                 const isMeetingField = Boolean(
