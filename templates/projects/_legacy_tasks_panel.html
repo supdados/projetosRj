@@ -11,19 +11,9 @@
                 <section class="task-hub-group stage-task-quick-add__stage-panel"
                          data-project-value="{{ project.id }}"
                          data-project-id="{{ project.id }}"
-                         data-stage-id="">
-                    <header class="task-hub-group-header">
-                        <div class="task-hub-group-title-wrap">
-                            <div class="task-hub-group-heading">
-                                <a href="{{ url_for('main.project_tasks', project_id=project.id) }}" class="task-hub-group-title task-hub-group-title-link">{{ project.titulo }}</a>
-                                <p class="task-hub-group-meta">Tarefas sem etapa (legado) — reassocie a uma etapa para organizá-las.</p>
-                            </div>
-                        </div>
-                        <span class="task-hub-group-count" data-stage-panel-count>
-                            {{ legacy_tasks|length }}{% if legacy_has_more %}+{% endif %} {{ 'tarefas' if legacy_tasks|length != 1 or legacy_has_more else 'tarefa' }}
-                        </span>
-                    </header>
-
+                         data-stage-id=""
+                         data-stage-count="{{ legacy_tasks|length }}"
+                         data-stage-has-more="{{ '1' if legacy_has_more else '0' }}">
                     <div class="task-item-header-row task-hub-group-columns">
                         <div class="task-item-bar task-item-bar-header"></div>
                         <div class="task-item-main">
@@ -37,15 +27,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <header class="task-hub-stage-header is-legacy"
-                            data-stage-drop-zone
-                            data-project-id="{{ project.id }}"
-                            data-stage-value="sem_etapa"
-                            data-stage-id="">
-                        <span class="task-hub-stage-header-label">Sem etapa</span>
-                        <span class="task-hub-stage-header-tag">legado</span>
-                    </header>
 
                     <div data-stage-legacy-task-rows>
                         {% for item in legacy_tasks %}

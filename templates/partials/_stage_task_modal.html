@@ -10,9 +10,23 @@
     <div class="stage-task-quick-add__panel task-detail-v2 task-hub-page" role="document"
          data-current-user-id="{{ current_user_obj.id if current_user_obj else '' }}">
         <header class="stage-task-quick-add__header">
-            <div>
-                <p class="stage-task-quick-add__eyebrow">Tarefas da etapa</p>
-                <h2 class="stage-task-quick-add__title" id="stageTaskQuickAddTitle" data-stage-quick-add-title>Etapa</h2>
+            <div class="stage-task-quick-add__heading">
+                <p class="stage-task-quick-add__eyebrow">
+                    <span>Tarefas da etapa</span>
+                    <span class="stage-task-quick-add__eyebrow-sep" aria-hidden="true">·</span>
+                    <span data-stage-quick-add-eyebrow-context></span>
+                </p>
+                <div class="stage-task-quick-add__title-row">
+                    <h2 class="stage-task-quick-add__title" id="stageTaskQuickAddTitle" data-stage-quick-add-title>Etapa</h2>
+                    <span class="stage-task-quick-add__count" data-stage-quick-add-count hidden></span>
+                </div>
+                <div class="stage-task-quick-add__meta">
+                    <span class="stage-task-quick-add__chip" data-stage-quick-add-orgao hidden>
+                        <span class="stage-task-quick-add__chip-dot" aria-hidden="true"></span>
+                        <span data-stage-quick-add-orgao-label></span>
+                    </span>
+                    <span class="stage-task-quick-add__meta-text" data-stage-quick-add-datas></span>
+                </div>
             </div>
             <button type="button" class="stage-task-quick-add__close" data-stage-quick-add-dismiss aria-label="Fechar">
                 <i class="fas fa-xmark" aria-hidden="true"></i>
@@ -21,7 +35,9 @@
         <div class="stage-task-quick-add__body" data-stage-task-content>
             <p class="stage-task-quick-add__loading" data-stage-task-loading hidden>Carregando tarefas...</p>
         </div>
-        <p class="stage-task-quick-add__hint">Enter para salvar e abrir nova linha · clique fora para fechar.</p>
+        <p class="stage-task-quick-add__hint">
+            <kbd>Enter</kbd> salvar e abrir nova linha · clique fora para fechar.
+        </p>
         <p class="stage-task-quick-add__error" data-stage-quick-add-error hidden></p>
     </div>
 </div>

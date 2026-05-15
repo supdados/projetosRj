@@ -11,7 +11,10 @@
                 data-stage-quick-add-trigger
                 data-stage-quick-add-mode="legacy"
                 data-project-id="{{ project.id }}"
+                data-project-titulo="{{ project.titulo }}"
+                data-orgao-sigla="{{ project.orgao_ref.sigla if project.orgao_ref else '' }}"
                 data-etapa-descricao="Tarefas sem etapa"
+                data-etapa-datas="Sem etapa associada"
                 title="Tarefas do projeto que ainda não foram associadas a uma etapa">
             <i class="fas fa-inbox me-1" aria-hidden="true"></i> Tarefas sem etapa
         </button>
@@ -315,12 +318,26 @@
                         <td class="actions text-center etapa-v4-actions-cell">
                             {% if current_user_obj %}
                             {% set open_count = etapa_open_task_counts.get(etapa.id, 0) %}
+                            {% set etapa_inicio_br = etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '' %}
+                            {% set etapa_fim_br = etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '' %}
+                            {% if etapa_inicio_br and etapa_fim_br %}
+                                {% set etapa_datas_label = etapa_inicio_br ~ ' — ' ~ etapa_fim_br %}
+                            {% elif etapa_inicio_br %}
+                                {% set etapa_datas_label = 'Início ' ~ etapa_inicio_br %}
+                            {% elif etapa_fim_br %}
+                                {% set etapa_datas_label = 'Fim ' ~ etapa_fim_br %}
+                            {% else %}
+                                {% set etapa_datas_label = 'Etapa sem datas definidas' %}
+                            {% endif %}
                             <button type="button"
                                 class="btn btn-sm btn-floating etapa-action-create-task{% if etapa.done %} is-stage-done{% endif %}"
                                 data-stage-quick-add-trigger
                                 data-etapa-id="{{ etapa.id }}"
                                 data-etapa-descricao="{{ etapa.descricao }}"
+                                data-etapa-datas="{{ etapa_datas_label }}"
                                 data-project-id="{{ project.id }}"
+                                data-project-titulo="{{ project.titulo }}"
+                                data-orgao-sigla="{{ project.orgao_ref.sigla if project.orgao_ref else '' }}"
                                 data-stage-done="{{ '1' if etapa.done else '0' }}"
                                 {% if etapa.done %}aria-disabled="true" tabindex="-1"{% endif %}
                                 title="{{ 'Etapa concluída — desfaça a conclusão para criar tarefas' if etapa.done else 'Criar tarefa nesta etapa' }}"

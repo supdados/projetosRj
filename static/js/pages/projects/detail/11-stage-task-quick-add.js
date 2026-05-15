@@ -130,6 +130,13 @@
         if (currentMode === 'stage') {
             rows.updateStageBadge(currentEtapaId, delta);
         }
+        const countEl = overlay.querySelector('[data-stage-quick-add-count]');
+        if (countEl && !countEl.hidden) {
+            const current = parseInt((countEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 0;
+            const next = Math.max(0, current + delta);
+            const suffix = next === 1 ? 'tarefa' : 'tarefas';
+            countEl.textContent = next + ' ' + suffix;
+        }
     }
     // Modais de delete dos rows injetados precisam viver no <body> para que
     // o Bootstrap consiga exibi-los sem ser cortado pelo overflow do panel.
@@ -174,11 +181,30 @@
             if (listEl) window.taskItemsKanban.attachListEl(listEl);
         }
     }
+    function updateHeaderCount(count, hasMore) {
+        const countEl = overlay.querySelector('[data-stage-quick-add-count]');
+        if (!countEl) return;
+        if (count == null) {
+            countEl.hidden = true;
+            countEl.textContent = '';
+            return;
+        }
+        const suffix = (count === 1 && !hasMore) ? 'tarefa' : 'tarefas';
+        countEl.textContent = String(count) + (hasMore ? '+' : '') + ' ' + suffix;
+        countEl.hidden = false;
+    }
     function renderHtml(html, opts) {
         const options = opts || {};
         injectHtml(html);
         resetFields();
         rows.highlightCreatedRow(contentHost, options.highlightTaskId);
+        // Lê contagem persistida no markup do painel (data-stage-count / has-more)
+        const section = contentHost && contentHost.querySelector('[data-stage-count]');
+        if (section) {
+            const count = parseInt(section.getAttribute('data-stage-count') || '0', 10);
+            const hasMore = section.getAttribute('data-stage-has-more') === '1';
+            updateHeaderCount(Number.isFinite(count) ? count : 0, hasMore);
+        }
         if (options.focusAdd) {
             showForm();
         } else {
@@ -317,9 +343,35 @@
         currentEtapaId = mode === 'stage' ? trigger.getAttribute('data-etapa-id') : null;
         currentProjectId = trigger.getAttribute('data-project-id') || config.projectId || currentProjectId;
         responsavelNames = [];
-        if (stageTitleEl) {
-            const fallback = mode === 'legacy' ? 'Tarefas sem etapa' : 'Etapa';
-            stageTitleEl.textContent = trigger.getAttribute('data-etapa-descricao') || fallback;
+        const fallbackTitle = mode === 'legacy' ? 'Tarefas sem etapa' : 'Etapa';
+        const stageDescricao = trigger.getAttribute('data-etapa-descricao') || fallbackTitle;
+        const projectTitle = trigger.getAttribute('data-project-titulo') || config.projectTitle || '';
+        const orgaoSigla = trigger.getAttribute('data-orgao-sigla') || '';
+        const etapaDatas = trigger.getAttribute('data-etapa-datas') || '';
+        if (stageTitleEl) stageTitleEl.textContent = stageDescricao;
+        const eyebrowCtx = overlay.querySelector('[data-stage-quick-add-eyebrow-context]');
+        if (eyebrowCtx) {
+            const parts = [];
+            if (projectTitle) parts.push(projectTitle);
+            parts.push(stageDescricao);
+            eyebrowCtx.textContent = parts.join(' — ');
+        }
+        const orgaoChip = overlay.querySelector('[data-stage-quick-add-orgao]');
+        const orgaoLabel = overlay.querySelector('[data-stage-quick-add-orgao-label]');
+        if (orgaoChip && orgaoLabel) {
+            if (orgaoSigla) {
+                orgaoLabel.textContent = 'Órgão · ' + orgaoSigla;
+                orgaoChip.hidden = false;
+            } else {
+                orgaoChip.hidden = true;
+            }
+        }
+        const datasEl = overlay.querySelector('[data-stage-quick-add-datas]');
+        if (datasEl) datasEl.textContent = etapaDatas;
+        const countEl = overlay.querySelector('[data-stage-quick-add-count]');
+        if (countEl) {
+            countEl.hidden = true;
+            countEl.textContent = '';
         }
         overlay.classList.remove('is-closed');
         overlay.setAttribute('aria-hidden', 'false');
@@ -489,9 +541,7 @@
                 // Remove a row, decrementa contador da etapa.
                 const row = contentHost && contentHost.querySelector('.task-item-row[data-item-id="' + taskId + '"]');
                 if (row && row.parentNode) row.parentNode.removeChild(row);
-                if (currentMode === 'stage') {
-                    rows.updateStageBadge(currentEtapaId, -1);
-                }
+                updateStageBadge(-1);
                 clearCache();
                 if (typeof window.showFlash === 'function') {
                     window.showFlash('Tarefa excluída.', 'success');
