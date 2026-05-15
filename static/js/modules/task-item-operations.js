@@ -457,6 +457,69 @@
             }
         }
 
+        // Estilos de explosão — cada um tem física distinta (spread, speed,
+        // gravity, life). Usados pelo triggerEpic para variar o "ritmo" das
+        // explosões e evitar o efeito de copy/paste entre elas.
+        var BURST_STYLES = {
+            // Estouro radial amplo e rápido, partículas curtas
+            explosive: { spread: 1.55, speedMin: 8.6, speedMax: 16.4, gravityMin: 0.20, gravityMax: 0.40, xJitter: 14, yJitter: 10 },
+            // Tiro estreito e potente para cima — efeito "fogos"
+            firework:  { spread: 0.45, speedMin: 10.2, speedMax: 18.0, gravityMin: 0.17, gravityMax: 0.30, xJitter: 6, yJitter: 6 },
+            // Estouro lateral suave (drift longo)
+            drift:     { spread: 1.95, speedMin: 3.8, speedMax: 7.6, gravityMin: 0.06, gravityMax: 0.14, xJitter: 22, yJitter: 14 },
+            // Pulso curto/concentrado
+            pop:       { spread: 0.85, speedMin: 5.6, speedMax: 9.4, gravityMin: 0.22, gravityMax: 0.42, xJitter: 8, yJitter: 6 },
+            // Chuveirão amplo cobrindo área — partículas pesadas
+            shower:    { spread: 2.40, speedMin: 4.2, speedMax: 8.6, gravityMin: 0.26, gravityMax: 0.50, xJitter: 28, yJitter: 18 },
+            // Fonte alta bem direcional
+            geyser:    { spread: 0.32, speedMin: 11.4, speedMax: 17.6, gravityMin: 0.18, gravityMax: 0.32, xJitter: 4, yJitter: 8 },
+        };
+        var BURST_STYLE_KEYS = Object.keys(BURST_STYLES);
+
+        function shuffledStyleKeys() {
+            var keys = BURST_STYLE_KEYS.slice();
+            for (var i = keys.length - 1; i > 0; i -= 1) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var tmp = keys[i];
+                keys[i] = keys[j];
+                keys[j] = tmp;
+            }
+            return keys;
+        }
+
+        function styledBurst(origin, count, styleKey, angleCenter, extraOpts) {
+            var s = BURST_STYLES[styleKey] || BURST_STYLES.explosive;
+            // Pequena variação aleatória nos próprios parâmetros do estilo,
+            // para que dois bursts do mesmo estilo não fiquem idênticos.
+            var spread = s.spread * randomBetween(0.9, 1.12);
+            var speedMin = s.speedMin * randomBetween(0.92, 1.08);
+            var speedMax = s.speedMax * randomBetween(0.92, 1.10);
+            var gravityMin = s.gravityMin * randomBetween(0.88, 1.14);
+            var gravityMax = s.gravityMax * randomBetween(0.92, 1.12);
+            var opts = {
+                angleCenter: angleCenter,
+                xJitter: s.xJitter,
+                yJitter: s.yJitter,
+            };
+            if (extraOpts) {
+                for (var k in extraOpts) {
+                    if (Object.prototype.hasOwnProperty.call(extraOpts, k)) {
+                        opts[k] = extraOpts[k];
+                    }
+                }
+            }
+            spawnBurst(origin, count, spread, speedMin, speedMax, gravityMin, gravityMax, opts);
+        }
+
+        function ensureRaf() {
+            if (particles.length > 1500) {
+                particles.splice(0, particles.length - 1500);
+            }
+            if (!rafId) {
+                rafId = window.requestAnimationFrame(tick);
+            }
+        }
+
         function triggerEpic() {
             if (prefersReducedMotion()) return;
             ensureCanvas();
@@ -471,116 +534,80 @@
             var viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1280;
             var viewportHeight = window.innerHeight || document.documentElement.clientHeight || 720;
 
-            // Cinco fontes ao longo do topo + dois lados, com fountain central.
-            var sources = [
-                { x: viewportWidth * 0.12, y: viewportHeight * 0.18, angle: -Math.PI / 2 + 0.35 },
-                { x: viewportWidth * 0.30, y: viewportHeight * 0.14, angle: -Math.PI / 2 + 0.18 },
-                { x: viewportWidth * 0.50, y: viewportHeight * 0.22, angle: -Math.PI / 2 },
-                { x: viewportWidth * 0.70, y: viewportHeight * 0.14, angle: -Math.PI / 2 - 0.18 },
-                { x: viewportWidth * 0.88, y: viewportHeight * 0.18, angle: -Math.PI / 2 - 0.35 },
-            ];
-            for (var i = 0; i < sources.length; i += 1) {
-                var src = sources[i];
-                spawnBurst(src, 90, 1.05, 7.0, 14.5, 0.18, 0.36, {
-                    angleCenter: src.angle,
-                    xJitter: 14,
-                    yJitter: 10,
-                    circleChance: 0.22,
-                });
-            }
+            // Sorteia uma sequência única de estilos para esta celebração —
+            // cada explosão na coreografia recebe um estilo distinto, e a
+            // sequência muda a cada chamada.
+            var styles = shuffledStyleKeys();
+            var nextStyle = (function () {
+                var i = 0;
+                return function () {
+                    var k = styles[i % styles.length];
+                    i += 1;
+                    return k;
+                };
+            })();
 
-            // Cascata densa do topo cobrindo a tela inteira.
+            // Sequência coreografada: cada disparo tem origem, ângulo, tamanho
+            // e timing próprios. Os estilos ditam o "feel" de cada estouro.
+            var schedule = [
+                // Wave 1 — abertura: 3 fogos verticais em tempos próximos mas
+                // não simultâneos (efeito de bateria de fogos).
+                { delay: 0,    origin: { x: viewportWidth * 0.18, y: viewportHeight * 0.30 }, angle: -Math.PI / 2 + 0.05, count: 95, style: nextStyle() },
+                { delay: 110,  origin: { x: viewportWidth * 0.82, y: viewportHeight * 0.32 }, angle: -Math.PI / 2 - 0.06, count: 95, style: nextStyle() },
+                { delay: 220,  origin: { x: viewportWidth * 0.50, y: viewportHeight * 0.22 }, angle: -Math.PI / 2,        count: 130, style: nextStyle() },
+
+                // Wave 2 — laterais grandes vindo "de fora" para o centro
+                { delay: 480,  origin: { x: viewportWidth * 0.04, y: viewportHeight * 0.62 }, angle: -0.65, count: 110, style: nextStyle() },
+                { delay: 540,  origin: { x: viewportWidth * 0.96, y: viewportHeight * 0.62 }, angle: -2.49, count: 110, style: nextStyle() },
+
+                // Wave 3 — finale: fonte alta do centro + dois pops de fundo
+                { delay: 880,  origin: { x: viewportWidth * 0.50, y: viewportHeight * 0.85 }, angle: -Math.PI / 2,        count: 170, style: nextStyle() },
+                { delay: 1040, origin: { x: viewportWidth * 0.32, y: viewportHeight * 0.78 }, angle: -Math.PI / 2 + 0.20, count: 70,  style: nextStyle() },
+                { delay: 1100, origin: { x: viewportWidth * 0.68, y: viewportHeight * 0.78 }, angle: -Math.PI / 2 - 0.20, count: 70,  style: nextStyle() },
+            ];
+
+            schedule.forEach(function (step) {
+                if (step.delay === 0) {
+                    styledBurst(step.origin, step.count, step.style, step.angle);
+                } else {
+                    window.setTimeout(function () {
+                        if (!canvas || !ctx) return;
+                        styledBurst(step.origin, step.count, step.style, step.angle);
+                        ensureRaf();
+                    }, step.delay);
+                }
+            });
+
+            // Cascata contínua do topo, espalhando partículas durante toda a
+            // celebração — usa estilo "shower" indireto via spawnCascade.
             spawnCascade(
                 { x: viewportWidth / 2, y: viewportHeight * 0.05 },
-                260,
+                240,
                 {
                     xSpread: viewportWidth * 0.55,
-                    yMin: 20,
-                    yMax: 220,
-                    vxMin: -2.6,
-                    vxMax: 2.6,
-                    vyMin: 2.6,
-                    vyMax: 6.4,
-                    gravityMin: 0.12,
-                    gravityMax: 0.26,
-                    circleChance: 0.2,
+                    yMin: 20, yMax: 220,
+                    vxMin: -2.6, vxMax: 2.6,
+                    vyMin: 2.6, vyMax: 6.4,
+                    gravityMin: 0.12, gravityMax: 0.26,
                 }
             );
-
-            // Segundo wave depois de 280ms para prolongar a celebração.
             window.setTimeout(function () {
                 if (!canvas || !ctx) return;
-                var sideOffset = Math.min(Math.max(viewportWidth * 0.18, 140), 320);
-                spawnBurst(
-                    { x: sideOffset, y: viewportHeight * 0.55 },
-                    100,
-                    0.55,
-                    7.4,
-                    14.6,
-                    0.18,
-                    0.34,
-                    { angleCenter: -0.85, xJitter: 8, yJitter: 8 }
-                );
-                spawnBurst(
-                    { x: viewportWidth - sideOffset, y: viewportHeight * 0.55 },
-                    100,
-                    0.55,
-                    7.4,
-                    14.6,
-                    0.18,
-                    0.34,
-                    { angleCenter: -2.29, xJitter: 8, yJitter: 8 }
-                );
                 spawnCascade(
-                    { x: viewportWidth / 2, y: viewportHeight * 0.08 },
+                    { x: viewportWidth / 2, y: viewportHeight * 0.06 },
                     180,
                     {
-                        xSpread: viewportWidth * 0.50,
-                        yMin: 30,
-                        yMax: 200,
-                        vxMin: -2.2,
-                        vxMax: 2.2,
-                        vyMin: 2.8,
-                        vyMax: 6.8,
-                        gravityMin: 0.13,
-                        gravityMax: 0.26,
+                        xSpread: viewportWidth * 0.48,
+                        yMin: 30, yMax: 200,
+                        vxMin: -2.2, vxMax: 2.2,
+                        vyMin: 2.8, vyMax: 6.8,
+                        gravityMin: 0.13, gravityMax: 0.26,
                     }
                 );
-                if (particles.length > 1400) {
-                    particles.splice(0, particles.length - 1400);
-                }
-                if (!rafId) {
-                    rafId = window.requestAnimationFrame(tick);
-                }
-            }, 280);
+                ensureRaf();
+            }, 700);
 
-            // Terceiro wave (fountain do centro inferior) após 620ms.
-            window.setTimeout(function () {
-                if (!canvas || !ctx) return;
-                spawnBurst(
-                    { x: viewportWidth / 2, y: viewportHeight * 0.78 },
-                    160,
-                    0.78,
-                    9.2,
-                    16.0,
-                    0.20,
-                    0.36,
-                    { xJitter: 18, yJitter: 12, circleChance: 0.24 }
-                );
-                if (particles.length > 1400) {
-                    particles.splice(0, particles.length - 1400);
-                }
-                if (!rafId) {
-                    rafId = window.requestAnimationFrame(tick);
-                }
-            }, 620);
-
-            if (particles.length > 1400) {
-                particles.splice(0, particles.length - 1400);
-            }
-            if (!rafId) {
-                rafId = window.requestAnimationFrame(tick);
-            }
+            ensureRaf();
         }
 
         return {

@@ -77,13 +77,13 @@ html[data-theme="dark"] .etapa-action-create-task:focus-visible {
     box-shadow: none !important;
 }
 
-/* Bolinha de notificação no dark: tom âmbar suave (semântica de notificação)
-   com leve brilho — distinto do azul do hover e do verde de sucesso. */
+/* Bolinha de notificação no dark: mesmo azul do botão "Novo Projeto"
+   da página inicial, sem ring escuro de separação. */
 html[data-theme="dark"] .etapa-action-task-count {
-    background: #f59e0b;
-    color: #1a1206;
+    background: linear-gradient(135deg, #0e6aa8 0%, #0b5e94 52%, #084f7e 100%);
+    color: #ffffff;
     font-weight: 700;
-    box-shadow: 0 0 0 2px #1f2a3a, 0 1px 3px rgba(245, 158, 11, 0.32);
+    box-shadow: 0 2px 6px rgba(6, 74, 123, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 /* Modal */
