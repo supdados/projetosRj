@@ -329,6 +329,10 @@
         if (!trigger || !window.responsavelPickerManager || typeof window.responsavelPickerManager.open !== 'function') {
             return;
         }
+        const formRoot = rows.getFormRoot(contentHost);
+        if (!formRoot || !formRoot.contains(trigger)) {
+            return;
+        }
         const responsavel = rows.getField(contentHost, 'responsavel');
         window.responsavelPickerManager.open({
             anchorEl: trigger,
@@ -488,6 +492,10 @@
         }
         const responsavelTrigger = event.target.closest('[data-role="responsavel-trigger"]');
         if (responsavelTrigger) {
+            const formRoot = rows.getFormRoot(contentHost);
+            if (!formRoot || !formRoot.contains(responsavelTrigger)) {
+                return;
+            }
             event.preventDefault();
             openResponsavelPicker(responsavelTrigger);
         }
