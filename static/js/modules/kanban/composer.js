@@ -145,6 +145,12 @@
                     }
                     if (etapaLoadedFor === normalized) return;
 
+                    // Esconde/zera imediatamente as etapas do projeto anterior. Enquanto o
+                    // fetch do novo projeto não resolve, o campo fica oculto e
+                    // getComposerEtapaValue() retorna '' — evita submeter uma etapa do
+                    // projeto antigo (que o backend recusaria: "Etapa não pertence...").
+                    resetEtapaPicker();
+
                     ctx.fetchEtapasForProject(normalized)
                         .then(function (etapas) {
                             if (getComposerProjectValue() !== normalized) return;

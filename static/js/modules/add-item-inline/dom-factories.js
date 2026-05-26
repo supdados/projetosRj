@@ -214,6 +214,14 @@
             var taskId = item.task_id || item.id || '';
             var taskTitulo = item.task_titulo || item.descricao || '';
             var projectInfo = ctx.getProjectInfo(item.project_value || item.project_id || '', item.project_titulo, item.project_orgao_sigla);
+            // Metadados de etapa para a hierarquia projeto → etapa → tarefa na lista.
+            // Sem eles, syncGroupedListOrder não consegue posicionar a row sob o
+            // header da etapa escolhida (ver _task_item_row.html). 'sem_etapa' é o
+            // bucket legado (tarefa com projeto mas sem etapa).
+            var etapaValue = item.etapa_value || 'sem_etapa';
+            var etapaId = item.etapa_id || '';
+            var stageLegacy = etapaValue === 'sem_etapa' ? '1' : '0';
+            var projectId = item.project_id || '';
             var commentsCount = Number(item.comments_count || 0);
             var anexosCount = Number(item.anexos_count || 0);
             var canDelete = canDeleteTaskItem(item);
@@ -247,6 +255,10 @@
                 'data-task-id="' + escapeAttr(taskId) + '" ',
                 'data-task-titulo="' + escapeAttr(taskTitulo) + '" ',
                 'data-project-value="' + escapeAttr(projectInfo.value) + '" ',
+                'data-project-id="' + escapeAttr(projectId) + '" ',
+                'data-stage-value="' + escapeAttr(etapaValue) + '" ',
+                'data-stage-id="' + escapeAttr(etapaId) + '" ',
+                'data-stage-legacy="' + stageLegacy + '" ',
                 'data-project-titulo="' + escapeAttr(projectInfo.label) + '">',
                 '<div class="task-item-bar status-' + escapeAttr(item.status) + '"></div>',
                 '<div class="task-item-main">',
