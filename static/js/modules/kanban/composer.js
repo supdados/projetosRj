@@ -4,6 +4,29 @@
     registry.composer = function registerComposer(ctx) {
         var refs = ctx.refs;
         var state = ctx.state;
+        var etapaCacheByProject = {};
+
+        // Busca (e cacheia) as etapas de um projeto via endpoint AJAX. O template
+        // injeta `projectEtapasUrlTemplate` com `project_id=0`; trocamos pelo id real.
+        ctx.fetchEtapasForProject = function fetchEtapasForProject(projectValue) {
+            if (etapaCacheByProject[projectValue]) {
+                return Promise.resolve(etapaCacheByProject[projectValue]);
+            }
+            var template = (window.TASK_HUB_CONFIG && window.TASK_HUB_CONFIG.projectEtapasUrlTemplate) || '';
+            if (!template) return Promise.resolve([]);
+            var url = template.replace(/\/0\/etapas(\?|$)/, '/' + encodeURIComponent(projectValue) + '/etapas$1');
+
+            return fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+            })
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    var etapas = (data && data.success && Array.isArray(data.etapas)) ? data.etapas : [];
+                    etapaCacheByProject[projectValue] = etapas;
+                    return etapas;
+                });
+        };
 
         function bindKanbanComposers() {
             state.composerControllers = {};
@@ -75,12 +98,72 @@
                 var projectInput = form.querySelector('.task-items-kanban-add-project-input[data-role="project-input"]');
                 var projectValueInput = form.querySelector('.task-items-kanban-add-project-value[data-role="project-value"]');
                 var projectDropdown = form.querySelector('.task-hub-kanban-project-dropdown[data-role="project-dropdown"]');
+                var etapaWrap = form.querySelector('[data-role="etapa-wrap"]');
+                var etapaSelect = form.querySelector('[data-role="etapa-select"]');
+                var etapaLoadedFor = null;
                 renderResponsavelPickerTrigger(ownerTrigger, selectedNames, 'Responsável');
 
                 function getComposerProjectValue() {
                     if (selectedProjectFromFilter) return selectedProjectFromFilter;
                     if (projectValueInput) return (projectValueInput.value || '').trim();
                     return '';
+                }
+
+                function getComposerEtapaValue() {
+                    if (!etapaSelect || !etapaWrap || etapaWrap.hasAttribute('hidden')) return '';
+                    return (etapaSelect.value || '').trim();
+                }
+
+                function clearEtapaOptions() {
+                    while (etapaSelect.firstChild) {
+                        etapaSelect.removeChild(etapaSelect.firstChild);
+                    }
+                    var semEtapa = document.createElement('option');
+                    semEtapa.value = 'sem_etapa';
+                    semEtapa.textContent = 'Sem etapa';
+                    etapaSelect.appendChild(semEtapa);
+                    etapaSelect.value = 'sem_etapa';
+                }
+
+                function resetEtapaPicker() {
+                    etapaLoadedFor = null;
+                    if (!etapaSelect || !etapaWrap) return;
+                    clearEtapaOptions();
+                    etapaWrap.setAttribute('hidden', '');
+                }
+
+                // Busca as etapas do projeto selecionado e popula o campo "Etapa".
+                // O resultado é cacheado por projeto (ctx.etapaCacheByProject) para
+                // evitar refetch entre as colunas do kanban (uma por status). Etapas
+                // concluídas entram desabilitadas — o backend recusa tarefa nelas.
+                function loadEtapasForProject(projectValue) {
+                    if (!etapaSelect || !etapaWrap) return;
+                    var normalized = (projectValue || '').trim();
+                    if (!normalized || normalized === 'sem_projeto') {
+                        resetEtapaPicker();
+                        return;
+                    }
+                    if (etapaLoadedFor === normalized) return;
+
+                    ctx.fetchEtapasForProject(normalized)
+                        .then(function (etapas) {
+                            if (getComposerProjectValue() !== normalized) return;
+                            clearEtapaOptions();
+                            etapas.forEach(function (etapa) {
+                                var option = document.createElement('option');
+                                option.value = etapa.value;
+                                option.textContent = etapa.done
+                                    ? etapa.label + ' (concluída)'
+                                    : etapa.label;
+                                if (etapa.done) option.disabled = true;
+                                etapaSelect.appendChild(option);
+                            });
+                            etapaWrap.removeAttribute('hidden');
+                            etapaLoadedFor = normalized;
+                        })
+                        .catch(function () {
+                            resetEtapaPicker();
+                        });
                 }
 
                 function setupComposerProjectPicker() {
@@ -119,6 +202,7 @@
                         projectValueInput.value = value;
                         projectInput.value = label;
                         hideDrop();
+                        loadEtapasForProject(value);
                     }
 
                     projectInput.addEventListener('focus', showDrop);
@@ -177,6 +261,11 @@
                     });
                     addBtn.setAttribute('hidden', '');
                     form.removeAttribute('hidden');
+                    // Projeto travado (filtro/rota de projeto): carrega etapas na abertura,
+                    // já que não há dropdown de projeto para disparar o carregamento.
+                    if (selectedProjectFromFilter) {
+                        loadEtapasForProject(selectedProjectFromFilter);
+                    }
                     ensureComposerVisible(composer, form, 0);
                     setTimeout(function () {
                         desc.focus();
@@ -198,6 +287,9 @@
                         if (!selectedProjectFromFilter && projectInput && projectValueInput) {
                             projectInput.value = '';
                             projectValueInput.value = '';
+                            resetEtapaPicker();
+                        } else if (etapaSelect) {
+                            etapaSelect.value = 'sem_etapa';
                         }
                         selectedNames = [];
                         renderResponsavelPickerTrigger(ownerTrigger, selectedNames, 'Responsável');
@@ -244,6 +336,7 @@
                     composer.classList.add('is-saving');
                     window.taskItemsListBridge.requestAddItem({
                         project: composerProject,
+                        etapa: getComposerEtapaValue(),
                         descricao: descricao,
                         status: status,
                         responsavel: selectedNames.join(', '),

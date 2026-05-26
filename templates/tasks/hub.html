@@ -450,6 +450,11 @@
                                 {% else %}
                                 <input type="hidden" class="task-items-kanban-add-project-value" data-role="project-value" value="{{ selected_project }}">
                                 {% endif %}
+                                <div class="task-hub-kanban-etapa-wrap" data-role="etapa-wrap" hidden>
+                                    <select class="task-items-kanban-add-etapa" data-role="etapa-select" aria-label="Etapa">
+                                        <option value="sem_etapa">Sem etapa</option>
+                                    </select>
+                                </div>
                                 <textarea class="task-items-kanban-add-desc" rows="2"
                                     placeholder="Descreva a tarefa..." required></textarea>
                                 <button type="button" class="responsavel-picker-trigger task-items-kanban-add-owner"
@@ -547,6 +552,7 @@ window.TASK_HUB_CONFIG = {
     archivedMode: {{ archived_mode|tojson }},
     focusTask: {{ (request.args.get('focus_task') or '')|tojson }},
     moveTaskEtapaUrlTemplate: "{{ url_for('main.move_task_etapa', task_id=0) }}",
+    projectEtapasUrlTemplate: "{{ url_for('main.list_project_etapas', project_id=0) }}",
 };
 </script>
 <script src="{{ url_for('static', filename='js/modules/task-item-helpers.js') }}"></script>

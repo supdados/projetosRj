@@ -23,6 +23,8 @@
 
                 var formData = new FormData();
                 formData.append('project', projectValue);
+                // `etapa` é opcional (kanban): backend trata vazio/'sem_etapa' como sem etapa.
+                formData.append('etapa', (dataPayload.etapa || '').trim());
                 formData.append('descricao', descricao);
                 formData.append('status', dataPayload.status || 'nao_iniciada');
                 formData.append('responsavel', (dataPayload.responsavel || '').trim());

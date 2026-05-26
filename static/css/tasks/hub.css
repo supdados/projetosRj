@@ -852,6 +852,35 @@
     z-index: 50;
 }
 
+.task-hub-page .task-hub-kanban-etapa-wrap {
+    display: block;
+}
+
+.task-hub-page .task-items-kanban-add-etapa {
+    width: 100%;
+    min-height: 34px;
+    border: 1px solid #cfdeed;
+    border-radius: var(--td-radius-sm);
+    padding: 0.22rem 0.44rem;
+    font-size: var(--ds-font-size-xs);
+    color: #2b3d52;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.task-hub-page .task-items-kanban-add-etapa:hover {
+    border-color: #b8cfe6;
+    background: #f8fbff;
+}
+
+.task-hub-page .task-items-kanban-add-etapa:focus {
+    outline: none;
+    border-color: #8bb0d7;
+    background: #f6fbff;
+    box-shadow: 0 0 0 3px rgba(31, 92, 168, 0.12);
+}
+
 @media (max-width: 991px) {
     .task-hub-page .task-hub-add-row .task-item-add-line {
         grid-template-columns: 1fr 1fr;
@@ -1222,6 +1251,23 @@ html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-
 }
 
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-project-input:focus {
+    border-color: rgba(99, 166, 219, 0.56);
+    background: #25374d;
+    box-shadow: var(--td-items-focus-ring);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-etapa {
+    background: #223144;
+    border-color: rgba(99, 166, 219, 0.34);
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-etapa:hover {
+    background: #29384c;
+    border-color: rgba(99, 166, 219, 0.48);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-items-kanban-add-etapa:focus {
     border-color: rgba(99, 166, 219, 0.56);
     background: #25374d;
     box-shadow: var(--td-items-focus-ring);
