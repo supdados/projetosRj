@@ -311,6 +311,11 @@
                     if (selectedNames.length) return true;
                     if (prioSelect && (prioSelect.value || '').trim()) return true;
                     if (tipoSelect && (tipoSelect.value || '').trim()) return true;
+                    // Projeto + etapa escolhidos mantêm o composer aberto ao clicar fora.
+                    // Sem descrição, trySubmitComposerOutside() não envia — só preserva a
+                    // seleção em vez de fechar e perder projeto/etapa.
+                    var etapaValue = getComposerEtapaValue();
+                    if (getComposerProjectValue() && etapaValue && etapaValue !== 'sem_etapa') return true;
                     return false;
                 }
 
