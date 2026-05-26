@@ -668,6 +668,20 @@
         min-height: 0 !important;
     }
 
+    /* Título e descrição não devem ter borda no modo de edição (apenas o
+       fundo translúcido sinaliza o campo editável). */
+    .project-header .project-header-text-editor--titulo.form-control,
+    .project-header .project-header-text-editor--short-description.form-control,
+    .project-header .project-header-text-editor--short_description.form-control,
+    .project-header .project-header-text-editor--titulo.form-control:focus,
+    .project-header .project-header-text-editor--titulo.form-control:focus-visible,
+    .project-header .project-header-text-editor--short-description.form-control:focus,
+    .project-header .project-header-text-editor--short-description.form-control:focus-visible,
+    .project-header .project-header-text-editor--short_description.form-control:focus,
+    .project-header .project-header-text-editor--short_description.form-control:focus-visible {
+        border: none !important;
+    }
+
     /* Estilos especiais para campos no header (fundo azul) */
     .project-header [data-field] input.form-control,
     .project-header [data-field] textarea.form-control,

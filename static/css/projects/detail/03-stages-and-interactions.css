@@ -1380,6 +1380,70 @@
         font-size: var(--ds-font-size-2xs);
     }
 
+    /* Chips do header compacto — mesmos campos do header principal, mas em
+       paleta clara (o compacto tem fundo azul-claro, ao contrário do header
+       principal escuro onde os .ph-chip usam texto branco). */
+    .project-compact-meta {
+        margin-top: 0.6rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.45rem;
+    }
+
+    .pc-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        border: 1px solid #d8e6f4;
+        background: #f4f9ff;
+        color: #45617f;
+        border-radius: 999px;
+        padding: 0.18rem 0.55rem;
+        font-size: var(--ds-font-size-xs);
+        font-weight: var(--ds-font-weight-semibold);
+        line-height: var(--ds-line-height-tight);
+        white-space: nowrap;
+    }
+
+    .pc-chip i {
+        font-size: var(--ds-font-size-2xs);
+        opacity: 0.92;
+    }
+
+    .pc-chip-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #16a34a;
+    }
+
+    /* Status */
+    .pc-chip--status-vigente {
+        background: #e8f8ef;
+        border-color: #bfe6cf;
+        color: #1d7a45;
+    }
+
+    .pc-chip--status-suspenso {
+        background: #fef4e6;
+        border-color: #f6dcab;
+        color: #9a6212;
+    }
+
+    /* Prioridade */
+    .pc-chip--prio-urgente {
+        background: #fdecec;
+        border-color: #f6bcbc;
+        color: #b42323;
+    }
+
+    .pc-chip--prio-alta {
+        background: #fdeede;
+        border-color: #f7cfa6;
+        color: #a8590f;
+    }
+
     .project-compact-back {
         display: inline-flex;
         align-items: center;

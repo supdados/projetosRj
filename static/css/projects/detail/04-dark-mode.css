@@ -93,6 +93,16 @@ html[data-theme="dark"] body.is-authenticated .project-header .project-header-te
     box-shadow: none !important;
 }
 
+/* Título e descrição sem borda no modo de edição (ver 01-shell-and-header.css). */
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-text-editor--titulo.form-control,
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-text-editor--short-description.form-control,
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-text-editor--short_description.form-control,
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-text-editor--titulo.form-control:focus,
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-text-editor--short-description.form-control:focus,
+html[data-theme="dark"] body.is-authenticated .project-header .project-header-text-editor--short_description.form-control:focus {
+    border: none !important;
+}
+
 html[data-theme="dark"] body.is-authenticated .project-compact-header {
     background: rgba(39, 52, 71, 0.96);
     border-color: var(--app-color-border);
@@ -280,6 +290,41 @@ html[data-theme="dark"] body.is-authenticated .project-compact-dates span {
 
 html[data-theme="dark"] body.is-authenticated .project-compact-dates span i {
     color: #aac3db;
+}
+
+/* Chips do header compacto no modo escuro (ver 03-stages-and-interactions.css). */
+html[data-theme="dark"] body.is-authenticated .pc-chip {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #d2e2f2;
+}
+
+html[data-theme="dark"] body.is-authenticated .pc-chip-dot {
+    background: #6ee7b7;
+}
+
+html[data-theme="dark"] body.is-authenticated .pc-chip--status-vigente {
+    background: rgba(110, 231, 183, 0.16);
+    border-color: rgba(110, 231, 183, 0.34);
+    color: #9ff0c9;
+}
+
+html[data-theme="dark"] body.is-authenticated .pc-chip--status-suspenso {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: rgba(245, 158, 11, 0.40);
+    color: #f7c97a;
+}
+
+html[data-theme="dark"] body.is-authenticated .pc-chip--prio-urgente {
+    background: rgba(220, 38, 38, 0.20);
+    border-color: rgba(248, 113, 113, 0.42);
+    color: #f5a6a6;
+}
+
+html[data-theme="dark"] body.is-authenticated .pc-chip--prio-alta {
+    background: rgba(234, 88, 12, 0.18);
+    border-color: rgba(251, 146, 60, 0.42);
+    color: #f6bf8c;
 }
 
 html[data-theme="dark"] body.is-authenticated .project-compact-back {

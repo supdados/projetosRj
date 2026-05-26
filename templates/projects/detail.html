@@ -101,13 +101,57 @@
                 {% if project.short_description %}
                 <p class="project-compact-description">{{ project.short_description }}</p>
                 {% endif %}
-                <div class="project-compact-dates">
-                    <span><i class="far fa-calendar-alt"></i> Início: {{
+
+                {# Mesmos campos do header principal (chips), em versão clara p/ o header compacto #}
+                <div class="project-compact-meta">
+                    {# Status #}
+                    <span class="pc-chip pc-chip--status pc-chip--status-{{ project.status|lower if project.status else 'na' }}">
+                        {% if project.status == 'Vigente' %}
+                        <span class="pc-chip-dot" aria-hidden="true"></span>Vigente
+                        {% elif project.status == 'Finalizado' %}
+                        <i class="fas fa-flag-checkered" aria-hidden="true"></i>Finalizado
+                        {% elif project.status == 'Suspenso' %}
+                        <i class="fas fa-pause" aria-hidden="true"></i>Suspenso
+                        {% else %}
+                        {{ project.status or 'Sem status' }}
+                        {% endif %}
+                    </span>
+
+                    {# Prioridade #}
+                    <span class="pc-chip pc-chip--prio pc-chip--prio-{{ project.prioridade or 'na' }}">
+                        {% if project.prioridade == 'urgente' %}
+                        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>Urgente
+                        {% elif project.prioridade == 'alta' %}
+                        <i class="fas fa-angle-double-up" aria-hidden="true"></i>Alta
+                        {% elif project.prioridade == 'media' %}
+                        <i class="fas fa-minus" aria-hidden="true"></i>Média
+                        {% elif project.prioridade == 'baixa' %}
+                        <i class="fas fa-angle-double-down" aria-hidden="true"></i>Baixa
+                        {% else %}
+                        Sem prioridade
+                        {% endif %}
+                    </span>
+
+                    {# Tipo de Entrega #}
+                    <span class="pc-chip">
+                        <i class="fas fa-box" aria-hidden="true"></i>{{ project.delivery_type or 'Sem tipo' }}
+                    </span>
+
+                    {# Categoria (Projeto Especial) #}
+                    <span class="pc-chip">
+                        <i class="fas fa-star" aria-hidden="true"></i>{{ project.special_project or 'Sem categoria' }}
+                    </span>
+
+                    {# Datas + total na mesma linha dos chips acima #}
+                    <span class="pc-chip"><i class="far fa-calendar-alt" aria-hidden="true"></i> Início: {{
                         project.data_inicio_projeto.strftime('%d/%m/%Y') if project.data_inicio_projeto else 'Não definida'
                         }}</span>
-                    <span><i class="far fa-calendar-check"></i> Fim: {{
+                    <span class="pc-chip"><i class="far fa-calendar-check" aria-hidden="true"></i> Fim: {{
                         project.data_fim_projeto.strftime('%d/%m/%Y') if project.data_fim_projeto else 'Não definida'
                         }}</span>
+                    {% if ph_has_dates %}
+                    <span class="pc-chip"><i class="far fa-hourglass" aria-hidden="true"></i> {{ ph_duration_label }}</span>
+                    {% endif %}
                 </div>
             </div>
             <a href="{{ url_for('main.list_projects') }}" class="project-compact-back">

@@ -624,7 +624,7 @@
                     input.className = 'form-control form-control-sm project-inline-input project-inline-input-description';
                     input.rows = 1;
                     input.value = currentValue || '';
-                    input.placeholder = 'Adicione uma descrição...';
+                    input.placeholder = 'Descrição';
                 } else if (field === 'titulo') {
                     input = document.createElement('textarea');
                     input.className = 'form-control form-control-sm project-inline-input project-inline-input-title';
