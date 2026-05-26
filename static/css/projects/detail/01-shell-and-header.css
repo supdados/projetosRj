@@ -1257,6 +1257,20 @@
     background-size: 0.7rem 0.7rem;
 }
 
+/* O <select> fechado usa texto branco (fica sobre o gradiente escuro do header).
+   Sem esta regra, no Chrome/Windows os <option> da lista aberta herdam o branco
+   e o popup nativo tem fundo branco -> texto branco sobre branco = invisível.
+   O Safari/macOS ignora a cor herdada, por isso o bug só aparecia no Chrome/Windows.
+   O popup é renderizado pelo SO (fora do header), então texto escuro sobre fundo
+   claro é legível tanto no modo claro quanto no escuro. */
+.project-header-chips .project-header-chip-editor.form-select option,
+.project-header-chips .project-header-chip-editor.form-select-sm option,
+.project-header-chips select.form-select option,
+.project-header-chips select.form-select-sm option {
+    color: #1f2d3d;
+    background-color: #ffffff;
+}
+
 .project-header-chips .project-header-chip-editor:focus,
 .project-header-chips .project-header-chip-editor:focus-visible {
     border-color: rgba(255, 255, 255, 0.18);

@@ -620,6 +620,17 @@ html[data-theme="dark"] body.is-authenticated .project-header-chips .project-hea
     background-size: 0.7rem 0.7rem !important;
 }
 
+/* No modo escuro, deixa o popup nativo dos <option> coerente com a UI escura.
+   A regra base (01-shell-and-header.css) já garante legibilidade no Chrome/Windows;
+   aqui só ajustamos a aparência para fundo escuro + texto claro. */
+html[data-theme="dark"] body.is-authenticated .project-header-chips .project-header-chip-editor.form-select option,
+html[data-theme="dark"] body.is-authenticated .project-header-chips .project-header-chip-editor.form-select-sm option,
+html[data-theme="dark"] body.is-authenticated .project-header-chips select.form-select option,
+html[data-theme="dark"] body.is-authenticated .project-header-chips select.form-select-sm option {
+    color: #e6eef7 !important;
+    background-color: #2b3a4f !important;
+}
+
 
 html[data-theme="dark"] body.is-authenticated .form-control::placeholder,
 html[data-theme="dark"] body.is-authenticated .form-select::placeholder,
