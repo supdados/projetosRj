@@ -37,35 +37,8 @@ html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--status-s
     border-color: rgba(245, 158, 11, 0.34) !important;
 }
 
-html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--prio-urgente {
-    background: transparent !important;
-    border-color: rgba(248, 113, 113, 0.36) !important;
-}
-
-html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--prio-alta {
-    background: transparent !important;
-    border-color: rgba(251, 146, 60, 0.36) !important;
-}
-
-html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--prio-media {
-    background: transparent !important;
-    border-color: rgba(234, 179, 8, 0.36) !important;
-}
-
-html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--prio-baixa {
-    background: transparent !important;
-    border-color: rgba(74, 222, 128, 0.36) !important;
-}
-
-html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--delivery[data-value]:not([data-value=""]) {
-    background: transparent !important;
-    border-color: rgba(96, 165, 250, 0.40) !important;
-}
-
-html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--special[data-value]:not([data-value=""]) {
-    background: transparent !important;
-    border-color: rgba(167, 139, 250, 0.44) !important;
-}
+/* Prioridade/tipo/categoria são neutros (cor só no ícone, definida em
+   01-shell-and-header.css), então no dark mode usam o fundo base do chip. */
 
 html[data-theme="dark"] body.is-authenticated .project-header .ph-chip-dates {
     background: transparent !important;
@@ -319,57 +292,23 @@ html[data-theme="dark"] body.is-authenticated .pc-chip {
     color: #d2e2f2;
 }
 
-html[data-theme="dark"] body.is-authenticated .pc-chip-dot {
-    background: #6ee7b7;
+html[data-theme="dark"] body.is-authenticated .pc-chip-dot,
+html[data-theme="dark"] body.is-authenticated .pc-chip--status-vigente .pc-chip-dot {
+    background: #6ee7b7 !important;
+    box-shadow: 0 0 0 2px rgba(110, 231, 183, 0.22);
 }
 
-html[data-theme="dark"] body.is-authenticated .pc-chip--status-vigente {
-    background: rgba(110, 231, 183, 0.16);
-    border-color: rgba(110, 231, 183, 0.34);
-    color: #9ff0c9;
-}
+/* Status neutro; cor só no indicador (bolinha já verde via .pc-chip-dot). */
+html[data-theme="dark"] body.is-authenticated .pc-chip--status-suspenso i { color: #f7c97a; }
 
-html[data-theme="dark"] body.is-authenticated .pc-chip--status-suspenso {
-    background: rgba(245, 158, 11, 0.18);
-    border-color: rgba(245, 158, 11, 0.40);
-    color: #f7c97a;
-}
-
-html[data-theme="dark"] body.is-authenticated .pc-chip--prio-urgente {
-    background: rgba(220, 38, 38, 0.20);
-    border-color: rgba(248, 113, 113, 0.42);
-    color: #f5a6a6;
-}
-
-html[data-theme="dark"] body.is-authenticated .pc-chip--prio-alta {
-    background: rgba(234, 88, 12, 0.18);
-    border-color: rgba(251, 146, 60, 0.42);
-    color: #f6bf8c;
-}
-
-html[data-theme="dark"] body.is-authenticated .pc-chip--prio-media {
-    background: rgba(202, 138, 4, 0.20);
-    border-color: rgba(234, 179, 8, 0.42);
-    color: #f0d486;
-}
-
-html[data-theme="dark"] body.is-authenticated .pc-chip--prio-baixa {
-    background: rgba(22, 163, 74, 0.18);
-    border-color: rgba(74, 222, 128, 0.40);
-    color: #8fe6b3;
-}
-
-html[data-theme="dark"] body.is-authenticated .pc-chip--delivery {
-    background: rgba(59, 130, 246, 0.20);
-    border-color: rgba(96, 165, 250, 0.44);
-    color: #aacbff;
-}
-
-html[data-theme="dark"] body.is-authenticated .pc-chip--special {
-    background: rgba(139, 92, 246, 0.22);
-    border-color: rgba(167, 139, 250, 0.46);
-    color: #cbb8fb;
-}
+/* Prioridade/tipo/categoria: chip neutro (base acima), só o ícone colorido.
+   Tom claro p/ legibilidade sobre o fundo escuro do header compacto. */
+html[data-theme="dark"] body.is-authenticated .pc-chip--prio-urgente i { color: #f5a6a6; }
+html[data-theme="dark"] body.is-authenticated .pc-chip--prio-alta i { color: #f6bf8c; }
+html[data-theme="dark"] body.is-authenticated .pc-chip--prio-media i { color: #f0d486; }
+html[data-theme="dark"] body.is-authenticated .pc-chip--prio-baixa i { color: #8fe6b3; }
+html[data-theme="dark"] body.is-authenticated .pc-chip--delivery i { color: #aacbff; }
+html[data-theme="dark"] body.is-authenticated .pc-chip--special i { color: #cbb8fb; }
 
 html[data-theme="dark"] body.is-authenticated .project-compact-back {
     background: #2b3a4f;

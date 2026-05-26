@@ -1418,56 +1418,18 @@
         background: #16a34a;
     }
 
-    /* Status */
-    .pc-chip--status-vigente {
-        background: #e8f8ef;
-        border-color: #bfe6cf;
-        color: #1d7a45;
-    }
+    /* Status: chip neutro; cor só no indicador (bolinha do Vigente / ícone),
+       igual aos demais. A bolinha já é verde via .pc-chip-dot. */
+    .pc-chip--status-suspenso i { color: #9a6212; }
 
-    .pc-chip--status-suspenso {
-        background: #fef4e6;
-        border-color: #f6dcab;
-        color: #9a6212;
-    }
-
-    /* Prioridade — mesma convenção da lista de projetos (projects/list.css). */
-    .pc-chip--prio-urgente {
-        background: rgba(220, 38, 38, 0.13);
-        border-color: rgba(220, 38, 38, 0.28);
-        color: #b42323;
-    }
-
-    .pc-chip--prio-alta {
-        background: rgba(234, 88, 12, 0.14);
-        border-color: rgba(234, 88, 12, 0.28);
-        color: #b45309;
-    }
-
-    .pc-chip--prio-media {
-        background: rgba(202, 138, 4, 0.14);
-        border-color: rgba(202, 138, 4, 0.28);
-        color: #8f6200;
-    }
-
-    .pc-chip--prio-baixa {
-        background: rgba(22, 163, 74, 0.12);
-        border-color: rgba(22, 163, 74, 0.25);
-        color: #167a44;
-    }
-
-    /* Tipo (azul) e Categoria (violeta). */
-    .pc-chip--delivery {
-        background: rgba(59, 130, 246, 0.11);
-        border-color: rgba(59, 130, 246, 0.24);
-        color: #1e40af;
-    }
-
-    .pc-chip--special {
-        background: rgba(139, 92, 246, 0.12);
-        border-color: rgba(139, 92, 246, 0.26);
-        color: #6d28d9;
-    }
+    /* Prioridade, tipo e categoria: chip neutro; apenas o ícone recebe a cor
+       semântica (paleta da lista de projetos), tom escuro p/ fundo claro. */
+    .pc-chip--prio-urgente i { color: #b42323; }
+    .pc-chip--prio-alta i { color: #b45309; }
+    .pc-chip--prio-media i { color: #8f6200; }
+    .pc-chip--prio-baixa i { color: #167a44; }
+    .pc-chip--delivery i { color: #1e40af; }
+    .pc-chip--special i { color: #6d28d9; }
 
     .project-compact-back {
         display: inline-flex;
