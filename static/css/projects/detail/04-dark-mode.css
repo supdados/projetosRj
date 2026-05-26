@@ -47,6 +47,26 @@ html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--prio-alt
     border-color: rgba(251, 146, 60, 0.36) !important;
 }
 
+html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--prio-media {
+    background: transparent !important;
+    border-color: rgba(234, 179, 8, 0.36) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--prio-baixa {
+    background: transparent !important;
+    border-color: rgba(74, 222, 128, 0.36) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--delivery[data-value]:not([data-value=""]) {
+    background: transparent !important;
+    border-color: rgba(96, 165, 250, 0.40) !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .project-header .ph-chip--special[data-value]:not([data-value=""]) {
+    background: transparent !important;
+    border-color: rgba(167, 139, 250, 0.44) !important;
+}
+
 html[data-theme="dark"] body.is-authenticated .project-header .ph-chip-dates {
     background: transparent !important;
     border: 0 !important;
@@ -325,6 +345,30 @@ html[data-theme="dark"] body.is-authenticated .pc-chip--prio-alta {
     background: rgba(234, 88, 12, 0.18);
     border-color: rgba(251, 146, 60, 0.42);
     color: #f6bf8c;
+}
+
+html[data-theme="dark"] body.is-authenticated .pc-chip--prio-media {
+    background: rgba(202, 138, 4, 0.20);
+    border-color: rgba(234, 179, 8, 0.42);
+    color: #f0d486;
+}
+
+html[data-theme="dark"] body.is-authenticated .pc-chip--prio-baixa {
+    background: rgba(22, 163, 74, 0.18);
+    border-color: rgba(74, 222, 128, 0.40);
+    color: #8fe6b3;
+}
+
+html[data-theme="dark"] body.is-authenticated .pc-chip--delivery {
+    background: rgba(59, 130, 246, 0.20);
+    border-color: rgba(96, 165, 250, 0.44);
+    color: #aacbff;
+}
+
+html[data-theme="dark"] body.is-authenticated .pc-chip--special {
+    background: rgba(139, 92, 246, 0.22);
+    border-color: rgba(167, 139, 250, 0.46);
+    color: #cbb8fb;
 }
 
 html[data-theme="dark"] body.is-authenticated .project-compact-back {

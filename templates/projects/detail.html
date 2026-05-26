@@ -25,10 +25,11 @@
         <div class="d-flex justify-content-between align-items-start mb-2 project-header-main-row">
             <div class="project-header-main-content">
                 <h1 class="mb-2" data-field="titulo" data-value="{{ project.titulo }}">{{ project.id }} - {{ project.titulo }}</h1>
+                {# Sem quebras de linha ao redor do valor: a descrição usa
+                   white-space: pre-line, que preservaria a newline e criaria
+                   uma linha em branco acima do texto, afastando-o do título. #}
                 <p class="mb-2 project-header-description project-header-description-muted"
-                    data-field="short_description" data-value="{{ project.short_description or '' }}">
-                    {{ project.short_description if project.short_description else '' }}
-                </p>
+                    data-field="short_description" data-value="{{ project.short_description or '' }}">{{ project.short_description if project.short_description else '' }}</p>
             </div>
             <a href="{{ url_for('main.list_projects') }}" class="btn btn-sm back-button ms-3 btn-back-to-list">
                 <i class="fas fa-arrow-left me-1"></i>Voltar
@@ -132,13 +133,13 @@
                         {% endif %}
                     </span>
 
-                    {# Tipo de Entrega #}
-                    <span class="pc-chip">
+                    {# Tipo de Entrega — cor só quando há valor #}
+                    <span class="pc-chip{% if project.delivery_type %} pc-chip--delivery{% endif %}">
                         <i class="fas fa-box" aria-hidden="true"></i>{{ project.delivery_type or 'Sem tipo' }}
                     </span>
 
-                    {# Categoria (Projeto Especial) #}
-                    <span class="pc-chip">
+                    {# Categoria (Projeto Especial) — cor só quando há valor #}
+                    <span class="pc-chip{% if project.special_project %} pc-chip--special{% endif %}">
                         <i class="fas fa-star" aria-hidden="true"></i>{{ project.special_project or 'Sem categoria' }}
                     </span>
 

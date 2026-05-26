@@ -1431,17 +1431,42 @@
         color: #9a6212;
     }
 
-    /* Prioridade */
+    /* Prioridade — mesma convenção da lista de projetos (projects/list.css). */
     .pc-chip--prio-urgente {
-        background: #fdecec;
-        border-color: #f6bcbc;
+        background: rgba(220, 38, 38, 0.13);
+        border-color: rgba(220, 38, 38, 0.28);
         color: #b42323;
     }
 
     .pc-chip--prio-alta {
-        background: #fdeede;
-        border-color: #f7cfa6;
-        color: #a8590f;
+        background: rgba(234, 88, 12, 0.14);
+        border-color: rgba(234, 88, 12, 0.28);
+        color: #b45309;
+    }
+
+    .pc-chip--prio-media {
+        background: rgba(202, 138, 4, 0.14);
+        border-color: rgba(202, 138, 4, 0.28);
+        color: #8f6200;
+    }
+
+    .pc-chip--prio-baixa {
+        background: rgba(22, 163, 74, 0.12);
+        border-color: rgba(22, 163, 74, 0.25);
+        color: #167a44;
+    }
+
+    /* Tipo (azul) e Categoria (violeta). */
+    .pc-chip--delivery {
+        background: rgba(59, 130, 246, 0.11);
+        border-color: rgba(59, 130, 246, 0.24);
+        color: #1e40af;
+    }
+
+    .pc-chip--special {
+        background: rgba(139, 92, 246, 0.12);
+        border-color: rgba(139, 92, 246, 0.26);
+        color: #6d28d9;
     }
 
     .project-compact-back {
