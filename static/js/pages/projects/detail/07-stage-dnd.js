@@ -101,11 +101,8 @@
                 });
                 return;
             }
-            const computed = window.getComputedStyle(textarea);
-            const lineHeight = parseFloat(computed.lineHeight) || 20;
-            const minHeight = lineHeight + 12;
             textarea.style.height = 'auto';
-            textarea.style.height = `${Math.max(textarea.scrollHeight, minHeight)}px`;
+            textarea.style.height = `${textarea.scrollHeight}px`;
         }
 
         function showCascadeConfirmModal(etapaId, daysDiff) {

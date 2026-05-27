@@ -263,8 +263,8 @@
         const hasComment = Boolean((comentarios || '').trim());
         if (hasComment) {
             return `
-                <div class="small text-muted mt-1 etapa-comentario-display ds-cursor-pointer" data-etapa-id="${etapaId}" title="Clique para editar">
-                    <i class="fas fa-comment-alt me-1"></i> ${escapeHtml(comentarios)}
+                <div class="small text-muted etapa-comentario-display ds-cursor-pointer" data-etapa-id="${etapaId}" title="Clique para editar">
+                    ${escapeHtml(comentarios)}
                 </div>
             `;
         }
@@ -272,7 +272,7 @@
             return '';
         }
         return `
-            <div class="small text-muted mt-1 etapa-comentario-placeholder ds-cursor-pointer" data-etapa-id="${etapaId}" data-comentario="">
+            <div class="small text-muted etapa-comentario-placeholder ds-cursor-pointer" data-etapa-id="${etapaId}" data-comentario="">
                 <i class="fas fa-comment-medical me-1"></i> adicionar comentário
             </div>
         `;

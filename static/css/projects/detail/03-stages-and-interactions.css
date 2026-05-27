@@ -97,6 +97,10 @@
         padding-right: 0.35rem;
     }
 
+    .etapa-v4-table tbody .etapa-v4-cell-number {
+        vertical-align: top;
+    }
+
     .etapa-v4-table thead .etapa-v4-col-desc,
     .etapa-v4-table tbody .etapa-v4-cell-description {
         padding-left: 0.4rem;
@@ -120,8 +124,8 @@
     .etapa-v4-cell-description {
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        gap: 0.2rem;
+        justify-content: flex-start;
+        gap: 0.05rem;
     }
 
     .etapa-v4-cell-description .editable-field,
@@ -776,10 +780,10 @@
 
     .editable-field-textarea {
         width: 100%;
-        min-height: 34px;
-        padding: 0.38rem 0.58rem;
+        min-height: 0;
+        padding: 0 0.45rem;
         border: 1px solid #c4d5e7 !important;
-        border-radius: 7px;
+        border-radius: 6px;
         font-size: var(--ds-font-size-sm);
         color: #3e556f;
         background: #ffffff;
@@ -788,14 +792,18 @@
         resize: none;
         overflow: hidden;
         line-height: 1.45;
+        box-sizing: border-box;
+        display: block;
     }
 
     .editable-field-textarea.editable-field-textarea-responsavel {
-        display: block;
-        box-sizing: border-box;
+        width: 100%;
         max-width: 100%;
-        min-height: 42px;
-        text-align: left;
+        min-width: 0;
+        min-height: 30px;
+        padding: 0.22rem 0.48rem;
+        border-radius: 8px;
+        text-align: center;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
     }
@@ -1226,37 +1234,37 @@
     }
 
     /* Estilos para campos editáveis no header */
-    .project-header [data-field="titulo"] input,
-    .project-header [data-field="short_description"] textarea {
+    .project-header input[data-field="titulo"],
+    .project-header textarea[data-field="short_description"] {
         font-family: inherit;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
-    .project-header [data-field="titulo"] input:focus,
-    .project-header [data-field="short_description"] textarea:focus {
+    .project-header input[data-field="titulo"]:focus,
+    .project-header textarea[data-field="short_description"]:focus {
         outline: none;
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
     }
 
-    .project-header [data-field="short_description"] textarea {
+    .project-header textarea[data-field="short_description"] {
         scrollbar-width: thin;
         scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
     }
 
-    .project-header [data-field="short_description"] textarea::-webkit-scrollbar {
+    .project-header textarea[data-field="short_description"]::-webkit-scrollbar {
         width: 6px;
     }
 
-    .project-header [data-field="short_description"] textarea::-webkit-scrollbar-track {
+    .project-header textarea[data-field="short_description"]::-webkit-scrollbar-track {
         background: transparent;
     }
 
-    .project-header [data-field="short_description"] textarea::-webkit-scrollbar-thumb {
+    .project-header textarea[data-field="short_description"]::-webkit-scrollbar-thumb {
         background-color: rgba(255, 255, 255, 0.3);
         border-radius: 3px;
     }
 
-    .project-header [data-field="short_description"] textarea::-webkit-scrollbar-thumb:hover {
+    .project-header textarea[data-field="short_description"]::-webkit-scrollbar-thumb:hover {
         background-color: rgba(255, 255, 255, 0.5);
     }
 

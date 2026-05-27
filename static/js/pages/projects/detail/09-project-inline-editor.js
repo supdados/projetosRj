@@ -626,9 +626,9 @@
                     input.value = currentValue || '';
                     input.placeholder = 'Descrição';
                 } else if (field === 'titulo') {
-                    input = document.createElement('textarea');
+                    input = document.createElement('input');
+                    input.type = 'text';
                     input.className = 'form-control form-control-sm project-inline-input project-inline-input-title';
-                    input.rows = 1;
                     input.value = currentValue;
                     input.placeholder = 'Nome do projeto';
                 } else {

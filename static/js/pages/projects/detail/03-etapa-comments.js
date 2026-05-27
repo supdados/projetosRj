@@ -30,7 +30,7 @@
 
         function autoResizeTextarea(textarea) {
             textarea.style.height = 'auto';
-            textarea.style.height = `${Math.max(textarea.scrollHeight, 44)}px`;
+            textarea.style.height = `${textarea.scrollHeight}px`;
         }
 
         function renderCommentState(etapaId, comentario) {
@@ -49,10 +49,10 @@
 
             if (trimmedComentario) {
                 const display = document.createElement('div');
-                display.className = 'small text-muted mt-1 etapa-comentario-display ds-cursor-pointer';
+                display.className = 'small text-muted etapa-comentario-display ds-cursor-pointer';
                 display.dataset.etapaId = etapaId;
                 display.title = 'Clique para editar';
-                display.innerHTML = `<i class="fas fa-comment-alt me-1"></i> ${escapeHtml(trimmedComentario)}`;
+                display.textContent = trimmedComentario;
                 commentContainer.appendChild(display);
                 return;
             }
@@ -62,7 +62,7 @@
             }
 
             const placeholder = document.createElement('div');
-            placeholder.className = 'small text-muted mt-1 etapa-comentario-placeholder ds-cursor-pointer';
+            placeholder.className = 'small text-muted etapa-comentario-placeholder ds-cursor-pointer';
             placeholder.dataset.etapaId = etapaId;
             placeholder.dataset.comentario = '';
             placeholder.innerHTML = '<i class="fas fa-comment-medical me-1"></i> adicionar comentário';
@@ -80,7 +80,7 @@
             textarea.className = 'comentario-textarea-inline';
             textarea.value = comentarioAtual;
             textarea.placeholder = 'Digite e pressione Enter para salvar';
-            textarea.rows = 2;
+            textarea.rows = 1;
 
             // Substituir elemento original pelo textarea
             elemento.style.display = 'none';

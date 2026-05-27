@@ -656,9 +656,12 @@
     }
 
     .project-header .project-header-text-editor--titulo.form-control {
+        box-sizing: border-box;
         display: block;
+        height: auto !important;
         margin-bottom: 0.18rem;
         padding: 0.14rem 0.32rem;
+        min-height: 0 !important;
     }
 
     .project-header .project-header-text-editor--short-description.form-control,

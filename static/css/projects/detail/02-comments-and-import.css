@@ -46,19 +46,21 @@
 
     .comentario-textarea-inline {
         width: 100%;
-        padding: 0.38rem 0.58rem;
+        padding: 0.15rem 0.45rem;
         border: 1px solid #c4d5e7;
-        border-radius: 7px;
+        border-radius: 6px;
         font-size: var(--ds-font-size-sm);
         color: #3e556f;
         resize: none;
-        min-height: 44px;
+        min-height: 0;
         box-shadow: none;
         font-family: inherit;
-        margin-top: 0.22rem;
+        margin-top: 0;
         background: #ffffff;
-        line-height: 1.45;
+        line-height: 1.35;
         overflow-y: hidden;
+        display: block;
+        box-sizing: border-box;
     }
 
     .comentario-textarea-inline:focus {

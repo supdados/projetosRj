@@ -239,13 +239,13 @@
                             </div>
                             <div class="etapa-descricao-comment">
                             {% if etapa.comentarios %}
-                            <div class="small text-muted mt-1 etapa-comentario-display ds-cursor-pointer" data-etapa-id="{{ etapa.id }}"
+                            <div class="small text-muted etapa-comentario-display ds-cursor-pointer" data-etapa-id="{{ etapa.id }}"
                                 title="Clique para editar">
-                                <i class="fas fa-comment-alt me-1"></i> {{ etapa.comentarios }}
+                                {{ etapa.comentarios }}
                             </div>
                             {% else %}
                             {% if current_user_obj %}
-                            <div class="small text-muted mt-1 etapa-comentario-placeholder ds-cursor-pointer"
+                            <div class="small text-muted etapa-comentario-placeholder ds-cursor-pointer"
                                 data-etapa-id="{{ etapa.id }}" data-comentario="">
                                 <i class="fas fa-comment-medical me-1"></i> adicionar comentário
                             </div>
