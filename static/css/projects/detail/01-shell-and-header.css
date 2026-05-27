@@ -658,10 +658,14 @@
     .project-header .project-header-text-editor--titulo.form-control {
         box-sizing: border-box;
         display: block;
-        height: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
         margin-bottom: 0.18rem;
         padding: 0.14rem 0.32rem;
         min-height: 0 !important;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
 
     .project-header .project-header-text-editor--short-description.form-control,
