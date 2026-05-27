@@ -31,7 +31,10 @@ def test_project_detail_renders_delete_button_and_confirm_modal(client_user, see
     assert "btn-delete-project" in html
     assert 'data-delete-url="/project/' in html
     assert f'data-delete-url="/project/{seed_data["project_id"]}/delete"' in html
-    assert ">Apagar Projeto<" in html
+    # O rótulo segue o ícone (</i>Apagar Projeto) e depois há whitespace antes de
+    # </button>, então casa-se o trecho contíguo. "Apagar Projeto" (P maiúsculo) é
+    # exclusivo deste botão — o modal usa "Apagar projeto" e "APAGAR PROJETO".
+    assert ">Apagar Projeto" in html
 
     for hook in DELETE_MODAL_HOOKS:
         assert hook in html, f"hook ausente na tela de detalhe: {hook}"
