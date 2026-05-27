@@ -1324,6 +1324,30 @@
 .ph-chip--delivery[data-value]:not([data-value=""]) i { color: #93c5fd; }
 .ph-chip--special[data-value]:not([data-value=""]) i { color: #c4b5fd; }
 
+/* Modo claro: cores mais saturadas para ganhar contraste sobre o gradiente
+   azul do header (que se mantém escuro também no modo claro). Dark mode segue
+   com a paleta pastel definida acima. */
+html:not([data-theme="dark"]) .ph-chip--status-vigente .ph-chip-dot {
+    background: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
+}
+html:not([data-theme="dark"]) .ph-chip--status-suspenso {
+    background: rgba(234, 88, 12, 0.32);
+    border-color: rgba(234, 88, 12, 0.65);
+}
+/* Fundo único, mais escuro que o branco translúcido padrão, para dar contraste
+   aos ícones saturados sem mudar a cor de fundo por chip. */
+html:not([data-theme="dark"]) .project-header .ph-chip {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(255, 255, 255, 0.20);
+}
+html:not([data-theme="dark"]) .ph-chip--prio-urgente i { color: #ef4444; }
+html:not([data-theme="dark"]) .ph-chip--prio-alta i { color: #f97316; }
+html:not([data-theme="dark"]) .ph-chip--prio-media i { color: #f59e0b; }
+html:not([data-theme="dark"]) .ph-chip--prio-baixa i { color: #22c55e; }
+html:not([data-theme="dark"]) .ph-chip--delivery[data-value]:not([data-value=""]) i { color: #3b82f6; }
+html:not([data-theme="dark"]) .ph-chip--special[data-value]:not([data-value=""]) i { color: #8b5cf6; }
+
 .ph-chip-dates {
     display: inline-flex;
     align-items: center;
