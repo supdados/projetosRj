@@ -5,6 +5,7 @@
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/projects/list.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/cal-datetime-picker.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/partials/delete-project-modal.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -273,7 +274,7 @@
                                     <i class="fas fa-pen" aria-hidden="true"></i>
                                     <span class="visually-hidden">Editar projeto</span>
                                 </a>
-                                <form action="{{ url_for('main.delete_project', project_id=project.id) }}" method="post" class="inline-form js-delete-project-form">
+                                <form action="{{ url_for('main.delete_project', project_id=project.id) }}" method="post" class="inline-form js-delete-project-form" data-project-name="{{ project.titulo }}">
                                     <button type="submit" class="projects-v4-action-btn is-delete" title="Excluir projeto">
                                         <i class="fas fa-trash" aria-hidden="true"></i>
                                         <span class="visually-hidden">Excluir projeto</span>
@@ -355,10 +356,12 @@
 </div>
 
 {% include "projects/add_form.html" %}
+{% include "partials/_delete_project_confirm_modal.html" %}
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
+<script src="{{ url_for('static', filename='js/modules/delete-project-modal.js') }}"></script>
 <script nonce="{{ csp_nonce }}">
     document.addEventListener('DOMContentLoaded', function () {
         var advancedFiltersPanel = document.getElementById('advancedFiltersPanel');
@@ -583,7 +586,8 @@
             });
         })();
 
-        // Delete project via AJAX (preserva filtros ativos)
+        // Exclusão de projeto: confirmação em dois passos via DeleteProjectModal.
+        // Sucesso remove a linha sem recarregar, preservando filtros ativos.
         (function () {
             function showFlash(msg, type) {
                 if (typeof window.showFlash === 'function') window.showFlash(msg, type);
@@ -592,29 +596,20 @@
             document.querySelectorAll('.js-delete-project-form').forEach(function (form) {
                 form.addEventListener('submit', function (e) {
                     e.preventDefault();
-                    if (!confirm('Tem certeza que deseja excluir este projeto e todas as suas etapas?')) return;
+                    if (!window.DeleteProjectModal) return;
+
                     var row = form.closest('tr');
-                    var btn = form.querySelector('button[type="submit"]');
-                    if (btn) btn.disabled = true;
-                    fetch(form.action, {
-                        method: 'POST',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    })
-                    .then(function (res) { return res.json(); })
-                    .then(function (data) {
-                        if (data.ok) {
-                            row.style.transition = 'opacity 0.25s ease';
-                            row.style.opacity = '0';
-                            setTimeout(function () { row.remove(); }, 260);
-                            showFlash(data.message, 'success');
-                        } else {
-                            if (btn) btn.disabled = false;
-                            showFlash(data.message || 'Erro ao excluir projeto.', 'danger');
+                    window.DeleteProjectModal.open({
+                        deleteUrl: form.action,
+                        projectName: form.dataset.projectName || '',
+                        onSuccess: function (data) {
+                            if (row) {
+                                row.style.transition = 'opacity 0.25s ease';
+                                row.style.opacity = '0';
+                                setTimeout(function () { row.remove(); }, 260);
+                            }
+                            showFlash((data && data.message) || 'Projeto apagado.', 'success');
                         }
-                    })
-                    .catch(function () {
-                        if (btn) btn.disabled = false;
-                        showFlash('Erro de conexão. Tente novamente.', 'danger');
                     });
                 });
             });

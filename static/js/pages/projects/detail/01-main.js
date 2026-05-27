@@ -865,6 +865,7 @@
             editButton: document.querySelector('.btn-edit-project'),
             saveButton: document.querySelector('.btn-save-project'),
             cancelButton: document.querySelector('.btn-cancel-edit'),
+            deleteButton: document.querySelector('.btn-delete-project'),
             historyButton: document.querySelector('.btn-history'),
             concludeButton: document.querySelector('.btn-conclude-project'),
             projectMainHeader: document.getElementById('projectMainHeader'),

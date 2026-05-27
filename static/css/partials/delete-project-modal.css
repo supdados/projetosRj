@@ -1,0 +1,199 @@
+/* Modal de exclusão de projeto em dois passos (aviso + confirmação por digitação).
+   Compartilhado entre a lista de projetos e a tela de detalhe — por isso vive em
+   `partials/` e não é escopado por nenhuma página específica. */
+
+.delete-project-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(8, 15, 30, 0.55);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1090;
+    padding: 1rem;
+}
+
+.delete-project-modal-overlay.is-open {
+    display: flex;
+}
+
+.delete-project-modal {
+    background: #ffffff;
+    width: 100%;
+    max-width: 460px;
+    border-radius: 14px;
+    border: 1px solid rgba(220, 38, 38, 0.18);
+    box-shadow: 0 24px 56px rgba(15, 23, 42, 0.28);
+    padding: 1.75rem 1.75rem 1.5rem;
+    text-align: center;
+    animation: delete-project-modal-in 160ms ease;
+}
+
+@keyframes delete-project-modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.delete-project-modal__icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.14) 0%, rgba(185, 28, 28, 0.2) 100%);
+    color: #dc2626;
+    font-size: 1.35rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.delete-project-modal__title {
+    margin-bottom: 0.6rem;
+    color: #0f172a;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.delete-project-modal__body {
+    margin-bottom: 0;
+    color: #475569;
+    line-height: 1.55;
+    font-size: 0.95rem;
+}
+
+.delete-project-modal__project-name {
+    display: block;
+    margin-top: 0.85rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.04);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.delete-project-modal__warning {
+    margin-top: 0.85rem;
+    color: #b91c1c;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Passo 2 — confirmação por digitação (estilo "digite o nome" do GitHub). */
+.delete-project-modal__confirm-instruction {
+    margin: 0.25rem 0 0.85rem;
+    color: #475569;
+    line-height: 1.55;
+    font-size: 0.95rem;
+}
+
+.delete-project-modal__phrase {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: 6px;
+    background: rgba(220, 38, 38, 0.1);
+    color: #b91c1c;
+    font-weight: 700;
+    font-family: var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
+    letter-spacing: 0.02em;
+    user-select: none;
+}
+
+.delete-project-modal__input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 1rem;
+    text-align: center;
+    letter-spacing: 0.02em;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.delete-project-modal__input:focus {
+    outline: none;
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.delete-project-modal__input.is-valid-phrase {
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.delete-project-modal__buttons {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.delete-project-modal__buttons .btn {
+    min-width: 130px;
+}
+
+/* O botão de confirmação final fica desabilitado até a frase bater exatamente. */
+.delete-project-modal__confirm-btn[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Passos: só um visível por vez. */
+.delete-project-modal__step {
+    display: none;
+}
+
+.delete-project-modal__step.is-active {
+    display: block;
+}
+
+/* Botão vermelho de apagar na tela de detalhe (modo edição). */
+.btn-delete-project {
+    background-color: #dc2626;
+    border-color: #dc2626;
+    color: #ffffff;
+}
+
+.btn-delete-project:hover,
+.btn-delete-project:focus-visible {
+    background-color: #b91c1c;
+    border-color: #b91c1c;
+    color: #ffffff;
+}
+
+/* ---- Dark mode ---- */
+html[data-theme="dark"] .delete-project-modal {
+    background: #1e293b;
+    border-color: rgba(248, 113, 113, 0.3);
+    box-shadow: 0 24px 56px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="dark"] .delete-project-modal__title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .delete-project-modal__body,
+html[data-theme="dark"] .delete-project-modal__confirm-instruction {
+    color: #cbd5e1;
+}
+
+html[data-theme="dark"] .delete-project-modal__project-name {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .delete-project-modal__input {
+    background: #0f172a;
+    border-color: #475569;
+    color: #f1f5f9;
+}

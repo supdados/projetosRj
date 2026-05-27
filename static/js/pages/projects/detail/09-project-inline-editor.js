@@ -568,6 +568,10 @@
                 refs.cancelButton.classList.remove('ds-hidden');
                 refs.cancelButton.style.display = 'inline-block';
             }
+            if (refs.deleteButton) {
+                refs.deleteButton.classList.remove('ds-hidden');
+                refs.deleteButton.style.display = 'inline-block';
+            }
 
             const backButton = document.querySelector('.btn-back-to-list');
             if (backButton) {
@@ -679,6 +683,25 @@
             refs.cancelButton.addEventListener('click', function (event) {
                 event.preventDefault();
                 exitEditMode();
+            });
+        }
+
+        if (refs.deleteButton) {
+            refs.deleteButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                if (!window.DeleteProjectModal) {
+                    return;
+                }
+                const backButton = document.querySelector('.btn-back-to-list');
+                const listUrl = backButton ? backButton.getAttribute('href') : '/';
+                window.DeleteProjectModal.open({
+                    deleteUrl: refs.deleteButton.dataset.deleteUrl,
+                    projectName: refs.deleteButton.dataset.projectName || '',
+                    onSuccess: function () {
+                        // Projeto apagado: o detalhe deixou de existir, então volta à lista.
+                        window.location.assign(listUrl);
+                    },
+                });
             });
         }
 

@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/projects/history.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/calendar-event-modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/partials/cal-datetime-picker.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/partials/delete-project-modal.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -352,6 +353,11 @@
             <button type="button" class="btn btn-secondary btn-sm btn-cancel-edit ds-hidden">
                 <i class="fas fa-times me-1"></i>Cancelar
             </button>
+            <button type="button" class="btn btn-sm btn-delete-project ds-hidden"
+                data-delete-url="{{ url_for('main.delete_project', project_id=project.id) }}"
+                data-project-name="{{ project.titulo }}">
+                <i class="fas fa-trash me-1"></i>Apagar Projeto
+            </button>
 
             {% if project.status == 'Vigente' %}
             <form method="POST" action="{{ url_for('main.concluir_project', project_id=project.id) }}"
@@ -435,6 +441,9 @@
     {% include 'partials/_task_anexo_preview_modal.html' %}
 </div>
 {% endif %}
+{% if current_user_obj %}
+{% include 'partials/_delete_project_confirm_modal.html' %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -468,6 +477,7 @@
 <script src="{{ url_for('static', filename='js/modules/responsavel-picker.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modules/task-item-operations.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modules/inline-editors.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/delete-project-modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modules/task-archive.js') }}"></script>
 <!-- Drawer compartilhado com /tarefas: o kanban-manager opera em modo
      "drawer-only" quando o board kanban não existe (caso desta página). -->
