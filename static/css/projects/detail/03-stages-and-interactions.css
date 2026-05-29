@@ -740,55 +740,6 @@
         opacity: 0.95;
     }
 
-    /* === Etapas sem scroll horizontal ===
-       Abaixo do desktop largo, a tabela deixa de forçar 1100px e passa a caber
-       no contêiner: os cabeçalhos quebram linha, as colunas largas (descrição/
-       responsável) afrouxam seus mínimos e os botões de confirmar/cancelar
-       encolhem. `overflow-x: auto` (definido no .etapa-v4-table-wrap) fica só
-       como rede de segurança para telas realmente minúsculas — a versão mobile
-       dedicada fica para depois. */
-    @media (max-width: 1199px) {
-        .etapa-v4-table {
-            min-width: 0;
-        }
-
-        .etapa-v4-table thead th {
-            white-space: normal;
-        }
-
-        /* Padding de célula mais enxuto para ganhar largura horizontal. */
-        .etapa-v4-table thead th,
-        .etapa-v4-table tbody td {
-            padding-left: 0.45rem;
-            padding-right: 0.45rem;
-        }
-
-        .etapa-v4-col-desc,
-        .etapa-v4-cell-description {
-            width: auto;
-            min-width: 160px;
-        }
-
-        .etapa-v4-col-responsavel,
-        .etapa-v4-cell-responsavel {
-            width: auto;
-            min-width: 110px;
-        }
-
-        .etapa-v4-col-actions {
-            width: 66px;
-        }
-
-        .etapa-inline-icon-btn {
-            width: 28px;
-            height: 28px;
-        }
-
-        .etapa-inline-cell-actions .etapa-inline-icon-btn {
-            margin: 0 0.1rem;
-        }
-    }
-
     @media (max-width: 900px) {
         .etapa-meeting-owner {
             white-space: normal;
@@ -804,28 +755,8 @@
         }
 
         .etapa-inline-icon-btn {
-            width: 26px;
-            height: 26px;
-        }
-    }
-
-    /* Telas muito pequenas: botões e padding ainda menores; as células podem
-       quebrar linha (cresce na vertical, não na horizontal). */
-    @media (max-width: 768px) {
-        .etapa-inline-icon-btn {
-            width: 24px;
-            height: 24px;
-        }
-
-        .etapa-v4-table tbody td,
-        .etapa-v4-table thead th {
-            padding: 0.5rem 0.4rem;
-        }
-
-        .etapa-v4-cell-description,
-        .etapa-descricao {
-            white-space: normal;
-            overflow-wrap: anywhere;
+            width: 29px;
+            height: 29px;
         }
     }
 
