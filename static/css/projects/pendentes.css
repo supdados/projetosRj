@@ -282,6 +282,18 @@
         width: 220px;
     }
 
+    .pending-tasks-col,
+    .pending-tasks-cell {
+        text-align: center;
+        width: 140px;
+    }
+
+    .pending-status-col,
+    .pending-status-cell {
+        text-align: center;
+        width: 160px;
+    }
+
     .pending-table td {
         border-bottom: 1px solid #edf2f8;
         padding: 0.6rem 0.7rem;

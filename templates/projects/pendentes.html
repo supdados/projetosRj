@@ -4,6 +4,12 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/projects/pendentes.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/projects/etapa-status-tasks.css') }}">
+<!-- Modal de tarefas por etapa (mesmo da tela do projeto): pílula + painel -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tasks/hub.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tasks/detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/projects/detail/stage-task-modal-scoped.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/projects/detail/05-stage-task-quick-add.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -134,7 +140,8 @@
                             <th>Responsável</th>
                             <th>Início Prev.</th>
                             <th>Fim Prev.</th>
-                            <th class="pending-actions-col">Ações</th>
+                            <th class="pending-tasks-col">Tarefas</th>
+                            <th class="pending-status-col">Status</th>
                         </tr>
                     </thead>
                     <tbody class="pending-visible-body">
@@ -153,29 +160,59 @@
                             <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.responsavel or 'Não informado' }}</td>
                             <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}</td>
                             <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}</td>
-                            <td class="pending-actions-cell">
-                                <div class="pending-actions">
-                                    <button
-                                        type="button"
-                                        class="pending-action-btn toggle-iniciada {% if etapa.iniciada and not etapa.done %}started{% endif %}"
-                                        data-etapa-id="{{ etapa.id }}"
-                                        title="{% if etapa.iniciada %}Marcar como Não Iniciada{% else %}Marcar como Iniciada{% endif %}"
-                                        {% if etapa.done %}disabled{% endif %}
-                                    >
-                                        <i class="fas {% if etapa.iniciada %}fa-stop-circle{% else %}fa-play-circle{% endif %}"></i>
-                                        <span>{% if etapa.iniciada %}Iniciada{% else %}Iniciar{% endif %}</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="pending-action-btn toggle-done complete"
-                                        data-etapa-id="{{ etapa.id }}"
-                                        title="Concluir etapa"
-                                        {% if not etapa.iniciada or etapa.done %}disabled{% endif %}
-                                    >
-                                        <i class="fas fa-check-circle"></i>
-                                        <span>Concluir</span>
-                                    </button>
-                                </div>
+                            {% set task_progress = etapa_task_progress.get(etapa.id, {'done': 0, 'total': 0}) %}
+                            {% set etapa_inicio_br = etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '' %}
+                            {% set etapa_fim_br = etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '' %}
+                            {% if etapa_inicio_br and etapa_fim_br %}
+                                {% set etapa_datas_label = etapa_inicio_br ~ ' — ' ~ etapa_fim_br %}
+                            {% elif etapa_inicio_br %}
+                                {% set etapa_datas_label = 'Início ' ~ etapa_inicio_br %}
+                            {% elif etapa_fim_br %}
+                                {% set etapa_datas_label = 'Fim ' ~ etapa_fim_br %}
+                            {% else %}
+                                {% set etapa_datas_label = 'Etapa sem datas definidas' %}
+                            {% endif %}
+                            <td class="pending-tasks-cell">
+                                <button type="button"
+                                    class="etapa-task-pill etapa-action-create-task{% if not task_progress['total'] %} is-empty{% endif %}"
+                                    data-stage-quick-add-trigger
+                                    data-etapa-id="{{ etapa.id }}"
+                                    data-etapa-descricao="{{ etapa.descricao }}"
+                                    data-etapa-datas="{{ etapa_datas_label }}"
+                                    data-project-id="{{ item.projeto.id }}"
+                                    data-project-titulo="{{ item.projeto.titulo }}"
+                                    data-orgao-sigla="{{ item.projeto.orgao_ref.sigla if item.projeto.orgao_ref else '' }}"
+                                    data-stage-done="0"
+                                    title="Ver e adicionar tarefas desta etapa"
+                                    aria-label="Ver e adicionar tarefas desta etapa">
+                                    <span class="etapa-task-pill-has">
+                                        <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                                        <span class="etapa-task-pill-count" data-stage-task-count="{{ etapa.id }}"
+                                              data-stage-task-done="{{ task_progress['done'] }}" data-stage-task-total="{{ task_progress['total'] }}">{{ task_progress['done'] }}/{{ task_progress['total'] }}</span>
+                                    </span>
+                                    <span class="etapa-task-pill-add">
+                                        <i class="fas fa-plus" aria-hidden="true"></i>
+                                        <span>Tarefas</span>
+                                    </span>
+                                </button>
+                            </td>
+                            <td class="pending-status-cell">
+                                {% set status_state = 'started' if etapa.iniciada else 'idle' %}
+                                <button
+                                    type="button"
+                                    class="btn btn-sm etapa-status-toggle etapa-status-cycle etapa-status-toggle-{{ status_state }}"
+                                    data-etapa-id="{{ etapa.id }}"
+                                    data-state="{{ status_state }}"
+                                    title="{% if status_state == 'started' %}Clique para marcar como concluída{% else %}Clique para marcar como iniciada{% endif %}"
+                                >
+                                    {% if status_state == 'started' %}
+                                    <i class="fas fa-play-circle"></i>
+                                    <span>Iniciada</span>
+                                    {% else %}
+                                    <i class="far fa-circle"></i>
+                                    <span>Não iniciada</span>
+                                    {% endif %}
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -184,7 +221,7 @@
                     {% if item.qtd_outras > 0 %}
                     <tfoot>
                         <tr class="pending-expand-row">
-                            <td colspan="5">
+                            <td colspan="6">
                                 <button
                                     type="button"
                                     class="pending-expand-btn toggle-outras-btn"
@@ -213,7 +250,8 @@
                                 <th>Responsável</th>
                                 <th>Início Prev.</th>
                                 <th>Fim Prev.</th>
-                                <th class="pending-actions-col">Ações</th>
+                                <th class="pending-tasks-col">Tarefas</th>
+                                <th class="pending-status-col">Status</th>
                             </tr>
                         </thead>
                         <tbody class="pending-other-body">
@@ -232,29 +270,59 @@
                                 <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.responsavel or 'Não informado' }}</td>
                                 <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '-' }}</td>
                                 <td class="pending-cell-text {% if etapa.done %}is-done{% endif %}">{{ etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '-' }}</td>
-                                <td class="pending-actions-cell">
-                                    <div class="pending-actions">
-                                        <button
-                                            type="button"
-                                            class="pending-action-btn toggle-iniciada {% if etapa.iniciada and not etapa.done %}started{% endif %}"
-                                            data-etapa-id="{{ etapa.id }}"
-                                            title="{% if etapa.iniciada %}Marcar como Não Iniciada{% else %}Marcar como Iniciada{% endif %}"
-                                            {% if etapa.done %}disabled{% endif %}
-                                        >
-                                            <i class="fas {% if etapa.iniciada %}fa-stop-circle{% else %}fa-play-circle{% endif %}"></i>
-                                            <span>{% if etapa.iniciada %}Iniciada{% else %}Iniciar{% endif %}</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="pending-action-btn toggle-done complete"
-                                            data-etapa-id="{{ etapa.id }}"
-                                            title="Concluir etapa"
-                                            {% if not etapa.iniciada or etapa.done %}disabled{% endif %}
-                                        >
-                                            <i class="fas fa-check-circle"></i>
-                                            <span>Concluir</span>
-                                        </button>
-                                    </div>
+                                {% set task_progress = etapa_task_progress.get(etapa.id, {'done': 0, 'total': 0}) %}
+                                {% set etapa_inicio_br = etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '' %}
+                                {% set etapa_fim_br = etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '' %}
+                                {% if etapa_inicio_br and etapa_fim_br %}
+                                    {% set etapa_datas_label = etapa_inicio_br ~ ' — ' ~ etapa_fim_br %}
+                                {% elif etapa_inicio_br %}
+                                    {% set etapa_datas_label = 'Início ' ~ etapa_inicio_br %}
+                                {% elif etapa_fim_br %}
+                                    {% set etapa_datas_label = 'Fim ' ~ etapa_fim_br %}
+                                {% else %}
+                                    {% set etapa_datas_label = 'Etapa sem datas definidas' %}
+                                {% endif %}
+                                <td class="pending-tasks-cell">
+                                    <button type="button"
+                                        class="etapa-task-pill etapa-action-create-task{% if not task_progress['total'] %} is-empty{% endif %}"
+                                        data-stage-quick-add-trigger
+                                        data-etapa-id="{{ etapa.id }}"
+                                        data-etapa-descricao="{{ etapa.descricao }}"
+                                        data-etapa-datas="{{ etapa_datas_label }}"
+                                        data-project-id="{{ item.projeto.id }}"
+                                        data-project-titulo="{{ item.projeto.titulo }}"
+                                        data-orgao-sigla="{{ item.projeto.orgao_ref.sigla if item.projeto.orgao_ref else '' }}"
+                                        data-stage-done="0"
+                                        title="Ver e adicionar tarefas desta etapa"
+                                        aria-label="Ver e adicionar tarefas desta etapa">
+                                        <span class="etapa-task-pill-has">
+                                            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                                            <span class="etapa-task-pill-count" data-stage-task-count="{{ etapa.id }}"
+                                                  data-stage-task-done="{{ task_progress['done'] }}" data-stage-task-total="{{ task_progress['total'] }}">{{ task_progress['done'] }}/{{ task_progress['total'] }}</span>
+                                        </span>
+                                        <span class="etapa-task-pill-add">
+                                            <i class="fas fa-plus" aria-hidden="true"></i>
+                                            <span>Tarefas</span>
+                                        </span>
+                                    </button>
+                                </td>
+                                <td class="pending-status-cell">
+                                    {% set status_state = 'started' if etapa.iniciada else 'idle' %}
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm etapa-status-toggle etapa-status-cycle etapa-status-toggle-{{ status_state }}"
+                                        data-etapa-id="{{ etapa.id }}"
+                                        data-state="{{ status_state }}"
+                                        title="{% if status_state == 'started' %}Clique para marcar como concluída{% else %}Clique para marcar como iniciada{% endif %}"
+                                    >
+                                        {% if status_state == 'started' %}
+                                        <i class="fas fa-play-circle"></i>
+                                        <span>Iniciada</span>
+                                        {% else %}
+                                        <i class="far fa-circle"></i>
+                                        <span>Não iniciada</span>
+                                        {% endif %}
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -352,6 +420,18 @@
         <p class="mb-0">Ajuste os filtros para explorar outras frentes de acompanhamento.</p>
     </div>
 </div>
+
+{% if current_user_obj %}
+{# Modal de tarefas por etapa — exatamente o mesmo da tela do projeto. #}
+{% include 'partials/_stage_task_modal.html' %}
+{# Drawer + preview ficam dentro de um escopo `.task-detail-v2` para o CSS
+   escopado de tasks/detail ser aplicado. O wrapper não cria layout. #}
+<div class="task-detail-v2" data-task-detail-scope
+     data-current-user-id="{{ current_user_obj.id if current_user_obj else '' }}">
+    {% include 'partials/_task_item_drawer.html' %}
+    {% include 'partials/_task_anexo_preview_modal.html' %}
+</div>
+{% endif %}
 
 {% endblock %}
 
@@ -482,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!placeholder) {
                 placeholder = document.createElement('tr');
                 placeholder.className = 'pending-visible-empty';
-                placeholder.innerHTML = '<td colspan="5">Sem etapas urgentes na janela atual.</td>';
+                placeholder.innerHTML = '<td colspan="6">Sem etapas urgentes na janela atual.</td>';
                 body.appendChild(placeholder);
             }
         } else if (placeholder) {
@@ -564,34 +644,40 @@ document.addEventListener('DOMContentLoaded', function() {
         saveExpandedSet(expandedSet);
     }
 
-    function updateButtonStates(etapaRow, iniciada, done) {
-        const btnIniciada = etapaRow.querySelector('.toggle-iniciada');
-        const btnDone = etapaRow.querySelector('.toggle-done');
-        const statusBadge = etapaRow.querySelector('.pending-status-badge');
-
-        if (btnIniciada) {
-            const iconIniciada = btnIniciada.querySelector('i');
-            const textIniciada = btnIniciada.querySelector('span');
-            if (iconIniciada) {
-                iconIniciada.className = 'fas ' + (iniciada ? 'fa-stop-circle' : 'fa-play-circle');
-            }
-            if (textIniciada) {
-                textIniciada.textContent = iniciada ? 'Iniciada' : 'Iniciar';
-            }
-            btnIniciada.classList.toggle('started', iniciada && !done);
-            btnIniciada.disabled = !!done;
+    // Botão de status unificado (mesmo ciclo da tela do projeto):
+    // não iniciada → iniciada → concluída → não iniciada. Na página de
+    // pendentes a etapa concluída sai da lista, então só vemos idle/started.
+    function updateStatusCycleButton(btn, iniciada, done) {
+        if (!btn) {
+            return;
         }
-
-        if (btnDone) {
-            btnDone.disabled = !!done || !iniciada;
+        btn.classList.remove(
+            'etapa-status-toggle-idle',
+            'etapa-status-toggle-started',
+            'etapa-status-toggle-ready',
+            'etapa-status-toggle-done',
+            'etapa-status-toggle-blocked'
+        );
+        if (done) {
+            btn.classList.add('etapa-status-toggle-done');
+            btn.dataset.state = 'done';
+            btn.innerHTML = '<i class="fas fa-check-circle"></i><span>Concluída</span>';
+            btn.title = 'Clique para voltar para não iniciada';
+        } else if (iniciada) {
+            btn.classList.add('etapa-status-toggle-started');
+            btn.dataset.state = 'started';
+            btn.innerHTML = '<i class="fas fa-play-circle"></i><span>Iniciada</span>';
+            btn.title = 'Clique para marcar como concluída';
+        } else {
+            btn.classList.add('etapa-status-toggle-idle');
+            btn.dataset.state = 'idle';
+            btn.innerHTML = '<i class="far fa-circle"></i><span>Não iniciada</span>';
+            btn.title = 'Clique para marcar como iniciada';
         }
+    }
 
-        if (statusBadge) {
-            statusBadge.textContent = iniciada && !done ? 'Iniciada' : 'Aberta';
-            statusBadge.classList.toggle('pending-status-started', iniciada && !done);
-            statusBadge.classList.toggle('pending-status-open', !(iniciada && !done));
-        }
-
+    function applyEtapaStatus(etapaRow, iniciada, done) {
+        updateStatusCycleButton(etapaRow.querySelector('.etapa-status-cycle'), iniciada, done);
         etapaRow.classList.toggle('etapa-iniciada', iniciada && !done);
         etapaRow.classList.toggle('etapa-done', !!done);
         etapaRow.querySelectorAll('.pending-cell-text').forEach(function(cell) {
@@ -645,59 +731,42 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const iniciadaBtn = event.target.closest('.toggle-iniciada');
-        if (iniciadaBtn) {
-            if (iniciadaBtn.disabled) {
+        const statusBtn = event.target.closest('.etapa-status-cycle');
+        if (statusBtn) {
+            if (statusBtn.disabled || statusBtn.dataset.inFlight === '1') {
                 return;
             }
-            const etapaId = iniciadaBtn.getAttribute('data-etapa-id');
+            const etapaId = statusBtn.getAttribute('data-etapa-id');
             const row = document.getElementById('etapa-row-' + etapaId);
             if (!etapaId || !row) {
                 return;
             }
+            // idle/concluída → /toggle_iniciada; iniciada → /toggle (conclui e,
+            // ao concluir, a etapa some da lista de pendentes).
+            const endpoint = statusBtn.dataset.state === 'started'
+                ? '/etapa/' + etapaId + '/toggle'
+                : '/etapa/' + etapaId + '/toggle_iniciada';
 
+            statusBtn.dataset.inFlight = '1';
             try {
-                const data = await postToggle('/etapa/' + etapaId + '/toggle_iniciada');
+                const data = await postToggle(endpoint);
                 if (!data.success) {
-                    showToast(data.message || 'Nao foi possivel atualizar a etapa.', 'danger');
+                    showToast(data.message || 'Não foi possível atualizar a etapa.', 'danger');
                     return;
                 }
-                updateButtonStates(row, data.iniciada, data.done);
-                if (data.message) {
-                    showToast(data.message, 'info');
-                }
-            } catch (error) {
-                showToast('Erro de comunicacao com o servidor.', 'danger');
-            }
-            return;
-        }
-
-        const doneBtn = event.target.closest('.toggle-done');
-        if (doneBtn) {
-            if (doneBtn.disabled) {
-                return;
-            }
-            const etapaId = doneBtn.getAttribute('data-etapa-id');
-            const row = document.getElementById('etapa-row-' + etapaId);
-            if (!etapaId || !row) {
-                return;
-            }
-
-            try {
-                const data = await postToggle('/etapa/' + etapaId + '/toggle');
-                if (!data.success) {
-                    showToast(data.message || 'Nao foi possivel concluir a etapa.', 'danger');
-                    return;
-                }
-
                 if (data.done) {
                     removeRowFromPending(row);
                     showToast('Etapa concluída', 'info');
                 } else {
-                    updateButtonStates(row, data.iniciada, data.done);
+                    applyEtapaStatus(row, data.iniciada, data.done);
+                    if (data.message) {
+                        showToast(data.message, 'info');
+                    }
                 }
             } catch (error) {
-                showToast('Erro de comunicacao com o servidor.', 'danger');
+                showToast('Erro de comunicação com o servidor.', 'danger');
+            } finally {
+                delete statusBtn.dataset.inFlight;
             }
             return;
         }
@@ -736,4 +805,35 @@ document.addEventListener('DOMContentLoaded', function() {
     updateEmptyStateVisibility();
 });
 </script>
+
+{% if current_user_obj %}
+{# Config + scripts do modal de tarefas por etapa, reaproveitando exatamente a
+   mesma stack da tela do projeto. Como esta página é multi-projeto, o
+   stageTasksUrlTemplate usa __PROJECT_ID__ além de __ETAPA_ID__ (resolvidos a
+   partir do gatilho clicado). #}
+<script nonce="{{ csp_nonce }}">
+    window.__PROJECT_DETAIL_CONFIG__ = {
+        csrfToken: {{ csrf_token()|tojson }},
+        addTaskUrl: {{ url_for('main.add_task')|tojson }},
+        stageTasksUrlTemplate: {{ (url_for('main.project_stage_tasks_panel', project_id=888888888, etapa_id=999999999).replace('888888888', '__PROJECT_ID__').replace('999999999', '__ETAPA_ID__'))|tojson }},
+        assignableUsersUrl: {{ url_for('main.get_hub_assignable_users')|tojson }},
+    };
+</script>
+<script src="{{ url_for('static', filename='js/modules/task-item-helpers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/responsavel-picker.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/task-item-operations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/task-archive.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/board-render.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/drawer-comments.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/drawer-anexos.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/drawer-core.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/board-dnd.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/composer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban/view-toggle.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modules/kanban-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/projects/detail/11-stage-task-quick-add-fetch.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/projects/detail/11-stage-task-quick-add-row-factory.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/projects/detail/11-stage-task-quick-add-lifecycle.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/projects/detail/11-stage-task-quick-add.js') }}"></script>
+{% endif %}
 {% endblock %}

@@ -228,7 +228,13 @@
         if (currentMode === 'legacy') {
             return legacyTasksUrl || '';
         }
-        return fetchApi.buildStageTasksUrl(stageTasksUrlTemplate, currentEtapaId);
+        // Em páginas multi-projeto (ex.: pendentes) o template traz o
+        // placeholder __PROJECT_ID__, resolvido com o projeto do gatilho atual.
+        // Na tela do projeto o id já vem fixo no template (no-op).
+        const template = String(stageTasksUrlTemplate || '')
+            .split('__PROJECT_ID__')
+            .join(encodeURIComponent(String(currentProjectId || '')));
+        return fetchApi.buildStageTasksUrl(template, currentEtapaId);
     }
     function loadPanel(options) {
         const opts = options || {};

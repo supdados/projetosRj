@@ -336,6 +336,7 @@ def list_projetos_pendentes():
                 "21dias": "Próximos 21 Dias",
             },
             etapa_bucket_map={},
+            etapa_task_progress={},
             summary_counts={
                 "total_projects": 0,
                 "atrasada": 0,
@@ -381,6 +382,40 @@ def list_projetos_pendentes():
         Etapa.ordem.asc(),
         Etapa.id.asc(),
     ).all()
+
+    # Progresso de tarefas (concluídas / total) por etapa aberta — exibido na
+    # pílula "Tarefas" de cada linha, no mesmo formato "3/10" da tela do projeto.
+    etapa_ids_abertas = [etapa.id for etapa in etapas_abertas]
+    if etapa_ids_abertas:
+        total_task_counts = dict(
+            db.session.query(Task.etapa_id, db.func.count(Task.id))
+            .filter(
+                Task.etapa_id.in_(etapa_ids_abertas),
+                Task.is_archived.is_(False),
+            )
+            .group_by(Task.etapa_id)
+            .all()
+        )
+        done_task_counts = dict(
+            db.session.query(Task.etapa_id, db.func.count(Task.id))
+            .filter(
+                Task.etapa_id.in_(etapa_ids_abertas),
+                Task.is_archived.is_(False),
+                Task.status == "finalizada",
+            )
+            .group_by(Task.etapa_id)
+            .all()
+        )
+    else:
+        total_task_counts = {}
+        done_task_counts = {}
+    etapa_task_progress = {
+        etapa_id: {
+            "total": int(total_task_counts.get(etapa_id, 0)),
+            "done": int(done_task_counts.get(etapa_id, 0)),
+        }
+        for etapa_id in etapa_ids_abertas
+    }
 
     etapas_por_projeto = defaultdict(list)
     etapa_bucket_map = {}
@@ -525,6 +560,7 @@ def list_projetos_pendentes():
             "21dias": "Próximos 21 Dias",
         },
         etapa_bucket_map=etapa_bucket_map,
+        etapa_task_progress=etapa_task_progress,
         summary_counts=summary_counts,
         pending_page=pending_page,
         pending_total_pages=pending_total_pages,

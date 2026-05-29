@@ -1,0 +1,152 @@
+/* Botão de status das etapas (ciclo único), espelhando o visual da tela do
+   projeto (css/projects/detail/03 + 04-dark-mode), isolado aqui para reuso em
+   páginas que não carregam o manifest completo do detalhe (ex.: projetos
+   pendentes). Só o botão — sem regras de tabela/linha — para não colidir com o
+   layout da página hospedeira. A pílula de tarefas vem de
+   05-stage-task-quick-add.css. */
+
+/* ---- Botão de status (ciclo único) ---- */
+.etapa-status-toggle {
+    height: 30px;
+    min-width: 124px;
+    border-radius: 7px;
+    border: 1px solid #cbdcf0 !important;
+    padding: 0 0.58rem !important;
+    background: #fff !important;
+    color: #2b4d6f !important;
+    font-family: var(--ds-font-family-base);
+    font-weight: var(--ds-font-weight-semibold);
+    font-size: var(--ds-font-size-xs);
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    box-shadow: none !important;
+    transition: all 0.16s ease;
+}
+
+.etapa-status-toggle:hover:not(:disabled),
+.etapa-status-toggle:focus-visible:not(:disabled) {
+    background: #f1f7ff !important;
+    border-color: #b7cee5 !important;
+    color: #20486f !important;
+    outline: none;
+}
+
+.etapa-status-toggle-done:hover:not(:disabled),
+.etapa-status-toggle-done:focus-visible:not(:disabled) {
+    background: #e3f4eb !important;
+    border-color: #a8d5bd !important;
+    color: #175f41 !important;
+}
+
+.etapa-status-toggle-started:hover:not(:disabled),
+.etapa-status-toggle-started:focus-visible:not(:disabled),
+.etapa-status-toggle-ready:hover:not(:disabled),
+.etapa-status-toggle-ready:focus-visible:not(:disabled) {
+    background: #e7f1fd !important;
+    border-color: #b8d0ea !important;
+    color: #214f7d !important;
+}
+
+.etapa-status-toggle-idle:hover:not(:disabled),
+.etapa-status-toggle-idle:focus-visible:not(:disabled) {
+    background: #f1f7ff !important;
+    border-color: #b7cee5 !important;
+    color: #20486f !important;
+}
+
+.etapa-status-toggle-blocked:hover:not(:disabled),
+.etapa-status-toggle-blocked:focus-visible:not(:disabled) {
+    background: #f6f8fb !important;
+    border-color: #dbe5ef !important;
+    color: #8092a7 !important;
+}
+
+.etapa-status-toggle:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.etapa-status-toggle i {
+    font-size: var(--ds-font-size-sm);
+}
+
+.etapa-status-toggle-done {
+    background: #eaf7f1 !important;
+    border-color: #b9dfca !important;
+    color: #1d714e !important;
+}
+
+.etapa-status-toggle-started,
+.etapa-status-toggle-ready {
+    background: #edf5ff !important;
+    border-color: #c5d8ee !important;
+    color: #255585 !important;
+}
+
+.etapa-status-toggle-blocked {
+    background: #f6f8fb !important;
+    border-color: #dbe5ef !important;
+    color: #8092a7 !important;
+}
+
+.etapa-status-toggle-idle {
+    background: #fff !important;
+    border-color: #cbdcf0 !important;
+    color: #2b4d6f !important;
+}
+
+/* ---- Dark mode ---- */
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle {
+    background: #2b3a4f !important;
+    border-color: var(--app-color-border) !important;
+    color: #d2dfec !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle:hover:not(:disabled),
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle:focus-visible:not(:disabled) {
+    background: rgba(78, 149, 204, 0.18) !important;
+    border-color: rgba(99, 166, 219, 0.48) !important;
+    color: #edf4fb !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-done:hover:not(:disabled),
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-done:focus-visible:not(:disabled) {
+    background: rgba(73, 185, 135, 0.3) !important;
+    border-color: rgba(73, 185, 135, 0.6) !important;
+    color: #e4f8ef !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-started:hover:not(:disabled),
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-started:focus-visible:not(:disabled),
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-ready:hover:not(:disabled),
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-ready:focus-visible:not(:disabled) {
+    background: rgba(78, 149, 204, 0.3) !important;
+    border-color: rgba(99, 166, 219, 0.58) !important;
+    color: #edf6ff !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-done {
+    background: rgba(73, 185, 135, 0.22) !important;
+    border-color: rgba(73, 185, 135, 0.46) !important;
+    color: #c9efdf !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-started,
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-ready {
+    background: rgba(78, 149, 204, 0.22) !important;
+    border-color: rgba(99, 166, 219, 0.48) !important;
+    color: #d9e8f6 !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-idle,
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-blocked {
+    background: #2b3a4f !important;
+    border-color: var(--app-color-border) !important;
+    color: #d2dfec !important;
+}
+
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle:disabled {
+    opacity: 0.48;
+}
