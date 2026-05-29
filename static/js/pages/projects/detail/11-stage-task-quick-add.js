@@ -126,16 +126,20 @@
     function resetFields() {
         rows.resetFields(contentHost, responsavelNames);
     }
-    function updateStageBadge(delta) {
-        if (currentMode === 'stage') {
-            rows.updateStageBadge(currentEtapaId, delta);
-        }
+    // Contagem do cabeçalho do painel ("N tarefas").
+    function updatePanelCount(delta) {
         const countEl = overlay.querySelector('[data-stage-quick-add-count]');
         if (countEl && !countEl.hidden) {
             const current = parseInt((countEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 0;
             const next = Math.max(0, current + delta);
             const suffix = next === 1 ? 'tarefa' : 'tarefas';
             countEl.textContent = next + ' ' + suffix;
+        }
+    }
+    // Pílula "concluídas/total" na linha da etapa (só no modo etapa).
+    function updateStageProgress(totalDelta, doneDelta) {
+        if (currentMode === 'stage') {
+            rows.updateStageProgress(currentEtapaId, totalDelta, doneDelta);
         }
     }
     // Modais de delete dos rows injetados precisam viver no <body> para que
@@ -305,9 +309,11 @@
         })
             .then((payload) => {
                 const createdStatus = payload && payload.task ? payload.task.status : status ? status.value : '';
-                if (createdStatus !== 'finalizada') {
-                    updateStageBadge(1);
+                const createdFinalizada = createdStatus === 'finalizada';
+                if (!createdFinalizada) {
+                    updatePanelCount(1);
                 }
+                updateStageProgress(1, createdFinalizada ? 1 : 0);
                 if (typeof window.showFlash === 'function') {
                     window.showFlash('Tarefa criada com sucesso.', 'success');
                 }
@@ -565,8 +571,10 @@
                 }
                 // Remove a row, decrementa contador da etapa.
                 const row = contentHost && contentHost.querySelector('.task-item-row[data-item-id="' + taskId + '"]');
+                const wasFinalizada = Boolean(row && row.dataset.itemStatus === 'finalizada');
                 if (row && row.parentNode) row.parentNode.removeChild(row);
-                updateStageBadge(-1);
+                updatePanelCount(-1);
+                updateStageProgress(-1, wasFinalizada ? -1 : 0);
                 clearCache();
                 if (typeof window.showFlash === 'function') {
                     window.showFlash('Tarefa excluída.', 'success');

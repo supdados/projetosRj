@@ -72,12 +72,18 @@
         text-align: center;
     }
 
+    .etapa-v4-col-tasks {
+        width: 140px;
+        text-align: center;
+    }
+
     .etapa-v4-col-status {
-        width: 128px;
+        width: 150px;
+        text-align: center;
     }
 
     .etapa-v4-col-actions {
-        width: 92px;
+        width: 72px;
     }
 
     .etapa-v4-cell-drag {
@@ -264,6 +270,7 @@
 
     .etapa-row-google-meeting .etapa-meeting-description-cell,
     .etapa-row-google-meeting .etapa-v4-cell-responsavel,
+    .etapa-row-google-meeting .etapa-v4-cell-tasks,
     .etapa-row-google-meeting .etapa-v4-cell-status {
         cursor: pointer;
     }
@@ -442,15 +449,14 @@
         color: #842323;
     }
 
-    .etapa-v4-cell-status .toggle-iniciada,
-    .etapa-v4-cell-status .toggle-done,
+    .etapa-v4-cell-status .etapa-status-cycle,
     .etapa-inline-cell-status .inline-status-toggle {
         line-height: 1;
     }
 
     .etapa-status-toggle {
         height: 30px;
-        min-width: 108px;
+        min-width: 124px;
         border-radius: 7px;
         border: 1px solid #cbdcf0 !important;
         padding: 0 0.58rem !important;
@@ -474,8 +480,6 @@
         outline: none;
     }
 
-    .etapa-status-toggle-started:hover:not(:disabled),
-    .etapa-status-toggle-started:focus-visible:not(:disabled),
     .etapa-status-toggle-done:hover:not(:disabled),
     .etapa-status-toggle-done:focus-visible:not(:disabled) {
         background: #e3f4eb !important;
@@ -483,6 +487,8 @@
         color: #175f41 !important;
     }
 
+    .etapa-status-toggle-started:hover:not(:disabled),
+    .etapa-status-toggle-started:focus-visible:not(:disabled),
     .etapa-status-toggle-ready:hover:not(:disabled),
     .etapa-status-toggle-ready:focus-visible:not(:disabled) {
         background: #e7f1fd !important;
@@ -513,13 +519,13 @@
         font-size: var(--ds-font-size-sm);
     }
 
-    .etapa-status-toggle-started,
     .etapa-status-toggle-done {
         background: #eaf7f1 !important;
         border-color: #b9dfca !important;
         color: #1d714e !important;
     }
 
+    .etapa-status-toggle-started,
     .etapa-status-toggle-ready {
         background: #edf5ff !important;
         border-color: #c5d8ee !important;

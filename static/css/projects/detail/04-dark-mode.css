@@ -690,8 +690,7 @@ html[data-theme="dark"] body.is-authenticated .etapa-done .etapa-v4-cell-date .e
     cursor: default;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-status .toggle-iniciada,
-html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-status .toggle-done,
+html[data-theme="dark"] body.is-authenticated .etapa-v4-cell-status .etapa-status-cycle,
 html[data-theme="dark"] body.is-authenticated .etapa-inline-cell-status .inline-status-toggle {
     box-shadow: none !important;
 }
@@ -713,8 +712,6 @@ html[data-theme="dark"] body.is-authenticated .etapa-status-toggle:focus-visible
     color: #edf4fb !important;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-started:hover:not(:disabled),
-html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-started:focus-visible:not(:disabled),
 html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-done:hover:not(:disabled),
 html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-done:focus-visible:not(:disabled) {
     background: rgba(73, 185, 135, 0.3) !important;
@@ -722,6 +719,8 @@ html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-done:focus-vi
     color: #e4f8ef !important;
 }
 
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-started:hover:not(:disabled),
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-started:focus-visible:not(:disabled),
 html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-ready:hover:not(:disabled),
 html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-ready:focus-visible:not(:disabled) {
     background: rgba(78, 149, 204, 0.3) !important;
@@ -736,13 +735,13 @@ html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-blocked:focus
     color: #d2dfec !important;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-started,
 html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-done {
     background: rgba(73, 185, 135, 0.22) !important;
     border-color: rgba(73, 185, 135, 0.46) !important;
     color: #c9efdf !important;
 }
 
+html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-started,
 html[data-theme="dark"] body.is-authenticated .etapa-status-toggle-ready {
     background: rgba(78, 149, 204, 0.22) !important;
     border-color: rgba(99, 166, 219, 0.48) !important;

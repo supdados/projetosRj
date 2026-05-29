@@ -400,7 +400,7 @@
                 ${buildMeetingDateHtml(dataFim, dataFimDisplay, endTimeDisplay, meetingInfo)}
             </td>
             <td class="etapa-row-text etapa-v4-cell-responsavel text-muted small">-</td>
-            <td class="text-center etapa-v4-cell-status text-muted small">-</td>
+            <td class="text-center etapa-v4-cell-tasks text-muted small">-</td>
             <td class="text-center etapa-v4-cell-status text-muted small">-</td>
             <td class="actions text-center etapa-v4-actions-cell">
                 <div class="etapa-meeting-actions">
@@ -438,11 +438,13 @@
         row.dataset.entryType = 'manual';
         row.dataset.workflowStage = 'true';
 
-        const doneButtonDisabled = (!iniciada && !done) || !page.shared.canEditEtapas ? 'disabled' : '';
-        const iniciadaDisabled = page.shared.canEditEtapas ? '' : 'disabled';
-        const doneTitle = done
-            ? 'Marcar como pendente'
-            : (iniciada ? 'Marcar como concluída' : 'Marcar como concluída (necessário iniciar primeiro)');
+        const statusDisabled = page.shared.canEditEtapas ? '' : 'disabled';
+        const statusState = done ? 'done' : (iniciada ? 'started' : 'idle');
+        const statusTitle = done
+            ? 'Clique para voltar para não iniciada'
+            : (iniciada ? 'Clique para marcar como concluída' : 'Clique para marcar como iniciada');
+        const statusIcon = done ? 'fas fa-check-circle' : (iniciada ? 'fas fa-play-circle' : 'far fa-circle');
+        const statusLabel = done ? 'Concluída' : (iniciada ? 'Iniciada' : 'Não iniciada');
         // Botão de criar tarefa (mesma estrutura do template Jinja em
         // _project_stages_section.html). Para etapas concluídas o botão fica
         // visível mas com aria-disabled — o JS do quick-add ignora o click.
@@ -465,7 +467,7 @@
             : 'Criar tarefa nesta etapa';
         const createTaskBtnHtml = `
             <button type="button"
-                class="btn btn-sm btn-floating etapa-action-create-task${stageDoneClass}"
+                class="etapa-task-pill etapa-action-create-task is-empty${stageDoneClass}"
                 data-stage-quick-add-trigger
                 data-etapa-id="${etapaId}"
                 data-etapa-descricao="${escapeHtml(descricao)}"
@@ -477,14 +479,22 @@
                 ${stageDoneAriaAttrs}
                 title="${escapeHtml(stageDoneTitle)}"
                 aria-label="${escapeHtml(stageDoneAriaLabel)}">
-                <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-                <span class="etapa-action-task-count is-empty"
-                      data-stage-task-count="${etapaId}">0</span>
+                <span class="etapa-task-pill-has">
+                    <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                    <span class="etapa-task-pill-count" data-stage-task-count="${etapaId}"
+                          data-stage-task-done="0" data-stage-task-total="0">0/0</span>
+                </span>
+                <span class="etapa-task-pill-add">
+                    <i class="fas fa-plus" aria-hidden="true"></i>
+                    <span>Tarefas</span>
+                </span>
             </button>
         `;
+        const tasksCellHtml = page.shared.canEditEtapas
+            ? createTaskBtnHtml
+            : '<span class="text-muted small">-</span>';
         const actionHtml = page.shared.canEditEtapas
             ? `
-                ${createTaskBtnHtml}
                 <form action="/etapa/${etapaId}/delete" method="post" class="inline-form" data-etapa-delete-form
                     data-confirm="Tem certeza que deseja excluir esta etapa?">
                     <button type="submit" class="btn btn-sm btn-floating" data-etapa-delete-btn title="Excluir Etapa">
@@ -515,20 +525,16 @@
             <td class="etapa-row-text etapa-v4-cell-responsavel ${done ? 'text-decoration-line-through text-muted' : ''}">
                 <span class="editable-field${isResponsavelEmptyValue(responsavel) ? ' editable-field-empty' : ''}" data-field="responsavel" data-etapa-id="${etapaId}" data-empty-display="Sem responsável">${escapeHtml(responsavel)}</span>
             </td>
-            <td class="text-center etapa-v4-cell-status">
-                <button type="button" class="btn btn-sm etapa-status-toggle toggle-iniciada etapa-status-toggle-${iniciada ? 'started' : 'idle'}"
-                    data-etapa-id="${etapaId}"
-                    data-state="${iniciada ? 'started' : 'idle'}"
-                    title="${iniciada ? 'Marcar como não iniciada' : 'Marcar como iniciada'}" ${iniciadaDisabled}>
-                    <i class="fas ${iniciada ? 'fa-stop-circle' : 'fa-play-circle'}"></i>
-                    <span>${iniciada ? 'Iniciada' : 'Iniciar'}</span>
-                </button>
+            <td class="text-center etapa-v4-cell-tasks">
+                ${tasksCellHtml}
             </td>
             <td class="text-center etapa-v4-cell-status">
-                <button type="button" class="btn btn-sm etapa-status-toggle toggle-done etapa-status-toggle-${done ? 'done' : (iniciada ? 'ready' : 'blocked')}"
-                    data-etapa-id="${etapaId}" data-state="${done ? 'done' : (iniciada ? 'ready' : 'blocked')}" ${doneButtonDisabled} title="${doneTitle}">
-                    <i class="fas fa-check-circle"></i>
-                    <span>${done ? 'Concluída' : 'Concluir'}</span>
+                <button type="button" class="btn btn-sm etapa-status-toggle etapa-status-cycle etapa-status-toggle-${statusState}"
+                    data-etapa-id="${etapaId}"
+                    data-state="${statusState}"
+                    title="${statusTitle}" ${statusDisabled}>
+                    <i class="${statusIcon}"></i>
+                    <span>${statusLabel}</span>
                 </button>
             </td>
             <td class="actions text-center etapa-v4-actions-cell">
@@ -851,11 +857,8 @@
                 : [],
             inlineIniciadaCheckbox: document.getElementById('etapa_inline_iniciada'),
             inlineDoneCheckbox: document.getElementById('etapa_inline_done'),
-            inlineIniciadaToggle: document.getElementById('etapaInlineAddFormRow')
-                ? document.getElementById('etapaInlineAddFormRow').querySelector('.inline-status-toggle-iniciada')
-                : null,
-            inlineDoneToggle: document.getElementById('etapaInlineAddFormRow')
-                ? document.getElementById('etapaInlineAddFormRow').querySelector('.inline-status-toggle-done')
+            inlineStatusToggle: document.getElementById('etapaInlineAddFormRow')
+                ? document.getElementById('etapaInlineAddFormRow').querySelector('.inline-status-cycle')
                 : null,
             projectStatusField: projectStatusField,
             projectActionsFooter: document.getElementById('projectActionsFooter'),

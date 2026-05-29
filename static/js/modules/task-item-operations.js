@@ -650,12 +650,15 @@
         var isActive = isActiveTaskStatus(nextStatus);
         if (wasActive === isActive) return;
 
-        var delta = isActive ? 1 : -1;
+        // A mudança de status só afeta "concluídas" (done) na pílula da etapa;
+        // o total permanece. Virou finalizada (inativa) → done+1;
+        // voltou a ativa → done-1.
+        var doneDelta = isActive ? -1 : 1;
         if (
             window.stageTaskQuickAddRows &&
-            typeof window.stageTaskQuickAddRows.updateStageBadge === 'function'
+            typeof window.stageTaskQuickAddRows.updateStageProgress === 'function'
         ) {
-            window.stageTaskQuickAddRows.updateStageBadge(stageId, delta);
+            window.stageTaskQuickAddRows.updateStageProgress(stageId, 0, doneDelta);
         }
     }
 

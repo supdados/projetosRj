@@ -1,100 +1,133 @@
-/* Botão "criar tarefa" na linha da etapa + badge de contagem */
+/* Pílula de tarefas na coluna "Tarefas" da etapa.
+   Dois layouts ("N tarefas" e "+ Tarefas") compartilham exatamente o mesmo
+   tamanho — a única diferença é preenchido (sólido) x vazio (tracejado). */
 
-.etapa-action-create-task {
-    position: relative;
-    color: #4b6582 !important;
-    background: transparent !important;
-    border-color: transparent !important;
+.etapa-task-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.34rem;
+    width: 116px;
+    height: 32px;
+    padding: 0 0.7rem;
+    border-radius: 8px;
+    border: 1px solid #cfe0f5;
+    background: #eef4ff;
+    color: #2856b6;
+    font-family: var(--ds-font-family-base);
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-semibold);
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
 
-/* Override .btn-floating:hover (que pinta de vermelho — estilo do botão
-   de excluir etapa ao lado). O ícone de tarefas é uma ação positiva.
-   Usamos :focus-visible (não :focus) para que o re-foco programático
-   após fechar o modal não deixe o botão "preso" no estado azul. */
-.etapa-action-create-task:hover,
-.etapa-action-create-task:focus-visible {
-    color: #1d4ed8 !important;
-    background: rgba(37, 99, 235, 0.10) !important;
-    border-color: transparent !important;
-    box-shadow: none;
-}
-
-.etapa-action-create-task:focus:not(:focus-visible) {
+.etapa-task-pill:hover,
+.etapa-task-pill:focus-visible {
+    background: #e2ecff;
+    border-color: #b6cdf0;
+    color: #1d4ed8;
     outline: none;
-    background: transparent !important;
-    color: #4b6582 !important;
 }
 
-.etapa-action-create-task .fa-clipboard-list,
-.etapa-action-create-task .fa-list-check {
-    font-size: 0.95rem;
+.etapa-task-pill:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.etapa-task-pill .etapa-task-pill-has,
+.etapa-task-pill .etapa-task-pill-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
     line-height: 1;
 }
 
-.etapa-action-create-task.is-stage-done {
+.etapa-task-pill .etapa-task-pill-count {
+    font-weight: var(--ds-font-weight-bold);
+}
+
+/* Linha de criação de etapa: a etapa ainda não existe, então a coluna de
+   tarefas mostra só um marcador neutro. */
+.etapa-task-pill-placeholder {
+    color: #9fb1c6;
+    font-weight: var(--ds-font-weight-medium);
+}
+
+.etapa-task-pill i {
+    font-size: 0.9rem;
+}
+
+/* Alterna entre os dois conteúdos sem mudar a caixa */
+.etapa-task-pill .etapa-task-pill-add {
+    display: none;
+}
+
+.etapa-task-pill.is-empty {
+    background: transparent;
+    border-style: dashed;
+    border-color: #c3d3e8;
+    color: #5a7799;
+}
+
+.etapa-task-pill.is-empty:hover,
+.etapa-task-pill.is-empty:focus-visible {
+    background: rgba(37, 99, 235, 0.07);
+    border-color: #9fc0e8;
+    color: #1d4ed8;
+}
+
+.etapa-task-pill.is-empty .etapa-task-pill-has {
+    display: none;
+}
+
+.etapa-task-pill.is-empty .etapa-task-pill-add {
+    display: inline-flex;
+}
+
+.etapa-task-pill.is-stage-done {
     opacity: 0.4;
     cursor: not-allowed;
 }
 
-.etapa-action-create-task.is-stage-done:hover,
-.etapa-action-create-task.is-stage-done:focus {
-    color: #4b6582 !important;
-    background: transparent !important;
+.etapa-task-pill.is-stage-done:hover,
+.etapa-task-pill.is-stage-done:focus-visible {
+    background: #eef4ff;
+    border-color: #cfe0f5;
+    color: #2856b6;
 }
 
-.etapa-action-task-count {
-    position: absolute;
-    top: -3px;
-    right: -3px;
-    min-width: 15px;
-    height: 15px;
-    padding: 0 4px;
-    border-radius: 999px;
-    background: #2563eb;
-    color: #ffffff;
-    font-size: 9px;
-    font-weight: 600;
-    line-height: 15px;
-    text-align: center;
-    letter-spacing: 0.01em;
-    box-shadow: 0 0 0 2px var(--app-color-surface, #ffffff);
-    pointer-events: none;
+.etapa-task-pill.is-stage-done.is-empty:hover,
+.etapa-task-pill.is-stage-done.is-empty:focus-visible {
+    background: transparent;
+    border-color: #c3d3e8;
+    color: #5a7799;
 }
 
-.etapa-action-task-count.is-empty {
-    display: none;
+/* Dark mode */
+html[data-theme="dark"] body.is-authenticated .etapa-task-pill {
+    background: rgba(78, 149, 204, 0.18);
+    border-color: rgba(99, 166, 219, 0.46);
+    color: #cfe6ff;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating.etapa-action-create-task,
-html[data-theme="dark"] .etapa-action-create-task {
-    color: #cdd9e7 !important;
-    background: transparent !important;
-    border-color: transparent !important;
+html[data-theme="dark"] body.is-authenticated .etapa-task-pill:hover,
+html[data-theme="dark"] body.is-authenticated .etapa-task-pill:focus-visible {
+    background: rgba(78, 149, 204, 0.3);
+    border-color: rgba(99, 166, 219, 0.62);
+    color: #edf6ff;
 }
 
-html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating.etapa-action-create-task:hover,
-html[data-theme="dark"] body.is-authenticated .etapa-v4-actions-cell .btn-floating.etapa-action-create-task:focus-visible,
-html[data-theme="dark"] .etapa-action-create-task:hover,
-html[data-theme="dark"] .etapa-action-create-task:focus-visible {
-    color: #cfe6ff !important;
-    background: rgba(96, 165, 250, 0.16) !important;
-    border-color: transparent !important;
-    box-shadow: none !important;
+html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty {
+    background: transparent;
+    border-color: rgba(120, 150, 184, 0.5);
+    color: #9fb6d2;
 }
 
-html[data-theme="dark"] .etapa-action-create-task:focus:not(:focus-visible) {
-    outline: none;
-    background: transparent !important;
-    color: #cdd9e7 !important;
-}
-
-/* Bolinha de notificação no dark: mesmo azul do botão "Novo Projeto"
-   da página inicial, sem ring escuro de separação. */
-html[data-theme="dark"] .etapa-action-task-count {
-    background: linear-gradient(135deg, #0e6aa8 0%, #0b5e94 52%, #084f7e 100%);
-    color: #ffffff;
-    font-weight: 700;
-    box-shadow: 0 2px 6px rgba(6, 74, 123, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:hover,
+html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:focus-visible {
+    background: rgba(96, 165, 250, 0.16);
+    border-color: rgba(99, 166, 219, 0.6);
+    color: #edf6ff;
 }
 
 /* Modal */

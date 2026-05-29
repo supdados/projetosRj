@@ -134,8 +134,8 @@
                         <th class="etapa-v4-col-date">Data Início</th>
                         <th class="etapa-v4-col-date">Data Fim</th>
                         <th class="etapa-v4-col-responsavel">Responsável</th>
-                        <th class="etapa-v4-col-status text-center">Iniciada</th>
-                        <th class="etapa-v4-col-status text-center">Concluída</th>
+                        <th class="etapa-v4-col-tasks text-center">Tarefas</th>
+                        <th class="etapa-v4-col-status text-center">Status</th>
                         <th class="etapa-v4-col-actions text-center">Ações</th>
                     </tr>
                 </thead>
@@ -203,7 +203,7 @@
                             </span>
                         </td>
                         <td class="etapa-row-text etapa-v4-cell-responsavel text-muted small">-</td>
-                        <td class="text-center etapa-v4-cell-status text-muted small">-</td>
+                        <td class="text-center etapa-v4-cell-tasks text-muted small">-</td>
                         <td class="text-center etapa-v4-cell-status text-muted small">-</td>
                         <td class="actions text-center etapa-v4-actions-cell">
                             <div class="etapa-meeting-actions">
@@ -273,39 +273,11 @@
                                 {{ etapa.responsavel if etapa.responsavel else 'Sem responsável' }}
                             </span>
                         </td>
-                        <td class="text-center etapa-v4-cell-status">
-                            <button type="button" class="btn btn-sm etapa-status-toggle toggle-iniciada etapa-status-toggle-{{ 'started' if etapa.iniciada else 'idle' }}"
-                                data-etapa-id="{{ etapa.id }}"
-                                data-state="{{ 'started' if etapa.iniciada else 'idle' }}"
-                                title="{{ 'Marcar como não iniciada' if etapa.iniciada else 'Marcar como iniciada' }}"
-                                {% if not current_user_obj %}disabled{% endif %}>
-                                {% if etapa.iniciada %}
-                                <i class="fas fa-stop-circle"></i>
-                                <span>Iniciada</span>
-                                {% else %}
-                                <i class="fas fa-play-circle"></i>
-                                <span>Iniciar</span>
-                                {% endif %}
-                            </button>
-                        </td>
-                        <td class="text-center etapa-v4-cell-status">
-                            <button type="button" class="btn btn-sm etapa-status-toggle toggle-done etapa-status-toggle-{{ 'done' if etapa.done else ('ready' if etapa.iniciada else 'blocked') }}"
-                                data-etapa-id="{{ etapa.id }}" {{ 'disabled' if (not etapa.iniciada and not etapa.done)
-                                or not current_user_obj else '' }}
-                                data-state="{{ 'done' if etapa.done else ('ready' if etapa.iniciada else 'blocked') }}"
-                                title="{{ 'Marcar como pendente' if etapa.done else ('Marcar como concluída (necessário iniciar primeiro)' if not etapa.iniciada else 'Marcar como concluída') }}">
-                                {% if etapa.done %}
-                                <i class="fas fa-check-circle"></i>
-                                <span>Concluída</span>
-                                {% else %}
-                                <i class="fas fa-check-circle"></i>
-                                <span>Concluir</span>
-                                {% endif %}
-                            </button>
-                        </td>
-                        <td class="actions text-center etapa-v4-actions-cell">
+                        <td class="text-center etapa-v4-cell-tasks">
                             {% if current_user_obj %}
-                            {% set open_count = etapa_open_task_counts.get(etapa.id, 0) %}
+                            {% set task_progress = etapa_task_progress.get(etapa.id, {'done': 0, 'total': 0}) %}
+                            {% set task_done = task_progress['done'] %}
+                            {% set task_total = task_progress['total'] %}
                             {% set etapa_inicio_br = etapa.data_inicio.strftime('%d/%m/%Y') if etapa.data_inicio else '' %}
                             {% set etapa_fim_br = etapa.data_fim.strftime('%d/%m/%Y') if etapa.data_fim else '' %}
                             {% if etapa_inicio_br and etapa_fim_br %}
@@ -318,7 +290,7 @@
                                 {% set etapa_datas_label = 'Etapa sem datas definidas' %}
                             {% endif %}
                             <button type="button"
-                                class="btn btn-sm btn-floating etapa-action-create-task{% if etapa.done %} is-stage-done{% endif %}"
+                                class="etapa-task-pill etapa-action-create-task{% if not task_total %} is-empty{% endif %}{% if etapa.done %} is-stage-done{% endif %}"
                                 data-stage-quick-add-trigger
                                 data-etapa-id="{{ etapa.id }}"
                                 data-etapa-descricao="{{ etapa.descricao }}"
@@ -330,10 +302,41 @@
                                 {% if etapa.done %}aria-disabled="true" tabindex="-1"{% endif %}
                                 title="{{ 'Etapa concluída — desfaça a conclusão para criar tarefas' if etapa.done else 'Criar tarefa nesta etapa' }}"
                                 aria-label="{{ 'Criar tarefa (etapa concluída)' if etapa.done else 'Criar tarefa nesta etapa' }}">
-                                <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-                                <span class="etapa-action-task-count{% if not open_count %} is-empty{% endif %}"
-                                      data-stage-task-count="{{ etapa.id }}">{{ open_count }}</span>
+                                <span class="etapa-task-pill-has">
+                                    <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                                    <span class="etapa-task-pill-count" data-stage-task-count="{{ etapa.id }}"
+                                          data-stage-task-done="{{ task_done }}" data-stage-task-total="{{ task_total }}">{{ task_done }}/{{ task_total }}</span>
+                                </span>
+                                <span class="etapa-task-pill-add">
+                                    <i class="fas fa-plus" aria-hidden="true"></i>
+                                    <span>Tarefas</span>
+                                </span>
                             </button>
+                            {% else %}
+                            <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center etapa-v4-cell-status">
+                            {% set status_state = 'done' if etapa.done else ('started' if etapa.iniciada else 'idle') %}
+                            <button type="button" class="btn btn-sm etapa-status-toggle etapa-status-cycle etapa-status-toggle-{{ status_state }}"
+                                data-etapa-id="{{ etapa.id }}"
+                                data-state="{{ status_state }}"
+                                title="{{ 'Clique para voltar para não iniciada' if status_state == 'done' else ('Clique para marcar como concluída' if status_state == 'started' else 'Clique para marcar como iniciada') }}"
+                                {% if not current_user_obj %}disabled{% endif %}>
+                                {% if status_state == 'done' %}
+                                <i class="fas fa-check-circle"></i>
+                                <span>Concluída</span>
+                                {% elif status_state == 'started' %}
+                                <i class="fas fa-play-circle"></i>
+                                <span>Iniciada</span>
+                                {% else %}
+                                <i class="far fa-circle"></i>
+                                <span>Não iniciada</span>
+                                {% endif %}
+                            </button>
+                        </td>
+                        <td class="actions text-center etapa-v4-actions-cell">
+                            {% if current_user_obj %}
                             <form action="{{ url_for('main.delete_etapa', etapa_id=etapa.id) }}" method="post"
                                 class="inline-form" data-etapa-delete-form
                                 data-confirm="Tem certeza que deseja excluir esta etapa?">
@@ -396,18 +399,15 @@
                             <label for="etapa_inline_responsavel" class="visually-hidden">Responsável</label>
                             <input type="text" id="etapa_inline_responsavel" class="form-control etapa-inline-input" name="etapa_responsavel" form="etapaInlineAddForm" placeholder="Responsável">
                         </td>
-                        <td class="etapa-inline-cell etapa-inline-cell-status text-center etapa-v4-cell-status">
-                            <input class="etapa-inline-checkbox-native ds-hidden" type="checkbox" id="etapa_inline_iniciada" name="etapa_iniciada" form="etapaInlineAddForm" aria-label="Marcar etapa como iniciada">
-                            <button type="button" class="btn btn-sm etapa-status-toggle etapa-status-toggle-idle inline-status-toggle inline-status-toggle-iniciada" aria-label="Marcar etapa como iniciada" title="Marcar como iniciada" data-state="idle">
-                                <i class="fas fa-play-circle"></i>
-                                <span>Iniciar</span>
-                            </button>
+                        <td class="etapa-inline-cell etapa-inline-cell-tasks text-center etapa-v4-cell-tasks">
+                            <span class="etapa-task-pill-placeholder" aria-hidden="true">—</span>
                         </td>
                         <td class="etapa-inline-cell etapa-inline-cell-status text-center etapa-v4-cell-status">
+                            <input class="etapa-inline-checkbox-native ds-hidden" type="checkbox" id="etapa_inline_iniciada" name="etapa_iniciada" form="etapaInlineAddForm" aria-label="Marcar etapa como iniciada">
                             <input class="etapa-inline-checkbox-native ds-hidden" type="checkbox" id="etapa_inline_done" name="etapa_done" form="etapaInlineAddForm" aria-label="Marcar etapa como concluída">
-                            <button type="button" class="btn btn-sm etapa-status-toggle etapa-status-toggle-blocked inline-status-toggle inline-status-toggle-done" aria-label="Marcar etapa como concluída" title="Marcar como concluída (necessário iniciar primeiro)" disabled data-state="blocked">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Concluir</span>
+                            <button type="button" class="btn btn-sm etapa-status-toggle etapa-status-cycle etapa-status-toggle-idle inline-status-toggle inline-status-cycle" aria-label="Alterar status da etapa" title="Clique para marcar como iniciada" data-state="idle">
+                                <i class="far fa-circle"></i>
+                                <span>Não iniciada</span>
                             </button>
                         </td>
                         <td class="etapa-inline-cell etapa-inline-cell-actions actions text-center etapa-v4-actions-cell">

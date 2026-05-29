@@ -17,8 +17,7 @@
         const inlineDateInputs = refs.inlineDateInputs;
         const inlineIniciadaCheckbox = refs.inlineIniciadaCheckbox;
         const inlineDoneCheckbox = refs.inlineDoneCheckbox;
-        const inlineIniciadaToggle = refs.inlineIniciadaToggle;
-        const inlineDoneToggle = refs.inlineDoneToggle;
+        const inlineStatusToggle = refs.inlineStatusToggle;
         const inlineAddSubmitBtn = refs.inlineAddSubmitBtn;
         const inlineAddCancelBtn = refs.inlineAddCancelBtn;
         const btnOpenInlineEtapaAdd = refs.btnOpenInlineEtapaAdd;
@@ -30,27 +29,7 @@
         let inlineDatePickerOpening = false;
         let reactivateProjectModalResolver = null;
 
-        function updateInlineIniciadaButton(button, iniciada) {
-            if (!button) {
-                return;
-            }
-            button.classList.remove(
-                'etapa-status-toggle-idle',
-                'etapa-status-toggle-started',
-                'etapa-status-toggle-ready',
-                'etapa-status-toggle-done',
-                'etapa-status-toggle-blocked'
-            );
-            button.classList.add(iniciada ? 'etapa-status-toggle-started' : 'etapa-status-toggle-idle');
-            button.dataset.state = iniciada ? 'started' : 'idle';
-            if (iniciada) {
-                button.innerHTML = '<i class="fas fa-stop-circle"></i><span>Iniciada</span>';
-            } else {
-                button.innerHTML = '<i class="fas fa-play-circle"></i><span>Iniciar</span>';
-            }
-        }
-
-        function updateInlineDoneButton(button, done, iniciada) {
+        function updateInlineStatusButton(button, iniciada, done) {
             if (!button) {
                 return;
             }
@@ -65,14 +44,18 @@
                 button.classList.add('etapa-status-toggle-done');
                 button.dataset.state = 'done';
                 button.innerHTML = '<i class="fas fa-check-circle"></i><span>Concluída</span>';
-                button.title = 'Marcar como pendente';
+                button.title = 'Clique para voltar para não iniciada';
+            } else if (iniciada) {
+                button.classList.add('etapa-status-toggle-started');
+                button.dataset.state = 'started';
+                button.innerHTML = '<i class="fas fa-play-circle"></i><span>Iniciada</span>';
+                button.title = 'Clique para marcar como concluída';
             } else {
-                button.classList.add(iniciada ? 'etapa-status-toggle-ready' : 'etapa-status-toggle-blocked');
-                button.dataset.state = iniciada ? 'ready' : 'blocked';
-                button.innerHTML = '<i class="fas fa-check-circle"></i><span>Concluir</span>';
-                button.title = iniciada ? 'Marcar como concluída' : 'Marcar como concluída (necessário iniciar primeiro)';
+                button.classList.add('etapa-status-toggle-idle');
+                button.dataset.state = 'idle';
+                button.innerHTML = '<i class="far fa-circle"></i><span>Não iniciada</span>';
+                button.title = 'Clique para marcar como iniciada';
             }
-            button.disabled = !iniciada && !done;
         }
 
         function isInlineComposerOpen() {
@@ -143,11 +126,8 @@
             const isIniciada = Boolean(inlineIniciadaCheckbox && inlineIniciadaCheckbox.checked);
             const isDone = Boolean(inlineDoneCheckbox && inlineDoneCheckbox.checked);
 
-            if (inlineIniciadaToggle) {
-                updateInlineIniciadaButton(inlineIniciadaToggle, isIniciada);
-            }
-            if (inlineDoneToggle) {
-                updateInlineDoneButton(inlineDoneToggle, isDone, isIniciada);
+            if (inlineStatusToggle) {
+                updateInlineStatusButton(inlineStatusToggle, isIniciada, isDone);
             }
         }
 
@@ -483,24 +463,23 @@
         syncAllInlineDateEmptyState();
         syncInlineStatusControls();
 
-        if (inlineIniciadaToggle && inlineIniciadaCheckbox) {
-            inlineIniciadaToggle.addEventListener('click', function (event) {
+        if (inlineStatusToggle && inlineIniciadaCheckbox && inlineDoneCheckbox) {
+            // Mesmo ciclo do botão de status das etapas existentes:
+            // não iniciada → iniciada → concluída → não iniciada.
+            inlineStatusToggle.addEventListener('click', function (event) {
                 event.preventDefault();
-                inlineIniciadaCheckbox.checked = !inlineIniciadaCheckbox.checked;
-                if (!inlineIniciadaCheckbox.checked && inlineDoneCheckbox) {
+                if (!inlineIniciadaCheckbox.checked) {
+                    // não iniciada → iniciada
+                    inlineIniciadaCheckbox.checked = true;
+                    inlineDoneCheckbox.checked = false;
+                } else if (!inlineDoneCheckbox.checked) {
+                    // iniciada → concluída
+                    inlineDoneCheckbox.checked = true;
+                } else {
+                    // concluída → não iniciada
+                    inlineIniciadaCheckbox.checked = false;
                     inlineDoneCheckbox.checked = false;
                 }
-                syncInlineStatusControls();
-            });
-        }
-
-        if (inlineDoneToggle && inlineDoneCheckbox) {
-            inlineDoneToggle.addEventListener('click', function (event) {
-                event.preventDefault();
-                if (inlineDoneToggle.disabled) {
-                    return;
-                }
-                inlineDoneCheckbox.checked = !inlineDoneCheckbox.checked;
                 syncInlineStatusControls();
             });
         }

@@ -118,34 +118,24 @@
             }
         }
 
-        function updateIniciadaButton(button, iniciada) {
+        // Botão de status unificado: um único controle que cicla
+        // não iniciada → iniciada → concluída → iniciada (preserva o clique
+        // a que os usuários já estão acostumados, agora numa só coluna).
+        function updateStatusCycleButton(button, iniciada, done) {
             if (!button) {
                 return;
             }
-            shared.setStatusToggleVariant(button, iniciada ? 'started' : 'idle');
-            if (iniciada) {
-                button.innerHTML = '<i class="fas fa-stop-circle"></i><span>Iniciada</span>';
-                button.title = 'Marcar como não iniciada';
-            } else {
-                button.innerHTML = '<i class="fas fa-play-circle"></i><span>Iniciar</span>';
-                button.title = 'Marcar como iniciada';
-            }
-        }
-
-        function updateDoneButton(button, done, iniciada) {
-            if (!button) {
-                return;
-            }
+            shared.setStatusToggleVariant(button, done ? 'done' : (iniciada ? 'started' : 'idle'));
             if (done) {
-                shared.setStatusToggleVariant(button, 'done');
                 button.innerHTML = '<i class="fas fa-check-circle"></i><span>Concluída</span>';
-                button.title = 'Marcar como pendente';
+                button.title = 'Clique para voltar para não iniciada';
+            } else if (iniciada) {
+                button.innerHTML = '<i class="fas fa-play-circle"></i><span>Iniciada</span>';
+                button.title = 'Clique para marcar como concluída';
             } else {
-                shared.setStatusToggleVariant(button, iniciada ? 'ready' : 'blocked');
-                button.innerHTML = '<i class="fas fa-check-circle"></i><span>Concluir</span>';
-                button.title = iniciada ? 'Marcar como concluída' : 'Marcar como concluída (necessário iniciar primeiro)';
+                button.innerHTML = '<i class="far fa-circle"></i><span>Não iniciada</span>';
+                button.title = 'Clique para marcar como iniciada';
             }
-            button.disabled = !iniciada && !done;
         }
 
         function updateStageCreateTaskButton(etapaId, done) {
@@ -191,7 +181,7 @@
                 return;
             }
 
-            const todasEtapas = document.querySelectorAll('.toggle-iniciada');
+            const todasEtapas = document.querySelectorAll('#etapas-tbody .etapa-status-cycle:not(.inline-status-cycle)');
             const totalEtapas = parseInt(btnConcluir.dataset.totalEtapas, 10) || todasEtapas.length;
 
             if (totalEtapas === 0) {
@@ -207,10 +197,7 @@
                 const etapaId = btn.dataset.etapaId;
                 if (!etapasUnicas.has(etapaId)) {
                     etapasUnicas.add(etapaId);
-                    const isIniciada = btn.dataset.state === 'started';
-                    const btnDone = btn.closest('tr') ? btn.closest('tr').querySelector(`.toggle-done[data-etapa-id="${etapaId}"]`) : null;
-                    const isDone = btnDone ? btnDone.dataset.state === 'done' : false;
-                    if (!isIniciada || !isDone) {
+                    if (btn.dataset.state !== 'done') {
                         todasConcluidas = false;
                     }
                 }
@@ -776,15 +763,23 @@
                     }
                 }
 
-                const iniciadaButton = event.target.closest('.toggle-iniciada');
-                if (iniciadaButton && refs.tbody.contains(iniciadaButton)) {
-                    if (iniciadaButton.dataset.inFlight === '1') {
+                const statusButton = event.target.closest('.etapa-status-cycle');
+                if (statusButton && refs.tbody.contains(statusButton) && !statusButton.classList.contains('inline-status-cycle')) {
+                    if (statusButton.disabled || statusButton.dataset.inFlight === '1') {
                         return;
                     }
-                    iniciadaButton.dataset.inFlight = '1';
-                    const etapaId = iniciadaButton.dataset.etapaId;
+                    statusButton.dataset.inFlight = '1';
+                    const etapaId = statusButton.dataset.etapaId;
+                    // Ciclo: não iniciada → iniciada → concluída → não iniciada.
+                    // - iniciada → concluída: marca conclusão via /toggle.
+                    // - não iniciada → iniciada e concluída → não iniciada:
+                    //   /toggle_iniciada (que ao desmarcar iniciada também
+                    //   limpa a conclusão, zerando o status).
+                    const endpoint = statusButton.dataset.state === 'started'
+                        ? `/etapa/${etapaId}/toggle`
+                        : `/etapa/${etapaId}/toggle_iniciada`;
 
-                    fetch(`/etapa/${etapaId}/toggle_iniciada`, {
+                    fetch(endpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
@@ -795,77 +790,29 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                updateIniciadaButton(iniciadaButton, data.iniciada);
-                                const commonAncestor = iniciadaButton.closest('tr.etapa-draggable-row');
-                                if (commonAncestor) {
-                                    const doneButton = commonAncestor.querySelector(`.toggle-done[data-etapa-id="${etapaId}"]`);
-                                    if (doneButton) {
-                                        updateDoneButton(doneButton, data.done, data.iniciada);
-                                    }
-                                }
+                                updateStatusCycleButton(statusButton, data.iniciada, data.done);
                                 updateRowAppearance(etapaId, data.iniciada, data.done);
                                 updateStageCreateTaskButton(etapaId, data.done);
                                 if (data.message) {
                                     shared.showAjaxFlashMessage(data.message, 'info');
                                 } else {
-                                    shared.showAjaxFlashMessage(data.iniciada ? 'Iniciada.' : 'Não iniciada.', 'success');
+                                    const okMsg = data.done ? 'Concluída.' : (data.iniciada ? 'Iniciada.' : 'Não iniciada.');
+                                    shared.showAjaxFlashMessage(okMsg, 'success');
                                 }
                                 verificarEAtualizarBotaoConcluir();
                             } else {
-                                shared.showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', 'danger');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erro ao alternar iniciada:', error);
-                            shared.showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
-                        })
-                        .finally(function () {
-                            delete iniciadaButton.dataset.inFlight;
-                        });
-                    return;
-                }
-
-                const doneButton = event.target.closest('.toggle-done');
-                if (doneButton && refs.tbody.contains(doneButton)) {
-                    if (doneButton.disabled || doneButton.dataset.inFlight === '1') {
-                        return;
-                    }
-                    doneButton.dataset.inFlight = '1';
-                    const etapaId = doneButton.dataset.etapaId;
-
-                    fetch(`/etapa/${etapaId}/toggle`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRFToken': config.csrfToken || '',
-                        },
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                updateDoneButton(doneButton, data.done, data.iniciada);
-                                updateRowAppearance(etapaId, data.iniciada, data.done);
-                                updateStageCreateTaskButton(etapaId, data.done);
-                                if (data.message) {
-                                    shared.showAjaxFlashMessage(data.message, 'info');
-                                } else {
-                                    shared.showAjaxFlashMessage(data.done ? 'Concluída.' : 'Pendente.', 'success');
-                                }
-                                verificarEAtualizarBotaoConcluir();
-                            } else {
-                                const feedbackType = data.success === false && data.message && data.message.includes('não foi iniciada')
+                                const feedbackType = data.message && (data.message.includes('pendente') || data.message.includes('não foi iniciada'))
                                     ? 'warning'
                                     : 'danger';
                                 shared.showAjaxFlashMessage(data.message || 'Erro ao atualizar etapa.', feedbackType);
                             }
                         })
                         .catch(error => {
-                            console.error('Erro ao alternar concluída:', error);
+                            console.error('Erro ao alternar status da etapa:', error);
                             shared.showAjaxFlashMessage('Erro de comunicação com o servidor.', 'danger');
                         })
                         .finally(function () {
-                            delete doneButton.dataset.inFlight;
+                            delete statusButton.dataset.inFlight;
                         });
                 }
             });

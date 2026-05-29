@@ -129,7 +129,10 @@
         }
     }
 
-    function updateStageBadge(etapaId, delta) {
+    // Atualiza a contagem "concluídas/total" da pílula de tarefas da etapa.
+    // O estado vazio (is-empty → "+ Tarefas") é controlado no botão para
+    // alternar os dois layouts mantendo o mesmo tamanho.
+    function updateStageProgress(etapaId, totalDelta, doneDelta) {
         if (!etapaId) {
             return;
         }
@@ -137,10 +140,16 @@
         if (!badge) {
             return;
         }
-        const current = parseInt(badge.textContent || '0', 10) || 0;
-        const next = Math.max(0, current + delta);
-        badge.textContent = String(next);
-        badge.classList.toggle('is-empty', next === 0);
+        const total = Math.max(0, (parseInt(badge.dataset.stageTaskTotal || '0', 10) || 0) + (totalDelta || 0));
+        const done = Math.max(0, Math.min(total, (parseInt(badge.dataset.stageTaskDone || '0', 10) || 0) + (doneDelta || 0)));
+        badge.dataset.stageTaskTotal = String(total);
+        badge.dataset.stageTaskDone = String(done);
+        badge.textContent = done + '/' + total;
+
+        const pill = badge.closest('.etapa-task-pill');
+        if (pill) {
+            pill.classList.toggle('is-empty', total === 0);
+        }
     }
 
     window.stageTaskQuickAddRows = {
@@ -153,6 +162,6 @@
         resetFields,
         resizeTextarea,
         showForm,
-        updateStageBadge,
+        updateStageProgress,
     };
 })();

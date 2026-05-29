@@ -547,21 +547,36 @@ def project_detail(project_id):
     active_task_count = Task.query.filter_by(
         project_id=project.id, is_archived=False
     ).count()
-    # Contagem de tarefas abertas (não arquivadas, não finalizadas) por etapa —
-    # usado pelo badge no botão de criar tarefa em cada linha de etapa.
-    open_task_counts = dict(
+    # Progresso de tarefas por etapa (concluídas / total) — exibido na pílula
+    # "Tarefas" de cada linha de etapa como "3/10". Total e concluídas
+    # consideram apenas tarefas não arquivadas.
+    total_task_counts = dict(
         db.session.query(Task.etapa_id, db.func.count(Task.id))
         .filter(
             Task.project_id == project.id,
             Task.etapa_id.isnot(None),
             Task.is_archived.is_(False),
-            Task.status != "finalizada",
         )
         .group_by(Task.etapa_id)
         .all()
     )
-    etapa_open_task_counts = {
-        etapa.id: int(open_task_counts.get(etapa.id, 0)) for etapa in project.etapas
+    done_task_counts = dict(
+        db.session.query(Task.etapa_id, db.func.count(Task.id))
+        .filter(
+            Task.project_id == project.id,
+            Task.etapa_id.isnot(None),
+            Task.is_archived.is_(False),
+            Task.status == "finalizada",
+        )
+        .group_by(Task.etapa_id)
+        .all()
+    )
+    etapa_task_progress = {
+        etapa.id: {
+            "total": int(total_task_counts.get(etapa.id, 0)),
+            "done": int(done_task_counts.get(etapa.id, 0)),
+        }
+        for etapa in project.etapas
     }
     project_history_entries = (
         ProjectHistory.query.filter_by(project_id=project.id)
@@ -591,7 +606,7 @@ def project_detail(project_id):
         "projects/detail.html",
         project=project,
         active_task_count=active_task_count,
-        etapa_open_task_counts=etapa_open_task_counts,
+        etapa_task_progress=etapa_task_progress,
         project_history_entries=project_history_entries,
         calendar_connection=calendar_connection,
         can_add_google_meeting=bool(
