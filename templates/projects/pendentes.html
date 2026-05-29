@@ -741,8 +741,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!etapaId || !row) {
                 return;
             }
-            // idle/concluída → /toggle_iniciada; iniciada → /toggle (conclui e,
-            // ao concluir, a etapa some da lista de pendentes).
+            // Ciclo idêntico ao da tela do projeto:
+            // não iniciada → iniciada → concluída → não iniciada.
+            // idle/concluída → /toggle_iniciada; iniciada → /toggle.
             const endpoint = statusBtn.dataset.state === 'started'
                 ? '/etapa/' + etapaId + '/toggle'
                 : '/etapa/' + etapaId + '/toggle_iniciada';
@@ -754,14 +755,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     showToast(data.message || 'Não foi possível atualizar a etapa.', 'danger');
                     return;
                 }
-                if (data.done) {
-                    removeRowFromPending(row);
-                    showToast('Etapa concluída', 'info');
+                // A etapa concluída permanece visível (com o status atualizado)
+                // até a página ser recarregada — assim o usuário pode revisar ou
+                // reverter um clique errado. Só some no próximo carregamento, em
+                // que o backend filtra etapas já concluídas.
+                applyEtapaStatus(row, data.iniciada, data.done);
+                if (data.message) {
+                    showToast(data.message, 'info');
                 } else {
-                    applyEtapaStatus(row, data.iniciada, data.done);
-                    if (data.message) {
-                        showToast(data.message, 'info');
-                    }
+                    const okMsg = data.done ? 'Concluída.' : (data.iniciada ? 'Iniciada.' : 'Não iniciada.');
+                    showToast(okMsg, 'success');
                 }
             } catch (error) {
                 showToast('Erro de comunicação com o servidor.', 'danger');
