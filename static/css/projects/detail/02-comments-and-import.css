@@ -32,6 +32,15 @@
         color: #6c757d !important;
     }
 
+    /* Etapa concluída não aceita novos comentários: o atalho "adicionar
+       comentário" CONTINUA no layout (opacity 0, ocupando o mesmo espaço — não
+       remover, senão a linha da etapa quebra), mas não é revelado no hover nem
+       fica clicável. !important vence as regras de hover acima (light e dark). */
+    .etapa-done .etapa-comentario-placeholder {
+        opacity: 0 !important;
+        pointer-events: none;
+    }
+
     .etapa-comentario-placeholder i {
         font-size: var(--ds-font-size-md);
     }

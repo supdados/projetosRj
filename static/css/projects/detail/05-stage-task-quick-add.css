@@ -207,7 +207,8 @@ html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:focus-vi
     /* Largura do scrollbar reservado no corpo; o header recua o mesmo tanto à
        direita para que os dois cartões fiquem com a mesma largura. */
     --stq-gutter: 12px;
-    width: min(1280px, 94vw);
+    /* ~10% mais estreito que o original (1280px / 94vw). */
+    width: min(1152px, 85vw);
     /* Cresce conforme o conteúdo e para no teto definido. */
     height: auto;
     max-height: clamp(420px, 64vh, 620px);
@@ -277,15 +278,33 @@ html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:focus-vi
 }
 
 .stage-task-quick-add__body::-webkit-scrollbar-thumb {
-    background: rgba(100, 116, 139, 0.4);
+    background: rgba(71, 85, 105, 0.7);
     border: 3px solid transparent;
     background-clip: padding-box;
     border-radius: 999px;
 }
 
 .stage-task-quick-add__body::-webkit-scrollbar-thumb:hover {
-    background: rgba(100, 116, 139, 0.6);
+    background: rgba(51, 65, 85, 0.85);
     background-clip: padding-box;
+}
+
+/* Firefox */
+.stage-task-quick-add__body {
+    scrollbar-color: rgba(71, 85, 105, 0.7) transparent;
+}
+
+/* No dark o fundo é escuro: thumb mais claro para continuar visível. */
+html[data-theme="dark"] .stage-task-quick-add__body {
+    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+}
+
+html[data-theme="dark"] .stage-task-quick-add__body::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.5);
+}
+
+html[data-theme="dark"] .stage-task-quick-add__body::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.7);
 }
 
 /* ============================================================
@@ -378,7 +397,7 @@ html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task
     border: 1px solid #d7e2ef;
     border-radius: var(--td-radius-lg, 14px);
     box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
-    padding: 0.85rem 1.35rem 0.95rem;
+    padding: 0.6rem 1.35rem 0.7rem;
     /* Mesma largura do cartão de tarefas: recua à direita o tamanho do
        scrollbar que o corpo reserva. */
     margin-right: var(--stq-gutter, 12px);
@@ -392,7 +411,7 @@ html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task
 }
 
 .stage-task-quick-add__eyebrow {
-    margin: 0 0 0.3rem;
+    margin: 0 0 0.2rem;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -427,39 +446,6 @@ html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task
     font-size: 0.85rem;
     color: #6b7c93;
     font-weight: 500;
-}
-
-.stage-task-quick-add__meta {
-    margin-top: 0.4rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-}
-
-.stage-task-quick-add__chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.28rem 0.7rem 0.28rem 0.55rem;
-    border-radius: 999px;
-    background: rgba(59, 130, 246, 0.12);
-    color: #1d4ed8;
-    font-size: 0.78rem;
-    font-weight: 500;
-    line-height: 1;
-}
-
-.stage-task-quick-add__chip-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-}
-
-.stage-task-quick-add__meta-text {
-    font-size: 0.82rem;
-    color: #6b7c93;
 }
 
 .stage-task-quick-add__close {
@@ -639,14 +625,8 @@ html[data-theme="dark"] .stage-task-quick-add__title {
     color: #f3f7fb;
 }
 
-html[data-theme="dark"] .stage-task-quick-add__count,
-html[data-theme="dark"] .stage-task-quick-add__meta-text {
+html[data-theme="dark"] .stage-task-quick-add__count {
     color: #94a8c1;
-}
-
-html[data-theme="dark"] .stage-task-quick-add__chip {
-    background: rgba(96, 165, 250, 0.18);
-    color: #93c5fd;
 }
 
 html[data-theme="dark"] .stage-task-quick-add__eyebrow-sep {
