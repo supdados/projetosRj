@@ -225,6 +225,10 @@
                 if (stageHeaders.length) {
                     stageHeaders.forEach(function (header) {
                         var stageValue = header.getAttribute('data-stage-value') || '';
+                        // As tarefas vivem no corpo colapsável da etapa
+                        // (`.task-hub-stage-tasks`), não como irmãs do header.
+                        var stage = header.closest('.task-hub-stage');
+                        var container = stage ? stage.querySelector('.task-hub-stage-tasks') : null;
                         var fragment = document.createDocumentFragment();
                         orderIds.forEach(function (id) {
                             var row = group.querySelector('.task-item-row[data-item-id="' + id + '"]');
@@ -237,7 +241,9 @@
                             if (modal) fragment.appendChild(modal);
                         });
                         if (!fragment.childNodes.length) return;
-                        if (header.nextSibling) {
+                        if (container) {
+                            container.appendChild(fragment);
+                        } else if (header.nextSibling) {
                             header.parentNode.insertBefore(fragment, header.nextSibling);
                         } else {
                             header.parentNode.appendChild(fragment);

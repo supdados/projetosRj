@@ -80,7 +80,15 @@
     }
 
     function moveRowInDom(row, targetStageHeader) {
-        // Insere o row imediatamente após o header de etapa (vira primeiro item).
+        // A etapa agora encapsula suas tarefas em `.task-hub-stage-tasks`
+        // (corpo colapsável). O row movido vira o primeiro item dessa etapa.
+        const stage = targetStageHeader.closest('.task-hub-stage');
+        const container = stage ? stage.querySelector('.task-hub-stage-tasks') : null;
+        if (container) {
+            container.insertBefore(row, container.firstChild);
+            return;
+        }
+        // Fallback para estruturas planas (grupo sem etapas): insere após o header.
         const parent = targetStageHeader.parentNode;
         if (!parent) {
             return;

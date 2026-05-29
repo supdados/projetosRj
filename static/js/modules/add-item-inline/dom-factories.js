@@ -13,8 +13,10 @@
 
         function buildGroupHeaderMarkup(projectInfo) {
             var projectUrl = ctx.buildProjectDetailUrl(projectInfo.value);
+            // `data-role="group-toggle-skip"`: clicar no nome do projeto navega
+            // para o detalhe em vez de colapsar o grupo (ver hub-collapse.js).
             var titleMarkup = projectUrl
-                ? '<a href="' + escapeAttr(projectUrl) + '" class="task-hub-group-title task-hub-group-title-link">' + escapeHtml(projectInfo.label) + '</a>'
+                ? '<a href="' + escapeAttr(projectUrl) + '" class="task-hub-group-title task-hub-group-title-link" data-role="group-toggle-skip">' + escapeHtml(projectInfo.label) + '</a>'
                 : '<h6 class="task-hub-group-title">' + escapeHtml(projectInfo.label) + '</h6>';
             var orgaoLabel = projectInfo.orgaoSigla || 'N\u00e3o informado';
 
@@ -22,10 +24,16 @@
                 '<div class="task-hub-group-title-wrap">',
                 '<div class="task-hub-group-heading">',
                 titleMarkup,
-                '<p class="task-hub-group-meta">\u00d3rg\u00e3o: <strong>' + escapeHtml(orgaoLabel) + '</strong></p>',
+                '<p class="task-hub-group-meta">',
+                '<span class="task-hub-group-org">' + escapeHtml(orgaoLabel) + '</span>',
+                '<span class="task-hub-meta-dot" aria-hidden="true"></span>',
+                '<span>0 tarefas</span>',
+                '</p>',
                 '</div>',
                 '</div>',
+                '<div class="task-hub-group-summary">',
                 '<span class="task-hub-group-count">0 tarefas</span>',
+                '</div>',
             ].join('');
         }
 
@@ -109,12 +117,15 @@
 
         function buildRegularGroupMarkup(projectInfo) {
             return [
-                '<section class="task-hub-group" data-project-value="' + escapeAttr(projectInfo.value) + '" data-project-id="' + escapeAttr(projectInfo.value === 'sem_projeto' ? '' : projectInfo.value) + '">',
-                '<header class="task-hub-group-header">',
+                '<section class="task-hub-group" data-open="true" data-project-value="' + escapeAttr(projectInfo.value) + '" data-project-id="' + escapeAttr(projectInfo.value === 'sem_projeto' ? '' : projectInfo.value) + '">',
+                '<header class="task-hub-group-header" data-role="group-toggle" role="button" tabindex="0" aria-expanded="true">',
+                '<span class="task-hub-toggle" aria-hidden="true"><i class="fas fa-chevron-down"></i></span>',
                 buildGroupHeaderMarkup(projectInfo),
                 '</header>',
+                '<div class="task-hub-group-body"><div class="inner">',
                 buildGroupColumnsMarkup(),
                 buildAddRowMarkup(projectInfo.value, { projectReady: true }),
+                '</div></div>',
                 '</section>',
             ].join('');
         }

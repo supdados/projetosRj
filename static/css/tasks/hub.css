@@ -635,12 +635,59 @@
 
 .task-hub-page .task-hub-group-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.78rem 1rem 0.66rem;
+    padding: 0.72rem 1rem;
     border-bottom: 1px solid #e8eef6;
     background: #f5f8fc;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.16s ease;
+}
+
+.task-hub-page .task-hub-group-header:hover {
+    background: #eef4fb;
+}
+
+/* Chevron de colapso (projeto e etapa) — gira ao fechar */
+.task-hub-page .task-hub-toggle {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    color: var(--tasks-muted);
+    font-size: 0.72rem;
+    transition: transform 0.25s ease, color 0.16s ease;
+}
+
+.task-hub-page .task-hub-group-header:hover .task-hub-toggle {
+    color: #2d4f77;
+}
+
+.task-hub-page .task-hub-group[data-open="false"] > .task-hub-group-header .task-hub-toggle,
+.task-hub-page .task-hub-stage[data-open="false"] > .task-hub-stage-header .task-hub-toggle {
+    transform: rotate(-90deg);
+}
+
+/* Animação de colapso via grid-template-rows (sem medir altura no JS) */
+.task-hub-page .task-hub-group-body,
+.task-hub-page .task-hub-stage-body {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.task-hub-page .task-hub-group[data-open="false"] > .task-hub-group-body,
+.task-hub-page .task-hub-stage[data-open="false"] > .task-hub-stage-body {
+    grid-template-rows: 0fr;
+}
+
+.task-hub-page .task-hub-group-body > .inner,
+.task-hub-page .task-hub-stage-body > .inner {
+    overflow: hidden;
+    min-height: 0;
 }
 
 .task-hub-page .task-hub-group-title-wrap {
@@ -683,6 +730,63 @@
 .task-hub-page .task-hub-group-meta strong {
     color: #2d4f77;
     font-weight: var(--ds-font-weight-semibold);
+}
+
+.task-hub-page .task-hub-group-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+}
+
+.task-hub-page .task-hub-group-org {
+    font-weight: var(--ds-font-weight-semibold);
+    color: #2d4f77;
+}
+
+.task-hub-page .task-hub-meta-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #aab8c8;
+    flex: 0 0 auto;
+}
+
+.task-hub-page .task-hub-group-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex: 0 0 auto;
+}
+
+.task-hub-page .task-hub-progress {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.task-hub-page .task-hub-progress-bar {
+    position: relative;
+    width: 84px;
+    height: 3px;
+    border-radius: 99px;
+    background: #dde7f2;
+    overflow: hidden;
+}
+
+.task-hub-page .task-hub-progress-bar > i {
+    position: absolute;
+    inset: 0;
+    border-radius: 99px;
+    background: var(--tasks-primary);
+    transform-origin: left;
+}
+
+.task-hub-page .task-hub-progress-num {
+    font-size: var(--ds-font-size-2xs);
+    font-weight: var(--ds-font-weight-semibold);
+    color: #516884;
+    font-variant-numeric: tabular-nums;
 }
 
 .task-hub-page .task-hub-group-count {
@@ -1342,21 +1446,37 @@ html[data-theme="dark"] .tasks-no-tasks-toast {
     box-shadow: 0 8px 28px rgba(5, 12, 22, 0.52);
 }
 
-/* Sub-cabeçalho de etapa dentro de um grupo de projeto */
+/* ====================================
+   Etapa colapsável dentro do grupo de projeto
+   ==================================== */
+.task-hub-stage {
+    border-top: 1px solid #eef2f7;
+}
+
+.task-hub-stage:first-child {
+    border-top: none;
+}
+
+/* Sub-cabeçalho de etapa — clicável para abrir/fechar */
 .task-hub-stage-header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin: 0.85rem 0 0.35rem;
-    padding: 0.35rem 0.65rem;
-    background: linear-gradient(90deg, #f1f6fb, transparent);
+    padding: 0.5rem 0.75rem 0.5rem 0.55rem;
     border-left: 3px solid #2563eb;
-    border-radius: 6px;
-    font-size: 0.82rem;
+    background: linear-gradient(90deg, #f1f6fb, transparent);
+    font-size: 0.78rem;
     font-weight: 700;
     color: #1f3358;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.16s ease;
+}
+
+.task-hub-stage-header:hover {
+    background: linear-gradient(90deg, #e9f1fa, transparent);
 }
 
 .task-hub-stage-header.is-legacy {
@@ -1365,8 +1485,23 @@ html[data-theme="dark"] .tasks-no-tasks-toast {
     color: #7a4309;
 }
 
+.task-hub-stage-header.is-legacy:hover {
+    background: linear-gradient(90deg, #fdeedd, transparent);
+}
+
+.task-hub-stage-header .task-hub-stage-toggle {
+    color: inherit;
+    opacity: 0.65;
+}
+
+.task-hub-stage-header-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .task-hub-stage-header-tag {
-    margin-left: auto;
     padding: 0.12rem 0.55rem;
     background: rgba(217, 119, 6, 0.12);
     color: #92400e;
@@ -1379,6 +1514,42 @@ html[data-theme="dark"] .tasks-no-tasks-toast {
 .task-hub-stage-header-tag.is-done {
     background: rgba(16, 185, 129, 0.14);
     color: #047857;
+}
+
+/* Estatísticas da etapa (concluídas/total + mini-progresso) à direita */
+.task-hub-stage-stats {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+}
+
+.task-hub-stage-count {
+    font-family: var(--ds-font-mono, ui-monospace, monospace);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #5a6d84;
+    font-variant-numeric: tabular-nums;
+}
+
+.task-hub-stage-progress {
+    position: relative;
+    width: 52px;
+    height: 2px;
+    border-radius: 99px;
+    background: #d6e1ee;
+    overflow: hidden;
+}
+
+.task-hub-stage-progress > i {
+    position: absolute;
+    inset: 0;
+    border-radius: 99px;
+    background: #4f7196;
+    transform-origin: left;
 }
 
 .task-hub-stage-header.is-drop-target {
@@ -1395,12 +1566,74 @@ html[data-theme="dark"] .tasks-no-tasks-toast {
     box-shadow: inset 0 0 0 2px #2563eb;
 }
 
+/* ---- Etapa: dark mode ---- */
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-stage {
+    border-top-color: rgba(99, 166, 219, 0.14);
+}
+
 html[data-theme="dark"] .task-hub-stage-header {
     background: linear-gradient(90deg, rgba(37, 99, 235, 0.18), transparent);
     color: #cfe2ff;
 }
 
+html[data-theme="dark"] .task-hub-stage-header:hover {
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.26), transparent);
+}
+
 html[data-theme="dark"] .task-hub-stage-header.is-legacy {
     background: linear-gradient(90deg, rgba(217, 119, 6, 0.18), transparent);
     color: #fde68a;
+}
+
+html[data-theme="dark"] .task-hub-stage-header.is-legacy:hover {
+    background: linear-gradient(90deg, rgba(217, 119, 6, 0.26), transparent);
+}
+
+html[data-theme="dark"] .task-hub-stage-count {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] .task-hub-stage-progress {
+    background: rgba(99, 166, 219, 0.22);
+}
+
+html[data-theme="dark"] .task-hub-stage-progress > i {
+    background: #7ea7d6;
+}
+
+/* ---- Grupo de projeto: dark mode (chevron, meta, progresso) ---- */
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-header {
+    cursor: pointer;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-header:hover {
+    background: #26384c;
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-toggle {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-header:hover .task-hub-toggle {
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-org {
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-meta-dot {
+    background: rgba(141, 160, 182, 0.5);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-progress-bar {
+    background: rgba(99, 166, 219, 0.22);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-progress-bar > i {
+    background: var(--app-color-primary);
+}
+
+html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-progress-num {
+    color: var(--app-color-text-secondary);
 }

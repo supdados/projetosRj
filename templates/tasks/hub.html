@@ -281,131 +281,181 @@
                     {% if not groups %}hidden{% endif %}>
 
                     {% for group in groups %}
+                    {% set group_stages = group.get('stages') or [] %}
+                    {% set group_total = group['tasks']|length %}
+                    {% set group_done = group['tasks']|selectattr('status', 'equalto', 'finalizada')|list|length %}
+                    {% set group_pct = ((group_done / group_total) * 100)|round|int if group_total else 0 %}
                     <section
                         class="task-hub-group"
+                        data-open="true"
                         data-project-value="{{ group['project_value'] }}"
                         data-project-id="{{ group['project_id'] or '' }}">
-                        <header class="task-hub-group-header">
+                        <header class="task-hub-group-header" data-role="group-toggle" role="button" tabindex="0" aria-expanded="true">
+                            <span class="task-hub-toggle" aria-hidden="true"><i class="fas fa-chevron-down"></i></span>
                             <div class="task-hub-group-title-wrap">
                                 <div class="task-hub-group-heading">
                                     {% if group['project_id'] %}
-                                    <a href="{{ url_for('main.project_detail', project_id=group['project_id']) }}" class="task-hub-group-title task-hub-group-title-link">
+                                    <a href="{{ url_for('main.project_detail', project_id=group['project_id']) }}" class="task-hub-group-title task-hub-group-title-link" data-role="group-toggle-skip">
                                         {{ group['project_titulo'] }}
                                     </a>
                                     {% else %}
                                     <h6 class="task-hub-group-title">{{ group['project_titulo'] }}</h6>
                                     {% endif %}
                                     <p class="task-hub-group-meta">
-                                        Órgão: <strong>{{ group['project_orgao_sigla'] or 'Não informado' }}</strong>
+                                        <span class="task-hub-group-org">{{ group['project_orgao_sigla'] or 'Não informado' }}</span>
+                                        {% if group_stages %}
+                                        <span class="task-hub-meta-dot" aria-hidden="true"></span>
+                                        <span>{{ group_stages|length }} etapa{{ 's' if group_stages|length != 1 else '' }}</span>
+                                        {% endif %}
+                                        <span class="task-hub-meta-dot" aria-hidden="true"></span>
+                                        <span>{{ group_total }} tarefa{{ 's' if group_total != 1 else '' }}</span>
                                     </p>
                                 </div>
                             </div>
-                            <span class="task-hub-group-count">
-                                {{ group['tasks']|length }} {{ 'tarefas' if group['tasks']|length != 1 else 'tarefa' }}
-                            </span>
+                            <div class="task-hub-group-summary">
+                                {% if group_total and not archived_mode %}
+                                <span class="task-hub-progress" title="{{ group_done }} de {{ group_total }} finalizadas">
+                                    <span class="task-hub-progress-bar"><i style="transform: scaleX({{ group_pct / 100 }});"></i></span>
+                                    <span class="task-hub-progress-num">{{ group_pct }}%</span>
+                                </span>
+                                {% endif %}
+                                <span class="task-hub-group-count">
+                                    {{ group_total }} {{ 'tarefas' if group_total != 1 else 'tarefa' }}
+                                </span>
+                            </div>
                         </header>
 
-                        <div class="task-item-header-row task-hub-group-columns">
-                            <div class="task-item-bar task-item-bar-header"></div>
-                            <div class="task-item-main">
-                                <div class="task-item-line task-item-header">
-                                    <span class="task-item-col-desc">Descrição</span>
-                                    <span class="task-item-col-prioridade">Prioridade</span>
-                                    <span class="task-item-col-tipo">Tipo</span>
-                                    <span class="task-item-col-status">Status</span>
-                                    <span class="task-item-col-responsavel">Responsável</span>
-                                    <span class="task-item-col-actions" title="Ações">Ações</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {% for item in group['tasks'] %}
-                        {% if group['project_id'] and item.hub_is_first_of_stage %}
-                        <header class="task-hub-stage-header{% if item.hub_stage_is_legacy_bucket %} is-legacy{% endif %}"
-                                data-stage-drop-zone
-                                data-project-id="{{ group['project_id'] }}"
-                                data-stage-value="{{ item.hub_stage_value }}"
-                                data-stage-id="{{ item.hub_stage_id or '' }}">
-                            <span class="task-hub-stage-header-label">{{ 'Sem etapa' if item.hub_stage_is_legacy_bucket else item.hub_stage_titulo }}</span>
-                            {% if item.hub_stage_is_legacy_bucket %}
-                            <span class="task-hub-stage-header-tag">legado</span>
-                            {% elif item.hub_stage_done %}
-                            <span class="task-hub-stage-header-tag is-done">Etapa concluída</span>
-                            {% endif %}
-                        </header>
-                        {% endif %}
-                        {{ render_task_item_row(
-                            task=item,
-                            project=item.project,
-                            project_value=item.hub_project_value,
-                            project_titulo=item.hub_project_titulo,
-                            stage_value=item.hub_stage_value,
-                            stage_id=item.hub_stage_id,
-                            stage_legacy=item.hub_stage_is_legacy_bucket,
-                            can_delete=item.hub_can_delete,
-                            can_finalize=item.hub_can_finalize,
-                            archived_mode=archived_mode,
-                            show_delete_modal=true,
-                            show_edit_button=not archived_mode,
-                            show_comments_form=not archived_mode,
-                            show_responsavel_picker=not archived_mode,
-                            next_url=current_url
-                        ) }}
-                        {% endfor %}
-
-                        {% if not archived_mode %}
-                        <div class="task-item-add-row task-hub-add-row" data-project-value="{{ group['project_value'] }}" data-project-id="{{ group['project_id'] or '' }}">
-                            <div class="task-item-add-placeholder" data-role="open-add-form">
-                                <span class="task-item-add-dashes"><i class="fas fa-plus" aria-hidden="true"></i></span>
-                                <span class="task-item-add-label">Adicionar nova tarefa</span>
-                            </div>
-                            <div class="task-item-add-form" data-role="add-form" hidden>
-                                <div class="task-item-add-bar"></div>
-                                <div class="task-item-add-main">
-                                    <div class="task-item-add-line">
-                                        <textarea class="task-item-add-desc" data-role="descricao" rows="1"
-                                            placeholder="Descreva a tarefa..."></textarea>
-                                        <select class="task-item-add-prioridade" data-role="prioridade">
-                                            <option value="">Prioridade</option>
-                                            <option value="baixa">Baixa</option>
-                                            <option value="media">Média</option>
-                                            <option value="alta">Alta</option>
-                                            <option value="urgente">Urgente</option>
-                                        </select>
-                                        <select class="task-item-add-tipo" data-role="tipo_pedido">
-                                            <option value="">Tipo</option>
-                                            <option value="bug">Bug</option>
-                                            <option value="melhoria">Melhoria</option>
-                                            <option value="duvida">Dúvida</option>
-                                            <option value="outros">Outros</option>
-                                        </select>
-                                        <select class="task-item-add-status" data-role="status">
-                                            <option value="nao_iniciada">Não iniciada</option>
-                                            <option value="em_andamento">Em andamento</option>
-                                            <option value="para_validacao">Para validação</option>
-                                            <option value="para_ajustes">Para ajustes</option>
-                                            <option value="finalizada">Finalizada</option>
-                                        </select>
-                                        <button type="button" class="responsavel-picker-trigger" data-role="responsavel-trigger"
-                                            aria-haspopup="dialog" aria-expanded="false">
-                                            <span class="responsavel-picker-trigger-content">
-                                                <em class="responsavel-placeholder">Responsável</em>
-                                            </span>
-                                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                                        </button>
-                                        <div class="task-item-add-actions">
-                                            <button type="button" class="task-item-btn task-hub-add-cancel" data-role="cancel-add" title="Cancelar">
-                                                <i class="fas fa-xmark" aria-hidden="true"></i>
-                                            </button>
-                                            <button type="button" class="task-item-btn task-item-btn-confirm task-hub-add-submit" data-role="submit-add" title="Salvar">
-                                                <i class="fas fa-check" aria-hidden="true"></i>
-                                            </button>
+                        <div class="task-hub-group-body">
+                            <div class="inner">
+                                <div class="task-item-header-row task-hub-group-columns">
+                                    <div class="task-item-bar task-item-bar-header"></div>
+                                    <div class="task-item-main">
+                                        <div class="task-item-line task-item-header">
+                                            <span class="task-item-col-desc">Descrição</span>
+                                            <span class="task-item-col-prioridade">Prioridade</span>
+                                            <span class="task-item-col-tipo">Tipo</span>
+                                            <span class="task-item-col-status">Status</span>
+                                            <span class="task-item-col-responsavel">Responsável</span>
+                                            <span class="task-item-col-actions" title="Ações">Ações</span>
                                         </div>
                                     </div>
                                 </div>
+
+                                {% if group_stages %}
+                                    {% for stage in group_stages %}
+                                    {% set stage_total = stage['tasks']|length %}
+                                    {% set stage_done = stage['tasks']|selectattr('status', 'equalto', 'finalizada')|list|length %}
+                                    {% set stage_pct = ((stage_done / stage_total) * 100)|round|int if stage_total else 0 %}
+                                    <section class="task-hub-stage{% if stage['is_legacy_bucket'] %} is-legacy{% endif %}" data-open="true">
+                                        <header class="task-hub-stage-header{% if stage['is_legacy_bucket'] %} is-legacy{% endif %}"
+                                                data-role="stage-toggle"
+                                                data-stage-drop-zone
+                                                data-project-id="{{ group['project_id'] }}"
+                                                data-stage-value="{{ stage['etapa_value'] }}"
+                                                data-stage-id="{{ stage['etapa_id'] or '' }}"
+                                                role="button" tabindex="0" aria-expanded="true">
+                                            <span class="task-hub-toggle task-hub-stage-toggle" aria-hidden="true"><i class="fas fa-chevron-down"></i></span>
+                                            <span class="task-hub-stage-header-label">{{ 'Sem etapa' if stage['is_legacy_bucket'] else stage['etapa_titulo'] }}</span>
+                                            {% if stage['is_legacy_bucket'] %}
+                                            <span class="task-hub-stage-header-tag">legado</span>
+                                            {% elif stage['etapa_done'] %}
+                                            <span class="task-hub-stage-header-tag is-done">Etapa concluída</span>
+                                            {% endif %}
+                                            <span class="task-hub-stage-stats">
+                                                {% if stage_total and not archived_mode %}
+                                                <span class="task-hub-stage-progress"><i style="transform: scaleX({{ stage_pct / 100 }});"></i></span>
+                                                {% endif %}
+                                                <span class="task-hub-stage-count">{{ stage_done }}/{{ stage_total }}</span>
+                                            </span>
+                                        </header>
+                                        <div class="task-hub-stage-body">
+                                            <div class="inner task-hub-stage-tasks">
+                                                {% for item in stage['tasks'] %}
+                                                {{ render_task_item_row(
+                                                    task=item, project=item.project,
+                                                    project_value=item.hub_project_value, project_titulo=item.hub_project_titulo,
+                                                    stage_value=item.hub_stage_value, stage_id=item.hub_stage_id,
+                                                    stage_legacy=item.hub_stage_is_legacy_bucket,
+                                                    can_delete=item.hub_can_delete, can_finalize=item.hub_can_finalize,
+                                                    archived_mode=archived_mode, show_delete_modal=true,
+                                                    show_edit_button=not archived_mode, show_comments_form=not archived_mode,
+                                                    show_responsavel_picker=not archived_mode, next_url=current_url
+                                                ) }}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </section>
+                                    {% endfor %}
+                                {% else %}
+                                    {% for item in group['tasks'] %}
+                                    {{ render_task_item_row(
+                                        task=item, project=item.project,
+                                        project_value=item.hub_project_value, project_titulo=item.hub_project_titulo,
+                                        stage_value=item.hub_stage_value, stage_id=item.hub_stage_id,
+                                        stage_legacy=item.hub_stage_is_legacy_bucket,
+                                        can_delete=item.hub_can_delete, can_finalize=item.hub_can_finalize,
+                                        archived_mode=archived_mode, show_delete_modal=true,
+                                        show_edit_button=not archived_mode, show_comments_form=not archived_mode,
+                                        show_responsavel_picker=not archived_mode, next_url=current_url
+                                    ) }}
+                                    {% endfor %}
+                                {% endif %}
+
+                                {% if not archived_mode %}
+                                <div class="task-item-add-row task-hub-add-row" data-project-value="{{ group['project_value'] }}" data-project-id="{{ group['project_id'] or '' }}">
+                                    <div class="task-item-add-placeholder" data-role="open-add-form">
+                                        <span class="task-item-add-dashes"><i class="fas fa-plus" aria-hidden="true"></i></span>
+                                        <span class="task-item-add-label">Adicionar nova tarefa</span>
+                                    </div>
+                                    <div class="task-item-add-form" data-role="add-form" hidden>
+                                        <div class="task-item-add-bar"></div>
+                                        <div class="task-item-add-main">
+                                            <div class="task-item-add-line">
+                                                <textarea class="task-item-add-desc" data-role="descricao" rows="1"
+                                                    placeholder="Descreva a tarefa..."></textarea>
+                                                <select class="task-item-add-prioridade" data-role="prioridade">
+                                                    <option value="">Prioridade</option>
+                                                    <option value="baixa">Baixa</option>
+                                                    <option value="media">Média</option>
+                                                    <option value="alta">Alta</option>
+                                                    <option value="urgente">Urgente</option>
+                                                </select>
+                                                <select class="task-item-add-tipo" data-role="tipo_pedido">
+                                                    <option value="">Tipo</option>
+                                                    <option value="bug">Bug</option>
+                                                    <option value="melhoria">Melhoria</option>
+                                                    <option value="duvida">Dúvida</option>
+                                                    <option value="outros">Outros</option>
+                                                </select>
+                                                <select class="task-item-add-status" data-role="status">
+                                                    <option value="nao_iniciada">Não iniciada</option>
+                                                    <option value="em_andamento">Em andamento</option>
+                                                    <option value="para_validacao">Para validação</option>
+                                                    <option value="para_ajustes">Para ajustes</option>
+                                                    <option value="finalizada">Finalizada</option>
+                                                </select>
+                                                <button type="button" class="responsavel-picker-trigger" data-role="responsavel-trigger"
+                                                    aria-haspopup="dialog" aria-expanded="false">
+                                                    <span class="responsavel-picker-trigger-content">
+                                                        <em class="responsavel-placeholder">Responsável</em>
+                                                    </span>
+                                                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                                </button>
+                                                <div class="task-item-add-actions">
+                                                    <button type="button" class="task-item-btn task-hub-add-cancel" data-role="cancel-add" title="Cancelar">
+                                                        <i class="fas fa-xmark" aria-hidden="true"></i>
+                                                    </button>
+                                                    <button type="button" class="task-item-btn task-item-btn-confirm task-hub-add-submit" data-role="submit-add" title="Salvar">
+                                                        <i class="fas fa-check" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
-                        {% endif %}
                     </section>
                     {% endfor %}
                 </div>
@@ -575,4 +625,5 @@ window.TASK_HUB_CONFIG = {
 <script src="{{ url_for('static', filename='js/modules/task-archive.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modules/inline-editors.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pages/tasks/hub-task-dnd.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/tasks/hub-collapse.js') }}"></script>
 {% endblock %}
