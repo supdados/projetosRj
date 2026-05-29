@@ -204,19 +204,27 @@ html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:focus-vi
 
 .stage-task-quick-add__panel {
     position: relative;
+    /* Largura do scrollbar reservado no corpo; o header recua o mesmo tanto à
+       direita para que os dois cartões fiquem com a mesma largura. */
+    --stq-gutter: 12px;
     width: min(1280px, 94vw);
     /* Cresce conforme o conteúdo e para no teto definido. */
     height: auto;
     max-height: clamp(420px, 64vh, 620px);
-    background: #ffffff;
-    border-radius: var(--td-radius-lg, 14px);
-    border: 1px solid #d7e2ef;
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
-    padding: 1.35rem 1.5rem 1.1rem;
+    /* O painel é só o contêiner de layout — header e corpo são dois cartões
+       independentes que flutuam sobre o backdrop. Por isso ele é transparente
+       (sem fundo/borda/sombra) e o gap entre os filhos deixa o blur aparecer. */
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    overflow: hidden;
+    /* gap 0: o espaço entre header e corpo vem do margin-bottom do header; o
+       corpo e a dica final ficam colados (a dica é o rodapé do cartão). */
+    gap: 0;
+    /* visível para não cortar a sombra dos cartões; o corpo rola internamente. */
+    overflow: visible;
     transform: translateY(0) scale(1);
     opacity: 1;
     /* Curva suave (ease-out cúbico) com leve atraso para que o backdrop
@@ -245,12 +253,92 @@ html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:focus-vi
 }
 
 .stage-task-quick-add__body {
-    flex: 1 1 auto;
+    /* 0 1 auto: encolhe e rola quando o conteúdo passa do teto do painel, mas
+       NÃO cresce além do conteúdo — assim a dica-rodapé fica colada na tabela
+       mesmo com poucas tarefas. */
+    flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
     transition: opacity 120ms ease-out;
-    /* Espaço interno para que a linha de "Adicionar tarefa" tenha respiro. */
-    padding-right: 2px;
+    /* Reserva o espaço do scrollbar de forma estável (mesmo sem rolar), para
+       que o cartão de tarefas tenha sempre a mesma largura — e o header se
+       alinha a ela via margin-right. */
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    /* sem padding: o cabeçalho sticky (top:0) gruda flush no topo, sem deixar
+       linhas vazarem por cima. */
+    padding: 0;
+}
+
+/* Largura fixa do scrollbar = --stq-gutter, garantindo o alinhamento exato
+   entre o recuo do header e o gutter reservado no corpo. */
+.stage-task-quick-add__body::-webkit-scrollbar {
+    width: var(--stq-gutter, 12px);
+}
+
+.stage-task-quick-add__body::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.4);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+}
+
+.stage-task-quick-add__body::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.6);
+    background-clip: padding-box;
+}
+
+/* ============================================================
+   Cabeçalho de colunas fixo ao rolar (DESCRIÇÃO, PRIORIDADE...).
+
+   ATENÇÃO ao seletor: o painel JÁ tem a classe `task-hub-page`, então as
+   regras `.stage-task-quick-add__panel .task-hub-page .X` do arquivo scoped
+   NÃO casam (exigiriam um `.task-hub-page` *descendente* do painel, que não
+   existe). Por isso hub.css (`.task-hub-page .task-hub-group`) e list.css
+   (`.task-detail-v2 .task-items-list`) prevaleciam com overflow hidden/auto,
+   transformando esses elementos em contêineres de scroll — e o sticky grudava
+   neles (que rolam junto) em vez de no corpo. Aqui usamos o painel como
+   ANCESTRAL real do elemento; como este arquivo carrega por último, vence.
+   ============================================================ */
+
+/* Nenhum ancestral entre o cabeçalho e o corpo pode ser contêiner de scroll. */
+.stage-task-quick-add__panel .task-items-list.task-hub-items-list,
+.stage-task-quick-add__panel .task-hub-group.stage-task-quick-add__stage-panel {
+    overflow: visible;
+}
+
+/* Cartão da tabela: cantos só no topo e sem borda inferior — a dica-rodapé
+   completa o cartão embaixo. */
+.stage-task-quick-add__panel .task-hub-group.stage-task-quick-add__stage-panel {
+    border-radius: 14px 14px 0 0;
+    border-bottom: none;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
+}
+
+/* A linha de títulos gruda no topo do corpo (que rola) e fica acima das linhas. */
+.stage-task-quick-add__panel .task-item-header-row.task-hub-group-columns {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    background: #f7fbff;
+    border-radius: 13px 13px 0 0;
+    border-bottom: 1px solid #e1ebf5;
+    box-shadow: 0 8px 12px -10px rgba(15, 23, 42, 0.45);
+}
+
+html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-item-header-row.task-hub-group-columns {
+    background: linear-gradient(180deg, #2f4158 0%, #2a3b50 100%);
+    border-bottom-color: rgba(99, 166, 219, 0.22);
+}
+
+/* Remove as barras coloridas de status à esquerda das linhas. Mantém a largura
+   transparente (4px) para o conteúdo seguir alinhado com o cabeçalho. O
+   seletor com .stage-task-quick-add__stage-panel (0,4,0) vence as regras de
+   cor por status de list.css (`.task-detail-v2 .task-item-bar.status-X`, 0,3,0).
+   Isso também limpa o canto: sem a barra de canto reto invadindo o arredondado
+   do cabeçalho. */
+.stage-task-quick-add__panel .task-hub-group.stage-task-quick-add__stage-panel .task-item-bar {
+    background: transparent;
 }
 
 .stage-task-quick-add__body.is-reloading {
@@ -285,6 +373,17 @@ html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:focus-vi
     justify-content: space-between;
     gap: 1rem;
     flex: 0 0 auto;
+    /* Cartão de cabeçalho — primeiro dos dois itens visuais do modal. */
+    background: #ffffff;
+    border: 1px solid #d7e2ef;
+    border-radius: var(--td-radius-lg, 14px);
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
+    padding: 0.85rem 1.35rem 0.95rem;
+    /* Mesma largura do cartão de tarefas: recua à direita o tamanho do
+       scrollbar que o corpo reserva. */
+    margin-right: var(--stq-gutter, 12px);
+    /* Espaço (com backdrop visível) só entre o header e o cartão de tarefas. */
+    margin-bottom: 0.85rem;
 }
 
 .stage-task-quick-add__heading {
@@ -293,7 +392,7 @@ html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:focus-vi
 }
 
 .stage-task-quick-add__eyebrow {
-    margin: 0 0 0.45rem;
+    margin: 0 0 0.3rem;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -317,7 +416,7 @@ html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:focus-vi
 
 .stage-task-quick-add__title {
     margin: 0;
-    font-size: 1.85rem;
+    font-size: 1.4rem;
     font-weight: 700;
     color: #0f1c2e;
     line-height: 1.15;
@@ -331,7 +430,7 @@ html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:focus-vi
 }
 
 .stage-task-quick-add__meta {
-    margin-top: 0.55rem;
+    margin-top: 0.4rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -412,6 +511,16 @@ html[data-theme="dark"] body.is-authenticated .etapa-task-pill.is-empty:focus-vi
     align-items: center;
     gap: 0.4rem;
     flex: 0 0 auto;
+    /* Rodapé do cartão de tarefas: colado na tabela (cantos só embaixo), mesma
+       largura (recua o gutter do scrollbar) e fundo com cor — a borda superior
+       azul é a "cor no meio" entre as tarefas e a dica. */
+    margin-right: var(--stq-gutter, 12px);
+    background: #eef4ff;
+    border: 1px solid #d7e2ef;
+    border-top: 2px solid #c3d6f2;
+    border-radius: 0 0 14px 14px;
+    padding: 0.6rem 1rem;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
 }
 
 .stage-task-quick-add__hint kbd {
@@ -458,10 +567,17 @@ html[data-theme="dark"] .stage-task-quick-add__panel {
     --stage-task-modal-muted-bg: #2b3a4f;
     --stage-task-modal-border: rgba(120, 156, 198, 0.24);
     --stage-task-modal-border-strong: rgba(120, 156, 198, 0.34);
+    /* Painel continua transparente no dark — o fundo do cartão vai no header. */
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: #e3edf7;
+}
+
+html[data-theme="dark"] .stage-task-quick-add__header {
     background: var(--stage-task-modal-bg);
     border-color: rgba(120, 156, 198, 0.22);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
-    color: #e3edf7;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
 html[data-theme="dark"] .stage-task-quick-add__eyebrow {
@@ -502,6 +618,10 @@ html[data-theme="dark"] .stage-task-quick-add__created-item {
 
 html[data-theme="dark"] .stage-task-quick-add__hint {
     color: #94a8c1;
+    background: var(--stage-task-modal-muted-bg, #2b3a4f);
+    border-color: rgba(120, 156, 198, 0.22);
+    border-top: 2px solid rgba(99, 166, 219, 0.4);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
 }
 
 html[data-theme="dark"] .stage-task-quick-add__hint kbd {

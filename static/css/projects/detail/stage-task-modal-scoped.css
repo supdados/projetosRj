@@ -614,19 +614,19 @@
     overflow: visible;
 }
 
-.stage-task-quick-add__panel .task-hub-page .task-item-header-row {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background: #f7fbff;
-}
+/* NOTA: seletor `.task-hub-page` descendente não casa (ver nota acima). O
+   sticky efetivo do cabeçalho de colunas está em 05-stage-task-quick-add.css. */
 
+/* NOTA: este seletor `.stage-task-quick-add__panel .task-hub-page .task-hub-group`
+   NÃO casa — o painel já tem a classe `task-hub-page`, não há um descendente
+   com ela. As regras efetivas do cartão da tabela (cantos, borda, sombra e o
+   overflow:visible que faz o cabeçalho sticky funcionar) estão em
+   05-stage-task-quick-add.css com `.stage-task-quick-add__panel .task-hub-group...`. */
 .stage-task-quick-add__panel .task-hub-page .task-hub-group {
     border: 1px solid #dfe8f2;
-    border-radius: 14px;
+    border-radius: 14px 14px 0 0;
     background: #ffffff;
-    box-shadow: 0 8px 24px rgba(20, 45, 78, 0.06);
-    overflow: hidden;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
 }
 
 .stage-task-quick-add__panel .task-hub-page .task-hub-group:first-of-type {
@@ -1158,7 +1158,7 @@ html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-hub-group {
     background: var(--stage-task-modal-bg);
     border-color: var(--stage-task-modal-border);
-    box-shadow: none;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
 html[data-theme="dark"] body.is-authenticated .stage-task-quick-add__panel .task-hub-page .task-hub-group-global-placeholder {

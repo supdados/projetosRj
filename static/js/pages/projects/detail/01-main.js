@@ -140,17 +140,34 @@
         trigger.setAttribute('data-etapa-datas', buildStageDatesLabel(row));
     }
 
+    // Conteúdo INTERNO do chip de status (.ph-chip--status), espelhando o
+    // markup do template em projects/detail.html. NÃO usar mais o badge
+    // Bootstrap antigo (bg-success/bg-secondary…): o chip foi refinado para o
+    // estilo minimalista e injetar o badge antigo aqui fazia o status voltar ao
+    // visual legado ao reativar o projeto (até dar refresh). Ver goal 2026-05-29.
     function buildProjectStatusBadge(statusValue) {
         if (statusValue === 'Vigente') {
-            return '<span class="badge bg-success text-uppercase"><i class="fas fa-check-circle me-1"></i>Vigente</span>';
+            return '<span class="ph-chip-dot" aria-hidden="true"></span>Vigente';
         }
         if (statusValue === 'Finalizado') {
-            return '<span class="badge bg-secondary text-uppercase"><i class="fas fa-flag-checkered me-1"></i>Finalizado</span>';
+            return '<i class="fas fa-flag-checkered" aria-hidden="true"></i>Finalizado';
         }
         if (statusValue === 'Suspenso') {
-            return '<span class="badge bg-warning text-dark text-uppercase"><i class="fas fa-pause-circle me-1"></i>Suspenso</span>';
+            return '<i class="fas fa-pause" aria-hidden="true"></i>Suspenso';
         }
-        return `<span class="badge bg-light text-dark">${escapeHtml(statusValue || 'Não definido')}</span>`;
+        return escapeHtml(statusValue || 'Sem status');
+    }
+
+    // Troca o modificador de cor do chip (ph-chip--status-vigente, etc.) para
+    // casar com o `status|lower` que o template usa.
+    function applyStatusChipModifier(chipEl, statusValue) {
+        const modifier = statusValue ? String(statusValue).toLowerCase() : 'na';
+        Array.from(chipEl.classList).forEach(function (cls) {
+            if (cls.indexOf('ph-chip--status-') === 0) {
+                chipEl.classList.remove(cls);
+            }
+        });
+        chipEl.classList.add('ph-chip--status-' + modifier);
     }
 
     function getTopNavOffset() {
@@ -886,6 +903,7 @@
             }
             page.refs.projectStatusField.dataset.value = statusValue || '';
             page.refs.projectStatusField.innerHTML = buildProjectStatusBadge(statusValue);
+            applyStatusChipModifier(page.refs.projectStatusField, statusValue);
             page.state.currentProjectStatus = statusValue || '';
         }
 
