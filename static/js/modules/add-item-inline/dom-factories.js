@@ -16,7 +16,7 @@
             // `data-role="group-toggle-skip"`: clicar no nome do projeto navega
             // para o detalhe em vez de colapsar o grupo (ver hub-collapse.js).
             var titleMarkup = projectUrl
-                ? '<a href="' + escapeAttr(projectUrl) + '" class="task-hub-group-title task-hub-group-title-link" data-role="group-toggle-skip">' + escapeHtml(projectInfo.label) + '</a>'
+                ? '<span class="task-hub-entity-id task-hub-project-id">' + escapeHtml(projectInfo.value) + '</span><span class="task-hub-title-separator" aria-hidden="true">-</span><a href="' + escapeAttr(projectUrl) + '" class="task-hub-group-title task-hub-group-title-link" data-role="group-toggle-skip">' + escapeHtml(projectInfo.label) + '</a>'
                 : '<h6 class="task-hub-group-title">' + escapeHtml(projectInfo.label) + '</h6>';
             var orgaoLabel = projectInfo.orgaoSigla || 'N\u00e3o informado';
 
@@ -27,12 +27,15 @@
                 '<p class="task-hub-group-meta">',
                 '<span class="task-hub-group-org">' + escapeHtml(orgaoLabel) + '</span>',
                 '<span class="task-hub-meta-dot" aria-hidden="true"></span>',
-                '<span>0 tarefas</span>',
+                '<span data-role="group-task-count">0 tarefas</span>',
                 '</p>',
                 '</div>',
                 '</div>',
                 '<div class="task-hub-group-summary">',
-                '<span class="task-hub-group-count">0 tarefas</span>',
+                '<span class="task-hub-progress" title="0 de 0 finalizadas">',
+                '<span class="task-hub-progress-bar"><i style="transform: scaleX(0);"></i></span>',
+                '<span class="task-hub-progress-num">0%</span>',
+                '</span>',
                 '</div>',
             ].join('');
         }
@@ -61,9 +64,13 @@
             var disabledAttr = opts.projectReady ? '' : ' disabled';
             var placeholderStyle = isOpen ? ' style="display:none;"' : '';
             var formHidden = isOpen ? '' : ' hidden';
+            var stageValue = String(opts.stageValue || '').trim();
+            var stageId = String(opts.stageId || '').trim();
+            var stageAttrs = stageValue ? ' data-stage-value="' + escapeAttr(stageValue) + '"' : '';
+            stageAttrs += stageId ? ' data-stage-id="' + escapeAttr(stageId) + '"' : '';
 
             return [
-                '<div class="task-item-add-row task-hub-add-row' + (opts.isGlobal ? ' task-hub-global-add-row' : '') + '" data-project-value="' + escapeAttr(projectValue) + '"' + (opts.isGlobal ? ' data-global-add="1"' : '') + '>',
+                '<div class="task-item-add-row task-hub-add-row' + (opts.isGlobal ? ' task-hub-global-add-row' : '') + '" data-project-value="' + escapeAttr(projectValue) + '"' + stageAttrs + (opts.isGlobal ? ' data-global-add="1"' : '') + '>',
                 '<div class="task-item-add-placeholder" data-role="open-add-form"' + placeholderStyle + '>',
                 '<span class="task-item-add-dashes"><i class="fas fa-plus" aria-hidden="true"></i></span>',
                 '<span class="task-item-add-label">Adicionar nova tarefa</span>',
@@ -165,7 +172,6 @@
                 '<p class="task-hub-group-meta">\u00d3rg\u00e3o: <strong data-role="project-orgao">' + escapeHtml(orgaoLabel) + '</strong></p>',
                 '</div>',
                 '</div>',
-                '<span class="task-hub-group-count">0 tarefas</span>',
                 '</header>',
                 buildGroupColumnsMarkup(),
                 buildAddRowMarkup(projectInfo.value, { projectReady: !!projectInfo.value, open: true, isGlobal: true }),

@@ -106,6 +106,56 @@
         totalPill.textContent = itemCount + ' tarefa' + (itemCount === 1 ? '' : 's');
     }
 
+    function updateTaskHubStageAndProjectProgress(root) {
+        var pageRoot = root || document.getElementById('taskHubPage') || document;
+
+        Array.prototype.forEach.call(pageRoot.querySelectorAll('.task-hub-stage'), function (stageEl) {
+            var rows = stageEl.querySelectorAll('.task-hub-stage-tasks > .task-item-row[data-item-id]');
+            var total = rows.length;
+            var done = 0;
+            Array.prototype.forEach.call(rows, function (row) {
+                if (getTaskItemStatus(row) === 'finalizada') {
+                    done += 1;
+                }
+            });
+            var countEl = stageEl.querySelector('[data-role="stage-progress-count"]');
+            if (countEl) {
+                countEl.textContent = done + '/' + total;
+            }
+        });
+
+        Array.prototype.forEach.call(pageRoot.querySelectorAll('.task-hub-group'), function (groupEl) {
+            var rows = groupEl.querySelectorAll('.task-item-row[data-item-id]');
+            var total = rows.length;
+            var done = 0;
+            Array.prototype.forEach.call(rows, function (row) {
+                if (getTaskItemStatus(row) === 'finalizada') {
+                    done += 1;
+                }
+            });
+
+            var countLabel = total + (total === 1 ? ' tarefa' : ' tarefas');
+            var countEl = groupEl.querySelector('[data-role="group-task-count"]');
+            if (countEl) {
+                countEl.textContent = countLabel;
+            }
+
+            var progress = groupEl.querySelector('.task-hub-progress');
+            if (progress) {
+                var pct = total ? Math.round((done / total) * 100) : 0;
+                progress.setAttribute('title', done + ' de ' + total + ' finalizadas');
+                var bar = progress.querySelector('.task-hub-progress-bar > i');
+                if (bar) {
+                    bar.style.transform = 'scaleX(' + (pct / 100) + ')';
+                }
+                var num = progress.querySelector('.task-hub-progress-num');
+                if (num) {
+                    num.textContent = pct + '%';
+                }
+            }
+        });
+    }
+
     function updateTaskHubArchiveCounter(delta) {
         if (!delta) return;
         var countEl = document.querySelector('.tasks-header .tasks-archive-count');
@@ -167,10 +217,6 @@
 
         if (groupEl) {
             var remaining = groupEl.querySelectorAll('.task-item-row[data-item-id]').length;
-            var groupCountEl = groupEl.querySelector('.task-hub-group-count');
-            if (groupCountEl) {
-                groupCountEl.textContent = remaining + (remaining === 1 ? ' tarefa' : ' tarefas');
-            }
             if (remaining === 0 && groupEl.parentNode) {
                 groupEl.parentNode.removeChild(groupEl);
             }
@@ -178,6 +224,7 @@
 
         updateTaskItemsHeaderCount();
         updateTaskItemsTotalPill();
+        updateTaskHubStageAndProjectProgress();
         return removed;
     }
 
@@ -466,6 +513,7 @@
         }
 
         syncTaskItemRowMetadata(row);
+        updateTaskHubStageAndProjectProgress();
         return row;
     }
 

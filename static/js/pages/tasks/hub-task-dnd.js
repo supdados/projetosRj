@@ -178,6 +178,9 @@
             .then(() => {
                 moveRowInDom(row, zone);
                 updateRowDataset(row, zone);
+                if (typeof window.updateTaskHubStageAndProjectProgress === 'function') {
+                    window.updateTaskHubStageAndProjectProgress();
+                }
             })
             .catch((err) => {
                 window.alert(err.message || 'Não foi possível mover a tarefa.');

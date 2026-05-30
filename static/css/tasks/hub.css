@@ -671,22 +671,20 @@
     transform: rotate(-90deg);
 }
 
-/* Animação de colapso via grid-template-rows (sem medir altura no JS) */
 .task-hub-page .task-hub-group-body,
 .task-hub-page .task-hub-stage-body {
-    display: grid;
-    grid-template-rows: 1fr;
-    transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    height: auto;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.task-hub-page .task-hub-group[data-open="false"] > .task-hub-group-body,
-.task-hub-page .task-hub-stage[data-open="false"] > .task-hub-stage-body {
-    grid-template-rows: 0fr;
+.task-hub-page .task-hub-group-body[hidden],
+.task-hub-page .task-hub-stage-body[hidden] {
+    display: none;
 }
 
 .task-hub-page .task-hub-group-body > .inner,
 .task-hub-page .task-hub-stage-body > .inner {
-    overflow: hidden;
     min-height: 0;
 }
 
@@ -700,6 +698,12 @@
     min-width: 0;
 }
 
+.task-hub-page .task-hub-group-heading > .task-hub-entity-id,
+.task-hub-page .task-hub-group-heading > .task-hub-title-separator,
+.task-hub-page .task-hub-group-heading > .task-hub-group-title {
+    vertical-align: middle;
+}
+
 .task-hub-page .task-hub-group-title {
     margin: 0;
     color: #2d4f77;
@@ -709,6 +713,26 @@
     display: inline-flex;
     align-items: center;
     max-width: 100%;
+}
+
+.task-hub-page .task-hub-entity-id {
+    color: #7a8796;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-regular);
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.task-hub-page .task-hub-project-id {
+    margin-right: 0.28rem;
+}
+
+.task-hub-page .task-hub-title-separator {
+    color: #9aa6b3;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-regular);
+    margin-right: 0.28rem;
+    white-space: nowrap;
 }
 
 .task-hub-page .task-hub-group-title-link {
@@ -789,18 +813,6 @@
     font-variant-numeric: tabular-nums;
 }
 
-.task-hub-page .task-hub-group-count {
-    border-radius: 999px;
-    border: 1px solid #d8dee7;
-    background: #edf0f4;
-    color: #4c5563;
-    font-size: var(--ds-font-size-2xs);
-    font-weight: var(--ds-font-weight-semibold);
-    padding: 0.2rem 0.52rem;
-    white-space: nowrap;
-    flex: 0 0 auto;
-}
-
 .task-hub-page .task-hub-empty-state {
     margin: 0 0 0.9rem;
 }
@@ -854,15 +866,77 @@
     z-index: 0;
 }
 
+.task-hub-page .task-item-bar,
+.task-hub-page .task-item-bar-header,
+.task-hub-page .task-item-add-bar {
+    display: none;
+}
+
+.task-hub-page .task-item-main {
+    padding: 0.72rem 0.85rem;
+}
+
+.task-hub-page .task-item-header-row .task-item-main {
+    padding: 0.52rem 0.85rem;
+}
+
+.task-hub-page .task-item-desc,
+.task-hub-page .task-item-desc-editing {
+    font-size: var(--ds-font-size-base);
+    font-weight: var(--ds-font-weight-regular);
+    line-height: 1.45;
+    color: #273344;
+}
+
+.task-hub-page .task-item-col-desc,
+.task-hub-page .task-item-col-prioridade,
+.task-hub-page .task-item-col-tipo,
+.task-hub-page .task-item-col-status,
+.task-hub-page .task-item-col-responsavel,
+.task-hub-page .task-item-col-actions {
+    font-weight: var(--ds-font-weight-medium);
+    letter-spacing: 0;
+}
+
+.task-hub-page .task-item-prioridade-select,
+.task-hub-page .task-item-tipo-select,
+.task-hub-page .task-item-status,
+.task-hub-page .task-item-status-readonly,
+.task-hub-page .task-item-responsavel {
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-regular);
+}
+
 .task-hub-page .task-hub-add-row {
-    border-top: 1px dashed #d6e4f2;
-    margin: 0;
+    border-top: 0;
+    background: transparent;
+    margin: 0 0 0.45rem;
 }
 
 .task-hub-page .task-hub-add-row .task-item-add-placeholder {
     border-radius: 0;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding: 0.72rem 0.85rem;
+    background: transparent;
+    color: #607287;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-regular);
+}
+
+.task-hub-page .task-hub-add-row .task-item-add-placeholder:hover {
+    background: transparent;
+    color: #1f5c8f;
+}
+
+.task-hub-page .task-hub-add-row .task-item-add-dashes {
+    color: #8ca0b4;
+}
+
+.task-hub-page .task-hub-add-row .task-item-add-form:not([hidden]) {
+    background: transparent;
+}
+
+.task-hub-page .task-hub-add-row .task-item-add-main {
+    padding: 0.42rem 0.85rem 0.8rem;
 }
 
 .task-hub-page .task-hub-add-row .task-item-add-line {
@@ -1001,9 +1075,6 @@
         align-items: flex-start;
     }
 
-    .task-hub-page .task-hub-group-count {
-        align-self: flex-start;
-    }
 }
 
 
@@ -1314,13 +1385,6 @@ html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-met
     color: var(--app-color-text-secondary);
 }
 
-html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-group-count {
-    background: rgba(141, 160, 182, 0.18);
-    border-color: rgba(141, 160, 182, 0.34);
-    color: var(--app-color-text-secondary);
-}
-
-
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-add-row {
     border-top-color: #2a4258;
 }
@@ -1450,7 +1514,7 @@ html[data-theme="dark"] .tasks-no-tasks-toast {
    Etapa colapsável dentro do grupo de projeto
    ==================================== */
 .task-hub-stage {
-    border-top: 1px solid #eef2f7;
+    border-top: 0;
 }
 
 .task-hub-stage:first-child {
@@ -1461,37 +1525,38 @@ html[data-theme="dark"] .tasks-no-tasks-toast {
 .task-hub-stage-header {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem 0.5rem 0.55rem;
-    border-left: 3px solid #2563eb;
-    background: linear-gradient(90deg, #f1f6fb, transparent);
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #1f3358;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    gap: 0.55rem;
+    padding: 0.68rem 0.85rem 0.46rem;
+    background: #ffffff;
+    font-size: var(--ds-font-size-base);
+    font-weight: var(--ds-font-weight-regular);
+    color: #263547;
+    text-transform: none;
+    letter-spacing: 0;
     cursor: pointer;
     user-select: none;
-    transition: background-color 0.16s ease;
+    transition: color 0.16s ease;
 }
 
 .task-hub-stage-header:hover {
-    background: linear-gradient(90deg, #e9f1fa, transparent);
+    background: #ffffff;
+    color: #174f82;
 }
 
 .task-hub-stage-header.is-legacy {
-    border-left-color: #d97706;
-    background: linear-gradient(90deg, #fef6ec, transparent);
-    color: #7a4309;
+    background: #ffffff;
+    color: #5f6875;
 }
 
 .task-hub-stage-header.is-legacy:hover {
-    background: linear-gradient(90deg, #fdeedd, transparent);
+    background: #ffffff;
+    color: #374151;
 }
 
 .task-hub-stage-header .task-hub-stage-toggle {
     color: inherit;
-    opacity: 0.65;
+    font-size: 0.78rem;
+    opacity: 0.46;
 }
 
 .task-hub-stage-header-label {
@@ -1499,57 +1564,33 @@ html[data-theme="dark"] .tasks-no-tasks-toast {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.task-hub-stage-header-tag {
-    padding: 0.12rem 0.55rem;
-    background: rgba(217, 119, 6, 0.12);
-    color: #92400e;
-    border-radius: 999px;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-
-.task-hub-stage-header-tag.is-done {
-    background: rgba(16, 185, 129, 0.14);
-    color: #047857;
-}
-
-/* Estatísticas da etapa (concluídas/total + mini-progresso) à direita */
-.task-hub-stage-stats {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 0 0 auto;
+    font-weight: var(--ds-font-weight-regular);
 }
 
 .task-hub-stage-count {
-    font-family: var(--ds-font-mono, ui-monospace, monospace);
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0;
-    text-transform: none;
-    color: #5a6d84;
+    margin-left: auto;
+    color: #697789;
+    font-size: var(--ds-font-size-sm);
+    font-weight: var(--ds-font-weight-regular);
     font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
 }
 
-.task-hub-stage-progress {
-    position: relative;
-    width: 52px;
-    height: 2px;
-    border-radius: 99px;
-    background: #d6e1ee;
-    overflow: hidden;
+.task-hub-stage-header-tag {
+    padding: 0;
+    background: transparent;
+    color: #8a6a3b;
+    border-radius: 999px;
+    font-size: var(--ds-font-size-xs);
+    font-weight: var(--ds-font-weight-regular);
+    text-transform: none;
+    letter-spacing: 0;
 }
 
-.task-hub-stage-progress > i {
-    position: absolute;
-    inset: 0;
-    border-radius: 99px;
-    background: #4f7196;
-    transform-origin: left;
+.task-hub-stage-header-tag.is-done {
+    background: transparent;
+    color: #2f7d62;
 }
 
 .task-hub-stage-header.is-drop-target {
@@ -1568,37 +1609,36 @@ html[data-theme="dark"] .tasks-no-tasks-toast {
 
 /* ---- Etapa: dark mode ---- */
 html[data-theme="dark"] body.is-authenticated .task-hub-page .task-hub-stage {
-    border-top-color: rgba(99, 166, 219, 0.14);
+    border-top-color: transparent;
 }
 
 html[data-theme="dark"] .task-hub-stage-header {
-    background: linear-gradient(90deg, rgba(37, 99, 235, 0.18), transparent);
-    color: #cfe2ff;
+    background: #273447;
+    color: var(--app-color-text-primary);
 }
 
 html[data-theme="dark"] .task-hub-stage-header:hover {
-    background: linear-gradient(90deg, rgba(37, 99, 235, 0.26), transparent);
+    background: #273447;
+    color: #c9e4ff;
 }
 
 html[data-theme="dark"] .task-hub-stage-header.is-legacy {
-    background: linear-gradient(90deg, rgba(217, 119, 6, 0.18), transparent);
-    color: #fde68a;
-}
-
-html[data-theme="dark"] .task-hub-stage-header.is-legacy:hover {
-    background: linear-gradient(90deg, rgba(217, 119, 6, 0.26), transparent);
-}
-
-html[data-theme="dark"] .task-hub-stage-count {
+    background: #273447;
     color: var(--app-color-text-muted);
 }
 
-html[data-theme="dark"] .task-hub-stage-progress {
-    background: rgba(99, 166, 219, 0.22);
+html[data-theme="dark"] .task-hub-stage-header.is-legacy:hover {
+    background: #273447;
+    color: var(--app-color-text-secondary);
 }
 
-html[data-theme="dark"] .task-hub-stage-progress > i {
-    background: #7ea7d6;
+html[data-theme="dark"] .task-hub-page .task-hub-entity-id {
+    color: var(--app-color-text-muted);
+}
+
+html[data-theme="dark"] .task-hub-page .task-hub-title-separator,
+html[data-theme="dark"] .task-hub-stage-count {
+    color: var(--app-color-text-muted);
 }
 
 /* ---- Grupo de projeto: dark mode (chevron, meta, progresso) ---- */

@@ -82,6 +82,13 @@
                 return ctx.normalizeProjectValue(addRow.getAttribute('data-project-value'));
             }
 
+            function getEtapaValue() {
+                if (typeof opts.getEtapaValue === 'function') {
+                    return String(opts.getEtapaValue() || '').trim();
+                }
+                return String(addRow.getAttribute('data-stage-id') || addRow.getAttribute('data-stage-value') || '').trim();
+            }
+
             function resizeTextarea() {
                 addDesc.style.height = 'auto';
                 addDesc.style.height = Math.max(32, addDesc.scrollHeight) + 'px';
@@ -164,6 +171,7 @@
                     responsavel: responsavelNames.join(', '),
                     prioridade: addPrioridade ? addPrioridade.value : '',
                     tipo_pedido: addTipo ? addTipo.value : '',
+                    etapa: getEtapaValue(),
                 })
                     .then(function (data) {
                         ctx.insertNewItem(data, {

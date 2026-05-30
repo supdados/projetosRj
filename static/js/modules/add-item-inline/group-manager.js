@@ -49,10 +49,12 @@
 
         function updateGroupCount(groupEl) {
             if (!groupEl) return;
-            var countEl = groupEl.querySelector('.task-hub-group-count');
-            if (!countEl) return;
             var count = groupEl.querySelectorAll('.task-item-row[data-item-id]').length;
-            countEl.textContent = count + (count === 1 ? ' tarefa' : ' tarefas');
+            var countLabel = count + (count === 1 ? ' tarefa' : ' tarefas');
+            var metaCountEl = groupEl.querySelector('[data-role="group-task-count"]');
+            if (metaCountEl) {
+                metaCountEl.textContent = countLabel;
+            }
         }
 
         function getSortedInsertBefore(projectInfo) {
@@ -223,7 +225,7 @@
             var targetGroup = resolveTargetGroupForItem(item, opts);
             if (!targetGroup) return null;
 
-            var targetAddRow = targetGroup.querySelector('.task-hub-add-row[data-project-value]');
+            var targetAddRow = resolveTargetAddRow(targetGroup, item);
             if (!targetAddRow || !targetAddRow.parentNode) return null;
 
             var markup = ctx.buildItemRowMarkup(item);
@@ -233,6 +235,7 @@
             syncListScaffoldVisibility();
             if (typeof window.updateTaskItemsHeaderCount === 'function') window.updateTaskItemsHeaderCount();
             if (typeof window.updateTaskItemsTotalPill === 'function') window.updateTaskItemsTotalPill();
+            if (typeof window.updateTaskHubStageAndProjectProgress === 'function') window.updateTaskHubStageAndProjectProgress();
             if (window.taskItemsKanban && typeof window.taskItemsKanban.rebuildFromList === 'function') {
                 window.taskItemsKanban.rebuildFromList();
             }
@@ -241,6 +244,24 @@
             }
             if (typeof window.getTaskItemRowById === 'function') return window.getTaskItemRowById(item.id);
             return null;
+        }
+
+        function resolveTargetAddRow(targetGroup, item) {
+            if (!targetGroup) return null;
+            var etapaValue = String(item.etapa_value || item.etapa_id || '').trim() || 'sem_etapa';
+            var rows = Array.prototype.slice.call(targetGroup.querySelectorAll('.task-hub-add-row[data-project-value]'));
+            for (var i = 0; i < rows.length; i += 1) {
+                var rowStageValue = String(rows[i].getAttribute('data-stage-value') || '').trim();
+                if (rowStageValue && rowStageValue === etapaValue) {
+                    return rows[i];
+                }
+            }
+            for (var j = 0; j < rows.length; j += 1) {
+                if (!rows[j].hasAttribute('data-stage-value')) {
+                    return rows[j];
+                }
+            }
+            return rows[0] || null;
         }
 
         ctx.getEmptyState = getEmptyState;

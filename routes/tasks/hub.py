@@ -131,6 +131,15 @@ def _group_hub_tasks_by_project(tasks):
 
     for group_key, stages_by_id in stages_by_group.items():
         stages = _sort_stage_buckets(stages_by_id)
+        visible_stage_index = 0
+        for stage in stages:
+            if stage["is_legacy_bucket"]:
+                stage["etapa_display_id"] = ""
+                continue
+            visible_stage_index += 1
+            stage["etapa_display_id"] = (
+                f"{groups[group_key]['project_id']}.{visible_stage_index}"
+            )
         groups[group_key]["stages"] = stages
         _flatten_stage_tasks_into_group(groups[group_key], stages)
 

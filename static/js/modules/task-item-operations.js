@@ -715,6 +715,9 @@
                     setTaskItemRowStatus(row, nextStatus);
                     syncTaskItemRowMetadata(row);
                     syncStageActiveTaskCount(row, previousStatus, nextStatus);
+                    if (typeof updateTaskHubStageAndProjectProgress === 'function') {
+                        updateTaskHubStageAndProjectProgress();
+                    }
                 }
 
                 if (!opts.skipKanbanSync && window.taskItemsKanban && typeof window.taskItemsKanban.syncItemFromRow === 'function') {

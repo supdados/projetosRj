@@ -50,12 +50,75 @@
         return 'p:' + projectValue + '|s:' + stageValue;
     }
 
-    function setOpen(element, open) {
+    function getBody(element) {
+        if (element.classList.contains('task-hub-group')) {
+            return element.querySelector(':scope > .task-hub-group-body');
+        }
+        return element.querySelector(':scope > .task-hub-stage-body');
+    }
+
+    function clampScrollRegion() {
+        var scrollRegion = view.closest('.app-scroll-region');
+        if (!scrollRegion) {
+            return;
+        }
+        var maxScrollTop = Math.max(0, scrollRegion.scrollHeight - scrollRegion.clientHeight);
+        if (scrollRegion.scrollTop > maxScrollTop) {
+            scrollRegion.scrollTop = maxScrollTop;
+        }
+    }
+
+    function finishBodyTransition(body, open) {
+        delete body.dataset.collapseTransition;
+        if (open) {
+            body.style.height = '';
+        } else {
+            body.hidden = true;
+        }
+        window.requestAnimationFrame(clampScrollRegion);
+    }
+
+    function setBodyOpen(element, open, animate) {
+        var body = getBody(element);
+        if (!body) {
+            return;
+        }
+
+        body.dataset.collapseTransition = open ? 'opening' : 'closing';
+
+        if (!animate) {
+            body.hidden = !open;
+            body.style.height = open ? '' : '0px';
+            delete body.dataset.collapseTransition;
+            window.requestAnimationFrame(clampScrollRegion);
+            return;
+        }
+
+        if (open) {
+            body.hidden = false;
+            body.style.height = '0px';
+            body.offsetHeight;
+            body.style.height = body.scrollHeight + 'px';
+        } else {
+            body.style.height = body.getBoundingClientRect().height + 'px';
+            body.offsetHeight;
+            body.style.height = '0px';
+        }
+
+        window.setTimeout(function () {
+            if (body.dataset.collapseTransition === (open ? 'opening' : 'closing')) {
+                finishBodyTransition(body, open);
+            }
+        }, 360);
+    }
+
+    function setOpen(element, open, animate) {
         element.setAttribute('data-open', open ? 'true' : 'false');
         var header = element.querySelector('[aria-expanded]');
         if (header) {
             header.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
+        setBodyOpen(element, open, animate !== false);
     }
 
     function persist(key, open) {
@@ -136,15 +199,27 @@
     function applyPersistedState() {
         view.querySelectorAll('.task-hub-group').forEach(function (group) {
             if (collapseState[groupKey(group)] === false) {
-                setOpen(group, false);
+                setOpen(group, false, false);
             }
         });
         view.querySelectorAll('.task-hub-stage').forEach(function (stage) {
             if (collapseState[stageKey(stage)] === false) {
-                setOpen(stage, false);
+                setOpen(stage, false, false);
             }
         });
     }
+
+    view.addEventListener('transitionend', function (event) {
+        var body = event.target;
+        if (
+            event.propertyName !== 'height'
+            || !body.matches('.task-hub-group-body, .task-hub-stage-body')
+            || !body.dataset.collapseTransition
+        ) {
+            return;
+        }
+        finishBodyTransition(body, body.dataset.collapseTransition === 'opening');
+    });
 
     applyPersistedState();
 })();
