@@ -157,15 +157,7 @@
                             <tbody>
                                 {% if recent_projects %}
                                     {% for project in recent_projects %}
-                                    {% set project_density_class = '' %}
-                                    {% if loop.index >= 14 %}
-                                        {% set project_density_class = ' dashboard-project-row-cinema' %}
-                                    {% elif loop.index >= 12 %}
-                                        {% set project_density_class = ' dashboard-project-row-expanded' %}
-                                    {% elif loop.index >= 10 %}
-                                        {% set project_density_class = ' dashboard-project-row-comfortable' %}
-                                    {% endif %}
-                                    <tr class="glass-table-row{{ project_density_class }}">
+                                    <tr class="glass-table-row">
                                         <td class="text-center dashboard-col-id">{{ project.id }}</td>
                                         <td class="dashboard-col-projeto">
                                             <a href="{{ url_for('main.project_detail', project_id=project.id) }}" class="text-decoration-none fw-medium glass-link">

@@ -413,12 +413,6 @@
         transform: none;
     }
 
-    .dashboard-page-v2 .dashboard-project-row-comfortable,
-    .dashboard-page-v2 .dashboard-project-row-expanded,
-    .dashboard-page-v2 .dashboard-project-row-cinema {
-        display: none;
-    }
-
     .dashboard-page-v2 .glass-table-row td {
         border: none !important;
         padding: 0.72rem !important;
@@ -956,21 +950,6 @@
             margin-bottom: 0.4rem !important;
         }
 
-        .dashboard-page-v2[data-dashboard-density="comfortable"] .dashboard-project-row-comfortable {
-            display: table-row;
-        }
-
-        .dashboard-page-v2[data-dashboard-density="expanded"] .dashboard-project-row-comfortable,
-        .dashboard-page-v2[data-dashboard-density="expanded"] .dashboard-project-row-expanded {
-            display: table-row;
-        }
-
-        .dashboard-page-v2[data-dashboard-density="cinema"] .dashboard-project-row-comfortable,
-        .dashboard-page-v2[data-dashboard-density="cinema"] .dashboard-project-row-expanded,
-        .dashboard-page-v2[data-dashboard-density="cinema"] .dashboard-project-row-cinema {
-            display: table-row;
-        }
-
         .dashboard-page-v2[data-dashboard-density="comfortable"] .tasks-kpi-recent-item-comfortable {
             display: flex;
         }
@@ -1033,6 +1012,9 @@
         .dashboard-page-v2 .dashboard-recent-col .glass-table-wrapper {
             flex: 1;
             min-height: 0;
+            /* No desktop quem manda na altura é o flex (preenche o card inteiro);
+               o teto fixo de 480px da regra base criava sobra abaixo da tabela. */
+            max-height: none;
             overflow-y: auto;
             overflow-x: hidden;
             overscroll-behavior: contain;

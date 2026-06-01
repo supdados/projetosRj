@@ -42,7 +42,10 @@ def dashboard():
 
     project_query_base = apply_project_scope(Project.query)
 
-    RECENT_PROJECTS_LIMIT = 15
+    # O painel preenche a altura via flex e rola o excedente, então carregamos
+    # o suficiente para encher telas altas sem deixar sobra (antes era 15, com
+    # as linhas extras escondidas por densidade — o que gerava espaço em branco).
+    RECENT_PROJECTS_LIMIT = 30
     recent_projects = (
         project_query_base.order_by(Project.id.desc())
         .limit(RECENT_PROJECTS_LIMIT)
