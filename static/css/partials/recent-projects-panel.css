@@ -1,0 +1,104 @@
+/* Painel "Projetos Recentes" do dashboard — componente autocontido.
+
+   Usa CSS grid (não <table>) porque position:sticky em <th> é anulado pelo
+   contexto do dashboard no Chromium; um cabeçalho <div> sticky funciona de forma
+   confiável no mesmo container de scroll. As colunas do cabeçalho e das linhas
+   compartilham --rp-cols, garantindo alinhamento. */
+
+.rp-list {
+    --rp-cols: 64px minmax(0, 1fr) 170px 185px;
+}
+
+.rp-head,
+.rp-row {
+    display: grid;
+    grid-template-columns: var(--rp-cols);
+    align-items: center;
+}
+
+.rp-cell {
+    padding: 0.72rem;
+    min-width: 0;
+    font-size: var(--ds-font-size-base);
+}
+
+.rp-cell-id,
+.rp-cell-org,
+.rp-cell-prio {
+    text-align: center;
+}
+
+.rp-cell-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--ds-font-weight-medium);
+}
+
+.rp-head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: linear-gradient(180deg, #eef4fb 0%, #e3edf7 100%);
+    border-bottom: 1px solid rgba(0, 90, 146, 0.18);
+}
+
+.rp-head .rp-cell {
+    color: var(--ds-color-primary-700);
+    font-weight: var(--ds-font-weight-bold);
+    font-size: var(--ds-font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+}
+
+/* O row inteiro é um <a>; :link/:visited garantem especificidade acima da regra
+   do user-agent para âncoras (senão o texto cai no azul padrão no dark mode). */
+.rp-row,
+.rp-row:link,
+.rp-row:visited {
+    text-decoration: none;
+    color: var(--app-color-text-primary);
+    transition: background var(--ds-transition-slow) ease;
+}
+
+.rp-row:hover {
+    background: linear-gradient(135deg, rgba(0, 90, 146, 0.07) 0%, rgba(0, 90, 146, 0.025) 100%);
+}
+
+.rp-row .rp-cell-name {
+    color: var(--ds-color-primary-600);
+}
+
+.rp-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+.rp-empty i {
+    color: var(--ds-color-text-muted, #94a3b8);
+    margin-bottom: 0.75rem;
+}
+
+/* ---- Dark mode ---- */
+html[data-theme="dark"] body.is-authenticated .rp-head {
+    background: var(--app-color-surface-elevated);
+    border-bottom-color: var(--app-color-border);
+}
+
+html[data-theme="dark"] body.is-authenticated .rp-head .rp-cell {
+    color: var(--app-color-text-secondary);
+}
+
+html[data-theme="dark"] body.is-authenticated .rp-row:hover {
+    background: rgba(99, 166, 219, 0.08);
+}
+
+/* Dark mode: todas as células da linha (ID, nome, órgão) usam a mesma cor. */
+html[data-theme="dark"] body.is-authenticated .rp-row,
+html[data-theme="dark"] body.is-authenticated .rp-row:link,
+html[data-theme="dark"] body.is-authenticated .rp-row:visited,
+html[data-theme="dark"] body.is-authenticated .rp-row .rp-cell-name {
+    color: #cfe3f6;
+}

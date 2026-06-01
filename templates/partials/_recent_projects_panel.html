@@ -1,0 +1,46 @@
+{# Painel "Projetos Recentes" do dashboard. Componente autocontido: estrutura em
+   CSS grid (ver static/css/partials/recent-projects-panel.css) com cabeçalho
+   fixo. Espera `recent_projects` e `num_projects` no contexto. #}
+<div id="dashboardRecentProjectsCard" class="card border-0 glass-card main-content-card">
+    <div class="card-header glass-card-header dashboard-section-header px-3">
+        <h5 class="card-title h6 mb-0 fw-bold glass-card-title ds-type-card-title dashboard-section-title">
+            <i class="fas fa-clock me-2 dashboard-brand-icon"></i>Projetos Recentes
+        </h5>
+    </div>
+
+    <div class="card-body p-0 glass-card-body">
+        <div class="glass-table-wrapper rp-list">
+            <div class="rp-head">
+                <span class="rp-cell rp-cell-id">ID</span>
+                <span class="rp-cell rp-cell-name">Projeto</span>
+                <span class="rp-cell rp-cell-org">Órgão</span>
+                <span class="rp-cell rp-cell-prio">Prioridade</span>
+            </div>
+
+            {% if recent_projects %}
+                {% for project in recent_projects %}
+                <a class="rp-row" href="{{ url_for('main.project_detail', project_id=project.id) }}">
+                    <span class="rp-cell rp-cell-id">{{ project.id }}</span>
+                    <span class="rp-cell rp-cell-name">{{ project.titulo }}</span>
+                    <span class="rp-cell rp-cell-org">{{ project.orgao_ref.sigla if project.orgao_ref else 'N/A' }}</span>
+                    <span class="rp-cell rp-cell-prio">
+                        <span class="badge glass-badge priority-{{ project.prioridade | lower }}">{{ project.prioridade | capitalize }}</span>
+                    </span>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="rp-empty glass-empty-state">
+                    <i class="fas fa-folder-open fa-2x"></i>
+                    {% if num_projects > 0 %}
+                        <p class="mb-0">Nenhum projeto recente para mostrar.</p>
+                    {% else %}
+                        <p class="mb-3">Nenhum projeto cadastrado ainda.</p>
+                        <button type="button" class="btn btn-primary glass-btn" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                            <i class="fas fa-plus me-1"></i>Criar Primeiro Projeto
+                        </button>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
