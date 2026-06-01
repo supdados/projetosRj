@@ -1,13 +1,14 @@
-{# Modal de exclusão de projeto em dois passos. Markup único compartilhado entre
-   a lista de projetos e a tela de detalhe. O comportamento vive em
-   static/js/modules/delete-project-modal.js, que opera sobre estes hooks.
+{# Modal de exclusão em dois passos, reutilizável. Markup único compartilhado
+   entre projetos (lista/detalhe) e modelos de etapas. O comportamento vive em
+   static/js/modules/delete-project-modal.js (ConfirmDeleteModal), que preenche
+   título, corpo, frase e rótulos via os hooks data-delete-* a cada open().
 
    Design: variante "V1 — Quiet" (iOS-like, minimalista). Os dois passos têm
    exatamente o mesmo tamanho e o mesmo ícone de lixeira (outline); no passo 2 o
    ícone fica vermelho para sinalizar a ação destrutiva iminente.
 
    Passo 1: aviso de que a ação é irreversível.
-   Passo 2: confirmação por digitação da frase exata "APAGAR PROJETO". #}
+   Passo 2: confirmação digitando a frase exata (ex.: "APAGAR PROJETO"). #}
 <div id="deleteProjectModal" class="delete-project-modal-overlay" aria-hidden="true">
     <div class="delete-project-modal" role="dialog" aria-modal="true" aria-labelledby="deleteProjectModalTitle">
 
@@ -16,11 +17,11 @@
             <div class="delete-project-modal__icon" data-delete-warn-icon aria-hidden="true">
                 {% include "partials/_delete_project_trash_icon.svg" %}
             </div>
-            <h2 id="deleteProjectModalTitle" class="delete-project-modal__title">Apagar projeto?</h2>
+            <h2 id="deleteProjectModalTitle" data-delete-title class="delete-project-modal__title">Apagar projeto?</h2>
             <p class="delete-project-modal__body">
-                Você está prestes a apagar
+                <span data-delete-lead>Você está prestes a apagar</span>
                 <strong data-delete-project-name>este projeto</strong>
-                e todo o seu conteúdo. Esta ação não pode ser desfeita.
+                <span data-delete-trail>e todo o seu conteúdo. Esta ação não pode ser desfeita.</span>
             </p>
 
             <div class="delete-project-modal__footer">

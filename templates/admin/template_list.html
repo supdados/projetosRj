@@ -4,6 +4,7 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/template-list.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/partials/delete-project-modal.css') }}">
 {% endblock %}
 
 {% set order_labels = {
@@ -136,11 +137,13 @@
                                 <i class="far fa-copy"></i>
                             </button>
                         </form>
-                        <button type="button" class="tpl-action-btn tpl-action-delete"
-                                data-bs-toggle="modal" data-bs-target="#deleteModal-{{ row.id }}"
-                                title="Excluir modelo" aria-label="Excluir modelo">
-                            <i class="far fa-trash-alt"></i>
-                        </button>
+                        <form method="POST" action="{{ url_for('main.delete_template', template_id=row.id) }}"
+                              class="inline-form js-delete-template-form" data-template-name="{{ row.name }}">
+                            <button type="submit" class="tpl-action-btn tpl-action-delete"
+                                    title="Excluir modelo" aria-label="Excluir modelo">
+                                <i class="far fa-trash-alt"></i>
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
@@ -177,38 +180,6 @@
         {% endif %}
     </footer>
 
-    {% for row in rows %}
-    <div class="modal fade" id="deleteModal-{{ row.id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content modal-clean">
-                <div class="modal-header-clean">
-                    <div class="modal-icon-clean">
-                        <i class="fas fa-exclamation-circle"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title-clean ds-type-section-title">Excluir modelo</h5>
-                        <p class="modal-subtitle-clean ds-type-body-sm">Esta ação não pode ser desfeita</p>
-                    </div>
-                    <button type="button" class="btn-close-clean" data-bs-dismiss="modal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body-clean">
-                    <p>Confirma a exclusão do modelo <strong>{{ row.name }}</strong>?</p>
-                </div>
-                <div class="modal-footer-clean">
-                    <button type="button" class="btn-modal-clean btn-cancel-clean" data-bs-dismiss="modal">
-                        Cancelar
-                    </button>
-                    <form action="{{ url_for('main.delete_template', template_id=row.id) }}" method="POST" class="inline-form">
-                        <button type="submit" class="btn-modal-clean btn-confirm-delete">Excluir</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-
     {% else %}
     <div class="tpl-empty">
         {% if q %}
@@ -228,10 +199,13 @@
     {% endif %}
 
 </div>
+
+{% include "partials/_delete_project_confirm_modal.html" %}
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
+<script src="{{ url_for('static', filename='js/modules/delete-project-modal.js') }}"></script>
 <script nonce="{{ csp_nonce }}">
 (function () {
     function navigateToTemplate(row) {
@@ -280,6 +254,39 @@
             }
         });
     }
+})();
+
+// Exclusão de modelo: mesma confirmação em dois passos dos projetos.
+// Sucesso remove a linha sem recarregar, preservando busca/ordenação.
+(function () {
+    function showFlash(msg, type) {
+        if (typeof window.showFlash === 'function') window.showFlash(msg, type);
+    }
+
+    document.querySelectorAll('.js-delete-template-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!window.ConfirmDeleteModal) return;
+
+            var row = form.closest('tr');
+            window.ConfirmDeleteModal.open({
+                deleteUrl: form.action,
+                itemName: form.dataset.templateName || '',
+                confirmPhrase: 'APAGAR MODELO',
+                title: 'Apagar modelo?',
+                trail: 'e todas as suas etapas. Esta ação não pode ser desfeita.',
+                confirmLabel: 'Apagar modelo',
+                onSuccess: function (data) {
+                    if (row) {
+                        row.style.transition = 'opacity 0.25s ease';
+                        row.style.opacity = '0';
+                        setTimeout(function () { row.remove(); }, 260);
+                    }
+                    showFlash((data && data.message) || 'Modelo apagado.', 'success');
+                }
+            });
+        });
+    });
 })();
 </script>
 {% endblock %}

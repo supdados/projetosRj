@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from flask import flash, g, redirect, render_template, request, url_for
+from flask import flash, g, jsonify, redirect, render_template, request, url_for
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
@@ -312,8 +312,16 @@ def duplicate_template(template_id):
 @login_required
 @admin_required
 def delete_template(template_id):
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     template = get_or_404(StageTemplate, template_id)
+
+    template_name = template.name
     db.session.delete(template)
     db.session.commit()
+
+    if is_ajax:
+        return jsonify(
+            {"ok": True, "message": f'Modelo "{template_name}" excluído.'}
+        )
     flash("Modelo de etapas excluído com sucesso.", "success")
     return redirect(url_for("main.list_templates"))

@@ -1,15 +1,28 @@
-/* Modal reutilizável de exclusão de projeto em dois passos.
+/* Modal reutilizável de exclusão em dois passos (confirmação por digitação).
  *
  * Passo 1: aviso de que a exclusão é irreversível.
- * Passo 2: confirmação por digitação da frase exata "APAGAR PROJETO"
- *          (padrão "digite o nome para confirmar" do GitHub).
+ * Passo 2: confirmação digitando uma frase exata (padrão "digite para confirmar"
+ *          do GitHub). Os textos e a frase são configuráveis por chamada, então
+ *          o mesmo card serve projetos, modelos de etapas, etc.
  *
- * Uso:
- *   DeleteProjectModal.open({
+ * Uso (projeto — valores padrão):
+ *   ConfirmDeleteModal.open({
  *       deleteUrl: '/project/12/delete',
- *       projectName: 'Meu Projeto',
+ *       itemName: 'Meu Projeto',
  *       onSuccess: function (data) { ... }   // pós-exclusão (remover linha, redirecionar…)
  *   });
+ *
+ * Uso (modelo de etapas — sobrescreve textos/frase):
+ *   ConfirmDeleteModal.open({
+ *       deleteUrl: '/admin/templates/5/delete',
+ *       itemName: 'Ciclo padrão',
+ *       confirmPhrase: 'APAGAR MODELO',
+ *       title: 'Apagar modelo?',
+ *       trail: 'e todas as suas etapas. Esta ação não pode ser desfeita.',
+ *       confirmLabel: 'Apagar modelo',
+ *   });
+ *
+ * `window.DeleteProjectModal` é mantido como alias retrocompatível.
  *
  * O CSRF é injetado automaticamente pelo wrapper de fetch em base.html, então
  * aqui basta marcar a requisição como XMLHttpRequest para a rota responder JSON.
@@ -17,7 +30,15 @@
 (function () {
     'use strict';
 
-    var CONFIRM_PHRASE = 'APAGAR PROJETO';
+    // Padrões = exclusão de projeto. Cada open() pode sobrescrever campo a campo.
+    var DEFAULTS = {
+        confirmPhrase: 'APAGAR PROJETO',
+        title: 'Apagar projeto?',
+        lead: 'Você está prestes a apagar',
+        itemName: 'este projeto',
+        trail: 'e todo o seu conteúdo. Esta ação não pode ser desfeita.',
+        confirmLabel: 'Apagar projeto',
+    };
 
     function flash(message, type) {
         if (typeof window.showFlash === 'function') {
@@ -35,7 +56,11 @@
         this.overlay = overlay;
         this.stepWarn = overlay.querySelector('[data-delete-step="warn"]');
         this.stepConfirm = overlay.querySelector('[data-delete-step="confirm"]');
-        this.projectNameEl = overlay.querySelector('[data-delete-project-name]');
+        this.titleEl = overlay.querySelector('[data-delete-title]');
+        this.leadEl = overlay.querySelector('[data-delete-lead]');
+        this.itemNameEl = overlay.querySelector('[data-delete-project-name]');
+        this.trailEl = overlay.querySelector('[data-delete-trail]');
+        this.phraseEl = overlay.querySelector('[data-delete-phrase]');
         this.input = overlay.querySelector('[data-delete-confirm-input]');
         this.warnIcon = overlay.querySelector('[data-delete-warn-icon]');
         this.confirmIcon = overlay.querySelector('[data-delete-icon]');
@@ -121,14 +146,30 @@
             onError: typeof config.onError === 'function' ? config.onError : null,
         };
 
-        if (this.projectNameEl) {
-            this.projectNameEl.textContent = config.projectName || 'este projeto';
+        // Frase/rótulo guardados na instância (usados em isPhraseValid/reset).
+        this.confirmPhrase = normalizePhrase(config.confirmPhrase || DEFAULTS.confirmPhrase);
+        this.confirmLabel = config.confirmLabel || DEFAULTS.confirmLabel;
+
+        this.setText(this.titleEl, config.title || DEFAULTS.title);
+        this.setText(this.leadEl, config.lead || DEFAULTS.lead);
+        this.setText(this.itemNameEl, config.itemName || config.projectName || DEFAULTS.itemName);
+        this.setText(this.trailEl, config.trail || DEFAULTS.trail);
+        this.setText(this.phraseEl, this.confirmPhrase);
+        if (this.input) {
+            this.input.placeholder = this.confirmPhrase;
         }
 
         this.resetToWarnStep();
         this.overlay.classList.add('is-open');
         this.overlay.setAttribute('aria-hidden', 'false');
         this.playWobble(this.warnIcon);
+    };
+
+    // Só escreve se o hook existir — evita quebrar se o markup mudar.
+    DeleteProjectModalController.prototype.setText = function (el, text) {
+        if (el) {
+            el.textContent = text;
+        }
     };
 
     // Reinicia o balanço de um ícone. O remove + reflow + add garante que a
@@ -164,7 +205,7 @@
         }
         if (this.confirmBtn) {
             this.confirmBtn.disabled = true;
-            this.confirmBtn.textContent = 'Apagar projeto';
+            this.confirmBtn.textContent = this.confirmLabel || DEFAULTS.confirmLabel;
         }
         this.showStep('warn');
     };
@@ -191,7 +232,8 @@
     };
 
     DeleteProjectModalController.prototype.isPhraseValid = function () {
-        return this.input && normalizePhrase(this.input.value) === CONFIRM_PHRASE;
+        var expected = this.confirmPhrase || DEFAULTS.confirmPhrase;
+        return this.input && normalizePhrase(this.input.value) === expected;
     };
 
     DeleteProjectModalController.prototype.syncConfirmButtonState = function () {
@@ -252,7 +294,7 @@
 
     DeleteProjectModalController.prototype.handleFailure = function (pending, message) {
         this.confirmBtn.disabled = false;
-        this.confirmBtn.textContent = 'Apagar projeto';
+        this.confirmBtn.textContent = this.confirmLabel || DEFAULTS.confirmLabel;
         this.syncConfirmButtonState();
         if (pending.onError) {
             pending.onError(message);
@@ -275,15 +317,19 @@
         return controller;
     }
 
-    window.DeleteProjectModal = {
-        confirmPhrase: CONFIRM_PHRASE,
+    var publicApi = {
+        defaultConfirmPhrase: DEFAULTS.confirmPhrase,
         open: function (options) {
             var instance = getController();
             if (!instance) {
-                console.error('DeleteProjectModal: #deleteProjectModal não encontrado no DOM.');
+                console.error('ConfirmDeleteModal: #deleteProjectModal não encontrado no DOM.');
                 return;
             }
             instance.open(options);
         },
     };
+
+    window.ConfirmDeleteModal = publicApi;
+    // Alias retrocompatível — páginas de projeto ainda chamam DeleteProjectModal.
+    window.DeleteProjectModal = publicApi;
 })();
