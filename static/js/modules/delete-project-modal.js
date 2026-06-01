@@ -37,6 +37,7 @@
         this.stepConfirm = overlay.querySelector('[data-delete-step="confirm"]');
         this.projectNameEl = overlay.querySelector('[data-delete-project-name]');
         this.input = overlay.querySelector('[data-delete-confirm-input]');
+        this.warnIcon = overlay.querySelector('[data-delete-warn-icon]');
         this.confirmIcon = overlay.querySelector('[data-delete-icon]');
         this.confirmBtn = overlay.querySelector('[data-delete-confirm]');
         this.advanceBtn = overlay.querySelector('[data-delete-advance]');
@@ -65,6 +66,16 @@
             btn.addEventListener('click', function () {
                 self.resetToWarnStep();
             });
+        });
+
+        // Remove a classe assim que o balanço termina, para o svg não ficar com
+        // transform residual (que desalinharia os ícones entre os passos).
+        [this.warnIcon, this.confirmIcon].forEach(function (icon) {
+            if (icon) {
+                icon.addEventListener('animationend', function () {
+                    icon.classList.remove('is-wobbling');
+                });
+            }
         });
 
         if (this.input) {
@@ -117,6 +128,18 @@
         this.resetToWarnStep();
         this.overlay.classList.add('is-open');
         this.overlay.setAttribute('aria-hidden', 'false');
+        this.playWobble(this.warnIcon);
+    };
+
+    // Reinicia o balanço de um ícone. O remove + reflow + add garante que a
+    // animação dispare de novo mesmo se a classe ainda estiver aplicada.
+    DeleteProjectModalController.prototype.playWobble = function (icon) {
+        if (!icon) {
+            return;
+        }
+        icon.classList.remove('is-wobbling');
+        void icon.offsetWidth;
+        icon.classList.add('is-wobbling');
     };
 
     DeleteProjectModalController.prototype.close = function () {
@@ -132,7 +155,12 @@
             this.input.classList.remove('is-valid-phrase');
         }
         if (this.confirmIcon) {
-            this.confirmIcon.classList.remove('delete-project-modal__icon--danger');
+            this.confirmIcon.classList.remove('delete-project-modal__icon--danger', 'is-wobbling');
+        }
+        this.confirmWasValid = false;
+        // Garante que voltar ao passo 1 não redispare o balanço da lixeira.
+        if (this.warnIcon) {
+            this.warnIcon.classList.remove('is-wobbling');
         }
         if (this.confirmBtn) {
             this.confirmBtn.disabled = true;
@@ -174,10 +202,16 @@
         if (this.input) {
             this.input.classList.toggle('is-valid-phrase', valid);
         }
-        // A lixeira nasce preta e só fica vermelha quando a frase confere.
+        // A lixeira nasce preta e só fica vermelha quando a frase confere; no
+        // momento em que passa a valer, ela também balança (só na transição,
+        // para não retremer a cada tecla com a frase já completa).
         if (this.confirmIcon) {
             this.confirmIcon.classList.toggle('delete-project-modal__icon--danger', valid);
+            if (valid && !this.confirmWasValid) {
+                this.playWobble(this.confirmIcon);
+            }
         }
+        this.confirmWasValid = valid;
     };
 
     DeleteProjectModalController.prototype.submit = function () {
