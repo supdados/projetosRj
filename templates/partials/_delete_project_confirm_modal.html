@@ -2,6 +2,10 @@
    a lista de projetos e a tela de detalhe. O comportamento vive em
    static/js/modules/delete-project-modal.js, que opera sobre estes hooks.
 
+   Design: variante "V1 — Quiet" (iOS-like, minimalista). Os dois passos têm
+   exatamente o mesmo tamanho e o mesmo ícone de lixeira (outline); no passo 2 o
+   ícone fica vermelho para sinalizar a ação destrutiva iminente.
+
    Passo 1: aviso de que a ação é irreversível.
    Passo 2: confirmação por digitação da frase exata "APAGAR PROJETO". #}
 <div id="deleteProjectModal" class="delete-project-modal-overlay" aria-hidden="true">
@@ -10,47 +14,45 @@
         {# ---- Passo 1: aviso ---- #}
         <div class="delete-project-modal__step is-active" data-delete-step="warn">
             <div class="delete-project-modal__icon" aria-hidden="true">
-                <i class="fas fa-triangle-exclamation"></i>
+                {% include "partials/_delete_project_trash_icon.svg" %}
             </div>
-            <h5 id="deleteProjectModalTitle" class="delete-project-modal__title">Apagar projeto?</h5>
+            <h2 id="deleteProjectModalTitle" class="delete-project-modal__title">Apagar projeto?</h2>
             <p class="delete-project-modal__body">
-                Esta ação é <strong>irreversível</strong>. O projeto e todas as suas etapas,
-                tarefas e reuniões serão apagados permanentemente.
+                Você está prestes a apagar
+                <strong data-delete-project-name>este projeto</strong>
+                e todo o seu conteúdo. Esta ação não pode ser desfeita.
             </p>
-            <span class="delete-project-modal__project-name" data-delete-project-name>Projeto</span>
-            <p class="delete-project-modal__warning">Não é possível desfazer.</p>
-            <div class="delete-project-modal__buttons">
-                <button type="button" class="btn btn-secondary" data-delete-cancel>Cancelar</button>
-                <button type="button" class="btn btn-danger" data-delete-advance>
-                    <i class="fas fa-trash me-1"></i>Sim, quero apagar
-                </button>
+
+            <div class="delete-project-modal__footer">
+                <button type="button" class="delete-project-modal__btn delete-project-modal__btn--ghost" data-delete-cancel>Cancelar</button>
+                <button type="button" class="delete-project-modal__btn delete-project-modal__btn--dark" data-delete-advance>Continuar</button>
             </div>
         </div>
 
         {# ---- Passo 2: confirmação por digitação ---- #}
         <div class="delete-project-modal__step" data-delete-step="confirm">
-            <div class="delete-project-modal__icon" aria-hidden="true">
-                <i class="fas fa-keyboard"></i>
+            <div class="delete-project-modal__icon" data-delete-icon aria-hidden="true">
+                {% include "partials/_delete_project_trash_icon.svg" %}
             </div>
-            <h5 class="delete-project-modal__title">Confirme a exclusão</h5>
-            <p class="delete-project-modal__confirm-instruction">
-                Para confirmar, digite
+            <h2 class="delete-project-modal__title">Confirme para apagar</h2>
+            <p class="delete-project-modal__body">
+                Digite
                 <span class="delete-project-modal__phrase" data-delete-phrase>APAGAR PROJETO</span>
-                no campo abaixo:
+                para confirmar.
             </p>
             <input
                 type="text"
                 class="delete-project-modal__input"
                 data-delete-confirm-input
+                placeholder="APAGAR PROJETO"
                 autocomplete="off"
                 autocapitalize="characters"
                 spellcheck="false"
                 aria-label="Digite APAGAR PROJETO para confirmar">
-            <div class="delete-project-modal__buttons">
-                <button type="button" class="btn btn-secondary" data-delete-cancel>Cancelar</button>
-                <button type="button" class="btn btn-danger delete-project-modal__confirm-btn" data-delete-confirm disabled>
-                    <i class="fas fa-trash me-1"></i>Apagar projeto
-                </button>
+
+            <div class="delete-project-modal__footer">
+                <button type="button" class="delete-project-modal__btn delete-project-modal__btn--ghost" data-delete-back>Voltar</button>
+                <button type="button" class="delete-project-modal__btn delete-project-modal__btn--danger delete-project-modal__confirm-btn" data-delete-confirm disabled>Apagar projeto</button>
             </div>
         </div>
 

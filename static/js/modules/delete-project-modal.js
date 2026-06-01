@@ -37,8 +37,10 @@
         this.stepConfirm = overlay.querySelector('[data-delete-step="confirm"]');
         this.projectNameEl = overlay.querySelector('[data-delete-project-name]');
         this.input = overlay.querySelector('[data-delete-confirm-input]');
+        this.confirmIcon = overlay.querySelector('[data-delete-icon]');
         this.confirmBtn = overlay.querySelector('[data-delete-confirm]');
         this.advanceBtn = overlay.querySelector('[data-delete-advance]');
+        this.backButtons = Array.prototype.slice.call(overlay.querySelectorAll('[data-delete-back]'));
         this.cancelButtons = Array.prototype.slice.call(overlay.querySelectorAll('[data-delete-cancel]'));
         this.pending = null;
         this.bind();
@@ -58,6 +60,12 @@
                 self.goToConfirmStep();
             });
         }
+
+        this.backButtons.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                self.resetToWarnStep();
+            });
+        });
 
         if (this.input) {
             this.input.addEventListener('input', function () {
@@ -123,9 +131,12 @@
             this.input.value = '';
             this.input.classList.remove('is-valid-phrase');
         }
+        if (this.confirmIcon) {
+            this.confirmIcon.classList.remove('delete-project-modal__icon--danger');
+        }
         if (this.confirmBtn) {
             this.confirmBtn.disabled = true;
-            this.confirmBtn.innerHTML = '<i class="fas fa-trash me-1"></i>Apagar projeto';
+            this.confirmBtn.textContent = 'Apagar projeto';
         }
         this.showStep('warn');
     };
@@ -163,6 +174,10 @@
         if (this.input) {
             this.input.classList.toggle('is-valid-phrase', valid);
         }
+        // A lixeira nasce preta e só fica vermelha quando a frase confere.
+        if (this.confirmIcon) {
+            this.confirmIcon.classList.toggle('delete-project-modal__icon--danger', valid);
+        }
     };
 
     DeleteProjectModalController.prototype.submit = function () {
@@ -173,7 +188,7 @@
 
         var pending = this.pending;
         this.confirmBtn.disabled = true;
-        this.confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Apagando...';
+        this.confirmBtn.textContent = 'Apagando…';
 
         fetch(pending.deleteUrl, {
             method: 'POST',
@@ -203,7 +218,7 @@
 
     DeleteProjectModalController.prototype.handleFailure = function (pending, message) {
         this.confirmBtn.disabled = false;
-        this.confirmBtn.innerHTML = '<i class="fas fa-trash me-1"></i>Apagar projeto';
+        this.confirmBtn.textContent = 'Apagar projeto';
         this.syncConfirmButtonState();
         if (pending.onError) {
             pending.onError(message);
