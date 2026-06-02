@@ -252,3 +252,33 @@ def test_delete_returns_403_for_non_admin(client_user, seed_data):
     )
     assert response.status_code == 403
     _assert_fail_envelope(response.get_json(), code="forbidden")
+
+
+def test_delete_user_com_evento_de_calendario_retorna_409_json(
+    app, client_admin, seed_data
+):
+    # Regressão: usuário com ``calendar_event`` (user_id NOT NULL) dispara
+    # IntegrityError no delete. Sem try/except a exceção vazava como HTML 500 e o
+    # cliente da SPA quebrava ("Unrecognized token '<'"). Deve devolver 409 JSON.
+    from datetime import datetime
+
+    from models import CalendarEvent, db
+
+    user_id = seed_data["deletable_user_id"]
+    with app.app_context():
+        db.session.add(
+            CalendarEvent(
+                user_id=user_id,
+                title="Reunião vinculada",
+                source="app",
+                starts_at=datetime(2026, 1, 1, 10, 0),
+                ends_at=datetime(2026, 1, 1, 11, 0),
+            )
+        )
+        db.session.commit()
+
+    response = client_admin.post(f"/api/admin/usuarios/{user_id}/delete")
+
+    assert response.status_code == 409
+    assert response.is_json  # NÃO pode vazar HTML
+    _assert_fail_envelope(response.get_json(), code="conflict")

@@ -319,8 +319,21 @@ def api_admin_usuarios_delete(user_id: int) -> Response | tuple[Response, int]:
             code="validation",
         )
 
-    db.session.delete(user)
-    db.session.commit()
+    # Espelha o try/except do `delete_user` legado: usuários antigos podem ter
+    # registros vinculados NOT NULL (ex.: calendar_event.user_id), cuja exclusão
+    # dispara IntegrityError. Sem este guard a exceção vaza como HTML 500 e o
+    # cliente da SPA quebra ao tentar parsear JSON ("Unrecognized token '<'").
+    try:
+        db.session.delete(user)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return fail(
+            "Não foi possível excluir: o usuário possui registros vinculados "
+            "(ex.: eventos de calendário). Remova-os antes de excluir.",
+            status=409,
+            code="conflict",
+        )
     return ok({"deleted_id": user_id})
 
 
