@@ -32,7 +32,10 @@ from .negotiation import (  # noqa: F401
     wants_json,
 )
 from .serializers import (  # noqa: F401
+    serialize_etapa_card,
+    serialize_pending_project_row,
     serialize_project_card,
+    serialize_project_history_entry,
     serialize_task_card,
     serialize_user,
 )
@@ -41,6 +44,8 @@ from .serializers import (  # noqa: F401
 from . import legacy  # noqa: F401,E402
 from . import session  # noqa: F401,E402
 from . import dashboard  # noqa: F401,E402
+from . import projects  # noqa: F401,E402
+from . import search  # noqa: F401,E402
 
 __all__ = [
     "ok",
@@ -51,4 +56,7 @@ __all__ = [
     "serialize_user",
     "serialize_project_card",
     "serialize_task_card",
+    "serialize_etapa_card",
+    "serialize_pending_project_row",
+    "serialize_project_history_entry",
 ]

@@ -243,23 +243,48 @@ def list_projects():
     )
 
 
-@main_bp.route("/projetos_pendentes")
-@login_required
-def list_projetos_pendentes():
-    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
-        request.args.get("orgao")
-    )
-    filtro_periodo = (request.args.get("periodo") or "atrasados").strip()
-    selected_responsavel = (request.args.get("responsavel") or "").strip()
-    pending_page = request.args.get("page", 1, type=int)
+def build_projetos_pendentes_context(
+    selected_orgao_id,
+    *,
+    filtro_periodo="atrasados",
+    selected_responsavel="",
+    pending_page=1,
+):
+    """Monta os dados da tela "Projetos Pendentes", respeitando o escopo de órgão.
+
+    Executa EXATAMENTE as mesmas queries/agregações que a rota Jinja
+    ``/projetos_pendentes`` usa, num único lugar, para que a rota Jinja e o
+    endpoint JSON da SPA (``GET /api/projetos-pendentes``) compartilhem a fonte
+    de verdade — sem recalcular buckets/contadores no cliente. A autorização por
+    órgão é server-side: usuários não-admin ficam restritos à sua subárvore
+    (``orgao_scope``).
+
+    Args:
+        selected_orgao_id: ID do órgão já validado/sanitizado para o usuário
+            corrente (``None`` quando nenhum filtro está aplicado). O chamador é
+            responsável por sanitizar via
+            ``sanitize_orgao_filter_for_current_user``.
+        filtro_periodo: Janela de visibilidade ("atrasados" | "7dias" | "14dias"
+            | "21dias"); valores fora do conjunto caem para "atrasados".
+        selected_responsavel: Filtro de responsável (substring, case-insensitive).
+        pending_page: Página solicitada (1-based) da lista paginada de projetos.
+
+    Returns:
+        ``dict`` com a lista paginada (``projetos_com_etapas``), os mapas de
+        bucket/progresso, os contadores agregados e os metadados de paginação,
+        consumidos pelo template ``projects/pendentes.html`` e pelo serializer
+        do endpoint JSON.
+
+    Exemplo:
+        >>> ctx = build_projetos_pendentes_context(None)
+        >>> ctx["summary_counts"]["total_projects"]
+        3
+    """
     pending_per_page = 15
 
     valid_periods = {"atrasados", "7dias", "14dias", "21dias"}
     if filtro_periodo not in valid_periods:
         filtro_periodo = "atrasados"
-
-    if invalid_orgao_filter:
-        return redirect_to_current_route_without_orgao()
 
     data_atual = datetime.date.today()
     data_7_dias = data_atual + datetime.timedelta(days=7)
@@ -315,29 +340,28 @@ def list_projetos_pendentes():
     objetivos, _, _ = get_goal_catalog_context()
 
     if not project_ids:
-        return render_template(
-            "projects/pendentes.html",
-            projetos_com_etapas=[],
-            objetivos=objetivos,
-            selected_orgao=selected_orgao_id,
-            filtro_periodo=filtro_periodo,
-            selected_responsavel=selected_responsavel,
-            responsaveis_options=[],
-            period_options=[
+        return {
+            "projetos_com_etapas": [],
+            "objetivos": objetivos,
+            "selected_orgao": selected_orgao_id,
+            "filtro_periodo": filtro_periodo,
+            "selected_responsavel": selected_responsavel,
+            "responsaveis_options": [],
+            "period_options": [
                 ("atrasados", "Projetos Atrasados"),
                 ("7dias", "Próximos 7 Dias"),
                 ("14dias", "Próximos 14 Dias"),
                 ("21dias", "Próximos 21 Dias"),
             ],
-            period_label_map={
+            "period_label_map": {
                 "atrasados": "Atrasados",
                 "7dias": "Próximos 7 Dias",
                 "14dias": "Próximos 14 Dias",
                 "21dias": "Próximos 21 Dias",
             },
-            etapa_bucket_map={},
-            etapa_task_progress={},
-            summary_counts={
+            "etapa_bucket_map": {},
+            "etapa_task_progress": {},
+            "summary_counts": {
                 "total_projects": 0,
                 "atrasada": 0,
                 "7dias": 0,
@@ -345,11 +369,11 @@ def list_projetos_pendentes():
                 "21dias": 0,
                 "sem_data": 0,
             },
-            pending_page=1,
-            pending_total_pages=0,
-            pending_per_page=pending_per_page,
-            pending_total_projects=0,
-        )
+            "pending_page": 1,
+            "pending_total_pages": 0,
+            "pending_per_page": pending_per_page,
+            "pending_total_projects": 0,
+        }
 
     responsaveis_query = (
         Etapa.query.filter(
@@ -539,34 +563,56 @@ def list_projetos_pendentes():
     end_idx = start_idx + pending_per_page
     projetos_pendentes_paginated = projetos_pendentes_com_etapas[start_idx:end_idx]
 
-    return render_template(
-        "projects/pendentes.html",
-        projetos_com_etapas=projetos_pendentes_paginated,
-        objetivos=objetivos,
-        selected_orgao=selected_orgao_id,
-        filtro_periodo=filtro_periodo,
-        selected_responsavel=selected_responsavel,
-        responsaveis_options=responsaveis_options,
-        period_options=[
+    return {
+        "projetos_com_etapas": projetos_pendentes_paginated,
+        "objetivos": objetivos,
+        "selected_orgao": selected_orgao_id,
+        "filtro_periodo": filtro_periodo,
+        "selected_responsavel": selected_responsavel,
+        "responsaveis_options": responsaveis_options,
+        "period_options": [
             ("atrasados", "Projetos Atrasados"),
             ("7dias", "Próximos 7 Dias"),
             ("14dias", "Próximos 14 Dias"),
             ("21dias", "Próximos 21 Dias"),
         ],
-        period_label_map={
+        "period_label_map": {
             "atrasados": "Atrasados",
             "7dias": "Próximos 7 Dias",
             "14dias": "Próximos 14 Dias",
             "21dias": "Próximos 21 Dias",
         },
-        etapa_bucket_map=etapa_bucket_map,
-        etapa_task_progress=etapa_task_progress,
-        summary_counts=summary_counts,
-        pending_page=pending_page,
-        pending_total_pages=pending_total_pages,
-        pending_per_page=pending_per_page,
-        pending_total_projects=pending_total_projects,
+        "etapa_bucket_map": etapa_bucket_map,
+        "etapa_task_progress": etapa_task_progress,
+        "summary_counts": summary_counts,
+        "pending_page": pending_page,
+        "pending_total_pages": pending_total_pages,
+        "pending_per_page": pending_per_page,
+        "pending_total_projects": pending_total_projects,
+    }
+
+
+@main_bp.route("/projetos_pendentes")
+@login_required
+def list_projetos_pendentes():
+    """Renderiza "Projetos Pendentes" (Jinja).
+
+    Fonte de dados: ``build_projetos_pendentes_context``. Mantém o path e o
+    comportamento (sanitização de órgão + redirect 302 em filtro inválido).
+    """
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+        request.args.get("orgao")
     )
+    if invalid_orgao_filter:
+        return redirect_to_current_route_without_orgao()
+
+    context = build_projetos_pendentes_context(
+        selected_orgao_id,
+        filtro_periodo=(request.args.get("periodo") or "atrasados").strip(),
+        selected_responsavel=(request.args.get("responsavel") or "").strip(),
+        pending_page=request.args.get("page", 1, type=int),
+    )
+    return render_template("projects/pendentes.html", **context)
 
 
 @main_bp.route("/project/<int:project_id>")
@@ -658,26 +704,56 @@ def project_detail(project_id):
     )
 
 
-@main_bp.route("/project/<int:project_id>/history")
-@login_required
-def project_history(project_id):
-    """Visualizar histórico de ações de um projeto"""
+def build_project_history_context(project_id):
+    """Monta os dados do histórico de ações de um projeto.
+
+    Centraliza a busca do projeto (``get_or_404``) e suas entradas de histórico
+    ordenadas (mais recente primeiro), para que a rota Jinja
+    ``/project/<id>/history`` e o endpoint JSON da SPA
+    (``GET /api/projetos/<id>/historico``) compartilhem a fonte de verdade. NÃO
+    faz controle de acesso: o chamador valida via ``user_can_access_project``
+    (a checagem difere entre Jinja, que faz flash+redirect, e a API, que devolve
+    403 no envelope).
+
+    Args:
+        project_id: ID do projeto cujo histórico será carregado.
+
+    Returns:
+        ``dict`` com ``project`` (instância de ``Project``) e ``history`` (lista
+        de ``ProjectHistory`` ordenada por ``timestamp`` decrescente).
+
+    Exemplo:
+        >>> ctx = build_project_history_context(1)
+        >>> ctx["project"].id
+        1
+    """
     project = get_or_404(Project, project_id)
-
-    # Verificar permissão
-    if not user_can_access_project(g.user, project):
-        flash("Você não tem permissão para visualizar este projeto.", "danger")
-        return redirect(url_for("main.list_projects"))
-
-    # Buscar histórico ordenado por data (mais recente primeiro)
     history_entries = (
         ProjectHistory.query.filter_by(project_id=project_id)
         .order_by(ProjectHistory.timestamp.desc())
         .all()
     )
+    return {"project": project, "history": history_entries}
+
+
+@main_bp.route("/project/<int:project_id>/history")
+@login_required
+def project_history(project_id):
+    """Visualizar histórico de ações de um projeto (Jinja).
+
+    Fonte de dados: ``build_project_history_context``. Mantém o controle de
+    acesso via flash+redirect (comportamento Jinja).
+    """
+    context = build_project_history_context(project_id)
+
+    if not user_can_access_project(g.user, context["project"]):
+        flash("Você não tem permissão para visualizar este projeto.", "danger")
+        return redirect(url_for("main.list_projects"))
 
     return render_template(
-        "projects/history.html", project=project, history=history_entries
+        "projects/history.html",
+        project=context["project"],
+        history=context["history"],
     )
 
 

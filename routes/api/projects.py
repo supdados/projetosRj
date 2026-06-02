@@ -1,0 +1,172 @@
+"""Endpoints JSON de projetos (telas de leitura) consumidos pela SPA SvelteKit.
+
+Fase 2 (telas de leitura). Dois endpoints, ambos no envelope canônico e
+protegidos por ``api_login_required`` (401 JSON):
+
+    - ``GET /api/projetos-pendentes`` — espelha a tela Jinja
+      ``/projetos_pendentes``, reaproveitando ``build_projetos_pendentes_context``
+      (mesma fonte de verdade). Respeita o escopo de órgão server-side
+      (``orgao_scope``); filtro de órgão inválido => 422 (em vez do redirect 302
+      do Jinja).
+    - ``GET /api/projetos/<id>/historico`` — espelha ``/project/<id>/history``,
+      reaproveitando ``build_project_history_context`` e validando o acesso via
+      ``user_can_access_project`` (404 quando o projeto não existe; 403 quando
+      fora do escopo do usuário).
+
+Anexa ao ``main_bp`` ÚNICO (``routes/blueprint.py``); NÃO cria blueprint novo.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from flask import Response, g, request
+from werkzeug.exceptions import NotFound
+
+from ..blueprint import main_bp
+from ..orgao_scope import (
+    sanitize_orgao_filter_for_current_user,
+    user_can_access_project,
+)
+from ..projects.views import (
+    build_project_history_context,
+    build_projetos_pendentes_context,
+)
+from .envelope import fail, ok
+from .negotiation import api_login_required
+from .serializers import (
+    serialize_pending_project_row,
+    serialize_project_card,
+    serialize_project_history_entry,
+)
+
+
+def _serialize_pending_context(context: dict[str, Any]) -> dict[str, Any]:
+    """Converte o contexto de "Projetos Pendentes" em payload JSON-safe.
+
+    Serializa cada linha (projeto + etapas + contadores) via
+    ``serialize_pending_project_row`` e repassa os derivados de listagem já
+    calculados no backend (mapas de bucket/progresso, contadores agregados e
+    metadados de paginação), preservando os mesmos nomes do template Jinja.
+
+    Args:
+        context: Saída de ``build_projetos_pendentes_context``.
+
+    Returns:
+        ``dict`` JSON-safe com ``projetos`` serializados, mapas auxiliares,
+        ``summary_counts`` e a paginação.
+    """
+    return {
+        "projetos": [
+            serialize_pending_project_row(row)
+            for row in context["projetos_com_etapas"]
+        ],
+        "filtro_periodo": context["filtro_periodo"],
+        "selected_responsavel": context["selected_responsavel"],
+        "selected_orgao": context["selected_orgao"],
+        "responsaveis_options": context["responsaveis_options"],
+        "etapa_bucket_map": {
+            str(etapa_id): bucket
+            for etapa_id, bucket in context["etapa_bucket_map"].items()
+        },
+        "etapa_task_progress": {
+            str(etapa_id): progress
+            for etapa_id, progress in context["etapa_task_progress"].items()
+        },
+        "summary_counts": context["summary_counts"],
+        "pagination": {
+            "page": context["pending_page"],
+            "per_page": context["pending_per_page"],
+            "total_pages": context["pending_total_pages"],
+            "total": context["pending_total_projects"],
+        },
+    }
+
+
+@main_bp.route("/api/projetos-pendentes", methods=["GET"])
+@api_login_required
+def api_projetos_pendentes() -> Response | tuple[Response, int]:
+    """Retorna os dados de "Projetos Pendentes" no envelope canônico para a SPA.
+
+    Reaproveita ``build_projetos_pendentes_context`` (a mesma fonte usada pela
+    rota Jinja) e respeita o escopo de órgão server-side. O filtro ``?orgao=`` é
+    sanitizado para o usuário corrente; um valor inválido (fora do escopo)
+    resulta em 422 JSON em vez do redirect 302 do fluxo Jinja. Os parâmetros
+    ``?periodo=``, ``?responsavel=`` e ``?page=`` espelham os da tela Jinja.
+
+    Returns:
+        Envelope ``{"ok": true, "data": {...}}`` com HTTP 200; ou
+        ``fail(..., 422, "validation")`` quando o filtro de órgão é inválido.
+        ``api_login_required`` devolve 401 JSON quando não há sessão.
+    """
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+        request.args.get("orgao")
+    )
+    if invalid_orgao_filter:
+        return fail(
+            "Filtro de órgão inválido para o usuário.",
+            status=422,
+            code="validation",
+        )
+
+    context = build_projetos_pendentes_context(
+        selected_orgao_id,
+        filtro_periodo=(request.args.get("periodo") or "atrasados").strip(),
+        selected_responsavel=(request.args.get("responsavel") or "").strip(),
+        pending_page=request.args.get("page", 1, type=int),
+    )
+    return ok(_serialize_pending_context(context))
+
+
+def _serialize_history_context(context: dict[str, Any]) -> dict[str, Any]:
+    """Converte o contexto de histórico de projeto em payload JSON-safe.
+
+    Serializa o cabeçalho do projeto via ``serialize_project_card`` e cada
+    entrada via ``serialize_project_history_entry``.
+
+    Args:
+        context: Saída de ``build_project_history_context`` (``project`` +
+            ``history``).
+
+    Returns:
+        ``dict`` JSON-safe com ``project`` e ``history``.
+    """
+    return {
+        "project": serialize_project_card(context["project"]),
+        "history": [
+            serialize_project_history_entry(entry) for entry in context["history"]
+        ],
+    }
+
+
+@main_bp.route("/api/projetos/<int:project_id>/historico", methods=["GET"])
+@api_login_required
+def api_projeto_historico(project_id: int) -> Response | tuple[Response, int]:
+    """Retorna o histórico de um projeto no envelope canônico para a SPA.
+
+    Reaproveita ``build_project_history_context`` e valida o acesso via
+    ``user_can_access_project`` (escopo de órgão server-side). Diferente da rota
+    Jinja (flash + redirect), devolve erros estruturados: 404 quando o projeto
+    não existe e 403 quando está fora do escopo do usuário.
+
+    Args:
+        project_id: ID do projeto cujo histórico será carregado.
+
+    Returns:
+        Envelope ``{"ok": true, "data": {...}}`` com HTTP 200; ou
+        ``fail(..., 404, "not_found")`` / ``fail(..., 403, "forbidden")``.
+        ``api_login_required`` devolve 401 JSON quando não há sessão.
+    """
+    try:
+        context = build_project_history_context(project_id)
+    except NotFound:
+        return fail("Projeto não encontrado.", status=404, code="not_found")
+
+    if not user_can_access_project(g.user, context["project"]):
+        return fail(
+            "Você não tem permissão para visualizar este projeto.",
+            status=403,
+            code="forbidden",
+        )
+
+    return ok(_serialize_history_context(context))

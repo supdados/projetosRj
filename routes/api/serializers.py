@@ -119,6 +119,100 @@ def serialize_project_card(project: Any) -> dict[str, Any]:
     }
 
 
+def serialize_etapa_card(etapa: Any) -> dict[str, Any]:
+    """Serializa uma etapa para a tela "Projetos Pendentes".
+
+    Usa CAMPOS REAIS de ``Etapa`` (``descricao``, ``data_inicio``, ``data_fim``,
+    ``responsavel``, ``ordem``, ``done``, ``entry_type``). As datas viram ISO
+    8601 (ou ``None``). O bucket de urgência e o progresso de tarefas NÃO ficam
+    aqui — são derivados de listagem entregues à parte (mapas por ``etapa.id``).
+
+    Args:
+        etapa: Instância de ``Etapa``.
+
+    Returns:
+        ``dict`` JSON-safe com os campos da etapa.
+    """
+    return {
+        "id": etapa.id,
+        "descricao": etapa.descricao,
+        "data_inicio": _iso_or_none(etapa.data_inicio),
+        "data_fim": _iso_or_none(etapa.data_fim),
+        "responsavel": etapa.responsavel,
+        "ordem": etapa.ordem,
+        "done": bool(etapa.done),
+        "project_id": etapa.project_id,
+        "entry_type": etapa.entry_type,
+    }
+
+
+def serialize_pending_project_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Serializa uma linha de "Projetos Pendentes" (projeto + etapas + contadores).
+
+    Reusa ``serialize_project_card`` para o projeto e ``serialize_etapa_card``
+    para as etapas visíveis/ocultas, preservando os contadores agregados já
+    calculados no backend (``build_projetos_pendentes_context``). O cliente NÃO
+    recalcula buckets/atraso.
+
+    Args:
+        row: Item de ``context["projetos_com_etapas"]`` — dict com ``projeto``,
+            ``etapas_visiveis``/``etapas_outras`` e os contadores ``qtd_*``.
+
+    Returns:
+        ``dict`` JSON-safe com ``project``, ``etapas_visiveis``,
+        ``etapas_outras`` e os contadores da linha.
+    """
+    return {
+        "project": serialize_project_card(row["projeto"]),
+        "etapas_visiveis": [
+            serialize_etapa_card(etapa) for etapa in row["etapas_visiveis"]
+        ],
+        "etapas_outras": [serialize_etapa_card(etapa) for etapa in row["etapas_outras"]],
+        "qtd_visiveis": row["qtd_visiveis"],
+        "qtd_outras": row["qtd_outras"],
+        "qtd_atrasadas": row["qtd_atrasadas"],
+        "qtd_7dias": row["qtd_7dias"],
+        "qtd_14dias": row["qtd_14dias"],
+        "qtd_21dias": row["qtd_21dias"],
+        "qtd_sem_data": row["qtd_sem_data"],
+        "max_overdue_days": row["max_overdue_days"],
+    }
+
+
+def serialize_project_history_entry(entry: Any) -> dict[str, Any]:
+    """Serializa uma entrada de ``ProjectHistory`` para a tela de histórico.
+
+    Usa CAMPOS REAIS (``action_type``, ``action_description``, ``old_value``,
+    ``new_value``, ``timestamp``) e inclui um vínculo mínimo do autor
+    (``user``) — apenas ``id``/``name``/``username``, NUNCA segredos.
+
+    Args:
+        entry: Instância de ``ProjectHistory``.
+
+    Returns:
+        ``dict`` JSON-safe com os campos da entrada de histórico.
+    """
+    author = getattr(entry, "user", None)
+    return {
+        "id": entry.id,
+        "project_id": entry.project_id,
+        "action_type": entry.action_type,
+        "action_description": entry.action_description,
+        "old_value": entry.old_value,
+        "new_value": entry.new_value,
+        "timestamp": _iso_or_none(entry.timestamp),
+        "user": (
+            {
+                "id": author.id,
+                "name": author.name,
+                "username": author.username,
+            }
+            if author is not None
+            else None
+        ),
+    }
+
+
 def serialize_task_card(task: Any) -> dict[str, Any]:
     """Serializa uma tarefa no formato de "card" para listas/dashboard.
 
