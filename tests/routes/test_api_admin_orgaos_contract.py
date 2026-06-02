@@ -412,6 +412,9 @@ def test_tipo_update_returns_ok_envelope(client_admin, seed_data):
             "nivel": 1,
             "descricao": "Atualizada",
             "ativo": "1",
+            # Secretaria é o tipo do órgão-raiz semeado; manter permite_raiz
+            # evita disparar _invalid_orgao_type_level_changes (409 hierárquico).
+            "permite_raiz": "1",
         },
     )
     assert response.status_code == 200

@@ -157,7 +157,7 @@ def test_api_chatbot_token_returns_upstream_token_payload(app, seed_data, monkey
         captured["portal_origin"] = request.headers.get("X-portal-origin")
         return _FakeResponse()
 
-    monkeypatch.setattr("routes.api.urlopen", fake_urlopen)
+    monkeypatch.setattr("routes.api.legacy.urlopen", fake_urlopen)
 
     user_client = _client_for_user(app, seed_data["user_id"])
     response = user_client.get(
