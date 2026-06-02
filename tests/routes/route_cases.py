@@ -1216,6 +1216,155 @@ ROUTE_CASES = [
         "requires_login": True,
         "requires_admin": False,
     },
+    # Fase 5b-2 (Drawer de Tarefa): detalhe + edicao inline (autosave) + lifecycle.
+    {
+        "id": "api_tarefa_detalhe_get",
+        "method": "GET",
+        "rule": "/api/tarefas/<int:task_id>/detalhe",
+        "path": "/api/tarefas/{task_id}/detalhe",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_campos_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/campos",
+        "path": "/api/tarefas/{task_id}/campos",
+        "role": "user",
+        "json": {"descricao": "Tarefa editada via drawer"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_finalizar_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/finalizar",
+        "path": "/api/tarefas/{task_id}/finalizar",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_arquivar_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/arquivar",
+        "path": "/api/tarefas/{task_id}/arquivar",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_desarquivar_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/desarquivar",
+        "path": "/api/tarefas/{task_id}/desarquivar",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_reativar_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/reativar",
+        "path": "/api/tarefas/{task_id}/reativar",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_sugestoes_responsavel_get",
+        "method": "GET",
+        "rule": "/api/tarefas/<int:task_id>/sugestoes-responsavel",
+        "path": "/api/tarefas/{task_id}/sugestoes-responsavel",
+        "role": "user",
+        "query_string": {"q": "Usuario"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    # Fase 5b-2 (Drawer de Tarefa): comentarios (add/editar/excluir) + anexos
+    # (listar/upload multipart/download binario/excluir). Anexados ao main_bp em
+    # routes/api/task_comments.py e routes/api/task_attachments.py, no envelope
+    # (EXCETO o download binario), com api_login_required + permissoes reusadas.
+    {
+        "id": "api_tarefa_comentario_add_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/comentarios",
+        "path": "/api/tarefas/{task_id}/comentarios",
+        "role": "user",
+        "json": {"content": "Comentario via drawer"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_comentario_edit_post",
+        "method": "POST",
+        "rule": "/api/comentarios/<int:comment_id>",
+        "path": "/api/comentarios/{comment_id}",
+        "role": "user",
+        "json": {"content": "Comentario editado via drawer"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_comentario_delete_post",
+        "method": "POST",
+        "rule": "/api/comentarios/<int:comment_id>/delete",
+        "path": "/api/comentarios/{comment_id}/delete",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_anexos_list_get",
+        "method": "GET",
+        "rule": "/api/tarefas/<int:task_id>/anexos",
+        "path": "/api/tarefas/{task_id}/anexos",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_anexo_upload_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/anexos",
+        "path": "/api/tarefas/{task_id}/anexos",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_anexo_download_get",
+        "method": "GET",
+        "rule": "/api/anexos/<int:anexo_id>",
+        "path": "/api/anexos/{anexo_id}",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_anexo_delete_post",
+        "method": "POST",
+        "rule": "/api/anexos/<int:anexo_id>/delete",
+        "path": "/api/anexos/{anexo_id}/delete",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
     {
         "id": "api_busca_get",
         "method": "GET",
@@ -2161,4 +2310,27 @@ ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 # e POST /api/tarefas/board/reordenar (ordem + status entre colunas). Anexados ao
 # main_bp em routes/api/board.py, no envelope, com api_login_required + escopo de
 # órgão. Total: 186.
-assert len(ROUTE_CASES) == 186
+#
+# Fase 5b-2 (Drawer de Tarefa): GET /api/tarefas/<id>/detalhe (payload completo do
+# drawer: campos editaveis + status/prioridade/tipo/responsavel + contexto
+# etapa/projeto + comentarios + anexos + permissions), POST /api/tarefas/<id>/campos
+# (edicao inline AUTOSAVE de descricao/prioridade/tipo/responsavel; status continua
+# em /api/tarefas/<id>/status da 5b-1), POST /api/tarefas/<id>/finalizar (respeita
+# _can_manage_task_restricted_actions -> 403), POST /api/tarefas/<id>/arquivar, POST
+# /api/tarefas/<id>/desarquivar, POST /api/tarefas/<id>/reativar (alias) e GET
+# /api/tarefas/<id>/sugestoes-responsavel (picker). Anexados ao main_bp em
+# routes/api/task_drawer.py, no envelope, com api_login_required + permissoes
+# server-side (reusa _can_view_task / _can_manage_task_restricted_actions). +7.
+#
+# Fase 5b-2 (etapa backend 2/2 — Comentarios + Anexos): POST
+# /api/tarefas/<id>/comentarios (add), POST /api/comentarios/<id> (editar autor),
+# POST /api/comentarios/<id>/delete (excluir autor); GET /api/tarefas/<id>/anexos
+# (listar), POST /api/tarefas/<id>/anexos (UPLOAD multipart request.files["file"],
+# valida tipo/conteudo + limite 10MB -> 413), GET /api/anexos/<id> (DOWNLOAD
+# binario send_file — NAO envelopado, mas api_login_required + _can_view_task) e
+# POST /api/anexos/<id>/delete (excluir; autor/admin). Anexados ao main_bp em
+# routes/api/task_comments.py e routes/api/task_attachments.py, reusando as regras
+# legadas (_can_view_task para comentar; autoria para editar/excluir comentario;
+# _can_manage_task_restricted_actions para excluir anexo). +7.
+# Total: 200.
+assert len(ROUTE_CASES) == 200
