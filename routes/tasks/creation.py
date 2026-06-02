@@ -71,7 +71,9 @@ def _resolve_etapa_token(raw_etapa_value, project, *, allow_empty=True, allow_do
 
 
 def _resolve_project_token(raw_project_value, allow_empty=False):
-    project_value = (raw_project_value or "").strip()
+    # Coage para str antes de .strip(): a SPA envia `project_id` como inteiro
+    # (JSON number), enquanto o form Jinja envia string. Espelha _resolve_etapa_token.
+    project_value = "" if raw_project_value is None else str(raw_project_value).strip()
     if not project_value:
         if allow_empty:
             return None, None, 200

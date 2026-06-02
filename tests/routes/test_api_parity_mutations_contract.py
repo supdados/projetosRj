@@ -180,6 +180,23 @@ def test_api_tarefa_criar_success(client_user, seed_data):
     assert data["task"]["project_id"] == seed_data["project_id"]
 
 
+def test_api_tarefa_criar_aceita_project_id_inteiro(client_user, seed_data):
+    # Regressão: a SPA envia ``project_id``/``etapa_id`` como INTEIRO (JSON number);
+    # o resolver fazia ``.strip()`` direto e estourava AttributeError -> HTTP 500
+    # (HTML), quebrando o quick-add. Deve resolver o projeto e criar a tarefa.
+    response = client_user.post(
+        "/api/tarefas",
+        json={
+            "project_id": seed_data["project_id"],
+            "etapa_id": seed_data["etapa_id"],
+            "descricao": "Tarefa via id inteiro",
+        },
+    )
+    assert response.status_code == 200
+    data = _ok(response.get_json())
+    assert data["task"]["project_id"] == seed_data["project_id"]
+
+
 def test_api_tarefa_criar_requires_descricao(client_user, seed_data):
     response = client_user.post(
         "/api/tarefas", json={"project": str(seed_data["project_id"])}
