@@ -21,6 +21,28 @@ def ensure_project_abep_indicator_column():
     return True
 
 
+def ensure_user_deleted_at_column():
+    """Garante a coluna ``user.deleted_at`` (soft-delete C4) em bancos existentes.
+
+    Mesmo padrão aditivo de ``ensure_project_abep_indicator_column``: inspeciona o
+    schema atual e só executa o ``ALTER TABLE ... ADD COLUMN`` quando a coluna
+    falta. None = ativo; timestamp = removido. Em testes a coluna já vem por
+    ``create_all`` a partir do modelo; aqui cobrimos o banco de dev no boot.
+    """
+    inspector = inspect(db.engine)
+    table_names = inspector.get_table_names()
+    if "user" not in table_names:
+        return False
+
+    column_names = {column["name"] for column in inspector.get_columns("user")}
+    if "deleted_at" in column_names:
+        return False
+
+    db.session.execute(text("ALTER TABLE user ADD COLUMN deleted_at DATETIME"))
+    db.session.commit()
+    return True
+
+
 def _rebuild_task_table_with_etapa_fk() -> None:
     """SQLite-only: recria task preservando dados e adicionando FK em etapa_id.
 
@@ -307,4 +329,8 @@ def initialize_database():
     """
     from scripts.migrations.run_migrations import run_all_migrations
 
-    return run_all_migrations(emit_output=False, stamp_alembic=False)
+    summary = run_all_migrations(emit_output=False, stamp_alembic=False)
+    # Soft-delete C4: garante user.deleted_at no banco de dev no próximo boot,
+    # sem migração manual (aditivo, mesmo padrão das demais ensure_*).
+    ensure_user_deleted_at_column()
+    return summary

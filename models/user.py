@@ -16,10 +16,19 @@ class User(db.Model):
     govbr_sub = db.Column(db.String(255), unique=True, nullable=True, index=True)
     failed_login_attempts = db.Column(db.Integer, nullable=False, default=0)
     lockout_until = db.Column(db.DateTime, nullable=True)
+    # Soft-delete (C4): None = usuário ativo; timestamp = removido. NUNCA apagamos
+    # a linha — o histórico (eventos/etapas/tarefas/comentários/anexos) permanece
+    # atribuído ao usuário, que passa a aparecer como "(removido)".
+    deleted_at = db.Column(db.DateTime, nullable=True, index=True)
 
     orgaos = db.relationship(
         "UserOrgao", backref="user", lazy=True, cascade="all, delete-orphan"
     )
+
+    @property
+    def is_active(self) -> bool:
+        """True quando o usuário não foi removido (soft-delete)."""
+        return self.deleted_at is None
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method="scrypt")

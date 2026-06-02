@@ -103,7 +103,7 @@ def _get_assignable_users_for_orgao(orgao_id):
     admin_ids = [
         user_id
         for (user_id,) in User.query.with_entities(User.id)
-        .filter(User.is_admin.is_(True))
+        .filter(User.is_admin.is_(True), User.deleted_at.is_(None))
         .all()
     ]
     candidate_ids.update(admin_ids)
@@ -125,7 +125,12 @@ def _get_assignable_users_for_orgao(orgao_id):
     if not candidate_ids:
         return []
 
-    return User.query.filter(User.id.in_(candidate_ids)).order_by(User.name.asc()).all()
+    # Soft-delete C4: usuários removidos não podem ser atribuídos como responsável.
+    return (
+        User.query.filter(User.id.in_(candidate_ids), User.deleted_at.is_(None))
+        .order_by(User.name.asc())
+        .all()
+    )
 
 
 def _get_assignable_users_for_project(project):

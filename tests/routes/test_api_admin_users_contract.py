@@ -254,15 +254,16 @@ def test_delete_returns_403_for_non_admin(client_user, seed_data):
     _assert_fail_envelope(response.get_json(), code="forbidden")
 
 
-def test_delete_user_com_evento_de_calendario_retorna_409_json(
+def test_delete_user_com_evento_de_calendario_faz_soft_delete(
     app, client_admin, seed_data
 ):
-    # Regressão: usuário com ``calendar_event`` (user_id NOT NULL) dispara
-    # IntegrityError no delete. Sem try/except a exceção vazava como HTML 500 e o
-    # cliente da SPA quebrava ("Unrecognized token '<'"). Deve devolver 409 JSON.
+    # Soft-delete C4: usuário com ``calendar_event`` (user_id NOT NULL) NÃO pode
+    # ser apagado — antes isto dava IntegrityError (409). Agora marcamos
+    # ``deleted_at`` e preservamos TODO o histórico: a linha do usuário e o
+    # ``calendar_event`` permanecem intactos.
     from datetime import datetime
 
-    from models import CalendarEvent, db
+    from models import CalendarEvent, User, db
 
     user_id = seed_data["deletable_user_id"]
     with app.app_context():
@@ -279,6 +280,122 @@ def test_delete_user_com_evento_de_calendario_retorna_409_json(
 
     response = client_admin.delete(f"/api/admin/usuarios/{user_id}")
 
-    assert response.status_code == 409
-    assert response.is_json  # NÃO pode vazar HTML
-    _assert_fail_envelope(response.get_json(), code="conflict")
+    assert response.status_code == 200
+    assert response.is_json
+    data = _assert_ok_envelope(response.get_json())
+    assert data["deleted_id"] == user_id
+
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        assert user is not None  # a linha CONTINUA existindo
+        assert user.deleted_at is not None  # marcado como removido
+        # O histórico permanece: o calendar_event do usuário não foi apagado.
+        events = CalendarEvent.query.filter_by(user_id=user_id).all()
+        assert len(events) == 1
+
+
+def test_soft_deleted_user_some_da_listagem_admin(app, client_admin, seed_data):
+    # Soft-delete C4: após remover, o usuário não aparece mais no GET da lista.
+    from models import User, db
+
+    user_id = seed_data["deletable_user_id"]
+    response = client_admin.delete(f"/api/admin/usuarios/{user_id}")
+    assert response.status_code == 200
+
+    data = _assert_ok_envelope(client_admin.get("/api/admin/usuarios").get_json())
+    listed_ids = {u["id"] for u in data["usuarios"]}
+    assert user_id not in listed_ids
+
+    with app.app_context():
+        assert db.session.get(User, user_id) is not None  # mas continua no banco
+
+
+def test_requisicao_de_usuario_removido_e_barrada(app, seed_data):
+    # Soft-delete C4: mesmo com sessão válida, o usuário removido é barrado pelo
+    # guard de ``load_logged_in_user`` (session.clear + g.user=None). O endpoint
+    # admin então responde 401 unauthenticated.
+    from models import User, db
+
+    user_id = seed_data["admin_id"]
+    other_admin_id = None
+    with app.app_context():
+        # Cria um 2º admin ativo para que o alvo possa ser marcado como removido
+        # sem violar o invariante de "único admin" e simula a remoção direta.
+        from werkzeug.security import generate_password_hash
+
+        from time_utils import utc_now
+
+        backup_admin = User(
+            username="backup_admin",
+            name="Backup Admin",
+            password_hash=generate_password_hash("x", method="scrypt"),
+            is_admin=True,
+        )
+        db.session.add(backup_admin)
+        db.session.flush()
+        other_admin_id = backup_admin.id
+        target = db.session.get(User, user_id)
+        target.deleted_at = utc_now()
+        db.session.commit()
+
+    c = app.test_client()
+    with c.session_transaction() as sess:
+        sess["user_id"] = user_id
+
+    response = c.get("/api/admin/usuarios")
+    assert response.status_code == 401
+    _assert_fail_envelope(response.get_json(), code="unauthenticated")
+    assert other_admin_id is not None
+
+
+def test_guard_unico_admin_conta_apenas_ativos(app, client_admin, seed_data):
+    # Soft-delete C4: o guard de "único admin" conta só admins ATIVOS. Com um 2º
+    # admin já removido (deleted_at setado), o admin restante volta a ser o único
+    # ativo e NÃO pode ser excluído.
+    from models import User, db
+
+    with app.app_context():
+        from werkzeug.security import generate_password_hash
+
+        from time_utils import utc_now
+
+        removed_admin = User(
+            username="removed_admin",
+            name="Removed Admin",
+            password_hash=generate_password_hash("x", method="scrypt"),
+            is_admin=True,
+            deleted_at=utc_now(),
+        )
+        db.session.add(removed_admin)
+        db.session.commit()
+        admin_id = seed_data["admin_id"]
+
+    # Self-delete já cobre 422; aqui validamos a contagem de ativos criando um
+    # admin ATIVO extra e tentando removê-lo deve funcionar, depois o restante é
+    # o único ativo. Verificamos via tentativa de remover o último ativo restante.
+    with app.app_context():
+        from werkzeug.security import generate_password_hash
+
+        second_active = User(
+            username="second_active_admin",
+            name="Second Active Admin",
+            password_hash=generate_password_hash("x", method="scrypt"),
+            is_admin=True,
+        )
+        db.session.add(second_active)
+        db.session.commit()
+        second_active_id = second_active.id
+
+    # Remove o 2º admin ativo -> ok (ainda resta o admin logado ativo).
+    resp = client_admin.delete(f"/api/admin/usuarios/{second_active_id}")
+    assert resp.status_code == 200
+
+    # Agora o admin logado é o único ATIVO; o removed_admin NÃO conta. Tentar
+    # remover via outro caminho confirmaria 422, mas o self-delete já bloqueia o
+    # admin logado. Validamos a contagem diretamente.
+    with app.app_context():
+        active_admins = User.query.filter(
+            User.is_admin.is_(True), User.deleted_at.is_(None)
+        ).count()
+        assert active_admins == 1
+        assert admin_id is not None

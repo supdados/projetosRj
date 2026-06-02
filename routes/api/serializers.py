@@ -152,6 +152,28 @@ def serialize_orgao_tipo(tipo: Any) -> dict[str, Any]:
     }
 
 
+def _author_display_name(user: Any, *, fallback: str = "Usuário") -> str:
+    """Nome de exibição de um autor, sufixado "(removido)" se soft-deletado.
+
+    Soft-delete C4: em contextos HISTÓRICOS (autor de comentário/anexo/histórico)
+    o usuário removido continua resolvendo o nome, mas sinalizamos a remoção para
+    a UI. NUNCA quebra quando ``user`` é ``None``.
+
+    Args:
+        user: Instância de ``User`` (ou ``None``).
+        fallback: Nome usado quando ``user`` é ``None`` ou sem nome.
+
+    Returns:
+        ``str`` com o nome (mais " (removido)" quando ``deleted_at`` está setado).
+    """
+    if user is None:
+        return fallback
+    base = user.name or user.username or fallback
+    if getattr(user, "deleted_at", None) is not None:
+        return f"{base} (removido)"
+    return base
+
+
 def _resolve_auth_provider(user: Any) -> str:
     """Deriva o provedor de autenticação a partir do vínculo Gov.br.
 
@@ -454,6 +476,7 @@ def serialize_project_history_entry(entry: Any) -> dict[str, Any]:
                 "id": author.id,
                 "name": author.name,
                 "username": author.username,
+                "is_deleted": getattr(author, "deleted_at", None) is not None,
             }
             if author is not None
             else None
@@ -611,7 +634,10 @@ def _serialize_task_comment(
         "id": comment.id,
         "content": comment.content,
         "user_id": comment.user_id,
-        "author_name": (author.name if author else None) or "Usuário",
+        "author_name": _author_display_name(author),
+        "author_is_deleted": bool(
+            author is not None and getattr(author, "deleted_at", None) is not None
+        ),
         "created_at": _iso_or_none(comment.created_at),
         "updated_at": _iso_or_none(comment.updated_at),
         "is_own": is_own,
@@ -644,7 +670,7 @@ def _serialize_task_anexo(
         "filename": anexo.filename,
         "content_type": content_type,
         "is_image": content_type.startswith("image/"),
-        "uploaded_by": (uploaded_by.name if uploaded_by else None) or "Usuário",
+        "uploaded_by": _author_display_name(uploaded_by),
         "created_at": _iso_or_none(anexo.created_at),
         "url": download_url,
     }

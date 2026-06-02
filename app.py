@@ -84,6 +84,13 @@ def _register_request_hooks(app):
         g.user = db.session.get(User, user_id)
         if g.user is None:
             session.clear()
+            return
+        # Soft-delete C4: usuário removido não usa o app, mesmo que autentique.
+        # Invalida a sessão atual e bloqueia re-login (local/gov.br) no próximo
+        # request — o histórico permanece atribuído a ele, mas o acesso some.
+        if g.user.deleted_at is not None:
+            session.clear()
+            g.user = None
 
     def _refresh_failure_response():
         """Resposta para falha de refresh Gov.br: 401 JSON p/ API, redirect p/ Jinja.

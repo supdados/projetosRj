@@ -24,6 +24,7 @@ from typing import Any
 from flask import Response, g, request
 
 from models import OrgaoUnidade, User, db
+from time_utils import utc_now
 
 from ..admin_users import (
     _list_orgaos_with_depth,
@@ -72,8 +73,12 @@ def api_admin_usuarios_list() -> Response | tuple[Response, int]:
         HTTP 200. ``api_admin_required`` devolve 401/403 JSON conforme a sessão.
     """
     page = request.args.get("page", 1, type=int)
-    pagination = User.query.order_by(User.name).paginate(
-        page=page, per_page=_PER_PAGE, error_out=False
+    # Soft-delete C4: a listagem admin mostra apenas usuários ATIVOS; removidos
+    # (deleted_at não nulo) somem da gestão mas continuam no histórico.
+    pagination = (
+        User.query.filter(User.deleted_at.is_(None))
+        .order_by(User.name)
+        .paginate(page=page, per_page=_PER_PAGE, error_out=False)
     )
     return ok(
         {"usuarios": [serialize_admin_user(user) for user in pagination.items]},
@@ -217,8 +222,9 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
     if should_update_cpf:
         cpf_govbr, cpf_error = _parse_cpf_govbr(payload.get("cpf_govbr"))
 
-    if user.is_admin and not is_admin_flag and User.query.filter_by(
-        is_admin=True
+    # Soft-delete C4: conta apenas administradores ATIVOS ao proteger o último.
+    if user.is_admin and not is_admin_flag and User.query.filter(
+        User.is_admin.is_(True), User.deleted_at.is_(None)
     ).count() <= 1:
         return fail(
             "Não é possível remover o status de administrador do único "
@@ -289,17 +295,22 @@ def api_admin_usuarios_remove_cpf(user_id: int) -> Response | tuple[Response, in
 @main_bp.route("/api/admin/usuarios/<int:user_id>", methods=["DELETE"])
 @api_admin_required
 def api_admin_usuarios_delete(user_id: int) -> Response | tuple[Response, int]:
-    """Exclui um usuário (envelope canônico), espelhando ``delete_user``.
+    """Remove (soft-delete) um usuário, preservando TODO o histórico (C4).
+
+    SOFT-DELETE: marca ``user.deleted_at`` em vez de apagar a linha. Eventos,
+    etapas, tarefas, comentários, anexos e ``project_history`` permanecem intactos
+    e atribuídos ao usuário, que passa a aparecer como "(removido)". NUNCA
+    cascateia/apaga dados — por isso não há mais try/except de IntegrityError de FK.
 
     Preserva as proteções: o admin não pode se auto-excluir e o único
-    administrador do sistema não pode ser excluído.
+    administrador ATIVO do sistema não pode ser removido.
 
     Args:
-        user_id: ID do usuário a excluir.
+        user_id: ID do usuário a remover.
 
     Returns:
         Envelope ``{"ok": true, "data": {"deleted_id": <id>}}`` com HTTP 200; ou
-        ``fail(..., 422, "validation")`` quando a exclusão é proibida;
+        ``fail(..., 422, "validation")`` quando a remoção é proibida;
         ``fail(..., 404)`` quando o usuário não existe.
     """
     user = db.session.get(User, user_id)
@@ -312,28 +323,20 @@ def api_admin_usuarios_delete(user_id: int) -> Response | tuple[Response, int]:
             status=422,
             code="validation",
         )
-    if user.is_admin and User.query.filter_by(is_admin=True).count() == 1:
+    # O guard do "único admin" conta apenas administradores ATIVOS (deleted_at
+    # is None) — admins já removidos não contam como existentes.
+    active_admins = User.query.filter(
+        User.is_admin.is_(True), User.deleted_at.is_(None)
+    ).count()
+    if user.is_admin and user.deleted_at is None and active_admins == 1:
         return fail(
             "Não é possível excluir o único administrador do sistema.",
             status=422,
             code="validation",
         )
 
-    # Espelha o try/except do `delete_user` legado: usuários antigos podem ter
-    # registros vinculados NOT NULL (ex.: calendar_event.user_id), cuja exclusão
-    # dispara IntegrityError. Sem este guard a exceção vaza como HTML 500 e o
-    # cliente da SPA quebra ao tentar parsear JSON ("Unrecognized token '<'").
-    try:
-        db.session.delete(user)
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        return fail(
-            "Não foi possível excluir: o usuário possui registros vinculados "
-            "(ex.: eventos de calendário). Remova-os antes de excluir.",
-            status=409,
-            code="conflict",
-        )
+    user.deleted_at = utc_now()
+    db.session.commit()
     return ok({"deleted_id": user_id})
 
 
