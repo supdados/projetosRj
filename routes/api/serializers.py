@@ -337,6 +337,7 @@ def serialize_etapa_card(etapa: Any) -> dict[str, Any]:
         "data_fim": _iso_or_none(etapa.data_fim),
         "responsavel": etapa.responsavel,
         "ordem": etapa.ordem,
+        "iniciada": bool(etapa.iniciada),
         "done": bool(etapa.done),
         "project_id": etapa.project_id,
         "entry_type": etapa.entry_type,
@@ -348,6 +349,7 @@ def serialize_etapa_detail(
     *,
     task_total: int = 0,
     task_done: int = 0,
+    meeting: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Serializa uma etapa para a tela de Detalhe do Projeto.
 
@@ -367,7 +369,7 @@ def serialize_etapa_detail(
         ``dict`` JSON-safe com os campos da etapa e ``task_count``
         ``{total, done}`` (read-only).
     """
-    return {
+    payload: dict[str, Any] = {
         "id": etapa.id,
         "descricao": etapa.descricao,
         "data_inicio": _iso_or_none(etapa.data_inicio),
@@ -382,6 +384,12 @@ def serialize_etapa_detail(
         "is_google_meeting": etapa.entry_type == "google_meeting",
         "task_count": {"total": int(task_total), "done": int(task_done)},
     }
+    # Reuniões Google (Fase 6): bloco read-only com os dados do evento Google e
+    # as permissões de gerência/edição já calculadas no backend. NUNCA inclui
+    # tokens OAuth — apenas o e-mail do dono já exposto no payload de etapa.
+    if meeting is not None:
+        payload["meeting"] = meeting
+    return payload
 
 
 def serialize_pending_project_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -580,7 +588,9 @@ def serialize_task_card(task: Any) -> dict[str, Any]:
     }
 
 
-def _serialize_task_comment(comment: Any, *, current_user_id: int | None) -> dict[str, Any]:
+def _serialize_task_comment(
+    comment: Any, *, current_user_id: int | None
+) -> dict[str, Any]:
     """Serializa um comentário de tarefa para o drawer (sem segredos).
 
     Usa CAMPOS REAIS de ``TaskComment`` (``content``, ``created_at``,
@@ -610,7 +620,9 @@ def _serialize_task_comment(comment: Any, *, current_user_id: int | None) -> dic
     }
 
 
-def _serialize_task_anexo(anexo: Any, *, download_url: str | None = None) -> dict[str, Any]:
+def _serialize_task_anexo(
+    anexo: Any, *, download_url: str | None = None
+) -> dict[str, Any]:
     """Serializa um anexo de tarefa para o drawer (sem segredos).
 
     Usa CAMPOS REAIS de ``TaskAnexo`` (``filename``, ``content_type``,

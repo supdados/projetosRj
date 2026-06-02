@@ -31,7 +31,10 @@ from flask import Response, g, request
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from models import Project, Task, db
 
+from services.etapas_dates import meeting_payload_block
+
 from ..blueprint import main_bp
+from ..calendars.helpers import _connection_for_current_user
 from ..orgao_scope import user_can_access_project
 from ..projects.ajax import ProjectInlineError, apply_project_inline_changes
 from ..shared import log_project_action
@@ -123,6 +126,16 @@ def _task_counts_by_etapa(project: Project) -> dict[int, dict[str, int]]:
     }
 
 
+def _etapa_meeting_block(etapa: Any, connection: Any) -> dict[str, Any] | None:
+    """Bloco read-only da reunião Google da etapa para o payload do Detalhe.
+
+    Fina camada sobre ``meeting_payload_block`` (services/etapas_dates.py) — a
+    MESMA fonte usada pelas rotas de criar/editar reunião — para que o GET do
+    detalhe e as mutações de reunião devolvam exatamente o mesmo shape.
+    """
+    return meeting_payload_block(etapa, connection)
+
+
 def _serialize_detail(project: Project) -> dict[str, Any]:
     """Monta o payload completo do Detalhe de Projeto.
 
@@ -141,6 +154,7 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
         project.etapas, key=lambda e: (e.ordem if e.ordem is not None else 0)
     )
     can_edit = user_can_access_project(g.user, project)
+    connection = _connection_for_current_user()
     return {
         "project": serialize_project_detail(project),
         "etapas": [
@@ -148,6 +162,7 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
                 etapa,
                 task_total=counts.get(etapa.id, {}).get("total", 0),
                 task_done=counts.get(etapa.id, {}).get("done", 0),
+                meeting=_etapa_meeting_block(etapa, connection),
             )
             for etapa in etapas
         ],

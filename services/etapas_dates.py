@@ -118,24 +118,47 @@ def _serialize_etapa_payload(etapa, *, connection=None):
         "entry_type": etapa.entry_type or "manual",
     }
 
-    if is_google_meeting_stage(etapa) and etapa.meeting is not None:
-        can_manage = can_manage_project_meeting(connection, etapa.meeting)
-        payload["meeting"] = {
-            "time_summary": meeting_time_summary(etapa.meeting),
-            "title": etapa.descricao,
-            "description": etapa.meeting.description or "",
-            "starts_at": format_input_datetime(etapa.meeting.starts_at),
-            "ends_at": format_input_datetime(etapa.meeting.ends_at),
-            "start_time_display": meeting_time_display(etapa.meeting, boundary="start"),
-            "end_time_display": meeting_time_display(etapa.meeting, boundary="end"),
-            "is_all_day": bool(etapa.meeting.is_all_day),
-            "sync_status": etapa.meeting.sync_status,
-            "sync_error": etapa.meeting.sync_error or "",
-            "location": etapa.meeting.location or "",
-            "meet_link": etapa.meeting.meet_link or "",
-            "owner_email": etapa.meeting.google_owner_email or "",
-            "can_manage": can_manage,
-            "can_edit": can_manage and etapa.meeting.sync_status != "error",
-            "can_edit_dates": can_manage and etapa.meeting.sync_status != "error",
-        }
+    meeting_block = meeting_payload_block(etapa, connection)
+    if meeting_block is not None:
+        payload["meeting"] = meeting_block
     return payload
+
+
+def meeting_payload_block(etapa, connection):
+    """Bloco read-only da reunião Google de uma etapa (ou ``None``).
+
+    Fonte ÚNICA de verdade do payload de reunião usado tanto pelo serializer
+    legado (``_serialize_etapa_payload``) quanto pelo serializer do Detalhe na
+    SPA (``serialize_etapa_detail``). NUNCA expõe tokens OAuth — apenas o e-mail
+    do dono já público no evento.
+
+    Args:
+        etapa: Instância de ``Etapa``.
+        connection: Conexão Google do usuário atual (para ``can_manage``).
+
+    Returns:
+        ``dict`` com os campos da reunião, ou ``None`` quando a etapa não é uma
+        reunião Google com evento associado.
+    """
+    if not is_google_meeting_stage(etapa) or etapa.meeting is None:
+        return None
+    can_manage = can_manage_project_meeting(connection, etapa.meeting)
+    editable = can_manage and etapa.meeting.sync_status != "error"
+    return {
+        "time_summary": meeting_time_summary(etapa.meeting),
+        "title": etapa.descricao,
+        "description": etapa.meeting.description or "",
+        "starts_at": format_input_datetime(etapa.meeting.starts_at),
+        "ends_at": format_input_datetime(etapa.meeting.ends_at),
+        "start_time_display": meeting_time_display(etapa.meeting, boundary="start"),
+        "end_time_display": meeting_time_display(etapa.meeting, boundary="end"),
+        "is_all_day": bool(etapa.meeting.is_all_day),
+        "sync_status": etapa.meeting.sync_status,
+        "sync_error": etapa.meeting.sync_error or "",
+        "location": etapa.meeting.location or "",
+        "meet_link": etapa.meeting.meet_link or "",
+        "owner_email": etapa.meeting.google_owner_email or "",
+        "can_manage": can_manage,
+        "can_edit": editable,
+        "can_edit_dates": editable,
+    }

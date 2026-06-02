@@ -20,9 +20,19 @@ const config = {
 		csrf: {
 			trustedOrigins: ['*']
 		},
-		// Assets do bundle vivem sob /static/spa/ na origem Flask.
+		// O ROUTER opera na RAIZ (base vazia) para casar com os PATHS NATIVOS
+		// servidos pelo Flask (`/dashboard`, `/projetos`, `/tarefas`, `/admin/*`,
+		// `/busca`, `/calendarios`...). routes/spa.py serve o index (via Jinja, com
+		// CSP nonce) nesses paths, entao deep-link/refresh (F5) resolvem a rota
+		// client-side correta sem loop.
+		//
+		// Os ASSETS continuam fisicamente sob /static/spa/ (adapter-static gravou
+		// ali). `assets` e independente de `base` no SvelteKit: o bootstrap usa
+		// `assets` para resolver modulepreload/start/app e os chunks, enquanto o
+		// roteamento client-side usa `base`. Assim o router fica coerente com a URL
+		// servida sem precisar duplicar/mover o bundle.
 		paths: {
-			base: '/static/spa',
+			base: '',
 			relative: false
 		}
 	}

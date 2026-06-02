@@ -1,25 +1,18 @@
 from flask import abort, current_app, flash, g, jsonify, redirect, request, url_for
 
 from models import (
-    CalendarEvent,
     Etapa,
     Project,
-    ProjectStageMeeting,
     StageTemplate,
     db,
 )
 from services.calendar_core import parse_event_form
 from services.etapas_import import import_template_stages
-from services.calendar_sync import sync_local_event_to_google
 from services.project_meetings import (
-    MEETING_ENTRY_TYPE,
     can_manage_project_meeting,
+    create_stage_meeting,
     is_google_meeting_stage,
-    meeting_time_display,
-    meeting_time_summary,
-    sync_etapa_from_meeting,
-    sync_local_calendar_event_mirrors,
-    update_meeting_from_calendar_event,
+    update_stage_meeting,
 )
 
 from routes.blueprint import main_bp
@@ -30,7 +23,6 @@ from routes.etapas.helpers import (
     _connection_for_current_user,
     _current_user_can_edit_project,
     _is_ajax_request,
-    _next_etapa_order,
     _serialize_etapa_payload,
 )
 
@@ -65,71 +57,19 @@ def add_project_meeting(project_id):
         flash(str(exc), "warning")
         return redirect(url_for("main.project_detail", project_id=project_id))
 
-    nova_ordem = _next_etapa_order(project.id)
-    event = CalendarEvent(
-        user_id=g.user.id,
-        title=payload["title"],
-        description=payload["description"],
-        location=payload["location"],
-        starts_at=payload["starts_at"],
-        ends_at=payload["ends_at"],
-        is_all_day=payload["is_all_day"],
-        timezone="America/Sao_Paulo",
-        source="app",
+    etapa, sync_warning = create_stage_meeting(
+        current_app.config,
+        project,
+        connection,
+        payload,
+        actor_user_id=g.user.id,
     )
-    etapa = Etapa(
-        descricao=payload["title"],
-        project_id=project.id,
-        ordem=nova_ordem,
-        entry_type=MEETING_ENTRY_TYPE,
-    )
-    db.session.add_all([event, etapa])
-    db.session.flush()
-
-    sync_warning = None
-    try:
-        sync_local_event_to_google(
-            current_app.config,
-            event,
-            connection,
-            create_conference=payload["create_conference"],
-        )
-    except Exception as exc:
-        event.sync_status = "error"
-        event.sync_error = str(exc)
-        sync_warning = str(exc)
-
-    meeting = ProjectStageMeeting(
-        etapa_id=etapa.id,
-        project_id=project.id,
-        calendar_event_id=event.id,
-        creator_user_id=g.user.id,
-        google_owner_account_id=connection.google_account_id,
-        google_owner_email=connection.google_account_email,
-        google_event_id=event.google_event_id,
-        google_calendar_id=event.google_calendar_id
-        or connection.calendar_id
-        or "primary",
-        starts_at=event.starts_at,
-        ends_at=event.ends_at,
-        is_all_day=bool(event.is_all_day),
-        timezone=event.timezone or "America/Sao_Paulo",
-        description=event.description,
-        location=event.location,
-        meet_link=event.meet_link,
-        sync_status=event.sync_status,
-        sync_error=event.sync_error,
-    )
-    db.session.add(meeting)
-    update_meeting_from_calendar_event(meeting, event)
-    sync_etapa_from_meeting(etapa, meeting, title=event.title)
-    sync_local_calendar_event_mirrors(meeting, title=event.title)
 
     try:
         log_project_action(
             project_id=project.id,
             action_type="add_google_meeting",
-            description=f'Adicionou a reunião "{event.title}"',
+            description=f'Adicionou a reunião "{etapa.descricao}"',
         )
         db.session.commit()
     except Exception:
@@ -201,59 +141,15 @@ def edit_project_meeting(etapa_id):
         flash(str(exc), "warning")
         return redirect(url_for("main.project_detail", project_id=project.id))
 
-    event = meeting.calendar_event
-    if event is None:
-        event = CalendarEvent(
-            user_id=meeting.creator_user_id,
-            title=etapa.descricao,
-            description=meeting.description,
-            location=meeting.location,
-            starts_at=meeting.starts_at,
-            ends_at=meeting.ends_at,
-            is_all_day=meeting.is_all_day,
-            timezone=meeting.timezone or "America/Sao_Paulo",
-            source="app",
-            google_calendar_id=meeting.google_calendar_id,
-            google_event_id=meeting.google_event_id,
-            meet_link=meeting.meet_link,
-            sync_status=meeting.sync_status,
-            sync_error=meeting.sync_error,
-        )
-        db.session.add(event)
-        db.session.flush()
-        meeting.calendar_event_id = event.id
-
-    event.title = payload["title"]
-    event.description = payload["description"]
-    event.location = payload["location"]
-    event.starts_at = payload["starts_at"]
-    event.ends_at = payload["ends_at"]
-    event.is_all_day = payload["is_all_day"]
-    event.timezone = meeting.timezone or event.timezone or "America/Sao_Paulo"
-    event.source = "app"
-
-    sync_warning = None
-    try:
-        sync_local_event_to_google(
-            current_app.config,
-            event,
-            connection,
-            create_conference=payload["create_conference"],
-        )
-    except Exception as exc:
-        event.sync_status = "error"
-        event.sync_error = str(exc)
-        sync_warning = str(exc)
-
-    update_meeting_from_calendar_event(meeting, event)
-    sync_etapa_from_meeting(etapa, meeting, title=event.title)
-    sync_local_calendar_event_mirrors(meeting, title=event.title)
+    etapa, sync_warning = update_stage_meeting(
+        current_app.config, etapa, connection, payload
+    )
 
     try:
         log_project_action(
             project_id=project.id,
             action_type="edit_google_meeting",
-            description=f'Editou a reunião "{event.title}"',
+            description=f'Editou a reunião "{etapa.descricao}"',
         )
         db.session.commit()
     except Exception:

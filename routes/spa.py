@@ -1,42 +1,79 @@
-"""Serve o index do bundle SvelteKit (SPA do piloto) via Jinja + csp_nonce.
+"""Serve a SPA SvelteKit (CSR) nos PATHS NATIVOS, com deep-link e F5 robustos.
 
-A SPA do piloto e montada sob ``/spa`` (raiz da SPA) e atende os paths migrados
-do piloto — a raiz da SPA e ``/spa/dashboard`` — devolvendo SEMPRE o mesmo index
-(client-side routing). O index e renderizado por ``render_template`` para injetar
-o ``csp_nonce`` (CSP ``script-src 'self' 'nonce-{nonce}'``, app.py:55) e a
-``<meta name="csrf-token">``; NUNCA e servido como arquivo estatico puro.
+PROBLEMA RESOLVIDO (item #1)
+---------------------------
+O roteador do SvelteKit precisa operar na MESMA base da URL servida. Antes, o
+``paths.base`` era ``/static/spa`` mas o index (com CSP nonce) so era servido em
+``/spa`` -> num deep-link/refresh o cliente iniciava com base ``/static/spa``
+enquanto a URL era ``/spa/...``: descasamento -> loop / tela branca.
 
-PATHS EXCLUIDOS (NAO interceptados): por desenho, esta rota so casa o prefixo
-``/spa``; portanto ``/api/*``, ``/webhook``, ``/calendar/oauth/*``, ``/auth/*``,
-``/login*``, ``/logout``, ``/favicon.ico``, ``/setup_db`` e ``/static/*`` (onde
-vive o bundle real, ``static/spa/``) permanecem nas suas rotas originais. Um guard
-interno reforca a exclusao para qualquer subpath reservado.
+ABORDAGEM
+---------
+1) ``frontend/svelte.config.js`` passa a usar ``paths.base = ''`` (RAIZ). Assim o
+   roteador client-side casa com os PATHS NATIVOS das telas migradas
+   (``/dashboard``, ``/projetos``, ``/projetos/pendentes``, ``/projetos/<id>``,
+   ``/tarefas``, ``/admin/*``, ``/busca``, ``/calendarios``). Com ``base=''`` o
+   bootstrap referencia os assets em ``/_app/...`` (raiz).
+2) Os ASSETS continuam fisicamente em ``static/spa/_app/`` (adapter-static). Como
+   o cliente os pede em ``/_app/...`` (raiz), esta rota serve ``/_app/<path>`` a
+   partir de ``static/spa/_app/`` (arquivos imutaveis e versionados por hash).
+3) O INDEX e servido via ``_render_spa()`` (Jinja, com ``%CSP_NONCE%``
+   substituido em runtime — NUNCA estatico cru, senao a CSP bloqueia o bootstrap)
+   nos paths nativos das telas migradas QUE NAO POSSUEM rota Jinja viva de mesma
+   URL: ``/projetos``, ``/projetos/pendentes``, ``/projetos/<id>``,
+   ``/projetos/<id>/historico``, ``/admin``, ``/admin/usuarios``,
+   ``/admin/usuarios/novo``, ``/admin/usuarios/<id>``, ``/admin/orgaos/novo`` e
+   ``/admin/orgaos/<id>``. Sao atendidos por um catch-all dinamico
+   ``/<path:spa_path>`` (rank MENOR que rotas estaticas — Werkzeug prioriza rotas
+   estaticas — entao so casa o que nenhuma rota Jinja atendeu), restrito ao
+   matcher de paths migrados; qualquer outro path -> 404 (preserva o comportamento
+   atual). Deep-link e F5 nesses paths resolvem a rota client-side correta.
 
-A funcao e anexada ao ``main_bp`` UNICO (``routes/blueprint.py``); NAO criamos
-blueprint novo, para preservar os ``url_for("main.xxx")`` existentes.
+LIMITE CONSCIENTE (telas Jinja AINDA VIVAS de mesma URL)
+--------------------------------------------------------
+``/dashboard``, ``/tarefas``, ``/busca``, ``/calendarios``, ``/admin/orgaos``,
+``/admin/orgaos/tipos`` e ``/admin/templates`` continuam com rota Jinja viva
+(coberta por testes de contrato/permissao). Como a migracao dessas telas no
+SERVIDOR ainda nao foi cortada (os testes provam que o Jinja e a tela canonica
+nessas URLs), NAO interceptamos esses GETs — fazer isso quebraria as telas Jinja
+vivas e seus guards de login/admin. A SPA possui rotas client-side para elas, mas
+o cut-over server-side (servir o index nesses paths) deve ocorrer junto da remocao
+da rota/teste Jinja correspondente, numa lane de migracao dedicada. Ate la, F5
+nesses paths cai na tela Jinja legada — SEM loop e SEM tela branca.
+
+EXCLUSOES (nunca SPA): ``/api/*``, ``/webhook``, ``/calendar/oauth/*``,
+``/auth/*``, ``/login*``, ``/logout``, ``/static/*``, ``/favicon.ico``,
+``/setup_db``, ``/_app/*`` e o proprio ``/spa`` legado.
+
+A funcao e anexada ao ``main_bp`` UNICO; NAO criamos blueprint novo, para
+preservar os ``url_for("main.xxx")`` existentes.
 """
 
 from __future__ import annotations
 
 import os
 import re
+import secrets
 
-from flask import abort, g, render_template
+from flask import abort, g, render_template, send_from_directory
 
 from .blueprint import main_bp
 
-# Caminho do index buildado pelo frontend (adapter-static -> static/spa/).
-_BUNDLE_INDEX_PATH = os.path.join(
+# Diretorio do bundle buildado (adapter-static -> static/spa/).
+_BUNDLE_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "static",
     "spa",
-    "index.html",
 )
+_BUNDLE_INDEX_PATH = os.path.join(_BUNDLE_DIR, "index.html")
+# Assets imutaveis do SvelteKit; com base='' o cliente os pede em /_app/...
+_BUNDLE_APP_DIR = os.path.join(_BUNDLE_DIR, "_app")
 
-# Prefixos que NUNCA devem ser servidos como SPA, mesmo que cheguem como subpath
-# do catch-all. Defesa em profundidade: o mount ja e ``/spa``, mas reforcamos.
+# Prefixos que NUNCA sao servidos como SPA, mesmo via catch-all. Defesa em
+# profundidade alem das rotas estaticas dedicadas (api/auth/login/...).
 _RESERVED_SUBPATH_PREFIXES = (
     "api/",
+    "api",
     "webhook",
     "calendar/oauth",
     "auth/",
@@ -45,6 +82,36 @@ _RESERVED_SUBPATH_PREFIXES = (
     "favicon.ico",
     "setup_db",
     "static/",
+    "static",
+    "_app/",
+    "_app",
+    "spa/",
+    "spa",
+)
+
+# --- Matcher dos PATHS NATIVOS servidos pelo catch-all da SPA ---------------
+# Conjunto exato (sem barra inicial) e padroes dinamicos. SO inclui paths
+# migrados que NAO possuem rota Jinja viva de mesma URL (os colidentes — ver
+# "LIMITE CONSCIENTE" no docstring — continuam no Jinja e nao entram aqui).
+# Atualizar quando uma tela for migrada para um path nativo livre OU quando uma
+# rota Jinja colidente for cortada (entao seu path entra aqui e o catch-all passa
+# a servi-lo, pois sem a rota estatica o dinamico finalmente casa).
+_MIGRATED_EXACT_PATHS = frozenset(
+    {
+        "projetos",
+        "projetos/pendentes",
+        "admin",
+        "admin/orgaos/novo",
+        "admin/usuarios",
+        "admin/usuarios/novo",
+    }
+)
+# Segmentos dinamicos das telas migradas (``<id>`` numerico). re.fullmatch.
+_MIGRATED_DYNAMIC_PATTERNS = (
+    re.compile(r"projetos/\d+"),
+    re.compile(r"projetos/\d+/historico"),
+    re.compile(r"admin/orgaos/\d+"),
+    re.compile(r"admin/usuarios/\d+"),
 )
 
 _HEAD_ASSETS_RE = re.compile(
@@ -52,6 +119,19 @@ _HEAD_ASSETS_RE = re.compile(
     re.IGNORECASE,
 )
 _BODY_RE = re.compile(r"<body[^>]*>(?P<body>.*)</body>", re.IGNORECASE | re.DOTALL)
+
+
+def _is_migrated_spa_path(normalized: str) -> bool:
+    """Indica se ``normalized`` (sem barra inicial) e um path de tela migrada."""
+    if normalized in _MIGRATED_EXACT_PATHS:
+        return True
+    return any(p.fullmatch(normalized) for p in _MIGRATED_DYNAMIC_PATTERNS)
+
+
+def _is_reserved(subpath: str) -> bool:
+    """Indica se o subpath pertence a uma area reservada (nao-SPA)."""
+    normalized = subpath.lstrip("/")
+    return any(normalized.startswith(prefix) for prefix in _RESERVED_SUBPATH_PREFIXES)
 
 
 def _read_bundle_fragments(nonce: str) -> tuple[str, str]:
@@ -87,15 +167,25 @@ def _read_bundle_fragments(nonce: str) -> tuple[str, str]:
     return head_assets, body
 
 
-def _is_reserved(subpath: str) -> bool:
-    """Indica se o subpath pertence a uma area reservada (nao-SPA)."""
-    normalized = subpath.lstrip("/")
-    return any(normalized.startswith(prefix) for prefix in _RESERVED_SUBPATH_PREFIXES)
+def _ensure_csp_nonce() -> str:
+    """Garante um ``g.csp_nonce`` vivo e o devolve.
+
+    O override de paths migrados roda como ``before_app_request`` ANTES de
+    ``assign_csp_nonce`` (app.py) na ordem de registro; ao curto-circuitar a
+    request, ``assign_csp_nonce`` nem chega a rodar. Geramos o nonce aqui e o
+    gravamos em ``g`` para que o MESMO valor apareca no body e no header CSP
+    (``set_security_headers`` em ``after_request`` le ``g.csp_nonce``).
+    """
+    nonce = getattr(g, "csp_nonce", "") or ""
+    if not nonce:
+        nonce = secrets.token_urlsafe(16)
+        g.csp_nonce = nonce
+    return nonce
 
 
 def _render_spa() -> str:
     """Renderiza o index da SPA injetando csp_nonce e a meta csrf-token."""
-    nonce = getattr(g, "csp_nonce", "")
+    nonce = _ensure_csp_nonce()
     head_assets, body = _read_bundle_fragments(nonce)
     return render_template(
         "spa/index.html",
@@ -104,15 +194,31 @@ def _render_spa() -> str:
     )
 
 
+@main_bp.route("/_app/<path:asset_path>", methods=["GET"])
+def spa_app_asset(asset_path: str):
+    """Serve os assets imutaveis do SvelteKit (base='' -> /_app/...).
+
+    O bundle grava os assets em ``static/spa/_app/``; com ``paths.base=''`` o
+    bootstrap os referencia em ``/_app/...`` (raiz). Esta rota faz a ponte. Os
+    arquivos sao versionados por hash (immutable), entao sao seguros para
+    cache longo.
+
+    Args:
+        asset_path: Caminho do asset relativo a ``static/spa/_app/``.
+
+    Returns:
+        O arquivo do bundle (404 se inexistente).
+    """
+    return send_from_directory(_BUNDLE_APP_DIR, asset_path)
+
+
 @main_bp.route("/spa", methods=["GET"])
 @main_bp.route("/spa/<path:subpath>", methods=["GET"])
 def spa_index(subpath: str = "") -> str:
-    """Serve o index da SPA do piloto para a raiz e subpaths client-side.
+    """Compat: serve o index da SPA na raiz legada ``/spa`` e subpaths.
 
-    Devolve sempre o mesmo index (roteamento e client-side na SPA), permitindo
-    que ``/spa`` (raiz) e ``/spa/dashboard`` rendam o Dashboard SvelteKit. Areas
-    reservadas (``/spa/api/...`` etc., improvaveis mas possiveis via subpath) sao
-    rejeitadas com 404 por seguranca.
+    Mantida para nao quebrar links antigos para ``/spa``; o roteamento atual
+    usa os paths nativos. Areas reservadas sao rejeitadas com 404.
 
     Args:
         subpath: O caminho client-side apos ``/spa`` (vazio para a raiz).
@@ -121,5 +227,27 @@ def spa_index(subpath: str = "") -> str:
         O HTML do index renderizado via Jinja (com ``csp_nonce`` e csrf-token).
     """
     if subpath and _is_reserved(subpath):
+        abort(404)
+    return _render_spa()
+
+
+@main_bp.route("/<path:spa_path>", methods=["GET"])
+def spa_native_path(spa_path: str) -> str:
+    """Catch-all dinamico: serve a SPA nos paths nativos migrados SEM rota Jinja.
+
+    Tem rank menor que as rotas estaticas (Werkzeug prioriza rotas estaticas),
+    entao so casa o que nenhuma rota Jinja existente atendeu: ``/projetos*``,
+    ``/admin/usuarios*``, ``/admin/orgaos/novo``, ``/admin/orgaos/<id>``,
+    ``/admin``. Paths NAO migrados (ou reservados) -> 404, preservando o
+    comportamento atual (telas Jinja vivas continuam nas suas rotas; URLs
+    desconhecidas seguem 404).
+
+    Args:
+        spa_path: Caminho apos a raiz (sem barra inicial).
+
+    Returns:
+        O index da SPA renderizado via Jinja.
+    """
+    if _is_reserved(spa_path) or not _is_migrated_spa_path(spa_path):
         abort(404)
     return _render_spa()

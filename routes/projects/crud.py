@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from flask import (
     current_app,
@@ -14,15 +14,18 @@ from flask import (
 
 from catalogs.abep import normalize_abep_indicator
 from models import (
-    Etapa,
     IndicadorProjeto,
     OrgaoUnidade,
     Project,
-    StageTemplate,
-    StageTemplateUsage,
     db,
 )
 from catalogs.objectives import normalize_goal_selection
+from services.project_completion import ProjectCompletionError, complete_project
+from services.project_creation import (
+    ProjectCreationInput,
+    StageDraft,
+    create_project_record,
+)
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
@@ -63,26 +66,78 @@ def _resolve_orgao_from_form(form_value, *, current_orgao_id=None):
     return orgao, None
 
 
-def _register_template_usage_on_creation(form_value, project_id):
-    """Registra StageTemplateUsage quando o projeto é criado a partir de um modelo.
+def _build_project_creation_input_from_form(orgao_unidade):
+    """Monta ``ProjectCreationInput`` a partir de ``request.form`` (fonte Jinja).
 
-    Retorna silenciosamente se form_value ausente ou inválido — o campo é opcional.
+    Centraliza o parsing do form de criação para que ``add_project`` (Jinja) e o
+    chamador da API compartilhem a MESMA normalização de objetivos/ABEP/etapas.
     """
-    if not form_value:
-        return
-    try:
-        template_id = int(form_value)
-    except (TypeError, ValueError):
-        return
-    if db.session.get(StageTemplate, template_id) is None:
-        return
-    usage = StageTemplateUsage(
-        template_id=template_id,
-        project_id=project_id,
-        created_by_id=g.user.id if g.user else None,
-        source="creation",
+    objetivo_id, resultado_esperado_id, indicador_ids = normalize_goal_selection(
+        request.form.get("project_objetivo"),
+        request.form.get("project_resultado"),
+        request.form.getlist("project_indicadores"),
     )
-    db.session.add(usage)
+
+    project_start_date = request.form.get("project_start_date")
+    start_date = None
+    if project_start_date:
+        try:
+            start_date = datetime.strptime(project_start_date, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            current_app.logger.warning(
+                "add_project: project_start_date inválido (recebido=%r, formato esperado=%%Y-%%m-%%d)",
+                project_start_date,
+            )
+
+    etapa_descricoes = request.form.getlist("etapa_descricao")
+    etapa_durations = request.form.getlist("etapa_duration")
+    etapas = []
+    for i, descricao in enumerate(etapa_descricoes):
+        duration = None
+        if i < len(etapa_durations) and etapa_durations[i]:
+            try:
+                duration = int(etapa_durations[i])
+            except (TypeError, ValueError):
+                current_app.logger.warning(
+                    "add_project: etapa_duration inválido (recebido=%r, esperado int de dias)",
+                    etapa_durations[i],
+                )
+        etapas.append(StageDraft(descricao=descricao, duration_days=duration))
+
+    template_id_raw = request.form.get("project_template_id")
+    template_id = None
+    if template_id_raw:
+        try:
+            template_id = int(template_id_raw)
+        except (TypeError, ValueError):
+            template_id = None
+
+    return ProjectCreationInput(
+        titulo=request.form.get("project_titulo"),
+        orgao_unidade=orgao_unidade,
+        orgao=request.form.get("project_orgao"),
+        prioridade=request.form.get("project_prioridade"),
+        objetivo_id=objetivo_id,
+        resultado_esperado_id=resultado_esperado_id,
+        indicador_ids=indicador_ids,
+        observacao=request.form.get("project_observacao"),
+        special_project=request.form.get("project_special_project") or None,
+        sei_process=request.form.get("project_sei_process") or None,
+        short_description=request.form.get("project_short_description") or None,
+        delivery_type=request.form.get("project_delivery_type") or None,
+        abep_indicator=normalize_abep_indicator(
+            request.form.get("project_abep_indicator")
+        ),
+        github_link=request.form.get("project_github_link") or None,
+        documentation_link=request.form.get("project_documentation_link") or None,
+        product_link=request.form.get("project_product_link") or None,
+        etapas=etapas,
+        start_date=start_date,
+        template_id=template_id,
+        is_tutorial=bool(
+            session.get("tutorial_active") and not session.get("tutorial_project_id")
+        ),
+    )
 
 
 @main_bp.route("/add_project", methods=["POST"])
@@ -102,117 +157,9 @@ def add_project():
             flash(orgao_error, "danger")
             return redirect(request.referrer or url_for("main.dashboard"))
 
-        orgao = request.form.get("project_orgao")
-        prioridade = request.form.get("project_prioridade")
-        objetivo_id_raw = request.form.get("project_objetivo")
-        resultado_esperado_id_raw = request.form.get("project_resultado")
-        observacao = request.form.get("project_observacao")
-        indicador_ids_raw = request.form.getlist("project_indicadores")
-
-        objetivo_id, resultado_esperado_id, indicador_ids = normalize_goal_selection(
-            objetivo_id_raw,
-            resultado_esperado_id_raw,
-            indicador_ids_raw,
-        )
-
-        # Novos campos
-        special_project = request.form.get("project_special_project") or None
-        sei_process = request.form.get("project_sei_process") or None
-        short_description = request.form.get("project_short_description") or None
-        delivery_type = request.form.get("project_delivery_type") or None
-        abep_indicator = normalize_abep_indicator(
-            request.form.get("project_abep_indicator")
-        )
-        github_link = request.form.get("project_github_link") or None
-        documentation_link = request.form.get("project_documentation_link") or None
-        product_link = request.form.get("project_product_link") or None
-
-        # Etapas importadas do modelo
-        etapa_descricoes = request.form.getlist("etapa_descricao")
-        etapa_durations = request.form.getlist("etapa_duration")  # Durações em dias
-        project_start_date = request.form.get(
-            "project_start_date"
-        )  # Data de início do projeto
-
-        new_project = Project(
-            titulo=titulo,
-            orgao_id=orgao_unidade.id,
-            orgao=orgao,
-            prioridade=prioridade,
-            objetivo_id=objetivo_id,
-            resultado_esperado_id=resultado_esperado_id,
-            observacao=observacao,
-            status="Vigente",  # Definir status padrão
-            is_tutorial=bool(
-                session.get("tutorial_active")
-                and not session.get("tutorial_project_id")
-            ),
-            special_project=special_project,
-            sei_process=sei_process,
-            short_description=short_description,
-            delivery_type=delivery_type,
-            abep_indicator=abep_indicator,
-            github_link=github_link,
-            documentation_link=documentation_link,
-            product_link=product_link,
-        )
-        db.session.add(new_project)
-        db.session.flush()  # Para obter o new_project.id para as etapas e indicadores
-
-        # Adicionar as etapas ao novo projeto com cálculo automático de datas
-        current_date = None
-        if project_start_date:
-            try:
-                current_date = datetime.strptime(project_start_date, "%Y-%m-%d").date()
-            except (TypeError, ValueError):
-                current_app.logger.warning(
-                    "add_project: project_start_date inválido (recebido=%r, formato esperado=%%Y-%%m-%%d)",
-                    project_start_date,
-                )
-                current_date = None
-
-        for i, descricao in enumerate(etapa_descricoes):
-            if descricao.strip():  # Apenas adiciona se não estiver vazio
-                data_inicio = None
-                data_fim = None
-
-                # Se há data de início e duração, calcular automaticamente
-                if current_date and i < len(etapa_durations) and etapa_durations[i]:
-                    try:
-                        duration = int(etapa_durations[i])
-                        data_inicio = current_date
-                        data_fim = current_date + timedelta(
-                            days=duration - 1
-                        )  # -1 porque o início conta como dia 1
-                        current_date = data_fim + timedelta(
-                            days=1
-                        )  # Próxima etapa começa no dia seguinte
-                    except (TypeError, ValueError):
-                        current_app.logger.warning(
-                            "add_project: etapa_duration inválido (recebido=%r, esperado int de dias)",
-                            etapa_durations[i],
-                        )
-
-                nova_etapa = Etapa(
-                    descricao=descricao,
-                    project_id=new_project.id,
-                    ordem=i,
-                    data_inicio=data_inicio,
-                    data_fim=data_fim,
-                )
-                db.session.add(nova_etapa)
-
-        # Adicionar os indicadores
-        if indicador_ids:
-            for ind_id in indicador_ids:
-                indicador_projeto = IndicadorProjeto(
-                    project_id=new_project.id, indicador_id=ind_id
-                )
-                db.session.add(indicador_projeto)
-
-        _register_template_usage_on_creation(
-            request.form.get("project_template_id"),
-            new_project.id,
+        creation_input = _build_project_creation_input_from_form(orgao_unidade)
+        new_project = create_project_record(
+            creation_input, created_by_id=g.user.id if g.user else None
         )
 
         # Registrar no histórico
@@ -463,41 +410,12 @@ def concluir_project(project_id):
         flash(message, category)
         return redirect(redirect_url)
 
-    # Verificar permissão
-    if not user_can_access_project(g.user, project):
-        return respond_error(
-            "Você não tem permissão para concluir este projeto.",
-            category="danger",
-            status_code=403,
-        )
-
-    # Verificar se o projeto está Vigente
-    if project.status != "Vigente":
-        return respond_error(
-            'Apenas projetos com status "Vigente" podem ser concluídos.',
-            category="warning",
-            status_code=400,
-        )
-
-    # Verificar se todas as etapas estão concluídas
-    if not project.todas_etapas_concluidas:
-        return respond_error(
-            "Todas as etapas devem estar iniciadas e concluídas para finalizar o projeto.",
-            category="warning",
-            status_code=400,
-        )
+    try:
+        complete_project(project, g.user)
+    except ProjectCompletionError as exc:
+        return respond_error(exc.message, category=exc.category, status_code=exc.status)
 
     try:
-        # Atualizar status
-        project.status = "Finalizado"
-
-        # Registrar no histórico
-        log_project_action(
-            project_id=project.id,
-            action_type="finalize",
-            description=f'Concluiu o projeto "{project.titulo}"',
-        )
-
         db.session.commit()
     except Exception:
         db.session.rollback()

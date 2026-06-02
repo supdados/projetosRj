@@ -1276,6 +1276,31 @@ ROUTE_CASES = [
         "requires_login": False,
         "requires_admin": False,
     },
+    # SPA nos PATHS NATIVOS (item #1): catch-all dinamico que serve o index
+    # (Jinja + csp_nonce) nos paths das telas migradas sem rota Jinja propria
+    # (ex.: /projetos, /admin/usuarios). Paths nao migrados -> 404.
+    {
+        "id": "spa_native_path_get",
+        "method": "GET",
+        "rule": "/<path:spa_path>",
+        "path": "/projetos",
+        "role": "anon",
+        "expected_status": 200,
+        "requires_login": False,
+        "requires_admin": False,
+    },
+    # Assets imutaveis do bundle SvelteKit. Com paths.base='' o cliente os pede
+    # em /_app/...; esta rota serve a partir de static/spa/_app/.
+    {
+        "id": "spa_app_asset_get",
+        "method": "GET",
+        "rule": "/_app/<path:asset_path>",
+        "path": "/_app/version.json",
+        "role": "anon",
+        "expected_status": 200,
+        "requires_login": False,
+        "requires_admin": False,
+    },
     # API and search
     {
         "id": "api_resultados_get",
@@ -2290,4 +2315,239 @@ ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 #
 # Fase 0a (corte SPA): removidas as 11 rotas shim orfas /tarefas/itens/* (legacy.py
 # deletado). 206 - 11 = 195. Cobertura preservada nas rotas canonicas /tarefas/<id>/*.
-assert len(ROUTE_CASES) == 195
+#
+# Item #1 (SPA em PATHS NATIVOS): +2 rotas em routes/spa.py.
+# + GET /<path:spa_path>: catch-all dinamico (rank < rotas estaticas) que serve o
+#   index da SPA (Jinja + csp_nonce) nos paths nativos das telas migradas SEM rota
+#   Jinja propria (/projetos, /projetos/pendentes, /projetos/<id>, /admin/usuarios,
+#   /admin/orgaos/novo, /admin/orgaos/<id>, /admin). Paths nao migrados -> 404.
+# + GET /_app/<path:asset_path>: serve os assets imutaveis do SvelteKit a partir
+#   de static/spa/_app/ (com paths.base='' o cliente os pede em /_app/...).
+# Os paths migrados que colidem com rotas Jinja de mesma URL (/dashboard, /tarefas,
+# /busca, /calendarios, /admin/orgaos, /admin/orgaos/tipos, /admin/templates) NAO
+# adicionam rota: sao servidos via before_app_request que curto-circuita o GET.
+# 195 + 2 = 197.
+#
+# Features de paridade (mutacoes da SPA no envelope canonico, aditivas; NAO
+# alteram os legados Jinja, que continuam servindo flash+redirect):
+# + POST /api/projetos (criar projeto, reusa services/project_creation).
+# + POST /api/projetos/<id>/concluir (concluir projeto, reusa
+#   services/project_completion).
+# + GET  /api/catalogos/objetivos (catalogo de objetivos para o modal).
+# + GET  /api/projetos/<pid>/etapas/<eid>/tarefas (tarefas da etapa, quick-add).
+# + POST /api/tarefas (criar tarefa, reusa _create_task_common).
+# + POST /api/tarefas/<id>/excluir (excluir tarefa, reusa notify_task_deleted).
+# + POST /api/tarefas/<id>/mover-etapa (mover etapa, reusa move_task_to_etapa).
+# + POST /api/tarefas/arquivar-finalizadas (lote, reusa bulk_archive_finalized).
+# + GET  /api/tarefas/sugestoes-responsavel (picker do hub).
+# Reunioes Google (Detalhe do Projeto) + CRUD de evento dedicado (#20):
+# + POST /api/projetos/<id>/reunioes (criar reuniao, reusa create_stage_meeting).
+# + POST /api/etapas/<id>/reuniao (editar reuniao, reusa update_stage_meeting).
+# + POST /api/etapas/<id>/reuniao/excluir (excluir reuniao, reusa delete_meeting_etapa).
+# + POST /api/calendarios/eventos (criar evento, reusa helpers de events.py).
+# + POST /api/calendarios/eventos/<id>/editar (editar evento).
+# + POST /api/calendarios/eventos/<id>/excluir (excluir evento).
+# + POST /api/calendarios/eventos/<id>/gerar-meet (gerar link do Meet).
+# 197 + 16 = 213.
+ROUTE_CASES += [
+    {
+        "id": "api_projeto_criar_post",
+        "method": "POST",
+        "rule": "/api/projetos",
+        "path": "/api/projetos",
+        "role": "user",
+        "json": {
+            "titulo": "Projeto via API",
+            "orgao_id": "{auditoria_orgao_id}",
+            "prioridade": "media",
+        },
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_projeto_concluir_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/concluir",
+        "path": "/api/projetos/{project_complete_id}/concluir",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_catalogo_objetivos_get",
+        "method": "GET",
+        "rule": "/api/catalogos/objetivos",
+        "path": "/api/catalogos/objetivos",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapa_tarefas_get",
+        "method": "GET",
+        "rule": "/api/projetos/<int:project_id>/etapas/<int:etapa_id>/tarefas",
+        "path": "/api/projetos/{project_id}/etapas/{etapa_id}/tarefas",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_criar_post",
+        "method": "POST",
+        "rule": "/api/tarefas",
+        "path": "/api/tarefas",
+        "role": "user",
+        "json": {
+            "project": "{project_id}",
+            "descricao": "Tarefa via API",
+            "status": "nao_iniciada",
+        },
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_excluir_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/excluir",
+        "path": "/api/tarefas/{task_id}/excluir",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_mover_etapa_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/mover-etapa",
+        "path": "/api/tarefas/{task_id}/mover-etapa",
+        "role": "user",
+        "json": {"etapa_id": "{etapa_started_id}"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefas_arquivar_finalizadas_post",
+        "method": "POST",
+        "rule": "/api/tarefas/arquivar-finalizadas",
+        "path": "/api/tarefas/arquivar-finalizadas",
+        "role": "user",
+        "json": {},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_hub_sugestoes_responsavel_get",
+        "method": "GET",
+        "rule": "/api/tarefas/sugestoes-responsavel",
+        "path": "/api/tarefas/sugestoes-responsavel",
+        "role": "user",
+        "query_string": {"project": "{project_id}"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_project_meeting_create_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/reunioes",
+        "path": "/api/projetos/{project_id}/reunioes",
+        "role": "user",
+        "json": {
+            "title": "Reuniao via API",
+            "starts_at": "2026-04-01T10:00",
+            "ends_at": "2026-04-01T11:00",
+        },
+        # Sem conexao Google ativa no seed => 400 (mesma regra do legado).
+        "expected_status": 400,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_project_meeting_edit_post",
+        "method": "POST",
+        "rule": "/api/etapas/<int:etapa_id>/reuniao",
+        "path": "/api/etapas/{etapa_id}/reuniao",
+        "role": "user",
+        "json": {
+            "title": "Reuniao editada via API",
+            "starts_at": "2026-04-01T10:00",
+            "ends_at": "2026-04-01T11:00",
+        },
+        # Etapa regular do seed nao e reuniao Google editavel => 400.
+        "expected_status": 400,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_project_meeting_delete_post",
+        "method": "POST",
+        "rule": "/api/etapas/<int:etapa_id>/reuniao/excluir",
+        "path": "/api/etapas/{etapa_id}/reuniao/excluir",
+        "role": "user",
+        # Etapa regular do seed nao e reuniao Google => 422 (mesma regra do
+        # legado: exclusao de reuniao so vale para etapas-reuniao Google).
+        "expected_status": 422,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_calendar_event_create_post",
+        "method": "POST",
+        "rule": "/api/calendarios/eventos",
+        "path": "/api/calendarios/eventos",
+        "role": "user",
+        "json": {
+            "title": "Evento via API",
+            "starts_at": "2026-04-02T09:00",
+            "ends_at": "2026-04-02T10:00",
+        },
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_calendar_event_edit_post",
+        "method": "POST",
+        "rule": "/api/calendarios/eventos/<int:event_id>/editar",
+        "path": "/api/calendarios/eventos/{calendar_event_id}/editar",
+        "role": "user",
+        "json": {
+            "title": "Evento editado via API",
+            "starts_at": "2026-04-02T09:00",
+            "ends_at": "2026-04-02T10:00",
+        },
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_calendar_event_generate_meet_post",
+        "method": "POST",
+        "rule": "/api/calendarios/eventos/<int:event_id>/gerar-meet",
+        "path": "/api/calendarios/eventos/{calendar_event_id}/gerar-meet",
+        "role": "user",
+        # Sem conexao Google ativa no seed => 409 (mesma regra do legado).
+        "expected_status": 409,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_calendar_event_delete_post",
+        "method": "POST",
+        "rule": "/api/calendarios/eventos/<int:event_id>/excluir",
+        "path": "/api/calendarios/eventos/{calendar_event_id}/excluir",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+]
+
+assert len(ROUTE_CASES) == 213
