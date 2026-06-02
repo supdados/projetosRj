@@ -30,7 +30,8 @@ from typing import Any
 
 from flask import Response, g, request
 
-from models import Etapa, Project, StageTemplate, db
+from models import Etapa, Project, StageTemplate, StageTemplateItem, db
+from sqlalchemy import func
 from services.etapas_cascade import cascade_subsequent_dates
 from services.etapas_import import import_template_stages
 from services.etapas_mutation import (
@@ -624,6 +625,63 @@ def api_projeto_cascade(project_id: int) -> Response | tuple[Response, int]:
         )
 
     return ok({"etapas": _ordered_etapas_payload(project)})
+
+
+# ── Modelos de etapas (listagem para o modal de importação) ───────────────────
+
+
+def _stage_templates_payload() -> list[dict[str, Any]]:
+    """Lista os modelos de etapas com contadores (mesma forma do legado).
+
+    Reproduz a query/serialização de ``get_templates`` (``GET /api/templates`` em
+    ``routes/api/legacy.py``): para cada ``StageTemplate``, o número de etapas e a
+    soma das durações em dias. Mantém os mesmos campos/ordenação para que o
+    frontend (``fetchStageTemplates``) consuma sem recalcular.
+
+    Returns:
+        Lista de ``{"id", "name", "stage_count", "total_duration_days"}``,
+        ordenada por ``name``.
+    """
+    stats_rows = (
+        db.session.query(
+            StageTemplateItem.templateId,
+            func.count(StageTemplateItem.id),
+            func.coalesce(func.sum(StageTemplateItem.duration_days), 0),
+        )
+        .group_by(StageTemplateItem.templateId)
+        .all()
+    )
+    stats_by_template = {tid: (count, int(total)) for tid, count, total in stats_rows}
+
+    payload: list[dict[str, Any]] = []
+    for template in StageTemplate.query.order_by(StageTemplate.name).all():
+        count, total = stats_by_template.get(template.id, (0, 0))
+        payload.append(
+            {
+                "id": template.id,
+                "name": template.name,
+                "stage_count": count,
+                "total_duration_days": total,
+            }
+        )
+    return payload
+
+
+@main_bp.route("/api/etapas/templates", methods=["GET"])
+@api_login_required
+def api_etapas_templates() -> Response | tuple[Response, int]:
+    """Lista os modelos de etapas no envelope canônico (para o modal de importação).
+
+    Espelho enveloped do legado ``GET /api/templates`` (que devolve array cru e
+    HTML em 401): reusa a MESMA query/serialização (``_stage_templates_payload``)
+    e devolve ``ok([...])`` com ``api_login_required`` (401 JSON). O legado
+    permanece intacto (strangler).
+
+    Returns:
+        Envelope ``{"ok": true, "data": [{"id", "name", "stage_count",
+        "total_duration_days"}, ...]}`` com HTTP 200; 401 JSON sem sessão.
+    """
+    return ok(_stage_templates_payload())
 
 
 # ── Importar modelo ───────────────────────────────────────────────────────────
