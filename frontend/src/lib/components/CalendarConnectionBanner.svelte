@@ -1,22 +1,22 @@
 <script lang="ts">
 	/**
-	 * Banner do estado da conexao Google Calendar.
+	 * Controles de conexao Google Calendar — cluster compacto que vive DENTRO do
+	 * header do hub (paridade v4.5: templates/calendars/calendars.html). NAO e um
+	 * card grande; sao os botoes de acao a direita do toggle de visao.
 	 *
 	 * Tres estados:
-	 *   1. Integracao desabilitada no servidor (`!googleEnabled`): mensagem
-	 *      informativa, sem acoes.
-	 *   2. Habilitada e sem conexao (`googleEnabled && !connection`): botao
-	 *      "Conectar Google Calendar".
-	 *   3. Conectado (`connection`): email da conta, ultima sync e acoes de
-	 *      sincronizar / renovar watch / desconectar.
+	 *   1. Conectado (`connection`): botao-icone "Sincronizar agora" (com tooltip
+	 *      da ultima sync), botao "Renovar watch" (apenas quando o watch expira em
+	 *      breve) e botao "Desconectar" sutil.
+	 *   2. Habilitado e sem conexao (`googleEnabled && !connection`): link
+	 *      "Conectar" (com icone de elo) — navegacao top-level para o OAuth do
+	 *      Flask, FORA da SPA (base `/static/spa`).
+	 *   3. Integracao desabilitada (`!googleEnabled`): nada (o aviso fica na pagina).
 	 *
-	 * O fluxo OAuth de inicio (`/calendar/oauth/start`) NAO esta sob a SPA
-	 * (base `/static/spa`); por isso usamos um `<a href>` absoluto para a
-	 * origem do Flask (`window.location.origin + '/calendar/oauth/start'`),
-	 * navegacao top-level, e NAO o router do SvelteKit / `base`.
+	 * O fluxo OAuth de inicio (`/calendar/oauth/start`) NAO esta sob a SPA; por
+	 * isso usamos `<a href>` absoluto para a origem do Flask, navegacao full-page.
 	 */
 	import type { CalendarConnection } from '$lib/types/calendar';
-	import Badge from './Badge.svelte';
 
 	interface Props {
 		connection: CalendarConnection | null;
@@ -36,154 +36,151 @@
 		busy = false
 	}: Props = $props();
 
-	/** URL absoluta do inicio do OAuth (fora da SPA). Navegacao full-page. */
 	const connectUrl = $derived(
 		typeof window !== 'undefined'
 			? `${window.location.origin}/calendar/oauth/start`
 			: '/calendar/oauth/start'
 	);
 
+	const syncTitle = $derived(
+		connection?.last_sync_at_display
+			? `Última sincronização: ${connection.last_sync_at_display}`
+			: 'Sincronizar agora'
+	);
+
 	function handleDisconnect(): void {
 		if (typeof window !== 'undefined') {
-			const confirmed = window.confirm(
-				'Desconectar a conta Google Calendar? A sincronizacao sera interrompida.'
+			const ok = window.confirm(
+				'Desconectar a conta Google Calendar? A sincronização será interrompida.'
 			);
-			if (!confirmed) return;
+			if (!ok) return;
 		}
 		onDisconnect();
 	}
 </script>
 
-<section
-	class="rounded-md border border-border-subtle bg-surface px-4 py-3"
-	aria-label="Conexao com o Google Calendar"
->
-	{#if !googleEnabled}
-		<div class="flex items-center gap-2">
-			<!-- Badge Google desligado (cal-google-badge--off): pilula muted. -->
-			<span
-				class="inline-flex flex-shrink-0 items-center gap-[0.3rem] whitespace-nowrap rounded-full border border-border-subtle bg-surface-muted px-2 py-[0.2rem] text-2xs font-medium leading-none text-text-muted"
-			>
-				<svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
-				Google
-			</span>
-			<p class="text-sm text-text-secondary">
-				A integracao com o Google Calendar nao esta habilitada neste servidor.
-			</p>
-		</div>
-	{:else if !connection}
-		<div class="flex flex-wrap items-center justify-between gap-3">
-			<div class="flex items-center gap-2">
-				<span
-					class="inline-flex flex-shrink-0 items-center gap-[0.3rem] whitespace-nowrap rounded-full border border-border-subtle bg-surface-muted px-2 py-[0.2rem] text-2xs font-medium leading-none text-text-muted"
-				>
-					<svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
-					Google
-				</span>
-				<p class="text-sm text-text-secondary">
-					Conecte sua conta Google para sincronizar eventos automaticamente.
-				</p>
-			</div>
-			<!-- Botao conectar (cal-btn-sm) com icone de elo. -->
-			<a
-				href={connectUrl}
-				class="inline-flex items-center gap-[0.28rem] whitespace-nowrap rounded-[0.4rem] border border-border-subtle bg-surface px-[0.65rem] py-[0.36rem] text-sm text-text-secondary no-underline transition-[background,border-color] duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<svg
-					width="12"
-					height="12"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2.5"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"
-				>
-					<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-					<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-				</svg>
-				Conectar Google Calendar
-			</a>
-		</div>
-	{:else}
-		<div class="flex flex-wrap items-start justify-between gap-3">
-			<div class="space-y-1">
-				<div class="flex flex-wrap items-center gap-2">
-					<!-- Badge Google ligado (cal-google-badge--on): pilula verde. -->
-					<span
-						class="inline-flex flex-shrink-0 items-center gap-[0.3rem] whitespace-nowrap rounded-full border border-success/20 bg-success/10 px-2 py-[0.2rem] text-2xs font-medium leading-none text-success"
-					>
-						<svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
-						Google
-					</span>
-					<Badge tone="success">Conectado</Badge>
-					{#if connection.google_account_email}
-						<span class="text-sm font-medium text-text-primary">
-							{connection.google_account_email}
-						</span>
-					{/if}
-				</div>
-				{#if connection.last_sync_at_display}
-					<p class="text-xs text-text-secondary">
-						Ultima sincronizacao: {connection.last_sync_at_display}
-					</p>
-				{/if}
-				{#if connection.watch_expiring_soon}
-					<div class="pt-1">
-						<Badge tone="warning">
-							Watch expira em breve{connection.watch_expiration_display
-								? `: ${connection.watch_expiration_display}`
-								: ''}
-						</Badge>
-					</div>
-				{/if}
-			</div>
-
-			<div class="flex flex-wrap items-center gap-2">
-				<!-- Sincronizar agora: botao com icone de refresh (cal-btn-icon + texto). -->
-				<button
-					type="button"
-					onclick={onSync}
-					disabled={busy}
-					class="inline-flex items-center gap-[0.3rem] whitespace-nowrap rounded-[0.4rem] border border-border-subtle bg-surface px-[0.65rem] py-[0.36rem] text-sm text-text-secondary transition-[background,border-color] duration-fast hover:bg-surface-muted disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<svg
-						width="13"
-						height="13"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2.5"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"
-					>
-						<polyline points="1 4 1 10 7 10" />
-						<polyline points="23 20 23 14 17 14" />
-						<path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-					</svg>
-					Sincronizar agora
-				</button>
-				<!-- Renovar watch (cal-btn-sm). -->
-				<button
-					type="button"
-					onclick={onRenewWatch}
-					disabled={busy}
-					class="inline-flex items-center gap-[0.28rem] whitespace-nowrap rounded-[0.4rem] border border-border-subtle bg-surface px-[0.65rem] py-[0.36rem] text-sm text-text-secondary transition-[background,border-color] duration-fast hover:bg-surface-muted disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					Renovar watch
-				</button>
-				<!-- Desconectar (cal-btn-sm--subtle): borda transparente que aparece no hover. -->
-				<button
-					type="button"
-					onclick={handleDisconnect}
-					disabled={busy}
-					class="inline-flex items-center gap-[0.28rem] whitespace-nowrap rounded-[0.4rem] border border-transparent bg-transparent px-[0.65rem] py-[0.36rem] text-sm text-danger transition-[background,border-color] duration-fast hover:border-danger/20 hover:bg-danger/5 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
-				>
-					Desconectar
-				</button>
-			</div>
-		</div>
+{#if connection}
+	<!-- Sincronizar agora (cal-btn-icon). -->
+	<button
+		type="button"
+		class="cal-btn-icon"
+		title={syncTitle}
+		aria-label="Sincronizar com o Google agora"
+		disabled={busy}
+		onclick={onSync}
+	>
+		<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<polyline points="1 4 1 10 7 10" />
+			<polyline points="23 20 23 14 17 14" />
+			<path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+		</svg>
+	</button>
+	{#if connection.watch_expiring_soon}
+		<!-- Renovar watch — visivel apenas quando expira em breve (cal-btn-sm). -->
+		<button
+			type="button"
+			class="cal-btn-sm cal-btn-sm--warn"
+			title={connection.watch_expiration_display
+				? `Watch expira em ${connection.watch_expiration_display}`
+				: 'Watch expira em breve'}
+			disabled={busy}
+			onclick={onRenewWatch}
+		>
+			Renovar watch
+		</button>
 	{/if}
-</section>
+	<!-- Desconectar (cal-btn-sm--subtle). -->
+	<button
+		type="button"
+		class="cal-btn-sm cal-btn-sm--subtle"
+		disabled={busy}
+		onclick={handleDisconnect}
+	>
+		Desconectar
+	</button>
+{:else if googleEnabled}
+	<!-- Conectar (cal-btn-sm) com icone de elo. -->
+	<a href={connectUrl} class="cal-btn-sm">
+		<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+			<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+		</svg>
+		Conectar
+	</a>
+{/if}
+
+<style>
+	/* Botao-icone (sync) — cal-btn-icon de calendars.css. */
+	.cal-btn-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.9rem;
+		height: 1.9rem;
+		border-radius: 0.4rem;
+		border: 1px solid var(--color-border);
+		background: none;
+		color: var(--color-text-secondary);
+		cursor: pointer;
+		flex-shrink: 0;
+		transition:
+			background 0.12s,
+			color 0.12s;
+	}
+	.cal-btn-icon:hover:not(:disabled) {
+		background: var(--color-surface-muted);
+		color: var(--color-text-primary);
+	}
+	.cal-btn-icon:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+
+	.cal-btn-sm {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.28rem;
+		padding: 0.36rem 0.65rem;
+		background: none;
+		border: 1px solid var(--color-border);
+		border-radius: 0.4rem;
+		font-size: 0.8rem;
+		color: var(--color-text-secondary);
+		cursor: pointer;
+		white-space: nowrap;
+		transition:
+			background 0.12s,
+			border-color 0.12s;
+		text-decoration: none;
+		flex-shrink: 0;
+	}
+	.cal-btn-sm:hover:not(:disabled) {
+		background: var(--color-surface-muted);
+	}
+	.cal-btn-sm:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+	.cal-btn-sm--subtle {
+		border-color: transparent;
+		color: var(--ds-color-danger-600);
+	}
+	.cal-btn-sm--subtle:hover:not(:disabled) {
+		border-color: rgba(220, 38, 38, 0.18);
+		background: rgba(220, 38, 38, 0.07);
+	}
+	.cal-btn-sm--warn {
+		color: var(--ds-color-warning-600);
+		border-color: rgba(202, 138, 4, 0.3);
+	}
+	.cal-btn-sm--warn:hover:not(:disabled) {
+		background: rgba(202, 138, 4, 0.08);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.cal-btn-icon,
+		.cal-btn-sm {
+			transition: none;
+		}
+	}
+</style>

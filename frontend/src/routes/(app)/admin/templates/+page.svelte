@@ -21,7 +21,7 @@
 	 * mutações usam `client.post` (X-CSRFToken automático). 401 já redireciona
 	 * em `client.ts`.
 	 */
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import {
 		fetchTemplateList,
 		fetchTemplateDetail,
@@ -51,6 +51,14 @@
 	 */
 	interface FormStage extends TemplateStageInput {
 		_key: number;
+		/**
+		 * Marca etapas recém-adicionadas pelo botão "Adicionar"/Enter. Espelha
+		 * `dataset.draftStage` do template_form.js: ao perder o foco com nome em
+		 * branco, a etapa rascunho é removida automaticamente.
+		 */
+		_draft?: boolean;
+		/** Sinaliza animação de saída antes do `remove()` (classe is-removing). */
+		_removing?: boolean;
 	}
 
 	let stageKeySeq = 0;
@@ -188,8 +196,24 @@
 
 	// --- Formulário -------------------------------------------------------
 
-	function blankStage(): FormStage {
-		return { _key: nextStageKey(), name: '', duration_days: 1 };
+	function blankStage(options?: { draft?: boolean }): FormStage {
+		return { _key: nextStageKey(), name: '', duration_days: 1, _draft: options?.draft };
+	}
+
+	/**
+	 * Foca (e seleciona) o input de nome da etapa de índice `index` no próximo
+	 * frame, espelhando o `requestAnimationFrame` + `focus()/select()` do
+	 * template_form.js ao adicionar uma etapa.
+	 */
+	async function focusStageName(index: number): Promise<void> {
+		await tick();
+		const input = stageListEl?.querySelectorAll<HTMLInputElement>(
+			'input[data-stage-name]'
+		)[index];
+		if (input) {
+			input.focus();
+			input.select();
+		}
 	}
 
 	function openCreate(): void {
@@ -236,17 +260,73 @@
 		formError = '';
 	}
 
-	function addStage(): void {
-		formStages = [...formStages, blankStage()];
+	/**
+	 * Adiciona uma etapa ao fim e foca seu nome. `draft` marca a etapa como
+	 * rascunho (auto-removida ao perder foco vazia), espelhando o
+	 * template_form.js — usado pelo botão "Adicionar" e pelo Enter.
+	 */
+	function addStage(options?: { draft?: boolean }): void {
+		formStages = [...formStages, blankStage(options)];
+		void focusStageName(formStages.length - 1);
 	}
 
+	/**
+	 * Remove a etapa com animação de saída (classe is-removing por ~140ms),
+	 * espelhando o `removeStage` do template_form.js. Garante ao menos uma linha
+	 * em branco quando a lista esvazia.
+	 */
 	function removeStage(index: number): void {
-		formStages = formStages.filter((_, i) => i !== index);
-		if (formStages.length === 0) formStages = [blankStage()];
+		const target = formStages[index];
+		if (!target) return;
+		target._removing = true;
+		formStages = [...formStages];
+		setTimeout(() => {
+			formStages = formStages.filter((s) => s._key !== target._key);
+			if (formStages.length === 0) formStages = [blankStage()];
+		}, 140);
 	}
 
+	/** "Limpar tudo": confirma antes de remover, como o `clearAll` do original. */
 	function clearStages(): void {
+		if (formStages.length === 0) return;
+		const ok = window.confirm(
+			'Remover todas as etapas deste modelo? Esta ação só é aplicada quando você salvar.'
+		);
+		if (!ok) return;
 		formStages = [blankStage()];
+	}
+
+	/**
+	 * Ao perder o foco de uma etapa rascunho deixada em branco, remove-a — igual
+	 * ao handler `focusout` do template_form.js. O `setTimeout(0)` espera o foco
+	 * assentar (pode ter ido para outro campo da mesma linha).
+	 */
+	function onStageFocusOut(index: number): void {
+		const stage = formStages[index];
+		if (!stage || !stage._draft) return;
+		setTimeout(() => {
+			const current = formStages.find((s) => s._key === stage._key);
+			if (!current || !current._draft) return;
+			const row = stageListEl?.querySelectorAll<HTMLElement>('[data-stage-row]')[
+				formStages.indexOf(current)
+			];
+			if (row && row.contains(document.activeElement)) return;
+			if (current.name.trim() === '') {
+				removeStage(formStages.indexOf(current));
+			}
+		}, 0);
+	}
+
+	/**
+	 * Enter no nome da ÚLTIMA etapa adiciona uma nova (rascunho), igual ao
+	 * `keydown` do template_form.js. Em etapas intermediárias, Enter não faz nada
+	 * especial (deixa o submit/required do browser cuidar).
+	 */
+	function onStageNameKeydown(event: KeyboardEvent, index: number): void {
+		if (event.key !== 'Enter') return;
+		if (index !== formStages.length - 1) return;
+		event.preventDefault();
+		addStage({ draft: true });
 	}
 
 	function moveStage(index: number, delta: number): void {
@@ -263,34 +343,76 @@
 	}
 
 	// --- Drag-and-drop das etapas (estado do formulário, sem API) ---------
+	//
+	// Espelha o template_form.js: o arraste só começa pela alça (grip) e a
+	// posição de soltura é mostrada por uma linha indicadora flutuante entre
+	// as etapas (em vez de mover itens "ao vivo"). `dropBeforeIndex` é o índice
+	// ANTES do qual a etapa arrastada cairá; `formStages.length` significa "no
+	// fim". Isso evita o salto visual e reproduz a UX do original.
+	let stageListEl: HTMLElement | null = $state(null);
 	let dragStageIndex = $state<number | null>(null);
-	let dropStageIndex = $state<number | null>(null);
+	let dropBeforeIndex = $state<number | null>(null);
 
 	function handleStageDragStart(event: DragEvent, index: number): void {
 		dragStageIndex = index;
 		if (event.dataTransfer) {
 			event.dataTransfer.effectAllowed = 'move';
-			// Firefox exige um payload para iniciar o arraste.
-			event.dataTransfer.setData('text/plain', String(index));
+			// Firefox/Safari exigem um payload para iniciar o arraste.
+			try {
+				event.dataTransfer.setData('text/plain', String(index));
+			} catch {
+				/* Safari pode lançar com payload vazio — ignorar. */
+			}
 		}
 	}
 
-	function handleStageDragOver(event: DragEvent, index: number): void {
+	/**
+	 * Calcula, a partir do Y do cursor, o índice ANTES do qual o item cairia —
+	 * usando o ponto médio de cada linha (exceto a própria que está sendo
+	 * arrastada), igual ao `getInsertionSlot` do template_form.js.
+	 */
+	function computeDropBefore(clientY: number): number {
+		if (!stageListEl) return formStages.length;
+		const rows = Array.from(
+			stageListEl.querySelectorAll<HTMLElement>('[data-stage-row]')
+		);
+		for (let i = 0; i < rows.length; i += 1) {
+			if (i === dragStageIndex) continue;
+			const rect = rows[i].getBoundingClientRect();
+			if (clientY < rect.top + rect.height / 2) return i;
+		}
+		return formStages.length;
+	}
+
+	function handleStageListDragOver(event: DragEvent): void {
 		if (dragStageIndex === null) return;
 		event.preventDefault();
 		if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-		dropStageIndex = index;
+		dropBeforeIndex = computeDropBefore(event.clientY);
 	}
 
-	function handleStageDrop(event: DragEvent, index: number): void {
+	function handleStageListDragLeave(event: DragEvent): void {
+		if (dragStageIndex === null) return;
+		const related = event.relatedTarget as Node | null;
+		if (!related || !stageListEl?.contains(related)) dropBeforeIndex = null;
+	}
+
+	function handleStageListDrop(event: DragEvent): void {
+		if (dragStageIndex === null) return;
 		event.preventDefault();
-		if (dragStageIndex !== null) reorderStage(dragStageIndex, index);
+		const before = dropBeforeIndex ?? computeDropBefore(event.clientY);
+		// Converte o "índice antes do qual cair" para o índice de destino do array
+		// após a remoção do item arrastado.
+		let to = before;
+		if (before > dragStageIndex) to = before - 1;
+		if (to > formStages.length - 1) to = formStages.length - 1;
+		reorderStage(dragStageIndex, to);
 		resetStageDrag();
 	}
 
 	function resetStageDrag(): void {
 		dragStageIndex = null;
-		dropStageIndex = null;
+		dropBeforeIndex = null;
 	}
 
 	async function saveForm(event: SubmitEvent): Promise<void> {
@@ -333,6 +455,32 @@
 		} finally {
 			formSaving = false;
 		}
+	}
+
+	// --- Navegação da linha (linha inteira clicável -> editar) ------------
+	//
+	// Espelha o `navigateToTemplate` do template_list.html: clicar/Enter/Espaço
+	// em qualquer ponto da linha abre a edição, EXCETO em elementos interativos
+	// (botões de ação) marcados com [data-stop-row-click].
+
+	function isInteractiveTarget(event: Event): boolean {
+		const el = event.target as HTMLElement | null;
+		if (!el) return false;
+		return !!el.closest(
+			'[data-stop-row-click], button, a, input, select, textarea, [role="button"]'
+		);
+	}
+
+	function onRowActivate(event: MouseEvent, row: TemplateRow): void {
+		if (isInteractiveTarget(event)) return;
+		void openEdit(row);
+	}
+
+	function onRowKeydown(event: KeyboardEvent, row: TemplateRow): void {
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		if (isInteractiveTarget(event)) return;
+		event.preventDefault();
+		void openEdit(row);
 	}
 
 	// --- Duplicar / Excluir ----------------------------------------------
@@ -414,14 +562,10 @@
 		class="flex flex-col items-start gap-4 rounded-xl border border-border-subtle bg-surface p-5 shadow-lg sm:flex-row sm:items-start"
 	>
 		<div
-			class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-700"
+			class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-lg text-primary-600"
 			aria-hidden="true"
 		>
-			<svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
-				<path d="M10 2 2 6l8 4 8-4-8-4Z" />
-				<path d="m3.5 9-1.5.75 8 4 8-4L16.5 9 10 12.25 3.5 9Z" opacity="0.85" />
-				<path d="m3.5 12.5-1.5.75 8 4 8-4-1.5-.75L10 15.75 3.5 12.5Z" opacity="0.7" />
-			</svg>
+			<i class="fas fa-layer-group"></i>
 		</div>
 		<div class="flex min-w-0 flex-1 flex-col gap-1">
 			<div class="flex flex-wrap items-center gap-3">
@@ -447,9 +591,7 @@
 				onclick={openCreate}
 				class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-base hover:-translate-y-px hover:bg-primary-700 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
 			>
-				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-					<path d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1Z" />
-				</svg>
+				<i class="fas fa-plus" aria-hidden="true"></i>
 				<span>Novo modelo</span>
 			</button>
 		{/if}
@@ -520,11 +662,7 @@
 									Etapas
 								</span>
 								<span class="text-xs text-text-muted" aria-live="polite">
-									{formStages.filter((s) => s.name.trim() !== '').length} etapa{formStages.filter(
-										(s) => s.name.trim() !== ''
-									).length === 1
-										? ''
-										: 's'}
+									{formStages.length} etapa{formStages.length === 1 ? '' : 's'}
 									<span class="px-1 text-border-strong" aria-hidden="true">·</span>
 									{stageTotalDuration} dia{stageTotalDuration === 1 ? '' : 's'} no total
 								</span>
@@ -538,111 +676,133 @@
 							</button>
 						</div>
 
-						<ul class="flex flex-col gap-2">
+						<ul
+							bind:this={stageListEl}
+							ondragover={handleStageListDragOver}
+							ondragleave={handleStageListDragLeave}
+							ondrop={handleStageListDrop}
+							class="relative flex flex-col gap-1.5"
+							role="list"
+						>
 							{#each formStages as stage, index (stage._key)}
 								<li
-									draggable={formStages.length > 1}
-									ondragstart={(e) => handleStageDragStart(e, index)}
-									ondragover={(e) => handleStageDragOver(e, index)}
-									ondrop={(e) => handleStageDrop(e, index)}
-									ondragend={resetStageDrag}
-									class="group grid grid-cols-[22px_30px_1fr_auto] items-center gap-2 rounded-md border bg-surface px-2.5 py-2 transition-all duration-fast hover:border-primary-500/40 hover:bg-surface-muted/40 focus-within:border-primary-500/40 focus-within:bg-surface-muted/40 {dragStageIndex ===
-									index
-										? 'scale-[0.99] border-dashed border-border-strong bg-surface-muted opacity-45'
-										: 'border-border-subtle'} {dropStageIndex === index &&
-									dragStageIndex !== null &&
-									dragStageIndex !== index
-										? 'ring-2 ring-primary-500'
+									data-stage-row
+									class="group relative grid grid-cols-[1fr_24px] items-center gap-2 transition-all duration-fast {stage._removing
+										? 'translate-x-4 opacity-0'
 										: ''}"
 								>
-									<span
-										class="flex h-7 w-[22px] shrink-0 items-center justify-center rounded-md text-border-strong transition-colors duration-fast {formStages.length >
-										1
-											? 'cursor-grab group-hover:text-primary-700 active:cursor-grabbing'
-											: 'opacity-0'}"
-										title="Arraste para reordenar"
-										aria-hidden="true"
+									<!-- Indicador de soltura ANTES desta etapa (linha azul flutuante) -->
+									{#if dragStageIndex !== null && dropBeforeIndex === index}
+										<span
+											class="pointer-events-none absolute left-0 right-0 -mt-1 h-[3px] -translate-y-1/2 rounded-full bg-primary-600 shadow-[0_2px_8px_rgba(0,90,146,0.35)]"
+											style="top: 0"
+											aria-hidden="true"
+										></span>
+									{/if}
+									<div
+										ondragstart={(e) => handleStageDragStart(e, index)}
+										ondragend={resetStageDrag}
+										role="presentation"
+										class="grid grid-cols-[22px_30px_1fr] items-center gap-2 rounded-lg border bg-surface px-2.5 py-2 transition-all duration-fast hover:border-primary-500/40 hover:bg-surface-muted/40 group-focus-within:border-primary-500/40 group-focus-within:bg-surface-muted/40 {dragStageIndex ===
+										index
+											? 'scale-[0.99] border-dashed border-border-strong bg-surface-muted opacity-45'
+											: 'border-border-subtle'}"
 									>
-										<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
-											<path d="M7 4a1 1 0 11-2 0 1 1 0 012 0zm0 6a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100-2 1 1 0 000 2zm9-13a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100-2 1 1 0 000 2zm1 5a1 1 0 11-2 0 1 1 0 012 0z" />
-										</svg>
-									</span>
-									<span
-										class="flex h-7 w-[30px] shrink-0 items-center justify-center text-sm font-semibold text-text-muted"
-										aria-hidden="true"
-									>
-										{index + 1}
-									</span>
-									<div class="grid grid-cols-[1fr_68px] items-center gap-2">
-										<input
-											type="text"
-											bind:value={stage.name}
-											placeholder="Nome da etapa"
-											aria-label={`Nome da etapa ${index + 1}`}
-											class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-all duration-fast placeholder:text-text-muted focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
-										/>
-										<div
-											class="flex h-[34px] items-center justify-center rounded-md border border-border-subtle bg-surface-muted"
-											title="Duração em dias"
+										<button
+											type="button"
+											draggable={formStages.length > 1}
+											aria-label={`Arraste para reordenar a etapa ${index + 1}`}
+											title="Arraste para reordenar"
+											class="flex h-7 w-[22px] shrink-0 cursor-grab items-center justify-center rounded-md border-none bg-transparent text-border-strong transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 active:cursor-grabbing {formStages.length >
+											1
+												? ''
+												: 'pointer-events-none opacity-40'}"
 										>
+											<i class="fas fa-grip-vertical" aria-hidden="true"></i>
+										</button>
+										<span
+											class="flex h-7 w-[30px] shrink-0 items-center justify-center text-sm font-semibold text-text-muted"
+											data-stage-number
+											aria-hidden="true"
+										>
+											{index + 1}
+										</span>
+										<div class="grid grid-cols-[1fr_68px] items-center gap-2">
 											<input
-												type="number"
-												min="1"
-												inputmode="numeric"
-												bind:value={stage.duration_days}
-												aria-label={`Duração em dias da etapa ${index + 1}`}
-												class="h-full w-full [appearance:textfield] border-none bg-transparent px-1 text-center text-sm font-semibold text-text-primary focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+												type="text"
+												data-stage-name
+												bind:value={stage.name}
+												placeholder="Nome da etapa"
+												aria-label={`Nome da etapa ${index + 1}`}
+												onkeydown={(e) => onStageNameKeydown(e, index)}
+												onfocusout={() => onStageFocusOut(index)}
+												class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-all duration-fast placeholder:text-text-muted focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
 											/>
+											<div
+												class="flex h-[34px] items-center justify-center rounded-md border border-border-subtle bg-surface-muted"
+												title="Duração em dias"
+											>
+												<input
+													type="number"
+													min="1"
+													inputmode="numeric"
+													bind:value={stage.duration_days}
+													onfocusout={() => onStageFocusOut(index)}
+													aria-label={`Duração em dias da etapa ${index + 1}`}
+													class="h-full w-full [appearance:textfield] border-none bg-transparent px-1 text-center text-sm font-semibold text-text-primary focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+												/>
+											</div>
 										</div>
 									</div>
-									<div class="flex items-center gap-0.5">
+									<!-- Remover (X) revelado no hover/foco, como o original; setas ↑/↓
+									     ficam disponíveis por teclado como fallback acessível ao DnD. -->
+									<div class="flex flex-col items-center justify-center">
 										<button
 											type="button"
 											onclick={() => moveStage(index, -1)}
 											disabled={index === 0}
 											aria-label={`Mover etapa ${index + 1} para cima`}
-											class="inline-flex h-6 w-6 items-center justify-center rounded-md text-text-muted opacity-0 transition-all duration-fast hover:bg-surface-muted hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+											class="inline-flex h-4 w-5 items-center justify-center rounded text-2xs text-text-muted opacity-0 transition-all duration-fast hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:invisible group-focus-within:opacity-100"
 										>
-											<svg viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5" aria-hidden="true">
-												<path d="M10 5a1 1 0 0 1 .7.3l4 4a1 1 0 0 1-1.4 1.4L10 7.42l-3.3 3.3a1 1 0 1 1-1.4-1.42l4-4A1 1 0 0 1 10 5Z" />
-											</svg>
-										</button>
-										<button
-											type="button"
-											onclick={() => moveStage(index, 1)}
-											disabled={index === formStages.length - 1}
-											aria-label={`Mover etapa ${index + 1} para baixo`}
-											class="inline-flex h-6 w-6 items-center justify-center rounded-md text-text-muted opacity-0 transition-all duration-fast hover:bg-surface-muted hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-										>
-											<svg viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5" aria-hidden="true">
-												<path d="M10 15a1 1 0 0 1-.7-.3l-4-4a1 1 0 1 1 1.4-1.4L10 12.58l3.3-3.3a1 1 0 0 1 1.4 1.42l-4 4A1 1 0 0 1 10 15Z" />
-											</svg>
+											<i class="fas fa-chevron-up" aria-hidden="true"></i>
 										</button>
 										<button
 											type="button"
 											onclick={() => removeStage(index)}
 											aria-label={`Remover etapa ${index + 1}`}
 											title="Remover etapa"
-											class="inline-flex h-6 w-6 items-center justify-center rounded-md text-text-muted opacity-0 transition-all duration-fast hover:bg-danger/10 hover:text-danger focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 group-hover:opacity-100 group-focus-within:opacity-100"
+											class="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md text-xs font-bold text-text-muted opacity-0 transition-all duration-fast hover:bg-surface-muted hover:text-danger focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 group-hover:opacity-100 group-focus-within:opacity-100"
 										>
-											<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-												<path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-											</svg>
+											<i class="fas fa-times" aria-hidden="true"></i>
+										</button>
+										<button
+											type="button"
+											onclick={() => moveStage(index, 1)}
+											disabled={index === formStages.length - 1}
+											aria-label={`Mover etapa ${index + 1} para baixo`}
+											class="inline-flex h-4 w-5 items-center justify-center rounded text-2xs text-text-muted opacity-0 transition-all duration-fast hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:invisible group-focus-within:opacity-100"
+										>
+											<i class="fas fa-chevron-down" aria-hidden="true"></i>
 										</button>
 									</div>
 								</li>
 							{/each}
+							<!-- Indicador de soltura AO FINAL da lista -->
+							{#if dragStageIndex !== null && dropBeforeIndex === formStages.length}
+								<span
+									class="pointer-events-none -mt-1 h-[3px] rounded-full bg-primary-600 shadow-[0_2px_8px_rgba(0,90,146,0.35)]"
+									aria-hidden="true"
+								></span>
+							{/if}
 						</ul>
 
 						<div>
 							<button
 								type="button"
-								onclick={addStage}
+								onclick={() => addStage({ draft: true })}
 								class="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-primary-100/40 px-4 py-2.5 text-sm font-semibold text-primary-700 transition-all duration-fast hover:border-primary-500 hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 							>
-								<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-									<path d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1Z" />
-								</svg>
+								<i class="fas fa-plus-circle" aria-hidden="true"></i>
 								<span>Adicionar nova etapa</span>
 							</button>
 						</div>
@@ -683,11 +843,10 @@
 		>
 			<div class="relative min-w-[15rem] flex-1">
 				<label for="tplSearch" class="sr-only">Busca livre</label>
-				<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden="true">
-					<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
-						<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 3.4 9.83l3.13 3.14a1 1 0 0 0 1.42-1.42l-3.14-3.13A5.5 5.5 0 0 0 9 3.5Zm-3.5 5.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0Z" clip-rule="evenodd" />
-					</svg>
-				</span>
+				<i
+					class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted"
+					aria-hidden="true"
+				></i>
 				<input
 					id="tplSearch"
 					name="q"
@@ -703,9 +862,7 @@
 			<label
 				class="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-text-secondary transition-colors duration-base hover:border-border-strong hover:bg-surface"
 			>
-				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4 text-text-muted" aria-hidden="true">
-					<path d="M3 6h10a1 1 0 0 0 0-2H3a1 1 0 0 0 0 2Zm0 5h7a1 1 0 1 0 0-2H3a1 1 0 1 0 0 2Zm0 5h4a1 1 0 1 0 0-2H3a1 1 0 1 0 0 2ZM17 4a1 1 0 0 0-2 0v3.59l-.3-.3a1 1 0 0 0-1.4 1.42l2 2a1 1 0 0 0 1.4 0l2-2a1 1 0 0 0-1.4-1.42l-.3.3V4Z" />
-				</svg>
+				<i class="fas fa-sliders-h text-text-muted" aria-hidden="true"></i>
 				<span class="text-text-muted">Ordenar por:</span>
 				<select
 					id="tplOrder"
@@ -770,15 +927,11 @@
 				<div
 					class="flex flex-col items-center gap-2 rounded-xl border border-border-subtle bg-surface px-6 py-12 text-center shadow-md"
 				>
-					<span class="mb-1 text-text-muted/60" aria-hidden="true">
+					<span class="mb-1 text-4xl text-text-muted/60" aria-hidden="true">
 						{#if search.trim()}
-							<svg viewBox="0 0 24 24" fill="currentColor" class="h-10 w-10">
-								<path fill-rule="evenodd" d="M10.5 3a7.5 7.5 0 1 0 4.55 13.46l4.24 4.25a1 1 0 0 0 1.42-1.42l-4.25-4.24A7.5 7.5 0 0 0 10.5 3ZM5 10.5a5.5 5.5 0 1 1 11 0 5.5 5.5 0 0 1-11 0Z" clip-rule="evenodd" />
-							</svg>
+							<i class="fas fa-search"></i>
 						{:else}
-							<svg viewBox="0 0 24 24" fill="currentColor" class="h-10 w-10">
-								<path d="M7 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.83a2 2 0 0 0-.59-1.42l-4.82-4.82A2 2 0 0 0 12.17 2H7Zm2 9h6a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2Zm0 4h6a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2Zm0-8h3a1 1 0 1 1 0 2H9a1 1 0 0 1 0-2Z" />
-							</svg>
+							<i class="fas fa-clipboard-list"></i>
 						{/if}
 					</span>
 					<h2 class="font-heading text-lg font-semibold text-text-primary">
@@ -806,9 +959,7 @@
 							onclick={openCreate}
 							class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-base hover:-translate-y-px hover:bg-primary-700 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
 						>
-							<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-								<path d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1Z" />
-							</svg>
+							<i class="fas fa-plus" aria-hidden="true"></i>
 							<span>{search.trim() ? 'Novo modelo' : 'Criar primeiro modelo'}</span>
 						</button>
 					</div>
@@ -842,6 +993,12 @@
 									</th>
 									<th
 										scope="col"
+										class="hidden px-4 py-3 text-2xs font-semibold uppercase tracking-caps text-text-muted lg:table-cell"
+									>
+										Silhueta
+									</th>
+									<th
+										scope="col"
 										class="whitespace-nowrap px-4 py-3 text-2xs font-semibold uppercase tracking-caps text-text-muted"
 									>
 										Usado em
@@ -863,7 +1020,12 @@
 							<tbody>
 								{#each data.templates as row (row.id)}
 									<tr
-										class="border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted/60"
+										role="link"
+										tabindex="0"
+										aria-label="Editar modelo {row.name}"
+										onclick={(e) => onRowActivate(e, row)}
+										onkeydown={(e) => onRowKeydown(e, row)}
+										class="group cursor-pointer border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:-ring-offset-2 focus-visible:ring-primary-500"
 									>
 										<td class="min-w-[280px] px-4 py-3 align-middle">
 											<div class="flex items-center gap-3">
@@ -875,13 +1037,9 @@
 												</span>
 												<div class="flex min-w-0 flex-col gap-0.5">
 													<div class="flex items-center gap-2">
-														<button
-															type="button"
-															onclick={() => openEdit(row)}
-															class="text-left text-sm font-semibold text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-														>
+														<span class="text-sm font-semibold text-primary-700">
 															{row.name}
-														</button>
+														</span>
 														{#if row.is_new}
 															<Badge tone="success">novo</Badge>
 														{/if}
@@ -899,6 +1057,35 @@
 											<span class="font-semibold text-text-primary">{row.total_duration}</span><span
 												class="ml-0.5 text-xs text-text-muted">d</span
 											>
+										</td>
+										<td class="hidden px-4 py-3 align-middle lg:table-cell">
+											{#if row.silhouette.length > 0}
+												<!-- Mini bar-chart das durações por etapa (silhueta), fiel ao
+												     v4.5: barras de 4px com passo 6px, altura já calculada no
+												     backend (par [altura_px, duração_dias]). As barras usam o
+												     primary-500 com opacidade que sobe no hover da linha. -->
+												<svg
+													viewBox="0 0 {row.silhouette.length * 6 - 2} 28"
+													class="block h-7 w-auto text-primary-500 [&_rect]:fill-current [&_rect]:opacity-70 group-hover:[&_rect]:opacity-95"
+													role="img"
+													aria-label="Distribuição de duração das etapas"
+												>
+													{#each row.silhouette as [height, dur], i (i)}
+														<rect
+															x={i * 6}
+															y={28 - height}
+															width="4"
+															height={height}
+															rx="1.2"
+															ry="1.2"
+														>
+															<title>{dur} dia{dur === 1 ? '' : 's'}</title>
+														</rect>
+													{/each}
+												</svg>
+											{:else}
+												<span class="text-border-strong" aria-hidden="true">—</span>
+											{/if}
 										</td>
 										<td class="whitespace-nowrap px-4 py-3 align-middle font-medium">
 											<span class="font-semibold text-text-primary">{row.usage_count}</span>
@@ -918,19 +1105,8 @@
 												<span class="text-text-muted">—</span>
 											{/if}
 										</td>
-										<td class="whitespace-nowrap px-4 py-3 pr-5 align-middle">
+										<td class="whitespace-nowrap px-4 py-3 pr-5 align-middle" data-stop-row-click>
 											<div class="flex items-center justify-end gap-1">
-												<button
-													type="button"
-													onclick={() => openEdit(row)}
-													title="Editar modelo"
-													aria-label="Editar modelo {row.name}"
-													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-												>
-													<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-														<path d="M13.59 2.59a2 2 0 0 1 2.83 2.83l-8.3 8.3a1 1 0 0 1-.42.25l-3 .9a.5.5 0 0 1-.62-.62l.9-3a1 1 0 0 1 .25-.42l8.36-8.24Z" />
-													</svg>
-												</button>
 												<button
 													type="button"
 													onclick={() => onDuplicate(row)}
@@ -940,12 +1116,9 @@
 													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 												>
 													{#if busyRowId === row.id}
-														<span class="text-xs" aria-hidden="true">…</span>
+														<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
 													{:else}
-														<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-															<path d="M7 3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H7Zm0 2h6v8H7V5Z" />
-															<path d="M3 7a2 2 0 0 1 1-1.73V15a2 2 0 0 0 2 2h7.73A2 2 0 0 1 12 18H6a3 3 0 0 1-3-3V7Z" />
-														</svg>
+														<i class="far fa-copy" aria-hidden="true"></i>
 													{/if}
 												</button>
 												<button
@@ -956,9 +1129,7 @@
 													aria-label="Excluir modelo {row.name}"
 													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors duration-fast hover:border-danger/40 hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 												>
-													<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-														<path d="M8 3a1 1 0 0 0-1 1v1H4a1 1 0 0 0 0 2h.08l.84 8.4A2 2 0 0 0 6.9 17h6.2a2 2 0 0 0 1.98-1.6L15.92 7H16a1 1 0 1 0 0-2h-3V4a1 1 0 0 0-1-1H8Zm1 4a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm-3 0a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm7 0a1 1 0 0 0-1 1v5a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1Z" />
-													</svg>
+													<i class="far fa-trash-alt" aria-hidden="true"></i>
 												</button>
 											</div>
 										</td>
@@ -986,9 +1157,7 @@
 								aria-label="Página anterior"
 								class="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-secondary transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:pointer-events-none disabled:opacity-40"
 							>
-								<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-									<path d="M12.7 5.3a1 1 0 0 1 0 1.4L9.42 10l3.3 3.3a1 1 0 0 1-1.42 1.4l-4-4a1 1 0 0 1 0-1.4l4-4a1 1 0 0 1 1.4 0Z" />
-								</svg>
+								<i class="fas fa-chevron-left" aria-hidden="true"></i>
 							</button>
 							{#each Array.from({ length: meta.total_pages }, (_, i) => i + 1) as p (p)}
 								<button
@@ -1010,9 +1179,7 @@
 								aria-label="Próxima página"
 								class="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-secondary transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:pointer-events-none disabled:opacity-40"
 							>
-								<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-									<path d="M7.3 5.3a1 1 0 0 0 0 1.4L10.58 10l-3.3 3.3a1 1 0 1 0 1.42 1.4l4-4a1 1 0 0 0 0-1.4l-4-4a1 1 0 0 0-1.4 0Z" />
-								</svg>
+								<i class="fas fa-chevron-right" aria-hidden="true"></i>
 							</button>
 						</nav>
 					{/if}
@@ -1038,9 +1205,7 @@
 					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger/10 text-danger"
 					aria-hidden="true"
 				>
-					<svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
-						<path d="M8 3a1 1 0 0 0-1 1v1H4a1 1 0 0 0 0 2h.08l.84 8.4A2 2 0 0 0 6.9 17h6.2a2 2 0 0 0 1.98-1.6L15.92 7H16a1 1 0 1 0 0-2h-3V4a1 1 0 0 0-1-1H8Zm1 4a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm-3 0a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm7 0a1 1 0 0 0-1 1v5a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1Z" />
-					</svg>
+					<i class="far fa-trash-alt"></i>
 				</span>
 				<h2 id="tpl-delete-title" class="font-heading text-lg font-bold text-text-primary">
 					Apagar modelo?

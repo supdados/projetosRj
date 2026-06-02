@@ -1,27 +1,45 @@
 <script lang="ts">
 	/**
-	 * Tela "Lista de Projetos" (FASE 3). Consome `GET /api/projetos` via
-	 * `$lib/api/projects` e renderiza a tabela com os componentes
-	 * compartilhado Badge (reusado, não editado). Os filtros
-	 * (busca textual com debounce, status, indicador ABEP como combobox,
-	 * especial) re-buscam server-side — o `orgao_scope` é aplicado no
-	 * backend. Estados loading/erro/vazio anunciados via aria-live.
+	 * Tela "Lista de Projetos" (paridade v4.5 — templates/projects/list.html).
 	 *
-	 * Padrão espelhado das telas de leitura (FASE 2):
-	 *   - busca/pendentes/+page.svelte (debounce + AbortController, filtros
-	 *     server-side, reconciliação dos filtros com o payload).
-	 *   - Links base-aware via `$app/paths` (links internos da SPA). O link
-	 *     de detalhe do projeto aponta para a rota SPA `${base}/projetos/<id>`
-	 *     (Detalhe migrado na Fase 5a).
+	 * Consome `GET /api/projetos` via `$lib/api/projects` e reproduz o conjunto
+	 * COMPLETO de filtros do original: busca livre (debounce), Órgão, Status,
+	 * Prioridade (linha essencial) + painel "Mais filtros" (Tipo de entrega,
+	 * Prazo/atraso, Objetivo EEGD, Indicador ABEP combobox). Os filtros
+	 * re-buscam server-side (o `orgao_scope` é aplicado no backend).
 	 *
-	 * Referência visual: templates/projects/list.html.
+	 * CLICK-THROUGH dos KPIs do Dashboard: os query params da URL
+	 * (`?status=`/`?atraso=`/`?prioridade=`/`?orgao=`/`?special_project=`/
+	 * `?delivery_type=`/`?objetivo=`/`?abep_indicator=`/`?search=`/`?page=`)
+	 * são lidos no mount e populam os filtros — abrindo o painel avançado se
+	 * houver filtro avançado ativo. Os filtros são refletidos de volta na URL
+	 * (replaceState) para deep-link / voltar / reload preservarem o estado,
+	 * espelhando o `?status=...` do form GET Jinja.
+	 *
+	 * Micro-interações replicadas do original (list.html + list.css + list.js):
+	 *   - Painel "Mais filtros" com slide animado (grid-template-rows 0fr→1fr),
+	 *     `inert`/`aria-hidden`/`aria-expanded`, rótulo "Mais/Menos filtros".
+	 *   - Combobox ABEP filtrável + navegável por teclado (↑/↓/Enter/Esc).
+	 *   - Badges de status/prioridade com tons fiéis (vigente/finalizado/
+	 *     suspenso/cancelado/em andamento; baixa/media/alta/urgente).
+	 *   - Tabela: ID-chip, link de título, datas mono, hover de linha, ações
+	 *     (editar) com fade-out na remoção.
+	 *   - Paginação numerada (primeira/anterior/janela/próxima/última).
 	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { base } from '$app/paths';
-	import { goto } from '$app/navigation';
-	import { fetchProjects, type CreateProjectResult } from '$lib/api/projects';
+	import { goto, replaceState } from '$app/navigation';
+	import { page as pageState } from '$app/state';
+	import {
+		fetchProjects,
+		fetchObjetivosCatalogo,
+		deleteProject,
+		type CreateProjectResult,
+		type ObjetivoCatalogo
+	} from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth';
+	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 	import type { Project } from '$lib/types/entities';
 	import Badge from '$lib/components/Badge.svelte';
@@ -43,11 +61,24 @@
 
 	// Filtros controlados pela UI; a busca acontece server-side.
 	let search = $state<string>('');
+	let orgao = $state<string>(''); // value do <select> (id como string)
 	let status = $state<string>(DEFAULT_STATUS);
+	let prioridade = $state<string>('');
+	let deliveryType = $state<string>('');
+	let atraso = $state<string>('');
+	let objetivo = $state<string>(''); // id como string
 	let specialProject = $state<string>('');
 	let abepIndicator = $state<string>(''); // value canônico (hidden)
 	let abepLabel = $state<string>(''); // texto exibido no combobox
 	let page = $state<number>(1);
+
+	// Painel "Mais filtros" (advanced): aberto se houver filtro avançado ativo.
+	let advancedOpen = $state<boolean>(false);
+
+	// Catálogo de objetivos EEGD para o select avançado (carregado sob demanda;
+	// o payload de /api/projetos NÃO traz a lista de objetivos).
+	let objetivosCatalog = $state<ObjetivoCatalogo[]>([]);
+	let objetivosLoaded = $state<boolean>(false);
 
 	// Combobox ABEP: estado de abertura e item destacado por teclado.
 	let abepOpen = $state<boolean>(false);
@@ -64,9 +95,6 @@
 
 	/**
 	 * Sucesso da criação: replica o flash success + redirect do Jinja.
-	 * Mostra o toast verde (window.showFlash) e navega client-side para o
-	 * detalhe do projeto criado. Converte o `redirect_to` do backend
-	 * ('/projetos/<id>') em rota SPA base-aware.
 	 */
 	function onProjectCreated(result: CreateProjectResult): void {
 		createModalOpen = false;
@@ -76,6 +104,7 @@
 			: result.redirect_to;
 		void goto(target);
 	}
+
 	// Guarda o rótulo do item selecionado para não filtrar a lista logo após
 	// escolher uma opção (o input passa a exibir o rótulo completo).
 	let lastSelectedAbepLabel = $state<string>('');
@@ -83,18 +112,60 @@
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let inFlight: AbortController | null = null;
 
-	/** Opções de status disponíveis (do payload; com fallback canônico). */
+	// Escopo de órgão global (seletor do topnav). `orgaoScopeQuery` é a derived
+	// pronta para anexar às chamadas /api (`'orgao=<id>'` | `''`). Quando o filtro
+	// de órgão PRÓPRIO da tela está vazio, propagamos o escopo global; o filtro
+	// explícito da tela tem precedência. A autorização continua server-side.
+	let scopeQuery = $state<string>('');
+	const unsubscribeScope = orgaoScopeQuery.subscribe((value) => {
+		scopeQuery = value;
+	});
+
+	/** Extrai o id numérico do escopo global de órgão (ou `undefined`). */
+	function scopeOrgaoId(): number | undefined {
+		const match = scopeQuery.match(/orgao=(\d+)/);
+		if (!match) return undefined;
+		const id = Number.parseInt(match[1], 10);
+		return Number.isFinite(id) ? id : undefined;
+	}
+
+	/** Opções de filtro derivadas do payload (com fallbacks canônicos). */
 	const statusOptions = $derived(data?.options.statuses ?? ['Vigente', 'Finalizado']);
+	const priorityOptions = $derived(data?.options.priorities ?? []);
+	const deliveryOptions = $derived(data?.options.delivery_types_options ?? []);
+	const atrasoOptions = $derived(data?.options.atrasos_options ?? []);
+	const orgaoOptions = $derived(data?.options.orgaos_options ?? []);
 	const specialOptions = $derived(data?.options.special_projects_options ?? []);
 	const abepOptions = $derived(data?.options.abep_indicadores_options ?? []);
 	const pagination = $derived(data?.pagination ?? null);
 	const totalProjects = $derived(data?.pagination.total ?? 0);
+
 	const hasActiveFilters = $derived(
 		search.trim() !== '' ||
+			orgao !== '' ||
 			status !== DEFAULT_STATUS ||
+			prioridade !== '' ||
+			deliveryType !== '' ||
+			atraso !== '' ||
+			objetivo !== '' ||
 			specialProject !== '' ||
 			abepIndicator !== ''
 	);
+
+	/** Há algum filtro AVANÇADO ativo? (controla a abertura inicial do painel) */
+	const hasAdvancedActive = $derived(
+		deliveryType !== '' || atraso !== '' || objetivo !== '' || abepIndicator !== ''
+	);
+
+	/** Janela de páginas visível na paginação numerada (igual ao range Jinja). */
+	const pageWindow = $derived.by(() => {
+		const tp = pagination?.total_pages ?? 1;
+		const start = Math.max(1, page - 2);
+		const end = Math.min(tp, page + 2);
+		const out: number[] = [];
+		for (let p = start; p <= end; p++) out.push(p);
+		return out;
+	});
 
 	/** Subconjunto de indicadores ABEP que casa com o texto digitado. */
 	const abepVisible = $derived.by(() => {
@@ -106,6 +177,55 @@
 		);
 	});
 
+	/**
+	 * Lê os query params da URL e popula os filtros (suporte a click-through dos
+	 * KPIs do Dashboard e a deep-links). Executado uma única vez no mount, ANTES
+	 * do primeiro load. `status` ausente cai no default "Vigente" (igual Jinja).
+	 */
+	function hydrateFiltersFromUrl(): void {
+		const params = pageState.url.searchParams;
+		const statusParam = params.get('status');
+		status = statusParam === null ? DEFAULT_STATUS : statusParam;
+		search = params.get('search') ?? params.get('q') ?? '';
+		orgao = params.get('orgao') ?? '';
+		prioridade = params.get('prioridade') ?? '';
+		deliveryType = params.get('delivery_type') ?? '';
+		atraso = params.get('atraso') ?? '';
+		objetivo = params.get('objetivo') ?? '';
+		specialProject = params.get('special_project') ?? '';
+		abepIndicator = params.get('abep_indicator') ?? '';
+		const pageParam = Number.parseInt(params.get('page') ?? '1', 10);
+		page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+		// Abre o painel avançado se chegou com filtro avançado ativo.
+		if (hasAdvancedActive) {
+			advancedOpen = true;
+			void ensureObjetivos();
+		}
+	}
+
+	/** Reflete os filtros ativos na URL (replaceState) para reload/voltar/deep-link. */
+	function syncUrlFromFilters(): void {
+		const params = new URLSearchParams();
+		if (search.trim()) params.set('search', search.trim());
+		if (orgao) params.set('orgao', orgao);
+		// Mantém ?status na URL sempre que difere do default OU foi limpo ("Todos").
+		if (status !== DEFAULT_STATUS) params.set('status', status);
+		if (prioridade) params.set('prioridade', prioridade);
+		if (deliveryType) params.set('delivery_type', deliveryType);
+		if (atraso) params.set('atraso', atraso);
+		if (objetivo) params.set('objetivo', objetivo);
+		if (specialProject) params.set('special_project', specialProject);
+		if (abepIndicator) params.set('abep_indicator', abepIndicator);
+		if (page > 1) params.set('page', String(page));
+		const qs = params.toString();
+		const target = `${base}/projetos${qs ? `?${qs}` : ''}`;
+		try {
+			replaceState(target, {});
+		} catch {
+			// replaceState exige contexto de roteamento; ignora fora dele (SSR/teste).
+		}
+	}
+
 	async function load(): Promise<void> {
 		loadState = data ? loadState : 'loading';
 		errorMessage = '';
@@ -115,8 +235,15 @@
 
 		const query: ProjectsListQuery = {
 			status,
+			prioridade: prioridade || undefined,
+			delivery_type: deliveryType || undefined,
+			atraso: atraso || undefined,
+			objetivo: objetivo || undefined,
 			special_project: specialProject || undefined,
 			abep_indicator: abepIndicator || undefined,
+			// Filtro de órgão da tela tem precedência; senão, herda o escopo global
+			// do topnav (orgaoScopeQuery). Vazio => sem filtro ("Todos os órgãos").
+			orgao: orgao ? Number.parseInt(orgao, 10) : scopeOrgaoId(),
 			q: search.trim() || undefined,
 			page
 		};
@@ -126,18 +253,34 @@
 			data = next;
 			// Reconcilia os filtros com o que o backend efetivamente aplicou.
 			status = next.filters.status ?? DEFAULT_STATUS;
+			prioridade = next.filters.prioridade ?? '';
+			deliveryType = next.filters.delivery_type ?? '';
+			atraso = next.filters.atraso ?? '';
+			objetivo = next.filters.objetivo ?? '';
 			specialProject = next.filters.special_project ?? '';
 			abepIndicator = next.filters.abep_indicator ?? '';
+			orgao = next.filters.selected_orgao != null ? String(next.filters.selected_orgao) : '';
 			page = next.pagination.page;
 			syncAbepLabelFromValue();
+			syncUrlFromFilters();
 			loadState = 'ready';
 		} catch (err) {
 			if (controller.signal.aborted) return;
-			// 401 já redirecionou em client.ts; aqui tratamos os demais erros.
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
 			errorMessage =
 				err instanceof Error ? err.message : 'Falha ao carregar os projetos.';
 			loadState = 'error';
+		}
+	}
+
+	/** Carrega o catálogo de objetivos EEGD uma única vez (select avançado). */
+	async function ensureObjetivos(): Promise<void> {
+		if (objetivosLoaded) return;
+		objetivosLoaded = true;
+		try {
+			objetivosCatalog = await fetchObjetivosCatalogo();
+		} catch {
+			objetivosLoaded = false; // permite nova tentativa ao reabrir o painel
 		}
 	}
 
@@ -172,22 +315,27 @@
 		void load();
 	}
 
-	function onStatusChange(event: Event): void {
-		status = (event.currentTarget as HTMLSelectElement).value;
+	/** Mudança de qualquer <select> de filtro: re-busca a partir da página 1. */
+	function applyFilterChange(): void {
 		page = 1;
 		void load();
 	}
 
-	function onSpecialChange(event: Event): void {
-		specialProject = (event.currentTarget as HTMLSelectElement).value;
-		page = 1;
-		void load();
+	/** Alterna o painel "Mais filtros" (slide animado + inert/aria). */
+	function toggleAdvanced(): void {
+		advancedOpen = !advancedOpen;
+		if (advancedOpen) void ensureObjetivos();
 	}
 
 	function clearFilters(): void {
 		if (debounceTimer) clearTimeout(debounceTimer);
 		search = '';
+		orgao = '';
 		status = DEFAULT_STATUS;
+		prioridade = '';
+		deliveryType = '';
+		atraso = '';
+		objetivo = '';
 		specialProject = '';
 		abepIndicator = '';
 		abepLabel = '';
@@ -198,6 +346,8 @@
 	}
 
 	function goToPage(target: number): void {
+		const tp = pagination?.total_pages ?? 1;
+		if (target < 1 || target > tp || target === page) return;
 		page = target;
 		void load();
 	}
@@ -258,7 +408,62 @@
 		}
 	}
 
+	// --- Exclusão de projeto: confirmação em dois passos + EXCLUSÃO REAL ----
+	// Persiste via DELETE /api/projetos/<id> (client `del`). A linha só some da
+	// UI APÓS o sucesso da chamada (fade-out de 280ms, igual ao list.js); em erro
+	// mostramos flash e MANTEMOS a linha. `deletingId` trava o botão durante a
+	// requisição (evita duplo-submit / clique no overlay).
+	let pendingDelete = $state<{ id: number; titulo: string } | null>(null);
+	let removingIds = $state<Set<number>>(new Set());
+	let deletingId = $state<number | null>(null);
+
+	function requestDelete(project: Project): void {
+		pendingDelete = { id: project.id, titulo: project.titulo };
+	}
+
+	function cancelDelete(): void {
+		if (deletingId !== null) return; // não cancela no meio da exclusão
+		pendingDelete = null;
+	}
+
+	async function confirmDelete(): Promise<void> {
+		if (!pendingDelete || deletingId !== null) return;
+		const id = pendingDelete.id;
+		const titulo = pendingDelete.titulo;
+		deletingId = id;
+		try {
+			await deleteProject(id);
+		} catch (err) {
+			// Falha: mantém a linha e informa o motivo (403/404/500 do envelope).
+			deletingId = null;
+			pendingDelete = null;
+			flash.danger(
+				err instanceof Error ? err.message : 'Não foi possível excluir o projeto.'
+			);
+			return;
+		}
+		// Sucesso: fecha o modal e só então faz o fade-out + remove do payload.
+		deletingId = null;
+		pendingDelete = null;
+		removingIds = new Set([...removingIds, id]);
+		setTimeout(() => {
+			if (data) {
+				data = {
+					...data,
+					projetos: data.projetos.filter((p) => p.id !== id),
+					pagination: {
+						...data.pagination,
+						total: Math.max(0, data.pagination.total - 1)
+					}
+				};
+			}
+			removingIds = new Set([...removingIds].filter((x) => x !== id));
+			flash.success(`Projeto "${titulo}" excluído.`);
+		}, 280);
+	}
+
 	onMount(() => {
+		hydrateFiltersFromUrl();
 		void load();
 		return () => inFlight?.abort();
 	});
@@ -266,11 +471,17 @@
 	onDestroy(() => {
 		if (debounceTimer) clearTimeout(debounceTimer);
 		inFlight?.abort();
+		unsubscribeScope();
 	});
 
 	/** Detalhe do projeto: rota SPA base-aware (Fase 5a migrada). */
 	function projectDetailHref(project: Project): string {
 		return `${base}/projetos/${project.id}`;
+	}
+
+	/** Link de edição: detalhe com query ?edit=true (igual ao list.html). */
+	function projectEditHref(project: Project): string {
+		return `${base}/projetos/${project.id}?edit=true`;
 	}
 
 	/** Formata uma data ISO em pt-BR; vazio vira travessão. */
@@ -286,7 +497,7 @@
 		});
 	}
 
-	/** Tom do badge de prioridade conforme a severidade. */
+	/** Tom do badge de prioridade conforme a severidade (paridade list.css). */
 	function priorityTone(
 		prioridade: string | null
 	): 'neutral' | 'info' | 'warning' | 'danger' {
@@ -298,13 +509,41 @@
 			case 'media':
 				return 'info';
 			default:
-				return 'neutral';
+				return 'neutral'; // baixa / desconhecida
 		}
+	}
+
+	/**
+	 * Tom do badge de status, fiel às cores do list.css:
+	 *   vigente/em andamento → success/info, finalizado → neutral,
+	 *   suspenso/pausado → warning, cancelado → danger.
+	 */
+	function statusTone(
+		status: string | null
+	): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
+		const key = (status ?? '').toLowerCase().replace(/\s+/g, '_');
+		if (key === 'vigente') return 'success';
+		if (key === 'em_andamento') return 'info';
+		if (key === 'suspenso' || key === 'pausado') return 'warning';
+		if (key === 'cancelado' || key === 'cancelada') return 'danger';
+		return 'neutral'; // finalizado e demais
 	}
 
 	function capitalize(value: string | null): string {
 		if (!value) return '—';
 		return value.charAt(0).toUpperCase() + value.slice(1);
+	}
+
+	/** Rótulo amigável do órgão para o <option>. */
+	function orgaoOptionLabel(option: {
+		sigla: string | null;
+		nome: string | null;
+		label: string;
+	}): string {
+		if (option.sigla && option.nome && option.nome !== option.sigla) {
+			return `${option.sigla} — ${option.nome}`;
+		}
+		return option.sigla ?? option.label;
 	}
 </script>
 
@@ -342,19 +581,17 @@
 			{#if isAdmin}
 				<!--
 					Exportar CSV: link direto para a rota Flask nativa /projects/download
-					(download de attachment, FORA do envelope JSON). Visível só p/ admin,
-					replicando o {% if is_admin_user %} do Jinja. Sem toast/som/loading —
-					o browser baixa 'projetosDDMMYYYYHHMM.csv'. NÃO base-aware: é rota
-					nativa do Flask, não da SPA.
+					(download de attachment, FORA do envelope JSON). Visível só p/ admin.
 				-->
 				<a
 					href="/projects/download"
 					download
 					title="Exportar projetos (CSV)"
+					aria-label="Exportar projetos"
 					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-primary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<i class="fas fa-download" aria-hidden="true"></i>
-					Exportar CSV
+					<span class="hidden sm:inline">Exportar CSV</span>
 				</a>
 			{/if}
 			<!--
@@ -373,172 +610,287 @@
 	</header>
 
 	<!--
-		Filtros (projects-v4-filters): card de superfície com borda + sombra. Os
-		campos re-buscam server-side. Linha de campos com a busca crescendo (flex-1)
-		e as ações empurradas para a direita (ml-auto). Quebra no mobile.
+		Filtros (projects-v4-filters): card de superfície com borda + sombra. A
+		linha essencial (busca/órgão/status/prioridade + ações) cresce e empurra
+		as ações para a direita; o painel "Mais filtros" abre com slide animado.
 	-->
 	<form
-		class="flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3.5 shadow-sm"
+		class="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface px-4 py-3.5 shadow-sm"
 		role="search"
 		aria-label="Filtros de projetos"
 		onsubmit={onSubmit}
 	>
-		<div class="flex min-w-[15rem] flex-1 flex-col gap-1">
-			<label
-				for="projetosSearch"
-				class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-			>
-				Busca livre
-			</label>
-			<!-- projects-v4-search-wrap: ícone de lupa à esquerda, padding interno. -->
-			<div class="relative">
-				<i
-					class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
-					aria-hidden="true"
-				></i>
-				<input
-					id="projetosSearch"
-					name="q"
-					type="search"
-					autocomplete="off"
-					bind:value={search}
-					oninput={onSearchInput}
-					placeholder="Digite título, órgão ou indicador…"
-					class="h-9 w-full rounded-md border border-border-subtle bg-surface pl-8 pr-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-				/>
+		<!-- Linha essencial (projects-v4-filter-essential). -->
+		<div class="flex flex-wrap items-end gap-2.5">
+			<div class="flex min-w-[15rem] flex-1 flex-col gap-1">
+				<label
+					for="projetosSearch"
+					class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+				>
+					Busca livre
+				</label>
+				<!-- projects-v4-search-wrap: ícone de lupa à esquerda, padding interno. -->
+				<div class="relative">
+					<i
+						class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
+						aria-hidden="true"
+					></i>
+					<input
+						id="projetosSearch"
+						name="search"
+						type="search"
+						autocomplete="off"
+						bind:value={search}
+						oninput={onSearchInput}
+						placeholder="Digite título, órgão ou indicador…"
+						class="h-9 w-full rounded-md border border-border-subtle bg-surface pl-8 pr-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
+					/>
+				</div>
+			</div>
+
+			{#if orgaoOptions.length > 0}
+				<div class="flex min-w-[10rem] flex-col gap-1">
+					<label
+						for="projetosOrgao"
+						class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+					>
+						Órgão
+					</label>
+					<select
+						id="projetosOrgao"
+						bind:value={orgao}
+						onchange={applyFilterChange}
+						class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
+					>
+						<option value="">Todos os órgãos</option>
+						{#each orgaoOptions as option (option.value)}
+							<option value={option.value}>{orgaoOptionLabel(option)}</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
+
+			<div class="flex min-w-[10rem] flex-col gap-1">
+				<label
+					for="projetosStatus"
+					class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+				>
+					Status
+				</label>
+				<select
+					id="projetosStatus"
+					bind:value={status}
+					onchange={applyFilterChange}
+					class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
+				>
+					<option value="">Todos os status</option>
+					{#each statusOptions as option (option)}
+						<option value={option}>{option}</option>
+					{/each}
+				</select>
+			</div>
+
+			<div class="flex min-w-[10rem] flex-col gap-1">
+				<label
+					for="projetosPrioridade"
+					class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+				>
+					Prioridade
+				</label>
+				<select
+					id="projetosPrioridade"
+					bind:value={prioridade}
+					onchange={applyFilterChange}
+					class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
+				>
+					<option value="">Todas as prioridades</option>
+					{#each priorityOptions as option (option)}
+						<option value={option}>{capitalize(option)}</option>
+					{/each}
+				</select>
+			</div>
+
+			<!-- Ações (projects-v4-filter-actions): empurradas para a direita. -->
+			<div class="ml-auto flex items-end gap-2">
+				<button
+					type="submit"
+					title="Filtrar"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary-700/25 bg-gradient-to-br from-primary-600 to-primary-700 px-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out hover:from-primary-500 hover:to-primary-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					<i class="fas fa-filter" aria-hidden="true"></i>
+					Filtrar
+				</button>
+				<!-- Toggle "Mais filtros" (btn-projects-v4-toggle). -->
+				<button
+					type="button"
+					onclick={toggleAdvanced}
+					aria-expanded={advancedOpen}
+					aria-controls="projetosAdvancedPanel"
+					title={advancedOpen ? 'Menos filtros' : 'Mais filtros'}
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-all duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {advancedOpen
+						? 'border-primary-500/50 bg-primary-100 text-primary-700'
+						: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-primary-700'}"
+				>
+					<i class="fas fa-sliders-h" aria-hidden="true"></i>
+					{advancedOpen ? 'Menos filtros' : 'Mais filtros'}
+				</button>
+				{#if hasActiveFilters}
+					<button
+						type="button"
+						onclick={clearFilters}
+						title="Limpar filtros"
+						aria-label="Limpar filtros"
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<i class="fas fa-rotate-left" aria-hidden="true"></i>
+						Limpar
+					</button>
+				{/if}
 			</div>
 		</div>
 
-		<div class="flex min-w-[10rem] flex-col gap-1">
-			<label
-				for="projetosStatus"
-				class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-			>
-				Status
-			</label>
-			<select
-				id="projetosStatus"
-				value={status}
-				onchange={onStatusChange}
-				class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-			>
-				{#each statusOptions as option (option)}
-					<option value={option}>{option}</option>
-				{/each}
-			</select>
-		</div>
+		<!--
+			Painel avançado (projects-v4-filter-advanced): slide via grid-rows
+			0fr→1fr, com opacidade/translate. `inert` quando fechado para tirar do
+			tab-order, espelhando o list.js.
+		-->
+		<div
+			id="projetosAdvancedPanel"
+			class="grid transition-[grid-template-rows,opacity,margin-top,padding-top,border-top-color] duration-300 ease-out {advancedOpen
+				? 'mt-0.5 grid-rows-[1fr] border-t border-border-subtle pt-3 opacity-100'
+				: 'grid-rows-[0fr] border-t border-transparent opacity-0'}"
+			aria-hidden={!advancedOpen}
+			inert={!advancedOpen}
+		>
+			<div class="min-h-0 overflow-visible">
+				<div class="flex flex-wrap items-end gap-2.5">
+					<div class="flex min-w-[11rem] flex-1 flex-col gap-1">
+						<label
+							for="projetosDelivery"
+							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+						>
+							Tipo de entrega
+						</label>
+						<select
+							id="projetosDelivery"
+							bind:value={deliveryType}
+							onchange={applyFilterChange}
+							class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
+						>
+							<option value="">Todos os tipos</option>
+							{#each deliveryOptions as option (option)}
+								<option value={option}>{option}</option>
+							{/each}
+						</select>
+					</div>
 
-		<div class="flex min-w-[10rem] flex-col gap-1">
-			<label
-				for="projetosSpecial"
-				class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-			>
-				Especial
-			</label>
-			<select
-				id="projetosSpecial"
-				value={specialProject}
-				onchange={onSpecialChange}
-				class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-			>
-				<option value="">Todos os especiais</option>
-				{#each specialOptions as option (option)}
-					<option value={option}>{option}</option>
-				{/each}
-			</select>
-		</div>
+					<div class="flex min-w-[11rem] flex-1 flex-col gap-1">
+						<label
+							for="projetosAtraso"
+							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+						>
+							Prazo
+						</label>
+						<select
+							id="projetosAtraso"
+							bind:value={atraso}
+							onchange={applyFilterChange}
+							class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
+						>
+							<option value="">Todos os prazos</option>
+							{#each atrasoOptions as option (option.value)}
+								<option value={option.value}>{option.label}</option>
+							{/each}
+						</select>
+					</div>
 
-		<!-- Indicador ABEP: combobox filtrável e navegável por teclado. -->
-		<div class="relative flex min-w-[16rem] flex-col gap-1">
-			<label
-				for="projetosAbep"
-				class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-			>
-				Indicador ABEP
-			</label>
-			<input
-				id="projetosAbep"
-				type="text"
-				autocomplete="off"
-				role="combobox"
-				aria-expanded={abepOpen}
-				aria-controls="projetosAbepListbox"
-				aria-autocomplete="list"
-				aria-activedescendant={abepActiveIndex >= 0
-					? `abep-option-${abepActiveIndex}`
-					: undefined}
-				bind:value={abepLabel}
-				oninput={onAbepInput}
-				onfocus={openAbep}
-				onkeydown={onAbepKeydown}
-				onblur={() => setTimeout(closeAbep, 120)}
-				placeholder="Busque por número ou título…"
-				class="h-9 cursor-text rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-			/>
-			{#if abepOpen}
-				<!--
-					projects-v4-abep-dropdown: painel flutuante com entrada suave
-					(animate-dropdown-in, 0.16s ease-out — keyframes do kit Fase 1).
-				-->
-				<ul
-					id="projetosAbepListbox"
-					role="listbox"
-					aria-label="Indicadores ABEP"
-					class="absolute left-0 right-0 top-full z-dropdown mt-1 max-h-[220px] origin-top animate-dropdown-in overflow-y-auto rounded-md border border-border-subtle bg-surface py-1 shadow-lg"
-				>
-					{#if abepVisible.length === 0}
-						<li class="px-2.5 py-2 text-sm italic text-text-muted">Nenhum indicador encontrado</li>
-					{:else}
-						{#each abepVisible as option, index (option.value)}
-							<li class="contents">
-								<!--
-									role="option" num <button> mantém o item acessível: a navegação por
-									teclado segue via aria-activedescendant + onkeydown no input (foco
-									permanece no combobox), e o <button> elimina o warning a11y de
-									click sem keydown. onmousedown previne o blur antes do onclick.
-								-->
-								<button
-									type="button"
-									id={`abep-option-${index}`}
-									role="option"
-									aria-selected={option.value === abepIndicator}
-									class="block w-full cursor-pointer px-2.5 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-primary-100 hover:text-primary-700 {index ===
-									abepActiveIndex
-										? 'bg-primary-100 text-primary-700'
-										: ''}"
-									onmousedown={(e) => e.preventDefault()}
-									onclick={() => selectAbep(option.value, option.label)}
-								>
-									{option.label}
-								</button>
-							</li>
-						{/each}
-					{/if}
-				</ul>
-			{/if}
-		</div>
+					<div class="flex min-w-[16rem] flex-[2] flex-col gap-1">
+						<label
+							for="projetosObjetivo"
+							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+						>
+							Objetivo EEGD
+						</label>
+						<select
+							id="projetosObjetivo"
+							bind:value={objetivo}
+							onchange={applyFilterChange}
+							class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
+						>
+							<option value="">Todos os objetivos</option>
+							{#each objetivosCatalog as option (option.id)}
+								<option value={String(option.id)}>{option.descricao}</option>
+							{/each}
+						</select>
+					</div>
 
-		<div class="ml-auto flex items-end gap-2">
-			<!-- Botão primário "Filtrar" com gradiente da marca, igual ao header. -->
-			<button
-				type="submit"
-				title="Filtrar"
-				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary-700/25 bg-gradient-to-br from-primary-600 to-primary-700 px-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out hover:from-primary-500 hover:to-primary-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<i class="fas fa-filter" aria-hidden="true"></i>
-				Filtrar
-			</button>
-			{#if hasActiveFilters}
-				<button
-					type="button"
-					onclick={clearFilters}
-					title="Limpar filtros"
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<i class="fas fa-rotate-left" aria-hidden="true"></i>
-					Limpar
-				</button>
-			{/if}
+					<!-- Indicador ABEP: combobox filtrável e navegável por teclado. -->
+					<div class="relative flex min-w-[18rem] flex-[2.4] flex-col gap-1">
+						<label
+							for="projetosAbep"
+							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+						>
+							Indicador ABEP
+						</label>
+						<input
+							id="projetosAbep"
+							type="text"
+							autocomplete="off"
+							role="combobox"
+							aria-expanded={abepOpen}
+							aria-controls="projetosAbepListbox"
+							aria-autocomplete="list"
+							aria-activedescendant={abepActiveIndex >= 0
+								? `abep-option-${abepActiveIndex}`
+								: undefined}
+							bind:value={abepLabel}
+							oninput={onAbepInput}
+							onfocus={openAbep}
+							onkeydown={onAbepKeydown}
+							onblur={() => setTimeout(closeAbep, 120)}
+							placeholder="Busque por número ou título…"
+							class="h-9 cursor-text rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
+						/>
+						{#if abepOpen}
+							<!--
+								projects-v4-abep-dropdown: painel flutuante com entrada suave
+								(animate-dropdown-in — keyframes do kit Fase 1).
+							-->
+							<ul
+								id="projetosAbepListbox"
+								role="listbox"
+								aria-label="Indicadores ABEP"
+								class="absolute left-0 right-0 top-full z-dropdown mt-1 max-h-[220px] origin-top animate-dropdown-in overflow-y-auto rounded-md border border-border-subtle bg-surface py-1 shadow-lg"
+							>
+								{#if abepVisible.length === 0}
+									<li class="px-2.5 py-2 text-sm italic text-text-muted">
+										Nenhum indicador encontrado
+									</li>
+								{:else}
+									{#each abepVisible as option, index (option.value)}
+										<li class="contents">
+											<button
+												type="button"
+												id={`abep-option-${index}`}
+												role="option"
+												aria-selected={option.value === abepIndicator}
+												class="block w-full cursor-pointer px-2.5 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-primary-100 hover:text-primary-700 {index ===
+												abepActiveIndex
+													? 'bg-primary-100 text-primary-700'
+													: ''}"
+												onmousedown={(e) => e.preventDefault()}
+												onclick={() => selectAbep(option.value, option.label)}
+											>
+												{option.label}
+											</button>
+										</li>
+									{/each}
+								{/if}
+							</ul>
+						{/if}
+					</div>
+				</div>
+			</div>
 		</div>
 	</form>
 
@@ -576,19 +928,24 @@
 					Nenhum projeto encontrado
 				</h2>
 				<p class="mb-3.5 mt-1.5 text-md text-text-muted">
-					Os filtros aplicados não retornaram resultados. Ajuste os filtros e tente
-					novamente.
+					Os filtros aplicados não retornaram resultados. Ajuste os filtros ou crie um
+					novo projeto.
 				</p>
+				<button
+					type="button"
+					onclick={() => (createModalOpen = true)}
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary-700/25 bg-gradient-to-br from-primary-600 to-primary-700 px-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out hover:from-primary-500 hover:to-primary-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					<i class="fas fa-plus" aria-hidden="true"></i>
+					Criar projeto
+				</button>
 			</div>
 		{:else}
 			<!--
 				Tabela-card (projects-v4-table-card): superfície com borda + sombra e
-				overflow-hidden para os cantos arredondarem a tabela. Sem padding
-				interno — a tabela encosta nas bordas, igual ao original.
+				overflow-hidden para os cantos arredondarem a tabela.
 			-->
-			<div
-				class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm"
-			>
+			<div class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm">
 				<div class="overflow-x-auto" aria-busy={loadState !== 'ready'}>
 					<table class="m-0 w-full min-w-[980px] border-separate border-spacing-0 text-sm">
 						<caption class="sr-only">Lista de projetos filtrados</caption>
@@ -629,6 +986,12 @@
 									scope="col"
 									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
 								>
+									Tipo de entrega
+								</th>
+								<th
+									scope="col"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+								>
 									Data Início
 								</th>
 								<th
@@ -637,15 +1000,25 @@
 								>
 									Data Fim
 								</th>
+								<th
+									scope="col"
+									class="w-28 border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+								>
+									Ações
+								</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#each data.projetos as project (project.id)}
-								<!-- Linha com hover suave (transição de fundo). -->
-								<tr class="group transition-colors duration-fast hover:bg-surface-muted/60">
-									<td
-										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle"
-									>
+								<!-- Linha com hover suave + fade-out na remoção (260ms). -->
+								<tr
+									class="group transition-[background-color,opacity] duration-fast hover:bg-surface-muted/60 {removingIds.has(
+										project.id
+									)
+										? 'pointer-events-none opacity-0'
+										: 'opacity-100'}"
+								>
+									<td class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle">
 										<!-- projects-v4-id-chip: chip arredondado com o ID. -->
 										<span
 											class="inline-flex items-center rounded-sm border border-border-subtle bg-surface-muted px-2 py-0.5 text-xs font-bold text-text-muted"
@@ -680,9 +1053,20 @@
 									<td
 										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle"
 									>
-										<Badge tone={project.status === 'Vigente' ? 'success' : 'neutral'}>
-											{project.status}
-										</Badge>
+										{#if project.status}
+											<Badge tone={statusTone(project.status)}>{project.status}</Badge>
+										{:else}
+											<span class="italic text-text-muted">—</span>
+										{/if}
+									</td>
+									<td
+										class="border-t border-border-subtle px-2.5 py-2.5 align-middle text-text-secondary"
+									>
+										{#if project.delivery_type}
+											{project.delivery_type}
+										{:else}
+											<span class="italic text-text-muted">—</span>
+										{/if}
 									</td>
 									<td
 										class="border-t border-border-subtle px-2.5 py-2.5 align-middle font-mono font-medium whitespace-nowrap text-text-secondary"
@@ -706,6 +1090,34 @@
 											<span class="italic text-text-muted">—</span>
 										{/if}
 									</td>
+									<!--
+										Ações (projects-v4-actions): editar (link p/ detalhe?edit=true)
+										e excluir (confirm em dois passos + DELETE real persistido em
+										/api/projetos/<id>; a linha some com fade só após o sucesso).
+									-->
+									<td
+										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle"
+									>
+										<div class="inline-flex items-center justify-center gap-1.5">
+											<a
+												href={projectEditHref(project)}
+												title="Editar projeto"
+												aria-label="Editar projeto"
+												class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-sm text-text-muted transition-colors duration-fast hover:border-primary-500/50 hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											>
+												<i class="fas fa-pen" aria-hidden="true"></i>
+											</a>
+											<button
+												type="button"
+												onclick={() => requestDelete(project)}
+												title="Excluir projeto"
+												aria-label="Excluir projeto"
+												class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-sm text-text-muted transition-colors duration-fast hover:border-danger/50 hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+											>
+												<i class="fas fa-trash" aria-hidden="true"></i>
+											</button>
+										</div>
+									</td>
 								</tr>
 							{/each}
 						</tbody>
@@ -715,8 +1127,8 @@
 
 			{#if pagination && pagination.total_pages > 1}
 				<!--
-					Paginação (projects-v4-pagination-wrap): card com a info "Mostrando…"
-					à esquerda e a navegação (chips) à direita. Empilha no mobile.
+					Paginação numerada (projects-v4-pagination): info "Mostrando…" à
+					esquerda; primeira/anterior/janela/próxima/última à direita.
 				-->
 				<section
 					class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 shadow-sm"
@@ -727,29 +1139,69 @@
 							totalProjects
 						)} de {totalProjects} projetos
 					</div>
-					<nav class="flex items-center gap-2" aria-label="Paginação de projetos">
-						<button
-							type="button"
-							onclick={() => goToPage(pagination.page - 1)}
-							disabled={pagination.page <= 1}
-							class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
-						>
-							Anterior
-						</button>
-						<span
-							class="inline-flex h-9 items-center rounded-md border border-primary-700 bg-gradient-to-b from-primary-500 to-primary-700 px-3 text-sm font-semibold text-white"
-							aria-live="polite"
-						>
-							Página {pagination.page} de {pagination.total_pages}
-						</span>
-						<button
-							type="button"
-							onclick={() => goToPage(pagination.page + 1)}
-							disabled={pagination.page >= pagination.total_pages}
-							class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
-						>
-							Próxima
-						</button>
+					<nav aria-label="Paginação de projetos">
+						<ul class="m-0 flex list-none items-center gap-1 p-0">
+							<li>
+								<button
+									type="button"
+									onclick={() => goToPage(1)}
+									disabled={pagination.page <= 1}
+									aria-label="Primeira página"
+									class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
+								>
+									««
+								</button>
+							</li>
+							<li>
+								<button
+									type="button"
+									onclick={() => goToPage(pagination.page - 1)}
+									disabled={pagination.page <= 1}
+									aria-label="Página anterior"
+									class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
+								>
+									«
+								</button>
+							</li>
+							{#each pageWindow as p (p)}
+								<li>
+									<button
+										type="button"
+										onclick={() => goToPage(p)}
+										aria-label={`Página ${p}`}
+										aria-current={p === pagination.page ? 'page' : undefined}
+										class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-3 text-sm font-semibold transition-all duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {p ===
+										pagination.page
+											? 'border-primary-700 bg-gradient-to-b from-primary-500 to-primary-700 text-white'
+											: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-primary-700'}"
+									>
+										{p}
+									</button>
+								</li>
+							{/each}
+							<li>
+								<button
+									type="button"
+									onclick={() => goToPage(pagination.page + 1)}
+									disabled={pagination.page >= pagination.total_pages}
+									aria-label="Próxima página"
+									class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
+								>
+									»
+								</button>
+							</li>
+							<li>
+								<button
+									type="button"
+									onclick={() => goToPage(pagination.total_pages)}
+									disabled={pagination.page >= pagination.total_pages}
+									aria-label="Última página"
+									class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
+								>
+									»»
+								</button>
+							</li>
+						</ul>
 					</nav>
 				</section>
 			{/if}
@@ -764,3 +1216,65 @@
 	onClose={() => (createModalOpen = false)}
 	onCreated={onProjectCreated}
 />
+
+<!--
+	Confirmação de exclusão em dois passos (espelha o DeleteProjectModal do
+	list.js). A persistência é REAL: confirmar dispara DELETE /api/projetos/<id>
+	e a linha só some (com fade) após o sucesso; em erro mantém a linha + flash.
+-->
+{#if pendingDelete}
+	<div
+		class="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="deleteProjectTitle"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) cancelDelete();
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') cancelDelete();
+		}}
+	>
+		<div
+			class="w-full max-w-md animate-dropdown-in rounded-lg border border-border-subtle bg-surface p-5 shadow-lg"
+		>
+			<h2
+				id="deleteProjectTitle"
+				class="m-0 flex items-center gap-2 font-heading text-lg font-bold text-text-primary"
+			>
+				<i class="fas fa-triangle-exclamation text-danger" aria-hidden="true"></i>
+				Excluir projeto
+			</h2>
+			<p class="mt-3 text-sm text-text-secondary">
+				Tem certeza que deseja excluir <strong class="text-text-primary"
+					>{pendingDelete.titulo}</strong
+				>? Esta ação não pode ser desfeita.
+			</p>
+			<div class="mt-5 flex justify-end gap-2">
+				<button
+					type="button"
+					onclick={cancelDelete}
+					disabled={deletingId !== null}
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					onclick={confirmDelete}
+					disabled={deletingId !== null}
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-danger/30 bg-danger px-3 text-sm font-semibold text-white transition-all duration-fast ease-out hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-60"
+				>
+					{#if deletingId !== null}
+						<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+						Excluindo…
+					{:else}
+						<i class="fas fa-trash" aria-hidden="true"></i>
+						Excluir
+					{/if}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}

@@ -225,6 +225,50 @@ def api_projeto_concluir(project_id: int) -> Response | tuple[Response, int]:
     )
 
 
+@main_bp.route("/api/projetos/<int:project_id>", methods=["DELETE"])
+@api_login_required
+def api_projeto_excluir(project_id: int) -> Response | tuple[Response, int]:
+    """Exclui um projeto de verdade (envelope), espelhando ``delete_project``.
+
+    Mesma regra do Jinja (``routes/projects/crud.delete_project``): permissão por
+    escopo de órgão (``user_can_access_project`` => 403), registro no histórico
+    antes da exclusão e exclusão em cascata (``db.session.delete``). Antes a SPA
+    só "apagava" no cliente; agora a remoção persiste.
+
+    Returns:
+        ``ok({deleted: True, id})`` (200); 404 inexistente; 403 fora do escopo;
+        401 sem sessão.
+    """
+    project = db.session.get(Project, project_id)
+    if project is None:
+        return fail("Projeto não encontrado.", status=404, code="not_found")
+    if not user_can_access_project(g.user, project):
+        return fail(
+            "Você não tem permissão para excluir este projeto.",
+            status=403,
+            code="forbidden",
+        )
+
+    titulo = project.titulo
+    try:
+        log_project_action(
+            project_id=project.id,
+            action_type="delete",
+            description=f'Excluiu o projeto "{titulo}"',
+        )
+        db.session.delete(project)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return fail(
+            "Erro ao excluir projeto. Tente novamente em instantes.",
+            status=500,
+            code="server",
+        )
+
+    return ok({"deleted": True, "id": project_id})
+
+
 @main_bp.route("/api/catalogos/objetivos", methods=["GET"])
 @api_login_required
 def api_catalogo_objetivos() -> Response | tuple[Response, int]:

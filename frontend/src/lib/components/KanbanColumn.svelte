@@ -21,6 +21,8 @@
 		composer?: Snippet<[TaskStatus]>;
 		/** Id do card sendo arrastado no momento (para feedback no card). */
 		draggingId?: number | null;
+		/** Id do card que acabou de aterrissar (animação `is-drop-settling`). */
+		settledId?: number | null;
 		/** A coluna é alvo válido para o drag em curso? (define cursor/realce). */
 		canDrop?: boolean;
 		/** Há um drag em andamento sobre esta coluna? */
@@ -39,6 +41,7 @@
 		column,
 		composer,
 		draggingId = null,
+		settledId = null,
 		canDrop = true,
 		isOver = false,
 		onCardDragStart,
@@ -75,14 +78,14 @@
 	  com transição 0.16s ease (~duration-fast).
 -->
 <section
-	class="kanban-column flex min-h-[340px] min-w-[200px] flex-1 flex-col overflow-hidden rounded-lg border border-border-subtle bg-canvas shadow-md transition-shadow duration-fast {isOver &&
+	class="kanban-column flex h-full min-h-0 min-w-[200px] flex-1 flex-col rounded-lg border border-border-subtle bg-canvas shadow-md transition-shadow duration-fast {isOver &&
 	canDrop
 		? 'is-column-drag-target border-primary-500'
 		: ''}"
 	aria-labelledby={`kanban-col-${column.status}`}
 >
 	<header
-		class="flex items-center justify-between gap-2 rounded-t-lg border-b px-3 py-2.5 {headTint}"
+		class="flex shrink-0 items-center justify-between gap-2 rounded-t-lg border-b px-3 py-2.5 {headTint}"
 	>
 		<h2
 			id={`kanban-col-${column.status}`}
@@ -98,7 +101,7 @@
 	</header>
 
 	<ul
-		class="flex min-h-[6rem] flex-1 flex-col gap-2 overflow-y-auto p-2 transition-[background-color,box-shadow] duration-fast {isOver &&
+		class="kanban-dropzone flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden p-2 transition-[background-color,box-shadow] duration-fast {isOver &&
 		canDrop
 			? 'bg-primary-100/50 shadow-[inset_0_0_0_1px_var(--ds-color-primary-500)]'
 			: ''} {isOver && !canDrop ? 'cursor-not-allowed opacity-70' : ''}"
@@ -114,6 +117,7 @@
 				<KanbanCard
 					{card}
 					dragging={draggingId === card.id}
+					settled={settledId === card.id}
 					columnLabel={column.label}
 					position={index + 1}
 					setSize={count}
@@ -130,7 +134,7 @@
 	</ul>
 
 	{#if composer}
-		<div class="px-[0.56rem] pb-[0.62rem] pt-[0.46rem]">
+		<div class="shrink-0 border-t border-border-subtle px-[0.56rem] pb-[0.62rem] pt-[0.46rem]">
 			{@render composer(column.status)}
 		</div>
 	{/if}
@@ -143,5 +147,29 @@
 		box-shadow:
 			0 0 0 2px rgba(31, 115, 181, 0.25),
 			0 6px 16px rgba(19, 63, 101, 0.12);
+	}
+
+	/* Scroll interno da coluna (paridade `.task-items-kanban-dropzone`): barra
+	   fina, para que cada coluna role por dentro sem rolar a página inteira. */
+	.kanban-dropzone {
+		scrollbar-width: thin;
+		scrollbar-color: rgba(92, 126, 157, 0.54) transparent;
+	}
+	.kanban-dropzone::-webkit-scrollbar {
+		width: 8px;
+	}
+	.kanban-dropzone::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.kanban-dropzone::-webkit-scrollbar-thumb {
+		background: rgba(92, 126, 157, 0.54);
+		border-radius: 999px;
+		border: 2px solid transparent;
+		background-clip: padding-box;
+		min-height: 40px;
+	}
+	.kanban-dropzone::-webkit-scrollbar-thumb:hover {
+		background: rgba(70, 103, 133, 0.68);
+		background-clip: padding-box;
 	}
 </style>

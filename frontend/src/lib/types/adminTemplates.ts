@@ -30,6 +30,11 @@ export interface TemplateRow {
 	initials: string;
 	stage_count: number;
 	total_duration: number;
+	/**
+	 * Pares `[altura_px, duracao_dias]` (serialize_template_row -> _silhouette_bars)
+	 * que a coluna Silhueta renderiza como mini-gráfico de barras.
+	 */
+	silhouette: Array<[number, number]>;
 	usage_count: number;
 	updated_at: string | null; // ISO 8601
 	/** Tempo relativo em pt-BR ("há 2 dias"), pré-formatado no backend. */

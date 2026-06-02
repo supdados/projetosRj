@@ -33,7 +33,6 @@
 	import { flash } from '$lib/stores/flash';
 	import {
 		fetchProjectDetail,
-		fetchEtapaTasks,
 		updateProjectInline,
 		addEtapa,
 		deleteEtapa,
@@ -42,6 +41,7 @@
 		toggleEtapaIniciada,
 		toggleEtapaDone,
 		reorderEtapas,
+		cascadeDates,
 		importStageModel,
 		fetchStageTemplates,
 		concludeProject,
@@ -52,12 +52,12 @@
 	import type {
 		ProjectDetailData,
 		EtapaDetail,
-		EtapaTask,
 		EtapaInlineField,
 		StageTemplateOption,
 		ProjectInlinePayload,
 		MeetingPayload
 	} from '$lib/types/projectDetail';
+	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import type { CalendarEvent, CalendarEventInput } from '$lib/types/calendar';
 	import ProjectHeader from '$lib/components/ProjectHeader.svelte';
 	import InlineEditField from '$lib/components/InlineEditField.svelte';
@@ -103,14 +103,29 @@
 	let reordering = $state<boolean>(false);
 	let reorderError = $state<string | null>(null);
 
-	// Tarefas read-only por etapa (carregadas sob demanda).
-	let tasksByEtapa = $state<Record<number, EtapaTask[] | null>>({});
-	let tasksLoading = $state<Record<number, boolean>>({});
-
-	// Adicionar etapa.
-	let newStageDescription = $state<string>('');
+	// Adicionar etapa (composer inline).
 	let addingStage = $state<boolean>(false);
 	let addStageError = $state<string | null>(null);
+
+	// Quick-add de tarefas da etapa (modal).
+	let quickAddEtapaId = $state<number | null>(null);
+
+	// Menu de contexto de dias úteis numa célula de data (+7/+14/+21).
+	interface DateContextMenuState {
+		etapaId: number;
+		field: 'data_inicio' | 'data_fim';
+		x: number;
+		y: number;
+	}
+	let dateMenu = $state<DateContextMenuState | null>(null);
+
+	// Confirmação de cascata após mudar uma data_inicio.
+	interface CascadeState {
+		etapaId: number;
+		daysDiff: number;
+	}
+	let cascadePrompt = $state<CascadeState | null>(null);
+	let cascadeBusy = $state<boolean>(false);
 
 	// Importar modelo de etapas.
 	let importOpen = $state<boolean>(false);
@@ -123,6 +138,34 @@
 	let topOffset = $state<number>(0);
 
 	const canEdit = $derived(data?.permissions.can_edit ?? false);
+
+	// Etapa-alvo do quick-add de tarefas (modal).
+	const quickAddEtapa = $derived(
+		quickAddEtapaId === null ? null : (data?.etapas.find((e) => e.id === quickAddEtapaId) ?? null)
+	);
+
+	/** Formata ISO em pt-BR (UTC) ou '' se vazio. */
+	function isoToBr(iso: string | null): string {
+		if (!iso) return '';
+		const d = new Date(iso);
+		if (Number.isNaN(d.getTime())) return '';
+		return d.toLocaleDateString('pt-BR', {
+			day: '2-digit',
+			month: '2-digit',
+			year: 'numeric',
+			timeZone: 'UTC'
+		});
+	}
+
+	/** Label de datas da etapa para o cabeçalho do quick-add (paridade legado). */
+	function etapaDatasLabel(etapa: EtapaDetail): string {
+		const ini = isoToBr(etapa.data_inicio);
+		const fim = isoToBr(etapa.data_fim);
+		if (ini && fim) return `${ini} — ${fim}`;
+		if (ini) return `Início ${ini}`;
+		if (fim) return `Fim ${fim}`;
+		return 'Etapa sem datas definidas';
+	}
 
 	// --- Concluir projeto (aviso + som + confetes) ---------------------------
 	let concludeInFlight = $state<boolean>(false);
@@ -424,6 +467,12 @@
 			// Datas disparam cascata server-side nas etapas seguintes -> re-busca.
 			if (field === 'data_inicio' || field === 'data_fim') {
 				await refresh();
+				// Ao mudar data_inicio com deslocamento de dias, oferece a cascata
+				// (paridade com showCascadeConfirmModal de 07-stage-dnd.js).
+				const diff = result.field_update?.daysDiff ?? 0;
+				if (field === 'data_inicio' && diff !== 0) {
+					cascadePrompt = { etapaId, daysDiff: diff };
+				}
 			}
 		} catch (err) {
 			if (isUnauthenticated(err)) return;
@@ -434,30 +483,27 @@
 		}
 	}
 
-	async function onToggleIniciada(etapaId: number): Promise<void> {
+	/**
+	 * Ciclo de status unico (paridade com .etapa-status-cycle de 07-stage-dnd.js):
+	 *   - idle/done -> toggle-iniciada (ao desmarcar iniciada, o backend tambem
+	 *     limpa a conclusao, zerando o status);
+	 *   - started   -> toggle (marca conclusao).
+	 * Re-busca apos o sucesso (derivados do projeto e botao concluir).
+	 */
+	async function onCycleStatus(etapaId: number): Promise<void> {
+		const etapa = data?.etapas.find((e) => e.id === etapaId);
+		if (!etapa) return;
+		const state = etapa.done ? 'done' : etapa.iniciada ? 'started' : 'idle';
 		setRowBusy(etapaId, true);
 		try {
-			const result = await toggleEtapaIniciada(etapaId);
+			const result =
+				state === 'started' ? await toggleEtapaDone(etapaId) : await toggleEtapaIniciada(etapaId);
 			replaceEtapa(result.etapa);
 			setRowBusy(etapaId, false);
-		} catch (err) {
-			if (isUnauthenticated(err)) return;
-			setRowBusy(etapaId, false, messageOf(err, 'Falha ao alternar o inicio da etapa.'));
-		}
-	}
-
-	async function onToggleDone(etapaId: number): Promise<void> {
-		setRowBusy(etapaId, true);
-		try {
-			const result = await toggleEtapaDone(etapaId);
-			replaceEtapa(result.etapa);
-			setRowBusy(etapaId, false);
-			// Concluir/reabrir etapa pode mudar os derivados do projeto (status,
-			// datas) -> re-busca para refletir o cabecalho.
 			await refresh();
 		} catch (err) {
 			if (isUnauthenticated(err)) return;
-			setRowBusy(etapaId, false, messageOf(err, 'Falha ao alternar a conclusao da etapa.'));
+			setRowBusy(etapaId, false, messageOf(err, 'Falha ao alternar o status da etapa.'));
 		}
 	}
 
@@ -486,18 +532,6 @@
 		}
 	}
 
-	/**
-	 * "Editar etapa" completo: a UI rica de edicao completa fica para fases
-	 * posteriores; aqui a edicao acontece inline em cada campo. Apenas focamos a
-	 * descricao da etapa para o usuario editar inline.
-	 */
-	function onEditEtapa(etapaId: number): void {
-		if (typeof document === 'undefined') return;
-		// Sem editor completo nesta fase; rola ate a etapa para edicao inline.
-		const node = document.getElementById(`etapa-${etapaId}-descricao`);
-		node?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-	}
-
 	// --- Reordenacao (cascata server-side) -----------------------------------
 
 	/**
@@ -521,34 +555,140 @@
 		}
 	}
 
-	// --- Tarefas read-only sob demanda ---------------------------------------
+	// --- Quick-add de tarefas da etapa (modal) -------------------------------
 
-	async function onLoadTasks(etapaId: number): Promise<void> {
-		if (tasksByEtapa[etapaId] != null || tasksLoading[etapaId]) return;
-		tasksLoading = { ...tasksLoading, [etapaId]: true };
-		try {
-			const result = await fetchEtapaTasks(projectId, etapaId);
-			tasksByEtapa = { ...tasksByEtapa, [etapaId]: result.tasks };
-		} catch (err) {
-			if (isUnauthenticated(err)) return;
-			// Lista read-only: em caso de falha, exibe lista vazia (sem bloquear UI).
-			tasksByEtapa = { ...tasksByEtapa, [etapaId]: [] };
-		} finally {
-			tasksLoading = { ...tasksLoading, [etapaId]: false };
-		}
+	function onOpenTasks(etapaId: number): void {
+		quickAddEtapaId = etapaId;
+	}
+	function closeQuickAdd(): void {
+		quickAddEtapaId = null;
+		// O modal mutou tarefas -> re-busca para atualizar a pílula da etapa.
+		void refresh();
+	}
+	/** Sincroniza a contagem da pílula a partir do quick-add (otimista). */
+	function onTaskProgressChange(etapaId: number, done: number, total: number): void {
+		if (!data) return;
+		data = {
+			...data,
+			etapas: data.etapas.map((e) =>
+				e.id === etapaId ? { ...e, task_count: { done, total } } : e
+			)
+		};
 	}
 
-	// --- Adicionar etapa ------------------------------------------------------
+	// --- Menu de contexto de dias uteis (+7/+14/+21) -------------------------
 
-	async function onAddStage(event: SubmitEvent): Promise<void> {
-		event.preventDefault();
-		const descricao = newStageDescription.trim();
-		if (!descricao || addingStage) return;
+	function onDateContextMenu(
+		etapaId: number,
+		field: 'data_inicio' | 'data_fim',
+		x: number,
+		y: number
+	): void {
+		const etapa = data?.etapas.find((e) => e.id === etapaId);
+		const base = field === 'data_inicio' ? etapa?.data_inicio : etapa?.data_fim;
+		if (!base) {
+			flash.warning('Defina uma data inicial antes de adicionar dias.');
+			return;
+		}
+		dateMenu = { etapaId, field, x, y };
+	}
+	function closeDateMenu(): void {
+		dateMenu = null;
+	}
+
+	/** Soma `businessDays` dias uteis a uma data ISO (UTC) — paridade do legado. */
+	function addBusinessDays(iso: string, businessDays: number): string {
+		const parts = iso.split('-').map(Number);
+		if (parts.length !== 3 || parts.some(Number.isNaN)) return '';
+		const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+		let remaining = Math.abs(Math.trunc(businessDays));
+		const step = businessDays >= 0 ? 1 : -1;
+		while (remaining > 0) {
+			d.setUTCDate(d.getUTCDate() + step);
+			const wd = d.getUTCDay();
+			if (wd !== 0 && wd !== 6) remaining -= 1;
+		}
+		const y = d.getUTCFullYear();
+		const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+		const day = String(d.getUTCDate()).padStart(2, '0');
+		return `${y}-${m}-${day}`;
+	}
+
+	async function applyDateDays(days: number): Promise<void> {
+		if (!dateMenu) return;
+		const { etapaId, field } = dateMenu;
+		const etapa = data?.etapas.find((e) => e.id === etapaId);
+		const base = field === 'data_inicio' ? etapa?.data_inicio : etapa?.data_fim;
+		closeDateMenu();
+		if (!base) return;
+		const newValue = addBusinessDays(base, days);
+		if (!newValue) {
+			flash.danger('Não foi possível calcular a nova data útil.');
+			return;
+		}
+		await onUpdateField(etapaId, field, newValue);
+		flash.success(`Data atualizada: +${days} dia(s) útil(eis)`);
+	}
+
+	// --- Cascata de datas (server-side) --------------------------------------
+
+	async function confirmCascade(): Promise<void> {
+		if (!cascadePrompt || cascadeBusy) return;
+		cascadeBusy = true;
+		const { etapaId, daysDiff } = cascadePrompt;
+		try {
+			await cascadeDates(projectId, { etapa_id: etapaId, days_diff: daysDiff });
+			cascadePrompt = null;
+			await refresh();
+			flash.success('Datas subsequentes atualizadas.');
+		} catch (err) {
+			if (isUnauthenticated(err)) return;
+			flash.danger(messageOf(err, 'Falha na atualização em cascata.'));
+		} finally {
+			cascadeBusy = false;
+		}
+	}
+	function dismissCascade(): void {
+		cascadePrompt = null;
+	}
+
+	// --- Adicionar etapa (composer inline) -----------------------------------
+
+	interface NewStageDraft {
+		descricao: string;
+		data_inicio: string;
+		data_fim: string;
+		responsavel: string;
+		iniciada: boolean;
+		done: boolean;
+	}
+
+	async function onAddStage(draft: NewStageDraft): Promise<void> {
+		if (!draft.descricao.trim() || addingStage) return;
+		// Projeto Finalizado: adicionar etapa o reativa (Vigente). Confirma antes
+		// (paridade com o reactivate-project-confirm-modal de 05-stage-composer.js).
+		const willReactivate = (data?.project.status ?? '') === 'Finalizado';
+		if (
+			willReactivate &&
+			typeof window !== 'undefined' &&
+			!window.confirm(
+				'Este projeto está finalizado. Ao adicionar uma nova etapa, ele voltará para o status Vigente. Deseja continuar?'
+			)
+		) {
+			return;
+		}
 		addingStage = true;
 		addStageError = null;
 		try {
-			await addEtapa(projectId, { descricao });
-			newStageDescription = '';
+			await addEtapa(projectId, {
+				descricao: draft.descricao.trim(),
+				data_inicio: draft.data_inicio || null,
+				data_fim: draft.data_fim || null,
+				responsavel: draft.responsavel || null,
+				iniciada: draft.iniciada,
+				done: draft.done,
+				reactivate: willReactivate || undefined
+			});
 			await refresh();
 		} catch (err) {
 			if (isUnauthenticated(err)) {
@@ -674,12 +814,6 @@
 			>
 				Histórico do projeto
 			</a>
-			<a
-				href={`${base}/projetos`}
-				class="inline-flex w-fit items-center rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				Voltar aos projetos
-			</a>
 
 			{#if canEdit && isVigente}
 				<button
@@ -766,97 +900,63 @@
 			</div>
 		</Card>
 
-		<!-- Secao de Etapas -->
-		<Card labelId="project-stages-title">
-			{#snippet header()}
-				<div class="flex flex-wrap items-center justify-between gap-3">
-					<h2 id="project-stages-title" class="font-heading text-lg font-semibold text-text-primary">
-						Etapas
-					</h2>
-					{#if canEdit}
-						<div class="flex flex-wrap items-center gap-2">
-							<button
-								type="button"
-								onclick={openCreateMeeting}
-								class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-							>
-								<i class="fas fa-video" aria-hidden="true"></i>
-								Adicionar reunião
-							</button>
-							<button
-								type="button"
-								onclick={openImport}
-								class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-							>
-								Importar modelo
-							</button>
-						</div>
-					{/if}
-				</div>
-			{/snippet}
+		<!-- Secao de Etapas (divisor + acoes + tabela), paridade com v4.5 -->
+		<div class="section-divider">
+			<h2 id="project-stages-title" class="font-heading text-lg font-bold text-text-primary">
+				Etapas do Projeto
+			</h2>
+		</div>
 
-			<div class="flex flex-col gap-4">
-				{#if canEdit}
-					<form class="flex flex-wrap items-end gap-2" onsubmit={onAddStage}>
-						<div class="flex min-w-[16rem] flex-1 flex-col gap-1">
-							<label
-								for="new-stage-descricao"
-								class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-							>
-								Nova etapa
-							</label>
-							<input
-								id="new-stage-descricao"
-								type="text"
-								bind:value={newStageDescription}
-								disabled={addingStage}
-								placeholder="Descrição da etapa…"
-								class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-							/>
-						</div>
-						<button
-							type="submit"
-							disabled={addingStage || newStageDescription.trim() === ''}
-							class="rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-						>
-							{addingStage ? 'Adicionando…' : 'Adicionar etapa'}
-						</button>
-						{#if addStageError}
-							<p role="alert" class="w-full text-sm text-danger">{addStageError}</p>
-						{/if}
-					</form>
-				{/if}
-
-				<StageList
-					etapas={data.etapas}
-					readonly={!canEdit}
-					{reordering}
-					{reorderError}
-					{rowStates}
-					{tasksByEtapa}
-					{tasksLoading}
-					{onReorder}
-					{onUpdateField}
-					{onToggleIniciada}
-					{onToggleDone}
-					{onSaveComentario}
-					onEdit={onEditEtapa}
-					onDelete={onDeleteEtapa}
-					{onLoadTasks}
+		{#if canEdit}
+			<div class="flex flex-wrap items-center justify-end gap-2">
+				<button
+					type="button"
+					onclick={openImport}
+					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
-					{#snippet meetingSlot(etapa)}
-						{#if etapa.meeting}
-							<MeetingDisplay
-								meeting={etapa.meeting}
-								busy={meetingDeleting[etapa.id] ?? false}
-								onEdit={() => openEditMeeting(etapa.id)}
-								onDelete={() => void onDeleteMeeting(etapa.id)}
-							/>
-						{/if}
-					{/snippet}
-				</StageList>
+					<i class="fas fa-file-import" aria-hidden="true"></i>
+					Importar Modelo
+				</button>
+				<button
+					type="button"
+					onclick={openCreateMeeting}
+					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					<i class="fab fa-google" aria-hidden="true"></i>
+					Adicionar reunião
+				</button>
 			</div>
-		</Card>
+		{/if}
+
+		<StageList
+			etapas={data.etapas}
+			{projectId}
+			readonly={!canEdit}
+			{reordering}
+			{reorderError}
+			{addingStage}
+			{addStageError}
+			{rowStates}
+			{onReorder}
+			{onUpdateField}
+			{onCycleStatus}
+			{onSaveComentario}
+			onDelete={onDeleteEtapa}
+			{onOpenTasks}
+			{onAddStage}
+			{onDateContextMenu}
+		>
+			{#snippet meetingSlot(etapa)}
+				{#if etapa.meeting}
+					<MeetingDisplay
+						meeting={etapa.meeting}
+						busy={meetingDeleting[etapa.id] ?? false}
+						onEdit={() => openEditMeeting(etapa.id)}
+						onDelete={() => void onDeleteMeeting(etapa.id)}
+					/>
+				{/if}
+			{/snippet}
+		</StageList>
 
 		<ImportModelModal
 			open={importOpen}
@@ -877,8 +977,82 @@
 			onSave={onSaveMeeting}
 			onClose={closeMeetingModal}
 		/>
+
+		<!-- Quick-add de tarefas da etapa (modal), paridade com 11-stage-task-quick-add.js -->
+		{#if quickAddEtapa}
+			<StageTaskQuickAdd
+				{projectId}
+				projectTitulo={data.project.titulo}
+				etapaId={quickAddEtapa.id}
+				etapaDescricao={quickAddEtapa.descricao ?? ''}
+				etapaDatas={etapaDatasLabel(quickAddEtapa)}
+				stageDone={quickAddEtapa.done}
+				{drawer}
+				onClose={closeQuickAdd}
+				onProgressChange={onTaskProgressChange}
+			/>
+		{/if}
 	{/if}
 </section>
+
+<!-- Menu de contexto de dias úteis (+7/+14/+21), paridade com 07-stage-dnd.js -->
+{#if dateMenu}
+	<button
+		type="button"
+		class="date-menu-backdrop"
+		aria-label="Fechar menu"
+		onclick={closeDateMenu}
+		oncontextmenu={(e) => {
+			e.preventDefault();
+			closeDateMenu();
+		}}
+	></button>
+	<ul
+		class="date-context-menu"
+		style={`left:${dateMenu.x}px; top:${dateMenu.y}px`}
+		role="menu"
+	>
+		{#each [7, 14, 21] as days (days)}
+			<li role="none">
+				<button type="button" role="menuitem" onclick={() => void applyDateDays(days)}>
+					<i class="fas fa-plus-circle text-success" aria-hidden="true"></i>+ {days} dias
+				</button>
+			</li>
+		{/each}
+	</ul>
+{/if}
+
+<!-- Modal de confirmação de cascata de datas -->
+{#if cascadePrompt}
+	<div class="cascade-overlay" role="presentation" onclick={dismissCascade}>
+		<div
+			class="cascade-modal"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="cascade-title"
+			onclick={(e) => e.stopPropagation()}
+		>
+			<h5 id="cascade-title">Atualizar Datas Subsequentes?</h5>
+			<p>
+				Deseja aplicar a mesma alteração de dias para as datas de início e fim de todas as etapas
+				posteriores?
+			</p>
+			<div class="cascade-buttons">
+				<button type="button" class="cascade-btn cascade-btn-secondary" onclick={dismissCascade}>
+					Não
+				</button>
+				<button
+					type="button"
+					class="cascade-btn cascade-btn-primary"
+					disabled={cascadeBusy}
+					onclick={confirmCascade}
+				>
+					{cascadeBusy ? 'Atualizando…' : 'Sim, atualizar'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <!-- Aviso de conclusão (overlay) — o chime + confete são disparados na ação. -->
 <ConcludeCelebrationOverlay
@@ -888,3 +1062,131 @@
 />
 
 <TaskDrawer store={drawer} />
+
+<style>
+	/* Divisor de seção "Etapas do Projeto" */
+	.section-divider {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-top: 0.5rem;
+	}
+	.section-divider::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--app-color-border, #dfe7f1);
+	}
+
+	/* Menu de contexto de dias úteis (paridade .custom-context-menu) */
+	.date-menu-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 1049;
+		background: transparent;
+		border: 0;
+		cursor: default;
+	}
+	.date-context-menu {
+		position: fixed;
+		z-index: 1050;
+		list-style: none;
+		margin: 0;
+		padding: 0.4rem;
+		min-width: 170px;
+		background: var(--app-color-surface, rgba(255, 255, 255, 0.98));
+		border: 1px solid var(--app-color-border, #d6e2ee);
+		border-radius: 11px;
+		box-shadow: 0 12px 28px rgba(24, 53, 86, 0.16);
+		transform-origin: top left;
+		animation: dateMenuIn 0.14s ease;
+	}
+	.date-context-menu button {
+		display: flex;
+		align-items: center;
+		gap: 0.52rem;
+		width: 100%;
+		padding: 0.45rem 0.62rem;
+		border: 0;
+		border-radius: 8px;
+		background: none;
+		color: var(--app-color-text, #365172);
+		font-size: 0.875rem;
+		text-align: left;
+		cursor: pointer;
+		transition:
+			background-color 0.14s ease,
+			color 0.14s ease;
+	}
+	.date-context-menu button:hover,
+	.date-context-menu button:focus-visible {
+		background-color: var(--app-color-surface-muted, #edf4fc);
+		color: var(--app-color-heading, #24476f);
+		outline: none;
+	}
+	.date-context-menu .text-success {
+		color: var(--app-color-success, #167a44);
+	}
+	@keyframes dateMenuIn {
+		from {
+			opacity: 0;
+			transform: translateY(-3px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+
+	/* Modal de cascata (paridade .confirm-modal-overlay/.confirm-modal) */
+	.cascade-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 1060;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, 0.4);
+	}
+	.cascade-modal {
+		background: var(--app-color-surface, #fff);
+		padding: 2rem;
+		border-radius: 8px;
+		box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+		max-width: 400px;
+		text-align: center;
+		color: var(--app-color-text, #304a66);
+	}
+	.cascade-modal h5 {
+		margin: 0 0 0.75rem;
+		font-weight: 700;
+		color: var(--app-color-heading, #0f172a);
+	}
+	.cascade-buttons {
+		margin-top: 1.5rem;
+		display: flex;
+		justify-content: center;
+		gap: 1rem;
+	}
+	.cascade-btn {
+		padding: 0.5rem 1.1rem;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+		border: 1px solid transparent;
+	}
+	.cascade-btn-secondary {
+		background: var(--app-color-surface-muted, #f1f5f9);
+		border-color: var(--app-color-border, #dfe7f1);
+		color: var(--app-color-text, #475569);
+	}
+	.cascade-btn-primary {
+		background: #005a92;
+		color: #fff;
+	}
+	.cascade-btn-primary:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+</style>

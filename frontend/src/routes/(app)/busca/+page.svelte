@@ -1,8 +1,9 @@
 <script lang="ts">
 	/**
-	 * Tela de Busca Global (FASE 2). Consome `GET /api/busca` via
-	 * `$lib/api/search` e renderiza resultados agrupados por tipo
-	 * (projeto/etapa/tarefa/evento).
+	 * Tela de Busca Global (FASE 2). Consome `GET /api/busca` (client tipado de
+	 * `$lib/api/client`) e renderiza resultados agrupados por tipo
+	 * (projeto/etapa/tarefa/evento). Propaga o escopo de orgao do topnav
+	 * (`?orgao=<id>`, via `orgaoScopeQuery`) para respeitar o filtro escolhido.
 	 *
 	 * Padrao espelhado do piloto (dashboard/+page.svelte): estados
 	 * loading/erro/vazio, erros 401 ja redirecionados por `client.ts`.
@@ -20,14 +21,13 @@
 	 * rotas Jinja) — href direto, sem prefixo `base` da SPA.
 	 */
 	import { onDestroy } from 'svelte';
-	import { fetchGlobalSearch } from '$lib/api/search';
-	import { ApiClientError } from '$lib/api/client';
+	import { get, ApiClientError } from '$lib/api/client';
+	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type {
 		GlobalSearchData,
 		SearchResultItem,
 		SearchResultsByType
 	} from '$lib/types/search';
-	import Badge from '$lib/components/Badge.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 
 	/** Estados da busca: ocioso (termo curto), buscando, pronto ou erro. */
@@ -38,17 +38,43 @@
 	/** Janela de debounce do campo de busca (ms). */
 	const DEBOUNCE_MS = 300;
 
-	/** Secoes na ordem de exibicao, com rotulo e chave em `results`. */
+	/**
+	 * Secoes na ordem de exibicao, com rotulo, chave em `results`, icone Font
+	 * Awesome (`fas fa-*`, 1:1 com o template v4.5) e classes de cor da pilula de
+	 * tipo. As cores das badges sao do v4.5: projeto=azul, etapa=ambar,
+	 * tarefa=verde, evento=indigo/info — mapeadas para tokens semanticos com
+	 * opacidade para que o dark mode troque sozinho.
+	 */
 	const SECTIONS: ReadonlyArray<{
 		key: keyof SearchResultsByType;
 		label: string;
-		tone: 'primary' | 'info' | 'warning' | 'success';
-		icon: 'folder' | 'list-check' | 'clipboard' | 'calendar';
+		icon: string;
+		badgeClass: string;
 	}> = [
-		{ key: 'projects', label: 'Projetos', tone: 'primary', icon: 'folder' },
-		{ key: 'stages', label: 'Etapas', tone: 'warning', icon: 'list-check' },
-		{ key: 'tasks', label: 'Tarefas', tone: 'success', icon: 'clipboard' },
-		{ key: 'events', label: 'Eventos', tone: 'info', icon: 'calendar' }
+		{
+			key: 'projects',
+			label: 'Projetos',
+			icon: 'fa-folder-open',
+			badgeClass: 'bg-primary-100 text-primary-700'
+		},
+		{
+			key: 'stages',
+			label: 'Etapas',
+			icon: 'fa-list-check',
+			badgeClass: 'bg-warning/15 text-warning'
+		},
+		{
+			key: 'tasks',
+			label: 'Tarefas',
+			icon: 'fa-clipboard-list',
+			badgeClass: 'bg-success/15 text-success'
+		},
+		{
+			key: 'events',
+			label: 'Eventos',
+			icon: 'fa-calendar-alt',
+			badgeClass: 'bg-info/15 text-info'
+		}
 	];
 
 	let term = $state<string>('');
@@ -86,7 +112,13 @@
 		errorMessage = '';
 
 		try {
-			const result = await fetchGlobalSearch(trimmed, controller.signal);
+			// Propaga o escopo de orgao do topnav (`?orgao=<id>` | ''); o backend
+			// sanitiza o filtro para o usuario corrente. Espelha o `?orgao=` que o
+			// v4.5 propagava em todas as telas (routes/search.py).
+			const params = new URLSearchParams({ q: trimmed });
+			const scope = $orgaoScopeQuery;
+			const path = scope ? `/api/busca?${params}&${scope}` : `/api/busca?${params}`;
+			const result = await get<GlobalSearchData>(path, controller.signal);
 			// Ignora respostas de buscas ja superadas por uma mais recente.
 			if (controller.signal.aborted) return;
 			data = result;
@@ -129,6 +161,17 @@
 		void runSearch(term);
 	}
 
+	// Reexecuta a busca (imediatamente, sem debounce) quando o escopo de orgao
+	// do topnav muda, para que os resultados respeitem o novo filtro. Ler
+	// `$orgaoScopeQuery` registra a dependencia reativa; so refaz a busca se ja
+	// houver um termo valido em tela (>= MIN_TERM_LENGTH).
+	$effect(() => {
+		void $orgaoScopeQuery;
+		if (term.trim().length < MIN_TERM_LENGTH) return;
+		if (debounceTimer) clearTimeout(debounceTimer);
+		void runSearch(term);
+	});
+
 	function sectionItems(key: keyof SearchResultsByType): SearchResultItem[] {
 		return data?.results[key] ?? [];
 	}
@@ -152,16 +195,7 @@
 			id="busca-title"
 			class="m-0 flex items-center gap-2 font-heading text-xl font-bold text-text-primary"
 		>
-			<svg
-				aria-hidden="true"
-				class="h-5 w-5 text-primary-600"
-				viewBox="0 0 512 512"
-				fill="currentColor"
-			>
-				<path
-					d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"
-				/>
-			</svg>
+			<i class="fas fa-search text-primary-600" aria-hidden="true"></i>
 			Busca Global
 		</h1>
 
@@ -247,34 +281,11 @@
 									id={`busca-sec-${section.key}`}
 									class="m-0 flex items-center gap-2 text-base font-bold text-text-primary"
 								>
-									<svg
-										aria-hidden="true"
-										class="h-4 w-4 text-text-muted"
-										viewBox="0 0 512 512"
-										fill="currentColor"
-									>
-										{#if section.icon === 'folder'}
-											<path
-												d="M88.7 223.8L0 375.8V96C0 60.7 28.7 32 64 32H181.5c17 0 33.3 6.7 45.3 18.7l26.5 26.5c12 12 28.3 18.7 45.3 18.7H416c35.3 0 64 28.7 64 64v32H144c-22.8 0-43.8 12.1-55.3 31.8zm27.6 16.1C122.1 230 132.6 224 144 224H544c11.5 0 22 6.1 27.7 16.1s5.7 22.2-.1 32.1l-112 192C453.9 474 443.4 480 432 480H32c-11.5 0-22-6.1-27.7-16.1s-5.7-22.2 .1-32.1l112-192z"
-											/>
-										{:else if section.icon === 'list-check'}
-											<path
-												d="M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H256c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32H480c17.7 0 32 14.3 32 32s-14.3 32-32 32H192c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"
-											/>
-										{:else if section.icon === 'clipboard'}
-											<path
-												d="M280 64h40c35.3 0 64 28.7 64 64V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V128C0 92.7 28.7 64 64 64h40 9.6C121 27.5 153.3 0 192 0s71 27.5 78.4 64H280zM64 112c-8.8 0-16 7.2-16 16V448c0 8.8 7.2 16 16 16H320c8.8 0 16-7.2 16-16V128c0-8.8-7.2-16-16-16H304v24c0 13.3-10.7 24-24 24H192 104c-13.3 0-24-10.7-24-24V112H64zm128-8a24 24 0 1 0 0-48 24 24 0 1 0 0 48z"
-											/>
-										{:else if section.icon === 'calendar'}
-											<path
-												d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192z"
-											/>
-										{/if}
-									</svg>
+									<i class="fas {section.icon} text-md text-text-muted" aria-hidden="true"></i>
 									{section.label}
 								</h2>
 								<span
-									class="rounded-full bg-primary-100 px-2 py-0.5 text-2xs font-bold text-primary-700"
+									class="rounded-full bg-surface-muted px-2 py-0.5 text-2xs font-bold text-text-secondary"
 								>
 									{items.length}
 								</span>
@@ -289,7 +300,11 @@
 										>
 											<span class="flex min-w-0 flex-1 flex-col gap-1">
 												<span class="flex items-center gap-1.5">
-													<Badge tone={section.tone}>{item.type_label}</Badge>
+													<span
+														class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-2xs font-bold uppercase tracking-wide {section.badgeClass}"
+													>
+														{item.type_label}
+													</span>
 													<span class="truncate font-semibold text-text-primary">
 														{item.title}
 													</span>
@@ -317,16 +332,10 @@
 													</span>
 												{/if}
 											</span>
-											<svg
+											<i
+												class="fas fa-chevron-right mt-0.5 shrink-0 text-sm text-text-muted"
 												aria-hidden="true"
-												class="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-muted"
-												viewBox="0 0 320 512"
-												fill="currentColor"
-											>
-												<path
-													d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z"
-												/>
-											</svg>
+											></i>
 										</a>
 									</li>
 								{/each}

@@ -16,7 +16,7 @@
  *   const data = await fetchProjects({ status: 'Vigente', q: 'painel' });
  */
 
-import { get, post } from './client';
+import { get, post, del } from './client';
 import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 import type { Project } from '$lib/types/entities';
 
@@ -105,6 +105,26 @@ export interface CreateProjectResult {
  */
 export function createProject(input: CreateProjectInput): Promise<CreateProjectResult> {
 	return post<CreateProjectResult>('/api/projetos', input);
+}
+
+/** Sucesso de `DELETE /api/projetos/<id>` (já desempacotado do envelope). */
+export interface DeleteProjectResult {
+	deleted: boolean;
+	id: number;
+}
+
+/**
+ * Exclui um projeto DE VERDADE via `DELETE /api/projetos/<id>`, espelhando a
+ * regra do Jinja (`routes/projects/crud.delete_project`): permissão por escopo
+ * de órgão (403 fora do escopo), 404 inexistente, exclusão em cascata. Em falha
+ * o backend devolve `{ok:false}` e `client.ts` lança `ApiClientError` — o
+ * chamador deve manter a linha na UI e exibir a mensagem como flash.
+ *
+ * Exemplo:
+ *   await deleteProject(42); // remove a linha só após sucesso
+ */
+export function deleteProject(projectId: number): Promise<DeleteProjectResult> {
+	return del<DeleteProjectResult>(`/api/projetos/${projectId}`);
 }
 
 /** Objetivo EEGD (catálogo `GET /api/catalogos/objetivos`). */

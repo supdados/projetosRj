@@ -63,6 +63,7 @@ export interface Project {
 	orgao_sigla: string | null;
 	short_description: string | null;
 	special_project: string | null;
+	delivery_type: string | null; // tipo de entrega (também no card/lista)
 	// derivados read-only (computados no backend)
 	data_inicio_projeto: string | null; // ISO 8601
 	data_fim_projeto: string | null; // ISO 8601
@@ -83,6 +84,7 @@ export interface Task {
 	tipo_pedido: TaskTipo | null;
 	ordem: number;
 	project_id: number | null;
+	project_titulo: string | null; // titulo do projeto da tarefa (mini-lista "Recentes")
 	etapa_id: number | null;
 	created_by_id: number;
 	created_at: string | null; // ISO 8601

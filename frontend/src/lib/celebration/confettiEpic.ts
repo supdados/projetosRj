@@ -386,6 +386,201 @@ function ensureRaf(): void {
 }
 
 /**
+ * Origem da celebração quando o caller passa um elemento/rect/ponto (paridade
+ * com `resolveOrigin`/`originFromRect` do legado). Aceita:
+ *   - `{ x, y }` (ponto absoluto, ex.: posição do ponteiro no drop);
+ *   - um elemento DOM (usa `getBoundingClientRect` -> centro horizontal, 36% top);
+ *   - um rect-like (`{ left, right, top, bottom }`);
+ *   - `null`/indefinido -> fallback (canto superior direito).
+ */
+export type CelebrationOriginLike =
+	| { x: number; y: number }
+	| Element
+	| { left: number; right: number; top: number; bottom: number }
+	| null
+	| undefined;
+
+interface RectLike {
+	left: number;
+	right: number;
+	top: number;
+	bottom: number;
+}
+
+function originFromRect(rect: RectLike | null): Origin | null {
+	if (!rect) return null;
+	if (
+		!Number.isFinite(rect.left) ||
+		!Number.isFinite(rect.right) ||
+		!Number.isFinite(rect.top) ||
+		!Number.isFinite(rect.bottom)
+	) {
+		return null;
+	}
+	return {
+		x: rect.left + (rect.right - rect.left) / 2,
+		y: rect.top + (rect.bottom - rect.top) * 0.36
+	};
+}
+
+function resolveOrigin(originLike: CelebrationOriginLike): Origin {
+	const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1280;
+	const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 720;
+	const fallback: Origin = {
+		x: Math.max(24, viewportWidth * 0.72),
+		y: Math.max(84, viewportHeight * 0.24)
+	};
+
+	if (!originLike) return fallback;
+
+	const pointLike = originLike as { x?: number; y?: number };
+	if (Number.isFinite(pointLike.x) && Number.isFinite(pointLike.y)) {
+		return { x: pointLike.x as number, y: pointLike.y as number };
+	}
+
+	const maybeElement = originLike as { getBoundingClientRect?: () => DOMRect };
+	if (typeof maybeElement.getBoundingClientRect === 'function') {
+		const fromElement = originFromRect(maybeElement.getBoundingClientRect());
+		if (fromElement) return fromElement;
+	}
+
+	const fromRectLike = originFromRect(originLike as RectLike);
+	if (fromRectLike) return fromRectLike;
+
+	return fallback;
+}
+
+let lastPatternKey = '';
+
+function pickConfettiPattern(): string {
+	const patterns = ['classic', 'wide', 'fountain', 'double_side'];
+	const index = Math.floor(Math.random() * patterns.length);
+	let picked = patterns[index];
+
+	if (patterns.length > 1 && picked === lastPatternKey) {
+		picked = patterns[(index + 1 + Math.floor(Math.random() * (patterns.length - 1))) % patterns.length];
+	}
+
+	lastPatternKey = picked;
+	return picked;
+}
+
+function runConfettiPattern(origin: Origin, patternKey: string): void {
+	if (patternKey === 'wide') {
+		spawnBurst(origin, 112, 1.36, 4.8, 12.2, 0.16, 0.36, { xJitter: 16, yJitter: 9 });
+		spawnCascade(origin, 58, {
+			xSpread: 320,
+			yMin: 130,
+			yMax: 350,
+			vxMin: -2.5,
+			vxMax: 2.5,
+			vyMin: 2.2,
+			vyMax: 5.4,
+			gravityMin: 0.12,
+			gravityMax: 0.24
+		});
+		return;
+	}
+
+	if (patternKey === 'fountain') {
+		spawnBurst(origin, 78, 0.54, 6.1, 12.9, 0.18, 0.34, { xJitter: 6, yJitter: 8 });
+		spawnBurst(
+			{ x: origin.x + randomBetween(-12, 12), y: origin.y - randomBetween(16, 32) },
+			54,
+			0.44,
+			6.7,
+			13.6,
+			0.18,
+			0.32,
+			{ xJitter: 5, yJitter: 6 }
+		);
+		spawnCascade(origin, 30, {
+			xSpread: 160,
+			yMin: 170,
+			yMax: 400,
+			vxMin: -1.2,
+			vxMax: 1.2,
+			vyMin: 2.8,
+			vyMax: 6.1,
+			gravityMin: 0.1,
+			gravityMax: 0.2
+		});
+		return;
+	}
+
+	if (patternKey === 'double_side') {
+		const sideOffset = Math.min(Math.max((window.innerWidth || 1200) * 0.14, 120), 260);
+		spawnBurst({ x: origin.x - sideOffset, y: origin.y + 6 }, 62, 0.5, 6.4, 12.8, 0.17, 0.33, {
+			angleCenter: -0.74,
+			xJitter: 7,
+			yJitter: 7
+		});
+		spawnBurst({ x: origin.x + sideOffset, y: origin.y + 6 }, 62, 0.5, 6.4, 12.8, 0.17, 0.33, {
+			angleCenter: -2.4,
+			xJitter: 7,
+			yJitter: 7
+		});
+		spawnCascade({ x: origin.x + randomBetween(-18, 18), y: origin.y - 10 }, 42, {
+			xSpread: 280,
+			yMin: 110,
+			yMax: 290,
+			vxMin: -1.7,
+			vxMax: 1.7,
+			vyMin: 2.3,
+			vyMax: 4.9,
+			gravityMin: 0.12,
+			gravityMax: 0.24
+		});
+		return;
+	}
+
+	// classic
+	spawnBurst(origin, 84, 1.02, 5.4, 11.4, 0.16, 0.34);
+	spawnBurst(
+		{ x: origin.x + randomBetween(-18, 18), y: origin.y - randomBetween(14, 36) },
+		44,
+		1.14,
+		4.4,
+		10.2,
+		0.18,
+		0.36
+	);
+	spawnCascade(origin, 38);
+}
+
+/**
+ * Celebração de CONCLUSÃO DE TAREFA — porte 1:1 de
+ * `taskFinalizeCelebration.trigger` (chamado por `updateItemStatus` no legado
+ * quando uma tarefa transita para "finalizada"). Sorteia uma "vibe" (paleta +
+ * mix de formas) e um padrão (classic/wide/fountain/double_side) a cada
+ * disparo, originado na posição passada (card/ponteiro). No-op com
+ * `prefers-reduced-motion`.
+ */
+export function triggerTaskFinalizeConfetti(originLike?: CelebrationOriginLike): void {
+	if (typeof window === 'undefined') return;
+	if (prefersReducedMotion()) return;
+	ensureCanvas();
+	if (!canvas || !ctx) return;
+
+	randomizeVibe();
+	const origin = resolveOrigin(originLike);
+	const patternKey = pickConfettiPattern();
+	if (hideTimer) {
+		clearTimeout(hideTimer);
+		hideTimer = null;
+	}
+
+	canvas.classList.add('is-active');
+	runConfettiPattern(origin, patternKey);
+
+	if (particles.length > 420) {
+		particles.splice(0, particles.length - 420);
+	}
+
+	if (!rafId) rafId = window.requestAnimationFrame(tick);
+}
+
+/**
  * Coreografia "épica" da conclusão de projeto — porte 1:1 de
  * `taskFinalizeCelebration.triggerEpic`. No-op com `prefers-reduced-motion`.
  */

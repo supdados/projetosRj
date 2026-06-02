@@ -15,6 +15,7 @@
 	 * Referência visual: templates/tasks/hub.html.
 	 */
 	import { onMount, setContext } from 'svelte';
+	import { get as readStore } from 'svelte/store';
 	import { fetchTarefas, deleteTarefa, archiveFinalizadas } from '$lib/api/tasks';
 	import { ApiClientError } from '$lib/api/client';
 	import type { TaskCard, TaskHubData, TaskHubModo, TaskHubQuery } from '$lib/types/tasks';
@@ -26,8 +27,14 @@
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import { createBoardStore } from '$lib/stores/board';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
+	import { orgaoScope } from '$lib/stores/orgaoScope';
 	import type { BoardCard, BoardQuery } from '$lib/types/board';
-	import type { TaskStatus } from '$lib/utils/taskStatus';
+	import { normalizeStatus, type TaskStatus } from '$lib/utils/taskStatus';
+	import {
+		triggerTaskFinalizeConfetti,
+		type CelebrationOriginLike
+	} from '$lib/celebration/confettiEpic';
+	import '$lib/celebration/confetti.css';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
@@ -122,12 +129,57 @@
 	let boardInFlight: AbortController | null = null;
 	let boardLoaded = $state<boolean>(false);
 
+	/**
+	 * CONFETE ao concluir tarefa — paridade com `taskFinalizeCelebration.trigger`
+	 * disparado por `updateItemStatus` no legado quando uma tarefa transita para
+	 * "finalizada". Reusa o motor de confete portado (`triggerTaskFinalizeConfetti`),
+	 * originando a celebração no card/ponteiro do drop (ou no botão do drawer).
+	 * Respeita `prefers-reduced-motion` (no-op dentro da lib).
+	 */
+	function celebrateFinalize(origin?: CelebrationOriginLike): void {
+		triggerTaskFinalizeConfetti(origin);
+	}
+	// KanbanBoard dispara a celebração via contexto ao mover um card p/ Finalizada.
+	setContext('celebrateFinalize', celebrateFinalize);
+
+	// Rastreia o status conhecido de cada card aberto no drawer, para detectar a
+	// transição -> "finalizada" feita pelo seletor/botão do drawer e celebrar
+	// (o drawer reconcilia o board removendo o card; aqui só observamos a mudança).
+	const lastKnownStatus = new Map<number, TaskStatus>();
+
 	// Drawer de tarefa (Fase 5b-2): reconcilia mutações no card do board sem
 	// duplicar estado (upsert/remove na board store). Em modo lista, a lista é
 	// re-buscada ao fechar o drawer (abaixo).
 	const drawer = createTaskDrawerStore({
-		onCardChanged: (card) => board.upsertCard(card),
-		onCardRemoved: (id) => board.removeCard(id)
+		onCardChanged: (card) => {
+			const prev = lastKnownStatus.get(card.id);
+			const next = normalizeStatus(card.status);
+			if (next === 'finalizada' && prev && prev !== 'finalizada') {
+				celebrateFinalize();
+			}
+			lastKnownStatus.set(card.id, next);
+			board.upsertCard(card);
+		},
+		onCardRemoved: (id) => {
+			// Finalizar/arquivar via drawer remove o card do board. Só celebra a
+			// TRANSIÇÃO de um status ATIVO conhecido -> "finalizada" (paridade com
+			// shouldCelebrateFinalize). Abrir um card JÁ finalizado dispara este
+			// reconciler sem `prev` ativo registrado -> não celebra (evita confete
+			// ao só visualizar uma tarefa concluída). Arquivar também não celebra.
+			const prev = lastKnownStatus.get(id);
+			const detail = readStore(drawer).detail;
+			const becameFinalized = !!(
+				detail &&
+				detail.id === id &&
+				!detail.is_archived &&
+				normalizeStatus(detail.status) === 'finalizada'
+			);
+			if (becameFinalized && prev && prev !== 'finalizada') {
+				celebrateFinalize();
+			}
+			lastKnownStatus.delete(id);
+			board.removeCard(id);
+		}
 	});
 
 	function openTask(taskId: number, mode: 'board' | 'list' | 'etapa'): void {
@@ -192,9 +244,13 @@
 		boardInFlight?.abort();
 		const controller = new AbortController();
 		boardInFlight = controller;
+		// Propaga o ESCOPO DE ÓRGÃO global (topnav) nas chamadas de board desta
+		// tela — paridade com `?orgao=` do legado (orgaoScopeQuery). O escopo global
+		// tem precedência; sem ele cai no filtro local de órgão da própria tela.
+		const scopeId = readStore(orgaoScope).selectedId;
 		const query: BoardQuery = {
 			project: project || undefined,
-			orgao: orgao || undefined
+			orgao: scopeId !== null ? String(scopeId) : orgao || undefined
 		};
 		await board.load(query, controller.signal);
 		if (!controller.signal.aborted) boardLoaded = true;
@@ -334,6 +390,22 @@
 			inFlight?.abort();
 			boardInFlight?.abort();
 		};
+	});
+
+	// Re-busca o board quando o ESCOPO DE ÓRGÃO global muda (topnav), enquanto a
+	// visão kanban está ativa — o escopo é propagado em `loadBoard`.
+	let lastScopeId: number | null | undefined;
+	let scopeInitialized = false;
+	$effect(() => {
+		const scopeId = $orgaoScope.selectedId;
+		if (!scopeInitialized) {
+			scopeInitialized = true;
+			lastScopeId = scopeId;
+			return;
+		}
+		if (scopeId === lastScopeId) return;
+		lastScopeId = scopeId;
+		if (view === 'kanban') void loadBoard();
 	});
 
 	/**

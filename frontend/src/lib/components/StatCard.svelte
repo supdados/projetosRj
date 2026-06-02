@@ -22,9 +22,17 @@
 		subtitle?: string;
 		/** Snippet de icone (SVG) opcional, renderizado no wrapper colorido. */
 		icon?: Snippet;
+		/**
+		 * Destino do click-through (opcional). Quando presente, o cartao inteiro
+		 * vira um link (espelha os KPI cards clicaveis do index.html original,
+		 * que levavam a /projetos filtrado). Acessivel: label descreve o destino.
+		 */
+		href?: string;
+		/** Rotulo acessivel do link (ex.: "Ver projetos finalizados"). */
+		linkLabel?: string;
 	}
 
-	let { label, value, tone = 'neutral', subtitle, icon }: Props = $props();
+	let { label, value, tone = 'neutral', subtitle, icon, href, linkLabel }: Props = $props();
 
 	const accent: Record<NonNullable<Props['tone']>, string> = {
 		neutral: 'text-text-primary',
@@ -45,10 +53,7 @@
 	};
 </script>
 
-<div
-	role="group"
-	class="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-4 shadow-sm transition-shadow duration-slow hover:shadow-md"
->
+{#snippet body()}
 	{#if icon}
 		<span
 			aria-hidden="true"
@@ -66,4 +71,24 @@
 			<span class="order-3 text-xs {accent[tone]}">{subtitle}</span>
 		{/if}
 	</div>
-</div>
+{/snippet}
+
+{#if href}
+	<!-- Click-through: cartao inteiro vira link para /projetos filtrado.
+	     Hover/focus realcam a borda+sombra (espelha o estado :hover dos KPI
+	     cards "glass" do index.css original). -->
+	<a
+		{href}
+		aria-label={linkLabel ?? label}
+		class="flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-4 no-underline shadow-sm transition-all duration-slow hover:border-primary-500 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+	>
+		{@render body()}
+	</a>
+{:else}
+	<div
+		role="group"
+		class="flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-4 shadow-sm transition-shadow duration-slow hover:shadow-md"
+	>
+		{@render body()}
+	</div>
+{/if}

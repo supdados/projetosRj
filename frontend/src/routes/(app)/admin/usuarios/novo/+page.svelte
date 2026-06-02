@@ -109,12 +109,10 @@
 		class="flex items-center gap-3 rounded-lg border border-primary-500/30 bg-glass-card px-3.5 py-3 shadow-md"
 	>
 		<span
-			class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary-500/20 bg-glass-card text-lg text-primary-700"
+			class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary-500/20 bg-glass-card text-lg text-primary-700"
 			aria-hidden="true"
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="currentColor" class="h-5 w-5">
-				<path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512l268.6 0c-3.5-7.2-5.5-15.3-5.5-23.8l0-3.6c-8.3-3.6-15.5-9.8-20.3-18.2-9.8 1.9-19.9 3-30.4 3l-14.2 0zm370.7-71.7l-13.9 13.9-13-13c-8.1-8.1-21.3-8.1-29.4 0s-8.1 21.3 0 29.4l13 13-13.9 13.9c-7.1 7.1-9.2 17.8-5.4 27.1s12.9 15.4 23 15.4l19.7 0 0 19.7c0 10.1 6.1 19.2 15.4 23s19.9 1.7 27.1-5.4l13.9-13.9 13 13c8.1 8.1 21.3 8.1 29.4 0s8.1-21.3 0-29.4l-13-13 13.9-13.9c7.1-7.1 9.2-17.8 5.4-27.1s-12.9-15.4-23-15.4l-19.7 0 0-19.7c0-10.1-6.1-19.2-15.4-23s-19.9-1.7-27.1 5.4z"/>
-			</svg>
+			<i class="fas fa-user-cog"></i>
 		</span>
 		<div class="min-w-0">
 			<h1 id="novo-usuario-title" class="font-heading text-3xl font-bold leading-tight text-primary-700">

@@ -2191,6 +2191,48 @@ ROUTE_CASES += [
         "requires_login": True,
         "requires_admin": False,
     },
+    # SPA aditivos (Fase atual): exclusao real de projeto, notificacoes enveloped
+    # e arvore de orgao do escopo (seletor da topnav).
+    {
+        "id": "api_projeto_excluir_delete",
+        "method": "DELETE",
+        "rule": "/api/projetos/<int:project_id>",
+        "path": "/api/projetos/{project_id}",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_notificacoes_list_get",
+        "method": "GET",
+        "rule": "/api/notificacoes",
+        "path": "/api/notificacoes",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_notificacoes_marcar_lidas_post",
+        "method": "POST",
+        "rule": "/api/notificacoes/marcar-lidas",
+        "path": "/api/notificacoes/marcar-lidas",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_orgaos_escopo_get",
+        "method": "GET",
+        "rule": "/api/orgaos/escopo",
+        "path": "/api/orgaos/escopo",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
 ]
 
 # Corte Grupo B (rotas Jinja canonicas -> SPA via catch-all):
@@ -2204,4 +2246,8 @@ ROUTE_CASES += [
 # main.list_tasks*/task_detail/project_tasks, main.calendars_hub) sao alvo de
 # url_for vivos em arquivos IMUTAVEIS (auth.py/decorators.py/calendars/oauth.py)
 # e em rotas/templates Jinja ainda vivos.
-assert len(ROUTE_CASES) == 181
+#
+# +4 aditivos da SPA (Fase atual): DELETE /api/projetos/<id> (exclusao real),
+# GET /api/notificacoes, POST /api/notificacoes/marcar-lidas e GET
+# /api/orgaos/escopo. 181 + 4 = 185.
+assert len(ROUTE_CASES) == 185

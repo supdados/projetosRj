@@ -41,6 +41,8 @@
 		card: BoardCard;
 		/** Indica que este card é o que está sendo arrastado (feedback visual). */
 		dragging?: boolean;
+		/** Card recém-aterrissado: roda a animação `is-drop-settling` (0.28s). */
+		settled?: boolean;
 		/** Rótulo da coluna atual (para o aria-label do card focável). */
 		columnLabel?: string;
 		/** Posição do card na coluna (1-based) para `aria-posinset`. */
@@ -56,6 +58,7 @@
 	let {
 		card,
 		dragging = false,
+		settled = false,
 		columnLabel = '',
 		position,
 		setSize,
@@ -127,6 +130,21 @@
 		}
 		// Em sucesso o card é removido da store (some do DOM); nada a fazer aqui.
 	}
+
+	/**
+	 * Bloqueia o início do drag quando o gesto nasce em um controle interativo
+	 * (botão Excluir/Abrir ou o mini-confirm) — paridade com `board-dnd.js`, que
+	 * dá `preventDefault()` no dragstart originado nesses alvos. Sem isso, arrastar
+	 * a partir de um botão moveria o card por engano.
+	 */
+	function handleDragStart(event: DragEvent): void {
+		const target = event.target as HTMLElement | null;
+		if (target?.closest('button, a, input, textarea, select, [role="alertdialog"]')) {
+			event.preventDefault();
+			return;
+		}
+		ondragstart?.(event);
+	}
 </script>
 
 <!--
@@ -141,7 +159,7 @@
 <div
 	class="kanban-card group flex cursor-grab flex-col gap-[0.52rem] rounded-[10px] border border-border-subtle bg-surface px-[0.6rem] pb-[0.6rem] pt-[0.56rem] shadow-[0_6px_16px_rgba(18,56,91,0.08)] outline-none transition-[transform,box-shadow,border-color,background-color] duration-fast hover:border-border-strong hover:shadow-[0_10px_22px_rgba(16,53,87,0.12)] focus-visible:border-primary-500 focus-visible:shadow-[0_0_0_3px_rgba(31,92,168,0.14),0_10px_22px_rgba(16,53,87,0.12)] active:cursor-grabbing {dragging
 		? 'is-dragging'
-		: ''}"
+		: ''} {settled ? 'is-drop-settling' : ''}"
 	draggable="true"
 	tabindex="0"
 	data-item-id={card.id}
@@ -151,7 +169,7 @@
 	aria-label={`${card.descricao}${columnLabel ? `, em ${columnLabel}` : ''}${
 		position && setSize ? ` (${position} de ${setSize})` : ''
 	}. Use as setas esquerda e direita para mover entre colunas.`}
-	ondragstart={(event) => ondragstart?.(event)}
+	ondragstart={handleDragStart}
 	ondragend={(event) => ondragend?.(event)}
 	onkeydown={(event) => onkeydown?.(event)}
 >

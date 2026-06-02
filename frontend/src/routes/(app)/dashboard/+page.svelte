@@ -9,6 +9,7 @@
 	import { fetchDashboard } from '$lib/api/dashboard';
 	import { ApiClientError } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth';
+	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type { DashboardData } from '$lib/types/dashboard';
 	import StatCard from '$lib/components/StatCard.svelte';
 	import RecentProjectsPanel from '$lib/components/RecentProjectsPanel.svelte';
@@ -22,13 +23,26 @@
 	let data = $state<DashboardData | null>(null);
 	let errorMessage = $state<string>('');
 
+	// Aborta a busca anterior quando o escopo muda durante um carregamento em
+	// voo, evitando que uma resposta atrasada sobrescreva a mais recente.
+	let inFlight: AbortController | null = null;
+
 	async function load(): Promise<void> {
+		inFlight?.abort();
+		const controller = new AbortController();
+		inFlight = controller;
+
 		loadState = 'loading';
 		errorMessage = '';
 		try {
-			data = await fetchDashboard();
+			// Propaga o escopo de orgao do topnav (`?orgao=<id>` | ''); o backend
+			// sanitiza o filtro para o usuario corrente.
+			const result = await fetchDashboard($orgaoScopeQuery, controller.signal);
+			if (controller.signal.aborted) return;
+			data = result;
 			loadState = 'ready';
 		} catch (err) {
+			if (controller.signal.aborted) return;
 			// 401 ja redirecionou; aqui tratamos os demais erros.
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
 			errorMessage =
@@ -37,7 +51,10 @@
 		}
 	}
 
-	onMount(() => {
+	// Carrega no mount e RECARREGA sempre que o escopo de orgao mudar. Ler
+	// `$orgaoScopeQuery` aqui registra a dependencia reativa do effect.
+	$effect(() => {
+		void $orgaoScopeQuery;
 		void load();
 	});
 
@@ -87,9 +104,40 @@
 		if (total <= 0) return 0;
 		return Math.round((part / total) * 1000) / 10;
 	}
+	// Prioridades de tarefas em aberto (espelha `tasks-kpi-priority-row` do
+	// original): cada linha vira link para /tarefas filtrado por prioridade.
+	const taskPriorities = $derived.by(() => {
+		const d = data;
+		if (!d) return [] as { key: string; label: string; count: number; dot: string }[];
+		return [
+			{ key: 'urgente', label: 'Urgente', count: d.task_urgente_count, dot: 'bg-danger' },
+			{ key: 'alta', label: 'Alta', count: d.task_alta_count, dot: 'bg-orange' },
+			{ key: 'media', label: 'Média', count: d.task_media_count, dot: 'bg-primary-600' },
+			{ key: 'baixa', label: 'Baixa', count: d.task_baixa_count, dot: 'bg-text-muted' }
+		];
+	});
+
+	// Cor da pilula de prioridade na mini-lista de recentes (espelha
+	// `tasks-kpi-recent-badge badge-*` do original; tons via tokens semanticos).
+	const taskBadgeClass: Record<string, string> = {
+		urgente: 'bg-surface-muted text-danger',
+		alta: 'bg-surface-muted text-orange',
+		media: 'bg-surface-muted text-primary-700',
+		baixa: 'bg-surface-muted text-success'
+	};
+
+	// Status do indicador de cada tarefa recente -> classe de cor do ponto.
+	const recentStatusDot: Record<string, string> = {
+		finalizada: 'bar-finalizada',
+		em_andamento: 'bar-em-andamento',
+		para_validacao: 'bar-para-validacao',
+		para_ajustes: 'bar-para-ajustes',
+		nao_iniciada: 'bar-nao-iniciada'
+	};
+
 	const statusBar = $derived.by(() => {
 		const d = data;
-		if (!d) return [] as { key: string; label: string; count: number; width: number; bar: string }[];
+		if (!d) return [] as { key: string; filter: string; label: string; count: number; width: number; bar: string }[];
 		const total = d.task_items_total;
 		const finalizada = pct(d.task_items_finalizada, total);
 		const andamento = pct(d.task_items_em_andamento, total);
@@ -97,12 +145,14 @@
 		const ajustes = pct(d.task_items_para_ajustes, total);
 		const naoIniciada =
 			Math.round((100 - finalizada - andamento - validacao - ajustes) * 10) / 10;
+		// `filter` usa o valor de status do backend (com underscore) consumido
+		// por /tarefas; `key` (com hifen) e so a chave de iteracao/CSS.
 		return [
-			{ key: 'finalizada', label: 'Concluída', count: d.task_items_finalizada, width: finalizada, bar: 'bar-finalizada' },
-			{ key: 'em-andamento', label: 'Andamento', count: d.task_items_em_andamento, width: andamento, bar: 'bar-em-andamento' },
-			{ key: 'para-validacao', label: 'Validação', count: d.task_items_para_validacao, width: validacao, bar: 'bar-para-validacao' },
-			{ key: 'para-ajustes', label: 'Ajustes', count: d.task_items_para_ajustes, width: ajustes, bar: 'bar-para-ajustes' },
-			{ key: 'nao-iniciada', label: 'N. iniciada', count: d.task_items_nao_iniciada, width: naoIniciada, bar: 'bar-nao-iniciada' }
+			{ key: 'finalizada', filter: 'finalizada', label: 'Concluída', count: d.task_items_finalizada, width: finalizada, bar: 'bar-finalizada' },
+			{ key: 'em-andamento', filter: 'em_andamento', label: 'Andamento', count: d.task_items_em_andamento, width: andamento, bar: 'bar-em-andamento' },
+			{ key: 'para-validacao', filter: 'para_validacao', label: 'Validação', count: d.task_items_para_validacao, width: validacao, bar: 'bar-para-validacao' },
+			{ key: 'para-ajustes', filter: 'para_ajustes', label: 'Ajustes', count: d.task_items_para_ajustes, width: ajustes, bar: 'bar-para-ajustes' },
+			{ key: 'nao-iniciada', filter: 'nao_iniciada', label: 'N. iniciada', count: d.task_items_nao_iniciada, width: naoIniciada, bar: 'bar-nao-iniciada' }
 		];
 	});
 </script>
@@ -136,19 +186,7 @@
 			</div>
 			<Button href={`${base}/projetos`}>
 				{#snippet icon()}
-					<svg
-						aria-hidden="true"
-						class="h-4 w-4"
-						viewBox="0 0 20 20"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<line x1="10" y1="4" x2="10" y2="16" />
-						<line x1="4" y1="10" x2="16" y2="10" />
-					</svg>
+					<i class="fas fa-plus" aria-hidden="true"></i>
 				{/snippet}
 				Novo Projeto
 			</Button>
@@ -170,12 +208,11 @@
 					value={data.num_projects}
 					tone="primary"
 					subtitle="Todos os projetos cadastrados"
+					href={`${base}/projetos`}
+					linkLabel="Ver todos os projetos"
 				>
 					{#snippet icon()}
-						<svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M2 5.5A1.5 1.5 0 0 1 3.5 4h3.4a1.5 1.5 0 0 1 1.06.44l.94.94A1.5 1.5 0 0 0 11 5.8h5.5A1.5 1.5 0 0 1 18 7.3v1.2" />
-							<path d="M2.4 9h15.2a1 1 0 0 1 .98 1.2l-1.1 5A1.5 1.5 0 0 1 16 16.5H4a1.5 1.5 0 0 1-1.48-1.3l-1.1-5.0A1 1 0 0 1 2.4 9Z" />
-						</svg>
+						<i class="fas fa-folder-open fa-lg" aria-hidden="true"></i>
 					{/snippet}
 				</StatCard>
 
@@ -184,12 +221,11 @@
 					value={data.count_finalizado}
 					tone="success"
 					subtitle="Projetos finalizados com sucesso"
+					href={`${base}/projetos?status=Finalizado`}
+					linkLabel="Ver projetos finalizados"
 				>
 					{#snippet icon()}
-						<svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-							<circle cx="10" cy="10" r="7.5" />
-							<path d="m6.5 10 2.2 2.2L13.5 7.5" />
-						</svg>
+						<i class="fas fa-check-circle fa-lg" aria-hidden="true"></i>
 					{/snippet}
 				</StatCard>
 
@@ -198,12 +234,11 @@
 					value={data.count_vigente}
 					tone="warning"
 					subtitle="Projetos em andamento"
+					href={`${base}/projetos?status=Vigente`}
+					linkLabel="Ver projetos vigentes"
 				>
 					{#snippet icon()}
-						<svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-							<circle cx="10" cy="10" r="7.5" />
-							<path d="M10 5.5V10l3 1.8" />
-						</svg>
+						<i class="fas fa-clock fa-lg" aria-hidden="true"></i>
 					{/snippet}
 				</StatCard>
 
@@ -212,25 +247,26 @@
 					value={data.projetos_em_atraso}
 					tone="danger"
 					subtitle="Necessitam atenção imediata"
+					href={`${base}/projetos?atraso=atrasado`}
+					linkLabel="Ver projetos em atraso"
 				>
 					{#snippet icon()}
-						<svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M10 2.5 18.5 17h-17L10 2.5Z" />
-							<line x1="10" y1="8" x2="10" y2="12" />
-							<line x1="10" y1="14.5" x2="10" y2="14.6" />
-						</svg>
+						<i class="fas fa-exclamation-triangle fa-lg" aria-hidden="true"></i>
 					{/snippet}
 				</StatCard>
 			</div>
 		</section>
 
-		<!-- Layout 2 colunas: projetos recentes (esq) + tarefas (dir) -->
-		<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+		<!-- Layout 2 colunas: projetos recentes (esq) + tarefas (dir).
+			 items-stretch (padrao do grid) faz as duas colunas terem a MESMA
+			 altura; o painel de recentes rola internamente (scroll-lock) e o de
+			 tarefas se alinha ao lado, como no index.html original. -->
+		<div class="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
 			<div class="lg:col-span-2">
-				<RecentProjectsPanel projects={data.recent_projects} />
+				<RecentProjectsPanel projects={data.recent_projects} totalProjects={data.num_projects} />
 			</div>
 
-			<aside class="lg:col-span-1">
+			<aside class="flex flex-col lg:col-span-1">
 				<Card title="Tarefas" labelId="dashboard-tasks-title">
 					{#snippet header()}
 						<a
@@ -238,53 +274,37 @@
 							class="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 no-underline transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 						>
 							Ver todas
-							<svg aria-hidden="true" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<line x1="4" y1="10" x2="15" y2="10" />
-								<path d="m11 6 4 4-4 4" />
-							</svg>
+							<i class="fas fa-arrow-right" aria-hidden="true"></i>
 						</a>
 					{/snippet}
 
 					<div class="flex flex-col gap-5">
-						<!-- Por prioridade -->
+						<!-- Por prioridade: cada linha e um link para /tarefas filtrado
+							 (espelha os `tasks-kpi-priority-row` clicaveis do original). -->
 						<section class="flex flex-col gap-2" aria-label="Tarefas por prioridade">
 							<div class="flex items-center justify-between">
 								<span class="text-sm font-bold text-text-secondary">Por prioridade</span>
 								<span class="text-xs font-semibold text-text-muted">{data.dashboard_open_tasks_count} abertas</span>
 							</div>
 							<div class="grid grid-cols-4 gap-1.5">
-								<div class="flex min-h-[46px] flex-col items-start justify-center gap-1 rounded-md border border-border-subtle bg-surface-muted px-2 py-1.5">
-									<span class="flex items-center gap-1.5">
-										<span class="h-2 w-2 shrink-0 rounded-full bg-danger" aria-hidden="true"></span>
-										<span class="truncate text-xs font-semibold text-text-secondary">Urgente</span>
-									</span>
-									<span class="text-sm font-bold text-text-primary">{data.task_urgente_count}</span>
-								</div>
-								<div class="flex min-h-[46px] flex-col items-start justify-center gap-1 rounded-md border border-border-subtle bg-surface-muted px-2 py-1.5">
-									<span class="flex items-center gap-1.5">
-										<span class="h-2 w-2 shrink-0 rounded-full bg-orange" aria-hidden="true"></span>
-										<span class="truncate text-xs font-semibold text-text-secondary">Alta</span>
-									</span>
-									<span class="text-sm font-bold text-text-primary">{data.task_alta_count}</span>
-								</div>
-								<div class="flex min-h-[46px] flex-col items-start justify-center gap-1 rounded-md border border-border-subtle bg-surface-muted px-2 py-1.5">
-									<span class="flex items-center gap-1.5">
-										<span class="h-2 w-2 shrink-0 rounded-full bg-primary-600" aria-hidden="true"></span>
-										<span class="truncate text-xs font-semibold text-text-secondary">Média</span>
-									</span>
-									<span class="text-sm font-bold text-text-primary">{data.task_media_count}</span>
-								</div>
-								<div class="flex min-h-[46px] flex-col items-start justify-center gap-1 rounded-md border border-border-subtle bg-surface-muted px-2 py-1.5">
-									<span class="flex items-center gap-1.5">
-										<span class="h-2 w-2 shrink-0 rounded-full bg-text-muted" aria-hidden="true"></span>
-										<span class="truncate text-xs font-semibold text-text-secondary">Baixa</span>
-									</span>
-									<span class="text-sm font-bold text-text-primary">{data.task_baixa_count}</span>
-								</div>
+								{#each taskPriorities as prio (prio.key)}
+									<a
+										href={`${base}/tarefas?prioridade=${prio.key}`}
+										class="flex min-h-[46px] flex-col items-start justify-center gap-1 rounded-md border border-border-subtle bg-surface-muted px-2 py-1.5 no-underline transition-colors duration-fast hover:border-primary-500 hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									>
+										<span class="flex items-center gap-1.5">
+											<span class="h-2 w-2 shrink-0 rounded-full {prio.dot}" aria-hidden="true"></span>
+											<span class="truncate text-xs font-semibold text-text-secondary">{prio.label}</span>
+										</span>
+										<span class="text-sm font-bold text-text-primary">{prio.count}</span>
+									</a>
+								{/each}
 							</div>
 						</section>
 
-						<!-- Por status: barra empilhada de progresso + legenda -->
+						<!-- Por status: barra empilhada de progresso + legenda. Segmentos
+							 e itens de legenda sao links para /tarefas filtrado por status
+							 (espelha os segmentos clicaveis + tooltips do original). -->
 						<section class="flex flex-col gap-2" aria-label="Tarefas por status">
 							<div class="flex items-center justify-between">
 								<span class="text-sm font-bold text-text-secondary">Por status</span>
@@ -292,29 +312,71 @@
 							</div>
 							<div
 								class="flex h-4 overflow-hidden rounded-sm border border-border-subtle bg-surface-muted"
-								role="img"
+								role="group"
 								aria-label="Distribuição de tarefas por status"
 							>
 								{#if data.task_items_total > 0}
 									{#each statusBar as seg (seg.key)}
-										<span
+										<a
+											href={`${base}/tarefas?status=${seg.filter}`}
 											class="status-seg block h-full {seg.bar}"
 											style="width: {seg.width}%"
 											title="{seg.label}: {seg.count}"
-											aria-hidden="true"
-										></span>
+											aria-label="Ver tarefas: {seg.label} ({seg.count})"
+										></a>
 									{/each}
 								{/if}
 							</div>
 							<ul class="flex flex-wrap gap-x-3 gap-y-1" aria-label="Legenda por status">
 								{#each statusBar as seg (seg.key)}
-									<li class="inline-flex items-center gap-1 text-2xs font-medium text-text-secondary">
-										<span class="h-2 w-2 shrink-0 rounded-full {seg.bar}" aria-hidden="true"></span>
-										{seg.label}
+									<li>
+										<a
+											href={`${base}/tarefas?status=${seg.filter}`}
+											class="inline-flex items-center gap-1 text-2xs font-medium text-text-secondary no-underline transition-colors duration-fast hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										>
+											<span class="h-2 w-2 shrink-0 rounded-full {seg.bar}" aria-hidden="true"></span>
+											{seg.label}
+										</a>
 									</li>
 								{/each}
 							</ul>
 						</section>
+
+						<!-- Recentes: mini-lista das ultimas tarefas (espelha
+							 `tasks-kpi-recent-list` do original). Cada item leva a /tarefas
+							 com a tarefa em foco; rola internamente se exceder a altura. -->
+						{#if data.recent_tasks.length > 0}
+							<section class="flex flex-col gap-2" aria-label="Tarefas recentes">
+								<span class="text-sm font-bold text-text-secondary">Recentes</span>
+								<div class="flex max-h-72 flex-col gap-1 overflow-y-auto">
+									{#each data.recent_tasks as t (t.id)}
+										<a
+											href={`${base}/tarefas?focus_task=${t.id}`}
+											title={t.descricao}
+											class="flex items-center gap-2 rounded-md border border-transparent px-2 py-1.5 no-underline transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										>
+											<span
+												class="h-2 w-2 shrink-0 rounded-full {recentStatusDot[t.status] ?? 'bg-text-muted'}"
+												aria-hidden="true"
+											></span>
+											<span class="flex min-w-0 flex-1 flex-col">
+												<span class="truncate text-xs font-medium text-text-primary">{t.descricao}</span>
+												<span class="truncate text-2xs text-text-muted">
+													{t.project_titulo ?? (t.project_id ? `Projeto #${t.project_id}` : 'Sem projeto vinculado')}
+												</span>
+											</span>
+											{#if t.prioridade}
+												<span
+													class="shrink-0 rounded-sm px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide {taskBadgeClass[t.prioridade] ?? 'bg-surface-muted text-text-secondary'}"
+												>
+													{t.prioridade}
+												</span>
+											{/if}
+										</a>
+									{/each}
+								</div>
+							</section>
+						{/if}
 					</div>
 				</Card>
 			</aside>

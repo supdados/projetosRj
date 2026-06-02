@@ -5,19 +5,29 @@
 	 * backend (read-only).
 	 *
 	 * Apresentacao fiel ao partial Jinja `_recent_projects_panel.html` +
-	 * `recent-projects-panel.css`: tabela em CSS grid (ID / Projeto / Orgao /
-	 * Prioridade) com cabecalho sticky e linha inteira clicavel. As colunas do
-	 * cabecalho e das linhas compartilham o mesmo template de grid.
+	 * `recent-projects-panel.css` + `index.css`:
+	 *   - Tabela em CSS grid (ID / Projeto / Orgao / Prioridade) com cabecalho
+	 *     STICKY e linha inteira clicavel. Colunas do cabecalho e das linhas
+	 *     compartilham o mesmo template de grid (--rp-cols: 64px | 1fr | 170px | 185px).
+	 *   - SCROLL-LOCK: o corpo da tabela tem altura travada e rola internamente
+	 *     (overflow-y:auto), em vez de empurrar a pagina inteira — alinhando o
+	 *     painel com o de Tarefas ao lado. Espelha `.glass-table-wrapper`
+	 *     (max-height + overflow) do index.css original.
+	 *
+	 * NAO usa o componente Card (que adiciona padding ao corpo): este painel
+	 * precisa do corpo edge-to-edge para o cabecalho sticky e o scroll
+	 * funcionarem como no original.
 	 */
 	import { base } from '$app/paths';
-	import Card from './Card.svelte';
 	import type { Project, TaskPrioridade } from '$lib/types/entities';
 
 	interface Props {
 		projects: Project[];
+		/** Total de projetos cadastrados; decide a mensagem do estado vazio. */
+		totalProjects?: number;
 	}
 
-	let { projects }: Props = $props();
+	let { projects, totalProjects = 0 }: Props = $props();
 
 	// Cor da pilula de prioridade (espelha .glass-badge.priority-* do original).
 	// Tons via tokens semanticos para troca automatica no dark mode.
@@ -39,21 +49,37 @@
 	}
 </script>
 
-<Card title="Projetos Recentes" labelId="recent-projects-title">
+<section
+	class="flex h-full flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm"
+	aria-labelledby="recent-projects-title"
+>
+	<header
+		class="flex shrink-0 items-center gap-2 border-b border-border-subtle px-5 py-4"
+	>
+		<i class="fas fa-clock text-primary-600" aria-hidden="true"></i>
+		<h2 id="recent-projects-title" class="font-heading text-lg font-semibold text-text-primary">
+			Projetos Recentes
+		</h2>
+	</header>
+
 	{#if projects.length === 0}
-		<div class="flex flex-col items-center gap-3 px-4 py-8 text-center">
-			<svg aria-hidden="true" class="h-9 w-9 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M3 7a2 2 0 0 1 2-2h4.2a2 2 0 0 1 1.4.6l1.2 1.2a2 2 0 0 0 1.4.6H19a2 2 0 0 1 2 2v2" />
-				<path d="M3.3 11h17.4a1.2 1.2 0 0 1 1.18 1.42l-1.3 6A2 2 0 0 1 18.6 20H5.4a2 2 0 0 1-1.96-1.58l-1.3-6A1.2 1.2 0 0 1 3.3 11Z" />
-			</svg>
-			<p class="text-sm text-text-muted">Nenhum projeto recente para mostrar.</p>
+		<div class="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-8 text-center">
+			<i class="fas fa-folder-open fa-2x text-text-muted" aria-hidden="true"></i>
+			{#if totalProjects > 0}
+				<p class="mb-0 text-sm text-text-muted">Nenhum projeto recente para mostrar.</p>
+			{:else}
+				<p class="mb-3 text-sm text-text-muted">Nenhum projeto cadastrado ainda.</p>
+				<a
+					href={`${base}/projetos`}
+					class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					<i class="fas fa-plus" aria-hidden="true"></i>Criar Primeiro Projeto
+				</a>
+			{/if}
 		</div>
 	{:else}
-		<div
-			class="overflow-x-auto"
-			role="table"
-			aria-labelledby="recent-projects-title"
-		>
+		<!-- Scroll-lock: corpo rola internamente; cabecalho sticky permanece visivel. -->
+		<div class="rp-scroll min-h-0 flex-1 overflow-y-auto" role="table" aria-labelledby="recent-projects-title">
 			<!-- Cabecalho sticky -->
 			<div
 				role="row"
@@ -90,7 +116,7 @@
 			{/each}
 		</div>
 	{/if}
-</Card>
+</section>
 
 <style>
 	/* Grid compartilhado por cabecalho e linhas (espelha --rp-cols do original:
@@ -98,5 +124,13 @@
 	.rp-grid {
 		display: grid;
 		grid-template-columns: 64px minmax(0, 1fr) 170px 185px;
+	}
+
+	/* Scroll-lock: trava a altura do corpo na viewport para a tabela rolar
+	   internamente (em vez de empurrar a pagina inteira). Espelha o
+	   max-height/overflow do `.glass-table-wrapper` do index.css original; aqui
+	   relativo a viewport para alinhar com o painel de Tarefas ao lado. */
+	.rp-scroll {
+		max-height: min(60vh, 520px);
 	}
 </style>

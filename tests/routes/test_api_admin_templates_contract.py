@@ -51,7 +51,12 @@ def test_list_returns_ok_envelope_with_metrics(client_admin, seed_data):
     assert row["stage_count"] == 2
     assert row["total_duration"] == 5
     assert "usage_count" in row
-    assert "silhouette" not in row
+    # Silhueta: o serializer agora repassa ``silhouette`` como lista de pares
+    # ``[altura, duracao]`` consumida pela coluna Silhueta da tela admin (SPA).
+    assert isinstance(row["silhouette"], list)
+    for bar in row["silhouette"]:
+        assert isinstance(bar, list)
+        assert len(bar) == 2
 
 
 def test_list_respects_order_query(client_admin, seed_data):

@@ -1,29 +1,46 @@
+<script module lang="ts">
+	/**
+	 * Estado de arraste COMPARTILHADO entre todas as instâncias recursivas do nó.
+	 * Espelha as variáveis de módulo `dragId`/`dragTipo` do orgao_tree.js (v4.5):
+	 * o `dragstart` registra quem está sendo arrastado para que o `dragover` de
+	 * QUALQUER nó-alvo possa decidir se é um destino de drop válido (o payload do
+	 * DataTransfer não é legível durante o dragover, por segurança do browser).
+	 */
+	let draggedId: number | null = null;
+
+	export function setDraggedOrgaoId(id: number | null): void {
+		draggedId = id;
+	}
+	export function getDraggedOrgaoId(): number | null {
+		return draggedId;
+	}
+</script>
+
 <script lang="ts">
 	/**
 	 * Nó RECURSIVO da árvore de órgãos (Admin > Órgãos). Espelha o macro Jinja
-	 * `render_orgao_node` de `templates/admin/_orgao_node.html`: linha com chevron
-	 * de expandir/recolher, dot + badge de tipo, sigla/nome e barra de ações
+	 * `render_orgao_node` de `templates/admin/_orgao_node.html` e o comportamento
+	 * de `static/js/admin/orgao_tree.js` (v4.5): linha com chevron de
+	 * expandir/recolher, dot + sigla/nome + badge de tipo e barra de ações
 	 * (adicionar subunidade, mover ↑/↓, mover de pai, editar, ativar/desativar,
-	 * excluir). Os filhos são renderizados por auto-referência ao próprio nome do
-	 * componente (`<OrgaoTreeNode>`) — idiom Svelte 5 que substitui `svelte:self`.
+	 * excluir). Os filhos são renderizados por auto-referência (`<OrgaoTreeNode>`).
 	 *
-	 * O componente é CONTROLADO: não muta o estado nem chama a API diretamente —
-	 * apenas emite callbacks (`onReorder`/`onReorderTo`/`onToggleAtivo`/`onMove`/
-	 * `onDelete`) para a página, que orquestra as chamadas a
-	 * `$lib/api/adminOrgaos` e o recarregamento da árvore. Links de criar/editar
-	 * são base-aware (`$app/paths`). Acessível: chevron com `aria-expanded`,
-	 * ações com `title`/`aria-label`, indentação por nível via `--orgao-depth`.
+	 * Componente CONTROLADO: não muta estado nem chama a API. O estado de
+	 * expand/collapse, seleção e busca vive na página (`expandedIds`,
+	 * `selectedId`, `filterQuery`) e as mutações são emitidas via callbacks
+	 * (`onToggle`/`onSelect`/`onReorder`/`onReparent`/`onToggleAtivo`/`onMove`/
+	 * `onDelete`).
 	 *
-	 * Reordenação por DRAG-AND-DROP (débito #8): cada nó é `draggable` e pode ser
-	 * solto sobre um irmão do MESMO pai (a árvore reordena só entre irmãos; mudar
-	 * de pai continua via "mover para outro pai"). Ao soltar, emite
-	 * `onReorderTo(orgaoId, fromIndex, toIndex)`; a página traduz o salto em
-	 * chamadas single-step ao endpoint POST `/reorder` existente. As setas ↑/↓
-	 * permanecem como alternativa acessível por teclado (mesmo callback `onReorder`).
-	 * DnD nativo HTML5 (sem dependências), espelhando StageList.svelte.
+	 * DRAG-AND-DROP = REPARENTING (igual ao v4.5): a linha é `draggable` quando o
+	 * nó não é raiz (`pai_id !== null`). Soltar o nó arrastado SOBRE outro nó
+	 * torna o alvo o novo pai (POST `/move`). O realce de alvo (`is-drop-target`)
+	 * só aparece em destinos válidos: a função `canDropOn(draggedId, targetId)`
+	 * (na página) recusa o próprio nó, descendentes e tipos incompatíveis
+	 * (espelha `isValidParentTipo`/guarda de descendentes do orgao_tree.js). As
+	 * setas ↑/↓ continuam reordenando entre irmãos como alternativa por teclado.
+	 * DnD nativo HTML5, sem dependências.
 	 */
 	import { base } from '$app/paths';
-	import Badge from '$lib/components/Badge.svelte';
 	import OrgaoTreeNode from './OrgaoTreeNode.svelte';
 	import type { CandidatoPai, OrgaoNode, ReorderDirection } from '$lib/types/adminOrgaos';
 
@@ -38,13 +55,19 @@
 		paiOptions: CandidatoPai[];
 		/** True enquanto uma mutação está em voo (desabilita ações). */
 		busy: boolean;
+		/** Ids de nós expandidos (controlado pela página). */
+		expandedIds: Set<number>;
+		/** Id do nó selecionado (realce, espelha is-selected do v4.5). */
+		selectedId: number | null;
+		/** Termo de busca normalizado (lowercase, sem espaços nas bordas). */
+		filterQuery: string;
+		/** Valida se `draggedId` pode ser solto sobre `targetId` (reparent). */
+		canDropOn: (draggedId: number, targetId: number) => boolean;
+		onToggle: (orgaoId: number) => void;
+		onSelect: (orgaoId: number) => void;
 		onReorder: (orgaoId: number, direction: ReorderDirection) => void;
-		/**
-		 * Reordena por drag-and-drop: solta o nó `draggedId` sobre `targetId`. A
-		 * página localiza ambos na árvore, valida que são irmãos (mesmo pai) e
-		 * converte o salto em chamadas single-step ao endpoint `/reorder`.
-		 */
-		onReorderTo: (draggedId: number, targetId: number) => void;
+		/** Reparenting por DnD: torna `targetId` o novo pai de `draggedId`. */
+		onReparent: (draggedId: number, targetId: number) => void;
 		onToggleAtivo: (orgaoId: number) => void;
 		onMove: (orgaoId: number, paiId: number | null) => void;
 		onDelete: (node: OrgaoNode) => void;
@@ -57,73 +80,59 @@
 		siblingCount,
 		paiOptions,
 		busy,
+		expandedIds,
+		selectedId,
+		filterQuery,
+		canDropOn,
+		onToggle,
+		onSelect,
 		onReorder,
-		onReorderTo,
+		onReparent,
 		onToggleAtivo,
 		onMove,
 		onDelete
 	}: Props = $props();
 
-	let expanded = $state(true);
 	/** Abre o seletor inline de "mover para outro pai". */
 	let moveOpen = $state(false);
-	/** Índice do irmão sobre o qual se arrasta (para realce de alvo de drop). */
-	let dragOver = $state(false);
-
-	const canDrag = $derived(!busy && siblingCount > 1);
-
-	function handleDragStart(event: DragEvent): void {
-		// O nó arrastado é o alvo mais interno; impede que ancestrais sobrescrevam
-		// o payload (ou cancelem o arraste) ao receberem o evento por bubbling.
-		event.stopPropagation();
-		if (!canDrag || !event.dataTransfer) {
-			event.preventDefault();
-			return;
-		}
-		event.dataTransfer.effectAllowed = 'move';
-		// Origem identificada por id do órgão; a página valida o mesmo pai.
-		event.dataTransfer.setData('application/x-orgao-id', String(node.id));
-		// Firefox exige um payload text/plain para iniciar o arraste.
-		event.dataTransfer.setData('text/plain', node.sigla ?? String(node.id));
-	}
-
-	function handleDragOver(event: DragEvent): void {
-		if (!canDrag || !event.dataTransfer) return;
-		const types = event.dataTransfer.types;
-		if (!types.includes('application/x-orgao-id')) return;
-		event.preventDefault();
-		// Evita que o nó-pai também realce/receba o drop ao passar sobre um filho.
-		event.stopPropagation();
-		event.dataTransfer.dropEffect = 'move';
-		dragOver = true;
-	}
-
-	function handleDragLeave(): void {
-		dragOver = false;
-	}
-
-	function handleDrop(event: DragEvent): void {
-		dragOver = false;
-		if (!canDrag || !event.dataTransfer) return;
-		const draggedId = Number(event.dataTransfer.getData('application/x-orgao-id'));
-		if (!Number.isFinite(draggedId) || draggedId === node.id) return;
-		event.preventDefault();
-		event.stopPropagation();
-		// A página valida que origem e destino são irmãos antes de reordenar.
-		onReorderTo(draggedId, node.id);
-	}
+	/** True quando o nó arrastado está sobre esta linha e o drop é válido. */
+	let dropTarget = $state(false);
 
 	const hasChildren = $derived(node.filhos.length > 0);
 	const isRoot = $derived(node.pai_id === null);
 	const isFirst = $derived(index === 0);
 	const isLast = $derived(index === siblingCount - 1);
+	const expanded = $derived(expandedIds.has(node.id));
+	const isSelected = $derived(selectedId === node.id);
+	/** Raiz não é arrastável (espelha draggable="false" do v4.5). */
+	const canDrag = $derived(!busy && !isRoot);
 	/** Raiz não pode ser excluída; órgão com filhos também não (backend 409). */
 	const canDelete = $derived(!isRoot && !hasChildren);
 
+	// === Busca: espelha applyFilter do orgao_tree.js ===
+	const selfMatches = $derived(matchesQuery(node));
+	/** True se o nó ou algum descendente casa com a busca. */
+	const subtreeMatches = $derived(filterQuery === '' || selfMatches || anyDescendantMatches(node));
+	/** Esconde o nó quando há busca e nem ele nem o subtree casam. */
+	const hidden = $derived(filterQuery !== '' && !subtreeMatches);
+
+	function matchesQuery(n: OrgaoNode): boolean {
+		if (filterQuery === '') return false;
+		const sigla = (n.sigla ?? '').toLowerCase();
+		const nome = (n.nome ?? '').toLowerCase();
+		return sigla.includes(filterQuery) || nome.includes(filterQuery);
+	}
+
+	function anyDescendantMatches(n: OrgaoNode): boolean {
+		for (const child of n.filhos) {
+			if (matchesQuery(child) || anyDescendantMatches(child)) return true;
+		}
+		return false;
+	}
+
 	/**
 	 * Slug do tipo para a cor do dot (espelha `_orgao_node.html`:
-	 * `tipo_nome|lower|replace(...)`). Apresentação apenas — as cores por tipo
-	 * vivem no bloco style com escopo, reproduzindo `orgao_tree.css`.
+	 * `tipo_nome|lower|replace(...)`). As cores por tipo vivem no bloco style.
 	 */
 	const tipoSlug = $derived(
 		(node.tipo ?? '')
@@ -137,12 +146,69 @@
 			.replace(/ /g, '-')
 	);
 
-	function toggleExpanded(): void {
-		expanded = !expanded;
+	function handleDragStart(event: DragEvent): void {
+		// O nó arrastado é o alvo mais interno; impede que ancestrais sobrescrevam
+		// o payload ao receberem o evento por bubbling.
+		event.stopPropagation();
+		if (!canDrag || !event.dataTransfer) {
+			event.preventDefault();
+			return;
+		}
+		event.dataTransfer.effectAllowed = 'move';
+		event.dataTransfer.setData('application/x-orgao-id', String(node.id));
+		// Firefox exige um payload text/plain para iniciar o arraste.
+		event.dataTransfer.setData('text/plain', node.sigla ?? String(node.id));
+		// Registra no estado compartilhado para a validação durante o dragover.
+		setDraggedOrgaoId(node.id);
 	}
 
-	function confirmDelete(): void {
-		onDelete(node);
+	function handleDragOver(event: DragEvent): void {
+		if (!event.dataTransfer) return;
+		if (!event.dataTransfer.types.includes('application/x-orgao-id')) return;
+		const draggedId = getDraggedOrgaoId();
+		// Só realça destinos válidos (espelha a guarda do dragover do v4.5):
+		// não o próprio/descendente, e tipo do alvo pode ser pai do arrastado.
+		if (draggedId === null || !canDropOn(draggedId, node.id)) return;
+		event.preventDefault();
+		// Impede que o nó-pai também receba o drop ao passar sobre um filho.
+		event.stopPropagation();
+		event.dataTransfer.dropEffect = 'move';
+		dropTarget = true;
+	}
+
+	function handleDragLeave(): void {
+		dropTarget = false;
+	}
+
+	function handleDrop(event: DragEvent): void {
+		dropTarget = false;
+		const draggedId = getDraggedOrgaoId();
+		if (draggedId === null) return;
+		event.preventDefault();
+		event.stopPropagation();
+		// A página valida tipo/descendência/pai-atual antes de mover.
+		onReparent(draggedId, node.id);
+	}
+
+	function handleDragEnd(): void {
+		dropTarget = false;
+		setDraggedOrgaoId(null);
+	}
+
+	function handleRowClick(event: MouseEvent): void {
+		// Cliques em ações/chevron não selecionam (espelha guarda do orgao_tree.js).
+		const target = event.target as HTMLElement;
+		if (target.closest('.orgao-actions') || target.closest('.orgao-toggle')) return;
+		onSelect(node.id);
+	}
+
+	function handleRowKeydown(event: KeyboardEvent): void {
+		// Seleção por teclado quando o foco está na própria linha (não nos botões).
+		if (event.target !== event.currentTarget) return;
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			onSelect(node.id);
+		}
 	}
 
 	function onMoveSelect(event: Event): void {
@@ -158,45 +224,46 @@
 <li
 	class="orgao-node"
 	class:is-inactive={!node.ativo}
+	class:is-hidden={hidden}
+	class:is-leaf={!hasChildren}
 	style={`--orgao-depth:${depth}`}
 	data-id={node.id}
-	draggable={canDrag}
-	ondragstart={handleDragStart}
-	ondragover={handleDragOver}
-	ondragleave={handleDragLeave}
-	ondrop={handleDrop}
-	ondragend={handleDragLeave}
+	role="none"
 >
-	<div class="orgao-row" class:is-drop-target={dragOver}>
-		{#if canDrag}
-			<span class="orgao-grip" title="Arraste para reordenar" aria-hidden="true">
-				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
-					<path d="M7 4a1 1 0 11-2 0 1 1 0 012 0zm0 6a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100-2 1 1 0 000 2zm9-13a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100-2 1 1 0 000 2zm1 5a1 1 0 11-2 0 1 1 0 012 0z" />
-				</svg>
-			</span>
-		{/if}
+	<div
+		class="orgao-row"
+		class:is-drop-target={dropTarget}
+		class:is-selected={isSelected}
+		class:is-match={selfMatches}
+		draggable={canDrag}
+		role="treeitem"
+		aria-selected={isSelected}
+		aria-expanded={hasChildren ? expanded : undefined}
+		tabindex="-1"
+		ondragstart={handleDragStart}
+		ondragover={handleDragOver}
+		ondragleave={handleDragLeave}
+		ondrop={handleDrop}
+		ondragend={handleDragEnd}
+		onclick={handleRowClick}
+		onkeydown={handleRowKeydown}
+	>
 		{#if hasChildren}
 			<button
 				type="button"
-				onclick={toggleExpanded}
+				onclick={() => onToggle(node.id)}
 				aria-expanded={expanded}
 				aria-label={expanded ? 'Recolher subunidades' : 'Expandir subunidades'}
 				class="orgao-toggle"
 				class:is-open={expanded}
 			>
-				<svg viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3" aria-hidden="true">
-					<path d="M7 5l6 5-6 5V5z" />
-				</svg>
+				<i class="fas fa-chevron-right" aria-hidden="true"></i>
 			</button>
 		{:else}
 			<span class="orgao-toggle is-empty" aria-hidden="true"></span>
 		{/if}
 
-		<span
-			class="orgao-tipo-dot"
-			data-tipo={tipoSlug}
-			title={node.tipo ?? ''}
-			aria-hidden="true"
+		<span class="orgao-tipo-dot" data-tipo={tipoSlug} title={node.tipo ?? ''} aria-hidden="true"
 		></span>
 
 		<span class="orgao-sigla">{node.sigla}</span>
@@ -204,20 +271,15 @@
 		{#if node.tipo}
 			<span class="orgao-tipo-badge">{node.tipo}</span>
 		{/if}
-		{#if !node.ativo}
-			<Badge tone="neutral">Inativo</Badge>
-		{/if}
 
 		<div class="orgao-actions">
 			<a
 				href={`${base}/admin/orgaos/novo?pai_id=${node.id}`}
 				title="Adicionar subunidade"
 				aria-label={`Adicionar subunidade em ${node.sigla}`}
-				class="orgao-action-btn is-add"
+				class="orgao-action-btn"
 			>
-				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-					<path d="M11 3a1 1 0 10-2 0v6H3a1 1 0 100 2h6v6a1 1 0 102 0v-6h6a1 1 0 100-2h-6V3z" />
-				</svg>
+				<i class="fas fa-plus" aria-hidden="true"></i>
 			</a>
 
 			<button
@@ -228,9 +290,7 @@
 				aria-label={`Mover ${node.sigla} para cima`}
 				class="orgao-action-btn"
 			>
-				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-					<path d="M10 5l5 6H5l5-6z" />
-				</svg>
+				<i class="fas fa-arrow-up" aria-hidden="true"></i>
 			</button>
 			<button
 				type="button"
@@ -240,9 +300,7 @@
 				aria-label={`Mover ${node.sigla} para baixo`}
 				class="orgao-action-btn"
 			>
-				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-					<path d="M10 15l-5-6h10l-5 6z" />
-				</svg>
+				<i class="fas fa-arrow-down" aria-hidden="true"></i>
 			</button>
 
 			{#if !isRoot}
@@ -255,11 +313,7 @@
 					aria-label={`Mover ${node.sigla} para outro pai`}
 					class="orgao-action-btn"
 				>
-					<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-						<path
-							d="M10 2a1 1 0 01.7.3l3 3a1 1 0 01-1.4 1.4L11 5.4V10a1 1 0 01-1 1H5.4l1.3 1.3a1 1 0 11-1.4 1.4l-3-3a1 1 0 010-1.4l3-3a1 1 0 111.4 1.4L5.4 9H9V5.4L7.7 6.7a1 1 0 11-1.4-1.4l3-3A1 1 0 0110 2z"
-						/>
-					</svg>
+					<i class="fas fa-arrows-alt" aria-hidden="true"></i>
 				</button>
 			{/if}
 
@@ -269,9 +323,7 @@
 				aria-label={`Editar ${node.sigla}`}
 				class="orgao-action-btn is-edit"
 			>
-				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-					<path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" />
-				</svg>
+				<i class="fas fa-pen" aria-hidden="true"></i>
 			</a>
 
 			<button
@@ -282,29 +334,19 @@
 				aria-label={`${node.ativo ? 'Desativar' : 'Ativar'} ${node.sigla}`}
 				class="orgao-action-btn {node.ativo ? 'is-warning' : 'is-success'}"
 			>
-				{#if node.ativo}
-					<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-						<path d="M10 4C5 4 1.7 8 1 10c.7 2 4 6 9 6s8.3-4 9-6c-.7-2-4-6-9-6zm0 9a3 3 0 110-6 3 3 0 010 6z" />
-					</svg>
-				{:else}
-					<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-						<path d="M3 3l14 14-1.4 1.4-2.3-2.3A9.6 9.6 0 0110 16c-5 0-8.3-4-9-6a12 12 0 013.3-4.1L1.6 4.4 3 3zm7 3a4 4 0 014 4c0 .5-.1 1-.3 1.4l1.5 1.5C16.6 11.8 17.6 10.7 18 10c-.7-2-4-6-9-6-.5 0-1 0-1.5.1L9 5.6c.3-.1.7-.1 1-.1z" />
-					</svg>
-				{/if}
+				<i class="fas {node.ativo ? 'fa-eye' : 'fa-eye-slash'}" aria-hidden="true"></i>
 			</button>
 
 			{#if canDelete}
 				<button
 					type="button"
-					onclick={confirmDelete}
+					onclick={() => onDelete(node)}
 					disabled={busy}
 					title="Excluir"
 					aria-label={`Excluir ${node.sigla}`}
 					class="orgao-action-btn is-delete"
 				>
-					<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-						<path d="M7 2a1 1 0 00-1 1v1H3v2h14V4h-3V3a1 1 0 00-1-1H7zM5 7v9a2 2 0 002 2h6a2 2 0 002-2V7H5z" />
-					</svg>
+					<i class="fas fa-trash" aria-hidden="true"></i>
 				</button>
 			{:else if !isRoot}
 				<span
@@ -312,9 +354,7 @@
 					aria-label="Exclusão indisponível: mova as subunidades antes"
 					class="orgao-action-btn is-disabled"
 				>
-					<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
-						<path d="M7 2a1 1 0 00-1 1v1H3v2h14V4h-3V3a1 1 0 00-1-1H7zM5 7v9a2 2 0 002 2h6a2 2 0 002-2V7H5z" />
-					</svg>
+					<i class="fas fa-trash" aria-hidden="true"></i>
 				</span>
 			{/if}
 		</div>
@@ -340,7 +380,7 @@
 	{/if}
 
 	{#if hasChildren && expanded}
-		<ul class="orgao-children">
+		<ul class="orgao-children" role="group">
 			{#each node.filhos as filho, i (filho.id)}
 				<OrgaoTreeNode
 					node={filho}
@@ -349,8 +389,14 @@
 					siblingCount={node.filhos.length}
 					{paiOptions}
 					{busy}
+					{expandedIds}
+					{selectedId}
+					{filterQuery}
+					{canDropOn}
+					{onToggle}
+					{onSelect}
 					{onReorder}
-					{onReorderTo}
+					{onReparent}
 					{onToggleAtivo}
 					{onMove}
 					{onDelete}
@@ -365,6 +411,9 @@
 	   (dark-safe). Os dots por tipo mantêm os hex decorativos do original. */
 	.orgao-node {
 		list-style: none;
+	}
+	.orgao-node.is-hidden {
+		display: none;
 	}
 
 	.orgao-children {
@@ -395,6 +444,16 @@
 		background: var(--color-surface-muted);
 	}
 
+	.orgao-row.is-selected {
+		background: var(--ds-color-primary-light-bg, rgba(0, 90, 146, 0.08));
+		border-color: var(--ds-color-primary-600);
+	}
+
+	/* Realce de busca (espelha .orgao-node.is-match do v4.5). */
+	.orgao-row.is-match {
+		background: var(--ds-color-warning-light-bg, rgba(254, 240, 138, 0.45));
+	}
+
 	.orgao-row.is-drop-target {
 		background: var(--ds-color-success-light-bg);
 		border-color: var(--ds-color-success-600);
@@ -404,20 +463,6 @@
 	.orgao-node.is-inactive > .orgao-row .orgao-sigla {
 		text-decoration: line-through;
 		color: var(--color-text-muted);
-	}
-
-	.orgao-grip {
-		width: 1rem;
-		height: 1.5rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--color-text-muted);
-		cursor: grab;
-		flex-shrink: 0;
-	}
-	.orgao-grip:active {
-		cursor: grabbing;
 	}
 
 	.orgao-toggle {
@@ -528,7 +573,8 @@
 		transition: opacity 120ms ease;
 		flex-shrink: 0;
 	}
-	.orgao-row:hover .orgao-actions {
+	.orgao-row:hover .orgao-actions,
+	.orgao-row.is-selected .orgao-actions {
 		opacity: 1;
 	}
 
@@ -542,6 +588,7 @@
 		border: 1px solid transparent;
 		background: transparent;
 		color: var(--color-text-muted);
+		font-size: 0.75rem;
 		cursor: pointer;
 		text-decoration: none;
 		transition:
@@ -560,10 +607,6 @@
 	.orgao-action-btn:disabled {
 		cursor: not-allowed;
 		opacity: 0.4;
-	}
-	.orgao-action-btn.is-add:hover {
-		color: var(--ds-color-primary-700);
-		background: var(--ds-color-info-light-bg);
 	}
 	.orgao-action-btn.is-edit:hover {
 		color: var(--ds-color-info-600);

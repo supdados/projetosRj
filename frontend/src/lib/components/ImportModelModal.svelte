@@ -3,11 +3,18 @@
 	 * Modal para importar um modelo de etapas ao projeto. CONTROLADO por callbacks.
 	 *
 	 * Referência: static/js/.../detail/02-import-model.js — seleciona um modelo,
-	 * define a data de início e confirma. Aqui o componente NÃO chama API: recebe a
-	 * lista de `templates` (carregada pela página via fetchStageTemplates) e emite
+	 * define a data de início, vê o PREVIEW das etapas e confirma. A página passa a
+	 * lista de `templates` (resumo) e o componente emite
 	 * `onConfirm({ template_id, start_date })`; a página chama importStageModel e
-	 * RE-BUSCA as etapas. As datas de cada etapa do modelo são calculadas
-	 * server-side (dias úteis) — o front NÃO recalcula.
+	 * RE-BUSCA as etapas.
+	 *
+	 * Preview: ao escolher um modelo, o componente busca o detalhe das etapas
+	 * (`fetchTemplateStages` → GET /api/templates/<id>: nome, ordem, duração) e
+	 * acumula as durações a partir da data de início para mostrar as DATAS
+	 * CALCULADAS de cada etapa. O cálculo é em DIAS ÚTEIS (pula sábado/domingo)
+	 * como estimativa cliente; as datas REAIS — incluindo feriados — são gravadas
+	 * pelo servidor na importação. Por isso o rodapé do preview avisa que são
+	 * datas estimadas.
 	 *
 	 * Acessibilidade: diálogo modal (`role="dialog"`, `aria-modal`), título
 	 * rotulando o diálogo, foco inicial no seletor, Escape fecha, fundo clicável
@@ -18,6 +25,7 @@
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import type { StageTemplateOption } from '$lib/types/projectDetail';
+	import { fetchTemplateStages, type TemplateStage } from '$lib/api/projects';
 
 	interface Props {
 		/** Diálogo aberto? (controlado pela página). */
@@ -57,19 +65,129 @@
 	let startDate = $state<string>(defaultStartDate ?? today());
 	let selectEl = $state<HTMLSelectElement | null>(null);
 
+	// Etapas do modelo selecionado (detalhe). Buscadas sob demanda para o preview.
+	let stages = $state<TemplateStage[]>([]);
+	let stagesLoading = $state<boolean>(false);
+	let stagesError = $state<string | null>(null);
+
 	const selectedTemplate = $derived(
 		templates.find((t) => String(t.id) === selectedId) ?? null
 	);
 	const canConfirm = $derived(!submitting && selectedId !== '' && startDate !== '');
 
-	// Ao abrir, reseta seleção/data e foca o seletor.
+	// Ao abrir, reseta seleção/data/preview e foca o seletor.
 	$effect(() => {
 		if (open) {
 			selectedId = '';
 			startDate = defaultStartDate ?? today();
+			stages = [];
+			stagesError = null;
 			void tick().then(() => selectEl?.focus());
 		}
 	});
+
+	// Busca o detalhe das etapas quando um modelo é escolhido (preview). Aborta a
+	// busca anterior se a seleção mudar antes de concluir.
+	$effect(() => {
+		const id = selectedId;
+		if (id === '') {
+			stages = [];
+			stagesError = null;
+			stagesLoading = false;
+			return;
+		}
+		const controller = new AbortController();
+		stagesLoading = true;
+		stagesError = null;
+		fetchTemplateStages(id, controller.signal)
+			.then((result) => {
+				stages = [...result].sort((a, b) => a.order - b.order);
+			})
+			.catch((err: unknown) => {
+				if (controller.signal.aborted) return;
+				stages = [];
+				stagesError =
+					err instanceof Error ? err.message : 'Não foi possível carregar as etapas do modelo.';
+			})
+			.finally(() => {
+				if (!controller.signal.aborted) stagesLoading = false;
+			});
+		return () => controller.abort();
+	});
+
+	/** Soma N dias úteis (pula sáb/dom) a uma data, em UTC, sem mutá-la. */
+	function addBusinessDays(base: Date, days: number): Date {
+		const result = new Date(base.getTime());
+		let added = 0;
+		while (added < days) {
+			result.setUTCDate(result.getUTCDate() + 1);
+			const weekday = result.getUTCDay();
+			if (weekday !== 0 && weekday !== 6) added += 1;
+		}
+		return result;
+	}
+
+	/** Avança a data inicial até o primeiro dia útil (>= ela mesma). */
+	function nextBusinessDay(base: Date): Date {
+		const result = new Date(base.getTime());
+		while (result.getUTCDay() === 0 || result.getUTCDay() === 6) {
+			result.setUTCDate(result.getUTCDate() + 1);
+		}
+		return result;
+	}
+
+	function formatDateBr(date: Date): string {
+		return date.toLocaleDateString('pt-BR', {
+			day: '2-digit',
+			month: '2-digit',
+			year: 'numeric',
+			timeZone: 'UTC'
+		});
+	}
+
+	/** Uma linha do preview: número, nome, datas calculadas e duração. */
+	interface PreviewStage {
+		order: number;
+		name: string;
+		duration: number;
+		startLabel: string;
+		endLabel: string;
+	}
+
+	/**
+	 * Etapas com datas calculadas, acumulando as durações (em dias úteis) a partir
+	 * da data de início. Cada etapa começa no próximo dia útil após o fim da
+	 * anterior; a duração D ocupa D dias úteis (início inclusive). Estimativa — o
+	 * servidor grava as datas reais considerando feriados.
+	 */
+	const previewStages = $derived.by<PreviewStage[]>(() => {
+		if (stages.length === 0 || !startDate) return [];
+		const parsed = new Date(`${startDate}T00:00:00Z`);
+		if (Number.isNaN(parsed.getTime())) return [];
+
+		const rows: PreviewStage[] = [];
+		let cursor = nextBusinessDay(parsed);
+		for (const stage of stages) {
+			const duration = stage.duration > 0 ? stage.duration : 1;
+			const start = cursor;
+			// Duração inclui o dia de início, logo o fim soma (duração - 1) dias úteis.
+			const end = addBusinessDays(start, duration - 1);
+			rows.push({
+				order: stage.order,
+				name: stage.name,
+				duration,
+				startLabel: formatDateBr(start),
+				endLabel: formatDateBr(end)
+			});
+			// Próxima etapa começa no dia útil seguinte ao fim desta.
+			cursor = addBusinessDays(end, 1);
+		}
+		return rows;
+	});
+
+	const previewTotalDays = $derived(
+		previewStages.reduce((sum, row) => sum + row.duration, 0)
+	);
 
 	function confirm(): void {
 		if (!canConfirm) return;
@@ -108,17 +226,30 @@
 			onkeydown={onKeydown}
 			tabindex="-1"
 		>
-			<header class="flex items-center justify-between gap-3">
-				<h2 id="import-model-title" class="font-heading text-lg font-semibold text-text-primary">
-					Importar modelo de etapas
-				</h2>
+			<header class="flex items-start justify-between gap-3">
+				<div class="flex items-start gap-3">
+					<span
+						class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-primary-700"
+						aria-hidden="true"
+					>
+						<i class="fas fa-file-import"></i>
+					</span>
+					<div class="flex flex-col gap-1">
+						<h2 id="import-model-title" class="font-heading text-lg font-semibold text-text-primary">
+							Importar Modelo de Etapas
+						</h2>
+						<p class="text-xs text-text-secondary">
+							Selecione um modelo e a data de início para criar as etapas automaticamente.
+						</p>
+					</div>
+				</div>
 				<button
 					type="button"
 					onclick={onClose}
 					aria-label="Fechar"
 					class="rounded-md border border-border-subtle bg-surface px-2 py-1 text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
-					✕
+					<i class="fas fa-times" aria-hidden="true"></i>
 				</button>
 			</header>
 
@@ -165,10 +296,68 @@
 						disabled={submitting}
 						class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 					/>
-					<p class="text-xs text-text-muted">
-						As datas das etapas são calculadas em dias úteis pelo servidor.
-					</p>
 				</div>
+
+				<!-- Preview das etapas com datas calculadas a partir da data de início. -->
+				{#if selectedId !== ''}
+					<section class="flex flex-col gap-2" aria-labelledby="import-model-preview-title">
+						<h3
+							id="import-model-preview-title"
+							class="text-sm font-medium text-text-primary"
+						>
+							Etapas do modelo
+						</h3>
+
+						{#if stagesLoading}
+							<p role="status" aria-live="polite" class="text-sm text-text-secondary">
+								Carregando etapas…
+							</p>
+						{:else if stagesError}
+							<p role="alert" class="text-sm text-danger">{stagesError}</p>
+						{:else if previewStages.length === 0}
+							<p class="text-sm text-text-muted">Este modelo não possui etapas cadastradas.</p>
+						{:else}
+							<ol class="flex max-h-60 flex-col gap-1.5 overflow-y-auto pr-1">
+								{#each previewStages as stage (stage.order)}
+									<li
+										class="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface-muted px-3 py-2"
+									>
+										<span
+											class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700"
+											aria-hidden="true"
+										>
+											{stage.order}
+										</span>
+										<span class="min-w-0 flex-1 truncate text-sm text-text-primary" title={stage.name}>
+											{stage.name}
+										</span>
+										<span class="shrink-0 text-right text-xs text-text-secondary">
+											<span class="block whitespace-nowrap">
+												{stage.startLabel} – {stage.endLabel}
+											</span>
+											<span class="block text-text-muted">
+												{stage.duration} dia{stage.duration > 1 ? 's' : ''}
+											</span>
+										</span>
+									</li>
+								{/each}
+							</ol>
+
+							<p class="flex items-center gap-2 text-xs text-text-secondary">
+								<i class="fas fa-info-circle text-primary-700" aria-hidden="true"></i>
+								<span>
+									<strong>Total:</strong>
+									{previewStages.length} etapa{previewStages.length > 1 ? 's' : ''} ·
+									{previewTotalDays} dia{previewTotalDays > 1 ? 's' : ''}
+								</span>
+							</p>
+							<p class="text-xs text-text-muted">
+								Datas estimadas em dias úteis. O servidor grava as datas finais
+								considerando feriados.
+							</p>
+						{/if}
+					</section>
+				{/if}
 			{/if}
 
 			{#if error}

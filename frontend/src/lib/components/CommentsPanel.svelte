@@ -17,8 +17,58 @@
 	let editingId = $state<number | null>(null);
 	let editText = $state('');
 	let busy = $state(false);
+	let editTextarea = $state<HTMLTextAreaElement | null>(null);
 
 	const comments = $derived($store.detail?.comentarios ?? []);
+
+	/**
+	 * Auto-resize do textarea conforme o conteúdo — paridade com
+	 * `autoResizeTextarea` de 03-etapa-comments.js (a edição inline de comentário
+	 * crescia com o texto em vez de manter scroll interno).
+	 */
+	function autoResize(el: HTMLTextAreaElement): void {
+		el.style.height = 'auto';
+		el.style.height = `${el.scrollHeight}px`;
+	}
+
+	function onTextareaInput(event: Event): void {
+		autoResize(event.currentTarget as HTMLTextAreaElement);
+	}
+
+	/**
+	 * Enter salva, Shift+Enter quebra linha, Escape cancela — igual ao editor
+	 * inline do legado (03-etapa-comments.js: keydown Enter/Escape).
+	 */
+	function onNewKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Enter' && !event.shiftKey) {
+			event.preventDefault();
+			void submitNew();
+		}
+	}
+
+	function onEditKeydown(event: KeyboardEvent, id: number): void {
+		if (event.key === 'Enter' && !event.shiftKey) {
+			event.preventDefault();
+			void saveEdit(id);
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			cancelEdit();
+		}
+	}
+
+	/**
+	 * Quando a edição inline abre, foca e posiciona o cursor no fim do texto e
+	 * ajusta a altura — espelha `abrirEdicaoInline` do legado (focus +
+	 * setSelectionRange no fim + autoResizeTextarea).
+	 */
+	$effect(() => {
+		if (editingId !== null && editTextarea) {
+			const el = editTextarea;
+			autoResize(el);
+			el.focus();
+			el.setSelectionRange(el.value.length, el.value.length);
+		}
+	});
 
 	function formatDate(iso: string | null): string {
 		if (!iso) return '';
@@ -126,10 +176,13 @@
 					{#if editingId === comment.id}
 						<div class="mt-1.5 flex flex-col gap-1.5">
 							<textarea
+								bind:this={editTextarea}
 								bind:value={editText}
-								rows="2"
+								rows="1"
 								aria-label="Editar comentário"
-								class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								oninput={onTextareaInput}
+								onkeydown={(e) => onEditKeydown(e, comment.id)}
+								class="w-full resize-none overflow-hidden rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm leading-normal text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 							></textarea>
 							<div class="flex justify-end gap-1.5">
 								<button
@@ -166,7 +219,8 @@
 			id="drawer-new-comment"
 			bind:value={newComment}
 			rows="2"
-			placeholder="Escreva um comentário…"
+			placeholder="Escreva um comentário… (Enter envia, Shift+Enter quebra linha)"
+			onkeydown={onNewKeydown}
 			class="max-h-[180px] min-h-[70px] w-full resize-none rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 		></textarea>
 		<div class="flex items-center justify-between gap-2">

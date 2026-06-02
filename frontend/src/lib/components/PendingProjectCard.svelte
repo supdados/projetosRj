@@ -123,25 +123,6 @@
 	let inFlightEtapa = $state<number | null>(null);
 	let projectDefocused = false;
 
-	/** Rótulo PT de cada bucket (espelha as classes do template Jinja). */
-	const bucketLabel: Record<EtapaBucket, string> = {
-		atrasada: 'Atrasada',
-		'7dias': 'Próximos 7 dias',
-		'14dias': 'Próximos 14 dias',
-		'21dias': 'Próximos 21 dias',
-		sem_data: 'Sem data',
-		futuro: 'Futura'
-	};
-
-	const bucketTone: Record<EtapaBucket, 'danger' | 'warning' | 'info' | 'neutral'> = {
-		atrasada: 'danger',
-		'7dias': 'warning',
-		'14dias': 'warning',
-		'21dias': 'info',
-		sem_data: 'neutral',
-		futuro: 'neutral'
-	};
-
 	function etapaBucket(etapa: PendingEtapa): EtapaBucket {
 		return bucketMap[String(etapa.id)] ?? 'futuro';
 	}
@@ -183,9 +164,9 @@
 	const chips = $derived(
 		[
 			{ key: 'atrasadas', count: counts.atrasadas, label: 'atrasadas', tone: 'danger' },
-			{ key: '7dias', count: counts['7dias'], label: '7 dias', tone: 'warning' },
-			{ key: '14dias', count: counts['14dias'], label: '14 dias', tone: 'warning' },
-			{ key: '21dias', count: counts['21dias'], label: '21 dias', tone: 'info' },
+			{ key: '7dias', count: counts['7dias'], label: '7d', tone: 'warning' },
+			{ key: '14dias', count: counts['14dias'], label: '14d', tone: 'info' },
+			{ key: '21dias', count: counts['21dias'], label: '21d', tone: 'info' },
 			{ key: 'sem_data', count: counts.sem_data, label: 'sem data', tone: 'neutral' }
 		].filter((chip) => chip.count > 0) as Chip[]
 	);
@@ -320,10 +301,10 @@
 </script>
 
 {#snippet etapaRow(etapa: PendingEtapa)}
-	{@const bucket = etapaBucket(etapa)}
 	{@const progress = progressOf(etapa)}
 	{@const key = statusKey(etapa.id)}
 	{@const isDone = key === 'done'}
+	{@const isEmpty = progress.total === 0}
 	<tr class="group border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted/50">
 		<td class="py-2.5 pr-3 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}">
 			{etapa.descricao}
@@ -341,20 +322,25 @@
 				<time datetime={etapa.data_fim}>{formatDateBr(etapa.data_fim)}</time>
 			{:else}—{/if}
 		</td>
-		<td class="py-2.5 pr-3 align-middle">
-			<Badge tone={bucketTone[bucket]}>{bucketLabel[bucket]}</Badge>
-		</td>
 		<td class="py-2.5 pr-3 text-center align-middle">
 			<button
 				type="button"
 				onclick={() => openQuickAdd(etapa)}
+				disabled={isDone}
 				title="Ver e adicionar tarefas desta etapa"
 				aria-label="Ver e adicionar tarefas desta etapa"
-				class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex h-8 w-[7.25rem] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold leading-none transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40
+					{isEmpty
+					? 'border-dashed border-primary-500/40 bg-transparent text-text-secondary hover:border-primary-500 hover:bg-primary-100/40 hover:text-primary-700'
+					: 'border-primary-500/40 bg-primary-100 text-primary-700 hover:border-primary-500 hover:bg-primary-200/60'}"
 			>
-				<i class="fas fa-clipboard-list" aria-hidden="true"></i>
-				<span>{progress.done}/{progress.total}</span>
-				<i class="fas fa-plus text-text-muted" aria-hidden="true"></i>
+				{#if isEmpty}
+					<i class="fas fa-plus" aria-hidden="true"></i>
+					<span>Tarefas</span>
+				{:else}
+					<i class="fas fa-clipboard-list" aria-hidden="true"></i>
+					<span class="font-bold">{progress.done}/{progress.total}</span>
+				{/if}
 			</button>
 		</td>
 		<td class="py-2.5 text-center align-middle">
@@ -363,7 +349,7 @@
 				onclick={() => void toggleStatus(etapa)}
 				disabled={inFlightEtapa === etapa.id}
 				title={STATUS_TITLE[key]}
-				class="inline-flex min-w-[7rem] items-center justify-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50
+				class="inline-flex h-8 min-w-[7.75rem] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold leading-none transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50
 					{key === 'done'
 					? 'border-success/40 bg-surface-muted text-success hover:bg-surface-muted'
 					: key === 'started'
@@ -434,9 +420,8 @@
 						>
 							<th scope="col" class="px-2 py-2.5 font-bold">Etapa</th>
 							<th scope="col" class="px-2 py-2.5 font-bold">Responsável</th>
-							<th scope="col" class="px-2 py-2.5 font-bold">Início</th>
-							<th scope="col" class="px-2 py-2.5 font-bold">Fim</th>
-							<th scope="col" class="px-2 py-2.5 font-bold">Janela</th>
+							<th scope="col" class="px-2 py-2.5 font-bold">Início Prev.</th>
+							<th scope="col" class="px-2 py-2.5 font-bold">Fim Prev.</th>
 							<th scope="col" class="px-2 py-2.5 text-center font-bold">Tarefas</th>
 							<th scope="col" class="px-2 py-2.5 text-center font-bold">Status</th>
 						</tr>
@@ -485,7 +470,6 @@
 										<th scope="col" class="px-2 py-2.5 font-bold">Responsável</th>
 										<th scope="col" class="px-2 py-2.5 font-bold">Início Prev.</th>
 										<th scope="col" class="px-2 py-2.5 font-bold">Fim Prev.</th>
-										<th scope="col" class="px-2 py-2.5 font-bold">Janela</th>
 										<th scope="col" class="px-2 py-2.5 text-center font-bold">Tarefas</th>
 										<th scope="col" class="px-2 py-2.5 text-center font-bold">Status</th>
 									</tr>

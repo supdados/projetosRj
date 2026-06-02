@@ -18,7 +18,7 @@
 	 *     sem texto redundante duplicado abaixo da coluna;
 	 *   - um região `aria-live="polite"` anuncia as movimentações e erros.
 	 */
-	import type { Snippet } from 'svelte';
+	import { getContext, type Snippet } from 'svelte';
 	import KanbanColumn from '$lib/components/KanbanColumn.svelte';
 	import type { BoardStore } from '$lib/stores/board';
 	import type { BoardCard } from '$lib/types/board';
@@ -26,8 +26,20 @@
 		STATUS_LABELS,
 		TASK_STATUS_ORDER,
 		canItemMoveToStatus,
+		normalizeStatus,
 		type TaskStatus
 	} from '$lib/utils/taskStatus';
+
+	/**
+	 * CONFETE ao concluir (paridade `taskFinalizeCelebration.trigger` disparado por
+	 * `updateItemStatus` no legado): a página fornece o disparador via contexto.
+	 * Recebe a ORIGEM (ponto do drop ou o card) para originar a celebração ali,
+	 * como o `celebrationOrigin`/`resolveFinalizeCelebrationOrigin` do legado.
+	 */
+	type CelebrateOrigin = { x: number; y: number } | Element | null | undefined;
+	const celebrateFinalize = getContext<((origin?: CelebrateOrigin) => void) | undefined>(
+		'celebrateFinalize'
+	);
 
 	interface Props {
 		store: BoardStore;
@@ -47,6 +59,37 @@
 	let overStatus = $state<TaskStatus | null>(null);
 	/** Mensagem para leitores de tela (movimentações/erros). */
 	let liveMessage = $state<string>('');
+
+	/**
+	 * Id do card-fonte que deve COLAPSAR (classe `is-dragging`). CRÍTICO: o legado
+	 * (`board-dnd.js`) só adiciona `is-dragging` num `setTimeout(0)` DEPOIS do
+	 * `dragstart`. Colapsar o elemento-fonte (height:0/opacity:0) de forma síncrona
+	 * DENTRO do `dragstart` CANCELA o drag nativo no Chrome/Firefox (o nó que
+	 * iniciou o gesto desaparece). Por isso o colapso é deferido e mora num estado
+	 * separado do `dragContext` (que é síncrono e dirige a lógica de drop).
+	 */
+	let collapsedId = $state<number | null>(null);
+	let collapseTimer: ReturnType<typeof setTimeout> | null = null;
+
+	/**
+	 * Card que acabou de aterrissar — recebe a animação de assentamento
+	 * `is-drop-settling` (paridade `triggerDropSettle` do board-dnd.js, 0.28s
+	 * ease). Limpo após a animação para não re-disparar em futuros renders.
+	 */
+	let settledId = $state<number | null>(null);
+	let settleTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function markSettled(cardId: number): void {
+		if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+			return;
+		}
+		if (settleTimer) clearTimeout(settleTimer);
+		settledId = cardId;
+		settleTimer = setTimeout(() => {
+			settledId = null;
+			settleTimer = null;
+		}, 320);
+	}
 
 	const columns = $derived($store.columns);
 	const boardError = $derived($store.error);
@@ -83,11 +126,23 @@
 			event.dataTransfer.effectAllowed = 'move';
 			event.dataTransfer.setData('text/plain', String(card.id));
 		}
+		// Colapsa o card-fonte SÓ no próximo tick (paridade `setTimeout(0)` do
+		// board-dnd.js). Fazê-lo síncrono aqui abortaria o drag nativo.
+		if (collapseTimer) clearTimeout(collapseTimer);
+		collapseTimer = setTimeout(() => {
+			if (dragContext?.card.id === card.id) collapsedId = card.id;
+			collapseTimer = null;
+		}, 0);
 	}
 
 	function onCardDragEnd(): void {
+		if (collapseTimer) {
+			clearTimeout(collapseTimer);
+			collapseTimer = null;
+		}
 		dragContext = null;
 		overStatus = null;
+		collapsedId = null;
 	}
 
 	function onZoneDragEnter(event: DragEvent, status: TaskStatus): void {
@@ -122,15 +177,33 @@
 		const ctx = dragContext;
 		const zone = event.currentTarget as HTMLElement;
 		const index = dropIndex(zone, event.clientY);
+		// Origem da celebração = ponto do drop (paridade com celebrationOrigin do
+		// card no legado): a chuva de confete nasce onde a tarefa foi solta.
+		const dropOrigin = { x: event.clientX, y: event.clientY };
+		if (collapseTimer) {
+			clearTimeout(collapseTimer);
+			collapseTimer = null;
+		}
 		dragContext = null;
 		overStatus = null;
+		collapsedId = null;
 
 		if (!canItemMoveToStatus(ctx.card, status, ctx.fromStatus)) {
 			liveMessage = 'Sem permissão para finalizar esta tarefa.';
 			return;
 		}
 
-		await commitMove(ctx.card, ctx.fromStatus, status, index);
+		const ok = await commitMove(ctx.card, ctx.fromStatus, status, index);
+		if (ok) markSettled(ctx.card.id);
+		// CONFETE: só quando o servidor confirma a transição p/ "finalizada" vinda
+		// de um status ativo (espelha shouldCelebrateFinalize do legado).
+		if (
+			ok &&
+			normalizeStatus(status) === 'finalizada' &&
+			normalizeStatus(ctx.fromStatus) !== 'finalizada'
+		) {
+			celebrateFinalize?.(dropOrigin);
+		}
 	}
 
 	/**
@@ -142,10 +215,10 @@
 		fromStatus: TaskStatus,
 		toStatus: TaskStatus,
 		index: number
-	): Promise<void> {
+	): Promise<boolean> {
 		if (fromStatus === toStatus) {
 			const column = columns.find((c) => c.status === toStatus);
-			if (!column) return;
+			if (!column) return false;
 			const ids = column.tasks.map((task) => task.id).filter((id) => id !== card.id);
 			const clamped = Math.max(0, Math.min(index, ids.length));
 			ids.splice(clamped, 0, card.id);
@@ -153,13 +226,14 @@
 			liveMessage = ok
 				? `Tarefa reordenada em ${STATUS_LABELS[toStatus]}.`
 				: $store.error || 'Não foi possível reordenar a tarefa.';
-			return;
+			return ok;
 		}
 
 		const ok = await store.moveCard(card.id, fromStatus, toStatus, index);
 		liveMessage = ok
 			? `Tarefa movida para ${STATUS_LABELS[toStatus]}.`
 			: $store.error || 'Não foi possível mover a tarefa.';
+		return ok;
 	}
 
 	/**
@@ -182,15 +256,27 @@
 		return null;
 	}
 
-	/** Move o card para o fim da coluna alvo (alvo já validado pelo chamador). */
+	/**
+	 * Move o card para o fim da coluna alvo (alvo já validado pelo chamador).
+	 * `origin` (elemento do card focado) origina o confete na sua posição quando
+	 * o teclado finaliza a tarefa — alternativa acessível ao DnD.
+	 */
 	async function moveToColumnEnd(
 		card: BoardCard,
 		fromStatus: TaskStatus,
-		toStatus: TaskStatus
+		toStatus: TaskStatus,
+		origin?: Element | null
 	): Promise<void> {
 		if (fromStatus === toStatus) return;
 		const target = columns.find((c) => c.status === toStatus);
-		await commitMove(card, fromStatus, toStatus, target ? target.tasks.length : 0);
+		const ok = await commitMove(card, fromStatus, toStatus, target ? target.tasks.length : 0);
+		if (
+			ok &&
+			normalizeStatus(toStatus) === 'finalizada' &&
+			normalizeStatus(fromStatus) !== 'finalizada'
+		) {
+			celebrateFinalize?.(origin ?? undefined);
+		}
 	}
 
 	/**
@@ -209,12 +295,14 @@
 		else return;
 
 		event.preventDefault();
+		// O card focado é a origem visual da celebração quando o teclado finaliza.
+		const cardEl = event.currentTarget as Element | null;
 
 		if (event.key === 'Home' || event.key === 'End') {
 			const edge = direction === 1 ? TASK_STATUS_ORDER.length - 1 : 0;
 			const target = TASK_STATUS_ORDER[edge];
 			if (target !== fromStatus && canItemMoveToStatus(card, target, fromStatus)) {
-				await moveToColumnEnd(card, fromStatus, target);
+				await moveToColumnEnd(card, fromStatus, target, cardEl);
 			} else {
 				liveMessage = 'Sem permissão para finalizar esta tarefa.';
 			}
@@ -229,7 +317,7 @@
 					: 'Esta tarefa já está na primeira coluna.';
 			return;
 		}
-		await moveToColumnEnd(card, fromStatus, next);
+		await moveToColumnEnd(card, fromStatus, next, cardEl);
 	}
 </script>
 
@@ -246,21 +334,26 @@
 	<!--
 		Board — fidelidade a static/css/tasks/detail/kanban.css
 		(`.task-items-kanban-board`): grid de 5 colunas com minmax(200px, 1fr) e
-		gap 0.62rem, alinhadas ao topo. Em telas estreitas faz scroll horizontal.
+		gap 0.62rem. ALTURA FIXA travada na viewport (`max-h`/`h`): cada COLUNA
+		preenche a altura (items-stretch) e ROLA POR DENTRO (a dropzone tem
+		overflow-y:auto), de modo que a PÁGINA não rola inteira quando os cards
+		excedem — paridade com `.task-items-kanban-dropzone` (height fixa + scroll).
+		Em telas estreitas faz scroll horizontal das colunas.
 	-->
 	<div
-		class="grid w-full grid-flow-col items-start gap-[0.62rem] overflow-x-auto pb-2 [grid-auto-columns:minmax(200px,1fr)] sm:grid-flow-row sm:[grid-template-columns:repeat(5,minmax(200px,1fr))]"
+		class="kanban-board grid h-[calc(100vh-19rem)] max-h-[calc(100vh-19rem)] min-h-[420px] w-full grid-flow-col items-stretch gap-[0.62rem] overflow-x-auto pb-2 [grid-auto-columns:minmax(220px,1fr)] sm:grid-flow-row sm:[grid-template-columns:repeat(5,minmax(200px,1fr))]"
 		role="group"
 		aria-label="Quadro Kanban de tarefas"
 	>
 		{#each TASK_STATUS_ORDER as status (status)}
 			{@const column = columns.find((c) => c.status === status)}
 			{#if column}
-				<div class="flex flex-col gap-2">
+				<div class="flex min-h-0 flex-col gap-2">
 					<KanbanColumn
 						{column}
 						{composer}
-						draggingId={dragContext?.card.id ?? null}
+						draggingId={collapsedId}
+						{settledId}
 						canDrop={canDropOn(status)}
 						isOver={overStatus === status}
 						{onCardDragStart}

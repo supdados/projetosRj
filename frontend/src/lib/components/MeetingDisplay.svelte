@@ -58,7 +58,7 @@
 
 	{#if meeting.owner_email}
 		<div class="flex items-center gap-2 text-sm text-text-secondary">
-			<i class="fas fa-user text-text-muted" aria-hidden="true"></i>
+			<i class="far fa-user text-text-muted" aria-hidden="true"></i>
 			<span class="break-all">{meeting.owner_email}</span>
 		</div>
 	{/if}
@@ -80,7 +80,7 @@
 			class="flex items-center gap-2 rounded-md border border-warning bg-surface px-2 py-1 text-sm text-warning"
 		>
 			<i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
-			Evento indisponível no Google Calendar.{meeting.sync_error ? ` ${meeting.sync_error}` : ''}
+			{meeting.sync_error || 'Evento indisponível no Google Calendar.'}
 		</p>
 	{/if}
 
@@ -90,19 +90,22 @@
 				href={meeting.meet_link}
 				target="_blank"
 				rel="noopener noreferrer"
-				class="inline-flex items-center gap-1 rounded-md border border-primary-500 bg-primary-100 px-2.5 py-1 text-sm font-medium text-primary-700 no-underline transition-colors duration-fast ease-out hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex items-center gap-1.5 rounded-md border-none bg-success px-2.5 py-1 text-sm font-medium text-white no-underline transition-colors duration-fast ease-out hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-success"
 			>
-				<i class="fas fa-video" aria-hidden="true"></i>
+				<i class="fab fa-google" aria-hidden="true"></i>
 				Abrir Meet
 			</a>
 			<button
 				type="button"
 				onclick={copyMeetLink}
-				class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-sm font-medium text-text-secondary transition-colors duration-fast ease-out hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				title={copied ? 'Link copiado!' : 'Copiar link do Meet'}
+				aria-label={copied ? 'Link copiado' : 'Copiar link do Meet'}
 				aria-live="polite"
+				class="inline-flex h-[1.7rem] w-[1.7rem] items-center justify-center rounded-md border bg-surface text-text-muted transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {copied
+					? 'border-success text-success'
+					: 'border-border-subtle'}"
 			>
 				<i class="fas {copied ? 'fa-check' : 'fa-copy'}" aria-hidden="true"></i>
-				{copied ? 'Link copiado!' : 'Copiar link'}
 			</button>
 		{/if}
 

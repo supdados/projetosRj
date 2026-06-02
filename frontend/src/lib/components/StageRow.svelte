@@ -1,37 +1,24 @@
 <script lang="ts">
 	/**
-	 * Uma etapa do Detalhe de Projeto. CONTROLADA por callbacks (sem chamar API).
+	 * Uma LINHA da tabela de etapas (paridade com _project_stages_section.html +
+	 * 07-stage-dnd.js + etapa-status-tasks.css). CONTROLADA por callbacks.
 	 *
-	 * Referências visuais: templates/projects/_project_stages_section.html e
-	 * _stage_tasks_panel.html. Cobre: datas (início/fim), responsável, toggles
-	 * iniciada/concluída, comentário, ações editar/excluir, e as TAREFAS DA ETAPA
-	 * SOMENTE LEITURA (contagem; lista simples carregada sob demanda pela página).
+	 * Reproduz fielmente o v4.5:
+	 *  - célula com alça de arraste (.drag-handle, draggable) — o DnD vive no StageList;
+	 *  - célula de ID (project.id.index) monoespaçada;
+	 *  - célula de descrição com EDITOR INLINE (textarea auto-resize) + comentário
+	 *    inline (display/placeholder clicável);
+	 *  - células de data com EDITOR INLINE (input date) + menu de contexto (+dias úteis,
+	 *    emitido ao pai); responsável com editor inline;
+	 *  - pílula de tarefas (.etapa-task-pill) com contagem done/total e estado vazio;
+	 *  - botão de STATUS CICLO único (idle → started → done → idle);
+	 *  - ação de excluir (.btn-floating).
 	 *
-	 * Restrições da Fase 5a:
-	 *   - Edição inline de campos da etapa (descricao/data_inicio/data_fim/
-	 *     responsavel) via <InlineEditField> -> `onUpdateField`. A página chama o
-	 *     endpoint update-field (cascata de datas server-side) e re-renderiza.
-	 *   - Toggles iniciada/done -> `onToggleIniciada`/`onToggleDone`.
-	 *   - Comentário -> `onSaveComentario` (textarea com salvar/cancelar).
-	 *   - Editar (completo)/Excluir -> `onEdit`/`onDelete`.
-	 *   - DnD é gerido pelo StageList (pai); aqui só expomos uma alça `draggable`.
-	 *   - Reuniões Google (`is_google_meeting`) renderizam READ-ONLY (Fase 6).
-	 *   - Tarefas: NUNCA mutadas; lista simples opcional via `tasks` + `onLoadTasks`.
-	 *
-	 * Acessibilidade: linha como região rotulada pela descrição; toggles como
-	 * checkboxes acessíveis; datas com <time datetime>; alça de arraste com label.
+	 * Etapa concluída => células com line-through e edição bloqueada (toast no pai).
+	 * Reuniões Google: renderizadas read-only (slot meetingSlot).
 	 */
-	import { getContext } from 'svelte';
-	import Badge from './Badge.svelte';
 	import InlineEditField from './InlineEditField.svelte';
-	import type { EtapaDetail, EtapaTask, EtapaInlineField } from '$lib/types/projectDetail';
-
-	/**
-	 * Abertura do drawer de tarefa (Fase 5b-2) via contexto fornecido pela página
-	 * de Detalhe — quando presente, as tarefas da etapa abrem o drawer (modo
-	 * drawer-only). Ausente => texto puro (comportamento read-only da Fase 5a).
-	 */
-	const openTaskDrawer = getContext<((taskId: number) => void) | undefined>('openTaskDrawer');
+	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
 
 	interface FieldState {
 		pending?: boolean;
@@ -40,58 +27,46 @@
 
 	interface Props {
 		etapa: EtapaDetail;
-		/** Bloqueia toda mutação (sem permissão). */
+		/** Número de exibição "projectId.index" (1-based). */
+		displayNumber: string;
 		readonly?: boolean;
-		/** Estados pending/erro por campo inline, controlados pela página. */
 		fieldStates?: Partial<Record<EtapaInlineField, FieldState>>;
-		/** Em andamento: toggle iniciada/done/comentário/excluir. */
 		busy?: boolean;
-		/** Erro de operação de linha (toggle/comentário/excluir). */
 		rowError?: string | null;
-		/** Tarefas da etapa (SOMENTE LEITURA) já carregadas; `null` = não carregadas. */
-		tasks?: EtapaTask[] | null;
-		/** Carregando a lista de tarefas (read-only). */
-		tasksLoading?: boolean;
-		/** Snippet opcional do conteúdo de reunião Google (Fase 6, read-only). */
 		meetingSlot?: import('svelte').Snippet<[EtapaDetail]>;
-		/** Edição inline de um campo: a página chama update-field e re-renderiza. */
 		onUpdateField: (field: EtapaInlineField, value: string) => void;
-		/** Alterna `iniciada`. */
-		onToggleIniciada: () => void;
-		/** Alterna `done` (concluída). */
-		onToggleDone: () => void;
-		/** Salva o comentário (string vazia limpa). */
+		/** Ciclo de status (idle→started→done→idle) — o pai decide o endpoint. */
+		onCycleStatus: () => void;
 		onSaveComentario: (comentario: string) => void;
-		/** Abre a edição completa da etapa (página decide a UI). */
-		onEdit: () => void;
-		/** Exclui a etapa (página confirma e chama o endpoint). */
 		onDelete: () => void;
-		/** Pede o carregamento read-only das tarefas da etapa. */
-		onLoadTasks?: () => void;
+		/** Abre o quick-add de tarefas (pílula). */
+		onOpenTasks: () => void;
+		/** Menu de contexto de dias úteis numa célula de data. */
+		onDateContextMenu: (field: 'data_inicio' | 'data_fim', clientX: number, clientY: number) => void;
+		/** Teclado na alça de arraste (ArrowUp/ArrowDown) — fallback acessível do DnD. */
+		onHandleKeydown?: (event: KeyboardEvent) => void;
 	}
 
 	let {
 		etapa,
+		displayNumber,
 		readonly = false,
 		fieldStates = {},
 		busy = false,
 		rowError = null,
-		tasks = null,
-		tasksLoading = false,
 		meetingSlot,
 		onUpdateField,
-		onToggleIniciada,
-		onToggleDone,
+		onCycleStatus,
 		onSaveComentario,
-		onEdit,
 		onDelete,
-		onLoadTasks
+		onOpenTasks,
+		onDateContextMenu,
+		onHandleKeydown
 	}: Props = $props();
 
 	const isMeeting = $derived(etapa.is_google_meeting);
-	// Reuniões Google e falta de permissão tornam a etapa read-only (Fase 5a/6).
 	const locked = $derived(readonly || isMeeting);
-	const fieldId = $derived(`etapa-${etapa.id}`);
+	const statusState = $derived(etapa.done ? 'done' : etapa.iniciada ? 'started' : 'idle');
 
 	let editingComment = $state(false);
 	let commentDraft = $state('');
@@ -101,24 +76,17 @@
 	}
 
 	function startComment(): void {
-		// Comentário não pode ser editado em etapa concluída (regra do backend).
 		if (locked || etapa.done) return;
 		commentDraft = etapa.comentarios ?? '';
 		editingComment = true;
 	}
-
 	function commitComment(): void {
 		onSaveComentario(commentDraft.trim());
 		editingComment = false;
 	}
-
 	function cancelComment(): void {
 		editingComment = false;
 		commentDraft = etapa.comentarios ?? '';
-	}
-
-	function toggleTasks(): void {
-		if (tasks === null) onLoadTasks?.();
 	}
 
 	function formatDateBr(iso: string | null): string {
@@ -132,274 +100,633 @@
 			timeZone: 'UTC'
 		});
 	}
+
+	function dateContext(field: 'data_inicio' | 'data_fim', event: MouseEvent): void {
+		if (locked || etapa.done) return;
+		event.preventDefault();
+		onDateContextMenu(field, event.clientX, event.clientY);
+	}
+
+	const statusLabel = $derived(
+		statusState === 'done' ? 'Concluída' : statusState === 'started' ? 'Iniciada' : 'Não iniciada'
+	);
+	const statusIcon = $derived(
+		statusState === 'done'
+			? 'fas fa-check-circle'
+			: statusState === 'started'
+				? 'fas fa-play-circle'
+				: 'far fa-circle'
+	);
+	const statusTitle = $derived(
+		statusState === 'done'
+			? 'Clique para voltar para não iniciada'
+			: statusState === 'started'
+				? 'Clique para marcar como concluída'
+				: 'Clique para marcar como iniciada'
+	);
+
+	const rowTextClass = $derived(etapa.done && !isMeeting ? 'etapa-done-text' : '');
 </script>
 
-<!--
-	Card da etapa. Fidelidade a .etapa-v4-table-card / .etapa-draggable-row do
-	original: raio 14px (rounded-xl), sombra suave (0 8px 24px rgba(20,45,78,.06)),
-	e micro-lift no hover (translateY(-1px) + sombra), transição all 0.16s ease.
--->
-<article
-	aria-label={`Etapa: ${etapa.descricao ?? 'sem descrição'}`}
-	class="stage-row flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface px-4 py-3 shadow-sm transition-[transform,box-shadow,border-color] duration-fast ease-out hover:-translate-y-px hover:border-border-strong hover:shadow-md {etapa.done
-		? 'opacity-90'
-		: ''}"
->
-	<div class="flex flex-wrap items-start justify-between gap-3">
-		<div class="flex min-w-0 items-start gap-2">
+{#if isMeeting}
+	<!-- ===== Linha de reunião Google (read-only) ===== -->
+	<tr class="etapa-row etapa-row-google-meeting" data-etapa-id={etapa.id}>
+		<td class="cell-drag cell-meeting-drag">
+			<i class="fab fa-google etapa-meeting-drag-icon" aria-hidden="true"></i>
+		</td>
+		<td class="cell-number">{displayNumber}</td>
+		<td class="cell-desc" colspan="7">
+			<div class="etapa-descricao">{etapa.descricao ?? '—'}</div>
+			{#if etapa.meeting?.owner_email}
+				<div class="etapa-meeting-owner" title={etapa.meeting.owner_email}>
+					<i class="far fa-user" aria-hidden="true"></i><span>{etapa.meeting.owner_email}</span>
+				</div>
+			{/if}
+			{#if meetingSlot}
+				<div class="etapa-meeting-slot">{@render meetingSlot(etapa)}</div>
+			{/if}
+		</td>
+	</tr>
+{:else}
+	<!-- ===== Linha de etapa regular ===== -->
+	<tr
+		class="etapa-row etapa-draggable-row {etapa.done
+			? 'etapa-done'
+			: etapa.iniciada
+				? 'etapa-iniciada'
+				: ''}"
+		data-etapa-id={etapa.id}
+		aria-busy={busy}
+	>
+		<td class="cell-drag" class:is-locked={locked}>
 			{#if !locked}
 				<span
-					class="mt-0.5 cursor-grab select-none text-text-muted transition-colors duration-fast ease-out hover:text-text-secondary active:cursor-grabbing"
-					aria-label="Arraste para reordenar a etapa"
+					class="drag-handle"
+					draggable="true"
+					role="button"
+					tabindex="0"
+					aria-label="Arraste para reordenar a etapa (ou use as setas para cima/baixo)"
 					title="Arraste para reordenar"
+					onkeydown={onHandleKeydown}
 				>
-					⠿
+					<i class="fas fa-grip-vertical" aria-hidden="true"></i>
 				</span>
 			{/if}
-			<div class="flex min-w-0 flex-col gap-1">
-				{#if locked}
-					<h3 class="break-words font-heading text-base font-semibold {etapa.done ? 'text-text-muted line-through' : 'text-text-primary'}">
-						{etapa.descricao ?? '—'}
-					</h3>
+		</td>
+		<td class="cell-number">{displayNumber}</td>
+
+		<!-- Descrição + comentário -->
+		<td class="cell-desc {rowTextClass}">
+			<div class="etapa-descricao-main">
+				{#if locked || etapa.done}
+					<span class="etapa-descricao">{etapa.descricao ?? '—'}</span>
 				{:else}
 					<InlineEditField
-						fieldId={`${fieldId}-descricao`}
+						variant="cell"
+						kind="textarea"
+						fieldId={`etapa-${etapa.id}-descricao`}
 						label="Descrição da etapa"
 						value={etapa.descricao}
-						kind="text"
 						pending={fieldState('descricao').pending}
 						error={fieldState('descricao').error}
 						onSave={(v) => onUpdateField('descricao', v)}
-					/>
+					>
+						{#snippet display(v)}
+							<span class="etapa-descricao">{v || '—'}</span>
+						{/snippet}
+					</InlineEditField>
 				{/if}
 			</div>
-		</div>
-
-		<div class="flex flex-wrap items-center gap-2">
-			{#if isMeeting}
-				<Badge tone="info">Reunião Google</Badge>
-			{/if}
-			{#if etapa.done}
-				<Badge tone="success">Concluída</Badge>
-			{:else if etapa.iniciada}
-				<Badge tone="primary">Iniciada</Badge>
-			{:else}
-				<Badge tone="neutral">Não iniciada</Badge>
-			{/if}
-		</div>
-	</div>
-
-	{#if isMeeting && meetingSlot}
-		<!-- Fase 6: conteúdo de reunião Google renderizado READ-ONLY pela página. -->
-		{@render meetingSlot(etapa)}
-	{/if}
-
-	<!-- Datas + responsável -->
-	<div class="grid gap-3 sm:grid-cols-3">
-		{#if locked}
-			<div class="flex flex-col gap-1">
-				<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Início</span>
-				<time class="text-sm text-text-secondary" datetime={etapa.data_inicio ?? undefined}>
-					{formatDateBr(etapa.data_inicio)}
-				</time>
-			</div>
-			<div class="flex flex-col gap-1">
-				<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Fim</span>
-				<time class="text-sm text-text-secondary" datetime={etapa.data_fim ?? undefined}>
-					{formatDateBr(etapa.data_fim)}
-				</time>
-			</div>
-			<div class="flex flex-col gap-1">
-				<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Responsável</span>
-				<span class="text-sm text-text-secondary">{etapa.responsavel || 'Sem responsável'}</span>
-			</div>
-		{:else}
-			<InlineEditField
-				fieldId={`${fieldId}-data_inicio`}
-				label="Início"
-				value={etapa.data_inicio}
-				kind="date"
-				emptyLabel="Sem data"
-				pending={fieldState('data_inicio').pending}
-				error={fieldState('data_inicio').error}
-				onSave={(v) => onUpdateField('data_inicio', v)}
-			>
-				{#snippet display(value)}
-					<time datetime={value ?? undefined}>{formatDateBr(value)}</time>
-				{/snippet}
-			</InlineEditField>
-			<InlineEditField
-				fieldId={`${fieldId}-data_fim`}
-				label="Fim"
-				value={etapa.data_fim}
-				kind="date"
-				emptyLabel="Sem data"
-				pending={fieldState('data_fim').pending}
-				error={fieldState('data_fim').error}
-				onSave={(v) => onUpdateField('data_fim', v)}
-			>
-				{#snippet display(value)}
-					<time datetime={value ?? undefined}>{formatDateBr(value)}</time>
-				{/snippet}
-			</InlineEditField>
-			<InlineEditField
-				fieldId={`${fieldId}-responsavel`}
-				label="Responsável"
-				value={etapa.responsavel}
-				kind="text"
-				emptyLabel="Sem responsável"
-				pending={fieldState('responsavel').pending}
-				error={fieldState('responsavel').error}
-				onSave={(v) => onUpdateField('responsavel', v)}
-			/>
-		{/if}
-	</div>
-
-	<!-- Toggles iniciada/concluída -->
-	{#if !locked}
-		<div class="flex flex-wrap items-center gap-4">
-			<label class="inline-flex cursor-pointer items-center gap-2 text-sm text-text-secondary transition-colors duration-fast ease-out hover:text-text-primary">
-				<input
-					type="checkbox"
-					checked={etapa.iniciada}
-					disabled={busy}
-					onchange={onToggleIniciada}
-					class="h-4 w-4 rounded border-border-subtle text-primary-500 transition-colors duration-fast ease-out focus:ring-primary-500"
-				/>
-				Iniciada
-			</label>
-			<label class="inline-flex cursor-pointer items-center gap-2 text-sm text-text-secondary transition-colors duration-fast ease-out hover:text-text-primary">
-				<input
-					type="checkbox"
-					checked={etapa.done}
-					disabled={busy || !etapa.iniciada}
-					onchange={onToggleDone}
-					class="h-4 w-4 rounded border-border-subtle text-success transition-colors duration-fast ease-out focus:ring-success"
-				/>
-				Concluída
-			</label>
-		</div>
-	{/if}
-
-	<!-- Comentário -->
-	<div class="flex flex-col gap-2">
-		{#if editingComment}
-			<textarea
-				bind:value={commentDraft}
-				rows="2"
-				disabled={busy}
-				aria-label={`Comentário da etapa ${etapa.descricao ?? ''}`}
-				class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			></textarea>
-			<div class="flex items-center gap-2">
-				<button
-					type="button"
-					onclick={commitComment}
-					disabled={busy}
-					class="rounded-md border border-primary-500 bg-primary-100 px-3 py-1.5 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					{busy ? 'Salvando…' : 'Salvar comentário'}
-				</button>
-				<button
-					type="button"
-					onclick={cancelComment}
-					disabled={busy}
-					class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					Cancelar
-				</button>
-			</div>
-		{:else}
-			<div class="flex items-start justify-between gap-2">
-				<div class="min-w-0 text-sm">
-					<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Comentário</span>
-					{#if etapa.comentarios}
-						<p class="whitespace-pre-wrap break-words text-text-secondary">{etapa.comentarios}</p>
-					{:else}
-						<p class="text-text-muted">Sem comentário</p>
-					{/if}
-				</div>
-				{#if !locked && !etapa.done}
+			<div class="etapa-descricao-comment">
+				{#if editingComment}
+					<textarea
+						bind:value={commentDraft}
+						rows="1"
+						disabled={busy}
+						aria-label="Comentário da etapa"
+						class="etapa-comment-editor"
+						onblur={commitComment}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' && !e.shiftKey) {
+								e.preventDefault();
+								commitComment();
+							} else if (e.key === 'Escape') {
+								cancelComment();
+							}
+						}}
+					></textarea>
+				{:else if etapa.comentarios}
 					<button
 						type="button"
+						class="etapa-comentario-display"
+						title="Clique para editar"
+						disabled={locked || etapa.done}
 						onclick={startComment}
-						disabled={busy}
-						class="shrink-0 rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 					>
-						{etapa.comentarios ? 'Editar' : 'Adicionar'}
+						{etapa.comentarios}
+					</button>
+				{:else if !locked && !etapa.done}
+					<button type="button" class="etapa-comentario-placeholder" onclick={startComment}>
+						<i class="fas fa-comment-medical" aria-hidden="true"></i> adicionar comentário
 					</button>
 				{/if}
 			</div>
-		{/if}
-	</div>
+		</td>
 
-	<!-- Tarefas da etapa: SOMENTE LEITURA (contagem + lista simples) -->
-	<details class="flex flex-col gap-2">
-		<!-- svelte-ignore a11y_no_redundant_roles -->
-		<summary
-			onclick={toggleTasks}
-			class="cursor-pointer list-none text-sm text-text-secondary transition-colors duration-fast ease-out hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		<!-- Data início -->
+		<td
+			class="cell-date {rowTextClass}"
+			oncontextmenu={(e) => dateContext('data_inicio', e)}
 		>
-			Tarefas:
-			<strong class="font-medium text-text-primary">
-				{etapa.task_count.done}/{etapa.task_count.total}
-			</strong>
-			{#if etapa.task_count.total > 0}
-				<span class="text-text-muted">(somente leitura)</span>
+			{#if locked || etapa.done}
+				<span class="cell-readonly" class:editable-field-empty={!etapa.data_inicio}>
+					{formatDateBr(etapa.data_inicio)}
+				</span>
+			{:else}
+				<InlineEditField
+					variant="cell"
+					kind="date"
+					centered
+					fieldId={`etapa-${etapa.id}-data_inicio`}
+					label="Data de início"
+					value={etapa.data_inicio}
+					emptyLabel="Sem data"
+					pending={fieldState('data_inicio').pending}
+					error={fieldState('data_inicio').error}
+					onSave={(v) => onUpdateField('data_inicio', v)}
+				>
+					{#snippet display(v)}
+						{formatDateBr(v)}
+					{/snippet}
+				</InlineEditField>
 			{/if}
-		</summary>
+		</td>
 
-		{#if tasksLoading}
-			<p role="status" aria-live="polite" class="text-sm text-text-muted">Carregando tarefas…</p>
-		{:else if tasks && tasks.length > 0}
-			<ul class="flex flex-col gap-1 pl-1">
-				{#each tasks as task (task.id)}
-					<li class="flex items-center gap-2 text-sm text-text-secondary">
-						<span class="text-text-muted" aria-hidden="true">•</span>
-						{#if openTaskDrawer}
-							<button
-								type="button"
-								onclick={() => openTaskDrawer?.(task.id)}
-								class="break-words text-left hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {task.status === 'finalizada' ? 'line-through text-text-muted' : ''}"
-							>
-								{task.descricao}
-							</button>
-						{:else}
-							<span class="break-words {task.status === 'finalizada' ? 'line-through text-text-muted' : ''}">
-								{task.descricao}
-							</span>
-						{/if}
-					</li>
-				{/each}
-			</ul>
-		{:else if tasks && tasks.length === 0}
-			<p class="text-sm text-text-muted">Nenhuma tarefa nesta etapa.</p>
-		{/if}
-	</details>
+		<!-- Data fim -->
+		<td
+			class="cell-date {rowTextClass}"
+			oncontextmenu={(e) => dateContext('data_fim', e)}
+		>
+			{#if locked || etapa.done}
+				<span class="cell-readonly" class:editable-field-empty={!etapa.data_fim}>
+					{formatDateBr(etapa.data_fim)}
+				</span>
+			{:else}
+				<InlineEditField
+					variant="cell"
+					kind="date"
+					centered
+					fieldId={`etapa-${etapa.id}-data_fim`}
+					label="Data de fim"
+					value={etapa.data_fim}
+					emptyLabel="Sem data"
+					pending={fieldState('data_fim').pending}
+					error={fieldState('data_fim').error}
+					onSave={(v) => onUpdateField('data_fim', v)}
+				>
+					{#snippet display(v)}
+						{formatDateBr(v)}
+					{/snippet}
+				</InlineEditField>
+			{/if}
+		</td>
 
-	<!-- Ações editar/excluir -->
-	{#if !locked}
-		<div class="flex items-center gap-2">
+		<!-- Responsável -->
+		<td class="cell-responsavel {rowTextClass}">
+			{#if locked || etapa.done}
+				<span class="cell-readonly" class:editable-field-empty={!etapa.responsavel}>
+					{etapa.responsavel || 'Sem responsável'}
+				</span>
+			{:else}
+				<InlineEditField
+					variant="cell"
+					kind="textarea"
+					centered
+					fieldId={`etapa-${etapa.id}-responsavel`}
+					label="Responsável"
+					value={etapa.responsavel}
+					emptyLabel="Sem responsável"
+					pending={fieldState('responsavel').pending}
+					error={fieldState('responsavel').error}
+					onSave={(v) => onUpdateField('responsavel', v)}
+				/>
+			{/if}
+		</td>
+
+		<!-- Tarefas (pílula) -->
+		<td class="cell-tasks">
+			{#if readonly}
+				<span class="text-muted-small">-</span>
+			{:else}
+				<button
+					type="button"
+					class="etapa-task-pill"
+					class:is-empty={etapa.task_count.total === 0}
+					class:is-stage-done={etapa.done}
+					aria-disabled={etapa.done ? 'true' : undefined}
+					tabindex={etapa.done ? -1 : undefined}
+					title={etapa.done
+						? 'Etapa concluída — desfaça a conclusão para criar tarefas'
+						: 'Criar tarefa nesta etapa'}
+					onclick={() => !etapa.done && onOpenTasks()}
+				>
+					<span class="etapa-task-pill-has">
+						<i class="fas fa-clipboard-list" aria-hidden="true"></i>
+						<span class="etapa-task-pill-count">{etapa.task_count.done}/{etapa.task_count.total}</span>
+					</span>
+					<span class="etapa-task-pill-add">
+						<i class="fas fa-plus" aria-hidden="true"></i>
+						<span>Tarefas</span>
+					</span>
+				</button>
+			{/if}
+		</td>
+
+		<!-- Status (ciclo) -->
+		<td class="cell-status">
 			<button
 				type="button"
-				onclick={onEdit}
-				disabled={busy}
-				class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-primary-700 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="etapa-status-toggle etapa-status-toggle-{statusState}"
+				data-state={statusState}
+				disabled={readonly || busy}
+				title={statusTitle}
+				onclick={onCycleStatus}
 			>
-				Editar etapa
+				<i class={statusIcon} aria-hidden="true"></i>
+				<span>{statusLabel}</span>
 			</button>
-			<button
-				type="button"
-				onclick={onDelete}
-				disabled={busy}
-				class="rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger transition-colors duration-fast ease-out hover:bg-danger hover:text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
-			>
-				Excluir
-			</button>
-		</div>
-	{/if}
+		</td>
 
-	{#if rowError}
-		<p role="alert" class="text-sm text-danger">{rowError}</p>
-	{/if}
-</article>
+		<!-- Ações -->
+		<td class="cell-actions">
+			{#if !readonly}
+				<button
+					type="button"
+					class="btn-floating"
+					title="Excluir Etapa"
+					disabled={busy}
+					onclick={onDelete}
+				>
+					<i class="fas fa-trash" aria-hidden="true"></i>
+				</button>
+			{:else}
+				<span class="text-muted-small">-</span>
+			{/if}
+		</td>
+	</tr>
+{/if}
+
+{#if rowError}
+	<tr>
+		<td colspan="9" class="cell-row-error" role="alert">{rowError}</td>
+	</tr>
+{/if}
+
+<style>
+	.etapa-row :global(td) {
+		border-top: 1px solid var(--app-color-border, #edf2f8);
+		padding: 0.62rem 0.7rem;
+		vertical-align: middle;
+		color: var(--app-color-text, #304a66);
+		font-size: 0.875rem;
+	}
+	.etapa-row:hover :global(td) {
+		background: var(--app-color-surface-muted, #f6fafe);
+	}
+
+	.cell-drag {
+		width: 44px;
+		color: #9fb1c6;
+	}
+	.drag-handle {
+		display: inline-flex;
+		cursor: grab;
+		color: #9fb1c6;
+		transition: color 0.16s ease;
+	}
+	.drag-handle:hover {
+		color: #5f7691;
+	}
+	.drag-handle:active {
+		cursor: grabbing;
+	}
+
+	.cell-number {
+		width: 64px;
+		font-family: var(--ds-font-family-mono, ui-monospace, monospace);
+		color: #5f7691;
+		font-weight: 500;
+		white-space: nowrap;
+		vertical-align: top;
+		padding-right: 0.35rem;
+	}
+
+	.cell-desc {
+		width: 306px;
+		min-width: 306px;
+		padding-left: 0.4rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.05rem;
+	}
+	.etapa-descricao-main {
+		display: flex;
+		align-items: center;
+		min-height: 1.35rem;
+	}
+	.etapa-descricao {
+		font-weight: 600;
+		color: var(--app-color-heading, #263f59);
+	}
+	.etapa-done .etapa-descricao,
+	.etapa-done-text {
+		color: #7b8fa7 !important;
+		text-decoration: line-through;
+	}
+	.etapa-descricao-comment {
+		display: block;
+	}
+	.etapa-comentario-display,
+	.etapa-comentario-placeholder {
+		display: inline-block;
+		background: none;
+		border: none;
+		padding: 0;
+		text-align: left;
+		font-size: 0.78rem;
+		color: #6f859f;
+		cursor: pointer;
+		font-family: inherit;
+	}
+	.etapa-comentario-display:hover,
+	.etapa-comentario-placeholder:hover {
+		color: #4d77a5;
+	}
+	.etapa-comentario-display:disabled {
+		cursor: default;
+		text-decoration: line-through;
+	}
+	.etapa-comment-editor {
+		width: 100%;
+		padding: 0.18rem 0.45rem;
+		border: 1px solid #c4d5e7;
+		border-radius: 6px;
+		font-size: 0.78rem;
+		color: #3e556f;
+		background: #fff;
+		font-family: inherit;
+		resize: none;
+		overflow: hidden;
+		line-height: 1.45;
+	}
+	.etapa-comment-editor:focus {
+		outline: none;
+		border-color: #7ea6ce;
+		box-shadow: 0 0 0 3px rgba(30, 84, 143, 0.12);
+	}
+
+	.cell-date {
+		width: 130px;
+		text-align: center;
+		font-family: var(--ds-font-family-mono, ui-monospace, monospace);
+		color: #5f7691;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+	.cell-responsavel {
+		width: 170px;
+		min-width: 170px;
+		text-align: center;
+	}
+	.cell-readonly {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 30px;
+		width: 100%;
+		padding: 0.22rem 0.48rem;
+		border-radius: 8px;
+	}
+	.cell-readonly.editable-field-empty {
+		color: #6f859f;
+		background: #f6f9fc;
+		border: 1px dashed #d6e2ef;
+	}
+	.etapa-done .cell-readonly.editable-field-empty {
+		background: transparent;
+		border-color: transparent;
+		color: #8ea1b7;
+	}
+
+	.cell-tasks {
+		width: 140px;
+		text-align: center;
+	}
+	/* Pílula de tarefas — paridade com 05-stage-task-quick-add.css */
+	.etapa-task-pill {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.34rem;
+		width: 116px;
+		height: 32px;
+		padding: 0 0.7rem;
+		border-radius: 8px;
+		border: 1px solid #cfe0f5;
+		background: #eef4ff;
+		color: #2856b6;
+		font-size: 0.78rem;
+		font-weight: 600;
+		line-height: 1;
+		cursor: pointer;
+		transition:
+			background-color 0.16s ease,
+			border-color 0.16s ease,
+			color 0.16s ease;
+	}
+	.etapa-task-pill:hover,
+	.etapa-task-pill:focus-visible {
+		background: #e2ecff;
+		border-color: #b6cdf0;
+		color: #1d4ed8;
+		outline: none;
+	}
+	.etapa-task-pill-has,
+	.etapa-task-pill-add {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.32rem;
+		line-height: 1;
+	}
+	.etapa-task-pill-count {
+		font-weight: 700;
+	}
+	.etapa-task-pill i {
+		font-size: 0.9rem;
+	}
+	.etapa-task-pill-add {
+		display: none;
+	}
+	.etapa-task-pill.is-empty {
+		background: transparent;
+		border-style: dashed;
+		border-color: #c3d3e8;
+		color: #5a7799;
+	}
+	.etapa-task-pill.is-empty:hover,
+	.etapa-task-pill.is-empty:focus-visible {
+		background: rgba(37, 99, 235, 0.07);
+		border-color: #9fc0e8;
+		color: #1d4ed8;
+	}
+	.etapa-task-pill.is-empty .etapa-task-pill-has {
+		display: none;
+	}
+	.etapa-task-pill.is-empty .etapa-task-pill-add {
+		display: inline-flex;
+	}
+	.etapa-task-pill.is-stage-done {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.cell-status {
+		width: 150px;
+		text-align: center;
+	}
+	/* Botão de status (ciclo) — paridade com etapa-status-tasks.css */
+	.etapa-status-toggle {
+		height: 30px;
+		min-width: 124px;
+		border-radius: 7px;
+		border: 1px solid #cbdcf0;
+		padding: 0 0.58rem;
+		background: #fff;
+		color: #2b4d6f;
+		font-weight: 600;
+		font-size: 0.78rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.3rem;
+		cursor: pointer;
+		transition: all 0.16s ease;
+	}
+	.etapa-status-toggle i {
+		font-size: 0.875rem;
+	}
+	.etapa-status-toggle:hover:not(:disabled),
+	.etapa-status-toggle:focus-visible:not(:disabled) {
+		background: #f1f7ff;
+		border-color: #b7cee5;
+		color: #20486f;
+		outline: none;
+	}
+	.etapa-status-toggle:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+	.etapa-status-toggle-done {
+		background: #eaf7f1;
+		border-color: #b9dfca;
+		color: #1d714e;
+	}
+	.etapa-status-toggle-done:hover:not(:disabled),
+	.etapa-status-toggle-done:focus-visible:not(:disabled) {
+		background: #e3f4eb;
+		border-color: #a8d5bd;
+		color: #175f41;
+	}
+	.etapa-status-toggle-started {
+		background: #edf5ff;
+		border-color: #c5d8ee;
+		color: #255585;
+	}
+	.etapa-status-toggle-started:hover:not(:disabled),
+	.etapa-status-toggle-started:focus-visible:not(:disabled) {
+		background: #e7f1fd;
+		border-color: #b8d0ea;
+		color: #214f7d;
+	}
+
+	.cell-actions {
+		width: 72px;
+		text-align: center;
+	}
+	.btn-floating {
+		width: 32px;
+		height: 32px;
+		border-radius: 8px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: 1px solid transparent;
+		font-size: 0.875rem;
+		background: transparent;
+		color: #768ba2;
+		cursor: pointer;
+		transition:
+			color 0.16s ease,
+			border-color 0.16s ease,
+			background-color 0.16s ease;
+	}
+	.btn-floating:hover:not(:disabled) {
+		border-color: rgba(184, 63, 63, 0.5);
+		color: #972d2d;
+		background: rgba(169, 59, 59, 0.14);
+	}
+	.btn-floating:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.text-muted-small {
+		color: #9fb1c6;
+		font-size: 0.78rem;
+	}
+	.cell-row-error {
+		color: var(--app-color-danger, #b42323);
+		font-size: 0.78rem;
+		padding-top: 0;
+	}
+
+	.etapa-meeting-drag-icon {
+		color: #4285f4;
+		font-size: 1.15rem;
+	}
+	.cell-meeting-drag {
+		text-align: center;
+	}
+	.etapa-meeting-owner {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.34rem;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: #5f7691;
+		font-size: 0.72rem;
+		font-weight: 500;
+		margin-top: 0.15rem;
+	}
+	.etapa-meeting-slot {
+		margin-top: 0.4rem;
+	}
+
+	/* Dark mode (data-theme=dark) */
+	:global(html[data-theme='dark']) .etapa-descricao {
+		color: #d2dfec;
+	}
+	:global(html[data-theme='dark']) .etapa-status-toggle {
+		background: #2b3a4f;
+		border-color: var(--app-color-border);
+		color: #d2dfec;
+	}
+	:global(html[data-theme='dark']) .etapa-task-pill {
+		background: rgba(78, 149, 204, 0.18);
+		border-color: rgba(99, 166, 219, 0.46);
+		color: #cfe6ff;
+	}
+</style>

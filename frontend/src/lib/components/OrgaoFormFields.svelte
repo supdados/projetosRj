@@ -52,6 +52,80 @@
 		tipos.filter((t) => t.ativo && (isRoot ? t.permite_raiz : !t.permite_raiz))
 	);
 
+	/**
+	 * Combobox de pai com busca (espelha o `#paiCombo` do orgao_form.html). O
+	 * filtro por RANK de tipo (só pais com nível superior ao tipo escolhido) não
+	 * é possível no cliente porque `candidatos_pai` não traz o nível de cada pai
+	 * (ver needs_backend); aqui implementamos a busca textual + navegação por
+	 * teclado, que é a interação visível do original.
+	 */
+	let comboOpen = $state(false);
+	let comboText = $state('');
+	let activeIndex = $state(-1);
+
+	// Sincroniza o rótulo exibido quando uma seleção válida existe (carga/edição).
+	// Não limpa o texto quando paiId fica vazio durante a digitação — só reflete
+	// uma seleção concreta, evitando apagar o que o usuário acabou de digitar.
+	$effect(() => {
+		const sel = candidatosPai.find((p) => String(p.id) === paiId);
+		if (sel) comboText = `${sel.sigla} — ${sel.nome}`;
+	});
+
+	const comboFiltered = $derived.by(() => {
+		const q = comboText.trim().toLowerCase();
+		const sel = candidatosPai.find((p) => String(p.id) === paiId);
+		const matchesSelected = sel && `${sel.sigla} — ${sel.nome}`.toLowerCase() === q;
+		if (!q || matchesSelected) return candidatosPai;
+		return candidatosPai.filter((p) =>
+			`${p.sigla} — ${p.nome}`.toLowerCase().includes(q)
+		);
+	});
+
+	function selectPai(id: number, label: string): void {
+		paiId = String(id);
+		comboText = label;
+		comboOpen = false;
+		activeIndex = -1;
+	}
+
+	function onComboInput(event: Event): void {
+		comboText = (event.currentTarget as HTMLInputElement).value;
+		// Ao digitar, invalida a seleção até confirmar uma opção (espelha v4.5).
+		const sel = candidatosPai.find((p) => String(p.id) === paiId);
+		if (!sel || `${sel.sigla} — ${sel.nome}` !== comboText) paiId = '';
+		comboOpen = true;
+		activeIndex = -1;
+	}
+
+	function onComboKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Escape') {
+			comboOpen = false;
+			return;
+		}
+		const list = comboFiltered;
+		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+			if (!list.length) return;
+			event.preventDefault();
+			comboOpen = true;
+			if (event.key === 'ArrowDown') {
+				activeIndex = activeIndex < 0 ? 0 : Math.min(activeIndex + 1, list.length - 1);
+			} else {
+				activeIndex = activeIndex < 0 ? list.length - 1 : Math.max(activeIndex - 1, 0);
+			}
+		} else if (event.key === 'Enter') {
+			const opt = list[activeIndex];
+			if (opt) {
+				event.preventDefault();
+				selectPai(opt.id, `${opt.sigla} — ${opt.nome}`);
+			}
+		}
+	}
+
+	function uppercaseSigla(event: Event): void {
+		// v4.5 força caixa alta no VALOR (não só visual): sigla.value.toUpperCase().
+		sigla = (event.currentTarget as HTMLInputElement).value.toUpperCase();
+	}
+
 	// Reproduz .account-input / .account-label do original (20-glass-forms-and-admin.css):
 	// input com borda sutil, raio md, foco com ring da marca; label em caixa alta.
 	const inputClass =
@@ -88,7 +162,8 @@
 					type="text"
 					required
 					maxlength="50"
-					bind:value={sigla}
+					value={sigla}
+					oninput={uppercaseSigla}
 					class="{inputClass} font-mono uppercase tracking-wide"
 				/>
 			</div>
@@ -121,12 +196,56 @@
 						class="{inputClass} opacity-70"
 					/>
 				{:else}
-					<select id="orgao-pai" required bind:value={paiId} class={inputClass}>
-						<option value="">Selecione…</option>
-						{#each candidatosPai as pai (pai.id)}
-							<option value={String(pai.id)}>{pai.sigla} — {pai.nome}</option>
-						{/each}
-					</select>
+					<!-- Combobox de pai com busca (espelha #paiCombo do orgao_form.html). -->
+					<div class="pai-combo">
+						<input
+							id="orgao-pai"
+							type="text"
+							placeholder="Digite para buscar um órgão pai..."
+							autocomplete="off"
+							role="combobox"
+							aria-expanded={comboOpen}
+							aria-controls="pai-combo-list"
+							aria-autocomplete="list"
+							required={paiId === ''}
+							value={comboText}
+							oninput={onComboInput}
+							onfocus={() => (comboOpen = true)}
+							onkeydown={onComboKeydown}
+							onblur={() => setTimeout(() => (comboOpen = false), 120)}
+							class={inputClass}
+						/>
+						<!-- Hidden mantém o id selecionado para o submit (string). -->
+						<input type="hidden" value={paiId} />
+						{#if comboOpen}
+							<ul id="pai-combo-list" role="listbox" class="pai-combo-dropdown">
+								{#each comboFiltered as pai, i (pai.id)}
+									<li role="option" aria-selected={String(pai.id) === paiId}>
+										<button
+											type="button"
+											class="pai-combo-option"
+											class:active={i === activeIndex}
+											onmousedown={(e) => {
+												e.preventDefault();
+												selectPai(pai.id, `${pai.sigla} — ${pai.nome}`);
+											}}
+										>
+											{pai.sigla} — {pai.nome}
+										</button>
+									</li>
+								{/each}
+								{#if comboFiltered.length === 0}
+									<li class="pai-combo-empty" role="presentation">
+										Nenhum órgão pai encontrado
+									</li>
+								{/if}
+							</ul>
+						{/if}
+					</div>
+					<p class="text-xs text-text-muted">
+						Apenas pais com hierarquia superior ao tipo escolhido são válidos (validado ao
+						salvar).
+					</p>
 				{/if}
 			</div>
 		</div>
@@ -177,3 +296,50 @@
 		</div>
 	</section>
 </div>
+
+<style>
+	/* Combobox de pai (espelha o <style> inline de orgao_form.html). Tokens
+	   semânticos para dark mode. */
+	.pai-combo {
+		position: relative;
+	}
+	.pai-combo-dropdown {
+		position: absolute;
+		top: calc(100% + 4px);
+		left: 0;
+		right: 0;
+		max-height: 280px;
+		overflow-y: auto;
+		list-style: none;
+		margin: 0;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: 10px;
+		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+		z-index: 50;
+		padding: 4px;
+	}
+	.pai-combo-option {
+		display: block;
+		width: 100%;
+		text-align: left;
+		padding: 8px 10px;
+		border: 0;
+		background: transparent;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		color: var(--color-text-primary);
+		line-height: 1.3;
+	}
+	.pai-combo-option:hover,
+	.pai-combo-option.active {
+		background: var(--color-surface-muted);
+	}
+	.pai-combo-empty {
+		padding: 10px;
+		color: var(--color-text-muted);
+		font-size: 0.85rem;
+		text-align: center;
+	}
+</style>

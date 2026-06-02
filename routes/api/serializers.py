@@ -297,6 +297,9 @@ def serialize_project_card(project: Any) -> dict[str, Any]:
         "orgao_sigla": orgao_ref.sigla if orgao_ref is not None else None,
         "short_description": project.short_description,
         "special_project": project.special_project,
+        # delivery_type também no card (lista de projetos): o front filtra/exibe
+        # o tipo de entrega sem precisar do payload completo de detalhe.
+        "delivery_type": project.delivery_type,
         # derivados read-only (computados no backend; NÃO recalcular no cliente)
         "data_inicio_projeto": _iso_or_none(project.data_inicio_projeto),
         "data_fim_projeto": _iso_or_none(project.data_fim_projeto),
@@ -545,8 +548,9 @@ def serialize_template_row(row: dict[str, Any]) -> dict[str, Any]:
     (``routes/admin_templates.py``) — preservando as métricas agregadas
     (``usage_count``/``stage_count``/``total_duration``) e os derivados de
     apresentação (``initials``/``is_new``/``editor_name``). Converte
-    ``updated_at`` para ISO 8601 e descarta ``silhouette`` (artefato de
-    renderização SVG do Jinja, não consumido pela SPA). NÃO expõe segredos.
+    ``updated_at`` para ISO 8601 e repassa ``silhouette`` — lista de pares
+    ``[altura, duracao]`` (de ``_silhouette_bars``) que a coluna Silhueta da tela
+    de templates renderiza como mini-gráfico. NÃO expõe segredos.
 
     Args:
         row: ``dict`` de ``_build_template_rows`` (chaves ``id``/``name``/...).
@@ -561,6 +565,9 @@ def serialize_template_row(row: dict[str, Any]) -> dict[str, Any]:
         "initials": row["initials"],
         "stage_count": row["stage_count"],
         "total_duration": row["total_duration"],
+        # Pares [altura, duracao]: ``_silhouette_bars`` devolve tuplas; JSON as
+        # serializa como listas — o front desenha as barras direto desses pares.
+        "silhouette": [list(bar) for bar in (row.get("silhouette") or [])],
         "usage_count": row["usage_count"],
         "updated_at": _iso_or_none(row["updated_at"]),
         "updated_relative": row["updated_relative"],
@@ -593,6 +600,9 @@ def serialize_task_card(task: Any) -> dict[str, Any]:
     from routes.tasks.permissions import task_permission_flags
 
     flags = task_permission_flags(task)
+    # ``task.project`` é o relacionamento já carregado (backref em models/task.py);
+    # a mini-lista "Recentes" mostra o nome do projeto em vez de "Projeto #id".
+    project = getattr(task, "project", None)
     return {
         "id": task.id,
         "descricao": task.descricao,
@@ -602,6 +612,7 @@ def serialize_task_card(task: Any) -> dict[str, Any]:
         "tipo_pedido": task.tipo_pedido,
         "ordem": task.ordem,
         "project_id": task.project_id,
+        "project_titulo": project.titulo if project is not None else None,
         "etapa_id": task.etapa_id,
         "created_by_id": task.created_by_id,
         "created_at": _iso_or_none(task.created_at),
