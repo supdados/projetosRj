@@ -110,7 +110,9 @@ def normalize_orgao_form(
     """
     nome = (form.get("nome") or "").strip()
     sigla = (form.get("sigla") or "").strip().upper()
-    tipo_raw = (form.get("tipo_id") or form.get("tipo") or "").strip()
+    # tipo_id chega como int via JSON da SPA; nao aplicar .strip() prematuro
+    # (find_orgao_tipo ja coage int/str). Fix bug AttributeError 500 orgao_tree.py:113.
+    tipo_raw = form.get("tipo_id") or form.get("tipo") or ""
     pai_id_raw = form.get("pai_id")
     ordem_raw = form.get("ordem")
     ativo_raw = form.get("ativo")

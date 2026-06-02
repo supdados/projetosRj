@@ -6,8 +6,11 @@ from models import OrgaoUnidade, db
 from routes.orgao_tree import (
     compute_orgao_depth,
     compute_subtree_height,
+    ensure_default_orgao_tipos,
+    find_orgao_tipo,
     get_orgao_descendants,
     is_valid_parent_tipo,
+    normalize_orgao_form,
     validate_orgao_move,
     would_create_cycle,
 )
@@ -205,3 +208,48 @@ def test_validate_orgao_move_valido_retorna_none(app, orgao_tree):
         # (resultado depende do TIPO_RANK; testamos apenas que não retorna erro de ciclo)
         resultado = validate_orgao_move(sub, raiz.id)
         assert resultado != "Não é possível mover um órgão para dentro de si mesmo."
+
+
+# ── normalize_orgao_form (regressão tipo_id INT) ──────────────────────────────
+
+
+def _estado_tipo_id():
+    """Id do tipo raiz (Estado), permite_raiz=True, usado para órgão raiz."""
+    ensure_default_orgao_tipos()
+    db.session.flush()
+    tipo = find_orgao_tipo("Estado")
+    assert tipo is not None
+    return tipo.id
+
+
+def test_normalize_orgao_form_tipo_id_int_nao_estoura(app):
+    """Regressão: SPA serializa tipo_id como INT no JSON; .strip() prematuro
+    causava AttributeError (HTTP 500) em orgao_tree.py:113."""
+    with app.app_context():
+        tipo_id = _estado_tipo_id()
+        form = {
+            "nome": "Estado RJ",
+            "sigla": "ERJ",
+            "tipo_id": tipo_id,  # INT, como a SPA envia via JSON
+        }
+        data, err = normalize_orgao_form(form, is_root=True)
+        assert err is None
+        assert data is not None
+        assert data["tipo"] == "Estado"
+        assert data["tipo_id"] == tipo_id
+
+
+def test_normalize_orgao_form_tipo_id_str_continua_funcionando(app):
+    """Caminho de form string (Jinja) deve continuar válido."""
+    with app.app_context():
+        tipo_id = _estado_tipo_id()
+        form = {
+            "nome": "Estado RJ",
+            "sigla": "ERJ",
+            "tipo_id": str(tipo_id),  # string, como o template Jinja envia
+        }
+        data, err = normalize_orgao_form(form, is_root=True)
+        assert err is None
+        assert data is not None
+        assert data["tipo"] == "Estado"
+        assert data["tipo_id"] == tipo_id
