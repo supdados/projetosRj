@@ -404,18 +404,27 @@
 						<li class="px-3 py-2 text-sm text-text-muted">Nenhum indicador encontrado</li>
 					{:else}
 						{#each abepVisible as option, index (option.value)}
-							<li
-								id={`abep-option-${index}`}
-								role="option"
-								aria-selected={option.value === abepIndicator}
-								class="cursor-pointer px-3 py-2 text-sm text-text-primary hover:bg-surface-muted {index ===
-								abepActiveIndex
-									? 'bg-surface-muted'
-									: ''}"
-								onmousedown={(e) => e.preventDefault()}
-								onclick={() => selectAbep(option.value, option.label)}
-							>
-								{option.label}
+							<li class="contents">
+								<!--
+									role="option" num <button> mantém o item acessível: a navegação por
+									teclado segue via aria-activedescendant + onkeydown no input (foco
+									permanece no combobox), e o <button> elimina o warning a11y de
+									click sem keydown. onmousedown previne o blur antes do onclick.
+								-->
+								<button
+									type="button"
+									id={`abep-option-${index}`}
+									role="option"
+									aria-selected={option.value === abepIndicator}
+									class="block w-full cursor-pointer px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted {index ===
+									abepActiveIndex
+										? 'bg-surface-muted'
+										: ''}"
+									onmousedown={(e) => e.preventDefault()}
+									onclick={() => selectAbep(option.value, option.label)}
+								>
+									{option.label}
+								</button>
 							</li>
 						{/each}
 					{/if}
