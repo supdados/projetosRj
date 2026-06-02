@@ -16,8 +16,9 @@
  *   const data = await fetchProjects({ status: 'Vigente', q: 'painel' });
  */
 
-import { get } from './client';
+import { get, post } from './client';
 import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
+import type { Project } from '$lib/types/entities';
 
 /** Monta a querystring a partir dos filtros, omitindo valores vazios/nulos. */
 function buildQuery(query: ProjectsListQuery): string {
@@ -47,4 +48,153 @@ export function fetchProjects(
 	signal?: AbortSignal
 ): Promise<ProjectsListData> {
 	return get<ProjectsListData>(`/api/projetos${buildQuery(query)}`, signal);
+}
+
+/** Etapa do Quick Create (espelha `etapa_descricao[]`/`etapa_duration[]`). */
+export interface CreateProjectStage {
+	descricao: string;
+	duration: number;
+}
+
+/**
+ * Payload de criação de projeto (Quick Create). Espelha o form
+ * `templates/projects/add_form.html` e o contrato `POST /api/projetos`
+ * (routes/api/projects_write.py). Apenas `titulo` e `orgao_id` são
+ * obrigatórios; os demais campos são opcionais.
+ */
+export interface CreateProjectInput {
+	titulo: string;
+	orgao_id: string | number;
+	orgao?: string;
+	prioridade?: string;
+	objetivo?: string | number | null;
+	resultado?: string | number | null;
+	indicadores?: (string | number)[];
+	observacao?: string;
+	special_project?: string;
+	sei_process?: string;
+	short_description?: string;
+	delivery_type?: string;
+	abep_indicator?: string;
+	github_link?: string;
+	documentation_link?: string;
+	product_link?: string;
+	etapas?: CreateProjectStage[];
+	start_date?: string; // YYYY-MM-DD
+	template_id?: number | null;
+}
+
+/** Sucesso de `POST /api/projetos` (já desempacotado do envelope). */
+export interface CreateProjectResult {
+	id: number;
+	redirect_to: string;
+	message: string;
+	project: Project;
+}
+
+/**
+ * Cria um projeto (Quick Create) via `POST /api/projetos`, reusando o pipeline
+ * de envelope/CSRF de `client.ts`. Em falha de validação/permissão o backend
+ * devolve `{ok:false}` e `client.ts` lança `ApiClientError` (422 validation,
+ * 403 forbidden, 500 server) — o chamador exibe a mensagem como flash.
+ *
+ * Exemplo:
+ *   const { redirect_to, message } = await createProject({
+ *     titulo: 'Painel X', orgao_id: 12
+ *   });
+ */
+export function createProject(input: CreateProjectInput): Promise<CreateProjectResult> {
+	return post<CreateProjectResult>('/api/projetos', input);
+}
+
+/** Objetivo EEGD (catálogo `GET /api/catalogos/objetivos`). */
+export interface ObjetivoCatalogo {
+	id: number;
+	descricao: string;
+}
+
+/**
+ * Catálogo de objetivos EEGD para o select inicial do modal de criação
+ * (`GET /api/catalogos/objetivos`, envelope).
+ */
+export function fetchObjetivosCatalogo(signal?: AbortSignal): Promise<ObjetivoCatalogo[]> {
+	return get<ObjetivoCatalogo[]>('/api/catalogos/objetivos', signal);
+}
+
+/** Resultado EEGD (legado `GET /api/resultados/<id>`). */
+export interface ResultadoCatalogo {
+	id: number;
+	descricao: string;
+}
+
+/** Indicador EEGD (legado `GET /api/indicadores/<id>`). */
+export interface IndicadorCatalogo {
+	id: number;
+	descricao: string;
+}
+
+/** Etapa de um modelo (legado `GET /api/templates/<id>`). */
+export interface TemplateStage {
+	name: string;
+	order: number;
+	duration: number;
+}
+
+/** Modelo de etapas (legado `GET /api/templates`). */
+export interface TemplateOption {
+	id: number;
+	name: string;
+	stage_count: number;
+	total_duration_days: number;
+}
+
+/**
+ * Lê uma resposta JSON CRUA (sem envelope) das rotas legadas de catálogo.
+ *
+ * As rotas `/api/resultados/<id>`, `/api/indicadores/<id>`, `/api/templates`
+ * e `/api/templates/<id>` (routes/api/legacy.py) devolvem um ARRAY puro, NÃO o
+ * envelope `{ok,data}` — por isso não podem passar pelo `get<T>` de `client.ts`.
+ * Mantemos `credentials:'include'` para o cookie de sessão; sem corpo => `[]`.
+ */
+async function fetchLegacyArray<T>(path: string, signal?: AbortSignal): Promise<T[]> {
+	const res = await fetch(path, {
+		method: 'GET',
+		credentials: 'include',
+		headers: { Accept: 'application/json' },
+		signal
+	});
+	if (!res.ok) return [];
+	const text = await res.text();
+	if (!text) return [];
+	const parsed = JSON.parse(text) as unknown;
+	return Array.isArray(parsed) ? (parsed as T[]) : [];
+}
+
+/** Resultados de um objetivo EEGD (cascata objetivo→resultado). */
+export function fetchResultados(
+	objetivoId: number | string,
+	signal?: AbortSignal
+): Promise<ResultadoCatalogo[]> {
+	return fetchLegacyArray<ResultadoCatalogo>(`/api/resultados/${objetivoId}`, signal);
+}
+
+/** Indicadores de um resultado EEGD (cascata resultado→indicadores). */
+export function fetchIndicadores(
+	resultadoId: number | string,
+	signal?: AbortSignal
+): Promise<IndicadorCatalogo[]> {
+	return fetchLegacyArray<IndicadorCatalogo>(`/api/indicadores/${resultadoId}`, signal);
+}
+
+/** Lista de modelos de etapas disponíveis para importar. */
+export function fetchTemplates(signal?: AbortSignal): Promise<TemplateOption[]> {
+	return fetchLegacyArray<TemplateOption>('/api/templates', signal);
+}
+
+/** Etapas de um modelo (para o preview read-only de importação). */
+export function fetchTemplateStages(
+	templateId: number | string,
+	signal?: AbortSignal
+): Promise<TemplateStage[]> {
+	return fetchLegacyArray<TemplateStage>(`/api/templates/${templateId}`, signal);
 }

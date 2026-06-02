@@ -55,6 +55,8 @@
 		onEdit: (etapaId: number) => void;
 		onDelete: (etapaId: number) => void;
 		onLoadTasks?: (etapaId: number) => void;
+		/** Snippet de conteúdo de reunião Google (Fase 6), repassado a StageRow. */
+		meetingSlot?: import('svelte').Snippet<[EtapaDetail]>;
 	}
 
 	let {
@@ -72,7 +74,8 @@
 		onSaveComentario,
 		onEdit,
 		onDelete,
-		onLoadTasks
+		onLoadTasks,
+		meetingSlot
 	}: Props = $props();
 
 	let dragIndex = $state<number | null>(null);
@@ -205,6 +208,7 @@
 					onEdit={() => onEdit(etapa.id)}
 					onDelete={() => onDelete(etapa.id)}
 					onLoadTasks={onLoadTasks ? () => onLoadTasks(etapa.id) : undefined}
+					{meetingSlot}
 				/>
 			</li>
 		{/each}

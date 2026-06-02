@@ -18,12 +18,16 @@
 	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { base } from '$app/paths';
-	import { fetchProjects } from '$lib/api/projects';
+	import { goto } from '$app/navigation';
+	import { fetchProjects, type CreateProjectResult } from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
+	import { auth } from '$lib/stores/auth';
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 	import type { Project } from '$lib/types/entities';
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
+	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
+	import { flash } from '$lib/stores/flash';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -48,6 +52,30 @@
 	// Combobox ABEP: estado de abertura e item destacado por teclado.
 	let abepOpen = $state<boolean>(false);
 	let abepActiveIndex = $state<number>(-1);
+
+	// Modal de criação de projeto (Quick Create).
+	let createModalOpen = $state<boolean>(false);
+
+	/** Gate do botão de exportar CSV: visível somente para admin (paridade Jinja). */
+	const isAdmin = $derived($auth.user?.is_admin ?? false);
+
+	/** Opções do GET /api/projetos repassadas ao modal (órgãos/ABEP/etc.). */
+	const createOptions = $derived(data?.options ?? null);
+
+	/**
+	 * Sucesso da criação: replica o flash success + redirect do Jinja.
+	 * Mostra o toast verde (window.showFlash) e navega client-side para o
+	 * detalhe do projeto criado. Converte o `redirect_to` do backend
+	 * ('/projetos/<id>') em rota SPA base-aware.
+	 */
+	function onProjectCreated(result: CreateProjectResult): void {
+		createModalOpen = false;
+		flash.success(result.message);
+		const target = result.redirect_to.startsWith('/')
+			? `${base}${result.redirect_to}`
+			: result.redirect_to;
+		void goto(target);
+	}
 	// Guarda o rótulo do item selecionado para não filtrar a lista logo após
 	// escolher uma opção (o input passa a exibir o rótulo completo).
 	let lastSelectedAbepLabel = $state<string>('');
@@ -297,6 +325,34 @@
 					{totalProjects} projeto{totalProjects === 1 ? '' : 's'}
 				</span>
 			{/if}
+			<div class="ml-auto flex items-center gap-2">
+				{#if isAdmin}
+					<!--
+						Exportar CSV: link direto para a rota Flask nativa /projects/download
+						(download de attachment, FORA do envelope JSON). Visível só p/ admin,
+						replicando o {% if is_admin_user %} do Jinja. Sem toast/som/loading —
+						o browser baixa 'projetosDDMMYYYYHHMM.csv'. NÃO base-aware: é rota
+						nativa do Flask, não da SPA.
+					-->
+					<a
+						href="/projects/download"
+						download
+						title="Exportar projetos (CSV)"
+						class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<i class="fas fa-download" aria-hidden="true"></i>
+						Exportar CSV
+					</a>
+				{/if}
+				<button
+					type="button"
+					onclick={() => (createModalOpen = true)}
+					class="inline-flex items-center gap-2 rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					<i class="fas fa-plus-circle" aria-hidden="true"></i>
+					Novo projeto
+				</button>
+			</div>
 		</div>
 		<p class="text-sm text-text-secondary">Visualize, filtre e acompanhe seus projetos.</p>
 	</header>
@@ -582,3 +638,11 @@
 		{/if}
 	{/if}
 </section>
+
+<!-- Modal de criação (Quick Create) com a mesma UX do add_form Jinja. -->
+<CriarProjetoModal
+	open={createModalOpen}
+	options={createOptions}
+	onClose={() => (createModalOpen = false)}
+	onCreated={onProjectCreated}
+/>

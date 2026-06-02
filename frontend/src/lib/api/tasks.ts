@@ -10,8 +10,18 @@
  *   const data = await fetchTarefas({ modo: 'finalizadas' });
  */
 
-import { get } from './client';
-import type { TaskHubData, TaskHubQuery } from '$lib/types/tasks';
+import { get, post } from './client';
+import type {
+	ArchiveFinalizadasResult,
+	CreateTarefaInput,
+	CreateTarefaResult,
+	DeleteTarefaResult,
+	HubResponsavelSuggestion,
+	MoverEtapaResult,
+	TaskHubData,
+	TaskHubFilterValues,
+	TaskHubQuery
+} from '$lib/types/tasks';
 
 /** Monta a querystring a partir dos filtros, omitindo valores vazios/nulos. */
 function buildQuery(query: TaskHubQuery): string {
@@ -40,4 +50,84 @@ export function fetchTarefas(
 	signal?: AbortSignal
 ): Promise<TaskHubData> {
 	return get<TaskHubData>(`/api/tarefas${buildQuery(query)}`, signal);
+}
+
+/**
+ * Cria uma tarefa (composer inline do Kanban / quick-add).
+ *
+ * `POST /api/tarefas` — body `{project, etapa, descricao, status, responsavel,
+ * prioridade, tipo_pedido}` (`project_id`/`etapa_id` aceitos como alias). Devolve
+ * `{task}` com o card serializado (mesma base do board) + extras de contexto.
+ * 422 (sem descrição/ responsável inválido), 403/404 (projeto/etapa fora de
+ * escopo). FRONT: inserir card otimista SEM toast/som/confete (paridade).
+ */
+export function createTarefa(
+	input: CreateTarefaInput,
+	signal?: AbortSignal
+): Promise<CreateTarefaResult> {
+	return post<CreateTarefaResult>('/api/tarefas', input, signal);
+}
+
+/**
+ * Exclui uma tarefa (card/drawer). `POST /api/tarefas/<id>/excluir`.
+ *
+ * Só autor/admin (403 `forbidden` com a mensagem do backend). Em sucesso devolve
+ * `{item_id, message}`. FRONT: remover card/row, recolher grupo vazio, fechar
+ * drawer; SEM toast/som/confete.
+ */
+export function deleteTarefa(taskId: number, signal?: AbortSignal): Promise<DeleteTarefaResult> {
+	return post<DeleteTarefaResult>(`/api/tarefas/${taskId}/excluir`, undefined, signal);
+}
+
+/**
+ * Move uma tarefa para outra etapa (DnD). `POST /api/tarefas/<id>/mover-etapa`.
+ *
+ * Body `{etapa_id}` (`"sem_etapa"` desassocia). A etapa precisa ser do MESMO
+ * projeto (422). `warning` presente quando a etapa de destino está concluída.
+ */
+export function moverEtapa(
+	taskId: number,
+	etapaId: number | 'sem_etapa' | null,
+	signal?: AbortSignal
+): Promise<MoverEtapaResult> {
+	return post<MoverEtapaResult>(
+		`/api/tarefas/${taskId}/mover-etapa`,
+		{ etapa_id: etapaId },
+		signal
+	);
+}
+
+/**
+ * Arquiva finalizadas em lote no escopo dos filtros ativos.
+ * `POST /api/tarefas/arquivar-finalizadas`.
+ *
+ * Devolve `{archived_count, archived_task_ids, message}`. Órgão fora do escopo
+ * => 422. FRONT: confirmar antes; remover cada row pelo id; SEM toast/som/confete.
+ */
+export function archiveFinalizadas(
+	filters: TaskHubFilterValues = {},
+	signal?: AbortSignal
+): Promise<ArchiveFinalizadasResult> {
+	return post<ArchiveFinalizadasResult>('/api/tarefas/arquivar-finalizadas', filters, signal);
+}
+
+/**
+ * Sugestões de responsável do hub (composer). `GET /api/tarefas/sugestoes-responsavel`.
+ *
+ * Aceita `?project=` OU `?orgao=`/`?area=` (sigla|id) e `?q=` (filtra por nome).
+ * 400 (nenhum projeto/órgão), 403 (órgão fora do escopo), 404 (projeto).
+ */
+export function fetchHubResponsaveis(
+	params: { project?: string; orgao?: string; q?: string },
+	signal?: AbortSignal
+): Promise<{ users: HubResponsavelSuggestion[] }> {
+	const qs = new URLSearchParams();
+	if (params.project) qs.set('project', params.project);
+	if (params.orgao) qs.set('orgao', params.orgao);
+	if (params.q) qs.set('q', params.q);
+	const query = qs.toString();
+	return get<{ users: HubResponsavelSuggestion[] }>(
+		`/api/tarefas/sugestoes-responsavel${query ? `?${query}` : ''}`,
+		signal
+	);
 }

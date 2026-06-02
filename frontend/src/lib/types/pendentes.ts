@@ -35,6 +35,7 @@ export interface PendingEtapa {
 	data_fim: string | null; // ISO 8601
 	responsavel: string | null;
 	ordem: number;
+	iniciada: boolean;
 	done: boolean;
 	project_id: number | null;
 	entry_type: string | null;
@@ -137,4 +138,62 @@ export interface PendingFilters {
 	responsavel?: string;
 	orgao?: number | null;
 	page?: number;
+}
+
+// ── Quick-add de tarefas por etapa (mutações) ────────────────────────────────
+
+/**
+ * Card de tarefa de uma etapa (`_stage_task_card`): card canônico
+ * (`serialize_task_card`) + contadores e flags de permissão usados no quick-add.
+ */
+export interface StageTaskCard {
+	id: number;
+	descricao: string;
+	status: string;
+	responsavel: string | null;
+	prioridade: string | null;
+	tipo_pedido: string | null;
+	ordem: number | null;
+	project_id: number | null;
+	etapa_id: number | null;
+	created_by_id: number | null;
+	created_at: string | null; // ISO 8601
+	is_archived: boolean;
+	archived_at: string | null; // ISO 8601
+	comments_count: number;
+	anexos_count: number;
+	permissions: {
+		can_finalize: boolean;
+		can_delete: boolean;
+		is_author: boolean;
+	};
+}
+
+/** Resposta de GET /api/projetos/<pid>/etapas/<eid>/tarefas (quick-add). */
+export interface StageTasksResult {
+	tarefas: StageTaskCard[];
+	total: number;
+	done: number;
+}
+
+/** Corpo de POST /api/tarefas (criar tarefa do quick-add). */
+export interface CreateTaskInput {
+	project_id: number;
+	etapa_id: number;
+	descricao: string;
+	status?: string;
+	responsavel?: string;
+	prioridade?: string;
+	tipo_pedido?: string;
+}
+
+/** Resposta de POST /api/tarefas — `task` é o card recém-criado. */
+export interface CreateTaskResult {
+	task: StageTaskCard;
+}
+
+/** Resposta de POST /api/tarefas/<id>/excluir. */
+export interface DeleteTaskResult {
+	item_id: number;
+	message: string;
 }

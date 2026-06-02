@@ -73,6 +73,13 @@ export interface BoardStore extends Readable<BoardState> {
 	reorder(status: TaskStatus, orderedIds: number[]): Promise<boolean>;
 	/** Insere/atualiza um card vindo de outra fonte (ex.: drawer da Fase 5b-2). */
 	upsertCard(card: BoardCard): void;
+	/**
+	 * Insere um card NOVO (composer) na coluna do `status` informado, no topo
+	 * (paridade com `insertItemFromPayload` do composer legado, que move o novo
+	 * card para a dropzone do status escolhido). Cards finalizados/arquivados não
+	 * entram no board ativo (no-op).
+	 */
+	addCard(card: BoardCard, status: TaskStatus): void;
 	/** Remove um card do board (ex.: tarefa finalizada/arquivada pelo drawer). */
 	removeCard(taskId: number): void;
 	reset(): void;
@@ -378,6 +385,28 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 		});
 	}
 
+	/**
+	 * Insere um card recém-criado no topo da coluna `status` (composer). O card
+	 * já vem com `status` do servidor; usamos o `status` explícito como coluna
+	 * alvo (a coluna onde o composer foi acionado). Se já existir um card com o
+	 * mesmo id (defensivo), faz upsert para não duplicar.
+	 */
+	function addCard(card: BoardCard, status: TaskStatus): void {
+		// Card arquivado não pertence ao board ativo (paridade: só tarefas ativas).
+		if (card.is_archived) return;
+		const targetStatus = normalizeStatus(status);
+		store.update((state) => {
+			const next = cloneColumns(state.columns);
+			for (const column of next) {
+				const at = column.tasks.findIndex((task) => task.id === card.id);
+				if (at !== -1) column.tasks.splice(at, 1);
+			}
+			const target = next.find((column) => column.status === targetStatus);
+			if (target) target.tasks.unshift(card);
+			return { ...state, columns: next, total: state.total + 1 };
+		});
+	}
+
 	/** Remove um card do board (tarefa saiu do board ativo: finalizada/arquivada). */
 	function removeCard(taskId: number): void {
 		store.update((state) => {
@@ -397,5 +426,14 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 		store.set(initialState(mode));
 	}
 
-	return { subscribe: store.subscribe, load, moveCard, reorder, upsertCard, removeCard, reset };
+	return {
+		subscribe: store.subscribe,
+		load,
+		moveCard,
+		reorder,
+		upsertCard,
+		addCard,
+		removeCard,
+		reset
+	};
 }

@@ -39,6 +39,7 @@ import {
 	uploadAttachment,
 	deleteAttachment
 } from '$lib/api/taskDrawer';
+import { deleteTarefa, moverEtapa } from '$lib/api/tasks';
 import { createAutosave, type Autosave, type AutosavePhase } from '$lib/utils/autosave';
 import { normalizeStatus } from '$lib/utils/taskStatus';
 import type { BoardCard } from '$lib/types/board';
@@ -99,6 +100,18 @@ export interface TaskDrawerStore extends Readable<TaskDrawerState> {
 	arquivar(): Promise<boolean>;
 	desarquivar(): Promise<boolean>;
 	reativar(): Promise<boolean>;
+	/**
+	 * Exclui a tarefa aberta (botão lixeira do drawer). Server-autoritativo
+	 * (403 só autor/admin). Em sucesso remove o card do board (`onCardRemoved`)
+	 * e FECHA o drawer; em erro mantém aberto e expõe a mensagem.
+	 */
+	deleteTask(): Promise<boolean>;
+	/**
+	 * Move a tarefa aberta para outra etapa (`etapaId` ou `"sem_etapa"`). Recarrega
+	 * o detalhe (reconciliando o card no board). Devolve um `warning` opcional
+	 * quando a etapa de destino está concluída (paridade com o legado).
+	 */
+	moveEtapa(etapaId: number | 'sem_etapa' | null): Promise<{ ok: boolean; warning?: string }>;
 	addComment(content: string): Promise<boolean>;
 	editComment(commentId: number, content: string): Promise<boolean>;
 	deleteComment(commentId: number): Promise<boolean>;
@@ -261,6 +274,61 @@ export function createTaskDrawerStore(
 		return runAction(reativarTask, 'Não foi possível reativar a tarefa.');
 	}
 
+	/**
+	 * Exclui a tarefa aberta. Diferente das ações de ciclo de vida (que aplicam um
+	 * payload), a exclusão remove o card do board e fecha o drawer. Em 403 mantém
+	 * o drawer aberto e mostra a mensagem do backend (paridade com `delete_task`).
+	 */
+	async function deleteTask(): Promise<boolean> {
+		const id = readStore(store).taskId;
+		if (id === null) return false;
+		await autosave.flush();
+		store.update((state) => ({ ...state, acting: true, error: null }));
+		try {
+			await deleteTarefa(id);
+			// Reconcilia o board (remove o card) e fecha o drawer.
+			reconcilers.onCardRemoved?.(id);
+			autosave.cancel();
+			pendingFields = {};
+			store.set({ ...INITIAL });
+			return true;
+		} catch (err) {
+			store.update((state) => ({
+				...state,
+				acting: false,
+				error: errorMessage(err, 'Não foi possível excluir a tarefa.')
+			}));
+			return false;
+		}
+	}
+
+	/**
+	 * Move a tarefa aberta para outra etapa. Após o servidor confirmar, recarrega
+	 * o detalhe (que reconcilia o card no board via `applyPayload`). Devolve o
+	 * `warning` opcional do backend (etapa concluída).
+	 */
+	async function moveEtapa(
+		etapaId: number | 'sem_etapa' | null
+	): Promise<{ ok: boolean; warning?: string }> {
+		const id = readStore(store).taskId;
+		if (id === null) return { ok: false };
+		await autosave.flush();
+		store.update((state) => ({ ...state, acting: true, error: null }));
+		try {
+			const result = await moverEtapa(id, etapaId);
+			await open(id, { mode: readStore(store).mode });
+			return { ok: true, warning: result.warning };
+		} catch (err) {
+			store.update((state) => ({
+				...state,
+				error: errorMessage(err, 'Não foi possível mover a tarefa.')
+			}));
+			return { ok: false };
+		} finally {
+			store.update((state) => ({ ...state, acting: false }));
+		}
+	}
+
 	/** Substitui a lista de comentários do detalhe corrente (mesma tarefa). */
 	function setComments(taskId: number, comentarios: TaskComment[]): void {
 		store.update((state) => {
@@ -381,6 +449,8 @@ export function createTaskDrawerStore(
 		arquivar,
 		desarquivar,
 		reativar,
+		deleteTask,
+		moveEtapa,
 		addComment: addCommentAction,
 		editComment: editCommentAction,
 		deleteComment: deleteCommentAction,

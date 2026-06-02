@@ -1,0 +1,17 @@
+/* Canvas full-screen do confete de celebração — porte FIEL de
+   static/css/tasks/detail/kanban.css (.task-finalize-confetti-canvas). O
+   módulo confettiEpic.ts cria o <canvas> com esta classe. */
+.task-finalize-confetti-canvas {
+	position: fixed;
+	inset: 0;
+	width: 100vw;
+	height: 100vh;
+	pointer-events: none;
+	z-index: 1210;
+	opacity: 0;
+	transition: opacity 0.18s ease;
+}
+
+.task-finalize-confetti-canvas.is-active {
+	opacity: 1;
+}

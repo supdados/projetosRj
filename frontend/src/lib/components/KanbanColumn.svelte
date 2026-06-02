@@ -10,12 +10,15 @@
 	 * Acessibilidade: a dropzone é uma lista (`<ul>`); cards arrastáveis são os
 	 * itens. O board mantém um aria-live para anunciar movimentações.
 	 */
+	import type { Snippet } from 'svelte';
 	import KanbanCard from '$lib/components/KanbanCard.svelte';
 	import type { BoardCard, BoardColumn } from '$lib/types/board';
 	import type { TaskStatus } from '$lib/utils/taskStatus';
 
 	interface Props {
 		column: BoardColumn;
+		/** Composer inline opcional, renderizado no rodapé da coluna (Fase 5b-3). */
+		composer?: Snippet<[TaskStatus]>;
 		/** Id do card sendo arrastado no momento (para feedback no card). */
 		draggingId?: number | null;
 		/** A coluna é alvo válido para o drag em curso? (define cursor/realce). */
@@ -34,6 +37,7 @@
 
 	let {
 		column,
+		composer,
 		draggingId = null,
 		canDrop = true,
 		isOver = false,
@@ -98,4 +102,10 @@
 			</li>
 		{/each}
 	</ul>
+
+	{#if composer}
+		<div class="border-t border-border-subtle p-2">
+			{@render composer(column.status)}
+		</div>
+	{/if}
 </section>

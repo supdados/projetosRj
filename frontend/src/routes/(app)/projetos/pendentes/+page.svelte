@@ -1,13 +1,17 @@
 <script lang="ts">
 	/**
-	 * Tela "Projetos Pendentes" (FASE 2 — leitura). Consome
-	 * `GET /api/projetos-pendentes` via `$lib/api/pendentes` e renderiza a lista
-	 * com os componentes compartilhados Card/Badge (reusados, não editados) e o
-	 * card específico desta tela (`PendingProjectCard`). Filtros de período,
-	 * responsável e órgão re-buscam server-side (o `orgao_scope` é aplicado no
-	 * backend). Estados de loading/erro/vazio anunciados via aria-live.
+	 * Tela "Projetos Pendentes". Consome `GET /api/projetos-pendentes` via
+	 * `$lib/api/pendentes` e renderiza a lista com os componentes compartilhados
+	 * Card/Badge (reusados, não editados) e o card específico desta tela
+	 * (`PendingProjectCard`). Filtros de período, responsável e órgão re-buscam
+	 * server-side (o `orgao_scope` é aplicado no backend).
 	 *
-	 * Referência visual: templates/projects/pendentes.html.
+	 * PARIDADE DE MUTAÇÃO (templates/projects/pendentes.html): botão de status
+	 * cíclico por etapa, quick-add de tarefas (modal por etapa reusando o
+	 * TaskDrawer), expandir/recolher "outras etapas" com persistência em
+	 * localStorage e botões globais Expandir/Recolher todas. Avisos via
+	 * `<FlashToasts>` (equivalente a `window.showFlash`). Sem som/confete (o
+	 * fluxo legado não tem).
 	 */
 	import { onMount } from 'svelte';
 	import { fetchPendentes } from '$lib/api/pendentes';
@@ -18,6 +22,12 @@
 		PendingPeriodo
 	} from '$lib/types/pendentes';
 	import PendingProjectCard from '$lib/components/PendingProjectCard.svelte';
+	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
+	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
+	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
+
+	/** Chave de persistência do estado expandido (mesma semântica do legado). */
+	const EXPANDED_STORAGE_KEY = 'pendingExpandedProjects';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -45,6 +55,9 @@
 			const next = await fetchPendentes(filters, controller.signal);
 			if (controller.signal.aborted) return;
 			data = next;
+			// Reset do decremento local: o backend já reflete o estado atual.
+			focusDelta = 0;
+			cardRefs = {};
 			// Reconcilia os filtros com o que o backend efetivamente aplicou.
 			periodo = next.filtro_periodo;
 			responsavel = next.selected_responsavel;
@@ -93,8 +106,97 @@
 		void load();
 	}
 
+	// ── Mutações (paridade com o Jinja) ──────────────────────────────────────
+
+	/** Store do drawer reusada pelo quick-add (NÃO recriar dentro do modal). */
+	const drawer = createTaskDrawerStore();
+
+	/** Set de IDs de projeto expandidos (persistido em localStorage). */
+	let expandedProjects = $state<Set<string>>(new Set());
+
+	/** Decremento local do contador global "Projetos no foco". */
+	let focusDelta = $state<number>(0);
+
+	/** Referências aos cards montados, para sincronizar progresso pós quick-add. */
+	let cardRefs = $state<Record<number, PendingProjectCard | undefined>>({});
+
+	/** Pedido de quick-add ativo (ou `null` quando fechado). */
+	interface QuickAddRequest {
+		projectId: number;
+		projectTitulo: string;
+		etapaId: number;
+		etapaDescricao: string;
+		etapaDatas: string;
+		stageDone: boolean;
+	}
+	let quickAdd = $state<QuickAddRequest | null>(null);
+
+	function readExpandedSet(): Set<string> {
+		if (typeof localStorage === 'undefined') return new Set();
+		try {
+			const raw = localStorage.getItem(EXPANDED_STORAGE_KEY);
+			if (!raw) return new Set();
+			const parsed = JSON.parse(raw) as unknown;
+			return Array.isArray(parsed) ? new Set(parsed.map(String)) : new Set();
+		} catch {
+			return new Set();
+		}
+	}
+
+	function saveExpandedSet(set: Set<string>): void {
+		if (typeof localStorage === 'undefined') return;
+		try {
+			localStorage.setItem(EXPANDED_STORAGE_KEY, JSON.stringify([...set]));
+		} catch {
+			// localStorage indisponível (modo privado): ignora a persistência.
+		}
+	}
+
+	function setProjectExpanded(projectId: number, expanded: boolean): void {
+		const next = new Set(expandedProjects);
+		if (expanded) next.add(String(projectId));
+		else next.delete(String(projectId));
+		expandedProjects = next;
+		saveExpandedSet(next);
+	}
+
+	function expandAll(): void {
+		if (!data) return;
+		const next = new Set(expandedProjects);
+		for (const row of data.projetos) {
+			if (row.qtd_outras > 0) next.add(String(row.project.id));
+		}
+		expandedProjects = next;
+		saveExpandedSet(next);
+	}
+
+	function collapseAll(): void {
+		expandedProjects = new Set();
+		saveExpandedSet(expandedProjects);
+	}
+
+	function openQuickAdd(request: QuickAddRequest): void {
+		quickAdd = request;
+	}
+
+	function closeQuickAdd(): void {
+		quickAdd = null;
+	}
+
+	/** Sincroniza a pílula done/total do card após mutação no quick-add. */
+	function syncEtapaProgress(etapaId: number, done: number, total: number): void {
+		if (!quickAdd) return;
+		cardRefs[quickAdd.projectId]?.syncEtapaProgress(etapaId, done, total);
+	}
+
+	/** Um projeto saiu do foco (todas as etapas concluídas): decrementa o total. */
+	function onProjectDefocused(): void {
+		focusDelta += 1;
+	}
+
 	onMount(() => {
 		void load();
+		expandedProjects = readExpandedSet();
 		return () => inFlight?.abort();
 	});
 
@@ -128,7 +230,7 @@
 				<span
 					class="inline-flex items-center gap-1 rounded-sm border border-primary-500 bg-primary-100 px-2 py-1 text-xs font-medium text-primary-700"
 				>
-					Projetos no foco: {summary.total_projects}
+					Projetos no foco: {Math.max(0, summary.total_projects - focusDelta)}
 				</span>
 			{/if}
 		</div>
@@ -221,6 +323,24 @@
 				Limpar filtros
 			</button>
 		{/if}
+
+		<!-- Ferramentas de expansão global (paridade com pendentes.html) -->
+		<div class="ml-auto flex items-end gap-2">
+			<button
+				type="button"
+				onclick={expandAll}
+				class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				<i class="fas fa-plus-square" aria-hidden="true"></i> Expandir todas
+			</button>
+			<button
+				type="button"
+				onclick={collapseAll}
+				class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				<i class="fas fa-minus-square" aria-hidden="true"></i> Recolher todas
+			</button>
+		</div>
 	</form>
 
 	{#if loadState === 'loading'}
@@ -252,9 +372,15 @@
 			<div class="flex flex-col gap-4" aria-busy={loadState !== 'ready'}>
 				{#each data.projetos as row (row.project.id)}
 					<PendingProjectCard
+						bind:this={cardRefs[row.project.id]}
 						{row}
 						bucketMap={data.etapa_bucket_map}
 						progressMap={data.etapa_task_progress}
+						{drawer}
+						{expandedProjects}
+						onToggleExpanded={setProjectExpanded}
+						onOpenQuickAdd={openQuickAdd}
+						{onProjectDefocused}
 					/>
 				{/each}
 			</div>
@@ -285,3 +411,21 @@
 		{/if}
 	{/if}
 </section>
+
+<!-- Quick-add de tarefas por etapa (modal). Reusa o TaskDrawer para editar. -->
+{#if quickAdd}
+	<StageTaskQuickAdd
+		projectId={quickAdd.projectId}
+		projectTitulo={quickAdd.projectTitulo}
+		etapaId={quickAdd.etapaId}
+		etapaDescricao={quickAdd.etapaDescricao}
+		etapaDatas={quickAdd.etapaDatas}
+		stageDone={quickAdd.stageDone}
+		{drawer}
+		onClose={closeQuickAdd}
+		onProgressChange={syncEtapaProgress}
+	/>
+{/if}
+
+<!-- Drawer de tarefa (reusado da lane fe:tarefas-drawer; não reescrito). -->
+<TaskDrawer store={drawer} />

@@ -31,7 +31,10 @@ import type {
 	ImportModelPayload,
 	ImportModelResult,
 	EtapaTasksData,
-	StageTemplateOption
+	StageTemplateOption,
+	ConcludeProjectResult,
+	MeetingPayload,
+	MeetingMutationResult
 } from '$lib/types/projectDetail';
 
 /** Carrega o payload completo do Detalhe de Projeto. */
@@ -178,6 +181,68 @@ export function importStageModel(
 	return post<ImportModelResult>(
 		`/api/projetos/${projectId}/importar-modelo`,
 		payload,
+		signal
+	);
+}
+
+/**
+ * Conclui o projeto (POST /api/projetos/<id>/concluir). Sem corpo. Em sucesso
+ * devolve a mensagem de celebração e o `redirect_to` da rota SPA do detalhe; o
+ * front toca o chime + confetes + overlay e navega via router. Erros (403/400)
+ * sobem como `ApiClientError` com a mensagem do envelope.
+ */
+export function concludeProject(
+	projectId: number,
+	signal?: AbortSignal
+): Promise<ConcludeProjectResult> {
+	return post<ConcludeProjectResult>(
+		`/api/projetos/${projectId}/concluir`,
+		undefined,
+		signal
+	);
+}
+
+/**
+ * Cria uma reunião Google de etapa (POST /api/projetos/<id>/reunioes). Devolve
+ * a etapa (shape legado com `meeting`), `warning` (sync Google falhou) e a
+ * `message` de sucesso. A página RE-BUSCA o detalhe após o sucesso.
+ */
+export function createStageMeeting(
+	projectId: number,
+	payload: MeetingPayload,
+	signal?: AbortSignal
+): Promise<MeetingMutationResult> {
+	return post<MeetingMutationResult>(
+		`/api/projetos/${projectId}/reunioes`,
+		payload,
+		signal
+	);
+}
+
+/**
+ * Edita uma reunião Google de etapa (POST /api/etapas/<id>/reuniao). Mesmo
+ * shape de retorno de `createStageMeeting`.
+ */
+export function updateStageMeeting(
+	etapaId: number,
+	payload: MeetingPayload,
+	signal?: AbortSignal
+): Promise<MeetingMutationResult> {
+	return post<MeetingMutationResult>(`/api/etapas/${etapaId}/reuniao`, payload, signal);
+}
+
+/**
+ * Exclui uma reunião Google de etapa (POST /api/etapas/<id>/reuniao/excluir).
+ * Sem corpo. Só a conta Google dona pode excluir (403); falha remota ABORTA
+ * (502). Em sucesso devolve o total de etapas para recalcular o botão concluir.
+ */
+export function deleteStageMeeting(
+	etapaId: number,
+	signal?: AbortSignal
+): Promise<EtapaDeleteResult & { message: string }> {
+	return post<EtapaDeleteResult & { message: string }>(
+		`/api/etapas/${etapaId}/reuniao/excluir`,
+		undefined,
 		signal
 	);
 }

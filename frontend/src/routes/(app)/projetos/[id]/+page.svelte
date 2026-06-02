@@ -26,9 +26,11 @@
 	import { onMount, setContext } from 'svelte';
 	import { page } from '$app/stores';
 	import { base } from '$app/paths';
+	import { goto } from '$app/navigation';
 	import { ApiClientError } from '$lib/api/client';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
+	import { flash } from '$lib/stores/flash';
 	import {
 		fetchProjectDetail,
 		fetchEtapaTasks,
@@ -41,7 +43,11 @@
 		toggleEtapaDone,
 		reorderEtapas,
 		importStageModel,
-		fetchStageTemplates
+		fetchStageTemplates,
+		concludeProject,
+		createStageMeeting,
+		updateStageMeeting,
+		deleteStageMeeting
 	} from '$lib/api/projectDetail';
 	import type {
 		ProjectDetailData,
@@ -49,13 +55,24 @@
 		EtapaTask,
 		EtapaInlineField,
 		StageTemplateOption,
-		ProjectInlinePayload
+		ProjectInlinePayload,
+		MeetingPayload
 	} from '$lib/types/projectDetail';
+	import type { CalendarEvent, CalendarEventInput } from '$lib/types/calendar';
 	import ProjectHeader from '$lib/components/ProjectHeader.svelte';
 	import InlineEditField from '$lib/components/InlineEditField.svelte';
 	import StageList from '$lib/components/StageList.svelte';
 	import ImportModelModal from '$lib/components/ImportModelModal.svelte';
 	import Card from '$lib/components/Card.svelte';
+	import ConcludeCelebrationOverlay from '$lib/components/ConcludeCelebrationOverlay.svelte';
+	import MeetingDisplay from '$lib/components/MeetingDisplay.svelte';
+	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
+	import {
+		primeConcludeAudioContext,
+		playConcludeSuccessChime
+	} from '$lib/celebration/concludeChime';
+	import { triggerEpicConfetti } from '$lib/celebration/confettiEpic';
+	import '$lib/celebration/confetti.css';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type HeaderField = 'titulo' | 'status' | 'prioridade';
@@ -106,6 +123,170 @@
 	let topOffset = $state<number>(0);
 
 	const canEdit = $derived(data?.permissions.can_edit ?? false);
+
+	// --- Concluir projeto (aviso + som + confetes) ---------------------------
+	let concludeInFlight = $state<boolean>(false);
+	let celebrationActive = $state<boolean>(false);
+	let celebrationTitle = $state<string>('Concluindo projeto...');
+	let celebrationMessage = $state<string>('Aguarde um instante.');
+
+	const reduceMotion = (): boolean =>
+		typeof window !== 'undefined' &&
+		!!window.matchMedia &&
+		window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	// O botão "Concluir Projeto" só aparece para quem pode editar, está habilitado
+	// quando o projeto está Vigente e TODAS as etapas estão concluídas (paridade
+	// com verificarEAtualizarBotaoConcluir do legado).
+	const isVigente = $derived((data?.project.status ?? '') === 'Vigente');
+	const canConclude = $derived(
+		canEdit && isVigente && (data?.derived.todas_etapas_concluidas ?? false)
+	);
+
+	function wait(ms: number): Promise<void> {
+		return new Promise((resolve) => window.setTimeout(resolve, ms));
+	}
+
+	/**
+	 * Conclui o projeto reproduzindo FIELMENTE a UX do legado: overlay
+	 * "Concluindo projeto..." + spinner, depois (em sucesso) overlay "Objetivo
+	 * concluído" + chime (Web Audio) + confete épico (canvas), aguarda o delay e
+	 * navega via router. Em erro: esconde overlay + toast (danger/warning).
+	 */
+	async function onConcludeProject(): Promise<void> {
+		if (!data || concludeInFlight || !canConclude) return;
+		concludeInFlight = true;
+		celebrationTitle = 'Concluindo projeto...';
+		celebrationMessage = 'Aguarde um instante.';
+		celebrationActive = true;
+		try {
+			const result = await concludeProject(projectId);
+			celebrationTitle = 'Objetivo concluído';
+			celebrationMessage = result.message;
+			playConcludeSuccessChime();
+			triggerEpicConfetti();
+			await wait(reduceMotion() ? 450 : 2400);
+			await goto(`${base}${result.redirect_to}`);
+			// Recarrega o detalhe (agora Finalizado) caso o router mantenha a tela.
+			celebrationActive = false;
+			await refresh();
+		} catch (err) {
+			celebrationActive = false;
+			if (isUnauthenticated(err)) return;
+			const category =
+				err instanceof ApiClientError && err.code === 'forbidden' ? 'danger' : 'warning';
+			flash.show(messageOf(err, 'Não foi possível concluir o projeto.'), category);
+		} finally {
+			concludeInFlight = false;
+		}
+	}
+
+	// --- Reuniões Google (criar/editar/excluir) ------------------------------
+	let meetingModalOpen = $state<boolean>(false);
+	let meetingModalBusy = $state<boolean>(false);
+	let meetingModalError = $state<string | null>(null);
+	// `null` => criar (reunião nova do projeto); número => editar a etapa-reunião.
+	let editingMeetingEtapaId = $state<number | null>(null);
+	// Estado de exclusão por etapa-reunião (spinner no MeetingDisplay).
+	let meetingDeleting = $state<Record<number, boolean>>({});
+
+	/** Monta o `CalendarEvent` que pré-preenche o modal a partir da etapa. */
+	function meetingEventForModal(etapaId: number | null): CalendarEvent | null {
+		if (etapaId === null || !data) return null;
+		const etapa = data.etapas.find((e) => e.id === etapaId);
+		const m = etapa?.meeting;
+		if (!m) return null;
+		return {
+			id: etapaId,
+			title: m.title ?? '',
+			description: m.description,
+			location: m.location,
+			starts_at: m.starts_at,
+			ends_at: m.ends_at,
+			starts_at_display: m.start_time_display,
+			ends_at_display: m.end_time_display,
+			is_all_day: m.is_all_day,
+			source: 'google',
+			sync_status: (m.sync_status as CalendarEvent['sync_status']) || 'pending',
+			sync_error: m.sync_error || undefined,
+			meet_link: m.meet_link
+		};
+	}
+
+	const meetingModalEvent = $derived(meetingEventForModal(editingMeetingEtapaId));
+
+	function openCreateMeeting(): void {
+		editingMeetingEtapaId = null;
+		meetingModalError = null;
+		meetingModalOpen = true;
+	}
+
+	function openEditMeeting(etapaId: number): void {
+		editingMeetingEtapaId = etapaId;
+		meetingModalError = null;
+		meetingModalOpen = true;
+	}
+
+	function closeMeetingModal(): void {
+		if (meetingModalBusy) return;
+		meetingModalOpen = false;
+		meetingModalError = null;
+	}
+
+	/** Converte o input do CalendarEventModal para o payload da reunião. */
+	function meetingPayloadOf(input: CalendarEventInput): MeetingPayload {
+		return {
+			title: input.title,
+			description: input.description,
+			location: input.location,
+			starts_at: input.starts_at,
+			ends_at: input.ends_at,
+			is_all_day: input.is_all_day,
+			create_conference: input.create_conference
+		};
+	}
+
+	/** Salva (cria/edita) a reunião; em sucesso re-busca o detalhe + toasts. */
+	async function onSaveMeeting(input: CalendarEventInput): Promise<void> {
+		if (meetingModalBusy) return;
+		meetingModalBusy = true;
+		meetingModalError = null;
+		const payload = meetingPayloadOf(input);
+		try {
+			const result =
+				editingMeetingEtapaId === null
+					? await createStageMeeting(projectId, payload)
+					: await updateStageMeeting(editingMeetingEtapaId, payload);
+			meetingModalOpen = false;
+			flash.success(result.message);
+			if (result.warning) flash.warning(result.warning);
+			await refresh();
+		} catch (err) {
+			if (isUnauthenticated(err)) return;
+			meetingModalError = messageOf(err, 'Não foi possível salvar a reunião.');
+		} finally {
+			meetingModalBusy = false;
+		}
+	}
+
+	/** Exclui a reunião (confirm nativo); em sucesso re-busca + toast. */
+	async function onDeleteMeeting(etapaId: number): Promise<void> {
+		if (typeof window !== 'undefined' && !window.confirm('Tem certeza que deseja excluir esta reunião?'))
+			return;
+		meetingDeleting = { ...meetingDeleting, [etapaId]: true };
+		try {
+			const result = await deleteStageMeeting(etapaId);
+			flash.success(result.message);
+			await refresh();
+		} catch (err) {
+			if (isUnauthenticated(err)) return;
+			const category =
+				err instanceof ApiClientError && err.code === 'forbidden' ? 'danger' : 'warning';
+			flash.show(messageOf(err, 'Não foi possível excluir a reunião.'), category);
+		} finally {
+			meetingDeleting = { ...meetingDeleting, [etapaId]: false };
+		}
+	}
 
 	/** Mensagem amigavel para um erro de API/desconhecido. */
 	function messageOf(err: unknown, fallback: string): string {
@@ -499,6 +680,28 @@
 			>
 				Voltar aos projetos
 			</a>
+
+			{#if canEdit && isVigente}
+				<button
+					type="button"
+					id="btn-concluir-projeto"
+					onpointerdown={() => void primeConcludeAudioContext()}
+					onclick={onConcludeProject}
+					disabled={!canConclude || concludeInFlight}
+					title={canConclude
+						? 'Concluir o projeto'
+						: 'Todas as etapas devem estar iniciadas e concluídas'}
+					class="ml-auto inline-flex w-fit items-center gap-1 rounded-md border border-success bg-success px-4 py-2 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-success"
+				>
+					{#if concludeInFlight}
+						<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+						Concluindo...
+					{:else}
+						<i class="fas fa-check-circle" aria-hidden="true"></i>
+						Concluir Projeto
+					{/if}
+				</button>
+			{/if}
 		</div>
 
 		<!-- Detalhes editaveis do projeto (campos fora do cabecalho) -->
@@ -571,13 +774,23 @@
 						Etapas
 					</h2>
 					{#if canEdit}
-						<button
-							type="button"
-							onclick={openImport}
-							class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-						>
-							Importar modelo
-						</button>
+						<div class="flex flex-wrap items-center gap-2">
+							<button
+								type="button"
+								onclick={openCreateMeeting}
+								class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							>
+								<i class="fas fa-video" aria-hidden="true"></i>
+								Adicionar reunião
+							</button>
+							<button
+								type="button"
+								onclick={openImport}
+								class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							>
+								Importar modelo
+							</button>
+						</div>
 					{/if}
 				</div>
 			{/snippet}
@@ -630,7 +843,18 @@
 					onEdit={onEditEtapa}
 					onDelete={onDeleteEtapa}
 					{onLoadTasks}
-				/>
+				>
+					{#snippet meetingSlot(etapa)}
+						{#if etapa.meeting}
+							<MeetingDisplay
+								meeting={etapa.meeting}
+								busy={meetingDeleting[etapa.id] ?? false}
+								onEdit={() => openEditMeeting(etapa.id)}
+								onDelete={() => void onDeleteMeeting(etapa.id)}
+							/>
+						{/if}
+					{/snippet}
+				</StageList>
 			</div>
 		</Card>
 
@@ -643,7 +867,24 @@
 			onConfirm={onConfirmImport}
 			onClose={closeImport}
 		/>
+
+		<!-- Reunião Google: criar/editar (reusa CalendarEventModal). -->
+		<CalendarEventModal
+			open={meetingModalOpen}
+			event={meetingModalEvent}
+			busy={meetingModalBusy}
+			error={meetingModalError}
+			onSave={onSaveMeeting}
+			onClose={closeMeetingModal}
+		/>
 	{/if}
 </section>
+
+<!-- Aviso de conclusão (overlay) — o chime + confete são disparados na ação. -->
+<ConcludeCelebrationOverlay
+	active={celebrationActive}
+	title={celebrationTitle}
+	message={celebrationMessage}
+/>
 
 <TaskDrawer store={drawer} />

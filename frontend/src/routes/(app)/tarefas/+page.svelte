@@ -15,16 +15,18 @@
 	 * Referência visual: templates/tasks/hub.html.
 	 */
 	import { onMount, setContext } from 'svelte';
-	import { fetchTarefas } from '$lib/api/tasks';
+	import { fetchTarefas, deleteTarefa, archiveFinalizadas } from '$lib/api/tasks';
 	import { ApiClientError } from '$lib/api/client';
 	import type { TaskCard, TaskHubData, TaskHubModo, TaskHubQuery } from '$lib/types/tasks';
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
 	import KanbanBoard from '$lib/components/KanbanBoard.svelte';
+	import KanbanComposer from '$lib/components/KanbanComposer.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import { createBoardStore } from '$lib/stores/board';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
-	import type { BoardQuery } from '$lib/types/board';
+	import type { BoardCard, BoardQuery } from '$lib/types/board';
+	import type { TaskStatus } from '$lib/utils/taskStatus';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
@@ -134,6 +136,43 @@
 	// KanbanCard abre o drawer via contexto (evita prop drilling por Board/Column).
 	setContext('openTaskDrawer', (id: number) => openTask(id, 'board'));
 
+	// EXCLUIR card no Kanban (mini-confirm inline no card): a página executa a
+	// chamada e remove o card da board store; fecha o drawer se aberto nesse item
+	// (paridade com `deleteKanbanItem` -> removeTaskItemFromDom + fechar drawer).
+	async function deleteCard(taskId: number): Promise<boolean> {
+		try {
+			await deleteTarefa(taskId);
+		} catch (err) {
+			if (err instanceof ApiClientError && err.code === 'unauthenticated') return false;
+			return false;
+		}
+		board.removeCard(taskId);
+		if ($drawer.taskId === taskId) void drawer.close();
+		// Em modo lista, re-busca para refletir a remoção e recolher grupos vazios.
+		if (view === 'list') void load();
+		return true;
+	}
+	setContext('deleteTaskCard', deleteCard);
+
+	// "Abrir um confirm fecha os demais" (paridade board-dnd.js): cada card que
+	// abre o seu confirm registra um fechador; ao registrar um novo, fechamos o
+	// anterior. Sem estado global — só o último confirm aberto fica visível.
+	let closeOpenDeleteConfirm: (() => void) | null = null;
+	setContext('registerDeleteConfirm', (close: () => void) => {
+		closeOpenDeleteConfirm?.();
+		closeOpenDeleteConfirm = close;
+	});
+
+	// "Abrir um composer fecha os demais" (paridade composer.js): só UM composer
+	// fica aberto por vez. Controlado pela página (estado canônico único).
+	let activeComposer = $state<TaskStatus | null>(null);
+
+	// Inserção otimista do composer na coluna do status (board store).
+	function onComposerCreated(card: BoardCard, status: TaskStatus): void {
+		board.addCard(card, status);
+		activeComposer = null;
+	}
+
 	// Ao FECHAR o drawer (depois de aberto), recarrega a LISTA para refletir
 	// mutações; o board já reconcilia ao vivo via upsert/removeCard.
 	let drawerWasOpen = false;
@@ -192,6 +231,71 @@
 			errorMessage =
 				err instanceof Error ? err.message : 'Falha ao carregar as tarefas.';
 			loadState = 'error';
+		}
+	}
+
+	// ARQUIVAR FINALIZADAS em lote (modo lista). Confirmação via modal SPA com o
+	// MESMO texto do legado; sucesso remove as rows pelos ids e re-busca; sem ids
+	// mostra o aviso 'Nenhuma tarefa…'. SEM toast/som/confete (paridade).
+	let confirmingArchive = $state(false);
+	let archiving = $state(false);
+	let archiveNotice = $state<string | null>(null);
+
+	function openArchiveConfirm(): void {
+		archiveNotice = null;
+		confirmingArchive = true;
+	}
+	function cancelArchiveConfirm(): void {
+		confirmingArchive = false;
+	}
+	async function confirmArchive(): Promise<void> {
+		archiving = true;
+		archiveNotice = null;
+		try {
+			const result = await archiveFinalizadas({
+				project: project || undefined,
+				orgao: orgao || undefined
+			});
+			confirmingArchive = false;
+			if (result.archived_count === 0) {
+				// Paridade: aviso quando não há nada a arquivar no escopo.
+				archiveNotice = result.message;
+			} else {
+				// Remove os cards do board (se carregado) e re-busca a lista.
+				for (const id of result.archived_task_ids) board.removeCard(Number(id));
+				void load();
+			}
+		} catch (err) {
+			archiveNotice =
+				err instanceof ApiClientError ? err.message : 'Erro ao arquivar tarefas.';
+			confirmingArchive = false;
+		} finally {
+			archiving = false;
+		}
+	}
+
+	// EXCLUIR row na LISTA (mini-confirm inline, paridade com o kanban). Um confirm
+	// aberto por vez; em sucesso re-busca (recolhe grupos vazios via `load`).
+	let confirmDeleteRowId = $state<number | null>(null);
+	let deletingRowId = $state<number | null>(null);
+	let rowDeleteError = $state<string | null>(null);
+
+	function openRowDeleteConfirm(taskId: number): void {
+		rowDeleteError = null;
+		confirmDeleteRowId = taskId;
+	}
+	function cancelRowDeleteConfirm(): void {
+		confirmDeleteRowId = null;
+	}
+	async function confirmRowDelete(taskId: number): Promise<void> {
+		deletingRowId = taskId;
+		rowDeleteError = null;
+		const ok = await deleteCard(taskId);
+		deletingRowId = null;
+		if (ok) {
+			confirmDeleteRowId = null;
+		} else {
+			rowDeleteError = 'Não foi possível excluir a tarefa.';
 		}
 	}
 
@@ -312,6 +416,17 @@
 					</button>
 				{/each}
 			</div>
+
+			<!-- Arquivar finalizados em lote (escopo dos filtros ativos) -->
+			<button
+				type="button"
+				onclick={openArchiveConfirm}
+				disabled={archiving || loadState !== 'ready'}
+				class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				title="Arquivar tarefas finalizadas do escopo atual"
+			>
+				Arquivar finalizados
+			</button>
 		{/if}
 
 		<!-- Alternância de visualização (Lista <-> Kanban); Lista é o default -->
@@ -402,6 +517,17 @@
 		{/if}
 	</form>
 
+	{#if archiveNotice}
+		<!-- Aviso pós-arquivamento (paridade com o alert legado: sem ids / erro) -->
+		<div
+			role="status"
+			aria-live="polite"
+			class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm text-text-secondary"
+		>
+			{archiveNotice}
+		</div>
+	{/if}
+
 	{#if view === 'kanban'}
 		{#if $board.status === 'loading' && !boardLoaded}
 			<p role="status" aria-live="polite" class="text-text-secondary">Carregando board…</p>
@@ -421,7 +547,19 @@
 			</div>
 		{:else}
 			<div aria-busy={$board.status === 'loading'}>
-				<KanbanBoard store={board} />
+				<KanbanBoard store={board}>
+					{#snippet composer(status: TaskStatus)}
+						<KanbanComposer
+							{status}
+							projectOptions={data?.project_options ?? []}
+							defaultProject={project}
+							open={activeComposer === status}
+							onCreated={onComposerCreated}
+							onRequestOpen={(s) => (activeComposer = s)}
+							onRequestClose={() => (activeComposer = null)}
+						/>
+					{/snippet}
+				</KanbanBoard>
 			</div>
 		{/if}
 	{:else if loadState === 'loading'}
@@ -477,13 +615,26 @@
 									<ul class="flex flex-col gap-2">
 										{#each stage.tasks as task (task.id)}
 											<li class="flex flex-col gap-2 rounded-md border border-border-subtle bg-surface px-4 py-3">
-												<button
-													type="button"
-													onclick={() => openTask(task.id, 'list')}
-													class="text-left text-sm text-text-primary hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-												>
-													{task.descricao}
-												</button>
+												<div class="flex items-start justify-between gap-2">
+													<button
+														type="button"
+														onclick={() => openTask(task.id, 'list')}
+														class="flex-1 text-left text-sm text-text-primary hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+													>
+														{task.descricao}
+													</button>
+													{#if confirmDeleteRowId !== task.id}
+														<button
+															type="button"
+															onclick={() => openRowDeleteConfirm(task.id)}
+															aria-label="Excluir tarefa"
+															title="Excluir tarefa"
+															class="shrink-0 text-xs font-medium text-danger hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+														>
+															Excluir
+														</button>
+													{/if}
+												</div>
 												<div class="flex flex-wrap items-center gap-2">
 													<Badge tone={statusTone(task.status)}>
 														{statusLabel(task.status)}
@@ -504,6 +655,37 @@
 														</span>
 													{/if}
 												</div>
+												{#if confirmDeleteRowId === task.id}
+													<!-- Mini-confirm inline (paridade com o kanban) -->
+													<div
+														role="alertdialog"
+														aria-label="Confirmar exclusão da tarefa"
+														class="flex flex-col gap-2 rounded-md border border-danger bg-surface px-3 py-2"
+													>
+														<p class="text-xs text-text-primary">Excluir esta tarefa?</p>
+														{#if rowDeleteError}
+															<p role="alert" class="text-xs text-danger">{rowDeleteError}</p>
+														{/if}
+														<div class="flex gap-2">
+															<button
+																type="button"
+																onclick={cancelRowDeleteConfirm}
+																disabled={deletingRowId === task.id}
+																class="rounded-md border border-border-subtle px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+															>
+																Cancelar
+															</button>
+															<button
+																type="button"
+																onclick={() => void confirmRowDelete(task.id)}
+																disabled={deletingRowId === task.id}
+																class="rounded-md bg-danger px-2 py-1 text-xs font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+															>
+																{deletingRowId === task.id ? 'Excluindo…' : 'Excluir'}
+															</button>
+														</div>
+													</div>
+												{/if}
 											</li>
 										{/each}
 									</ul>
@@ -516,5 +698,39 @@
 		{/if}
 	{/if}
 </section>
+
+{#if confirmingArchive}
+	<!-- Confirmação de arquivamento (modal SPA com o MESMO texto do legado) -->
+	<div class="fixed inset-0 z-modal bg-black/40" role="presentation" onclick={cancelArchiveConfirm}></div>
+	<div
+		role="alertdialog"
+		aria-modal="true"
+		aria-labelledby="archive-confirm-title"
+		class="fixed left-1/2 top-1/2 z-modal flex w-full max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-lg border border-border-subtle bg-surface p-5 shadow-lg"
+	>
+		<h2 id="archive-confirm-title" class="font-heading text-lg font-bold text-text-primary">
+			Arquivar finalizados
+		</h2>
+		<p class="text-sm text-text-secondary">Arquivar tarefas finalizadas do escopo atual?</p>
+		<div class="flex justify-end gap-2">
+			<button
+				type="button"
+				onclick={cancelArchiveConfirm}
+				disabled={archiving}
+				class="rounded-md border border-border-subtle px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+			>
+				Cancelar
+			</button>
+			<button
+				type="button"
+				onclick={() => void confirmArchive()}
+				disabled={archiving}
+				class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+			>
+				{archiving ? 'Arquivando…' : 'Arquivar'}
+			</button>
+		</div>
+	</div>
+{/if}
 
 <TaskDrawer store={drawer} />

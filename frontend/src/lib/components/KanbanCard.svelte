@@ -24,6 +24,17 @@
 	 */
 	const openTaskDrawer = getContext<((taskId: number) => void) | undefined>('openTaskDrawer');
 
+	/**
+	 * Exclusão de card (Fase 5b-3): fornecida via contexto pela página. O card
+	 * coordena o MINI-CONFIRM INLINE local; a página executa a chamada e remove o
+	 * card da store (paridade com `deleteKanbanItem`). Abrir um confirm fecha os
+	 * demais via o sinal `closeOtherDeletes` (também por contexto).
+	 */
+	const deleteTask =
+		getContext<((taskId: number) => Promise<boolean>) | undefined>('deleteTaskCard');
+	const registerDeleteConfirm =
+		getContext<((close: () => void) => void) | undefined>('registerDeleteConfirm');
+
 	type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
 	interface Props {
@@ -88,6 +99,34 @@
 		if (!value) return null;
 		return TIPO_LABEL[value] ?? value;
 	}
+
+	// MINI-CONFIRM INLINE de exclusão (paridade com .task-items-kanban-delete-confirm).
+	let confirmingDelete = $state(false);
+	let deleting = $state(false);
+	let deleteError = $state<string | null>(null);
+
+	function openDeleteConfirm(): void {
+		// Abrir um confirm fecha os demais (paridade board-dnd.js).
+		registerDeleteConfirm?.(() => {
+			confirmingDelete = false;
+		});
+		confirmingDelete = true;
+		deleteError = null;
+	}
+	function cancelDeleteConfirm(): void {
+		confirmingDelete = false;
+	}
+	async function confirmDelete(): Promise<void> {
+		if (!deleteTask) return;
+		deleting = true;
+		deleteError = null;
+		const ok = await deleteTask(card.id);
+		if (!ok) {
+			deleteError = 'Não foi possível excluir a tarefa.';
+			deleting = false;
+		}
+		// Em sucesso o card é removido da store (some do DOM); nada a fazer aqui.
+	}
 </script>
 
 <div
@@ -124,13 +163,58 @@
 		<p class="text-xs text-text-muted">Responsável: {card.responsavel}</p>
 	{/if}
 
-	{#if openTaskDrawer}
-		<button
-			type="button"
-			onclick={() => openTaskDrawer?.(card.id)}
-			class="w-fit text-xs font-medium text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+	<div class="flex items-center gap-3">
+		{#if openTaskDrawer}
+			<button
+				type="button"
+				onclick={() => openTaskDrawer?.(card.id)}
+				class="w-fit text-xs font-medium text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				Abrir
+			</button>
+		{/if}
+		{#if deleteTask && !confirmingDelete}
+			<button
+				type="button"
+				onclick={openDeleteConfirm}
+				aria-label="Excluir tarefa"
+				title="Excluir tarefa"
+				class="w-fit text-xs font-medium text-danger hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+			>
+				Excluir
+			</button>
+		{/if}
+	</div>
+
+	{#if confirmingDelete}
+		<!-- Mini-confirm inline no card (não window.confirm) -->
+		<div
+			role="alertdialog"
+			aria-label="Confirmar exclusão da tarefa"
+			class="flex flex-col gap-2 rounded-md border border-danger bg-surface px-2 py-2"
 		>
-			Abrir
-		</button>
+			<p class="text-xs text-text-primary">Excluir esta tarefa?</p>
+			{#if deleteError}
+				<p role="alert" class="text-xs text-danger">{deleteError}</p>
+			{/if}
+			<div class="flex gap-2">
+				<button
+					type="button"
+					onclick={cancelDeleteConfirm}
+					disabled={deleting}
+					class="rounded-md border border-border-subtle px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					onclick={() => void confirmDelete()}
+					disabled={deleting}
+					class="rounded-md bg-danger px-2 py-1 text-xs font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+				>
+					{deleting ? 'Excluindo…' : 'Excluir'}
+				</button>
+			</div>
+		</div>
 	{/if}
 </div>

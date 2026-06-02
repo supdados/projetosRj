@@ -47,9 +47,35 @@ export interface EtapaTaskCount {
 }
 
 /**
+ * Bloco read-only da reunião Google de uma etapa (Fase 6). Espelha
+ * `meeting_payload_block` (services/etapas_dates.py) — a MESMA fonte usada pelos
+ * endpoints de criar/editar reunião. NUNCA contém tokens OAuth; `owner_email` é
+ * o e-mail já público do evento. `can_*` vêm calculados no backend.
+ */
+export interface EtapaMeeting {
+	time_summary: string;
+	title: string | null;
+	description: string;
+	starts_at: string; // input datetime (YYYY-MM-DDTHH:mm) ou ''
+	ends_at: string;
+	start_time_display: string;
+	end_time_display: string;
+	is_all_day: boolean;
+	sync_status: string;
+	sync_error: string;
+	location: string;
+	meet_link: string;
+	owner_email: string;
+	can_manage: boolean;
+	can_edit: boolean;
+	can_edit_dates: boolean;
+}
+
+/**
  * Uma etapa na tela de Detalhe (serialize_etapa_detail). Inclui `iniciada`,
  * `comentarios` e a contagem read-only de tarefas. `is_google_meeting` marca as
- * reuniões Google (Fase 6) — renderizadas read-only nesta fase.
+ * reuniões Google (Fase 6); quando verdadeiro, `meeting` traz o bloco read-only
+ * do evento Google.
  */
 export interface EtapaDetail {
 	id: number;
@@ -65,6 +91,8 @@ export interface EtapaDetail {
 	entry_type: string | null;
 	is_google_meeting: boolean;
 	task_count: EtapaTaskCount;
+	/** Presente apenas em etapas-reunião Google (Fase 6). */
+	meeting?: EtapaMeeting;
 }
 
 /** Derivados read-only do projeto computados no backend (_serialize_detail.derived). */
@@ -245,4 +273,54 @@ export interface StageTemplateOption {
 	name: string;
 	stage_count: number;
 	total_duration_days: number;
+}
+
+/**
+ * Resposta de POST /api/projetos/<id>/concluir (envelope desempacotado).
+ * `redirect_to` aponta para a rota SPA do detalhe; o front toca o chime +
+ * confetes + overlay e navega via router (goto).
+ */
+export interface ConcludeProjectResult {
+	message: string;
+	redirect_to: string;
+	status: string;
+}
+
+/**
+ * Corpo de criação/edição de reunião Google de etapa
+ * (POST /api/projetos/<id>/reunioes | POST /api/etapas/<id>/reuniao).
+ * Espelha o `_event_payload_from_json` do backend.
+ */
+export interface MeetingPayload {
+	title: string;
+	description?: string;
+	location?: string;
+	starts_at?: string; // YYYY-MM-DDTHH:mm
+	ends_at?: string;
+	is_all_day?: boolean;
+	create_conference?: boolean;
+}
+
+/**
+ * Resposta de criar/editar reunião (envelope desempacotado). `warning != null`
+ * quando o sync com o Google falhou (a etapa/evento persistem). `message` é o
+ * texto PT pronto para o toast de sucesso.
+ */
+export interface MeetingMutationResult {
+	etapa: EtapaMeetingPayload;
+	warning: string | null;
+	message: string;
+}
+
+/**
+ * Payload de etapa devolvido pelos endpoints de reunião — shape do serializer
+ * LEGADO (`_serialize_etapa_payload`), distinto de `EtapaDetail`. Após a
+ * mutação a página RE-BUSCA o detalhe completo, então só usamos `id`/`meeting`
+ * para feedback imediato; os campos restantes existem por compatibilidade.
+ */
+export interface EtapaMeetingPayload {
+	id: number;
+	descricao: string | null;
+	entry_type: string | null;
+	meeting?: EtapaMeeting;
 }

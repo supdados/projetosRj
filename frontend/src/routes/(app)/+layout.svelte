@@ -14,6 +14,7 @@
 	import type { Snippet } from 'svelte';
 	import { auth, loadCurrentUser } from '$lib/stores/auth';
 	import AppTopnav from '$lib/components/AppTopnav.svelte';
+	import FlashToasts from '$lib/components/FlashToasts.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -49,4 +50,6 @@
 			</div>
 		{/if}
 	</main>
+
+	<FlashToasts />
 </div>

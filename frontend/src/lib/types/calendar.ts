@@ -4,8 +4,9 @@
  * Espelham o que o backend serializa:
  *   - Hub: `GET /api/calendarios` -> `serialize_calendar_event` +
  *     `_serialize_connection` (routes/api/calendars.py, serializers.py).
- *   - CRUD de evento (rotas legadas com `Accept: application/json`):
- *     `_event_json` (routes/calendars/helpers.py) -> `{ ok, event }`.
+ *   - CRUD de evento (endpoints /api dedicados, issue #20, envelope `{ok,data}`):
+ *     `routes/api/calendars_events.py` -> `{event, sync_outcome, sync_message}`
+ *     (criar/editar), `{event}` (gerar-meet), `{deleted, remote_warning?}` (excluir).
  *
  * NUNCA expoem tokens (access_token/refresh_token/sync_token/
  * watch_channel_token) nem password_hash — o backend ja os omite.
@@ -28,8 +29,7 @@ export type CalendarEventSource = 'app' | 'google';
  *
  * `starts_at`/`ends_at` vem em formato de input (`format_input_datetime`),
  * proprios para `<input type="datetime-local">`; os `_display` sao legiveis.
- * `sync_error` so chega pelo hub (`serialize_calendar_event`); as rotas
- * legadas de CRUD (`_event_json`) NAO o incluem — por isso e opcional.
+ * `sync_error` vem de `serialize_calendar_event` (hub e CRUD /api).
  */
 export interface CalendarEvent {
 	id: number;
@@ -91,4 +91,34 @@ export interface CalendarEventInput {
 	ends_at: string;
 	is_all_day: boolean;
 	create_conference: boolean;
+}
+
+/**
+ * Desfecho do sync com o Google ao criar/editar um evento. Espelha os flashes
+ * legados (routes/calendars/events.py) — a falha de sync NAO e erro HTTP:
+ *   - `synced`     : evento salvo E sincronizado com o Google Calendar.
+ *   - `local_only` : sem conexao Google; salvo apenas localmente.
+ *   - `sync_error` : evento persiste, mas o envio ao Google falhou.
+ */
+export type CalendarSyncOutcome = 'synced' | 'local_only' | 'sync_error';
+
+/**
+ * Resultado de criar/editar evento (`POST /api/calendarios/eventos[/<id>/editar]`).
+ * `sync_message` e o texto PT pronto para exibir como toast/aviso, equivalente
+ * ao flash do fluxo Jinja.
+ */
+export interface CalendarEventMutationResult {
+	event: CalendarEvent;
+	sync_outcome: CalendarSyncOutcome;
+	sync_message: string;
+}
+
+/**
+ * Resultado de excluir evento (`POST /api/calendarios/eventos/<id>/excluir`).
+ * `remote_warning` so vem quando o evento simples foi removido localmente, mas
+ * falhou no Google Calendar (equivalente ao flash warning legado).
+ */
+export interface CalendarEventDeleteResult {
+	deleted: boolean;
+	remote_warning?: string;
 }

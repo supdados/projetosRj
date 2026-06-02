@@ -89,3 +89,82 @@ export interface TaskHubQuery {
 	orgao?: string | number | null;
 	modo?: TaskHubModo;
 }
+
+/**
+ * Filtros do corpo de `POST /api/tarefas/arquivar-finalizadas` (espelham
+ * `_read_task_filter_values`). Mesmos nomes dos query params do hub.
+ */
+export interface TaskHubFilterValues {
+	project?: string;
+	orgao?: string | number | null;
+	prioridade?: string;
+	tipo?: string;
+	status?: string;
+	responsavel?: string;
+}
+
+/**
+ * Body de `POST /api/tarefas` (criar tarefa via composer/quick-add). Espelha o
+ * payload aceito por `api_tarefa_criar` (`project_id`/`etapa_id` como alias).
+ */
+export interface CreateTarefaInput {
+	project?: string | number | null;
+	project_id?: string | number | null;
+	etapa?: string | number | null;
+	etapa_id?: string | number | null;
+	descricao: string;
+	status?: string;
+	responsavel?: string | null;
+	prioridade?: string | null;
+	tipo_pedido?: string | null;
+}
+
+/**
+ * Card devolvido por `POST /api/tarefas` (= `serialize_task_card` + extras de
+ * contexto de projeto/etapa e permissões expostas por `_stage_card_payload`).
+ */
+export interface CreatedTaskCard extends TaskCard {
+	etapa_descricao: string | null;
+	project_titulo: string | null;
+	project_orgao_sigla: string | null;
+	comments_count: number;
+	anexos_count: number;
+	permissions: {
+		can_delete: boolean;
+		can_finalize: boolean;
+		is_author: boolean;
+	};
+}
+
+/** Resposta de `POST /api/tarefas`. */
+export interface CreateTarefaResult {
+	task: CreatedTaskCard;
+}
+
+/** Resposta de `POST /api/tarefas/<id>/excluir`. */
+export interface DeleteTarefaResult {
+	item_id: number;
+	message: string;
+}
+
+/** Resposta de `POST /api/tarefas/<id>/mover-etapa`. */
+export interface MoverEtapaResult {
+	task_id: number;
+	etapa_id: number | null;
+	previous_etapa_id: number | null;
+	/** Presente quando a etapa de destino está concluída. */
+	warning?: string;
+}
+
+/** Resposta de `POST /api/tarefas/arquivar-finalizadas`. */
+export interface ArchiveFinalizadasResult {
+	archived_count: number;
+	archived_task_ids: string[];
+	message: string;
+}
+
+/** Sugestão de responsável do picker do hub (`GET .../sugestoes-responsavel`). */
+export interface HubResponsavelSuggestion {
+	id: number;
+	name: string;
+}

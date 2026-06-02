@@ -1,30 +1,33 @@
 /**
  * Acesso tipado a tela de Calendario.
  *
- * Dois grupos de endpoints, ambos na mesma origem do Flask:
+ * Dois grupos de endpoints, ambos no envelope canonico `{ok,data}` (via
+ * `client.ts`), na mesma origem do Flask:
  *
- *  1. Hub + acoes de conexao (envelope canonico `{ok,data}`, via `client.ts`):
+ *  1. Hub + acoes de conexao:
  *       - `GET  /api/calendarios`                  -> CalendarHub.
  *       - `POST /api/calendarios/google/disconnect` -> { disconnected }.
  *       - `POST /api/calendarios/google/sync`        -> resumo do sync.
  *       - `POST /api/calendarios/google/watch/renew` -> { expires_at_display }.
  *
- *  2. CRUD de evento (REUSO das rotas Jinja legadas — NAO ha endpoint /api):
- *       - `POST /calendarios/eventos`                  (criar)
- *       - `POST /calendarios/eventos/<id>/editar`      (editar)
- *       - `POST /calendarios/eventos/<id>/gerar-meet`  (gerar Meet)
- *       - `POST /calendarios/eventos/<id>/excluir`     (excluir)
- *     Essas rotas esperam `request.form` (multipart) e, com
- *     `Accept: application/json`, respondem `{ "ok": true, "event": {...} }`
- *     (NAO o envelope canonico `{ok,data}`). Por isso usam o poster dedicado
- *     `postLegacyEventForm` abaixo, e nao `client.postForm`.
+ *  2. CRUD de evento (endpoints /api dedicados — issue #20, envelope `{ok,data}`):
+ *       - `POST /api/calendarios/eventos`                 (criar)
+ *       - `POST /api/calendarios/eventos/<id>/editar`     (editar)
+ *       - `POST /api/calendarios/eventos/<id>/gerar-meet` (gerar Meet)
+ *       - `POST /api/calendarios/eventos/<id>/excluir`    (excluir)
+ *     Recebem JSON no corpo e respondem `{ok, data}`. A FALHA DE SYNC com o
+ *     Google NAO e erro HTTP (o evento persiste): criar/editar devolvem
+ *     `sync_outcome`/`sync_message` (espelhando o flash legado) para a SPA
+ *     exibir o aviso equivalente; excluir devolve `remote_warning` opcional.
+ *     O poster legado `postLegacyEventForm`/`buildEventFormData` foi removido.
  */
 
-import { get, post, postFormRaw } from './client';
-import { ApiClientError } from './client';
+import { get, post } from './client';
 import type {
 	CalendarEvent,
 	CalendarEventInput,
+	CalendarEventMutationResult,
+	CalendarEventDeleteResult,
 	CalendarHub
 } from '$lib/types/calendar';
 
@@ -79,112 +82,81 @@ export function renewWatch(
 }
 
 // ---------------------------------------------------------------------------
-// CRUD de evento via rotas legadas (multipart/form-data + Accept JSON).
+// CRUD de evento via endpoints /api dedicados (envelope `{ok,data}`, issue #20).
+//
+// O corpo e enviado como JSON (`client.post`); o backend (routes/api/
+// calendars_events.py) adapta para `parse_event_form` internamente. O input
+// `CalendarEventInput` ja casa com o contrato JSON do backend (title,
+// description, location, starts_at, ends_at, is_all_day, create_conference),
+// entao nao ha mais montagem de FormData.
 // ---------------------------------------------------------------------------
 
 /**
- * Monta o `FormData` a partir do input do formulario.
+ * Cria um evento (`POST /api/calendarios/eventos`).
  *
- * Espelha `parse_event_form` (services/calendar_core.py): campos `title`,
- * `description`, `location`, `starts_at`, `ends_at`, e os checkboxes `all_day`
- * / `create_conference` (o backend usa `bool(form.get(...))`, logo so importa
- * a presenca da chave — so anexamos quando `true`).
+ * A falha de sync com o Google NAO e erro HTTP: o evento persiste e o resultado
+ * traz `sync_outcome`/`sync_message` (espelhando o flash legado) para a pagina
+ * exibir o aviso equivalente. Erros estruturados (422 validacao / 500) viram
+ * `ApiClientError` lancado por `client.post`.
  */
-function buildEventFormData(input: CalendarEventInput): FormData {
-	const form = new FormData();
-	form.set('title', input.title);
-	form.set('description', input.description);
-	form.set('location', input.location);
-	form.set('starts_at', input.starts_at);
-	form.set('ends_at', input.ends_at);
-	if (input.is_all_day) form.set('all_day', 'on');
-	if (input.create_conference) form.set('create_conference', 'on');
-	return form;
-}
-
-/** Resposta crua das rotas legadas de evento: `{ ok, event }` (nao `{ok,data}`). */
-interface LegacyEventResponse {
-	ok: boolean;
-	event?: CalendarEvent;
-	error?: { code?: string; message?: string };
-	message?: string;
-}
-
-/**
- * POST multipart para uma rota legada de evento, desempacotando `{ok,event}`.
- *
- * Reusa `postFormRaw` do `client.ts` (cookie de sessao, `X-CSRFToken` da meta
- * com re-fetch de CSRF em falha, 401 -> navegacao top-level para `/login`),
- * que devolve o JSON cru; aqui lemos a chave `event` em vez do envelope
- * `{ok,data}`, porque essas rotas Jinja respondem `{ "ok": true, "event": ... }`.
- * Em falha estruturada lanca `ApiClientError`.
- */
-async function postLegacyEventForm(
-	path: string,
-	form: FormData,
-	signal?: AbortSignal
-): Promise<CalendarEvent> {
-	const legacy: LegacyEventResponse =
-		(await postFormRaw<LegacyEventResponse>(path, form, signal)) ?? { ok: false };
-	if (legacy.ok && legacy.event) {
-		return legacy.event;
-	}
-
-	const code = legacy.error?.code ?? 'server';
-	const message =
-		legacy.error?.message ??
-		legacy.message ??
-		'Nao foi possivel concluir a operacao do evento.';
-	throw new ApiClientError(code, message, 0);
-}
-
-/** Cria um evento (rota legada `POST /calendarios/eventos`). */
 export function createEvent(
 	input: CalendarEventInput,
 	signal?: AbortSignal
-): Promise<CalendarEvent> {
-	return postLegacyEventForm(
-		'/calendarios/eventos',
-		buildEventFormData(input),
-		signal
-	);
+): Promise<CalendarEventMutationResult> {
+	return post<CalendarEventMutationResult>('/api/calendarios/eventos', input, signal);
 }
 
-/** Edita um evento (rota legada `POST /calendarios/eventos/<id>/editar`). */
+/**
+ * Edita um evento (`POST /api/calendarios/eventos/<id>/editar`).
+ *
+ * Mesmo contrato de `createEvent` (`{event, sync_outcome, sync_message}`).
+ * Reuniao vinculada sem permissao -> 403 (`ApiClientError`).
+ */
 export function updateEvent(
 	id: number,
 	input: CalendarEventInput,
 	signal?: AbortSignal
-): Promise<CalendarEvent> {
-	return postLegacyEventForm(
-		`/calendarios/eventos/${id}/editar`,
-		buildEventFormData(input),
+): Promise<CalendarEventMutationResult> {
+	return post<CalendarEventMutationResult>(
+		`/api/calendarios/eventos/${id}/editar`,
+		input,
 		signal
 	);
 }
 
 /**
  * Gera o link do Google Meet de um evento
- * (rota legada `POST /calendarios/eventos/<id>/gerar-meet`).
+ * (`POST /api/calendarios/eventos/<id>/gerar-meet`).
+ *
+ * Devolve o evento ja com `meet_link` preenchido. Sem conexao Google -> 409;
+ * falha de geracao -> 502 (ambos `ApiClientError`).
  */
 export function generateMeet(
 	id: number,
 	signal?: AbortSignal
-): Promise<CalendarEvent> {
-	return postLegacyEventForm(
-		`/calendarios/eventos/${id}/gerar-meet`,
-		new FormData(),
+): Promise<{ event: CalendarEvent }> {
+	return post<{ event: CalendarEvent }>(
+		`/api/calendarios/eventos/${id}/gerar-meet`,
+		undefined,
 		signal
 	);
 }
 
 /**
- * Exclui um evento (rota legada `POST /calendarios/eventos/<id>/excluir`).
+ * Exclui um evento (`POST /api/calendarios/eventos/<id>/excluir`).
  *
- * A rota responde `{ "ok": true, "event": _event_json }` mesmo apos a remocao,
- * mas o retorno e irrelevante para uma exclusao — o chamador ignora e recarrega
- * o hub. Logo devolvemos `void`; falhas viram `ApiClientError`.
+ * Devolve `{deleted}` e, quando o evento simples foi removido localmente mas
+ * falhou no Google, `remote_warning` (a pagina exibe como aviso). Reuniao
+ * vinculada com falha remota ABORTA no backend (502 -> `ApiClientError`),
+ * nao exclui.
  */
-export async function deleteEvent(id: number, signal?: AbortSignal): Promise<void> {
-	await postLegacyEventForm(`/calendarios/eventos/${id}/excluir`, new FormData(), signal);
+export function deleteEvent(
+	id: number,
+	signal?: AbortSignal
+): Promise<CalendarEventDeleteResult> {
+	return post<CalendarEventDeleteResult>(
+		`/api/calendarios/eventos/${id}/excluir`,
+		undefined,
+		signal
+	);
 }

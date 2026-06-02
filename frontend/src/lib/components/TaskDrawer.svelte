@@ -25,6 +25,8 @@
 	} from '$lib/utils/taskStatus';
 	import { updateTaskStatus } from '$lib/api/board';
 	import { ApiClientError } from '$lib/api/client';
+	import { fetchProjectDetail } from '$lib/api/projectDetail';
+	import type { EtapaDetail } from '$lib/types/projectDetail';
 	import { focusTrap } from '$lib/actions/focusTrap';
 	import Badge from './Badge.svelte';
 	import CommentsPanel from './CommentsPanel.svelte';
@@ -121,13 +123,83 @@
 		}
 	}
 
+	// EXCLUIR: mini-confirm inline no header (paridade com #taskItemDrawerDeleteConfirm
+	// do drawer legado — NÃO usa window.confirm). Clicar lixeira abre o confirm;
+	// Escape fecha primeiro o confirm e só depois o drawer.
+	let confirmingDelete = $state(false);
+
+	function openDeleteConfirm(): void {
+		confirmingDelete = true;
+	}
+	function cancelDeleteConfirm(): void {
+		confirmingDelete = false;
+	}
+	async function confirmDelete(): Promise<void> {
+		const ok = await store.deleteTask();
+		// Em sucesso a store já fechou o drawer; em erro mantém aberto + mensagem.
+		if (ok) confirmingDelete = false;
+	}
+
+	// MOVER DE ETAPA: select que aparece via toggle. As etapas do projeto são
+	// buscadas sob demanda (não vêm no payload do drawer). `warning` de etapa
+	// concluída é exibido inline (o Jinja ignorava; aqui mostramos por fidelidade
+	// à informação do backend, sem som/confete).
+	let movingEtapa = $state(false);
+	let etapaOptions = $state<EtapaDetail[]>([]);
+	let etapaListLoading = $state(false);
+	let etapaWarning = $state<string | null>(null);
+	let etapaError = $state<string | null>(null);
+	let loadedEtapasForProject = $state<number | null>(null);
+
+	async function toggleMoveEtapa(): Promise<void> {
+		movingEtapa = !movingEtapa;
+		etapaWarning = null;
+		etapaError = null;
+		if (!movingEtapa) return;
+		const projectId = detail?.project?.id ?? null;
+		if (projectId === null || loadedEtapasForProject === projectId) return;
+		etapaListLoading = true;
+		try {
+			const data = await fetchProjectDetail(projectId);
+			// Só etapas regulares (reuniões Google não recebem tarefas).
+			etapaOptions = data.etapas.filter((e) => !e.is_google_meeting);
+			loadedEtapasForProject = projectId;
+		} catch (err) {
+			etapaError =
+				err instanceof ApiClientError ? err.message : 'Não foi possível carregar as etapas.';
+		} finally {
+			etapaListLoading = false;
+		}
+	}
+
+	async function onMoveEtapa(event: Event): Promise<void> {
+		const value = (event.currentTarget as HTMLSelectElement).value;
+		const target: number | 'sem_etapa' = value === '' ? 'sem_etapa' : Number(value);
+		etapaWarning = null;
+		etapaError = null;
+		const result = await store.moveEtapa(target);
+		if (!result.ok) {
+			etapaError = $store.error ?? 'Não foi possível mover a tarefa.';
+			return;
+		}
+		etapaWarning = result.warning ?? null;
+		if (!etapaWarning) movingEtapa = false;
+	}
+
 	async function close(): Promise<void> {
+		confirmingDelete = false;
+		movingEtapa = false;
 		await store.close();
 	}
 
 	function onKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape') {
 			event.stopPropagation();
+			// Escape fecha primeiro o confirm de exclusão (paridade com o legado).
+			if (confirmingDelete) {
+				confirmingDelete = false;
+				return;
+			}
 			void close();
 		}
 	}
@@ -181,15 +253,58 @@
 					<span class="truncate text-xs text-text-muted">Etapa: {detail.etapa.descricao}</span>
 				{/if}
 			</div>
-			<button
-				type="button"
-				onclick={() => void close()}
-				aria-label="Fechar"
-				class="shrink-0 rounded-md border border-border-subtle px-2 py-1 text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				✕
-			</button>
+			<div class="flex shrink-0 items-center gap-1">
+				{#if detail && detail.permissions.can_delete}
+					<button
+						type="button"
+						onclick={openDeleteConfirm}
+						aria-label="Excluir tarefa"
+						title="Excluir tarefa"
+						disabled={$store.acting}
+						class="rounded-md border border-border-subtle px-2 py-1 text-danger hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+					>
+						🗑
+					</button>
+				{/if}
+				<button
+					type="button"
+					onclick={() => void close()}
+					aria-label="Fechar"
+					class="rounded-md border border-border-subtle px-2 py-1 text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					✕
+				</button>
+			</div>
 		</header>
+
+		{#if confirmingDelete}
+			<!-- Mini-confirm inline (paridade com #taskItemDrawerDeleteConfirm). -->
+			<div
+				role="alertdialog"
+				aria-label="Confirmar exclusão da tarefa"
+				class="flex flex-col gap-2 rounded-md border border-danger bg-surface px-3 py-3"
+			>
+				<p class="text-sm text-text-primary">Deseja excluir esta tarefa?</p>
+				<div class="flex gap-2">
+					<button
+						type="button"
+						onclick={cancelDeleteConfirm}
+						disabled={$store.acting}
+						class="rounded-md border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					>
+						Cancelar
+					</button>
+					<button
+						type="button"
+						onclick={() => void confirmDelete()}
+						disabled={$store.acting}
+						class="rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+					>
+						{$store.acting ? 'Excluindo…' : 'Excluir tarefa'}
+					</button>
+				</div>
+			</div>
+		{/if}
 
 		{#if $store.status === 'loading'}
 			<p role="status" aria-live="polite" class="text-text-secondary">Carregando tarefa…</p>
@@ -307,6 +422,48 @@
 					/>
 				</div>
 			</div>
+
+			<!-- Mover de etapa (DnD equivalente no drawer): só projetos com etapas -->
+			{#if detail.project && detail.permissions.can_edit}
+				<div class="flex flex-col gap-2 border-t border-border-subtle pt-3">
+					<button
+						type="button"
+						onclick={() => void toggleMoveEtapa()}
+						aria-expanded={movingEtapa}
+						class="w-fit text-sm font-medium text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						{movingEtapa ? 'Cancelar mudança de etapa' : 'Mover de etapa'}
+					</button>
+					{#if movingEtapa}
+						{#if etapaListLoading}
+							<p role="status" aria-live="polite" class="text-xs text-text-muted">
+								Carregando etapas…
+							</p>
+						{:else}
+							<select
+								aria-label="Mover tarefa para a etapa"
+								value={detail.etapa?.id ?? ''}
+								onchange={onMoveEtapa}
+								disabled={$store.acting}
+								class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+							>
+								<option value="">Sem etapa</option>
+								{#each etapaOptions as etapa (etapa.id)}
+									<option value={etapa.id}>
+										{etapa.descricao ?? `Etapa ${etapa.id}`}{etapa.done ? ' (concluída)' : ''}
+									</option>
+								{/each}
+							</select>
+						{/if}
+						{#if etapaWarning}
+							<p role="status" aria-live="polite" class="text-xs text-warning">{etapaWarning}</p>
+						{/if}
+						{#if etapaError}
+							<p role="alert" class="text-xs text-danger">{etapaError}</p>
+						{/if}
+					{/if}
+				</div>
+			{/if}
 
 			<!-- Ações de ciclo de vida (server-autoritativas) -->
 			<div class="flex flex-wrap gap-2 border-t border-border-subtle pt-3">

@@ -13,11 +13,17 @@
 	 *      evento NUNCA e escondido).
 	 *
 	 * O CRUD de evento e delegado ao <CalendarEventModal> (controlado): a pagina
-	 * chama `createEvent`/`updateEvent`/`deleteEvent`/`generateMeet` (rotas
-	 * legadas via `Accept: application/json`, ver lib/api/calendars.ts) e
+	 * chama `createEvent`/`updateEvent`/`deleteEvent`/`generateMeet` (endpoints
+	 * /api dedicados no envelope `{ok,data}`, ver lib/api/calendars.ts) e
 	 * recarrega o hub. Falha de SYNC nunca bloqueia o salvar (o evento persiste
 	 * com `sync_status` pending/error); por isso so o erro estruturado de escrita
 	 * mantem o modal aberto via prop `error`.
+	 *
+	 * FIDELIDADE ao flash legado: criar/editar devolvem `sync_message` e excluir
+	 * devolve `remote_warning` opcional; a pagina os exibe num aviso aria-live
+	 * pos-acao (`actionNotice`), equivalente ao flash success/warning do Jinja,
+	 * alem do badge degradado por evento que ja existia. Gerar Meet copia o link
+	 * para a area de transferencia e mostra um aviso efemero "Link copiado!".
 	 *
 	 * Estados de loading/erro sao anunciados via aria-live (role=status/alert).
 	 * Foco/Esc do modal sao tratados pelo proprio componente.
@@ -37,6 +43,8 @@
 	import type {
 		CalendarEvent,
 		CalendarEventInput,
+		CalendarEventMutationResult,
+		CalendarEventDeleteResult,
 		CalendarHub
 	} from '$lib/types/calendar';
 	import CalendarConnectionBanner from '$lib/components/CalendarConnectionBanner.svelte';
@@ -56,6 +64,29 @@
 	let modalEvent = $state<CalendarEvent | null>(null);
 	let modalBusy = $state<boolean>(false);
 	let modalError = $state<string | null>(null);
+
+	/**
+	 * Aviso pos-acao (equivalente ao flash legado): mensagem de sync ao salvar,
+	 * remote_warning ao excluir, ou "Link copiado!" ao gerar Meet. `tone` mapeia
+	 * o estilo (success/warning) e a semantica aria (status/alert).
+	 */
+	let actionNotice = $state<{ message: string; tone: 'success' | 'warning' } | null>(
+		null
+	);
+	let noticeTimer: ReturnType<typeof setTimeout> | null = null;
+
+	/**
+	 * Mostra o aviso pos-acao e o auto-descarta em ~2.2s (paridade com o
+	 * auto-dismiss do flash legado, static/js/app-shell/flash.js).
+	 */
+	function showNotice(message: string, tone: 'success' | 'warning'): void {
+		if (noticeTimer) clearTimeout(noticeTimer);
+		actionNotice = { message, tone };
+		noticeTimer = setTimeout(() => {
+			actionNotice = null;
+			noticeTimer = null;
+		}, 2200);
+	}
 
 	let inFlight: AbortController | null = null;
 
@@ -86,7 +117,10 @@
 
 	onMount(() => {
 		void load();
-		return () => inFlight?.abort();
+		return () => {
+			inFlight?.abort();
+			if (noticeTimer) clearTimeout(noticeTimer);
+		};
 	});
 
 	// --- Acoes de conexao Google. Recarregam o hub no sucesso; erro vira alerta
@@ -150,55 +184,90 @@
 	}
 
 	/**
-	 * Executa uma operacao de escrita do modal e, no sucesso, recarrega o hub e
-	 * fecha o modal. Erro estruturado de escrita mantem o modal aberto (prop
-	 * `error`). Falha de sync nunca cai aqui: o backend salva o evento e responde
-	 * `{ok:true}` mesmo com `sync_status` pending/error.
+	 * Executa uma operacao de escrita do modal e, no sucesso, recarrega o hub,
+	 * fecha o modal e devolve o resultado (para o chamador exibir o aviso de
+	 * sync). Erro estruturado de escrita mantem o modal aberto (prop `error`).
+	 * Falha de sync nunca cai aqui: o backend salva o evento e responde `{ok}`
+	 * mesmo com `sync_status` pending/error (vem em `sync_outcome`/`sync_message`).
 	 */
-	async function runModalAction(
-		action: () => Promise<unknown>,
+	async function runModalAction<T>(
+		action: () => Promise<T>,
 		fallback: string
-	): Promise<void> {
-		if (modalBusy) return;
+	): Promise<T | null> {
+		if (modalBusy) return null;
 		modalBusy = true;
 		modalError = null;
 		try {
-			await action();
+			const result = await action();
 			await load();
 			modalBusy = false;
 			modalOpen = false;
 			modalEvent = null;
+			return result;
 		} catch (err) {
 			modalBusy = false;
-			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
+			if (err instanceof ApiClientError && err.code === 'unauthenticated') return null;
 			modalError = readErrorMessage(err, fallback);
+			return null;
 		}
+	}
+
+	/** tone do aviso a partir do desfecho de sync (success exceto em sync_error). */
+	function noticeToneFor(result: CalendarEventMutationResult): 'success' | 'warning' {
+		return result.sync_outcome === 'sync_error' ? 'warning' : 'success';
 	}
 
 	function handleSave(input: CalendarEventInput): void {
 		const editing = modalEvent;
-		if (editing) {
-			void runModalAction(
-				() => updateEvent(editing.id, input),
-				'Nao foi possivel salvar o evento.'
-			);
-			return;
-		}
-		void runModalAction(
-			() => createEvent(input),
-			'Nao foi possivel criar o evento.'
-		);
+		const action = editing
+			? () => updateEvent(editing.id, input)
+			: () => createEvent(input);
+		const fallback = editing
+			? 'Nao foi possivel salvar o evento.'
+			: 'Nao foi possivel criar o evento.';
+		void runModalAction(action, fallback).then((result) => {
+			if (result) showNotice(result.sync_message, noticeToneFor(result));
+		});
 	}
 
 	function handleDelete(id: number): void {
-		void runModalAction(() => deleteEvent(id), 'Nao foi possivel excluir o evento.');
+		void runModalAction<CalendarEventDeleteResult>(
+			() => deleteEvent(id),
+			'Nao foi possivel excluir o evento.'
+		).then((result) => {
+			if (!result) return;
+			if (result.remote_warning) {
+				showNotice(
+					`Evento removido localmente, mas falhou no Google: ${result.remote_warning}`,
+					'warning'
+				);
+			} else {
+				showNotice('Evento removido com sucesso.', 'success');
+			}
+		});
 	}
 
+	/**
+	 * Gera o link do Meet e, no sucesso, copia-o para a area de transferencia
+	 * mostrando o aviso efemero "Link copiado!" (paridade com o toast legado
+	 * `showCopyToast` ~1.7s; aqui reusamos o `actionNotice` ~2.2s). A copia e
+	 * best-effort: se a Clipboard API falhar/indisponivel, ainda confirmamos a
+	 * geracao do link.
+	 */
 	function handleGenerateMeet(id: number): void {
-		void runModalAction(
+		void runModalAction<{ event: CalendarEvent }>(
 			() => generateMeet(id),
 			'Nao foi possivel gerar o Google Meet.'
-		);
+		).then(async (result) => {
+			const link = result?.event.meet_link;
+			if (!link) return;
+			try {
+				await navigator.clipboard?.writeText(link);
+				showNotice('Link copiado!', 'success');
+			} catch {
+				showNotice('Link do Meet gerado com sucesso.', 'success');
+			}
+		});
 	}
 
 	// --- Agrupamento por dia. ---
@@ -332,6 +401,19 @@
 				Novo evento
 			</button>
 		</div>
+
+		{#if actionNotice}
+			<!-- Aviso pos-acao equivalente ao flash legado (auto-dismiss ~2.2s). -->
+			<p
+				role={actionNotice.tone === 'warning' ? 'alert' : 'status'}
+				aria-live={actionNotice.tone === 'warning' ? 'assertive' : 'polite'}
+				class={actionNotice.tone === 'warning'
+					? 'rounded-md border border-warning bg-surface-muted px-4 py-2 text-sm text-warning'
+					: 'rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm text-primary-700'}
+			>
+				{actionNotice.message}
+			</p>
+		{/if}
 
 		{#if eventCount === 0}
 			<div

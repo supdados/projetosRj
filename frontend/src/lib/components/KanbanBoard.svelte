@@ -18,6 +18,7 @@
 	 *     sem texto redundante duplicado abaixo da coluna;
 	 *   - um região `aria-live="polite"` anuncia as movimentações e erros.
 	 */
+	import type { Snippet } from 'svelte';
 	import KanbanColumn from '$lib/components/KanbanColumn.svelte';
 	import type { BoardStore } from '$lib/stores/board';
 	import type { BoardCard } from '$lib/types/board';
@@ -30,9 +31,11 @@
 
 	interface Props {
 		store: BoardStore;
+		/** Composer inline por coluna (Fase 5b-3), repassado para cada KanbanColumn. */
+		composer?: Snippet<[TaskStatus]>;
 	}
 
-	let { store }: Props = $props();
+	let { store, composer }: Props = $props();
 
 	/** Contexto do drag em curso (estado canônico no componente, não no DOM). */
 	interface DragContext {
@@ -251,6 +254,7 @@
 				<div class="flex flex-1 flex-col gap-2">
 					<KanbanColumn
 						{column}
+						{composer}
 						draggingId={dragContext?.card.id ?? null}
 						canDrop={canDropOn(status)}
 						isOver={overStatus === status}
