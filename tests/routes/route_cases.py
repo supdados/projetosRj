@@ -954,6 +954,60 @@ ROUTE_CASES = [
         "requires_login": False,
         "requires_admin": False,
     },
+    # SPA API (envelope canônico)
+    {
+        "id": "api_me_get",
+        "method": "GET",
+        "rule": "/api/me",
+        "path": "/api/me",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_csrf_token_get",
+        "method": "GET",
+        "rule": "/api/csrf-token",
+        "path": "/api/csrf-token",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_dashboard_get",
+        "method": "GET",
+        "rule": "/api/dashboard",
+        "path": "/api/dashboard",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    # SPA shell (catch-all servido via Jinja + csp_nonce; routes/spa.py).
+    # Raiz da SPA e subpaths client-side (ex.: /spa/dashboard) rendam o index.
+    # Nao exige login: o guard de auth e client-side (carrega /api/me no boot).
+    {
+        "id": "spa_index_get",
+        "method": "GET",
+        "rule": "/spa",
+        "path": "/spa",
+        "role": "anon",
+        "expected_status": 200,
+        "requires_login": False,
+        "requires_admin": False,
+    },
+    {
+        "id": "spa_index_subpath_get",
+        "method": "GET",
+        "rule": "/spa/<path:subpath>",
+        "path": "/spa/dashboard",
+        "role": "anon",
+        "expected_status": 200,
+        "requires_login": False,
+        "requires_admin": False,
+    },
     # API and search
     {
         "id": "api_resultados_get",
@@ -1513,4 +1567,6 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 134
+# 134 rotas originais + 3 endpoints JSON da SPA (/api/me, /api/csrf-token,
+# /api/dashboard) + 2 rotas do shell SPA (/spa e /spa/<path:subpath>).
+assert len(ROUTE_CASES) == 139
