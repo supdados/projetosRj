@@ -185,22 +185,12 @@ export function importStageModel(
 /**
  * Lista os modelos de etapas para o ImportModelModal.
  *
- * O endpoint legado GET /api/templates (routes/api/legacy.py) devolve um ARRAY
- * cru (sem o envelope `{ok, data}`), portanto NÃO passa por `client.ts`; é
- * buscado diretamente com `credentials: 'include'`. Mantém a mesma origem.
+ * Usa o endpoint enveloped GET /api/etapas/templates (envelope canônico
+ * `{ok, data}`) via `client.get`, que desempacota `data` e trata 401/CSRF.
  */
 export async function fetchStageTemplates(
 	signal?: AbortSignal
 ): Promise<StageTemplateOption[]> {
-	const res = await fetch('/api/templates', {
-		method: 'GET',
-		credentials: 'include',
-		headers: { Accept: 'application/json' },
-		signal
-	});
-	if (!res.ok) {
-		throw new Error(`Falha ao carregar modelos de etapas (HTTP ${res.status}).`);
-	}
-	const body = (await res.json()) as StageTemplateOption[];
-	return Array.isArray(body) ? body : [];
+	const data = await get<StageTemplateOption[]>('/api/etapas/templates', signal);
+	return Array.isArray(data) ? data : [];
 }
