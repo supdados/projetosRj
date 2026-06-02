@@ -51,31 +51,57 @@
 	}: Props = $props();
 
 	const count = $derived(column.tasks.length);
+
+	/**
+	 * Tinta de cabeçalho por status (paridade com kanban.css
+	 * `.task-items-kanban-column.status-* .task-items-kanban-col-head`). Usa
+	 * tokens semânticos suaves (light-bg) para trocar sozinho no dark mode.
+	 */
+	const HEAD_TINT: Record<string, string> = {
+		nao_iniciada: 'border-border-subtle bg-surface-muted',
+		em_andamento: 'border-info/30 bg-info/10',
+		para_validacao: 'border-warning/40 bg-warning/10',
+		para_ajustes: 'border-danger/30 bg-danger/10',
+		finalizada: 'border-success/30 bg-success/10'
+	};
+	const headTint = $derived(HEAD_TINT[column.status] ?? HEAD_TINT.nao_iniciada);
 </script>
 
+<!--
+	Coluna do Kanban — fidelidade a static/css/tasks/detail/kanban.css:
+	  radius 12px (rounded-lg), borda + sombra 0 6px 16px, cabeçalho com tinta
+	  por status, contador em pílula. A dropzone reproduz `.is-drag-over`
+	  (fundo tintado + ring interno) e `.is-column-drag-target` (borda + ring),
+	  com transição 0.16s ease (~duration-fast).
+-->
 <section
-	class="flex min-w-[16rem] flex-1 flex-col rounded-lg border border-border-subtle bg-surface-muted"
+	class="kanban-column flex min-h-[340px] min-w-[200px] flex-1 flex-col overflow-hidden rounded-lg border border-border-subtle bg-canvas shadow-md transition-shadow duration-fast {isOver &&
+	canDrop
+		? 'is-column-drag-target border-primary-500'
+		: ''}"
 	aria-labelledby={`kanban-col-${column.status}`}
 >
-	<header class="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2">
+	<header
+		class="flex items-center justify-between gap-2 rounded-t-lg border-b px-3 py-2.5 {headTint}"
+	>
 		<h2
 			id={`kanban-col-${column.status}`}
-			class="font-heading text-sm font-semibold text-text-primary"
+			class="font-heading text-sm font-bold text-text-primary"
 		>
 			{column.label}
 		</h2>
 		<span
-			class="inline-flex min-w-[1.5rem] items-center justify-center rounded-sm bg-surface px-1.5 py-0.5 text-xs font-medium text-text-secondary"
+			class="inline-flex h-[22px] min-w-[24px] items-center justify-center rounded-full border border-border-subtle bg-surface px-1.5 text-xs font-semibold text-text-secondary"
 		>
 			{count}
 		</span>
 	</header>
 
 	<ul
-		class="flex min-h-[6rem] flex-1 flex-col gap-2 p-2 transition-colors duration-fast {isOver &&
+		class="flex min-h-[6rem] flex-1 flex-col gap-2 overflow-y-auto p-2 transition-[background-color,box-shadow] duration-fast {isOver &&
 		canDrop
-			? 'bg-primary-100/60 outline outline-2 outline-primary-500'
-			: ''} {isOver && !canDrop ? 'cursor-not-allowed bg-surface-muted opacity-70' : ''}"
+			? 'bg-primary-100/50 shadow-[inset_0_0_0_1px_var(--ds-color-primary-500)]'
+			: ''} {isOver && !canDrop ? 'cursor-not-allowed opacity-70' : ''}"
 		data-status={column.status}
 		aria-label={`Coluna ${column.label}`}
 		ondragenter={(event) => onZoneDragEnter?.(event, column.status)}
@@ -97,15 +123,25 @@
 				/>
 			</li>
 		{:else}
-			<li class="rounded-md border border-dashed border-border-subtle px-3 py-4 text-center text-xs text-text-muted">
-				Sem tarefas
+			<li class="flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-dashed border-border-subtle bg-surface/80 px-3 py-3 text-center text-xs text-text-muted">
+				Sem itens nesta etapa
 			</li>
 		{/each}
 	</ul>
 
 	{#if composer}
-		<div class="border-t border-border-subtle p-2">
+		<div class="px-[0.56rem] pb-[0.62rem] pt-[0.46rem]">
 			{@render composer(column.status)}
 		</div>
 	{/if}
 </section>
+
+<style>
+	/* `.is-column-drag-target` (kanban.css): ring duplo de realce da coluna alvo,
+	   reproduzindo box-shadow: 0 0 0 2px rgba(139,176,215,.25), 0 6px 16px ... */
+	.is-column-drag-target {
+		box-shadow:
+			0 0 0 2px rgba(31, 115, 181, 0.25),
+			0 6px 16px rgba(19, 63, 101, 0.12);
+	}
+</style>

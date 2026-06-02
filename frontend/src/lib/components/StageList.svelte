@@ -158,16 +158,23 @@
 	<ol class="flex flex-col gap-3" aria-label="Etapas do projeto" aria-busy={reordering}>
 		{#each etapas as etapa, index (etapa.id)}
 			{@const st = rowState(etapa.id)}
+			<!--
+				Estados de DnD fiéis a 03-stages-and-interactions.css:
+				  .dragging  -> opacity .5 + scale(.98) + borda tracejada azul
+				  .drag-over -> translateY(-1px) + sombra azulada + leve highlight
+				A transição (all .35s ease ~= duration-slow) suaviza o reposicionamento.
+			-->
 			<li
 				draggable={isDraggable(etapa)}
 				ondragstart={(e) => handleDragStart(e, index)}
 				ondragover={(e) => handleDragOver(e, index)}
 				ondrop={(e) => handleDrop(e, index)}
 				ondragend={resetDrag}
-				class="relative {dragIndex === index ? 'opacity-50' : ''} {overIndex === index &&
-				dragIndex !== null &&
-				dragIndex !== index
-					? 'ring-2 ring-primary-500'
+				class="relative rounded-xl transition-[transform,box-shadow,opacity] duration-slow ease-out {dragIndex ===
+				index
+					? 'scale-[0.98] opacity-50 outline-2 outline-dashed outline-primary-500'
+					: ''} {overIndex === index && dragIndex !== null && dragIndex !== index
+					? '-translate-y-px shadow-md ring-2 ring-primary-500'
 					: ''}"
 			>
 				{#if canReorder && !etapa.is_google_meeting}
@@ -177,7 +184,7 @@
 							onclick={() => move(index, -1)}
 							disabled={index === 0}
 							aria-label={`Mover etapa "${etapa.descricao ?? ''}" para cima`}
-							class="rounded border border-border-subtle bg-surface px-1 text-xs text-text-secondary hover:bg-surface-muted disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="rounded border border-border-subtle bg-surface px-1 text-xs text-text-secondary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-primary-700 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 						>
 							▲
 						</button>
@@ -186,7 +193,7 @@
 							onclick={() => move(index, 1)}
 							disabled={index === etapas.length - 1}
 							aria-label={`Mover etapa "${etapa.descricao ?? ''}" para baixo`}
-							class="rounded border border-border-subtle bg-surface px-1 text-xs text-text-secondary hover:bg-surface-muted disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="rounded border border-border-subtle bg-surface px-1 text-xs text-text-secondary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-primary-700 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 						>
 							▼
 						</button>

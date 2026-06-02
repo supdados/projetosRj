@@ -229,7 +229,7 @@
 			</h1>
 			{#if summary}
 				<span
-					class="inline-flex items-center gap-1 rounded-sm border border-primary-500 bg-primary-100 px-2 py-1 text-xs font-medium text-primary-700"
+					class="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-primary-500/40 bg-primary-100 px-2.5 py-1 text-xs font-semibold text-primary-700"
 				>
 					Projetos no foco: {Math.max(0, summary.total_projects - focusDelta)}
 				</span>
@@ -353,9 +353,15 @@
 			<div
 				role="status"
 				aria-live="polite"
-				class="rounded-lg border border-border-subtle bg-surface px-5 py-8 text-center text-text-muted"
+				class="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border-subtle bg-surface px-5 py-8 text-center"
 			>
-				Nenhum projeto pendente para os filtros selecionados.
+				<i class="fas fa-check-circle text-4xl text-primary-600" aria-hidden="true"></i>
+				<h2 class="font-heading text-xl font-bold text-text-primary">
+					Nenhum projeto pendente para os filtros selecionados.
+				</h2>
+				<p class="text-sm text-text-secondary">
+					Ajuste os filtros para explorar outras frentes de acompanhamento.
+				</p>
 			</div>
 		{:else}
 			<div class="flex flex-col gap-4" aria-busy={loadState !== 'ready'}>

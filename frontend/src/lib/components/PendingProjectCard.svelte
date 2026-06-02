@@ -19,6 +19,7 @@
 	 */
 	import { base } from '$app/paths';
 	import { slide } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import Card from './Card.svelte';
 	import Badge from './Badge.svelte';
 	import { flash } from '$lib/stores/flash';
@@ -323,51 +324,51 @@
 	{@const progress = progressOf(etapa)}
 	{@const key = statusKey(etapa.id)}
 	{@const isDone = key === 'done'}
-	<tr class="border-b border-border-subtle last:border-0">
-		<td class="py-2 pr-3 align-top {isDone ? 'text-text-muted line-through' : 'text-text-primary'}">
+	<tr class="group border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted/50">
+		<td class="py-2.5 pr-3 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}">
 			{etapa.descricao}
 		</td>
-		<td class="py-2 pr-3 align-top text-text-secondary">
+		<td class="py-2.5 pr-3 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
 			{etapa.responsavel || 'Não informado'}
 		</td>
-		<td class="py-2 pr-3 align-top text-text-secondary">
+		<td class="py-2.5 pr-3 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
 			{#if etapa.data_inicio}
 				<time datetime={etapa.data_inicio}>{formatDateBr(etapa.data_inicio)}</time>
 			{:else}—{/if}
 		</td>
-		<td class="py-2 pr-3 align-top text-text-secondary">
+		<td class="py-2.5 pr-3 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
 			{#if etapa.data_fim}
 				<time datetime={etapa.data_fim}>{formatDateBr(etapa.data_fim)}</time>
 			{:else}—{/if}
 		</td>
-		<td class="py-2 pr-3 align-top">
+		<td class="py-2.5 pr-3 align-middle">
 			<Badge tone={bucketTone[bucket]}>{bucketLabel[bucket]}</Badge>
 		</td>
-		<td class="py-2 pr-3 align-top">
+		<td class="py-2.5 pr-3 text-center align-middle">
 			<button
 				type="button"
 				onclick={() => openQuickAdd(etapa)}
 				title="Ver e adicionar tarefas desta etapa"
 				aria-label="Ver e adicionar tarefas desta etapa"
-				class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-2.5 py-1 text-xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				<i class="fas fa-clipboard-list" aria-hidden="true"></i>
 				<span>{progress.done}/{progress.total}</span>
 				<i class="fas fa-plus text-text-muted" aria-hidden="true"></i>
 			</button>
 		</td>
-		<td class="py-2 align-top">
+		<td class="py-2.5 text-center align-middle">
 			<button
 				type="button"
 				onclick={() => void toggleStatus(etapa)}
 				disabled={inFlightEtapa === etapa.id}
 				title={STATUS_TITLE[key]}
-				class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50
+				class="inline-flex min-w-[7rem] items-center justify-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50
 					{key === 'done'
-					? 'border-success text-success'
+					? 'border-success/40 bg-surface-muted text-success hover:bg-surface-muted'
 					: key === 'started'
-						? 'border-primary-500 text-primary-700'
-						: 'border-border-subtle text-text-secondary'}"
+						? 'border-primary-500/40 bg-primary-100 text-primary-700 hover:bg-primary-100'
+						: 'border-border-subtle bg-surface text-text-secondary hover:border-primary-500 hover:bg-surface-muted'}"
 			>
 				<i class={STATUS_ICON[key]} aria-hidden="true"></i>
 				<span>{STATUS_LABEL[key]}</span>
@@ -379,15 +380,17 @@
 <Card labelId={headingId}>
 	<div class="flex flex-col gap-4">
 		<header
-			class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+			class="-mx-5 -mt-5 flex flex-col gap-2 border-b border-border-subtle px-5 pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between"
 		>
 			<div class="flex min-w-0 flex-col gap-1">
 				<a
 					href={`${base}/projetos/${project.id}`}
 					id={headingId}
-					class="truncate font-heading text-lg font-semibold text-text-primary no-underline hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					title="Abrir projeto"
+					class="inline-flex min-w-0 items-center gap-2 font-heading text-lg font-bold text-text-primary no-underline transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
-					{project.titulo}
+					<i class="fas fa-folder-open shrink-0 text-primary-600" aria-hidden="true"></i>
+					<span class="truncate">{project.titulo}</span>
 				</a>
 				<span class="text-xs text-text-muted">
 					Órgão: <strong class="font-medium text-text-secondary">{orgaoLabel}</strong>
@@ -398,9 +401,20 @@
 				</span>
 			</div>
 
-			<ul class="flex flex-wrap items-center gap-2" aria-label="Resumo de etapas por janela">
+			<ul
+				class="flex flex-wrap items-center justify-end gap-1.5"
+				aria-label="Resumo de etapas por janela"
+			>
 				{#each chips as chip (chip.key)}
-					<li><Badge tone={chip.tone}>{chip.count} {chip.label}</Badge></li>
+					<li>
+						<Badge tone={chip.tone}>
+							{#if chip.key === 'atrasadas'}
+								<i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+							{/if}
+							<span class="font-bold">{chip.count}</span>
+							{chip.label}
+						</Badge>
+					</li>
 				{/each}
 				{#if chips.length === 0}
 					<li><Badge tone="neutral">Sem pendências na janela</Badge></li>
@@ -416,15 +430,15 @@
 					<caption class="sr-only">Etapas pendentes de {project.titulo}</caption>
 					<thead>
 						<tr
-							class="border-b border-border-subtle text-left text-xs uppercase tracking-wide text-text-muted"
+							class="border-b border-border-subtle bg-surface-muted/60 text-left text-xs font-bold uppercase tracking-caps text-text-muted"
 						>
-							<th scope="col" class="py-2 pr-3 font-semibold">Etapa</th>
-							<th scope="col" class="py-2 pr-3 font-semibold">Responsável</th>
-							<th scope="col" class="py-2 pr-3 font-semibold">Início</th>
-							<th scope="col" class="py-2 pr-3 font-semibold">Fim</th>
-							<th scope="col" class="py-2 pr-3 font-semibold">Janela</th>
-							<th scope="col" class="py-2 pr-3 font-semibold">Tarefas</th>
-							<th scope="col" class="py-2 font-semibold">Status</th>
+							<th scope="col" class="px-2 py-2.5 font-bold">Etapa</th>
+							<th scope="col" class="px-2 py-2.5 font-bold">Responsável</th>
+							<th scope="col" class="px-2 py-2.5 font-bold">Início</th>
+							<th scope="col" class="px-2 py-2.5 font-bold">Fim</th>
+							<th scope="col" class="px-2 py-2.5 font-bold">Janela</th>
+							<th scope="col" class="px-2 py-2.5 text-center font-bold">Tarefas</th>
+							<th scope="col" class="px-2 py-2.5 text-center font-bold">Status</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -437,13 +451,13 @@
 		{/if}
 
 		{#if row.qtd_outras > 0}
-			<div class="flex flex-col gap-2">
+			<div class="-mx-5 -mb-5 flex flex-col border-t border-border-subtle bg-surface-muted/30">
 				<button
 					type="button"
 					onclick={toggleExpanded}
 					aria-expanded={isExpanded}
 					aria-controls={otherPanelId}
-					class="inline-flex w-fit items-center gap-2 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex w-fit items-center gap-2 rounded-md px-5 py-2.5 text-sm font-semibold text-primary-700 transition-colors duration-fast hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<i class={isExpanded ? 'fas fa-minus' : 'fas fa-plus'} aria-hidden="true"></i>
 					<span>
@@ -452,24 +466,28 @@
 				</button>
 
 				{#if isExpanded}
-					<div id={otherPanelId} transition:slide={{ duration: 240 }}>
-						<div class="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
+					<div
+						id={otherPanelId}
+						class="overflow-hidden border-t border-dashed border-border-subtle"
+						transition:slide={{ duration: 340, easing: cubicOut }}
+					>
+						<div class="px-5 py-2 text-xs font-semibold uppercase tracking-caps text-text-muted">
 							Outras etapas
 						</div>
-						<div class="overflow-x-auto">
+						<div class="overflow-x-auto px-5 pb-3">
 							<table class="w-full border-collapse text-sm">
 								<caption class="sr-only">Outras etapas de {project.titulo}</caption>
 								<thead>
 									<tr
-										class="border-b border-border-subtle text-left text-xs uppercase tracking-wide text-text-muted"
+										class="border-b border-border-subtle bg-surface-muted/60 text-left text-xs font-bold uppercase tracking-caps text-text-muted"
 									>
-										<th scope="col" class="py-2 pr-3 font-semibold">Etapa</th>
-										<th scope="col" class="py-2 pr-3 font-semibold">Responsável</th>
-										<th scope="col" class="py-2 pr-3 font-semibold">Início Prev.</th>
-										<th scope="col" class="py-2 pr-3 font-semibold">Fim Prev.</th>
-										<th scope="col" class="py-2 pr-3 font-semibold">Janela</th>
-										<th scope="col" class="py-2 pr-3 font-semibold">Tarefas</th>
-										<th scope="col" class="py-2 font-semibold">Status</th>
+										<th scope="col" class="px-2 py-2.5 font-bold">Etapa</th>
+										<th scope="col" class="px-2 py-2.5 font-bold">Responsável</th>
+										<th scope="col" class="px-2 py-2.5 font-bold">Início Prev.</th>
+										<th scope="col" class="px-2 py-2.5 font-bold">Fim Prev.</th>
+										<th scope="col" class="px-2 py-2.5 font-bold">Janela</th>
+										<th scope="col" class="px-2 py-2.5 text-center font-bold">Tarefas</th>
+										<th scope="col" class="px-2 py-2.5 text-center font-bold">Status</th>
 									</tr>
 								</thead>
 								<tbody>

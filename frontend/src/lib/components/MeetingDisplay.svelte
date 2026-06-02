@@ -90,7 +90,7 @@
 				href={meeting.meet_link}
 				target="_blank"
 				rel="noopener noreferrer"
-				class="inline-flex items-center gap-1 rounded-md border border-primary-500 bg-primary-100 px-2.5 py-1 text-sm font-medium text-primary-700 no-underline transition-colors duration-fast hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex items-center gap-1 rounded-md border border-primary-500 bg-primary-100 px-2.5 py-1 text-sm font-medium text-primary-700 no-underline transition-colors duration-fast ease-out hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				<i class="fas fa-video" aria-hidden="true"></i>
 				Abrir Meet
@@ -98,7 +98,7 @@
 			<button
 				type="button"
 				onclick={copyMeetLink}
-				class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-sm font-medium text-text-secondary transition-colors duration-fast ease-out hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				aria-live="polite"
 			>
 				<i class="fas {copied ? 'fa-check' : 'fa-copy'}" aria-hidden="true"></i>
@@ -112,7 +112,7 @@
 					type="button"
 					onclick={onEdit}
 					disabled={busy}
-					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-sm font-medium text-text-primary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-primary-700 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<i class="fas fa-pen" aria-hidden="true"></i>
 					Editar
@@ -122,7 +122,7 @@
 				type="button"
 				onclick={onDelete}
 				disabled={busy}
-				class="inline-flex items-center gap-1 rounded-md border border-danger bg-surface px-2.5 py-1 text-sm font-medium text-danger transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+				class="inline-flex items-center gap-1 rounded-md border border-danger bg-surface px-2.5 py-1 text-sm font-medium text-danger transition-colors duration-fast ease-out hover:bg-danger hover:text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 			>
 				<i class="fas {busy ? 'fa-spinner fa-spin' : 'fa-trash'}" aria-hidden="true"></i>
 				{busy ? 'Apagando…' : 'Apagar'}

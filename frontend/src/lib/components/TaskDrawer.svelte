@@ -28,6 +28,8 @@
 	import { fetchProjectDetail } from '$lib/api/projectDetail';
 	import type { EtapaDetail } from '$lib/types/projectDetail';
 	import { focusTrap } from '$lib/actions/focusTrap';
+	import { fade, fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import Badge from './Badge.svelte';
 	import CommentsPanel from './CommentsPanel.svelte';
 	import AttachmentsPanel from './AttachmentsPanel.svelte';
@@ -225,35 +227,50 @@
 </script>
 
 {#if isOpen}
-	<!-- Backdrop -->
+	<!--
+		Backdrop — fidelidade a drawer.css `.task-item-drawer-backdrop`:
+		rgba(7,20,33,0.34) + leve blur, fade 0.2s ease.
+	-->
 	<div
-		class="fixed inset-0 z-modal bg-black/40"
+		class="fixed inset-0 z-modal bg-[rgba(7,20,33,0.34)] backdrop-blur-[1.2px]"
 		role="presentation"
 		onclick={() => void close()}
+		transition:fade={{ duration: 200 }}
 	></div>
 
+	<!--
+		Painel lateral — fidelidade a drawer.css `.task-item-drawer`:
+		width min(460px,100vw), borda esquerda, sombra -14px 0 34px, e slide-in
+		translateX(100% -> 0) com 0.24s cubic-bezier(0.22,1,0.36,1) (~cubicOut).
+	-->
 	<div
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="task-drawer-title"
 		tabindex="-1"
-		class="fixed right-0 top-0 z-modal flex h-full w-full max-w-md flex-col gap-4 overflow-y-auto border-l border-border-subtle bg-surface p-5 shadow-lg"
+		class="fixed right-0 top-0 z-modal flex h-full w-[min(460px,100vw)] flex-col overflow-y-auto border-l border-border-subtle bg-surface shadow-[-14px_0_34px_rgba(12,44,74,0.16)]"
 		onkeydown={onKeydown}
 		use:focusTrap
+		transition:fly={{ x: 460, duration: 240, easing: cubicOut, opacity: 1 }}
 	>
-		<header class="flex items-start justify-between gap-3">
-			<div class="flex min-w-0 flex-col gap-1">
-				<h2 id="task-drawer-title" class="font-heading text-lg font-bold text-text-primary">
+		<header
+			class="flex items-start justify-between gap-[0.54rem] border-b border-border-subtle bg-surface-elevated/70 px-[0.92rem] pb-[0.76rem] pt-[0.86rem]"
+		>
+			<div class="flex min-w-0 flex-1 flex-col gap-1">
+				<p
+					id="task-drawer-title"
+					class="m-0 text-2xs font-semibold uppercase tracking-wide text-text-muted"
+				>
 					Tarefa
-				</h2>
+				</p>
 				{#if detail?.project}
-					<span class="truncate text-xs text-text-secondary">{detail.project.titulo}</span>
+					<span class="truncate text-md font-bold text-text-primary">{detail.project.titulo}</span>
 				{/if}
 				{#if detail?.etapa}
 					<span class="truncate text-xs text-text-muted">Etapa: {detail.etapa.descricao}</span>
 				{/if}
 			</div>
-			<div class="flex shrink-0 items-center gap-1">
+			<div class="flex shrink-0 items-center gap-[0.34rem]">
 				{#if detail && detail.permissions.can_delete}
 					<button
 						type="button"
@@ -261,21 +278,32 @@
 						aria-label="Excluir tarefa"
 						title="Excluir tarefa"
 						disabled={$store.acting}
-						class="rounded-md border border-border-subtle px-2 py-1 text-danger hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+						class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-danger/40 bg-surface text-danger transition-all duration-fast hover:border-danger/60 hover:bg-danger/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
 					>
-						🗑
+						<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
+							<path d="M10 11v6M14 11v6" />
+						</svg>
 					</button>
 				{/if}
 				<button
 					type="button"
 					onclick={() => void close()}
 					aria-label="Fechar"
-					class="rounded-md border border-border-subtle px-2 py-1 text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-border-subtle bg-surface text-lg leading-none text-text-secondary transition-all duration-fast hover:border-border-strong hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
-					✕
+					<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M18 6 6 18M6 6l12 12" />
+					</svg>
 				</button>
 			</div>
 		</header>
+
+		<!--
+			Corpo rolável — fidelidade a drawer.css `.task-item-drawer-body`:
+			padding 0.86rem 0.92rem, coluna com gap 0.68rem.
+		-->
+		<div class="flex flex-1 flex-col gap-[0.68rem] overflow-y-auto px-[0.92rem] py-[0.86rem]">
 
 		{#if confirmingDelete}
 			<!-- Mini-confirm inline (paridade com #taskItemDrawerDeleteConfirm). -->
@@ -516,5 +544,6 @@
 				<AttachmentsPanel {store} />
 			</div>
 		{/if}
+		</div>
 	</div>
 {/if}

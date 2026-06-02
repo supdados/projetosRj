@@ -64,93 +64,123 @@
 	}
 </script>
 
-<section aria-labelledby="drawer-comments-title" class="flex flex-col gap-3">
-	<h3 id="drawer-comments-title" class="text-sm font-semibold text-text-primary">
-		Comentários ({comments.length})
+<section
+	aria-labelledby="drawer-comments-title"
+	class="flex flex-col gap-1 rounded-xl border border-border-subtle bg-gradient-to-b from-surface to-surface-muted/40 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
+>
+	<h3
+		id="drawer-comments-title"
+		class="flex items-center gap-2 px-1 py-1 text-sm font-bold text-text-primary"
+	>
+		<span>Comentários</span>
+		<span
+			class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-border-subtle bg-surface px-1.5 text-xs font-semibold text-text-secondary"
+		>
+			{comments.length}
+		</span>
 	</h3>
 
-	<form class="flex flex-col gap-2" onsubmit={(e) => { e.preventDefault(); void submitNew(); }}>
-		<label for="drawer-new-comment" class="sr-only">Novo comentário</label>
-		<textarea
-			id="drawer-new-comment"
-			bind:value={newComment}
-			rows="2"
-			placeholder="Escreva um comentário…"
-			class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-		></textarea>
-		<div class="flex justify-end">
-			<button
-				type="submit"
-				disabled={busy || newComment.trim() === ''}
-				class="rounded-md bg-primary-600 px-4 py-1.5 text-sm font-medium text-white transition-colors duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-			>
-				Comentar
-			</button>
-		</div>
-	</form>
-
 	{#if comments.length === 0}
-		<p class="text-sm text-text-muted">Nenhum comentário ainda.</p>
+		<p
+			class="rounded-lg border border-dashed border-border-subtle bg-surface px-3 py-2.5 text-center text-xs text-text-secondary"
+		>
+			Nenhum comentário ainda.
+		</p>
 	{:else}
-		<ul class="flex flex-col gap-3">
+		<ul class="flex max-h-[40vh] flex-col gap-2 overflow-y-auto px-1 py-0.5">
 			{#each comments as comment (comment.id)}
-				<li class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2">
-					<div class="flex flex-wrap items-baseline justify-between gap-2">
-						<span class="text-xs font-semibold text-text-primary">{comment.author_name}</span>
-						<span class="text-xs text-text-muted">{formatDate(comment.updated_at ?? comment.created_at)}</span>
-					</div>
-
-					{#if editingId === comment.id}
-						<textarea
-							bind:value={editText}
-							rows="2"
-							aria-label="Editar comentário"
-							class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-						></textarea>
-						<div class="flex gap-2">
-							<button
-								type="button"
-								disabled={busy || editText.trim() === ''}
-								onclick={() => saveEdit(comment.id)}
-								class="rounded-md bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				<li
+					class="group flex flex-col gap-0.5 rounded-lg border border-l-4 border-border-subtle border-l-primary-500 bg-surface px-2.5 py-2 shadow-sm transition-shadow duration-fast"
+				>
+					<div class="flex items-center gap-1.5">
+						<span class="text-xs font-semibold text-primary-700">{comment.author_name}</span>
+						<span class="text-2xs text-text-muted">{formatDate(comment.updated_at ?? comment.created_at)}</span>
+						{#if (comment.can_edit || comment.can_delete) && editingId !== comment.id}
+							<div
+								class="ml-auto inline-flex items-center gap-1 opacity-0 transition-opacity duration-fast group-hover:opacity-100 group-focus-within:opacity-100"
 							>
-								Salvar
-							</button>
-							<button
-								type="button"
-								onclick={cancelEdit}
-								class="rounded-md border border-border-subtle px-3 py-1 text-xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-							>
-								Cancelar
-							</button>
-						</div>
-					{:else}
-						<p class="whitespace-pre-wrap text-sm text-text-secondary">{comment.content}</p>
-						{#if comment.can_edit || comment.can_delete}
-							<div class="flex gap-3">
 								{#if comment.can_edit}
 									<button
 										type="button"
 										onclick={() => startEdit(comment.id, comment.content)}
-										class="text-xs font-medium text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										aria-label="Editar comentário"
+										class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle bg-surface text-2xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 									>
-										Editar
+										<i class="fas fa-pen" aria-hidden="true"></i>
 									</button>
 								{/if}
 								{#if comment.can_delete}
 									<button
 										type="button"
 										onclick={() => remove(comment.id)}
-										class="text-xs font-medium text-danger hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+										aria-label="Excluir comentário"
+										class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-danger bg-surface text-2xs font-semibold text-danger transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 									>
-										Excluir
+										<i class="fas fa-trash-alt" aria-hidden="true"></i>
 									</button>
 								{/if}
 							</div>
 						{/if}
+					</div>
+
+					{#if editingId === comment.id}
+						<div class="mt-1.5 flex flex-col gap-1.5">
+							<textarea
+								bind:value={editText}
+								rows="2"
+								aria-label="Editar comentário"
+								class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							></textarea>
+							<div class="flex justify-end gap-1.5">
+								<button
+									type="button"
+									disabled={busy || editText.trim() === ''}
+									onclick={() => saveEdit(comment.id)}
+									class="rounded-md border border-primary-500 bg-primary-100 px-2.5 py-1 text-2xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+								>
+									Salvar
+								</button>
+								<button
+									type="button"
+									onclick={cancelEdit}
+									class="rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-2xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								>
+									Cancelar
+								</button>
+							</div>
+						</div>
+					{:else}
+						<p class="m-0 whitespace-pre-wrap text-sm leading-normal text-text-secondary">{comment.content}</p>
 					{/if}
 				</li>
 			{/each}
 		</ul>
 	{/if}
+
+	<form
+		class="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface p-2 shadow-sm"
+		onsubmit={(e) => { e.preventDefault(); void submitNew(); }}
+	>
+		<label for="drawer-new-comment" class="sr-only">Novo comentário</label>
+		<textarea
+			id="drawer-new-comment"
+			bind:value={newComment}
+			rows="2"
+			placeholder="Escreva um comentário…"
+			class="max-h-[180px] min-h-[70px] w-full resize-none rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		></textarea>
+		<div class="flex items-center justify-between gap-2">
+			<span class="text-2xs text-text-muted">Comente para registrar o andamento.</span>
+			<button
+				type="submit"
+				disabled={busy || newComment.trim() === ''}
+				title="Comentar"
+				aria-label="Comentar"
+				class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md border border-primary-500 bg-primary-100 text-xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				<i class="fas fa-paper-plane" aria-hidden="true"></i>
+				<span class="sr-only">Comentar</span>
+			</button>
+		</div>
+	</form>
 </section>

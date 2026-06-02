@@ -34,7 +34,30 @@ export default {
 				success: 'var(--ds-color-success-600)',
 				warning: 'var(--ds-color-warning-600)',
 				danger: 'var(--ds-color-danger-600)',
-				info: 'var(--ds-color-info-600)'
+				info: 'var(--ds-color-info-600)',
+				// Cor da prioridade "alta" no original (#ea580c, laranja) — nao havia
+				// token semantico equivalente; mapeada para CSS var (ajusta no dark).
+				orange: 'var(--ds-color-orange-600)',
+				// Cores de prioridade (badges) — valores 1:1 de 00-foundation.css:1650.
+				priority: {
+					baixa: 'var(--ds-color-priority-baixa)',
+					media: 'var(--ds-color-priority-media)',
+					alta: 'var(--ds-color-priority-alta)',
+					urgente: 'var(--ds-color-priority-urgente)'
+				}
+			},
+			backgroundImage: {
+				// Gradiente do topbar/brand do original (#1769a8). Util reutilizavel.
+				'topnav-gradient':
+					'linear-gradient(135deg, var(--ds-color-topnav-from) 0%, var(--ds-color-topnav-to) 100%)',
+				// Skeleton shimmer (90deg) — 10-skeleton.css:52.
+				'skeleton-shimmer':
+					'linear-gradient(90deg, var(--ds-color-skeleton-base) 0%, var(--ds-color-skeleton-highlight) 50%, var(--ds-color-skeleton-base) 100%)',
+				// Glass card (135deg) — 20-glass-forms-and-admin.css:162.
+				'glass-card':
+					'linear-gradient(135deg, var(--ds-glass-card-from) 0%, var(--ds-glass-card-to) 100%)',
+				'glass-card-header':
+					'linear-gradient(135deg, var(--ds-glass-header-from) 0%, var(--ds-glass-header-to) 100%)'
 			},
 			fontFamily: {
 				body: [
@@ -139,6 +162,58 @@ export default {
 				'modal-backdrop': '1040',
 				modal: '1050',
 				toast: '1080'
+			},
+			// Keyframes globais reproduzidos 1:1 do legacy CSS (mesmos nomes/passos).
+			keyframes: {
+				// 00-foundation.css:579
+				'app-dropdown-in': {
+					from: { opacity: '0', transform: 'translateY(-6px) scale(0.985)' },
+					to: { opacity: '1', transform: 'translateY(0) scale(1)' }
+				},
+				// 00-foundation.css:1402
+				'search-focus-pulse': {
+					'0%': {
+						boxShadow: '0 0 0 0 rgba(0, 90, 146, 0.36)',
+						backgroundColor: 'rgba(0, 90, 146, 0.12)'
+					},
+					'60%': {
+						boxShadow: '0 0 0 10px rgba(0, 90, 146, 0)',
+						backgroundColor: 'rgba(0, 90, 146, 0.08)'
+					},
+					'100%': {
+						boxShadow: '0 0 0 0 rgba(0, 90, 146, 0)',
+						backgroundColor: 'transparent'
+					}
+				},
+				// 10-skeleton.css:1997
+				'skeleton-loading': {
+					'0%': { backgroundPosition: '200% 0' },
+					'100%': { backgroundPosition: '-200% 0' }
+				},
+				// 20-glass-forms-and-admin.css:752
+				'modal-slide-in': {
+					from: { opacity: '0', transform: 'translateY(-50px) scale(0.9)' },
+					to: { opacity: '1', transform: 'translateY(0) scale(1)' }
+				},
+				// 20-glass-forms-and-admin.css:763
+				'glass-shimmer': {
+					'0%': { transform: 'translateX(-100%)' },
+					'100%': { transform: 'translateX(100%)' }
+				},
+				// style.css:96 (chatbot panel) — entrada de painel/dropdown rico.
+				'panel-in': {
+					from: { opacity: '0', transform: 'translateY(16px) scale(0.95)' },
+					to: { opacity: '1', transform: 'translateY(0) scale(1)' }
+				}
+			},
+			animation: {
+				// Duracoes/easings 1:1 do original.
+				'dropdown-in': 'app-dropdown-in 0.16s ease-out',
+				'search-focus-pulse': 'search-focus-pulse 2.1s ease-out 1',
+				'skeleton-loading': 'skeleton-loading 1.5s infinite',
+				'modal-slide-in': 'modal-slide-in 0.3s cubic-bezier(0.34, 1.15, 0.64, 1) both',
+				'glass-shimmer': 'glass-shimmer 1.5s ease-in-out infinite',
+				'panel-in': 'panel-in 0.22s cubic-bezier(0.34, 1.15, 0.64, 1) both'
 			}
 		}
 	},

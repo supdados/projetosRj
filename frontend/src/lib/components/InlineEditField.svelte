@@ -184,8 +184,17 @@
 			{/if}
 		</div>
 	{:else}
+		<!--
+			Modo leitura. Fidelidade a .editable-field do original: a área de valor
+			tem hover sutil (background-color shift, transição 0.16s ease) quando
+			editável, sinalizando affordance de clique-para-editar.
+		-->
 		<div class="flex items-start justify-between gap-2">
-			<div class="min-w-0 text-sm text-text-primary">
+			<div
+				class="min-w-0 rounded-md text-sm text-text-primary transition-colors duration-fast ease-out {!readonly
+					? 'px-1 -mx-1 hover:bg-surface-muted'
+					: ''}"
+			>
 				{#if display}
 					{@render display(value)}
 				{:else if hasValue}
@@ -200,7 +209,7 @@
 					onclick={enterEdit}
 					disabled={pending}
 					aria-label={`Editar ${label}`}
-					class="shrink-0 rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="shrink-0 rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs font-medium text-text-secondary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-primary-700 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					Editar
 				</button>

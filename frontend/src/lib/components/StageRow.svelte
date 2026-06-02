@@ -134,9 +134,14 @@
 	}
 </script>
 
+<!--
+	Card da etapa. Fidelidade a .etapa-v4-table-card / .etapa-draggable-row do
+	original: raio 14px (rounded-xl), sombra suave (0 8px 24px rgba(20,45,78,.06)),
+	e micro-lift no hover (translateY(-1px) + sombra), transição all 0.16s ease.
+-->
 <article
 	aria-label={`Etapa: ${etapa.descricao ?? 'sem descrição'}`}
-	class="flex flex-col gap-3 rounded-md border border-border-subtle bg-surface px-4 py-3 {etapa.done
+	class="stage-row flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface px-4 py-3 shadow-sm transition-[transform,box-shadow,border-color] duration-fast ease-out hover:-translate-y-px hover:border-border-strong hover:shadow-md {etapa.done
 		? 'opacity-90'
 		: ''}"
 >
@@ -144,7 +149,7 @@
 		<div class="flex min-w-0 items-start gap-2">
 			{#if !locked}
 				<span
-					class="mt-0.5 cursor-grab select-none text-text-muted"
+					class="mt-0.5 cursor-grab select-none text-text-muted transition-colors duration-fast ease-out hover:text-text-secondary active:cursor-grabbing"
 					aria-label="Arraste para reordenar a etapa"
 					title="Arraste para reordenar"
 				>
@@ -253,23 +258,23 @@
 	<!-- Toggles iniciada/concluída -->
 	{#if !locked}
 		<div class="flex flex-wrap items-center gap-4">
-			<label class="inline-flex items-center gap-2 text-sm text-text-secondary">
+			<label class="inline-flex cursor-pointer items-center gap-2 text-sm text-text-secondary transition-colors duration-fast ease-out hover:text-text-primary">
 				<input
 					type="checkbox"
 					checked={etapa.iniciada}
 					disabled={busy}
 					onchange={onToggleIniciada}
-					class="h-4 w-4 rounded border-border-subtle text-primary-500 focus:ring-primary-500"
+					class="h-4 w-4 rounded border-border-subtle text-primary-500 transition-colors duration-fast ease-out focus:ring-primary-500"
 				/>
 				Iniciada
 			</label>
-			<label class="inline-flex items-center gap-2 text-sm text-text-secondary">
+			<label class="inline-flex cursor-pointer items-center gap-2 text-sm text-text-secondary transition-colors duration-fast ease-out hover:text-text-primary">
 				<input
 					type="checkbox"
 					checked={etapa.done}
 					disabled={busy || !etapa.iniciada}
 					onchange={onToggleDone}
-					class="h-4 w-4 rounded border-border-subtle text-success focus:ring-success"
+					class="h-4 w-4 rounded border-border-subtle text-success transition-colors duration-fast ease-out focus:ring-success"
 				/>
 				Concluída
 			</label>
@@ -333,7 +338,7 @@
 		<!-- svelte-ignore a11y_no_redundant_roles -->
 		<summary
 			onclick={toggleTasks}
-			class="cursor-pointer list-none text-sm text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			class="cursor-pointer list-none text-sm text-text-secondary transition-colors duration-fast ease-out hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 		>
 			Tarefas:
 			<strong class="font-medium text-text-primary">
@@ -379,7 +384,7 @@
 				type="button"
 				onclick={onEdit}
 				disabled={busy}
-				class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-primary-700 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				Editar etapa
 			</button>
@@ -387,7 +392,7 @@
 				type="button"
 				onclick={onDelete}
 				disabled={busy}
-				class="rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+				class="rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger transition-colors duration-fast ease-out hover:bg-danger hover:text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 			>
 				Excluir
 			</button>

@@ -41,6 +41,38 @@
 	--ds-color-warning-600: #ca8a04;
 	--ds-color-danger-600: #dc2626;
 	--ds-color-info-600: #0ea5e9;
+	/* Laranja da prioridade "alta" (00-foundation.css:1650 → #ea580c) */
+	--ds-color-orange-600: #ea580c;
+
+	/* Cores de prioridade dos badges — valores 1:1 de 00-foundation.css:1634-1652 */
+	--ds-color-priority-baixa: #16a34a;
+	--ds-color-priority-media: #ca8a04;
+	--ds-color-priority-alta: #ea580c;
+	--ds-color-priority-urgente: #dc2626;
+
+	/* Fundos translucidos dos stat-cards da dashboard (00-foundation.css:19-23) */
+	--ds-color-primary-light-bg: rgba(0, 90, 146, 0.08);
+	--ds-color-success-light-bg: rgba(22, 163, 74, 0.08);
+	--ds-color-info-light-bg: rgba(202, 138, 4, 0.08);
+	--ds-color-danger-light-bg: rgba(220, 38, 38, 0.08);
+
+	/* Topbar/brand (00-foundation.css:191 → #1769a8) */
+	--ds-color-topnav-from: #1769a8;
+	--ds-color-topnav-to: #1769a8;
+
+	/* Skeleton shimmer (10-skeleton.css:52) */
+	--ds-color-skeleton-base: #eeeeee;
+	--ds-color-skeleton-highlight: #f5f5f5;
+
+	/* Glass card (20-glass-forms-and-admin.css:162-225) */
+	--ds-glass-card-from: rgba(255, 255, 255, 0.9);
+	--ds-glass-card-to: rgba(255, 255, 255, 0.7);
+	--ds-glass-header-from: rgba(0, 90, 146, 0.04);
+	--ds-glass-header-to: rgba(0, 90, 146, 0.02);
+	--ds-glass-border: rgba(255, 255, 255, 0.4);
+	--ds-glass-shadow: 0 4px 16px rgba(0, 90, 146, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04),
+		inset 0 1px 0 rgba(255, 255, 255, 0.8);
+	--ds-glass-border-hover: rgba(0, 90, 146, 0.15);
 
 	/* Semanticas (light) — consumidas pelo tailwind.config (canvas/surface/text/border) */
 	--color-canvas: #f7f9fc;
@@ -75,6 +107,37 @@
 	--ds-color-danger-600: #d97a7a;
 	--ds-color-info-600: #63a6db;
 
+	/* Prioridade no dark — alinhada aos tons escuros da paleta (theme-dark.css).
+	   "alta" (laranja) amaciada para o fundo escuro; demais reusam os tons dark. */
+	--ds-color-orange-600: #e08b5c;
+	--ds-color-priority-baixa: #49b987;
+	--ds-color-priority-media: #d8a24d;
+	--ds-color-priority-alta: #e08b5c;
+	--ds-color-priority-urgente: #d97a7a;
+
+	/* Stat-card translucidos no dark (mesmos hues, alfa levemente maior) */
+	--ds-color-primary-light-bg: rgba(78, 149, 204, 0.14);
+	--ds-color-success-light-bg: rgba(73, 185, 135, 0.14);
+	--ds-color-info-light-bg: rgba(216, 162, 77, 0.14);
+	--ds-color-danger-light-bg: rgba(217, 122, 122, 0.14);
+
+	/* Topbar no dark (theme-dark.css:56 → surface translucido) */
+	--ds-color-topnav-from: rgba(39, 52, 71, 0.94);
+	--ds-color-topnav-to: rgba(39, 52, 71, 0.94);
+
+	/* Skeleton shimmer no dark (theme-dark.css:691) */
+	--ds-color-skeleton-base: #32445b;
+	--ds-color-skeleton-highlight: #3a4f68;
+
+	/* Glass card no dark (theme-dark.css:525-540 → surface solido) */
+	--ds-glass-card-from: var(--color-surface);
+	--ds-glass-card-to: var(--color-surface);
+	--ds-glass-header-from: var(--color-surface-elevated);
+	--ds-glass-header-to: var(--color-surface-elevated);
+	--ds-glass-border: var(--color-border);
+	--ds-glass-shadow: 0 12px 30px rgba(7, 11, 18, 0.35);
+	--ds-glass-border-hover: var(--color-border-strong);
+
 	color-scheme: dark;
 }
 
@@ -103,5 +166,106 @@
 		font-family: 'ManropeVariable', 'Manrope', 'Inter', system-ui, sans-serif;
 		line-height: 1.25;
 		letter-spacing: -0.01em;
+	}
+}
+
+@layer components {
+	/*
+	 * Utilitarios reutilizaveis portados do legacy CSS. Reproduzem valores exatos
+	 * (padding, raio, gradientes, alfa). As telas consomem via className; o dark
+	 * troca sozinho pelas CSS vars semanticas — sem variantes dark: no markup.
+	 */
+
+	/* Badge de prioridade — 00-foundation.css:1625-1652 (padding/raio/uppercase 1:1) */
+	.priority-badge {
+		display: inline-block;
+		padding: 0.25rem 0.75rem;
+		font-size: theme('fontSize.xs');
+		font-weight: theme('fontWeight.semibold');
+		border-radius: 20px;
+		text-transform: uppercase;
+		letter-spacing: theme('letterSpacing.wide');
+	}
+	.priority-baixa {
+		background-color: color-mix(in srgb, var(--ds-color-priority-baixa) 10%, transparent);
+		color: var(--ds-color-priority-baixa);
+	}
+	.priority-media {
+		background-color: color-mix(in srgb, var(--ds-color-priority-media) 10%, transparent);
+		color: var(--ds-color-priority-media);
+	}
+	.priority-alta {
+		background-color: color-mix(in srgb, var(--ds-color-priority-alta) 10%, transparent);
+		color: var(--ds-color-priority-alta);
+	}
+	.priority-urgente {
+		background-color: color-mix(in srgb, var(--ds-color-priority-urgente) 10%, transparent);
+		color: var(--ds-color-priority-urgente);
+	}
+
+	/* Glass card — 20-glass-forms-and-admin.css:161-207 (gradiente, blur, sombra, hover) */
+	.glass-card {
+		background-image: linear-gradient(
+			135deg,
+			var(--ds-glass-card-from) 0%,
+			var(--ds-glass-card-to) 100%
+		);
+		backdrop-filter: blur(20px);
+		-webkit-backdrop-filter: blur(20px);
+		border: 1px solid var(--ds-glass-border);
+		border-radius: 12px;
+		box-shadow: var(--ds-glass-shadow);
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		overflow: hidden;
+		position: relative;
+	}
+	.glass-card:hover {
+		border-color: var(--ds-glass-border-hover);
+	}
+	.glass-card-header {
+		display: flex;
+		align-items: center;
+		padding: 0.9rem 1.2rem 0.7rem;
+		background-image: linear-gradient(
+			135deg,
+			var(--ds-glass-header-from) 0%,
+			var(--ds-glass-header-to) 100%
+		);
+		border-bottom: 1px solid color-mix(in srgb, var(--ds-color-primary-600) 8%, transparent);
+		position: relative;
+		z-index: 1;
+	}
+	.glass-card-body {
+		padding: 1.2rem;
+		position: relative;
+		z-index: 1;
+	}
+
+	/* Gradiente do topbar/brand — 00-foundation.css:191 (#1769a8) */
+	.gradient-topnav {
+		background-image: linear-gradient(
+			135deg,
+			var(--ds-color-topnav-from) 0%,
+			var(--ds-color-topnav-to) 100%
+		);
+	}
+
+	/* Skeleton shimmer — 10-skeleton.css:52-56 (gradiente 90deg + animacao 1.5s) */
+	.skeleton-shimmer {
+		background-image: linear-gradient(
+			90deg,
+			var(--ds-color-skeleton-base) 0%,
+			var(--ds-color-skeleton-highlight) 50%,
+			var(--ds-color-skeleton-base) 100%
+		);
+		background-size: 200% 100%;
+		animation: skeleton-loading 1.5s infinite;
+	}
+}
+
+/* Respeita usuarios que pedem menos movimento (a11y) — neutraliza as animacoes. */
+@media (prefers-reduced-motion: reduce) {
+	.skeleton-shimmer {
+		animation: none;
 	}
 }

@@ -243,15 +243,20 @@
 	<!-- Anuncia movimentações/erros para leitores de tela. -->
 	<p class="sr-only" role="status" aria-live="polite">{liveMessage}</p>
 
+	<!--
+		Board — fidelidade a static/css/tasks/detail/kanban.css
+		(`.task-items-kanban-board`): grid de 5 colunas com minmax(200px, 1fr) e
+		gap 0.62rem, alinhadas ao topo. Em telas estreitas faz scroll horizontal.
+	-->
 	<div
-		class="flex w-full gap-3 overflow-x-auto pb-2"
+		class="grid w-full grid-flow-col items-start gap-[0.62rem] overflow-x-auto pb-2 [grid-auto-columns:minmax(200px,1fr)] sm:grid-flow-row sm:[grid-template-columns:repeat(5,minmax(200px,1fr))]"
 		role="group"
 		aria-label="Quadro Kanban de tarefas"
 	>
 		{#each TASK_STATUS_ORDER as status (status)}
 			{@const column = columns.find((c) => c.status === status)}
 			{#if column}
-				<div class="flex flex-1 flex-col gap-2">
+				<div class="flex flex-col gap-2">
 					<KanbanColumn
 						{column}
 						{composer}

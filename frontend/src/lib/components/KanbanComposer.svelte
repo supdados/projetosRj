@@ -210,18 +210,25 @@
 	}
 </script>
 
+<!--
+	Composer inline da coluna — fidelidade a static/css/tasks/detail/kanban.css:
+	  o botão `+ adicionar` reproduz `.task-items-kanban-add-btn` (borda tracejada,
+	  fundo suave, radius 9px, transição 0.16s e hover que escurece o azul). O
+	  formulário reproduz `.task-items-kanban-add-form` (borda, fundo branco, radius
+	  10px, sombra inset+externa, gap 0.46rem). `is-saving` aplica opacity 0.72.
+-->
 {#if !open}
 	<button
 		type="button"
 		onclick={requestOpen}
-		class="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border-subtle px-3 py-2 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		class="flex w-full items-center justify-center gap-1 rounded-[9px] border border-dashed border-border-strong bg-surface-muted px-[0.48rem] py-[0.38rem] text-xs font-semibold text-primary-700 transition-all duration-fast hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500"
 	>
 		+ adicionar
 	</button>
 {:else}
 	<form
-		class="flex flex-col gap-2 rounded-md border border-primary-500 bg-surface p-2 {saving
-			? 'opacity-70'
+		class="flex flex-col gap-[0.46rem] rounded-[10px] border border-border-subtle bg-surface p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_8px_18px_rgba(19,63,101,0.08)] transition-opacity duration-fast {saving
+			? 'pointer-events-none opacity-[0.72]'
 			: ''}"
 		aria-label="Nova tarefa em {status}"
 		onsubmit={(e) => {
@@ -265,7 +272,7 @@
 			rows="2"
 			placeholder="Descreva a tarefa…"
 			aria-label="Descrição da tarefa"
-			class="w-full rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+			class="min-h-[64px] w-full resize-y rounded-md border border-border-subtle bg-surface px-[0.48rem] py-[0.38rem] text-sm leading-normal text-text-primary transition-shadow duration-fast focus:border-primary-500 focus:outline-none focus:shadow-[0_0_0_3px_rgba(31,92,168,0.12)] disabled:opacity-60"
 		></textarea>
 
 		{#if project && responsavelOptions.length > 0}
@@ -309,21 +316,21 @@
 			<p role="alert" class="text-xs text-danger">{errorMessage}</p>
 		{/if}
 
-		<div class="flex gap-2">
-			<button
-				type="submit"
-				disabled={saving}
-				class="rounded-md bg-primary-500 px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-			>
-				{saving ? 'Salvando…' : 'Salvar'}
-			</button>
+		<div class="flex justify-end gap-[0.34rem]">
 			<button
 				type="button"
 				onclick={requestClose}
 				disabled={saving}
-				class="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				class="h-[30px] rounded-md border border-border-subtle bg-surface px-[0.56rem] text-xs font-semibold text-text-secondary transition-all duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 			>
 				Cancelar
+			</button>
+			<button
+				type="submit"
+				disabled={saving}
+				class="h-[30px] rounded-md border border-primary-500 bg-primary-100 px-[0.56rem] text-xs font-semibold text-primary-700 transition-all duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+			>
+				{saving ? 'Salvando…' : 'Salvar'}
 			</button>
 		</div>
 	</form>

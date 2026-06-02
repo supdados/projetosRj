@@ -136,7 +136,7 @@
 			<p class="text-text-secondary">{data.project.titulo}</p>
 			<a
 				href={`${base}/projetos/${data.project.id}`}
-				class="inline-flex w-fit items-center rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex w-fit items-center whitespace-nowrap rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-semibold text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				Voltar ao projeto
 			</a>
@@ -182,31 +182,43 @@
 			{/if}
 		</div>
 	{:else if data}
-		<Card labelId="history-list-title">
-			{#snippet header()}
-				<h2 id="history-list-title" class="font-heading text-lg font-semibold text-text-primary">
-					Registro consolidado de ações no projeto
-				</h2>
-			{/snippet}
-
-			{#if data.history.length === 0}
-				<div class="flex flex-col gap-1 py-4 text-center">
-					<p class="font-medium text-text-primary">Nenhuma ação registrada ainda</p>
-					<p class="text-sm text-text-muted">
+		{#if data.history.length === 0}
+			<Card>
+				<div class="flex flex-col gap-1 px-1 py-8 text-center">
+					<p class="font-semibold text-text-primary">Nenhuma ação registrada ainda</p>
+					<p class="text-md text-text-secondary">
 						O histórico será exibido aqui à medida que o projeto for atualizado.
 					</p>
 				</div>
-			{:else}
-				<ol class="flex flex-col gap-4" aria-labelledby="history-list-title">
+			</Card>
+		{:else}
+			<!--
+				Card do kit (overflow-hidden via rounded-lg + border) reproduz o
+				.history-list-card original: cabecalho-subtitulo discreto + lista de
+				entradas separadas por divisorias (sem padding lateral no corpo da
+				lista para que as bordas das linhas atinjam as laterais do card).
+			-->
+			<section
+				class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm"
+				aria-labelledby="history-list-title"
+			>
+				<div
+					id="history-list-title"
+					class="border-b border-border-subtle px-4 py-3 text-sm font-semibold text-text-secondary"
+				>
+					Registro consolidado de ações no projeto.
+				</div>
+
+				<ol class="flex flex-col">
 					{#each data.history as entry (entry.id)}
 						{@const present = presentAction(entry.action_type)}
 						<li
-							class="flex flex-col gap-2 rounded-md border border-border-subtle bg-surface px-4 py-3"
+							class="flex flex-col gap-1.5 border-b border-border-subtle px-4 py-3.5 transition-colors duration-fast last:border-b-0 hover:bg-surface-muted"
 						>
-							<div class="flex flex-wrap items-center justify-between gap-2">
+							<div class="flex items-start justify-between gap-2">
 								<Badge tone={present.tone}>{present.label}</Badge>
 								<time
-									class="text-xs text-text-muted"
+									class="whitespace-nowrap text-xs text-text-muted"
 									datetime={entry.timestamp ?? undefined}
 								>
 									{formatTimestamp(entry.timestamp)}
@@ -214,7 +226,7 @@
 							</div>
 
 							{#if entry.action_description}
-								<h3 class="font-heading text-base font-semibold text-text-primary">
+								<h3 class="font-heading text-base font-semibold leading-normal text-text-primary">
 									{entry.action_description}
 								</h3>
 							{/if}
@@ -224,21 +236,21 @@
 							</p>
 
 							{#if entry.old_value || entry.new_value}
-								<div class="grid gap-3 sm:grid-cols-2">
+								<div class="mt-1 grid gap-2 sm:grid-cols-2">
 									{#if entry.old_value}
-										<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
-											<h4 class="text-xs font-semibold uppercase tracking-wide text-text-muted">
+										<div class="flex flex-col gap-1 rounded-md border border-danger/40 bg-danger/5 px-2.5 py-2">
+											<h4 class="text-xs font-bold uppercase tracking-wide text-text-muted">
 												Antes
 											</h4>
-											<pre class="whitespace-pre-wrap break-words font-mono text-sm text-text-primary">{entry.old_value}</pre>
+											<pre class="m-0 whitespace-pre-wrap break-words font-sans text-sm leading-normal text-text-secondary">{entry.old_value}</pre>
 										</div>
 									{/if}
 									{#if entry.new_value}
-										<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
-											<h4 class="text-xs font-semibold uppercase tracking-wide text-text-muted">
+										<div class="flex flex-col gap-1 rounded-md border border-success/40 bg-success/5 px-2.5 py-2">
+											<h4 class="text-xs font-bold uppercase tracking-wide text-text-muted">
 												Depois
 											</h4>
-											<pre class="whitespace-pre-wrap break-words font-mono text-sm text-text-primary">{entry.new_value}</pre>
+											<pre class="m-0 whitespace-pre-wrap break-words font-sans text-sm leading-normal text-text-secondary">{entry.new_value}</pre>
 										</div>
 									{/if}
 								</div>
@@ -246,7 +258,7 @@
 						</li>
 					{/each}
 				</ol>
-			{/if}
-		</Card>
+			</section>
+		{/if}
 	{/if}
 </section>

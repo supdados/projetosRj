@@ -129,9 +129,18 @@
 	}
 </script>
 
+<!--
+	Card de tarefa — fidelidade a static/css/tasks/detail/kanban.css
+	(`.task-items-kanban-card`): radius 10px, sombra 0 6px 16px, hover sobe para
+	0 10px 22px + borda mais clara, focus-visible com ring triplo, transição
+	0.16s ease (transform/box-shadow/border/bg). `cursor: grab` (e `grabbing` no
+	active). `is-dragging` colapsa o card (opacity:0, height:0). `is-drop-settling`
+	roda a animação de assentamento (`td-kanban-drop-settle` 0.28s ease). O botão
+	de excluir só aparece no hover/focus (paridade com `.task-items-kanban-delete-btn`).
+-->
 <div
-	class="flex cursor-grab flex-col gap-2 rounded-md border border-border-subtle bg-surface px-3 py-2.5 shadow-sm transition-opacity duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 active:cursor-grabbing {dragging
-		? 'opacity-40'
+	class="kanban-card group flex cursor-grab flex-col gap-[0.52rem] rounded-[10px] border border-border-subtle bg-surface px-[0.6rem] pb-[0.6rem] pt-[0.56rem] shadow-[0_6px_16px_rgba(18,56,91,0.08)] outline-none transition-[transform,box-shadow,border-color,background-color] duration-fast hover:border-border-strong hover:shadow-[0_10px_22px_rgba(16,53,87,0.12)] focus-visible:border-primary-500 focus-visible:shadow-[0_0_0_3px_rgba(31,92,168,0.14),0_10px_22px_rgba(16,53,87,0.12)] active:cursor-grabbing {dragging
+		? 'is-dragging'
 		: ''}"
 	draggable="true"
 	tabindex="0"
@@ -146,63 +155,74 @@
 	ondragend={(event) => ondragend?.(event)}
 	onkeydown={(event) => onkeydown?.(event)}
 >
-	<p class="text-sm text-text-primary">{card.descricao}</p>
-
-	<div class="flex flex-wrap items-center gap-2">
-		{#if prioridadeLabel(card.prioridade)}
-			<Badge tone={prioridadeTone(card.prioridade)}>
-				{prioridadeLabel(card.prioridade)}
-			</Badge>
-		{/if}
-		{#if tipoLabel(card.tipo_pedido)}
-			<span class="text-xs text-text-secondary">{tipoLabel(card.tipo_pedido)}</span>
-		{/if}
-	</div>
-
-	{#if card.responsavel}
-		<p class="text-xs text-text-muted">Responsável: {card.responsavel}</p>
-	{/if}
-
-	<div class="flex items-center gap-3">
-		{#if openTaskDrawer}
-			<button
-				type="button"
-				onclick={() => openTaskDrawer?.(card.id)}
-				class="w-fit text-xs font-medium text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				Abrir
-			</button>
-		{/if}
+	<div class="flex flex-wrap items-center justify-between gap-1">
+		<div class="flex flex-wrap items-center gap-[0.3rem]">
+			{#if prioridadeLabel(card.prioridade)}
+				<Badge tone={prioridadeTone(card.prioridade)}>
+					{prioridadeLabel(card.prioridade)}
+				</Badge>
+			{/if}
+			{#if tipoLabel(card.tipo_pedido)}
+				<span
+					class="rounded-[4px] border border-border-subtle bg-surface-muted px-1.5 py-px text-[10px] font-semibold text-text-secondary"
+					>{tipoLabel(card.tipo_pedido)}</span
+				>
+			{/if}
+		</div>
 		{#if deleteTask && !confirmingDelete}
+			<!-- Botão excluir revelado no hover/focus do card (paridade is-delete-btn) -->
 			<button
 				type="button"
 				onclick={openDeleteConfirm}
 				aria-label="Excluir tarefa"
 				title="Excluir tarefa"
-				class="w-fit text-xs font-medium text-danger hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+				class="inline-flex h-7 w-7 shrink-0 -translate-y-px items-center justify-center rounded-md border border-danger/40 bg-surface text-xs text-danger opacity-0 transition-[opacity,transform,background-color,border-color] duration-fast hover:bg-danger/10 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100"
 			>
-				Excluir
+				<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
+					<path d="M10 11v6M14 11v6" />
+				</svg>
+			</button>
+		{/if}
+	</div>
+
+	<p class="m-0 break-words text-sm leading-normal text-text-primary">{card.descricao}</p>
+
+	<div class="mt-auto flex items-center justify-between gap-2">
+		{#if card.responsavel}
+			<span class="truncate text-xs text-text-secondary">Responsável: {card.responsavel}</span>
+		{:else}
+			<span class="truncate text-xs italic text-text-muted">Sem responsável</span>
+		{/if}
+		{#if openTaskDrawer}
+			<button
+				type="button"
+				onclick={() => openTaskDrawer?.(card.id)}
+				class="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				Abrir
 			</button>
 		{/if}
 	</div>
 
 	{#if confirmingDelete}
-		<!-- Mini-confirm inline no card (não window.confirm) -->
+		<!-- Mini-confirm inline no card (paridade .task-items-kanban-delete-confirm:
+		     borda/fundo de perigo + animação de entrada td-kanban-delete-confirm-in) -->
 		<div
 			role="alertdialog"
 			aria-label="Confirmar exclusão da tarefa"
-			class="flex flex-col gap-2 rounded-md border border-danger bg-surface px-2 py-2"
+			class="kanban-delete-confirm mt-[0.12rem] flex flex-col gap-2 rounded-[9px] border border-danger/40 bg-danger/5 px-[0.46rem] py-[0.42rem]"
 		>
-			<p class="text-xs text-text-primary">Excluir esta tarefa?</p>
+			<p class="m-0 text-xs font-semibold text-danger">Excluir esta tarefa?</p>
 			{#if deleteError}
 				<p role="alert" class="text-xs text-danger">{deleteError}</p>
 			{/if}
-			<div class="flex gap-2">
+			<div class="flex justify-end gap-[0.24rem]">
 				<button
 					type="button"
 					onclick={cancelDeleteConfirm}
 					disabled={deleting}
-					class="rounded-md border border-border-subtle px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="h-[26px] rounded-[7px] border border-border-subtle bg-surface px-[0.44rem] text-2xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 				>
 					Cancelar
 				</button>
@@ -210,7 +230,7 @@
 					type="button"
 					onclick={() => void confirmDelete()}
 					disabled={deleting}
-					class="rounded-md bg-danger px-2 py-1 text-xs font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+					class="h-[26px] rounded-[7px] border border-danger/50 bg-danger/10 px-[0.44rem] text-2xs font-semibold text-danger transition-colors duration-fast hover:bg-danger/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
 				>
 					{deleting ? 'Excluindo…' : 'Excluir'}
 				</button>
@@ -218,3 +238,67 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/*
+	 * `.is-dragging` (kanban.css): o card-fonte colapsa enquanto arrastado —
+	 * opacity:0 + altura zero + sem borda/sombra + cursor grabbing. Mantém o
+	 * elemento no fluxo (a board usa data-item-id para calcular o índice de drop).
+	 */
+	.is-dragging {
+		opacity: 0;
+		height: 0;
+		min-height: 0;
+		margin: 0;
+		padding-top: 0;
+		padding-bottom: 0;
+		border-width: 0;
+		box-shadow: none;
+		transform: none;
+		cursor: grabbing;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	/* Animação de assentamento pós-drop (`td-kanban-drop-settle`, 0.28s ease). */
+	@keyframes td-kanban-drop-settle {
+		0% {
+			transform: scale(1.03) translateY(-2px);
+			box-shadow: 0 12px 28px rgba(13, 48, 80, 0.18);
+		}
+		50% {
+			transform: scale(0.99) translateY(1px);
+		}
+		100% {
+			transform: scale(1) translateY(0);
+			box-shadow: 0 6px 16px rgba(18, 56, 91, 0.08);
+		}
+	}
+	:global(.kanban-card.is-drop-settling) {
+		animation: td-kanban-drop-settle 0.28s ease;
+	}
+
+	/* Entrada do mini-confirm de exclusão (`td-kanban-delete-confirm-in`). */
+	@keyframes td-kanban-delete-confirm-in {
+		from {
+			opacity: 0;
+			transform: translateY(-3px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+	.kanban-delete-confirm {
+		animation: td-kanban-delete-confirm-in 0.16s ease;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		:global(.kanban-card.is-drop-settling) {
+			animation: none;
+		}
+		.kanban-delete-confirm {
+			animation: none;
+		}
+	}
+</style>

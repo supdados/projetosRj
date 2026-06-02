@@ -15,6 +15,8 @@
 	 * seleção válida.
 	 */
 	import { tick } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import type { StageTemplateOption } from '$lib/types/projectDetail';
 
 	interface Props {
@@ -83,19 +85,25 @@
 </script>
 
 {#if open}
-	<!-- Fundo: clicar fora fecha. -->
+	<!-- Fundo: clicar fora fecha. Fade ~280ms ease-out (paridade .modal). -->
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
 		role="presentation"
+		transition:fade={{ duration: 280, easing: cubicOut }}
 		onclick={onClose}
 		onkeydown={onKeydown}
 	>
-		<!-- Diálogo: para o clique de borbulhar para o fundo. -->
+		<!--
+			Diálogo: para o clique de borbulhar para o fundo. Raio 16px (rounded-2xl)
+			e entrada translateY+escala em ~320ms cubic-bezier(0.22,1,0.36,1) (cubicOut)
+			como o .modal-content do detalhe.
+		-->
 		<div
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="import-model-title"
-			class="flex w-full max-w-lg flex-col gap-4 rounded-lg border border-border-subtle bg-surface p-5 shadow-lg"
+			class="flex w-full max-w-lg flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-5 shadow-lg"
+			transition:fly={{ y: 18, duration: 320, easing: cubicOut }}
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={onKeydown}
 			tabindex="-1"

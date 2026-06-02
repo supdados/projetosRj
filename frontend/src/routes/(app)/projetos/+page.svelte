@@ -2,7 +2,7 @@
 	/**
 	 * Tela "Lista de Projetos" (FASE 3). Consome `GET /api/projetos` via
 	 * `$lib/api/projects` e renderiza a tabela com os componentes
-	 * compartilhados Card/Badge (reusados, não editados). Os filtros
+	 * compartilhado Badge (reusado, não editado). Os filtros
 	 * (busca textual com debounce, status, indicador ABEP como combobox,
 	 * especial) re-buscam server-side — o `orgao_scope` é aplicado no
 	 * backend. Estados loading/erro/vazio anunciados via aria-live.
@@ -24,7 +24,6 @@
 	import { auth } from '$lib/stores/auth';
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 	import type { Project } from '$lib/types/entities';
-	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
@@ -313,75 +312,101 @@
 	<title>Todos os Projetos — ProjetosRJ</title>
 </svelte:head>
 
-<section aria-labelledby="projetos-title" class="flex flex-col gap-6">
-	<header class="flex flex-col gap-2">
-		<div class="flex flex-wrap items-center gap-3">
-			<h1 id="projetos-title" class="font-heading text-2xl font-bold text-text-primary">
-				Todos os Projetos
-			</h1>
-			{#if data}
-				<span
-					class="inline-flex items-center gap-1 rounded-sm border border-primary-500 bg-primary-100 px-2 py-1 text-xs font-medium text-primary-700"
-				>
-					{totalProjects} projeto{totalProjects === 1 ? '' : 's'}
-				</span>
-			{/if}
-			<div class="ml-auto flex items-center gap-2">
-				{#if isAdmin}
-					<!--
-						Exportar CSV: link direto para a rota Flask nativa /projects/download
-						(download de attachment, FORA do envelope JSON). Visível só p/ admin,
-						replicando o {% if is_admin_user %} do Jinja. Sem toast/som/loading —
-						o browser baixa 'projetosDDMMYYYYHHMM.csv'. NÃO base-aware: é rota
-						nativa do Flask, não da SPA.
-					-->
-					<a
-						href="/projects/download"
-						download
-						title="Exportar projetos (CSV)"
-						class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+<section aria-labelledby="projetos-title" class="flex flex-col gap-4">
+	<!--
+		Cabeçalho-card (projects-v4-header): superfície elevada com borda + sombra,
+		título + meta-pill à esquerda, ações à direita. Empilha no mobile (<992px).
+	-->
+	<header
+		class="flex flex-col items-stretch justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-5 shadow-sm md:flex-row md:items-start"
+	>
+		<div class="min-w-0">
+			<h1
+				id="projetos-title"
+				class="m-0 inline-flex flex-wrap items-center gap-2 font-heading text-2xl font-bold text-text-primary"
+			>
+				<span>Todos os Projetos</span>
+				{#if data}
+					<!-- projects-v4-meta-pill: pílula suave com a contagem. -->
+					<span
+						class="inline-flex items-center whitespace-nowrap rounded-md border border-primary-500/40 bg-primary-100 px-2.5 py-1 text-xs font-semibold text-primary-700"
 					>
-						<i class="fas fa-download" aria-hidden="true"></i>
-						Exportar CSV
-					</a>
+						{totalProjects} projeto{totalProjects === 1 ? '' : 's'}
+					</span>
 				{/if}
-				<button
-					type="button"
-					onclick={() => (createModalOpen = true)}
-					class="inline-flex items-center gap-2 rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<i class="fas fa-plus-circle" aria-hidden="true"></i>
-					Novo projeto
-				</button>
-			</div>
+			</h1>
+			<p class="mt-1.5 text-base text-text-muted">Visualize, filtre e acompanhe seus projetos.</p>
 		</div>
-		<p class="text-sm text-text-secondary">Visualize, filtre e acompanhe seus projetos.</p>
+
+		<div class="flex flex-wrap items-center justify-end gap-2">
+			{#if isAdmin}
+				<!--
+					Exportar CSV: link direto para a rota Flask nativa /projects/download
+					(download de attachment, FORA do envelope JSON). Visível só p/ admin,
+					replicando o {% if is_admin_user %} do Jinja. Sem toast/som/loading —
+					o browser baixa 'projetosDDMMYYYYHHMM.csv'. NÃO base-aware: é rota
+					nativa do Flask, não da SPA.
+				-->
+				<a
+					href="/projects/download"
+					download
+					title="Exportar projetos (CSV)"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-primary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					<i class="fas fa-download" aria-hidden="true"></i>
+					Exportar CSV
+				</a>
+			{/if}
+			<!--
+				Botão primário (btn-projects-v4-primary): gradiente da marca + sombra
+				elevada. Reproduzido com o token primary e leve elevação no hover.
+			-->
+			<button
+				type="button"
+				onclick={() => (createModalOpen = true)}
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary-700/25 bg-gradient-to-br from-primary-600 to-primary-700 px-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out hover:from-primary-500 hover:to-primary-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				<i class="fas fa-plus" aria-hidden="true"></i>
+				Novo projeto
+			</button>
+		</div>
 	</header>
 
-	<!-- Filtros (re-buscam server-side) -->
+	<!--
+		Filtros (projects-v4-filters): card de superfície com borda + sombra. Os
+		campos re-buscam server-side. Linha de campos com a busca crescendo (flex-1)
+		e as ações empurradas para a direita (ml-auto). Quebra no mobile.
+	-->
 	<form
-		class="flex flex-wrap items-end gap-4 rounded-lg border border-border-subtle bg-surface px-5 py-4 shadow-sm"
+		class="flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3.5 shadow-sm"
 		role="search"
 		aria-label="Filtros de projetos"
 		onsubmit={onSubmit}
 	>
-		<div class="flex min-w-[14rem] flex-1 flex-col gap-1">
+		<div class="flex min-w-[15rem] flex-1 flex-col gap-1">
 			<label
 				for="projetosSearch"
 				class="text-xs font-semibold uppercase tracking-wide text-text-muted"
 			>
 				Busca livre
 			</label>
-			<input
-				id="projetosSearch"
-				name="q"
-				type="search"
-				autocomplete="off"
-				bind:value={search}
-				oninput={onSearchInput}
-				placeholder="Título, órgão ou indicador…"
-				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			/>
+			<!-- projects-v4-search-wrap: ícone de lupa à esquerda, padding interno. -->
+			<div class="relative">
+				<i
+					class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
+					aria-hidden="true"
+				></i>
+				<input
+					id="projetosSearch"
+					name="q"
+					type="search"
+					autocomplete="off"
+					bind:value={search}
+					oninput={onSearchInput}
+					placeholder="Digite título, órgão ou indicador…"
+					class="h-9 w-full rounded-md border border-border-subtle bg-surface pl-8 pr-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
+				/>
+			</div>
 		</div>
 
 		<div class="flex min-w-[10rem] flex-col gap-1">
@@ -395,7 +420,7 @@
 				id="projetosStatus"
 				value={status}
 				onchange={onStatusChange}
-				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
 			>
 				{#each statusOptions as option (option)}
 					<option value={option}>{option}</option>
@@ -414,7 +439,7 @@
 				id="projetosSpecial"
 				value={specialProject}
 				onchange={onSpecialChange}
-				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
 			>
 				<option value="">Todos os especiais</option>
 				{#each specialOptions as option (option)}
@@ -448,17 +473,21 @@
 				onkeydown={onAbepKeydown}
 				onblur={() => setTimeout(closeAbep, 120)}
 				placeholder="Busque por número ou título…"
-				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 cursor-text rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
 			/>
 			{#if abepOpen}
+				<!--
+					projects-v4-abep-dropdown: painel flutuante com entrada suave
+					(animate-dropdown-in, 0.16s ease-out — keyframes do kit Fase 1).
+				-->
 				<ul
 					id="projetosAbepListbox"
 					role="listbox"
 					aria-label="Indicadores ABEP"
-					class="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-auto rounded-md border border-border-subtle bg-surface py-1 shadow-md"
+					class="absolute left-0 right-0 top-full z-dropdown mt-1 max-h-[220px] origin-top animate-dropdown-in overflow-y-auto rounded-md border border-border-subtle bg-surface py-1 shadow-lg"
 				>
 					{#if abepVisible.length === 0}
-						<li class="px-3 py-2 text-sm text-text-muted">Nenhum indicador encontrado</li>
+						<li class="px-2.5 py-2 text-sm italic text-text-muted">Nenhum indicador encontrado</li>
 					{:else}
 						{#each abepVisible as option, index (option.value)}
 							<li class="contents">
@@ -473,9 +502,9 @@
 									id={`abep-option-${index}`}
 									role="option"
 									aria-selected={option.value === abepIndicator}
-									class="block w-full cursor-pointer px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted {index ===
+									class="block w-full cursor-pointer px-2.5 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-primary-100 hover:text-primary-700 {index ===
 									abepActiveIndex
-										? 'bg-surface-muted'
+										? 'bg-primary-100 text-primary-700'
 										: ''}"
 									onmousedown={(e) => e.preventDefault()}
 									onclick={() => selectAbep(option.value, option.label)}
@@ -489,27 +518,38 @@
 			{/if}
 		</div>
 
-		<div class="flex items-end gap-2">
+		<div class="ml-auto flex items-end gap-2">
+			<!-- Botão primário "Filtrar" com gradiente da marca, igual ao header. -->
 			<button
 				type="submit"
-				class="rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				title="Filtrar"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary-700/25 bg-gradient-to-br from-primary-600 to-primary-700 px-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out hover:from-primary-500 hover:to-primary-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
+				<i class="fas fa-filter" aria-hidden="true"></i>
 				Filtrar
 			</button>
 			{#if hasActiveFilters}
 				<button
 					type="button"
 					onclick={clearFilters}
-					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					title="Limpar filtros"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
-					Limpar filtros
+					<i class="fas fa-rotate-left" aria-hidden="true"></i>
+					Limpar
 				</button>
 			{/if}
 		</div>
 	</form>
 
 	{#if loadState === 'loading'}
-		<p role="status" aria-live="polite" class="text-text-secondary">Carregando projetos…</p>
+		<p
+			role="status"
+			aria-live="polite"
+			class="rounded-lg border border-border-subtle bg-surface px-4 py-8 text-center text-sm text-text-muted shadow-sm"
+		>
+			Carregando projetos…
+		</p>
 	{:else if loadState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if data}
@@ -520,78 +560,150 @@
 		</div>
 
 		{#if data.projetos.length === 0}
+			<!--
+				Estado vazio (projects-v4-empty-state): borda tracejada, ícone em
+				quadro suave, título e texto centralizados.
+			-->
 			<div
-				class="rounded-lg border border-border-subtle bg-surface px-5 py-12 text-center"
+				class="rounded-lg border border-dashed border-border-strong bg-surface-muted/40 px-4 py-8 text-center"
 			>
-				<h2 class="font-heading text-lg font-semibold text-text-primary">
+				<div
+					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-primary-100 text-xl text-primary-700"
+				>
+					<i class="fas fa-folder-open" aria-hidden="true"></i>
+				</div>
+				<h2 class="m-0 font-heading text-xl font-bold text-text-primary">
 					Nenhum projeto encontrado
 				</h2>
-				<p class="mt-2 text-sm text-text-muted">
+				<p class="mb-3.5 mt-1.5 text-md text-text-muted">
 					Os filtros aplicados não retornaram resultados. Ajuste os filtros e tente
 					novamente.
 				</p>
 			</div>
 		{:else}
-			<Card>
+			<!--
+				Tabela-card (projects-v4-table-card): superfície com borda + sombra e
+				overflow-hidden para os cantos arredondarem a tabela. Sem padding
+				interno — a tabela encosta nas bordas, igual ao original.
+			-->
+			<div
+				class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm"
+			>
 				<div class="overflow-x-auto" aria-busy={loadState !== 'ready'}>
-					<table class="w-full border-collapse text-sm">
+					<table class="m-0 w-full min-w-[980px] border-separate border-spacing-0 text-sm">
 						<caption class="sr-only">Lista de projetos filtrados</caption>
 						<thead>
-							<tr class="border-b border-border-subtle text-left text-text-muted">
-								<th scope="col" class="px-3 py-2 font-semibold">ID</th>
-								<th scope="col" class="px-3 py-2 font-semibold">Título</th>
-								<th scope="col" class="px-3 py-2 font-semibold">Órgão</th>
-								<th scope="col" class="px-3 py-2 font-semibold">Prioridade</th>
-								<th scope="col" class="px-3 py-2 font-semibold">Status</th>
-								<th scope="col" class="px-3 py-2 font-semibold">Data Início</th>
-								<th scope="col" class="px-3 py-2 font-semibold">Data Fim</th>
+							<!-- Cabeçalho: fundo suave, MAIÚSCULAS com letter-spacing caps. -->
+							<tr class="text-left text-text-muted">
+								<th
+									scope="col"
+									class="w-16 border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+								>
+									ID
+								</th>
+								<th
+									scope="col"
+									class="min-w-[260px] border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+								>
+									Título
+								</th>
+								<th
+									scope="col"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+								>
+									Órgão
+								</th>
+								<th
+									scope="col"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+								>
+									Prioridade
+								</th>
+								<th
+									scope="col"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+								>
+									Status
+								</th>
+								<th
+									scope="col"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+								>
+									Data Início
+								</th>
+								<th
+									scope="col"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+								>
+									Data Fim
+								</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#each data.projetos as project (project.id)}
-								<tr class="border-b border-border-subtle last:border-0">
-									<td class="px-3 py-2 text-text-muted">{project.id}</td>
-									<td class="px-3 py-2">
+								<!-- Linha com hover suave (transição de fundo). -->
+								<tr class="group transition-colors duration-fast hover:bg-surface-muted/60">
+									<td
+										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle"
+									>
+										<!-- projects-v4-id-chip: chip arredondado com o ID. -->
+										<span
+											class="inline-flex items-center rounded-sm border border-border-subtle bg-surface-muted px-2 py-0.5 text-xs font-bold text-text-muted"
+										>
+											{project.id}
+										</span>
+									</td>
+									<td class="border-t border-border-subtle px-2.5 py-2.5 align-middle">
 										<a
 											href={projectDetailHref(project)}
-											class="font-medium text-primary-700 no-underline hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="font-semibold text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 										>
 											{project.titulo}
 										</a>
 									</td>
-									<td class="px-3 py-2 text-text-secondary">
+									<td
+										class="border-t border-border-subtle px-2.5 py-2.5 align-middle text-text-secondary"
+									>
 										{project.orgao_sigla ?? project.orgao ?? '—'}
 									</td>
-									<td class="px-3 py-2">
+									<td
+										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle"
+									>
 										{#if project.prioridade}
 											<Badge tone={priorityTone(project.prioridade)}>
 												{capitalize(project.prioridade)}
 											</Badge>
 										{:else}
-											<span class="text-text-muted">—</span>
+											<span class="italic text-text-muted">—</span>
 										{/if}
 									</td>
-									<td class="px-3 py-2">
+									<td
+										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle"
+									>
 										<Badge tone={project.status === 'Vigente' ? 'success' : 'neutral'}>
 											{project.status}
 										</Badge>
 									</td>
-									<td class="px-3 py-2 text-text-secondary">
+									<td
+										class="border-t border-border-subtle px-2.5 py-2.5 align-middle font-mono font-medium whitespace-nowrap text-text-secondary"
+									>
 										{#if project.data_inicio_projeto}
 											<time datetime={project.data_inicio_projeto}>
 												{formatDateBr(project.data_inicio_projeto)}
 											</time>
 										{:else}
-											<span class="text-text-muted">—</span>
+											<span class="italic text-text-muted">—</span>
 										{/if}
 									</td>
-									<td class="px-3 py-2 text-text-secondary">
+									<td
+										class="border-t border-border-subtle px-2.5 py-2.5 align-middle font-mono font-medium whitespace-nowrap text-text-secondary"
+									>
 										{#if project.data_fim_projeto}
 											<time datetime={project.data_fim_projeto}>
 												{formatDateBr(project.data_fim_projeto)}
 											</time>
 										{:else}
-											<span class="text-text-muted">—</span>
+											<span class="italic text-text-muted">—</span>
 										{/if}
 									</td>
 								</tr>
@@ -599,30 +711,47 @@
 						</tbody>
 					</table>
 				</div>
-			</Card>
+			</div>
 
 			{#if pagination && pagination.total_pages > 1}
-				<nav class="flex items-center justify-center gap-3" aria-label="Paginação de projetos">
-					<button
-						type="button"
-						onclick={() => goToPage(pagination.page - 1)}
-						disabled={pagination.page <= 1}
-						class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-					>
-						Anterior
-					</button>
-					<span class="text-sm text-text-secondary" aria-live="polite">
-						Página {pagination.page} de {pagination.total_pages}
-					</span>
-					<button
-						type="button"
-						onclick={() => goToPage(pagination.page + 1)}
-						disabled={pagination.page >= pagination.total_pages}
-						class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-					>
-						Próxima
-					</button>
-				</nav>
+				<!--
+					Paginação (projects-v4-pagination-wrap): card com a info "Mostrando…"
+					à esquerda e a navegação (chips) à direita. Empilha no mobile.
+				-->
+				<section
+					class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 shadow-sm"
+				>
+					<div class="text-sm font-medium text-text-secondary">
+						Mostrando {(pagination.page - 1) * pagination.per_page + 1} - {Math.min(
+							pagination.page * pagination.per_page,
+							totalProjects
+						)} de {totalProjects} projetos
+					</div>
+					<nav class="flex items-center gap-2" aria-label="Paginação de projetos">
+						<button
+							type="button"
+							onclick={() => goToPage(pagination.page - 1)}
+							disabled={pagination.page <= 1}
+							class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
+						>
+							Anterior
+						</button>
+						<span
+							class="inline-flex h-9 items-center rounded-md border border-primary-700 bg-gradient-to-b from-primary-500 to-primary-700 px-3 text-sm font-semibold text-white"
+							aria-live="polite"
+						>
+							Página {pagination.page} de {pagination.total_pages}
+						</span>
+						<button
+							type="button"
+							onclick={() => goToPage(pagination.page + 1)}
+							disabled={pagination.page >= pagination.total_pages}
+							class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
+						>
+							Próxima
+						</button>
+					</nav>
+				</section>
 			{/if}
 		{/if}
 	{/if}

@@ -120,6 +120,23 @@
 	/** Raiz não pode ser excluída; órgão com filhos também não (backend 409). */
 	const canDelete = $derived(!isRoot && !hasChildren);
 
+	/**
+	 * Slug do tipo para a cor do dot (espelha `_orgao_node.html`:
+	 * `tipo_nome|lower|replace(...)`). Apresentação apenas — as cores por tipo
+	 * vivem no bloco style com escopo, reproduzindo `orgao_tree.css`.
+	 */
+	const tipoSlug = $derived(
+		(node.tipo ?? '')
+			.toLowerCase()
+			.replace(/ç/g, 'c')
+			.replace(/ã/g, 'a')
+			.replace(/ú/g, 'u')
+			.replace(/í/g, 'i')
+			.replace(/é/g, 'e')
+			.replace(/á/g, 'a')
+			.replace(/ /g, '-')
+	);
+
 	function toggleExpanded(): void {
 		expanded = !expanded;
 	}
@@ -150,18 +167,9 @@
 	ondrop={handleDrop}
 	ondragend={handleDragLeave}
 >
-	<div
-		class="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors duration-fast hover:bg-surface-muted"
-		class:ring-2={dragOver}
-		class:ring-primary-500={dragOver}
-		style={`padding-left:calc(0.5rem + ${depth} * 1.25rem)`}
-	>
+	<div class="orgao-row" class:is-drop-target={dragOver}>
 		{#if canDrag}
-			<span
-				class="flex h-6 w-4 shrink-0 cursor-grab items-center justify-center text-text-muted"
-				title="Arraste para reordenar"
-				aria-hidden="true"
-			>
+			<span class="orgao-grip" title="Arraste para reordenar" aria-hidden="true">
 				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
 					<path d="M7 4a1 1 0 11-2 0 1 1 0 012 0zm0 6a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100-2 1 1 0 000 2zm9-13a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100-2 1 1 0 000 2zm1 5a1 1 0 11-2 0 1 1 0 012 0z" />
 				</svg>
@@ -173,39 +181,39 @@
 				onclick={toggleExpanded}
 				aria-expanded={expanded}
 				aria-label={expanded ? 'Recolher subunidades' : 'Expandir subunidades'}
-				class="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-text-muted transition-transform duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="orgao-toggle"
+				class:is-open={expanded}
 			>
-				<svg
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="h-3.5 w-3.5 transition-transform duration-fast"
-					style={expanded ? 'transform:rotate(90deg)' : ''}
-					aria-hidden="true"
-				>
+				<svg viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3" aria-hidden="true">
 					<path d="M7 5l6 5-6 5V5z" />
 				</svg>
 			</button>
 		{:else}
-			<span class="h-6 w-6 shrink-0" aria-hidden="true"></span>
+			<span class="orgao-toggle is-empty" aria-hidden="true"></span>
 		{/if}
 
-		<span class="flex min-w-0 flex-1 items-center gap-2">
-			<span class="truncate text-sm font-semibold text-text-primary">{node.sigla}</span>
-			<span class="truncate text-sm text-text-secondary">{node.nome}</span>
-			{#if node.tipo}
-				<Badge tone="info">{node.tipo}</Badge>
-			{/if}
-			{#if !node.ativo}
-				<Badge tone="neutral">Inativo</Badge>
-			{/if}
-		</span>
+		<span
+			class="orgao-tipo-dot"
+			data-tipo={tipoSlug}
+			title={node.tipo ?? ''}
+			aria-hidden="true"
+		></span>
 
-		<div class="flex shrink-0 items-center gap-1">
+		<span class="orgao-sigla">{node.sigla}</span>
+		<span class="orgao-nome">{node.nome}</span>
+		{#if node.tipo}
+			<span class="orgao-tipo-badge">{node.tipo}</span>
+		{/if}
+		{#if !node.ativo}
+			<Badge tone="neutral">Inativo</Badge>
+		{/if}
+
+		<div class="orgao-actions">
 			<a
 				href={`${base}/admin/orgaos/novo?pai_id=${node.id}`}
 				title="Adicionar subunidade"
 				aria-label={`Adicionar subunidade em ${node.sigla}`}
-				class="flex h-7 w-7 items-center justify-center rounded-sm text-text-muted hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="orgao-action-btn is-add"
 			>
 				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
 					<path d="M11 3a1 1 0 10-2 0v6H3a1 1 0 100 2h6v6a1 1 0 102 0v-6h6a1 1 0 100-2h-6V3z" />
@@ -218,7 +226,7 @@
 				disabled={busy || isFirst}
 				title="Mover para cima"
 				aria-label={`Mover ${node.sigla} para cima`}
-				class="flex h-7 w-7 items-center justify-center rounded-sm text-text-muted hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40"
+				class="orgao-action-btn"
 			>
 				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
 					<path d="M10 5l5 6H5l5-6z" />
@@ -230,7 +238,7 @@
 				disabled={busy || isLast}
 				title="Mover para baixo"
 				aria-label={`Mover ${node.sigla} para baixo`}
-				class="flex h-7 w-7 items-center justify-center rounded-sm text-text-muted hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40"
+				class="orgao-action-btn"
 			>
 				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
 					<path d="M10 15l-5-6h10l-5 6z" />
@@ -245,7 +253,7 @@
 					aria-expanded={moveOpen}
 					title="Mover para outro pai"
 					aria-label={`Mover ${node.sigla} para outro pai`}
-					class="flex h-7 w-7 items-center justify-center rounded-sm text-text-muted hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40"
+					class="orgao-action-btn"
 				>
 					<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
 						<path
@@ -259,7 +267,7 @@
 				href={`${base}/admin/orgaos/${node.id}`}
 				title="Editar"
 				aria-label={`Editar ${node.sigla}`}
-				class="flex h-7 w-7 items-center justify-center rounded-sm text-text-muted hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="orgao-action-btn is-edit"
 			>
 				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
 					<path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" />
@@ -272,9 +280,7 @@
 				disabled={busy}
 				title={node.ativo ? 'Desativar' : 'Ativar'}
 				aria-label={`${node.ativo ? 'Desativar' : 'Ativar'} ${node.sigla}`}
-				class="flex h-7 w-7 items-center justify-center rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40 {node.ativo
-					? 'text-warning hover:bg-surface-muted'
-					: 'text-success hover:bg-surface-muted'}"
+				class="orgao-action-btn {node.ativo ? 'is-warning' : 'is-success'}"
 			>
 				{#if node.ativo}
 					<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
@@ -294,7 +300,7 @@
 					disabled={busy}
 					title="Excluir"
 					aria-label={`Excluir ${node.sigla}`}
-					class="flex h-7 w-7 items-center justify-center rounded-sm text-danger hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40"
+					class="orgao-action-btn is-delete"
 				>
 					<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
 						<path d="M7 2a1 1 0 00-1 1v1H3v2h14V4h-3V3a1 1 0 00-1-1H7zM5 7v9a2 2 0 002 2h6a2 2 0 002-2V7H5z" />
@@ -304,7 +310,7 @@
 				<span
 					title="Mova as subunidades antes de excluir"
 					aria-label="Exclusão indisponível: mova as subunidades antes"
-					class="flex h-7 w-7 cursor-not-allowed items-center justify-center rounded-sm text-text-muted opacity-40"
+					class="orgao-action-btn is-disabled"
 				>
 					<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
 						<path d="M7 2a1 1 0 00-1 1v1H3v2h14V4h-3V3a1 1 0 00-1-1H7zM5 7v9a2 2 0 002 2h6a2 2 0 002-2V7H5z" />
@@ -315,10 +321,7 @@
 	</div>
 
 	{#if moveOpen && !isRoot}
-		<div
-			class="mt-1 flex items-center gap-2"
-			style={`padding-left:calc(2.5rem + ${depth} * 1.25rem)`}
-		>
+		<div class="orgao-move-row" style={`--orgao-depth:${depth}`}>
 			<label class="text-xs text-text-muted" for={`move-${node.id}`}>Mover para:</label>
 			<select
 				id={`move-${node.id}`}
@@ -337,7 +340,7 @@
 	{/if}
 
 	{#if hasChildren && expanded}
-		<ul class="flex flex-col">
+		<ul class="orgao-children">
 			{#each node.filhos as filho, i (filho.id)}
 				<OrgaoTreeNode
 					node={filho}
@@ -356,3 +359,254 @@
 		</ul>
 	{/if}
 </li>
+
+<style>
+	/* Espelha static/css/admin/orgao_tree.css (v4.5). Cores via vars semânticas
+	   (dark-safe). Os dots por tipo mantêm os hex decorativos do original. */
+	.orgao-node {
+		list-style: none;
+	}
+
+	.orgao-children {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.orgao-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.4rem 0.6rem;
+		padding-left: calc(0.6rem + var(--orgao-depth, 0) * 1.4rem);
+		border-radius: 8px;
+		cursor: pointer;
+		transition:
+			background 100ms ease,
+			box-shadow 120ms ease,
+			border-color 120ms ease;
+		border: 1px solid transparent;
+		margin: 1px 0.5rem;
+	}
+
+	.orgao-row:hover {
+		background: var(--color-surface-muted);
+	}
+
+	.orgao-row.is-drop-target {
+		background: var(--ds-color-success-light-bg);
+		border-color: var(--ds-color-success-600);
+		border-style: dashed;
+	}
+
+	.orgao-node.is-inactive > .orgao-row .orgao-sigla {
+		text-decoration: line-through;
+		color: var(--color-text-muted);
+	}
+
+	.orgao-grip {
+		width: 1rem;
+		height: 1.5rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--color-text-muted);
+		cursor: grab;
+		flex-shrink: 0;
+	}
+	.orgao-grip:active {
+		cursor: grabbing;
+	}
+
+	.orgao-toggle {
+		width: 1.25rem;
+		height: 1.25rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: transparent;
+		border: 0;
+		cursor: pointer;
+		color: var(--color-text-muted);
+		font-size: 0.75rem;
+		transition: transform 150ms ease;
+		flex-shrink: 0;
+		border-radius: 6px;
+	}
+	.orgao-toggle:hover {
+		color: var(--color-text-primary);
+	}
+	.orgao-toggle:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 2px var(--ds-color-primary-600);
+	}
+	.orgao-toggle.is-empty {
+		cursor: default;
+	}
+	.orgao-toggle.is-open {
+		transform: rotate(90deg);
+	}
+
+	.orgao-tipo-dot {
+		width: 0.55rem;
+		height: 0.55rem;
+		border-radius: 50%;
+		flex-shrink: 0;
+		background: var(--color-text-muted);
+	}
+	.orgao-tipo-dot[data-tipo='estado'] {
+		background: #0b4d86;
+	}
+	.orgao-tipo-dot[data-tipo='secretaria'] {
+		background: #1d4ed8;
+	}
+	.orgao-tipo-dot[data-tipo='subsecretaria'] {
+		background: #0891b2;
+	}
+	.orgao-tipo-dot[data-tipo='autarquia'] {
+		background: #7c3aed;
+	}
+	.orgao-tipo-dot[data-tipo='fundacao'] {
+		background: #db2777;
+	}
+	.orgao-tipo-dot[data-tipo='empresa-publica'] {
+		background: #be185d;
+	}
+	.orgao-tipo-dot[data-tipo='assessoria'] {
+		background: #0d9488;
+	}
+	.orgao-tipo-dot[data-tipo='coordenacao'] {
+		background: #b45309;
+	}
+	.orgao-tipo-dot[data-tipo='nucleo'] {
+		background: #b45309;
+	}
+	.orgao-tipo-dot[data-tipo='departamento'] {
+		background: #6b7280;
+	}
+
+	.orgao-sigla {
+		font-family: 'JetBrains Mono', 'SFMono-Regular', ui-monospace, monospace;
+		font-weight: 700;
+		font-size: 0.8125rem;
+		color: var(--color-text-primary);
+		letter-spacing: 0.02em;
+		flex-shrink: 0;
+		min-width: 0;
+	}
+
+	.orgao-nome {
+		font-size: 0.8125rem;
+		color: var(--color-text-secondary);
+		flex: 1 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.orgao-tipo-badge {
+		font-size: 0.65rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		font-weight: 600;
+		color: var(--color-text-muted);
+		background: var(--color-surface-muted);
+		padding: 0.15rem 0.5rem;
+		border-radius: 999px;
+		flex-shrink: 0;
+	}
+
+	.orgao-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.2rem;
+		margin-left: auto;
+		opacity: 0.55;
+		transition: opacity 120ms ease;
+		flex-shrink: 0;
+	}
+	.orgao-row:hover .orgao-actions {
+		opacity: 1;
+	}
+
+	.orgao-action-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		border-radius: 6px;
+		border: 1px solid transparent;
+		background: transparent;
+		color: var(--color-text-muted);
+		cursor: pointer;
+		text-decoration: none;
+		transition:
+			background 120ms ease,
+			color 120ms ease,
+			border-color 120ms ease;
+	}
+	.orgao-action-btn:hover {
+		background: var(--color-surface-muted);
+		color: var(--color-text-primary);
+	}
+	.orgao-action-btn:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 2px var(--ds-color-primary-600);
+	}
+	.orgao-action-btn:disabled {
+		cursor: not-allowed;
+		opacity: 0.4;
+	}
+	.orgao-action-btn.is-add:hover {
+		color: var(--ds-color-primary-700);
+		background: var(--ds-color-info-light-bg);
+	}
+	.orgao-action-btn.is-edit:hover {
+		color: var(--ds-color-info-600);
+		background: var(--ds-color-info-light-bg);
+	}
+	.orgao-action-btn.is-delete:hover {
+		color: var(--ds-color-danger-600);
+		background: var(--ds-color-danger-light-bg);
+	}
+	.orgao-action-btn.is-warning:hover {
+		color: var(--ds-color-warning-600);
+		background: var(--ds-color-info-light-bg);
+	}
+	.orgao-action-btn.is-success:hover {
+		color: var(--ds-color-success-600);
+		background: var(--ds-color-success-light-bg);
+	}
+	.orgao-action-btn.is-disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+
+	.orgao-move-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+		padding-left: calc(2.5rem + var(--orgao-depth, 0) * 1.4rem);
+	}
+
+	@media (max-width: 720px) {
+		.orgao-row {
+			gap: 0.35rem;
+			padding-left: calc(0.4rem + var(--orgao-depth, 0) * 1rem);
+		}
+		.orgao-tipo-badge {
+			display: none;
+		}
+		.orgao-nome {
+			font-size: 0.75rem;
+		}
+		.orgao-actions {
+			gap: 0;
+		}
+	}
+</style>

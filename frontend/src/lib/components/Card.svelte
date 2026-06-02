@@ -11,9 +11,11 @@
 		labelId?: string;
 		children: Snippet;
 		header?: Snippet;
+		/** Rodape opcional do card, separado por borda (acoes/resumo). */
+		footer?: Snippet;
 	}
 
-	let { title, labelId, children, header }: Props = $props();
+	let { title, labelId, children, header, footer }: Props = $props();
 </script>
 
 <section
@@ -33,4 +35,9 @@
 	<div class="p-5">
 		{@render children()}
 	</div>
+	{#if footer}
+		<footer class="flex items-center justify-end gap-3 border-t border-border-subtle px-5 py-4">
+			{@render footer()}
+		</footer>
+	{/if}
 </section>

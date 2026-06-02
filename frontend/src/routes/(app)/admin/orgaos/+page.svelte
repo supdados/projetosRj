@@ -227,7 +227,7 @@
 			</div>
 		{:else}
 			<Card>
-				<ul class="flex flex-col" aria-busy={mutating}>
+				<ul class="orgao-tree" aria-busy={mutating}>
 					{#each data.arvore as raiz, i (raiz.id)}
 						<OrgaoTreeNode
 							node={raiz}
@@ -244,7 +244,29 @@
 						/>
 					{/each}
 				</ul>
+
+				{#snippet footer()}
+					<p class="flex items-center gap-2 text-xs text-text-muted">
+						<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
+							<path d="M10 2a1 1 0 011 1v4.6l1.3-1.3a1 1 0 111.4 1.4l-3 3a1 1 0 01-1.4 0l-3-3a1 1 0 011.4-1.4L9 7.6V3a1 1 0 011-1zM3 9a1 1 0 011 1v3a1 1 0 001 1h10a1 1 0 001-1v-3a1 1 0 112 0v3a3 3 0 01-3 3H5a3 3 0 01-3-3v-3a1 1 0 011-1z" />
+						</svg>
+						Arraste uma unidade sobre outra do mesmo nível para reordenar.
+					</p>
+				{/snippet}
 			</Card>
 		{/if}
 	{/if}
 </section>
+
+<style>
+	/* Espelha .orgao-tree de orgao_tree.css (v4.5): lista rolável até 70vh. */
+	.orgao-tree {
+		list-style: none;
+		margin: -0.5rem -0.5rem;
+		padding: 0.5rem 0;
+		display: flex;
+		flex-direction: column;
+		max-height: 70vh;
+		overflow: auto;
+	}
+</style>

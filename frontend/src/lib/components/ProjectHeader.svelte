@@ -115,8 +115,8 @@
 
 <header
 	aria-labelledby="project-detail-title"
-	class="sticky top-0 z-20 flex flex-col gap-3 border-b border-border-subtle bg-surface px-5 transition-[padding] duration-fast {compact
-		? 'py-2'
+	class="sticky top-0 z-20 flex flex-col gap-3 border-b border-border-subtle bg-surface px-5 transition-[padding,box-shadow] duration-base ease-[cubic-bezier(0.4,0,0.2,1)] {compact
+		? 'py-2 shadow-md'
 		: 'py-4'}"
 	style={`top: ${topOffset}px`}
 	data-compact={compact ? 'true' : 'false'}
@@ -127,7 +127,7 @@
 				<div class="flex items-center gap-2">
 					<h1
 						id="project-detail-title"
-						class="truncate font-heading font-bold text-text-primary {compact
+						class="truncate font-heading font-bold text-text-primary transition-[font-size] duration-base ease-[cubic-bezier(0.4,0,0.2,1)] {compact
 							? 'text-lg'
 							: 'text-2xl'}"
 					>

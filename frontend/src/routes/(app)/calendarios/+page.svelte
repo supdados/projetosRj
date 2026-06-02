@@ -335,6 +335,18 @@
 		if (start && end) return `${start} — ${end}`;
 		return start || end;
 	}
+
+	/**
+	 * Cor da barra lateral do evento na lista (cal-list-bar) por estado de sync,
+	 * 1:1 com o original: erro = danger, pendente = cinza (#94a3b8), sincronizado
+	 * com o Google = verde (#0f9d58), local = primary.
+	 */
+	function syncBarClass(event: CalendarEvent): string {
+		if (event.sync_status === 'error') return 'bg-danger';
+		if (event.sync_status === 'pending') return 'bg-[#94a3b8]';
+		if (event.source === 'google') return 'bg-[#0f9d58]';
+		return 'bg-primary-600';
+	}
 </script>
 
 <svelte:head>
@@ -385,8 +397,21 @@
 			<button
 				type="button"
 				onclick={openCreate}
-				class="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex items-center gap-[0.3rem] whitespace-nowrap rounded-[0.45rem] bg-primary-600 px-[0.85rem] py-[0.42rem] text-sm font-medium text-white transition-colors duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
+				<svg
+					width="12"
+					height="12"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					aria-hidden="true"
+				>
+					<line x1="12" y1="5" x2="12" y2="19" />
+					<line x1="5" y1="12" x2="19" y2="12" />
+				</svg>
 				Novo evento
 			</button>
 		</div>
@@ -408,7 +433,7 @@
 			<div
 				role="status"
 				aria-live="polite"
-				class="rounded-lg border border-border-subtle bg-surface px-5 py-8 text-center text-text-muted"
+				class="rounded-[0.7rem] border border-dashed border-border-subtle px-4 py-12 text-center text-sm text-text-muted"
 			>
 				Nenhum evento ainda. Crie o primeiro com "Novo evento".
 			</div>
@@ -421,59 +446,95 @@
 						>
 							{group.label}
 						</h3>
-						<ul class="flex flex-col gap-2">
+						<ul class="flex flex-col gap-[0.35rem]">
 							{#each group.events as event (event.id)}
+								<!-- cal-list-event: borda + hover border-primary/shadow; barra lateral por sync. -->
 								<li
-									class="flex flex-col gap-2 rounded-md border border-border-subtle bg-surface px-4 py-3"
+									class="group flex items-start gap-[0.7rem] rounded-[0.55rem] border border-border-subtle bg-surface px-[0.7rem] py-[0.6rem] transition-[border-color,box-shadow] duration-fast hover:border-primary-500 hover:shadow-[0_2px_8px_rgba(0,90,146,0.08)]"
 								>
-									<button
-										type="button"
-										onclick={() => openEdit(event)}
-										class="flex flex-col gap-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-									>
-										<span
-											class="text-sm font-medium text-text-primary hover:text-primary-700"
+									<!-- cal-list-bar: faixa colorida 3px. -->
+									<span
+										class="min-h-[2rem] w-[3px] flex-shrink-0 self-stretch rounded-[2px] {syncBarClass(
+											event
+										)}"
+										aria-hidden="true"
+									></span>
+
+									<div class="min-w-0 flex-1">
+										<button
+											type="button"
+											onclick={() => openEdit(event)}
+											class="flex w-full flex-col gap-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 										>
-											{event.title}
-										</span>
-										<span class="text-xs text-text-secondary">
-											{timeRangeOf(event)}
-										</span>
-									</button>
-
-									{#if event.location}
-										<p class="text-xs text-text-muted">{event.location}</p>
-									{/if}
-
-									{#if event.meet_link}
-										<p class="text-xs">
-											<a
-												href={event.meet_link}
-												target="_blank"
-												rel="noopener noreferrer"
-												class="text-primary-700 underline hover:text-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											<span
+												class="truncate text-md font-medium text-text-primary group-hover:text-primary-700"
 											>
-												Entrar no Google Meet
-											</a>
-										</p>
-									{/if}
+												{event.title}
+											</span>
+											<span class="text-xs text-text-muted">
+												{timeRangeOf(event)}
+											</span>
+										</button>
 
-									{#if event.sync_status === 'error'}
-										<!-- Aviso degradado por evento: NUNCA esconde o evento. -->
-										<p
-											role="status"
-											aria-live="polite"
-											class="rounded-md border border-warning bg-surface-muted px-2 py-1 text-xs text-warning"
-										>
-											Falha de sincronizacao com o Google{event.sync_error
-												? `: ${event.sync_error}`
-												: '.'}
-										</p>
-									{:else if event.sync_status === 'pending'}
-										<p class="text-xs text-text-muted">
-											Aguardando sincronizacao com o Google.
-										</p>
-									{/if}
+										<div class="mt-[0.22rem] flex flex-wrap items-center gap-[0.6rem]">
+											{#if event.location}
+												<span class="text-xs text-text-muted">{event.location}</span>
+											{/if}
+
+											{#if event.meet_link}
+												<!-- cal-meta-meet: pilula verde com icone de video. -->
+												<a
+													href={event.meet_link}
+													target="_blank"
+													rel="noopener noreferrer"
+													class="inline-flex items-center gap-[0.25rem] rounded-[0.3rem] bg-[#00832d] py-[0.18rem] pl-[0.35rem] pr-[0.45rem] text-xs font-medium text-white no-underline transition-colors duration-fast hover:bg-[#006625] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												>
+													<svg width="12" height="12" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+														<path
+															d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"
+														/>
+													</svg>
+													Meet
+												</a>
+											{/if}
+
+											{#if event.sync_status === 'error'}
+												<!-- cal-sync-badge--error: pilula danger. -->
+												<span
+													class="inline-flex items-center rounded-full border border-danger/20 bg-danger/[0.08] px-[0.38rem] py-[0.1rem] text-2xs text-danger"
+												>
+													Erro de sync
+												</span>
+											{:else if event.sync_status === 'pending'}
+												<!-- cal-sync-badge--pending: pilula cinza. -->
+												<span
+													class="inline-flex items-center rounded-full border border-border-subtle bg-surface-muted px-[0.38rem] py-[0.1rem] text-2xs text-text-muted"
+												>
+													Pendente
+												</span>
+											{:else if event.source === 'google'}
+												<!-- cal-sync-badge--ok: pilula verde (sincronizado). -->
+												<span
+													class="inline-flex items-center rounded-full border border-success/20 bg-success/10 px-[0.38rem] py-[0.1rem] text-2xs text-success"
+												>
+													Sincronizado
+												</span>
+											{/if}
+										</div>
+
+										{#if event.sync_status === 'error'}
+											<!-- Aviso degradado por evento: NUNCA esconde o evento. -->
+											<p
+												role="status"
+												aria-live="polite"
+												class="mt-2 rounded-md border border-warning bg-surface-muted px-2 py-1 text-xs text-warning"
+											>
+												Falha de sincronizacao com o Google{event.sync_error
+													? `: ${event.sync_error}`
+													: '.'}
+											</p>
+										{/if}
+									</div>
 								</li>
 							{/each}
 						</ul>

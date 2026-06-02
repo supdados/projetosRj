@@ -524,7 +524,7 @@
 					class="flex flex-col gap-4 rounded-md border border-border-subtle bg-surface-muted/30 p-4"
 				>
 					<span
-						class="inline-flex w-fit items-center rounded-full border border-primary-500 bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700"
+						class="inline-flex w-fit items-center rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary-700"
 					>
 						Criação rápida
 					</span>
@@ -647,7 +647,7 @@
 							type="button"
 							onclick={() => toggleSection('planning')}
 							aria-expanded={openSection === 'planning'}
-							class="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-text-primary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {openSection === 'planning' ? 'bg-primary-100 text-primary-700' : 'text-text-primary'}"
 						>
 							<span><i class="fas fa-sliders-h mr-2"></i>Classificação</span>
 							<i class="fas {openSection === 'planning' ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
@@ -694,7 +694,7 @@
 							type="button"
 							onclick={() => toggleSection('goals')}
 							aria-expanded={openSection === 'goals'}
-							class="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-text-primary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {openSection === 'goals' ? 'bg-primary-100 text-primary-700' : 'text-text-primary'}"
 						>
 							<span><i class="fas fa-bullseye mr-2"></i>Objetivos, resultados e indicadores</span>
 							<i class="fas {openSection === 'goals' ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
@@ -844,7 +844,7 @@
 							type="button"
 							onclick={() => toggleSection('details')}
 							aria-expanded={openSection === 'details'}
-							class="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-text-primary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {openSection === 'details' ? 'bg-primary-100 text-primary-700' : 'text-text-primary'}"
 						>
 							<span><i class="fas fa-link mr-2"></i>Links e Observação</span>
 							<i class="fas {openSection === 'details' ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
@@ -925,7 +925,7 @@
 							type="button"
 							onclick={() => toggleSection('template')}
 							aria-expanded={openSection === 'template'}
-							class="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-text-primary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {openSection === 'template' ? 'bg-primary-100 text-primary-700' : 'text-text-primary'}"
 						>
 							<span><i class="fas fa-layer-group mr-2"></i>Modelo de Etapas</span>
 							<i class="fas {openSection === 'template' ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
@@ -1009,14 +1009,14 @@
 						type="button"
 						onclick={onClose}
 						disabled={submitting}
-						class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="min-w-[126px] rounded-md border border-primary-500 bg-surface px-4 py-2 text-sm font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 					>
 						Cancelar
 					</button>
 					<button
 						type="submit"
 						disabled={!canSubmit}
-						class="inline-flex items-center gap-2 rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="inline-flex min-w-[126px] items-center justify-center gap-2 rounded-md border border-primary-700 bg-topnav-gradient px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-fast hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-border-subtle disabled:bg-surface-muted disabled:bg-none disabled:text-text-muted disabled:shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 					>
 						{#if submitting}
 							<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>Criando…

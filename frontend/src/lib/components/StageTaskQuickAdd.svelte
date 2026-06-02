@@ -22,6 +22,7 @@
 	 */
 	import { onMount, tick } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { ApiClientError } from '$lib/api/client';
 	import {
 		fetchStageTasks,
@@ -210,11 +211,16 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<!-- Backdrop -->
+<!--
+	Backdrop + diálogo: fidelidade a 05-stage-task-quick-add.css.
+	  backdrop -> opacity 280ms ease-out (entrar) / 200ms (sair)
+	  diálogo  -> translateY(18px) scale(0.97) -> 0/1 em ~320ms cubic-bezier(0.22,1,0.36,1)
+	cubicOut aproxima a curva (0.22,1,0.36,1) do original.
+-->
 <div
 	class="fixed inset-0 z-modal bg-black/40"
 	role="presentation"
-	transition:fade={{ duration: 120 }}
+	transition:fade={{ duration: 280, easing: cubicOut }}
 	onclick={attemptClose}
 ></div>
 
@@ -223,8 +229,8 @@
 	aria-modal="true"
 	aria-labelledby="stage-quick-add-title"
 	tabindex="-1"
-	transition:fly={{ y: 16, duration: 180 }}
-	class="fixed left-1/2 top-1/2 z-modal flex max-h-[85vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-lg border border-border-subtle bg-surface p-5 shadow-lg"
+	transition:fly={{ y: 18, duration: 320, easing: cubicOut }}
+	class="fixed left-1/2 top-1/2 z-modal flex max-h-[85vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-2xl border border-border-subtle bg-surface p-5 shadow-lg"
 >
 	<header class="flex items-start justify-between gap-3">
 		<div class="flex min-w-0 flex-col gap-1">
