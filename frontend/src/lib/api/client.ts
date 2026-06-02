@@ -15,7 +15,7 @@
  * NAO usa o monkeypatch de fetch do base.html (so existe no Jinja legado).
  */
 
-import type { ApiResult } from '$lib/types/api';
+import type { ApiResult, PageMeta } from '$lib/types/api';
 
 /** Erro estruturado lancado quando o backend devolve `{ok:false}`. */
 export class ApiClientError extends Error {
@@ -173,9 +173,74 @@ async function request<T>(path: string, config: RequestConfig): Promise<T> {
 	return parsed.data;
 }
 
+/**
+ * Como `request<T>`, mas devolve `{ data, meta }` em vez de descartar a `meta`
+ * do envelope. Reusa o MESMO pipeline (`sendOnce` + 401 -> /login + retry de
+ * CSRF), so que preservando `meta` para chamadores que paginam (#9 — antes
+ * `fetchAdminUsers`/`fetchTemplateList` faziam fetch nativo so para ler `meta`).
+ */
+async function requestWithMeta<T>(
+	path: string,
+	config: RequestConfig
+): Promise<{ data: T; meta?: PageMeta }> {
+	let parsed = (await sendOnce<T>(path, config)) as ApiResult<T> & {
+		__status: number;
+		meta?: PageMeta;
+	};
+	const status = parsed.__status;
+
+	if (!parsed.ok) {
+		const { code, message } = parsed.error;
+
+		if (status === 401 || code === 'unauthenticated') {
+			redirectToLogin();
+			throw new ApiClientError('unauthenticated', message, status);
+		}
+
+		if (NON_GET(config.method) && isCsrfFailure(status, code)) {
+			const fresh = await refreshCsrfToken();
+			if (fresh) {
+				parsed = (await sendOnce<T>(path, config)) as ApiResult<T> & {
+					__status: number;
+					meta?: PageMeta;
+				};
+				if (parsed.ok) return { data: parsed.data, meta: parsed.meta };
+				throw new ApiClientError(
+					parsed.error.code,
+					parsed.error.message,
+					parsed.__status
+				);
+			}
+		}
+
+		throw new ApiClientError(code, message, status);
+	}
+
+	return { data: parsed.data, meta: parsed.meta };
+}
+
 /** GET tipado: desempacota o envelope e devolve `data`. */
 export function get<T>(path: string, signal?: AbortSignal): Promise<T> {
 	return request<T>(path, { method: 'GET', signal });
+}
+
+/**
+ * GET tipado que preserva a `meta` do envelope: devolve `{ data, meta }`.
+ *
+ * Mesmo pipeline de `get<T>` (cookie de sessao, 401 -> navegacao top-level para
+ * /login, retry de CSRF herdado de `request`), mas sem descartar `meta`. Use em
+ * listas paginadas que precisam de `page/page_size/total`.
+ *
+ * Exemplo:
+ *   const { data, meta } = await getWithMeta<{ usuarios: User[] }>(
+ *     '/api/admin/usuarios?page=2'
+ *   );
+ */
+export function getWithMeta<T>(
+	path: string,
+	signal?: AbortSignal
+): Promise<{ data: T; meta?: PageMeta }> {
+	return requestWithMeta<T>(path, { method: 'GET', signal });
 }
 
 /** POST tipado: envia `body` como JSON, devolve `data`. */
@@ -199,4 +264,95 @@ export function postForm<T>(path: string, formData: FormData, signal?: AbortSign
 	return request<T>(path, { method: 'POST', formData, signal });
 }
 
-export const apiClient = { get, post, postForm };
+/**
+ * Resultado cru de um POST multipart: o JSON parseado (qualquer forma) e o
+ * status HTTP. Usado por `postFormRaw` para chamadores que NAO falam o envelope
+ * canonico `{ok,data}` (ex.: rotas Jinja legadas que respondem `{ok,event}`).
+ */
+interface RawFormResult<T> {
+	json: T | null;
+	status: number;
+}
+
+/**
+ * Envia UM POST multipart sem assumir envelope: devolve o JSON cru + status.
+ *
+ * NUNCA seta `Content-Type` (o browser monta o boundary). Injeta `X-CSRFToken`
+ * da memoria/meta. Corpo vazio -> `json: null`.
+ */
+async function sendFormOnce<T>(
+	path: string,
+	formData: FormData,
+	signal?: AbortSignal
+): Promise<RawFormResult<T>> {
+	const headers: Record<string, string> = { Accept: 'application/json' };
+	const token = currentCsrfToken();
+	if (token) headers['X-CSRFToken'] = token;
+
+	const res = await fetch(`${API_PREFIX}${path}`, {
+		method: 'POST',
+		credentials: 'include',
+		headers,
+		body: formData,
+		signal
+	});
+
+	const text = await res.text();
+	let json: T | null = null;
+	if (text) {
+		try {
+			json = JSON.parse(text) as T;
+		} catch {
+			json = null;
+		}
+	}
+	return { json, status: res.status };
+}
+
+/**
+ * POST multipart que devolve o JSON CRU (sem desempacotar `{ok,data}`), usando o
+ * MESMO tratamento de CSRF e 401 do `client.ts` (#21).
+ *
+ * Diferente de `postForm` (que assume o envelope canonico), este poster serve
+ * rotas que respondem outra forma — ex.: as rotas Jinja legadas de evento em
+ * `calendars.ts`, que devolvem `{ "ok": true, "event": {...} }`. O chamador
+ * interpreta o JSON; aqui so garantimos:
+ *   - cookie de sessao (`credentials:'include'`);
+ *   - `X-CSRFToken` da meta e, em falha de CSRF (HTTP 400), UM re-fetch via
+ *     `GET /api/csrf-token` (`refreshCsrfToken`) + retry — igual a `request`;
+ *   - 401 -> navegacao top-level para `/login` (lanca `ApiClientError`).
+ *
+ * Exemplo:
+ *   const body = await postFormRaw<{ ok: boolean; event: CalendarEvent }>(
+ *     '/calendarios/eventos', formData
+ *   );
+ */
+export async function postFormRaw<T>(
+	path: string,
+	formData: FormData,
+	signal?: AbortSignal
+): Promise<T | null> {
+	let result = await sendFormOnce<T>(path, formData, signal);
+
+	if (result.status === 401) {
+		redirectToLogin();
+		throw new ApiClientError('unauthenticated', 'Sessao expirada.', 401);
+	}
+
+	// Falha de CSRF (HTTP 400): re-busca token e tenta de novo (uma vez). Sem
+	// envelope canonico, decidimos pelo status — o backend marca CSRF como 400.
+	if (result.status === 400) {
+		const fresh = await refreshCsrfToken();
+		if (fresh) {
+			result = await sendFormOnce<T>(path, formData, signal);
+			if (result.status === 401) {
+				redirectToLogin();
+				throw new ApiClientError('unauthenticated', 'Sessao expirada.', 401);
+			}
+		}
+	}
+
+	return result.json;
+}
+
+export const apiClient = { get, getWithMeta, post, postForm, postFormRaw };
