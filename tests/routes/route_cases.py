@@ -1016,6 +1016,161 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
+        "id": "api_projeto_detalhe_get",
+        "method": "GET",
+        "rule": "/api/projetos/<int:project_id>/detalhe",
+        "path": "/api/projetos/{project_id}/detalhe",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_projeto_inline_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/inline",
+        "path": "/api/projetos/{project_id}/inline",
+        "role": "user",
+        "json": {"titulo": "Projeto Inline API"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_projeto_tarefas_etapa_get",
+        "method": "GET",
+        "rule": "/api/projetos/<int:project_id>/tarefas-etapa",
+        "path": "/api/projetos/{project_id}/tarefas-etapa",
+        "role": "user",
+        "query_string": {"etapa_id": "{etapa_id}"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapa_add_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/etapas",
+        "path": "/api/projetos/{project_id}/etapas",
+        "role": "user",
+        "json": {
+            "descricao": "Etapa via API",
+            "data_inicio": "2026-03-02",
+            "data_fim": "2026-03-06",
+            "responsavel": "Usuario Auditoria",
+        },
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapa_edit_post",
+        "method": "POST",
+        "rule": "/api/etapas/<int:etapa_id>",
+        "path": "/api/etapas/{etapa_id}",
+        "role": "user",
+        "json": {
+            "descricao": "Etapa editada via API",
+            "data_inicio": "2026-01-12",
+            "data_fim": "2026-01-16",
+            "responsavel": "Usuario Auditoria",
+            "iniciada": False,
+            "done": False,
+        },
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapa_delete_post",
+        "method": "POST",
+        "rule": "/api/etapas/<int:etapa_id>/delete",
+        "path": "/api/etapas/{etapa_id}/delete",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapa_update_field_post",
+        "method": "POST",
+        "rule": "/api/etapas/<int:etapa_id>/update-field",
+        "path": "/api/etapas/{etapa_id}/update-field",
+        "role": "user",
+        "json": {"field": "descricao", "value": "Descricao inline API"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapa_comentario_post",
+        "method": "POST",
+        "rule": "/api/etapas/<int:etapa_id>/comentario",
+        "path": "/api/etapas/{etapa_id}/comentario",
+        "role": "user",
+        "json": {"comentario": "Comentario via API"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapa_toggle_iniciada_post",
+        "method": "POST",
+        "rule": "/api/etapas/<int:etapa_id>/toggle-iniciada",
+        "path": "/api/etapas/{etapa_id}/toggle-iniciada",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapa_toggle_post",
+        "method": "POST",
+        "rule": "/api/etapas/<int:etapa_id>/toggle",
+        "path": "/api/etapas/{etapa_started_id}/toggle",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapas_reordenar_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/etapas/reordenar",
+        "path": "/api/projetos/{project_id}/etapas/reordenar",
+        "role": "user",
+        "json": {
+            "etapa_ids": ["{etapa_id}", "{etapa_started_id}"],
+            "etapa_id": "{etapa_id}",
+            "days_diff": 2,
+        },
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_projeto_cascade_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/cascade",
+        "path": "/api/projetos/{project_id}/cascade",
+        "role": "user",
+        "json": {"etapa_id": "{etapa_id}", "days_diff": 2},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_projeto_importar_modelo_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/importar-modelo",
+        "path": "/api/projetos/{project_id}/importar-modelo",
+        "role": "user",
+        "json": {"template_id": "{template_id}", "start_date": "2026-03-10"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
         "id": "api_tarefas_get",
         "method": "GET",
         "rule": "/api/tarefas",
@@ -1947,5 +2102,21 @@ ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 # /api/admin/templates (lista com metricas + ?order=/?q=/?page=), GET
 # /api/admin/templates/<id> (form + etapas), POST /api/admin/templates (criar),
 # POST /api/admin/templates/<id> (editar), POST .../duplicate e POST
-# .../delete. Total: 170.
-assert len(ROUTE_CASES) == 170
+# .../delete.
+# + 3 endpoints JSON da Fase 5a (Detalhe de Projeto): GET
+# /api/projetos/<id>/detalhe (payload completo do detalhe: projeto + etapas com
+# contagem de tarefas read-only + derivados + opcoes + permissions), POST
+# /api/projetos/<id>/inline (edicao inline reusando apply_project_inline_changes;
+# 422 validation / 403 forbidden) e GET /api/projetos/<id>/tarefas-etapa (lista
+# SOMENTE LEITURA das tarefas de uma etapa).
+# + 10 endpoints JSON da Fase 5a (Etapas — mutacao): POST
+# /api/projetos/<id>/etapas (adicionar), POST /api/etapas/<id> (editar), POST
+# /api/etapas/<id>/delete, POST /api/etapas/<id>/update-field (inline; cascata
+# de datas em dias uteis server-side), POST /api/etapas/<id>/comentario, POST
+# /api/etapas/<id>/toggle-iniciada, POST /api/etapas/<id>/toggle, POST
+# /api/projetos/<id>/etapas/reordenar (reordena e dispara cascade_subsequent_dates
+# server-side; devolve as etapas atualizadas), POST /api/projetos/<id>/cascade
+# (recalculo de datas em cascata) e POST /api/projetos/<id>/importar-modelo
+# (aplica template reusando import_template_stages). Todos no envelope, com
+# api_login_required + user_can_access_project (404/403). Total: 183.
+assert len(ROUTE_CASES) == 183
