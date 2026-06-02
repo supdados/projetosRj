@@ -72,6 +72,11 @@ from . import admin_users  # noqa: F401,E402
 from . import admin_orgaos  # noqa: F401,E402
 from . import admin_templates  # noqa: F401,E402
 
+# Errorhandlers JSON para /api/* (B1): exceções não tratadas sob /api viram o
+# envelope canônico em vez de HTML 500. Importado por último para registrar os
+# handlers no main_bp após as rotas.
+from . import errors  # noqa: F401,E402
+
 __all__ = [
     "ok",
     "fail",
