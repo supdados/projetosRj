@@ -2259,6 +2259,47 @@ ROUTE_CASES = [
         "requires_login": True,
         "requires_admin": True,
     },
+    # Fase 6 (Google Calendar): hub JSON + acoes de conexao Google no envelope.
+    {
+        "id": "api_calendarios_hub_get",
+        "method": "GET",
+        "rule": "/api/calendarios",
+        "path": "/api/calendarios",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_calendarios_google_disconnect_post",
+        "method": "POST",
+        "rule": "/api/calendarios/google/disconnect",
+        "path": "/api/calendarios/google/disconnect",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_calendarios_google_sync_post",
+        "method": "POST",
+        "rule": "/api/calendarios/google/sync",
+        "path": "/api/calendarios/google/sync",
+        "role": "user",
+        "expected_status": 409,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_calendarios_google_watch_renew_post",
+        "method": "POST",
+        "rule": "/api/calendarios/google/watch/renew",
+        "path": "/api/calendarios/google/watch/renew",
+        "role": "user",
+        "expected_status": 409,
+        "requires_login": True,
+        "requires_admin": False,
+    },
 ]
 
 LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
@@ -2332,5 +2373,18 @@ ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 # routes/api/task_comments.py e routes/api/task_attachments.py, reusando as regras
 # legadas (_can_view_task para comentar; autoria para editar/excluir comentario;
 # _can_manage_task_restricted_actions para excluir anexo). +7.
-# Total: 200.
-assert len(ROUTE_CASES) == 200
+#
+# Fase 6 (Google Calendar): GET /api/calendarios (hub: eventos do usuario
+# ordenados + estado da conexao SEM tokens + google_calendar_enabled +
+# last_sync_display) e tres acoes de conexao que reusam EXATAMENTE os helpers do
+# fluxo Jinja (routes/calendars/helpers.py), porem no envelope: POST
+# /api/calendarios/google/disconnect (_stop_watch_channel + delete), POST
+# /api/calendarios/google/sync (_sync_events_from_google -> summary
+# {upserted,deleted,ignored}) e POST /api/calendarios/google/watch/renew
+# (_renew_watch_channel -> {expires_at_display}). Token expirado e tratado igual
+# ao legado (_describe_calendar_issue + _EXPIRED_TOKEN_CODES -> _auto_disconnect).
+# O CRUD de evento NAO ganha endpoint /api: o frontend reusa POST
+# /calendarios/eventos[/...] com Accept: application/json. Anexados ao main_bp em
+# routes/api/calendars.py, com api_login_required. +4.
+# Total: 204.
+assert len(ROUTE_CASES) == 204
