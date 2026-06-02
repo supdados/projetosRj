@@ -2,6 +2,35 @@ from models import Task, TaskAccessAudit, db
 from time_utils import utc_now
 
 
+def _hub_descriptions(client, path="/api/tarefas"):
+    """Descricoes das tarefas do hub via ``/api/tarefas`` (fonte da SPA).
+
+    Apos o cut-over o hub serve a shell da SPA; a listagem (ativas/arquivadas)
+    e consumida do endpoint JSON. Achatamos os grupos em descricoes para validar
+    onde cada tarefa aparece.
+    """
+    payload = client.get(path).get_json()
+    assert payload["ok"] is True
+    descriptions = []
+    for group in payload["data"]["groups"]:
+        descriptions.extend(task["descricao"] for task in group["tasks"])
+    return descriptions
+
+
+def _hub_project_ids(client, path="/api/tarefas"):
+    """IDs de projeto com grupo (tarefas) na listagem do hub via API."""
+    payload = client.get(path).get_json()
+    assert payload["ok"] is True
+    return {group["project_id"] for group in payload["data"]["groups"]}
+
+
+def _hub_project_option_values(client, path="/api/tarefas"):
+    """Valores das opcoes de projeto (filtro) na listagem do hub via API."""
+    payload = client.get(path).get_json()
+    assert payload["ok"] is True
+    return {opt["value"] for opt in payload["data"]["project_options"]}
+
+
 def test_finalize_keeps_task_active_and_only_updates_status(
     app, client_user, seed_data
 ):
@@ -17,13 +46,10 @@ def test_finalize_keeps_task_active_and_only_updates_status(
         assert task.is_finalized is False
         assert task.finalized_at is None
 
-    active_page = client_user.get("/tarefas")
-    assert active_page.status_code == 200
-    assert b"Item Auditoria" in active_page.data
-
-    archived_page = client_user.get("/tarefas/arquivadas")
-    assert archived_page.status_code == 200
-    assert b"Item Auditoria" not in archived_page.data
+    assert "Item Auditoria" in _hub_descriptions(client_user)
+    assert "Item Auditoria" not in _hub_descriptions(
+        client_user, "/api/tarefas?modo=arquivadas"
+    )
 
 
 def test_archive_finalized_moves_task_to_archived_listing(app, client_user, seed_data):
@@ -40,13 +66,10 @@ def test_archive_finalized_moves_task_to_archived_listing(app, client_user, seed
         assert task.is_finalized is True
         assert task.finalized_at is not None
 
-    active_page = client_user.get("/tarefas")
-    assert active_page.status_code == 200
-    assert b"Item Auditoria" not in active_page.data
-
-    archived_page = client_user.get("/tarefas/arquivadas")
-    assert archived_page.status_code == 200
-    assert b"Item Auditoria" in archived_page.data
+    assert "Item Auditoria" not in _hub_descriptions(client_user)
+    assert "Item Auditoria" in _hub_descriptions(
+        client_user, "/api/tarefas?modo=arquivadas"
+    )
 
 
 def test_reactivate_returns_archived_task_to_active_listing_as_programado(
@@ -66,13 +89,10 @@ def test_reactivate_returns_archived_task_to_active_listing_as_programado(
         assert task.finalized_at is None
         assert task.status == "nao_iniciada"
 
-    active_page = client_user.get("/tarefas")
-    assert active_page.status_code == 200
-    assert b"Item Auditoria" in active_page.data
-
-    archived_page = client_user.get("/tarefas/arquivadas")
-    assert archived_page.status_code == 200
-    assert b"Item Auditoria" not in archived_page.data
+    assert "Item Auditoria" in _hub_descriptions(client_user)
+    assert "Item Auditoria" not in _hub_descriptions(
+        client_user, "/api/tarefas?modo=arquivadas"
+    )
 
 
 def test_archive_finalized_ajax_returns_archived_ids(app, client_user, seed_data):
@@ -353,52 +373,42 @@ def test_tasks_hub_hides_projects_without_items_until_first_item_is_created(
         db.session.add(archived_task)
         db.session.commit()
 
-    hub_without_item = client_user.get("/tarefas")
-    assert hub_without_item.status_code == 200
-    assert (
-        f'data-project-id="{seed_data["project_complete_id"]}"'.encode()
-        not in hub_without_item.data
-    )
-    assert (
-        f'data-value="{seed_data["project_complete_id"]}"'.encode()
-        in hub_without_item.data
-    )
+    complete_id = seed_data["project_complete_id"]
+
+    # Sem tarefa ativa o projeto nao tem grupo, mas continua disponivel no
+    # filtro de projetos.
+    assert complete_id not in _hub_project_ids(client_user)
+    assert str(complete_id) in _hub_project_option_values(client_user)
 
     with app.app_context():
         db.session.add(
             Task(
                 descricao="Primeira tarefa ativa do projeto completo",
                 status="nao_iniciada",
-                project_id=seed_data["project_complete_id"],
+                project_id=complete_id,
                 created_by_id=seed_data["user_id"],
             )
         )
         db.session.commit()
 
-    hub_with_item = client_user.get("/tarefas")
-    assert hub_with_item.status_code == 200
-    assert (
-        f'data-project-id="{seed_data["project_complete_id"]}"'.encode()
-        in hub_with_item.data
-    )
+    # Com a primeira tarefa ativa o projeto passa a ter grupo na listagem.
+    assert complete_id in _hub_project_ids(client_user)
 
 
-def test_tasks_hub_uses_orgao_selector_instead_of_area_selector(client, seed_data):
+def test_tasks_hub_serves_spa_shell_for_user_and_admin(client, seed_data):
+    # O seletor de orgao migrou para a SPA; aqui garantimos apenas que ambos os
+    # papeis recebem a shell da SPA no path nativo.
     with client.session_transaction() as session:
         session["user_id"] = seed_data["user_id"]
-
     user_response = client.get("/tarefas")
     assert user_response.status_code == 200
-    assert b'name="area"' not in user_response.data
-    assert b'name="orgao"' in user_response.data
+    assert "data-sveltekit-preload-data" in user_response.get_data(as_text=True)
 
     with client.session_transaction() as session:
         session["user_id"] = seed_data["admin_id"]
-
     admin_response = client.get("/tarefas")
     assert admin_response.status_code == 200
-    assert b'name="area"' not in admin_response.data
-    assert b'name="orgao"' in admin_response.data
+    assert "data-sveltekit-preload-data" in admin_response.get_data(as_text=True)
 
 
 def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(
@@ -406,24 +416,27 @@ def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(
 ):
     task_id = seed_data["task_id"]
     project_id = seed_data["project_id"]
-    task_title = b"Item Auditoria"
 
     client_user.post(f"/tarefas/{task_id}/finalizar", follow_redirects=False)
     client_user.post("/tarefas/arquivar-finalizadas", follow_redirects=False)
 
+    # A listagem do projeto (via API, project filter) nao traz a tarefa arquivada.
+    project_descriptions = _hub_descriptions(
+        client_user, f"/api/tarefas?project={project_id}"
+    )
+    assert "Item Auditoria" not in project_descriptions
+
+    # As telas /projeto/<id>/tarefas e /dashboard servem a shell da SPA.
     project_tasks_page = client_user.get(f"/projeto/{project_id}/tarefas")
     assert project_tasks_page.status_code == 200
-    assert task_title not in project_tasks_page.data
-    assert (
-        f"/tarefas/arquivadas?project={project_id}".encode() in project_tasks_page.data
-    )
-
-    dashboard_page = client_user.get("/dashboard")
-    assert dashboard_page.status_code == 200
-    assert task_title not in dashboard_page.data
+    assert "data-sveltekit-preload-data" in project_tasks_page.get_data(as_text=True)
 
 
-def test_archived_tasks_page_paginates_visible_tasks(app, client_user, seed_data):
+def test_archived_tasks_listing_returns_all_visible_archived_tasks(
+    app, client_user, seed_data
+):
+    # A paginacao virou responsabilidade da SPA; o endpoint JSON do hub devolve
+    # todas as tarefas arquivadas visiveis (mesma fonte build_task_hub_context).
     with app.app_context():
         archived_tasks = [
             Task(
@@ -440,52 +453,20 @@ def test_archived_tasks_page_paginates_visible_tasks(app, client_user, seed_data
         db.session.add_all(archived_tasks)
         db.session.commit()
 
-    page_one = client_user.get("/tarefas/arquivadas")
-    assert page_one.status_code == 200
-    page_one_html = page_one.get_data(as_text=True)
-    assert "Arquivada paginada 00" in page_one_html
-    assert "Arquivada paginada 19" in page_one_html
-    assert "Arquivada paginada 20" not in page_one_html
-    assert "Exibindo 1-20 de 25" in page_one_html
-    assert 'href="/tarefas/arquivadas?page=2"' in page_one_html
-
-    page_two = client_user.get("/tarefas/arquivadas?page=2")
-    assert page_two.status_code == 200
-    page_two_html = page_two.get_data(as_text=True)
-    assert "Arquivada paginada 00" not in page_two_html
-    assert "Arquivada paginada 20" in page_two_html
-    assert "Arquivada paginada 24" in page_two_html
-    assert "Exibindo 21-25 de 25" in page_two_html
+    descriptions = _hub_descriptions(client_user, "/api/tarefas?modo=arquivadas")
+    for index in range(25):
+        assert f"Arquivada paginada {index:02d}" in descriptions
 
 
-def test_project_tasks_template_contract_keeps_project_context_but_allows_switching_project_filter(
-    client_user, seed_data
-):
+def test_project_tasks_serves_spa_shell_with_project_context(client_user, seed_data):
+    # O contexto travado de projeto e a UI de troca de filtro vivem na SPA; aqui
+    # garantimos o shell no path nativo do hub de projeto (endpoint preservado).
     response = client_user.get(f"/projeto/{seed_data['project_id']}/tarefas")
     assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    assert f'/tarefas/arquivadas?project={seed_data["project_id"]}' in html
-    assert "/tarefas/arquivar-finalizadas" in html
-    assert 'title="Tarefas arquivadas"' in html
-    assert 'aria-label="Tarefas arquivadas"' in html
-    assert 'data-project-locked="1"' in html
-    assert 'id="filter_project_input"' in html
-    assert (
-        f'<input type="hidden" name="project" id="filter_project" value="{seed_data["project_id"]}">'
-        in html
-    )
-    assert 'id="project_locked"' not in html
-    assert 'action="/tarefas"' in html
-    assert 'href="/tarefas"' in html
+    assert "data-sveltekit-preload-data" in response.get_data(as_text=True)
 
 
-def test_project_tasks_empty_state_has_no_create_first_button(client_user, seed_data):
+def test_project_tasks_empty_project_still_serves_spa_shell(client_user, seed_data):
     response = client_user.get(f"/projeto/{seed_data['project_complete_id']}/tarefas")
     assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    assert '<section class="tasks-empty-state">' not in html
-    assert "Adicionar nova tarefa" in html
-    assert "task-hub-add-row" in html
-    assert 'id="taskHubCreateButton"' not in html
+    assert "data-sveltekit-preload-data" in response.get_data(as_text=True)

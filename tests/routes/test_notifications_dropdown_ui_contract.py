@@ -6,7 +6,7 @@ def _read(path):
 
 
 def test_notifications_dropdown_contains_semantic_render_hooks(client_user):
-    response = client_user.get("/dashboard")
+    response = client_user.get("/projects")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     notifications_path = (
@@ -50,7 +50,7 @@ def test_notifications_dropdown_contains_semantic_render_hooks(client_user):
 
 
 def test_notifications_dropdown_navigation_contract_is_preserved(client_user):
-    response = client_user.get("/dashboard")
+    response = client_user.get("/projects")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     notifications_path = (

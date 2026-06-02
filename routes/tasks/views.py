@@ -1,4 +1,4 @@
-from flask import flash, g, jsonify, redirect, url_for
+from flask import flash, g, jsonify, redirect, request, url_for
 
 from models import (
     Etapa,
@@ -10,30 +10,73 @@ from models import (
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
+from routes.orgao_scope import (
+    redirect_to_current_route_without_orgao,
+    sanitize_orgao_filter_for_current_user,
+)
+from routes.spa import _render_spa
 
 from routes.tasks.helpers import (
     _build_legacy_query_args,
     _can_access_project_in_tasks,
     _can_view_task,
-    _render_task_hub,
 )
+from routes.tasks.queries import _read_task_filter_values
+
+
+def _serve_task_hub_spa_or_redirect():
+    """Serve a shell da SPA do hub, preservando o redirect de orgao invalido.
+
+    O hub legado redirecionava (302) sem o parametro de orgao quando o filtro
+    era invalido para o usuario corrente. Preservamos esse contrato no path
+    nativo (incluindo o alias legado ``?area=``, lido por
+    ``_read_task_filter_values``) para nao quebrar a suite nem links existentes;
+    nos demais casos servimos a SPA, cuja fonte de dados vive em
+    ``GET /api/tarefas``.
+    """
+    filter_values = _read_task_filter_values(request.args)
+    _, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+        filter_values["orgao_filter"]
+    )
+    if invalid_orgao_filter:
+        return redirect_to_current_route_without_orgao()
+    return _render_spa()
 
 
 @main_bp.route("/tarefas", methods=["GET"])
 @login_required
 def list_tasks():
-    return _render_task_hub()
+    """Serve a SPA no path nativo ``/tarefas`` (cut-over KEEP-ENDPOINT).
+
+    O endpoint ``main.list_tasks`` permanece para que o ``target_url``
+    PERSISTIDO em notificacoes (``routes/tasks/notifications.py``) e os
+    redirects de ``creation.py``/``crud.py`` continuem validos; uma notificacao
+    antiga abre agora a SPA. A fonte de dados real do hub vive em
+    ``GET /api/tarefas`` (consumido pela SPA).
+    """
+    return _serve_task_hub_spa_or_redirect()
 
 
 @main_bp.route("/tarefas/arquivadas", methods=["GET"])
 @login_required
 def list_tasks_archived():
-    return _render_task_hub(include_archived=True)
+    """Serve a SPA no path nativo ``/tarefas/arquivadas`` (KEEP-ENDPOINT).
+
+    O modo "arquivadas" do hub e roteado client-side pela SPA; os dados vem de
+    ``GET /api/tarefas?modo=arquivadas``.
+    """
+    return _serve_task_hub_spa_or_redirect()
 
 
 @main_bp.route("/tarefas/finalizadas", methods=["GET"])
 @login_required
 def list_tasks_finalized():
+    """Mantem o redirect legado para ``/tarefas/arquivadas`` (302).
+
+    Endpoint preservado (alguns redirects/links apontam para ``finalizadas``);
+    o comportamento de redirecionar para a listagem de arquivadas e mantido para
+    nao quebrar a suite nem links existentes.
+    """
     return redirect(
         f'{url_for("main.list_tasks_archived")}{_build_legacy_query_args()}'
     )
@@ -42,6 +85,14 @@ def list_tasks_finalized():
 @main_bp.route("/tarefas/<int:task_id>", methods=["GET"])
 @login_required
 def task_detail(task_id):
+    """Resolve o deep-link de tarefa e redireciona (302) para a listagem da SPA.
+
+    O endpoint ``main.task_detail`` permanece (a busca e ``queries.py`` emitem
+    esse path). O comportamento de redirect e mantido: para tarefa visivel,
+    redireciona para ``/projeto/<id>/tarefas`` ou ``/tarefas`` com ``focus_task``
+    (a SPA cuida do foco); ``LegacyTaskRedirect`` segue resolvendo para o
+    destino canonico.
+    """
     task = db.session.get(Task, task_id)
 
     if task and _can_view_task(g.user, task):
@@ -131,6 +182,14 @@ def list_project_etapas(project_id):
 @main_bp.route("/projeto/<int:project_id>/tarefas", methods=["GET"])
 @login_required
 def project_tasks(project_id):
+    """Serve a SPA no path nativo ``/projeto/<id>/tarefas`` (KEEP-ENDPOINT).
+
+    Endpoint preservado (``task_detail`` redireciona para ele com ``focus_task``;
+    notificacoes e redirects apontam para ca). Mantemos a checagem de
+    existencia/permissao do projeto (302 para a Lista quando inacessivel) e, em
+    caso de acesso valido, servimos a SPA — que roteia o hub do projeto
+    client-side e busca os dados em ``GET /api/tarefas?project=<id>``.
+    """
     project = db.session.get(Project, project_id)
     if not project:
         flash("Projeto não encontrado.", "warning")
@@ -140,4 +199,4 @@ def project_tasks(project_id):
         flash("Você não tem permissão para acessar este projeto.", "danger")
         return redirect(url_for("main.list_projects"))
 
-    return _render_task_hub(locked_project=project, template_name="projects/tasks.html")
+    return _render_spa()

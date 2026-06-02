@@ -43,7 +43,6 @@ from routes.tasks.queries import (  # noqa: F401
 from routes.tasks.hub import (  # noqa: F401
     _build_task_hub_project_options,
     _group_hub_tasks_by_project,
-    _render_task_hub,
     build_task_hub_context,
 )
 from routes.tasks.creation import (  # noqa: F401

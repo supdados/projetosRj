@@ -6,7 +6,9 @@ def _read(path):
 
 
 def test_theme_toggle_is_present_on_authenticated_pages(client_user):
-    response = client_user.get("/dashboard")
+    # /dashboard agora serve a SPA; usamos /projects (Jinja viva) como pagina
+    # autenticada que renderiza o app-shell legado com o toggle de tema.
+    response = client_user.get("/projects")
 
     assert response.status_code == 200
     html = response.get_data(as_text=True)
@@ -76,7 +78,7 @@ def test_login_skeleton_template_tracks_new_layout_contract():
 
 
 def test_theme_toggle_is_after_notifications_and_account(client_user):
-    response = client_user.get("/dashboard")
+    response = client_user.get("/projects")
 
     assert response.status_code == 200
     html = response.get_data(as_text=True)

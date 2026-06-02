@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 
 from models import Task, db
 from time_utils import utc_now
@@ -22,141 +21,21 @@ def _read_kanban_js(*relative_paths):
     )
 
 
-def test_tasks_hub_template_contains_view_toggle_and_project_filter(client_user):
+def test_tasks_hub_serves_spa_shell(client_user):
+    # Apos o cut-over KEEP-ENDPOINT o hub serve a shell da SPA SvelteKit; a UI
+    # (toggle/list/kanban/composer/drawer) vive nos componentes Svelte e a fonte
+    # de dados em GET /api/tarefas. Aqui garantimos apenas o shell no path nativo.
     response = client_user.get("/tarefas")
     assert response.status_code == 200
-
-    html = response.get_data(as_text=True)
-
-    required_hooks = [
-        'id="taskItemsViewToggle"',
-        'id="taskHubCreateButton"',
-        'data-view="list"',
-        'data-view="kanban"',
-        'id="taskItemsListView"',
-        'id="taskItemsKanbanView"',
-        'id="taskItemsKanbanBoard"',
-        'id="filter_project_input"',
-        'id="filterProjectDropdown"',
-        'id="filter_prioridade"',
-        'id="filter_tipo"',
-        'id="filter_status"',
-        'id="filter_responsavel"',
-        'class="task-hub-group"',
-        "task-hub-add-row",
-    ]
-    for hook in required_hooks:
-        assert hook in html
-
-    assert ">Filtrar<" not in html
-    assert 'id="archiveFinalizedTasksForm"' in html
-    assert "items-header-clean" not in html
-    assert html.index('id="taskItemsViewToggle"') < html.index('id="filterTasksForm"')
-    assert "Gerenciamento de tarefas" in html
-    assert 'title="Tarefas arquivadas"' in html
-    assert 'aria-label="Tarefas arquivadas"' in html
-    assert 'data-reorder-url="/tarefas/reordenar"' in html
+    assert response.mimetype == "text/html"
+    body = response.get_data(as_text=True)
+    assert "data-sveltekit-preload-data" in body
+    assert '<meta name="csrf-token"' in body
 
 
-def test_tasks_hub_header_orders_archive_then_toggle_then_create(client_user):
-    response = client_user.get("/tarefas")
-    assert response.status_code == 200
-
-    html = response.get_data(as_text=True)
-    archive_form_index = html.index('id="archiveFinalizedTasksForm"')
-    archived_link_index = html.index('aria-label="Tarefas arquivadas"')
-    toggle_index = html.index('id="taskItemsViewToggle"')
-    create_button_index = html.index('id="taskHubCreateButton"')
-
-    assert archive_form_index < archived_link_index < toggle_index < create_button_index
-
-
-def test_tasks_hub_kanban_composer_requires_project_when_no_filter(client_user):
-    response = client_user.get("/tarefas")
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    assert "task-items-kanban-add-project-input" in html
-    assert "task-hub-kanban-project-dropdown" in html
-    assert "task-hub-kanban-project-caret" in html
-    assert 'placeholder="Selecione o projeto"' in html
-    assert 'placeholder="Selecione o projeto..."' not in html
-    assert html.index('id="taskItemDrawerAutosaveStatus"') < html.index(
-        'id="taskItemDrawerPrioridade"'
-    )
-
-
-def test_tasks_hub_drawer_contains_permission_banner_hook(client_user):
-    response = client_user.get("/tarefas")
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    assert 'id="taskItemDrawerPermissionBanner"' in html
-    assert 'class="task-item-drawer-permission-banner"' in html
-
-
-def test_tasks_hub_kanban_composer_uses_filtered_project_without_project_input(
-    client_user, seed_data
-):
-    response = client_user.get(f'/tarefas?project={seed_data["project_id"]}')
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    assert "task-items-kanban-add-project-input" not in html
-    assert "task-items-kanban-add-project-value" in html
-
-
-def test_tasks_hub_admin_renders_project_filter_before_orgao_filter(client_admin):
-    response = client_admin.get("/tarefas")
-    assert response.status_code == 200
-
-    html = response.get_data(as_text=True)
-    assert 'id="filter_project_input"' in html
-    assert 'id="filter_orgao"' in html
-    assert html.index('id="filter_project_input"') < html.index('id="filter_orgao"')
-
-
-def test_tasks_hub_uses_project_links_and_not_duplicate_task_detail_link(
-    client_user, seed_data
-):
-    response = client_user.get("/tarefas")
-    assert response.status_code == 200
-
-    html = response.get_data(as_text=True)
-    assert f'href="/project/{seed_data["project_id"]}"' in html
-    assert f'href="/tarefas/{seed_data["task_id"]}"' not in html
-
-
-def test_tasks_hub_project_filter_lists_visible_projects_without_active_items(
-    client_user, seed_data
-):
-    response = client_user.get("/tarefas")
-    assert response.status_code == 200
-
-    html = response.get_data(as_text=True)
-    assert f'data-value="{seed_data["project_complete_id"]}"' in html
-    assert "Projeto Concluivel" in html
-
-
-def test_tasks_hub_hides_finalize_and_delete_controls_for_non_author(
-    client_editable, seed_data
-):
-    response = client_editable.get("/tarefas")
-    assert response.status_code == 200
-
-    html = response.get_data(as_text=True)
-    row_match = re.search(
-        rf'<div\s+class="task-item-row"[^>]*data-item-id="{seed_data["task_id"]}"[\s\S]*?<select class="task-item-status[\s\S]*?</select>',
-        html,
-    )
-
-    assert row_match is not None
-    row_html = row_match.group(0)
-    assert 'data-can-delete="0"' in row_html
-    assert 'data-can-finalize="0"' in row_html
-    assert 'value="finalizada"' not in row_html
-    assert f'data-bs-target="#deleteItemModal-{seed_data["task_id"]}"' not in html
-    assert f'id="deleteItemModal-{seed_data["task_id"]}"' not in html
+def test_tasks_hub_requires_login(client):
+    response = client.get("/tarefas", follow_redirects=False)
+    assert response.status_code == 302
 
 
 def test_tasks_hub_project_filter_js_allows_enter_to_clear_empty_selection():
@@ -488,9 +367,9 @@ def test_tasks_hub_inline_add_action_buttons_use_square_corners():
     )
 
 
-def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(
-    app, client_user, seed_data
-):
+def test_tasks_archived_serves_spa_shell(app, client_user, seed_data):
+    # O modo arquivadas tambem serve a shell da SPA; o conteudo read-only vive
+    # nos componentes Svelte e os dados em GET /api/tarefas?modo=arquivadas.
     with app.app_context():
         archived_task = Task(
             descricao="Tarefa arquivada readonly",
@@ -509,30 +388,4 @@ def test_tasks_archived_template_reuses_active_list_structure_in_readonly_mode(
 
     response = client_user.get("/tarefas/arquivadas")
     assert response.status_code == 200
-
-    html = response.get_data(as_text=True)
-    required_hooks = [
-        'id="taskItemsListView"',
-        'class="task-hub-group"',
-        "task-item-col-desc",
-        "task-item-col-prioridade",
-        "task-item-col-tipo",
-        "task-item-col-status",
-        "task-item-col-responsavel",
-        "task-item-status-readonly",
-        "task-item-unarchive-form",
-        "task-item-comments-btn",
-        "comments-body-",
-        'title="Desarquivar"',
-        "Apagar",
-        ">Ativas<",
-    ]
-    for hook in required_hooks:
-        assert hook in html
-
-    assert 'id="taskItemsViewToggle"' not in html
-    assert 'id="taskItemsKanbanView"' not in html
-    assert "task-hub-add-row" not in html
-    assert "task-item-desc-edit-btn" not in html
-    assert 'class="task-comment-form"' not in html
-    assert "btn-edit-comment" not in html
+    assert "data-sveltekit-preload-data" in response.get_data(as_text=True)

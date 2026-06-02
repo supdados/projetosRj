@@ -93,13 +93,17 @@ def test_reorder_tasks_hub_persists_order_after_status_change(
             == foreign_before
         )
 
-    page_response = client_user.get("/tarefas")
-    assert page_response.status_code == 200
-    html = page_response.get_data(as_text=True)
+    # O hub agora serve a SPA; a ordem visivel vem de /api/tarefas (mesma fonte
+    # build_task_hub_context, ordenada por ordem/id).
+    payload = client_user.get("/api/tarefas").get_json()
+    assert payload["ok"] is True
+    descriptions = []
+    for group in payload["data"]["groups"]:
+        descriptions.extend(task["descricao"] for task in group["tasks"])
     assert (
-        html.index("Hub topo validacao")
-        < html.index("Hub mover para validacao")
-        < html.index("Hub base validacao")
+        descriptions.index("Hub topo validacao")
+        < descriptions.index("Hub mover para validacao")
+        < descriptions.index("Hub base validacao")
     )
 
 

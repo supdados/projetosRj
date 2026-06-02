@@ -1,110 +1,24 @@
-import re
-from pathlib import Path
+"""Contrato do path nativo ``/dashboard`` apos o cut-over KEEP-ENDPOINT.
 
-from models import Project, db
-from tests._orgao_helpers import ensure_orgao
+Antes esta tela renderizava o template Jinja ``index.html`` com paineis de
+projetos recentes/KPIs. Agora ``main.dashboard`` mantem o mesmo endpoint (para
+preservar os ``url_for("main.dashboard")`` em auth/decorators/crud) mas serve a
+shell da SPA SvelteKit via ``_render_spa()``. A fonte de dados real do dashboard
+vive em ``GET /api/dashboard`` (coberto por ``test_api_spa_contract`` e
+``test_dashboard_behavior_contract``). Estes testes apenas garantem que o path
+nativo continua servindo a SPA (200 logado) e o shell correto.
+"""
 
 
-def test_dashboard_recent_projects_caps_rows_at_limit(app, client_user):
-    # O painel "Projetos Recentes" (partials/_recent_projects_panel.html) lista
-    # no máximo RECENT_PROJECTS_LIMIT (30) linhas <a class="rp-row">, as mais
-    # recentes primeiro (ver routes/dashboard.py). As mais antigas ficam de fora.
-    with app.app_context():
-        for index in range(1, 36):
-            project = Project(
-                titulo=f"Dashboard Limit Test {index:02d}",
-                orgao_id=ensure_orgao("Auditoria").id,
-                orgao="Orgao Teste",
-                prioridade="media",
-                status="Vigente",
-                objetivo_id=1,
-                resultado_esperado_id=1,
-                observacao="Projeto para contrato de limite da dashboard",
-            )
-            db.session.add(project)
-        db.session.commit()
-
+def test_dashboard_serves_spa_shell_when_logged_in(client_user):
     response = client_user.get("/dashboard")
     assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    rendered_rows = re.findall(r'class="rp-row(?: [^"]+)?"', html)
-    assert len(rendered_rows) == 30
-
-    expected_visible_titles = [
-        f"Dashboard Limit Test {index:02d}" for index in range(35, 5, -1)
-    ]
-    expected_hidden_titles = [
-        f"Dashboard Limit Test {index:02d}" for index in range(1, 4)
-    ]
-
-    for title in expected_visible_titles:
-        assert title in html
-
-    for title in expected_hidden_titles:
-        assert title not in html
+    assert response.mimetype == "text/html"
+    body = response.get_data(as_text=True)
+    assert "data-sveltekit-preload-data" in body
+    assert '<meta name="csrf-token"' in body
 
 
-def test_dashboard_template_contains_layout_and_scroll_hooks(client_user):
-    response = client_user.get("/dashboard")
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    required_hooks = [
-        "dashboard-main-grid",
-        "dashboard-recent-col",
-        "dashboard-side-col",
-        'id="dashboardRecentProjectsCard"',
-        'id="dashboardTasksCard"',
-        "glass-table-wrapper",
-        "dashboard-tasks-kpi-card",
-    ]
-
-    for hook in required_hooks:
-        assert hook in html
-
-
-def test_dashboard_renders_chatbot_launcher_when_enabled(app, client_user):
-    app.config.update(
-        CHATBOT_ENABLED=True,
-        CHATBOT_BASE_URL="https://chatbot.proderj.rj.gov.br",
-    )
-
-    response = client_user.get("/dashboard")
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    required_hooks = [
-        "dashboardChatbotLauncher",
-        "dashboardChatbotPanel",
-        "dashboardChatbotFrame",
-        "/api/chatbot-token",
-        "https://chatbot.proderj.rj.gov.br",
-    ]
-
-    for hook in required_hooks:
-        assert hook in html
-
-
-def test_dashboard_css_keeps_desktop_section_spacing_consistent():
-    css_path = Path(__file__).resolve().parents[2] / "static" / "css" / "index.css"
-    css = css_path.read_text(encoding="utf-8")
-    shared_css_path = (
-        Path(__file__).resolve().parents[2] / "static" / "css" / "style.css"
-    )
-    shared_css = shared_css_path.read_text(encoding="utf-8")
-
-    assert (
-        ".dashboard-page-v2 .dashboard-welcome-strip,\n        .dashboard-page-v2 .dashboard-kpi-row {\n            margin-bottom: 0.4rem !important;"
-        in css
-    )
-    assert (
-        ".dashboard-page-v2 .dashboard-welcome-strip,\n        .dashboard-page-v2 .dashboard-welcome-strip {\n            margin-bottom: 0.28rem !important;"
-        not in css
-    )
-    assert (
-        ".dashboard-page-v2 .dashboard-welcome-strip,\n        .dashboard-page-v2 .dashboard-kpi-row {\n            margin-bottom: 0.28rem !important;"
-        in css
-    )
-    assert ".dashboard-chatbot-launcher {" in shared_css
-    assert ".dashboard-chatbot-panel {" in shared_css
+def test_dashboard_requires_login(client):
+    response = client.get("/dashboard", follow_redirects=False)
+    assert response.status_code == 302

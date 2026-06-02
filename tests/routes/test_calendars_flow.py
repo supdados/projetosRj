@@ -60,46 +60,26 @@ def _seed_linked_calendar_meeting(app, seed_data, *, project_id, google_event_id
         return connection.id, event.id, etapa.id, meeting.id
 
 
-def test_calendars_page_renders_core_actions(client_user):
+def test_calendars_hub_serves_spa_shell(client_user):
+    # Apos o cut-over KEEP-ENDPOINT o hub serve a shell da SPA SvelteKit; a
+    # fonte de dados/CRUD vive em GET /api/calendarios e nas rotas de events.py.
     response = client_user.get("/calendarios")
     assert response.status_code == 200
-
-    html = response.get_data(as_text=True)
-    assert "Calendário" in html
-    assert "Conectar" in html
-    assert 'action="/calendarios/eventos"' in html
-    assert 'href="/calendar/oauth/start"' in html
-    assert 'id="fieldEndsAtDateCol"' in html
+    assert response.mimetype == "text/html"
+    body = response.get_data(as_text=True)
+    assert "data-sveltekit-preload-data" in body
+    assert '<meta name="csrf-token"' in body
 
 
-def test_calendars_connected_view_hides_calendar_watch_subtext(
-    app, client_user, seed_data, monkeypatch
-):
-    with app.app_context():
-        connection = UserCalendarConnection(
-            user_id=seed_data["user_id"],
-            provider="google",
-            calendar_id="primary",
-            refresh_token="refresh-token",
-        )
-        db.session.add(connection)
-        db.session.commit()
-
-    response = client_user.get("/calendarios")
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    assert "cal-google-badge--on" in html
-    assert "Desconectar" in html
-    assert 'href="/calendar/oauth/start"' not in html
-    assert "Calendário:" not in html
-    assert "Watch expira em:" not in html
-    assert "Renovar watch" not in html
+def test_calendars_hub_requires_login(client):
+    response = client.get("/calendarios", follow_redirects=False)
+    assert response.status_code == 302
 
 
 def test_calendars_hub_does_not_run_auto_maintenance_on_get(
     app, client_user, seed_data, monkeypatch
 ):
+    # Servir a shell da SPA NAO deve disparar manutencao automatica do Google.
     with app.app_context():
         connection = UserCalendarConnection(
             user_id=seed_data["user_id"],
@@ -124,8 +104,6 @@ def test_calendars_hub_does_not_run_auto_maintenance_on_get(
     response = client_user.get("/calendarios")
     assert response.status_code == 200
     assert calls["count"] == 0
-    html = response.get_data(as_text=True)
-    assert 'title="Sincronizar"' in html
 
 
 def test_create_calendar_event_without_google_connection_marks_pending(

@@ -1,7 +1,7 @@
 import datetime
 from typing import Any, Optional
 
-from flask import current_app, g, render_template, request
+from flask import g, request
 from sqlalchemy import and_, or_
 
 from models import Etapa, Project, Task, db
@@ -15,6 +15,7 @@ from .orgao_scope import (
     sanitize_orgao_filter_for_current_user,
 )
 from .shared import get_goal_catalog_context
+from .spa import _render_spa
 
 
 def build_dashboard_context(selected_orgao_id: Optional[int]) -> dict[str, Any]:
@@ -249,19 +250,19 @@ def build_dashboard_context(selected_orgao_id: Optional[int]) -> dict[str, Any]:
 @main_bp.route("/dashboard")
 @login_required
 def dashboard():
-    """Renderiza o Dashboard (Jinja). Fonte de dados: ``build_dashboard_context``."""
-    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+    """Serve a SPA no path nativo ``/dashboard`` (cut-over KEEP-ENDPOINT).
+
+    O endpoint ``main.dashboard`` permanece para que os ``url_for`` em
+    ``auth.py``/``decorators.py``/``crud.py`` continuem validos; o corpo agora
+    devolve a shell da SPA. A validacao de filtro de orgao e preservada para que
+    um ``?orgao=`` invalido continue redirecionando (302) sem o parametro, igual
+    ao comportamento legado. A fonte de dados real do Dashboard vive no endpoint
+    JSON ``GET /api/dashboard`` (que ainda reusa ``build_dashboard_context``).
+    """
+    _, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
         request.args.get("orgao")
     )
     if invalid_orgao_filter:
         return redirect_to_current_route_without_orgao()
 
-    context = build_dashboard_context(selected_orgao_id)
-    return render_template(
-        "index.html",
-        chatbot_enabled=bool(current_app.config.get("CHATBOT_ENABLED")),
-        chatbot_base_url=str(current_app.config.get("CHATBOT_BASE_URL", ""))
-        .strip()
-        .rstrip("/"),
-        **context,
-    )
+    return _render_spa()

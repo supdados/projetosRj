@@ -1,26 +1,38 @@
 import datetime
 
-from flask import jsonify
-
 import routes.dashboard as dashboard_routes
 from models import CalendarEvent, Etapa, Project, ProjectStageMeeting, Task, User, db
+from routes.dashboard import build_dashboard_context
+from routes.orgao_scope import sanitize_orgao_filter_for_current_user
 from tests._orgao_helpers import ensure_orgao
 
 
-def _capture_dashboard_context(monkeypatch):
-    captured = {}
+def _dashboard_context_for_request(app, client, *, query_string=None):
+    """Reproduz a fonte de verdade do Dashboard dentro do request corrente.
 
-    def fake_render_template(template_name, **context):
-        captured["template_name"] = template_name
-        captured["context"] = context
-        return jsonify({"ok": True})
+    Apos o cut-over KEEP-ENDPOINT a rota ``/dashboard`` serve a shell da SPA; a
+    logica de escopo/contadores migrou para ``build_dashboard_context`` (mesma
+    funcao reusada por ``GET /api/dashboard``). Estes testes validam essa fonte
+    de verdade diretamente, dentro de um ``test_request_context`` com a sessao do
+    usuario, em vez de inspecionar o HTML Jinja (que nao existe mais).
+    """
+    with client.session_transaction() as session:
+        user_id = session.get("user_id")
+    with app.test_request_context("/dashboard", query_string=query_string):
+        from flask import g, session as flask_session
 
-    monkeypatch.setattr(dashboard_routes, "render_template", fake_render_template)
-    return captured
+        flask_session["user_id"] = user_id
+        app.preprocess_request()
+        selected_orgao_id, invalid = sanitize_orgao_filter_for_current_user(
+            (query_string or {}).get("orgao")
+        )
+        if invalid:
+            return None
+        return build_dashboard_context(selected_orgao_id)
 
 
 def test_dashboard_context_for_user_scopes_projects_tasks_and_overdue(
-    app, client_user, seed_data, monkeypatch
+    app, client_user, seed_data
 ):
     with app.app_context():
         db.session.add(
@@ -69,13 +81,11 @@ def test_dashboard_context_for_user_scopes_projects_tasks_and_overdue(
         )
         db.session.commit()
 
-    captured = _capture_dashboard_context(monkeypatch)
-
     response = client_user.get("/dashboard")
-
     assert response.status_code == 200
-    assert captured["template_name"] == "index.html"
-    context = captured["context"]
+    assert "data-sveltekit-preload-data" in response.get_data(as_text=True)
+
+    context = _dashboard_context_for_request(app, client_user)
 
     assert context["num_projects"] == 3
     assert context["count_vigente"] == 2
@@ -106,7 +116,7 @@ def test_dashboard_context_for_user_scopes_projects_tasks_and_overdue(
 
 
 def test_dashboard_fails_closed_for_non_admin_without_orgao_links(
-    app, client, seed_data, monkeypatch
+    app, client, seed_data
 ):
     with app.app_context():
         user = User(
@@ -123,12 +133,10 @@ def test_dashboard_fails_closed_for_non_admin_without_orgao_links(
     with client.session_transaction() as session:
         session["user_id"] = user_id
 
-    captured = _capture_dashboard_context(monkeypatch)
-
     response = client.get("/dashboard")
-
     assert response.status_code == 200
-    context = captured["context"]
+
+    context = _dashboard_context_for_request(app, client)
     assert context["num_projects"] == 0
     assert context["count_vigente"] == 0
     assert context["count_finalizado"] == 0
@@ -136,7 +144,7 @@ def test_dashboard_fails_closed_for_non_admin_without_orgao_links(
 
 
 def test_dashboard_admin_area_filter_restricts_projects_and_tasks(
-    app, client_admin, seed_data, monkeypatch
+    app, client_admin, seed_data
 ):
     with app.app_context():
         db.session.add(
@@ -150,14 +158,14 @@ def test_dashboard_admin_area_filter_restricts_projects_and_tasks(
         )
         db.session.commit()
 
-    captured = _capture_dashboard_context(monkeypatch)
-
     response = client_admin.get(
         "/dashboard", query_string={"orgao": str(seed_data["vpd_orgao_id"])}
     )
-
     assert response.status_code == 200
-    context = captured["context"]
+
+    context = _dashboard_context_for_request(
+        app, client_admin, query_string={"orgao": str(seed_data["vpd_orgao_id"])}
+    )
 
     assert context["num_projects"] == 1
     assert context["count_vigente"] == 1
@@ -189,7 +197,7 @@ def test_dashboard_redirects_when_non_admin_forces_foreign_area(client, seed_dat
 
 
 def test_dashboard_overdue_count_ignores_google_meeting_only_project(
-    app, client_user, seed_data, monkeypatch
+    app, client_user, seed_data
 ):
     with app.app_context():
         project = Project(
@@ -243,11 +251,9 @@ def test_dashboard_overdue_count_ignores_google_meeting_only_project(
         )
         db.session.commit()
 
-    captured = _capture_dashboard_context(monkeypatch)
-
     response = client_user.get("/dashboard")
-
     assert response.status_code == 200
-    context = captured["context"]
+
+    context = _dashboard_context_for_request(app, client_user)
     assert context["num_projects"] == 3
     assert context["projetos_em_atraso"] == 1

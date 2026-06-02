@@ -6,15 +6,17 @@ de órgão + dropdown de conta + busca global. JS de navegação/notificações
 depende dos hooks data-* listados abaixo; um refactor que os renomeie
 quebraria silenciosamente a top-nav.
 
-Usamos a rota /dashboard para garantir que o parcial é renderizado no
-contexto real (com endpoint e usuário autenticado).
+Apos o cut-over KEEP-ENDPOINT, /dashboard passou a servir a shell da SPA (sem
+Jinja). Usamos a rota /projects (Lista de Projetos, ainda Jinja viva) para
+garantir que o parcial é renderizado no contexto real (com endpoint e usuário
+autenticado).
 """
 
 from pathlib import Path
 
 
 def _topnav_html(client_admin):
-    response = client_admin.get("/dashboard")
+    response = client_admin.get("/projects")
     assert response.status_code == 200
     return response.get_data(as_text=True)
 
@@ -33,9 +35,10 @@ def test_topnav_has_brand_and_nav_icons(client_admin):
     assert html.count("data-orgao-nav") >= 5
 
 
-def test_topnav_marks_dashboard_active_when_on_home(client_admin):
+def test_topnav_renders_primary_nav_icons(client_admin):
     html = _topnav_html(client_admin)
-    # Classe 'active' presente no link do dashboard (endpoint = main.dashboard).
+    # Em /projects (Jinja viva) o link de projetos fica ativo; os icones dos
+    # links principais devem estar todos presentes.
     assert "app-nav-link app-nav-icon-btn active" in html
     # Fontes awesome esperados dos links principais.
     assert "fas fa-home" in html
@@ -68,7 +71,7 @@ def test_topnav_renders_global_search_form_hooks(client_admin):
 
 def test_topnav_global_search_preserves_selected_orgao(client_admin, seed_data):
     response = client_admin.get(
-        "/dashboard", query_string={"orgao": str(seed_data["vpd_orgao_id"])}
+        "/projects", query_string={"orgao": str(seed_data["vpd_orgao_id"])}
     )
     assert response.status_code == 200
     html = response.get_data(as_text=True)
@@ -98,7 +101,7 @@ def test_topnav_admin_dropdown_has_admin_entries(client_admin):
 
 
 def test_topnav_user_dropdown_hides_admin_entries(client_user):
-    response = client_user.get("/dashboard")
+    response = client_user.get("/projects")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 

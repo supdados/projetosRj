@@ -39,17 +39,17 @@ def test_get_visible_orgao_tree_keeps_inactive_ancestor(app, seed_data):
 # --- #6 --------------------------------------------------------------------
 
 
-def test_task_hub_fills_selected_orgao_sigla(client_user, seed_data, app):
+def test_task_hub_accepts_selected_orgao_filter(client_user, seed_data, app):
+    # Apos o cut-over /tarefas serve a shell da SPA; o filtro de orgao e aplicado
+    # server-side em GET /api/tarefas (mesma fonte build_task_hub_context). Um
+    # orgao valido para o usuario corrente devolve 200 com o filtro aplicado.
     with app.app_context():
         auditoria = OrgaoUnidade.query.filter_by(sigla="Auditoria").first()
         auditoria_id = auditoria.id
 
-    response = client_user.get(f"/tarefas?orgao={auditoria_id}")
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-    # Antes do fix, `selected_orgao_sigla` era sempre "" porque
-    # g.get("ORGAOS_DISPONIVEIS") devolvia None. Agora a sigla aparece no HTML.
-    assert "Auditoria" in html
+    payload = client_user.get(f"/api/tarefas?orgao={auditoria_id}").get_json()
+    assert payload["ok"] is True
+    assert payload["data"]["filters"]["selected_orgao"] == auditoria_id
 
 
 # --- #7 --------------------------------------------------------------------
