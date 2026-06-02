@@ -1006,6 +1006,26 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
+        "id": "api_projetos_get",
+        "method": "GET",
+        "rule": "/api/projetos",
+        "path": "/api/projetos",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefas_get",
+        "method": "GET",
+        "rule": "/api/tarefas",
+        "path": "/api/tarefas",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
         "id": "api_busca_get",
         "method": "GET",
         "rule": "/api/busca",
@@ -1597,9 +1617,13 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 
 # Segurança adicional para garantir escopo fechado do plano.
-# 134 rotas originais + 6 endpoints JSON da SPA (/api/me, /api/csrf-token,
-# /api/dashboard + Fase 2: /api/projetos-pendentes, /api/projetos/<id>/historico,
-# /api/busca) + 2 rotas do shell SPA (/spa e /spa/<path:subpath>).
-# As telas /spa/* da Fase 2 (Pendentes/Busca/Historico) NAO adicionam rota:
-# são servidas pelo catch-all /spa/<path:subpath> (client-side routing).
-assert len(ROUTE_CASES) == 142
+# 134 rotas originais + 6 endpoints JSON da SPA da Fase 2 (/api/me,
+# /api/csrf-token, /api/dashboard, /api/projetos-pendentes,
+# /api/projetos/<id>/historico, /api/busca) + 2 endpoints JSON da Fase 3
+# (/api/projetos, /api/tarefas) + 2 rotas do shell SPA (/spa e
+# /spa/<path:subpath>).
+# As telas /spa/* (Lista de Projetos e Hub de Tarefas em modo lista) NAO
+# adicionam rota Flask: são servidas pelo catch-all /spa/<path:subpath>
+# (client-side routing). O filtro de orgao de Pendentes também NAO adiciona rota
+# (só estende o payload de /api/projetos-pendentes com orgaos_options).
+assert len(ROUTE_CASES) == 144
