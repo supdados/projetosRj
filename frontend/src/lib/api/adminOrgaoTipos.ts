@@ -12,7 +12,7 @@
  * `_normalize_tipo_form` (routes/admin_orgaos.py).
  */
 
-import { get, post } from './client';
+import { get, post, put, del } from './client';
 import type {
 	AdminOrgaoTiposListData,
 	AdminOrgaoTipoDetailData,
@@ -79,7 +79,7 @@ export function updateOrgaoTipo(
 	input: AdminOrgaoTipoFormInput,
 	signal?: AbortSignal
 ): Promise<AdminOrgaoTipoMutationData> {
-	return post<AdminOrgaoTipoMutationData>(
+	return put<AdminOrgaoTipoMutationData>(
 		`/api/admin/orgaos/tipos/${tipoId}`,
 		buildTipoBody(input),
 		signal
@@ -109,8 +109,8 @@ export function deleteOrgaoTipo(
 	tipoId: number,
 	signal?: AbortSignal
 ): Promise<AdminOrgaoTipoDeleteData> {
-	return post<AdminOrgaoTipoDeleteData>(
-		`/api/admin/orgaos/tipos/${tipoId}/delete`,
+	return del<AdminOrgaoTipoDeleteData>(
+		`/api/admin/orgaos/tipos/${tipoId}`,
 		undefined,
 		signal
 	);

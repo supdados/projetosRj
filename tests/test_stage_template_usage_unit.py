@@ -166,8 +166,8 @@ def test_template_audit_fields_on_create(app, client_admin, seed_data):
 def test_template_updated_by_changes_on_edit(app, client_admin, seed_data):
     template_id = seed_data["template_id"]
 
-    # Corte Grupo B: edicao canonica via POST /api/admin/templates/<id>.
-    response = client_admin.post(
+    # Corte Grupo B: edicao canonica via PUT /api/admin/templates/<id> (RESTful).
+    response = client_admin.put(
         f"/api/admin/templates/{template_id}",
         json={
             "name": "Modelo Editado",

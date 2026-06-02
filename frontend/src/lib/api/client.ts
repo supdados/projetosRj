@@ -249,6 +249,28 @@ export function post<T>(path: string, body?: unknown, signal?: AbortSignal): Pro
 }
 
 /**
+ * PUT tipado (edição RESTful de recurso): envia `body` como JSON, devolve `data`.
+ *
+ * Mesmo pipeline de `post<T>` (cookie de sessão, `X-CSRFToken`, retry único de
+ * CSRF, 401 -> navegação top-level para /login). Use em CRUD de recurso (ex.:
+ * editar usuário/órgão/tipo/modelo em `PUT /api/admin/...`).
+ */
+export function put<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+	return request<T>(path, { method: 'PUT', body, signal });
+}
+
+/**
+ * DELETE tipado (exclusão RESTful de recurso): devolve `data`.
+ *
+ * Nomeado `del` porque `delete` é palavra reservada em JS. Mesmo pipeline de
+ * `post<T>`/`put<T>` (cookie de sessão, `X-CSRFToken`, retry único de CSRF, 401
+ * -> /login). Aceita `body` opcional para simetria, normalmente omitido.
+ */
+export function del<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+	return request<T>(path, { method: 'DELETE', body, signal });
+}
+
+/**
  * POST multipart tipado (UPLOAD). Envia `formData` SEM `Content-Type` (o browser
  * monta o boundary), com `credentials:'include'` + `X-CSRFToken`. Desempacota o
  * envelope `{ok,data}`; em 401 navega top-level para /login; o 413 (limite de
@@ -355,4 +377,4 @@ export async function postFormRaw<T>(
 	return result.json;
 }
 
-export const apiClient = { get, getWithMeta, post, postForm, postFormRaw };
+export const apiClient = { get, getWithMeta, post, put, del, postForm, postFormRaw };

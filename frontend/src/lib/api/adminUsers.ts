@@ -14,7 +14,7 @@
  * /login), porque o callback Gov.br depende do cookie SameSite=Strict.
  */
 
-import { get, getWithMeta, post } from './client';
+import { get, getWithMeta, post, put, del } from './client';
 import type {
 	AdminUsersListResult,
 	AdminUserDetail,
@@ -81,12 +81,12 @@ export function createAdminUser(
 	return post<{ usuario: AdminUser }>('/api/admin/usuarios', payload);
 }
 
-/** Edita um usuário (POST /api/admin/usuarios/<id>). */
+/** Edita um usuário (PUT /api/admin/usuarios/<id>). */
 export function updateAdminUser(
 	userId: number,
 	payload: AdminUserUpdatePayload
 ): Promise<{ usuario: AdminUser }> {
-	return post<{ usuario: AdminUser }>(`/api/admin/usuarios/${userId}`, payload);
+	return put<{ usuario: AdminUser }>(`/api/admin/usuarios/${userId}`, payload);
 }
 
 /** Remove CPF + vínculo Gov.br (POST /api/admin/usuarios/<id>/remover-cpf). */
@@ -96,9 +96,9 @@ export function removeAdminUserCpf(
 	return post<{ usuario: AdminUser }>(`/api/admin/usuarios/${userId}/remover-cpf`);
 }
 
-/** Exclui um usuário (POST /api/admin/usuarios/<id>/delete). */
+/** Exclui um usuário (DELETE /api/admin/usuarios/<id>). */
 export function deleteAdminUser(
 	userId: number
 ): Promise<{ deleted_id: number }> {
-	return post<{ deleted_id: number }>(`/api/admin/usuarios/${userId}/delete`);
+	return del<{ deleted_id: number }>(`/api/admin/usuarios/${userId}`);
 }

@@ -14,9 +14,10 @@ validação resultam em ``fail(..., 422, "validation")`` em vez do ``flash`` +
 re-render do fluxo Jinja.
 
 Anexa ao ``main_bp`` ÚNICO (``routes/blueprint.py``); NÃO cria blueprint novo.
-RESTificação (PUT/DELETE) marcada como cleanup futuro — aqui usamos POST,
-espelhando as rotas Flask existentes (o cliente usa ``client.post`` com
-``X-CSRFToken``).
+CRUD de recurso RESTificado: editar -> ``PUT /api/admin/templates/<id>`` e
+excluir -> ``DELETE /api/admin/templates/<id>``. A ação ``duplicate`` permanece
+``POST`` (comando, não CRUD de recurso). O cliente usa ``client.put``/
+``client.del`` com ``X-CSRFToken``.
 """
 
 from __future__ import annotations
@@ -275,7 +276,7 @@ def api_admin_templates_create() -> Response | tuple[Response, int]:
     return ok({"template": serialize_template_detail(template)})
 
 
-@main_bp.route("/api/admin/templates/<int:template_id>", methods=["POST"])
+@main_bp.route("/api/admin/templates/<int:template_id>", methods=["PUT"])
 @api_admin_required
 def api_admin_templates_update(
     template_id: int,
@@ -358,7 +359,7 @@ def api_admin_templates_duplicate(
     return ok({"template": serialize_template_detail(copy)})
 
 
-@main_bp.route("/api/admin/templates/<int:template_id>/delete", methods=["POST"])
+@main_bp.route("/api/admin/templates/<int:template_id>", methods=["DELETE"])
 @api_admin_required
 def api_admin_templates_delete(
     template_id: int,

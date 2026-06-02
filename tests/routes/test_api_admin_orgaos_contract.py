@@ -162,13 +162,13 @@ def test_create_returns_403_for_non_admin(client_user, seed_data):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/admin/orgaos/<id> (editar)
+# PUT /api/admin/orgaos/<id> (editar)
 # ---------------------------------------------------------------------------
 
 
 def test_update_returns_ok_envelope(client_admin, seed_data):
     orgao_id = seed_data["orgao_child_id"]
-    response = client_admin.post(
+    response = client_admin.put(
         f"/api/admin/orgaos/{orgao_id}",
         json={
             "nome": "Secretaria Renomeada",
@@ -186,13 +186,13 @@ def test_update_returns_ok_envelope(client_admin, seed_data):
 
 
 def test_update_returns_404_for_unknown_orgao(client_admin):
-    response = client_admin.post("/api/admin/orgaos/999999", json={"nome": "x"})
+    response = client_admin.put("/api/admin/orgaos/999999", json={"nome": "x"})
     assert response.status_code == 404
     _assert_fail_envelope(response.get_json(), code="not_found")
 
 
 def test_update_returns_403_for_non_admin(client_user, seed_data):
-    response = client_user.post(
+    response = client_user.put(
         f"/api/admin/orgaos/{seed_data['orgao_child_id']}", json={"nome": "x"}
     )
     assert response.status_code == 403
@@ -282,21 +282,21 @@ def test_toggle_ativo_returns_403_for_non_admin(client_user, seed_data):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/admin/orgaos/<id>/delete
+# DELETE /api/admin/orgaos/<id>
 # ---------------------------------------------------------------------------
 
 
 def test_delete_leaf_returns_ok_envelope(client_admin, seed_data):
     orgao_id = seed_data["orgao_child_id"]
-    response = client_admin.post(f"/api/admin/orgaos/{orgao_id}/delete")
+    response = client_admin.delete(f"/api/admin/orgaos/{orgao_id}")
     assert response.status_code == 200
     data = _assert_ok_envelope(response.get_json())
     assert data["deleted_id"] == orgao_id
 
 
 def test_delete_root_returns_409(client_admin, seed_data):
-    response = client_admin.post(
-        f"/api/admin/orgaos/{seed_data['orgao_root_id']}/delete"
+    response = client_admin.delete(
+        f"/api/admin/orgaos/{seed_data['orgao_root_id']}"
     )
     assert response.status_code == 409
     _assert_fail_envelope(response.get_json(), code="validation")
@@ -304,15 +304,15 @@ def test_delete_root_returns_409(client_admin, seed_data):
 
 def test_delete_orgao_with_children_returns_409(client_admin, seed_data):
     # O root tem o child como filho; não pode ser excluído (também é raiz).
-    response = client_admin.post(
-        f"/api/admin/orgaos/{seed_data['orgao_root_id']}/delete"
+    response = client_admin.delete(
+        f"/api/admin/orgaos/{seed_data['orgao_root_id']}"
     )
     assert response.status_code == 409
     _assert_fail_envelope(response.get_json(), code="validation")
 
 
 def test_delete_returns_404_for_unknown_orgao(client_admin):
-    response = client_admin.post("/api/admin/orgaos/999999/delete")
+    response = client_admin.delete("/api/admin/orgaos/999999")
     assert response.status_code == 404
     _assert_fail_envelope(response.get_json(), code="not_found")
 
@@ -399,13 +399,13 @@ def test_tipo_create_duplicate_returns_422(client_admin):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/admin/orgaos/tipos/<id> (editar)
+# PUT /api/admin/orgaos/tipos/<id> (editar)
 # ---------------------------------------------------------------------------
 
 
 def test_tipo_update_returns_ok_envelope(client_admin, seed_data):
     tipo_id = seed_data["orgao_tipo_secretaria_id"]
-    response = client_admin.post(
+    response = client_admin.put(
         f"/api/admin/orgaos/tipos/{tipo_id}",
         json={
             "nome": "Secretaria",
@@ -425,7 +425,7 @@ def test_tipo_update_returns_ok_envelope(client_admin, seed_data):
 def test_tipo_update_deactivate_in_use_returns_409(client_admin, seed_data):
     # Secretaria está em uso por SECT; desativar deve ser bloqueado.
     tipo_id = seed_data["orgao_tipo_secretaria_id"]
-    response = client_admin.post(
+    response = client_admin.put(
         f"/api/admin/orgaos/tipos/{tipo_id}",
         json={"nome": "Secretaria", "nivel": 1},
     )
@@ -434,7 +434,7 @@ def test_tipo_update_deactivate_in_use_returns_409(client_admin, seed_data):
 
 
 def test_tipo_update_returns_404_for_unknown(client_admin):
-    response = client_admin.post(
+    response = client_admin.put(
         "/api/admin/orgaos/tipos/999999", json={"nome": "x", "nivel": 1}
     )
     assert response.status_code == 404
@@ -466,13 +466,13 @@ def test_tipo_toggle_ativo_root_tipo_returns_409(client_admin, seed_data):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/admin/orgaos/tipos/<id>/delete
+# DELETE /api/admin/orgaos/tipos/<id>
 # ---------------------------------------------------------------------------
 
 
 def test_tipo_delete_unused_returns_ok_envelope(client_admin, seed_data):
     tipo_id = seed_data["orgao_tipo_nucleo_id"]
-    response = client_admin.post(f"/api/admin/orgaos/tipos/{tipo_id}/delete")
+    response = client_admin.delete(f"/api/admin/orgaos/tipos/{tipo_id}")
     assert response.status_code == 200
     data = _assert_ok_envelope(response.get_json())
     assert data["deleted_id"] == tipo_id
@@ -480,14 +480,14 @@ def test_tipo_delete_unused_returns_ok_envelope(client_admin, seed_data):
 
 def test_tipo_delete_in_use_returns_409(client_admin, seed_data):
     tipo_id = seed_data["orgao_tipo_secretaria_id"]
-    response = client_admin.post(f"/api/admin/orgaos/tipos/{tipo_id}/delete")
+    response = client_admin.delete(f"/api/admin/orgaos/tipos/{tipo_id}")
     assert response.status_code == 409
     _assert_fail_envelope(response.get_json(), code="validation")
 
 
 def test_tipo_delete_returns_403_for_non_admin(client_user, seed_data):
-    response = client_user.post(
-        f"/api/admin/orgaos/tipos/{seed_data['orgao_tipo_nucleo_id']}/delete"
+    response = client_user.delete(
+        f"/api/admin/orgaos/tipos/{seed_data['orgao_tipo_nucleo_id']}"
     )
     assert response.status_code == 403
     _assert_fail_envelope(response.get_json(), code="forbidden")

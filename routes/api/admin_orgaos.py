@@ -18,9 +18,10 @@ validação => ``fail(..., 422, "validation")`` e conflitos => ``fail(..., 409,
 "validation")`` em vez do ``flash`` + redirect do fluxo Jinja.
 
 Anexa ao ``main_bp`` ÚNICO (``routes/blueprint.py``); NÃO cria blueprint novo.
-RESTificação (PUT/DELETE) marcada como cleanup futuro — aqui usamos POST,
-espelhando as rotas Flask existentes (o cliente usa ``client.post`` com
-``X-CSRFToken``).
+CRUD de recurso RESTificado: editar -> ``PUT /api/admin/orgaos/<id>`` (e
+``.../tipos/<id>``) e excluir -> ``DELETE`` na mesma URL do recurso. As ações
+(``move``/``reorder``/``toggle-ativo``) permanecem ``POST`` — são comandos, não
+CRUD de recurso. O cliente usa ``client.put``/``client.del`` com ``X-CSRFToken``.
 """
 
 from __future__ import annotations
@@ -221,7 +222,7 @@ def api_admin_orgaos_create() -> Response | tuple[Response, int]:
     return ok({"orgao": serialize_orgao_form(novo)})
 
 
-@main_bp.route("/api/admin/orgaos/<int:orgao_id>", methods=["POST"])
+@main_bp.route("/api/admin/orgaos/<int:orgao_id>", methods=["PUT"])
 @api_admin_required
 def api_admin_orgaos_update(orgao_id: int) -> Response | tuple[Response, int]:
     """Edita um órgão (envelope canônico), espelhando o POST de ``edit_orgao``.
@@ -285,7 +286,7 @@ def api_admin_orgaos_update(orgao_id: int) -> Response | tuple[Response, int]:
     return ok({"orgao": serialize_orgao_form(orgao)})
 
 
-@main_bp.route("/api/admin/orgaos/<int:orgao_id>/delete", methods=["POST"])
+@main_bp.route("/api/admin/orgaos/<int:orgao_id>", methods=["DELETE"])
 @api_admin_required
 def api_admin_orgaos_delete(orgao_id: int) -> Response | tuple[Response, int]:
     """Exclui um órgão (envelope canônico), espelhando ``delete_orgao``.
@@ -536,7 +537,7 @@ def api_admin_orgao_tipos_create() -> Response | tuple[Response, int]:
     return ok({"tipo": serialize_orgao_tipo(tipo)})
 
 
-@main_bp.route("/api/admin/orgaos/tipos/<int:tipo_id>", methods=["POST"])
+@main_bp.route("/api/admin/orgaos/tipos/<int:tipo_id>", methods=["PUT"])
 @api_admin_required
 def api_admin_orgao_tipos_update(tipo_id: int) -> Response | tuple[Response, int]:
     """Edita um tipo de órgão (envelope), espelhando o POST de ``edit_orgao_tipo``.
@@ -639,7 +640,7 @@ def api_admin_orgao_tipos_toggle_ativo(
     return ok({"tipo": serialize_orgao_tipo(tipo)})
 
 
-@main_bp.route("/api/admin/orgaos/tipos/<int:tipo_id>/delete", methods=["POST"])
+@main_bp.route("/api/admin/orgaos/tipos/<int:tipo_id>", methods=["DELETE"])
 @api_admin_required
 def api_admin_orgao_tipos_delete(tipo_id: int) -> Response | tuple[Response, int]:
     """Exclui um tipo de órgão (envelope), espelhando ``delete_orgao_tipo``.

@@ -3,15 +3,16 @@
  *
  * Encapsula os endpoints `/api/admin/orgaos*` (`routes/api/admin_orgaos.py`),
  * protegidos por `api_admin_required` (403 para não-admin, 401 sem sessão). As
- * leituras usam `client.get`; as mutações usam `client.post` (que já injeta o
- * `X-CSRFToken` — NÃO editamos `client.ts`). RESTificação (PUT/DELETE) fica
- * como cleanup futuro: aqui usamos POST, espelhando as rotas Flask.
+ * leituras usam `client.get`. CRUD de recurso é RESTful: editar usa
+ * `client.put` e excluir usa `client.del`. As ações (move/reorder/toggle-ativo)
+ * continuam em `client.post` — são comandos, não CRUD de recurso. Todos injetam
+ * o `X-CSRFToken`.
  *
  * O envelope `{ok, data}` é desempacotado por `client.ts`; em falha lança
  * `ApiClientError` (com `code`/`status`), que a tela traduz para a UI.
  */
 
-import { get, post } from './client';
+import { get, post, put, del } from './client';
 import type {
 	OrgaoDetailData,
 	OrgaoForm,
@@ -43,21 +44,21 @@ export function createOrgao(
 	return post<{ orgao: OrgaoForm }>(BASE, payload, signal);
 }
 
-/** Edita um órgão existente. */
+/** Edita um órgão existente (PUT — CRUD RESTful de recurso). */
 export function updateOrgao(
 	orgaoId: number,
 	payload: OrgaoFormPayload,
 	signal?: AbortSignal
 ): Promise<{ orgao: OrgaoForm }> {
-	return post<{ orgao: OrgaoForm }>(`${BASE}/${orgaoId}`, payload, signal);
+	return put<{ orgao: OrgaoForm }>(`${BASE}/${orgaoId}`, payload, signal);
 }
 
-/** Exclui um órgão (sem filhos e não-raiz; o backend protege os demais). */
+/** Exclui um órgão (DELETE; sem filhos e não-raiz; o backend protege os demais). */
 export function deleteOrgao(
 	orgaoId: number,
 	signal?: AbortSignal
 ): Promise<{ deleted_id: number }> {
-	return post<{ deleted_id: number }>(`${BASE}/${orgaoId}/delete`, undefined, signal);
+	return del<{ deleted_id: number }>(`${BASE}/${orgaoId}`, undefined, signal);
 }
 
 /** Move um órgão para um novo pai (ou raiz, com `pai_id` null). */

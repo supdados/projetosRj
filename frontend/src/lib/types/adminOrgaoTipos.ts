@@ -40,7 +40,7 @@ export interface AdminOrgaoTipoMutationData {
 	tipo: AdminOrgaoTipo;
 }
 
-/** Carga de POST /api/admin/orgaos/tipos/<id>/delete. */
+/** Carga de DELETE /api/admin/orgaos/tipos/<id>. */
 export interface AdminOrgaoTipoDeleteData {
 	deleted_id: number;
 }

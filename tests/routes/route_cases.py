@@ -1533,7 +1533,7 @@ ROUTE_CASES = [
     },
     {
         "id": "api_admin_usuarios_update_post",
-        "method": "POST",
+        "method": "PUT",
         "rule": "/api/admin/usuarios/<int:user_id>",
         "path": "/api/admin/usuarios/{editable_user_id}",
         "role": "admin",
@@ -1554,9 +1554,9 @@ ROUTE_CASES = [
     },
     {
         "id": "api_admin_usuarios_delete_post",
-        "method": "POST",
-        "rule": "/api/admin/usuarios/<int:user_id>/delete",
-        "path": "/api/admin/usuarios/{deletable_user_id}/delete",
+        "method": "DELETE",
+        "rule": "/api/admin/usuarios/<int:user_id>",
+        "path": "/api/admin/usuarios/{deletable_user_id}",
         "role": "admin",
         "expected_status": 200,
         "requires_login": True,
@@ -1613,7 +1613,7 @@ ROUTE_CASES = [
     },
     {
         "id": "api_admin_orgaos_update_post",
-        "method": "POST",
+        "method": "PUT",
         "rule": "/api/admin/orgaos/<int:orgao_id>",
         "path": "/api/admin/orgaos/{orgao_child_id}",
         "role": "admin",
@@ -1663,9 +1663,9 @@ ROUTE_CASES = [
     },
     {
         "id": "api_admin_orgaos_delete_post",
-        "method": "POST",
-        "rule": "/api/admin/orgaos/<int:orgao_id>/delete",
-        "path": "/api/admin/orgaos/{orgao_child_id}/delete",
+        "method": "DELETE",
+        "rule": "/api/admin/orgaos/<int:orgao_id>",
+        "path": "/api/admin/orgaos/{orgao_child_id}",
         "role": "admin",
         "expected_status": 200,
         "requires_login": True,
@@ -1708,7 +1708,7 @@ ROUTE_CASES = [
     },
     {
         "id": "api_admin_orgao_tipos_update_post",
-        "method": "POST",
+        "method": "PUT",
         "rule": "/api/admin/orgaos/tipos/<int:tipo_id>",
         "path": "/api/admin/orgaos/tipos/{orgao_tipo_secretaria_id}",
         "role": "admin",
@@ -1735,9 +1735,9 @@ ROUTE_CASES = [
     },
     {
         "id": "api_admin_orgao_tipos_delete_post",
-        "method": "POST",
-        "rule": "/api/admin/orgaos/tipos/<int:tipo_id>/delete",
-        "path": "/api/admin/orgaos/tipos/{orgao_tipo_nucleo_id}/delete",
+        "method": "DELETE",
+        "rule": "/api/admin/orgaos/tipos/<int:tipo_id>",
+        "path": "/api/admin/orgaos/tipos/{orgao_tipo_nucleo_id}",
         "role": "admin",
         "expected_status": 200,
         "requires_login": True,
@@ -1781,7 +1781,7 @@ ROUTE_CASES = [
     },
     {
         "id": "api_admin_templates_update_post",
-        "method": "POST",
+        "method": "PUT",
         "rule": "/api/admin/templates/<int:template_id>",
         "path": "/api/admin/templates/{template_id}",
         "role": "admin",
@@ -1806,9 +1806,9 @@ ROUTE_CASES = [
     },
     {
         "id": "api_admin_templates_delete_post",
-        "method": "POST",
-        "rule": "/api/admin/templates/<int:template_id>/delete",
-        "path": "/api/admin/templates/{template_id}/delete",
+        "method": "DELETE",
+        "rule": "/api/admin/templates/<int:template_id>",
+        "path": "/api/admin/templates/{template_id}",
         "role": "admin",
         "expected_status": 200,
         "requires_login": True,
@@ -1872,18 +1872,21 @@ ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 # (só estende o payload de /api/projetos-pendentes com orgaos_options).
 # + 6 endpoints JSON da Fase 4 (Admin Usuarios): GET /api/admin/usuarios,
 # GET /api/admin/usuarios/<id>, POST /api/admin/usuarios (criar),
-# POST /api/admin/usuarios/<id> (editar), POST .../remover-cpf e POST .../delete.
+# PUT /api/admin/usuarios/<id> (editar — RESTificado), POST .../remover-cpf
+# (acao) e DELETE /api/admin/usuarios/<id> (excluir — RESTificado).
 # + 14 endpoints JSON da Fase 4 (Admin Orgaos/Tipos): GET /api/admin/orgaos
-# (arvore), GET /api/admin/orgaos/<id>, POST /api/admin/orgaos (criar), POST
-# /api/admin/orgaos/<id> (editar), POST .../delete, .../move, .../reorder,
-# .../toggle-ativo; GET /api/admin/orgaos/tipos (lista), GET .../tipos/<id>,
-# POST .../tipos (criar), POST .../tipos/<id> (editar), POST
-# .../tipos/<id>/toggle-ativo e POST .../tipos/<id>/delete.
+# (arvore), GET /api/admin/orgaos/<id>, POST /api/admin/orgaos (criar), PUT
+# /api/admin/orgaos/<id> (editar), DELETE /api/admin/orgaos/<id> (excluir),
+# POST .../move, .../reorder, .../toggle-ativo (acoes); GET /api/admin/orgaos/
+# tipos (lista), GET .../tipos/<id>, POST .../tipos (criar), PUT .../tipos/<id>
+# (editar), POST .../tipos/<id>/toggle-ativo (acao) e DELETE .../tipos/<id>
+# (excluir). CRUD de recurso RESTificado (PUT/DELETE); reorder/move/toggle-ativo
+# permanecem POST (acoes/comandos).
 # + 6 endpoints JSON da Fase 4 (Admin Templates de etapas): GET
 # /api/admin/templates (lista com metricas + ?order=/?q=/?page=), GET
 # /api/admin/templates/<id> (form + etapas), POST /api/admin/templates (criar),
-# POST /api/admin/templates/<id> (editar), POST .../duplicate e POST
-# .../delete.
+# PUT /api/admin/templates/<id> (editar — RESTificado), POST .../duplicate
+# (acao) e DELETE /api/admin/templates/<id> (excluir — RESTificado).
 # + 3 endpoints JSON da Fase 5a (Detalhe de Projeto): GET
 # /api/projetos/<id>/detalhe (payload completo do detalhe: projeto + etapas com
 # contagem de tarefas read-only + derivados + opcoes + permissions), POST

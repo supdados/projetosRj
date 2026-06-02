@@ -150,13 +150,13 @@ def test_create_returns_403_for_non_admin(client_user):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/admin/usuarios/<id> (editar)
+# PUT /api/admin/usuarios/<id> (editar)
 # ---------------------------------------------------------------------------
 
 
 def test_update_returns_ok_envelope(client_admin, seed_data):
     user_id = seed_data["editable_user_id"]
-    response = client_admin.post(
+    response = client_admin.put(
         f"/api/admin/usuarios/{user_id}",
         json={"name": "Nome Atualizado Contrato", "orgao": "Novo Orgao"},
     )
@@ -167,13 +167,13 @@ def test_update_returns_ok_envelope(client_admin, seed_data):
 
 
 def test_update_returns_404_for_unknown_user(client_admin):
-    response = client_admin.post("/api/admin/usuarios/999999", json={"name": "x"})
+    response = client_admin.put("/api/admin/usuarios/999999", json={"name": "x"})
     assert response.status_code == 404
     _assert_fail_envelope(response.get_json(), code="not_found")
 
 
 def test_update_invalid_cpf_returns_422(client_admin, seed_data):
-    response = client_admin.post(
+    response = client_admin.put(
         f"/api/admin/usuarios/{seed_data['editable_user_id']}",
         json={"name": "Nome", "cpf_govbr": "123"},
     )
@@ -182,7 +182,7 @@ def test_update_invalid_cpf_returns_422(client_admin, seed_data):
 
 
 def test_update_returns_403_for_non_admin(client_user, seed_data):
-    response = client_user.post(
+    response = client_user.put(
         f"/api/admin/usuarios/{seed_data['editable_user_id']}", json={"name": "x"}
     )
     assert response.status_code == 403
@@ -219,13 +219,13 @@ def test_remove_cpf_returns_401_when_unauthenticated(client, seed_data):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/admin/usuarios/<id>/delete
+# DELETE /api/admin/usuarios/<id>
 # ---------------------------------------------------------------------------
 
 
 def test_delete_returns_ok_envelope(client_admin, seed_data):
     user_id = seed_data["deletable_user_id"]
-    response = client_admin.post(f"/api/admin/usuarios/{user_id}/delete")
+    response = client_admin.delete(f"/api/admin/usuarios/{user_id}")
 
     assert response.status_code == 200
     data = _assert_ok_envelope(response.get_json())
@@ -233,22 +233,22 @@ def test_delete_returns_ok_envelope(client_admin, seed_data):
 
 
 def test_delete_self_returns_422(client_admin, seed_data):
-    response = client_admin.post(
-        f"/api/admin/usuarios/{seed_data['admin_id']}/delete"
+    response = client_admin.delete(
+        f"/api/admin/usuarios/{seed_data['admin_id']}"
     )
     assert response.status_code == 422
     _assert_fail_envelope(response.get_json(), code="validation")
 
 
 def test_delete_returns_404_for_unknown_user(client_admin):
-    response = client_admin.post("/api/admin/usuarios/999999/delete")
+    response = client_admin.delete("/api/admin/usuarios/999999")
     assert response.status_code == 404
     _assert_fail_envelope(response.get_json(), code="not_found")
 
 
 def test_delete_returns_403_for_non_admin(client_user, seed_data):
-    response = client_user.post(
-        f"/api/admin/usuarios/{seed_data['deletable_user_id']}/delete"
+    response = client_user.delete(
+        f"/api/admin/usuarios/{seed_data['deletable_user_id']}"
     )
     assert response.status_code == 403
     _assert_fail_envelope(response.get_json(), code="forbidden")
@@ -277,7 +277,7 @@ def test_delete_user_com_evento_de_calendario_retorna_409_json(
         )
         db.session.commit()
 
-    response = client_admin.post(f"/api/admin/usuarios/{user_id}/delete")
+    response = client_admin.delete(f"/api/admin/usuarios/{user_id}")
 
     assert response.status_code == 409
     assert response.is_json  # NÃO pode vazar HTML

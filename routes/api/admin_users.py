@@ -181,7 +181,7 @@ def api_admin_usuarios_create() -> Response | tuple[Response, int]:
     return ok({"usuario": serialize_admin_user(new_user)})
 
 
-@main_bp.route("/api/admin/usuarios/<int:user_id>", methods=["POST"])
+@main_bp.route("/api/admin/usuarios/<int:user_id>", methods=["PUT"])
 @api_admin_required
 def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
     """Edita um usuário (envelope canônico), espelhando o POST de ``edit_user``.
@@ -286,7 +286,7 @@ def api_admin_usuarios_remove_cpf(user_id: int) -> Response | tuple[Response, in
     return ok({"usuario": serialize_admin_user(user)})
 
 
-@main_bp.route("/api/admin/usuarios/<int:user_id>/delete", methods=["POST"])
+@main_bp.route("/api/admin/usuarios/<int:user_id>", methods=["DELETE"])
 @api_admin_required
 def api_admin_usuarios_delete(user_id: int) -> Response | tuple[Response, int]:
     """Exclui um usuário (envelope canônico), espelhando ``delete_user``.

@@ -12,7 +12,7 @@
  * Backend: routes/api/admin_templates.py (envelope ok/fail, api_admin_required).
  */
 
-import { get, getWithMeta, post } from './client';
+import { get, getWithMeta, post, put, del } from './client';
 import type {
 	TemplateDetailResult,
 	TemplateListMeta,
@@ -89,7 +89,7 @@ export async function updateTemplate(
 	templateId: number,
 	payload: TemplatePayload
 ): Promise<TemplateDetail> {
-	const data = await post<{ template: TemplateDetail }>(
+	const data = await put<{ template: TemplateDetail }>(
 		`/api/admin/templates/${templateId}`,
 		payload
 	);
@@ -106,8 +106,8 @@ export async function duplicateTemplate(templateId: number): Promise<TemplateDet
 
 /** Exclui um modelo (etapas/usos em cascata). Devolve o id removido. */
 export async function deleteTemplate(templateId: number): Promise<number> {
-	const data = await post<{ deleted_id: number }>(
-		`/api/admin/templates/${templateId}/delete`
+	const data = await del<{ deleted_id: number }>(
+		`/api/admin/templates/${templateId}`
 	);
 	return data.deleted_id;
 }

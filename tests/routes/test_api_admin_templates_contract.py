@@ -161,13 +161,13 @@ def test_create_returns_403_for_non_admin(client_user):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/admin/templates/<id> (editar)
+# PUT /api/admin/templates/<id> (editar)
 # ---------------------------------------------------------------------------
 
 
 def test_update_replaces_stages(client_admin, seed_data):
     template_id = seed_data["template_id"]
-    response = client_admin.post(
+    response = client_admin.put(
         f"/api/admin/templates/{template_id}",
         json={
             "name": "Template Renomeado",
@@ -186,7 +186,7 @@ def test_update_replaces_stages(client_admin, seed_data):
 
 
 def test_update_without_stages_returns_422(client_admin, seed_data):
-    response = client_admin.post(
+    response = client_admin.put(
         f"/api/admin/templates/{seed_data['template_id']}",
         json={"name": "Sem Etapas", "stages": []},
     )
@@ -195,7 +195,7 @@ def test_update_without_stages_returns_422(client_admin, seed_data):
 
 
 def test_update_returns_404_for_unknown(client_admin):
-    response = client_admin.post(
+    response = client_admin.put(
         "/api/admin/templates/999999",
         json={"name": "x", "stages": [{"name": "e", "duration_days": 1}]},
     )
@@ -204,7 +204,7 @@ def test_update_returns_404_for_unknown(client_admin):
 
 
 def test_update_returns_403_for_non_admin(client_user, seed_data):
-    response = client_user.post(
+    response = client_user.put(
         f"/api/admin/templates/{seed_data['template_id']}",
         json={"name": "x", "stages": [{"name": "e", "duration_days": 1}]},
     )
@@ -244,27 +244,27 @@ def test_duplicate_returns_403_for_non_admin(client_user, seed_data):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/admin/templates/<id>/delete
+# DELETE /api/admin/templates/<id>
 # ---------------------------------------------------------------------------
 
 
 def test_delete_returns_ok_envelope(client_admin, seed_data):
     template_id = seed_data["template_id"]
-    response = client_admin.post(f"/api/admin/templates/{template_id}/delete")
+    response = client_admin.delete(f"/api/admin/templates/{template_id}")
     assert response.status_code == 200
     data = _assert_ok_envelope(response.get_json())
     assert data["deleted_id"] == template_id
 
 
 def test_delete_returns_404_for_unknown(client_admin):
-    response = client_admin.post("/api/admin/templates/999999/delete")
+    response = client_admin.delete("/api/admin/templates/999999")
     assert response.status_code == 404
     _assert_fail_envelope(response.get_json(), code="not_found")
 
 
 def test_delete_returns_403_for_non_admin(client_user, seed_data):
-    response = client_user.post(
-        f"/api/admin/templates/{seed_data['template_id']}/delete"
+    response = client_user.delete(
+        f"/api/admin/templates/{seed_data['template_id']}"
     )
     assert response.status_code == 403
     _assert_fail_envelope(response.get_json(), code="forbidden")
