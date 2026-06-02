@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema de gerenciamento de projetos - Controle e acompanhe seus projetos de forma eficiente">
+    <title>ProjetosRJ</title>
+
+    {# Fonte do token CSRF para o client.ts (X-CSRFToken). Injetado server-side
+       pelo Jinja ao servir o index do bundle SvelteKit via routes/spa.py. #}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#005A92" id="appThemeColorMeta">
+
+    {# Anti-flash de tema: portado de templates/base.html:12-32. Roda ANTES do
+       primeiro paint (sincrono, no head) e seta data-theme no <html>. Recebe o
+       nonce do CSP (script-src 'self' 'nonce-{nonce}', app.py:55). #}
+    <script nonce="{{ csp_nonce }}">
+        (function () {
+            var storageKey = 'projetosrj.theme';
+            var root = document.documentElement;
+            var theme = 'light';
+            try {
+                var storedTheme = window.localStorage.getItem(storageKey);
+                if (storedTheme === 'light' || storedTheme === 'dark') {
+                    theme = storedTheme;
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            } catch (error) {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            }
+            root.setAttribute('data-theme', theme);
+            root.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
+
+    {# Tags de asset (modulepreload + stylesheet) extraidas do <head> do bundle
+       buildado (static/spa/index.html). Os nomes sao hasheados a cada build, por
+       isso vem do bundle em vez de fixos aqui. #}
+    {{ spa_head_assets | safe }}
+</head>
+<body data-sveltekit-preload-data="hover">
+    {# Script de bootstrap do SvelteKit, com o nonce do CSP ja injetado pela rota
+       (routes/spa.py substitui o placeholder %CSP_NONCE% pelo csp_nonce vivo). #}
+    {{ spa_body | safe }}
+</body>
+</html>

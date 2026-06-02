@@ -86,6 +86,27 @@ def _register_request_hooks(app):
         if g.user is None:
             session.clear()
 
+    def _refresh_failure_response():
+        """Resposta para falha de refresh Gov.br: 401 JSON p/ API, redirect p/ Jinja.
+
+        Para a SPA (requisições ``/api/*`` ou que negociam JSON via ``wants_json``),
+        devolve o envelope ``fail(code="unauthenticated")`` com HTTP 401 — assim o
+        cliente recebe erro estruturado em vez de um 302 opaco (que causaria loop).
+        Para requisições não-API o comportamento é IDÊNTICO ao anterior: redirect
+        302 para a página de login.
+        """
+        from routes.api import fail, wants_json
+
+        session.clear()
+        g.user = None
+        if request.path.startswith("/api/") or wants_json():
+            return fail(
+                "Sessão Gov.br expirada.",
+                status=401,
+                code="unauthenticated",
+            )
+        return redirect(url_for("main.login_page"))
+
     @app.before_request
     def check_govbr_token_expiry():
         if session.get("auth_provider") != "govbr":
@@ -103,18 +124,14 @@ def _register_request_hooks(app):
 
         govbr_refresh_token = request.cookies.get("govbr_refresh_token")
         if not govbr_refresh_token:
-            session.clear()
-            g.user = None
-            return redirect(url_for("main.login_page"))
+            return _refresh_failure_response()
 
         try:
             new_tokens = refresh_access_token(
                 app.config, refresh_token=govbr_refresh_token
             )
         except GovBrOIDCError:
-            session.clear()
-            g.user = None
-            return redirect(url_for("main.login_page"))
+            return _refresh_failure_response()
 
         expires_in = new_tokens.get("expires_in")
         refresh_expires_in = new_tokens.get("refresh_expires_in")

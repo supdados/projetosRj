@@ -1,0 +1,107 @@
+/*
+ * SPA ProjetosRJ — base de estilo.
+ * @font-face: fontes servidas pelo Flask em /static/fonts/ (mesmas de design-system.css:7-29).
+ * Vars semanticas :root + [data-theme="dark"]: valores escuros copiados 1:1 de
+ * design-system.css:152-203 (o backend escopa em body.is-authenticated; aqui a SPA
+ * inteira e autenticada, entao escopamos no atributo data-theme).
+ */
+
+@font-face {
+	font-family: 'InterVariable';
+	src: url('/static/fonts/Inter-Variable.woff2') format('woff2');
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'InterVariable';
+	src: url('/static/fonts/Inter-Italic-Variable.woff2') format('woff2');
+	font-weight: 100 900;
+	font-style: italic;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'ManropeVariable';
+	src: url('/static/fonts/Manrope-Variable.woff2') format('woff2');
+	font-weight: 200 800;
+	font-style: normal;
+	font-display: swap;
+}
+
+:root {
+	/* --ds-color-primary-* (light) consumidos pelo tailwind.config (primary.*) */
+	--ds-color-primary-700: #004b79;
+	--ds-color-primary-600: #005a92;
+	--ds-color-primary-500: #1f73b5;
+	--ds-color-primary-100: #e6f0f6;
+	--ds-color-secondary-600: #bc9d32;
+	--ds-color-success-600: #16a34a;
+	--ds-color-warning-600: #ca8a04;
+	--ds-color-danger-600: #dc2626;
+	--ds-color-info-600: #0ea5e9;
+
+	/* Semanticas (light) — consumidas pelo tailwind.config (canvas/surface/text/border) */
+	--color-canvas: #f7f9fc;
+	--color-surface: #ffffff;
+	--color-surface-elevated: #ffffff;
+	--color-surface-muted: #f8fafc;
+	--color-border: #dee2e6;
+	--color-border-strong: #cbd5e1;
+	--color-text-primary: #212529;
+	--color-text-secondary: #475569;
+	--color-text-muted: #6c757d;
+}
+
+/* Dark — valores 1:1 de design-system.css:152-203 */
+[data-theme='dark'] {
+	--color-canvas: #1f2936;
+	--color-surface: #273447;
+	--color-surface-elevated: #2d3c51;
+	--color-surface-muted: #223042;
+	--color-border: #3c4f65;
+	--color-border-strong: #4a6078;
+	--color-text-primary: #e6edf5;
+	--color-text-secondary: #c5d2e0;
+	--color-text-muted: #a8b8ca;
+
+	--ds-color-primary-700: #3f84b9;
+	--ds-color-primary-600: #4e95cc;
+	--ds-color-primary-500: #63a6db;
+	--ds-color-primary-100: rgba(78, 149, 204, 0.2);
+	--ds-color-success-600: #49b987;
+	--ds-color-warning-600: #d8a24d;
+	--ds-color-danger-600: #d97a7a;
+	--ds-color-info-600: #63a6db;
+
+	color-scheme: dark;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	html {
+		font-family: var(--ds-font-family-body, 'InterVariable', 'Inter', system-ui, sans-serif);
+	}
+
+	body {
+		font-size: 0.95rem;
+		line-height: 1.5;
+		color: var(--color-text-primary);
+		background: var(--color-canvas);
+	}
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		font-family: 'ManropeVariable', 'Manrope', 'Inter', system-ui, sans-serif;
+		line-height: 1.25;
+		letter-spacing: -0.01em;
+	}
+}

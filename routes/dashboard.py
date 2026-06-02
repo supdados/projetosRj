@@ -1,4 +1,5 @@
 import datetime
+from typing import Any, Optional
 
 from flask import current_app, g, render_template, request
 from sqlalchemy import and_, or_
@@ -16,15 +17,30 @@ from .orgao_scope import (
 from .shared import get_goal_catalog_context
 
 
-@main_bp.route("/dashboard")
-@login_required
-def dashboard():
-    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
-        request.args.get("orgao")
-    )
-    if invalid_orgao_filter:
-        return redirect_to_current_route_without_orgao()
+def build_dashboard_context(selected_orgao_id: Optional[int]) -> dict[str, Any]:
+    """Monta o dicionário de dados do Dashboard, respeitando o escopo de órgão.
 
+    Executa EXATAMENTE as mesmas queries/contadores que a rota Jinja
+    ``/dashboard`` usa, num único lugar, para que a rota Jinja e o endpoint
+    JSON da SPA (``GET /api/dashboard``) compartilhem a fonte de verdade — sem
+    recalcular derivados no cliente. A autorização por órgao é server-side:
+    usuários não-admin ficam restritos à sua subárvore (``orgao_scope``).
+
+    Args:
+        selected_orgao_id: ID do órgão já validado/sanitizado para o usuário
+            corrente (``None`` quando nenhum filtro está aplicado). O chamador é
+            responsável por sanitizar via ``sanitize_orgao_filter_for_current_user``.
+
+    Returns:
+        ``dict`` com as listas (``recent_projects``, ``recent_tasks``,
+        ``objetivos``) e todos os contadores agregados consumidos pelo template
+        ``index.html`` e pelo serializer do endpoint JSON.
+
+    Exemplo:
+        >>> ctx = build_dashboard_context(selected_orgao_id=None)
+        >>> ctx["num_projects"]
+        12
+    """
     user_subtree_ids = set() if g.user.is_admin else get_user_orgao_subtree_ids(g.user)
     selected_subtree_ids = (
         expand_orgao_filter_ids(selected_orgao_id) if selected_orgao_id else set()
@@ -199,37 +215,53 @@ def dashboard():
         "next_url": None,
     }
 
+    return {
+        "recent_projects": recent_projects,
+        "count_urgente": count_urgente,
+        "count_alta": count_alta,
+        "count_media": count_media,
+        "count_baixa": count_baixa,
+        "count_vigente": count_vigente,
+        "count_finalizado": count_finalizado,
+        "num_projects": num_projects,
+        "projetos_em_atraso": projetos_em_atraso,
+        "dashboard_tasks": dashboard_tasks,
+        "dashboard_open_tasks_count": dashboard_open_tasks_count,
+        "dashboard_open_items_count": dashboard_open_items_count,
+        "dashboard_tasks_pagination": dashboard_tasks_pagination,
+        "task_items_nao_iniciada": task_items_nao_iniciada,
+        "task_items_em_andamento": task_items_em_andamento,
+        "task_items_para_validacao": task_items_para_validacao,
+        "task_items_para_ajustes": task_items_para_ajustes,
+        "task_items_finalizada": task_items_finalizada,
+        "task_items_total": task_items_total,
+        "task_urgente_count": task_urgente_count,
+        "task_alta_count": task_alta_count,
+        "task_media_count": task_media_count,
+        "task_baixa_count": task_baixa_count,
+        "task_atencao_count": task_atencao_count,
+        "recent_tasks": recent_tasks,
+        "objetivos": objetivos,
+        "selected_orgao": selected_orgao_id,
+    }
+
+
+@main_bp.route("/dashboard")
+@login_required
+def dashboard():
+    """Renderiza o Dashboard (Jinja). Fonte de dados: ``build_dashboard_context``."""
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+        request.args.get("orgao")
+    )
+    if invalid_orgao_filter:
+        return redirect_to_current_route_without_orgao()
+
+    context = build_dashboard_context(selected_orgao_id)
     return render_template(
         "index.html",
-        recent_projects=recent_projects,
-        count_urgente=count_urgente,
-        count_alta=count_alta,
-        count_media=count_media,
-        count_baixa=count_baixa,
-        count_vigente=count_vigente,
-        count_finalizado=count_finalizado,
-        num_projects=num_projects,
-        projetos_em_atraso=projetos_em_atraso,
-        dashboard_tasks=dashboard_tasks,
-        dashboard_open_tasks_count=dashboard_open_tasks_count,
-        dashboard_open_items_count=dashboard_open_items_count,
-        dashboard_tasks_pagination=dashboard_tasks_pagination,
-        task_items_nao_iniciada=task_items_nao_iniciada,
-        task_items_em_andamento=task_items_em_andamento,
-        task_items_para_validacao=task_items_para_validacao,
-        task_items_para_ajustes=task_items_para_ajustes,
-        task_items_finalizada=task_items_finalizada,
-        task_items_total=task_items_total,
-        task_urgente_count=task_urgente_count,
-        task_alta_count=task_alta_count,
-        task_media_count=task_media_count,
-        task_baixa_count=task_baixa_count,
-        task_atencao_count=task_atencao_count,
-        recent_tasks=recent_tasks,
-        objetivos=objetivos,
-        selected_orgao=selected_orgao_id,
         chatbot_enabled=bool(current_app.config.get("CHATBOT_ENABLED")),
         chatbot_base_url=str(current_app.config.get("CHATBOT_BASE_URL", ""))
         .strip()
         .rstrip("/"),
+        **context,
     )

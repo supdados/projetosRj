@@ -1,3 +1,13 @@
+"""Endpoints JSON pré-existentes do portal.
+
+Este módulo preserva, sem alteração de path nem de lógica, as rotas que já
+existiam em ``routes/api.py`` antes da migração para o pacote ``routes.api``.
+As funções continuam anexadas a ``main_bp`` (logo ``url_for("main.<fn>")`` e os
+endpoints registrados permanecem idênticos). Novos endpoints da SPA devem usar
+o envelope canônico (``routes/api/envelope.py``); estes legados ainda retornam
+payloads crus/`{"error": ...}` por compatibilidade com o frontend Jinja atual.
+"""
+
 import json
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -13,10 +23,10 @@ from catalogs.objectives import (
     get_resultados_for_objetivo,
 )
 
-from .blueprint import main_bp
-from .decorators import login_required
-from .orgao_scope import get_user_orgao_subtree_ids
-from .shared import get_or_404
+from ..blueprint import main_bp
+from ..decorators import login_required
+from ..orgao_scope import get_user_orgao_subtree_ids
+from ..shared import get_or_404
 
 
 @main_bp.route("/api/resultados/<int:objetivo_id>")
