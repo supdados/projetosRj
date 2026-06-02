@@ -6,14 +6,26 @@
 	 *
 	 * Edição inline dos campos (descrição/prioridade/tipo/responsável) com
 	 * AUTOSAVE (debounce na store via `createAutosave`; `flush` no blur e ao
-	 * fechar — nunca perde edição). O status é exibido como Badge (read-only; muda
-	 * por DnD no board / ações de ciclo de vida). Ações finalizar/arquivar/
-	 * desarquivar/reativar são server-autoritativas (403 → erro, sem aplicar).
-	 * Comentários e anexos ficam nos painéis dedicados. Mutações refletem no card
-	 * do board via os reconciliadores injetados na store.
+	 * fechar — nunca perde edição). O status tem um SELETOR (#16) que chama
+	 * `POST /api/tarefas/<id>/status` (mesmo cliente `updateTaskStatus` do board):
+	 * só envia; em erro reverte a seleção e mostra a mensagem (server-autoritativo,
+	 * 403 ao finalizar sem permissão). Ações finalizar/arquivar/desarquivar/
+	 * reativar são server-autoritativas (403 → erro, sem aplicar). Comentários e
+	 * anexos ficam nos painéis dedicados. Mutações refletem no card do board via os
+	 * reconciliadores injetados na store. O foco fica preso no painel via
+	 * `use:focusTrap` (#17), que também foca o primeiro elemento ao abrir e
+	 * restaura o foco anterior ao fechar.
 	 */
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
-	import { STATUS_LABELS, normalizeStatus } from '$lib/utils/taskStatus';
+	import {
+		STATUS_LABELS,
+		TASK_STATUS_ORDER,
+		normalizeStatus,
+		type TaskStatus
+	} from '$lib/utils/taskStatus';
+	import { updateTaskStatus } from '$lib/api/board';
+	import { ApiClientError } from '$lib/api/client';
+	import { focusTrap } from '$lib/actions/focusTrap';
 	import Badge from './Badge.svelte';
 	import CommentsPanel from './CommentsPanel.svelte';
 	import AttachmentsPanel from './AttachmentsPanel.svelte';
@@ -51,10 +63,18 @@
 		{ value: 'implementacao', label: 'Implementação' }
 	];
 
-	let closeButton = $state<HTMLButtonElement | null>(null);
-
 	const isOpen = $derived($store.status !== 'closed');
 	const detail = $derived($store.detail);
+
+	// #16: seletor de status. Mudança de status é uma operação à parte (não passa
+	// pelo autosave de campos). Reusa o cliente `updateTaskStatus` do board.
+	let changingStatus = $state(false);
+	let statusError = $state<string | null>(null);
+
+	const STATUS_OPTIONS = TASK_STATUS_ORDER.map((value) => ({
+		value,
+		label: STATUS_LABELS[value]
+	}));
 
 	const autosaveLabel = $derived(
 		$store.autosave === 'saving' || $store.autosave === 'pending'
@@ -66,13 +86,39 @@
 					: ''
 	);
 
-	// Foca o botão fechar quando o drawer abre (acessibilidade).
-	$effect(() => {
-		if (isOpen && closeButton) closeButton.focus();
-	});
-
 	function statusTone(status: string): Tone {
 		return STATUS_TONE[normalizeStatus(status)] ?? 'neutral';
+	}
+
+	/**
+	 * #16: aplica a transição de status no servidor (autoritativo). Só ENVIA; em
+	 * erro reverte o `<select>` ao status atual e mostra a mensagem. Salva edições
+	 * pendentes antes (flush) e recarrega o detalhe (reconciliando o board).
+	 */
+	async function onStatus(event: Event): Promise<void> {
+		const target = event.currentTarget as HTMLSelectElement;
+		const next = target.value as TaskStatus;
+		const current = detail ? normalizeStatus(detail.status) : null;
+		const taskId = $store.taskId;
+		if (taskId === null || current === null || next === current) return;
+
+		changingStatus = true;
+		statusError = null;
+		try {
+			await store.flush();
+			await updateTaskStatus(taskId, next);
+			// Recarrega o detalhe canônico (e reconcilia o card no board via a store).
+			await store.open(taskId, { mode: $store.mode });
+		} catch (err) {
+			// Reverte a seleção visual ao status atual e sinaliza o erro.
+			target.value = current;
+			statusError =
+				err instanceof ApiClientError
+					? err.message
+					: 'Não foi possível alterar o status da tarefa.';
+		} finally {
+			changingStatus = false;
+		}
 	}
 
 	async function close(): Promise<void> {
@@ -121,6 +167,7 @@
 		tabindex="-1"
 		class="fixed right-0 top-0 z-modal flex h-full w-full max-w-md flex-col gap-4 overflow-y-auto border-l border-border-subtle bg-surface p-5 shadow-lg"
 		onkeydown={onKeydown}
+		use:focusTrap
 	>
 		<header class="flex items-start justify-between gap-3">
 			<div class="flex min-w-0 flex-col gap-1">
@@ -135,7 +182,6 @@
 				{/if}
 			</div>
 			<button
-				bind:this={closeButton}
 				type="button"
 				onclick={() => void close()}
 				aria-label="Fechar"
@@ -152,11 +198,40 @@
 				{$store.error}
 			</div>
 		{:else if detail}
-			<!-- Status (read-only) + indicador de autosave -->
-			<div class="flex items-center justify-between gap-2">
-				<Badge tone={statusTone(detail.status)}>{STATUS_LABELS[normalizeStatus(detail.status)]}</Badge>
-				<span aria-live="polite" class="text-xs text-text-muted">{autosaveLabel}</span>
+			<!-- Status: seletor (#16) + indicador visual (Badge) + autosave -->
+			<div class="flex items-end justify-between gap-2">
+				<div class="flex min-w-44 flex-1 flex-col gap-1">
+					<label
+						for="drawer-status"
+						class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+					>
+						Status
+					</label>
+					<div class="flex items-center gap-2">
+						<select
+							id="drawer-status"
+							value={normalizeStatus(detail.status)}
+							onchange={onStatus}
+							disabled={changingStatus || $store.acting}
+							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+						>
+							{#each STATUS_OPTIONS as opt (opt.value)}
+								<option value={opt.value}>{opt.label}</option>
+							{/each}
+						</select>
+						<Badge tone={statusTone(detail.status)}>
+							{STATUS_LABELS[normalizeStatus(detail.status)]}
+						</Badge>
+					</div>
+				</div>
+				<span aria-live="polite" class="pb-2 text-xs text-text-muted">{autosaveLabel}</span>
 			</div>
+
+			{#if statusError}
+				<div role="alert" class="rounded-md border border-danger bg-surface px-3 py-2 text-sm text-text-primary">
+					{statusError}
+				</div>
+			{/if}
 
 			{#if $store.error}
 				<div role="alert" class="rounded-md border border-danger bg-surface px-3 py-2 text-sm text-text-primary">

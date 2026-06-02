@@ -8,15 +8,17 @@
 	 * lib/api/calendars.ts) e RE-BUSCA o hub. Salvar e EXPLICITO (sem autosave).
 	 *
 	 * Acessibilidade: dialogo modal (`role="dialog"`, `aria-modal`, `tabindex=-1`),
-	 * titulo rotulando o dialogo, foco inicial no campo titulo, Escape fecha, fundo
-	 * clicavel fecha. O servidor e autoritativo; a validacao do cliente e minima
-	 * (titulo nao vazio; ends_at >= starts_at).
+	 * titulo rotulando o dialogo, Escape fecha, fundo clicavel fecha. O foco fica
+	 * preso no dialogo via `use:focusTrap` (#19), que foca o primeiro elemento
+	 * focavel ao abrir e restaura o foco anterior ao fechar. O servidor e
+	 * autoritativo; a validacao do cliente e minima (titulo nao vazio;
+	 * ends_at >= starts_at).
 	 *
 	 * Se o evento estiver com `sync_status === "error"` e `sync_error`, mostra um
 	 * aviso DEGRADADO que NAO bloqueia o formulario.
 	 */
-	import { tick } from 'svelte';
 	import type { CalendarEvent, CalendarEventInput } from '$lib/types/calendar';
+	import { focusTrap } from '$lib/actions/focusTrap';
 
 	interface Props {
 		/** Dialogo aberto? (controlado pela pagina). */
@@ -56,7 +58,6 @@
 	let allDay = $state(false);
 	let createConference = $state(false);
 	let clientError = $state<string | null>(null);
-	let titleEl = $state<HTMLInputElement | null>(null);
 
 	const isEdit = $derived(event !== null);
 	const meetLink = $derived(event?.meet_link ?? '');
@@ -67,7 +68,8 @@
 		isEdit && !meetLink && typeof onGenerateMeet === 'function'
 	);
 
-	// Ao abrir, preenche o formulario a partir do evento (ou reseta) e foca o titulo.
+	// Ao abrir, preenche o formulario a partir do evento (ou reseta). O foco
+	// inicial fica a cargo de `use:focusTrap` (#19).
 	$effect(() => {
 		if (!open) return;
 		title = event?.title ?? '';
@@ -78,7 +80,6 @@
 		allDay = event?.is_all_day ?? false;
 		createConference = false;
 		clientError = null;
-		void tick().then(() => titleEl?.focus());
 	});
 
 	function validate(): string | null {
@@ -144,6 +145,7 @@
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={onKeydown}
 			tabindex="-1"
+			use:focusTrap
 		>
 			<header class="flex items-center justify-between gap-3">
 				<h2
@@ -178,7 +180,6 @@
 					Titulo
 				</label>
 				<input
-					bind:this={titleEl}
 					bind:value={title}
 					id="event-title"
 					type="text"
