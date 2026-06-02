@@ -1181,6 +1181,42 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
+        "id": "api_tarefas_board_get",
+        "method": "GET",
+        "rule": "/api/tarefas/board",
+        "path": "/api/tarefas/board",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefa_status_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/status",
+        "path": "/api/tarefas/{task_id}/status",
+        "role": "user",
+        "json": {"status": "em_andamento"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_tarefas_board_reordenar_post",
+        "method": "POST",
+        "rule": "/api/tarefas/board/reordenar",
+        "path": "/api/tarefas/board/reordenar",
+        "role": "user",
+        "json": {
+            "columns": [
+                {"status": "nao_iniciada", "task_ids": ["{task_id}"]},
+            ]
+        },
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
         "id": "api_busca_get",
         "method": "GET",
         "rule": "/api/busca",
@@ -2118,5 +2154,11 @@ ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 # server-side; devolve as etapas atualizadas), POST /api/projetos/<id>/cascade
 # (recalculo de datas em cascata) e POST /api/projetos/<id>/importar-modelo
 # (aplica template reusando import_template_stages). Todos no envelope, com
-# api_login_required + user_can_access_project (404/403). Total: 183.
-assert len(ROUTE_CASES) == 183
+# api_login_required + user_can_access_project (404/403).
+#
+# Fase 5b-1 (Kanban): GET /api/tarefas/board (5 colunas por status), POST
+# /api/tarefas/<id>/status (transição autoritativa via _can_transition_task_to_status)
+# e POST /api/tarefas/board/reordenar (ordem + status entre colunas). Anexados ao
+# main_bp em routes/api/board.py, no envelope, com api_login_required + escopo de
+# órgão. Total: 186.
+assert len(ROUTE_CASES) == 186
