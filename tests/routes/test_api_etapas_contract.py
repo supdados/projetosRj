@@ -90,13 +90,16 @@ def test_update_field_data_inicio_triggers_business_day_cascade(
 def test_reordenar_triggers_cascade_and_returns_updated_etapas(
     app, client_user, seed_data
 ):
+    # Seed coerente: a etapa base fica no TOPO (ordem 0) e a etapa subsequente
+    # (etapa_started) logo abaixo (ordem 1). A cascata deve usar a ordem-base
+    # RESULTANTE pós-reorder e deslocar a subsequente real em dias úteis.
     with app.app_context():
         before = db.session.get(Etapa, seed_data["etapa_started_id"]).data_inicio
 
     response = client_user.post(
         f"/api/projetos/{seed_data['project_id']}/etapas/reordenar",
         json={
-            "etapa_ids": [seed_data["etapa_started_id"], seed_data["etapa_id"]],
+            "etapa_ids": [seed_data["etapa_id"], seed_data["etapa_started_id"]],
             "etapa_id": seed_data["etapa_id"],
             "days_diff": 5,
         },
@@ -109,8 +112,8 @@ def test_reordenar_triggers_cascade_and_returns_updated_etapas(
     assert len(data["etapas"]) >= 2
 
     with app.app_context():
-        # etapa base = etapa (ordem 0); a subsequente (etapa_started) foi
-        # deslocada em 5 dias úteis pela cascata server-side.
+        # base = etapa_id (ordem 0 pós-reorder); etapa_started é subsequente
+        # (ordem 1) e foi deslocada em 5 dias úteis pela cascata server-side.
         after = db.session.get(Etapa, seed_data["etapa_started_id"]).data_inicio
         assert after is not None and before is not None
         assert after > before

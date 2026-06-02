@@ -539,7 +539,17 @@ def api_etapas_reordenar(project_id: int) -> Response | tuple[Response, int]:
                 etapa.ordem = index
 
         if cascade_info is not None:
-            base_ordem, days_diff = cascade_info
+            _stale_ordem, days_diff = cascade_info
+            # A ordem-base deve refletir o layout RESULTANTE pós-reorder; usar a
+            # posição do ID base na lista reordenada (ids_int) evita cascatear
+            # sobre a ordem antiga já lida por _resolve_cascade_request (ver
+            # docs/analise-testes-falhando.md §2.7).
+            base_etapa_id = int(data["etapa_id"])
+            base_ordem = (
+                ids_int.index(base_etapa_id)
+                if base_etapa_id in ids_int
+                else _stale_ordem
+            )
             cascade_subsequent_dates(project_id, base_ordem, days_diff)
 
         db.session.commit()
