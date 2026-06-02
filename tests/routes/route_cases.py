@@ -1127,9 +1127,9 @@ ROUTE_CASES = [
         "id": "api_etapa_toggle_post",
         "method": "POST",
         "rule": "/api/etapas/<int:etapa_id>/toggle",
-        "path": "/api/etapas/{etapa_started_id}/toggle",
+        "path": "/api/etapas/{etapa_id}/toggle",
         "role": "user",
-        "expected_status": 200,
+        "expected_status": 422,
         "requires_login": True,
         "requires_admin": False,
     },
@@ -1166,6 +1166,16 @@ ROUTE_CASES = [
         "path": "/api/projetos/{project_id}/importar-modelo",
         "role": "user",
         "json": {"template_id": "{template_id}", "start_date": "2026-03-10"},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapas_templates_get",
+        "method": "GET",
+        "rule": "/api/etapas/templates",
+        "path": "/api/etapas/templates",
+        "role": "user",
         "expected_status": 200,
         "requires_login": True,
         "requires_admin": False,
@@ -2031,6 +2041,16 @@ ROUTE_CASES = [
         "requires_admin": True,
     },
     {
+        "id": "api_admin_orgaos_opcoes_get",
+        "method": "GET",
+        "rule": "/api/admin/orgaos/opcoes",
+        "path": "/api/admin/orgaos/opcoes",
+        "role": "admin",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": True,
+    },
+    {
         "id": "api_admin_orgaos_detail_get",
         "method": "GET",
         "rule": "/api/admin/orgaos/<int:orgao_id>",
@@ -2386,5 +2406,15 @@ ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 # O CRUD de evento NAO ganha endpoint /api: o frontend reusa POST
 # /calendarios/eventos[/...] com Accept: application/json. Anexados ao main_bp em
 # routes/api/calendars.py, com api_login_required. +4.
-# Total: 204.
-assert len(ROUTE_CASES) == 204
+#
+# Debito tecnico de backend (enveloped, aditivos; nao alteram os legados):
+# + GET /api/etapas/templates (#13): espelho enveloped do legado GET /api/templates
+#   (que devolve array cru e HTML em 401) para o modal de importacao de modelos;
+#   reusa a MESMA query/serializacao (_stage_templates_payload em
+#   routes/api/etapas.py), com api_login_required. role=user.
+# + GET /api/admin/orgaos/opcoes (#10): opcoes de orgaos ATIVOS ja achatadas
+#   (id/sigla/nome/depth) para o select do form de usuario, reusando
+#   _list_orgaos_with_depth (routes/admin_users.py). Anexado em
+#   routes/api/admin_orgaos.py, com api_admin_required. role=admin.
+# Total: 206.
+assert len(ROUTE_CASES) == 206
