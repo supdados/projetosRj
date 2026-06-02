@@ -20,9 +20,15 @@
 	import type { TaskCard, TaskHubData, TaskHubModo, TaskHubQuery } from '$lib/types/tasks';
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
+	import KanbanBoard from '$lib/components/KanbanBoard.svelte';
+	import { createBoardStore } from '$lib/stores/board';
+	import type { BoardQuery } from '$lib/types/board';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+
+	/** Visualização da tela: lista (default) ou kanban. */
+	type ViewMode = 'list' | 'kanban';
 
 	/** Modos da topnav (espelham `?modo=` do endpoint). */
 	const MODO_OPTIONS: { value: TaskHubModo; label: string }[] = [
@@ -104,6 +110,36 @@
 
 	let inFlight: AbortController | null = null;
 
+	// Visualização (lista default <-> kanban). O board tem sua própria store
+	// canônica; o modo lista mantém seu fluxo atual intocado.
+	let view = $state<ViewMode>('list');
+	const board = createBoardStore();
+	let boardInFlight: AbortController | null = null;
+	let boardLoaded = $state<boolean>(false);
+
+	/**
+	 * Carrega o board aplicando os MESMOS filtros de projeto/órgão do modo lista
+	 * (o board mostra só tarefas ativas; `modo` é específico da lista). Reusa o
+	 * `orgao_scope` do backend via `BoardQuery.orgao`.
+	 */
+	async function loadBoard(): Promise<void> {
+		boardInFlight?.abort();
+		const controller = new AbortController();
+		boardInFlight = controller;
+		const query: BoardQuery = {
+			project: project || undefined,
+			orgao: orgao || undefined
+		};
+		await board.load(query, controller.signal);
+		if (!controller.signal.aborted) boardLoaded = true;
+	}
+
+	function selectView(next: ViewMode): void {
+		if (view === next) return;
+		view = next;
+		if (next === 'kanban') void loadBoard();
+	}
+
 	async function load(): Promise<void> {
 		loadState = data ? loadState : 'loading';
 		errorMessage = '';
@@ -139,25 +175,34 @@
 		void load();
 	}
 
+	/** Re-busca a visualização ativa após mudança de filtro (lista e/ou board). */
+	function reloadActiveView(): void {
+		void load();
+		if (view === 'kanban') void loadBoard();
+	}
+
 	function onProjectChange(event: Event): void {
 		project = (event.currentTarget as HTMLSelectElement).value;
-		void load();
+		reloadActiveView();
 	}
 
 	function onOrgaoChange(event: Event): void {
 		orgao = (event.currentTarget as HTMLSelectElement).value;
-		void load();
+		reloadActiveView();
 	}
 
 	function clearFilters(): void {
 		project = '';
 		orgao = '';
-		void load();
+		reloadActiveView();
 	}
 
 	onMount(() => {
 		void load();
-		return () => inFlight?.abort();
+		return () => {
+			inFlight?.abort();
+			boardInFlight?.abort();
+		};
 	});
 
 	/**
@@ -175,7 +220,9 @@
 	});
 
 	const hasActiveFilters = $derived(project !== '' || orgao !== '');
-	const totalItems = $derived(data?.total_items ?? 0);
+	const totalItems = $derived(
+		view === 'kanban' ? $board.total : (data?.total_items ?? 0)
+	);
 
 	/**
 	 * Divide as tarefas de um grupo em subgrupos por etapa, respeitando o
@@ -210,28 +257,68 @@
 				{totalItems} tarefa{totalItems === 1 ? '' : 's'}
 			</span>
 		</div>
-		<p class="text-sm text-text-secondary">Tarefas agrupadas por projeto.</p>
+		<p class="text-sm text-text-secondary">
+			{view === 'kanban'
+				? 'Tarefas ativas por status. Arraste os cards entre colunas para mudar o status.'
+				: 'Tarefas agrupadas por projeto.'}
+		</p>
 	</header>
 
-	<!-- Alternância de status (ativas/finalizadas/arquivadas) -->
-	<div
-		role="group"
-		aria-label="Visão das tarefas"
-		class="inline-flex w-fit rounded-md border border-border-subtle bg-surface p-1"
-	>
-		{#each MODO_OPTIONS as option (option.value)}
+	<div class="flex flex-wrap items-center gap-3">
+		<!-- Alternância de status (ativas/finalizadas/arquivadas) — só no modo lista -->
+		{#if view === 'list'}
+			<div
+				role="group"
+				aria-label="Visão das tarefas"
+				class="inline-flex w-fit rounded-md border border-border-subtle bg-surface p-1"
+			>
+				{#each MODO_OPTIONS as option (option.value)}
+					<button
+						type="button"
+						aria-pressed={modo === option.value}
+						onclick={() => selectModo(option.value)}
+						class="rounded-sm px-4 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {modo ===
+						option.value
+							? 'bg-primary-100 text-primary-700'
+							: 'text-text-secondary hover:bg-surface-muted'}"
+					>
+						{option.label}
+					</button>
+				{/each}
+			</div>
+		{/if}
+
+		<!-- Alternância de visualização (Lista <-> Kanban); Lista é o default -->
+		<div
+			role="group"
+			aria-label="Modo de visualização"
+			class="ml-auto inline-flex w-fit rounded-md border border-border-subtle bg-surface p-1"
+		>
 			<button
 				type="button"
-				aria-pressed={modo === option.value}
-				onclick={() => selectModo(option.value)}
-				class="rounded-sm px-4 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {modo ===
-				option.value
+				data-view="list"
+				aria-pressed={view === 'list'}
+				onclick={() => selectView('list')}
+				class="rounded-sm px-4 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {view ===
+				'list'
 					? 'bg-primary-100 text-primary-700'
 					: 'text-text-secondary hover:bg-surface-muted'}"
 			>
-				{option.label}
+				Lista
 			</button>
-		{/each}
+			<button
+				type="button"
+				data-view="kanban"
+				aria-pressed={view === 'kanban'}
+				onclick={() => selectView('kanban')}
+				class="rounded-sm px-4 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {view ===
+				'kanban'
+					? 'bg-primary-100 text-primary-700'
+					: 'text-text-secondary hover:bg-surface-muted'}"
+			>
+				Kanban
+			</button>
+		</div>
 	</div>
 
 	<!-- Filtros (re-buscam server-side) -->
@@ -289,7 +376,29 @@
 		{/if}
 	</form>
 
-	{#if loadState === 'loading'}
+	{#if view === 'kanban'}
+		{#if $board.status === 'loading' && !boardLoaded}
+			<p role="status" aria-live="polite" class="text-text-secondary">Carregando board…</p>
+		{:else if $board.status === 'error' && !boardLoaded}
+			<div
+				role="alert"
+				class="flex flex-col items-start gap-3 rounded-lg border border-danger bg-surface px-5 py-4"
+			>
+				<p class="text-text-primary">{$board.error}</p>
+				<button
+					type="button"
+					onclick={() => loadBoard()}
+					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					Tentar novamente
+				</button>
+			</div>
+		{:else}
+			<div aria-busy={$board.status === 'loading'}>
+				<KanbanBoard store={board} />
+			</div>
+		{/if}
+	{:else if loadState === 'loading'}
 		<p role="status" aria-live="polite" class="text-text-secondary">Carregando tarefas…</p>
 	{:else if loadState === 'error'}
 		<div

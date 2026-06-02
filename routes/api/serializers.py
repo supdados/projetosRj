@@ -537,18 +537,29 @@ def serialize_template_row(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def serialize_task_card(task: Any) -> dict[str, Any]:
-    """Serializa uma tarefa no formato de "card" para listas/dashboard.
+    """Serializa uma tarefa no formato de "card" para listas/dashboard/Kanban.
 
     Task e TaskItem são a MESMA tabela; existe um único tipo ``Task``. Usa
     CAMPOS REAIS (``descricao``, ``is_archived``, ``archived_at``) — sem aliases
     legados (``titulo``/``is_finalized``) vazando para o frontend.
 
+    Inclui ``permissions.can_finalize`` (derivado de
+    ``routes/tasks/permissions.task_permission_flags`` para o usuário corrente em
+    ``flask.g``). O Kanban (Fase 5b-1) usa esse flag SÓ para UX (habilitar/desabilitar
+    o drop na coluna "finalizada"); a decisão autoritativa continua server-side em
+    ``_can_transition_task_to_status``. Quando não há contexto de usuário (ex.: uso
+    fora de request), ``can_finalize`` cai para ``False``.
+
     Args:
         task: Instância de ``Task``.
 
     Returns:
-        ``dict`` JSON-safe com os campos do card da tarefa.
+        ``dict`` JSON-safe com os campos do card da tarefa, incluindo
+        ``permissions.can_finalize``.
     """
+    from routes.tasks.permissions import task_permission_flags
+
+    flags = task_permission_flags(task)
     return {
         "id": task.id,
         "descricao": task.descricao,
@@ -563,4 +574,5 @@ def serialize_task_card(task: Any) -> dict[str, Any]:
         "created_at": _iso_or_none(task.created_at),
         "is_archived": bool(task.is_archived),
         "archived_at": _iso_or_none(task.archived_at),
+        "permissions": {"can_finalize": bool(flags["can_finalize"])},
     }

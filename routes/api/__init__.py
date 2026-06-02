@@ -58,6 +58,7 @@ from . import projects  # noqa: F401,E402
 from . import project_detail  # noqa: F401,E402
 from . import etapas  # noqa: F401,E402
 from . import tasks  # noqa: F401,E402
+from . import board  # noqa: F401,E402
 from . import search  # noqa: F401,E402
 from . import admin_users  # noqa: F401,E402
 from . import admin_orgaos  # noqa: F401,E402

@@ -7,6 +7,13 @@ from models import (
 from routes.orgao_scope import get_user_orgao_subtree_ids, user_can_access_project
 from routes.tasks.constants import _preview_text
 
+#: Mensagem canônica quando alguém sem permissão tenta mover uma tarefa para
+#: "finalizada". Definida aqui (junto de ``_can_transition_task_to_status``) para
+#: que tanto a rota Jinja legada (``routes/tasks/crud.py``) quanto o endpoint
+#: ``/api/*`` do Kanban (``routes/api/board.py``) compartilhem a MESMA string,
+#: sem duplicação. ``crud.py`` reexporta este nome — comportamento inalterado.
+FINALIZE_DENIED_MESSAGE = "Apenas o criador da tarefa pode movê-la para Finalizada."
+
 
 def _can_view_task(user, task):
     if user.is_admin:

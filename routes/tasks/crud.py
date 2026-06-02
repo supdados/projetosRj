@@ -7,6 +7,7 @@ from routes.decorators import login_required
 from routes.orgao_scope import sanitize_orgao_filter_for_current_user
 from routes.tasks.constants import VALID_PRIORIDADES, VALID_STATUSES, VALID_TIPOS
 from routes.tasks.helpers import (
+    FINALIZE_DENIED_MESSAGE,
     _audit_denied_task_action,
     _build_visible_tasks_query,
     _can_manage_task_restricted_actions,
@@ -46,7 +47,9 @@ from services.task_mutation import (
     unarchive_task as mutate_unarchive_task,
 )
 
-FINALIZE_DENIED_MESSAGE = "Apenas o criador da tarefa pode movê-la para Finalizada."
+# FINALIZE_DENIED_MESSAGE é definido em routes/tasks/permissions.py (fonte única,
+# junto da regra _can_transition_task_to_status) e reexportado por helpers; o nome
+# permanece disponível neste módulo, sem mudança de comportamento.
 DELETE_DENIED_MESSAGE = "Somente o autor da tarefa ou um administrador pode excluí-la."
 EDIT_RESTRICTED_FIELDS_DENIED_MESSAGE = "Somente o autor da tarefa ou um administrador pode editar descrição, prioridade e responsável."
 

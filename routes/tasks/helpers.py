@@ -20,6 +20,7 @@ from routes.tasks.constants import (  # noqa: F401
     _task_tipo_label,
 )
 from routes.tasks.permissions import (  # noqa: F401
+    FINALIZE_DENIED_MESSAGE,
     _audit_denied_task_action,
     _can_access_project_in_tasks,
     _can_manage_task_restricted_actions,
