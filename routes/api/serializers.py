@@ -576,3 +576,133 @@ def serialize_task_card(task: Any) -> dict[str, Any]:
         "archived_at": _iso_or_none(task.archived_at),
         "permissions": {"can_finalize": bool(flags["can_finalize"])},
     }
+
+
+def _serialize_task_comment(comment: Any, *, current_user_id: int | None) -> dict[str, Any]:
+    """Serializa um comentário de tarefa para o drawer (sem segredos).
+
+    Usa CAMPOS REAIS de ``TaskComment`` (``content``, ``created_at``,
+    ``updated_at``) e um vínculo mínimo do autor (id/nome) — NUNCA expõe
+    ``password_hash`` nem credenciais. ``can_edit``/``can_delete`` espelham a
+    regra das rotas legadas (``comments.py``): só o próprio autor edita/exclui.
+
+    Args:
+        comment: Instância de ``TaskComment``.
+        current_user_id: ID do usuário corrente (para derivar ``is_own``).
+
+    Returns:
+        ``dict`` JSON-safe com os campos do comentário e flags de permissão.
+    """
+    author = getattr(comment, "author", None)
+    is_own = bool(current_user_id is not None and comment.user_id == current_user_id)
+    return {
+        "id": comment.id,
+        "content": comment.content,
+        "user_id": comment.user_id,
+        "author_name": (author.name if author else None) or "Usuário",
+        "created_at": _iso_or_none(comment.created_at),
+        "updated_at": _iso_or_none(comment.updated_at),
+        "is_own": is_own,
+        "can_edit": is_own,
+        "can_delete": is_own,
+    }
+
+
+def _serialize_task_anexo(anexo: Any, *, download_url: str | None = None) -> dict[str, Any]:
+    """Serializa um anexo de tarefa para o drawer (sem segredos).
+
+    Usa CAMPOS REAIS de ``TaskAnexo`` (``filename``, ``content_type``,
+    ``created_at``) e o nome de quem subiu (sem expor ids internos sensíveis).
+    NÃO inclui ``stored_filename`` (nome físico no disco) no payload. O
+    ``download_url`` aponta para o ``send_file`` binário legado (mesma origin).
+
+    Args:
+        anexo: Instância de ``TaskAnexo``.
+        download_url: URL absoluta/relativa do download binário (``view_task_item_anexo``).
+
+    Returns:
+        ``dict`` JSON-safe com os campos do anexo e ``url`` de download.
+    """
+    content_type = anexo.content_type or ""
+    uploaded_by = getattr(anexo, "uploaded_by", None)
+    return {
+        "id": anexo.id,
+        "filename": anexo.filename,
+        "content_type": content_type,
+        "is_image": content_type.startswith("image/"),
+        "uploaded_by": (uploaded_by.name if uploaded_by else None) or "Usuário",
+        "created_at": _iso_or_none(anexo.created_at),
+        "url": download_url,
+    }
+
+
+def serialize_task_detail(
+    task: Any,
+    *,
+    permissions: dict[str, bool] | None = None,
+    anexo_url_for: Any = None,
+) -> dict[str, Any]:
+    """Serializa o payload completo de uma tarefa para o DRAWER (Fase 5b-2).
+
+    Reusa ``serialize_task_card`` (campos editáveis inline + ``permissions.can_finalize``
+    UX-only) e SOMA o contexto do drawer que o card não traz: o vínculo de
+    etapa/projeto (para o cabeçalho de contexto), a lista de ``comentarios`` e de
+    ``anexos`` (serializados sem segredos) e o bloco autoritativo de
+    ``permissions`` ``{can_edit, can_finalize, can_delete}`` derivado server-side
+    (``task_permission_flags``). Task e TaskItem são a MESMA tabela.
+
+    NUNCA expõe segredos: ``stored_filename`` do anexo (caminho físico) e
+    ``password_hash``/credenciais de autores ficam de fora.
+
+    Args:
+        task: Instância de ``Task``.
+        permissions: Flags autoritativos do usuário corrente
+            (``task_permission_flags``); quando ``None``, cai para tudo ``False``.
+        anexo_url_for: Callable ``(anexo) -> str`` que monta a URL de download
+            binário (``url_for("main.view_task_item_anexo", ...)``). Quando
+            ``None``, ``url`` do anexo fica ``None`` (ex.: uso fora de request).
+
+    Returns:
+        ``dict`` JSON-safe com os campos do card mais ``etapa``/``project``
+        (contexto), ``comentarios: [...]``, ``anexos: [...]`` e ``permissions``.
+    """
+    from flask import g
+
+    perms = permissions or {}
+    current_user = getattr(g, "user", None)
+    current_user_id = getattr(current_user, "id", None)
+
+    card = serialize_task_card(task)
+    etapa = getattr(task, "etapa", None)
+    project = getattr(task, "project", None)
+    card.update(
+        {
+            "etapa": (
+                {"id": etapa.id, "descricao": etapa.descricao, "done": bool(etapa.done)}
+                if etapa is not None
+                else None
+            ),
+            "project": (
+                {"id": project.id, "titulo": project.titulo}
+                if project is not None
+                else None
+            ),
+            "comentarios": [
+                _serialize_task_comment(comment, current_user_id=current_user_id)
+                for comment in (task.comments or [])
+            ],
+            "anexos": [
+                _serialize_task_anexo(
+                    anexo,
+                    download_url=(anexo_url_for(anexo) if anexo_url_for else None),
+                )
+                for anexo in (task.anexos or [])
+            ],
+            "permissions": {
+                "can_edit": bool(perms.get("can_edit", perms.get("can_manage", False))),
+                "can_finalize": bool(perms.get("can_finalize", False)),
+                "can_delete": bool(perms.get("can_delete", False)),
+            },
+        }
+    )
+    return card

@@ -13,8 +13,16 @@
 	 * O drag em si é coordenado pelo `KanbanBoard` (HTML5 nativo); aqui só
 	 * expomos `draggable` e propagamos os eventos `dragstart`/`dragend`.
 	 */
+	import { getContext } from 'svelte';
 	import Badge from '$lib/components/Badge.svelte';
 	import type { BoardCard } from '$lib/types/board';
+
+	/**
+	 * Abertura do drawer (Fase 5b-2): fornecida via contexto pela página, para não
+	 * exigir prop drilling por KanbanBoard/KanbanColumn. Ausente quando o board é
+	 * usado sem drawer.
+	 */
+	const openTaskDrawer = getContext<((taskId: number) => void) | undefined>('openTaskDrawer');
 
 	type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
@@ -91,5 +99,15 @@
 
 	{#if card.responsavel}
 		<p class="text-xs text-text-muted">Responsável: {card.responsavel}</p>
+	{/if}
+
+	{#if openTaskDrawer}
+		<button
+			type="button"
+			onclick={() => openTaskDrawer?.(card.id)}
+			class="w-fit text-xs font-medium text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		>
+			Abrir
+		</button>
 	{/if}
 </article>

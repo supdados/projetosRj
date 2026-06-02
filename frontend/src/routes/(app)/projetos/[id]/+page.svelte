@@ -23,10 +23,12 @@
 	 *   - 404 `not_found`; 403 `forbidden`; 401 ja redireciona em `client.ts`.
 	 * Links internos sao base-aware (`$app/paths`).
 	 */
-	import { onMount } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import { page } from '$app/stores';
 	import { base } from '$app/paths';
 	import { ApiClientError } from '$lib/api/client';
+	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
+	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import {
 		fetchProjectDetail,
 		fetchEtapaTasks,
@@ -144,6 +146,19 @@
 			errorMessage = messageOf(err, 'Falha ao recarregar o projeto.');
 		}
 	}
+
+	// --- Drawer de tarefa (Fase 5b-2, modo drawer-only) ----------------------
+	// Sem board aqui: ao fechar o drawer após mutações, recarrega o detalhe para
+	// refletir contagem/estado das tarefas de etapa (sem re-fetch por keystroke).
+	const drawer = createTaskDrawerStore();
+	setContext('openTaskDrawer', (id: number) => void drawer.open(id, { mode: 'etapa' }));
+
+	let drawerWasOpen = false;
+	$effect(() => {
+		const open = $drawer.status !== 'closed';
+		if (drawerWasOpen && !open) void refresh();
+		drawerWasOpen = open;
+	});
 
 	// --- Edicao inline de campos do projeto (cabecalho + demais) -------------
 
@@ -630,3 +645,5 @@
 		/>
 	{/if}
 </section>
+
+<TaskDrawer store={drawer} />

@@ -71,6 +71,10 @@ export interface BoardStore extends Readable<BoardState> {
 		index: number
 	): Promise<boolean>;
 	reorder(status: TaskStatus, orderedIds: number[]): Promise<boolean>;
+	/** Insere/atualiza um card vindo de outra fonte (ex.: drawer da Fase 5b-2). */
+	upsertCard(card: BoardCard): void;
+	/** Remove um card do board (ex.: tarefa finalizada/arquivada pelo drawer). */
+	removeCard(taskId: number): void;
 	reset(): void;
 }
 
@@ -345,9 +349,53 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 		}
 	}
 
+	/**
+	 * Insere ou atualiza um card (reconciliação vinda do drawer da Fase 5b-2).
+	 * Se o card já existe na coluna do seu status atual, é substituído no lugar
+	 * (preserva posição); se mudou de coluna ou é novo, entra no topo da coluna
+	 * correta. O status do card determina a coluna (autoritativo do servidor).
+	 */
+	function upsertCard(card: BoardCard): void {
+		store.update((state) => {
+			const targetStatus = normalizeStatus(card.status);
+			const next = cloneColumns(state.columns);
+			let priorIndexInTarget = -1;
+			for (const column of next) {
+				const at = column.tasks.findIndex((task) => task.id === card.id);
+				if (at !== -1) {
+					if (column.status === targetStatus) priorIndexInTarget = at;
+					column.tasks.splice(at, 1);
+				}
+			}
+			const target = next.find((column) => column.status === targetStatus);
+			if (target) {
+				const idx = priorIndexInTarget === -1
+					? 0
+					: Math.min(priorIndexInTarget, target.tasks.length);
+				target.tasks.splice(idx, 0, card);
+			}
+			return { ...state, columns: next };
+		});
+	}
+
+	/** Remove um card do board (tarefa saiu do board ativo: finalizada/arquivada). */
+	function removeCard(taskId: number): void {
+		store.update((state) => {
+			const next = cloneColumns(state.columns);
+			for (const column of next) {
+				const at = column.tasks.findIndex((task) => task.id === taskId);
+				if (at !== -1) {
+					column.tasks.splice(at, 1);
+					break;
+				}
+			}
+			return { ...state, columns: next };
+		});
+	}
+
 	function reset(): void {
 		store.set(initialState(mode));
 	}
 
-	return { subscribe: store.subscribe, load, moveCard, reorder, reset };
+	return { subscribe: store.subscribe, load, moveCard, reorder, upsertCard, removeCard, reset };
 }

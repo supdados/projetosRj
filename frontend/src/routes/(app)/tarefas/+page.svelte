@@ -14,14 +14,16 @@
 	 *
 	 * Referência visual: templates/tasks/hub.html.
 	 */
-	import { onMount } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import { fetchTarefas } from '$lib/api/tasks';
 	import { ApiClientError } from '$lib/api/client';
 	import type { TaskCard, TaskHubData, TaskHubModo, TaskHubQuery } from '$lib/types/tasks';
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
 	import KanbanBoard from '$lib/components/KanbanBoard.svelte';
+	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import { createBoardStore } from '$lib/stores/board';
+	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import type { BoardQuery } from '$lib/types/board';
 
 	type LoadState = 'loading' | 'ready' | 'error';
@@ -116,6 +118,30 @@
 	const board = createBoardStore();
 	let boardInFlight: AbortController | null = null;
 	let boardLoaded = $state<boolean>(false);
+
+	// Drawer de tarefa (Fase 5b-2): reconcilia mutações no card do board sem
+	// duplicar estado (upsert/remove na board store). Em modo lista, a lista é
+	// re-buscada ao fechar o drawer (abaixo).
+	const drawer = createTaskDrawerStore({
+		onCardChanged: (card) => board.upsertCard(card),
+		onCardRemoved: (id) => board.removeCard(id)
+	});
+
+	function openTask(taskId: number, mode: 'board' | 'list' | 'etapa'): void {
+		void drawer.open(taskId, { mode });
+	}
+
+	// KanbanCard abre o drawer via contexto (evita prop drilling por Board/Column).
+	setContext('openTaskDrawer', (id: number) => openTask(id, 'board'));
+
+	// Ao FECHAR o drawer (depois de aberto), recarrega a LISTA para refletir
+	// mutações; o board já reconcilia ao vivo via upsert/removeCard.
+	let drawerWasOpen = false;
+	$effect(() => {
+		const open = $drawer.status !== 'closed';
+		if (drawerWasOpen && !open && view === 'list') void load();
+		drawerWasOpen = open;
+	});
 
 	/**
 	 * Carrega o board aplicando os MESMOS filtros de projeto/órgão do modo lista
@@ -451,7 +477,13 @@
 									<ul class="flex flex-col gap-2">
 										{#each stage.tasks as task (task.id)}
 											<li class="flex flex-col gap-2 rounded-md border border-border-subtle bg-surface px-4 py-3">
-												<p class="text-sm text-text-primary">{task.descricao}</p>
+												<button
+													type="button"
+													onclick={() => openTask(task.id, 'list')}
+													class="text-left text-sm text-text-primary hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												>
+													{task.descricao}
+												</button>
 												<div class="flex flex-wrap items-center gap-2">
 													<Badge tone={statusTone(task.status)}>
 														{statusLabel(task.status)}
@@ -484,3 +516,5 @@
 		{/if}
 	{/if}
 </section>
+
+<TaskDrawer store={drawer} />

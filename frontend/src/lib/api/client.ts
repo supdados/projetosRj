@@ -86,6 +86,8 @@ function redirectToLogin(): void {
 interface RequestConfig {
 	method: string;
 	body?: unknown;
+	/** Corpo multipart pre-montado (UPLOAD). Mutuamente exclusivo com `body`. */
+	formData?: FormData;
 	signal?: AbortSignal;
 }
 
@@ -102,7 +104,11 @@ async function sendOnce<T>(path: string, config: RequestConfig): Promise<ApiResu
 	const headers: Record<string, string> = { Accept: 'application/json' };
 	let payload: BodyInit | undefined;
 
-	if (config.body !== undefined) {
+	if (config.formData !== undefined) {
+		// UPLOAD multipart: NUNCA seta Content-Type — o browser injeta o
+		// boundary correto. Definir manualmente quebraria o parse no Flask.
+		payload = config.formData;
+	} else if (config.body !== undefined) {
 		headers['Content-Type'] = 'application/json';
 		payload = JSON.stringify(config.body);
 	}
@@ -177,4 +183,20 @@ export function post<T>(path: string, body?: unknown, signal?: AbortSignal): Pro
 	return request<T>(path, { method: 'POST', body, signal });
 }
 
-export const apiClient = { get, post };
+/**
+ * POST multipart tipado (UPLOAD). Envia `formData` SEM `Content-Type` (o browser
+ * monta o boundary), com `credentials:'include'` + `X-CSRFToken`. Desempacota o
+ * envelope `{ok,data}`; em 401 navega top-level para /login; o 413 (limite de
+ * 10MB, `MAX_CONTENT_LENGTH`) chega como `ApiClientError(code='validation',
+ * status=413)` vindo do `api_payload_too_large` do backend.
+ *
+ * Exemplo:
+ *   const fd = new FormData();
+ *   fd.append('file', file);
+ *   const { anexo } = await postForm(`/api/tarefas/${id}/anexos`, fd);
+ */
+export function postForm<T>(path: string, formData: FormData, signal?: AbortSignal): Promise<T> {
+	return request<T>(path, { method: 'POST', formData, signal });
+}
+
+export const apiClient = { get, post, postForm };

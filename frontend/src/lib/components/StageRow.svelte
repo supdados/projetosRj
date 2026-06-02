@@ -21,9 +21,17 @@
 	 * Acessibilidade: linha como região rotulada pela descrição; toggles como
 	 * checkboxes acessíveis; datas com <time datetime>; alça de arraste com label.
 	 */
+	import { getContext } from 'svelte';
 	import Badge from './Badge.svelte';
 	import InlineEditField from './InlineEditField.svelte';
 	import type { EtapaDetail, EtapaTask, EtapaInlineField } from '$lib/types/projectDetail';
+
+	/**
+	 * Abertura do drawer de tarefa (Fase 5b-2) via contexto fornecido pela página
+	 * de Detalhe — quando presente, as tarefas da etapa abrem o drawer (modo
+	 * drawer-only). Ausente => texto puro (comportamento read-only da Fase 5a).
+	 */
+	const openTaskDrawer = getContext<((taskId: number) => void) | undefined>('openTaskDrawer');
 
 	interface FieldState {
 		pending?: boolean;
@@ -343,9 +351,19 @@
 				{#each tasks as task (task.id)}
 					<li class="flex items-center gap-2 text-sm text-text-secondary">
 						<span class="text-text-muted" aria-hidden="true">•</span>
-						<span class="break-words {task.status === 'finalizada' ? 'line-through text-text-muted' : ''}">
-							{task.descricao}
-						</span>
+						{#if openTaskDrawer}
+							<button
+								type="button"
+								onclick={() => openTaskDrawer?.(task.id)}
+								class="break-words text-left hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {task.status === 'finalizada' ? 'line-through text-text-muted' : ''}"
+							>
+								{task.descricao}
+							</button>
+						{:else}
+							<span class="break-words {task.status === 'finalizada' ? 'line-through text-text-muted' : ''}">
+								{task.descricao}
+							</span>
+						{/if}
 					</li>
 				{/each}
 			</ul>

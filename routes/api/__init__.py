@@ -44,6 +44,7 @@ from .serializers import (  # noqa: F401
     serialize_project_detail,
     serialize_project_history_entry,
     serialize_task_card,
+    serialize_task_detail,
     serialize_template_detail,
     serialize_template_row,
     serialize_template_stage_item,
@@ -59,6 +60,9 @@ from . import project_detail  # noqa: F401,E402
 from . import etapas  # noqa: F401,E402
 from . import tasks  # noqa: F401,E402
 from . import board  # noqa: F401,E402
+from . import task_drawer  # noqa: F401,E402
+from . import task_comments  # noqa: F401,E402
+from . import task_attachments  # noqa: F401,E402
 from . import search  # noqa: F401,E402
 from . import admin_users  # noqa: F401,E402
 from . import admin_orgaos  # noqa: F401,E402
@@ -75,6 +79,7 @@ __all__ = [
     "serialize_project_card",
     "serialize_project_detail",
     "serialize_task_card",
+    "serialize_task_detail",
     "serialize_etapa_card",
     "serialize_etapa_detail",
     "serialize_orgao_option",
