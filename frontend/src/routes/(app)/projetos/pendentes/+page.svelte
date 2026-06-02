@@ -21,21 +21,6 @@
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
-	/** Opções de janela (espelham `period_options` do backend). */
-	const PERIOD_OPTIONS: { value: PendingPeriodo; label: string }[] = [
-		{ value: 'atrasados', label: 'Projetos Atrasados' },
-		{ value: '7dias', label: 'Próximos 7 Dias' },
-		{ value: '14dias', label: 'Próximos 14 Dias' },
-		{ value: '21dias', label: 'Próximos 21 Dias' }
-	];
-
-	const PERIOD_LABEL: Record<PendingPeriodo, string> = {
-		atrasados: 'Atrasados',
-		'7dias': 'Próximos 7 Dias',
-		'14dias': 'Próximos 14 Dias',
-		'21dias': 'Próximos 21 Dias'
-	};
-
 	let loadState = $state<LoadState>('loading');
 	let data = $state<PendingData | null>(null);
 	let errorMessage = $state<string>('');
@@ -115,6 +100,10 @@
 
 	const summary = $derived(data?.summary_counts ?? null);
 	const pagination = $derived(data?.pagination ?? null);
+	/** Opções de período rotuladas pelo backend (`period_options`). */
+	const periodOptions = $derived(data?.period_options ?? []);
+	/** Rótulo da janela ativa, servido pelo backend (`periodo_label`). */
+	const periodoLabel = $derived(data?.periodo_label ?? '');
 	const hasActiveFilters = $derived(
 		periodo !== 'atrasados' || responsavel !== '' || orgao !== null
 	);
@@ -144,7 +133,7 @@
 			{/if}
 		</div>
 		<p class="text-sm text-text-secondary">
-			Janela ativa: <strong class="font-semibold text-text-primary">{PERIOD_LABEL[periodo]}</strong>
+			Janela ativa: <strong class="font-semibold text-text-primary">{periodoLabel}</strong>
 			{#if responsavel}
 				· Responsável: <strong class="font-semibold text-text-primary">{responsavel}</strong>
 			{/if}
@@ -168,9 +157,10 @@
 				id="periodoFilter"
 				value={periodo}
 				onchange={onPeriodoChange}
-				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				disabled={periodOptions.length === 0}
+				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 			>
-				{#each PERIOD_OPTIONS as option (option.value)}
+				{#each periodOptions as option (option.value)}
 					<option value={option.value}>{option.label}</option>
 				{/each}
 			</select>

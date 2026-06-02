@@ -99,10 +99,22 @@ export interface PendingPagination {
 	total: number;
 }
 
+/** Uma opção de período (`period_options[i]`), rótulo já vindo do backend. */
+export interface PendingPeriodOption {
+	value: PendingPeriodo;
+	label: string;
+}
+
 /** Carga completa de GET /api/projetos-pendentes (já desempacotada). */
 export interface PendingData {
 	projetos: PendingProjectRow[];
 	filtro_periodo: PendingPeriodo;
+	/** Rótulo legível do período selecionado (fonte de verdade no backend). */
+	periodo_label: string;
+	/** Mapa `PendingPeriodo` -> rótulo legível (`period_label_map`). */
+	period_label_map: Record<PendingPeriodo, string>;
+	/** Opções de período já rotuladas pelo backend (`period_options`). */
+	period_options: PendingPeriodOption[];
 	selected_responsavel: string;
 	selected_orgao: number | null;
 	responsaveis_options: string[];

@@ -58,12 +58,24 @@ def _serialize_pending_context(context: dict[str, Any]) -> dict[str, Any]:
         ``dict`` JSON-safe com ``projetos`` serializados, mapas auxiliares,
         ``summary_counts`` e a paginação.
     """
+    period_label_map = context["period_label_map"]
     return {
         "projetos": [
             serialize_pending_project_row(row)
             for row in context["projetos_com_etapas"]
         ],
         "filtro_periodo": context["filtro_periodo"],
+        # Rótulo legível do período selecionado, derivado da MESMA fonte de
+        # verdade do Jinja (``period_label_map``). O front consome este campo em
+        # vez de recalcular o rótulo (débito técnico #4 — evita drift).
+        "periodo_label": period_label_map.get(
+            context["filtro_periodo"], context["filtro_periodo"]
+        ),
+        "period_label_map": period_label_map,
+        "period_options": [
+            {"value": value, "label": label}
+            for value, label in context["period_options"]
+        ],
         "selected_responsavel": context["selected_responsavel"],
         "selected_orgao": context["selected_orgao"],
         "responsaveis_options": context["responsaveis_options"],
