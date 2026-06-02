@@ -8,11 +8,19 @@
 	 * componente (`<OrgaoTreeNode>`) — idiom Svelte 5 que substitui `svelte:self`.
 	 *
 	 * O componente é CONTROLADO: não muta o estado nem chama a API diretamente —
-	 * apenas emite callbacks (`onReorder`/`onToggleAtivo`/`onMove`/`onDelete`)
-	 * para a página, que orquestra as chamadas a `$lib/api/adminOrgaos` e o
-	 * recarregamento da árvore. Links de criar/editar são base-aware
-	 * (`$app/paths`). Acessível: chevron com `aria-expanded`, ações com `title`/
-	 * `aria-label`, indentação por nível via `--orgao-depth`.
+	 * apenas emite callbacks (`onReorder`/`onReorderTo`/`onToggleAtivo`/`onMove`/
+	 * `onDelete`) para a página, que orquestra as chamadas a
+	 * `$lib/api/adminOrgaos` e o recarregamento da árvore. Links de criar/editar
+	 * são base-aware (`$app/paths`). Acessível: chevron com `aria-expanded`,
+	 * ações com `title`/`aria-label`, indentação por nível via `--orgao-depth`.
+	 *
+	 * Reordenação por DRAG-AND-DROP (débito #8): cada nó é `draggable` e pode ser
+	 * solto sobre um irmão do MESMO pai (a árvore reordena só entre irmãos; mudar
+	 * de pai continua via "mover para outro pai"). Ao soltar, emite
+	 * `onReorderTo(orgaoId, fromIndex, toIndex)`; a página traduz o salto em
+	 * chamadas single-step ao endpoint POST `/reorder` existente. As setas ↑/↓
+	 * permanecem como alternativa acessível por teclado (mesmo callback `onReorder`).
+	 * DnD nativo HTML5 (sem dependências), espelhando StageList.svelte.
 	 */
 	import { base } from '$app/paths';
 	import Badge from '$lib/components/Badge.svelte';
@@ -31,6 +39,12 @@
 		/** True enquanto uma mutação está em voo (desabilita ações). */
 		busy: boolean;
 		onReorder: (orgaoId: number, direction: ReorderDirection) => void;
+		/**
+		 * Reordena por drag-and-drop: solta o nó `draggedId` sobre `targetId`. A
+		 * página localiza ambos na árvore, valida que são irmãos (mesmo pai) e
+		 * converte o salto em chamadas single-step ao endpoint `/reorder`.
+		 */
+		onReorderTo: (draggedId: number, targetId: number) => void;
 		onToggleAtivo: (orgaoId: number) => void;
 		onMove: (orgaoId: number, paiId: number | null) => void;
 		onDelete: (node: OrgaoNode) => void;
@@ -44,6 +58,7 @@
 		paiOptions,
 		busy,
 		onReorder,
+		onReorderTo,
 		onToggleAtivo,
 		onMove,
 		onDelete
@@ -52,6 +67,51 @@
 	let expanded = $state(true);
 	/** Abre o seletor inline de "mover para outro pai". */
 	let moveOpen = $state(false);
+	/** Índice do irmão sobre o qual se arrasta (para realce de alvo de drop). */
+	let dragOver = $state(false);
+
+	const canDrag = $derived(!busy && siblingCount > 1);
+
+	function handleDragStart(event: DragEvent): void {
+		// O nó arrastado é o alvo mais interno; impede que ancestrais sobrescrevam
+		// o payload (ou cancelem o arraste) ao receberem o evento por bubbling.
+		event.stopPropagation();
+		if (!canDrag || !event.dataTransfer) {
+			event.preventDefault();
+			return;
+		}
+		event.dataTransfer.effectAllowed = 'move';
+		// Origem identificada por id do órgão; a página valida o mesmo pai.
+		event.dataTransfer.setData('application/x-orgao-id', String(node.id));
+		// Firefox exige um payload text/plain para iniciar o arraste.
+		event.dataTransfer.setData('text/plain', node.sigla ?? String(node.id));
+	}
+
+	function handleDragOver(event: DragEvent): void {
+		if (!canDrag || !event.dataTransfer) return;
+		const types = event.dataTransfer.types;
+		if (!types.includes('application/x-orgao-id')) return;
+		event.preventDefault();
+		// Evita que o nó-pai também realce/receba o drop ao passar sobre um filho.
+		event.stopPropagation();
+		event.dataTransfer.dropEffect = 'move';
+		dragOver = true;
+	}
+
+	function handleDragLeave(): void {
+		dragOver = false;
+	}
+
+	function handleDrop(event: DragEvent): void {
+		dragOver = false;
+		if (!canDrag || !event.dataTransfer) return;
+		const draggedId = Number(event.dataTransfer.getData('application/x-orgao-id'));
+		if (!Number.isFinite(draggedId) || draggedId === node.id) return;
+		event.preventDefault();
+		event.stopPropagation();
+		// A página valida que origem e destino são irmãos antes de reordenar.
+		onReorderTo(draggedId, node.id);
+	}
 
 	const hasChildren = $derived(node.filhos.length > 0);
 	const isRoot = $derived(node.pai_id === null);
@@ -83,11 +143,30 @@
 	class:is-inactive={!node.ativo}
 	style={`--orgao-depth:${depth}`}
 	data-id={node.id}
+	draggable={canDrag}
+	ondragstart={handleDragStart}
+	ondragover={handleDragOver}
+	ondragleave={handleDragLeave}
+	ondrop={handleDrop}
+	ondragend={handleDragLeave}
 >
 	<div
 		class="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors duration-fast hover:bg-surface-muted"
+		class:ring-2={dragOver}
+		class:ring-primary-500={dragOver}
 		style={`padding-left:calc(0.5rem + ${depth} * 1.25rem)`}
 	>
+		{#if canDrag}
+			<span
+				class="flex h-6 w-4 shrink-0 cursor-grab items-center justify-center text-text-muted"
+				title="Arraste para reordenar"
+				aria-hidden="true"
+			>
+				<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
+					<path d="M7 4a1 1 0 11-2 0 1 1 0 012 0zm0 6a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100-2 1 1 0 000 2zm9-13a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100-2 1 1 0 000 2zm1 5a1 1 0 11-2 0 1 1 0 012 0z" />
+				</svg>
+			</span>
+		{/if}
 		{#if hasChildren}
 			<button
 				type="button"
@@ -268,6 +347,7 @@
 					{paiOptions}
 					{busy}
 					{onReorder}
+					{onReorderTo}
 					{onToggleAtivo}
 					{onMove}
 					{onDelete}

@@ -10,7 +10,10 @@
 	 *   - `list`: tabela com busca (debounce), ordenação, métricas
 	 *     (usage/stage/duration), duplicar e excluir (com confirmação).
 	 *   - `form`: criar/editar — nome, descrição e a sequência de etapas
-	 *     (adicionar/remover/reordenar com setas).
+	 *     (adicionar/remover/reordenar por DRAG-AND-DROP, com setas ↑/↓ como
+	 *     alternativa acessível por teclado). A reordenação é local (estado do
+	 *     formulário); a ordem só é persistida ao salvar o modelo. DnD nativo
+	 *     HTML5, espelhando StageList.svelte/OrgaoTreeNode.svelte (sem libs).
 	 *
 	 * Padrões reusados das telas de leitura (FASE 2/3): AbortController +
 	 * debounce, estados loading/erro/vazio anunciados via aria-live, componentes
@@ -39,6 +42,22 @@
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type ViewMode = 'list' | 'form';
+
+	/**
+	 * Etapa no estado do formulário. Acrescenta `_key` (id estável só-cliente) ao
+	 * payload `TemplateStageInput` para o `{#each}` keyed sobreviver à
+	 * reordenação por drag-and-drop sem reusar nós errados. O `_key` é removido
+	 * ao montar o payload enviado à API.
+	 */
+	interface FormStage extends TemplateStageInput {
+		_key: number;
+	}
+
+	let stageKeySeq = 0;
+	function nextStageKey(): number {
+		stageKeySeq += 1;
+		return stageKeySeq;
+	}
 
 	/** Janela de debounce da busca textual (ms). Espelha o list.html (350ms). */
 	const DEBOUNCE_MS = 350;
@@ -72,7 +91,7 @@
 	let editingId = $state<number | null>(null);
 	let formName = $state<string>('');
 	let formDescription = $state<string>('');
-	let formStages = $state<TemplateStageInput[]>([]);
+	let formStages = $state<FormStage[]>([]);
 	let formError = $state<string>('');
 	let formSaving = $state<boolean>(false);
 	let formLoading = $state<boolean>(false);
@@ -169,8 +188,8 @@
 
 	// --- Formulário -------------------------------------------------------
 
-	function blankStage(): TemplateStageInput {
-		return { name: '', duration_days: 1 };
+	function blankStage(): FormStage {
+		return { _key: nextStageKey(), name: '', duration_days: 1 };
 	}
 
 	function openCreate(): void {
@@ -198,6 +217,7 @@
 			formName = detail.template.name;
 			formDescription = detail.template.description ?? '';
 			formStages = detail.template.stages.map((s) => ({
+				_key: nextStageKey(),
 				name: s.name,
 				duration_days: s.duration_days
 			}));
@@ -230,12 +250,47 @@
 	}
 
 	function moveStage(index: number, delta: number): void {
-		const target = index + delta;
-		if (target < 0 || target >= formStages.length) return;
+		reorderStage(index, index + delta);
+	}
+
+	/** Move a etapa de `from` para `to` no estado do formulário (compartilhado por setas e DnD). */
+	function reorderStage(from: number, to: number): void {
+		if (to < 0 || to >= formStages.length || from === to) return;
 		const next = [...formStages];
-		const [moved] = next.splice(index, 1);
-		next.splice(target, 0, moved);
+		const [moved] = next.splice(from, 1);
+		next.splice(to, 0, moved);
 		formStages = next;
+	}
+
+	// --- Drag-and-drop das etapas (estado do formulário, sem API) ---------
+	let dragStageIndex = $state<number | null>(null);
+	let dropStageIndex = $state<number | null>(null);
+
+	function handleStageDragStart(event: DragEvent, index: number): void {
+		dragStageIndex = index;
+		if (event.dataTransfer) {
+			event.dataTransfer.effectAllowed = 'move';
+			// Firefox exige um payload para iniciar o arraste.
+			event.dataTransfer.setData('text/plain', String(index));
+		}
+	}
+
+	function handleStageDragOver(event: DragEvent, index: number): void {
+		if (dragStageIndex === null) return;
+		event.preventDefault();
+		if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+		dropStageIndex = index;
+	}
+
+	function handleStageDrop(event: DragEvent, index: number): void {
+		event.preventDefault();
+		if (dragStageIndex !== null) reorderStage(dragStageIndex, index);
+		resetStageDrag();
+	}
+
+	function resetStageDrag(): void {
+		dragStageIndex = null;
+		dropStageIndex = null;
 	}
 
 	async function saveForm(event: SubmitEvent): Promise<void> {
@@ -468,10 +523,33 @@
 						</div>
 
 						<ul class="flex flex-col gap-2">
-							{#each formStages as stage, index (index)}
+							{#each formStages as stage, index (stage._key)}
 								<li
-									class="flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-3 py-2"
+									draggable={formStages.length > 1}
+									ondragstart={(e) => handleStageDragStart(e, index)}
+									ondragover={(e) => handleStageDragOver(e, index)}
+									ondrop={(e) => handleStageDrop(e, index)}
+									ondragend={resetStageDrag}
+									class="flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-3 py-2 transition-colors duration-fast {dragStageIndex ===
+									index
+										? 'opacity-50'
+										: ''} {dropStageIndex === index &&
+									dragStageIndex !== null &&
+									dragStageIndex !== index
+										? 'ring-2 ring-primary-500'
+										: ''}"
 								>
+									{#if formStages.length > 1}
+										<span
+											class="flex h-6 w-4 shrink-0 cursor-grab items-center justify-center text-text-muted"
+											title="Arraste para reordenar"
+											aria-hidden="true"
+										>
+											<svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
+												<path d="M7 4a1 1 0 11-2 0 1 1 0 012 0zm0 6a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100-2 1 1 0 000 2zm9-13a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100-2 1 1 0 000 2zm1 5a1 1 0 11-2 0 1 1 0 012 0z" />
+											</svg>
+										</span>
+									{/if}
 									<span
 										class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-muted text-xs font-semibold text-text-secondary"
 										aria-hidden="true"

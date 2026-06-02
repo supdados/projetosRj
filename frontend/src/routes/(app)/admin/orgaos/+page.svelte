@@ -93,6 +93,38 @@
 		void runMutation(() => reorderOrgao(orgaoId, direction));
 	}
 
+	/** Lista de irmãos (mesmo nível) que contém `orgaoId`, ou `null`. */
+	function findSiblings(nodes: OrgaoNode[], orgaoId: number): OrgaoNode[] | null {
+		if (nodes.some((n) => n.id === orgaoId)) return nodes;
+		for (const n of nodes) {
+			const hit = findSiblings(n.filhos, orgaoId);
+			if (hit) return hit;
+		}
+		return null;
+	}
+
+	/**
+	 * Reordena por drag-and-drop: solta `draggedId` na posição de `targetId`.
+	 * Só reordena entre irmãos (mesmo pai); o endpoint `/reorder` é single-step,
+	 * então emitimos N chamadas `up`/`down` sequenciais e recarregamos uma vez.
+	 */
+	function handleReorderTo(draggedId: number, targetId: number): void {
+		if (!data || draggedId === targetId) return;
+		const siblings = findSiblings(data.arvore, draggedId);
+		if (!siblings) return;
+		const from = siblings.findIndex((n) => n.id === draggedId);
+		const to = siblings.findIndex((n) => n.id === targetId);
+		// Alvo em outro pai: não reordenamos (use "mover para outro pai").
+		if (from === -1 || to === -1 || from === to) return;
+		const direction: ReorderDirection = to > from ? 'down' : 'up';
+		const steps = Math.abs(to - from);
+		void runMutation(async () => {
+			for (let i = 0; i < steps; i++) {
+				await reorderOrgao(draggedId, direction);
+			}
+		});
+	}
+
 	function handleToggleAtivo(orgaoId: number): void {
 		void runMutation(() => toggleOrgaoAtivo(orgaoId));
 	}
@@ -205,6 +237,7 @@
 							paiOptions={candidatosPai}
 							busy={mutating}
 							onReorder={handleReorder}
+							onReorderTo={handleReorderTo}
 							onToggleAtivo={handleToggleAtivo}
 							onMove={handleMove}
 							onDelete={handleDelete}
