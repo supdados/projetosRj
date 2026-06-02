@@ -1217,6 +1217,8 @@ ROUTE_CASES = [
         "rule": "/api/tarefas/<int:task_id>/anexos",
         "path": "/api/tarefas/{task_id}/anexos",
         "role": "user",
+        # Magic bytes "%PDF-" casam a extensao .pdf em _file_content_matches_extension.
+        "files": {"file": (b"%PDF-1.4\n%fake pdf body for smoke", "doc.pdf")},
         "expected_status": 200,
         "requires_login": True,
         "requires_admin": False,
@@ -2049,6 +2051,8 @@ ROUTE_CASES = [
             "nome": "Secretaria",
             "nivel": 1,
             "ativo": "1",
+            # Mantem o tipo como raiz para nao colidir com o orgao-raiz semeado (409 de dominio).
+            "permite_raiz": "1",
         },
         "expected_status": 200,
         "requires_login": True,

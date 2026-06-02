@@ -1,3 +1,5 @@
+from io import BytesIO
+
 import pytest
 
 from tests.routes.route_cases import ROUTE_CASES
@@ -22,6 +24,13 @@ def _resolve_request(case, seed_data):
     for key in ("data", "json", "headers", "query_string"):
         if key in case:
             request_kwargs[key] = _format_payload(case[key], context)
+    if "files" in case:
+        files = case["files"]
+        request_kwargs["data"] = {
+            field: (BytesIO(magic_bytes), filename)
+            for field, (magic_bytes, filename) in files.items()
+        }
+        request_kwargs["content_type"] = "multipart/form-data"
     return path, request_kwargs
 
 
