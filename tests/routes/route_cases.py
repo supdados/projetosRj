@@ -985,6 +985,36 @@ ROUTE_CASES = [
         "requires_login": True,
         "requires_admin": False,
     },
+    {
+        "id": "api_projetos_pendentes_get",
+        "method": "GET",
+        "rule": "/api/projetos-pendentes",
+        "path": "/api/projetos-pendentes",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_projeto_historico_get",
+        "method": "GET",
+        "rule": "/api/projetos/<int:project_id>/historico",
+        "path": "/api/projetos/{project_id}/historico",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_busca_get",
+        "method": "GET",
+        "rule": "/api/busca",
+        "path": "/api/busca",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
     # SPA shell (catch-all servido via Jinja + csp_nonce; routes/spa.py).
     # Raiz da SPA e subpaths client-side (ex.: /spa/dashboard) rendam o index.
     # Nao exige login: o guard de auth e client-side (carrega /api/me no boot).
@@ -1567,6 +1597,9 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 
 # Segurança adicional para garantir escopo fechado do plano.
-# 134 rotas originais + 3 endpoints JSON da SPA (/api/me, /api/csrf-token,
-# /api/dashboard) + 2 rotas do shell SPA (/spa e /spa/<path:subpath>).
-assert len(ROUTE_CASES) == 139
+# 134 rotas originais + 6 endpoints JSON da SPA (/api/me, /api/csrf-token,
+# /api/dashboard + Fase 2: /api/projetos-pendentes, /api/projetos/<id>/historico,
+# /api/busca) + 2 rotas do shell SPA (/spa e /spa/<path:subpath>).
+# As telas /spa/* da Fase 2 (Pendentes/Busca/Historico) NAO adicionam rota:
+# são servidas pelo catch-all /spa/<path:subpath> (client-side routing).
+assert len(ROUTE_CASES) == 142
