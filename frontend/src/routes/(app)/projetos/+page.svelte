@@ -43,6 +43,8 @@
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 	import type { Project } from '$lib/types/entities';
 	import Badge from '$lib/components/Badge.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Button from '$lib/components/Button.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import { flash } from '$lib/stores/flash';
@@ -462,8 +464,29 @@
 		}, 280);
 	}
 
+	/**
+	 * Atalho de 1 clique do dashboard ("Novo Projeto"): se a URL chega com
+	 * `?new=1`, abre o modal de criação automaticamente e LIMPA o param via
+	 * replaceState (para reload/voltar não reabrirem o modal). Não interfere no
+	 * fluxo manual do modal. Roda APÓS hydrateFiltersFromUrl, que ignora `new`.
+	 */
+	function openCreateModalFromUrl(): void {
+		const params = pageState.url.searchParams;
+		if (params.get('new') !== '1') return;
+		createModalOpen = true;
+		params.delete('new');
+		const qs = params.toString();
+		const target = `${base}/projetos${qs ? `?${qs}` : ''}`;
+		try {
+			replaceState(target, {});
+		} catch {
+			// replaceState exige contexto de roteamento; ignora fora dele (SSR/teste).
+		}
+	}
+
 	onMount(() => {
 		hydrateFiltersFromUrl();
+		openCreateModalFromUrl();
 		void load();
 		return () => inFlight?.abort();
 	});
@@ -553,31 +576,26 @@
 
 <section aria-labelledby="projetos-title" class="flex flex-col gap-4">
 	<!--
-		Cabeçalho-card (projects-v4-header): superfície elevada com borda + sombra,
-		título + meta-pill à esquerda, ações à direita. Empilha no mobile (<992px).
+		Header padronizado (PageHeader, Fase 1): mesmo chrome/altura do home.
+		titleContent reproduz o título "Todos os Projetos" + meta-pill da contagem;
+		o subtitle e as ações (Exportar CSV admin + Novo projeto) seguem o original.
 	-->
-	<header
-		class="flex flex-col items-stretch justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-5 shadow-sm md:flex-row md:items-start"
+	<PageHeader
+		labelId="projetos-title"
+		subtitle="Visualize, filtre e acompanhe seus projetos."
 	>
-		<div class="min-w-0">
-			<h1
-				id="projetos-title"
-				class="m-0 inline-flex flex-wrap items-center gap-2 font-heading text-2xl font-bold text-text-primary"
-			>
-				<span>Todos os Projetos</span>
-				{#if data}
-					<!-- projects-v4-meta-pill: pílula suave com a contagem. -->
-					<span
-						class="inline-flex items-center whitespace-nowrap rounded-md border border-primary-500/40 bg-primary-100 px-2.5 py-1 text-xs font-semibold text-primary-700"
-					>
-						{totalProjects} projeto{totalProjects === 1 ? '' : 's'}
-					</span>
-				{/if}
-			</h1>
-			<p class="mt-1.5 text-base text-text-muted">Visualize, filtre e acompanhe seus projetos.</p>
-		</div>
-
-		<div class="flex flex-wrap items-center justify-end gap-2">
+		{#snippet titleContent()}
+			<span>Todos os Projetos</span>
+			{#if data}
+				<!-- projects-v4-meta-pill: pílula suave com a contagem. -->
+				<span
+					class="ml-2 inline-flex items-center whitespace-nowrap rounded-md border border-primary-500/40 bg-primary-100 px-2.5 py-1 align-middle text-xs font-semibold text-primary-700"
+				>
+					{totalProjects} projeto{totalProjects === 1 ? '' : 's'}
+				</span>
+			{/if}
+		{/snippet}
+		{#snippet actions()}
 			{#if isAdmin}
 				<!--
 					Exportar CSV: link direto para a rota Flask nativa /projects/download
@@ -598,16 +616,14 @@
 				Botão primário (btn-projects-v4-primary): gradiente da marca + sombra
 				elevada. Reproduzido com o token primary e leve elevação no hover.
 			-->
-			<button
-				type="button"
-				onclick={() => (createModalOpen = true)}
-				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary-700/25 bg-gradient-to-br from-primary-600 to-primary-700 px-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out hover:from-primary-500 hover:to-primary-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<i class="fas fa-plus" aria-hidden="true"></i>
-				Novo projeto
-			</button>
-		</div>
-	</header>
+			<Button onclick={() => (createModalOpen = true)}>
+				{#snippet icon()}
+					<i class="fas fa-plus" aria-hidden="true"></i>
+				{/snippet}
+				Novo Projeto
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	<!--
 		Filtros (projects-v4-filters): card de superfície com borda + sombra. A

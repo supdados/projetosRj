@@ -21,6 +21,7 @@
 		PendingFilters,
 		PendingPeriodo
 	} from '$lib/types/pendentes';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import PendingProjectCard from '$lib/components/PendingProjectCard.svelte';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
@@ -215,6 +216,16 @@
 			? ''
 			: (data?.orgaos_options.find((o) => o.value === String(orgao))?.label ?? '')
 	);
+	/** Subtítulo plano do header (PageHeader recebe texto, não markup). */
+	const headerSubtitle = $derived(
+		[
+			periodoLabel ? `Janela ativa: ${periodoLabel}` : '',
+			responsavel ? `Responsável: ${responsavel}` : '',
+			selectedOrgaoLabel ? `Órgão: ${selectedOrgaoLabel}` : ''
+		]
+			.filter(Boolean)
+			.join(' · ')
+	);
 </script>
 
 <svelte:head>
@@ -222,11 +233,8 @@
 </svelte:head>
 
 <section aria-labelledby="pendentes-title" class="flex flex-col gap-6">
-	<header class="flex flex-col gap-2">
-		<div class="flex flex-wrap items-center gap-3">
-			<h1 id="pendentes-title" class="font-heading text-2xl font-bold text-text-primary">
-				Projetos Pendentes
-			</h1>
+	<PageHeader title="Projetos pendentes" subtitle={headerSubtitle} labelId="pendentes-title">
+		{#snippet actions()}
 			{#if summary}
 				<span
 					class="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-primary-500/40 bg-primary-100 px-2.5 py-1 text-xs font-semibold text-primary-700"
@@ -234,17 +242,8 @@
 					Projetos no foco: {Math.max(0, summary.total_projects - focusDelta)}
 				</span>
 			{/if}
-		</div>
-		<p class="text-sm text-text-secondary">
-			Janela ativa: <strong class="font-semibold text-text-primary">{periodoLabel}</strong>
-			{#if responsavel}
-				· Responsável: <strong class="font-semibold text-text-primary">{responsavel}</strong>
-			{/if}
-			{#if selectedOrgaoLabel}
-				· Órgão: <strong class="font-semibold text-text-primary">{selectedOrgaoLabel}</strong>
-			{/if}
-		</p>
-	</header>
+		{/snippet}
+	</PageHeader>
 
 	<!-- Filtros (re-buscam server-side) -->
 	<form

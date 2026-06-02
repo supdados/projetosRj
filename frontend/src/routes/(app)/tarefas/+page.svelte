@@ -16,9 +16,23 @@
 	 */
 	import { onMount, setContext } from 'svelte';
 	import { get as readStore } from 'svelte/store';
-	import { fetchTarefas, deleteTarefa, archiveFinalizadas } from '$lib/api/tasks';
+	import {
+		fetchTarefas,
+		deleteTarefa,
+		archiveFinalizadas,
+		createTarefa,
+		fetchHubResponsaveis
+	} from '$lib/api/tasks';
 	import { ApiClientError } from '$lib/api/client';
-	import type { TaskCard, TaskHubData, TaskHubModo, TaskHubQuery } from '$lib/types/tasks';
+	import type {
+		TaskCard,
+		TaskHubData,
+		TaskHubGroup,
+		TaskHubModo,
+		TaskHubQuery,
+		HubResponsavelSuggestion
+	} from '$lib/types/tasks';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
 	import KanbanBoard from '$lib/components/KanbanBoard.svelte';
@@ -356,14 +370,133 @@
 		}
 	}
 
+	// ADD-TAREFA NO MODO LISTA (paridade com add-item-inline.js + render_hub_add_row
+	// do hub.html legado): cada GRUPO de projeto ganha um botão "+ Nova tarefa" que
+	// abre um form inline. Cria via a MESMA chamada do KanbanComposer (`createTarefa`)
+	// e re-busca a lista. Apenas UM form aberto por vez (controlado pela página).
+	type AddDraft = {
+		descricao: string;
+		prioridade: string;
+		tipo: string;
+		status: string;
+		responsavel: string;
+		responsavelOptions: HubResponsavelSuggestion[];
+		saving: boolean;
+		error: string | null;
+	};
+
+	const ADD_STATUS_OPTIONS: { value: string; label: string }[] = [
+		{ value: 'nao_iniciada', label: 'Não iniciada' },
+		{ value: 'em_andamento', label: 'Em andamento' },
+		{ value: 'para_validacao', label: 'Para validação' },
+		{ value: 'para_ajustes', label: 'Para ajustes' },
+		{ value: 'finalizada', label: 'Finalizada' }
+	];
+	const ADD_PRIORIDADE_OPTIONS: { value: string; label: string }[] = [
+		{ value: '', label: 'Prioridade' },
+		{ value: 'baixa', label: 'Baixa' },
+		{ value: 'media', label: 'Média' },
+		{ value: 'alta', label: 'Alta' },
+		{ value: 'urgente', label: 'Urgente' }
+	];
+	const ADD_TIPO_OPTIONS: { value: string; label: string }[] = [
+		{ value: '', label: 'Tipo' },
+		{ value: 'bug', label: 'Bug' },
+		{ value: 'melhoria', label: 'Melhoria' },
+		{ value: 'duvida', label: 'Dúvida' },
+		{ value: 'outros', label: 'Outros' },
+		{ value: 'implementacao', label: 'Implementação' }
+	];
+
+	// Chave do grupo cujo form de adição está aberto (só um por vez), + rascunho.
+	let addOpenKey = $state<string | null>(null);
+	let addDraft = $state<AddDraft>(emptyAddDraft());
+
+	function emptyAddDraft(): AddDraft {
+		return {
+			descricao: '',
+			prioridade: '',
+			tipo: '',
+			status: 'nao_iniciada',
+			responsavel: '',
+			responsavelOptions: [],
+			saving: false,
+			error: null
+		};
+	}
+
+	function openAddForm(group: TaskHubGroup): void {
+		addOpenKey = group.key;
+		addDraft = emptyAddDraft();
+		void loadAddResponsaveis(group);
+	}
+
+	function cancelAddForm(): void {
+		addOpenKey = null;
+		addDraft = emptyAddDraft();
+	}
+
+	// Sugestões de responsável carregadas sob demanda por projeto (paridade com o
+	// composer do Kanban). Grupos "sem projeto" não consultam.
+	async function loadAddResponsaveis(group: TaskHubGroup): Promise<void> {
+		if (!group.project_id) return;
+		try {
+			const result = await fetchHubResponsaveis({ project: group.project_value });
+			if (addOpenKey === group.key) addDraft.responsavelOptions = result.users;
+		} catch {
+			if (addOpenKey === group.key) addDraft.responsavelOptions = [];
+		}
+	}
+
+	function onAddTextareaKeydown(event: KeyboardEvent, group: TaskHubGroup): void {
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			cancelAddForm();
+			return;
+		}
+		if (event.key === 'Enter' && !event.shiftKey) {
+			event.preventDefault();
+			void submitAddForm(group);
+		}
+	}
+
+	async function submitAddForm(group: TaskHubGroup): Promise<void> {
+		if (addDraft.saving) return;
+		addDraft.error = null;
+		// Descrição vazia: paridade com o composer — apenas não submete.
+		if (!addDraft.descricao.trim()) return;
+
+		addDraft.saving = true;
+		try {
+			await createTarefa({
+				project: group.project_value,
+				descricao: addDraft.descricao.trim(),
+				status: addDraft.status,
+				responsavel: addDraft.responsavel || null,
+				prioridade: addDraft.prioridade || null,
+				tipo_pedido: addDraft.tipo || null
+			});
+			// Re-busca a lista para refletir a nova tarefa no grupo/etapa correto
+			// (o backend recalcula o agrupamento por etapa).
+			cancelAddForm();
+			void load();
+		} catch (err) {
+			addDraft.error =
+				err instanceof ApiClientError ? err.message : 'Erro ao adicionar tarefa.';
+			addDraft.saving = false;
+		}
+	}
+
 	function selectModo(next: TaskHubModo): void {
 		if (modo === next) return;
+		cancelAddForm();
 		modo = next;
 		void load();
 	}
 
 	/** Re-busca a visualização ativa após mudança de filtro (lista e/ou board). */
 	function reloadActiveView(): void {
+		cancelAddForm();
 		void load();
 		if (view === 'kanban') void loadBoard();
 	}
@@ -449,23 +582,21 @@
 </svelte:head>
 
 <section aria-labelledby="tarefas-title" class="flex flex-col gap-6">
-	<header class="flex flex-col gap-2">
-		<div class="flex flex-wrap items-center gap-3">
-			<h1 id="tarefas-title" class="font-heading text-2xl font-bold text-text-primary">
-				Tarefas
-			</h1>
+	<PageHeader
+		title="Tarefas"
+		labelId="tarefas-title"
+		subtitle={view === 'kanban'
+			? 'Tarefas ativas por status. Arraste os cards entre colunas para mudar o status.'
+			: 'Tarefas agrupadas por projeto.'}
+	>
+		{#snippet actions()}
 			<span
 				class="inline-flex items-center gap-1 rounded-sm border border-primary-500 bg-primary-100 px-2 py-1 text-xs font-medium text-primary-700"
 			>
 				{totalItems} tarefa{totalItems === 1 ? '' : 's'}
 			</span>
-		</div>
-		<p class="text-sm text-text-secondary">
-			{view === 'kanban'
-				? 'Tarefas ativas por status. Arraste os cards entre colunas para mudar o status.'
-				: 'Tarefas agrupadas por projeto.'}
-		</p>
-	</header>
+		{/snippet}
+	</PageHeader>
 
 	<div class="flex flex-wrap items-center gap-3">
 		<!-- Alternância de status (ativas/finalizadas/arquivadas) — só no modo lista -->
@@ -740,6 +871,114 @@
 									</ul>
 								</div>
 							{/each}
+
+							<!--
+								ADD-TAREFA NO MODO LISTA (paridade com render_hub_add_row +
+								add-item-inline.js): botão "+ Nova tarefa" por grupo que abre um
+								form inline. Cria via `createTarefa` (mesma /api do composer do
+								Kanban) e re-busca a lista. Só um form aberto por vez.
+							-->
+							{#if addOpenKey === group.key}
+								<form
+									class="flex flex-col gap-2 rounded-md border border-border-subtle bg-surface p-3 shadow-sm transition-opacity duration-fast {addDraft.saving
+										? 'pointer-events-none opacity-[0.72]'
+										: ''}"
+									aria-label="Nova tarefa em {group.project_titulo}"
+									onsubmit={(e) => {
+										e.preventDefault();
+										void submitAddForm(group);
+									}}
+								>
+									<!-- svelte-ignore a11y_autofocus -->
+									<textarea
+										bind:value={addDraft.descricao}
+										onkeydown={(e) => onAddTextareaKeydown(e, group)}
+										disabled={addDraft.saving}
+										rows="2"
+										autofocus
+										placeholder="Descreva a tarefa…"
+										aria-label="Descrição da tarefa"
+										class="min-h-[64px] w-full resize-y rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm leading-normal text-text-primary transition-shadow duration-fast focus:border-primary-500 focus:outline-none focus:shadow-[0_0_0_3px_rgba(31,92,168,0.12)] disabled:opacity-60"
+									></textarea>
+
+									<div class="flex flex-wrap gap-2">
+										<select
+											bind:value={addDraft.status}
+											disabled={addDraft.saving}
+											aria-label="Status"
+											class="flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+										>
+											{#each ADD_STATUS_OPTIONS as opt (opt.value)}
+												<option value={opt.value}>{opt.label}</option>
+											{/each}
+										</select>
+										<select
+											bind:value={addDraft.prioridade}
+											disabled={addDraft.saving}
+											aria-label="Prioridade"
+											class="flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+										>
+											{#each ADD_PRIORIDADE_OPTIONS as opt (opt.value)}
+												<option value={opt.value}>{opt.label}</option>
+											{/each}
+										</select>
+										<select
+											bind:value={addDraft.tipo}
+											disabled={addDraft.saving}
+											aria-label="Tipo de pedido"
+											class="flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+										>
+											{#each ADD_TIPO_OPTIONS as opt (opt.value)}
+												<option value={opt.value}>{opt.label}</option>
+											{/each}
+										</select>
+										{#if addDraft.responsavelOptions.length > 0}
+											<select
+												bind:value={addDraft.responsavel}
+												disabled={addDraft.saving}
+												aria-label="Responsável"
+												class="flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+											>
+												<option value="">Sem responsável</option>
+												{#each addDraft.responsavelOptions as user (user.id)}
+													<option value={user.name}>{user.name}</option>
+												{/each}
+											</select>
+										{/if}
+									</div>
+
+									{#if addDraft.error}
+										<p role="alert" class="text-xs text-danger">{addDraft.error}</p>
+									{/if}
+
+									<div class="flex justify-end gap-2">
+										<button
+											type="button"
+											onclick={cancelAddForm}
+											disabled={addDraft.saving}
+											class="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+										>
+											Cancelar
+										</button>
+										<button
+											type="submit"
+											disabled={addDraft.saving}
+											class="rounded-md border border-primary-500 bg-primary-100 px-3 py-1.5 text-xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+										>
+											{addDraft.saving ? 'Salvando…' : 'Salvar'}
+										</button>
+									</div>
+								</form>
+							{:else}
+								<button
+									type="button"
+									onclick={() => openAddForm(group)}
+									class="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border-strong bg-surface-muted px-3 py-2 text-xs font-semibold text-primary-700 transition-colors duration-fast hover:border-primary-500 hover:bg-primary-100 focus:outline-none focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500"
+								>
+									<i class="fas fa-plus" aria-hidden="true"></i>
+									Nova tarefa
+								</button>
+							{/if}
 						</div>
 					</Card>
 				{/each}

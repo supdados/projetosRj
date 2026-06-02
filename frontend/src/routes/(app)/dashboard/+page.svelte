@@ -6,6 +6,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
+	import { goto } from '$app/navigation';
 	import { fetchDashboard } from '$lib/api/dashboard';
 	import { ApiClientError } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth';
@@ -15,7 +16,12 @@
 	import RecentProjectsPanel from '$lib/components/RecentProjectsPanel.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import Button from '$lib/components/Button.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
+	import { fetchProjects, type CreateProjectResult } from '$lib/api/projects';
+	import { flash } from '$lib/stores/flash';
+	import type { ProjectsListOptions } from '$lib/types/projects';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -96,6 +102,44 @@
 		todayLabel = formatToday(new Date());
 	});
 
+	// "Novo Projeto" em 1 clique: abre o modal de criacao AQUI no Dashboard (sem
+	// navegar para /projetos). As opcoes do formulario vivem no payload de
+	// /api/projetos; buscamos sob demanda na primeira abertura e reaproveitamos.
+	let createModalOpen = $state(false);
+	let createOptions = $state<ProjectsListOptions | null>(null);
+	let openingCreate = $state(false);
+
+	async function openCreateModal(): Promise<void> {
+		if (openingCreate) return;
+		if (!createOptions) {
+			openingCreate = true;
+			try {
+				const projectsData = await fetchProjects({});
+				createOptions = projectsData.options;
+			} catch (err) {
+				flash.danger(
+					err instanceof Error
+						? err.message
+						: 'Falha ao preparar o formulário de novo projeto.'
+				);
+				return;
+			} finally {
+				openingCreate = false;
+			}
+		}
+		createModalOpen = true;
+	}
+
+	// Pos-criacao: mesmo fluxo da tela de projetos — fecha, avisa e vai ao projeto.
+	function onProjectCreated(result: CreateProjectResult): void {
+		createModalOpen = false;
+		flash.success(result.message);
+		const target = result.redirect_to.startsWith('/')
+			? `${base}${result.redirect_to}`
+			: result.redirect_to;
+		void goto(target);
+	}
+
 	// --- Apresentacao do painel de tarefas (read-only) ---
 	// Larguras dos segmentos da barra empilhada, em %, derivadas dos contadores
 	// ja carregados (mesmo calculo do template Jinja: contagem/total * 100). E
@@ -163,35 +207,24 @@
 
 <section aria-labelledby="dashboard-title" class="flex flex-col gap-4">
 	<!-- Hero "Olá, <nome> / Administrador" + data + Novo Projeto -->
-	<header
-		class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border-subtle bg-surface px-4 py-3 shadow-sm"
-	>
-		<div class="min-w-0 flex-1">
-			<h1
-				id="dashboard-title"
-				class="truncate font-heading text-3xl font-bold leading-tight text-primary-700"
-			>
-				<span class="mr-1 font-semibold text-text-secondary">Olá,</span>
-				<span>{welcomeName}</span>
-			</h1>
-			<p class="mt-1 truncate text-sm font-medium {isAdmin ? 'text-primary-600' : 'text-text-muted'}">
-				{welcomeContext}
-			</p>
-		</div>
-
-		<div class="flex shrink-0 items-center gap-4">
+	<PageHeader subtitle={welcomeContext} labelId="dashboard-title">
+		{#snippet titleContent()}
+			<span class="mr-1 font-semibold text-text-secondary">Olá,</span>
+			<span>{welcomeName}</span>
+		{/snippet}
+		{#snippet actions()}
 			<div class="flex flex-col items-end gap-0.5 text-right">
 				<span class="text-2xs font-bold uppercase tracking-caps text-text-muted">Hoje</span>
 				<span class="text-md font-semibold text-primary-600">{todayLabel}</span>
 			</div>
-			<Button href={`${base}/projetos`}>
+			<Button onclick={openCreateModal} disabled={openingCreate}>
 				{#snippet icon()}
 					<i class="fas fa-plus" aria-hidden="true"></i>
 				{/snippet}
 				Novo Projeto
 			</Button>
-		</div>
-	</header>
+		{/snippet}
+	</PageHeader>
 
 	{#if loadState === 'loading'}
 		<p role="status" aria-live="polite" class="text-text-secondary">
@@ -387,6 +420,14 @@
 			SETD — Subsecretaria de Estado de Tecnologia Digital
 		</footer>
 	{/if}
+
+	<!-- Modal de criação aberto no proprio Dashboard (sem navegar para /projetos). -->
+	<CriarProjetoModal
+		open={createModalOpen}
+		options={createOptions}
+		onClose={() => (createModalOpen = false)}
+		onCreated={onProjectCreated}
+	/>
 </section>
 
 <style>

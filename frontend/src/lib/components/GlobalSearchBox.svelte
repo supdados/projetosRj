@@ -53,7 +53,21 @@
 	];
 
 	let term = $state<string>('');
-	let open = $state<boolean>(false);
+	/**
+	 * "Engajado": o usuario focou/digitou no campo ao menos uma vez nesta sessao
+	 * de interacao. Latcha em true no foco/digitacao e so volta a false quando o
+	 * dropdown e DESCARTADO (clique-fora/Escape/selecao). NAO desliga no blur —
+	 * isso evitaria a corrida blur-vs-clique que fechava o painel antes do clique
+	 * num resultado registrar. A ABERTURA real e DERIVADA (engaged + termo valido
+	 * + nao-descartado), entao o painel fica MONTADO continuamente e so o conteudo
+	 * interno troca (Buscando... -> resultados), sem flicker.
+	 */
+	let engaged = $state<boolean>(false);
+	/**
+	 * Descarte explicito: so vira true por Escape, clique-fora ou selecao.
+	 * Resetado quando o usuario volta a digitar/focar, para reabrir naturalmente.
+	 */
+	let dismissed = $state<boolean>(false);
 	let stateMessage = $state<string>('Digite ao menos 2 caracteres.');
 	let data = $state<GlobalSearchData | null>(null);
 	/** Indice do item selecionado por teclado/hover (-1 = nenhum). */
@@ -64,6 +78,15 @@
 
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let inFlight: AbortController | null = null;
+
+	const hasValidTerm = $derived(term.trim().length >= MIN_TERM_LENGTH);
+
+	/**
+	 * UNICA fonte de verdade da visibilidade do dropdown. Nunca abre para termos
+	 * curtos (sem fetch, sem piscar) e PERMANECE aberto enquanto engajado + termo
+	 * valido — fechando apenas por clique-fora/Escape/selecao (via `dismissed`).
+	 */
+	const open = $derived(engaged && hasValidTerm && !dismissed);
 
 	/** Lista achatada de itens visiveis, na ordem dos grupos (para o teclado). */
 	const flatItems = $derived.by<SearchResultItem[]>(() => {
@@ -96,13 +119,10 @@
 		}
 	}
 
+	/** Fecha por intencao do usuario (Escape/clique-fora/selecao). */
 	function closeDropdown(): void {
-		open = false;
+		dismissed = true;
 		selectedIndex = -1;
-	}
-
-	function openDropdown(): void {
-		open = true;
 	}
 
 	async function runSearch(query: string): Promise<void> {
@@ -110,9 +130,9 @@
 		inFlight = new AbortController();
 		const localController = inFlight;
 		stateMessage = 'Buscando...';
-		data = null;
+		// NAO zera `data` aqui: manter os resultados anteriores visiveis enquanto
+		// a nova requisicao corre evita o flash de "vazio" entre digitacoes.
 		selectedIndex = -1;
-		openDropdown();
 
 		const params = new URLSearchParams({ q: query, limit: '5' });
 		if ($orgaoScope.selectedId !== null) {
@@ -142,11 +162,16 @@
 		const query = term.trim();
 		clearDebounce();
 		selectedIndex = -1;
+		// Digitou de novo => engaja e limpa o descarte para o dropdown reabrir.
+		engaged = true;
+		dismissed = false;
 
+		// Termo curto: aborta fetch pendente e zera resultados. O dropdown NAO
+		// abre/pisca porque `open` e derivado (hasValidTerm == false aqui).
 		if (query.length < MIN_TERM_LENGTH) {
 			if (inFlight) inFlight.abort();
 			data = null;
-			closeDropdown();
+			stateMessage = 'Digite ao menos 2 caracteres.';
 			return;
 		}
 
@@ -156,13 +181,13 @@
 	}
 
 	function handleFocus(): void {
+		engaged = true;
+		dismissed = false;
 		const query = term.trim();
 		if (query.length < MIN_TERM_LENGTH) return;
-		if (hasAnyResult || stateMessage) {
-			openDropdown();
-		} else {
-			void runSearch(query);
-		}
+		// Ao focar com termo valido sem resultados ainda carregados, busca.
+		// (Se ja ha resultados, o dropdown reaparece sozinho via `open`.)
+		if (!hasAnyResult && !inFlight) void runSearch(query);
 	}
 
 	function moveSelection(step: number): void {
