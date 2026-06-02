@@ -3,9 +3,22 @@ import pytest
 from tests.routes.route_cases import ADMIN_REQUIRED_CASES, LOGIN_REQUIRED_CASES
 
 
+class _DummyIdContext(dict):
+    """Contexto de format() que devolve um id ficticio para chaves ausentes.
+
+    A negacao a anonimo/nao-admin nao depende do id concreto na URL (o guard
+    rejeita ANTES de qualquer lookup), entao um placeholder e suficiente quando
+    o ``seed_data`` nao expoe a chave (ex.: ``anexo_id`` vive em outra lane de
+    seed). Mantem o teste de permissao auto-suficiente sem tocar o seed.
+    """
+
+    def __missing__(self, key):
+        return "1"
+
+
 def _format_payload(value, context):
     if isinstance(value, str):
-        return value.format(**context)
+        return value.format_map(context)
     if isinstance(value, list):
         return [_format_payload(item, context) for item in value]
     if isinstance(value, tuple):
@@ -16,8 +29,8 @@ def _format_payload(value, context):
 
 
 def _resolve_request(case, seed_data):
-    context = dict(seed_data)
-    path = case["path"].format(**context)
+    context = _DummyIdContext(seed_data)
+    path = case["path"].format_map(context)
     request_kwargs = {}
     for key in ("data", "json", "headers", "query_string"):
         if key in case:
@@ -25,28 +38,100 @@ def _resolve_request(case, seed_data):
     return path, request_kwargs
 
 
+def _is_api_rule(case):
+    """Rotas /api/* falam o contrato JSON canonico (401/403)."""
+    return case["rule"].startswith("/api/")
+
+
+def _assert_canonical_unauthenticated(response):
+    """Fixa o envelope canonico 401 JSON (sem Location), detectando 404/500/2xx."""
+    assert response.status_code == 401
+    assert response.is_json
+    body = response.get_json()
+    assert body["ok"] is False
+    assert body["error"]["code"] == "unauthenticated"
+    assert not (response.headers.get("Location") or "")
+
+
 @pytest.mark.parametrize(
     "case", LOGIN_REQUIRED_CASES, ids=[case["id"] for case in LOGIN_REQUIRED_CASES]
 )
-def test_login_required_routes_redirect_when_anonymous(case, client, seed_data):
+def test_login_required_routes_deny_anonymous(case, client, seed_data):
+    """Toda rota login-required NEGA acesso a anonimo.
+
+    Intencao preservada da forma antiga ("rota protegida nega anonimo"). Por
+    contrato:
+      - Jinja: 302 + "/login" no Location.
+      - /api/* canonico (SPA): 401 JSON {ok:false, error.code:"unauthenticated"}.
+      - /api/* legado (area ainda Jinja, ex.: /api/templates, /api/chatbot-token):
+        302 + "/login" (guard ``login_required`` legado, ver legacy.py).
+      - /api/* mutativo: 401 (harness CSRF OFF) ou 400 (CSRF ON em prod).
+    Nunca 2xx/404/500 — a negacao tem que ser efetiva e a rota tem que existir.
+    """
     path, request_kwargs = _resolve_request(case, seed_data)
     response = client.open(
         path, method=case["method"], follow_redirects=False, **request_kwargs
     )
+    location = response.headers.get("Location") or ""
 
-    assert response.status_code == 302
-    assert "/login" in (response.headers.get("Location") or "")
+    # (A) Jinja: redireciona para /login.
+    if not _is_api_rule(case):
+        assert response.status_code == 302
+        assert "/login" in location
+        return
+
+    # Cobertura explicita: download binario de anexo a anonimo devolve 401 JSON
+    # canonico (envelope), NUNCA o octet-stream.
+    if case["id"] == "api_anexo_download_get":
+        _assert_canonical_unauthenticated(response)
+        assert "application/octet-stream" not in (response.content_type or "")
+        return
+
+    # (C) /api/* mutativo (POST/PUT/PATCH/DELETE): 401 no harness (CSRF OFF),
+    # 400 em producao (CSRF ON roda antes do guard) ou 302/login no legado.
+    # Nunca 2xx.
+    if case["method"] != "GET":
+        if response.status_code == 302:
+            assert "/login" in location  # POST legado sob guard Jinja
+            return
+        assert response.status_code in (400, 401)
+        assert not (200 <= response.status_code < 300)
+        assert not location
+        return
+
+    # (B) /api/* GET: contrato canonico 401 JSON; rotas legadas ainda nao
+    # migradas usam o guard Jinja (302 -> /login). Ambos negam de fato; nenhum
+    # serve 2xx/404/500.
+    if response.status_code == 302:
+        assert "/login" in location
+        return
+    _assert_canonical_unauthenticated(response)
 
 
 @pytest.mark.parametrize(
     "case", ADMIN_REQUIRED_CASES, ids=[case["id"] for case in ADMIN_REQUIRED_CASES]
 )
-def test_admin_routes_redirect_for_non_admin(case, client_user, seed_data):
+def test_admin_routes_deny_non_admin(case, client_user, seed_data):
+    """Toda rota admin NEGA acesso a usuario autenticado nao-admin.
+
+    Intencao preservada (302 + /dashboard no Jinja); para /api/* o novo contrato
+    e 403 JSON com code "forbidden".
+    """
     path, request_kwargs = _resolve_request(case, seed_data)
     response = client_user.open(
         path, method=case["method"], follow_redirects=False, **request_kwargs
     )
 
+    # (B) /api/*: 403 JSON com envelope canonico.
+    if _is_api_rule(case):
+        assert response.status_code == 403
+        assert response.is_json
+        body = response.get_json()
+        assert body["ok"] is False
+        assert body["error"]["code"] == "forbidden"
+        return
+
+    # (A) Jinja: redireciona para /dashboard.
     assert response.status_code == 302
     assert "/dashboard" in (response.headers.get("Location") or "")
 
