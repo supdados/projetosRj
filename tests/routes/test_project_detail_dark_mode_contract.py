@@ -95,11 +95,8 @@ def test_project_header_meta_chips_stay_transparent_in_dark_mode():
         "    background: transparent !important;\n"
         "    border: 0 !important;"
     ) in detail_dark_css
-    assert (
-        "html[data-theme=\"dark\"] body.is-authenticated "
-        ".project-header .ph-chip--prio-urgente {\n"
-        "    background: transparent !important;"
-    ) in detail_dark_css
+    # As variações por prioridade (.ph-chip--prio-*) já são cobertas pela regra
+    # genérica .ph-chip acima; não há mais uma regra dedicada a urgente.
 
 
 def test_project_detail_dark_selects_keep_dropdown_indicator():
@@ -144,5 +141,9 @@ def test_project_header_meta_chips_render_with_scoped_classes(client_user, seed_
     compact_start = html.index('id="projectCompactHeader"')
     compact_end = html.index("<!-- Cartão de detalhes do projeto -->")
     project_compact_html = html[compact_start:compact_end]
-    assert 'class="project-compact-dates"' in project_compact_html
-    assert project_compact_html.count("<span><i") == 2
+    # O header compacto replica os chips do header principal (classes pc-chip)
+    # dentro de .project-compact-meta, incluindo as datas de início e fim.
+    assert 'class="project-compact-meta"' in project_compact_html
+    assert 'class="pc-chip pc-chip--status' in project_compact_html
+    assert "far fa-calendar-alt" in project_compact_html
+    assert "far fa-calendar-check" in project_compact_html

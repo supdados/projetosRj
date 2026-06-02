@@ -42,8 +42,10 @@ def test_login_page_defaults_to_hidden_govbr_integration(client):
     assert "lp-govbr-btn" not in html
     assert 'id="lpToggleBtn"' not in html
     assert 'id="lpDivider"' not in html
-    # E o form deve aparecer já visível (sem a classe hidden).
-    assert "lp-local-form--hidden" not in html
+    # E o form deve aparecer já visível: o elemento usa só a classe base, sem o
+    # modificador --hidden (que o JS ainda referencia em classList, por isso
+    # checamos a classe aplicada no form, não a string solta no script).
+    assert 'class="lp-local-form"' in html
 
 
 def test_login_page_shows_govbr_button_when_enabled(app, client):

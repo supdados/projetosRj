@@ -25,8 +25,9 @@ def test_project_detail_template_contains_stage_table_hooks(client_user, seed_da
         "etapa-draggable-row",
         "etapa-drag-handle",
         "editable-field",
-        "toggle-iniciada",
-        "toggle-done",
+        "etapa-status-toggle",
+        "etapa-status-cycle",
+        'data-state="',
         "btn-comment-data",
         "data-etapa-delete-form",
         "data-etapa-delete-btn",
@@ -168,7 +169,7 @@ def test_project_detail_stage_task_quick_add_defaults_closed_and_keeps_add_row_v
         / "11-stage-task-quick-add-row-factory.js"
     ).read_text(encoding="utf-8")
 
-    assert "loadPanel({ focusAdd: false });" in quick_add_js
+    assert "loadPanel({ focusAdd: false, resetScroll: true });" in quick_add_js
     assert "function ensureFormVisible(contentHost)" in row_factory_js
     assert "scrollIntoView({ block: 'end', inline: 'nearest' });" in row_factory_js
 

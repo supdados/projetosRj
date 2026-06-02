@@ -111,9 +111,11 @@ def test_topnav_user_dropdown_hides_admin_entries(client_user):
 
 def test_topnav_theme_toggle_button_is_rendered(client_admin):
     html = _topnav_html(client_admin)
+    # O toggle de tema é um switch: theme.js depende do input #appThemeToggle
+    # (checkbox role="switch") e do wrapper .app-theme-switch para o título.
     assert 'id="appThemeToggle"' in html
-    assert 'id="appThemeToggleIcon"' in html
-    assert 'aria-label="Alternar tema"' in html
+    assert 'class="app-theme-switch' in html
+    assert 'aria-label="Alternar tema claro/escuro"' in html
 
 
 def test_topnav_icon_buttons_define_pressed_state_contract():

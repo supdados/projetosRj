@@ -173,7 +173,7 @@ def test_project_header_inline_editors_keep_chip_dimensions():
     assert "input.style.height = 'auto';" in editor_content
     assert "input.addEventListener('input', function ()" in editor_content
     assert "project-header-text-editor" in editor_content
-    assert "input = document.createElement('textarea');\n                    input.className = 'form-control form-control-sm project-inline-input project-inline-input-title';" in editor_content
+    assert "input = document.createElement('textarea');\n                    input.rows = 1;\n                    input.className = 'form-control form-control-sm project-inline-input project-inline-input-title';" in editor_content
     assert "input.className = 'form-control form-control-sm project-inline-input project-inline-input-description';\n                    input.rows = 1;" in editor_content
     assert "project-additional-link-editor" in editor_content
     assert "project-observacao-editor" in editor_content

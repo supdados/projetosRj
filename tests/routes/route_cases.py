@@ -727,6 +727,16 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
+        "id": "task_project_etapas_get",
+        "method": "GET",
+        "rule": "/tarefas/projeto/<int:project_id>/etapas",
+        "path": "/tarefas/projeto/{project_id}/etapas",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
         "id": "task_assignable_users_get",
         "method": "GET",
         "rule": "/tarefas/<int:task_id>/sugestoes-responsavel",
@@ -1503,4 +1513,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 133
+assert len(ROUTE_CASES) == 134

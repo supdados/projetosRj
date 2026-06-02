@@ -169,16 +169,16 @@ def test_admin_template_form_minimal_stage_fields_contract():
     assert "appearance: textfield;" in css
     assert ".tpl-stage-remove" in css
     assert "border: none;" in css
-    assert ".tpl-stage-item.is-hover-active .tpl-stage-remove" in css
-    assert "opacity: 0 !important;" in css
-    assert "visibility: hidden;" in css
-    assert "pointer-events: none !important;" in css
-    assert "opacity: 1 !important;" in css
-    assert "visibility: visible;" in css
-    assert "pointer-events: auto !important;" in css
+    # Reveal do botão de remover via :hover/:focus-within nativos (um item por vez).
+    assert "opacity: 0;" in css
+    assert "pointer-events: none;" in css
+    assert ".tpl-stage-item:hover .tpl-stage-remove," in css
+    assert ".tpl-stage-item:focus-within .tpl-stage-remove" in css
+    assert "opacity: 1;" in css
+    assert "pointer-events: auto;" in css
 
 
-def test_admin_template_form_stage_remove_hover_is_single_active_item_contract():
+def test_admin_template_form_stage_remove_reveals_on_native_hover_contract():
     root = Path(__file__).resolve().parents[2]
     css = (
         root / "static" / "css" / "admin" / "template-form.css"
@@ -187,21 +187,16 @@ def test_admin_template_form_stage_remove_hover_is_single_active_item_contract()
         root / "static" / "js" / "admin" / "template_form.js"
     ).read_text(encoding="utf-8")
 
-    assert "let activeActionItem = null;" in js
-    assert "function setActiveActionItem(item)" in js
-    assert "function getStageItemFromTarget(target)" in js
-    assert "is-hover-active" in js
-    assert "stageItem.classList.toggle('is-hover-active', stageItem === item)" in js
-    assert "list.addEventListener('pointerover'" in js
-    assert "list.addEventListener('pointerout'" in js
-    assert "document.addEventListener('pointermove'" in js
-    assert "document.addEventListener('pointerleave'" in js
-    assert "window.addEventListener('blur'" in js
-    assert ".tpl-stage-item.is-hover-active .tpl-stage-card" in css
-    assert ".tpl-stage-item:hover .tpl-stage-remove" not in css
-    assert ".tpl-stage-item:focus-within .tpl-stage-remove" not in css
-    assert ".tpl-stage-remove:focus {\n    opacity: 1;" not in css
-    assert ".tpl-stage-item:hover .tpl-stage-card" not in css
+    # O reveal do botão de remover etapa é puramente CSS (:hover/:focus-within),
+    # naturalmente um item por vez — a antiga lógica JS de "active item"
+    # (classes is-hover-active) foi removida.
+    assert ".tpl-stage-item:hover .tpl-stage-remove," in css
+    assert ".tpl-stage-item:focus-within .tpl-stage-remove" in css
+    assert "is-hover-active" not in css
+    assert "is-hover-active" not in js
+    # O template_form.js cuida só do ciclo de vida das etapas (form wiring).
+    assert "getElementById('templateForm')" in js
+    assert "addStage(" in js
 
 
 def test_admin_template_form_drag_uses_single_drop_indicator_contract():

@@ -5,9 +5,12 @@ from models import Project, db
 from tests._orgao_helpers import ensure_orgao
 
 
-def test_dashboard_recent_projects_renders_maximum_9_rows(app, client_user):
+def test_dashboard_recent_projects_caps_rows_at_limit(app, client_user):
+    # O painel "Projetos Recentes" (partials/_recent_projects_panel.html) lista
+    # no máximo RECENT_PROJECTS_LIMIT (30) linhas <a class="rp-row">, as mais
+    # recentes primeiro (ver routes/dashboard.py). As mais antigas ficam de fora.
     with app.app_context():
-        for index in range(1, 19):
+        for index in range(1, 36):
             project = Project(
                 titulo=f"Dashboard Limit Test {index:02d}",
                 orgao_id=ensure_orgao("Auditoria").id,
@@ -25,11 +28,11 @@ def test_dashboard_recent_projects_renders_maximum_9_rows(app, client_user):
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    rendered_rows = re.findall(r'class="glass-table-row(?: [^"]+)?"', html)
-    assert len(rendered_rows) == 15
+    rendered_rows = re.findall(r'class="rp-row(?: [^"]+)?"', html)
+    assert len(rendered_rows) == 30
 
     expected_visible_titles = [
-        f"Dashboard Limit Test {index:02d}" for index in range(18, 3, -1)
+        f"Dashboard Limit Test {index:02d}" for index in range(35, 5, -1)
     ]
     expected_hidden_titles = [
         f"Dashboard Limit Test {index:02d}" for index in range(1, 4)

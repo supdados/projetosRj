@@ -97,6 +97,11 @@ def app(tmp_path):
             "SQLALCHEMY_ENGINE_OPTIONS": {"poolclass": NullPool},
             "SKIP_STARTUP_DB_INIT": True,
             "WTF_CSRF_ENABLED": False,
+            # Isola os testes do .env do desenvolvedor: features opcionais
+            # ficam desligadas por padrão e cada teste que precisa delas liga
+            # explicitamente via app.config.update(...).
+            "CHATBOT_ENABLED": False,
+            "GOVBR_OIDC_ENABLED": False,
         }
     )
 

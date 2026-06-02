@@ -8,7 +8,9 @@ def test_projetos_pendentes_template_uses_short_done_toast(client_user):
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 
-    assert "showToast('Etapa concluída', 'info');" in html
+    # A etapa concluída permanece visível na triagem; a mensagem curta vem do
+    # backend (data.message), não mais de uma string hardcoded no template.
+    assert "showToast(data.message, 'info');" in html
     assert "removida da triagem" not in html
 
 

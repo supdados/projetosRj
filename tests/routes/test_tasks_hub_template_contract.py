@@ -318,7 +318,15 @@ def test_tasks_hub_kanban_js_keeps_grouped_list_rows_inside_project_sections():
     assert (
         "function syncListOrderFromKanban() {\n"
         "            if (!ctx.reorderUrl) return;\n"
-        "            if (ctx.isTaskHubGroupedList()) return;"
+        in content
+    )
+    # Lista agrupada delega para syncGroupedListOrder, mantendo as linhas dentro
+    # das seções de projeto (em vez de reordenar a lista plana).
+    assert (
+        "            if (ctx.isTaskHubGroupedList()) {\n"
+        "                syncGroupedListOrder(orderIds);\n"
+        "                return;\n"
+        "            }"
         in content
     )
 
