@@ -52,7 +52,10 @@ export const STATUS_LABELS: Readonly<Record<TaskStatus, string>> = {
  */
 export interface StatusRuleItem {
 	status?: string | null;
+	/** Forma plana (item sintético do drag / testes). */
 	can_finalize?: boolean | null;
+	/** Forma aninhada do `BoardCard` serializado pelo backend (`permissions.can_finalize`). */
+	permissions?: { can_finalize?: boolean | null } | null;
 }
 
 /**
@@ -76,7 +79,13 @@ export function getStatusLabel(status: string | null | undefined): string {
  * NÃO substitui a checagem autoritativa do servidor.
  */
 export function canFinalize(item: StatusRuleItem | null | undefined): boolean {
-	return !!(item && item.can_finalize);
+	if (!item) return false;
+	// Aceita a forma plana (`can_finalize`) E a aninhada do BoardCard
+	// (`permissions.can_finalize`). Sem isso, o card do Kanban (que só tem a
+	// forma aninhada) caía para `false` e o drop em "Finalizada" era sempre
+	// bloqueado client-side, mesmo quando o backend permitiria.
+	if (typeof item.can_finalize === 'boolean') return item.can_finalize;
+	return !!item.permissions?.can_finalize;
 }
 
 /**
