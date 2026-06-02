@@ -32,12 +32,19 @@ from .negotiation import (  # noqa: F401
     wants_json,
 )
 from .serializers import (  # noqa: F401
+    serialize_admin_user,
     serialize_etapa_card,
+    serialize_orgao_form,
+    serialize_orgao_node,
     serialize_orgao_option,
+    serialize_orgao_tipo,
     serialize_pending_project_row,
     serialize_project_card,
     serialize_project_history_entry,
     serialize_task_card,
+    serialize_template_detail,
+    serialize_template_row,
+    serialize_template_stage_item,
     serialize_user,
 )
 
@@ -48,6 +55,9 @@ from . import dashboard  # noqa: F401,E402
 from . import projects  # noqa: F401,E402
 from . import tasks  # noqa: F401,E402
 from . import search  # noqa: F401,E402
+from . import admin_users  # noqa: F401,E402
+from . import admin_orgaos  # noqa: F401,E402
+from . import admin_templates  # noqa: F401,E402
 
 __all__ = [
     "ok",
@@ -56,10 +66,17 @@ __all__ = [
     "api_login_required",
     "api_admin_required",
     "serialize_user",
+    "serialize_admin_user",
     "serialize_project_card",
     "serialize_task_card",
     "serialize_etapa_card",
     "serialize_orgao_option",
+    "serialize_orgao_node",
+    "serialize_orgao_form",
+    "serialize_orgao_tipo",
     "serialize_pending_project_row",
     "serialize_project_history_entry",
+    "serialize_template_detail",
+    "serialize_template_row",
+    "serialize_template_stage_item",
 ]

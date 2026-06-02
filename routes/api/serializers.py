@@ -63,6 +63,93 @@ def serialize_orgao_option(node: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def serialize_orgao_node(orgao: Any) -> dict[str, Any]:
+    """Serializa um nó da árvore de órgãos (admin) recursivamente.
+
+    Inclui os campos editáveis do nó (``id``, ``sigla``, ``nome``, ``tipo``,
+    ``tipo_id``, ``pai_id``, ``ordem``, ``ativo``, ``codigo_externo``) e a lista
+    ``filhos`` (serializados recursivamente, ordenados por ``ordem``/``sigla``).
+    Espelha ``_serialize_orgao`` de ``routes/admin_orgaos.py`` somando a árvore.
+    NÃO expõe segredos.
+
+    Args:
+        orgao: Instância de ``OrgaoUnidade``.
+
+    Returns:
+        ``dict`` JSON-safe com os campos do nó e ``filhos: [...]``.
+    """
+    filhos = sorted(
+        getattr(orgao, "filhos", None) or [],
+        key=lambda f: (f.ordem if f.ordem is not None else 0, f.sigla or ""),
+    )
+    return {
+        "id": orgao.id,
+        "sigla": orgao.sigla,
+        "nome": orgao.nome,
+        "tipo": orgao.tipo,
+        "tipo_id": orgao.tipo_id,
+        "pai_id": orgao.pai_id,
+        "ordem": orgao.ordem,
+        "ativo": bool(orgao.ativo),
+        "codigo_externo": orgao.codigo_externo,
+        "filhos": [serialize_orgao_node(filho) for filho in filhos],
+    }
+
+
+def serialize_orgao_form(orgao: Any) -> dict[str, Any]:
+    """Serializa um órgão para o formulário de edição (sem ``filhos``).
+
+    Espelha ``_serialize_orgao`` de ``routes/admin_orgaos.py``, somando as datas
+    de vigência (ISO 8601) usadas pelo form. NÃO expõe segredos.
+
+    Args:
+        orgao: Instância de ``OrgaoUnidade``.
+
+    Returns:
+        ``dict`` JSON-safe com os campos do form do órgão.
+    """
+    return {
+        "id": orgao.id,
+        "sigla": orgao.sigla,
+        "nome": orgao.nome,
+        "tipo": orgao.tipo,
+        "tipo_id": orgao.tipo_id,
+        "pai_id": orgao.pai_id,
+        "ordem": orgao.ordem,
+        "ativo": bool(orgao.ativo),
+        "codigo_externo": orgao.codigo_externo,
+        "data_inicio_vigencia": _iso_or_none(
+            getattr(orgao, "data_inicio_vigencia", None)
+        ),
+        "data_fim_vigencia": _iso_or_none(getattr(orgao, "data_fim_vigencia", None)),
+    }
+
+
+def serialize_orgao_tipo(tipo: Any) -> dict[str, Any]:
+    """Serializa um tipo de órgão (catálogo/CRUD admin).
+
+    Usa CAMPOS REAIS de ``OrgaoTipo`` (``nome``, ``slug``, ``nivel``,
+    ``descricao``, ``ativo``, ``is_system``, ``permite_raiz``). ``is_system``
+    sinaliza tipos-padrão protegidos. NÃO expõe segredos.
+
+    Args:
+        tipo: Instância de ``OrgaoTipo``.
+
+    Returns:
+        ``dict`` JSON-safe com os campos do tipo de órgão.
+    """
+    return {
+        "id": tipo.id,
+        "nome": tipo.nome,
+        "slug": tipo.slug,
+        "nivel": tipo.nivel,
+        "descricao": tipo.descricao,
+        "ativo": bool(tipo.ativo),
+        "is_system": bool(tipo.is_system),
+        "permite_raiz": bool(tipo.permite_raiz),
+    }
+
+
 def _resolve_auth_provider(user: Any) -> str:
     """Deriva o provedor de autenticação a partir do vínculo Gov.br.
 
@@ -111,6 +198,46 @@ def serialize_user(user: Any) -> dict[str, Any]:
         "username": user.username,
         "is_admin": bool(user.is_admin),
         "orgaos": orgaos,
+        "auth_provider": _resolve_auth_provider(user),
+    }
+
+
+def serialize_admin_user(user: Any) -> dict[str, Any]:
+    """Serializa um usuário para as telas de administração (CRUD de usuários).
+
+    Diferente de ``serialize_user`` (consumido por ``/api/me``), inclui os campos
+    relevantes ao painel admin — ``orgao`` (string legada), o vínculo Gov.br
+    (``cpf_govbr``/``has_govbr_link``) e a flag ``govbr_link_locked`` (que sinaliza
+    quando o CPF não é editável por já existir vínculo OAuth ativo, espelhando
+    ``hide_govbr_link_fields`` em ``routes/admin_users.py``). NUNCA expõe
+    ``password_hash``, ``govbr_sub`` nem qualquer segredo.
+
+    Args:
+        user: Instância de ``User``.
+
+    Returns:
+        ``dict`` JSON-safe ``{id, name, username, is_admin, orgao, orgaos,
+        cpf_govbr, has_govbr_link, govbr_link_locked, auth_provider}``.
+    """
+    vinculos = getattr(user, "orgaos", None) or []
+    orgaos = [
+        _orgao_ref_brief(uo.orgao)
+        for uo in vinculos
+        if getattr(uo, "orgao", None) is not None
+    ]
+    has_govbr_link = bool(
+        getattr(user, "cpf_govbr", None) and getattr(user, "govbr_sub", None)
+    )
+    return {
+        "id": user.id,
+        "name": user.name,
+        "username": user.username,
+        "is_admin": bool(user.is_admin),
+        "orgao": user.orgao,
+        "orgaos": orgaos,
+        "cpf_govbr": user.cpf_govbr,
+        "has_govbr_link": has_govbr_link,
+        "govbr_link_locked": has_govbr_link,
         "auth_provider": _resolve_auth_provider(user),
     }
 
@@ -202,7 +329,9 @@ def serialize_pending_project_row(row: dict[str, Any]) -> dict[str, Any]:
         "etapas_visiveis": [
             serialize_etapa_card(etapa) for etapa in row["etapas_visiveis"]
         ],
-        "etapas_outras": [serialize_etapa_card(etapa) for etapa in row["etapas_outras"]],
+        "etapas_outras": [
+            serialize_etapa_card(etapa) for etapa in row["etapas_outras"]
+        ],
         "qtd_visiveis": row["qtd_visiveis"],
         "qtd_outras": row["qtd_outras"],
         "qtd_atrasadas": row["qtd_atrasadas"],
@@ -245,6 +374,91 @@ def serialize_project_history_entry(entry: Any) -> dict[str, Any]:
             if author is not None
             else None
         ),
+    }
+
+
+def serialize_template_stage_item(item: Any) -> dict[str, Any]:
+    """Serializa uma etapa (``StageTemplateItem``) de um modelo de etapas.
+
+    Usa CAMPOS REAIS de ``StageTemplateItem`` (``name``, ``duration_days``,
+    ``order``). Consumido pelo form de edição/duplicação na SPA Admin.
+
+    Args:
+        item: Instância de ``StageTemplateItem``.
+
+    Returns:
+        ``dict`` JSON-safe ``{id, name, duration_days, order}``.
+    """
+    return {
+        "id": item.id,
+        "name": item.name,
+        "duration_days": int(item.duration_days or 1),
+        "order": item.order,
+    }
+
+
+def serialize_template_detail(template: Any) -> dict[str, Any]:
+    """Serializa um modelo de etapas com suas etapas (form de edição).
+
+    Usa CAMPOS REAIS de ``StageTemplate`` (``name``, ``description``,
+    ``created_at``, ``updated_at``) somando as etapas ordenadas
+    (``serialize_template_stage_item``) e os agregados read-only
+    (``stage_count``/``total_duration``) computados no backend. NÃO expõe
+    ``created_by_id``/``updated_by_id`` (apenas o nome do editor).
+
+    Args:
+        template: Instância de ``StageTemplate`` (com ``items`` carregados).
+
+    Returns:
+        ``dict`` JSON-safe com os campos do modelo e ``stages: [...]``.
+    """
+    items = sorted(
+        getattr(template, "items", None) or [],
+        key=lambda it: (it.order if it.order is not None else 0),
+    )
+    editor = template.updated_by or template.created_by
+    return {
+        "id": template.id,
+        "name": template.name,
+        "description": template.description,
+        "stage_count": len(items),
+        "total_duration": sum(int(it.duration_days or 0) for it in items),
+        "created_at": _iso_or_none(template.created_at),
+        "updated_at": _iso_or_none(template.updated_at),
+        "editor_name": (editor.name if editor else None)
+        or (editor.username if editor else None),
+        "stages": [serialize_template_stage_item(it) for it in items],
+    }
+
+
+def serialize_template_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Serializa uma linha de lista de modelos vinda de ``_build_template_rows``.
+
+    Recebe o ``dict`` já produzido por ``_build_template_rows``
+    (``routes/admin_templates.py``) — preservando as métricas agregadas
+    (``usage_count``/``stage_count``/``total_duration``) e os derivados de
+    apresentação (``initials``/``is_new``/``editor_name``). Converte
+    ``updated_at`` para ISO 8601 e descarta ``silhouette`` (artefato de
+    renderização SVG do Jinja, não consumido pela SPA). NÃO expõe segredos.
+
+    Args:
+        row: ``dict`` de ``_build_template_rows`` (chaves ``id``/``name``/...).
+
+    Returns:
+        ``dict`` JSON-safe com as métricas e metadados do modelo para a lista.
+    """
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "description": row["description"],
+        "initials": row["initials"],
+        "stage_count": row["stage_count"],
+        "total_duration": row["total_duration"],
+        "usage_count": row["usage_count"],
+        "updated_at": _iso_or_none(row["updated_at"]),
+        "updated_relative": row["updated_relative"],
+        "editor_name": row["editor_name"],
+        "is_new": bool(row["is_new"]),
     }
 
 

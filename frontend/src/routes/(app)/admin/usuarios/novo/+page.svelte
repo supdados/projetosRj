@@ -1,0 +1,141 @@
+<script lang="ts">
+	/**
+	 * Tela "Admin > Usuários > Novo" (FASE 4). Form de CRIAÇÃO de usuário,
+	 * consumindo `POST /api/admin/usuarios` via `$lib/api/adminUsers`
+	 * (`client.post` injeta X-CSRFToken). As opções de órgãos vêm da árvore de
+	 * órgãos (`fetchOrgaoOptionsForUser`), já que não há `usuario/<id>` cujo
+	 * detalhe as traga na criação.
+	 *
+	 * Em sucesso navega para a lista (`/admin/usuarios`). Erros de validação
+	 * (422) do backend são exibidos no form (role=alert). Links base-aware.
+	 */
+	import { onMount, onDestroy } from 'svelte';
+	import { base } from '$app/paths';
+	import { goto } from '$app/navigation';
+	import { fetchOrgaoOptionsForUser, createAdminUser } from '$lib/api/adminUsers';
+	import { ApiClientError } from '$lib/api/client';
+	import type { AdminOrgaoOption, AdminUserCreatePayload } from '$lib/types/adminUsers';
+	import UserForm from '../UserForm.svelte';
+
+	type LoadState = 'loading' | 'ready' | 'error';
+
+	let loadState = $state<LoadState>('loading');
+	let loadError = $state<string>('');
+	let orgaosOptions = $state<AdminOrgaoOption[]>([]);
+
+	let saving = $state<boolean>(false);
+	let formError = $state<string>('');
+
+	let values = $state({
+		name: '',
+		username: '',
+		orgao: '',
+		cpf_govbr: '',
+		password: '',
+		is_admin: false,
+		orgaos_responsavel: [] as number[]
+	});
+
+	let inFlight: AbortController | null = null;
+
+	const listHref = `${base}/admin/usuarios`;
+
+	async function loadOptions(): Promise<void> {
+		loadState = 'loading';
+		loadError = '';
+		inFlight?.abort();
+		const controller = new AbortController();
+		inFlight = controller;
+		try {
+			orgaosOptions = await fetchOrgaoOptionsForUser(controller.signal);
+			if (controller.signal.aborted) return;
+			loadState = 'ready';
+		} catch (err) {
+			if (controller.signal.aborted) return;
+			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
+			loadError =
+				err instanceof Error ? err.message : 'Falha ao carregar as opções de órgãos.';
+			loadState = 'error';
+		}
+	}
+
+	async function submit(): Promise<void> {
+		if (saving) return;
+		saving = true;
+		formError = '';
+		const payload: AdminUserCreatePayload = {
+			username: values.username.trim(),
+			name: values.name.trim(),
+			password: values.password,
+			orgao: values.orgao.trim() || undefined,
+			is_admin: values.is_admin,
+			cpf_govbr: values.cpf_govbr.trim() || undefined,
+			orgaos_responsavel: values.orgaos_responsavel
+		};
+		try {
+			await createAdminUser(payload);
+			await goto(listHref);
+		} catch (err) {
+			saving = false;
+			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
+			formError = err instanceof Error ? err.message : 'Falha ao criar o usuário.';
+		}
+	}
+
+	onMount(() => {
+		void loadOptions();
+		return () => inFlight?.abort();
+	});
+
+	onDestroy(() => inFlight?.abort());
+</script>
+
+<svelte:head>
+	<title>Novo Usuário — ProjetosRJ</title>
+</svelte:head>
+
+<section aria-labelledby="novo-usuario-title" class="flex flex-col gap-6">
+	<header class="flex flex-col gap-2">
+		<nav class="text-sm text-text-muted" aria-label="Trilha de navegação">
+			<a href={listHref} class="text-primary-700 no-underline hover:underline">Usuários</a>
+			<span aria-hidden="true"> / </span>
+			<span>Novo</span>
+		</nav>
+		<h1 id="novo-usuario-title" class="font-heading text-2xl font-bold text-text-primary">
+			Novo Usuário
+		</h1>
+		<p class="text-sm text-text-secondary">
+			Configure os dados do usuário e as permissões de acesso.
+		</p>
+	</header>
+
+	{#if loadState === 'loading'}
+		<p role="status" aria-live="polite" class="text-text-secondary">Carregando…</p>
+	{:else if loadState === 'error'}
+		<div
+			role="alert"
+			class="flex flex-col items-start gap-3 rounded-lg border border-danger bg-surface px-5 py-4"
+		>
+			<p class="text-text-primary">{loadError}</p>
+			<button
+				type="button"
+				onclick={() => loadOptions()}
+				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				Tentar novamente
+			</button>
+		</div>
+	{:else}
+		<UserForm
+			mode="create"
+			bind:values
+			{orgaosOptions}
+			govbrLinkLocked={false}
+			hasCpf={false}
+			{saving}
+			errorMessage={formError}
+			cancelHref={listHref}
+			onSubmit={() => submit()}
+		/>
+	{/if}
+</section>
