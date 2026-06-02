@@ -338,6 +338,7 @@ def seed_data(app):
 
         backfill_orgao_tipo_ids()
         secretaria_tipo = OrgaoTipo.query.filter_by(nome="Secretaria").first()
+        nucleo_tipo = OrgaoTipo.query.filter_by(nome="Núcleo").first()
 
         db.session.commit()
 
@@ -368,6 +369,7 @@ def seed_data(app):
             "orgao_root_id": orgao_root.id,
             "orgao_child_id": orgao_secretaria.id,
             "orgao_tipo_secretaria_id": secretaria_tipo.id if secretaria_tipo else 2,
+            "orgao_tipo_nucleo_id": nucleo_tipo.id if nucleo_tipo else 11,
             "user_username": user.username,
             "user_password": TEST_PASSWORD,
             "admin_username": admin.username,
