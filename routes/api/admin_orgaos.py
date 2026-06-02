@@ -38,6 +38,7 @@ from ..admin_orgaos import (
     _normalize_tipo_form,
     _prepare_orgao_catalogs,
 )
+from ..admin_users import _list_orgaos_with_depth
 from ..blueprint import main_bp
 from ..orgao_tree import (
     compute_orgao_depth,
@@ -117,6 +118,28 @@ def api_admin_orgaos_tree() -> Response | tuple[Response, int]:
             **catalogs,
         }
     )
+
+
+@main_bp.route("/api/admin/orgaos/opcoes", methods=["GET"])
+@api_admin_required
+def api_admin_orgaos_opcoes() -> Response | tuple[Response, int]:
+    """Opções de órgãos (ativos, achatadas) para o select do form de usuário.
+
+    Reusa ``_list_orgaos_with_depth`` (``routes/admin_users.py`` — a mesma fonte
+    que o form Jinja de criação/edição de usuário consome via
+    ``orgaos_with_depth``): somente órgãos ativos, ordenados por
+    ``(depth, sigla)``, já achatados — o frontend não precisa mais achatar a
+    árvore de ``/api/admin/orgaos`` (``fetchOrgaoOptionsForUser``).
+
+    Returns:
+        Envelope ``{"ok": true, "data": [{"id", "sigla", "nome", "depth"}, ...]}``
+        com HTTP 200; 401 JSON sem sessão; 403 JSON para não-admin.
+    """
+    opcoes = [
+        {"id": orgao_id, "sigla": sigla, "nome": nome, "depth": depth}
+        for orgao_id, sigla, nome, depth in _list_orgaos_with_depth()
+    ]
+    return ok(opcoes)
 
 
 @main_bp.route("/api/admin/orgaos/<int:orgao_id>", methods=["GET"])
