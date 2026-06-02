@@ -281,6 +281,39 @@ def serialize_project_card(project: Any) -> dict[str, Any]:
     }
 
 
+def serialize_project_detail(project: Any) -> dict[str, Any]:
+    """Serializa um projeto para a tela de Detalhe (card + campos editáveis).
+
+    Reusa ``serialize_project_card`` (id/titulo/status/derivados read-only) e
+    soma os demais campos editáveis inline do projeto que NÃO estão no card —
+    ``observacao``, ``sei_process``, ``delivery_type``, ``abep_indicator``,
+    ``github_link``, ``documentation_link``, ``product_link`` e a seleção de
+    objetivo/resultado/indicadores. NUNCA expõe segredos.
+
+    Args:
+        project: Instância de ``Project``.
+
+    Returns:
+        ``dict`` JSON-safe com os campos do card mais os editáveis do detalhe.
+    """
+    card = serialize_project_card(project)
+    card.update(
+        {
+            "observacao": project.observacao,
+            "sei_process": project.sei_process,
+            "delivery_type": project.delivery_type,
+            "abep_indicator": project.abep_indicator,
+            "github_link": project.github_link,
+            "documentation_link": project.documentation_link,
+            "product_link": project.product_link,
+            "objetivo_id": project.objetivo_id,
+            "resultado_esperado_id": project.resultado_esperado_id,
+            "indicadores_ids": [ip.indicador_id for ip in project.indicadores],
+        }
+    )
+    return card
+
+
 def serialize_etapa_card(etapa: Any) -> dict[str, Any]:
     """Serializa uma etapa para a tela "Projetos Pendentes".
 
@@ -305,6 +338,47 @@ def serialize_etapa_card(etapa: Any) -> dict[str, Any]:
         "done": bool(etapa.done),
         "project_id": etapa.project_id,
         "entry_type": etapa.entry_type,
+    }
+
+
+def serialize_etapa_detail(
+    etapa: Any,
+    *,
+    task_total: int = 0,
+    task_done: int = 0,
+) -> dict[str, Any]:
+    """Serializa uma etapa para a tela de Detalhe do Projeto.
+
+    Diferente de ``serialize_etapa_card`` (tela "Projetos Pendentes"), inclui os
+    campos completos da etapa usados na seção de ETAPAS do detalhe — ``iniciada``
+    (além de ``done``), os ``comentarios`` e a contagem de tarefas por etapa
+    (SOMENTE LEITURA, entregue pelo backend; o cliente NÃO recalcula nem muta as
+    tarefas — isso fica para a Fase 5b). As datas viram ISO 8601 (ou ``None``).
+    NÃO expõe segredos.
+
+    Args:
+        etapa: Instância de ``Etapa``.
+        task_total: Total de tarefas não arquivadas vinculadas à etapa.
+        task_done: Tarefas finalizadas (subconjunto de ``task_total``).
+
+    Returns:
+        ``dict`` JSON-safe com os campos da etapa e ``task_count``
+        ``{total, done}`` (read-only).
+    """
+    return {
+        "id": etapa.id,
+        "descricao": etapa.descricao,
+        "data_inicio": _iso_or_none(etapa.data_inicio),
+        "data_fim": _iso_or_none(etapa.data_fim),
+        "responsavel": etapa.responsavel,
+        "ordem": etapa.ordem,
+        "iniciada": bool(etapa.iniciada),
+        "done": bool(etapa.done),
+        "comentarios": etapa.comentarios,
+        "project_id": etapa.project_id,
+        "entry_type": etapa.entry_type,
+        "is_google_meeting": etapa.entry_type == "google_meeting",
+        "task_count": {"total": int(task_total), "done": int(task_done)},
     }
 
 

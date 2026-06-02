@@ -34,12 +34,14 @@ from .negotiation import (  # noqa: F401
 from .serializers import (  # noqa: F401
     serialize_admin_user,
     serialize_etapa_card,
+    serialize_etapa_detail,
     serialize_orgao_form,
     serialize_orgao_node,
     serialize_orgao_option,
     serialize_orgao_tipo,
     serialize_pending_project_row,
     serialize_project_card,
+    serialize_project_detail,
     serialize_project_history_entry,
     serialize_task_card,
     serialize_template_detail,
@@ -53,6 +55,8 @@ from . import legacy  # noqa: F401,E402
 from . import session  # noqa: F401,E402
 from . import dashboard  # noqa: F401,E402
 from . import projects  # noqa: F401,E402
+from . import project_detail  # noqa: F401,E402
+from . import etapas  # noqa: F401,E402
 from . import tasks  # noqa: F401,E402
 from . import search  # noqa: F401,E402
 from . import admin_users  # noqa: F401,E402
@@ -68,8 +72,10 @@ __all__ = [
     "serialize_user",
     "serialize_admin_user",
     "serialize_project_card",
+    "serialize_project_detail",
     "serialize_task_card",
     "serialize_etapa_card",
+    "serialize_etapa_detail",
     "serialize_orgao_option",
     "serialize_orgao_node",
     "serialize_orgao_form",

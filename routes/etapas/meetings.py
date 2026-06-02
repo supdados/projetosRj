@@ -6,10 +6,10 @@ from models import (
     Project,
     ProjectStageMeeting,
     StageTemplate,
-    StageTemplateUsage,
     db,
 )
 from services.calendar_core import parse_event_form
+from services.etapas_import import import_template_stages
 from services.calendar_sync import sync_local_event_to_google
 from services.project_meetings import (
     MEETING_ENTRY_TYPE,
@@ -310,58 +310,18 @@ def import_model_to_project(project_id):
         return redirect(url_for("main.project_detail", project_id=project_id))
 
     try:
-        from datetime import datetime, timedelta
+        from datetime import datetime
 
         # Converter data de início
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-        current_date = start_date
 
-        # Calcular a próxima ordem disponível
-        ultima_etapa = (
-            db.session.query(Etapa)
-            .filter(Etapa.project_id == project.id)
-            .order_by(Etapa.ordem.desc())
-            .first()
-        )
-        ordem_inicial = (ultima_etapa.ordem + 1) if ultima_etapa else 0
-
-        # Criar etapas baseadas no modelo
-        etapas_criadas = 0
-        for index, item in enumerate(template.items):
-            # Calcular datas
-            data_inicio = current_date
-            data_fim = current_date + timedelta(days=item.duration_days - 1)
-
-            # Criar etapa
-            nova_etapa = Etapa(
-                descricao=item.name,
-                data_inicio=data_inicio,
-                data_fim=data_fim,
-                project_id=project.id,
-                ordem=ordem_inicial + index,
-                iniciada=False,
-                done=False,
-            )
-            db.session.add(nova_etapa)
-            etapas_criadas += 1
-
-            # Próxima etapa começa no dia seguinte ao fim desta
-            current_date = data_fim + timedelta(days=1)
-
-        # Registrar no histórico
-        log_project_action(
-            project_id=project.id,
-            action_type="import_model",
-            description=f'Importou {etapas_criadas} etapa(s) do modelo "{template.name}"',
-        )
-
-        usage = StageTemplateUsage(
-            template_id=template.id,
-            project_id=project.id,
+        etapas_criadas = import_template_stages(
+            project,
+            template,
+            start_date,
             created_by_id=g.user.id if g.user else None,
             source="post_import",
         )
-        db.session.add(usage)
 
         db.session.commit()
         flash(

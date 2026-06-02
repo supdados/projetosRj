@@ -11,12 +11,13 @@
 	 *   - busca/pendentes/+page.svelte (debounce + AbortController, filtros
 	 *     server-side, reconciliação dos filtros com o payload).
 	 *   - Links base-aware via `$app/paths` (links internos da SPA). O link
-	 *     de detalhe do projeto aponta para a rota Flask `/project/<id>`
-	 *     (caminho ABSOLUTO, fora do `base` da SPA — Detalhe NÃO é migrado).
+	 *     de detalhe do projeto aponta para a rota SPA `${base}/projetos/<id>`
+	 *     (Detalhe migrado na Fase 5a).
 	 *
 	 * Referência visual: templates/projects/list.html.
 	 */
 	import { onMount, onDestroy } from 'svelte';
+	import { base } from '$app/paths';
 	import { fetchProjects } from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
@@ -239,9 +240,9 @@
 		inFlight?.abort();
 	});
 
-	/** Detalhe do projeto: rota Flask (caminho absoluto, fora do base da SPA). */
+	/** Detalhe do projeto: rota SPA base-aware (Fase 5a migrada). */
 	function projectDetailHref(project: Project): string {
-		return `/project/${project.id}`;
+		return `${base}/projetos/${project.id}`;
 	}
 
 	/** Formata uma data ISO em pt-BR; vazio vira travessão. */
