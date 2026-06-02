@@ -13,8 +13,9 @@
 	 * habilitar/desabilitar a dropzone "Finalizada" — o servidor é autoritativo.
 	 *
 	 * Acessibilidade:
-	 *   - cada card tem um botão "Mover" que abre um menu de status alvo
-	 *     (alternativa de teclado ao drag-and-drop);
+	 *   - cada card é focável (`tabindex=0`) e responde a teclado (setas ←/→ para
+	 *     mover entre colunas, Home/End para os extremos) — alternativa ao DnD,
+	 *     sem texto redundante duplicado abaixo da coluna;
 	 *   - um região `aria-live="polite"` anuncia as movimentações e erros.
 	 */
 	import KanbanColumn from '$lib/components/KanbanColumn.svelte';
@@ -43,8 +44,6 @@
 	let overStatus = $state<TaskStatus | null>(null);
 	/** Mensagem para leitores de tela (movimentações/erros). */
 	let liveMessage = $state<string>('');
-	/** Card cujo menu de "mover por teclado" está aberto (id) ou null. */
-	let keyboardMenuFor = $state<number | null>(null);
 
 	const columns = $derived($store.columns);
 	const boardError = $derived($store.error);
@@ -77,7 +76,6 @@
 
 	function onCardDragStart(event: DragEvent, card: BoardCard, fromStatus: TaskStatus): void {
 		dragContext = { card, fromStatus };
-		keyboardMenuFor = null;
 		if (event.dataTransfer) {
 			event.dataTransfer.effectAllowed = 'move';
 			event.dataTransfer.setData('text/plain', String(card.id));
@@ -161,16 +159,74 @@
 			: $store.error || 'Não foi possível mover a tarefa.';
 	}
 
-	/** Alternativa de teclado: move o card para o fim da coluna alvo. */
-	async function moveByKeyboard(card: BoardCard, fromStatus: TaskStatus, toStatus: TaskStatus): Promise<void> {
-		keyboardMenuFor = null;
+	/**
+	 * Próximo status válido a partir de `fromStatus` na direção dada
+	 * (`+1` = direita/avançar, `-1` = esquerda/voltar), pulando alvos que
+	 * `canItemMoveToStatus` reprova (ex.: finalizar sem permissão). Retorna
+	 * `null` quando não há coluna válida naquela direção (extremo do board).
+	 */
+	function adjacentStatus(
+		card: BoardCard,
+		fromStatus: TaskStatus,
+		direction: 1 | -1
+	): TaskStatus | null {
+		const start = TASK_STATUS_ORDER.indexOf(fromStatus);
+		if (start === -1) return null;
+		for (let i = start + direction; i >= 0 && i < TASK_STATUS_ORDER.length; i += direction) {
+			const candidate = TASK_STATUS_ORDER[i];
+			if (canItemMoveToStatus(card, candidate, fromStatus)) return candidate;
+		}
+		return null;
+	}
+
+	/** Move o card para o fim da coluna alvo (alvo já validado pelo chamador). */
+	async function moveToColumnEnd(
+		card: BoardCard,
+		fromStatus: TaskStatus,
+		toStatus: TaskStatus
+	): Promise<void> {
 		if (fromStatus === toStatus) return;
 		const target = columns.find((c) => c.status === toStatus);
 		await commitMove(card, fromStatus, toStatus, target ? target.tasks.length : 0);
 	}
 
-	function toggleKeyboardMenu(cardId: number): void {
-		keyboardMenuFor = keyboardMenuFor === cardId ? null : cardId;
+	/**
+	 * Teclado no card focado (alternativa ao DnD): setas ←/→ movem para a coluna
+	 * anterior/seguinte válida; Home/End para a primeira/última coluna válida.
+	 * Quando não há alvo válido naquela direção, anuncia o motivo sem mover.
+	 */
+	async function onCardKeydown(
+		event: KeyboardEvent,
+		card: BoardCard,
+		fromStatus: TaskStatus
+	): Promise<void> {
+		let direction: 1 | -1;
+		if (event.key === 'ArrowRight' || event.key === 'End') direction = 1;
+		else if (event.key === 'ArrowLeft' || event.key === 'Home') direction = -1;
+		else return;
+
+		event.preventDefault();
+
+		if (event.key === 'Home' || event.key === 'End') {
+			const edge = direction === 1 ? TASK_STATUS_ORDER.length - 1 : 0;
+			const target = TASK_STATUS_ORDER[edge];
+			if (target !== fromStatus && canItemMoveToStatus(card, target, fromStatus)) {
+				await moveToColumnEnd(card, fromStatus, target);
+			} else {
+				liveMessage = 'Sem permissão para finalizar esta tarefa.';
+			}
+			return;
+		}
+
+		const next = adjacentStatus(card, fromStatus, direction);
+		if (!next) {
+			liveMessage =
+				direction === 1
+					? 'Não é possível avançar esta tarefa.'
+					: 'Esta tarefa já está na primeira coluna.';
+			return;
+		}
+		await moveToColumnEnd(card, fromStatus, next);
 	}
 </script>
 
@@ -204,45 +260,8 @@
 						{onZoneDragOver}
 						{onZoneDragLeave}
 						{onZoneDrop}
+						{onCardKeydown}
 					/>
-
-					<!-- Alternativa acessível ao DnD (teclado/clique): um controle por
-					     card que abre um menu de status alvo. canItemMoveToStatus
-					     desabilita alvos inválidos, espelhando a regra do drop. -->
-					{#each column.tasks as card (card.id)}
-						<div class="relative px-2">
-							<button
-								type="button"
-								onclick={() => toggleKeyboardMenu(card.id)}
-								aria-haspopup="menu"
-								aria-expanded={keyboardMenuFor === card.id}
-								class="w-full rounded-sm border border-border-subtle bg-surface px-2 py-1 text-left text-xs text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-							>
-								Mover: {card.descricao}
-							</button>
-							{#if keyboardMenuFor === card.id}
-								<div
-									class="absolute left-2 right-2 top-full z-10 mt-1 flex flex-col gap-1 rounded-md border border-border-subtle bg-surface p-2 shadow-md"
-									role="menu"
-									aria-label={`Mover "${card.descricao}" para`}
-								>
-									<p class="px-1 text-xs font-semibold text-text-muted">Mover para</p>
-									{#each TASK_STATUS_ORDER as target (target)}
-										{@const allowed = canItemMoveToStatus(card, target, status)}
-										<button
-											type="button"
-											role="menuitem"
-											disabled={target === status || !allowed}
-											onclick={() => moveByKeyboard(card, status, target)}
-											class="rounded-sm px-2 py-1 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
-										>
-											{STATUS_LABELS[target]}
-										</button>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					{/each}
 				</div>
 			{/if}
 		{/each}

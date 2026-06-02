@@ -28,6 +28,8 @@
 		onZoneDragOver?: (event: DragEvent, status: TaskStatus) => void;
 		onZoneDragLeave?: (event: DragEvent, status: TaskStatus) => void;
 		onZoneDrop?: (event: DragEvent, status: TaskStatus) => void;
+		/** Teclado no card focado: mover entre colunas (alternativa ao DnD). */
+		onCardKeydown?: (event: KeyboardEvent, card: BoardCard, status: TaskStatus) => void;
 	}
 
 	let {
@@ -40,7 +42,8 @@
 		onZoneDragEnter,
 		onZoneDragOver,
 		onZoneDragLeave,
-		onZoneDrop
+		onZoneDrop,
+		onCardKeydown
 	}: Props = $props();
 
 	const count = $derived(column.tasks.length);
@@ -76,13 +79,17 @@
 		ondragleave={(event) => onZoneDragLeave?.(event, column.status)}
 		ondrop={(event) => onZoneDrop?.(event, column.status)}
 	>
-		{#each column.tasks as card (card.id)}
+		{#each column.tasks as card, index (card.id)}
 			<li>
 				<KanbanCard
 					{card}
 					dragging={draggingId === card.id}
+					columnLabel={column.label}
+					position={index + 1}
+					setSize={count}
 					ondragstart={(event) => onCardDragStart?.(event, card, column.status)}
 					ondragend={(event) => onCardDragEnd?.(event)}
+					onkeydown={(event) => onCardKeydown?.(event, card, column.status)}
 				/>
 			</li>
 		{:else}
