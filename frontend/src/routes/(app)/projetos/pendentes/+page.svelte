@@ -43,6 +43,7 @@
 	// Filtros controlados pela UI; a busca acontece server-side.
 	let periodo = $state<PendingPeriodo>('atrasados');
 	let responsavel = $state<string>('');
+	let orgao = $state<number | null>(null);
 	let page = $state<number>(1);
 
 	let inFlight: AbortController | null = null;
@@ -54,7 +55,7 @@
 		const controller = new AbortController();
 		inFlight = controller;
 
-		const filters: PendingFilters = { periodo, responsavel, page };
+		const filters: PendingFilters = { periodo, responsavel, orgao, page };
 		try {
 			const next = await fetchPendentes(filters, controller.signal);
 			if (controller.signal.aborted) return;
@@ -62,6 +63,7 @@
 			// Reconcilia os filtros com o que o backend efetivamente aplicou.
 			periodo = next.filtro_periodo;
 			responsavel = next.selected_responsavel;
+			orgao = next.selected_orgao;
 			page = next.pagination.page;
 			loadState = 'ready';
 		} catch (err) {
@@ -86,9 +88,17 @@
 		void load();
 	}
 
+	function onOrgaoChange(event: Event): void {
+		const raw = (event.currentTarget as HTMLSelectElement).value;
+		orgao = raw === '' ? null : Number(raw);
+		page = 1;
+		void load();
+	}
+
 	function clearFilters(): void {
 		periodo = 'atrasados';
 		responsavel = '';
+		orgao = null;
 		page = 1;
 		void load();
 	}
@@ -105,7 +115,14 @@
 
 	const summary = $derived(data?.summary_counts ?? null);
 	const pagination = $derived(data?.pagination ?? null);
-	const hasActiveFilters = $derived(periodo !== 'atrasados' || responsavel !== '');
+	const hasActiveFilters = $derived(
+		periodo !== 'atrasados' || responsavel !== '' || orgao !== null
+	);
+	const selectedOrgaoLabel = $derived(
+		orgao === null
+			? ''
+			: (data?.orgaos_options.find((o) => o.value === String(orgao))?.label ?? '')
+	);
 </script>
 
 <svelte:head>
@@ -130,6 +147,9 @@
 			Janela ativa: <strong class="font-semibold text-text-primary">{PERIOD_LABEL[periodo]}</strong>
 			{#if responsavel}
 				· Responsável: <strong class="font-semibold text-text-primary">{responsavel}</strong>
+			{/if}
+			{#if selectedOrgaoLabel}
+				· Órgão: <strong class="font-semibold text-text-primary">{selectedOrgaoLabel}</strong>
 			{/if}
 		</p>
 	</header>
@@ -174,6 +194,29 @@
 				{#if data}
 					{#each data.responsaveis_options as nome (nome)}
 						<option value={nome}>{nome}</option>
+					{/each}
+				{/if}
+			</select>
+		</div>
+
+		<div class="flex min-w-[12rem] flex-col gap-1">
+			<label
+				for="orgaoFilter"
+				class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+			>
+				Órgão
+			</label>
+			<select
+				id="orgaoFilter"
+				value={orgao === null ? '' : String(orgao)}
+				onchange={onOrgaoChange}
+				disabled={!data || data.orgaos_options.length === 0}
+				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+			>
+				<option value="">Todos</option>
+				{#if data}
+					{#each data.orgaos_options as orgaoOption (orgaoOption.value)}
+						<option value={orgaoOption.value}>{orgaoOption.label}</option>
 					{/each}
 				{/if}
 			</select>

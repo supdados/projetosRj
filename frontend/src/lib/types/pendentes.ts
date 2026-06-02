@@ -74,6 +74,23 @@ export interface PendingSummaryCounts {
 	sem_data: number;
 }
 
+/**
+ * Opção de órgão para o `<select>` de filtro (serialize_orgao_option).
+ * Representa um nó da subárvore de órgãos visível ao usuário. O `value` é o
+ * id do órgão como string; `label` cai para `sigla || nome`.
+ */
+export interface OrgaoOption {
+	value: string;
+	label: string;
+	sigla: string | null;
+	nome: string;
+	tipo: string | null;
+	pai_id: number | null;
+	is_user_orgao: boolean;
+	is_user_ancestor: boolean;
+	is_inactive: boolean;
+}
+
 /** Metadados de paginação da listagem (`pagination`). */
 export interface PendingPagination {
 	page: number;
@@ -89,6 +106,11 @@ export interface PendingData {
 	selected_responsavel: string;
 	selected_orgao: number | null;
 	responsaveis_options: string[];
+	/**
+	 * Subárvore de órgãos visível ao usuário (reuso de `get_user_orgao_options`),
+	 * para popular o `<select>` de filtro de órgão.
+	 */
+	orgaos_options: OrgaoOption[];
 	/** Mapa `etapaId` (string) -> bucket de urgência. */
 	etapa_bucket_map: Record<string, EtapaBucket>;
 	/** Mapa `etapaId` (string) -> progresso de tarefas. */

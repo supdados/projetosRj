@@ -23,6 +23,7 @@ from models import (
     UserCalendarConnection,
     db,
 )
+from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from services.calendar_sync import hydrate_google_connection_identity
 from services.google_calendar import is_google_calendar_enabled
 from services.calendar_core import format_input_datetime
@@ -32,6 +33,7 @@ from routes.blueprint import main_bp
 from routes.decorators import login_required
 from routes.orgao_scope import (
     expand_orgao_filter_ids,
+    get_user_orgao_options,
     get_user_orgao_subtree_ids,
     redirect_to_current_route_without_orgao,
     sanitize_orgao_filter_for_current_user,
@@ -54,33 +56,48 @@ def _safe_csv_text(value):
     return text
 
 
-@main_bp.route("/projects")
-@login_required
-def list_projects():
-    selected_priority = request.args.get("prioridade")
-    selected_status = request.args.get("status")
-    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
-        request.args.get("orgao")
-    )
-    selected_atraso = request.args.get("atraso")
-    selected_special_project = request.args.get("special_project")  # Novo filtro
-    selected_delivery_type = request.args.get("delivery_type")  # Novo filtro
-    selected_abep_indicator = request.args.get("abep_indicator")  # Novo filtro
-    selected_objetivo = request.args.get("objetivo")  # Novo filtro
-    search_query = request.args.get("search", "").strip()  # Busca
+def build_projects_list_context(
+    *,
+    selected_priority=None,
+    selected_status=None,
+    selected_orgao_id=None,
+    selected_atraso=None,
+    selected_special_project=None,
+    selected_delivery_type=None,
+    selected_abep_indicator=None,
+    selected_objetivo=None,
+    search_query="",
+    page=1,
+):
+    """Monta os dados da Lista de Projetos, respeitando o escopo de órgão.
 
-    # Paginação
-    page = request.args.get("page", 1, type=int)
+    Centraliza as queries/filtros/paginação que a rota Jinja ``/projects``
+    (``list_projects``) usa, para que a rota Jinja e o endpoint JSON da SPA
+    (``GET /api/projetos``) compartilhem a MESMA fonte de verdade. O escopo de
+    órgão é server-side (não-admin restrito à subárvore). O chamador é
+    responsável por sanitizar o filtro de órgão via
+    ``sanitize_orgao_filter_for_current_user`` antes de passar
+    ``selected_orgao_id``.
+
+    Args:
+        selected_priority: Filtro de prioridade (ou ``None``/"").
+        selected_status: Filtro de status; o chamador define o default "Vigente"
+            (mantido aqui apenas como filtro, sem reescrever o default).
+        selected_orgao_id: ID de órgão já validado para o usuário (ou ``None``).
+        selected_atraso: "atrasado" | "no_prazo" | "" (filtro aplicado em Python).
+        selected_special_project: "ABEP" | "TCE" | "" .
+        selected_delivery_type: Tipo de entrega (ou "").
+        selected_abep_indicator: Indicador ABEP (normalizado internamente).
+        selected_objetivo: ID de objetivo como string (ou "").
+        search_query: Texto de busca (título/órgão/indicador/ID).
+        page: Página solicitada (1-based) da lista paginada.
+
+    Returns:
+        ``dict`` com a lista paginada (``projects``), os filtros
+        aplicados/selecionados, as opções de filtro (incluindo ``orgaos_options``
+        e ``ABEP_INDICADORES_OPTIONS``) e os metadados de paginação.
+    """
     per_page = 40
-
-    # Se nenhum status for especificado na URL, define 'Vigente' como padrão.
-    # A verificação `is None` é importante para permitir que o usuário selecione
-    # "Todos os status", que envia uma string vazia ("").
-    if selected_status is None:
-        selected_status = "Vigente"
-
-    if invalid_orgao_filter:
-        return redirect_to_current_route_without_orgao()
 
     query = Project.query
 
@@ -217,29 +234,101 @@ def list_projects():
     if selected_orgao_id:
         has_active_filters = True
 
+    # Subárvore de órgãos visível ao usuário (escopo server-side) para popular o
+    # <select> de filtro de órgão na SPA. O template Jinja não usa esta chave (a
+    # topnav já injeta a árvore via context processor); fica disponível para o
+    # endpoint JSON sem alterar o comportamento renderizado.
+    orgaos_options = get_user_orgao_options(g.user)
+
+    return {
+        "projects": projects_paginated,
+        "page": page,
+        "total_pages": total_pages,
+        "total_projects": total_projects,
+        "per_page": per_page,
+        "search_query": search_query,
+        "selected_priority": selected_priority,
+        "selected_status": selected_status,
+        "selected_atraso": selected_atraso,
+        "selected_special_project": selected_special_project,
+        "selected_delivery_type": selected_delivery_type,
+        "selected_abep_indicator": selected_abep_indicator,
+        "selected_objetivo": selected_objetivo,
+        "selected_orgao": selected_orgao_id,
+        "priorities": priorities_options,
+        "statuses": statuses_options,
+        "atrasos_options": atrasos_options,
+        "objetivos": objetivos,
+        "orgaos_options": orgaos_options,
+        "special_projects_options": special_projects_options,
+        "delivery_types_options": delivery_types_options,
+        "abep_indicadores_options": ABEP_INDICADORES_OPTIONS,
+        "has_active_filters": has_active_filters,
+        "has_advanced_filters_active": has_advanced_filters_active,
+    }
+
+
+@main_bp.route("/projects")
+@login_required
+def list_projects():
+    """Renderiza a Lista de Projetos (Jinja).
+
+    Fonte de dados: ``build_projects_list_context``. Mantém o path ``/projects`` e
+    o comportamento (default de status "Vigente" + redirect 302 em filtro de
+    órgão inválido). O template recebe o mesmo conjunto de variáveis de antes
+    (``orgaos_options``/``abep_indicadores_options`` ficam disponíveis no contexto
+    mas não alteram o markup renderizado).
+    """
+    selected_status = request.args.get("status")
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+        request.args.get("orgao")
+    )
+
+    # Se nenhum status for especificado na URL, define 'Vigente' como padrão.
+    # A verificação `is None` é importante para permitir que o usuário selecione
+    # "Todos os status", que envia uma string vazia ("").
+    if selected_status is None:
+        selected_status = "Vigente"
+
+    if invalid_orgao_filter:
+        return redirect_to_current_route_without_orgao()
+
+    context = build_projects_list_context(
+        selected_priority=request.args.get("prioridade"),
+        selected_status=selected_status,
+        selected_orgao_id=selected_orgao_id,
+        selected_atraso=request.args.get("atraso"),
+        selected_special_project=request.args.get("special_project"),
+        selected_delivery_type=request.args.get("delivery_type"),
+        selected_abep_indicator=request.args.get("abep_indicator"),
+        selected_objetivo=request.args.get("objetivo"),
+        search_query=request.args.get("search", "").strip(),
+        page=request.args.get("page", 1, type=int),
+    )
+
     return render_template(
         "projects/list.html",
-        projects=projects_paginated,
-        page=page,
-        total_pages=total_pages,
-        total_projects=total_projects,
-        search_query=search_query,
-        selected_priority=selected_priority,
-        selected_status=selected_status,
-        selected_atraso=selected_atraso,
-        selected_special_project=selected_special_project,
-        selected_delivery_type=selected_delivery_type,
-        selected_abep_indicator=selected_abep_indicator,
-        selected_objetivo=selected_objetivo,
-        selected_orgao=selected_orgao_id,
-        priorities=priorities_options,
-        statuses=statuses_options,
-        atrasos_options=atrasos_options,
-        objetivos=objetivos,
-        special_projects_options=special_projects_options,
-        delivery_types_options=delivery_types_options,
-        has_active_filters=has_active_filters,
-        has_advanced_filters_active=has_advanced_filters_active,
+        projects=context["projects"],
+        page=context["page"],
+        total_pages=context["total_pages"],
+        total_projects=context["total_projects"],
+        search_query=context["search_query"],
+        selected_priority=context["selected_priority"],
+        selected_status=context["selected_status"],
+        selected_atraso=context["selected_atraso"],
+        selected_special_project=context["selected_special_project"],
+        selected_delivery_type=context["selected_delivery_type"],
+        selected_abep_indicator=context["selected_abep_indicator"],
+        selected_objetivo=context["selected_objetivo"],
+        selected_orgao=context["selected_orgao"],
+        priorities=context["priorities"],
+        statuses=context["statuses"],
+        atrasos_options=context["atrasos_options"],
+        objetivos=context["objetivos"],
+        special_projects_options=context["special_projects_options"],
+        delivery_types_options=context["delivery_types_options"],
+        has_active_filters=context["has_active_filters"],
+        has_advanced_filters_active=context["has_advanced_filters_active"],
     )
 
 
@@ -339,10 +428,16 @@ def build_projetos_pendentes_context(
 
     objetivos, _, _ = get_goal_catalog_context()
 
+    # Subárvore de órgãos visível ao usuário (escopo server-side) para popular o
+    # <select> de filtro de órgão na SPA. A árvore é a mesma usada pela topnav;
+    # aqui só repassamos os nós (a serialização em opções fica no endpoint JSON).
+    orgaos_options = get_user_orgao_options(g.user)
+
     if not project_ids:
         return {
             "projetos_com_etapas": [],
             "objetivos": objetivos,
+            "orgaos_options": orgaos_options,
             "selected_orgao": selected_orgao_id,
             "filtro_periodo": filtro_periodo,
             "selected_responsavel": selected_responsavel,
@@ -566,6 +661,7 @@ def build_projetos_pendentes_context(
     return {
         "projetos_com_etapas": projetos_pendentes_paginated,
         "objetivos": objetivos,
+        "orgaos_options": orgaos_options,
         "selected_orgao": selected_orgao_id,
         "filtro_periodo": filtro_periodo,
         "selected_responsavel": selected_responsavel,

@@ -33,6 +33,7 @@ from .negotiation import (  # noqa: F401
 )
 from .serializers import (  # noqa: F401
     serialize_etapa_card,
+    serialize_orgao_option,
     serialize_pending_project_row,
     serialize_project_card,
     serialize_project_history_entry,
@@ -45,6 +46,7 @@ from . import legacy  # noqa: F401,E402
 from . import session  # noqa: F401,E402
 from . import dashboard  # noqa: F401,E402
 from . import projects  # noqa: F401,E402
+from . import tasks  # noqa: F401,E402
 from . import search  # noqa: F401,E402
 
 __all__ = [
@@ -57,6 +59,7 @@ __all__ = [
     "serialize_project_card",
     "serialize_task_card",
     "serialize_etapa_card",
+    "serialize_orgao_option",
     "serialize_pending_project_row",
     "serialize_project_history_entry",
 ]

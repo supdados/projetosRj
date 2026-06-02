@@ -232,6 +232,25 @@ def get_visible_orgao_tree(user) -> list[dict]:
     ]
 
 
+def get_user_orgao_options(user) -> list[dict]:
+    """Retorna a subárvore de órgãos visível ao usuário para popular um seletor.
+
+    Reusa ``get_visible_orgao_tree`` (escopo server-side: admin vê tudo ativo;
+    não-admin vê ancestrais + órgão + descendentes do vínculo). NÃO reimplementa
+    a lógica de escopo — apenas repassa a árvore visível para que os endpoints
+    JSON (``/api/projetos``, ``/api/tarefas``, ``/api/projetos-pendentes``) a
+    serializem em opções de ``<select>``.
+
+    Args:
+        user: Instância de ``User`` (ou ``None``).
+
+    Returns:
+        Lista de nós ``{id, sigla, nome, tipo, pai_id, is_user_orgao,
+        is_user_ancestor, is_inactive}``, vazia quando não há vínculos.
+    """
+    return get_visible_orgao_tree(user)
+
+
 def user_can_access_project(user, project) -> bool:
     """Retorna True se o usuario pode acessar o projeto via subtree de orgao.
 

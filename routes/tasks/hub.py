@@ -228,6 +228,69 @@ def _build_task_hub_project_options(include_archived=False, orgao_filter_id=None
     return options
 
 
+def build_task_hub_context(
+    *,
+    project_filter="",
+    prioridade_filter="",
+    tipo_filter="",
+    status_filter="",
+    responsavel_filter="",
+    selected_orgao_id=None,
+    include_archived=False,
+):
+    """Monta os dados do Hub de Tarefas em modo lista (sem kanban).
+
+    Centraliza a montagem das tarefas agrupadas por projeto e das opções de
+    projeto que ``_render_task_hub`` produz, reusando os MESMOS helpers de query
+    e agrupamento (``_build_visible_tasks_query`` /
+    ``_group_hub_tasks_by_project`` / ``_build_task_hub_project_options``), para
+    que a rota Jinja ``/tarefas`` e o endpoint JSON da SPA (``GET /api/tarefas``)
+    compartilhem a fonte de verdade. O escopo de órgão é server-side; o chamador
+    sanitiza o filtro de órgão. Foca no modo lista — NÃO calcula as URLs/labels
+    de navegação específicas do template (paginação de arquivadas, links de
+    alternância), que continuam em ``_render_task_hub``.
+
+    Args:
+        project_filter: ID do projeto como string, "sem_projeto" ou "" (todos).
+        prioridade_filter: Filtro de prioridade (ou "").
+        tipo_filter: Filtro de tipo de pedido (ou "").
+        status_filter: Filtro de status da tarefa (ou "").
+        responsavel_filter: Filtro de responsável (substring, normalizado).
+        selected_orgao_id: ID de órgão já validado para o usuário (ou ``None``).
+        include_archived: Quando ``True``, lista tarefas arquivadas.
+
+    Returns:
+        ``dict`` com ``groups`` (tarefas agrupadas por projeto e subagrupadas por
+        etapa), ``project_options``, os filtros selecionados e ``total_items``.
+    """
+    tasks = _build_visible_tasks_query(
+        include_archived=include_archived,
+        project_filter=project_filter,
+        prioridade_filter=prioridade_filter,
+        tipo_filter=tipo_filter,
+        status_filter=status_filter,
+        responsavel_filter=responsavel_filter,
+        orgao_filter_id=selected_orgao_id,
+    ).all()
+    groups = _group_hub_tasks_by_project(tasks)
+    project_options = _build_task_hub_project_options(
+        include_archived=include_archived,
+        orgao_filter_id=selected_orgao_id,
+    )
+    return {
+        "groups": groups,
+        "project_options": project_options,
+        "selected_orgao": selected_orgao_id,
+        "selected_project": project_filter,
+        "selected_prioridade": prioridade_filter,
+        "selected_tipo": tipo_filter,
+        "selected_status": status_filter,
+        "selected_responsavel": responsavel_filter,
+        "include_archived": include_archived,
+        "total_items": len(tasks),
+    }
+
+
 def _render_task_hub(
     locked_project=None, template_name="tasks/hub.html", include_archived=False
 ):

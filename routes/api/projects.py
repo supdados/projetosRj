@@ -30,11 +30,13 @@ from ..orgao_scope import (
 )
 from ..projects.views import (
     build_project_history_context,
+    build_projects_list_context,
     build_projetos_pendentes_context,
 )
 from .envelope import fail, ok
 from .negotiation import api_login_required
 from .serializers import (
+    serialize_orgao_option,
     serialize_pending_project_row,
     serialize_project_card,
     serialize_project_history_entry,
@@ -65,6 +67,9 @@ def _serialize_pending_context(context: dict[str, Any]) -> dict[str, Any]:
         "selected_responsavel": context["selected_responsavel"],
         "selected_orgao": context["selected_orgao"],
         "responsaveis_options": context["responsaveis_options"],
+        "orgaos_options": [
+            serialize_orgao_option(node) for node in context["orgaos_options"]
+        ],
         "etapa_bucket_map": {
             str(etapa_id): bucket
             for etapa_id, bucket in context["etapa_bucket_map"].items()
@@ -116,6 +121,107 @@ def api_projetos_pendentes() -> Response | tuple[Response, int]:
         pending_page=request.args.get("page", 1, type=int),
     )
     return ok(_serialize_pending_context(context))
+
+
+def _serialize_projects_list_context(context: dict[str, Any]) -> dict[str, Any]:
+    """Converte o contexto da Lista de Projetos em payload JSON-safe.
+
+    Serializa cada projeto via ``serialize_project_card`` e repassa os filtros
+    selecionados, as opções de filtro (incluindo ``orgaos_options`` e os
+    indicadores ABEP) e a paginação, preservando a fonte de verdade de
+    ``build_projects_list_context`` (sem recalcular nada no cliente).
+
+    Args:
+        context: Saída de ``build_projects_list_context``.
+
+    Returns:
+        ``dict`` JSON-safe com ``projetos`` serializados, ``filters``
+        selecionados, ``options`` de filtro e ``pagination``.
+    """
+    return {
+        "projetos": [
+            serialize_project_card(project) for project in context["projects"]
+        ],
+        "filters": {
+            "status": context["selected_status"],
+            "prioridade": context["selected_priority"],
+            "atraso": context["selected_atraso"],
+            "special_project": context["selected_special_project"],
+            "delivery_type": context["selected_delivery_type"],
+            "abep_indicator": context["selected_abep_indicator"],
+            "objetivo": context["selected_objetivo"],
+            "q": context["search_query"],
+            "selected_orgao": context["selected_orgao"],
+        },
+        "options": {
+            "special_projects_options": context["special_projects_options"],
+            "delivery_types_options": context["delivery_types_options"],
+            "abep_indicadores_options": context["abep_indicadores_options"],
+            "priorities": context["priorities"],
+            "statuses": context["statuses"],
+            "atrasos_options": [
+                {"value": value, "label": label}
+                for value, label in context["atrasos_options"]
+            ],
+            "orgaos_options": [
+                serialize_orgao_option(node) for node in context["orgaos_options"]
+            ],
+        },
+        "pagination": {
+            "page": context["page"],
+            "per_page": context["per_page"],
+            "total": context["total_projects"],
+            "total_pages": context["total_pages"],
+        },
+    }
+
+
+@main_bp.route("/api/projetos", methods=["GET"])
+@api_login_required
+def api_projetos() -> Response | tuple[Response, int]:
+    """Retorna a Lista de Projetos no envelope canônico para a SPA.
+
+    Reaproveita ``build_projects_list_context`` (a mesma fonte usada pela rota
+    Jinja ``/projects``) e respeita o escopo de órgão server-side. O filtro
+    ``?orgao=`` é sanitizado para o usuário corrente; um valor inválido (fora do
+    escopo) resulta em 422 JSON (``validation``) em vez do redirect 302 do fluxo
+    Jinja. Os parâmetros ``?status=`` (default "Vigente"), ``?prioridade=``,
+    ``?atraso=``, ``?special_project=``, ``?delivery_type=``,
+    ``?abep_indicator=``, ``?objetivo=``, ``?q=`` (busca) e ``?page=`` espelham
+    os filtros da tela Jinja (``?q`` é o alias JSON de ``?search``).
+
+    Returns:
+        Envelope ``{"ok": true, "data": {...}}`` com HTTP 200; ou
+        ``fail(..., 422, "validation")`` quando o filtro de órgão é inválido.
+        ``api_login_required`` devolve 401 JSON quando não há sessão.
+    """
+    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
+        request.args.get("orgao")
+    )
+    if invalid_orgao_filter:
+        return fail(
+            "Filtro de órgão inválido para o usuário.",
+            status=422,
+            code="validation",
+        )
+
+    selected_status = request.args.get("status")
+    if selected_status is None:
+        selected_status = "Vigente"
+
+    context = build_projects_list_context(
+        selected_priority=request.args.get("prioridade"),
+        selected_status=selected_status,
+        selected_orgao_id=selected_orgao_id,
+        selected_atraso=request.args.get("atraso"),
+        selected_special_project=request.args.get("special_project"),
+        selected_delivery_type=request.args.get("delivery_type"),
+        selected_abep_indicator=request.args.get("abep_indicator"),
+        selected_objetivo=request.args.get("objetivo"),
+        search_query=(request.args.get("q") or request.args.get("search") or "").strip(),
+        page=request.args.get("page", 1, type=int),
+    )
+    return ok(_serialize_projects_list_context(context))
 
 
 def _serialize_history_context(context: dict[str, Any]) -> dict[str, Any]:

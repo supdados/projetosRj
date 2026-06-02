@@ -28,6 +28,41 @@ def _orgao_ref_brief(orgao: Any) -> dict[str, Any]:
     return {"id": orgao.id, "sigla": orgao.sigla, "nome": orgao.nome}
 
 
+def serialize_orgao_option(node: dict[str, Any]) -> dict[str, Any]:
+    """Serializa um nó da árvore de órgãos visível como opção de ``<select>``.
+
+    Recebe um nó já produzido por ``get_visible_orgao_tree`` (escopo server-side
+    do usuário) e devolve apenas os campos necessários para popular um seletor de
+    filtro de órgão na SPA — preservando ``pai_id`` para que o cliente possa, se
+    quiser, reconstruir a hierarquia (indentação). NÃO expõe segredos.
+
+    Args:
+        node: ``dict`` com ``id``/``sigla``/``nome``/``tipo``/``pai_id`` e as
+            flags ``is_user_orgao``/``is_user_ancestor``/``is_inactive``.
+
+    Returns:
+        ``dict`` JSON-safe ``{value, label, sigla, nome, tipo, pai_id,
+        is_user_orgao, is_user_ancestor, is_inactive}``.
+
+    Exemplo:
+        >>> serialize_orgao_option({"id": 3, "sigla": "SETD", "nome": "...",
+        ...     "tipo": "Secretaria", "pai_id": 1, "is_user_orgao": True,
+        ...     "is_user_ancestor": False, "is_inactive": False})["value"]
+        '3'
+    """
+    return {
+        "value": str(node["id"]),
+        "label": node.get("sigla") or node.get("nome") or str(node["id"]),
+        "sigla": node.get("sigla"),
+        "nome": node.get("nome"),
+        "tipo": node.get("tipo"),
+        "pai_id": node.get("pai_id"),
+        "is_user_orgao": bool(node.get("is_user_orgao")),
+        "is_user_ancestor": bool(node.get("is_user_ancestor")),
+        "is_inactive": bool(node.get("is_inactive")),
+    }
+
+
 def _resolve_auth_provider(user: Any) -> str:
     """Deriva o provedor de autenticação a partir do vínculo Gov.br.
 
