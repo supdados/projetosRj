@@ -63,6 +63,7 @@ from . import board  # noqa: F401,E402
 from . import task_drawer  # noqa: F401,E402
 from . import task_comments  # noqa: F401,E402
 from . import task_attachments  # noqa: F401,E402
+from . import calendars  # noqa: F401,E402
 from . import search  # noqa: F401,E402
 from . import admin_users  # noqa: F401,E402
 from . import admin_orgaos  # noqa: F401,E402

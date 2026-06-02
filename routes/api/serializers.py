@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from services.calendar_core import format_human_datetime, format_input_datetime
+
 
 def _orgao_ref_brief(orgao: Any) -> dict[str, Any]:
     """Serializa o vínculo mínimo de um órgão (id/sigla/nome).
@@ -706,3 +708,36 @@ def serialize_task_detail(
         }
     )
     return card
+
+
+def serialize_calendar_event(event: Any) -> dict[str, Any]:
+    """Serializa um ``CalendarEvent`` para o hub de calendário da SPA.
+
+    Espelha ``routes/calendars/helpers._event_json`` (datas em formato de input
+    + display, ``sync_status``/``source``/``meet_link``/``is_all_day``) e
+    ACRESCENTA ``sync_error`` (mensagem de erro de sincronização, quando houver),
+    necessário ao hub. Reusa ``format_human_datetime``/``format_input_datetime``
+    de ``services.calendar_core`` — a mesma fonte que ``helpers`` encapsula — sem
+    tocar ``helpers.py``. NÃO expõe tokens.
+
+    Args:
+        event: Instância de ``CalendarEvent``.
+
+    Returns:
+        ``dict`` JSON-safe com os campos do evento + ``sync_error``.
+    """
+    return {
+        "id": event.id,
+        "title": event.title,
+        "description": event.description or "",
+        "location": event.location or "",
+        "starts_at": format_input_datetime(event.starts_at),
+        "ends_at": format_input_datetime(event.ends_at),
+        "starts_at_display": format_human_datetime(event.starts_at),
+        "ends_at_display": format_human_datetime(event.ends_at),
+        "sync_status": event.sync_status,
+        "sync_error": event.sync_error or "",
+        "source": event.source,
+        "meet_link": event.meet_link or "",
+        "is_all_day": bool(event.is_all_day),
+    }

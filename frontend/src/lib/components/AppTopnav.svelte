@@ -26,6 +26,7 @@
 		{ label: 'Projetos', path: '/projetos' },
 		{ label: 'Pendentes', path: '/projetos/pendentes' },
 		{ label: 'Tarefas', path: '/tarefas' },
+		{ label: 'Calendarios', path: '/calendarios' },
 		{ label: 'Busca', path: '/busca' }
 	];
 
