@@ -27,6 +27,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
+	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import { flash } from '$lib/stores/flash';
 
 	type LoadState = 'loading' | 'ready' | 'error';
@@ -510,19 +511,7 @@
 	{#if loadState === 'loading'}
 		<p role="status" aria-live="polite" class="text-text-secondary">Carregando projetos…</p>
 	{:else if loadState === 'error'}
-		<div
-			role="alert"
-			class="flex flex-col items-start gap-3 rounded-lg border border-danger bg-surface px-5 py-4"
-		>
-			<p class="text-text-primary">{errorMessage}</p>
-			<button
-				type="button"
-				onclick={() => load()}
-				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				Tentar novamente
-			</button>
-		</div>
+		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if data}
 		<div role="status" aria-live="polite" class="sr-only">
 			{totalProjects} projeto{totalProjects === 1 ? '' : 's'} encontrado{totalProjects === 1

@@ -28,6 +28,7 @@
 		SearchResultsByType
 	} from '$lib/types/search';
 	import Badge from '$lib/components/Badge.svelte';
+	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 
 	/** Estados da busca: ocioso (termo curto), buscando, pronto ou erro. */
 	type SearchState = 'idle' | 'loading' | 'ready' | 'error';
@@ -182,19 +183,7 @@
 	{:else if searchState === 'loading'}
 		<p class="text-text-secondary">Buscando…</p>
 	{:else if searchState === 'error'}
-		<div
-			role="alert"
-			class="flex flex-col items-start gap-3 rounded-lg border border-danger bg-surface px-5 py-4"
-		>
-			<p class="text-text-primary">{errorMessage}</p>
-			<button
-				type="button"
-				onclick={retry}
-				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				Tentar novamente
-			</button>
-		</div>
+		<LoadErrorState message={errorMessage} onRetry={retry} />
 	{:else if data}
 		{#if data.counts.total === 0}
 			<p class="text-text-secondary">

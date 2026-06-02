@@ -24,6 +24,7 @@
 	import PendingProjectCard from '$lib/components/PendingProjectCard.svelte';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
+	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 
 	/** Chave de persistência do estado expandido (mesma semântica do legado). */
@@ -346,19 +347,7 @@
 	{#if loadState === 'loading'}
 		<p role="status" aria-live="polite" class="text-text-secondary">Carregando projetos…</p>
 	{:else if loadState === 'error'}
-		<div
-			role="alert"
-			class="flex flex-col items-start gap-3 rounded-lg border border-danger bg-surface px-5 py-4"
-		>
-			<p class="text-text-primary">{errorMessage}</p>
-			<button
-				type="button"
-				onclick={() => load()}
-				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				Tentar novamente
-			</button>
-		</div>
+		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if data}
 		{#if data.projetos.length === 0}
 			<div

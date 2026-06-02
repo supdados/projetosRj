@@ -23,6 +23,7 @@
 	import KanbanBoard from '$lib/components/KanbanBoard.svelte';
 	import KanbanComposer from '$lib/components/KanbanComposer.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
+	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import { createBoardStore } from '$lib/stores/board';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import type { BoardCard, BoardQuery } from '$lib/types/board';
@@ -532,19 +533,7 @@
 		{#if $board.status === 'loading' && !boardLoaded}
 			<p role="status" aria-live="polite" class="text-text-secondary">Carregando board…</p>
 		{:else if $board.status === 'error' && !boardLoaded}
-			<div
-				role="alert"
-				class="flex flex-col items-start gap-3 rounded-lg border border-danger bg-surface px-5 py-4"
-			>
-				<p class="text-text-primary">{$board.error}</p>
-				<button
-					type="button"
-					onclick={() => loadBoard()}
-					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					Tentar novamente
-				</button>
-			</div>
+			<LoadErrorState message={$board.error ?? ''} onRetry={() => loadBoard()} />
 		{:else}
 			<div aria-busy={$board.status === 'loading'}>
 				<KanbanBoard store={board}>
@@ -565,19 +554,7 @@
 	{:else if loadState === 'loading'}
 		<p role="status" aria-live="polite" class="text-text-secondary">Carregando tarefas…</p>
 	{:else if loadState === 'error'}
-		<div
-			role="alert"
-			class="flex flex-col items-start gap-3 rounded-lg border border-danger bg-surface px-5 py-4"
-		>
-			<p class="text-text-primary">{errorMessage}</p>
-			<button
-				type="button"
-				onclick={() => load()}
-				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				Tentar novamente
-			</button>
-		</div>
+		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if data}
 		{#if data.groups.length === 0}
 			<div
