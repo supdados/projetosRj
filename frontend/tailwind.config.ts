@@ -50,6 +50,9 @@ export default {
 				// Gradiente do topbar/brand do original (#1769a8). Util reutilizavel.
 				'topnav-gradient':
 					'linear-gradient(135deg, var(--ds-color-topnav-from) 0%, var(--ds-color-topnav-to) 100%)',
+				// Azul de marca dos botoes primarios: constante em light E dark.
+				'brand-gradient':
+					'linear-gradient(135deg, var(--ds-color-brand-from) 0%, var(--ds-color-brand-to) 100%)',
 				// Skeleton shimmer (90deg) — 10-skeleton.css:52.
 				'skeleton-shimmer':
 					'linear-gradient(90deg, var(--ds-color-skeleton-base) 0%, var(--ds-color-skeleton-highlight) 50%, var(--ds-color-skeleton-base) 100%)',

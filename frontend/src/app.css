@@ -60,6 +60,11 @@
 	--ds-color-topnav-from: #1769a8;
 	--ds-color-topnav-to: #1769a8;
 
+	/* Azul de marca dos BOTÕES primários: constante em light E dark (o topnav
+	   acima vira surface escuro no dark, mas o botão deve seguir azul). */
+	--ds-color-brand-from: #1769a8;
+	--ds-color-brand-to: #1769a8;
+
 	/* Skeleton shimmer (10-skeleton.css:52) */
 	--ds-color-skeleton-base: #eeeeee;
 	--ds-color-skeleton-highlight: #f5f5f5;
