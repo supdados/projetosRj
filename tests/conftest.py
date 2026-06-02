@@ -1,5 +1,6 @@
 import datetime
 import os
+import uuid
 
 import pytest
 from sqlalchemy.pool import NullPool
@@ -18,6 +19,7 @@ from models import (
     StageTemplate,
     StageTemplateItem,
     Task,
+    TaskAnexo,
     TaskItem,
     TaskItemComment,
     User,
@@ -26,6 +28,7 @@ from models import (
 )
 from catalogs.objectives import sync_goal_catalog_to_db
 from routes.orgao_tree import backfill_orgao_tipo_ids, ensure_default_orgao_tipos
+from routes.tasks.constants import _get_upload_folder
 
 TEST_PASSWORD = "senha123"
 
@@ -278,6 +281,30 @@ def seed_data(app):
         db.session.add_all([task, foreign_task, orphan_task])
         db.session.flush()
 
+        # Anexo REAL ligado à `orphan_task`: grava um PDF mínimo no disco com um
+        # stored_filename UUID conhecido. Os magic bytes "%PDF-1.4" casam a
+        # extensão (`_file_content_matches_extension`), permitindo que o smoke de
+        # download/delete exerça o caminho feliz 200. Fica em `orphan_task`
+        # (autor=`user`, sem projeto) — não em `task` — para preservar o
+        # invariante "task inicia sem anexos" exigido pelos testes de contrato em
+        # test_api_task_comments_attachments_contract.py. `user` é autor da
+        # orphan_task, então pode VER (`_can_view_task`) e EXCLUIR
+        # (`_can_manage_task_restricted_actions`). O arquivo é removido no
+        # finalizador da fixture (teardown abaixo) para repetibilidade (FIRST).
+        anexo_stored_filename = f"{uuid.uuid4()}.pdf"
+        anexo_file_path = os.path.join(_get_upload_folder(), anexo_stored_filename)
+        with open(anexo_file_path, "wb") as anexo_file:
+            anexo_file.write(b"%PDF-1.4\n%minimal seed attachment\n")
+        anexo = TaskAnexo(
+            task_id=orphan_task.id,
+            filename="doc.pdf",
+            stored_filename=anexo_stored_filename,
+            content_type="application/pdf",
+            uploaded_by_id=user.id,
+        )
+        db.session.add(anexo)
+        db.session.flush()
+
         calendar_event = CalendarEvent(
             user_id=user.id,
             title="Evento Seed",
@@ -342,7 +369,7 @@ def seed_data(app):
 
         db.session.commit()
 
-        return {
+        seeded = {
             "admin_id": admin.id,
             "user_id": user.id,
             "outsider_id": outsider.id,
@@ -355,6 +382,7 @@ def seed_data(app):
             "etapa_started_id": etapa_started.id,
             "foreign_etapa_id": foreign_etapa.id,
             "task_id": task.id,
+            "anexo_id": anexo.id,
             "foreign_task_id": foreign_task.id,
             "orphan_task_id": orphan_task.id,
             "calendar_event_id": calendar_event.id,
@@ -375,6 +403,15 @@ def seed_data(app):
             "admin_username": admin.username,
             "admin_password": TEST_PASSWORD,
         }
+
+    yield seeded
+
+    # Teardown do arquivo físico do anexo semeado (o smoke de delete pode tê-lo
+    # removido; ignoramos a ausência) para garantir repetibilidade.
+    try:
+        os.remove(anexo_file_path)
+    except OSError:
+        pass
 
 
 # Cada cliente autenticado cria seu PRÓPRIO test_client com cookie jar
