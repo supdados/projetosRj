@@ -12,8 +12,7 @@
  * Backend: routes/api/admin_templates.py (envelope ok/fail, api_admin_required).
  */
 
-import { get, post, ApiClientError } from './client';
-import type { ApiResult } from '$lib/types/api';
+import { get, getWithMeta, post } from './client';
 import type {
 	TemplateDetailResult,
 	TemplateListMeta,
@@ -44,42 +43,30 @@ interface TemplateListEnvelope {
 /**
  * Busca a lista de modelos + métricas + paginação.
  *
- * Faz um fetch local para preservar o `meta` do envelope (paginação e
- * `order`/`q` reconciliados pelo servidor), que `client.get` descartaria.
- * Espelha `client.ts`: `credentials: 'include'`, GET sem CSRF, e em 401 deixa
- * a navegação top-level por conta do próximo `post`/`get` compartilhado — aqui
- * apenas lançamos `ApiClientError` para a tela tratar.
- *
- * @throws {ApiClientError} quando o backend devolve `{ok:false}`.
+ * Usa `getWithMeta` do client (que preserva o `meta` do envelope — paginação e
+ * `order`/`q` reconciliados pelo servidor — e trata 401/CSRF como `get`/`post`),
+ * mantendo o retorno `{ templates, order_options, meta }` que a tela espera.
  */
 export async function fetchTemplateList(
 	query: TemplateListQuery = {},
 	signal?: AbortSignal
 ): Promise<TemplateListResult> {
-	const res = await fetch(`/api/admin/templates${buildListQuery(query)}`, {
-		method: 'GET',
-		credentials: 'include',
-		headers: { Accept: 'application/json' },
+	const { data, meta } = await getWithMeta<TemplateListEnvelope>(
+		`/api/admin/templates${buildListQuery(query)}`,
 		signal
-	});
-	const body = (await res.json()) as ApiResult<TemplateListEnvelope> & {
-		meta?: TemplateListMeta;
-	};
-	if (!body.ok) {
-		throw new ApiClientError(body.error.code, body.error.message, res.status);
-	}
-	const meta: TemplateListMeta = body.meta ?? {
+	);
+	const listMeta: TemplateListMeta = (meta as TemplateListMeta | undefined) ?? {
 		page: 1,
-		per_page: body.data.templates.length,
-		total: body.data.templates.length,
+		per_page: data.templates.length,
+		total: data.templates.length,
 		total_pages: 1,
 		order: (query.order ?? 'mais_usados') as TemplateOrder,
 		q: query.q ?? ''
 	};
 	return {
-		templates: body.data.templates,
-		order_options: body.data.order_options,
-		meta
+		templates: data.templates,
+		order_options: data.order_options,
+		meta: listMeta
 	};
 }
 
