@@ -20,9 +20,8 @@
  *     `postLegacyEventForm` abaixo, e nao `client.postForm`.
  */
 
-import { get, post } from './client';
+import { get, post, postFormRaw } from './client';
 import { ApiClientError } from './client';
-import type { ApiResult } from '$lib/types/api';
 import type {
 	CalendarEvent,
 	CalendarEventInput,
@@ -83,18 +82,6 @@ export function renewWatch(
 // CRUD de evento via rotas legadas (multipart/form-data + Accept JSON).
 // ---------------------------------------------------------------------------
 
-/** Caminho de login do Flask (rota imutavel). Navegacao top-level. */
-const LOGIN_PATH = '/login';
-
-/** Le o token CSRF da `<meta name="csrf-token">` injetada pelo Jinja. */
-function readCsrfToken(): string | null {
-	if (typeof document === 'undefined') return null;
-	const meta = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]');
-	const content = meta?.content?.trim() ?? '';
-	if (!content || content === '%CSRF_TOKEN%') return null;
-	return content;
-}
-
 /**
  * Monta o `FormData` a partir do input do formulario.
  *
@@ -126,10 +113,10 @@ interface LegacyEventResponse {
 /**
  * POST multipart para uma rota legada de evento, desempacotando `{ok,event}`.
  *
- * Mantem as mesmas convencoes de `client.ts` (cookie de sessao via
- * `credentials:'include'`, `X-CSRFToken` da meta, 401 -> navegacao top-level
- * para `/login`), mas le a chave `event` em vez do envelope `{ok,data}`,
- * porque essas rotas Jinja respondem `{ "ok": true, "event": _event_json }`.
+ * Reusa `postFormRaw` do `client.ts` (cookie de sessao, `X-CSRFToken` da meta
+ * com re-fetch de CSRF em falha, 401 -> navegacao top-level para `/login`),
+ * que devolve o JSON cru; aqui lemos a chave `event` em vez do envelope
+ * `{ok,data}`, porque essas rotas Jinja respondem `{ "ok": true, "event": ... }`.
  * Em falha estruturada lanca `ApiClientError`.
  */
 async function postLegacyEventForm(
@@ -137,35 +124,9 @@ async function postLegacyEventForm(
 	form: FormData,
 	signal?: AbortSignal
 ): Promise<CalendarEvent> {
-	const headers: Record<string, string> = { Accept: 'application/json' };
-	const token = readCsrfToken();
-	if (token) headers['X-CSRFToken'] = token;
-
-	const res = await fetch(path, {
-		method: 'POST',
-		credentials: 'include',
-		headers,
-		body: form,
-		signal
-	});
-
-	if (res.status === 401) {
-		if (typeof window !== 'undefined') window.location.assign(LOGIN_PATH);
-		throw new ApiClientError('unauthenticated', 'Sessao expirada.', 401);
-	}
-
-	const text = await res.text();
-	let parsed: LegacyEventResponse | ApiResult<unknown> | null = null;
-	if (text) {
-		try {
-			parsed = JSON.parse(text) as LegacyEventResponse | ApiResult<unknown>;
-		} catch {
-			parsed = null;
-		}
-	}
-
-	const legacy = (parsed ?? {}) as LegacyEventResponse;
-	if (res.ok && legacy.ok && legacy.event) {
+	const legacy: LegacyEventResponse =
+		(await postFormRaw<LegacyEventResponse>(path, form, signal)) ?? { ok: false };
+	if (legacy.ok && legacy.event) {
 		return legacy.event;
 	}
 
@@ -174,7 +135,7 @@ async function postLegacyEventForm(
 		legacy.error?.message ??
 		legacy.message ??
 		'Nao foi possivel concluir a operacao do evento.';
-	throw new ApiClientError(code, message, res.status);
+	throw new ApiClientError(code, message, 0);
 }
 
 /** Cria um evento (rota legada `POST /calendarios/eventos`). */
@@ -220,17 +181,10 @@ export function generateMeet(
 /**
  * Exclui um evento (rota legada `POST /calendarios/eventos/<id>/excluir`).
  *
- * A rota responde `{ "ok": true, "event": _event_json }` mesmo apos a remocao
- * (o objeto `event` ainda esta carregado na sessao); o chamador normalmente
- * ignora o retorno e recarrega o hub.
+ * A rota responde `{ "ok": true, "event": _event_json }` mesmo apos a remocao,
+ * mas o retorno e irrelevante para uma exclusao — o chamador ignora e recarrega
+ * o hub. Logo devolvemos `void`; falhas viram `ApiClientError`.
  */
-export function deleteEvent(
-	id: number,
-	signal?: AbortSignal
-): Promise<CalendarEvent> {
-	return postLegacyEventForm(
-		`/calendarios/eventos/${id}/excluir`,
-		new FormData(),
-		signal
-	);
+export async function deleteEvent(id: number, signal?: AbortSignal): Promise<void> {
+	await postLegacyEventForm(`/calendarios/eventos/${id}/excluir`, new FormData(), signal);
 }
