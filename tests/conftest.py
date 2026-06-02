@@ -377,25 +377,33 @@ def seed_data(app):
         }
 
 
+# Cada cliente autenticado cria seu PRÓPRIO test_client com cookie jar
+# independente. Compartilhar o `client` único fazia o 2º login sobrescrever a
+# sessão do 1º, mascarando os 403 esperados quando dois usuários distintos são
+# pedidos no mesmo teste (P1b — defeito de fixture, produção está correta).
 @pytest.fixture
-def client_admin(client, seed_data):
-    _login(client, seed_data["admin_id"])
-    return client
-
-
-@pytest.fixture
-def client_user(client, seed_data):
-    _login(client, seed_data["user_id"])
-    return client
-
-
-@pytest.fixture
-def client_outsider(client, seed_data):
-    _login(client, seed_data["outsider_id"])
-    return client
+def client_admin(app, seed_data):
+    c = app.test_client()
+    _login(c, seed_data["admin_id"])
+    return c
 
 
 @pytest.fixture
-def client_editable(client, seed_data):
-    _login(client, seed_data["editable_user_id"])
-    return client
+def client_user(app, seed_data):
+    c = app.test_client()
+    _login(c, seed_data["user_id"])
+    return c
+
+
+@pytest.fixture
+def client_outsider(app, seed_data):
+    c = app.test_client()
+    _login(c, seed_data["outsider_id"])
+    return c
+
+
+@pytest.fixture
+def client_editable(app, seed_data):
+    c = app.test_client()
+    _login(c, seed_data["editable_user_id"])
+    return c
