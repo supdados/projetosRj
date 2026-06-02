@@ -60,7 +60,7 @@ def test_task_item_attachment_alias_and_invalid_extension_are_handled(
     monkeypatch.setattr(task_helpers, "_get_upload_folder", lambda: str(tmp_path))
 
     alias_upload_response = client_user.post(
-        f"/tarefas/itens/{seed_data['task_item_id']}/anexos/add",
+        f"/tarefas/{seed_data['task_item_id']}/anexos/add",
         data={"file": (io.BytesIO(b"%PDF-1.4 conteudo"), "anexo.pdf")},
         content_type="multipart/form-data",
     )
@@ -72,7 +72,7 @@ def test_task_item_attachment_alias_and_invalid_extension_are_handled(
     assert alias_payload["anexo"]["content_type"] == "application/pdf"
 
     alias_list_response = client_user.get(
-        f"/tarefas/itens/{seed_data['task_item_id']}/anexos"
+        f"/tarefas/{seed_data['task_item_id']}/anexos"
     )
     assert alias_list_response.status_code == 200
     alias_list_payload = alias_list_response.get_json()

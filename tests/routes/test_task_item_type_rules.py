@@ -13,7 +13,7 @@ def test_update_tipo_rejects_implementacao_and_preserves_current_value(
         db.session.commit()
 
     response = client_user.post(
-        f"/tarefas/itens/{item_id}/update_tipo",
+        f"/tarefas/{item_id}/update_tipo",
         json={"tipo_pedido": "implementacao"},
     )
 
@@ -42,7 +42,7 @@ def test_edit_task_item_preserves_legacy_implementacao_when_submitted(
         status = item.status
 
     response = client_user.post(
-        f"/tarefas/itens/{item_id}/edit",
+        f"/tarefas/{item_id}/edit",
         data={
             "descricao": descricao,
             "status": status,
@@ -71,8 +71,11 @@ def test_add_task_item_with_implementacao_type_is_sanitized_to_empty(
     app, client_user, seed_data
 ):
     response = client_user.post(
-        f"/tarefas/{seed_data['task_id']}/itens/add",
+        "/tarefas/add",
         data={
+            # Rota canonica /tarefas/add nao tem anchor: precisa de 'project'
+            # explicito (a canonica nao usa default_project=anchor.project).
+            "project": str(seed_data["project_id"]),
             "descricao": "Novo item sem tipo legado",
             "status": "nao_iniciada",
             "responsavel": "Usuario Auditoria",

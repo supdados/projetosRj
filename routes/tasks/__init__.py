@@ -1,1 +1,1 @@
-from routes.tasks import views, crud, comments, attachments, legacy
+from routes.tasks import views, crud, comments, attachments

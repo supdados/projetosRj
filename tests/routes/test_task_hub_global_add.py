@@ -8,7 +8,7 @@ AJAX_HEADERS = {
 
 def test_task_hub_global_add_item_in_filtered_project(app, client_user, seed_data):
     response = client_user.post(
-        "/tarefas/itens/add",
+        "/tarefas/add",
         headers=AJAX_HEADERS,
         data={
             "project": str(seed_data["project_id"]),
@@ -39,7 +39,7 @@ def test_task_hub_global_add_item_without_filter_choosing_project(
     client_user, seed_data
 ):
     response = client_user.post(
-        "/tarefas/itens/add",
+        "/tarefas/add",
         headers=AJAX_HEADERS,
         data={
             "project": str(seed_data["project_id"]),
@@ -55,7 +55,7 @@ def test_task_hub_global_add_item_without_filter_choosing_project(
 
 def test_task_hub_global_add_item_in_sem_projeto_anchor(client_user, seed_data):
     response = client_user.post(
-        "/tarefas/itens/add",
+        "/tarefas/add",
         headers=AJAX_HEADERS,
         data={
             "project": "sem_projeto",
@@ -74,7 +74,7 @@ def test_task_hub_global_add_item_in_sem_projeto_anchor(client_user, seed_data):
 
 def test_task_hub_global_add_forbidden_for_outsider(client_outsider, seed_data):
     response = client_outsider.post(
-        "/tarefas/itens/add",
+        "/tarefas/add",
         headers=AJAX_HEADERS,
         data={
             "project": str(seed_data["project_id"]),

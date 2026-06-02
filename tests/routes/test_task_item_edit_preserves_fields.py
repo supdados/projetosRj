@@ -16,7 +16,7 @@ def test_edit_task_item_preserves_prioridade_and_tipo_when_fields_are_omitted(
         status = item.status
 
     response = client_user.post(
-        f"/tarefas/itens/{item_id}/edit",
+        f"/tarefas/{item_id}/edit",
         data={
             "descricao": descricao,
             "status": status,

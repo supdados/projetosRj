@@ -51,7 +51,7 @@ def test_update_task_tipo_canonical_allows_clearing_value(app, client_user, seed
         assert task.tipo_pedido is None
 
 
-def test_update_task_item_prioridade_alias_uses_same_contract(
+def test_update_task_prioridade_canonical_uses_same_contract(
     app, client_user, seed_data
 ):
     item_id = seed_data["task_item_id"]
@@ -63,7 +63,7 @@ def test_update_task_item_prioridade_alias_uses_same_contract(
         db.session.commit()
 
     response = client_user.post(
-        f"/tarefas/itens/{item_id}/update_prioridade",
+        f"/tarefas/{item_id}/update_prioridade",
         json={"prioridade": "alta"},
     )
 
@@ -77,7 +77,7 @@ def test_update_task_item_prioridade_alias_uses_same_contract(
         assert item.prioridade == "alta"
 
 
-def test_update_task_item_tipo_alias_uses_same_contract(app, client_user, seed_data):
+def test_update_task_tipo_canonical_sets_outros_value(app, client_user, seed_data):
     item_id = seed_data["task_item_id"]
 
     with app.app_context():
@@ -87,7 +87,7 @@ def test_update_task_item_tipo_alias_uses_same_contract(app, client_user, seed_d
         db.session.commit()
 
     response = client_user.post(
-        f"/tarefas/itens/{item_id}/update_tipo",
+        f"/tarefas/{item_id}/update_tipo",
         json={"tipo_pedido": "outros"},
     )
 

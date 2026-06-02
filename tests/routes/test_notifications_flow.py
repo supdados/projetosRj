@@ -34,7 +34,7 @@ def test_notifications_dropdown_marks_as_read(app, client_user, seed_data):
 
     actor_client = _client_for_user(app, actor_id)
     response = actor_client.post(
-        f"/tarefas/itens/{seed_data['task_item_id']}/update_status",
+        f"/tarefas/{seed_data['task_item_id']}/update_status",
         json={"status": "para_validacao"},
     )
     assert response.status_code == 200
@@ -126,14 +126,14 @@ def test_comment_reply_notifies_previous_participant(app, client_user, seed_data
     client_b = _client_for_user(app, user_b_id)
 
     first_comment_response = client_b.post(
-        f"/tarefas/itens/{seed_data['task_item_id']}/comentarios/add",
+        f"/tarefas/{seed_data['task_item_id']}/comentarios/add",
         headers={"X-Requested-With": "XMLHttpRequest"},
         data={"content": "Comentario do usuario B"},
     )
     assert first_comment_response.status_code == 200
 
     second_comment_response = client_user.post(
-        f"/tarefas/itens/{seed_data['task_item_id']}/comentarios/add",
+        f"/tarefas/{seed_data['task_item_id']}/comentarios/add",
         headers={"X-Requested-With": "XMLHttpRequest"},
         data={"content": "Resposta do usuario A"},
     )
@@ -159,7 +159,7 @@ def test_status_change_by_other_user_notifies_task_creator(app, seed_data):
 
     actor_client = _client_for_user(app, actor_id)
     response = actor_client.post(
-        f"/tarefas/itens/{seed_data['task_item_id']}/update_status",
+        f"/tarefas/{seed_data['task_item_id']}/update_status",
         json={"status": "em_andamento"},
     )
     assert response.status_code == 200
@@ -196,7 +196,7 @@ def test_assignment_change_notifies_assigned_user(app, seed_data):
 
     actor_client = _client_for_user(app, actor_id)
     response = actor_client.post(
-        f"/tarefas/itens/{seed_data['task_item_id']}/edit",
+        f"/tarefas/{seed_data['task_item_id']}/edit",
         data={
             "descricao": current_description,
             "status": current_status,

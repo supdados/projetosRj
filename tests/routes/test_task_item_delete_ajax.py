@@ -12,7 +12,7 @@ def test_delete_task_item_ajax_returns_json_and_deletes_item(
     item_id = seed_data["task_item_id"]
 
     response = client_user.post(
-        f"/tarefas/itens/{item_id}/delete", headers=AJAX_HEADERS
+        f"/tarefas/{item_id}/delete", headers=AJAX_HEADERS
     )
 
     assert response.status_code == 200
@@ -28,7 +28,7 @@ def test_delete_task_item_ajax_forbidden_for_outsider(app, client_outsider, seed
     item_id = seed_data["task_item_id"]
 
     response = client_outsider.post(
-        f"/tarefas/itens/{item_id}/delete", headers=AJAX_HEADERS
+        f"/tarefas/{item_id}/delete", headers=AJAX_HEADERS
     )
 
     assert response.status_code == 403
@@ -46,7 +46,7 @@ def test_delete_task_item_ajax_forbidden_for_non_author_collaborator_and_audited
     item_id = seed_data["task_item_id"]
 
     response = client_editable.post(
-        f"/tarefas/itens/{item_id}/delete", headers=AJAX_HEADERS
+        f"/tarefas/{item_id}/delete", headers=AJAX_HEADERS
     )
 
     assert response.status_code == 403
@@ -81,7 +81,7 @@ def test_delete_task_item_ajax_error_keeps_json_contract(
     monkeypatch.setattr(db.session, "commit", fail_commit)
 
     response = client_user.post(
-        f"/tarefas/itens/{item_id}/delete", headers=AJAX_HEADERS
+        f"/tarefas/{item_id}/delete", headers=AJAX_HEADERS
     )
 
     assert response.status_code == 500

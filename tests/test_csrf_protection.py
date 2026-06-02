@@ -99,7 +99,6 @@ _ENDPOINTS_SEM_JSON = [
     "/tarefas/1/delete",
     "/tarefas/comentarios/1/delete",
     "/tarefas/anexos/1/delete",
-    "/tarefas/itens/1/delete",
 ]
 
 # Endpoints que sempre enviaram Content-Type: application/json (referência)
