@@ -104,6 +104,12 @@ _MIGRATED_EXACT_PATHS = frozenset(
         "admin/orgaos/novo",
         "admin/usuarios",
         "admin/usuarios/novo",
+        # Telas do Grupo B cujas rotas Jinja canonicas foram cortadas: agora o
+        # catch-all serve a SPA nesses paths nativos (deep-link/F5).
+        "admin/orgaos",
+        "admin/orgaos/tipos",
+        "admin/templates",
+        "busca",
     }
 )
 # Segmentos dinamicos das telas migradas (``<id>`` numerico). re.fullmatch.

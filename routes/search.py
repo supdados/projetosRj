@@ -536,28 +536,3 @@ def global_search_api():
     )
     return jsonify(payload)
 
-
-@main_bp.route("/busca", methods=["GET"])
-@login_required
-def global_search_page():
-    search_term = (request.args.get("q") or "").strip()
-    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
-        request.args.get("orgao")
-    )
-    if invalid_orgao_filter:
-        return redirect_to_current_route_without_orgao()
-    if search_term:
-        search_payload = build_global_search_results(
-            search_term,
-            g.user,
-            limit_per_type=GLOBAL_SEARCH_PAGE_LIMIT,
-            selected_orgao_id=selected_orgao_id,
-        )
-    else:
-        search_payload = _empty_global_search_payload(search_term)
-
-    return render_template(
-        "search/results.html",
-        search_query=search_term,
-        search_payload=search_payload,
-    )

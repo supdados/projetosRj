@@ -5,15 +5,16 @@ PROJECT_DETAIL_CSS_BUNDLE = [
     PROJECT_ROOT / "static" / "css" / "projects" / "detail.css",
     *sorted((PROJECT_ROOT / "static" / "css" / "projects" / "detail").glob("*.css")),
 ]
+# NOTA (corte Grupo B): search/results.css, admin/template-list.css e
+# admin/template-form.css foram removidos no corte (telas /busca e
+# /admin/templates viraram SPA). O dark mode dessas telas agora vive nos
+# componentes Svelte; este contrato cobre apenas os assets Jinja remanescentes.
 DARK_MODE_CSS_ASSETS = [
     PROJECT_ROOT / "static" / "css" / "theme-dark.css",
     PROJECT_ROOT / "static" / "css" / "tasks" / "hub.css",
     PROJECT_ROOT / "static" / "css" / "tasks" / "detail" / "dark.css",
-    PROJECT_ROOT / "static" / "css" / "search" / "results.css",
     *PROJECT_DETAIL_CSS_BUNDLE,
     PROJECT_ROOT / "static" / "css" / "projects" / "history.css",
-    PROJECT_ROOT / "static" / "css" / "admin" / "template-list.css",
-    PROJECT_ROOT / "static" / "css" / "admin" / "template-form.css",
 ]
 
 
@@ -66,8 +67,6 @@ def test_dark_mode_stylesheet_contains_critical_interaction_selectors():
         ".task-anexo-preview-modal",
         ".task-anexo-preview-dialog",
         ".task-anexo-preview-link",
-        ".search-results-count",
-        ".search-result-badge-project",
         ".project-compact-inner",
         ".project-compact-dates span",
         ".objective-section",
@@ -87,8 +86,6 @@ def test_dark_mode_stylesheet_contains_critical_interaction_selectors():
         ".history-list-header",
         ".history-action-pill.tone-success",
         ".header-count",
-        ".tpl-form-stages-counter",
-        ".tpl-stage-item",
         ".account-page-header-main",
         ".account-input",
         ".account-area-item",

@@ -142,17 +142,17 @@ def test_distinct_project_count_matches_expectation(app, client_admin, seed_data
 
 
 def test_template_audit_fields_on_create(app, client_admin, seed_data):
+    # Corte Grupo B: a rota Jinja /admin/templates/new virou SPA; o CRUD canonico
+    # vive em POST /api/admin/templates, que registra created_by/updated_by.
     response = client_admin.post(
-        "/admin/templates/new",
-        data={
+        "/api/admin/templates",
+        json={
             "name": "Modelo Auditoria",
             "description": "Teste de auditoria",
-            "stage_name": ["Etapa A"],
-            "stage_duration": ["1"],
+            "stages": [{"name": "Etapa A", "duration_days": 1}],
         },
-        follow_redirects=False,
     )
-    assert response.status_code == 302
+    assert response.status_code == 200
 
     with app.app_context():
         template = StageTemplate.query.filter_by(name="Modelo Auditoria").first()
@@ -166,17 +166,16 @@ def test_template_audit_fields_on_create(app, client_admin, seed_data):
 def test_template_updated_by_changes_on_edit(app, client_admin, seed_data):
     template_id = seed_data["template_id"]
 
+    # Corte Grupo B: edicao canonica via POST /api/admin/templates/<id>.
     response = client_admin.post(
-        f"/admin/templates/{template_id}/edit",
-        data={
+        f"/api/admin/templates/{template_id}",
+        json={
             "name": "Modelo Editado",
             "description": "Auditoria update",
-            "stage_name": ["Nova"],
-            "stage_duration": ["2"],
+            "stages": [{"name": "Nova", "duration_days": 2}],
         },
-        follow_redirects=False,
     )
-    assert response.status_code == 302
+    assert response.status_code == 200
 
     with app.app_context():
         template = db.session.get(StageTemplate, template_id)

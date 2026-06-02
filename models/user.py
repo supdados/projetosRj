@@ -16,9 +16,6 @@ class User(db.Model):
     govbr_sub = db.Column(db.String(255), unique=True, nullable=True, index=True)
     failed_login_attempts = db.Column(db.Integer, nullable=False, default=0)
     lockout_until = db.Column(db.DateTime, nullable=True)
-    tutorial_visto = db.Column(
-        db.Boolean, default=False, nullable=False, server_default="0"
-    )
 
     orgaos = db.relationship(
         "UserOrgao", backref="user", lazy=True, cascade="all, delete-orphan"

@@ -202,10 +202,6 @@ def test_global_search_ignores_out_of_range_numeric_ids(client_user):
     assert api_response.status_code == 200
     assert api_response.get_json()["query"] == huge_numeric_query
 
-    page_response = client_user.get("/busca", query_string={"q": huge_numeric_query})
-    assert page_response.status_code == 200
-    assert huge_numeric_query in page_response.get_data(as_text=True)
-
 
 def test_global_search_api_includes_only_events_of_current_user(app, seed_data):
     with app.app_context():
@@ -348,57 +344,8 @@ def test_global_search_api_formats_utc_full_day_duration_as_single_local_day(
     assert "13/03/2026" not in event_results[0]["meta"]
 
 
-def test_search_page_renders_grouped_sections_and_hides_foreign_area_results(
-    client_user, seed_data
-):
-    response = client_user.get("/busca", query_string={"q": "Auditoria"})
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    assert "Busca Global" in html
-    assert "search-results-section-title" in html
-    assert "Projetos" in html
-    assert "Etapas" in html
-    assert "Tarefas" in html
-    assert "Projeto Auditoria" in html
-    assert "Projeto VPD" not in html
-    assert 'class="search-result-item search-result-item-square"' in html
-
-
-def test_search_page_renders_events_section_when_matches_exist(client_user):
-    response = client_user.get("/busca", query_string={"q": "Evento Seed"})
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    assert "Eventos" in html
-    assert "Evento Seed" in html
-
-
-def test_search_page_empty_state_without_query_and_without_results(client_user):
-    empty_query_response = client_user.get("/busca")
-    assert empty_query_response.status_code == 200
-    assert "Digite um termo para iniciar a busca." in empty_query_response.get_data(
-        as_text=True
-    )
-
-    no_results_response = client_user.get(
-        "/busca", query_string={"q": "TermoInexistenteXYZ"}
-    )
-    assert no_results_response.status_code == 200
-    assert (
-        'Nenhuma referencia encontrada para "<strong>TermoInexistenteXYZ</strong>".'
-        in no_results_response.get_data(as_text=True)
-    )
-
-
-def test_search_page_redirects_when_non_admin_forces_foreign_area(
-    client_user, seed_data
-):
-    response = client_user.get(
-        "/busca",
-        query_string={"q": "Auditoria", "orgao": seed_data["vpd_orgao_id"]},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 302
-    assert response.headers["Location"].endswith("/busca?q=Auditoria")
+# NOTA (corte Grupo B): os testes que renderizavam a pagina Jinja /busca
+# (search/results.html) foram removidos — /busca agora serve a SPA via catch-all
+# (routes/spa.py). O contrato de dados da busca permanece coberto acima via
+# /api/busca-global (mesma fonte build_global_search_results) e em
+# tests/routes/test_api_*; o escopo de orgao e o filtro foram preservados ali.

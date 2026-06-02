@@ -8,7 +8,6 @@ from flask import (
     redirect,
     render_template,
     request,
-    session,
     url_for,
 )
 
@@ -134,9 +133,6 @@ def _build_project_creation_input_from_form(orgao_unidade):
         etapas=etapas,
         start_date=start_date,
         template_id=template_id,
-        is_tutorial=bool(
-            session.get("tutorial_active") and not session.get("tutorial_project_id")
-        ),
     )
 
 
@@ -170,10 +166,6 @@ def add_project():
         )
 
         db.session.commit()
-
-        # Guarda o ID do projeto criado durante o tutorial para usar nas seções seguintes
-        if session.get("tutorial_active"):
-            session["tutorial_project_id"] = new_project.id
 
         flash("Projeto adicionado com sucesso!", "success")
         return redirect(url_for("main.project_detail", project_id=new_project.id))

@@ -21,6 +21,5 @@ from . import projects  # noqa: F401,E402
 from . import search  # noqa: F401,E402
 from . import spa  # noqa: F401,E402
 from . import tasks  # noqa: F401,E402
-from . import tutorial  # noqa: F401,E402
 
 __all__ = ["main_bp", "inject_current_year"]

@@ -26,7 +26,7 @@ from __future__ import annotations
 import datetime
 from typing import Any
 
-from flask import Response, g, request, session
+from flask import Response, g, request
 
 from catalogs.abep import normalize_abep_indicator
 from catalogs.objectives import (
@@ -150,9 +150,6 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
         etapas=_parse_creation_etapas(data.get("etapas")),
         start_date=start_date,
         template_id=_coerce_int(data.get("template_id")),
-        is_tutorial=bool(
-            session.get("tutorial_active") and not session.get("tutorial_project_id")
-        ),
     )
 
     try:
@@ -175,9 +172,6 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
             status=500,
             code="server",
         )
-
-    if session.get("tutorial_active"):
-        session["tutorial_project_id"] = new_project.id
 
     return ok(
         {

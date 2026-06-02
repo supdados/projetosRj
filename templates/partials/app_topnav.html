@@ -178,7 +178,7 @@
                             <form
                                 class="app-global-search-form"
                                 id="appGlobalSearchForm"
-                                action="{{ url_for('main.global_search_page') }}"
+                                action="/busca"
                                 method="GET"
                                 role="search"
                                 autocomplete="off"
@@ -266,7 +266,7 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="{{ url_for('main.list_orgaos') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.list_orgaos' or endpoint == 'main.add_orgao' or endpoint == 'main.edit_orgao' or endpoint == 'main.list_orgao_tipos' or endpoint == 'main.add_orgao_tipo' or endpoint == 'main.edit_orgao_tipo' else '' }}">
+                                        <a href="/admin/orgaos" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.list_orgaos' or endpoint == 'main.add_orgao' or endpoint == 'main.edit_orgao' or endpoint == 'main.list_orgao_tipos' or endpoint == 'main.add_orgao_tipo' or endpoint == 'main.edit_orgao_tipo' else '' }}">
                                             <span class="app-dropdown-item-main">
                                                 <i class="fas fa-sitemap"></i>
                                                 <span>Hierarquia de Órgãos</span>
@@ -275,7 +275,7 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="{{ url_for('main.list_templates') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') else '' }}">
+                                        <a href="/admin/templates" class="dropdown-item app-dropdown-item {{ 'active' if endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') else '' }}">
                                             <span class="app-dropdown-item-main">
                                                 <i class="fas fa-layer-group"></i>
                                                 <span>Modelos de Etapas</span>

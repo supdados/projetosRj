@@ -61,10 +61,6 @@
     {% if current_user_obj %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/theme-dark.css', v='20260425c') }}">
     {% endif %}
-    {% if tutorial_active %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/shepherd/shepherd.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/tutorial.css') }}">
-    {% endif %}
 </head>
 <body class="loading-active{% if current_user_obj %} is-authenticated{% endif %}">
     
@@ -82,9 +78,6 @@
             {% if current_user_obj %}
             {% set endpoint = request.endpoint or '' %}
             {% include "partials/app_topnav.html" %}
-            {% if tutorial_active %}
-            {% include "tutorial/banner.html" %}
-            {% endif %}
             {% elif request.endpoint != 'main.login_page' %}
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid">
@@ -241,17 +234,6 @@
         };
     })();
     </script>
-
-    {% if tutorial_active %}
-    <script src="{{ url_for('static', filename='vendor/shepherd/shepherd.min.js') }}"></script>
-    <script nonce="{{ csp_nonce }}">
-    window.__TUTORIAL_ACTIVE__  = true;
-    window.__TUTORIAL_SECTION__ = {{ tutorial_section|tojson }};
-    window.__TUTORIAL_RESET__   = {{ tutorial_reset|tojson }};
-    </script>
-    <script src="{{ url_for('static', filename='js/tutorial/steps.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/tutorial/runner.js') }}"></script>
-    {% endif %}
 
     {% block scripts %}
     {% endblock %}

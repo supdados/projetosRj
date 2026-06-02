@@ -301,37 +301,6 @@ def ensure_task_core_columns():
     return added
 
 
-def ensure_tutorial_columns() -> list[str]:
-    """Garante colunas de tutorial em bancos existentes."""
-    inspector = inspect(db.engine)
-    table_names = inspector.get_table_names()
-    added = []
-
-    if "project" in table_names:
-        cols = {c["name"] for c in inspector.get_columns("project")}
-        if "is_tutorial" not in cols:
-            db.session.execute(
-                text(
-                    "ALTER TABLE project ADD COLUMN is_tutorial BOOLEAN NOT NULL DEFAULT 0"
-                )
-            )
-            db.session.commit()
-            added.append("project.is_tutorial")
-
-    if "user" in table_names:
-        cols = {c["name"] for c in inspector.get_columns("user")}
-        if "tutorial_visto" not in cols:
-            db.session.execute(
-                text(
-                    "ALTER TABLE user ADD COLUMN tutorial_visto BOOLEAN NOT NULL DEFAULT 0"
-                )
-            )
-            db.session.commit()
-            added.append("user.tutorial_visto")
-
-    return added
-
-
 def initialize_database():
     """
     Inicializa/normaliza o schema usando a rotina canônica de migração.

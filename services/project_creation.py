@@ -69,7 +69,6 @@ class ProjectCreationInput:
     etapas: list[StageDraft] = field(default_factory=list)
     start_date: Optional[datetime.date] = None
     template_id: Optional[int] = None
-    is_tutorial: bool = False
 
 
 def create_project_record(data: ProjectCreationInput, *, created_by_id: int | None):
@@ -101,7 +100,6 @@ def create_project_record(data: ProjectCreationInput, *, created_by_id: int | No
         resultado_esperado_id=data.resultado_esperado_id,
         observacao=data.observacao,
         status="Vigente",
-        is_tutorial=data.is_tutorial,
         special_project=data.special_project,
         sei_process=data.sei_process,
         short_description=data.short_description,

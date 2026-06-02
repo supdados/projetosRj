@@ -27,7 +27,6 @@ from time_utils import register_sqlite_adapters
 from startup import (
     ensure_project_abep_indicator_column,
     ensure_task_core_columns,
-    ensure_tutorial_columns,
 )  # noqa: F401
 
 TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
@@ -232,15 +231,6 @@ def _register_context_processors(app):
             "chatbot_base_url": str(app.config.get("CHATBOT_BASE_URL", ""))
             .strip()
             .rstrip("/"),
-            "tutorial_active": bool(flask_session.get("tutorial_active")),
-            "tutorial_section": flask_session.get("tutorial_section", ""),
-            # Só consome o flag reset quando o tutorial está ativo; caso contrário
-            # o bootstrap do tutorial não roda e o flag seria perdido sem efeito.
-            "tutorial_reset": (
-                bool(flask_session.pop("tutorial_reset", False))
-                if flask_session.get("tutorial_active")
-                else False
-            ),
         }
 
 
@@ -287,9 +277,6 @@ def create_app(test_config=None):
                 print(
                     f"Catalogo de objetivos sincronizado: {startup_summary['sync_summary']}"
                 )
-                tutorial_cols = ensure_tutorial_columns()
-                if tutorial_cols:
-                    print(f"Colunas de tutorial criadas: {tutorial_cols}")
             except Exception as exc:
                 print(
                     f"Erro durante a inicialização/verificação do banco de dados em app.py: {exc}"
