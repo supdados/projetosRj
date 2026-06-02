@@ -1,6 +1,7 @@
 """Cascata de datas entre etapas subsequentes de um projeto."""
 
 from models import Etapa, db
+from services.etapas_dates import _add_business_days, _normalize_to_business_day
 from services.project_meetings import MEETING_ENTRY_TYPE
 
 
@@ -9,12 +10,6 @@ def cascade_subsequent_dates(project_id, base_etapa_ordem, days_to_add):
 
     Não faz commit — a rota é responsável pela transação.
     """
-    # Import tardio: ``routes.etapas.helpers`` é uma rota e importá-lo no topo cria
-    # um ciclo (services -> routes.etapas -> crud -> services.etapas_cascade) quando
-    # o serviço é carregado cedo (ex.: por routes.api.etapas). Importar na chamada
-    # mantém o serviço independente de rotas no carregamento do módulo.
-    from routes.etapas.helpers import _add_business_days, _normalize_to_business_day
-
     subsequent_etapas = (
         Etapa.query.filter(
             Etapa.project_id == project_id,
