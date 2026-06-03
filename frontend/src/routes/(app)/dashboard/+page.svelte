@@ -333,7 +333,7 @@
 				>
 					{#snippet icon()}
 						<!-- Micro-interacao: prancheta com foto; no hover levanta e estampa "OK". -->
-						<ClipboardStamp size={46} image="/static/img/dashboard/folder/2.webp" />
+						<ClipboardStamp size={52} image="/static/img/dashboard/folder/2.webp" />
 					{/snippet}
 				</StatCard>
 

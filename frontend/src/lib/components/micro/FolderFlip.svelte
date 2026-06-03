@@ -117,21 +117,21 @@
 	.ff-root:is(:hover, :focus-within) .ff-folder--0,
 	:global(.group:hover) .ff-folder--0,
 	:global(.group:focus-within) .ff-folder--0 {
-		transform: rotateX(-34deg) translateZ(20px) translateY(0px);
+		transform: rotateX(-29deg) translateZ(20px) translateY(0px);
 		/* enter lento + curva de "assentar" (so no estado ativo). */
 		transition: transform 0.42s cubic-bezier(0.34, 1.2, 0.64, 1);
 	}
 	.ff-root:is(:hover, :focus-within) .ff-folder--1,
 	:global(.group:hover) .ff-folder--1,
 	:global(.group:focus-within) .ff-folder--1 {
-		transform: rotateX(-28deg) translateZ(8px) translateY(-8px);
+		transform: rotateX(-24deg) translateZ(8px) translateY(-8px);
 		transition: transform 0.42s cubic-bezier(0.34, 1.2, 0.64, 1);
 		transition-delay: 120ms;
 	}
 	.ff-root:is(:hover, :focus-within) .ff-folder--2,
 	:global(.group:hover) .ff-folder--2,
 	:global(.group:focus-within) .ff-folder--2 {
-		transform: rotateX(-22deg) translateZ(-4px) translateY(-16px);
+		transform: rotateX(-19deg) translateZ(-4px) translateY(-16px);
 		transition: transform 0.42s cubic-bezier(0.34, 1.2, 0.64, 1);
 		transition-delay: 240ms;
 	}
