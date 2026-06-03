@@ -274,3 +274,20 @@
 		animation: none;
 	}
 }
+
+/* Viewport-fit do Dashboard (espelha `.wrapper:has(.dashboard-page-breathe)` da
+   v4.5): no desktop a shell trava em 100dvh com overflow:hidden, entao a pagina
+   NAO rola — o espaco restante e distribuido por flex para a linha dos paineis,
+   e apenas o painel interno (Projetos Recentes / Tarefas) rola. So a partir de
+   >=lg; no mobile o conteudo empilha e a pagina rola normalmente. */
+@media (min-width: 1024px) {
+	body:has(.dashboard-viewport-lock) {
+		overflow: hidden;
+	}
+	.app-shell:has(.dashboard-viewport-lock) {
+		height: 100vh;
+		height: 100dvh;
+		min-height: 0;
+		overflow: hidden;
+	}
+}

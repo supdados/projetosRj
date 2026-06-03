@@ -199,13 +199,65 @@
 			{ key: 'nao-iniciada', filter: 'nao_iniciada', label: 'N. iniciada', count: d.task_items_nao_iniciada, width: naoIniciada, bar: 'bar-nao-iniciada' }
 		];
 	});
+
+	// "Tarefas recentes" SEM scroll: a lista preenche a altura disponivel e
+	// mostra apenas os itens que cabem INTEIROS — telas maiores exibem mais,
+	// menores exibem menos. Porte 1:1 do `applyRecentTaskFit` do index.html (v4.5):
+	// mede o rodape de cada item contra o da lista e oculta (`tk-fit-hidden`) o
+	// primeiro que ultrapassa e todos os seguintes.
+	let recentListEl = $state<HTMLDivElement | null>(null);
+
+	function applyRecentFit(): void {
+		const list = recentListEl;
+		if (!list) return;
+		const items = Array.from(list.children) as HTMLElement[];
+		for (const item of items) item.classList.remove('tk-fit-hidden');
+		const listBottom = list.getBoundingClientRect().bottom;
+		if (list.clientHeight <= 0) return;
+		let hideRest = false;
+		for (const item of items) {
+			if (hideRest) {
+				item.classList.add('tk-fit-hidden');
+				continue;
+			}
+			if (item.getBoundingClientRect().bottom > listBottom + 1) {
+				item.classList.add('tk-fit-hidden');
+				hideRest = true;
+			}
+		}
+	}
+
+	// Recalcula no mount, quando a lista de tarefas muda e a cada redimensionamento
+	// (ResizeObserver na propria lista + resize da janela). `requestAnimationFrame`
+	// garante medicao apos o paint do layout flex.
+	$effect(() => {
+		void data?.recent_tasks;
+		const list = recentListEl;
+		if (!list) return;
+		let frame = requestAnimationFrame(applyRecentFit);
+		const ro = new ResizeObserver(() => {
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(applyRecentFit);
+		});
+		ro.observe(list);
+		return () => {
+			cancelAnimationFrame(frame);
+			ro.disconnect();
+		};
+	});
 </script>
 
 <svelte:head>
 	<title>Dashboard — ProjetosRJ</title>
 </svelte:head>
 
-<section aria-labelledby="dashboard-title" class="flex flex-col gap-4">
+<!-- lg:h-full + min-h-0 ancoram o layout viewport-fit adaptativo da v4.5: a
+	 secao preenche a altura do <main> e distribui o espaco restante para a linha
+	 dos paineis (que rolam internamente). No mobile fica em fluxo normal. -->
+<section
+	aria-labelledby="dashboard-title"
+	class="dashboard-viewport-lock flex flex-col gap-4 lg:h-full lg:min-h-0"
+>
 	<!-- Hero "Olá, <nome> / Administrador" + data + Novo Projeto -->
 	<PageHeader subtitle={welcomeContext} labelId="dashboard-title">
 		{#snippet titleContent()}
@@ -294,13 +346,13 @@
 			 items-stretch (padrao do grid) faz as duas colunas terem a MESMA
 			 altura; o painel de recentes rola internamente (scroll-lock) e o de
 			 tarefas se alinha ao lado, como no index.html original. -->
-		<div class="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
-			<div class="lg:col-span-2">
+		<div class="grid grid-cols-1 items-stretch gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-3">
+			<div class="lg:col-span-2 lg:min-h-0">
 				<RecentProjectsPanel projects={data.recent_projects} totalProjects={data.num_projects} />
 			</div>
 
-			<aside class="flex flex-col lg:col-span-1">
-				<Card title="Tarefas" labelId="dashboard-tasks-title">
+			<aside class="flex flex-col lg:col-span-1 lg:min-h-0">
+				<Card title="Tarefas" labelId="dashboard-tasks-title" fill>
 					{#snippet header()}
 						<a
 							href={`${base}/tarefas`}
@@ -311,10 +363,10 @@
 						</a>
 					{/snippet}
 
-					<div class="flex flex-col gap-5">
+					<div class="flex flex-col gap-5 lg:min-h-0 lg:flex-1">
 						<!-- Por prioridade: cada linha e um link para /tarefas filtrado
 							 (espelha os `tasks-kpi-priority-row` clicaveis do original). -->
-						<section class="flex flex-col gap-2" aria-label="Tarefas por prioridade">
+						<section class="flex flex-col gap-2 lg:shrink-0" aria-label="Tarefas por prioridade">
 							<div class="flex items-center justify-between">
 								<span class="text-sm font-bold text-text-secondary">Por prioridade</span>
 								<span class="text-xs font-semibold text-text-muted">{data.dashboard_open_tasks_count} abertas</span>
@@ -323,13 +375,11 @@
 								{#each taskPriorities as prio (prio.key)}
 									<a
 										href={`${base}/tarefas?prioridade=${prio.key}`}
-										class="flex min-h-[46px] flex-col items-start justify-center gap-1 rounded-md border border-border-subtle bg-surface-muted px-2 py-1.5 no-underline transition-colors duration-fast hover:border-primary-500 hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										class="flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface-muted px-2 py-1.5 no-underline transition-colors duration-fast hover:border-primary-500 hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 									>
-										<span class="flex items-center gap-1.5">
-											<span class="h-2 w-2 shrink-0 rounded-full {prio.dot}" aria-hidden="true"></span>
-											<span class="truncate text-xs font-semibold text-text-secondary">{prio.label}</span>
-										</span>
-										<span class="text-sm font-bold text-text-primary">{prio.count}</span>
+										<span class="h-2 w-2 shrink-0 rounded-full {prio.dot}" aria-hidden="true"></span>
+										<span class="min-w-0 flex-1 truncate text-xs font-semibold text-text-secondary">{prio.label}</span>
+										<span class="shrink-0 text-sm font-bold text-text-primary">{prio.count}</span>
 									</a>
 								{/each}
 							</div>
@@ -338,7 +388,7 @@
 						<!-- Por status: barra empilhada de progresso + legenda. Segmentos
 							 e itens de legenda sao links para /tarefas filtrado por status
 							 (espelha os segmentos clicaveis + tooltips do original). -->
-						<section class="flex flex-col gap-2" aria-label="Tarefas por status">
+						<section class="flex flex-col gap-2 lg:shrink-0" aria-label="Tarefas por status">
 							<div class="flex items-center justify-between">
 								<span class="text-sm font-bold text-text-secondary">Por status</span>
 								<span class="text-xs font-semibold text-text-muted">{data.task_items_total} total</span>
@@ -376,17 +426,22 @@
 						</section>
 
 						<!-- Recentes: mini-lista das ultimas tarefas (espelha
-							 `tasks-kpi-recent-list` do original). Cada item leva a /tarefas
-							 com a tarefa em foco; rola internamente se exceder a altura. -->
+							 `tasks-kpi-recent-list` do original). SEM scroll: a lista tem
+							 overflow:hidden e `applyRecentFit` esconde (`tk-fit-hidden`) os
+							 itens que nao cabem inteiros — telas maiores mostram mais, menores
+							 mostram menos, identico a logica da v4.5. -->
 						{#if data.recent_tasks.length > 0}
-							<section class="flex flex-col gap-2" aria-label="Tarefas recentes">
-								<span class="text-sm font-bold text-text-secondary">Recentes</span>
-								<div class="flex max-h-72 flex-col gap-1 overflow-y-auto">
+							<section class="flex flex-col gap-2 lg:min-h-0 lg:flex-1" aria-label="Tarefas recentes">
+								<span class="shrink-0 text-sm font-bold text-text-secondary">Recentes</span>
+								<div
+									bind:this={recentListEl}
+									class="flex flex-col gap-1 overflow-hidden lg:min-h-0 lg:flex-1"
+								>
 									{#each data.recent_tasks as t (t.id)}
 										<a
 											href={`${base}/tarefas?focus_task=${t.id}`}
 											title={t.descricao}
-											class="flex items-center gap-2 rounded-md border border-transparent px-2 py-1.5 no-underline transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="recent-task-item flex items-center gap-2 rounded-md border border-transparent px-2 py-1.5 no-underline transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 										>
 											<span
 												class="h-2 w-2 shrink-0 rounded-full {recentStatusDot[t.status] ?? 'bg-text-muted'}"
@@ -455,5 +510,12 @@
 	.status-seg {
 		min-width: 2px;
 		transition: width 0.4s ease;
+	}
+
+	/* Itens de tarefas recentes que nao cabem inteiros na altura da lista sao
+	   ocultados por `applyRecentFit` (sem scroll) — mesma estrategia do
+	   `is-fit-hidden` da v4.5. Global porque a classe e aplicada via JS. */
+	:global(.tk-fit-hidden) {
+		display: none !important;
 	}
 </style>

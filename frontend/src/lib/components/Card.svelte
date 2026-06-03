@@ -13,13 +13,22 @@
 		header?: Snippet;
 		/** Rodape opcional do card, separado por borda (acoes/resumo). */
 		footer?: Snippet;
+		/**
+		 * Quando true, o card vira uma coluna flex que preenche a altura do pai
+		 * (`h-full`) e o corpo flexiona (`flex-1 min-h-0`) — habilita que um filho
+		 * do corpo role internamente em vez de empurrar a pagina. Usado no painel
+		 * de Tarefas do Dashboard para o layout viewport-fit adaptativo.
+		 */
+		fill?: boolean;
 	}
 
-	let { title, labelId, children, header, footer }: Props = $props();
+	let { title, labelId, children, header, footer, fill = false }: Props = $props();
 </script>
 
 <section
-	class="rounded-lg border border-border-subtle bg-surface shadow-sm"
+	class="rounded-lg border border-border-subtle bg-surface shadow-sm {fill
+		? 'flex h-full flex-col'
+		: ''}"
 	aria-labelledby={labelId}
 >
 	{#if header || title}
@@ -32,7 +41,7 @@
 			{#if header}{@render header()}{/if}
 		</header>
 	{/if}
-	<div class="p-5">
+	<div class="p-5 {fill ? 'flex min-h-0 flex-1 flex-col' : ''}">
 		{@render children()}
 	</div>
 	{#if footer}

@@ -23,10 +23,10 @@
 	});
 </script>
 
-<div class="flex min-h-screen flex-col bg-canvas text-text-primary">
+<div class="app-shell flex min-h-screen flex-col bg-canvas text-text-primary">
 	<AppTopnav user={$auth.user} />
 
-	<main class="mx-auto w-full max-w-6xl flex-1 px-5 py-6">
+	<main class="mx-auto w-full min-h-0 max-w-6xl flex-1 px-5 py-6">
 		{#if $auth.status === 'authenticated'}
 			{@render children()}
 		{:else if $auth.status === 'unauthenticated' && $auth.error}

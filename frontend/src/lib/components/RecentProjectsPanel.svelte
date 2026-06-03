@@ -126,11 +126,17 @@
 		grid-template-columns: 64px minmax(0, 1fr) 170px 185px;
 	}
 
-	/* Scroll-lock: trava a altura do corpo na viewport para a tabela rolar
-	   internamente (em vez de empurrar a pagina inteira). Espelha o
-	   max-height/overflow do `.glass-table-wrapper` do index.css original; aqui
-	   relativo a viewport para alinhar com o painel de Tarefas ao lado. */
+	/* Scroll-lock: trava a altura do corpo para a tabela rolar internamente (em
+	   vez de empurrar a pagina inteira). No mobile usa um teto relativo a
+	   viewport; no desktop (>=lg) o teto e removido para que o painel preencha a
+	   altura distribuida pelo flex do Dashboard (viewport-fit adaptativo, espelha
+	   a logica `flex:1; min-height:0; overflow` da v4.5). */
 	.rp-scroll {
 		max-height: min(60vh, 520px);
+	}
+	@media (min-width: 1024px) {
+		.rp-scroll {
+			max-height: none;
+		}
 	}
 </style>

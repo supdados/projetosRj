@@ -65,7 +65,7 @@
 		</span>
 	{/if}
 	<div class="flex min-w-0 flex-col gap-1">
-		<span class="order-1 font-heading text-3xl font-bold leading-tight {accent[tone]}">{value}</span>
+		<span class="order-1 font-heading text-2xl font-bold leading-tight {accent[tone]}">{value}</span>
 		<span class="order-2 text-sm font-medium text-text-secondary">{label}</span>
 		{#if subtitle}
 			<span class="order-3 text-xs {accent[tone]}">{subtitle}</span>
@@ -80,14 +80,14 @@
 	<a
 		{href}
 		aria-label={linkLabel ?? label}
-		class="flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-4 no-underline shadow-sm transition-all duration-slow hover:border-primary-500 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		class="flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-3 no-underline shadow-sm transition-all duration-slow hover:border-primary-500 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 	>
 		{@render body()}
 	</a>
 {:else}
 	<div
 		role="group"
-		class="flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-4 shadow-sm transition-shadow duration-slow hover:shadow-md"
+		class="flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-3 shadow-sm transition-shadow duration-slow hover:shadow-md"
 	>
 		{@render body()}
 	</div>
