@@ -26,7 +26,10 @@
 <div class="app-shell flex min-h-screen flex-col bg-canvas text-text-primary">
 	<AppTopnav user={$auth.user} />
 
-	<main class="mx-auto w-full min-h-0 max-w-6xl flex-1 px-5 py-6">
+	<!-- Sem teto de largura: o conteudo (itens) cresce com a tela. O respiro lateral
+	     e um padding responsivo que escala em telas menores e TRAVA em ~7rem a partir
+	     do tamanho de notebook -> respiro constante em telas grandes, itens aumentam. -->
+	<main class="mx-auto w-full min-h-0 flex-1 px-[clamp(1.5rem,8vw,7rem)] py-6">
 		{#if $auth.status === 'authenticated'}
 			{@render children()}
 		{:else if $auth.status === 'unauthenticated' && $auth.error}

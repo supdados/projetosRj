@@ -29,13 +29,13 @@
 
 	let { projects, totalProjects = 0 }: Props = $props();
 
-	// Cor da pilula de prioridade (espelha .glass-badge.priority-* do original).
-	// Tons via tokens semanticos para troca automatica no dark mode.
+	// Cor da prioridade (SEM fundo — apenas o texto colorido). Tons via tokens
+	// semanticos para troca automatica no dark mode.
 	const priorityClass: Record<string, string> = {
-		baixa: 'bg-surface-muted text-success',
-		media: 'bg-surface-muted text-primary-700',
-		alta: 'bg-surface-muted text-orange',
-		urgente: 'bg-surface-muted text-danger'
+		baixa: 'text-success',
+		media: 'text-primary-700',
+		alta: 'text-orange',
+		urgente: 'text-danger'
 	};
 
 	function prioKey(prioridade: TaskPrioridade | string | null): string {
@@ -53,10 +53,7 @@
 	class="flex h-full flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm"
 	aria-labelledby="recent-projects-title"
 >
-	<header
-		class="flex shrink-0 items-center gap-2 border-b border-border-subtle px-5 py-4"
-	>
-		<i class="fas fa-clock text-primary-600" aria-hidden="true"></i>
+	<header class="flex shrink-0 items-center gap-2 border-b border-border-subtle px-5 py-4">
 		<h2 id="recent-projects-title" class="font-heading text-lg font-semibold text-text-primary">
 			Projetos Recentes
 		</h2>
@@ -105,9 +102,9 @@
 					</span>
 					<span role="cell" class="px-3 py-3 text-center">
 						<span
-							class="inline-flex min-w-[92px] items-center justify-center rounded-sm px-2 py-1 text-2xs font-bold uppercase tracking-wide {priorityClass[
+							class="inline-flex min-w-[92px] items-center justify-center px-2 py-1 text-2xs font-bold uppercase tracking-wide {priorityClass[
 								prioKey(project.prioridade)
-							] ?? 'bg-surface-muted text-text-secondary'}"
+							] ?? 'text-text-secondary'}"
 						>
 							{prioLabel(project.prioridade)}
 						</span>

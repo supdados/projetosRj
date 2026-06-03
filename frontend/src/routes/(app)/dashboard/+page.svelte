@@ -361,7 +361,7 @@
 				>
 					{#snippet icon()}
 						<!-- Micro-interacao: ampulheta racha e a areia despeja para fora no hover. -->
-						<AlertHourglass size={36} />
+						<AlertHourglass size={34} />
 					{/snippet}
 				</StatCard>
 			</div>
