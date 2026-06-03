@@ -24,6 +24,7 @@ from models import (
     db,
 )
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
+from catalogs.inventario import any_orgao_allows_inventario
 from services.calendar_sync import hydrate_google_connection_identity
 from services.google_calendar import is_google_calendar_enabled
 from services.calendar_core import format_input_datetime
@@ -34,6 +35,7 @@ from routes.decorators import login_required
 from routes.orgao_scope import (
     expand_orgao_filter_ids,
     get_user_orgao_options,
+    get_user_orgao_siglas,
     get_user_orgao_subtree_ids,
     redirect_to_current_route_without_orgao,
     sanitize_orgao_filter_for_current_user,
@@ -203,6 +205,8 @@ def build_projects_list_context(
 
     # Novas opções para filtros
     special_projects_options = ["ABEP", "TCE"]
+    if g.user.is_admin or any_orgao_allows_inventario(get_user_orgao_siglas(g.user)):
+        special_projects_options.append("Inventário")
     delivery_types_options = [
         "Sistema",
         "Painel",

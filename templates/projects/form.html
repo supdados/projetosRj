@@ -37,10 +37,10 @@
                             <option value="" {% if not project.orgao_id %}selected{% endif %}>Selecione um órgão</option>
                             {# Órgão atual fora da lista (ex.: inativo) — preserva vínculo legado no submit #}
                             {% if project.orgao_id and not current_orgao_in_list and project.orgao_ref %}
-                                <option value="{{ project.orgao_id }}" selected data-orgao-inativo="1">{{ project.orgao_ref.sigla }}{% if project.orgao_ref.nome and project.orgao_ref.nome != project.orgao_ref.sigla %} — {{ project.orgao_ref.nome }}{% endif %} (inativo)</option>
+                                <option value="{{ project.orgao_id }}" selected data-orgao-inativo="1" data-sigla="{{ project.orgao_ref.sigla }}">{{ project.orgao_ref.sigla }}{% if project.orgao_ref.nome and project.orgao_ref.nome != project.orgao_ref.sigla %} — {{ project.orgao_ref.nome }}{% endif %} (inativo)</option>
                             {% endif %}
                             {% for orgao_opt_id, orgao_opt_sigla, orgao_opt_nome in ORGAOS_DISPONIVEIS %}
-                                <option value="{{ orgao_opt_id }}" {% if orgao_opt_id == project.orgao_id %}selected{% endif %}>{{ orgao_opt_sigla }}{% if orgao_opt_nome and orgao_opt_nome != orgao_opt_sigla %} — {{ orgao_opt_nome }}{% endif %}</option>
+                                <option value="{{ orgao_opt_id }}" data-sigla="{{ orgao_opt_sigla }}" {% if orgao_opt_id == project.orgao_id %}selected{% endif %}>{{ orgao_opt_sigla }}{% if orgao_opt_nome and orgao_opt_nome != orgao_opt_sigla %} — {{ orgao_opt_nome }}{% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -67,6 +67,7 @@
                             <option value="">Nenhum</option>
                             <option value="ABEP" {{ 'selected' if project.special_project == 'ABEP' else '' }}>ABEP</option>
                             <option value="TCE" {{ 'selected' if project.special_project == 'TCE' else '' }}>TCE</option>
+                            <option value="Inventário" {{ 'selected' if project.special_project == 'Inventário' else '' }}>Inventário</option>
                         </select>
                         <small class="form-text text-muted">Selecione se este projeto faz parte de um programa especial</small>
                     </div>
@@ -433,5 +434,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+</script>
+{% include "projects/inventario_special_toggle.html" %}
+<script nonce="{{ csp_nonce }}">
+    document.addEventListener('DOMContentLoaded', function () {
+        window.bindInventarioSpecialToggle('project_orgao_id', 'project_special_project');
+    });
 </script>
 {% endblock %}

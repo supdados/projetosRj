@@ -29,6 +29,7 @@ from typing import Any
 from flask import Response, g, request
 
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
+from catalogs.inventario import orgao_allows_inventario
 from models import Project, Task, db
 
 from services.etapas_dates import meeting_payload_block
@@ -155,6 +156,9 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
     )
     can_edit = user_can_access_project(g.user, project)
     connection = _connection_for_current_user()
+    special_project_options = list(_SPECIAL_PROJECT_OPTIONS)
+    if orgao_allows_inventario(project.orgao_ref.sigla if project.orgao_ref else None):
+        special_project_options.append("Inventário")
     return {
         "project": serialize_project_detail(project),
         "etapas": [
@@ -184,7 +188,7 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
         "options": {
             "status": _status_options(project),
             "prioridade": _PRIORIDADE_OPTIONS,
-            "special_project": _SPECIAL_PROJECT_OPTIONS,
+            "special_project": special_project_options,
             "delivery_type": _DELIVERY_TYPE_OPTIONS,
             "abep_indicator": ABEP_INDICADORES_OPTIONS,
         },

@@ -129,6 +129,16 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
+        "id": "import_projects_post",
+        "method": "POST",
+        "rule": "/projects/import",
+        "path": "/projects/import",
+        "role": "admin",
+        "expected_status": 302,
+        "requires_login": True,
+        "requires_admin": True,
+    },
+    {
         "id": "projetos_pendentes_get",
         "method": "GET",
         "rule": "/projetos_pendentes",
@@ -2250,4 +2260,4 @@ ROUTE_CASES += [
 # +4 aditivos da SPA (Fase atual): DELETE /api/projetos/<id> (exclusao real),
 # GET /api/notificacoes, POST /api/notificacoes/marcar-lidas e GET
 # /api/orgaos/escopo. 181 + 4 = 185.
-assert len(ROUTE_CASES) == 185
+assert len(ROUTE_CASES) == 186

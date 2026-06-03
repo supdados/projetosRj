@@ -12,6 +12,7 @@ from flask import (
 )
 
 from catalogs.abep import normalize_abep_indicator
+from catalogs.inventario import sanitize_special_project_for_orgao
 from models import (
     IndicadorProjeto,
     OrgaoUnidade,
@@ -258,8 +259,9 @@ def edit_project(project_id):
         project_to_edit.observacao = request.form.get("project_observacao")
 
         # Processar novos campos
-        project_to_edit.special_project = (
-            request.form.get("project_special_project") or None
+        project_to_edit.special_project = sanitize_special_project_for_orgao(
+            request.form.get("project_special_project") or None,
+            orgao_unidade.sigla,
         )
         project_to_edit.sei_process = request.form.get("project_sei_process") or None
         project_to_edit.short_description = (

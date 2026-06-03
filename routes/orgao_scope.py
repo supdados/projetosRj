@@ -100,6 +100,19 @@ def expand_orgao_filter_ids(orgao_id) -> set[int]:
     return {int(orgao_id), *get_orgao_descendants(int(orgao_id))}
 
 
+def get_user_orgao_siglas(user) -> list[str]:
+    """Siglas dos órgãos vinculados diretamente ao usuário (para regras por sigla).
+
+    Usado por regras de negócio que dependem da sigla do órgão (ex.: elegibilidade
+    do projeto especial "Inventário"). Admin não é tratado aqui — chamadores
+    costumam liberar admin antes de consultar siglas.
+    """
+    if user is None:
+        return []
+    vinculos = getattr(user, "orgaos", None) or []
+    return [uo.orgao.sigla for uo in vinculos if uo.orgao and uo.orgao.sigla]
+
+
 def get_user_primary_orgao(user):
     """Retorna o primeiro vinculo OrgaoUnidade do usuario (ou None)."""
     if user is None:

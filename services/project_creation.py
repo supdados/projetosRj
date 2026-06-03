@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from catalogs.abep import normalize_abep_indicator
+from catalogs.inventario import sanitize_special_project_for_orgao
 from catalogs.objectives import normalize_goal_selection
 from models import (
     Etapa,
@@ -100,7 +101,9 @@ def create_project_record(data: ProjectCreationInput, *, created_by_id: int | No
         resultado_esperado_id=data.resultado_esperado_id,
         observacao=data.observacao,
         status="Vigente",
-        special_project=data.special_project,
+        special_project=sanitize_special_project_for_orgao(
+            data.special_project, data.orgao_unidade.sigla
+        ),
         sei_process=data.sei_process,
         short_description=data.short_description,
         delivery_type=data.delivery_type,
