@@ -490,6 +490,40 @@
 		width: var(--ah-hw);
 		height: var(--ah-hh);
 		flex-shrink: 0;
+		/* pivo do tremor na base (tampa inferior). */
+		transform-origin: 50% 100%;
+	}
+
+	/* Feedback IMEDIATO no hover: a ampulheta inteira (vidro + areia do canvas)
+	   treme de um lado p/ o outro UMA vez. Disparado pelo cartao `.group` ESTAVEL
+	   (nao pelo proprio root que se move) p/ nao causar hover-loop. O jorro (15s)
+	   e tratado no JS, independente disto. */
+	:global(.group:hover) .ah-root,
+	:global(.group:focus-within) .ah-root {
+		animation: ah-shake 0.5s ease-out 1;
+	}
+	@keyframes ah-shake {
+		0% {
+			transform: rotate(0deg);
+		}
+		18% {
+			transform: rotate(-7deg);
+		}
+		36% {
+			transform: rotate(6deg);
+		}
+		54% {
+			transform: rotate(-4deg);
+		}
+		72% {
+			transform: rotate(2.5deg);
+		}
+		88% {
+			transform: rotate(-1deg);
+		}
+		100% {
+			transform: rotate(0deg);
+		}
 	}
 	.ah-sand {
 		position: absolute;
@@ -512,6 +546,9 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.ah-root {
+			animation: none;
+		}
 		.ah-sand {
 			display: none;
 		}
