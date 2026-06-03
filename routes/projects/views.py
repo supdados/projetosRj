@@ -150,7 +150,7 @@ def list_projects():
     objetivos, _, _ = get_goal_catalog_context()  # Para o modal de adicionar projeto e filtro
     
     # Novas opções para filtros
-    special_projects_options = ['ABEP', 'TCE']
+    special_projects_options = ['ABEP', 'TCE', 'Inventário']
     delivery_types_options = ['Sistema', 'Painel', 'Norma', 'Instrumento de parceria', 'Fluxo Processual', 'Outro']
     has_advanced_filters_active = any([
         selected_atraso,

@@ -1,0 +1,73 @@
+<div class="modal fade" id="importProjectsModal" tabindex="-1" aria-labelledby="importProjectsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('main.import_projects') }}" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importProjectsModalLabel">
+                        <i class="fas fa-file-import me-2"></i>Importar projetos (CSV)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        O arquivo deve conter um cabeçalho com as colunas <code>titulo</code> e
+                        <code>descricao</code>. Todos os projetos serão criados com a área, o projeto
+                        especial, o tipo de entrega e o status escolhidos abaixo.
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="import_file" class="form-label fw-bold">Arquivo CSV</label>
+                        <input type="file" class="form-control" id="import_file" name="import_file" accept=".csv,text/csv" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="import_area" class="form-label fw-bold">Área de destino</label>
+                            <select class="form-select" id="import_area" name="import_area" required>
+                                <option value="" selected disabled>Selecione uma área</option>
+                                {% for area_item in AREAS_RESPONSAVEIS_CHOICES %}
+                                <option value="{{ area_item }}">{{ area_item }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="import_status" class="form-label fw-bold">Status</label>
+                            <select class="form-select" id="import_status" name="import_status">
+                                <option value="Vigente" selected>Vigente</option>
+                                <option value="Suspenso">Em pausa (Suspenso)</option>
+                                <option value="Finalizado">Finalizado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="import_special_project" class="form-label fw-bold">Projetos Especiais</label>
+                            <select class="form-select" id="import_special_project" name="import_special_project">
+                                <option value="" selected>Nenhum</option>
+                                {% for special in special_projects_options %}
+                                <option value="{{ special }}">{{ special }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="import_delivery_type" class="form-label fw-bold">Tipo de Entrega</label>
+                            <select class="form-select" id="import_delivery_type" name="import_delivery_type">
+                                <option value="" selected>Nenhum</option>
+                                {% for delivery in delivery_types_options %}
+                                <option value="{{ delivery }}">{{ delivery }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-file-import me-1"></i>Importar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

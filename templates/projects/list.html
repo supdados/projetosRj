@@ -29,6 +29,14 @@
                download>
                 <i class="fas fa-download" aria-hidden="true"></i>
             </a>
+            <button type="button"
+                    class="btn-projects-v4 btn-projects-v4-secondary"
+                    title="Importar projetos (CSV)"
+                    aria-label="Importar projetos"
+                    data-bs-toggle="modal"
+                    data-bs-target="#importProjectsModal">
+                <i class="fas fa-file-import" aria-hidden="true"></i>
+            </button>
             {% endif %}
             <button type="button" class="btn-projects-v4 btn-projects-v4-primary" data-bs-toggle="modal" data-bs-target="#addProjectModal">
                 <i class="fas fa-plus" aria-hidden="true"></i>
@@ -355,6 +363,10 @@
 </div>
 
 {% include "projects/add_form.html" %}
+
+{% if is_admin_user %}
+{% include "projects/import_modal.html" %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
