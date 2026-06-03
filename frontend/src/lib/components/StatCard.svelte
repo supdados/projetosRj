@@ -42,14 +42,14 @@
 		danger: 'text-danger'
 	};
 
-	// Wrapper do icone: fundo suave + cor do tom (espelha .dash-kpi-*-bg/.dash-kpi-*
-	// e .dashboard-brand-icon-wrap do index.css; tons via vars semanticas no dark).
-	const iconWrap: Record<NonNullable<Props['tone']>, string> = {
-		neutral: 'bg-surface-muted text-text-secondary',
-		primary: 'bg-primary-100 text-primary-700',
-		success: 'bg-surface-muted text-success',
-		warning: 'bg-surface-muted text-warning',
-		danger: 'bg-surface-muted text-danger'
+	// Cor do icone por tom. SEM fundo/caixa (glassmorphism removido a pedido):
+	// renderizamos apenas o icone colorido, sem o wrapper preenchido atras.
+	const iconColor: Record<NonNullable<Props['tone']>, string> = {
+		neutral: 'text-text-secondary',
+		primary: 'text-primary-700',
+		success: 'text-success',
+		warning: 'text-warning',
+		danger: 'text-danger'
 	};
 </script>
 
@@ -57,9 +57,7 @@
 	{#if icon}
 		<span
 			aria-hidden="true"
-			class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg shadow-sm {iconWrap[
-				tone
-			]}"
+			class="flex shrink-0 items-center justify-center {iconColor[tone]}"
 		>
 			{@render icon()}
 		</span>
@@ -80,14 +78,14 @@
 	<a
 		{href}
 		aria-label={linkLabel ?? label}
-		class="flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-3 no-underline shadow-sm transition-all duration-slow hover:border-primary-500 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		class="group flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-3 no-underline shadow-sm transition-all duration-slow hover:border-primary-500 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 	>
 		{@render body()}
 	</a>
 {:else}
 	<div
 		role="group"
-		class="flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-3 shadow-sm transition-shadow duration-slow hover:shadow-md"
+		class="group flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-3 shadow-sm transition-shadow duration-slow hover:shadow-md"
 	>
 		{@render body()}
 	</div>

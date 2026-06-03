@@ -13,6 +13,10 @@
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type { DashboardData } from '$lib/types/dashboard';
 	import StatCard from '$lib/components/StatCard.svelte';
+	import FolderReveal from '$lib/components/micro/FolderReveal.svelte';
+	import ClipboardStamp from '$lib/components/micro/ClipboardStamp.svelte';
+	import FolderFlip from '$lib/components/micro/FolderFlip.svelte';
+	import AlertHourglass from '$lib/components/micro/AlertHourglass.svelte';
 	import RecentProjectsPanel from '$lib/components/RecentProjectsPanel.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -202,29 +206,38 @@
 
 	// "Tarefas recentes" SEM scroll: a lista preenche a altura disponivel e
 	// mostra apenas os itens que cabem INTEIROS — telas maiores exibem mais,
-	// menores exibem menos. Porte 1:1 do `applyRecentTaskFit` do index.html (v4.5):
-	// mede o rodape de cada item contra o da lista e oculta (`tk-fit-hidden`) o
-	// primeiro que ultrapassa e todos os seguintes.
+	// menores exibem menos. Inspirado no `applyRecentTaskFit` do index.html (v4.5):
+	// 1) mede com os itens empacotados no topo (`flex-start`) e oculta
+	//    (`tk-fit-hidden`) o primeiro que ultrapassa o rodape e todos os seguintes;
+	// 2) distribui a folga restante COMO espacamento entre os itens visiveis
+	//    (`space-between`), para que o ultimo encoste no fim e nao sobre branco.
 	let recentListEl = $state<HTMLDivElement | null>(null);
 
 	function applyRecentFit(): void {
 		const list = recentListEl;
 		if (!list) return;
 		const items = Array.from(list.children) as HTMLElement[];
+		// Empacota no topo para a medicao refletir a altura real dos itens.
+		list.style.justifyContent = 'flex-start';
 		for (const item of items) item.classList.remove('tk-fit-hidden');
 		const listBottom = list.getBoundingClientRect().bottom;
 		if (list.clientHeight <= 0) return;
 		let hideRest = false;
+		let visibleCount = 0;
 		for (const item of items) {
 			if (hideRest) {
 				item.classList.add('tk-fit-hidden');
 				continue;
 			}
-			if (item.getBoundingClientRect().bottom > listBottom + 1) {
+			if (item.getBoundingClientRect().bottom > listBottom + 2) {
 				item.classList.add('tk-fit-hidden');
 				hideRest = true;
+			} else {
+				visibleCount += 1;
 			}
 		}
+		// Com mais de um item, espalha a sobra entre eles; com um so, mantem no topo.
+		list.style.justifyContent = visibleCount > 1 ? 'space-between' : 'flex-start';
 	}
 
 	// Recalcula no mount, quando a lista de tarefas muda e a cada redimensionamento
@@ -297,7 +310,16 @@
 					linkLabel="Ver todos os projetos"
 				>
 					{#snippet icon()}
-						<i class="fas fa-folder-open fa-lg" aria-hidden="true"></i>
+						<!-- Micro-interacao: a pasta abre no hover do cartao revelando 3 prints
+							 do app (servidos pelo Flask em /static/img/, fora do bundle da SPA). -->
+						<FolderReveal
+							size={46}
+							images={[
+								'/static/img/dashboard/folder/1.webp',
+								'/static/img/dashboard/folder/2.webp',
+								'/static/img/dashboard/folder/3.webp'
+							]}
+						/>
 					{/snippet}
 				</StatCard>
 
@@ -310,7 +332,8 @@
 					linkLabel="Ver projetos finalizados"
 				>
 					{#snippet icon()}
-						<i class="fas fa-check-circle fa-lg" aria-hidden="true"></i>
+						<!-- Micro-interacao: prancheta com foto; no hover levanta e estampa "OK". -->
+						<ClipboardStamp size={46} image="/static/img/dashboard/folder/2.webp" />
 					{/snippet}
 				</StatCard>
 
@@ -323,7 +346,8 @@
 					linkLabel="Ver projetos vigentes"
 				>
 					{#snippet icon()}
-						<i class="fas fa-clock fa-lg" aria-hidden="true"></i>
+						<!-- Micro-interacao: pilha de 3 pastas que folheia uma a uma no hover. -->
+						<FolderFlip size={46} />
 					{/snippet}
 				</StatCard>
 
@@ -336,7 +360,8 @@
 					linkLabel="Ver projetos em atraso"
 				>
 					{#snippet icon()}
-						<i class="fas fa-exclamation-triangle fa-lg" aria-hidden="true"></i>
+						<!-- Micro-interacao: ampulheta racha e a areia despeja para fora no hover. -->
+						<AlertHourglass size={36} />
 					{/snippet}
 				</StatCard>
 			</div>
@@ -435,13 +460,13 @@
 								<span class="shrink-0 text-sm font-bold text-text-secondary">Recentes</span>
 								<div
 									bind:this={recentListEl}
-									class="flex flex-col gap-1 overflow-hidden lg:min-h-0 lg:flex-1"
+									class="flex flex-col gap-0.5 overflow-hidden lg:min-h-0 lg:flex-1"
 								>
 									{#each data.recent_tasks as t (t.id)}
 										<a
 											href={`${base}/tarefas?focus_task=${t.id}`}
 											title={t.descricao}
-											class="recent-task-item flex items-center gap-2 rounded-md border border-transparent px-2 py-1.5 no-underline transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="recent-task-item flex items-center gap-2 rounded-md border border-border-subtle px-2 py-1 no-underline transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 										>
 											<span
 												class="h-2 w-2 shrink-0 rounded-full {recentStatusDot[t.status] ?? 'bg-text-muted'}"
