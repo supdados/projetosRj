@@ -74,3 +74,11 @@ def test_extra_columns_are_ignored():
     raw = b"titulo;descricao;status\nA;d;Vigente"
     rows = parse_import_rows(raw)
     assert rows == [ParsedImportRow("A", "d")]
+
+
+def test_row_with_more_fields_than_header_does_not_raise():
+    # Linha malformada: mais separadores que o cabeçalho. csv.DictReader coloca o
+    # excedente sob a chave None (uma list); não deve estourar AttributeError.
+    raw = b"titulo;descricao\nA;foo;bar"
+    rows = parse_import_rows(raw)
+    assert rows == [ParsedImportRow("A", "foo")]

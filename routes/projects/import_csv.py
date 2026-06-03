@@ -9,13 +9,13 @@ import csv
 import io
 from typing import NamedTuple
 
-from flask import current_app, flash, g, redirect, request, url_for
+from flask import current_app, flash, redirect, request, url_for
 from sqlalchemy.exc import SQLAlchemyError
 
 from models import Project, db
 
 from routes.blueprint import main_bp
-from routes.decorators import login_required
+from routes.decorators import admin_required, login_required
 from routes.shared import (
     is_area_in_catalog,
     log_project_action,
@@ -56,8 +56,13 @@ def _extract_rows(reader: "csv.DictReader") -> list[ParsedImportRow]:
     """Converte linhas do DictReader em ParsedImportRow, ignorando título vazio."""
     rows: list[ParsedImportRow] = []
     for raw_row in reader:
+        # csv.DictReader joga colunas excedentes (linha com mais separadores que o
+        # cabeçalho) sob a chave None como list; filtramos para não chamar .strip()
+        # em list e evitar AttributeError → 500 numa importação malformada.
         normalized = {
-            (k or "").strip().lower(): (v or "").strip() for k, v in raw_row.items()
+            (k or "").strip().lower(): (v or "").strip()
+            for k, v in raw_row.items()
+            if k is not None
         }
         titulo = normalized.get("titulo", "")
         if not titulo:
@@ -130,12 +135,9 @@ def _persist_imported_projects(
 
 @main_bp.route("/projects/import", methods=["POST"])
 @login_required
+@admin_required
 def import_projects():
     """Importa projetos de um CSV (titulo/descricao). Apenas admin."""
-    if not g.user.is_admin:
-        flash("Acesso restrito a administradores.", "danger")
-        return redirect(url_for("main.list_projects"))
-
     area = _resolve_import_area(request.form.get("import_area"))
     if area is None:
         return redirect(url_for("main.list_projects"))
