@@ -6,6 +6,7 @@ from flask import abort, current_app, g, redirect, request, url_for
 from sqlalchemy import func, inspect
 
 from catalogs.abep import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
+from catalogs.inventario import INVENTARIO_AREAS
 from models import AreaCatalog, Project, ProjectHistory, UserArea, db
 from catalogs.objectives import (
     OBJETIVO_IDS,
@@ -270,6 +271,7 @@ def inject_current_year():
         'current_year': datetime.datetime.now(datetime.UTC).year,
         'AREAS_RESPONSAVEIS_CHOICES': get_area_catalog_choices(),
         'ABEP_INDICADORES_OPTIONS': ABEP_INDICADORES_OPTIONS,
+        'INVENTARIO_AREAS': list(INVENTARIO_AREAS),
     }
 
 

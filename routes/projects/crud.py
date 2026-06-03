@@ -1,6 +1,7 @@
 from flask import current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from catalogs.abep import normalize_abep_indicator
+from catalogs.inventario import sanitize_special_project_for_area
 from models import Etapa, IndicadorProjeto, Project, db
 from catalogs.objectives import normalize_goal_selection
 
@@ -54,7 +55,9 @@ def add_project():
         )
         
         # Novos campos
-        special_project = request.form.get('project_special_project') or None
+        special_project = sanitize_special_project_for_area(
+            request.form.get('project_special_project') or None, area_responsavel
+        )
         sei_process = request.form.get('project_sei_process') or None
         short_description = request.form.get('project_short_description') or None
         delivery_type = request.form.get('project_delivery_type') or None
@@ -223,7 +226,10 @@ def edit_project(project_id):
         project_to_edit.observacao = request.form.get('project_observacao')
         
         # Processar novos campos
-        project_to_edit.special_project = request.form.get('project_special_project') or None
+        project_to_edit.special_project = sanitize_special_project_for_area(
+            request.form.get('project_special_project') or None,
+            project_to_edit.area_responsavel,
+        )
         project_to_edit.sei_process = request.form.get('project_sei_process') or None
         project_to_edit.short_description = request.form.get('project_short_description') or None
         project_to_edit.delivery_type = request.form.get('project_delivery_type') or None

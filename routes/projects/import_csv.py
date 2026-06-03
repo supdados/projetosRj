@@ -12,6 +12,7 @@ from typing import NamedTuple
 from flask import current_app, flash, redirect, request, url_for
 from sqlalchemy.exc import SQLAlchemyError
 
+from catalogs.inventario import sanitize_special_project_for_area
 from models import Project, db
 
 from routes.blueprint import main_bp
@@ -150,7 +151,9 @@ def import_projects():
         )
         return redirect(url_for("main.list_projects"))
 
-    special_project = request.form.get("import_special_project") or None
+    special_project = sanitize_special_project_for_area(
+        request.form.get("import_special_project") or None, area
+    )
     delivery_type = request.form.get("import_delivery_type") or None
 
     upload = request.files.get("import_file")

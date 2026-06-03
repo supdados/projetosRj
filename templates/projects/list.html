@@ -635,4 +635,13 @@
 </script>
 <script src="{{ url_for('static', filename='js/modules/cal-datetime-picker.js') }}"></script>
 {% include "projects/add_form_js.html" %}
+{% include "projects/inventario_special_toggle.html" %}
+<script nonce="{{ csp_nonce }}">
+    document.addEventListener('DOMContentLoaded', function () {
+        window.bindInventarioSpecialToggle('project_area_responsavel', 'project_special_project');
+        {% if is_admin_user %}
+        window.bindInventarioSpecialToggle('import_area', 'import_special_project');
+        {% endif %}
+    });
+</script>
 {% endblock %}

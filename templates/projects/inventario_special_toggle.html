@@ -1,0 +1,43 @@
+<script nonce="{{ csp_nonce }}">
+// Mostra a opção "Inventário" em Projetos Especiais apenas quando a área
+// selecionada é uma das áreas autorizadas (regra de negócio em catalogs/inventario.py).
+(function () {
+    'use strict';
+    const ALLOWED = ({{ INVENTARIO_AREAS|tojson }}).map(function (name) {
+        return name.trim().toLowerCase();
+    });
+
+    function selectedAreaValue(areaFieldName) {
+        const fields = document.querySelectorAll('[name="' + areaFieldName + '"]');
+        for (const field of fields) {
+            if (!field.disabled && field.value) return field.value;
+        }
+        for (const field of fields) {
+            if (field.value) return field.value;
+        }
+        return '';
+    }
+
+    window.bindInventarioSpecialToggle = function (areaFieldName, specialSelectId) {
+        const special = document.getElementById(specialSelectId);
+        if (!special) return;
+        const option = special.querySelector('option[value="Inventário"]');
+        if (!option) return;
+
+        function sync() {
+            const area = (selectedAreaValue(areaFieldName) || '').trim().toLowerCase();
+            const allowed = ALLOWED.indexOf(area) !== -1;
+            option.hidden = !allowed;
+            option.disabled = !allowed;
+            if (!allowed && special.value === 'Inventário') {
+                special.value = '';
+            }
+        }
+
+        document.querySelectorAll('[name="' + areaFieldName + '"]').forEach(function (field) {
+            field.addEventListener('change', sync);
+        });
+        sync();
+    };
+})();
+</script>

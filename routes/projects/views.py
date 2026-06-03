@@ -5,6 +5,7 @@ from collections import defaultdict
 
 from flask import current_app, flash, g, make_response, redirect, render_template, request, url_for
 
+from catalogs.inventario import any_area_allows_inventario
 from models import Etapa, Project, ProjectHistory, Task, UserCalendarConnection, db
 from services.calendar_sync import hydrate_google_connection_identity
 from services.google_calendar import is_google_calendar_enabled
@@ -150,7 +151,9 @@ def list_projects():
     objetivos, _, _ = get_goal_catalog_context()  # Para o modal de adicionar projeto e filtro
     
     # Novas opções para filtros
-    special_projects_options = ['ABEP', 'TCE', 'Inventário']
+    special_projects_options = ['ABEP', 'TCE']
+    if g.user.is_admin or any_area_allows_inventario(g.user.get_areas()):
+        special_projects_options.append('Inventário')
     delivery_types_options = ['Sistema', 'Painel', 'Norma', 'Instrumento de parceria', 'Fluxo Processual', 'Outro']
     has_advanced_filters_active = any([
         selected_atraso,

@@ -1,6 +1,7 @@
 from flask import g, jsonify, request
 
 from catalogs.abep import normalize_abep_indicator
+from catalogs.inventario import sanitize_special_project_for_area
 from models import IndicadorProjeto, Project, db
 from catalogs.objectives import normalize_goal_selection
 
@@ -93,10 +94,15 @@ def update_project_inline(project_id):
                 if g.user.is_admin or (len(user_areas) > 1 and new_area in user_areas):
                     changes.append(f'área de "{project_to_edit.area_responsavel}" para "{new_area}"')
                     project_to_edit.area_responsavel = new_area
+                    project_to_edit.special_project = sanitize_special_project_for_area(
+                        project_to_edit.special_project, project_to_edit.area_responsavel
+                    )
 
         # Novos campos
         if 'special_project' in data:
-            project_to_edit.special_project = data['special_project'] or None
+            project_to_edit.special_project = sanitize_special_project_for_area(
+                data['special_project'] or None, project_to_edit.area_responsavel
+            )
 
         if 'sei_process' in data:
             project_to_edit.sei_process = data['sei_process'] or None

@@ -433,4 +433,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+{% include "projects/inventario_special_toggle.html" %}
+<script nonce="{{ csp_nonce }}">
+    document.addEventListener('DOMContentLoaded', function () {
+        window.bindInventarioSpecialToggle('project_area_responsavel', 'project_special_project');
+    });
+</script>
 {% endblock %}
