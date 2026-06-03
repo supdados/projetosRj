@@ -30,6 +30,14 @@
                download>
                 <i class="fas fa-download" aria-hidden="true"></i>
             </a>
+            <button type="button"
+                    class="btn-projects-v4 btn-projects-v4-secondary"
+                    title="Importar projetos (CSV)"
+                    aria-label="Importar projetos"
+                    data-bs-toggle="modal"
+                    data-bs-target="#importProjectsModal">
+                <i class="fas fa-file-import" aria-hidden="true"></i>
+            </button>
             {% endif %}
             <button type="button" class="btn-projects-v4 btn-projects-v4-primary" data-bs-toggle="modal" data-bs-target="#addProjectModal">
                 <i class="fas fa-plus" aria-hidden="true"></i>
@@ -357,6 +365,10 @@
 
 {% include "projects/add_form.html" %}
 {% include "partials/_delete_project_confirm_modal.html" %}
+
+{% if is_admin_user %}
+{% include "projects/import_modal.html" %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -618,4 +630,13 @@
 </script>
 <script src="{{ url_for('static', filename='js/modules/cal-datetime-picker.js') }}"></script>
 {% include "projects/add_form_js.html" %}
+{% include "projects/inventario_special_toggle.html" %}
+<script nonce="{{ csp_nonce }}">
+    document.addEventListener('DOMContentLoaded', function () {
+        window.bindInventarioSpecialToggle('project_orgao_id', 'project_special_project');
+        {% if is_admin_user %}
+        window.bindInventarioSpecialToggle('import_orgao_id', 'import_special_project');
+        {% endif %}
+    });
+</script>
 {% endblock %}

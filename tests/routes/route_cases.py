@@ -129,6 +129,16 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
+        "id": "import_projects_post",
+        "method": "POST",
+        "rule": "/projects/import",
+        "path": "/projects/import",
+        "role": "admin",
+        "expected_status": 302,
+        "requires_login": True,
+        "requires_admin": True,
+    },
+    {
         "id": "projetos_pendentes_get",
         "method": "GET",
         "rule": "/projetos_pendentes",
@@ -1513,4 +1523,4 @@ LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 
 # Segurança adicional para garantir escopo fechado do plano.
-assert len(ROUTE_CASES) == 134
+assert len(ROUTE_CASES) == 135

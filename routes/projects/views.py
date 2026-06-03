@@ -32,11 +32,13 @@ from routes.blueprint import main_bp
 from routes.decorators import login_required
 from routes.orgao_scope import (
     expand_orgao_filter_ids,
+    get_user_orgao_siglas,
     get_user_orgao_subtree_ids,
     redirect_to_current_route_without_orgao,
     sanitize_orgao_filter_for_current_user,
     user_can_access_project,
 )
+from catalogs.inventario import any_orgao_allows_inventario
 from routes.shared import (
     get_or_404,
     get_goal_catalog_context,
@@ -186,6 +188,8 @@ def list_projects():
 
     # Novas opções para filtros
     special_projects_options = ["ABEP", "TCE"]
+    if g.user.is_admin or any_orgao_allows_inventario(get_user_orgao_siglas(g.user)):
+        special_projects_options.append("Inventário")
     delivery_types_options = [
         "Sistema",
         "Painel",

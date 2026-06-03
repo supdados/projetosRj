@@ -1,6 +1,7 @@
 from flask import g, jsonify, request
 
 from catalogs.abep import normalize_abep_indicator
+from catalogs.inventario import sanitize_special_project_for_orgao
 from models import IndicadorProjeto, Project, db
 from catalogs.objectives import normalize_goal_selection
 
@@ -178,10 +179,17 @@ def update_project_inline(project_id):
                     f'órgão responsável de "{old_sigla}" para "{new_orgao_obj.sigla}"'
                 )
                 project_to_edit.orgao_id = new_orgao_id
+                project_to_edit.special_project = sanitize_special_project_for_orgao(
+                    project_to_edit.special_project, new_orgao_obj.sigla
+                )
 
         # Novos campos
         if "special_project" in data:
-            project_to_edit.special_project = data["special_project"] or None
+            current_orgao = db.session.get(OrgaoUnidade, project_to_edit.orgao_id)
+            project_to_edit.special_project = sanitize_special_project_for_orgao(
+                data["special_project"] or None,
+                current_orgao.sigla if current_orgao else None,
+            )
 
         if "sei_process" in data:
             project_to_edit.sei_process = data["sei_process"] or None

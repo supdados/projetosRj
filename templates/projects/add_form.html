@@ -46,12 +46,13 @@
                                             <input type="hidden"
                                                    id="project_orgao_id"
                                                    name="project_orgao_id"
+                                                   data-sigla="{{ ORGAOS_DISPONIVEIS[0][1] }}"
                                                    value="{{ ORGAOS_DISPONIVEIS[0][0] }}">
                                         {% else %}
                                             <select class="form-select-glass form-select-glass-enhanced" id="project_orgao_id" name="project_orgao_id" required>
                                                 <option value="" selected disabled>Selecione um órgão</option>
                                                 {% for orgao_opt_id, orgao_opt_sigla, orgao_opt_nome in ORGAOS_DISPONIVEIS %}
-                                                    <option value="{{ orgao_opt_id }}">{{ orgao_opt_sigla }}{% if orgao_opt_nome and orgao_opt_nome != orgao_opt_sigla %} — {{ orgao_opt_nome }}{% endif %}</option>
+                                                    <option value="{{ orgao_opt_id }}" data-sigla="{{ orgao_opt_sigla }}">{{ orgao_opt_sigla }}{% if orgao_opt_nome and orgao_opt_nome != orgao_opt_sigla %} — {{ orgao_opt_nome }}{% endif %}</option>
                                                 {% endfor %}
                                             </select>
                                         {% endif %}
@@ -154,6 +155,7 @@
                                                         <option value="">Nenhum</option>
                                                         <option value="ABEP">ABEP</option>
                                                         <option value="TCE">TCE</option>
+                                                        <option value="Inventário">Inventário</option>
                                                     </select>
                                                 </div>
                                             </div>
