@@ -6,8 +6,9 @@
 	 * REPOUSO: areia preenche o bulbo SUPERIOR (clip CURVO seguindo a parede do bulbo).
 	 * Nenhum rAF => 0 CPU.
 	 *
-	 * HOVER (proprio OU ancestral `.group`): uma RACHADURA e desenhada no ponto de
-	 * vazamento (canvas) e a areia VAZA do GARGALO (meio do item) num fluxo UNIFORME (pouca
+	 * HOVER (proprio OU ancestral `.group`) por 15s CONTINUOS (gate anti-agressivo;
+	 * sair zera a contagem): uma RACHADURA e desenhada no ponto de vazamento (canvas)
+	 * e a areia VAZA do GARGALO (meio do item) num fluxo UNIFORME (pouca
 	 * aleatoriedade = parabola previsivel), cai ate o CHAO DO CARD (medido em runtime)
 	 * e e ABSORVIDA por um MONTE desenhado (forma limpa que cresce) — previsivel, sem
 	 * pilha de pixels espalhada. Permanece ate o mouse sair (entao escoa).
@@ -367,10 +368,23 @@
 		const group = root.closest('.group') as HTMLElement | null;
 		const hoverTarget: HTMLElement = group ?? root;
 
+		// DELAY DE ENTRADA (15s): a animacao e intensa demais p/ disparar a cada hover,
+		// entao so jorra apos 15s de hover CONTINUO. `enterTimer` agenda o start(); sair
+		// zera a contagem (via leave). A grace de 90ms na saida (abaixo) absorve flicks
+		// transitorios -> um micro-leave NAO reseta os 15s.
+		const ENTER_DELAY_MS = 15000;
+		let enterTimer = 0;
+		const clearEnterTimer = () => {
+			if (enterTimer) {
+				clearTimeout(enterTimer);
+				enterTimer = 0;
+			}
+		};
+
 		// Hover-intent na SAIDA: uma `mouseleave` transitoria (cursor rocando a borda,
-		// jitter de layout, ou leave->enter rapido) NAO deve drenar de imediato. Um
+		// jitter de layout, ou leave->enter rapido) NAO deve agir de imediato. Um
 		// pequeno atraso cancelavel absorve o ruido; reentrar antes do prazo cancela a
-		// saida e mantem o estado. Ref: hover-intent (cssscript.com/sv-hover-intent).
+		// saida e mantem o estado/contagem. Ref: hover-intent (cssscript.com/sv-hover-intent).
 		const LEAVE_DELAY_MS = 90;
 		let leaveTimer = 0;
 		const clearLeaveTimer = () => {
@@ -380,14 +394,26 @@
 			}
 		};
 		const enter = () => {
-			clearLeaveTimer(); // reentrou: cancela qualquer drenagem pendente
-			start();
+			clearLeaveTimer(); // reentrou: cancela qualquer drenagem/saida pendente
+			// Animacao JA tocou e esta drenando (leaving): voltar rapido RETOMA na hora
+			// (sem exigir novos 15s) — start() reaproveita a pose e a pilha volta a subir.
+			if (phase === 'leaving') {
+				start();
+				return;
+			}
+			if (phase !== 'idle') return; // entering/active: ja rodando, nada a fazer
+			if (enterTimer) return; // ja contando os 15s
+			enterTimer = window.setTimeout(() => {
+				enterTimer = 0;
+				start(); // 15s continuos -> dispara o jorro
+			}, ENTER_DELAY_MS);
 		};
 		const leave = () => {
 			clearLeaveTimer();
 			leaveTimer = window.setTimeout(() => {
 				leaveTimer = 0;
-				stop();
+				clearEnterTimer(); // saiu de fato: zera a contagem dos 15s
+				stop(); // se estava jorrando, drena; se idle, no-op
 			}, LEAVE_DELAY_MS);
 		};
 		hoverTarget.addEventListener('mouseenter', enter);
@@ -415,6 +441,7 @@
 		// curso). Sem isto, o loop ficaria preso parado apos voltar de outra aba.
 		const onVisibility = () => {
 			if (document.hidden) {
+				clearEnterTimer(); // aba oculta NAO conta os 15s (senao dispara ao voltar)
 				cancelLoop(); // libera o id; loop() tambem zera, mas cancelamos ja
 				return;
 			}
@@ -422,16 +449,24 @@
 		};
 		document.addEventListener('visibilitychange', onVisibility);
 
+		// Perder o FOCO da janela (cmd-tab / clicar em outro app) sem o cursor sair do
+		// elemento NAO dispara mouseleave -> o timer dos 15s continuaria e a animacao
+		// comecaria ao voltar. Cancelamos a contagem no blur; so re-hover reinicia.
+		const onBlur = () => clearEnterTimer();
+		window.addEventListener('blur', onBlur);
+
 		return () => {
 			mq.removeEventListener('change', onMq);
 			hoverTarget.removeEventListener('mouseenter', enter);
 			hoverTarget.removeEventListener('mouseleave', leave);
 			hoverTarget.removeEventListener('focusin', enter);
 			hoverTarget.removeEventListener('focusout', leave);
+			clearEnterTimer();
 			clearLeaveTimer();
 			if (resizeTimer) clearTimeout(resizeTimer);
 			window.removeEventListener('resize', onResize);
 			document.removeEventListener('visibilitychange', onVisibility);
+			window.removeEventListener('blur', onBlur);
 			cancelLoop(); // unico caminho de cancelamento no unmount (sem leak)
 		};
 	});
