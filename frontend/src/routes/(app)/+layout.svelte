@@ -40,10 +40,13 @@
 	     e um padding responsivo que escala em telas menores e TRAVA em ~7rem a partir
 	     do tamanho de notebook -> respiro constante em telas grandes, itens aumentam.
 	     overflow-y-auto: a barra de rolagem da pagina vive aqui, comecando logo abaixo
-	     do topnav fixo (mesmo padrao do painel Projetos Recentes). -->
+	     do topnav fixo (mesmo padrao do painel Projetos Recentes).
+	     relative: e o containing block dos descendentes position:absolute (ex.: inputs
+	     sr-only de anexo por linha na lista de tarefas). Sem isso eles se ancoram no
+	     <html> e esticam o scrollHeight do documento -> 2a barra rolando pagina vazia. -->
 	<main
 		bind:this={mainEl}
-		class="mx-auto w-full min-h-0 flex-1 overflow-y-auto px-[clamp(1.5rem,8vw,7rem)] py-6"
+		class="relative mx-auto w-full min-h-0 flex-1 overflow-y-auto px-[clamp(1.5rem,8vw,7rem)] py-6"
 	>
 		{#if $auth.status === 'authenticated'}
 			{@render children()}
