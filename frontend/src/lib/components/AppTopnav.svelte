@@ -45,11 +45,52 @@
 	// Ordem do v4.5 (sem item "Busca" — a busca virou o campo live a direita).
 	const navLinks: NavLink[] = [
 		{ label: 'Inicio', path: '/dashboard', icon: 'fa-home' },
-		{ label: 'Todos os projetos', path: '/projetos', icon: 'fa-folder-open' },
+		{ label: 'Projetos', path: '/projetos', icon: 'fa-folder-open' },
 		{ label: 'Tarefas', path: '/tarefas', icon: 'fa-tasks' },
-		{ label: 'Projetos pendentes', path: '/projetos/pendentes', icon: 'fa-exclamation-triangle' },
+		{ label: 'Pendentes', path: '/projetos/pendentes', icon: 'fa-exclamation-triangle' },
 		{ label: 'Calendario', path: '/calendarios', icon: 'fa-calendar-alt' }
 	];
+
+	// Indicador unico (pilula branca) que DESLIZA entre os itens da nav. Um so
+	// elemento persistente, posicionado por transform+width medindo o <a> ativo —
+	// nao a dupla send/receive do crossfade. Por que: o crossfade remede AS DUAS
+	// pontas depois do reflow; como o item ativo ganha rotulo e empurra os
+	// vizinhos, o ponto de partida "saltava" antes de deslizar. Aqui a partida e a
+	// posicao ATUAL real do indicador (transform anterior), entao ele vai direto de
+	// um item ao outro. Detalhes em micro/docs/transicao-topnav.md.
+	let navEl = $state<HTMLElement | null>(null);
+	let pill = $state<{ x: number; w: number; ready: boolean }>({ x: 0, w: 0, ready: false });
+	// Sem transicao no 1o posicionamento (senao desliza do x=0); liga depois.
+	let pillSlides = $state(false);
+
+	function measurePill(): void {
+		if (!navEl) return;
+		const activeEl = navEl.querySelector<HTMLElement>('a[aria-current="page"]');
+		if (!activeEl) {
+			pill = { ...pill, ready: false };
+			return;
+		}
+		// rect relativo ao <nav> (robusto a offsetParent).
+		const nav = navEl.getBoundingClientRect();
+		const r = activeEl.getBoundingClientRect();
+		pill = { x: r.left - nav.left, w: r.width, ready: true };
+		if (!pillSlides) requestAnimationFrame(() => (pillSlides = true));
+	}
+
+	// Re-mede quando a rota muda (o rotulo do ativo expande -> larguras mudam). O
+	// rAF garante medir DEPOIS do reflow, ja na geometria final.
+	$effect(() => {
+		pathname;
+		requestAnimationFrame(measurePill);
+	});
+
+	// Acompanha mudancas de largura da viewport (quebra de layout reposiciona itens).
+	$effect(() => {
+		if (!navEl) return;
+		const onResize = () => measurePill();
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
+	});
 
 	/**
 	 * Considera ativo quando o pathname e o link em si ou um descendente dele
@@ -386,7 +427,25 @@
 				ProjetosRJ
 			</a>
 
-			<nav aria-label="Navegacao principal" class="inline-flex items-center gap-2">
+			<!-- Indicador unico (pilula branca) que DESLIZA entre os itens. Um so
+			     elemento, posicionado por transform+width medindo o <a> ativo, entao
+			     vai DIRETO de um item ao outro (sem o "salto" do reflow). O item ATIVO
+			     mostra icone + nome (texto escuro sobre a pilula); os demais ficam so
+			     icone. Detalhes/alternativas em micro/docs/transicao-topnav.md. -->
+			<nav
+				bind:this={navEl}
+				aria-label="Navegacao principal"
+				class="relative inline-flex items-center gap-1"
+			>
+				{#if pill.ready}
+					<span
+						class="nav-pill pointer-events-none absolute left-0 top-0 z-0 h-[1.95rem] rounded-full bg-white {pillSlides
+							? 'nav-pill--slide'
+							: ''}"
+						style="width: {pill.w}px; transform: translate3d({pill.x}px, 0, 0);"
+						aria-hidden="true"
+					></span>
+				{/if}
 				{#each navLinks as link (link.path)}
 					{@const active = isActive(link.path, pathname)}
 					<a
@@ -394,11 +453,14 @@
 						aria-current={active ? 'page' : undefined}
 						title={link.label}
 						aria-label={link.label}
-						class="inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] no-underline transition-all duration-[180ms] ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {active
-							? 'border-white bg-white text-primary-700'
-							: 'bg-transparent text-white/[0.78] hover:bg-white/10 hover:text-white'}"
+						class="relative z-[1] inline-flex h-[1.95rem] items-center rounded-full pl-[0.5rem] text-[0.9rem] no-underline transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {active
+							? 'pr-3 text-primary-700'
+							: 'pr-[0.5rem] text-white/[0.78] hover:bg-white/10 hover:text-white'}"
 					>
-						<i class="fas {link.icon}" aria-hidden="true"></i>
+						<i class="fas {link.icon} shrink-0" aria-hidden="true"></i>
+						{#if active}
+							<span class="ml-2 whitespace-nowrap font-semibold leading-none">{link.label}</span>
+						{/if}
 					</a>
 				{/each}
 			</nav>
@@ -753,6 +815,21 @@
 </header>
 
 <style>
+	/* Indicador deslizante da nav: anima transform (compositor) + width (custo de
+	   layout trivial por ser UM elemento fora de fluxo). cubic-bezier in-out =
+	   passada suave. .nav-pill--slide so e aplicada apos o 1o posicionamento, para
+	   nao deslizar a partir do x=0 ao montar. */
+	.nav-pill--slide {
+		transition:
+			transform 320ms cubic-bezier(0.65, 0, 0.35, 1),
+			width 320ms cubic-bezier(0.65, 0, 0.35, 1);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.nav-pill--slide {
+			transition: none;
+		}
+	}
+
 	/* === Seletor de orgao em arvore ===
 	   Porte de static/css/partials/orgao-tree-picker.css (v4.5). O trigger vive na
 	   barra azul (cores brancas fixas, como no original); o painel e branco com
