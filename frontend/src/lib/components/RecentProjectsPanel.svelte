@@ -95,9 +95,9 @@
 					href={`${base}/projetos/${project.id}`}
 					class="rp-grid items-center border-b border-border-subtle no-underline transition-colors duration-slow hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
 				>
-					<span role="cell" class="px-3 py-3 text-center text-sm text-text-secondary">{project.id}</span>
-					<span role="cell" class="truncate px-3 py-3 text-sm font-medium text-primary-600">{project.titulo}</span>
-					<span role="cell" class="px-3 py-3 text-center text-sm text-text-secondary">
+					<span role="cell" class="px-3 py-3 text-center text-base text-text-secondary">{project.id}</span>
+					<span role="cell" class="truncate px-3 py-3 text-base font-medium text-primary-600">{project.titulo}</span>
+					<span role="cell" class="px-3 py-3 text-center text-base text-text-secondary">
 						{project.orgao_sigla ?? project.orgao ?? 'N/A'}
 					</span>
 					<span role="cell" class="px-3 py-3 text-center">
