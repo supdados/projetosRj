@@ -9,12 +9,12 @@
 	 *     por linha, lazy); anexos: o ícone abre o seletor de arquivo direto.
 	 * O clique na descrição (texto) abre o TaskDrawer completo.
 	 */
-	import { onDestroy } from 'svelte';
+	import { getContext, onDestroy } from 'svelte';
 	import { get } from 'svelte/store';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import type { TaskCard } from '$lib/types/tasks';
+	import type { TaskAssignee, TaskCard } from '$lib/types/tasks';
 	import type { TaskFieldEdits } from '$lib/types/taskDrawer';
 	import { type TaskStatus } from '$lib/utils/taskStatus';
 	import {
@@ -25,15 +25,13 @@
 	} from '$lib/utils/taskLabels';
 	import { saveFields } from '$lib/api/taskDrawer';
 	import { updateTaskStatus } from '$lib/api/board';
-	import { fetchHubResponsaveis } from '$lib/api/tasks';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
+	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
 	import CommentsPanel from '$lib/components/CommentsPanel.svelte';
 	import AttachmentLightbox from '$lib/components/AttachmentLightbox.svelte';
 
 	interface Props {
 		task: TaskCard;
-		/** Valor do projeto do grupo — p/ sugestões de responsável. */
-		projectValue: string;
 		/** Abre o drawer completo da tarefa (clique na descrição). */
 		onOpen: (id: number) => void;
 		/** Exclui a tarefa; resolve `true` em sucesso. */
@@ -42,7 +40,7 @@
 		onChanged: () => void;
 	}
 
-	let { task, projectValue, onOpen, onDelete, onChanged }: Props = $props();
+	let { task, onOpen, onDelete, onChanged }: Props = $props();
 
 	const PRIORIDADE_OPTS = [
 		{ value: '', label: '—' },
@@ -68,9 +66,17 @@
 
 	// Classe base do <select> estilo-chip (some o caret nativo; clica e abre o
 	// dropdown). A cor vem do chipClass do tom atual.
-	const SELECT_CHIP = 'w-full cursor-pointer appearance-none text-center disabled:opacity-50';
+	// `text-align-last: center` centraliza o VALOR exibido do <select> de forma
+	// confiável entre navegadores (Safari/macOS não respeita só `text-center`).
+	const SELECT_CHIP =
+		'w-full cursor-pointer appearance-none text-center [text-align-last:center] disabled:opacity-50';
 
 	let savingField = $state(false);
+
+	// Celebração de finalização (confete), fornecida pela página via contexto — a
+	// MESMA do Kanban/drawer. A lista dispara ao transicionar p/ "finalizada".
+	const celebrateFinalize =
+		getContext<((origin?: unknown) => void) | undefined>('celebrateFinalize');
 
 	/** Salva campos (descricao/prioridade/tipo_pedido/responsavel) e revalida. */
 	async function saveField(fields: TaskFieldEdits): Promise<void> {
@@ -86,10 +92,16 @@
 	}
 
 	/** Status tem rota própria (respeita can_finalize); revalida sempre. */
-	async function changeStatus(value: string): Promise<void> {
+	async function changeStatus(value: string, origin?: HTMLElement): Promise<void> {
+		const wasFinalized = task.status === 'finalizada';
 		savingField = true;
 		try {
 			await updateTaskStatus(task.id, value as TaskStatus);
+			// Confete só na TRANSIÇÃO ativa -> finalizada e após o servidor aceitar
+			// (updateTaskStatus lança em 403). Origem = o próprio chip de status.
+			if (value === 'finalizada' && !wasFinalized) {
+				celebrateFinalize?.(origin);
+			}
 		} catch {
 			// 403 ao finalizar sem permissão etc. — revalida e reverte
 		} finally {
@@ -121,19 +133,9 @@
 		if (value !== task.descricao) await saveField({ descricao: value });
 	}
 
-	// --- Sugestões de responsável (lazy ao focar o select) ---
-	let responsavelOptions = $state<{ id: number; name: string }[]>([]);
-	let responsavelLoaded = $state(false);
-	async function loadResponsaveis(): Promise<void> {
-		if (responsavelLoaded || !projectValue) return;
-		responsavelLoaded = true;
-		try {
-			const result = await fetchHubResponsaveis({ project: projectValue });
-			responsavelOptions = result.users;
-		} catch {
-			responsavelOptions = [];
-		}
-	}
+	// Responsáveis múltiplos: estado local seedado do card. O AssigneePicker
+	// persiste no servidor e sincroniza esta lista a partir da resposta.
+	let assignees = $state<TaskAssignee[]>(task.assignees ?? []);
 
 	// --- Exclusão (mini-confirm inline) ---
 	let confirming = $state(false);
@@ -229,7 +231,7 @@
 </script>
 
 <div class="group/row border-b border-border-subtle last:border-b-0">
-	<div class="task-hub-grid px-3 py-[0.55rem] transition-colors duration-fast hover:bg-primary-100/40">
+	<div class="task-hub-grid px-3 py-2 transition-colors duration-fast hover:bg-primary-100/40">
 		<!-- Descrição: texto abre o drawer; caneta habilita edição inline -->
 		{#if editingDesc}
 			<!-- svelte-ignore a11y_autofocus -->
@@ -294,7 +296,7 @@
 			value={task.status}
 			disabled={savingField}
 			aria-label="Status"
-			onchange={(e) => changeStatus(e.currentTarget.value)}
+			onchange={(e) => changeStatus(e.currentTarget.value, e.currentTarget)}
 			class="{chipClass(statusTone(task.status))} {SELECT_CHIP}"
 		>
 			{#each STATUS_OPTS as opt (opt.value)}
@@ -302,23 +304,8 @@
 			{/each}
 		</select>
 
-		<!-- Responsável (select; sugestões lazy) -->
-		<select
-			value={task.responsavel ?? ''}
-			disabled={savingField}
-			aria-label="Responsável"
-			onfocus={loadResponsaveis}
-			onchange={(e) => saveField({ responsavel: e.currentTarget.value || null })}
-			class="w-full cursor-pointer truncate rounded-[5px] border border-border-subtle bg-surface px-1.5 py-1 text-xs text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-		>
-			<option value="">Não informado</option>
-			{#if task.responsavel && !responsavelOptions.some((u) => u.name === task.responsavel)}
-				<option value={task.responsavel}>{task.responsavel}</option>
-			{/if}
-			{#each responsavelOptions as user (user.id)}
-				<option value={user.name}>{user.name}</option>
-			{/each}
-		</select>
+		<!-- Responsáveis (múltiplos): avatares de iniciais + popover de busca -->
+		<AssigneePicker taskId={task.id} bind:assignees disabled={savingField} />
 
 		<!-- Ações: comentários (inline), anexar (seletor direto), excluir -->
 		<div class="flex items-center justify-center gap-1">

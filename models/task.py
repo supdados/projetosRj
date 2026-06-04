@@ -87,6 +87,16 @@ class Task(db.Model):
         cascade="all, delete-orphan",
         order_by="TaskAnexo.created_at",
     )
+    # Responsáveis múltiplos (N:N via task_assignee). selectin evita N+1 ao
+    # serializar a lista do hub. A coluna legada ``responsavel`` (texto) deixa
+    # de ser usada para novas atribuições.
+    assignees = db.relationship(
+        "TaskAssignee",
+        backref="task_ref",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        order_by="TaskAssignee.created_at",
+    )
 
     def __init__(self, **kwargs):
         _resolve_legacy_kwargs(kwargs)
@@ -148,6 +158,37 @@ class Task(db.Model):
     @property
     def items(self):
         return [self]
+
+
+class TaskAssignee(db.Model):
+    """Atribuição N:N entre Task e User — múltiplos responsáveis por tarefa.
+
+    Exemplo: TaskAssignee(task_id=10, user_id=3) marca o usuário 3 como
+    responsável da tarefa 10. PK composta garante idempotência.
+    """
+
+    __tablename__ = "task_assignee"
+
+    task_id = db.Column(
+        db.Integer,
+        db.ForeignKey("task.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+    user = db.relationship("User")
+
+    __table_args__ = (db.Index("ix_task_assignee_user_id", "user_id"),)
+
+    def __repr__(self):
+        return f"<TaskAssignee task_id={self.task_id} user_id={self.user_id}>"
 
 
 @event.listens_for(Etapa, "before_delete")

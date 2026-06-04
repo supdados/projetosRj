@@ -284,12 +284,22 @@ def _extract_creation_payload(default_project=None):
         request.form.get("tipo_pedido") or payload.get("tipo_pedido") or ""
     ).strip() or None
 
+    raw_assignee_ids = payload.get("assignee_ids")
+    assignee_ids: list[int] = []
+    if isinstance(raw_assignee_ids, list):
+        for value in raw_assignee_ids:
+            try:
+                assignee_ids.append(int(value))
+            except (TypeError, ValueError):
+                continue
+
     return {
         "project_raw": project_raw,
         "etapa_raw": etapa_raw,
         "descricao": descricao,
         "status": status,
         "responsavel": responsavel,
+        "assignee_ids": assignee_ids,
         "prioridade": prioridade,
         "tipo_pedido": tipo_pedido,
     }
@@ -374,6 +384,19 @@ def _create_task_common(default_project=None):
         db.session.add(task)
         db.session.flush()
 
+        # Responsáveis múltiplos (novo modelo). Valida cada id contra os
+        # candidatos com acesso ao projeto; notifica os adicionados (abaixo).
+        from routes.tasks.notifications import notify_assignee_change
+        from routes.tasks.queries import set_task_assignees
+
+        allowed_assignee_ids = {
+            user.id for user in _get_assignable_users_for_project(project)
+        }
+        desired_assignees = [
+            uid for uid in payload["assignee_ids"] if uid in allowed_assignee_ids
+        ]
+        added_assignees, removed_assignees = set_task_assignees(task, desired_assignees)
+
         notify_task_event(
             task,
             actor_user_id=g.user.id,
@@ -392,6 +415,8 @@ def _create_task_common(default_project=None):
                 old_responsavel=None,
                 new_responsavel=task.responsavel,
             )
+
+        notify_assignee_change(task, added_assignees, removed_assignees)
 
         db.session.commit()
 

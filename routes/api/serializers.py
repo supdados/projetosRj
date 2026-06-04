@@ -598,6 +598,7 @@ def serialize_task_card(task: Any) -> dict[str, Any]:
         ``permissions.can_finalize``.
     """
     from routes.tasks.permissions import task_permission_flags
+    from routes.tasks.queries import serialize_task_assignees
 
     flags = task_permission_flags(task)
     # ``task.project`` é o relacionamento já carregado (backref em models/task.py);
@@ -608,6 +609,7 @@ def serialize_task_card(task: Any) -> dict[str, Any]:
         "descricao": task.descricao,
         "status": task.status,
         "responsavel": task.responsavel,
+        "assignees": serialize_task_assignees(task),
         "prioridade": task.prioridade,
         "tipo_pedido": task.tipo_pedido,
         "ordem": task.ordem,

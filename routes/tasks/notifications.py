@@ -11,8 +11,45 @@ from flask import g, url_for
 
 from routes.tasks.constants import _preview_text, _task_status_label
 from routes.tasks.queries import _task_active_target_url
-from services.notifications import notify_task_assignment_change, notify_task_event
+from services.notifications import (
+    create_user_notifications,
+    notify_task_assignment_change,
+    notify_task_event,
+)
 from services.task_mutation import TaskEditDiff
+
+
+def notify_assignee_change(task, added_user_ids, removed_user_ids) -> None:
+    """Notifica (sino) quem foi adicionado/removido como responsável da tarefa.
+
+    Dispara em TODA atribuição (tarefa nova ou edição). ``create_user_notifications``
+    já descarta o próprio ator e valida a existência dos usuários, então é seguro
+    passar listas que incluam o ator. Sem e-mail (não há infra).
+
+    Uso: notify_assignee_change(task, added_ids, removed_ids) após reconciliar.
+    """
+    if not added_user_ids and not removed_user_ids:
+        return
+    target_url = _task_active_target_url(task)
+    descricao = _preview_text(task.descricao, 90)
+    if added_user_ids:
+        create_user_notifications(
+            added_user_ids,
+            g.user.id,
+            "task_assigned",
+            "Você foi atribuído a uma tarefa",
+            f'{g.user.name} atribuiu você à tarefa "{descricao}".',
+            target_url,
+        )
+    if removed_user_ids:
+        create_user_notifications(
+            removed_user_ids,
+            g.user.id,
+            "task_unassigned",
+            "Você foi removido de uma tarefa",
+            f'{g.user.name} removeu você da tarefa "{descricao}".',
+            target_url,
+        )
 
 
 def notify_task_created(task) -> None:

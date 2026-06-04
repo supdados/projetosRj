@@ -32,7 +32,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Response, g, request, url_for
+from flask import Response, current_app, g, request, url_for
 
 from models import Task, db
 
@@ -43,12 +43,14 @@ from ..tasks.creation import (
     _resolve_responsavel_for_edit,
 )
 from ..tasks.notifications import (
+    notify_assignee_change,
     notify_prioridade_change,
     notify_task_edited,
     notify_task_finalized,
     notify_task_unarchived,
     notify_tipo_change,
 )
+from ..tasks.queries import serialize_assignee, set_task_assignees
 from ..tasks.permissions import (
     FINALIZE_DENIED_MESSAGE,
     _audit_denied_task_action,
@@ -465,7 +467,60 @@ def api_tarefa_sugestoes_responsavel(task_id: int) -> Response | tuple[Response,
 
     users = _get_assignable_users_for_project(task.project)
     query = (request.args.get("q") or "").strip().lower()
-    options = [{"id": user.id, "name": user.name} for user in users]
+    options = [serialize_assignee(user) for user in users]
     if query:
         options = [u for u in options if query in (u["name"] or "").lower()]
     return ok({"users": options})
+
+
+@main_bp.route("/api/tarefas/<int:task_id>/responsaveis", methods=["POST"])
+@api_login_required
+def api_tarefa_responsaveis(task_id: int) -> Response | tuple[Response, int]:
+    """Define os responsáveis MÚLTIPLOS da tarefa e notifica os adicionados.
+
+    Body JSON: ``{"user_ids": [int, ...]}``. Cada id é validado contra os
+    candidatos com acesso ao projeto; ids fora dessa lista são ignorados.
+    Notifica (sino) em TODA atribuição — adicionados e removidos. Exige autor
+    ou admin (mesma restrição da edição de ``responsavel``).
+
+    Returns:
+        Envelope ``{"ok": true, "data": {"task": {...}, "detail": {...}}}`` (200);
+        404/403/422 canônicos; 401 JSON sem sessão.
+    """
+    task, error = _load_drawer_task(task_id)
+    if error is not None:
+        return error
+
+    if not _can_manage_task_restricted_actions(g.user, task):
+        return fail(EDIT_RESTRICTED_DENIED_MESSAGE, status=403, code="forbidden")
+
+    payload = request.get_json(silent=True) or {}
+    raw_ids = payload.get("user_ids")
+    if not isinstance(raw_ids, list):
+        return fail("'user_ids' deve ser uma lista de inteiros.", status=422, code="validation")
+
+    allowed_ids = {user.id for user in _get_assignable_users_for_project(task.project)}
+    desired: list[int] = []
+    for value in raw_ids:
+        try:
+            user_id = int(value)
+        except (TypeError, ValueError):
+            return fail(
+                f"user_id inválido: {value!r} (esperado inteiro).",
+                status=422,
+                code="validation",
+            )
+        if user_id in allowed_ids:
+            desired.append(user_id)
+
+    added, removed = set_task_assignees(task, desired)
+    notify_assignee_change(task, added, removed)
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Erro ao salvar responsaveis da tarefa %s", task_id)
+        return fail("Erro ao salvar responsáveis.", status=422, code="validation")
+
+    return ok(_drawer_detail_payload(task))

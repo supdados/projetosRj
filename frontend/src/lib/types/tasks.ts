@@ -35,6 +35,8 @@ export interface TaskCard {
 	created_at: string | null; // ISO 8601
 	is_archived: boolean;
 	archived_at: string | null; // ISO 8601
+	/** Responsáveis múltiplos (avatares de iniciais). Substitui `responsavel`. */
+	assignees: TaskAssignee[];
 	/** Título da etapa à qual a tarefa pertence (ou `null` para "sem etapa"). */
 	etapa_titulo: string | null;
 	/** True quando esta tarefa abre um novo bloco de etapa no grupo. */
@@ -119,6 +121,8 @@ export interface CreateTarefaInput {
 	descricao: string;
 	status?: string;
 	responsavel?: string | null;
+	/** Responsáveis múltiplos a atribuir na criação (notifica cada um). */
+	assignee_ids?: number[];
 	prioridade?: string | null;
 	tipo_pedido?: string | null;
 }
@@ -167,8 +171,24 @@ export interface ArchiveFinalizadasResult {
 	message: string;
 }
 
+/**
+ * Responsável de uma tarefa (avatar de iniciais, sem foto). Mesma forma nos
+ * candidatos do picker e em `TaskCard.assignees` — o backend serializa via
+ * `serialize_assignee`.
+ */
+export interface TaskAssignee {
+	id: number;
+	name: string;
+	/** Iniciais para o avatar (ex.: "AJ"). */
+	initials: string;
+	/** Linha secundária no dropdown (órgão ou @username). */
+	subtitle?: string;
+}
+
 /** Sugestão de responsável do picker do hub (`GET .../sugestoes-responsavel`). */
 export interface HubResponsavelSuggestion {
 	id: number;
 	name: string;
+	initials: string;
+	subtitle?: string;
 }

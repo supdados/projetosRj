@@ -92,7 +92,7 @@ export function tipoLabel(value: string | null): string | null {
  * + borda do mesmo tom (tokens DS, dark-safe).
  */
 export const CHIP_BASE =
-	'inline-flex items-center justify-center whitespace-nowrap rounded-[5px] border px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-tight tracking-wide';
+	'inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md border px-2 py-1 text-[11px] font-semibold uppercase leading-none tracking-wide';
 
 const CHIP_TONE: Record<BadgeTone, string> = {
 	neutral: 'border-border-subtle bg-surface-muted text-text-secondary',

@@ -7,7 +7,9 @@ from sqlalchemy.orm import joinedload
 from models import (
     Project,
     Task,
+    TaskAssignee,
     TaskComment,
+    User,
     db,
 )
 from routes.tasks.constants import (
@@ -20,6 +22,56 @@ from routes.tasks.constants import (
     _task_status_label,
     _task_tipo_label,
 )
+
+
+def assignee_initials(name: str) -> str:
+    """Iniciais para o avatar (sem foto): 1ª letra do 1º e do último nome.
+
+    Exemplo: "Alex Johnson" -> "AJ"; "Maria" -> "MA"; vazio -> "?".
+    """
+    parts = [p for p in (name or "").strip().split() if p]
+    if not parts:
+        return "?"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return (parts[0][0] + parts[-1][0]).upper()
+
+
+def serialize_assignee(user: User) -> dict:
+    """Serializa um usuário como responsável: {id, name, initials, subtitle}."""
+    display_name = user.name or user.username or "Usuário"
+    subtitle = (user.orgao or "").strip() or f"@{user.username}"
+    return {
+        "id": user.id,
+        "name": display_name,
+        "initials": assignee_initials(user.name or user.username),
+        "subtitle": subtitle,
+    }
+
+
+def serialize_task_assignees(task: Task) -> list:
+    """Lista serializada dos responsáveis de uma tarefa (ordenados por nome)."""
+    rows = [a for a in task.assignees if a.user is not None]
+    rows.sort(key=lambda a: (a.user.name or a.user.username or "").lower())
+    return [serialize_assignee(a.user) for a in rows]
+
+
+def set_task_assignees(task: Task, desired_user_ids) -> tuple[list, list]:
+    """Reconcilia os responsáveis da tarefa com ``desired_user_ids``.
+
+    Usa a coleção ORM (cascade delete-orphan) para manter ``task.assignees``
+    consistente para serialização imediata. Retorna (adicionados, removidos)
+    como listas ordenadas de user_id. O caller faz o commit.
+    """
+    desired = {int(uid) for uid in desired_user_ids if uid}
+    current = {a.user_id: a for a in task.assignees}
+    to_remove = sorted(set(current) - desired)
+    to_add = sorted(desired - set(current))
+    for uid in to_remove:
+        task.assignees.remove(current[uid])
+    for uid in to_add:
+        task.assignees.append(TaskAssignee(user_id=uid))
+    return to_add, to_remove
 
 
 def _read_task_filter_values(source):

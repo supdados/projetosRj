@@ -127,6 +127,15 @@ def api_tarefa_criar() -> Response | tuple[Response, int]:
     if tipo_pedido not in VALID_TIPOS:
         tipo_pedido = None
 
+    raw_assignee_ids = data.get("assignee_ids")
+    assignee_ids: list[int] = []
+    if isinstance(raw_assignee_ids, list):
+        for value in raw_assignee_ids:
+            try:
+                assignee_ids.append(int(value))
+            except (TypeError, ValueError):
+                continue
+
     is_valid, canonical_responsavel, invalid_names = _validate_task_responsavel(
         project, (data.get("responsavel") or "").strip()
     )
@@ -162,6 +171,18 @@ def api_tarefa_criar() -> Response | tuple[Response, int]:
         db.session.flush()
 
         from ..tasks.constants import _preview_text, _task_status_label
+        from ..tasks.notifications import notify_assignee_change
+        from ..tasks.queries import set_task_assignees
+
+        # Responsáveis múltiplos do quick-add: valida contra os candidatos com
+        # acesso ao projeto e notifica os adicionados (abaixo, antes do commit).
+        allowed_assignee_ids = {
+            user.id for user in _get_assignable_users_for_project(project)
+        }
+        desired_assignees = [
+            uid for uid in assignee_ids if uid in allowed_assignee_ids
+        ]
+        added_assignees, removed_assignees = set_task_assignees(task, desired_assignees)
 
         notify_task_event(
             task,
@@ -181,6 +202,7 @@ def api_tarefa_criar() -> Response | tuple[Response, int]:
                 old_responsavel=None,
                 new_responsavel=task.responsavel,
             )
+        notify_assignee_change(task, added_assignees, removed_assignees)
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
@@ -408,8 +430,10 @@ def api_hub_sugestoes_responsavel() -> Response | tuple[Response, int]:
     else:
         return fail("Informe um projeto ou órgão.", status=400, code="validation")
 
+    from routes.tasks.queries import serialize_assignee
+
     query = (request.args.get("q") or "").strip().lower()
-    options = [{"id": user.id, "name": user.name} for user in users]
+    options = [serialize_assignee(user) for user in users]
     if query:
         options = [u for u in options if query in (u["name"] or "").lower()]
     return ok({"users": options})

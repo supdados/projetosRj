@@ -24,21 +24,21 @@
 		fetchTarefas,
 		deleteTarefa,
 		archiveFinalizadas,
-		createTarefa,
-		fetchHubResponsaveis
+		createTarefa
 	} from '$lib/api/tasks';
 	import { ApiClientError } from '$lib/api/client';
 	import type {
+		TaskAssignee,
 		TaskCard,
 		TaskHubData,
 		TaskHubGroup,
 		TaskHubModo,
-		TaskHubQuery,
-		HubResponsavelSuggestion
+		TaskHubQuery
 	} from '$lib/types/tasks';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import TaskHubTaskRow from '$lib/components/TaskHubTaskRow.svelte';
+	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
 	import KanbanBoard from '$lib/components/KanbanBoard.svelte';
 	import KanbanComposer from '$lib/components/KanbanComposer.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
@@ -303,8 +303,7 @@
 		prioridade: string;
 		tipo: string;
 		status: string;
-		responsavel: string;
-		responsavelOptions: HubResponsavelSuggestion[];
+		assignees: TaskAssignee[];
 		saving: boolean;
 		error: string | null;
 	};
@@ -345,8 +344,7 @@
 			prioridade: '',
 			tipo: '',
 			status: 'nao_iniciada',
-			responsavel: '',
-			responsavelOptions: [],
+			assignees: [],
 			saving: false,
 			error: null
 		};
@@ -363,7 +361,6 @@
 			etapaId: stage.tasks[0]?.etapa_id ?? null
 		};
 		addDraft = emptyAddDraft();
-		void loadAddResponsaveis(group.project_id, group.project_value, addOpenKey);
 	}
 
 	function cancelAddForm(): void {
@@ -387,22 +384,6 @@
 				document.removeEventListener('pointerdown', handle, true);
 			}
 		};
-	}
-
-	// Sugestões de responsável carregadas sob demanda por projeto (paridade com o
-	// composer do Kanban). Projetos "sem id" não consultam.
-	async function loadAddResponsaveis(
-		projectId: number | null,
-		projectValue: string,
-		key: string
-	): Promise<void> {
-		if (!projectId) return;
-		try {
-			const result = await fetchHubResponsaveis({ project: projectValue });
-			if (addOpenKey === key) addDraft.responsavelOptions = result.users;
-		} catch {
-			if (addOpenKey === key) addDraft.responsavelOptions = [];
-		}
 	}
 
 	/** Auto-resize da textarea de descrição (piso 34px = min-h; teto via max-h CSS). */
@@ -437,7 +418,7 @@
 				etapa: addTarget.etapaId ?? undefined,
 				descricao: addDraft.descricao.trim(),
 				status: addDraft.status,
-				responsavel: addDraft.responsavel || null,
+				assignee_ids: addDraft.assignees.map((a) => a.id),
 				prioridade: addDraft.prioridade || null,
 				tipo_pedido: addDraft.tipo || null
 			});
@@ -830,7 +811,6 @@
 												{#each stage.tasks as task (task.id)}
 													<TaskHubTaskRow
 														{task}
-														projectValue={group.project_value}
 														onOpen={(id) => openTask(id, 'list')}
 														onDelete={deleteCard}
 														onChanged={() => void load()}
@@ -901,21 +881,11 @@
 																	<option value={opt.value}>{opt.label}</option>
 																{/each}
 															</select>
-															{#if addDraft.responsavelOptions.length > 0}
-																<select
-																	bind:value={addDraft.responsavel}
-																	disabled={addDraft.saving}
-																	aria-label="Responsável"
-																	class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-																>
-																	<option value="">Sem responsável</option>
-																	{#each addDraft.responsavelOptions as user (user.id)}
-																		<option value={user.name}>{user.name}</option>
-																	{/each}
-																</select>
-															{:else}
-																<span class="text-center text-2xs italic text-text-muted">—</span>
-															{/if}
+															<AssigneePicker
+																projectValue={addTarget?.projectValue}
+																bind:assignees={addDraft.assignees}
+																disabled={addDraft.saving}
+															/>
 															<div class="flex items-center justify-center gap-1">
 																<button
 																	type="submit"

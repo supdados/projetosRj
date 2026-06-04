@@ -14,6 +14,7 @@ from .task import (
     LegacyTaskRedirect,
     TaskItemComment,
     TaskItemAnexo,
+    TaskAssignee,
 )
 from .orgao import (
     ALLOWED_TIPOS,
@@ -55,6 +56,7 @@ __all__ = [
     "LegacyTaskRedirect",
     "TaskItemComment",
     "TaskItemAnexo",
+    "TaskAssignee",
     "OrgaoUnidade",
     "ALLOWED_TIPOS",
     "DEFAULT_ORGAO_TIPOS",

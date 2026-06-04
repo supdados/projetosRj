@@ -18,6 +18,8 @@ import type {
 	DeleteTarefaResult,
 	HubResponsavelSuggestion,
 	MoverEtapaResult,
+	TaskAssignee,
+	TaskCard,
 	TaskHubData,
 	TaskHubFilterValues,
 	TaskHubQuery
@@ -128,6 +130,38 @@ export function fetchHubResponsaveis(
 	const query = qs.toString();
 	return get<{ users: HubResponsavelSuggestion[] }>(
 		`/api/tarefas/sugestoes-responsavel${query ? `?${query}` : ''}`,
+		signal
+	);
+}
+
+/**
+ * Candidatos a responsável de UMA tarefa (com acesso ao projeto/etapa).
+ * `GET /api/tarefas/<id>/sugestoes-responsavel?q=`. Devolve a forma de
+ * `TaskAssignee` (id, name, initials, subtitle) já filtrada por `q` (nome).
+ */
+export function fetchTaskCandidates(
+	taskId: number,
+	q?: string,
+	signal?: AbortSignal
+): Promise<{ users: TaskAssignee[] }> {
+	const qs = q ? `?q=${encodeURIComponent(q)}` : '';
+	return get<{ users: TaskAssignee[] }>(`/api/tarefas/${taskId}/sugestoes-responsavel${qs}`, signal);
+}
+
+/**
+ * Define os responsáveis múltiplos de uma tarefa e notifica os adicionados.
+ * `POST /api/tarefas/<id>/responsaveis` — body `{user_ids}`. 403 (não autor/admin),
+ * 422 (payload inválido). Devolve `{task, detail}` com o card atualizado
+ * (`task.assignees` reflete a nova lista).
+ */
+export function saveTaskAssignees(
+	taskId: number,
+	userIds: number[],
+	signal?: AbortSignal
+): Promise<{ task: TaskCard; detail: unknown }> {
+	return post<{ task: TaskCard; detail: unknown }>(
+		`/api/tarefas/${taskId}/responsaveis`,
+		{ user_ids: userIds },
 		signal
 	);
 }
