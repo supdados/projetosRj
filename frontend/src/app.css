@@ -307,3 +307,42 @@
 .app-shell > main::-webkit-scrollbar-thumb:hover {
 	background-color: color-mix(in srgb, var(--ds-color-primary-500) 70%, transparent);
 }
+
+/* === Lista de tarefas (hub) — grade compartilhada e colapso ===
+   Grade unica reusada pelo cabecalho de colunas e pelas linhas de tarefa, para
+   as colunas alinharem perfeitamente. Colunas: Descricao (1fr) | Prioridade |
+   Tipo | Status | Responsavel | Acoes. min-width forca scroll horizontal (dentro
+   do card) em telas estreitas em vez de espremer as celulas. */
+.task-hub-grid {
+	display: grid;
+	grid-template-columns:
+		minmax(0, 1fr)
+		var(--th-col-prio, 104px)
+		var(--th-col-tipo, 112px)
+		var(--th-col-status, 140px)
+		var(--th-col-owner, 180px)
+		var(--th-col-actions, 104px);
+	align-items: center;
+	gap: 0.4rem 0.6rem;
+	min-width: 760px;
+}
+
+/* Colapso de secao (projeto/etapa) via grid-template-rows 0fr<->1fr — o filho
+   precisa de overflow:hidden/min-height:0 para clipar enquanto recolhe. */
+.task-collapse {
+	display: grid;
+	grid-template-rows: 1fr;
+	transition: grid-template-rows 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.task-collapse[data-collapsed='true'] {
+	grid-template-rows: 0fr;
+}
+.task-collapse > * {
+	overflow: hidden;
+	min-height: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+	.task-collapse {
+		transition: none;
+	}
+}

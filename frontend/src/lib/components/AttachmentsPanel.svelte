@@ -17,9 +17,14 @@
 
 	interface Props {
 		store: TaskDrawerStore;
+		/**
+		 * Prefixo dos ids do painel. Default 'drawer' (uso no TaskDrawer). Na lista
+		 * usa `task-<id>` para o input de arquivo/título não colidirem entre linhas.
+		 */
+		idPrefix?: string;
 	}
 
-	let { store }: Props = $props();
+	let { store, idPrefix = 'drawer' }: Props = $props();
 
 	const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -104,11 +109,11 @@
 </script>
 
 <section
-	aria-labelledby="drawer-anexos-title"
+	aria-labelledby={`${idPrefix}-anexos-title`}
 	class="flex flex-col gap-2 border-t border-border-subtle pt-3"
 >
 	<h3
-		id="drawer-anexos-title"
+		id={`${idPrefix}-anexos-title`}
 		class="flex items-center gap-2 text-sm font-semibold text-text-primary"
 	>
 		<i class="fas fa-paperclip text-text-muted" aria-hidden="true"></i>
@@ -188,7 +193,7 @@
 	{#if canManage}
 		<div class="flex flex-col gap-1">
 			<label
-				for="drawer-anexo-input"
+				for={`${idPrefix}-anexo-input`}
 				ondragover={onDragOver}
 				ondragleave={onDragLeave}
 				ondrop={onDrop}
@@ -204,7 +209,7 @@
 				>
 			</label>
 			<input
-				id="drawer-anexo-input"
+				id={`${idPrefix}-anexo-input`}
 				bind:this={fileInput}
 				type="file"
 				disabled={uploading}

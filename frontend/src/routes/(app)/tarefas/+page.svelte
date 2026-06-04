@@ -1,20 +1,24 @@
 <script lang="ts">
 	/**
 	 * Tela "Hub de Tarefas" em MODO LISTA (sem Kanban). Consome
-	 * `GET /api/tarefas` via `$lib/api/tasks` e renderiza as tarefas agrupadas
-	 * por projeto, reusando os componentes compartilhados Card/Badge (apenas
-	 * lidos/reusados, nunca editados). Dentro de cada grupo as tarefas são
-	 * sub-agrupadas por etapa a partir de `etapa_titulo`/`is_first_of_stage`,
-	 * já calculados no backend.
+	 * `GET /api/tarefas` via `$lib/api/tasks` e renderiza a hierarquia
+	 * PROJETO → ETAPA → TAREFA: cada projeto é um `Card`; dentro dele, as tarefas
+	 * são sub-agrupadas por etapa (a partir de `etapa_titulo`/`is_first_of_stage`,
+	 * já calculados no backend) em seções colapsáveis; cada tarefa vira uma
+	 * `TaskHubTaskRow` (linha estilo "main": grade de colunas + chips padronizados).
+	 * "+ Nova tarefa" é por ETAPA (revela form inline com slide); comentários/anexos
+	 * abrem o `TaskDrawer` e mostram contagem na linha.
 	 *
 	 * Os filtros de projeto e órgão re-buscam server-side (o `orgao_scope` é
 	 * aplicado no backend); a alternância de status (ativas/arquivadas/
 	 * finalizadas) traduz para o `?modo=` do endpoint. Estados de loading/erro/
 	 * vazio são anunciados via aria-live.
 	 *
-	 * Referência visual: templates/tasks/hub.html.
+	 * Design: estilo da branch main (templates/tasks/hub.html) + nível de etapa.
+	 * Decisões e pesquisa em frontend/docs/lista-tarefas-hierarquica.md.
 	 */
 	import { onMount, setContext } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { get as readStore } from 'svelte/store';
 	import {
 		fetchTarefas,
@@ -34,7 +38,7 @@
 	} from '$lib/types/tasks';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Card from '$lib/components/Card.svelte';
-	import Badge from '$lib/components/Badge.svelte';
+	import TaskHubTaskRow from '$lib/components/TaskHubTaskRow.svelte';
 	import KanbanBoard from '$lib/components/KanbanBoard.svelte';
 	import KanbanComposer from '$lib/components/KanbanComposer.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
@@ -51,7 +55,6 @@
 	import '$lib/celebration/confetti.css';
 
 	type LoadState = 'loading' | 'ready' | 'error';
-	type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
 	/** Visualização da tela: lista (default) ou kanban. */
 	type ViewMode = 'list' | 'kanban';
@@ -63,67 +66,9 @@
 		{ value: 'arquivadas', label: 'Arquivadas' }
 	];
 
-	/** Rótulos PT dos status (espelham `status_labels` do hub Jinja). */
-	const STATUS_LABEL: Record<string, string> = {
-		nao_iniciada: 'Não iniciada',
-		em_andamento: 'Em andamento',
-		para_validacao: 'Para validação',
-		para_ajustes: 'Para ajustes',
-		finalizada: 'Finalizada'
-	};
-
-	/** Tom semântico do Badge por status. */
-	const STATUS_TONE: Record<string, BadgeTone> = {
-		nao_iniciada: 'neutral',
-		em_andamento: 'info',
-		para_validacao: 'primary',
-		para_ajustes: 'warning',
-		finalizada: 'success'
-	};
-
-	/** Rótulos PT das prioridades (espelham `prioridade_labels` do hub Jinja). */
-	const PRIORIDADE_LABEL: Record<string, string> = {
-		baixa: 'Baixa',
-		media: 'Média',
-		alta: 'Alta',
-		urgente: 'Urgente'
-	};
-
-	/** Tom semântico do Badge por prioridade. */
-	const PRIORIDADE_TONE: Record<string, BadgeTone> = {
-		baixa: 'neutral',
-		media: 'info',
-		alta: 'warning',
-		urgente: 'danger'
-	};
-
-	/** Rótulos PT dos tipos de pedido (espelham `tipo_labels` do hub Jinja). */
-	const TIPO_LABEL: Record<string, string> = {
-		bug: 'Bug',
-		melhoria: 'Melhoria',
-		duvida: 'Dúvida',
-		outros: 'Outros',
-		implementacao: 'Implementação'
-	};
-
-	function statusLabel(value: string): string {
-		return STATUS_LABEL[value] ?? value;
-	}
-	function statusTone(value: string): BadgeTone {
-		return STATUS_TONE[value] ?? 'neutral';
-	}
-	function prioridadeLabel(value: string | null): string | null {
-		if (!value) return null;
-		return PRIORIDADE_LABEL[value] ?? value;
-	}
-	function prioridadeTone(value: string | null): BadgeTone {
-		if (!value) return 'neutral';
-		return PRIORIDADE_TONE[value] ?? 'neutral';
-	}
-	function tipoLabel(value: string | null): string | null {
-		if (!value) return null;
-		return TIPO_LABEL[value] ?? value;
-	}
+	// Rótulos, tons e cor da barra de status vivem em $lib/utils/taskLabels.ts e
+	// são usados pelos componentes da lista (TaskHubTaskRow). As opções dos
+	// selects do form de "+ Nova tarefa" continuam abaixo (ADD_*_OPTIONS).
 
 	let loadState = $state<LoadState>('loading');
 	let data = $state<TaskHubData | null>(null);
@@ -345,30 +290,9 @@
 		}
 	}
 
-	// EXCLUIR row na LISTA (mini-confirm inline, paridade com o kanban). Um confirm
-	// aberto por vez; em sucesso re-busca (recolhe grupos vazios via `load`).
-	let confirmDeleteRowId = $state<number | null>(null);
-	let deletingRowId = $state<number | null>(null);
-	let rowDeleteError = $state<string | null>(null);
-
-	function openRowDeleteConfirm(taskId: number): void {
-		rowDeleteError = null;
-		confirmDeleteRowId = taskId;
-	}
-	function cancelRowDeleteConfirm(): void {
-		confirmDeleteRowId = null;
-	}
-	async function confirmRowDelete(taskId: number): Promise<void> {
-		deletingRowId = taskId;
-		rowDeleteError = null;
-		const ok = await deleteCard(taskId);
-		deletingRowId = null;
-		if (ok) {
-			confirmDeleteRowId = null;
-		} else {
-			rowDeleteError = 'Não foi possível excluir a tarefa.';
-		}
-	}
+	// EXCLUIR na LISTA: a confirmação inline (mini-confirm, paridade com o kanban)
+	// agora vive em TaskHubTaskRow, que chama `deleteCard` via a prop `onDelete`.
+	// `deleteCard` re-busca a lista no sucesso (recolhe grupos/etapas vazios).
 
 	// ADD-TAREFA NO MODO LISTA (paridade com add-item-inline.js + render_hub_add_row
 	// do hub.html legado): cada GRUPO de projeto ganha um botão "+ Nova tarefa" que
@@ -409,7 +333,10 @@
 	];
 
 	// Chave do grupo cujo form de adição está aberto (só um por vez), + rascunho.
+	// "+ Nova tarefa" POR ETAPA: só um form aberto por vez (chave = stageKey). A
+	// tarefa nasce na etapa alvo (etapa_id) e no projeto do grupo.
 	let addOpenKey = $state<string | null>(null);
+	let addTarget = $state<{ projectValue: string; projectId: number | null; etapaId: number | null } | null>(null);
 	let addDraft = $state<AddDraft>(emptyAddDraft());
 
 	function emptyAddDraft(): AddDraft {
@@ -425,30 +352,67 @@
 		};
 	}
 
-	function openAddForm(group: TaskHubGroup): void {
-		addOpenKey = group.key;
+	function openAddForm(
+		group: TaskHubGroup,
+		stage: { titulo: string | null; tasks: TaskCard[] }
+	): void {
+		addOpenKey = stageKey(group, stage);
+		addTarget = {
+			projectValue: group.project_value,
+			projectId: group.project_id,
+			etapaId: stage.tasks[0]?.etapa_id ?? null
+		};
 		addDraft = emptyAddDraft();
-		void loadAddResponsaveis(group);
+		void loadAddResponsaveis(group.project_id, group.project_value, addOpenKey);
 	}
 
 	function cancelAddForm(): void {
 		addOpenKey = null;
+		addTarget = null;
 		addDraft = emptyAddDraft();
 	}
 
+	/**
+	 * Action: fecha o form de "+ Nova tarefa" ao clicar FORA dele — só se nada foi
+	 * digitado (não descarta texto em andamento). Captura no `pointerdown`.
+	 */
+	function closeOnClickOutside(node: HTMLElement) {
+		function handle(event: PointerEvent): void {
+			if (node.contains(event.target as Node)) return;
+			if (!addDraft.descricao.trim()) cancelAddForm();
+		}
+		document.addEventListener('pointerdown', handle, true);
+		return {
+			destroy() {
+				document.removeEventListener('pointerdown', handle, true);
+			}
+		};
+	}
+
 	// Sugestões de responsável carregadas sob demanda por projeto (paridade com o
-	// composer do Kanban). Grupos "sem projeto" não consultam.
-	async function loadAddResponsaveis(group: TaskHubGroup): Promise<void> {
-		if (!group.project_id) return;
+	// composer do Kanban). Projetos "sem id" não consultam.
+	async function loadAddResponsaveis(
+		projectId: number | null,
+		projectValue: string,
+		key: string
+	): Promise<void> {
+		if (!projectId) return;
 		try {
-			const result = await fetchHubResponsaveis({ project: group.project_value });
-			if (addOpenKey === group.key) addDraft.responsavelOptions = result.users;
+			const result = await fetchHubResponsaveis({ project: projectValue });
+			if (addOpenKey === key) addDraft.responsavelOptions = result.users;
 		} catch {
-			if (addOpenKey === group.key) addDraft.responsavelOptions = [];
+			if (addOpenKey === key) addDraft.responsavelOptions = [];
 		}
 	}
 
-	function onAddTextareaKeydown(event: KeyboardEvent, group: TaskHubGroup): void {
+	/** Auto-resize da textarea de descrição (piso 34px = min-h; teto via max-h CSS). */
+	function autoResizeAdd(event: Event): void {
+		const el = event.currentTarget as HTMLTextAreaElement;
+		el.style.height = 'auto';
+		el.style.height = `${Math.max(34, el.scrollHeight)}px`;
+	}
+
+	function onAddTextareaKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape') {
 			event.preventDefault();
 			cancelAddForm();
@@ -456,12 +420,12 @@
 		}
 		if (event.key === 'Enter' && !event.shiftKey) {
 			event.preventDefault();
-			void submitAddForm(group);
+			void submitAddForm();
 		}
 	}
 
-	async function submitAddForm(group: TaskHubGroup): Promise<void> {
-		if (addDraft.saving) return;
+	async function submitAddForm(): Promise<void> {
+		if (!addTarget || addDraft.saving) return;
 		addDraft.error = null;
 		// Descrição vazia: paridade com o composer — apenas não submete.
 		if (!addDraft.descricao.trim()) return;
@@ -469,15 +433,16 @@
 		addDraft.saving = true;
 		try {
 			await createTarefa({
-				project: group.project_value,
+				project: addTarget.projectValue,
+				etapa: addTarget.etapaId ?? undefined,
 				descricao: addDraft.descricao.trim(),
 				status: addDraft.status,
 				responsavel: addDraft.responsavel || null,
 				prioridade: addDraft.prioridade || null,
 				tipo_pedido: addDraft.tipo || null
 			});
-			// Re-busca a lista para refletir a nova tarefa no grupo/etapa correto
-			// (o backend recalcula o agrupamento por etapa).
+			// Re-busca a lista para refletir a nova tarefa na etapa correta
+			// (o backend recalcula o agrupamento).
 			cancelAddForm();
 			void load();
 		} catch (err) {
@@ -575,6 +540,42 @@
 		}
 		return blocks;
 	}
+
+	/** Chave estável de uma etapa dentro do grupo (prefere etapa_id; cai p/ título). */
+	function stageKey(group: TaskHubGroup, stage: { titulo: string | null; tasks: TaskCard[] }): string {
+		const etapaId = stage.tasks[0]?.etapa_id ?? null;
+		const sub = etapaId != null ? `e:${etapaId}` : stage.titulo ? `t:${stage.titulo}` : '__sem_etapa__';
+		return `${group.key}::${sub}`;
+	}
+
+	// Colapso de etapas, persistido em localStorage (default: tudo expandido).
+	const COLLAPSE_STAGES_KEY = 'tarefas:list:collapsed:stages';
+	let collapsedStages = $state(new SvelteSet<string>());
+
+	function toggleSet(set: SvelteSet<string>, key: string): void {
+		if (set.has(key)) set.delete(key);
+		else set.add(key);
+	}
+
+	// Hidrata SÍNCRONO (SPA é CSR-only): garante que o $effect de persistência não
+	// sobrescreva o armazenado com vazio antes da hidratação.
+	if (typeof localStorage !== 'undefined') {
+		try {
+			const raw = localStorage.getItem(COLLAPSE_STAGES_KEY);
+			if (raw) for (const k of JSON.parse(raw) as string[]) collapsedStages.add(k);
+		} catch {
+			// JSON corrompido / storage indisponível: começa tudo expandido.
+		}
+	}
+
+	$effect(() => {
+		// Persiste sempre que o conjunto de etapas recolhidas mudar (best-effort).
+		try {
+			localStorage.setItem(COLLAPSE_STAGES_KEY, JSON.stringify([...collapsedStages]));
+		} catch {
+			// storage indisponível/cota: ignora.
+		}
+	});
 </script>
 
 <svelte:head>
@@ -786,199 +787,176 @@
 							</div>
 						{/snippet}
 
-						<div class="flex flex-col gap-5">
-							{#each stagesOf(group.tasks) as stage (stage.titulo ?? '__sem_etapa__')}
-								<div class="flex flex-col gap-2">
-									<h3 class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-										{stage.titulo ?? 'Sem etapa'}
-									</h3>
-									<ul class="flex flex-col gap-2">
-										{#each stage.tasks as task (task.id)}
-											<li class="flex flex-col gap-2 rounded-md border border-border-subtle bg-surface px-4 py-3">
-												<div class="flex items-start justify-between gap-2">
+						<div class="flex flex-col gap-3">
+							{#each stagesOf(group.tasks) as stage (stageKey(group, stage))}
+								{@const sKey = stageKey(group, stage)}
+								{@const stCollapsed = collapsedStages.has(sKey)}
+								<div class="overflow-hidden rounded-lg border border-border-subtle">
+									<!-- Nível 2 — ETAPA: sub-cabeçalho leve e colapsável -->
+									<button
+										type="button"
+										onclick={() => toggleSet(collapsedStages, sKey)}
+										aria-expanded={!stCollapsed}
+										aria-controls={`stage-${sKey}`}
+										class="flex w-full items-center gap-2 border-b border-border-subtle bg-surface-muted px-3 py-[0.5rem] text-left transition-colors duration-fast hover:bg-primary-100/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+									>
+										<i
+											class="fas fa-chevron-right text-2xs text-text-muted transition-transform duration-fast motion-reduce:transition-none {stCollapsed
+												? ''
+												: 'rotate-90'}"
+											aria-hidden="true"
+										></i>
+										<span class="text-sm font-semibold text-primary-700">{stage.titulo ?? 'Sem etapa'}</span>
+										<span
+											class="rounded-full bg-surface px-2 py-0.5 text-2xs font-semibold text-text-secondary"
+										>
+											{stage.tasks.length}
+										</span>
+									</button>
+
+									<!-- Corpo colapsável: cabeçalho de colunas + linhas (mesma grade) -->
+									<div class="task-collapse" data-collapsed={stCollapsed} id={`stage-${sKey}`}>
+										<div>
+											<div class="overflow-x-auto overflow-y-hidden">
+												<!-- Cabeçalho de colunas (mesma .task-hub-grid das linhas → alinha). -->
+												<div class="task-hub-grid border-b border-border-subtle bg-surface-muted/70 px-3 py-1.5">
+													<span class="text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Descrição</span>
+													<span class="text-center text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Prioridade</span>
+													<span class="text-center text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Tipo</span>
+													<span class="text-center text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Status</span>
+													<span class="text-center text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Responsável</span>
+													<span class="text-center text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Ações</span>
+												</div>
+												{#each stage.tasks as task (task.id)}
+													<TaskHubTaskRow
+														{task}
+														projectValue={group.project_value}
+														onOpen={(id) => openTask(id, 'list')}
+														onDelete={deleteCard}
+														onChanged={() => void load()}
+													/>
+												{/each}
+											</div>
+
+											<!-- "+ Nova tarefa" POR ETAPA, na MESMA grade das linhas: cada campo
+											     cai sob a sua coluna (a descrição NÃO ocupa a largura toda). Tem o
+											     próprio overflow-x-auto p/ não ser cortado e alinhar as colunas;
+											     o form revela com slide fluido (estilo da main). -->
+											<div class="overflow-x-auto overflow-y-hidden">
+												{#if addOpenKey === sKey}
+													<!-- Aparece INSTANTÂNEO e no MESMO lugar (sem slide/fade) — paridade
+													     com a main (display swap), focando a descrição. Fecha ao clicar
+													     fora se estiver vazio. -->
+													<form
+														use:closeOnClickOutside
+														class="border-t border-border-subtle bg-surface {addDraft.saving
+															? 'pointer-events-none opacity-[0.72]'
+															: ''}"
+														aria-label="Nova tarefa em {stage.titulo ?? 'Sem etapa'}"
+														onsubmit={(e) => {
+															e.preventDefault();
+															void submitAddForm();
+														}}
+													>
+														<div class="task-hub-grid min-h-[44px] items-center px-3">
+															<!-- svelte-ignore a11y_autofocus -->
+															<textarea
+																bind:value={addDraft.descricao}
+																onkeydown={onAddTextareaKeydown}
+																oninput={autoResizeAdd}
+																disabled={addDraft.saving}
+																rows="1"
+																autofocus
+																placeholder="Descreva a tarefa…"
+																aria-label="Descrição da tarefa"
+																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-[5px] border border-border-subtle bg-surface px-2 py-1.5 text-sm leading-normal text-text-primary transition-shadow duration-fast focus:border-primary-500 focus:outline-none focus:shadow-[0_0_0_3px_rgba(31,92,168,0.12)] disabled:opacity-60"
+															></textarea>
+															<select
+																bind:value={addDraft.prioridade}
+																disabled={addDraft.saving}
+																aria-label="Prioridade"
+																class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+															>
+																{#each ADD_PRIORIDADE_OPTIONS as opt (opt.value)}
+																	<option value={opt.value}>{opt.label}</option>
+																{/each}
+															</select>
+															<select
+																bind:value={addDraft.tipo}
+																disabled={addDraft.saving}
+																aria-label="Tipo de pedido"
+																class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+															>
+																{#each ADD_TIPO_OPTIONS as opt (opt.value)}
+																	<option value={opt.value}>{opt.label}</option>
+																{/each}
+															</select>
+															<select
+																bind:value={addDraft.status}
+																disabled={addDraft.saving}
+																aria-label="Status"
+																class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+															>
+																{#each ADD_STATUS_OPTIONS as opt (opt.value)}
+																	<option value={opt.value}>{opt.label}</option>
+																{/each}
+															</select>
+															{#if addDraft.responsavelOptions.length > 0}
+																<select
+																	bind:value={addDraft.responsavel}
+																	disabled={addDraft.saving}
+																	aria-label="Responsável"
+																	class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+																>
+																	<option value="">Sem responsável</option>
+																	{#each addDraft.responsavelOptions as user (user.id)}
+																		<option value={user.name}>{user.name}</option>
+																	{/each}
+																</select>
+															{:else}
+																<span class="text-center text-2xs italic text-text-muted">—</span>
+															{/if}
+															<div class="flex items-center justify-center gap-1">
+																<button
+																	type="submit"
+																	disabled={addDraft.saving}
+																	title="Salvar"
+																	aria-label="Salvar tarefa"
+																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-[5px] border border-primary-500 bg-primary-100 text-primary-700 transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+																>
+																	<i class="fas fa-check text-xs" aria-hidden="true"></i>
+																</button>
+																<button
+																	type="button"
+																	onclick={cancelAddForm}
+																	disabled={addDraft.saving}
+																	title="Cancelar"
+																	aria-label="Cancelar"
+																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-[5px] border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+																>
+																	<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
+																</button>
+															</div>
+														</div>
+														{#if addDraft.error}
+															<p role="alert" class="px-3 pb-2 text-xs text-danger">{addDraft.error}</p>
+														{/if}
+													</form>
+												{:else}
 													<button
 														type="button"
-														onclick={() => openTask(task.id, 'list')}
-														class="flex-1 text-left text-sm text-text-primary hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+														onclick={() => openAddForm(group, stage)}
+														class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-primary-100/30 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
 													>
-														{task.descricao}
+														<i class="fas fa-plus text-2xs text-primary-500" aria-hidden="true"></i>
+														Adicionar nova tarefa
 													</button>
-													{#if confirmDeleteRowId !== task.id}
-														<button
-															type="button"
-															onclick={() => openRowDeleteConfirm(task.id)}
-															aria-label="Excluir tarefa"
-															title="Excluir tarefa"
-															class="shrink-0 text-xs font-medium text-danger hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
-														>
-															Excluir
-														</button>
-													{/if}
-												</div>
-												<div class="flex flex-wrap items-center gap-2">
-													<Badge tone={statusTone(task.status)}>
-														{statusLabel(task.status)}
-													</Badge>
-													{#if prioridadeLabel(task.prioridade)}
-														<Badge tone={prioridadeTone(task.prioridade)}>
-															{prioridadeLabel(task.prioridade)}
-														</Badge>
-													{/if}
-													{#if tipoLabel(task.tipo_pedido)}
-														<span class="text-xs text-text-secondary">
-															{tipoLabel(task.tipo_pedido)}
-														</span>
-													{/if}
-													{#if task.responsavel}
-														<span class="text-xs text-text-muted">
-															· {task.responsavel}
-														</span>
-													{/if}
-												</div>
-												{#if confirmDeleteRowId === task.id}
-													<!-- Mini-confirm inline (paridade com o kanban) -->
-													<div
-														role="alertdialog"
-														aria-label="Confirmar exclusão da tarefa"
-														class="flex flex-col gap-2 rounded-md border border-danger bg-surface px-3 py-2"
-													>
-														<p class="text-xs text-text-primary">Excluir esta tarefa?</p>
-														{#if rowDeleteError}
-															<p role="alert" class="text-xs text-danger">{rowDeleteError}</p>
-														{/if}
-														<div class="flex gap-2">
-															<button
-																type="button"
-																onclick={cancelRowDeleteConfirm}
-																disabled={deletingRowId === task.id}
-																class="rounded-md border border-border-subtle px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-															>
-																Cancelar
-															</button>
-															<button
-																type="button"
-																onclick={() => void confirmRowDelete(task.id)}
-																disabled={deletingRowId === task.id}
-																class="rounded-md bg-danger px-2 py-1 text-xs font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
-															>
-																{deletingRowId === task.id ? 'Excluindo…' : 'Excluir'}
-															</button>
-														</div>
-													</div>
 												{/if}
-											</li>
-										{/each}
-									</ul>
+											</div>
+										</div>
+									</div>
 								</div>
 							{/each}
-
-							<!--
-								ADD-TAREFA NO MODO LISTA (paridade com render_hub_add_row +
-								add-item-inline.js): botão "+ Nova tarefa" por grupo que abre um
-								form inline. Cria via `createTarefa` (mesma /api do composer do
-								Kanban) e re-busca a lista. Só um form aberto por vez.
-							-->
-							{#if addOpenKey === group.key}
-								<form
-									class="flex flex-col gap-2 rounded-md border border-border-subtle bg-surface p-3 shadow-sm transition-opacity duration-fast {addDraft.saving
-										? 'pointer-events-none opacity-[0.72]'
-										: ''}"
-									aria-label="Nova tarefa em {group.project_titulo}"
-									onsubmit={(e) => {
-										e.preventDefault();
-										void submitAddForm(group);
-									}}
-								>
-									<!-- svelte-ignore a11y_autofocus -->
-									<textarea
-										bind:value={addDraft.descricao}
-										onkeydown={(e) => onAddTextareaKeydown(e, group)}
-										disabled={addDraft.saving}
-										rows="2"
-										autofocus
-										placeholder="Descreva a tarefa…"
-										aria-label="Descrição da tarefa"
-										class="min-h-[64px] w-full resize-y rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm leading-normal text-text-primary transition-shadow duration-fast focus:border-primary-500 focus:outline-none focus:shadow-[0_0_0_3px_rgba(31,92,168,0.12)] disabled:opacity-60"
-									></textarea>
-
-									<div class="flex flex-wrap gap-2">
-										<select
-											bind:value={addDraft.status}
-											disabled={addDraft.saving}
-											aria-label="Status"
-											class="flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-										>
-											{#each ADD_STATUS_OPTIONS as opt (opt.value)}
-												<option value={opt.value}>{opt.label}</option>
-											{/each}
-										</select>
-										<select
-											bind:value={addDraft.prioridade}
-											disabled={addDraft.saving}
-											aria-label="Prioridade"
-											class="flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-										>
-											{#each ADD_PRIORIDADE_OPTIONS as opt (opt.value)}
-												<option value={opt.value}>{opt.label}</option>
-											{/each}
-										</select>
-										<select
-											bind:value={addDraft.tipo}
-											disabled={addDraft.saving}
-											aria-label="Tipo de pedido"
-											class="flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-										>
-											{#each ADD_TIPO_OPTIONS as opt (opt.value)}
-												<option value={opt.value}>{opt.label}</option>
-											{/each}
-										</select>
-										{#if addDraft.responsavelOptions.length > 0}
-											<select
-												bind:value={addDraft.responsavel}
-												disabled={addDraft.saving}
-												aria-label="Responsável"
-												class="flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-											>
-												<option value="">Sem responsável</option>
-												{#each addDraft.responsavelOptions as user (user.id)}
-													<option value={user.name}>{user.name}</option>
-												{/each}
-											</select>
-										{/if}
-									</div>
-
-									{#if addDraft.error}
-										<p role="alert" class="text-xs text-danger">{addDraft.error}</p>
-									{/if}
-
-									<div class="flex justify-end gap-2">
-										<button
-											type="button"
-											onclick={cancelAddForm}
-											disabled={addDraft.saving}
-											class="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-										>
-											Cancelar
-										</button>
-										<button
-											type="submit"
-											disabled={addDraft.saving}
-											class="rounded-md border border-primary-500 bg-primary-100 px-3 py-1.5 text-xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-										>
-											{addDraft.saving ? 'Salvando…' : 'Salvar'}
-										</button>
-									</div>
-								</form>
-							{:else}
-								<button
-									type="button"
-									onclick={() => openAddForm(group)}
-									class="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border-strong bg-surface-muted px-3 py-2 text-xs font-semibold text-primary-700 transition-colors duration-fast hover:border-primary-500 hover:bg-primary-100 focus:outline-none focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500"
-								>
-									<i class="fas fa-plus" aria-hidden="true"></i>
-									Nova tarefa
-								</button>
-							{/if}
 						</div>
 					</Card>
 				{/each}

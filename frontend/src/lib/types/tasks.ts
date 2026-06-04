@@ -39,6 +39,10 @@ export interface TaskCard {
 	etapa_titulo: string | null;
 	/** True quando esta tarefa abre um novo bloco de etapa no grupo. */
 	is_first_of_stage: boolean;
+	/** Nº de comentários (indicador na linha da lista). */
+	comments_count: number;
+	/** Nº de anexos (indicador na linha da lista). */
+	anexos_count: number;
 }
 
 /** Grupo de tarefas de um projeto (serialize_hub_group). */

@@ -9,9 +9,14 @@
 
 	interface Props {
 		store: TaskDrawerStore;
+		/**
+		 * Prefixo dos ids do painel. Default 'drawer' (uso no TaskDrawer). A lista
+		 * usa `task-<id>` para não colidir quando várias instâncias coexistem.
+		 */
+		idPrefix?: string;
 	}
 
-	let { store }: Props = $props();
+	let { store, idPrefix = 'drawer' }: Props = $props();
 
 	let newComment = $state('');
 	let editingId = $state<number | null>(null);
@@ -115,11 +120,11 @@
 </script>
 
 <section
-	aria-labelledby="drawer-comments-title"
+	aria-labelledby={`${idPrefix}-comments-title`}
 	class="flex flex-col gap-1 rounded-xl border border-border-subtle bg-gradient-to-b from-surface to-surface-muted/40 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
 >
 	<h3
-		id="drawer-comments-title"
+		id={`${idPrefix}-comments-title`}
 		class="flex items-center gap-2 px-1 py-1 text-sm font-bold text-text-primary"
 	>
 		<span>Comentários</span>
@@ -140,7 +145,7 @@
 		<ul class="flex max-h-[40vh] flex-col gap-2 overflow-y-auto px-1 py-0.5">
 			{#each comments as comment (comment.id)}
 				<li
-					class="group flex flex-col gap-0.5 rounded-lg border border-l-4 border-border-subtle border-l-primary-500 bg-surface px-2.5 py-2 shadow-sm transition-shadow duration-fast"
+					class="group flex flex-col gap-0.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-2 shadow-sm transition-shadow duration-fast"
 				>
 					<div class="flex items-center gap-1.5">
 						<span class="text-xs font-semibold text-primary-700">{comment.author_name}</span>
@@ -214,9 +219,9 @@
 		class="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface p-2 shadow-sm"
 		onsubmit={(e) => { e.preventDefault(); void submitNew(); }}
 	>
-		<label for="drawer-new-comment" class="sr-only">Novo comentário</label>
+		<label for={`${idPrefix}-new-comment`} class="sr-only">Novo comentário</label>
 		<textarea
-			id="drawer-new-comment"
+			id={`${idPrefix}-new-comment`}
 			bind:value={newComment}
 			rows="2"
 			placeholder="Escreva um comentário… (Enter envia, Shift+Enter quebra linha)"
