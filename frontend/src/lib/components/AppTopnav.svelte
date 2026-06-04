@@ -84,12 +84,22 @@
 		requestAnimationFrame(measurePill);
 	});
 
-	// Acompanha mudancas de largura da viewport (quebra de layout reposiciona itens).
+	// Acompanha mudancas de largura da viewport (quebra de layout reposiciona itens)
+	// E reflows internos do nav. O ResizeObserver e essencial no RELOAD: a fonte
+	// custom (Manrope/Inter) costuma trocar DEPOIS do 1o measurePill, alargando o
+	// rotulo ativo; sem remedir, o texto vazava a pilula. fonts.ready cobre o swap
+	// inicial; o observer cobre qualquer reflow posterior.
 	$effect(() => {
 		if (!navEl) return;
 		const onResize = () => measurePill();
 		window.addEventListener('resize', onResize);
-		return () => window.removeEventListener('resize', onResize);
+		const ro = new ResizeObserver(() => measurePill());
+		ro.observe(navEl);
+		document.fonts?.ready.then(() => measurePill());
+		return () => {
+			window.removeEventListener('resize', onResize);
+			ro.disconnect();
+		};
 	});
 
 	/**
