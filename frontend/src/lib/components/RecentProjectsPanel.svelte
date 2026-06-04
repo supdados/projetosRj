@@ -7,11 +7,11 @@
 	 * Apresentacao fiel ao partial Jinja `_recent_projects_panel.html` +
 	 * `recent-projects-panel.css` + `index.css`:
 	 *   - Tabela em CSS grid (ID / Projeto / Orgao / Prioridade) com cabecalho
-	 *     STICKY e linha inteira clicavel. Colunas do cabecalho e das linhas
-	 *     compartilham o mesmo template de grid (--rp-cols: 64px | 1fr | 170px | 185px).
-	 *   - SCROLL-LOCK: o corpo da tabela tem altura travada e rola internamente
-	 *     (overflow-y:auto), em vez de empurrar a pagina inteira — alinhando o
-	 *     painel com o de Tarefas ao lado. Espelha `.glass-table-wrapper`
+	 *     fixo (fora do scroll) e linha inteira clicavel. Colunas do cabecalho e
+	 *     das linhas compartilham o mesmo template de grid (64px | 1fr | 170px | 185px).
+	 *   - SCROLL-LOCK: apenas as linhas rolam internamente (overflow-y:auto), com
+	 *     altura travada — a barra de rolagem comeca abaixo do cabecalho fixo, e o
+	 *     painel nao empurra a pagina inteira. Espelha `.glass-table-wrapper`
 	 *     (max-height + overflow) do index.css original.
 	 *
 	 * NAO usa o componente Card (que adiciona padding ao corpo): este painel
@@ -75,12 +75,11 @@
 			{/if}
 		</div>
 	{:else}
-		<!-- Scroll-lock: corpo rola internamente; cabecalho sticky permanece visivel. -->
-		<div class="rp-scroll min-h-0 flex-1 overflow-y-auto" role="table" aria-labelledby="recent-projects-title">
-			<!-- Cabecalho sticky -->
+		<div role="table" aria-labelledby="recent-projects-title" class="flex min-h-0 flex-1 flex-col">
+			<!-- Cabecalho fixo, FORA do scroll: a barra de rolagem comeca abaixo dele -->
 			<div
 				role="row"
-				class="rp-grid sticky top-0 z-[5] items-center border-b border-border-subtle bg-surface-muted text-2xs font-bold uppercase tracking-caps text-primary-700"
+				class="rp-grid shrink-0 items-center border-b border-border-subtle bg-surface-muted text-2xs font-bold uppercase tracking-caps text-primary-700"
 			>
 				<span role="columnheader" class="px-3 py-2.5 text-center">ID</span>
 				<span role="columnheader" class="px-3 py-2.5">Projeto</span>
@@ -88,29 +87,31 @@
 				<span role="columnheader" class="px-3 py-2.5 text-center">Prioridade</span>
 			</div>
 
-			<!-- Linhas: o <a> inteiro e clicavel -->
-			{#each projects as project (project.id)}
-				<a
-					role="row"
-					href={`${base}/projetos/${project.id}`}
-					class="rp-grid items-center border-b border-border-subtle no-underline transition-colors duration-slow hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
-				>
-					<span role="cell" class="px-3 py-3 text-center text-base text-text-secondary">{project.id}</span>
-					<span role="cell" class="truncate px-3 py-3 text-base font-medium text-primary-600">{project.titulo}</span>
-					<span role="cell" class="px-3 py-3 text-center text-base text-text-secondary">
-						{project.orgao_sigla ?? project.orgao ?? 'N/A'}
-					</span>
-					<span role="cell" class="px-3 py-3 text-center">
-						<span
-							class="inline-flex min-w-[92px] items-center justify-center px-2 py-1 text-2xs font-bold uppercase tracking-wide {priorityClass[
-								prioKey(project.prioridade)
-							] ?? 'text-text-secondary'}"
-						>
-							{prioLabel(project.prioridade)}
+			<!-- Scroll-lock: apenas as linhas rolam internamente (cabecalho permanece fixo acima). -->
+			<div role="rowgroup" class="rp-scroll min-h-0 flex-1 overflow-y-auto">
+				{#each projects as project (project.id)}
+					<a
+						role="row"
+						href={`${base}/projetos/${project.id}`}
+						class="rp-grid items-center border-b border-border-subtle no-underline transition-colors duration-slow hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+					>
+						<span role="cell" class="px-3 py-3 text-center text-base text-text-secondary">{project.id}</span>
+						<span role="cell" class="truncate px-3 py-3 text-base font-medium text-primary-600">{project.titulo}</span>
+						<span role="cell" class="px-3 py-3 text-center text-base text-text-secondary">
+							{project.orgao_sigla ?? project.orgao ?? 'N/A'}
 						</span>
-					</span>
-				</a>
-			{/each}
+						<span role="cell" class="px-3 py-3 text-center">
+							<span
+								class="inline-flex min-w-[92px] items-center justify-center px-2 py-1 text-2xs font-bold uppercase tracking-wide {priorityClass[
+									prioKey(project.prioridade)
+								] ?? 'text-text-secondary'}"
+							>
+								{prioLabel(project.prioridade)}
+							</span>
+						</span>
+					</a>
+				{/each}
+			</div>
 		</div>
 	{/if}
 </section>
@@ -130,6 +131,22 @@
 	   a logica `flex:1; min-height:0; overflow` da v4.5). */
 	.rp-scroll {
 		max-height: min(60vh, 520px);
+		/* Barra fina e azul-clara (refinada). Cor via token primario -> adapta no dark mode. */
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent) transparent;
+	}
+	.rp-scroll::-webkit-scrollbar {
+		width: 6px;
+	}
+	.rp-scroll::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.rp-scroll::-webkit-scrollbar-thumb {
+		background-color: color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent);
+		border-radius: 9999px;
+	}
+	.rp-scroll::-webkit-scrollbar-thumb:hover {
+		background-color: color-mix(in srgb, var(--ds-color-primary-500) 70%, transparent);
 	}
 	@media (min-width: 1024px) {
 		.rp-scroll {

@@ -11,6 +11,7 @@
 	 * Stubs visuais de notificacoes/busca/chatbot NAO entram nesta etapa.
 	 */
 	import { onMount } from 'svelte';
+	import { afterNavigate } from '$app/navigation';
 	import type { Snippet } from 'svelte';
 	import { auth, loadCurrentUser } from '$lib/stores/auth';
 	import AppTopnav from '$lib/components/AppTopnav.svelte';
@@ -18,18 +19,32 @@
 
 	let { children }: { children: Snippet } = $props();
 
+	// O scroller da pagina agora e o <main> (nao mais a janela), entao a
+	// restauracao de scroll do Kit nao se aplica: reposiciona no topo a cada
+	// navegacao para nao herdar o scroll da pagina anterior.
+	let mainEl = $state<HTMLElement | null>(null);
+
 	onMount(() => {
 		void loadCurrentUser();
 	});
+
+	afterNavigate(() => {
+		mainEl?.scrollTo(0, 0);
+	});
 </script>
 
-<div class="app-shell flex min-h-screen flex-col bg-canvas text-text-primary">
+<div class="app-shell flex flex-col overflow-hidden bg-canvas text-text-primary">
 	<AppTopnav user={$auth.user} />
 
 	<!-- Sem teto de largura: o conteudo (itens) cresce com a tela. O respiro lateral
 	     e um padding responsivo que escala em telas menores e TRAVA em ~7rem a partir
-	     do tamanho de notebook -> respiro constante em telas grandes, itens aumentam. -->
-	<main class="mx-auto w-full min-h-0 flex-1 px-[clamp(1.5rem,8vw,7rem)] py-6">
+	     do tamanho de notebook -> respiro constante em telas grandes, itens aumentam.
+	     overflow-y-auto: a barra de rolagem da pagina vive aqui, comecando logo abaixo
+	     do topnav fixo (mesmo padrao do painel Projetos Recentes). -->
+	<main
+		bind:this={mainEl}
+		class="mx-auto w-full min-h-0 flex-1 overflow-y-auto px-[clamp(1.5rem,8vw,7rem)] py-6"
+	>
 		{#if $auth.status === 'authenticated'}
 			{@render children()}
 		{:else if $auth.status === 'unauthenticated' && $auth.error}
