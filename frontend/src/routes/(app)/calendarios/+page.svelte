@@ -29,7 +29,8 @@
 		createEvent,
 		updateEvent,
 		deleteEvent,
-		generateMeet
+		generateMeet,
+		fetchCalendarMembers
 	} from '$lib/api/calendars';
 	import { ApiClientError } from '$lib/api/client';
 	import type {
@@ -37,14 +38,24 @@
 		CalendarEventInput,
 		CalendarEventMutationResult,
 		CalendarEventDeleteResult,
-		CalendarHub
+		CalendarHub,
+		CalendarMember
 	} from '$lib/types/calendar';
 	import CalendarConnectionBanner from '$lib/components/CalendarConnectionBanner.svelte';
 	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import CalendarWeekGrid from '$lib/components/calendar/CalendarWeekGrid.svelte';
+	import CalendarRightPanel from '$lib/components/calendar/CalendarRightPanel.svelte';
+	import CalendarListView from '$lib/components/calendar/CalendarListView.svelte';
+	import {
+		startOfWeek,
+		fmtWeekRangeLabel,
+		addDays,
+		isoDayKey
+	} from '$lib/components/calendar/weekDates';
 
 	type LoadState = 'loading' | 'ready' | 'error';
-	type ViewMode = 'calendar' | 'list';
+	type ViewMode = 'day' | 'week' | 'month' | 'list';
 
 	const MONTHS = [
 		'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -60,7 +71,10 @@
 	const today = new Date();
 	let curYear = $state(today.getFullYear());
 	let curMonth = $state(today.getMonth());
-	let curView = $state<ViewMode>('calendar');
+	let curView = $state<ViewMode>('week');
+	// Data foco das visoes Semana/Dia e do painel direito (mini-mes/Esta semana).
+	let anchorDate = $state(new Date());
+	let members = $state<CalendarMember[]>([]);
 
 	// Modal.
 	let modalOpen = $state<boolean>(false);
@@ -68,6 +82,8 @@
 	let modalBusy = $state<boolean>(false);
 	let modalError = $state<string | null>(null);
 	let modalCreateDate = $state<string>('');
+	// datetime-local "YYYY-MM-DDTHH:MM" do clique no time-grid (prefill do horario).
+	let modalCreateStart = $state<string>('');
 
 	let actionNotice = $state<{ message: string; tone: 'success' | 'warning' } | null>(null);
 	let noticeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -107,12 +123,31 @@
 		}
 	}
 
+	async function loadMembers(): Promise<void> {
+		try {
+			const res = await fetchCalendarMembers();
+			members = res.members;
+		} catch {
+			members = [];
+		}
+	}
+
 	onMount(() => {
 		if (browser) {
 			const saved = localStorage.getItem('cal_view');
-			if (saved === 'list' || saved === 'calendar') curView = saved;
+			// Migra o valor legado 'calendar' -> 'month'; valida contra o set atual.
+			const migrated = saved === 'calendar' ? 'month' : saved;
+			if (
+				migrated === 'day' ||
+				migrated === 'week' ||
+				migrated === 'month' ||
+				migrated === 'list'
+			) {
+				curView = migrated;
+			}
 		}
 		void load();
+		void loadMembers();
 		return () => {
 			inFlight?.abort();
 			if (noticeTimer) clearTimeout(noticeTimer);
@@ -146,7 +181,52 @@
 		closeEventPopover();
 		curYear = today.getFullYear();
 		curMonth = today.getMonth();
+		anchorDate = new Date();
 	}
+
+	// Navegacao do header adaptada a visao: mes (month/list), semana (week), dia (day).
+	function prevPeriod(): void {
+		closeDayPopover();
+		closeEventPopover();
+		if (curView === 'week') anchorDate = addDays(anchorDate, -7);
+		else if (curView === 'day') anchorDate = addDays(anchorDate, -1);
+		else prevMonth();
+	}
+	function nextPeriod(): void {
+		closeDayPopover();
+		closeEventPopover();
+		if (curView === 'week') anchorDate = addDays(anchorDate, 7);
+		else if (curView === 'day') anchorDate = addDays(anchorDate, 1);
+		else nextMonth();
+	}
+
+	// Mini-calendario do painel direito.
+	function miniPrevMonth(): void {
+		anchorDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth() - 1, 1);
+	}
+	function miniNextMonth(): void {
+		anchorDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth() + 1, 1);
+	}
+	function selectDay(date: Date): void {
+		anchorDate = date;
+		if (curView === 'month' || curView === 'list') switchView('week');
+	}
+
+	// Acoes do time-grid (Semana/Dia): abre o modal JA no horario clicado.
+	function openCreateAt(date: Date): void {
+		const pad = (n: number): string => String(n).padStart(2, '0');
+		modalEvent = null;
+		modalCreateDate = isoDayKey(date);
+		modalCreateStart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+			date.getDate()
+		)}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+		modalError = null;
+		modalBusy = false;
+		modalOpen = true;
+	}
+
+	// Mini-calendario: modo de destaque conforme a visao ativa.
+	const miniMode = $derived<'week' | 'day'>(curView === 'week' ? 'week' : 'day');
 
 	// --- Date math (1:1 com calendars.js) ---
 	function dayTs(dateStr: string): number {
@@ -203,6 +283,19 @@
 	}
 
 	const monthLabel = $derived(`${MONTHS[curMonth]} ${curYear}`);
+
+	// Visoes Semana/Dia + painel direito derivam de anchorDate.
+	const weekStart = $derived(startOfWeek(anchorDate, 1));
+	const weekRangeLabel = $derived(fmtWeekRangeLabel(weekStart));
+	const miniMonthDate = $derived(new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1));
+	const dayLabel = $derived(
+		anchorDate.toLocaleDateString('pt-BR', {
+			weekday: 'long',
+			day: 'numeric',
+			month: 'long',
+			year: 'numeric'
+		})
+	);
 
 	const weeks = $derived.by<WeekRow[]>(() => {
 		const evs = events;
@@ -579,48 +672,6 @@
 		}
 	}
 
-	// --- List view ---
-	function listBarClass(ev: CalendarEvent): string {
-		if (ev.sync_status === 'error') return 'cal-list-bar--error';
-		if (ev.sync_status === 'pending') return 'cal-list-bar--pending';
-		if (ev.source === 'google') return 'cal-list-bar--google';
-		return '';
-	}
-
-	interface ListGroup {
-		key: string;
-		label: string;
-		events: CalendarEvent[];
-	}
-	const listGroups = $derived.by<ListGroup[]>(() => {
-		const sorted = [...events].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
-		const groups = new Map<string, CalendarEvent[]>();
-		for (const ev of sorted) {
-			const key = ev.starts_at.slice(0, 10);
-			const bucket = groups.get(key);
-			if (bucket) bucket.push(ev);
-			else groups.set(key, [ev]);
-		}
-		const out: ListGroup[] = [];
-		for (const [key, evs] of groups) {
-			const [y, m, d] = key.split('-').map(Number);
-			const dateObj = new Date(y, m - 1, d);
-			const wday = dateObj.toLocaleDateString('pt-BR', { weekday: 'long' });
-			const label = `${wday.charAt(0).toUpperCase()}${wday.slice(1)}, ${d} de ${MONTHS[m - 1]}`;
-			out.push({ key, label, events: evs });
-		}
-		return out;
-	});
-
-	function listTimeLabel(ev: CalendarEvent): { allDay: boolean; start: string; end: string } {
-		if (ev.is_all_day || ev.starts_at.slice(11) === '00:00') {
-			return { allDay: true, start: '', end: '' };
-		}
-		const fmt = (s: string) =>
-			new Date(s).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-		return { allDay: false, start: fmt(ev.starts_at), end: `– ${fmt(ev.ends_at)}` };
-	}
-
 	// --- Connection actions ---
 	async function runConnectionAction(action: () => Promise<unknown>, fallback: string): Promise<void> {
 		if (connectionBusy) return;
@@ -651,6 +702,7 @@
 	function openCreate(dateStr = ''): void {
 		modalEvent = null;
 		modalCreateDate = dateStr;
+		modalCreateStart = '';
 		modalError = null;
 		modalBusy = false;
 		modalOpen = true;
@@ -786,47 +838,26 @@
 				</span>
 			{/if}
 
-			{#if curView === 'calendar'}
-				<div class="cal-month-nav">
-					<button class="cal-nav-btn" type="button" onclick={prevMonth} title="Mês anterior" aria-label="Mês anterior">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-					</button>
-					<span class="cal-month-label">{monthLabel}</span>
-					<button class="cal-nav-btn" type="button" onclick={nextMonth} title="Próximo mês" aria-label="Próximo mês">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-					</button>
-					<button class="cal-today-btn" type="button" onclick={goToToday}>Hoje</button>
-				</div>
-			{/if}
+			<div class="cal-month-nav">
+				<button class="cal-nav-btn" type="button" onclick={prevPeriod} title="Anterior" aria-label="Período anterior">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+				</button>
+				<span class="cal-month-label">
+					{#if curView === 'week'}{weekRangeLabel}{:else if curView === 'day'}{dayLabel}{:else}{monthLabel}{/if}
+				</span>
+				<button class="cal-nav-btn" type="button" onclick={nextPeriod} title="Próximo" aria-label="Próximo período">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+				</button>
+				<button class="cal-today-btn" type="button" onclick={goToToday}>Hoje</button>
+			</div>
 
 			<div class="cal-header-gap"></div>
 
 			<div class="cal-view-toggle" role="group" aria-label="Alternar visão">
-				<button
-					class="cal-toggle-btn"
-					class:is-active={curView === 'calendar'}
-					type="button"
-					aria-pressed={curView === 'calendar'}
-					onclick={() => switchView('calendar')}
-					title="Visão calendário"
-				>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-					</svg>
-				</button>
-				<button
-					class="cal-toggle-btn"
-					class:is-active={curView === 'list'}
-					type="button"
-					aria-pressed={curView === 'list'}
-					onclick={() => switchView('list')}
-					title="Visão lista"
-				>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
-						<circle cx="3" cy="6" r="1" fill="currentColor" /><circle cx="3" cy="12" r="1" fill="currentColor" /><circle cx="3" cy="18" r="1" fill="currentColor" />
-					</svg>
-				</button>
+				<button class="cal-toggle-btn" class:is-active={curView === 'day'} type="button" aria-pressed={curView === 'day'} onclick={() => switchView('day')}>Dia</button>
+				<button class="cal-toggle-btn" class:is-active={curView === 'week'} type="button" aria-pressed={curView === 'week'} onclick={() => switchView('week')}>Semana</button>
+				<button class="cal-toggle-btn" class:is-active={curView === 'month'} type="button" aria-pressed={curView === 'month'} onclick={() => switchView('month')}>Mês</button>
+				<button class="cal-toggle-btn" class:is-active={curView === 'list'} type="button" aria-pressed={curView === 'list'} onclick={() => switchView('list')}>Lista</button>
 			</div>
 
 			<!-- Acoes de conexao Google (sync / renovar / desconectar) -->
@@ -863,8 +894,14 @@
 			</p>
 		{/if}
 
-		<!-- ── Visao CALENDARIO ─────────────────────────────────────────── -->
-		{#if curView === 'calendar'}
+		<!-- ── Conteudo: visao ativa (centro) + painel direito ──────────── -->
+		<div class="cal-layout">
+			<div class="cal-main-col">
+			{#if curView === 'week'}
+				<CalendarWeekGrid {weekStart} {events} onSelectEvent={openEdit} onCreateAt={openCreateAt} />
+			{:else if curView === 'day'}
+				<CalendarWeekGrid weekStart={anchorDate} days={[anchorDate]} {events} onSelectEvent={openEdit} onCreateAt={openCreateAt} />
+			{:else if curView === 'month'}
 			<div class="cal-view cal-view--calendar is-active">
 				<div class="cal-grid-wrap">
 					<div class="cal-grid" style="grid-template-rows: {gridTemplateRows};">
@@ -961,90 +998,23 @@
 				</div>
 			</div>
 		{:else}
-			<!-- ── Visao LISTA ──────────────────────────────────────────── -->
-			<div class="cal-view cal-view--list is-active">
-				<div class="cal-list">
-					{#if eventCount === 0}
-						<div class="cal-list-empty">
-							Nenhum evento. Clique em <strong>Novo evento</strong> para começar.
-						</div>
-					{:else}
-						{#each listGroups as group (group.key)}
-							<div class="cal-list-group">
-								<div class="cal-list-date-label">{group.label}</div>
-								{#each group.events as ev (ev.id)}
-									{@const t = listTimeLabel(ev)}
-									<div
-										class="cal-list-event"
-										role="button"
-										tabindex="0"
-										onclick={(e) => { e.stopPropagation(); openEventPopover(ev, e.currentTarget as HTMLElement); }}
-										onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEventPopover(ev, e.currentTarget as HTMLElement); } }}
-									>
-										<div class="cal-list-bar {listBarClass(ev)}"></div>
-										<div class="cal-list-time">
-											{#if t.allDay}
-												Dia inteiro
-											{:else}
-												{t.start}<br /><span class="cal-list-time-end">{t.end}</span>
-											{/if}
-										</div>
-										<div class="cal-list-body">
-											<div class="cal-list-title">{ev.title}</div>
-											<div class="cal-list-meta">
-												{#if ev.location}
-													<span class="cal-meta-item">{ev.location}</span>
-												{/if}
-												{#if ev.meet_link}
-													<a
-														class="cal-meta-meet"
-														href={ev.meet_link}
-														target="_blank"
-														rel="noopener noreferrer"
-														onclick={(e) => e.stopPropagation()}
-													>
-														<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.889L15 14" /><rect x="3" y="6" width="12" height="12" rx="2" /></svg>
-														Meet
-													</a>
-												{/if}
-												{#if ev.sync_status === 'error'}
-													<span class="cal-sync-badge cal-sync-badge--error">Erro de sync</span>
-												{:else if ev.sync_status === 'pending'}
-													<span class="cal-sync-badge cal-sync-badge--pending">Pendente</span>
-												{:else if ev.source === 'google'}
-													<span class="cal-sync-badge cal-sync-badge--ok">Sincronizado</span>
-												{/if}
-											</div>
-											{#if ev.sync_status === 'error'}
-												<p class="cal-list-sync-warn" role="status" aria-live="polite">
-													Falha de sincronização com o Google{ev.sync_error ? `: ${ev.sync_error}` : '.'}
-												</p>
-											{/if}
-										</div>
-										<div class="cal-list-actions">
-											<button
-												type="button"
-												class="cal-btn-sm"
-												title="Editar"
-												aria-label="Editar"
-												onclick={(e) => { e.stopPropagation(); openEdit(ev); }}
-											>✎</button>
-											<button
-												type="button"
-												class="cal-btn-sm cal-btn-sm--danger"
-												title="Excluir"
-												aria-label="Excluir"
-												onclick={(e) => { e.stopPropagation(); deleteFromUi(ev.id); }}
-											>✕</button>
-										</div>
-									</div>
-								{/each}
-							</div>
-						{/each}
-					{/if}
-				</div>
+			<!-- Visao LISTA (redesenhada, sem barra lateral colorida) -->
+				<CalendarListView {events} onSelectEvent={openEdit} />
+			{/if}
 			</div>
-		{/if}
+			<CalendarRightPanel
+				mode={miniMode}
+				{weekStart}
+				selectedDay={anchorDate}
+				month={miniMonthDate}
+				{events}
+				{members}
+				onSelectEvent={openEdit}
+				onSelectDay={selectDay}
+				onPrevMonth={miniPrevMonth}
+				onNextMonth={miniNextMonth}
+			/>
+		</div>
 	{/if}
 </section>
 
@@ -1190,6 +1160,7 @@
 	open={modalOpen}
 	event={modalEvent}
 	createDate={modalCreateDate}
+	createStart={modalCreateStart}
 	hasGoogle={hasGoogle}
 	busy={modalBusy}
 	error={modalError}
@@ -1270,12 +1241,33 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 0.38rem 0.6rem;
+		padding: 0.38rem 0.7rem;
 		background: none;
 		border: none;
 		cursor: pointer;
+		font-size: 0.82rem;
+		font-weight: 500;
 		color: var(--app-color-text-muted);
 		transition: background 0.13s, color 0.13s;
+	}
+
+	/* Layout 2-colunas: visao ativa (fluida) + painel direito (~320px).
+	   Stacka em telas <1024px. Vive dentro do respiro do <main> — sem 100vh
+	   nem overflow proprio (a pagina e o unico scroller). */
+	.cal-layout {
+		display: flex;
+		gap: 1.25rem;
+		align-items: flex-start;
+		margin-top: 0.75rem;
+	}
+	.cal-main-col {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+	@media (max-width: 1024px) {
+		.cal-layout {
+			flex-direction: column;
+		}
 	}
 	.cal-toggle-btn:hover {
 		background: var(--app-color-surface-muted);
@@ -1367,7 +1359,8 @@
 	.cal-view--calendar.is-active {
 		display: flex;
 		flex-direction: column;
-		min-height: 32rem;
+		/* Preenche a mesma altura aproximada da visao Semana (13h * 44px + headers). */
+		min-height: 42rem;
 	}
 
 	/* ── Month nav ──────────────────────────────────────────────────── */
@@ -1420,13 +1413,15 @@
 		border-radius: 0.75rem;
 		overflow: hidden;
 		background: var(--app-color-surface);
+		display: flex;
+		flex-direction: column;
 		flex: 1;
 		min-height: 0;
 	}
 	.cal-grid {
 		display: grid;
 		grid-template-rows: auto repeat(6, minmax(0, 1fr));
-		height: 100%;
+		flex: 1;
 		min-height: 0;
 	}
 	.cal-grid-headers {
@@ -1976,161 +1971,6 @@
 		cursor: default;
 	}
 
-	/* ── List view ──────────────────────────────────────────────────── */
-	.cal-list {
-		display: flex;
-		flex-direction: column;
-	}
-	.cal-list-empty {
-		text-align: center;
-		padding: 3rem 1rem;
-		color: var(--app-color-text-muted);
-		font-size: 0.88rem;
-		border: 1px dashed var(--app-color-border);
-		border-radius: 0.7rem;
-	}
-	.cal-list-group {
-		display: flex;
-		flex-direction: column;
-	}
-	.cal-list-date-label {
-		font-size: 0.72rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.07em;
-		color: var(--app-color-text-muted);
-		padding: 0.9rem 0 0.35rem;
-	}
-	.cal-list-event {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.7rem;
-		padding: 0.6rem 0.7rem;
-		border-radius: 0.55rem;
-		border: 1px solid var(--app-color-border);
-		background: var(--app-color-surface);
-		cursor: pointer;
-		margin-bottom: 0.35rem;
-		transition: border-color 0.12s, box-shadow 0.12s;
-		text-align: left;
-		width: 100%;
-	}
-	.cal-list-event:hover {
-		border-color: var(--app-color-primary);
-		box-shadow: 0 2px 8px rgba(0, 90, 146, 0.08);
-	}
-	.cal-list-bar {
-		width: 3px;
-		align-self: stretch;
-		min-height: 2rem;
-		border-radius: 2px;
-		background: var(--app-color-primary);
-		flex-shrink: 0;
-	}
-	.cal-list-bar--google {
-		background: #0f9d58;
-	}
-	.cal-list-bar--pending {
-		background: #94a3b8;
-	}
-	.cal-list-bar--error {
-		background: var(--app-color-danger);
-	}
-	.cal-list-time {
-		font-size: 0.78rem;
-		color: var(--app-color-text-muted);
-		white-space: nowrap;
-		min-width: 4.5rem;
-		padding-top: 0.1rem;
-		line-height: 1.4;
-	}
-	.cal-list-time-end {
-		opacity: 0.8;
-	}
-	.cal-list-body {
-		flex: 1;
-		min-width: 0;
-	}
-	.cal-list-title {
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--app-color-text-primary);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.cal-list-meta {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		margin-top: 0.22rem;
-		flex-wrap: wrap;
-	}
-	.cal-meta-item {
-		font-size: 0.76rem;
-		color: var(--app-color-text-muted);
-	}
-	.cal-meta-meet {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		padding: 0.18rem 0.45rem 0.18rem 0.35rem;
-		font-size: 0.72rem;
-		font-weight: 500;
-		background: #00832d;
-		color: #fff;
-		text-decoration: none;
-		border-radius: 0.3rem;
-		transition: background 0.12s;
-	}
-	.cal-meta-meet:hover {
-		background: #006625;
-		color: #fff;
-		text-decoration: none;
-	}
-	.cal-sync-badge {
-		display: inline-flex;
-		align-items: center;
-		font-size: 0.68rem;
-		padding: 0.1rem 0.38rem;
-		border-radius: 999px;
-		border: 1px solid transparent;
-	}
-	.cal-sync-badge--ok {
-		color: var(--app-color-success);
-		background: rgba(22, 163, 74, 0.1);
-		border-color: rgba(22, 163, 74, 0.2);
-	}
-	.cal-sync-badge--error {
-		color: var(--app-color-danger);
-		background: rgba(220, 38, 38, 0.08);
-		border-color: rgba(220, 38, 38, 0.2);
-	}
-	.cal-sync-badge--pending {
-		color: var(--app-color-text-muted);
-		background: rgba(107, 114, 128, 0.1);
-		border-color: rgba(107, 114, 128, 0.2);
-	}
-	.cal-list-sync-warn {
-		margin-top: 0.4rem;
-		font-size: 0.74rem;
-		color: var(--app-color-warning, #ca8a04);
-		border: 1px solid rgba(202, 138, 4, 0.3);
-		background: var(--app-color-surface-muted);
-		border-radius: 0.4rem;
-		padding: 0.25rem 0.5rem;
-	}
-	.cal-list-actions {
-		display: flex;
-		gap: 0.25rem;
-		align-items: flex-start;
-		opacity: 0;
-		transition: opacity 0.13s;
-	}
-	.cal-list-event:hover .cal-list-actions {
-		opacity: 1;
-	}
-
 	/* ── Responsive ─────────────────────────────────────────────────── */
 	@media (max-width: 600px) {
 		.cal-cell {
@@ -2151,12 +1991,6 @@
 			height: 1rem;
 			line-height: 1rem;
 		}
-		.cal-list-time {
-			display: none;
-		}
-		.cal-list-actions {
-			opacity: 1;
-		}
 		.cal-month-nav {
 			gap: 0.3rem;
 		}
@@ -2174,9 +2008,7 @@
 		.cal-cell,
 		.cal-cell-num,
 		.cal-event-pill,
-		.cal-span-bar,
-		.cal-list-event,
-		.cal-list-actions {
+		.cal-span-bar {
 			transition: none;
 		}
 	}

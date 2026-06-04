@@ -33,6 +33,8 @@
 		event: CalendarEvent | null;
 		/** Data base (YYYY-MM-DD) ao criar a partir de um dia da grade. */
 		createDate?: string;
+		/** Datetime-local "YYYY-MM-DDTHH:MM" do clique no time-grid — prefill preciso ao criar. */
+		createStart?: string;
 		/** Ha conexao Google? Habilita o toggle/gerar Meet. */
 		hasGoogle?: boolean;
 		busy?: boolean;
@@ -47,6 +49,7 @@
 		open,
 		event,
 		createDate = '',
+		createStart = '',
 		hasGoogle = false,
 		busy = false,
 		error = null,
@@ -166,13 +169,26 @@
 				allDayEndDate = endDate;
 			}
 		} else {
-			const base = createDate || todayStr();
-			startDate = base;
-			startTime = '09:00';
-			endDate = base;
-			endTime = '10:00';
-			allDayStartDate = base;
-			allDayEndDate = base;
+			if (createStart) {
+				// Prefill a partir do clique no time-grid; fim = inicio + 1h.
+				const parsed = new Date(createStart);
+				const startParts = toLocalParts(parsed);
+				const endParts = toLocalParts(new Date(parsed.getTime() + 3600000));
+				startDate = startParts.date;
+				startTime = startParts.time;
+				endDate = endParts.date;
+				endTime = endParts.time;
+				allDayStartDate = startParts.date;
+				allDayEndDate = endParts.date;
+			} else {
+				const base = createDate || todayStr();
+				startDate = base;
+				startTime = '09:00';
+				endDate = base;
+				endTime = '10:00';
+				allDayStartDate = base;
+				allDayEndDate = base;
+			}
 		}
 	});
 

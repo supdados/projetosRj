@@ -28,7 +28,8 @@ import type {
 	CalendarEventInput,
 	CalendarEventMutationResult,
 	CalendarEventDeleteResult,
-	CalendarHub
+	CalendarHub,
+	CalendarMember
 } from '$lib/types/calendar';
 
 /** Resumo devolvido por `POST /api/calendarios/google/sync`. */
@@ -52,6 +53,13 @@ export interface CalendarWatchRenewResult {
 /** Busca o hub do calendario (eventos + estado da conexao Google). */
 export function getCalendarHub(signal?: AbortSignal): Promise<CalendarHub> {
 	return get<CalendarHub>('/api/calendarios', signal);
+}
+
+/** Busca os membros do Time visiveis no calendario do usuario logado. */
+export function fetchCalendarMembers(
+	signal?: AbortSignal
+): Promise<{ members: CalendarMember[] }> {
+	return get<{ members: CalendarMember[] }>('/api/calendarios/membros', signal);
 }
 
 /** Desconecta a conta Google Calendar do usuario. */

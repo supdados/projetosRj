@@ -122,3 +122,13 @@ export interface CalendarEventDeleteResult {
 	deleted: boolean;
 	remote_warning?: string;
 }
+
+/**
+ * Membro do Time exibido na secao lateral do calendario.
+ * Espelha o item de `GET /api/calendarios/membros` -> `data.members`.
+ */
+export interface CalendarMember {
+	id: number;
+	name: string;
+	initials: string;
+}

@@ -24,8 +24,8 @@ import datetime
 from typing import Any
 
 from flask import Response, current_app, g
-
-from models import CalendarEvent, db
+from models import CalendarEvent, User, UserOrgao, db
+from routes.tasks.queries import assignee_initials, serialize_assignee
 from services.google_calendar import is_google_calendar_enabled
 
 from ..blueprint import main_bp
@@ -220,6 +220,67 @@ def api_sync_google_calendar_now() -> Response | tuple[Response, int]:
             "full_sync": summary.get("full_sync", False),
         }
     )
+
+
+@main_bp.route("/api/calendarios/membros", methods=["GET"])
+@api_login_required
+def api_calendar_members() -> Response | tuple[Response, int]:
+    """Membros do Time visíveis no calendário do usuário logado.
+
+    Retorna usuários ativos que compartilham pelo menos um órgão com o usuário
+    logado, mais todos os admins ativos. Sem N+1: uma query para órgãos do
+    usuário, uma para user_ids nesses órgãos, uma para admins, uma final para
+    hidratar os User.
+
+    Returns:
+        Envelope ``{"ok": true, "data": {"members": [...]}}`` com cada membro
+        como ``{id, name, initials}``.
+    """
+    my_orgao_ids = [
+        orgao_id
+        for (orgao_id,) in UserOrgao.query.with_entities(UserOrgao.orgao_id)
+        .filter_by(user_id=g.user.id)
+        .all()
+    ]
+
+    candidate_ids: set[int] = set()
+
+    if my_orgao_ids:
+        peer_ids = [
+            user_id
+            for (user_id,) in UserOrgao.query.with_entities(UserOrgao.user_id)
+            .filter(UserOrgao.orgao_id.in_(my_orgao_ids))
+            .all()
+        ]
+        candidate_ids.update(peer_ids)
+
+    admin_ids = [
+        user_id
+        for (user_id,) in User.query.with_entities(User.id)
+        .filter(User.is_admin.is_(True), User.deleted_at.is_(None))
+        .all()
+    ]
+    candidate_ids.update(admin_ids)
+
+    if not candidate_ids:
+        return ok({"members": []})
+
+    users = (
+        User.query.filter(User.id.in_(candidate_ids), User.deleted_at.is_(None))
+        .order_by(User.name.asc())
+        .all()
+    )
+
+    members = [
+        {
+            "id": u.id,
+            "name": u.name or u.username or "Usuário",
+            "initials": assignee_initials(u.name or u.username or ""),
+        }
+        for u in users
+    ]
+
+    return ok({"members": members})
 
 
 @main_bp.route("/api/calendarios/google/watch/renew", methods=["POST"])
