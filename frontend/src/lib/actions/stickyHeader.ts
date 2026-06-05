@@ -1,22 +1,27 @@
 /**
  * Action `use:stickyHeader` — compacta o cabeçalho do projeto ao rolar.
  *
- * Espelha o comportamento de static/js/pages/projects/detail/10-compact-header.js:
- * usa um elemento "sentinela" posicionado logo acima do cabeçalho principal e um
- * IntersectionObserver. Enquanto o sentinela está visível (topo da página), o
- * cabeçalho está expandido; quando o sentinela sai da viewport (usuário rolou
- * para baixo), o cabeçalho vira compacto.
+ * Aplicada ao PRÓPRIO header e usa um IntersectionObserver para disparar a
+ * reavaliação nos cruzamentos. A decisão é DIRECIONAL: o cabeçalho só compacta
+ * quando a BASE do header já passou ACIMA da linha do topnav fixo — ou seja,
+ * exatamente quando o header deixa de estar aparente. Não basta o header estar
+ * "fora da viewport" — em telas/janelas baixas a base pode estar abaixo da dobra
+ * com o cabeçalho inteiro ainda visível, o que fazia o compacto surgir cedo
+ * demais (header principal e compacto apareciam juntos).
  *
- * A action é aplicada AO SENTINELA. Ela apenas observa a interseção e invoca o
- * callback `onChange(isCompact)` — a decisão de classes/ARIA fica no componente
- * controlado (ProjectHeader), respeitando o padrão "controlado por callback".
+ * Observa-se o próprio header (e não um sentinela separado) porque um sentinela
+ * irmão sofre o `gap` do flex container da página, ficando alguns px abaixo da
+ * base real do header e atrasando o gatilho.
+ *
+ * Invoca o callback `onChange(isCompact)` — a decisão de classes/ARIA fica no
+ * componente controlado (ProjectHeader), padrão "controlado por callback".
  *
  * Acessibilidade/robustez:
  *   - Em ambientes sem IntersectionObserver (SSR/jsdom), faz no-op seguro.
- *   - `rootMargin` opcional permite descontar a altura do topnav fixo.
+ *   - `topOffset` desconta a altura do topnav fixo no topo da viewport.
  *
  * Exemplo:
- *   <div use:stickyHeader={{ onChange: (c) => (compact = c), topOffset: 64 }} />
+ *   <header use:stickyHeader={{ onChange: (c) => (compact = c), topOffset: 64 }} />
  */
 
 /** Parâmetros da action (reativos via `update`). */
@@ -54,6 +59,17 @@ export function stickyHeader(node: HTMLElement, params: StickyHeaderParams): Act
 		current.onChange(isCompact);
 	}
 
+	/**
+	 * Decide o estado compacto de forma DIRECIONAL: só compacta quando a base do
+	 * sentinela já rolou ACIMA da linha do topnav. Comparar apenas com
+	 * `isIntersecting` mostraria o compacto também quando o sentinela está abaixo
+	 * da dobra (telas baixas), com o cabeçalho inteiro ainda visível.
+	 */
+	function evaluate(): void {
+		const top = Math.max(0, Math.round(current.topOffset ?? 0));
+		notify(node.getBoundingClientRect().bottom <= top);
+	}
+
 	function connect(): void {
 		if (typeof IntersectionObserver === 'undefined') {
 			// SSR/jsdom: começa expandido e não observa.
@@ -62,10 +78,10 @@ export function stickyHeader(node: HTMLElement, params: StickyHeaderParams): Act
 		}
 		observer = new IntersectionObserver(
 			(entries) => {
-				const entry = entries[0];
-				if (!entry) return;
-				// Sentinela visível => expandido; fora da viewport => compacto.
-				notify(!entry.isIntersecting);
+				if (!entries[0]) return;
+				// O observer só dispara nos cruzamentos da linha do topnav e da
+				// dobra; a decisão de mostrar/esconder é sempre direcional.
+				evaluate();
 			},
 			{ root: null, rootMargin: buildRootMargin(current.topOffset ?? 0), threshold: 0 }
 		);

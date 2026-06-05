@@ -56,6 +56,12 @@
 	let compact = $state(false);
 	const canEdit = $derived(permissions.can_edit);
 
+	// Folga (px) entre a base do topnav e o header compacto, para que ele não
+	// fique colado no topo. O GATILHO usa `topOffset` puro (sincronia exata com
+	// o sumiço do header); só a POSIÇÃO do compacto recebe esta folga.
+	const COMPACT_TOP_GAP = 12;
+	const compactTop = $derived(topOffset + COMPACT_TOP_GAP);
+
 	// --- Edição inline de chip (status/prioridade) ---------------------------
 	let editingChip = $state<HeaderField | null>(null);
 	let chipDraft = $state('');
@@ -132,15 +138,15 @@
 	const hasDates = $derived(Boolean(startBr || endBr));
 </script>
 
-<!-- Sentinela: enquanto visível, o cabeçalho fica expandido; ao sair, compacta. -->
-<div
-	aria-hidden="true"
-	class="ph-sentinel"
+<!-- ===================== HEADER PRINCIPAL (glass) =====================
+     A action observa o PRÓPRIO header: o compacto aparece exatamente quando a
+     base do header passa acima da linha do topnav (sem depender de um sentinela
+     separado, que sofria o gap-6 do flex container e atrasava o gatilho). -->
+<header
+	class="project-header"
+	aria-labelledby="project-detail-title"
 	use:stickyHeader={{ topOffset, onChange: (isCompact) => (compact = isCompact) }}
-></div>
-
-<!-- ===================== HEADER PRINCIPAL (glass) ===================== -->
-<header class="project-header" aria-labelledby="project-detail-title">
+>
 	<div class="ph-main-row">
 		<div class="ph-main-content">
 			<h1 id="project-detail-title" class="ph-title">{project.id} - {project.titulo}</h1>
@@ -262,7 +268,7 @@
 <div
 	class="project-compact-header"
 	class:is-visible={compact}
-	style={`--project-compact-top:${topOffset}px`}
+	style={`--project-compact-top:${compactTop}px`}
 	aria-hidden={compact ? 'false' : 'true'}
 >
 	<div class="project-compact-inner">
@@ -322,12 +328,6 @@
 </div>
 
 <style>
-	.ph-sentinel {
-		width: 100%;
-		height: 1px;
-		pointer-events: none;
-	}
-
 	/* ----- Header glass ----- */
 	.project-header {
 		position: relative;
