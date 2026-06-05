@@ -88,19 +88,23 @@
 		return a + Math.random() * (b - a);
 	}
 
-	// Bulbo SUPERIOR com paredes concavas (curvas).
+	// Bulbo SUPERIOR fiel a silhueta do vidro (webp): paredes em "S" com OMBROS
+	// largos e arredondados perto do topo (ponto mais largo ~y0.16, medido pixel a
+	// pixel na imagem) que afunilam CONCAVAMENTE ate o gargalo. Cubica por lado;
+	// a quadratica antiga dava lados quase retos => a areia parecia um triangulo.
 	function upperBulbPath(ctx: CanvasRenderingContext2D, hw: number, hh: number) {
 		const cx = hw / 2;
 		const topY = hh * 0.085;
-		const topHalf = hw * 0.4;
-		const neckY = hh * 0.47;
-		const neckHalf = hw * 0.055;
+		const topHalf = hw * 0.448;
+		const neckY = hh * 0.49;
+		const neckHalf = hw * 0.085;
 		ctx.beginPath();
 		ctx.moveTo(cx - topHalf, topY);
 		ctx.lineTo(cx + topHalf, topY);
-		ctx.quadraticCurveTo(cx + topHalf * 0.5, hh * 0.32, cx + neckHalf, neckY);
+		// Parede direita: topo -> ombro (c1 empurra p/ fora+baixo) -> gargalo (c2 fecha).
+		ctx.bezierCurveTo(cx + hw * 0.515, hh * 0.21, cx + hw * 0.36, hh * 0.4, cx + neckHalf, neckY);
 		ctx.lineTo(cx - neckHalf, neckY);
-		ctx.quadraticCurveTo(cx - topHalf * 0.5, hh * 0.32, cx - topHalf, topY);
+		ctx.bezierCurveTo(cx - hw * 0.36, hh * 0.4, cx - hw * 0.515, hh * 0.21, cx - topHalf, topY);
 		ctx.closePath();
 	}
 
@@ -126,7 +130,8 @@
 		ctx.save();
 		upperBulbPath(ctx, hw, hh);
 		ctx.clip();
-		const top = hh * 0.085 + hh * 0.39 * f;
+		// Nivel desce de topY (cheio) ate neckY (vazio): 0.49 - 0.085 = 0.405.
+		const top = hh * 0.085 + hh * 0.405 * f;
 		ctx.fillStyle = SANDS[0];
 		ctx.fillRect(0, top, hw, hh);
 		ctx.restore();
