@@ -42,7 +42,6 @@
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 	import type { Project } from '$lib/types/entities';
-	import Badge from '$lib/components/Badge.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
@@ -557,17 +556,25 @@
 		return value.charAt(0).toUpperCase() + value.slice(1);
 	}
 
-	/** Rótulo amigável do órgão para o <option>. */
+	/** Rótulo do órgão no <select>: apenas a SIGLA (nome completo polui o campo). */
 	function orgaoOptionLabel(option: {
 		sigla: string | null;
 		nome: string | null;
 		label: string;
 	}): string {
-		if (option.sigla && option.nome && option.nome !== option.sigla) {
-			return `${option.sigla} — ${option.nome}`;
-		}
 		return option.sigla ?? option.label;
 	}
+
+	// Cor do texto por tom (SEM fundo/pilula). Espelha os tons do Badge, mas para
+	// renderizar Prioridade/Status como TEXTO colorido em vez de badge preenchido.
+	const toneTextClass: Record<string, string> = {
+		neutral: 'text-text-secondary',
+		primary: 'text-primary-700',
+		success: 'text-success',
+		warning: 'text-warning',
+		danger: 'text-danger',
+		info: 'text-info'
+	};
 </script>
 
 <svelte:head>
@@ -982,7 +989,7 @@
 								</th>
 								<th
 									scope="col"
-									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Órgão
 								</th>
@@ -1000,7 +1007,7 @@
 								</th>
 								<th
 									scope="col"
-									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Tipo de entrega
 								</th>
@@ -1035,33 +1042,37 @@
 										: 'opacity-100'}"
 								>
 									<td class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle">
-										<!-- projects-v4-id-chip: chip arredondado com o ID. -->
-										<span
-											class="inline-flex items-center rounded-sm border border-border-subtle bg-surface-muted px-2 py-0.5 text-xs font-bold text-text-muted"
-										>
+										<!-- ID em texto simples (sem chip/fundo). -->
+										<span class="text-xs font-bold text-text-muted">
 											{project.id}
 										</span>
 									</td>
 									<td class="border-t border-border-subtle px-2.5 py-2.5 align-middle">
 										<a
 											href={projectDetailHref(project)}
-											class="font-semibold text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="text-[15px] font-medium text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 										>
 											{project.titulo}
 										</a>
 									</td>
 									<td
-										class="border-t border-border-subtle px-2.5 py-2.5 align-middle text-text-secondary"
+										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle text-text-secondary"
 									>
-										{project.orgao_sigla ?? project.orgao ?? '—'}
+										<span class="text-xs font-semibold uppercase tracking-wide">
+											{project.orgao_sigla ?? project.orgao ?? '—'}
+										</span>
 									</td>
 									<td
 										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle"
 									>
 										{#if project.prioridade}
-											<Badge tone={priorityTone(project.prioridade)}>
+											<span
+												class="text-xs font-semibold uppercase tracking-wide {toneTextClass[
+													priorityTone(project.prioridade)
+												]}"
+											>
 												{capitalize(project.prioridade)}
-											</Badge>
+											</span>
 										{:else}
 											<span class="italic text-text-muted">—</span>
 										{/if}
@@ -1070,16 +1081,24 @@
 										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle"
 									>
 										{#if project.status}
-											<Badge tone={statusTone(project.status)}>{project.status}</Badge>
+											<span
+												class="text-xs font-semibold uppercase tracking-wide {toneTextClass[
+													statusTone(project.status)
+												]}"
+											>
+												{project.status}
+											</span>
 										{:else}
 											<span class="italic text-text-muted">—</span>
 										{/if}
 									</td>
 									<td
-										class="border-t border-border-subtle px-2.5 py-2.5 align-middle text-text-secondary"
+										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle text-text-secondary"
 									>
 										{#if project.delivery_type}
-											{project.delivery_type}
+											<span class="text-xs font-semibold uppercase tracking-wide">
+												{project.delivery_type}
+											</span>
 										{:else}
 											<span class="italic text-text-muted">—</span>
 										{/if}

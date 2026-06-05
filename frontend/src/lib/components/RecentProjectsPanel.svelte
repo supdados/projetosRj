@@ -75,11 +75,18 @@
 			{/if}
 		</div>
 	{:else}
-		<div role="table" aria-labelledby="recent-projects-title" class="flex min-h-0 flex-1 flex-col">
-			<!-- Cabecalho fixo, FORA do scroll: a barra de rolagem comeca abaixo dele -->
+		<div
+			role="table"
+			aria-labelledby="recent-projects-title"
+			class="rp-scroll flex min-h-0 flex-1 flex-col overflow-y-auto"
+		>
+			<!-- Cabecalho STICKY DENTRO do scroll: divide a MESMA largura util (ja
+			     descontada a barra de rolagem) e o mesmo grid das linhas -> colunas
+			     alinhadas. Antes, com o cabecalho FORA do scroll, a barra so encolhia
+			     as linhas e empurrava as colunas fixas ~15px p/ a esquerda. -->
 			<div
 				role="row"
-				class="rp-grid shrink-0 items-center border-b border-border-subtle bg-surface-muted text-2xs font-bold uppercase tracking-caps text-primary-700"
+				class="rp-grid sticky top-0 z-10 items-center border-b border-border-subtle bg-surface-muted text-2xs font-bold uppercase tracking-caps text-primary-700"
 			>
 				<span role="columnheader" class="px-3 py-2.5 text-center">ID</span>
 				<span role="columnheader" class="px-3 py-2.5">Projeto</span>
@@ -87,8 +94,7 @@
 				<span role="columnheader" class="px-3 py-2.5 text-center">Prioridade</span>
 			</div>
 
-			<!-- Scroll-lock: apenas as linhas rolam internamente (cabecalho permanece fixo acima). -->
-			<div role="rowgroup" class="rp-scroll min-h-0 flex-1 overflow-y-auto">
+			<div role="rowgroup">
 				{#each projects as project (project.id)}
 					<a
 						role="row"
