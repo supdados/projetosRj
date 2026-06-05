@@ -79,7 +79,13 @@
 	import '$lib/celebration/confetti.css';
 
 	type LoadState = 'loading' | 'ready' | 'error';
-	type HeaderField = 'titulo' | 'status' | 'prioridade' | 'delivery_type' | 'special_project';
+	type HeaderField =
+		| 'titulo'
+		| 'short_description'
+		| 'status'
+		| 'prioridade'
+		| 'delivery_type'
+		| 'special_project';
 
 	interface FieldState {
 		pending?: boolean;
@@ -898,6 +904,7 @@
 			{topOffset}
 			fieldStates={{
 				titulo: projectFieldStates.titulo,
+				short_description: projectFieldStates.short_description,
 				status: projectFieldStates.status,
 				prioridade: projectFieldStates.prioridade,
 				delivery_type: projectFieldStates.delivery_type,

@@ -15,6 +15,7 @@
 	 * CONTROLADO: recebe `project` + `options` + `permissions` + `derivedData`; emite
 	 * `onEditField(field, value)` — NÃO chama API.
 	 */
+	import { tick } from 'svelte';
 	import { stickyHeader } from '$lib/actions/stickyHeader';
 	import type {
 		ProjectDetail,
@@ -24,7 +25,13 @@
 	} from '$lib/types/projectDetail';
 	import { base } from '$app/paths';
 
-	type HeaderField = 'titulo' | 'status' | 'prioridade' | 'delivery_type' | 'special_project';
+	type HeaderField =
+		| 'titulo'
+		| 'short_description'
+		| 'status'
+		| 'prioridade'
+		| 'delivery_type'
+		| 'special_project';
 
 	interface FieldState {
 		pending?: boolean;
@@ -68,6 +75,137 @@
 	// baixo dá o visual rico (ícone/cor); o select por cima captura o clique.
 	function selectChip(field: HeaderField, value: string): void {
 		onEditField(field, value);
+	}
+
+	// --- Edição inline de TÍTULO e DESCRIÇÃO (paridade com v4.5) --------------
+	// Réplica do 09-project-inline-editor.js: clicar no lápis troca o texto por um
+	// <textarea> que HERDA a tipografia do display (sem salto visual), com fundo
+	// translúcido e SEM borda, altura auto-crescente e — na descrição — largura que
+	// abraça o conteúdo (mín..máx = largura do container). Blur/Enter salvam;
+	// Shift+Enter quebra linha na descrição; Escape cancela. A página recebe
+	// onEditField(field, value) e chama a API; o valor otimista segura o texto novo
+	// no display até o servidor confirmar (sem piscar de volta no valor antigo).
+	type TextField = 'titulo' | 'short_description';
+
+	let editingField = $state<TextField | null>(null);
+	let draft = $state('');
+	let textEditorEl = $state<HTMLTextAreaElement | null>(null);
+	// `undefined` => sem valor otimista; string/null => exibe o valor pendente.
+	let optTitulo = $state<string | null | undefined>(undefined);
+	let optDesc = $state<string | null | undefined>(undefined);
+	let sawPendingTitulo = $state(false);
+	let sawPendingDesc = $state(false);
+
+	const shownTitulo = $derived(optTitulo !== undefined ? optTitulo : project.titulo);
+	const shownDescription = $derived(optDesc !== undefined ? optDesc : project.short_description);
+
+	// Solta o valor otimista quando a gravação se resolve (paridade InlineEditField):
+	// o prop alcançou o valor salvo, houve erro (reverte), ou o pending caiu após ter
+	// sido true.
+	$effect(() => {
+		if (optTitulo === undefined) {
+			sawPendingTitulo = false;
+			return;
+		}
+		const fs = fieldStates.titulo;
+		if (fs?.pending) {
+			sawPendingTitulo = true;
+			return;
+		}
+		if ((project.titulo ?? '') === (optTitulo ?? '') || fs?.error || sawPendingTitulo) {
+			optTitulo = undefined;
+			sawPendingTitulo = false;
+		}
+	});
+	$effect(() => {
+		if (optDesc === undefined) {
+			sawPendingDesc = false;
+			return;
+		}
+		const fs = fieldStates.short_description;
+		if (fs?.pending) {
+			sawPendingDesc = true;
+			return;
+		}
+		if ((project.short_description ?? '') === (optDesc ?? '') || fs?.error || sawPendingDesc) {
+			optDesc = undefined;
+			sawPendingDesc = false;
+		}
+	});
+
+	// Mede a largura do texto p/ a descrição abraçar o conteúdo (canvas, fonte real).
+	let measureCanvas: HTMLCanvasElement | null = null;
+	function measureDescriptionWidth(ta: HTMLTextAreaElement): number {
+		const style = window.getComputedStyle(ta);
+		measureCanvas ??= document.createElement('canvas');
+		const ctx = measureCanvas.getContext('2d');
+		if (!ctx) return 240;
+		ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+		const text = ta.value || ta.placeholder || '';
+		const longest = text
+			.split(/\r?\n/)
+			.reduce((max, line) => Math.max(max, ctx.measureText(line || ' ').width), 0);
+		return Math.ceil(longest + 26);
+	}
+
+	// Cresce a altura ao conteúdo (ambos) e a largura ao texto (só descrição).
+	function autoSizeText(): void {
+		const ta = textEditorEl;
+		if (!ta) return;
+		ta.style.height = 'auto';
+		// border-box: soma a borda p/ não recortar a última linha (igual InlineEditField).
+		const borderY = ta.offsetHeight - ta.clientHeight;
+		ta.style.height = `${ta.scrollHeight + borderY}px`;
+		if (editingField !== 'short_description') return;
+		const container = ta.closest('.ph-main-content');
+		const maxW = container ? Math.floor(container.getBoundingClientRect().width) : 0;
+		const measured = measureDescriptionWidth(ta);
+		// Piso 72px = paridade v4.5 (resizeProjectHeaderTextEditor): a descrição
+		// abraça o conteúdo até bem curto em vez de manter uma caixa larga.
+		const next = maxW ? Math.min(maxW, Math.max(72, measured)) : Math.max(72, measured);
+		ta.style.width = `${next}px`;
+	}
+
+	async function enterTextEdit(field: TextField): Promise<void> {
+		if (!canEdit || fieldStates[field]?.pending) return;
+		editingField = field;
+		draft = (field === 'titulo' ? shownTitulo : shownDescription) ?? '';
+		await tick();
+		textEditorEl?.focus();
+		textEditorEl?.select();
+		autoSizeText();
+	}
+
+	function commitText(): void {
+		const field = editingField;
+		if (!field) return;
+		editingField = null;
+		const trimmed = draft.trim();
+		const current = (field === 'titulo' ? project.titulo : project.short_description) ?? '';
+		// Título é obrigatório: blur/Enter com vazio apenas cancela (paridade legado).
+		if (field === 'titulo' && trimmed === '') return;
+		if (trimmed === current) return;
+		if (field === 'titulo') optTitulo = trimmed;
+		else optDesc = trimmed === '' ? null : trimmed;
+		onEditField(field, trimmed);
+	}
+
+	function cancelText(): void {
+		editingField = null;
+	}
+
+	function onTextKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			cancelText();
+			return;
+		}
+		if (event.key === 'Enter') {
+			// Descrição: Shift+Enter quebra linha; Enter salva. Título: Enter salva.
+			if (editingField === 'short_description' && event.shiftKey) return;
+			event.preventDefault();
+			commitText();
+		}
 	}
 
 	const statusKey = $derived((project.status ?? '').toLowerCase() || 'na');
@@ -128,9 +266,105 @@
 >
 	<div class="ph-main-row">
 		<div class="ph-main-content">
-			<h1 id="project-detail-title" class="ph-title">{project.id} - {project.titulo}</h1>
-			{#if project.short_description}
-				<p class="ph-description">{project.short_description}</p>
+			<!-- Título: o lápis troca o texto por um textarea fluido (paridade v4.5). O
+			     <h1> fica SEMPRE no DOM (oculto visualmente ao editar) para preservar o
+			     heading de nível 1 e o nome da região (header/section aria-labelledby);
+			     o textarea tem id próprio para não roubar o id do heading. -->
+			<div class="ph-title-row">
+				<h1
+					id="project-detail-title"
+					class="ph-title"
+					class:ph-visually-hidden={editingField === 'titulo'}
+				>
+					{project.id} - {shownTitulo}
+				</h1>
+				{#if editingField === 'titulo'}
+					<textarea
+						bind:this={textEditorEl}
+						bind:value={draft}
+						class="ph-text-editor ph-text-editor--title"
+						rows="1"
+						placeholder="Nome do projeto"
+						aria-label="Título do projeto"
+						aria-invalid={fieldStates.titulo?.error ? 'true' : undefined}
+						aria-describedby={fieldStates.titulo?.error ? 'project-title-error' : undefined}
+						disabled={fieldStates.titulo?.pending}
+						oninput={autoSizeText}
+						onblur={commitText}
+						onkeydown={onTextKeydown}
+					></textarea>
+				{:else if canEdit}
+					<button
+						type="button"
+						class="ph-edit-pen"
+						aria-label="Editar título do projeto"
+						disabled={fieldStates.titulo?.pending}
+						onclick={() => enterTextEdit('titulo')}
+					>
+						<i
+							class="fas {fieldStates.titulo?.pending ? 'fa-spinner fa-spin' : 'fa-pen'}"
+							aria-hidden="true"
+						></i>
+					</button>
+				{/if}
+			</div>
+			{#if fieldStates.titulo?.error}
+				<p id="project-title-error" class="ph-text-error" role="alert">
+					{fieldStates.titulo.error}
+				</p>
+			{/if}
+
+			<!-- Descrição: idem; quando vazia, oferece "Adicionar descrição". -->
+			{#if editingField === 'short_description'}
+				<textarea
+					bind:this={textEditorEl}
+					bind:value={draft}
+					class="ph-text-editor ph-text-editor--description"
+					rows="1"
+					placeholder="Descrição do projeto"
+					aria-label="Descrição do projeto"
+					aria-invalid={fieldStates.short_description?.error ? 'true' : undefined}
+					aria-describedby={fieldStates.short_description?.error
+						? 'project-desc-error'
+						: undefined}
+					disabled={fieldStates.short_description?.pending}
+					oninput={autoSizeText}
+					onblur={commitText}
+					onkeydown={onTextKeydown}
+				></textarea>
+			{:else if shownDescription}
+				<div class="ph-description-row">
+					<p class="ph-description">{shownDescription}</p>
+					{#if canEdit}
+						<button
+							type="button"
+							class="ph-edit-pen ph-edit-pen--description"
+							aria-label="Editar descrição do projeto"
+							disabled={fieldStates.short_description?.pending}
+							onclick={() => enterTextEdit('short_description')}
+						>
+							<i
+								class="fas {fieldStates.short_description?.pending
+									? 'fa-spinner fa-spin'
+									: 'fa-pen'}"
+								aria-hidden="true"
+							></i>
+						</button>
+					{/if}
+				</div>
+			{:else if canEdit}
+				<button
+					type="button"
+					class="ph-add-description"
+					onclick={() => enterTextEdit('short_description')}
+				>
+					<i class="fas fa-pen" aria-hidden="true"></i>Adicionar descrição
+				</button>
+			{/if}
+			{#if fieldStates.short_description?.error}
+				<p id="project-desc-error" class="ph-text-error" role="alert">
+					{fieldStates.short_description.error}
+				</p>
 			{/if}
 		</div>
 		<a href={`${base}/projetos`} class="ph-back-button">
@@ -281,9 +515,9 @@
 >
 	<div class="project-compact-inner">
 		<div class="project-compact-main">
-			<h2 class="project-compact-title">{project.id} - {project.titulo}</h2>
-			{#if project.short_description}
-				<p class="project-compact-description">{project.short_description}</p>
+			<h2 class="project-compact-title">{project.id} - {shownTitulo}</h2>
+			{#if shownDescription}
+				<p class="project-compact-description">{shownDescription}</p>
 			{/if}
 			<div class="project-compact-meta">
 				<span class="pc-chip pc-chip--status pc-chip--status-{statusKey}">
@@ -407,6 +641,171 @@
 		overflow: hidden;
 		white-space: pre-line;
 		overflow-wrap: anywhere;
+	}
+
+	/* ----- Edição inline de título/descrição (lápis) ----- */
+	.ph-title-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.45rem;
+	}
+	.ph-title-row .ph-title {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+	/* Oculta o <h1> ao editar mantendo-o acessível (heading nível 1 + nome da
+	   região via aria-labelledby) e FORA do fluxo p/ o textarea ocupar a linha. */
+	.ph-visually-hidden {
+		position: absolute !important;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+	/* `fit-content`: a linha abraça o texto p/ o lápis ficar logo após a descrição. */
+	.ph-description-row {
+		display: flex;
+		width: fit-content;
+		max-width: 100%;
+		align-items: flex-start;
+		gap: 0.4rem;
+	}
+	.ph-description-row .ph-description {
+		min-width: 0;
+	}
+	.ph-edit-pen {
+		flex-shrink: 0;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.55rem;
+		height: 1.55rem;
+		margin-top: 0.2rem;
+		padding: 0;
+		border-radius: 6px;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		background: rgba(255, 255, 255, 0.08);
+		color: rgba(255, 255, 255, 0.9);
+		font-size: 0.72rem;
+		line-height: 1;
+		cursor: pointer;
+		opacity: 0.5;
+		transition:
+			opacity 0.16s ease,
+			background 0.16s ease,
+			border-color 0.16s ease,
+			color 0.16s ease;
+	}
+	.ph-edit-pen--description {
+		width: 1.5rem;
+		height: 1.5rem;
+		margin-top: 0.05rem;
+		font-size: 0.66rem;
+	}
+	.ph-title-row:hover .ph-edit-pen,
+	.ph-description-row:hover .ph-edit-pen,
+	.ph-edit-pen:hover,
+	.ph-edit-pen:focus-visible {
+		opacity: 1;
+	}
+	.ph-edit-pen:hover {
+		background: rgba(255, 255, 255, 0.22);
+		border-color: rgba(255, 255, 255, 0.45);
+		color: #fff;
+	}
+	.ph-edit-pen:disabled {
+		cursor: default;
+		opacity: 0.7;
+	}
+	/* Touch / sem hover: o lápis nunca recebe :hover, então fica sempre visível. */
+	@media (hover: none) {
+		.ph-edit-pen {
+			opacity: 1;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.ph-edit-pen {
+			transition-duration: 1ms;
+		}
+	}
+	.ph-add-description {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		margin-top: 0.1rem;
+		padding: 0.18rem 0.55rem;
+		border-radius: 6px;
+		border: 1px dashed rgba(255, 255, 255, 0.32);
+		background: rgba(255, 255, 255, 0.06);
+		color: rgba(255, 255, 255, 0.82);
+		font-size: 0.8rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition:
+			background 0.16s ease,
+			border-color 0.16s ease,
+			color 0.16s ease;
+	}
+	.ph-add-description:hover {
+		background: rgba(255, 255, 255, 0.15);
+		border-color: rgba(255, 255, 255, 0.5);
+		color: #fff;
+	}
+
+	/* Editor: herda a tipografia do display; fundo translúcido, SEM borda (paridade
+	   v4.5). Cresce em altura (ambos) e largura (descrição, via JS). */
+	.ph-text-editor {
+		display: block;
+		margin: 0;
+		color: #fff;
+		background: rgba(255, 255, 255, 0.08);
+		border: 1px solid transparent;
+		border-radius: 8px;
+		font-family: inherit;
+		box-sizing: border-box;
+		overflow: hidden;
+		overflow-wrap: anywhere;
+		white-space: pre-wrap;
+		resize: none;
+		transition:
+			width 0.12s ease,
+			height 0.12s ease,
+			background-color 0.16s ease,
+			box-shadow 0.16s ease;
+	}
+	.ph-text-editor:focus {
+		outline: none;
+		background: rgba(255, 255, 255, 0.14);
+		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.28);
+	}
+	.ph-text-editor::placeholder {
+		color: rgba(255, 255, 255, 0.65);
+	}
+	.ph-text-editor--title {
+		width: 100%;
+		margin-bottom: 0.12rem;
+		padding: 0.1rem 0.34rem;
+		font-size: 1.5rem;
+		font-weight: 700;
+		line-height: 1.2;
+		word-break: break-word;
+	}
+	.ph-text-editor--description {
+		max-width: 100%;
+		padding: 0.12rem 0.3rem;
+		font-size: 0.875rem;
+		font-weight: 400;
+		line-height: 1.5;
+	}
+	.ph-text-error {
+		margin: 0.25rem 0 0;
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: #fecaca;
 	}
 
 	.ph-back-button {
