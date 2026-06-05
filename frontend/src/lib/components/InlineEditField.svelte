@@ -60,21 +60,49 @@
 	let editing = $state(false);
 	let draft = $state('');
 	let editorEl = $state<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null);
+	// Valor otimista: mostrado entre o blur e a confirmação do servidor para que o
+	// campo não pisque de volta no valor antigo enquanto a API responde.
+	let optimisticValue = $state<string | null>(null);
+	let sawPending = $state(false);
 
 	const errorId = $derived(`${fieldId}-error`);
-	const hasValue = $derived(value !== null && value !== '');
+	// O que o display realmente mostra (otimista tem prioridade sobre o prop).
+	const shownValue = $derived(optimisticValue ?? value);
+	const hasValue = $derived(shownValue !== null && shownValue !== '');
+
+	// Solta o valor otimista quando a gravação se resolve: o prop alcançou o valor
+	// salvo, houve erro (reverte para o antigo), ou o pending voltou a false após
+	// ter sido true (datas re-buscam e podem não devolver a string idêntica).
+	$effect(() => {
+		if (optimisticValue === null) {
+			sawPending = false;
+			return;
+		}
+		if (pending) {
+			sawPending = true;
+			return;
+		}
+		if ((value ?? '') === optimisticValue || error || sawPending) {
+			optimisticValue = null;
+			sawPending = false;
+		}
+	});
 
 	function autoResize(): void {
 		if (editorEl && editorEl.tagName === 'TEXTAREA') {
 			const ta = editorEl as HTMLTextAreaElement;
 			ta.style.height = 'auto';
-			ta.style.height = `${ta.scrollHeight}px`;
+			// scrollHeight = conteúdo + padding (sem borda). Como a caixa é
+			// border-box, somamos a borda para não recortar a última linha — sem
+			// isso o texto fica colado/cortado na base da caixa.
+			const borderY = ta.offsetHeight - ta.clientHeight;
+			ta.style.height = `${ta.scrollHeight + borderY}px`;
 		}
 	}
 
 	async function enterEdit(): Promise<void> {
 		if (readonly || pending) return;
-		draft = value ?? '';
+		draft = shownValue ?? '';
 		editing = true;
 		await tick();
 		editorEl?.focus();
@@ -87,7 +115,10 @@
 	function commit(): void {
 		const trimmed = kind === 'date' || kind === 'select' ? draft : draft.trim();
 		editing = false;
-		if (trimmed !== (value ?? '')) onSave(trimmed);
+		if (trimmed !== (value ?? '')) {
+			optimisticValue = trimmed; // segura o valor novo no display até o servidor confirmar
+			onSave(trimmed);
+		}
 	}
 
 	function cancel(): void {
@@ -152,7 +183,7 @@
 			aria-label={label ? `Editar ${label}` : 'Editar campo'}
 			onclick={enterEdit}
 		>
-			{#if display}{@render display(value)}{:else if hasValue}{value}{:else}{emptyLabel}{/if}
+			{#if display}{@render display(shownValue)}{:else if hasValue}{shownValue}{:else}{emptyLabel}{/if}
 		</button>
 	{/if}
 	{#if error}
@@ -245,9 +276,9 @@
 						: ''}"
 				>
 					{#if display}
-						{@render display(value)}
+						{@render display(shownValue)}
 					{:else if hasValue}
-						<span class="break-words">{value}</span>
+						<span class="break-words">{shownValue}</span>
 					{:else}
 						<span class="text-text-muted">{emptyLabel}</span>
 					{/if}
@@ -273,11 +304,13 @@
 	.editable-field {
 		display: inline-block;
 		width: 100%;
+		box-sizing: border-box;
 		background: none;
 		border: 1px solid transparent;
 		border-radius: 8px;
 		padding: 0.18rem 0.4rem;
 		font: inherit;
+		line-height: 1.45;
 		color: inherit;
 		text-align: left;
 		cursor: text;
@@ -310,11 +343,13 @@
 		color: #536d89;
 	}
 
+	/* Caixa IDÊNTICA à do .editable-field (mesmo padding/borda/line-height) para
+	   que entrar em edição não cresça nem encolha a célula. */
 	.cell-editor {
 		width: 100%;
-		padding: 0.38rem 0.58rem;
+		padding: 0.18rem 0.4rem;
 		border: 1px solid #c4d5e7;
-		border-radius: 7px;
+		border-radius: 8px;
 		font-size: 0.875rem;
 		color: #3e556f;
 		background: #fff;
@@ -327,8 +362,10 @@
 		overflow: hidden;
 		display: block;
 	}
+	/* Datas/responsável: mesma altura mínima do display centralizado (30px). */
 	.cell-editor.centered {
 		text-align: center;
+		min-height: 30px;
 	}
 	.cell-editor:focus {
 		outline: none;

@@ -17,6 +17,7 @@
 	 * Etapa concluída => células com line-through e edição bloqueada (toast no pai).
 	 * Reuniões Google: renderizadas read-only (slot meetingSlot).
 	 */
+	import { tick } from 'svelte';
 	import InlineEditField from './InlineEditField.svelte';
 	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
 
@@ -70,23 +71,56 @@
 
 	let editingComment = $state(false);
 	let commentDraft = $state('');
+	let commentEl = $state<HTMLTextAreaElement | null>(null);
+	// Valor otimista do comentário: evita piscar o placeholder/valor antigo entre
+	// o blur e a confirmação do servidor (mesmo padrão do InlineEditField).
+	let optimisticComment = $state<string | null>(null);
+	let sawCommentBusy = $state(false);
+
+	const shownComment = $derived(optimisticComment ?? etapa.comentarios);
+
+	$effect(() => {
+		if (optimisticComment === null) {
+			sawCommentBusy = false;
+			return;
+		}
+		if (busy) {
+			sawCommentBusy = true;
+			return;
+		}
+		if ((etapa.comentarios ?? '') === optimisticComment || rowError || sawCommentBusy) {
+			optimisticComment = null;
+			sawCommentBusy = false;
+		}
+	});
 
 	function fieldState(field: EtapaInlineField): FieldState {
 		return fieldStates[field] ?? {};
 	}
 
-	function startComment(): void {
+	async function startComment(): Promise<void> {
 		if (locked || etapa.done) return;
-		commentDraft = etapa.comentarios ?? '';
+		commentDraft = shownComment ?? '';
 		editingComment = true;
+		// Foca direto na caixa para que digitar (e o blur ao clicar fora) funcionem
+		// já no primeiro clique.
+		await tick();
+		commentEl?.focus();
 	}
 	function commitComment(): void {
-		onSaveComentario(commentDraft.trim());
+		const text = commentDraft.trim();
 		editingComment = false;
+		// Clicar fora sem digitar nada apenas fecha; com texto, salva.
+		if (text) {
+			optimisticComment = text; // segura o valor novo no display até o servidor confirmar
+			onSaveComentario(text);
+		} else {
+			commentDraft = shownComment ?? '';
+		}
 	}
 	function cancelComment(): void {
 		editingComment = false;
-		commentDraft = etapa.comentarios ?? '';
+		commentDraft = shownComment ?? '';
 	}
 
 	function formatDateBr(iso: string | null): string {
@@ -200,9 +234,11 @@
 			<div class="etapa-descricao-comment">
 				{#if editingComment}
 					<textarea
+						bind:this={commentEl}
 						bind:value={commentDraft}
 						rows="1"
 						disabled={busy}
+						placeholder="Escreva um comentário"
 						aria-label="Comentário da etapa"
 						class="etapa-comment-editor"
 						onblur={commitComment}
@@ -215,7 +251,7 @@
 							}
 						}}
 					></textarea>
-				{:else if etapa.comentarios}
+				{:else if shownComment}
 					<button
 						type="button"
 						class="etapa-comentario-display"
@@ -223,11 +259,11 @@
 						disabled={locked || etapa.done}
 						onclick={startComment}
 					>
-						{etapa.comentarios}
+						{shownComment}
 					</button>
 				{:else if !locked && !etapa.done}
 					<button type="button" class="etapa-comentario-placeholder" onclick={startComment}>
-						<i class="fas fa-comment-medical" aria-hidden="true"></i> adicionar comentário
+						adicionar comentário
 					</button>
 				{/if}
 			</div>
@@ -417,8 +453,7 @@
 		color: #5f7691;
 		font-weight: 500;
 		white-space: nowrap;
-		vertical-align: top;
-		padding-right: 0.35rem;
+		text-align: center;
 	}
 
 	.cell-desc {
@@ -429,10 +464,12 @@
 		flex-direction: column;
 		gap: 0.05rem;
 	}
+	/* Mesma altura da caixa do .editable-field (editável) para que a descrição
+	   tenha altura constante entre os estados editável e concluído (read-only). */
 	.etapa-descricao-main {
 		display: flex;
 		align-items: center;
-		min-height: 1.35rem;
+		min-height: 1.75rem;
 	}
 	.etapa-descricao {
 		font-weight: 600;
@@ -443,20 +480,37 @@
 		color: #7b8fa7 !important;
 		text-decoration: line-through;
 	}
+	/* Reserva a altura de uma linha de comentário para que a célula tenha a MESMA
+	   altura nos 3 estados (não iniciada / iniciada / concluída) — concluída não
+	   tem placeholder, mas o espaço continua reservado. */
 	.etapa-descricao-comment {
 		display: block;
+		min-height: 1.65rem;
+	}
+	/* Display, placeholder e editor compartilham EXATAMENTE a mesma caixa
+	   (padding + borda + line-height) para que clicar-para-editar não cresça nem
+	   encolha a linha. */
+	.etapa-comentario-display,
+	.etapa-comentario-placeholder,
+	.etapa-comment-editor {
+		/* block (não inline-block): elimina o espaço de descida da line-box que
+		   fazia a linha crescer ao entrar em edição do comentário. */
+		display: block;
+		width: 100%;
+		box-sizing: border-box;
+		padding: 0.18rem 0.45rem;
+		border: 1px solid transparent;
+		border-radius: 6px;
+		text-align: left;
+		font-size: 0.78rem;
+		line-height: 1.45;
+		font-family: inherit;
 	}
 	.etapa-comentario-display,
 	.etapa-comentario-placeholder {
-		display: inline-block;
 		background: none;
-		border: none;
-		padding: 0;
-		text-align: left;
-		font-size: 0.78rem;
 		color: #6f859f;
 		cursor: pointer;
-		font-family: inherit;
 	}
 	.etapa-comentario-display:hover,
 	.etapa-comentario-placeholder:hover {
@@ -466,18 +520,22 @@
 		cursor: default;
 		text-decoration: line-through;
 	}
+	/* O placeholder "adicionar comentário" só aparece ao passar o mouse na linha
+	   (ou ao receber foco via teclado). */
+	.etapa-comentario-placeholder {
+		opacity: 0;
+		transition: opacity 0.16s ease;
+	}
+	.etapa-row:hover .etapa-comentario-placeholder,
+	.etapa-comentario-placeholder:focus-visible {
+		opacity: 1;
+	}
 	.etapa-comment-editor {
-		width: 100%;
-		padding: 0.18rem 0.45rem;
-		border: 1px solid #c4d5e7;
-		border-radius: 6px;
-		font-size: 0.78rem;
 		color: #3e556f;
 		background: #fff;
-		font-family: inherit;
+		border-color: #c4d5e7;
 		resize: none;
 		overflow: hidden;
-		line-height: 1.45;
 	}
 	.etapa-comment-editor:focus {
 		outline: none;

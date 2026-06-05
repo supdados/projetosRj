@@ -228,6 +228,7 @@
 	// ---- Composer inline (adicionar etapa) ----
 	let composerOpen = $state(false);
 	let descricaoEl = $state<HTMLTextAreaElement | null>(null);
+	let composerRowEl = $state<HTMLTableRowElement | null>(null);
 	let draft = $state<NewStageDraft>({
 		descricao: '',
 		data_inicio: '',
@@ -258,6 +259,9 @@
 		composerOpen = true;
 		await Promise.resolve();
 		descricaoEl?.focus();
+		// Fixa a altura do textarea já na abertura (igual ao estado pós-digitação)
+		// para não dar o "pulinho" de crescimento na primeira vez que abre.
+		autoResizeDescricao();
 	}
 	function closeComposer(): void {
 		composerOpen = false;
@@ -291,7 +295,24 @@
 	function autoResizeDescricao(): void {
 		if (descricaoEl) {
 			descricaoEl.style.height = 'auto';
-			descricaoEl.style.height = `${descricaoEl.scrollHeight}px`;
+			// Soma a borda: a caixa é border-box e scrollHeight ignora a borda.
+			const borderY = descricaoEl.offsetHeight - descricaoEl.clientHeight;
+			descricaoEl.style.height = `${descricaoEl.scrollHeight + borderY}px`;
+		}
+	}
+	/**
+	 * Clique fora do composer: salva se já houver descrição, senão cancela.
+	 * Usa pointerdown em captura — o calendário nativo de <input type=date> é
+	 * renderizado fora do DOM, então não dispara este evento (sem falso positivo).
+	 */
+	function handleComposerOutsidePointer(event: PointerEvent): void {
+		if (!composerOpen || addingStage) return;
+		const target = event.target as Node | null;
+		if (composerRowEl && target && composerRowEl.contains(target)) return;
+		if (draft.descricao.trim()) {
+			submitComposer();
+		} else {
+			closeComposer();
 		}
 	}
 	function composerKeydown(event: KeyboardEvent): void {
@@ -305,6 +326,13 @@
 			submitComposer();
 		}
 	}
+
+	// Enquanto o composer está aberto, escuta cliques fora dele.
+	$effect(() => {
+		if (!composerOpen) return;
+		document.addEventListener('pointerdown', handleComposerOutsidePointer, true);
+		return () => document.removeEventListener('pointerdown', handleComposerOutsidePointer, true);
+	});
 
 	// Após adicionar com sucesso (etapas muda de tamanho), fecha o composer.
 	let prevLen = etapas.length;
@@ -374,7 +402,7 @@
 							</td>
 						</tr>
 					{:else}
-						<tr class="etapa-composer-row">
+						<tr class="etapa-composer-row" bind:this={composerRowEl}>
 							<td class="cell-drag">
 								<span class="composer-drag-placeholder" aria-hidden="true">
 									<i class="fas fa-grip-vertical"></i>
@@ -508,6 +536,9 @@
 	.etapa-table {
 		width: 100%;
 		min-width: 1100px;
+		/* Larguras de coluna fixas: o conteúdo (ex.: <input type=date> em edição)
+		   não pode mais esticar a coluna, então nada muda de largura ao editar. */
+		table-layout: fixed;
 		border-collapse: separate;
 		border-spacing: 0;
 		margin: 0;
@@ -530,6 +561,7 @@
 	}
 	.col-number {
 		width: 64px;
+		text-align: center !important;
 	}
 	.col-desc {
 		width: 306px;
@@ -594,14 +626,18 @@
 		border-top: 1px solid var(--app-color-border, #edf2f8);
 		padding: 0.5rem 0.7rem;
 	}
+	/* Ocupa a linha inteira e centraliza: o tracejado vira a "última linha"
+	   adicionável; ao clicar, vira o composer (estado atual). */
 	.etapa-entry-btn {
-		display: inline-flex;
+		display: flex;
+		width: 100%;
 		align-items: center;
+		justify-content: center;
 		gap: 0.45rem;
 		background: none;
 		border: 1px dashed #c3d3e8;
 		border-radius: 8px;
-		padding: 0.45rem 0.9rem;
+		padding: 0.6rem 0.9rem;
 		color: #2856b6;
 		font-size: 0.82rem;
 		font-weight: 600;
