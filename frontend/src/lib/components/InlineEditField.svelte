@@ -35,6 +35,8 @@
 		pending?: boolean;
 		error?: string | null;
 		fieldId: string;
+		/** Classe FontAwesome completa (ex.: "fab fa-github") exibida antes do valor. */
+		icon?: string;
 		display?: import('svelte').Snippet<[string | null]>;
 		onSave: (value: string) => void;
 		onCancel?: () => void;
@@ -52,6 +54,7 @@
 		pending = false,
 		error = null,
 		fieldId,
+		icon = '',
 		display,
 		onSave,
 		onCancel
@@ -278,9 +281,14 @@
 					{#if display}
 						{@render display(shownValue)}
 					{:else if hasValue}
-						<span class="break-words">{shownValue}</span>
+						<span class="break-words"
+							>{#if icon}<i class="{icon} mr-1.5 text-primary-600" aria-hidden="true"></i
+								>{/if}{shownValue}</span
+						>
 					{:else}
-						<span class="text-text-muted">{emptyLabel}</span>
+						<span class="text-text-muted"
+							>{#if icon}<i class="{icon} mr-1.5" aria-hidden="true"></i>{/if}{emptyLabel}</span
+						>
 					{/if}
 				</div>
 				{#if !readonly}

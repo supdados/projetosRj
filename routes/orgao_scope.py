@@ -264,6 +264,31 @@ def get_user_orgao_options(user) -> list[dict]:
     return get_visible_orgao_tree(user)
 
 
+def scoped_orgao_options(user) -> list[dict]:
+    """Órgãos atribuíveis ao projeto pelo usuário, para o picker de Área Responsável.
+
+    Admin enxerga todos os órgãos ativos; demais enxergam apenas a própria subtree
+    (vínculo + descendentes), também restrita a ativos. Mesma regra de
+    ``get_project_edit_data`` (routes/projects/ajax.py), isolada aqui para reuso no
+    payload do Detalhe sem duplicar a query.
+
+    Args:
+        user: Instância de ``User`` (ou ``None``).
+
+    Returns:
+        Lista de ``{id, sigla, nome}`` ordenada por ``sigla``; vazia quando um
+        não-admin não tem vínculos.
+    """
+    query = OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True))
+    if not getattr(user, "is_admin", False):
+        subtree_ids = get_user_orgao_subtree_ids(user)
+        if not subtree_ids:
+            return []
+        query = query.filter(OrgaoUnidade.id.in_(subtree_ids))
+    rows = query.order_by(OrgaoUnidade.sigla).all()
+    return [{"id": o.id, "sigla": o.sigla, "nome": o.nome} for o in rows]
+
+
 def user_can_access_project(user, project) -> bool:
     """Retorna True se o usuario pode acessar o projeto via subtree de orgao.
 

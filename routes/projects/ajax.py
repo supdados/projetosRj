@@ -7,7 +7,11 @@ from catalogs.objectives import normalize_goal_selection
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
-from routes.orgao_scope import get_user_orgao_subtree_ids, user_can_access_project
+from routes.orgao_scope import (
+    get_user_orgao_subtree_ids,
+    scoped_orgao_options,
+    user_can_access_project,
+)
 from models import OrgaoUnidade
 from routes.shared import (
     get_or_404,
@@ -41,27 +45,7 @@ def get_project_edit_data(project_id):
 
         indicadores_do_projeto_ids = [ip.indicador_id for ip in project.indicadores]
 
-        if g.user.is_admin:
-            orgao_rows = (
-                OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True))
-                .order_by(OrgaoUnidade.sigla)
-                .all()
-            )
-        else:
-            subtree_ids = get_user_orgao_subtree_ids(g.user)
-            orgao_rows = (
-                (
-                    OrgaoUnidade.query.filter(OrgaoUnidade.id.in_(subtree_ids))
-                    .filter(OrgaoUnidade.ativo.is_(True))
-                    .order_by(OrgaoUnidade.sigla)
-                    .all()
-                )
-                if subtree_ids
-                else []
-            )
-        available_orgaos = [
-            {"id": o.id, "sigla": o.sigla, "nome": o.nome} for o in orgao_rows
-        ]
+        available_orgaos = scoped_orgao_options(g.user)
 
         return jsonify(
             {
@@ -211,6 +195,9 @@ def apply_project_inline_changes(project_to_edit, data):
 
     if "documentation_link" in data:
         project_to_edit.documentation_link = data["documentation_link"] or None
+
+    if "product_link" in data:
+        project_to_edit.product_link = data["product_link"] or None
 
     if "observacao" in data:
         project_to_edit.observacao = data["observacao"] or None

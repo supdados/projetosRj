@@ -16,7 +16,6 @@
 	 * `onEditField(field, value)` — NÃO chama API.
 	 */
 	import { stickyHeader } from '$lib/actions/stickyHeader';
-	import { tick } from 'svelte';
 	import type {
 		ProjectDetail,
 		ProjectDetailOptions,
@@ -25,7 +24,7 @@
 	} from '$lib/types/projectDetail';
 	import { base } from '$app/paths';
 
-	type HeaderField = 'titulo' | 'status' | 'prioridade';
+	type HeaderField = 'titulo' | 'status' | 'prioridade' | 'delivery_type' | 'special_project';
 
 	interface FieldState {
 		pending?: boolean;
@@ -62,33 +61,13 @@
 	const COMPACT_TOP_GAP = 12;
 	const compactTop = $derived(topOffset + COMPACT_TOP_GAP);
 
-	// --- Edição inline de chip (status/prioridade) ---------------------------
-	let editingChip = $state<HeaderField | null>(null);
-	let chipDraft = $state('');
-	let chipEditorEl = $state<HTMLSelectElement | null>(null);
-
-	async function startChipEdit(field: HeaderField, value: string | null): Promise<void> {
-		if (!canEdit) return;
-		editingChip = field;
-		chipDraft = value ?? '';
-		await tick();
-		chipEditorEl?.focus();
-	}
-
-	function commitChip(field: HeaderField): void {
-		onEditField(field, chipDraft);
-		editingChip = null;
-	}
-
-	function cancelChip(): void {
-		editingChip = null;
-	}
-
-	function chipKeydown(event: KeyboardEvent, field: HeaderField): void {
-		if (event.key === 'Escape') {
-			event.preventDefault();
-			cancelChip();
-		}
+	// --- Edição inline de chip (status/prioridade/tipo/especial) -------------
+	// Um <select> nativo INVISÍVEL fica sobreposto ao chip: o clique cai direto
+	// no select e o dropdown nativo abre de primeira (sem swap de elemento nem
+	// timing de showPicker, que exigia cliques extras). O chip estilizado por
+	// baixo dá o visual rico (ícone/cor); o select por cima captura o clique.
+	function selectChip(field: HeaderField, value: string): void {
+		onEditField(field, value);
 	}
 
 	const statusKey = $derived((project.status ?? '').toLowerCase() || 'na');
@@ -161,86 +140,115 @@
 	</div>
 
 	<div class="project-header-chips">
-		<!-- Status (editável inline) -->
-		{#if editingChip === 'status'}
-			<select
-				bind:this={chipEditorEl}
-				bind:value={chipDraft}
-				class="ph-chip-editor"
-				aria-label="Status do projeto"
-				onchange={() => commitChip('status')}
-				onblur={() => commitChip('status')}
-				onkeydown={(e) => chipKeydown(e, 'status')}
-			>
-				{#each options.status as opt (opt.value)}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
-		{:else}
-			<button
-				type="button"
-				class="ph-chip ph-chip--status ph-chip--status-{statusKey}"
-				class:ph-chip--editable={canEdit}
-				disabled={!canEdit}
-				onclick={() => startChipEdit('status', project.status)}
-				title={canEdit ? 'Clique para editar o status' : undefined}
-			>
-				{#if project.status === 'Vigente'}
-					<span class="ph-chip-dot" aria-hidden="true"></span>Vigente
-				{:else if project.status === 'Finalizado'}
-					<i class="fas fa-flag-checkered" aria-hidden="true"></i>Finalizado
-				{:else if project.status === 'Suspenso'}
-					<i class="fas fa-pause" aria-hidden="true"></i>Suspenso
-				{:else}
-					{project.status || 'Sem status'}
+		<!-- Status (editável inline: select nativo invisível sobre o chip) -->
+		<div class="ph-field">
+			<span class="ph-field-label">Status</span>
+			<div class="ph-chip-wrap" class:ph-chip-wrap--editable={canEdit}>
+				<span
+					class="ph-chip ph-chip--status ph-chip--status-{statusKey}"
+					data-value={project.status ?? ''}
+				>
+					{#if project.status === 'Vigente'}
+						<span class="ph-chip-dot" aria-hidden="true"></span>Vigente
+					{:else if project.status === 'Finalizado'}
+						<i class="fas fa-flag-checkered" aria-hidden="true"></i>Finalizado
+					{:else if project.status === 'Suspenso'}
+						<i class="fas fa-pause" aria-hidden="true"></i>Suspenso
+					{:else}
+						{project.status || 'Sem status'}
+					{/if}
+					{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
+				</span>
+				{#if canEdit}
+					<select
+						class="ph-chip-overlay"
+						aria-label="Status do projeto"
+						onchange={(e) => selectChip('status', e.currentTarget.value)}
+					>
+						{#each options.status as opt (opt.value)}
+							<option value={opt.value} selected={opt.value === (project.status ?? '')}
+								>{opt.label}</option
+							>
+						{/each}
+					</select>
 				{/if}
-			</button>
-		{/if}
+			</div>
+		</div>
 
 		<!-- Prioridade (editável inline) -->
-		{#if editingChip === 'prioridade'}
-			<select
-				bind:this={chipEditorEl}
-				bind:value={chipDraft}
-				class="ph-chip-editor"
-				aria-label="Prioridade do projeto"
-				onchange={() => commitChip('prioridade')}
-				onblur={() => commitChip('prioridade')}
-				onkeydown={(e) => chipKeydown(e, 'prioridade')}
-			>
-				<option value="">Sem prioridade</option>
-				{#each options.prioridade as opt (opt.value)}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
-		{:else}
-			<button
-				type="button"
-				class="ph-chip ph-chip--prio ph-chip--prio-{prioKey}"
-				class:ph-chip--editable={canEdit}
-				disabled={!canEdit}
-				onclick={() => startChipEdit('prioridade', project.prioridade)}
-				title={canEdit ? 'Clique para editar a prioridade' : undefined}
-			>
-				{#if project.prioridade && PRIO_ICON[project.prioridade]}
-					<i class="fas {PRIO_ICON[project.prioridade]}" aria-hidden="true"></i>{PRIO_LABEL[
-						project.prioridade
-					]}
-				{:else}
-					Sem prioridade
+		<div class="ph-field">
+			<span class="ph-field-label">Prioridade</span>
+			<div class="ph-chip-wrap" class:ph-chip-wrap--editable={canEdit}>
+				<span class="ph-chip ph-chip--prio ph-chip--prio-{prioKey}">
+					{#if project.prioridade && PRIO_ICON[project.prioridade]}
+						<i class="fas {PRIO_ICON[project.prioridade]}" aria-hidden="true"></i>{PRIO_LABEL[
+							project.prioridade
+						]}
+					{:else}
+						Sem prioridade
+					{/if}
+					{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
+				</span>
+				{#if canEdit}
+					<select
+						class="ph-chip-overlay"
+						aria-label="Prioridade do projeto"
+						onchange={(e) => selectChip('prioridade', e.currentTarget.value)}
+					>
+						<option value="" selected={!project.prioridade}>Sem prioridade</option>
+						{#each options.prioridade as opt (opt.value)}
+							<option value={opt.value} selected={opt.value === project.prioridade}>{opt.label}</option>
+						{/each}
+					</select>
 				{/if}
-			</button>
-		{/if}
+			</div>
+		</div>
 
-		<!-- Tipo de entrega -->
-		<span class="ph-chip ph-chip--delivery" data-value={project.delivery_type ?? ''}>
-			<i class="fas fa-box" aria-hidden="true"></i>{project.delivery_type || 'Sem tipo'}
-		</span>
+		<!-- Tipo de entrega (editável inline) -->
+		<div class="ph-field">
+			<span class="ph-field-label">Tipo de entrega</span>
+			<div class="ph-chip-wrap" class:ph-chip-wrap--editable={canEdit}>
+				<span class="ph-chip ph-chip--delivery" data-value={project.delivery_type ?? ''}>
+					<i class="fas fa-box" aria-hidden="true"></i>{project.delivery_type || 'Sem tipo'}
+					{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
+				</span>
+				{#if canEdit}
+					<select
+						class="ph-chip-overlay"
+						aria-label="Tipo de entrega do projeto"
+						onchange={(e) => selectChip('delivery_type', e.currentTarget.value)}
+					>
+						<option value="" selected={!project.delivery_type}>Sem tipo</option>
+						{#each options.delivery_type as opt (opt)}
+							<option value={opt} selected={opt === project.delivery_type}>{opt}</option>
+						{/each}
+					</select>
+				{/if}
+			</div>
+		</div>
 
-		<!-- Categoria (projeto especial) -->
-		<span class="ph-chip ph-chip--special" data-value={project.special_project ?? ''}>
-			<i class="fas fa-star" aria-hidden="true"></i>{project.special_project || 'Sem categoria'}
-		</span>
+		<!-- Projeto especial (editável inline) -->
+		<div class="ph-field">
+			<span class="ph-field-label">Projeto especial</span>
+			<div class="ph-chip-wrap" class:ph-chip-wrap--editable={canEdit}>
+				<span class="ph-chip ph-chip--special" data-value={project.special_project ?? ''}>
+					<i class="fas fa-star" aria-hidden="true"></i>{project.special_project || 'Sem categoria'}
+					{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
+				</span>
+				{#if canEdit}
+					<select
+						class="ph-chip-overlay"
+						aria-label="Projeto especial"
+						onchange={(e) => selectChip('special_project', e.currentTarget.value)}
+					>
+						<option value="" selected={!project.special_project}>Sem categoria</option>
+						{#each options.special_project as opt (opt)}
+							<option value={opt} selected={opt === project.special_project}>{opt}</option>
+						{/each}
+					</select>
+				{/if}
+			</div>
+		</div>
 
 		<!-- Datas + duração -->
 		{#if hasDates}
@@ -427,9 +435,44 @@
 		z-index: 1;
 		display: flex;
 		flex-wrap: wrap;
-		align-items: center;
+		align-items: flex-end;
 		gap: 0.42rem 0.5rem;
 		margin-top: 0.95rem;
+	}
+
+	/* Campo do cabeçalho: legenda minimalista (título) que SÓ aparece ao passar o
+	   mouse / focar AQUELE campo. Posicionada em absoluto p/ não empurrar o chip
+	   (sem reserva de espaço nem salto de layout). */
+	.ph-field {
+		position: relative;
+		display: inline-flex;
+		flex-direction: column;
+	}
+	.ph-field-label {
+		position: absolute;
+		bottom: 100%;
+		left: 0;
+		margin-bottom: 0.2rem;
+		padding-left: 0.15rem;
+		font-size: 0.58rem;
+		font-weight: 700;
+		line-height: 1;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+		white-space: nowrap;
+		color: rgba(255, 255, 255, 0.7);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.16s ease;
+	}
+	.ph-field:hover .ph-field-label,
+	.ph-field:focus-within .ph-field-label {
+		opacity: 1;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.ph-field-label {
+			transition-duration: 1ms;
+		}
 	}
 	.ph-chip {
 		display: inline-flex;
@@ -445,21 +488,50 @@
 		line-height: 1;
 		white-space: nowrap;
 	}
-	button.ph-chip {
-		cursor: default;
-		font-family: inherit;
+	/* Wrapper do chip editável: um <select> invisível por cima captura o clique
+	   e abre o dropdown nativo de primeira (sem swap de elemento). */
+	.ph-chip-wrap {
+		position: relative;
+		display: inline-flex;
 	}
-	button.ph-chip.ph-chip--editable {
+	.ph-chip-wrap--editable .ph-chip {
 		cursor: pointer;
 		transition:
 			background 0.16s ease,
 			border-color 0.16s ease;
 	}
-	button.ph-chip.ph-chip--editable:hover,
-	button.ph-chip.ph-chip--editable:focus-visible {
+	.ph-chip-wrap--editable:hover .ph-chip,
+	.ph-chip-wrap:focus-within .ph-chip {
 		background: rgba(255, 255, 255, 0.2);
 		border-color: rgba(255, 255, 255, 0.4);
-		outline: none;
+	}
+	.ph-chip-overlay {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		opacity: 0;
+		cursor: pointer;
+		font: inherit;
+	}
+	/* Popup nativo legível (o select em si fica invisível, mas as opções não). */
+	.ph-chip-overlay option {
+		color: #1f2d3d;
+		background-color: #fff;
+	}
+	.ph-chip-caret {
+		margin-left: 0.05rem;
+		font-size: 0.55rem !important;
+		color: rgba(255, 255, 255, 0.7) !important;
+		opacity: 0;
+		transition: opacity 0.16s ease;
+	}
+	.ph-chip-wrap--editable:hover .ph-chip-caret,
+	.ph-chip-wrap:focus-within .ph-chip-caret {
+		opacity: 1;
 	}
 	.ph-chip i {
 		font-size: 0.74rem;
@@ -493,35 +565,6 @@
 	}
 	.ph-chip--special[data-value]:not([data-value='']) i {
 		color: #8b5cf6;
-	}
-
-	.ph-chip-editor {
-		appearance: none;
-		-webkit-appearance: none;
-		height: 1.74rem;
-		min-width: 140px;
-		max-width: 220px;
-		padding: 0.36rem 1.35rem 0.36rem 0.7rem;
-		border-radius: 6px;
-		border: 1px solid rgba(255, 255, 255, 0.18);
-		background-color: rgba(255, 255, 255, 0.1);
-		color: #fff;
-		font-size: 0.78rem;
-		font-weight: 600;
-		line-height: 1;
-		background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='m4 6 4 4 4-4'/%3e%3c/svg%3e");
-		background-repeat: no-repeat;
-		background-position: right 0.55rem center;
-		background-size: 0.7rem 0.7rem;
-	}
-	.ph-chip-editor:focus,
-	.ph-chip-editor:focus-visible {
-		outline: 0;
-		border-color: rgba(255, 255, 255, 0.4);
-	}
-	.ph-chip-editor option {
-		color: #1f2d3d;
-		background-color: #fff;
 	}
 
 	.ph-chip-dates {

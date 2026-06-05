@@ -107,6 +107,22 @@ export interface ProjectDetailDerived {
 	todas_etapas_concluidas: boolean;
 }
 
+/**
+ * Opção de órgão ESCOPADA para o picker da Área Responsável inline
+ * (_serialize_detail.options.orgaos → routes/orgao_scope.scoped_orgao_options).
+ *
+ * Lista PLANA já filtrada pelo backend (admin = todos ativos; demais =
+ * subtree do usuário + ativo), ordenada por `sigla`. É a mesma fonte de
+ * `get_project_edit_data`, isolada para reuso no payload do detalhe. A
+ * validação de permissão ao salvar `orgao_id` continua server-side (403 fora
+ * do escopo); este tipo cobre APENAS a exibição das opções no picker.
+ */
+export interface OrgaoDetailOption {
+	id: number;
+	sigla: string;
+	nome: string;
+}
+
 /** Opções dos seletores de edição inline (_serialize_detail.options). */
 export interface ProjectDetailOptions {
 	status: ValueLabelOption[];
@@ -114,6 +130,8 @@ export interface ProjectDetailOptions {
 	special_project: string[];
 	delivery_type: string[];
 	abep_indicator: AbepIndicadorOption[];
+	/** Órgãos atribuíveis à Área Responsável (escopados ao usuário). */
+	orgaos: OrgaoDetailOption[];
 }
 
 /** Permissões da tela de detalhe (_serialize_detail.permissions). */
@@ -161,6 +179,19 @@ export interface EtapaTasksData {
 /** Corpo de POST /api/projetos/<id>/inline (campos parciais do projeto). */
 export interface ProjectInlinePayload {
 	[field: string]: string | number | number[] | null;
+}
+
+/**
+ * Seleção COESA da cascata EEGG (objetivo → resultado → ≤4 indicadores) salva
+ * num ÚNICO POST /inline. `objetivo_id === null` limpa toda a cascata. O
+ * backend valida a cascata (`normalize_goal_selection`): o resultado deriva do
+ * objetivo, os indicadores pertencem ao resultado e o limite é 4 — o cliente
+ * NÃO revalida. Subconjunto tipado de `ProjectInlinePayload`.
+ */
+export interface ProjectGoalsSelection {
+	objetivo_id: number | null;
+	resultado_esperado_id: number | null;
+	indicadores_ids: number[];
 }
 
 /** Resposta de POST /api/projetos/<id>/inline. */

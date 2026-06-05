@@ -34,6 +34,7 @@
 	import {
 		fetchProjectDetail,
 		updateProjectInline,
+		saveProjectGoals,
 		addEtapa,
 		deleteEtapa,
 		updateEtapaField,
@@ -55,12 +56,15 @@
 		EtapaInlineField,
 		StageTemplateOption,
 		ProjectInlinePayload,
+		ProjectGoalsSelection,
 		MeetingPayload
 	} from '$lib/types/projectDetail';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import type { CalendarEvent, CalendarEventInput } from '$lib/types/calendar';
 	import ProjectHeader from '$lib/components/ProjectHeader.svelte';
 	import InlineEditField from '$lib/components/InlineEditField.svelte';
+	import InlineCombobox from '$lib/components/InlineCombobox.svelte';
+	import EeggInlineEditor from '$lib/components/EeggInlineEditor.svelte';
 	import StageList from '$lib/components/StageList.svelte';
 	import ImportModelModal from '$lib/components/ImportModelModal.svelte';
 	import Card from '$lib/components/Card.svelte';
@@ -75,7 +79,7 @@
 	import '$lib/celebration/confetti.css';
 
 	type LoadState = 'loading' | 'ready' | 'error';
-	type HeaderField = 'titulo' | 'status' | 'prioridade';
+	type HeaderField = 'titulo' | 'status' | 'prioridade' | 'delivery_type' | 'special_project';
 
 	interface FieldState {
 		pending?: boolean;
@@ -414,6 +418,99 @@
 
 	function onHeaderEditField(field: HeaderField, value: string): void {
 		void saveProjectField(field, value);
+	}
+
+	// --- Edicao inline da secao "Detalhes do Projeto" ------------------------
+
+	interface InlineComboOption {
+		value: string;
+		label: string;
+		sublabel?: string;
+	}
+
+	/** Orgaos escopados (options.orgaos) -> opcoes do combobox da Area Responsavel. */
+	const orgaoOptions = $derived<InlineComboOption[]>(
+		(data?.options.orgaos ?? []).map((o) => ({
+			value: String(o.id),
+			label: o.sigla,
+			sublabel: o.nome
+		}))
+	);
+
+	/** Catalogo ABEP (options.abep_indicator) -> opcoes do combobox. Filtra por value/label. */
+	const abepOptions = $derived<InlineComboOption[]>(
+		(data?.options.abep_indicator ?? []).map((o) => ({
+			value: o.value,
+			label: o.label,
+			sublabel: o.title && o.title !== o.label ? o.title : undefined
+		}))
+	);
+
+	/**
+	 * Salva a Area Responsavel (orgao_id) via /inline. Otimismo/erro reusam
+	 * `projectFieldStates`; 403 (fora de escopo) aparece inline e o valor reverte
+	 * naturalmente porque o projeto so e substituido em caso de sucesso.
+	 */
+	async function saveOrgao(value: string): Promise<void> {
+		if (!data) return;
+		setProjectFieldState('orgao_id', { pending: true, error: null });
+		try {
+			const result = await updateProjectInline(projectId, { orgao_id: Number(value) });
+			data = { ...data, project: result.project };
+			setProjectFieldState('orgao_id', { pending: false, error: null });
+		} catch (err) {
+			if (isUnauthenticated(err)) return;
+			const forbidden = err instanceof ApiClientError && err.code === 'forbidden';
+			setProjectFieldState('orgao_id', {
+				pending: false,
+				error: messageOf(
+					err,
+					forbidden
+						? 'Você não tem permissão para atribuir este órgão.'
+						: 'Falha ao salvar a área responsável.'
+				)
+			});
+		}
+	}
+
+	/**
+	 * Rótulo de fallback do ABEP no estado fechado: se o valor salvo (possivelmente
+	 * legado/pré-normalização) não casar com nenhuma option do catálogo atual, exibe
+	 * o próprio valor cru em vez de "Não informado". Quando há match, devolve null
+	 * para o combobox usar o label da option (matchedLabel). Espelha o uso de
+	 * `orgao_sigla` na Área Responsável.
+	 */
+	const abepDisplayLabel = $derived.by<string | null>(() => {
+		const value = data?.project.abep_indicator ?? null;
+		if (value === null || value === '') return null;
+		const matched = abepOptions.some((o) => o.value === value);
+		return matched ? null : value;
+	});
+
+	/** Salva o Indicador ABEP (value canonico; backend normaliza). */
+	function saveAbepIndicator(value: string): void {
+		void saveProjectField('abep_indicator', value);
+	}
+
+	/**
+	 * Salva a cascata EEGG (objetivo/resultado/indicadores) num unico request.
+	 * Reusa o estado otimista por campo (`projectFieldStates.eegg`) e re-renderiza
+	 * o projeto com a resposta (descricoes EEGG atualizadas).
+	 */
+	async function saveEegg(selection: ProjectGoalsSelection): Promise<void> {
+		if (!data) return;
+		setProjectFieldState('eegg', { pending: true, error: null });
+		try {
+			const result = await saveProjectGoals(projectId, selection);
+			data = { ...data, project: result.project };
+			setProjectFieldState('eegg', { pending: false, error: null });
+		} catch (err) {
+			if (isUnauthenticated(err)) return;
+			setProjectFieldState('eegg', {
+				pending: false,
+				error: messageOf(err, 'Falha ao salvar o objetivo/resultado/indicadores.')
+			});
+		}
 	}
 
 	// --- Etapas: estados auxiliares ------------------------------------------
@@ -802,171 +899,248 @@
 			fieldStates={{
 				titulo: projectFieldStates.titulo,
 				status: projectFieldStates.status,
-				prioridade: projectFieldStates.prioridade
+				prioridade: projectFieldStates.prioridade,
+				delivery_type: projectFieldStates.delivery_type,
+				special_project: projectFieldStates.special_project
 			}}
 			onEditField={onHeaderEditField}
 		/>
 
-		<div class="flex flex-wrap items-center gap-3">
-			<a
-				href={`${base}/projetos/${data.project.id}/historico`}
-				class="inline-flex w-fit items-center rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				Histórico do projeto
-			</a>
-
-			{#if canEdit && isVigente}
-				<button
-					type="button"
-					id="btn-concluir-projeto"
-					onpointerdown={() => void primeConcludeAudioContext()}
-					onclick={onConcludeProject}
-					disabled={!canConclude || concludeInFlight}
-					title={canConclude
-						? 'Concluir o projeto'
-						: 'Todas as etapas devem estar iniciadas e concluídas'}
-					class="ml-auto inline-flex w-fit items-center gap-1 rounded-md border border-success bg-success px-4 py-2 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-success"
-				>
-					{#if concludeInFlight}
-						<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
-						Concluindo...
-					{:else}
-						<i class="fas fa-check-circle" aria-hidden="true"></i>
-						Concluir Projeto
-					{/if}
-				</button>
-			{/if}
-		</div>
-
 		<!-- Detalhes editaveis do projeto (campos fora do cabecalho) -->
 		<Card labelId="project-details-title">
 			{#snippet header()}
-				<h2 id="project-details-title" class="font-heading text-lg font-semibold text-text-primary">
-					Detalhes
+				<h2
+					id="project-details-title"
+					class="flex items-center gap-2 font-heading text-lg font-semibold text-text-primary"
+				>
+					<i class="fas fa-circle-info text-primary-600" aria-hidden="true"></i>Detalhes do Projeto
 				</h2>
 			{/snippet}
 
-			<!-- Identidade + EEGG (somente leitura) — restaurados da tela antiga. -->
-			<div class="mb-5 flex flex-col gap-5">
-				<div class="grid gap-4 sm:grid-cols-3">
-					{@render readField('Área Responsável', data.project.orgao_sigla, 'fa-sitemap')}
-					{@render readField('Órgão', data.project.orgao, 'fa-building')}
-					{@render readField('Indicador ABEP', data.project.abep_indicator, 'fa-list-ol')}
+			<!-- Ações no RODAPÉ do card (Ver Histórico + Concluir), à direita (ref. tela antiga). -->
+			{#snippet footer()}
+				<a
+					href={`${base}/projetos/${data?.project.id}/historico`}
+					class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					<i class="fas fa-history" aria-hidden="true"></i>Ver Histórico
+				</a>
+
+				{#if canEdit && isVigente}
+					<button
+						type="button"
+						id="btn-concluir-projeto"
+						onpointerdown={() => void primeConcludeAudioContext()}
+						onclick={onConcludeProject}
+						disabled={!canConclude || concludeInFlight}
+						title={canConclude
+							? 'Concluir o projeto'
+							: 'Todas as etapas devem estar iniciadas e concluídas'}
+						class="inline-flex items-center gap-1.5 rounded-md border border-success bg-success px-3 py-1.5 text-xs font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-success"
+					>
+						{#if concludeInFlight}
+							<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+							Concluindo...
+						{:else}
+							<i class="fas fa-check-circle" aria-hidden="true"></i>
+							Concluir Projeto
+						{/if}
+					</button>
+				{/if}
+			{/snippet}
+
+			<!-- Identidade + EEGG (editaveis inline, clicando direto no valor) —
+			     cada campo em um cartão com borda/sombra, hierarquia e folga. -->
+			<div class="flex flex-col gap-6">
+				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+					<!-- Área Responsável: combobox pesquisável de órgãos (orgao_id). -->
+					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
+						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Área Responsável</span>
+						<InlineCombobox
+							fieldId="project-orgao-id"
+							label="Área Responsável, editar"
+							value={data.project.orgao_id !== null && data.project.orgao_id !== undefined
+								? String(data.project.orgao_id)
+								: null}
+							displayLabel={data.project.orgao_sigla}
+							options={orgaoOptions}
+							emptyLabel="Não informado"
+							readonly={!canEdit}
+							pending={projectFieldStates.orgao_id?.pending}
+							error={projectFieldStates.orgao_id?.error}
+							onSelect={saveOrgao}
+						/>
+					</div>
+					<!-- Órgão: texto livre legado (orgao). -->
+					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
+						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Órgão</span>
+						<InlineEditField
+							fieldId="project-orgao"
+							label="Órgão"
+							value={data.project.orgao}
+							kind="text"
+							variant="cell"
+							emptyLabel="Não informado"
+							readonly={!canEdit}
+							pending={projectFieldStates.orgao?.pending}
+							error={projectFieldStates.orgao?.error}
+							onSave={(v) => saveProjectField('orgao', v)}
+						/>
+					</div>
+					<!-- Processo SEI mora na primeira linha (posição da tela antiga). -->
+					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
+						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Processo SEI</span>
+						<InlineEditField
+							fieldId="project-sei"
+							label="Processo SEI"
+							value={data.project.sei_process}
+							kind="text"
+							variant="cell"
+							emptyLabel="Não informado"
+							readonly={!canEdit}
+							pending={projectFieldStates.sei_process?.pending}
+							error={projectFieldStates.sei_process?.error}
+							onSave={(v) => saveProjectField('sei_process', v)}
+						/>
+					</div>
+					<!-- Indicador ABEP: combobox pesquisável do catálogo (abep_indicator). -->
+					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
+						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Indicador ABEP</span>
+						<InlineCombobox
+							fieldId="project-abep"
+							label="Indicador ABEP, editar"
+							value={data.project.abep_indicator}
+							displayLabel={abepDisplayLabel}
+							options={abepOptions}
+							emptyLabel="Não informado"
+							readonly={!canEdit}
+							pending={projectFieldStates.abep_indicator?.pending}
+							error={projectFieldStates.abep_indicator?.error}
+							onSelect={saveAbepIndicator}
+						/>
+					</div>
 				</div>
 
-				{#snippet readField(label: string, value: string | null, icon: string)}
-					<div class="flex flex-col gap-1">
-						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</span>
-						{#if value}
-							<span class="text-sm text-text-primary">
-								<i class="fas {icon} mr-1 text-primary-600" aria-hidden="true"></i>{value}
-							</span>
-						{:else}
-							<span class="text-sm text-text-muted">
-								<i class="fas {icon} mr-1" aria-hidden="true"></i>Não informado
-							</span>
-						{/if}
-					</div>
-				{/snippet}
-
+				<!-- EEGG: cascata objetivo/resultado/indicadores editável inline. -->
 				<div class="flex flex-col gap-3">
 					<h3 class="flex items-center gap-2 font-heading text-sm font-semibold text-text-primary">
-						<i class="fas fa-sitemap text-primary-600" aria-hidden="true"></i>EEGG
+						<i class="fas fa-sitemap text-primary-600" aria-hidden="true"></i>EEGD - Estratégia
+						Estadual de Governo Digital
 					</h3>
-					<div class="grid gap-4 sm:grid-cols-3">
-						<div class="flex flex-col gap-1">
-							<span
-								class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-text-muted"
-							>
-								<i class="fas fa-bullseye text-primary-600" aria-hidden="true"></i>Objetivo
-							</span>
-							<p class="text-sm text-text-primary">
-								{data.project.objetivo_descricao ?? 'Não definido'}
-							</p>
-						</div>
-						<div class="flex flex-col gap-1">
-							<span
-								class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-text-muted"
-							>
-								<i class="fas fa-chart-line text-primary-600" aria-hidden="true"></i>Resultado esperado
-							</span>
-							<p class="text-sm text-text-primary">
-								{data.project.resultado_esperado_descricao ?? 'Não definido'}
-							</p>
-						</div>
-						<div class="flex flex-col gap-1">
-							<span
-								class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-text-muted"
-							>
-								<i class="fas fa-tasks text-primary-600" aria-hidden="true"></i>Indicadores
-							</span>
-							{#if data.project.indicadores_descricoes.length > 0}
-								<ul class="list-disc pl-5 text-sm text-text-primary">
-									{#each data.project.indicadores_descricoes as indicador, i (i)}
-										<li>{indicador}</li>
-									{/each}
-								</ul>
-							{:else}
-								<p class="text-sm text-text-muted">Nenhum indicador definido</p>
-							{/if}
-						</div>
-					</div>
+					<EeggInlineEditor
+						fieldId="project-eegg"
+						objetivoId={data.project.objetivo_id}
+						resultadoId={data.project.resultado_esperado_id}
+						indicadoresIds={data.project.indicadores_ids}
+						objetivoDescricao={data.project.objetivo_descricao}
+						resultadoDescricao={data.project.resultado_esperado_descricao}
+						indicadoresDescricoes={data.project.indicadores_descricoes}
+						readonly={!canEdit}
+						pending={projectFieldStates.eegg?.pending}
+						error={projectFieldStates.eegg?.error}
+						onSave={saveEegg}
+					/>
 				</div>
-
-				<div class="border-t border-border-subtle"></div>
 			</div>
 
-			<div class="grid gap-4 sm:grid-cols-2">
-				<InlineEditField
-					fieldId="project-observacao"
-					label="Observação"
-					value={data.project.observacao}
-					kind="textarea"
-					readonly={!canEdit}
-					pending={projectFieldStates.observacao?.pending}
-					error={projectFieldStates.observacao?.error}
-					onSave={(v) => saveProjectField('observacao', v)}
-				/>
-				<InlineEditField
-					fieldId="project-sei"
-					label="Processo SEI"
-					value={data.project.sei_process}
-					kind="text"
-					readonly={!canEdit}
-					pending={projectFieldStates.sei_process?.pending}
-					error={projectFieldStates.sei_process?.error}
-					onSave={(v) => saveProjectField('sei_process', v)}
-				/>
-				<InlineEditField
-					fieldId="project-github"
-					label="Link do GitHub"
-					value={data.project.github_link}
-					kind="text"
-					readonly={!canEdit}
-					pending={projectFieldStates.github_link?.pending}
-					error={projectFieldStates.github_link?.error}
-					onSave={(v) => saveProjectField('github_link', v)}
-				/>
-				<InlineEditField
-					fieldId="project-doc"
-					label="Link da documentação"
-					value={data.project.documentation_link}
-					kind="text"
-					readonly={!canEdit}
-					pending={projectFieldStates.documentation_link?.pending}
-					error={projectFieldStates.documentation_link?.error}
-					onSave={(v) => saveProjectField('documentation_link', v)}
-				/>
-				<InlineEditField
-					fieldId="project-product"
-					label="Link do produto"
-					value={data.project.product_link}
-					kind="text"
-					readonly={!canEdit}
-					pending={projectFieldStates.product_link?.pending}
-					error={projectFieldStates.product_link?.error}
-					onSave={(v) => saveProjectField('product_link', v)}
-				/>
+			<!-- Informações adicionais (editáveis) — agrupadas em um bloco com borda,
+			     espelhando a seção da tela antiga. -->
+			<div class="mt-6 flex flex-col gap-3">
+				<h3 class="flex items-center gap-2 font-heading text-sm font-semibold text-text-primary">
+					<i class="fas fa-circle-info text-primary-600" aria-hidden="true"></i>Informações Adicionais
+				</h3>
+				<div class="rounded-md border border-border-subtle bg-surface p-5 shadow-sm">
+					<!-- Links compactos: ícone + rótulo + valor na MESMA linha (ref. tela antiga). -->
+					<div class="flex flex-col gap-2.5">
+						<div class="flex items-center gap-2 text-sm">
+							<i class="fab fa-github w-4 shrink-0 text-center text-primary-600" aria-hidden="true"></i>
+							<span class="shrink-0 font-semibold text-text-primary">Github:</span>
+							<div class="min-w-0 flex-1">
+								<InlineEditField
+									fieldId="project-github"
+									label="Link do GitHub"
+									value={data.project.github_link}
+									kind="text"
+									variant="cell"
+									emptyLabel="Não informado"
+									readonly={!canEdit}
+									pending={projectFieldStates.github_link?.pending}
+									error={projectFieldStates.github_link?.error}
+									onSave={(v) => saveProjectField('github_link', v)}
+								/>
+							</div>
+						</div>
+						<div class="flex items-center gap-2 text-sm">
+							<i class="fas fa-book w-4 shrink-0 text-center text-primary-600" aria-hidden="true"></i>
+							<span class="shrink-0 font-semibold text-text-primary">Documentação:</span>
+							<div class="min-w-0 flex-1">
+								<InlineEditField
+									fieldId="project-doc"
+									label="Link da documentação"
+									value={data.project.documentation_link}
+									kind="text"
+									variant="cell"
+									emptyLabel="Não informado"
+									readonly={!canEdit}
+									pending={projectFieldStates.documentation_link?.pending}
+									error={projectFieldStates.documentation_link?.error}
+									onSave={(v) => saveProjectField('documentation_link', v)}
+								/>
+							</div>
+						</div>
+						<div class="flex items-center gap-2 text-sm">
+							<i class="fas fa-box w-4 shrink-0 text-center text-primary-600" aria-hidden="true"></i>
+							<span class="shrink-0 font-semibold text-text-primary">Produto:</span>
+							<div class="min-w-0 flex-1">
+								<InlineEditField
+									fieldId="project-product"
+									label="Link do produto"
+									value={data.project.product_link}
+									kind="text"
+									variant="cell"
+									emptyLabel="Não informado"
+									readonly={!canEdit}
+									pending={projectFieldStates.product_link?.pending}
+									error={projectFieldStates.product_link?.error}
+									onSave={(v) => saveProjectField('product_link', v)}
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div class="my-4 border-t border-border-subtle"></div>
+
+					<!-- Observação à esquerda; "Adicionar Tarefas" à direita (ref. tela antiga). -->
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
+							<span class="flex items-center gap-2 text-sm font-semibold text-text-primary">
+								<i class="fas fa-note-sticky w-4 text-center text-primary-600" aria-hidden="true"></i
+								>Observação:
+							</span>
+							<InlineEditField
+								fieldId="project-observacao"
+								label="Observação"
+								value={data.project.observacao}
+								kind="textarea"
+								variant="cell"
+								emptyLabel="Nenhuma observação registrada."
+								readonly={!canEdit}
+								pending={projectFieldStates.observacao?.pending}
+								error={projectFieldStates.observacao?.error}
+								onSave={(v) => saveProjectField('observacao', v)}
+							/>
+						</div>
+						<!-- Navega para o hub de tarefas do projeto (KEEP-ENDPOINT Flask que
+						     serve a SPA); reload completo pois está fora do base da SPA. -->
+						<a
+							href={`/projeto/${data.project.id}/tarefas`}
+							data-sveltekit-reload
+							class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-primary-700 no-underline shadow-sm transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						>
+							<i class="fas fa-plus-circle" aria-hidden="true"></i>Adicionar tarefa
+						</a>
+					</div>
+				</div>
 			</div>
 		</Card>
 

@@ -18,6 +18,7 @@ import type {
 	ProjectDetailData,
 	ProjectInlinePayload,
 	ProjectInlineResult,
+	ProjectGoalsSelection,
 	EtapaAddPayload,
 	EtapaAddResult,
 	EtapaEditPayload,
@@ -65,6 +66,49 @@ export function updateProjectInline(
 ): Promise<ProjectInlineResult> {
 	return post<ProjectInlineResult>(`/api/projetos/${projectId}/inline`, changes, signal);
 }
+
+/**
+ * Salva a cascata EEGG (objetivo → resultado → ≤4 indicadores) como UNIDADE
+ * coesa, reusando `updateProjectInline` (mesmo endpoint /inline) — não há rota
+ * dedicada. O backend valida a cascata (`normalize_goal_selection`) e devolve o
+ * projeto RE-SERIALIZADO com as descrições EEGG atualizadas; a página
+ * re-renderiza com `result.project`. `objetivo_id === null` limpa tudo.
+ *
+ * Exemplo:
+ *   const { project } = await saveProjectGoals(42, {
+ *     objetivo_id: 1, resultado_esperado_id: 3, indicadores_ids: [7, 9]
+ *   });
+ */
+export function saveProjectGoals(
+	projectId: number,
+	selection: ProjectGoalsSelection,
+	signal?: AbortSignal
+): Promise<ProjectInlineResult> {
+	// `ProjectGoalsSelection` é estruturalmente um `ProjectInlinePayload` válido
+	// (chaves string → number | number[] | null), mas TS não widen um tipo
+	// fechado para a index signature; o cast é seguro no boundary.
+	return updateProjectInline(projectId, selection as unknown as ProjectInlinePayload, signal);
+}
+
+/**
+ * Catálogo de metas EEGG reexportado de `$lib/api/projects` para que o
+ * editor inline da cascata (EeggInlineEditor) importe tudo de um único módulo.
+ * São EXATAMENTE os mesmos endpoints/funções usados pelo CriarProjetoModal:
+ *   - fetchObjetivosCatalogo() → GET /api/catalogos/objetivos (envelope)
+ *   - fetchResultados(objetivoId) → GET /api/resultados/<id> (array cru)
+ *   - fetchIndicadores(resultadoId) → GET /api/indicadores/<id> (array cru)
+ * NÃO há reimplementação aqui — apenas reexport, para não divergir do modal.
+ */
+export {
+	fetchObjetivosCatalogo,
+	fetchResultados,
+	fetchIndicadores
+} from './projects';
+export type {
+	ObjetivoCatalogo,
+	ResultadoCatalogo,
+	IndicadorCatalogo
+} from './projects';
 
 /** Adiciona uma etapa ao projeto; devolve a etapa criada e o status do projeto. */
 export function addEtapa(

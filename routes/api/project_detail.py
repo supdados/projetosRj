@@ -36,7 +36,7 @@ from services.etapas_dates import meeting_payload_block
 
 from ..blueprint import main_bp
 from ..calendars.helpers import _connection_for_current_user
-from ..orgao_scope import user_can_access_project
+from ..orgao_scope import scoped_orgao_options, user_can_access_project
 from ..projects.ajax import ProjectInlineError, apply_project_inline_changes
 from ..shared import log_project_action
 from .envelope import fail, ok
@@ -191,6 +191,7 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
             "special_project": special_project_options,
             "delivery_type": _DELIVERY_TYPE_OPTIONS,
             "abep_indicator": ABEP_INDICADORES_OPTIONS,
+            "orgaos": scoped_orgao_options(g.user),
         },
         "permissions": {"can_edit": can_edit},
     }
