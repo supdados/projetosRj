@@ -336,6 +336,21 @@ def serialize_project_detail(project: Any) -> dict[str, Any]:
             "objetivo_id": project.objetivo_id,
             "resultado_esperado_id": project.resultado_esperado_id,
             "indicadores_ids": [ip.indicador_id for ip in project.indicadores],
+            # Descrições EEGG (somente leitura) para a seção de detalhes — o
+            # cliente só tem os IDs, então enviamos os textos prontos.
+            "objetivo_descricao": (
+                project.objetivo.descricao if project.objetivo else None
+            ),
+            "resultado_esperado_descricao": (
+                project.resultado_esperado.descricao
+                if project.resultado_esperado
+                else None
+            ),
+            "indicadores_descricoes": [
+                ip.indicador.descricao
+                for ip in project.indicadores
+                if ip.indicador is not None
+            ],
         }
     )
     return card

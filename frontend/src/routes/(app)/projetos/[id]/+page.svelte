@@ -846,6 +846,76 @@
 				</h2>
 			{/snippet}
 
+			<!-- Identidade + EEGG (somente leitura) — restaurados da tela antiga. -->
+			<div class="mb-5 flex flex-col gap-5">
+				<div class="grid gap-4 sm:grid-cols-3">
+					{@render readField('Área Responsável', data.project.orgao_sigla, 'fa-sitemap')}
+					{@render readField('Órgão', data.project.orgao, 'fa-building')}
+					{@render readField('Indicador ABEP', data.project.abep_indicator, 'fa-list-ol')}
+				</div>
+
+				{#snippet readField(label: string, value: string | null, icon: string)}
+					<div class="flex flex-col gap-1">
+						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</span>
+						{#if value}
+							<span class="text-sm text-text-primary">
+								<i class="fas {icon} mr-1 text-primary-600" aria-hidden="true"></i>{value}
+							</span>
+						{:else}
+							<span class="text-sm text-text-muted">
+								<i class="fas {icon} mr-1" aria-hidden="true"></i>Não informado
+							</span>
+						{/if}
+					</div>
+				{/snippet}
+
+				<div class="flex flex-col gap-3">
+					<h3 class="flex items-center gap-2 font-heading text-sm font-semibold text-text-primary">
+						<i class="fas fa-sitemap text-primary-600" aria-hidden="true"></i>EEGG
+					</h3>
+					<div class="grid gap-4 sm:grid-cols-3">
+						<div class="flex flex-col gap-1">
+							<span
+								class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-text-muted"
+							>
+								<i class="fas fa-bullseye text-primary-600" aria-hidden="true"></i>Objetivo
+							</span>
+							<p class="text-sm text-text-primary">
+								{data.project.objetivo_descricao ?? 'Não definido'}
+							</p>
+						</div>
+						<div class="flex flex-col gap-1">
+							<span
+								class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-text-muted"
+							>
+								<i class="fas fa-chart-line text-primary-600" aria-hidden="true"></i>Resultado esperado
+							</span>
+							<p class="text-sm text-text-primary">
+								{data.project.resultado_esperado_descricao ?? 'Não definido'}
+							</p>
+						</div>
+						<div class="flex flex-col gap-1">
+							<span
+								class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-text-muted"
+							>
+								<i class="fas fa-tasks text-primary-600" aria-hidden="true"></i>Indicadores
+							</span>
+							{#if data.project.indicadores_descricoes.length > 0}
+								<ul class="list-disc pl-5 text-sm text-text-primary">
+									{#each data.project.indicadores_descricoes as indicador, i (i)}
+										<li>{indicador}</li>
+									{/each}
+								</ul>
+							{:else}
+								<p class="text-sm text-text-muted">Nenhum indicador definido</p>
+							{/if}
+						</div>
+					</div>
+				</div>
+
+				<div class="border-t border-border-subtle"></div>
+			</div>
+
 			<div class="grid gap-4 sm:grid-cols-2">
 				<InlineEditField
 					fieldId="project-observacao"

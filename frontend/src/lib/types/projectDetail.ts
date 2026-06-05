@@ -38,6 +38,10 @@ export interface ProjectDetail extends Project {
 	objetivo_id: number | null;
 	resultado_esperado_id: number | null;
 	indicadores_ids: number[];
+	// Descrições EEGG (somente leitura) — o cliente só tem os IDs.
+	objetivo_descricao: string | null;
+	resultado_esperado_descricao: string | null;
+	indicadores_descricoes: string[];
 }
 
 /** Contagem read-only de tarefas por etapa (serialize_etapa_detail.task_count). */
