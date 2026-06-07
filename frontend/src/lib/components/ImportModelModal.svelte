@@ -62,6 +62,10 @@
 	}
 
 	let selectedId = $state<string>('');
+	// Semente inicial do campo editável; mudanças do prop são refletidas no $effect
+	// de abertura (re-seeda startDate = defaultStartDate ?? today()). A captura do
+	// valor inicial aqui é intencional.
+	// svelte-ignore state_referenced_locally
 	let startDate = $state<string>(defaultStartDate ?? today());
 	let selectEl = $state<HTMLSelectElement | null>(null);
 

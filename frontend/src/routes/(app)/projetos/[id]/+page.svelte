@@ -754,6 +754,10 @@
 	function dismissCascade(): void {
 		cascadePrompt = null;
 	}
+	// Fecha o modal de cascata via teclado (Escape), espelhando o clique no backdrop.
+	function onCascadeKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Escape') dismissCascade();
+	}
 
 	// --- Adicionar etapa (composer inline) -----------------------------------
 
@@ -1281,7 +1285,9 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="cascade-title"
+			tabindex={-1}
 			onclick={(e) => e.stopPropagation()}
+			onkeydown={onCascadeKeydown}
 		>
 			<h5 id="cascade-title">Atualizar Datas Subsequentes?</h5>
 			<p>

@@ -414,7 +414,7 @@
 
 {#if rowError}
 	<tr>
-		<td colspan="9" class="cell-row-error" role="alert">{rowError}</td>
+		<td colspan="9" class="cell-row-error" aria-live="assertive" aria-atomic="true">{rowError}</td>
 	</tr>
 {/if}
 

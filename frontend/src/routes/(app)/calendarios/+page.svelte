@@ -989,6 +989,10 @@
 									{#each week.cells as cell (cell.dateStr)}
 										{@const visCount = cellVisibleCount(cell)}
 										{@const hidden = cellHiddenCount(cell)}
+										<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+										<!-- Falso-positivo: o analisador estatico nao avalia o ternario dinamico;
+										     quando !cell.outside a celula e interativa (role="button" + onclick +
+										     onkeydown), entao tabindex={0} e correto para foco por teclado. -->
 										<div
 											class="cal-cell"
 											class:cal-cell--outside={cell.outside}

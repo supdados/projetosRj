@@ -335,10 +335,17 @@
 	});
 
 	// Após adicionar com sucesso (etapas muda de tamanho), fecha o composer.
-	let prevLen = etapas.length;
+	// prevLen é semeado na primeira execução do effect para que a leitura
+	// reativa de etapas.length aconteça dentro do effect, não na montagem.
+	let prevLen: number | null = null;
 	$effect(() => {
-		if (etapas.length !== prevLen) {
-			prevLen = etapas.length;
+		const len = etapas.length;
+		if (prevLen === null) {
+			prevLen = len;
+			return;
+		}
+		if (len !== prevLen) {
+			prevLen = len;
 			if (composerOpen && !addingStage) closeComposer();
 		}
 	});
@@ -496,7 +503,7 @@
 							</td>
 						</tr>
 						{#if addStageError}
-							<tr><td colspan="9" class="composer-error" role="alert">{addStageError}</td></tr>
+							<tr><td colspan="9" class="composer-error"><span role="alert">{addStageError}</span></td></tr>
 						{/if}
 					{/if}
 				{/if}

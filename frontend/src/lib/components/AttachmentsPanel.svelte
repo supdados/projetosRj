@@ -231,7 +231,7 @@
 		onclick={closePreview}
 		role="presentation"
 	></div>
-	<section
+	<div
 		role="dialog"
 		aria-modal="true"
 		aria-label={`Preview de ${preview.filename}`}
@@ -291,5 +291,5 @@
 				Baixar
 			</a>
 		</footer>
-	</section>
+	</div>
 {/if}
