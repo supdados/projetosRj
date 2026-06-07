@@ -17,7 +17,7 @@
 	 * Design: estilo da branch main (templates/tasks/hub.html) + nível de etapa.
 	 * Decisões e pesquisa em frontend/docs/lista-tarefas-hierarquica.md.
 	 */
-	import { onMount, setContext } from 'svelte';
+	import { onMount, setContext, tick } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { get as readStore } from 'svelte/store';
 	import {
@@ -48,7 +48,6 @@
 	import { orgaoScope } from '$lib/stores/orgaoScope';
 	import type { BoardCard, BoardQuery } from '$lib/types/board';
 	import { normalizeStatus, type TaskStatus } from '$lib/utils/taskStatus';
-	import { tipoLabel, prioridadeLabel, statusLabel } from '$lib/utils/taskLabels';
 	import {
 		triggerTaskFinalizeConfetti,
 		type CelebrationOriginLike
@@ -59,13 +58,6 @@
 
 	/** Visualização da tela: lista (default) ou kanban. */
 	type ViewMode = 'list' | 'kanban';
-
-	/** Modos da topnav (espelham `?modo=` do endpoint). */
-	const MODO_OPTIONS: { value: TaskHubModo; label: string }[] = [
-		{ value: 'ativas', label: 'Ativas' },
-		{ value: 'finalizadas', label: 'Finalizadas' },
-		{ value: 'arquivadas', label: 'Arquivadas' }
-	];
 
 	// Rótulos, tons e cor da barra de status vivem em $lib/utils/taskLabels.ts e
 	// são usados pelos componentes da lista (TaskHubTaskRow). As opções dos
@@ -218,7 +210,13 @@
 		const scopeId = readStore(orgaoScope).selectedId;
 		const query: BoardQuery = {
 			project: project || undefined,
-			orgao: scopeId !== null ? String(scopeId) : orgao || undefined
+			orgao: scopeId !== null ? String(scopeId) : orgao || undefined,
+			// Mesmos filtros da barra compartilhada aplicados ao board (o endpoint
+			// do Kanban os suporta) — sem isso a lista filtra e o board nao.
+			tipo: tipo || undefined,
+			prioridade: prioridade || undefined,
+			status: statusFilter || undefined,
+			responsavel: responsavel || undefined
 		};
 		await board.load(query, controller.signal);
 		if (!controller.signal.aborted) boardLoaded = true;
@@ -450,13 +448,6 @@
 		}
 	}
 
-	function selectModo(next: TaskHubModo): void {
-		if (modo === next) return;
-		cancelAddForm();
-		modo = next;
-		void load();
-	}
-
 	/** Re-busca a visualização ativa após mudança de filtro (lista e/ou board). */
 	function reloadActiveView(): void {
 		cancelAddForm();
@@ -464,14 +455,14 @@
 		if (view === 'kanban') void loadBoard();
 	}
 
-	function onProjectChange(event: Event): void {
-		project = (event.currentTarget as HTMLSelectElement).value;
-		reloadActiveView();
-	}
-
-	function onOrgaoChange(event: Event): void {
-		orgao = (event.currentTarget as HTMLSelectElement).value;
-		reloadActiveView();
+	/** Alterna entre ver tarefas ativas e arquivadas (botão-ícone de arquivo).
+	 *  Arquivadas só existem no modo lista (o board mostra apenas ativas), então
+	 *  ao ligar arquivadas no Kanban caímos para a Lista. */
+	function toggleArchived(): void {
+		modo = modo === 'arquivadas' ? 'ativas' : 'arquivadas';
+		if (modo === 'arquivadas' && view !== 'list') selectView('list');
+		cancelAddForm();
+		void load();
 	}
 
 	function clearFilters(): void {
@@ -481,7 +472,67 @@
 		prioridade = '';
 		statusFilter = '';
 		responsavel = '';
+		closeProjectFilter();
 		reloadActiveView();
+	}
+
+	// ── Filtro de PROJETO pesquisável (produção tem centenas de projetos) ──────
+	// Combobox boxed: fechado mostra o rótulo do projeto; aberto vira input de
+	// busca + listbox filtrada (paridade com o project-search do v4.5).
+	let projectQuery = $state('');
+	let projectOpen = $state(false);
+	let projectActiveIndex = $state(0);
+	let projectInputEl = $state<HTMLInputElement | null>(null);
+
+	/** Rótulo exibido no estado fechado (selecionado ou "Todos os projetos"). */
+	const selectedProjectLabel = $derived.by(() => {
+		if (!project) return 'Todos os projetos';
+		return data?.project_options.find((o) => o.value === project)?.label ?? project;
+	});
+
+	/** Opções filtradas pelo texto digitado (inclui "Todos os projetos"). */
+	const projectFilterList = $derived.by(() => {
+		const all = [
+			{ value: '', label: 'Todos os projetos' },
+			...(data?.project_options ?? []).map((o) => ({ value: o.value, label: o.label }))
+		];
+		const q = projectQuery.trim().toLowerCase();
+		return q ? all.filter((o) => o.label.toLowerCase().includes(q)) : all;
+	});
+
+	async function openProjectFilter(): Promise<void> {
+		if (!data || data.project_options.length === 0) return;
+		projectQuery = '';
+		projectActiveIndex = 0;
+		projectOpen = true;
+		await tick();
+		projectInputEl?.focus();
+	}
+	function closeProjectFilter(): void {
+		projectOpen = false;
+		projectQuery = '';
+	}
+	function pickProject(value: string): void {
+		closeProjectFilter();
+		if (value === project) return;
+		project = value;
+		reloadActiveView();
+	}
+	function onProjectFilterKeydown(event: KeyboardEvent): void {
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			projectActiveIndex = Math.min(projectFilterList.length - 1, projectActiveIndex + 1);
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			projectActiveIndex = Math.max(0, projectActiveIndex - 1);
+		} else if (event.key === 'Enter') {
+			event.preventDefault();
+			const opt = projectFilterList[projectActiveIndex];
+			if (opt) pickProject(opt.value);
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			closeProjectFilter();
+		}
 	}
 
 	onMount(() => {
@@ -536,19 +587,6 @@
 			prioridade !== '' ||
 			statusFilter !== '' ||
 			responsavel !== ''
-	);
-
-	// Chips legíveis dos filtros por deep-link ativos (para o usuário ver e poder
-	// limpar — senão ficaria filtrado "invisivelmente" pela URL).
-	const deepLinkFilters = $derived(
-		[
-			tipo ? { key: 'tipo', label: `Tipo: ${tipoLabel(tipo) ?? tipo}` } : null,
-			prioridade
-				? { key: 'prioridade', label: `Prioridade: ${prioridadeLabel(prioridade) ?? prioridade}` }
-				: null,
-			statusFilter ? { key: 'status', label: `Status: ${statusLabel(statusFilter)}` } : null,
-			responsavel ? { key: 'responsavel', label: `Responsável: ${responsavel}` } : null
-		].filter((f): f is { key: string; label: string } => f !== null)
 	);
 	const totalItems = $derived(
 		view === 'kanban' ? $board.total : (data?.total_items ?? 0)
@@ -629,29 +667,7 @@
 	</PageHeader>
 
 	<div class="flex flex-wrap items-center gap-3">
-		<!-- Alternância de status (ativas/finalizadas/arquivadas) — só no modo lista -->
-		{#if view === 'list'}
-			<div
-				role="group"
-				aria-label="Visão das tarefas"
-				class="inline-flex w-fit rounded-md border border-border-subtle bg-surface p-1"
-			>
-				{#each MODO_OPTIONS as option (option.value)}
-					<button
-						type="button"
-						aria-pressed={modo === option.value}
-						onclick={() => selectModo(option.value)}
-						class="rounded-sm px-4 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {modo ===
-						option.value
-							? 'bg-primary-100 text-primary-700'
-							: 'text-text-secondary hover:bg-surface-muted'}"
-					>
-						{option.label}
-					</button>
-				{/each}
-			</div>
-
-			<!-- Arquivar finalizados em lote (escopo dos filtros ativos) -->
+		<!-- Arquivar finalizados em lote + ver arquivados (lista e kanban). -->
 			<button
 				type="button"
 				onclick={openArchiveConfirm}
@@ -661,7 +677,23 @@
 			>
 				Arquivar finalizados
 			</button>
-		{/if}
+
+			<!-- Toggle para VER as tarefas arquivadas (ícone de arquivo). -->
+			<button
+				type="button"
+				onclick={toggleArchived}
+				aria-pressed={modo === 'arquivadas'}
+				title={modo === 'arquivadas'
+					? 'Voltar para as tarefas ativas'
+					: 'Mostrar tarefas arquivadas'}
+				class="inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {modo ===
+				'arquivadas'
+					? 'border-primary-500 bg-primary-100 text-primary-700'
+					: 'border-border-subtle bg-surface text-text-primary hover:bg-surface-muted'}"
+			>
+				<i class="fas fa-box-archive" aria-hidden="true"></i>
+				<span class="sr-only">Mostrar tarefas arquivadas</span>
+			</button>
 
 		<!-- Alternância de visualização (Lista <-> Kanban); Lista é o default -->
 		<div
@@ -696,42 +728,87 @@
 		</div>
 	</div>
 
-	<!-- Filtros (re-buscam server-side) -->
+	<!-- Filtros (re-buscam server-side). Réplica da barra do v4.5
+		 (templates/tasks/hub.html + static/css/tasks/hub.css): cartão único, campos
+		 em UMA linha, selects limpos (h-36/borda/raio 8) e Projeto mais largo. -->
 	<form
-		class="flex flex-wrap items-end gap-4 rounded-lg border border-border-subtle bg-surface px-5 py-4 shadow-sm"
+		class="flex items-end gap-3 rounded-xl border border-border-subtle bg-surface px-4 py-3 shadow-sm"
 		aria-label="Filtros de tarefas"
 		onsubmit={(e) => e.preventDefault()}
 	>
-		<div class="flex min-w-[14rem] flex-col gap-1">
-			<label for="projectFilter" class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-				Projeto
-			</label>
-			<select
-				id="projectFilter"
-				value={project}
-				onchange={onProjectChange}
-				disabled={!data || data.project_options.length === 0}
-				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-			>
-				<option value="">Todos os projetos</option>
-				{#if data}
-					{#each data.project_options as option (option.value)}
-						<option value={option.value}>{option.label}</option>
+		<div class="relative flex min-w-0 flex-[1.9] flex-col gap-1">
+			<label id="filter_project_label" for="filter_project" class="text-xs font-semibold uppercase tracking-wide text-text-muted">Projeto</label>
+			{#if projectOpen}
+				<input
+					bind:this={projectInputEl}
+					id="filter_project"
+					type="text"
+					bind:value={projectQuery}
+					oninput={() => (projectActiveIndex = 0)}
+					onkeydown={onProjectFilterKeydown}
+					onblur={() => setTimeout(closeProjectFilter, 120)}
+					role="combobox"
+					aria-expanded="true"
+					aria-controls="filter_project_listbox"
+					aria-autocomplete="list"
+					placeholder="Buscar projeto…"
+					autocomplete="off"
+					class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+				/>
+				<ul
+					id="filter_project_listbox"
+					role="listbox"
+					class="thin-scroll absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-md"
+				>
+					{#each projectFilterList as opt, i (opt.value)}
+						<li class="contents">
+							<button
+								type="button"
+								role="option"
+								aria-selected={opt.value === project}
+								onmousedown={(e) => {
+									e.preventDefault();
+									pickProject(opt.value);
+								}}
+								class="block w-full truncate px-3 py-1.5 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted {i ===
+								projectActiveIndex
+									? 'bg-surface-muted'
+									: ''}"
+							>
+								{opt.label}
+							</button>
+						</li>
 					{/each}
-				{/if}
-			</select>
+					{#if projectFilterList.length === 0}
+						<li class="px-3 py-1.5 text-sm text-text-muted">Nenhum projeto encontrado</li>
+					{/if}
+				</ul>
+			{:else}
+				<button
+					id="filter_project"
+					type="button"
+					onclick={openProjectFilter}
+					disabled={!data || data.project_options.length === 0}
+					aria-haspopup="listbox"
+					aria-labelledby="filter_project_label"
+					class="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+				>
+					<span class="min-w-0 flex-1 truncate text-left {project === '' ? 'text-text-muted' : ''}"
+						>{selectedProjectLabel}</span
+					>
+					<i class="fas fa-chevron-down shrink-0 text-xs text-text-muted" aria-hidden="true"></i>
+				</button>
+			{/if}
 		</div>
 
-		<div class="flex min-w-[12rem] flex-col gap-1">
-			<label for="orgaoFilter" class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-				Órgão
-			</label>
+		<div class="flex min-w-0 flex-1 flex-col gap-1">
+			<label for="filter_orgao" class="text-xs font-semibold uppercase tracking-wide text-text-muted">Órgão</label>
 			<select
-				id="orgaoFilter"
-				value={orgao}
-				onchange={onOrgaoChange}
+				id="filter_orgao"
+				bind:value={orgao}
+				onchange={reloadActiveView}
 				disabled={orgaoOptions.length === 0}
-				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+				class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 			>
 				<option value="">Todos os órgãos</option>
 				{#each orgaoOptions as sigla (sigla)}
@@ -740,27 +817,58 @@
 			</select>
 		</div>
 
-		{#if deepLinkFilters.length > 0}
-			<!-- Filtros vindos por link (ex.: chip "Por tipo" do Dashboard): visiveis
-				 para o usuario saber o que esta filtrado e poder limpar. -->
-			<ul class="flex flex-wrap items-center gap-1.5" aria-label="Filtros aplicados">
-				{#each deepLinkFilters as f (f.key)}
-					<li
-						class="inline-flex items-center gap-1 rounded-md border border-primary-500/40 bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-700"
-					>
-						{f.label}
-					</li>
+		<div class="flex min-w-0 flex-1 flex-col gap-1">
+			<label for="filter_prioridade" class="text-xs font-semibold uppercase tracking-wide text-text-muted">Prioridade</label>
+			<select
+				id="filter_prioridade"
+				bind:value={prioridade}
+				onchange={reloadActiveView}
+				class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				<option value="">Todas as prioridades</option>
+				{#each ADD_PRIORIDADE_OPTIONS.slice(1) as option (option.value)}
+					<option value={option.value}>{option.label}</option>
 				{/each}
-			</ul>
-		{/if}
+			</select>
+		</div>
+
+		<div class="flex min-w-0 flex-1 flex-col gap-1">
+			<label for="filter_tipo" class="text-xs font-semibold uppercase tracking-wide text-text-muted">Tipo</label>
+			<select
+				id="filter_tipo"
+				bind:value={tipo}
+				onchange={reloadActiveView}
+				class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				<option value="">Todos os tipos</option>
+				{#each ADD_TIPO_OPTIONS.slice(1) as option (option.value)}
+					<option value={option.value}>{option.label}</option>
+				{/each}
+			</select>
+		</div>
+
+		<div class="flex min-w-0 flex-1 flex-col gap-1">
+			<label for="filter_status" class="text-xs font-semibold uppercase tracking-wide text-text-muted">Status</label>
+			<select
+				id="filter_status"
+				bind:value={statusFilter}
+				onchange={reloadActiveView}
+				class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				<option value="">Todos os status</option>
+				{#each ADD_STATUS_OPTIONS as option (option.value)}
+					<option value={option.value}>{option.label}</option>
+				{/each}
+			</select>
+		</div>
 
 		{#if hasActiveFilters}
 			<button
 				type="button"
 				onclick={clearFilters}
-				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 shrink-0 self-end rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
-				Limpar filtros
+				Limpar
 			</button>
 		{/if}
 	</form>
