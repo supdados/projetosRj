@@ -148,9 +148,11 @@
 		confirmed = [...assignees];
 		query = '';
 		highlight = 0;
+		// Carrega os candidatos ANTES de abrir: o popover aparece já no tamanho
+		// final (sem abrir com "Carregando…" e depois crescer). Cacheado = instantâneo.
+		await ensureCandidates();
 		computePosition();
 		open = true;
-		await ensureCandidates();
 		await tick();
 		inputEl?.focus();
 	}

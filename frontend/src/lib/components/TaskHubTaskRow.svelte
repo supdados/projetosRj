@@ -27,7 +27,7 @@
 	import { updateTaskStatus } from '$lib/api/board';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
-	import CommentsPanel from '$lib/components/CommentsPanel.svelte';
+	import InlineCommentsTree from '$lib/components/InlineCommentsTree.svelte';
 	import AttachmentLightbox from '$lib/components/AttachmentLightbox.svelte';
 
 	interface Props {
@@ -158,6 +158,7 @@
 	const inlineStore = createTaskDrawerStore();
 	const panelId = $derived(`task-${task.id}`);
 	let commentsOpen = $state(false);
+	let commentsDirty = $state(false);
 	let loadingComments = $state(false);
 	let commentsError = $state<string | null>(null);
 	let commentsBtn = $state<HTMLButtonElement | null>(null);
@@ -177,19 +178,43 @@
 			commentsOpen = false;
 			return;
 		}
+		// Carrega o detalhe ANTES de abrir: assim o painel desliza direto até o
+		// tamanho final (sem abrir pequeno com "Carregando…" e depois saltar).
+		if (get(inlineStore).detail?.id !== task.id) {
+			loadingComments = true;
+			commentsError = null;
+			await ensureDetail();
+			loadingComments = false;
+			commentsError = get(inlineStore).error;
+		}
 		commentsOpen = true;
-		if (get(inlineStore).detail?.id === task.id) return;
-		loadingComments = true;
-		commentsError = null;
-		await ensureDetail();
-		loadingComments = false;
-		commentsError = get(inlineStore).error;
 	}
 
 	function onPanelKeydown(event: KeyboardEvent): void {
 		if (event.key !== 'Escape') return;
 		commentsOpen = false;
 		commentsBtn?.focus();
+	}
+
+	/**
+	 * Fecha o painel de comentários ao clicar FORA dele — só se NÃO houver conteúdo
+	 * não salvo (`commentsDirty`: texto no composer ou edição aberta). Ignora o
+	 * próprio botão de comentários (ele já alterna). Captura no `pointerdown`.
+	 */
+	function closeCommentsOnClickOutside(node: HTMLElement) {
+		function handle(event: PointerEvent): void {
+			const target = event.target as Node;
+			if (node.contains(target)) return;
+			if (commentsBtn?.contains(target)) return;
+			if (commentsDirty) return;
+			commentsOpen = false;
+		}
+		document.addEventListener('pointerdown', handle, true);
+		return {
+			destroy() {
+				document.removeEventListener('pointerdown', handle, true);
+			}
+		};
 	}
 
 	let galleryOpen = $state(false);
@@ -231,7 +256,7 @@
 </script>
 
 <div class="group/row border-b border-border-subtle last:border-b-0">
-	<div class="task-hub-grid px-3 py-2 transition-colors duration-fast hover:bg-primary-100/40">
+	<div class="task-hub-grid px-3 py-2 transition-colors duration-fast {commentsOpen ? '' : 'hover:bg-primary-100/40'}">
 		<!-- Descrição: texto abre o drawer; caneta habilita edição inline -->
 		{#if editingDesc}
 			<!-- svelte-ignore a11y_autofocus -->
@@ -242,7 +267,7 @@
 				autofocus
 				rows="1"
 				aria-label="Editar descrição"
-				class="min-h-[30px] w-full min-w-0 resize-y rounded-[5px] border border-primary-500 bg-surface px-2 py-1 text-sm leading-normal text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="min-h-[30px] w-full min-w-0 resize-y rounded-[5px] border border-border-subtle bg-surface px-2 py-1 text-sm leading-normal text-text-primary focus:border-primary-500 focus:outline-none"
 			></textarea>
 		{:else}
 			<div class="flex min-w-0 items-center gap-1">
@@ -308,7 +333,7 @@
 		<AssigneePicker taskId={task.id} bind:assignees disabled={savingField} />
 
 		<!-- Ações: comentários (inline), anexar (seletor direto), excluir -->
-		<div class="flex items-center justify-center gap-1">
+		<div class="flex items-center justify-center gap-0.5">
 			<button
 				bind:this={commentsBtn}
 				type="button"
@@ -317,11 +342,11 @@
 				aria-label={`Comentários (${commentsCount})`}
 				aria-expanded={commentsOpen}
 				aria-controls={`${panelId}-comments-region`}
-				class="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-2xs font-semibold transition-colors duration-fast hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {commentsOpen
-					? 'bg-primary-100 text-primary-700'
-					: 'text-text-muted'}"
+				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-2xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {commentsOpen
+					? 'text-primary-700'
+					: 'text-text-muted hover:text-primary-700'}"
 			>
-				<i class="far fa-comment" aria-hidden="true"></i>{commentsCount}
+				<i class="{loadingComments ? 'fas fa-spinner fa-spin' : 'far fa-comment'}" aria-hidden="true"></i><span class="min-w-[0.7rem] text-left tabular-nums">{#if commentsCount > 0}{commentsCount}{/if}</span>
 			</button>
 			<button
 				type="button"
@@ -331,9 +356,9 @@
 				aria-label={anexosCount === 0
 					? 'Anexar arquivo'
 					: `Ver anexos (${anexosCount})`}
-				class="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-2xs font-semibold text-text-muted transition-colors duration-fast hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-2xs font-semibold text-text-muted transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 			>
-				<i class="fas {uploading ? 'fa-spinner fa-spin' : 'fa-paperclip'}" aria-hidden="true"></i>{anexosCount}
+				<i class="fas {uploading ? 'fa-spinner fa-spin' : 'fa-paperclip'}" aria-hidden="true"></i><span class="min-w-[0.7rem] text-left tabular-nums">{#if anexosCount > 0}{anexosCount}{/if}</span>
 			</button>
 			<input
 				bind:this={fileInput}
@@ -348,7 +373,7 @@
 				onclick={askDelete}
 				aria-label="Excluir tarefa"
 				title="Excluir tarefa"
-				class="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted opacity-0 transition-all duration-fast hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-danger group-hover/row:opacity-100"
+				class="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 			>
 				<i class="fas fa-trash-can text-xs" aria-hidden="true"></i>
 			</button>
@@ -363,6 +388,7 @@
 			aria-label={`Comentários da tarefa: ${task.descricao}`}
 			transition:slide={slideParams}
 			onkeydown={onPanelKeydown}
+			use:closeCommentsOnClickOutside
 			class="border-t border-border-subtle bg-surface-muted/40 px-3 py-3"
 		>
 			{#if loadingComments}
@@ -370,7 +396,7 @@
 			{:else if commentsError}
 				<p role="alert" class="text-xs text-danger">{commentsError}</p>
 			{:else}
-				<CommentsPanel store={inlineStore} idPrefix={panelId} />
+				<InlineCommentsTree store={inlineStore} idPrefix={panelId} bind:dirty={commentsDirty} />
 			{/if}
 		</div>
 	{/if}

@@ -2,20 +2,20 @@
 	/**
 	 * Tela "Hub de Tarefas" em MODO LISTA (sem Kanban). Consome
 	 * `GET /api/tarefas` via `$lib/api/tasks` e renderiza a hierarquia
-	 * PROJETO → ETAPA → TAREFA: cada projeto é um `Card`; dentro dele, as tarefas
-	 * são sub-agrupadas por etapa (a partir de `etapa_titulo`/`is_first_of_stage`,
-	 * já calculados no backend) em seções colapsáveis; cada tarefa vira uma
-	 * `TaskHubTaskRow` (linha estilo "main": grade de colunas + chips padronizados).
-	 * "+ Nova tarefa" é por ETAPA (revela form inline com slide); comentários/anexos
-	 * abrem o `TaskDrawer` e mostram contagem na linha.
+	 * PROJETO → ETAPA → TAREFA (redesign variation-d): cada projeto é uma
+	 * `<section>` com `ProjectGroupHeader` (código #id, contagens, donut %) e
+	 * colapso próprio; dentro, as tarefas são sub-agrupadas por etapa (a partir de
+	 * `etapa_titulo`/`is_first_of_stage`, já calculados no backend) sob um
+	 * `StageGroupHeader` (barra azul que embute os rótulos de coluna). Cada tarefa
+	 * vira uma `TaskHubTaskRow` (chips de prioridade/tipo/status/responsável
+	 * preservados); os comentários expandem INLINE na linha (`InlineCommentsTree`).
+	 * "+ Nova tarefa" é por ETAPA (revela form inline); o clique no texto da
+	 * descrição abre o `TaskDrawer` completo.
 	 *
 	 * Os filtros de projeto e órgão re-buscam server-side (o `orgao_scope` é
 	 * aplicado no backend); a alternância de status (ativas/arquivadas/
 	 * finalizadas) traduz para o `?modo=` do endpoint. Estados de loading/erro/
-	 * vazio são anunciados via aria-live.
-	 *
-	 * Design: estilo da branch main (templates/tasks/hub.html) + nível de etapa.
-	 * Decisões e pesquisa em frontend/docs/lista-tarefas-hierarquica.md.
+	 * vazio são anunciados via aria-live. Colapso de projeto/etapa em localStorage.
 	 */
 	import { onMount, setContext, tick } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -36,8 +36,10 @@
 		TaskHubQuery
 	} from '$lib/types/tasks';
 	import PageHeader from '$lib/components/PageHeader.svelte';
-	import Card from '$lib/components/Card.svelte';
 	import TaskHubTaskRow from '$lib/components/TaskHubTaskRow.svelte';
+	import ProjectGroupHeader from '$lib/components/ProjectGroupHeader.svelte';
+	import StageGroupHeader from '$lib/components/StageGroupHeader.svelte';
+	import { projectCode } from '$lib/utils/taskProgress';
 	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
 	import KanbanBoard from '$lib/components/KanbanBoard.svelte';
 	import KanbanComposer from '$lib/components/KanbanComposer.svelte';
@@ -615,9 +617,12 @@
 		return `${group.key}::${sub}`;
 	}
 
-	// Colapso de etapas, persistido em localStorage (default: tudo expandido).
+	// Colapso de PROJETOS e ETAPAS, persistido em localStorage (default: tudo
+	// expandido). Chaves separadas; o mesmo toggleSet serve aos dois conjuntos.
 	const COLLAPSE_STAGES_KEY = 'tarefas:list:collapsed:stages';
+	const COLLAPSE_PROJECTS_KEY = 'tarefas:list:collapsed:projects';
 	let collapsedStages = $state(new SvelteSet<string>());
+	let collapsedProjects = $state(new SvelteSet<string>());
 
 	function toggleSet(set: SvelteSet<string>, key: string): void {
 		if (set.has(key)) set.delete(key);
@@ -626,19 +631,31 @@
 
 	// Hidrata SÍNCRONO (SPA é CSR-only): garante que o $effect de persistência não
 	// sobrescreva o armazenado com vazio antes da hidratação.
-	if (typeof localStorage !== 'undefined') {
+	function hydrateSet(key: string, set: SvelteSet<string>): void {
+		if (typeof localStorage === 'undefined') return;
 		try {
-			const raw = localStorage.getItem(COLLAPSE_STAGES_KEY);
-			if (raw) for (const k of JSON.parse(raw) as string[]) collapsedStages.add(k);
+			const raw = localStorage.getItem(key);
+			if (raw) for (const k of JSON.parse(raw) as string[]) set.add(k);
 		} catch {
 			// JSON corrompido / storage indisponível: começa tudo expandido.
 		}
 	}
+	hydrateSet(COLLAPSE_STAGES_KEY, collapsedStages);
+	hydrateSet(COLLAPSE_PROJECTS_KEY, collapsedProjects);
 
 	$effect(() => {
 		// Persiste sempre que o conjunto de etapas recolhidas mudar (best-effort).
 		try {
 			localStorage.setItem(COLLAPSE_STAGES_KEY, JSON.stringify([...collapsedStages]));
+		} catch {
+			// storage indisponível/cota: ignora.
+		}
+	});
+
+	$effect(() => {
+		// Persiste o conjunto de projetos recolhidos (best-effort).
+		try {
+			localStorage.setItem(COLLAPSE_PROJECTS_KEY, JSON.stringify([...collapsedProjects]));
 		} catch {
 			// storage indisponível/cota: ignora.
 		}
@@ -922,62 +939,45 @@
 		{:else}
 			<div class="flex flex-col gap-5" aria-busy={loadState !== 'ready'}>
 				{#each data.groups as group (group.key)}
-					{@const labelId = `group-${group.key}`}
-					<Card {labelId}>
-						{#snippet header()}
-							<div class="flex flex-wrap items-baseline gap-2">
-								<h2 id={labelId} class="font-heading text-lg font-semibold text-text-primary">
-									{group.project_titulo}
-								</h2>
-								<span class="text-xs font-medium text-text-secondary">
-									{group.project_orgao_sigla || 'Não informado'}
-								</span>
-								<span class="text-xs text-text-muted">
-									· {group.tasks.length} tarefa{group.tasks.length === 1 ? '' : 's'}
-								</span>
-							</div>
-						{/snippet}
+					{@const pKey = group.key}
+					{@const pCollapsed = collapsedProjects.has(pKey)}
+					{@const groupStages = stagesOf(group.tasks)}
+					<!-- Nivel 1 - PROJETO: header rico (codigo #id, contagens, donut) + colapso. -->
+					<section
+						aria-label={group.project_titulo}
+						class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm"
+					>
+						<ProjectGroupHeader
+							titulo={group.project_titulo}
+							code={projectCode(group)}
+							orgaoSigla={group.project_orgao_sigla}
+							taskCount={group.tasks.length}
+							stagesCount={groupStages.length}
+							open={!pCollapsed}
+							onToggle={() => toggleSet(collapsedProjects, pKey)}
+							controlsId={`project-${pKey}`}
+						/>
 
-						<div class="flex flex-col gap-3">
-							{#each stagesOf(group.tasks) as stage (stageKey(group, stage))}
-								{@const sKey = stageKey(group, stage)}
-								{@const stCollapsed = collapsedStages.has(sKey)}
-								<div class="overflow-hidden rounded-lg border border-border-subtle">
-									<!-- Nível 2 — ETAPA: sub-cabeçalho leve e colapsável -->
-									<button
-										type="button"
-										onclick={() => toggleSet(collapsedStages, sKey)}
-										aria-expanded={!stCollapsed}
-										aria-controls={`stage-${sKey}`}
-										class="flex w-full items-center gap-2 border-b border-border-subtle bg-surface-muted px-3 py-[0.5rem] text-left transition-colors duration-fast hover:bg-primary-100/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
-									>
-										<i
-											class="fas fa-chevron-right text-2xs text-text-muted transition-transform duration-fast motion-reduce:transition-none {stCollapsed
-												? ''
-												: 'rotate-90'}"
-											aria-hidden="true"
-										></i>
-										<span class="text-sm font-semibold text-primary-700">{stage.titulo ?? 'Sem etapa'}</span>
-										<span
-											class="rounded-full bg-surface px-2 py-0.5 text-2xs font-semibold text-text-secondary"
-										>
-											{stage.tasks.length}
-										</span>
-									</button>
+						<div class="task-collapse border-t border-border-subtle" data-collapsed={pCollapsed} id={`project-${pKey}`}>
+							<div>
+								<div class="flex flex-col gap-3 p-3">
+								{#each groupStages as stage (stageKey(group, stage))}
+									{@const sKey = stageKey(group, stage)}
+									{@const stCollapsed = collapsedStages.has(sKey)}
+									<div class="overflow-hidden rounded-lg border border-border-subtle">
+										<!-- Scroller horizontal UNICO: header de etapa (com labels) + linhas compartilham o mesmo scroll -> colunas alinhadas. -->
+										<div class="overflow-x-auto overflow-y-hidden">
+											<StageGroupHeader
+												stageCode={stage.tasks[0]?.etapa_display_id ?? null}
+												titulo={stage.titulo}
+												count={stage.tasks.length}
+												collapsed={stCollapsed}
+												onToggle={() => toggleSet(collapsedStages, sKey)}
+												controlsId={`stage-${sKey}`}
+											/>
 
-									<!-- Corpo colapsável: cabeçalho de colunas + linhas (mesma grade) -->
-									<div class="task-collapse" data-collapsed={stCollapsed} id={`stage-${sKey}`}>
-										<div>
-											<div class="overflow-x-auto overflow-y-hidden">
-												<!-- Cabeçalho de colunas (mesma .task-hub-grid das linhas → alinha). -->
-												<div class="task-hub-grid border-b border-border-subtle bg-surface-muted/70 px-3 py-1.5">
-													<span class="text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Descrição</span>
-													<span class="text-center text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Prioridade</span>
-													<span class="text-center text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Tipo</span>
-													<span class="text-center text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Status</span>
-													<span class="text-center text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Responsável</span>
-													<span class="text-center text-2xs font-bold uppercase tracking-[0.04em] text-text-muted">Ações</span>
-												</div>
+											<div class="task-collapse" data-collapsed={stCollapsed} id={`stage-${sKey}`}>
+												<div>
 												{#each stage.tasks as task (task.id)}
 													<TaskHubTaskRow
 														{task}
@@ -986,13 +986,6 @@
 														onChanged={() => void load()}
 													/>
 												{/each}
-											</div>
-
-											<!-- "+ Nova tarefa" POR ETAPA, na MESMA grade das linhas: cada campo
-											     cai sob a sua coluna (a descrição NÃO ocupa a largura toda). Tem o
-											     próprio overflow-x-auto p/ não ser cortado e alinhar as colunas;
-											     o form revela com slide fluido (estilo da main). -->
-											<div class="overflow-x-auto overflow-y-hidden">
 												{#if addOpenKey === sKey}
 													<!-- Aparece INSTANTÂNEO e no MESMO lugar (sem slide/fade) — paridade
 													     com a main (display swap), focando a descrição. Fecha ao clicar
@@ -1019,7 +1012,7 @@
 																autofocus
 																placeholder="Descreva a tarefa…"
 																aria-label="Descrição da tarefa"
-																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-[5px] border border-border-subtle bg-surface px-2 py-1.5 text-sm leading-normal text-text-primary transition-shadow duration-fast focus:border-primary-500 focus:outline-none focus:shadow-[0_0_0_3px_rgba(31,92,168,0.12)] disabled:opacity-60"
+																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-[5px] border border-border-subtle bg-surface px-2 py-1.5 text-sm leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60"
 															></textarea>
 															<select
 																bind:value={addDraft.prioridade}
@@ -1092,13 +1085,15 @@
 														Adicionar nova tarefa
 													</button>
 												{/if}
+												</div>
 											</div>
 										</div>
 									</div>
+								{/each}
 								</div>
-							{/each}
+							</div>
 						</div>
-					</Card>
+					</section>
 				{/each}
 			</div>
 		{/if}

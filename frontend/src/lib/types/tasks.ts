@@ -39,6 +39,11 @@ export interface TaskCard {
 	assignees: TaskAssignee[];
 	/** Título da etapa à qual a tarefa pertence (ou `null` para "sem etapa"). */
 	etapa_titulo: string | null;
+	/**
+	 * Código exibível da etapa (ex.: "42.1" = projeto.índice-visível), derivado no
+	 * backend (`hub_stage_display_id`). `null` para o bucket "sem etapa".
+	 */
+	etapa_display_id: string | null;
 	/** True quando esta tarefa abre um novo bloco de etapa no grupo. */
 	is_first_of_stage: boolean;
 	/** Nº de comentários (indicador na linha da lista). */
