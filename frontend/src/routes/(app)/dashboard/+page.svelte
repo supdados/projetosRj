@@ -19,6 +19,7 @@
 	import AlertHourglass from '$lib/components/micro/AlertHourglass.svelte';
 	import RecentProjectsPanel from '$lib/components/RecentProjectsPanel.svelte';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
+	import { statusLabel } from '$lib/utils/taskLabels';
 	import Card from '$lib/components/Card.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -156,13 +157,16 @@
 	const RING_VIEW = 100;
 	const RING_STROKE = 11;
 
-	// Ordem/rotulos/cores dos 5 status (cores = tokens semanticos -> dark mode ok).
+	// Ordem + cores dos 5 status — IDENTICAS as de /tarefas (taskLabels: em_andamento
+	// = info, para_validacao = primary, para_ajustes = warning, finalizada = success,
+	// nao_iniciada = muted). Os rotulos vem de `statusLabel` (mesma fonte do drop de
+	// selecao em tarefas), entao texto e cor batem com a tela de tarefas.
 	const STATUS_ORDER = [
-		{ key: 'finalizada', label: 'Concluída', color: 'var(--ds-color-success-600)' },
-		{ key: 'em_andamento', label: 'Andamento', color: 'var(--ds-color-primary-600)' },
-		{ key: 'para_validacao', label: 'Validação', color: 'var(--ds-color-warning-600)' },
-		{ key: 'para_ajustes', label: 'Ajustes', color: 'var(--ds-color-orange-600)' },
-		{ key: 'nao_iniciada', label: 'Não iniciada', color: 'var(--color-text-muted)' }
+		{ key: 'finalizada', color: 'var(--ds-color-success-600)' },
+		{ key: 'em_andamento', color: 'var(--ds-color-info-600)' },
+		{ key: 'para_validacao', color: 'var(--ds-color-primary-500)' },
+		{ key: 'para_ajustes', color: 'var(--ds-color-warning-600)' },
+		{ key: 'nao_iniciada', color: 'var(--color-text-muted)' }
 	] as const;
 
 	const statusCounts = $derived.by(() => ({
@@ -174,7 +178,7 @@
 	}));
 
 	const statusLegend = $derived(
-		STATUS_ORDER.map((s) => ({ ...s, count: statusCounts[s.key] }))
+		STATUS_ORDER.map((s) => ({ ...s, label: statusLabel(s.key), count: statusCounts[s.key] }))
 	);
 
 	// % concluido (finalizada / total). 0 quando nao ha tarefas.
@@ -467,12 +471,12 @@
 									<span class="text-xl font-bold tabular-nums text-text-primary">{data.dashboard_open_tasks_count}</span>
 									<span class="text-xs text-text-muted">tarefas abertas</span>
 								</div>
-								<ul class="flex flex-col gap-0.5" aria-label="Legenda por status">
+								<ul class="flex flex-col gap-1.5" aria-label="Legenda por status">
 									{#each statusLegend as s (s.key)}
-										<li class="flex items-center gap-2 leading-tight">
+										<li class="flex items-center gap-2 leading-none">
 											<span class="h-2 w-2 shrink-0 rounded-full" style="background: {s.color};" aria-hidden="true"></span>
-											<span class="min-w-0 flex-1 truncate text-xs text-text-secondary">{s.label}</span>
-											<span class="shrink-0 text-xs font-semibold tabular-nums text-text-primary">{s.count}</span>
+											<span class="min-w-0 flex-1 truncate text-[11px] text-text-secondary">{s.label}</span>
+											<span class="shrink-0 text-[11px] font-semibold tabular-nums text-text-primary">{s.count}</span>
 										</li>
 									{/each}
 								</ul>
