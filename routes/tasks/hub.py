@@ -162,6 +162,7 @@ def _flatten_stage_tasks_into_group(group, stages):
             task.hub_stage_id = stage["etapa_id"]
             task.hub_stage_value = stage["etapa_value"]
             task.hub_stage_titulo = stage["etapa_titulo"]
+            task.hub_stage_display_id = stage.get("etapa_display_id") or None
             task.hub_stage_is_legacy_bucket = stage["is_legacy_bucket"]
             task.hub_stage_done = stage["etapa_done"]
             task.hub_is_first_of_stage = index == 0
