@@ -31,6 +31,19 @@
 	/** Chave de persistência do estado expandido (mesma semântica do legado). */
 	const EXPANDED_STORAGE_KEY = 'pendingExpandedProjects';
 
+	/**
+	 * Rótulos de período conhecidos no cliente (espelham `period_label_map` do
+	 * backend, routes/projects/views.py). Servem de fallback síncrono para o
+	 * subtítulo do header renderizar JUNTO com o título no primeiro paint, sem
+	 * esperar o fetch. Quando `data` chega, o mapa do backend tem precedência.
+	 */
+	const PERIOD_LABELS: Record<PendingPeriodo, string> = {
+		atrasados: 'Atrasados',
+		'7dias': 'Próximos 7 Dias',
+		'14dias': 'Próximos 14 Dias',
+		'21dias': 'Próximos 21 Dias'
+	};
+
 	type LoadState = 'loading' | 'ready' | 'error';
 
 	let loadState = $state<LoadState>('loading');
@@ -206,8 +219,13 @@
 	const pagination = $derived(data?.pagination ?? null);
 	/** Opções de período rotuladas pelo backend (`period_options`). */
 	const periodOptions = $derived(data?.period_options ?? []);
-	/** Rótulo da janela ativa, servido pelo backend (`periodo_label`). */
-	const periodoLabel = $derived(data?.periodo_label ?? '');
+	/**
+	 * Rótulo da janela ativa. Deriva do estado local `periodo` (já definido no
+	 * primeiro render) via `PERIOD_LABELS`, então o subtítulo aparece JUNTO com o
+	 * título — sem o flicker de esperar o `periodo_label` vindo do fetch. O mapa
+	 * do backend tem precedência assim que `data` carrega.
+	 */
+	const periodoLabel = $derived(data?.period_label_map?.[periodo] ?? PERIOD_LABELS[periodo]);
 	const hasActiveFilters = $derived(
 		periodo !== 'atrasados' || responsavel !== '' || orgao !== null
 	);
