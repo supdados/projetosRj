@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { CalendarEvent } from '$lib/types/calendar';
 	import {
 		weekDays,
@@ -23,8 +24,30 @@
 
 	const START_HOUR = 7;
 	const END_HOUR = 20;
-	// 44px/hora: equilibrio entre caber sem scroll de pagina e nao ficar baixo demais.
-	const PX_PER_HOUR = 44;
+
+	// Altura por hora RESPONSIVA: a grade de horários ocupa toda a altura
+	// disponível (do TOPO da grade até o fim da viewport), dividida pelas horas
+	// visíveis e clampada [30, 56]px. Telas maiores => grade maior; menores =>
+	// menor, sempre sem scroll de página. A altura disponível é MEDIDA (não
+	// estimada), então não depende do "chrome" acima da grade.
+	let timeGridEl = $state<HTMLElement | null>(null);
+	let availForGrid = $state(468);
+
+	function recomputeGridHeight(): void {
+		if (!timeGridEl) return;
+		const top = timeGridEl.getBoundingClientRect().top;
+		availForGrid = Math.max(260, window.innerHeight - top - 24);
+	}
+
+	onMount(() => {
+		const onResize = () => recomputeGridHeight();
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
+	});
+
+	const PX_PER_HOUR = $derived(
+		Math.max(30, Math.min(56, Math.floor(availForGrid / (END_HOUR - START_HOUR))))
+	);
 
 	const SHORT_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 	const shortName = (d: Date): string => SHORT_NAMES[d.getDay()];
@@ -52,6 +75,15 @@
 
 	// Altura da faixa all-day em px (24px por lane + padding)
 	const allDayRowHeight = $derived(maxAllDayLanes * 24 + 8);
+
+	// Remede após o layout assentar e quando a faixa all-day muda de altura (o topo
+	// da grade desce, alterando a altura disponível).
+	$effect(() => {
+		void allDayRowHeight;
+		void days;
+		const id = requestAnimationFrame(recomputeGridHeight);
+		return () => cancelAnimationFrame(id);
+	});
 
 	function fmtTime(str: string): string {
 		const d = parseLocal(str);
@@ -152,7 +184,7 @@
 	<!-- ============================================================
 	     TIME GRID — gutter de horas + 7 DayColumns
 	     ============================================================ -->
-	<div class="flex" role="row">
+	<div class="flex" role="row" bind:this={timeGridEl}>
 		<!-- Gutter de horas -->
 		<div
 			class="relative w-14 shrink-0 border-r border-border-subtle"

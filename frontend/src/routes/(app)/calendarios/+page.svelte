@@ -3,9 +3,9 @@
 	 * Tela "Calendario" — HUB completo (paridade v4.5).
 	 *
 	 * Reproduz o hub legado (templates/calendars + static/js/pages/calendars.js):
-	 *   - Header compacto: badge Google, navegacao de periodo, toggle de visao
-	 *     (dia/semana/mes), acoes de conexao (sync/renovar/desconectar via
-	 *     <CalendarConnectionBanner>) e botao "Novo evento".
+	 *   - Header compacto: badge Google (menu com sync/renovar/desconectar ao
+	 *     clicar), navegacao de periodo, toggle de visao (dia/semana/mes) e botao
+	 *     "Novo evento".
 	 *   - Visao MES: grade mensal com celulas, pilulas de evento de um dia,
 	 *     barras de span (eventos multi-dia) sobrepostas em lanes, "+N mais" com
 	 *     densidade calculada pela altura disponivel da celula, popover do dia e
@@ -41,7 +41,6 @@
 		CalendarMember
 	} from '$lib/types/calendar';
 	import PageHeader from '$lib/components/PageHeader.svelte';
-	import CalendarConnectionBanner from '$lib/components/CalendarConnectionBanner.svelte';
 	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import CalendarWeekGrid from '$lib/components/calendar/CalendarWeekGrid.svelte';
@@ -693,6 +692,50 @@
 		void runConnectionAction(() => disconnectGoogle(), 'Falha ao desconectar a conta Google.');
 	}
 
+	// --- Menu de conexão Google (abre ao clicar no badge "Google") ---
+	// As ações de conexão (sincronizar, renovar watch, desconectar) saíram da
+	// toolbar e vivem aqui, sob o badge. O popover é `position: fixed` (ancorado por
+	// coordenadas) porque o badge fica dentro do <h1> do header, que tem overflow
+	// oculto (truncate) e cortaria um dropdown absoluto.
+	let googleMenuOpen = $state(false);
+	let googleMenuX = $state(0);
+	let googleMenuY = $state(0);
+	let googleMenuEl = $state<HTMLElement | null>(null);
+	const connectUrl = $derived(
+		typeof window !== 'undefined'
+			? `${window.location.origin}/calendar/oauth/start`
+			: '/calendar/oauth/start'
+	);
+	function toggleGoogleMenu(event: MouseEvent): void {
+		if (googleMenuOpen) {
+			googleMenuOpen = false;
+			return;
+		}
+		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+		googleMenuX = rect.left;
+		googleMenuY = rect.bottom + 4;
+		googleMenuOpen = true;
+	}
+	function runGoogleAction(action: () => void): void {
+		googleMenuOpen = false;
+		action();
+	}
+	function confirmDisconnect(): void {
+		googleMenuOpen = false;
+		if (typeof window !== 'undefined') {
+			const ok = window.confirm(
+				'Desconectar a conta Google Calendar? A sincronização será interrompida.'
+			);
+			if (!ok) return;
+		}
+		handleDisconnect();
+	}
+	function onWindowClickGoogle(event: MouseEvent): void {
+		if (googleMenuOpen && googleMenuEl && !googleMenuEl.contains(event.target as Node)) {
+			googleMenuOpen = false;
+		}
+	}
+
 	// --- Modal ---
 	function openCreate(dateStr = ''): void {
 		modalEvent = null;
@@ -797,6 +840,7 @@
 		if (e.key === 'Escape') {
 			closeDayPopover();
 			closeEventPopover();
+			googleMenuOpen = false;
 		}
 	}
 	function onWindowClick(): void {
@@ -806,10 +850,10 @@
 </script>
 
 <svelte:head>
-	<title>Calendario — ProjetosRJ</title>
+	<title>Calendário — ProjetosRJ</title>
 </svelte:head>
 
-<svelte:window onkeydown={onWindowKeydown} />
+<svelte:window onkeydown={onWindowKeydown} onclick={onWindowClickGoogle} />
 
 <section class="cal-page" aria-labelledby="calendarios-title">
 	<!--
@@ -821,32 +865,54 @@
 	-->
 	<PageHeader subtitle="Eventos e reunioes da equipe" labelId="calendarios-title">
 		{#snippet titleContent()}
-			<span>Calendario</span>
+			<span>Calendário</span>
 			{#if hub?.connection}
-				<span class="cal-google-badge cal-google-badge--on ml-2 align-middle">
-					<svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
-					Google
+				<span class="cal-gmenu ml-2 align-middle" bind:this={googleMenuEl}>
+					<button
+						type="button"
+						class="cal-google-badge cal-google-badge--on cal-gmenu-trigger"
+						aria-haspopup="menu"
+						aria-expanded={googleMenuOpen}
+						onclick={toggleGoogleMenu}
+					>
+						<svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
+						Google
+						<svg class="cal-gmenu-caret" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+					</button>
+					{#if googleMenuOpen}
+						<div class="cal-gmenu-pop" role="menu" style="left: {googleMenuX}px; top: {googleMenuY}px;">
+							<button type="button" role="menuitem" class="cal-gmenu-item" disabled={connectionBusy} onclick={() => runGoogleAction(handleSync)}>
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10" /><polyline points="23 20 23 14 17 14" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" /></svg>
+								Sincronizar agora
+							</button>
+							{#if hub.connection.watch_expiring_soon}
+								<button type="button" role="menuitem" class="cal-gmenu-item" disabled={connectionBusy} onclick={() => runGoogleAction(handleRenewWatch)}>
+									<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+									Renovar watch
+									{#if hub.connection.watch_expiration_display}
+										<span class="cal-gmenu-meta">expira em {hub.connection.watch_expiration_display}</span>
+									{/if}
+								</button>
+							{/if}
+							<button type="button" role="menuitem" class="cal-gmenu-item cal-gmenu-item--danger" disabled={connectionBusy} onclick={confirmDisconnect}>
+								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M5.17 11.75l-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71" /><line x1="8" y1="2" x2="8" y2="5" /><line x1="2" y1="8" x2="5" y2="8" /><line x1="16" y1="19" x2="16" y2="22" /><line x1="19" y1="16" x2="22" y2="16" /></svg>
+								Desconectar do Google
+							</button>
+						</div>
+					{/if}
 				</span>
 			{:else if hub?.google_calendar_enabled}
-				<span class="cal-google-badge cal-google-badge--off ml-2 align-middle">
+				<a class="cal-google-badge cal-google-badge--off cal-gmenu-trigger ml-2 align-middle" href={connectUrl}>
 					<svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
-					Google
-				</span>
+					Conectar
+				</a>
 			{/if}
 		{/snippet}
 		{#snippet actions()}
 			{#if hub}
 				<div class="cal-toolbar">
-					<!-- Acoes de conexao Google (sync / renovar / desconectar) -->
-					<CalendarConnectionBanner
-						connection={hub.connection}
-						googleEnabled={hub.google_calendar_enabled}
-						onSync={handleSync}
-						onRenewWatch={handleRenewWatch}
-						onDisconnect={handleDisconnect}
-						busy={connectionBusy}
-					/>
-
+					<!-- Ações de conexão Google agora vivem no menu do badge "Google"
+						 (ao lado do título). A toolbar fica só com "Novo evento". -->
 					<button class="cal-btn-new" type="button" onclick={() => openCreate()}>
 						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
 						Novo evento
@@ -1222,8 +1288,8 @@
 		gap: 0.3rem;
 		font-size: 0.72rem;
 		font-weight: 500;
-		padding: 0.2rem 0.5rem;
-		border-radius: 999px;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.4rem;
 		border: 1px solid transparent;
 		line-height: 1;
 		white-space: nowrap;
@@ -1238,6 +1304,72 @@
 		color: var(--app-color-text-muted);
 		background: var(--app-color-surface-muted);
 		border-color: var(--app-color-border);
+	}
+
+	/* ── Menu do badge Google (sincronizar / renovar / desconectar) ──────── */
+	.cal-gmenu {
+		display: inline-flex;
+	}
+	.cal-gmenu-trigger {
+		cursor: pointer;
+		font-family: inherit;
+		text-decoration: none;
+	}
+	.cal-gmenu-caret {
+		margin-left: 0.1rem;
+		opacity: 0.75;
+	}
+	/* Popover ancorado por coordenadas (fixed) — não é cortado pelo overflow do
+	   <h1>; herda os tokens --app-color-* via DOM. */
+	.cal-gmenu-pop {
+		position: fixed;
+		z-index: 50;
+		display: flex;
+		min-width: 13rem;
+		flex-direction: column;
+		padding: 0.3rem;
+		border: 1px solid var(--app-color-border);
+		border-radius: 0.6rem;
+		background: var(--app-color-surface);
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+	}
+	.cal-gmenu-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		padding: 0.45rem 0.55rem;
+		border: none;
+		border-radius: 0.4rem;
+		background: none;
+		color: var(--app-color-text-primary);
+		font-size: 0.84rem;
+		font-weight: 500;
+		text-align: left;
+		white-space: nowrap;
+		cursor: pointer;
+		transition: background 0.12s;
+	}
+	.cal-gmenu-item:hover:not(:disabled) {
+		background: var(--app-color-surface-muted);
+	}
+	.cal-gmenu-item:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+	/* Tempo até expirar, à direita do "Renovar watch" (discreto). */
+	.cal-gmenu-meta {
+		margin-left: auto;
+		padding-left: 0.75rem;
+		font-size: 0.72rem;
+		font-weight: 500;
+		color: var(--app-color-text-muted);
+		white-space: nowrap;
+	}
+
+	/* Desconectar: texto na cor normal; apenas o ícone em vermelho. */
+	.cal-gmenu-item--danger svg {
+		color: var(--app-color-danger);
 	}
 
 	/* ── View toggle ────────────────────────────────────────────────────
@@ -1386,8 +1518,10 @@
 	.cal-view--calendar.is-active {
 		display: flex;
 		flex-direction: column;
-		/* Preenche a mesma altura aproximada da visao Semana (13h * 44px + headers). */
-		min-height: 42rem;
+		/* Altura RESPONSIVA: cresce com a viewport (telas maiores => mês maior),
+		   clampada p/ caber sem scroll (≈ a mesma da visão Semana). 16rem ≈ chrome
+		   acima/abaixo (topnav, header da página, barra de navegação, respiros). */
+		min-height: clamp(30rem, calc(100vh - 16rem), 52rem);
 	}
 
 	/* ── Month nav ──────────────────────────────────────────────────────
@@ -1437,13 +1571,15 @@
 		width: 1.9rem;
 		height: 1.9rem;
 		border-radius: 0.4rem;
-		border: 1px solid var(--app-color-border);
-		background: var(--app-color-surface);
+		/* Sem fundo/borda em repouso — apenas o ícone; fundo sutil no hover. */
+		border: none;
+		background: none;
 		color: var(--app-color-text-secondary);
 		cursor: pointer;
-		transition: background 0.12s;
+		transition: color 0.12s, background 0.12s;
 	}
 	.cal-nav-btn:hover {
+		color: var(--app-color-text-primary);
 		background: var(--app-color-surface-muted);
 	}
 	.cal-today-btn {
