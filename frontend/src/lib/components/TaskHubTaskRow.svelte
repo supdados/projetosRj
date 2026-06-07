@@ -133,9 +133,21 @@
 		if (value !== task.descricao) await saveField({ descricao: value });
 	}
 
-	// Responsáveis múltiplos: estado local seedado do card. O AssigneePicker
-	// persiste no servidor e sincroniza esta lista a partir da resposta.
+	// Responsáveis múltiplos: estado local seedado do card. O seed inicial é
+	// INTENCIONAL (render imediato dos avatares, sem flash) e a re-sincronização
+	// com o servidor é feita pelo $effect abaixo — por isso o aviso de "captura só
+	// o valor inicial" não se aplica aqui.
+	// svelte-ignore state_referenced_locally
 	let assignees = $state<TaskAssignee[]>(task.assignees ?? []);
+
+	// Re-sincroniza com o card quando a lista vem do servidor: o re-fetch da lista
+	// reatribui o prop `task`, disparando este efeito; sem ele os avatares ficariam
+	// presos ao 1º valor (ex.: alteração feita em outra aba/sessão). Depende apenas
+	// de `task` (não lê `assignees`), então NÃO conflita com a edição otimista do
+	// picker — que altera só o estado local e não re-busca a lista.
+	$effect(() => {
+		assignees = task.assignees ?? [];
+	});
 
 	// --- Exclusão (mini-confirm inline) ---
 	let confirming = $state(false);

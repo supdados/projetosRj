@@ -64,6 +64,7 @@ def test_api_projeto_detalhe_returns_ok_envelope_with_expected_shape(
         "special_project",
         "delivery_type",
         "abep_indicator",
+        "orgaos",
     }
     assert data["permissions"]["can_edit"] is True
 

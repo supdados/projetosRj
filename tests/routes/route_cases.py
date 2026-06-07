@@ -1175,6 +1175,19 @@ ROUTE_CASES = [
         "requires_login": True,
         "requires_admin": False,
     },
+    {
+        # Responsáveis MÚLTIPLOS da tarefa (autor/admin). Lista vazia limpa os
+        # responsáveis e ainda commita -> 200 (mesma regra de finalizar/campos).
+        "id": "api_tarefa_responsaveis_post",
+        "method": "POST",
+        "rule": "/api/tarefas/<int:task_id>/responsaveis",
+        "path": "/api/tarefas/{task_id}/responsaveis",
+        "role": "user",
+        "json": {"user_ids": []},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
     # Fase 5b-2 (Drawer de Tarefa): comentarios (add/editar/excluir) + anexos
     # (listar/upload multipart/download binario/excluir). Anexados ao main_bp em
     # routes/api/task_comments.py e routes/api/task_attachments.py, no envelope
@@ -1836,6 +1849,17 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
+        # Membros do Time visíveis no calendário (usuários do mesmo órgão + admins).
+        "id": "api_calendarios_membros_get",
+        "method": "GET",
+        "rule": "/api/calendarios/membros",
+        "path": "/api/calendarios/membros",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
         "id": "api_calendarios_google_disconnect_post",
         "method": "POST",
         "rule": "/api/calendarios/google/disconnect",
@@ -2260,4 +2284,6 @@ ROUTE_CASES += [
 # +4 aditivos da SPA (Fase atual): DELETE /api/projetos/<id> (exclusao real),
 # GET /api/notificacoes, POST /api/notificacoes/marcar-lidas e GET
 # /api/orgaos/escopo. 181 + 4 = 185.
-assert len(ROUTE_CASES) == 186
+# +2 rotas antes sem cobertura: POST /api/tarefas/<id>/responsaveis e
+# GET /api/calendarios/membros. 186 + 2 = 188.
+assert len(ROUTE_CASES) == 188
