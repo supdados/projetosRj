@@ -48,6 +48,7 @@
 	import { orgaoScope } from '$lib/stores/orgaoScope';
 	import type { BoardCard, BoardQuery } from '$lib/types/board';
 	import { normalizeStatus, type TaskStatus } from '$lib/utils/taskStatus';
+	import { tipoLabel, prioridadeLabel, statusLabel } from '$lib/utils/taskLabels';
 	import {
 		triggerTaskFinalizeConfetti,
 		type CelebrationOriginLike
@@ -78,6 +79,14 @@
 	let modo = $state<TaskHubModo>('ativas');
 	let project = $state<string>('');
 	let orgao = $state<string>('');
+
+	// Filtros vindos por DEEP-LINK na URL (ex.: Dashboard -> /tarefas?tipo=bug).
+	// A API/hub ja filtram por estes campos; aqui apenas os lemos da URL e os
+	// repassamos a `load()`. Aplicam-se a visao LISTA (o board so mostra ativas).
+	let tipo = $state<string>('');
+	let prioridade = $state<string>('');
+	let statusFilter = $state<string>('');
+	let responsavel = $state<string>('');
 
 	let inFlight: AbortController | null = null;
 
@@ -228,7 +237,15 @@
 		const controller = new AbortController();
 		inFlight = controller;
 
-		const query: TaskHubQuery = { modo, project, orgao };
+		const query: TaskHubQuery = {
+			modo,
+			project,
+			orgao,
+			tipo: tipo || undefined,
+			prioridade: prioridade || undefined,
+			status: statusFilter || undefined,
+			responsavel: responsavel || undefined
+		};
 		try {
 			const next = await fetchTarefas(query, controller.signal);
 			if (controller.signal.aborted) return;
@@ -460,10 +477,21 @@
 	function clearFilters(): void {
 		project = '';
 		orgao = '';
+		tipo = '';
+		prioridade = '';
+		statusFilter = '';
+		responsavel = '';
 		reloadActiveView();
 	}
 
 	onMount(() => {
+		// Filtros por deep-link (ex.: chips "Por tipo" do Dashboard -> ?tipo=bug).
+		// Lidos uma vez na entrada; o servidor aplica o filtro na lista.
+		const params = new URLSearchParams(window.location.search);
+		tipo = params.get('tipo') ?? '';
+		prioridade = params.get('prioridade') ?? '';
+		statusFilter = params.get('status') ?? '';
+		responsavel = params.get('responsavel') ?? '';
 		void load();
 		return () => {
 			inFlight?.abort();
@@ -501,7 +529,27 @@
 		return Array.from(seen).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 	});
 
-	const hasActiveFilters = $derived(project !== '' || orgao !== '');
+	const hasActiveFilters = $derived(
+		project !== '' ||
+			orgao !== '' ||
+			tipo !== '' ||
+			prioridade !== '' ||
+			statusFilter !== '' ||
+			responsavel !== ''
+	);
+
+	// Chips legíveis dos filtros por deep-link ativos (para o usuário ver e poder
+	// limpar — senão ficaria filtrado "invisivelmente" pela URL).
+	const deepLinkFilters = $derived(
+		[
+			tipo ? { key: 'tipo', label: `Tipo: ${tipoLabel(tipo) ?? tipo}` } : null,
+			prioridade
+				? { key: 'prioridade', label: `Prioridade: ${prioridadeLabel(prioridade) ?? prioridade}` }
+				: null,
+			statusFilter ? { key: 'status', label: `Status: ${statusLabel(statusFilter)}` } : null,
+			responsavel ? { key: 'responsavel', label: `Responsável: ${responsavel}` } : null
+		].filter((f): f is { key: string; label: string } => f !== null)
+	);
 	const totalItems = $derived(
 		view === 'kanban' ? $board.total : (data?.total_items ?? 0)
 	);
@@ -691,6 +739,20 @@
 				{/each}
 			</select>
 		</div>
+
+		{#if deepLinkFilters.length > 0}
+			<!-- Filtros vindos por link (ex.: chip "Por tipo" do Dashboard): visiveis
+				 para o usuario saber o que esta filtrado e poder limpar. -->
+			<ul class="flex flex-wrap items-center gap-1.5" aria-label="Filtros aplicados">
+				{#each deepLinkFilters as f (f.key)}
+					<li
+						class="inline-flex items-center gap-1 rounded-md border border-primary-500/40 bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-700"
+					>
+						{f.label}
+					</li>
+				{/each}
+			</ul>
+		{/if}
 
 		{#if hasActiveFilters}
 			<button

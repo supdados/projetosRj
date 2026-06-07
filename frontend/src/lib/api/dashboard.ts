@@ -9,13 +9,13 @@
  */
 
 import { get } from './client';
-import type { Project, Task } from '$lib/types/entities';
-import type { DashboardData } from '$lib/types/dashboard';
+import type { Project } from '$lib/types/entities';
+import type { DashboardData, DashboardRecentTask } from '$lib/types/dashboard';
 
 /** Forma crua devolvida pelo backend (contadores aninhados em `counts`). */
 interface RawDashboardData {
 	recent_projects: Project[];
-	recent_tasks: Task[];
+	recent_tasks: DashboardRecentTask[];
 	objetivos?: unknown;
 	selected_orgao: number | null;
 	counts: {
@@ -42,6 +42,11 @@ interface RawDashboardData {
 			media: number;
 			baixa: number;
 			atencao: number;
+			tipo_bug: number;
+			tipo_melhoria: number;
+			tipo_duvida: number;
+			tipo_outros: number;
+			tipo_implementacao: number;
 		};
 	};
 }
@@ -81,6 +86,12 @@ function flattenDashboard(raw: RawDashboardData): DashboardData {
 		task_media_count: t.media,
 		task_baixa_count: t.baixa,
 		task_atencao_count: t.atencao,
+
+		task_tipo_bug_count: t.tipo_bug,
+		task_tipo_melhoria_count: t.tipo_melhoria,
+		task_tipo_duvida_count: t.tipo_duvida,
+		task_tipo_outros_count: t.tipo_outros,
+		task_tipo_implementacao_count: t.tipo_implementacao,
 
 		selected_orgao: raw.selected_orgao
 	};

@@ -10,10 +10,23 @@
  */
 
 import type { Project, Task } from './entities';
+import type { TaskAssignee } from './tasks';
+
+/**
+ * Tarefa recente do Dashboard: card canônico + responsáveis vinculados
+ * (`assignees`) + indicadores de comentários/anexos (servidos por
+ * `_serialize_recent_task`/`serialize_task_card` no backend). Usado nas linhas de
+ * "Recentes" do painel de tarefas.
+ */
+export interface DashboardRecentTask extends Task {
+	assignees: TaskAssignee[];
+	comments_count: number;
+	anexos_count: number;
+}
 
 export interface DashboardData {
 	recent_projects: Project[];
-	recent_tasks: Task[];
+	recent_tasks: DashboardRecentTask[];
 
 	// Contadores de projeto (por prioridade / status / agregados)
 	count_urgente: number;
@@ -43,6 +56,13 @@ export interface DashboardData {
 	task_media_count: number;
 	task_baixa_count: number;
 	task_atencao_count: number;
+
+	// Tarefas em aberto por tipo de pedido (bloco "Por tipo")
+	task_tipo_bug_count: number;
+	task_tipo_melhoria_count: number;
+	task_tipo_duvida_count: number;
+	task_tipo_outros_count: number;
+	task_tipo_implementacao_count: number;
 
 	selected_orgao: number | null;
 }

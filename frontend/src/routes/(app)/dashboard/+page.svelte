@@ -18,6 +18,7 @@
 	import FolderFlip from '$lib/components/micro/FolderFlip.svelte';
 	import AlertHourglass from '$lib/components/micro/AlertHourglass.svelte';
 	import RecentProjectsPanel from '$lib/components/RecentProjectsPanel.svelte';
+	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -145,64 +146,94 @@
 	}
 
 	// --- Apresentacao do painel de tarefas (read-only) ---
-	// Larguras dos segmentos da barra empilhada, em %, derivadas dos contadores
-	// ja carregados (mesmo calculo do template Jinja: contagem/total * 100). E
-	// formatacao visual da barra de progresso, nao logica de dominio.
-	function pct(part: number, total: number): number {
-		if (total <= 0) return 0;
-		return Math.round((part / total) * 1000) / 10;
-	}
-	// Prioridades de tarefas em aberto (espelha `tasks-kpi-priority-row` do
-	// original): cada linha vira link para /tarefas filtrado por prioridade.
-	const taskPriorities = $derived.by(() => {
-		const d = data;
-		if (!d) return [] as { key: string; label: string; count: number; dot: string }[];
-		return [
-			{ key: 'urgente', label: 'Urgente', count: d.task_urgente_count, dot: 'bg-danger' },
-			{ key: 'alta', label: 'Alta', count: d.task_alta_count, dot: 'bg-orange' },
-			{ key: 'media', label: 'Média', count: d.task_media_count, dot: 'bg-primary-600' },
-			{ key: 'baixa', label: 'Baixa', count: d.task_baixa_count, dot: 'bg-text-muted' }
-		];
+	// Transposicao do mock "concept4": anel de % concluido + legenda por status,
+	// chips "Por tipo" e mini-lista de recentes (tipo/comentarios/anexos/avatar).
+	// Tudo derivado dos contadores ja carregados — sem logica de dominio nova.
+
+	// Anel de progresso (donut) RESPONSIVO: o SVG usa um viewBox em unidades fixas
+	// (`RING_VIEW`) e escala via CSS (largura em clamp + container queries para a
+	// fonte interna). Rotacionado -90deg para o 1o segmento comecar no topo.
+	const RING_VIEW = 100;
+	const RING_STROKE = 11;
+
+	// Ordem/rotulos/cores dos 5 status (cores = tokens semanticos -> dark mode ok).
+	const STATUS_ORDER = [
+		{ key: 'finalizada', label: 'Concluída', color: 'var(--ds-color-success-600)' },
+		{ key: 'em_andamento', label: 'Andamento', color: 'var(--ds-color-primary-600)' },
+		{ key: 'para_validacao', label: 'Validação', color: 'var(--ds-color-warning-600)' },
+		{ key: 'para_ajustes', label: 'Ajustes', color: 'var(--ds-color-orange-600)' },
+		{ key: 'nao_iniciada', label: 'Não iniciada', color: 'var(--color-text-muted)' }
+	] as const;
+
+	const statusCounts = $derived.by(() => ({
+		finalizada: data?.task_items_finalizada ?? 0,
+		em_andamento: data?.task_items_em_andamento ?? 0,
+		para_validacao: data?.task_items_para_validacao ?? 0,
+		para_ajustes: data?.task_items_para_ajustes ?? 0,
+		nao_iniciada: data?.task_items_nao_iniciada ?? 0
+	}));
+
+	const statusLegend = $derived(
+		STATUS_ORDER.map((s) => ({ ...s, count: statusCounts[s.key] }))
+	);
+
+	// % concluido (finalizada / total). 0 quando nao ha tarefas.
+	const donutPct = $derived.by(() => {
+		const total = data?.task_items_total ?? 0;
+		return total > 0 ? Math.round((statusCounts.finalizada / total) * 100) : 0;
 	});
 
-	// Cor da pilula de prioridade na mini-lista de recentes (espelha
-	// `tasks-kpi-recent-badge badge-*` do original; tons via tokens semanticos).
-	const taskBadgeClass: Record<string, string> = {
-		urgente: 'bg-surface-muted text-danger',
-		alta: 'bg-surface-muted text-orange',
-		media: 'bg-surface-muted text-primary-700',
-		baixa: 'bg-surface-muted text-success'
-	};
-
-	// Status do indicador de cada tarefa recente -> classe de cor do ponto.
-	const recentStatusDot: Record<string, string> = {
-		finalizada: 'bar-finalizada',
-		em_andamento: 'bar-em-andamento',
-		para_validacao: 'bar-para-validacao',
-		para_ajustes: 'bar-para-ajustes',
-		nao_iniciada: 'bar-nao-iniciada'
-	};
-
-	const statusBar = $derived.by(() => {
-		const d = data;
-		if (!d) return [] as { key: string; filter: string; label: string; count: number; width: number; bar: string }[];
-		const total = d.task_items_total;
-		const finalizada = pct(d.task_items_finalizada, total);
-		const andamento = pct(d.task_items_em_andamento, total);
-		const validacao = pct(d.task_items_para_validacao, total);
-		const ajustes = pct(d.task_items_para_ajustes, total);
-		const naoIniciada =
-			Math.round((100 - finalizada - andamento - validacao - ajustes) * 10) / 10;
-		// `filter` usa o valor de status do backend (com underscore) consumido
-		// por /tarefas; `key` (com hifen) e so a chave de iteracao/CSS.
-		return [
-			{ key: 'finalizada', filter: 'finalizada', label: 'Concluída', count: d.task_items_finalizada, width: finalizada, bar: 'bar-finalizada' },
-			{ key: 'em-andamento', filter: 'em_andamento', label: 'Andamento', count: d.task_items_em_andamento, width: andamento, bar: 'bar-em-andamento' },
-			{ key: 'para-validacao', filter: 'para_validacao', label: 'Validação', count: d.task_items_para_validacao, width: validacao, bar: 'bar-para-validacao' },
-			{ key: 'para-ajustes', filter: 'para_ajustes', label: 'Ajustes', count: d.task_items_para_ajustes, width: ajustes, bar: 'bar-para-ajustes' },
-			{ key: 'nao-iniciada', filter: 'nao_iniciada', label: 'N. iniciada', count: d.task_items_nao_iniciada, width: naoIniciada, bar: 'bar-nao-iniciada' }
-		];
+	// Segmentos do anel: comprimento/offset proporcionais a cada status (com um
+	// pequeno gap entre arcos). Segmentos vazios sao omitidos.
+	const ring = $derived.by(() => {
+		const total = data?.task_items_total ?? 0;
+		const r = (RING_VIEW - RING_STROKE) / 2;
+		const C = 2 * Math.PI * r;
+		const gap = 2;
+		const segs: { color: string; dash: string; offset: number }[] = [];
+		if (total > 0) {
+			let acc = 0;
+			for (const s of STATUS_ORDER) {
+				const n = statusCounts[s.key];
+				if (n > 0) {
+					const len = Math.max(0, (n / total) * C - gap);
+					segs.push({ color: s.color, dash: `${len} ${C}`, offset: -((acc / total) * C) });
+				}
+				acc += n;
+			}
+		}
+		return { r, C, segs };
 	});
+
+	// Metadados de tipo de pedido (icone FontAwesome + cor). `duvida` usa roxo
+	// literal (sem token dedicado no design system).
+	const TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
+		bug: { label: 'Bug', icon: 'fa-bug', color: 'var(--ds-color-danger-600)' },
+		melhoria: { label: 'Melhoria', icon: 'fa-arrow-up', color: 'var(--ds-color-warning-600)' },
+		duvida: { label: 'Dúvida', icon: 'fa-circle-question', color: '#7c3aed' },
+		outros: { label: 'Outros', icon: 'fa-ellipsis', color: 'var(--color-text-muted)' },
+		implementacao: { label: 'Implementação', icon: 'fa-code', color: 'var(--ds-color-primary-600)' }
+	};
+	const TYPE_ORDER = ['bug', 'melhoria', 'duvida', 'outros', 'implementacao'] as const;
+
+	// Chips "Por tipo": so os tipos com tarefas em aberto (count > 0).
+	const taskTypes = $derived.by(() => {
+		const d = data;
+		if (!d) return [] as { key: string; label: string; icon: string; color: string; count: number }[];
+		const counts: Record<string, number> = {
+			bug: d.task_tipo_bug_count,
+			melhoria: d.task_tipo_melhoria_count,
+			duvida: d.task_tipo_duvida_count,
+			outros: d.task_tipo_outros_count,
+			implementacao: d.task_tipo_implementacao_count
+		};
+		return TYPE_ORDER.filter((k) => counts[k] > 0).map((k) => ({
+			key: k,
+			...TYPE_META[k],
+			count: counts[k]
+		}));
+	});
+
 
 	// "Tarefas recentes" SEM scroll: a lista preenche a altura disponivel e
 	// mostra apenas os itens que cabem INTEIROS — telas maiores exibem mais,
@@ -388,101 +419,129 @@
 						</a>
 					{/snippet}
 
-					<div class="flex flex-col gap-5 lg:min-h-0 lg:flex-1">
-						<!-- Por prioridade: cada linha e um link para /tarefas filtrado
-							 (espelha os `tasks-kpi-priority-row` clicaveis do original). -->
-						<section class="flex flex-col gap-2 lg:shrink-0" aria-label="Tarefas por prioridade">
-							<div class="flex items-center justify-between">
-								<span class="text-sm font-bold text-text-secondary">Por prioridade</span>
-								<span class="text-xs font-semibold text-text-muted">{data.dashboard_open_tasks_count} abertas</span>
-							</div>
-							<div class="grid grid-cols-4 gap-1.5">
-								{#each taskPriorities as prio (prio.key)}
-									<a
-										href={`${base}/tarefas?prioridade=${prio.key}`}
-										class="flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface-muted px-2 py-1.5 no-underline transition-colors duration-fast hover:border-primary-500 hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-									>
-										<span class="h-2 w-2 shrink-0 rounded-full {prio.dot}" aria-hidden="true"></span>
-										<span class="min-w-0 flex-1 truncate text-xs font-semibold text-text-secondary">{prio.label}</span>
-										<span class="shrink-0 text-sm font-bold text-text-primary">{prio.count}</span>
-									</a>
-								{/each}
-							</div>
-						</section>
-
-						<!-- Por status: barra empilhada de progresso + legenda. Segmentos
-							 e itens de legenda sao links para /tarefas filtrado por status
-							 (espelha os segmentos clicaveis + tooltips do original). -->
-						<section class="flex flex-col gap-2 lg:shrink-0" aria-label="Tarefas por status">
-							<div class="flex items-center justify-between">
-								<span class="text-sm font-bold text-text-secondary">Por status</span>
-								<span class="text-xs font-semibold text-text-muted">{data.task_items_total} total</span>
-							</div>
-							<div
-								class="flex h-4 overflow-hidden rounded-sm border border-border-subtle bg-surface-muted"
-								role="group"
-								aria-label="Distribuição de tarefas por status"
-							>
-								{#if data.task_items_total > 0}
-									{#each statusBar as seg (seg.key)}
-										<a
-											href={`${base}/tarefas?status=${seg.filter}`}
-											class="status-seg block h-full {seg.bar}"
-											style="width: {seg.width}%"
-											title="{seg.label}: {seg.count}"
-											aria-label="Ver tarefas: {seg.label} ({seg.count})"
-										></a>
+					<div class="flex flex-col gap-4 lg:min-h-0 lg:flex-1">
+						<!-- Hero: anel de % concluido + total em aberto + legenda por status. -->
+						<section
+							class="dashboard-tasks-hero flex shrink-0 items-center gap-4 rounded-xl border border-border-subtle px-4 py-3"
+							aria-label="Resumo de tarefas por status"
+						>
+							<div class="dashboard-tasks-ring relative shrink-0">
+								<svg
+									viewBox="0 0 {RING_VIEW} {RING_VIEW}"
+									class="block h-full w-full -rotate-90"
+									aria-hidden="true"
+								>
+									<circle
+										cx={RING_VIEW / 2}
+										cy={RING_VIEW / 2}
+										r={ring.r}
+										fill="none"
+										stroke="var(--color-border)"
+										stroke-width={RING_STROKE - 2}
+									/>
+									{#each ring.segs as seg, i (i)}
+										<circle
+											cx={RING_VIEW / 2}
+											cy={RING_VIEW / 2}
+											r={ring.r}
+											fill="none"
+											stroke={seg.color}
+											stroke-width={RING_STROKE}
+											stroke-dasharray={seg.dash}
+											stroke-dashoffset={seg.offset}
+											stroke-linecap="butt"
+										/>
 									{/each}
-								{/if}
+								</svg>
+								<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center tabular-nums">
+									<div class="ring-pct font-heading font-bold leading-none text-text-primary">
+										{donutPct}<span class="ring-pct-sign font-semibold text-text-muted">%</span>
+									</div>
+									<div class="ring-label font-semibold uppercase tracking-caps text-text-muted">
+										Concluído
+									</div>
+								</div>
 							</div>
-							<ul class="flex flex-wrap gap-x-3 gap-y-1" aria-label="Legenda por status">
-								{#each statusBar as seg (seg.key)}
-									<li>
-										<a
-											href={`${base}/tarefas?status=${seg.filter}`}
-											class="inline-flex items-center gap-1 text-2xs font-medium text-text-secondary no-underline transition-colors duration-fast hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										>
-											<span class="h-2 w-2 shrink-0 rounded-full {seg.bar}" aria-hidden="true"></span>
-											{seg.label}
-										</a>
-									</li>
-								{/each}
-							</ul>
+							<div class="min-w-0 flex-1">
+								<div class="mb-1 flex items-baseline gap-1.5">
+									<span class="text-xl font-bold tabular-nums text-text-primary">{data.dashboard_open_tasks_count}</span>
+									<span class="text-xs text-text-muted">tarefas abertas</span>
+								</div>
+								<ul class="flex flex-col gap-0.5" aria-label="Legenda por status">
+									{#each statusLegend as s (s.key)}
+										<li class="flex items-center gap-2 leading-tight">
+											<span class="h-2 w-2 shrink-0 rounded-full" style="background: {s.color};" aria-hidden="true"></span>
+											<span class="min-w-0 flex-1 truncate text-xs text-text-secondary">{s.label}</span>
+											<span class="shrink-0 text-xs font-semibold tabular-nums text-text-primary">{s.count}</span>
+										</li>
+									{/each}
+								</ul>
+							</div>
 						</section>
 
-						<!-- Recentes: mini-lista das ultimas tarefas (espelha
-							 `tasks-kpi-recent-list` do original). SEM scroll: a lista tem
-							 overflow:hidden e `applyRecentFit` esconde (`tk-fit-hidden`) os
-							 itens que nao cabem inteiros — telas maiores mostram mais, menores
-							 mostram menos, identico a logica da v4.5. -->
+						<!-- Por tipo: chips (so tipos com tarefas em aberto). Link p/ /tarefas. -->
+						{#if taskTypes.length > 0}
+							<section class="flex shrink-0 flex-col gap-2" aria-label="Tarefas por tipo">
+								<span class="text-2xs font-semibold uppercase tracking-caps text-text-muted">Por tipo</span>
+								<div class="flex flex-wrap gap-1.5">
+									{#each taskTypes as ty (ty.key)}
+										<a
+											href={`${base}/tarefas?tipo=${ty.key}`}
+											class="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-xs font-semibold text-text-secondary no-underline transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										>
+											<i class="fas {ty.icon}" style="color: {ty.color};" aria-hidden="true"></i>
+											{ty.label}
+											<span class="text-2xs font-semibold tabular-nums text-text-muted">{ty.count}</span>
+										</a>
+									{/each}
+								</div>
+							</section>
+						{/if}
+
+						<!-- Recentes: mini-lista (tipo + titulo + projeto + comentarios/anexos +
+							 avatar do responsavel). SEM scroll: `applyRecentFit` esconde os itens
+							 que nao cabem inteiros — telas maiores mostram mais, menores menos. -->
 						{#if data.recent_tasks.length > 0}
 							<section class="flex flex-col gap-2 lg:min-h-0 lg:flex-1" aria-label="Tarefas recentes">
-								<span class="shrink-0 text-sm font-bold text-text-secondary">Recentes</span>
+								<span class="shrink-0 text-2xs font-semibold uppercase tracking-caps text-text-muted">Recentes</span>
 								<div
 									bind:this={recentListEl}
-									class="flex flex-col gap-0.5 overflow-hidden lg:min-h-0 lg:flex-1"
+									class="flex flex-col gap-1.5 overflow-hidden lg:min-h-0 lg:flex-1"
 								>
 									{#each data.recent_tasks as t (t.id)}
+										{@const meta = TYPE_META[t.tipo_pedido ?? '']}
 										<a
 											href={`${base}/tarefas?focus_task=${t.id}`}
 											title={t.descricao}
-											class="recent-task-item flex items-center gap-2 rounded-md border border-border-subtle px-2 py-1 no-underline transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="recent-task-item flex items-center gap-2.5 rounded-xl border border-border-subtle px-3 py-2 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 										>
 											<span
-												class="h-2 w-2 shrink-0 rounded-full {recentStatusDot[t.status] ?? 'bg-text-muted'}"
+												class="flex h-5 w-5 shrink-0 items-center justify-center"
+												style="color: {meta?.color ?? 'var(--color-text-muted)'};"
 												aria-hidden="true"
-											></span>
+											>
+												<i class="fas {meta?.icon ?? 'fa-circle-dot'}"></i>
+											</span>
 											<span class="flex min-w-0 flex-1 flex-col">
-												<span class="truncate text-xs font-medium text-text-primary">{t.descricao}</span>
-												<span class="truncate text-2xs text-text-muted">
-													{t.project_titulo ?? (t.project_id ? `Projeto #${t.project_id}` : 'Sem projeto vinculado')}
+												<span class="truncate text-sm font-semibold text-text-primary">{t.descricao}</span>
+												<span class="flex items-center gap-1.5 truncate text-2xs text-text-muted">
+													<span class="truncate">{t.project_titulo ?? (t.project_id ? `Projeto #${t.project_id}` : 'Sem projeto vinculado')}</span>
+													{#if t.comments_count > 0 || t.anexos_count > 0}
+														<span class="opacity-40">·</span>
+														{#if t.comments_count > 0}
+															<span class="inline-flex shrink-0 items-center gap-0.5"><i class="fas fa-comment" aria-hidden="true"></i>{t.comments_count}</span>
+														{/if}
+														{#if t.anexos_count > 0}
+															<span class="inline-flex shrink-0 items-center gap-0.5"><i class="fas fa-paperclip" aria-hidden="true"></i>{t.anexos_count}</span>
+														{/if}
+													{/if}
 												</span>
 											</span>
-											{#if t.prioridade}
-												<span
-													class="shrink-0 rounded-sm px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide {taskBadgeClass[t.prioridade] ?? 'bg-surface-muted text-text-secondary'}"
-												>
-													{t.prioridade}
+											{#if t.assignees.length > 0}
+												<span class="flex shrink-0 items-center -space-x-1.5">
+													{#each t.assignees.slice(0, 3) as a (a.id)}
+														<AssigneeAvatar name={a.name} initials={a.initials} size="sm" />
+													{/each}
 												</span>
 											{/if}
 										</a>
@@ -511,30 +570,30 @@
 </section>
 
 <style>
-	/* Cores dos segmentos da barra de status e dos pontos da legenda.
-	   Valores 1:1 do index.css original (.bar-* / status dots); mapeados aos
-	   tokens semanticos para trocarem sozinhos no dark mode. */
-	:global(.bar-finalizada) {
-		background-color: var(--ds-color-success-600);
-	}
-	:global(.bar-em-andamento) {
-		background-color: var(--ds-color-primary-600);
-	}
-	:global(.bar-para-validacao) {
-		background-color: var(--ds-color-warning-600);
-	}
-	:global(.bar-para-ajustes) {
-		background-color: var(--ds-color-orange-600);
-	}
-	:global(.bar-nao-iniciada) {
-		background-color: var(--color-text-muted);
+	/* Caixa "hero" do painel de tarefas (anel + legenda): gradiente sutil de
+	   surface-muted -> surface, como no mock concept4. Tokens => dark mode ok. */
+	.dashboard-tasks-hero {
+		background: linear-gradient(180deg, var(--color-surface-muted), var(--color-surface));
 	}
 
-	/* Animacao da barra empilhada: transicao de largura 0.4s ease, igual ao
-	   .tasks-kpi-bar-segment original. */
-	.status-seg {
-		min-width: 2px;
-		transition: width 0.4s ease;
+	/* Anel responsivo: largura acompanha a coluna (clamp), sempre quadrado. O
+	   `container-type` habilita unidades `cqw` para a fonte interna escalar junto
+	   com o anel — em vez de tamanhos fixos. */
+	.dashboard-tasks-ring {
+		width: clamp(80px, 30%, 128px);
+		aspect-ratio: 1 / 1;
+		container-type: inline-size;
+	}
+	.ring-pct {
+		font-size: 19cqw;
+	}
+	.ring-pct-sign {
+		font-size: 0.55em;
+	}
+	.ring-label {
+		margin-top: 3cqw;
+		font-size: 8cqw;
+		letter-spacing: 0.05em;
 	}
 
 	/* Itens de tarefas recentes que nao cabem inteiros na altura da lista sao

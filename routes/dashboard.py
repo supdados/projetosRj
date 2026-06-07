@@ -200,6 +200,28 @@ def build_dashboard_context(selected_orgao_id: Optional[int]) -> dict[str, Any]:
     task_baixa_count = count_open_tasks_by_priority("baixa")
     task_atencao_count = task_items_para_validacao + task_items_para_ajustes
 
+    def count_open_tasks_by_tipo(tipo_value):
+        q = (
+            db.session.query(db.func.count(Task.id))
+            .select_from(Task)
+            .filter(
+                Task.tipo_pedido == tipo_value,
+                Task.status != "finalizada",
+            )
+        )
+        q = apply_task_visibility_rules(q, include_archived=False)
+        return int(q.scalar() or 0)
+
+    # Contagem de tarefas EM ABERTO por tipo de pedido (mesmo critério das
+    # contagens por prioridade). Alimenta o bloco "Por tipo" do painel de tarefas
+    # do Dashboard (paridade com o mock concept4). `implementacao` é legado, mas
+    # contado para refletir bases antigas.
+    task_tipo_bug_count = count_open_tasks_by_tipo("bug")
+    task_tipo_melhoria_count = count_open_tasks_by_tipo("melhoria")
+    task_tipo_duvida_count = count_open_tasks_by_tipo("duvida")
+    task_tipo_outros_count = count_open_tasks_by_tipo("outros")
+    task_tipo_implementacao_count = count_open_tasks_by_tipo("implementacao")
+
     recent_tasks_q = Task.query.filter(Task.status != "finalizada")
     recent_tasks_q = apply_task_visibility_rules(recent_tasks_q, include_archived=False)
     recent_tasks = recent_tasks_q.order_by(Task.id.desc()).limit(9).all()
@@ -241,6 +263,11 @@ def build_dashboard_context(selected_orgao_id: Optional[int]) -> dict[str, Any]:
         "task_media_count": task_media_count,
         "task_baixa_count": task_baixa_count,
         "task_atencao_count": task_atencao_count,
+        "task_tipo_bug_count": task_tipo_bug_count,
+        "task_tipo_melhoria_count": task_tipo_melhoria_count,
+        "task_tipo_duvida_count": task_tipo_duvida_count,
+        "task_tipo_outros_count": task_tipo_outros_count,
+        "task_tipo_implementacao_count": task_tipo_implementacao_count,
         "recent_tasks": recent_tasks,
         "objetivos": objetivos,
         "selected_orgao": selected_orgao_id,
