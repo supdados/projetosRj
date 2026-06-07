@@ -76,27 +76,40 @@
 		</svg>
 	</button>
 	{#if connection.watch_expiring_soon}
-		<!-- Renovar watch — visivel apenas quando expira em breve (cal-btn-sm). -->
+		<!-- Renovar watch — icone-sino, visivel apenas quando expira em breve. -->
 		<button
 			type="button"
-			class="cal-btn-sm cal-btn-sm--warn"
+			class="cal-btn-icon cal-btn-icon--warn"
 			title={connection.watch_expiration_display
-				? `Watch expira em ${connection.watch_expiration_display}`
-				: 'Watch expira em breve'}
+				? `Renovar watch (expira em ${connection.watch_expiration_display})`
+				: 'Renovar watch (expira em breve)'}
+			aria-label="Renovar watch do Google Calendar"
 			disabled={busy}
 			onclick={onRenewWatch}
 		>
-			Renovar watch
+			<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+				<path d="M13.73 21a2 2 0 0 1-3.46 0" />
+			</svg>
 		</button>
 	{/if}
-	<!-- Desconectar (cal-btn-sm--subtle). -->
+	<!-- Desconectar — icone de elo partido (espelha o "Conectar"). -->
 	<button
 		type="button"
-		class="cal-btn-sm cal-btn-sm--subtle"
+		class="cal-btn-icon cal-btn-icon--danger"
+		title="Desconectar a conta Google Calendar"
+		aria-label="Desconectar a conta Google Calendar"
 		disabled={busy}
 		onclick={handleDisconnect}
 	>
-		Desconectar
+		<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+			<path d="M5.17 11.75l-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+			<line x1="8" y1="2" x2="8" y2="5" />
+			<line x1="2" y1="8" x2="5" y2="8" />
+			<line x1="16" y1="19" x2="16" y2="22" />
+			<line x1="19" y1="16" x2="22" y2="16" />
+		</svg>
 	</button>
 {:else if googleEnabled}
 	<!-- Conectar (cal-btn-sm) com icone de elo. -->
@@ -135,6 +148,25 @@
 		opacity: 0.5;
 		cursor: default;
 	}
+	/* Renovar watch: tom de alerta (so aparece quando o watch expira em breve). */
+	.cal-btn-icon--warn {
+		color: var(--ds-color-warning-600);
+		border-color: rgba(202, 138, 4, 0.3);
+	}
+	.cal-btn-icon--warn:hover:not(:disabled) {
+		background: rgba(202, 138, 4, 0.08);
+		color: var(--ds-color-warning-600);
+	}
+	/* Desconectar: tom de perigo, borda sutil ate o hover. */
+	.cal-btn-icon--danger {
+		color: var(--ds-color-danger-600);
+		border-color: transparent;
+	}
+	.cal-btn-icon--danger:hover:not(:disabled) {
+		border-color: rgba(220, 38, 38, 0.18);
+		background: rgba(220, 38, 38, 0.07);
+		color: var(--ds-color-danger-600);
+	}
 
 	.cal-btn-sm {
 		display: inline-flex;
@@ -160,21 +192,6 @@
 	.cal-btn-sm:disabled {
 		opacity: 0.5;
 		cursor: default;
-	}
-	.cal-btn-sm--subtle {
-		border-color: transparent;
-		color: var(--ds-color-danger-600);
-	}
-	.cal-btn-sm--subtle:hover:not(:disabled) {
-		border-color: rgba(220, 38, 38, 0.18);
-		background: rgba(220, 38, 38, 0.07);
-	}
-	.cal-btn-sm--warn {
-		color: var(--ds-color-warning-600);
-		border-color: rgba(202, 138, 4, 0.3);
-	}
-	.cal-btn-sm--warn:hover:not(:disabled) {
-		background: rgba(202, 138, 4, 0.08);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

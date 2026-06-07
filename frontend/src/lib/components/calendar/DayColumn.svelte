@@ -29,15 +29,32 @@
 	const positioned = $derived(layoutDayEvents(events, day, { startHour, endHour, pxPerHour }));
 	const todayCol = $derived(isToday(day));
 
+	/** Hora sob o cursor (faixa de pre-visualizacao do clique). `null` = sem hover. */
+	let hoverHour = $state<number | null>(null);
+
+	/** Hora cheia correspondente ao Y do mouse, clampada na faixa visivel. */
+	function hourAt(e: MouseEvent): number {
+		const target = e.currentTarget as HTMLElement;
+		const relY = e.clientY - target.getBoundingClientRect().top;
+		return Math.min(Math.max(Math.floor(relY / pxPerHour) + startHour, startHour), endHour - 1);
+	}
+
 	function handleColumnClick(e: MouseEvent) {
 		if (!onCreateAt) return;
-		const target = e.currentTarget as HTMLElement;
-		const rect = target.getBoundingClientRect();
-		const relY = e.clientY - rect.top;
 		// Snap na HORA CHEIA: o usuario refina o horario exato ao abrir o modal.
-		const hour = Math.min(Math.max(Math.floor(relY / pxPerHour) + startHour, startHour), endHour - 1);
+		const hour = hourAt(e);
 		const d = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0);
 		onCreateAt(d);
+	}
+
+	function handleColumnMouseMove(e: MouseEvent) {
+		if (!onCreateAt) return;
+		// Sobre um evento existente o clique seleciona (nao cria): sem previa.
+		if ((e.target as HTMLElement).closest('button')) {
+			hoverHour = null;
+			return;
+		}
+		hoverHour = hourAt(e);
 	}
 
 	// Ativacao por teclado nao tem coordenada Y: abre num horario padrao (9h,
@@ -72,6 +89,8 @@
 	role="gridcell"
 	aria-label={day.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
 	onclick={handleColumnClick}
+	onmousemove={handleColumnMouseMove}
+	onmouseleave={() => (hoverHour = null)}
 	onkeydown={(e) => {
 		if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
@@ -94,6 +113,17 @@
 			aria-hidden="true"
 		></div>
 	{/each}
+
+	<!-- Previa do clique: realca a faixa da hora cheia sob o cursor (paridade
+	     com o hover das celulas do mes). Fica atras dos eventos e nao captura
+	     o ponteiro, para nao interferir no clique/selecao. -->
+	{#if hoverHour !== null}
+		<div
+			class="pointer-events-none absolute inset-x-0 z-0 bg-primary-500/10 ring-1 ring-inset ring-primary-500/30"
+			style="top: {(hoverHour - startHour) * pxPerHour}px; height: {pxPerHour}px;"
+			aria-hidden="true"
+		></div>
+	{/if}
 
 	{#each positioned as p (p.ev.id)}
 		{@const colors = eventColorClasses(p.ev)}

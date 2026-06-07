@@ -65,7 +65,7 @@
 	O <main> da página é o único scroller.
 -->
 <div
-	class="w-full min-w-0 rounded-lg border border-border-subtle bg-surface text-text-primary"
+	class="cal-grid-card w-full min-w-0 rounded-lg border border-border-subtle bg-surface text-text-primary"
 	role="grid"
 	aria-label="Grade semanal de eventos"
 >

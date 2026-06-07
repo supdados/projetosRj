@@ -3,15 +3,14 @@
 	 * Tela "Calendario" — HUB completo (paridade v4.5).
 	 *
 	 * Reproduz o hub legado (templates/calendars + static/js/pages/calendars.js):
-	 *   - Header compacto: badge Google, navegacao de mes (so na visao calendario),
-	 *     toggle calendario/lista, acoes de conexao (sync/renovar/desconectar via
+	 *   - Header compacto: badge Google, navegacao de periodo, toggle de visao
+	 *     (dia/semana/mes), acoes de conexao (sync/renovar/desconectar via
 	 *     <CalendarConnectionBanner>) e botao "Novo evento".
-	 *   - Visao CALENDARIO: grade mensal com celulas, pilulas de evento de um dia,
+	 *   - Visao MES: grade mensal com celulas, pilulas de evento de um dia,
 	 *     barras de span (eventos multi-dia) sobrepostas em lanes, "+N mais" com
 	 *     densidade calculada pela altura disponivel da celula, popover do dia e
 	 *     popover de detalhe do evento (estilo Google).
-	 *   - Visao LISTA: eventos agrupados por dia, barra lateral por status de sync,
-	 *     acoes de editar/excluir no hover.
+	 *   - Visoes SEMANA/DIA: grade de horarios (time grid) com criacao por clique.
 	 *
 	 * O CRUD de evento e delegado ao <CalendarEventModal>; a pagina chama os
 	 * endpoints /api dedicados (lib/api/calendars.ts) e recarrega o hub. A geracao
@@ -41,12 +40,12 @@
 		CalendarHub,
 		CalendarMember
 	} from '$lib/types/calendar';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CalendarConnectionBanner from '$lib/components/CalendarConnectionBanner.svelte';
 	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import CalendarWeekGrid from '$lib/components/calendar/CalendarWeekGrid.svelte';
 	import CalendarRightPanel from '$lib/components/calendar/CalendarRightPanel.svelte';
-	import CalendarListView from '$lib/components/calendar/CalendarListView.svelte';
 	import {
 		startOfWeek,
 		fmtWeekRangeLabel,
@@ -55,7 +54,7 @@
 	} from '$lib/components/calendar/weekDates';
 
 	type LoadState = 'loading' | 'ready' | 'error';
-	type ViewMode = 'day' | 'week' | 'month' | 'list';
+	type ViewMode = 'day' | 'week' | 'month';
 
 	const MONTHS = [
 		'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -135,14 +134,10 @@
 	onMount(() => {
 		if (browser) {
 			const saved = localStorage.getItem('cal_view');
-			// Migra o valor legado 'calendar' -> 'month'; valida contra o set atual.
-			const migrated = saved === 'calendar' ? 'month' : saved;
-			if (
-				migrated === 'day' ||
-				migrated === 'week' ||
-				migrated === 'month' ||
-				migrated === 'list'
-			) {
+			// Migra valores legados ('calendar' e a visao 'list' descontinuada) -> 'month';
+			// valida contra o set atual.
+			const migrated = saved === 'calendar' || saved === 'list' ? 'month' : saved;
+			if (migrated === 'day' || migrated === 'week' || migrated === 'month') {
 				curView = migrated;
 			}
 		}
@@ -184,7 +179,7 @@
 		anchorDate = new Date();
 	}
 
-	// Navegacao do header adaptada a visao: mes (month/list), semana (week), dia (day).
+	// Navegacao do header adaptada a visao: mes (month), semana (week), dia (day).
 	function prevPeriod(): void {
 		closeDayPopover();
 		closeEventPopover();
@@ -209,7 +204,7 @@
 	}
 	function selectDay(date: Date): void {
 		anchorDate = date;
-		if (curView === 'month' || curView === 'list') switchView('week');
+		if (curView === 'month') switchView('week');
 	}
 
 	// Acoes do time-grid (Semana/Dia): abre o modal JA no horario clicado.
@@ -817,65 +812,55 @@
 <svelte:window onkeydown={onWindowKeydown} />
 
 <section class="cal-page" aria-labelledby="calendarios-title">
-	<h1 id="calendarios-title" class="sr-only">Calendario</h1>
+	<!--
+		Header padrao (PageHeader) — mesma identidade visual/altura das demais
+		telas. A toolbar do calendario (navegacao de periodo, toggle de visao,
+		acoes de conexao Google e "Novo evento") vive DENTRO das `actions`, e o
+		status Google vira uma pilula ao lado do titulo: integra-se ao header sem
+		empilhar uma linha extra de controles (sem expandir a altura da tela).
+	-->
+	<PageHeader subtitle="Eventos e reunioes da equipe" labelId="calendarios-title">
+		{#snippet titleContent()}
+			<span>Calendario</span>
+			{#if hub?.connection}
+				<span class="cal-google-badge cal-google-badge--on ml-2 align-middle">
+					<svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
+					Google
+				</span>
+			{:else if hub?.google_calendar_enabled}
+				<span class="cal-google-badge cal-google-badge--off ml-2 align-middle">
+					<svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
+					Google
+				</span>
+			{/if}
+		{/snippet}
+		{#snippet actions()}
+			{#if hub}
+				<div class="cal-toolbar">
+					<!-- Acoes de conexao Google (sync / renovar / desconectar) -->
+					<CalendarConnectionBanner
+						connection={hub.connection}
+						googleEnabled={hub.google_calendar_enabled}
+						onSync={handleSync}
+						onRenewWatch={handleRenewWatch}
+						onDisconnect={handleDisconnect}
+						busy={connectionBusy}
+					/>
+
+					<button class="cal-btn-new" type="button" onclick={() => openCreate()}>
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+						Novo evento
+					</button>
+				</div>
+			{/if}
+		{/snippet}
+	</PageHeader>
 
 	{#if loadState === 'loading'}
 		<p role="status" aria-live="polite" class="text-text-secondary">Carregando calendario…</p>
 	{:else if loadState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if hub}
-		<!-- ── Header compacto (cal-header) ─────────────────────────────── -->
-		<header class="cal-header">
-			{#if hub.connection}
-				<span class="cal-google-badge cal-google-badge--on">
-					<svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
-					Google
-				</span>
-			{:else if hub.google_calendar_enabled}
-				<span class="cal-google-badge cal-google-badge--off">
-					<svg width="6" height="6" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor" /></svg>
-					Google
-				</span>
-			{/if}
-
-			<div class="cal-month-nav">
-				<button class="cal-nav-btn" type="button" onclick={prevPeriod} title="Anterior" aria-label="Período anterior">
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-				</button>
-				<span class="cal-month-label">
-					{#if curView === 'week'}{weekRangeLabel}{:else if curView === 'day'}{dayLabel}{:else}{monthLabel}{/if}
-				</span>
-				<button class="cal-nav-btn" type="button" onclick={nextPeriod} title="Próximo" aria-label="Próximo período">
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-				</button>
-				<button class="cal-today-btn" type="button" onclick={goToToday}>Hoje</button>
-			</div>
-
-			<div class="cal-header-gap"></div>
-
-			<div class="cal-view-toggle" role="group" aria-label="Alternar visão">
-				<button class="cal-toggle-btn" class:is-active={curView === 'day'} type="button" aria-pressed={curView === 'day'} onclick={() => switchView('day')}>Dia</button>
-				<button class="cal-toggle-btn" class:is-active={curView === 'week'} type="button" aria-pressed={curView === 'week'} onclick={() => switchView('week')}>Semana</button>
-				<button class="cal-toggle-btn" class:is-active={curView === 'month'} type="button" aria-pressed={curView === 'month'} onclick={() => switchView('month')}>Mês</button>
-				<button class="cal-toggle-btn" class:is-active={curView === 'list'} type="button" aria-pressed={curView === 'list'} onclick={() => switchView('list')}>Lista</button>
-			</div>
-
-			<!-- Acoes de conexao Google (sync / renovar / desconectar) -->
-			<CalendarConnectionBanner
-				connection={hub.connection}
-				googleEnabled={hub.google_calendar_enabled}
-				onSync={handleSync}
-				onRenewWatch={handleRenewWatch}
-				onDisconnect={handleDisconnect}
-				busy={connectionBusy}
-			/>
-
-			<button class="cal-btn-new" type="button" onclick={() => openCreate()}>
-				<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-				Novo evento
-			</button>
-		</header>
-
 		{#if !hub.google_calendar_enabled}
 			<div class="cal-alert" role="alert">
 				<i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
@@ -897,11 +882,32 @@
 		<!-- ── Conteudo: visao ativa (centro) + painel direito ──────────── -->
 		<div class="cal-layout">
 			<div class="cal-main-col">
+			<!-- Seletor de datas: cabecalho preso ao topo do card do calendario
+			     (mes/semana/dia) — formam um unico item. -->
+			<div
+				class="cal-nav-bar"
+				class:cal-nav-bar--gutter={curView === 'week' || curView === 'day'}
+			>
+				<div class="cal-month-nav">
+					<button class="cal-nav-btn" type="button" onclick={prevPeriod} title="Anterior" aria-label="Período anterior">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+					</button>
+					<span class="cal-month-label">
+						{#if curView === 'week'}{weekRangeLabel}{:else if curView === 'day'}{dayLabel}{:else}{monthLabel}{/if}
+					</span>
+					<button class="cal-nav-btn" type="button" onclick={nextPeriod} title="Próximo" aria-label="Próximo período">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+					</button>
+				</div>
+				<!-- "Hoje" fora do fluxo: nao entra na centralizacao do seletor (so
+				     o grupo ‹ data › fica centralizado em relacao a coluna abaixo). -->
+				<button class="cal-today-btn cal-today-btn--float" type="button" onclick={goToToday}>Hoje</button>
+			</div>
 			{#if curView === 'week'}
 				<CalendarWeekGrid {weekStart} {events} onSelectEvent={openEdit} onCreateAt={openCreateAt} />
 			{:else if curView === 'day'}
 				<CalendarWeekGrid weekStart={anchorDate} days={[anchorDate]} {events} onSelectEvent={openEdit} onCreateAt={openCreateAt} />
-			{:else if curView === 'month'}
+			{:else}
 			<div class="cal-view cal-view--calendar is-active">
 				<div class="cal-grid-wrap">
 					<div class="cal-grid" style="grid-template-rows: {gridTemplateRows};">
@@ -997,23 +1003,28 @@
 					</div>
 				</div>
 			</div>
-		{:else}
-			<!-- Visao LISTA (redesenhada, sem barra lateral colorida) -->
-				<CalendarListView {events} onSelectEvent={openEdit} />
 			{/if}
 			</div>
-			<CalendarRightPanel
-				mode={miniMode}
-				{weekStart}
-				selectedDay={anchorDate}
-				month={miniMonthDate}
-				{events}
-				{members}
-				onSelectEvent={openEdit}
-				onSelectDay={selectDay}
-				onPrevMonth={miniPrevMonth}
-				onNextMonth={miniNextMonth}
-			/>
+			<div class="cal-side-col">
+				<!-- Toggle de visao acima do mini calendario (coluna direita). -->
+				<div class="cal-view-toggle" role="group" aria-label="Alternar visão">
+					<button class="cal-toggle-btn" class:is-active={curView === 'day'} type="button" aria-pressed={curView === 'day'} onclick={() => switchView('day')}>Dia</button>
+					<button class="cal-toggle-btn" class:is-active={curView === 'week'} type="button" aria-pressed={curView === 'week'} onclick={() => switchView('week')}>Semana</button>
+					<button class="cal-toggle-btn" class:is-active={curView === 'month'} type="button" aria-pressed={curView === 'month'} onclick={() => switchView('month')}>Mês</button>
+				</div>
+				<CalendarRightPanel
+					mode={miniMode}
+					{weekStart}
+					selectedDay={anchorDate}
+					month={miniMonthDate}
+					{events}
+					{members}
+					onSelectEvent={openEdit}
+					onSelectDay={selectDay}
+					onPrevMonth={miniPrevMonth}
+					onNextMonth={miniNextMonth}
+				/>
+			</div>
 		</div>
 	{/if}
 </section>
@@ -1193,16 +1204,17 @@
 		gap: 0.75rem;
 	}
 
-	/* ── Header ─────────────────────────────────────────────────────── */
-	.cal-header {
+	/* ── Toolbar (dentro das `actions` do PageHeader) ───────────────────
+	   Cluster de controles do calendario alinhado a direita do titulo. O
+	   flex-wrap mantem o respiro responsivo do header legado quando o espaco
+	   aperta, sem forcar uma linha extra de altura no caso comum (desktop). */
+	.cal-toolbar {
 		display: flex;
 		align-items: center;
+		justify-content: flex-end;
 		gap: 0.5rem;
 		flex-wrap: wrap;
 		min-width: 0;
-	}
-	.cal-header-gap {
-		flex: 1;
 	}
 	.cal-google-badge {
 		display: inline-flex;
@@ -1228,16 +1240,19 @@
 		border-color: var(--app-color-border);
 	}
 
-	/* ── View toggle ────────────────────────────────────────────────── */
+	/* ── View toggle ────────────────────────────────────────────────────
+	   Vive no topo da coluna direita (acima do mini calendario); ocupa a
+	   largura do painel, com os 4 botoes distribuidos igualmente. */
 	.cal-view-toggle {
 		display: flex;
+		width: 100%;
 		border: 1px solid var(--app-color-border);
 		border-radius: 0.45rem;
 		overflow: hidden;
 		background: var(--app-color-surface);
-		flex-shrink: 0;
 	}
 	.cal-toggle-btn {
+		flex: 1;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -1264,7 +1279,19 @@
 		flex: 1 1 0;
 		min-width: 0;
 	}
+	/* Coluna direita: toggle de visao + painel (mini calendario, eventos,
+	   equipe). Largura fixa = mesma do <aside> interno (lg:w-80 = 20rem). */
+	.cal-side-col {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		width: 20rem;
+		flex-shrink: 0;
+	}
 	@media (max-width: 1024px) {
+		.cal-side-col {
+			width: 100%;
+		}
 		.cal-layout {
 			flex-direction: column;
 		}
@@ -1363,7 +1390,33 @@
 		min-height: 42rem;
 	}
 
-	/* ── Month nav ──────────────────────────────────────────────────── */
+	/* ── Month nav ──────────────────────────────────────────────────────
+	   Cabecalho preso ao topo do card do calendario: mesma superficie/borda
+	   da grade, cantos arredondados so no topo e divisor inferior. A grade
+	   abaixo perde a borda/raio do topo (ver .cal-grid-wrap e .cal-grid-card),
+	   entao os dois leem como um UNICO card. */
+	.cal-nav-bar {
+		position: relative;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		padding: 0.5rem 0.75rem;
+		background: var(--app-color-surface);
+		border: 1px solid var(--app-color-border);
+		border-radius: 0.75rem 0.75rem 0 0;
+	}
+	/* Semana/dia: a grade tem uma coluna de horas a esquerda (w-14 = 3.5rem).
+	   Desloca o centro do seletor para alinhar com as colunas de DIAS (e nao
+	   com a largura total do card). 4.25rem = 0.75rem (padding base) + 3.5rem. */
+	.cal-nav-bar--gutter {
+		padding-left: 4.25rem;
+	}
+	/* Grade de semana/dia (CalendarWeekGrid): cola no cabecalho acima. */
+	.cal-main-col :global(.cal-grid-card) {
+		border-top: none;
+		border-top-left-radius: 0;
+		border-top-right-radius: 0;
+	}
 	.cal-month-nav {
 		display: flex;
 		align-items: center;
@@ -1383,7 +1436,7 @@
 		justify-content: center;
 		width: 1.9rem;
 		height: 1.9rem;
-		border-radius: 50%;
+		border-radius: 0.4rem;
 		border: 1px solid var(--app-color-border);
 		background: var(--app-color-surface);
 		color: var(--app-color-text-secondary);
@@ -1406,11 +1459,20 @@
 	.cal-today-btn:hover {
 		background: var(--app-color-surface-muted);
 	}
+	/* Fora do fluxo: ancorado a direita, sem deslocar o centro do seletor. */
+	.cal-today-btn--float {
+		position: absolute;
+		right: 0.75rem;
+		top: 50%;
+		transform: translateY(-50%);
+	}
 
 	/* ── Grid ───────────────────────────────────────────────────────── */
 	.cal-grid-wrap {
 		border: 1px solid var(--app-color-border);
-		border-radius: 0.75rem;
+		/* Cola no cabecalho .cal-nav-bar acima: sem borda/raio no topo. */
+		border-top: none;
+		border-radius: 0 0 0.75rem 0.75rem;
 		overflow: hidden;
 		background: var(--app-color-surface);
 		display: flex;
