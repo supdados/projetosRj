@@ -27,3 +27,6 @@ config/client_secret.json
 .claude/
 docs/
 CLAUDE.md
+
+# Arquivos temporarios de depuracao/probe na raiz (ex.: tmp_*_probe.html).
+/tmp_*
