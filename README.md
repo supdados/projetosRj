@@ -1,186 +1,119 @@
-# projetosRj
-código fonte para o gerenciador de projetos do estado do rio de janeiro.
+# ProjetosRJ
 
-Todos os caminhos deste README são relativos à raiz do repositório `projetosRj/`, e os comandos assumem execução dentro desse diretório.
+Gerenciador de projetos para órgãos do Estado do Rio de Janeiro — controle de
+projetos, etapas, tarefas, equipes e calendário, com login federado **Gov.br**.
 
-## Mapa rapido da pasta
+> _Project management app for agencies of the State of Rio de Janeiro — projects,
+> stages, tasks, teams and calendar, with **Gov.br** federated login._
 
-Arquivos que ficam na raiz:
-- `app.py`, `wsgi.py`: ponto de entrada da aplicação.
-- `models.py`, `time_utils.py`: base de dados e utilitários centrais.
-- `objective_catalog.py`, `abep_catalog.py`: catálogos canônicos usados pelo backend.
-- `README.md`, `requirements`, `requirements-dev.txt`: documentação e dependências.
+Licença / License: **Apache-2.0** · Autor / Author: **Junior Guimarães**
 
-Pastas principais:
-- `routes/`: rotas modulares da aplicação.
-- `scripts/`: utilitários operacionais, agora separados por domínio.
-- `docs/`: documentação e ativos de apoio, incluindo capturas em `docs/assets/capturas/`.
-- `templates/`, `static/`, `services/`, `tests/`, `migrations/`, `instance/`: camadas funcionais da app.
+---
 
-Detalhamento adicional:
-- `docs/estrutura-do-projeto.md`
+## 🇧🇷 Português
 
-## Catalogo de Objetivos, Resultados e Indicadores
+### Visão geral
+Aplicação web full-stack para acompanhamento de projetos públicos: hierarquia
+**Projeto → Etapa → Tarefa**, atribuição de responsáveis, comentários e anexos,
+quadro Kanban, dashboards, busca global e integração com **Google Calendar**.
+A autenticação usa **Gov.br (OpenID Connect)**.
 
-Este projeto agora usa um **catalogo canonico em codigo** para:
-- Objetivo
-- Resultado esperado
-- Indicadores
+> Projeto desenvolvido por iniciativa própria e posteriormente adotado no
+> ambiente de trabalho. Tokens e dados sensíveis nunca são versionados.
 
-### O que mudou
+### Stack
+- **Backend:** Python · Flask 3 · SQLAlchemy 2 · Flask-Migrate (Alembic) ·
+  MySQL (PyMySQL) · Flask-WTF (CSRF) · Flask-Limiter · `cryptography` · Gunicorn.
+- **Frontend (v5.0):** SvelteKit (Svelte 5) + Tailwind, compilado como SPA.
+- **Auth:** Gov.br OIDC · **Integrações:** Google Calendar.
+- **Testes:** `pytest` (backend) · `vitest` (frontend).
 
-1. As opcoes do formulario nao dependem mais de dados previamente inseridos no banco.
-2. As APIs de cascata usam o catalogo fixo:
-- `GET /api/resultados/<objetivo_id>`
-- `GET /api/indicadores/<resultado_id>`
-3. O backend valida combinacao de objetivo/resultado/indicadores antes de salvar.
-4. O banco continua com as tabelas relacionais, mas agora elas sao sincronizadas automaticamente com o catalogo.
+### Versões (branches)
+- **`main`** — versão em produção (Flask + templates Jinja).
+- **`v4.5`** — versão estável/homologação (refinamentos sobre a main).
+- **`v5.0`** — reescrita moderna: SPA em SvelteKit + API Flask (em evolução).
 
-### Sincronizacao automatica
-
-Na inicializacao da aplicacao (`app.py`):
-1. `db.create_all()` cria tabelas faltantes.
-2. `sync_goal_catalog_to_db()` faz upsert no catalogo (idempotente).
-
-Tambem existe sincronizacao na rota operacional:
-- `GET /setup_db`
-
-### Script para producao (MySQL) e local (SQLite)
-
-Arquivo:
-- `projetosRj/scripts/catalog/sync_objectives_catalog.py`
-
-Exemplos:
+### Como rodar (desenvolvimento)
 ```bash
-python3 scripts/catalog/sync_objectives_catalog.py
-python3 scripts/catalog/sync_objectives_catalog.py --dry-run
-python3 scripts/catalog/sync_objectives_catalog.py --skip-create-all
+# 1) Backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements -r requirements-dev.txt
+cp .env.example .env        # preencha as variáveis (veja .env.example)
+flask db upgrade            # aplica as migrações
+python app.py               # ou: gunicorn wsgi:app
+
+# 2) Frontend (apenas na v5.0)
+cd frontend
+npm install
+npm run build               # gera a SPA em static/spa/
+# durante o dev: npm run dev
 ```
 
-Comportamento:
-1. Usa o banco definido pelas variaveis de ambiente da app.
-2. Cria tabelas faltantes (a menos que `--skip-create-all`).
-3. Faz upsert do catalogo em `objetivo`, `resultado_esperado` e `indicador`.
-4. Nao remove registros extras existentes.
+### Variáveis de ambiente
+Todas estão documentadas em [`.env.example`](.env.example) (banco, `SECRET_KEY`,
+Gov.br OIDC, Google Calendar, rate limiting). Nenhum segredo real vai no repositório.
 
-### Ordem de configuracao de banco
-
-Definida em `app.py`:
-1. `DATABASE_URL` (prioridade maxima)
-2. MySQL via `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-3. SQLite local em `instance/projetosrj.db` (padrao local)
-
-## Novo campo: Indicadores ABEP
-
-Foi adicionado o campo `project.abep_indicator`:
-1. Aparece no formulario de criacao (`project_add_form`) com dropdown e busca por numero/titulo.
-2. Aparece no formulario de edicao (`project_form`) com dropdown e busca por numero/titulo.
-3. Aparece na tela de detalhe do projeto (inclusive edicao inline).
-4. Aparece como filtro na listagem de todos os projetos.
-
-Catalogo fixo:
-- `projetosRj/abep_catalog.py`
-
-Migracao para bancos existentes:
-- Script canonico: `python3 scripts/migrations/run_migrations.py`
-- Wrapper legado: `python3 scripts/migrations/migrate_add_abep_indicator.py`
-- O startup da app usa a mesma rotina canonica de compatibilidade.
-
-## Organizacao de rotas (modular)
-
-As rotas foram refatoradas para um pacote dedicado:
-- `projetosRj/routes/`
-
-Estrutura principal:
-- `routes/blueprint.py`: blueprint unico `main_bp` (mantem endpoints `main.*`).
-- `routes/decorators.py`: `login_required`, `admin_required`.
-- `routes/shared.py`: helpers/constantes compartilhadas e `inject_current_year`.
-- `routes/auth.py`: login/logout/home/senha.
-- `routes/dashboard.py`: dashboard.
-- `routes/search.py`: busca global (`/api/busca-global`, `/busca`) e helpers de busca.
-- `routes/projects.py`: projetos e historico de projeto.
-- `routes/etapas.py`: etapas e operacoes relacionadas.
-- `routes/tasks.py`: tarefas, itens e comentarios.
-- `routes/admin_users.py`: administracao de usuarios.
-- `routes/admin_templates.py`: modelos de etapas.
-- `routes/api.py`: APIs auxiliares (objetivo/resultado/indicador/templates/projetos usuario).
-- `routes/maintenance.py`: rotas operacionais (`/setup_db`, favicon).
-
-Ponto de entrada:
-- `routes/__init__.py` exporta `main_bp` e `inject_current_year` e importa os modulos para registrar as rotas.
-
-Compatibilidade:
-- URLs e endpoint names foram preservados.
-- `url_for('main.*')` continua igual.
-
-## Testes automatizados
-
-Dependencias de desenvolvimento:
-
+### Testes
 ```bash
-./.venv/bin/pip install -r requirements-dev.txt
+pytest                      # backend
+cd frontend && npm test     # frontend (vitest)
 ```
 
-Executar a suite de testes:
+---
 
+## 🇬🇧 English
+
+### Overview
+Full-stack web app to track public-sector projects: a **Project → Stage → Task**
+hierarchy with assignees, comments and attachments, a Kanban board, dashboards,
+global search and **Google Calendar** integration. Authentication uses
+**Gov.br (OpenID Connect)**.
+
+> Built on personal initiative and later adopted at work. Secrets and sensitive
+> data are never committed.
+
+### Stack
+- **Backend:** Python · Flask 3 · SQLAlchemy 2 · Flask-Migrate (Alembic) ·
+  MySQL (PyMySQL) · Flask-WTF (CSRF) · Flask-Limiter · `cryptography` · Gunicorn.
+- **Frontend (v5.0):** SvelteKit (Svelte 5) + Tailwind, built as an SPA.
+- **Auth:** Gov.br OIDC · **Integrations:** Google Calendar.
+- **Tests:** `pytest` (backend) · `vitest` (frontend).
+
+### Versions (branches)
+- **`main`** — production (Flask + Jinja templates).
+- **`v4.5`** — stable / staging (refinements over `main`).
+- **`v5.0`** — modern rewrite: SvelteKit SPA + Flask API (work in progress).
+
+### Running locally (development)
 ```bash
-./.venv/bin/python -m pytest -q
+# 1) Backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements -r requirements-dev.txt
+cp .env.example .env        # fill in the variables (see .env.example)
+flask db upgrade            # apply migrations
+python app.py               # or: gunicorn wsgi:app
+
+# 2) Frontend (v5.0 only)
+cd frontend
+npm install
+npm run build               # outputs the SPA to static/spa/
+# during dev: npm run dev
 ```
 
-A cobertura de rotas fica em:
-- `tests/routes/route_cases.py`: matriz unica com metodo+URL.
-- `tests/routes/test_routes_smoke.py`: smoke test por rota.
-- `tests/routes/test_routes_permissions.py`: cenarios de permissao.
-- `tests/routes/test_route_inventory.py`: garante 100% das rotas registradas cobertas na matriz.
+### Environment variables
+All documented in [`.env.example`](.env.example) (database, `SECRET_KEY`, Gov.br
+OIDC, Google Calendar, rate limiting). No real secrets are stored in the repo.
 
-## Seed fake (dados para visualizacao)
-
-Script:
-- `projetosRj/scripts/seed_fake_data.py`
-
-Execucao padrao (reseta e recria o banco atual):
-
+### Tests
 ```bash
-./scripts/seed_fake_data.py --yes
+pytest                      # backend
+cd frontend && npm test     # frontend (vitest)
 ```
 
-Padrao de volume:
-- 100 projetos
-- 5 etapas por projeto
-- 2 tarefas por projeto
-- 4 itens por tarefa
-- 1 comentario por item
+---
 
-Exemplo com volume customizado:
+## Licença / License
+Distribuído sob a licença **Apache-2.0** — veja [`LICENSE`](LICENSE).
+_Distributed under the **Apache-2.0** license — see [`LICENSE`](LICENSE)._
 
-```bash
-./scripts/seed_fake_data.py \
-  --yes \
-  --projects 150 \
-  --stages-per-project 6 \
-  --tasks-per-project 3 \
-  --items-per-task 4 \
-  --comments-per-item 1
-```
-
-## Scripts operacionais
-
-- Criar admin: `python3 scripts/admin/gerar_senha.py`
-- Sincronizar catalogo: `python3 scripts/catalog/sync_objectives_catalog.py`
-- Migracao canonica (SQLite e MySQL): `python3 scripts/migrations/run_migrations.py`
-- Wrapper legado ABEP: `python3 scripts/migrations/migrate_add_abep_indicator.py`
-- Wrapper legado producao MySQL: `python3 scripts/migrations/migrate_production.py`
-- Wrapper legado unificacao de tarefas: `./scripts/migrations/migration_unificacao_tarefas`
-
-### Ordem oficial de migracao
-
-O repositorio agora considera um unico fluxo oficial:
-1. `scripts/migrations/run_migrations.py`
-
-Esse script, em ordem, faz:
-1. Migra `user.area_responsavel` para `user_areas` quando a coluna legada existe.
-2. Garante tabelas e colunas modernas de `project`, `etapa` e `project_history`.
-3. Unifica qualquer banco misto com `task_item*` para o modelo final `task/task_comment/task_anexo/legacy_task_redirect`.
-4. Normaliza os status de tarefa para `nao_iniciada`, `em_andamento`, `para_validacao`, `para_ajustes`, `finalizada`.
-5. Sincroniza os catalogos canonicos de objetivos e areas.
-6. Em MySQL, marca `alembic_version` no head atual apos convergir o schema.
+© 2026 Junior Guimarães
