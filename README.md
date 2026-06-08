@@ -6,7 +6,7 @@ projetos, etapas, tarefas, equipes e calendário, com login federado **Gov.br**.
 > _Project management app for agencies of the State of Rio de Janeiro — projects,
 > stages, tasks, teams and calendar, with **Gov.br** federated login._
 
-Licença / License: **Apache-2.0** · Autor / Author: **Junior Guimarães**
+Licença / License: **Apache-2.0** · Autor / Author: **José Hudson de Oliveira Guimarães Junior** (@jhogj)
 
 ---
 
@@ -17,9 +17,6 @@ Aplicação web full-stack para acompanhamento de projetos públicos: hierarquia
 **Projeto → Etapa → Tarefa**, atribuição de responsáveis, comentários e anexos,
 quadro Kanban, dashboards, busca global e integração com **Google Calendar**.
 A autenticação usa **Gov.br (OpenID Connect)**.
-
-> Projeto desenvolvido por iniciativa própria e posteriormente adotado no
-> ambiente de trabalho. Tokens e dados sensíveis nunca são versionados.
 
 ### Stack
 - **Backend:** Python · Flask 3 · SQLAlchemy 2 · Flask-Migrate (Alembic) ·
@@ -69,9 +66,6 @@ hierarchy with assignees, comments and attachments, a Kanban board, dashboards,
 global search and **Google Calendar** integration. Authentication uses
 **Gov.br (OpenID Connect)**.
 
-> Built on personal initiative and later adopted at work. Secrets and sensitive
-> data are never committed.
-
 ### Stack
 - **Backend:** Python · Flask 3 · SQLAlchemy 2 · Flask-Migrate (Alembic) ·
   MySQL (PyMySQL) · Flask-WTF (CSRF) · Flask-Limiter · `cryptography` · Gunicorn.
@@ -116,4 +110,4 @@ cd frontend && npm test     # frontend (vitest)
 Distribuído sob a licença **Apache-2.0** — veja [`LICENSE`](LICENSE).
 _Distributed under the **Apache-2.0** license — see [`LICENSE`](LICENSE)._
 
-© 2026 Junior Guimarães
+© 2026 José Hudson de Oliveira Guimarães Junior
