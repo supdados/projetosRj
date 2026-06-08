@@ -21,3 +21,9 @@ config/client_secret.json
 # Output do build da SPA SvelteKit (regenerar com: cd frontend && npm run build).
 # A fonte fica em frontend/; este diretorio e gerado e nao deve ser versionado.
 static/spa/
+
+# Segredos e dumps de banco — NUNCA versionar (auditoria de seguranca 2026-06).
+# client_secret.json na raiz, dumps SQL e arquivos SQLite (instance/ ja coberto acima).
+/client_secret.json
+*.sql
+*.db
