@@ -27,3 +27,8 @@ static/spa/
 /client_secret.json
 *.sql
 *.db
+
+# Config/sessao do Claude Code, documentacao interna e instrucoes — fora do repo publico.
+.claude/
+docs/
+CLAUDE.md
