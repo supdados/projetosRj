@@ -16,3 +16,9 @@ migrations/versions/*
 !migrations/versions/7c1d9e4a2b3f_add_caderno_note_attachments.py
 instance/
 config/client_secret.json
+
+# Segredos e dumps de banco — NUNCA versionar (auditoria de seguranca 2026-06).
+# client_secret.json na raiz, dumps SQL e arquivos SQLite (instance/ ja coberto acima).
+/client_secret.json
+*.sql
+*.db
