@@ -3,27 +3,26 @@
 	 * Modal "Criar Novo Projeto" (Quick Create) — paridade fiel com o modal
 	 * Bootstrap `templates/projects/add_form.html` + `add_form_js.html`.
 	 *
-	 * Replica:
-	 *   - modal grande com seção rápida (título*, área responsável, prioridade,
-	 *     descrição, órgão) + accordion de 4 seções colapsáveis (Classificação,
-	 *     Objetivos/resultados/indicadores, Links e Observação, Modelo de Etapas);
+	 * Estrutura: ACORDEÃO multi-seção (estilo "Account Setup"). Todas as 5 seções
+	 * ficam visíveis numa lista; cada uma é expansível/colapsável de forma
+	 * independente (progressive disclosure — múltiplas abertas ao mesmo tempo).
+	 * Cada header traz ícone circular + título + tooltip (i) + descrição + pill de
+	 * status + chevron; ao expandir revela um cartão com linhas "ícone+label | input".
+	 *
+	 * Replica (lógica de negócio preservada do wizard anterior):
+	 *   - seção Principal (título*, área*, prioridade, descrição, órgão texto);
 	 *   - combobox ABEP filtrável com navegação por teclado (Arrow/Enter/Escape);
-	 *   - cascata objetivo→resultado→indicadores via `/api/resultados`/`indicadores`
-	 *     legados, com animação escalonada (índice·100ms) e LIMITE de 4 indicadores
-	 *     (alerta de flash 'Você pode selecionar no máximo 4 indicadores');
+	 *   - cascata objetivo→resultado→indicadores com animação escalonada (índice·100ms)
+	 *     e LIMITE de 4 indicadores ('Você pode selecionar no máximo 4 indicadores');
 	 *   - máscara SEI on-input ('SEI-000000/000000/0000');
-	 *   - import de modelo com preview read-only e cálculo de datas no client
-	 *     (dias corridos, mesmo algoritmo de `renderTemplateImportPreview`);
+	 *   - import de modelo com preview read-only e cálculo de datas no client;
 	 *   - botão "Criar Projeto" desabilitado até título + área válidos.
 	 *
 	 * Submit: `POST /api/projetos` (via `createProject`). Em sucesso o COMPONENTE
-	 * NÃO navega nem mostra flash — emite `onCreated(result)` e a página decide
-	 * (showFlash + goto), replicando o flash success + redirect do Jinja. Em erro,
-	 * exibe a mensagem do envelope como flash danger/warning (sem fechar o modal).
-	 *
-	 * NÃO há som/confete (o fluxo Jinja não tem).
+	 * NÃO navega nem mostra flash — emite `onCreated(result)`. Em erro, exibe a
+	 * mensagem do envelope como flash danger/warning (sem fechar o modal).
 	 */
-	import { tick } from 'svelte';
+	import { tick, untrack, onDestroy } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import {
 		createProject,
@@ -78,7 +77,63 @@
 	];
 	const MAX_INDICADORES = 4;
 
-	// --- Campos da seção rápida -------------------------------------------
+	/**
+	 * As 5 seções do acordeão (mesmos grupos do wizard anterior). Só a Principal
+	 * é obrigatória; pode-se SALVAR a qualquer momento (canSubmit). `tooltip` e
+	 * `description` alimentam o ícone (i) e a linha de subtítulo do header.
+	 */
+	interface SectionDef {
+		id: string;
+		title: string;
+		icon: string;
+		optional: boolean;
+		tooltip: string;
+		description: string;
+	}
+	const SECTIONS: SectionDef[] = [
+		{
+			id: 'principal',
+			title: 'Principal',
+			icon: 'fa-circle-info',
+			optional: false,
+			tooltip: 'Título e área são obrigatórios para criar o projeto.',
+			description: 'Dados básicos do projeto.'
+		},
+		{
+			id: 'classificacao',
+			title: 'Classificação',
+			icon: 'fa-sliders',
+			optional: true,
+			tooltip: 'Categorize o tipo de entrega e marque se é projeto especial (ABEP/TCE).',
+			description: 'Tipo de entrega e projetos especiais.'
+		},
+		{
+			id: 'objetivos',
+			title: 'Objetivos, resultados e indicadores',
+			icon: 'fa-bullseye',
+			optional: true,
+			tooltip: 'Vincule ao planejamento EEGD e selecione até 4 indicadores.',
+			description: 'Vínculo EEGD e indicadores ABEP.'
+		},
+		{
+			id: 'links',
+			title: 'Links e observações',
+			icon: 'fa-link',
+			optional: true,
+			tooltip: 'Processo SEI, repositórios e anotações detalhadas.',
+			description: 'Processo SEI, links e observações.'
+		},
+		{
+			id: 'etapas',
+			title: 'Modelo de etapas',
+			icon: 'fa-layer-group',
+			optional: true,
+			tooltip: 'Importe um modelo de etapas e defina a data de início.',
+			description: 'Cronograma a partir de um modelo.'
+		}
+	];
+
+	// --- Campos da seção Principal ----------------------------------------
 	let titulo = $state('');
 	let orgaoId = $state('');
 	let prioridade = $state('baixa');
@@ -100,6 +155,15 @@
 	let selectedIndicadores = $state<number[]>([]);
 	// IDs já revelados pela animação escalonada (animate-in).
 	let revealedIndicadores = $state<Set<number>>(new Set());
+	// Timers pendentes do reveal escalonado — limpos a cada nova cascata/reset/close
+	// para não reativar IDs obsoletos numa lista nova (ou escrever estado após
+	// desmontar). Ver onResultadoChange / clearRevealTimers.
+	let revealTimers: ReturnType<typeof setTimeout>[] = [];
+
+	function clearRevealTimers(): void {
+		revealTimers.forEach(clearTimeout);
+		revealTimers = [];
+	}
 
 	// --- ABEP combobox -----------------------------------------------------
 	let abepValue = $state(''); // value canônico (hidden)
@@ -126,25 +190,31 @@
 	let submitting = $state(false);
 	let catalogsLoaded = $state(false);
 	let titleInputEl = $state<HTMLInputElement | null>(null);
+	let dialogEl = $state<HTMLElement | null>(null); // container role=dialog (focus trap)
+	let triedSubmit = $state(false); // marca erro da seção Principal só após tentativa
+	let reduceMotion = $state(false); // espelha prefers-reduced-motion (p/ fly do modal)
 
-	// --- Wizard (passo a passo) -------------------------------------------
-	// Os 5 passos do formulario (mesmos grupos do acordeao anterior). So o
-	// Principal e obrigatorio; pode-se SALVAR a qualquer momento (canSubmit).
-	const WIZARD_STEPS = [
-		{ id: 'principal', label: 'Principal', title: 'Principal', icon: 'fa-circle-info', optional: false },
-		{ id: 'classificacao', label: 'Classificação', title: 'Classificação', icon: 'fa-sliders-h', optional: true },
-		{ id: 'objetivos', label: 'Objetivos', title: 'Objetivos, resultados e indicadores', icon: 'fa-bullseye', optional: true },
-		{ id: 'links', label: 'Links', title: 'Links e observações', icon: 'fa-link', optional: true },
-		{ id: 'etapas', label: 'Etapas', title: 'Modelo de etapas', icon: 'fa-layer-group', optional: true }
-	];
-	let currentStep = $state(0); // indice 0..4
-	let stepDirection = $state(1); // 1 = avancar, -1 = voltar (sentido do slide)
-	let triedSubmit = $state(false); // marca erro do passo 1 so apos tentativa
-	let stepHeadingEl = $state<HTMLHeadingElement | null>(null);
-	let contentH = $state(0); // altura medida do conteudo do passo (p/ animar o resize)
-	let measured = $state(false); // libera a transicao de altura so apos a medicao inicial
-	let winH = $state(900); // altura da viewport (p/ teto do corpo)
-	const maxBodyPx = $derived(Math.max(240, winH - 220)); // reserva header+footer
+	// --- Acordeão: seções abertas ------------------------------------------
+	// Múltiplas seções podem estar abertas simultaneamente (progressive
+	// disclosure). Principal aberta por padrão. O Set é SEMPRE reatribuído
+	// (nunca mutado in-place) para a reatividade de runes funcionar.
+	let openSections = $state<Set<string>>(new Set(['principal']));
+
+	function isOpen(id: string): boolean {
+		return openSections.has(id);
+	}
+
+	function toggleSection(id: string): void {
+		const next = new Set(openSections);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		openSections = next;
+	}
+
+	function openSection(id: string): void {
+		if (openSections.has(id)) return;
+		openSections = new Set([...openSections, id]);
+	}
 
 	const orgaoOptions = $derived<OrgaoOption[]>(options?.orgaos_options ?? []);
 	const abepOptions = $derived<AbepIndicadorOption[]>(
@@ -169,21 +239,51 @@
 	});
 
 	// Ao abrir: reseta o formulário, carrega catálogos uma vez e foca o título.
+	// IMPORTANTE: o reset é disparado SÓ na transição fechado→aberto. Em Svelte 5
+	// um $effect rastreia toda leitura reativa síncrona, inclusive dentro de
+	// funções chamadas — e resetForm() lê `options`. Sem o gate + untrack, uma
+	// atualização assíncrona de `options` (carga/refresh) com o modal aberto
+	// re-disparava o efeito e apagava os dados já digitados (perda de dados).
+	let wasOpen = false;
+	let openerEl: HTMLElement | null = null;
 	$effect(() => {
-		if (open) {
-			resetForm();
-			void loadCatalogs();
-			// A altura do passo e medida no mount; so habilitamos a transicao DEPOIS
-			// (senao o modal "cresceria" de 0 ao abrir). Step changes ai sim animam.
-			measured = false;
-			void tick().then(() => {
-				titleInputEl?.focus();
-				setTimeout(() => (measured = true), 80);
+		const isNowOpen = open;
+		if (isNowOpen && !wasOpen) {
+			openerEl = (document.activeElement as HTMLElement | null) ?? null;
+			untrack(() => {
+				resetForm();
+				void loadCatalogs();
 			});
+			void tick().then(() => titleInputEl?.focus());
+		}
+		wasOpen = isNowOpen;
+	});
+
+	// Quando há EXATAMENTE um órgão disponível, pré-seleciona-o assim que as opções
+	// chegarem — inclusive de forma ASSÍNCRONA com o modal já aberto (ex.: deep-link
+	// /projetos?new=1 que abre o modal ANTES de `options` carregar). Sem isto, o
+	// untrack do efeito de abertura faz o `resetForm` (com options vazio) deixar
+	// `orgaoId=''` para sempre, e o input de órgão único (desabilitado) impediria
+	// `canSubmit`. Efeito ESTREITO de propósito: só preenche `orgaoId` quando está
+	// vazio e há 1 opção — NÃO re-roda resetForm nem apaga dados já digitados.
+	$effect(() => {
+		if (open && orgaoOptions.length === 1 && orgaoId === '') {
+			orgaoId = orgaoOptions[0].value;
 		}
 	});
 
+	// Lê prefers-reduced-motion uma vez (e observa mudanças) p/ condicionar o fly.
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+		reduceMotion = mq.matches;
+		const onChange = (e: MediaQueryListEvent) => (reduceMotion = e.matches);
+		mq.addEventListener('change', onChange);
+		return () => mq.removeEventListener('change', onChange);
+	});
+
 	function resetForm(): void {
+		clearRevealTimers();
 		titulo = '';
 		// Pré-seleciona quando há um único órgão disponível (paridade Jinja).
 		const opts = options?.orgaos_options ?? [];
@@ -212,8 +312,7 @@
 		templateId = '';
 		templateStages = [];
 		startDate = '';
-		currentStep = 0;
-		stepDirection = 1;
+		openSections = new Set(['principal']);
 		triedSubmit = false;
 	}
 
@@ -237,6 +336,7 @@
 	// --- Cascata objetivo → resultado → indicadores ------------------------
 
 	async function onObjetivoChange(): Promise<void> {
+		clearRevealTimers();
 		resultadoId = '';
 		resultados = [];
 		indicadores = [];
@@ -254,6 +354,7 @@
 	}
 
 	async function onResultadoChange(): Promise<void> {
+		clearRevealTimers();
 		indicadores = [];
 		selectedIndicadores = [];
 		revealedIndicadores = new Set();
@@ -262,13 +363,20 @@
 		try {
 			const data = await fetchIndicadores(resultadoId);
 			indicadores = data;
-			// Animação escalonada (animate-in): revela cada item a cada 100ms.
-			revealedIndicadores = new Set();
-			data.forEach((ind, index) => {
-				setTimeout(() => {
-					revealedIndicadores = new Set([...revealedIndicadores, ind.id]);
-				}, index * 100);
-			});
+			if (reduceMotion) {
+				// prefers-reduced-motion: revela todos de uma vez (sem stagger).
+				revealedIndicadores = new Set(data.map((ind) => ind.id));
+			} else {
+				// Animação escalonada (animate-in): revela cada item a cada 100ms.
+				revealedIndicadores = new Set();
+				data.forEach((ind, index) => {
+					revealTimers.push(
+						setTimeout(() => {
+							revealedIndicadores = new Set([...revealedIndicadores, ind.id]);
+						}, index * 100)
+					);
+				});
+			}
 		} catch {
 			indicadores = [];
 		} finally {
@@ -442,13 +550,15 @@
 		return formatBrDate(lastEnd);
 	});
 
-	// --- Wizard: navegacao e estado dos passos -----------------------------
+	// --- Status das seções (pills) -----------------------------------------
 
-	// Erro so no passo 1 (titulo/orgao) e so apos tentar salvar invalido.
+	type SectionStatus = 'incompleto' | 'progresso' | 'completo';
+
+	// Erro só na seção Principal (título/órgão) e só após tentar salvar inválido.
 	const step1HasError = $derived(triedSubmit && (!titulo.trim() || !orgaoId.trim()));
 
-	// "Preenchido" (check no stepper): heuristica leve por passo.
-	function isStepFilled(index: number): boolean {
+	// "Preenchido" (status completo): heurística leve por seção.
+	function sectionFilled(index: number): boolean {
 		if (index === 0) return titulo.trim().length > 0 && orgaoId.trim().length > 0;
 		if (index === 1) return Boolean(deliveryType || specialProject);
 		if (index === 2)
@@ -460,46 +570,61 @@
 		return Boolean(templateId || startDate);
 	}
 
-	async function goTo(index: number): Promise<void> {
-		if (index === currentStep) return;
-		stepDirection = index > currentStep ? 1 : -1;
-		currentStep = index;
-		await tick();
-		stepHeadingEl?.focus(); // foco no heading do novo passo
-	}
-	function nextStep(): void {
-		if (currentStep < WIZARD_STEPS.length - 1) void goTo(currentStep + 1);
-	}
-	function prevStep(): void {
-		if (currentStep > 0) void goTo(currentStep - 1);
+	function sectionStatus(index: number): SectionStatus {
+		if (index === 0) {
+			const hasTitulo = titulo.trim().length > 0;
+			const hasArea = orgaoId.trim().length > 0;
+			if (hasTitulo && hasArea) return 'completo';
+			if (hasTitulo || hasArea) return 'progresso';
+			return 'incompleto';
+		}
+		// Seções opcionais: vazio => incompleto; algum campo => completo.
+		return sectionFilled(index) ? 'completo' : 'incompleto';
 	}
 
-	// Wrapper do submit: se invalido, leva ao passo 1 e foca o campo faltante.
+	function pillLabel(s: SectionStatus, errored: boolean): string {
+		if (errored) return 'Revisar';
+		return s === 'completo' ? 'Completo' : s === 'progresso' ? 'Em progresso' : 'Pendente';
+	}
+	function pillClass(s: SectionStatus, errored: boolean): string {
+		// Pills da referência são TEXTO PURO (sem ícone, sem chip no estado neutro).
+		const base =
+			'inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-2xs font-semibold uppercase tracking-wide';
+		if (errored) return `${base} text-danger bg-danger/15`;
+		if (s === 'completo') return `${base} text-success bg-success/15`;
+		if (s === 'progresso') return `${base} text-warning bg-warning/15`;
+		// "Pendente"/Incomplete: só texto cinza, sem background (espelha o mockup).
+		return `${base} text-text-muted`;
+	}
+
+	// --- Submit ------------------------------------------------------------
+
+	// Wrapper do submit: se inválido, abre a seção Principal e foca o campo faltante.
 	async function trySubmit(): Promise<void> {
 		if (!canSubmit) {
 			triedSubmit = true;
-			if (currentStep !== 0) await goTo(0);
+			openSection('principal');
 			await tick();
-			(!titulo.trim()
+			const target = !titulo.trim()
 				? titleInputEl
-				: (document.getElementById('cp-orgao-id') as HTMLElement | null)
-			)?.focus();
+				: (document.getElementById('cp-orgao-id') as HTMLElement | null);
+			target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+			target?.focus();
 			return;
 		}
 		await submit();
 	}
 
-	// Esc fecha; Ctrl/Cmd+Enter salva de qualquer passo.
+	// Esc fecha; Ctrl/Cmd+Enter salva de qualquer seção.
 	function onModalKeydown(event: KeyboardEvent): void {
 		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
 			event.preventDefault();
 			void trySubmit();
 			return;
 		}
+		trapFocus(event);
 		onBackdropKeydown(event);
 	}
-
-	// --- Submit ------------------------------------------------------------
 
 	async function submit(): Promise<void> {
 		if (!canSubmit) return;
@@ -548,99 +673,97 @@
 	function onBackdropKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape' && !submitting) {
 			event.preventDefault();
-			onClose();
+			requestClose();
+		}
+	}
+
+	// Fecha o modal restaurando o foco ao elemento que o abriu (APG dialog).
+	function requestClose(): void {
+		const opener = openerEl;
+		onClose();
+		void tick().then(() => opener?.focus?.());
+	}
+
+	onDestroy(clearRevealTimers);
+
+	/** Focáveis dentro do dialog, em ordem de tabulação. */
+	function focusableElements(): HTMLElement[] {
+		if (!dialogEl) return [];
+		const nodes = dialogEl.querySelectorAll<HTMLElement>(
+			'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+		);
+		// Ignora os que estão em painéis colapsados (inert) ou ocultos.
+		return Array.from(nodes).filter(
+			(el) => !el.closest('[inert]') && el.offsetParent !== null
+		);
+	}
+
+	// Focus trap: Tab/Shift+Tab fazem wrap entre o primeiro e o último focável,
+	// contendo o foco físico do teclado dentro do dialog (aria-modal sozinho só
+	// informa o leitor de tela, não contém o foco).
+	function trapFocus(event: KeyboardEvent): void {
+		if (event.key !== 'Tab') return;
+		const focusables = focusableElements();
+		if (focusables.length === 0) return;
+		const first = focusables[0];
+		const last = focusables[focusables.length - 1];
+		const active = document.activeElement as HTMLElement | null;
+		if (event.shiftKey) {
+			if (active === first || !dialogEl?.contains(active)) {
+				event.preventDefault();
+				last.focus();
+			}
+		} else if (active === last) {
+			event.preventDefault();
+			first.focus();
 		}
 	}
 </script>
-
-<svelte:window bind:innerHeight={winH} />
 
 {#if open}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
 		role="presentation"
-		onclick={() => !submitting && onClose()}
-		onkeydown={onModalKeydown}
+		onclick={() => !submitting && requestClose()}
 	>
 		<div
+			bind:this={dialogEl}
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="criar-projeto-title"
-			class="flex max-h-[calc(100dvh-5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-lg"
+			class="flex max-h-[calc(100dvh-5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={onModalKeydown}
 			tabindex="-1"
-			transition:fly={{ y: 16, duration: 200 }}
+			transition:fly={{ y: 16, duration: reduceMotion ? 0 : 220 }}
 		>
-			<!-- Cabeçalho fixo: título + fechar + stepper -->
-			<header class="flex-shrink-0 border-b border-border-subtle bg-surface-muted/30 px-6 pb-4 pt-5">
-				<div class="mb-4 flex items-center justify-between gap-3">
-					<h2 id="criar-projeto-title" class="font-heading text-lg font-semibold text-text-primary">
+			<!-- HEADER fixo: ícone circular + título/subtítulo + fechar -->
+			<header
+				class="flex flex-shrink-0 items-center gap-4 border-b border-border-subtle px-6 py-5"
+			>
+				<span
+					class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface text-text-secondary"
+				>
+					<i class="fas fa-diagram-project" aria-hidden="true"></i>
+				</span>
+				<div class="min-w-0 flex-1">
+					<h2
+						id="criar-projeto-title"
+						class="font-heading text-lg font-semibold text-text-primary"
+					>
 						Criar Novo Projeto
 					</h2>
-					<button
-						type="button"
-						onclick={onClose}
-						disabled={submitting}
-						aria-label="Fechar"
-						class="rounded-md border border-border-subtle bg-surface px-2 py-1 text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-					>
-						✕
-					</button>
+					<p class="text-sm text-text-secondary">Preencha as seções para criar seu projeto.</p>
 				</div>
-
-				<!-- Stepper acessivel: passos clicaveis (nav > ol > button) -->
-				<nav aria-label="Etapas da criação do projeto">
-					<ol class="flex items-center gap-1">
-						{#each WIZARD_STEPS as step, i (step.id)}
-							{@const active = i === currentStep}
-							{@const filled = isStepFilled(i)}
-							{@const errored = i === 0 && step1HasError}
-							<li class="flex flex-1 items-center gap-1">
-								<button
-									type="button"
-									onclick={() => goTo(i)}
-									aria-current={active ? 'step' : undefined}
-									title={step.title}
-									class="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {active
-										? 'bg-primary-100'
-										: 'hover:bg-surface-muted'}"
-								>
-									<span
-										class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold {errored
-											? 'bg-danger/15 text-danger ring-1 ring-danger'
-											: active
-												? 'bg-primary-600 text-white'
-												: filled
-													? 'bg-primary-600/15 text-primary-700'
-													: 'bg-surface-muted text-text-muted'}"
-									>
-										{#if errored}
-											<i class="fas fa-exclamation" aria-hidden="true"></i>
-										{:else if filled && !active}
-											<i class="fas fa-check" aria-hidden="true"></i>
-										{:else}{i + 1}{/if}
-									</span>
-									<span
-										class="hidden truncate text-xs font-semibold sm:inline {active
-											? 'text-primary-700'
-											: 'text-text-secondary'}"
-									>
-										{#if errored}<span class="sr-only">Com erro: </span>{:else if active}<span
-												class="sr-only">Passo atual: </span
-											>{:else if filled}<span class="sr-only">Preenchido: </span>{/if}{step.label}
-									</span>
-								</button>
-								{#if i < WIZARD_STEPS.length - 1}
-									<span class="h-px flex-1 bg-border-subtle" aria-hidden="true"></span>
-								{/if}
-							</li>
-						{/each}
-					</ol>
-				</nav>
-				<div class="sr-only" aria-live="polite">
-					Passo {currentStep + 1} de {WIZARD_STEPS.length}: {WIZARD_STEPS[currentStep].title}
-				</div>
+				<button
+					type="button"
+					onclick={requestClose}
+					disabled={submitting}
+					aria-label="Fechar"
+					class="rounded-md p-2 text-text-secondary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					<i class="fas fa-xmark" aria-hidden="true"></i>
+				</button>
 			</header>
 
 			<form
@@ -648,459 +771,706 @@
 					e.preventDefault();
 					void trySubmit();
 				}}
-				class="flex flex-col"
+				class="flex min-h-0 flex-1 flex-col"
 			>
-				<!-- Corpo: ÚNICA região que rola; slide direcional entre passos -->
-				<div
-					class="overflow-x-hidden {contentH > maxBodyPx ? 'overflow-y-auto' : 'overflow-y-hidden'} {measured ? 'transition-[height] duration-500 ease-out' : ''}"
-					style="height: {Math.min(contentH, maxBodyPx)}px;"
-				>
-					<div bind:clientHeight={contentH} class="px-6 py-4">
-					{#key currentStep}
-						<div
-							in:fly={{ x: 24 * stepDirection, duration: 280 }}
-							class="flex flex-col gap-3.5"
-							style="min-height: {[0, 2, 3].includes(currentStep) ? '22rem' : '11rem'}"
-						>
-							<h3
-								bind:this={stepHeadingEl}
-								tabindex="-1"
-								class="font-heading text-base font-semibold text-text-primary focus:outline-none"
-							>
-								{WIZARD_STEPS[currentStep].title}
-								{#if WIZARD_STEPS[currentStep].optional}
-									<span class="ml-2 align-middle text-xs font-normal text-text-muted">(opcional)</span>
-								{/if}
+				<!-- LISTA de seções: única região que rola -->
+				<div class="flex-1 overflow-y-auto">
+					{#each SECTIONS as section, i (section.id)}
+						{@const expanded = isOpen(section.id)}
+						{@const status = sectionStatus(i)}
+						{@const errored = i === 0 && step1HasError}
+						<section class="border-b border-border-subtle last:border-b-0">
+							<!-- HEADER da seção. A área de toque é o <button> de expandir, que
+							     cobre a linha inteira (absolute inset-0). O ícone (i) é um BOTÃO
+							     próprio, irmão do toggle (não filho — botão aninhado é HTML
+							     inválido), com aria-label próprio e foco por teclado: a dica fica
+							     acessível sem mouse e sem inflar o nome acessível do toggle. -->
+							<h3 id={`cp-panel-${section.id}-h`} class="relative">
+								<button
+									type="button"
+									onclick={() => toggleSection(section.id)}
+									aria-expanded={expanded}
+									aria-controls={`cp-panel-${section.id}`}
+									class="absolute inset-0 z-0 w-full transition-colors duration-fast hover:bg-surface-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+								>
+									<span class="sr-only">{section.title}</span>
+								</button>
+								<!-- Conteúdo visível por cima do botão; pointer-events-none para que
+								     o clique caia no toggle, exceto no botão (i). -->
+								<div class="pointer-events-none relative z-10 flex items-center gap-4 px-6 py-4">
+									<span
+										class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface text-text-secondary"
+									>
+										<i class={`fas ${section.icon}`} aria-hidden="true"></i>
+									</span>
+									<span class="min-w-0 flex-1">
+										<span class="flex items-center gap-1.5">
+											<span class="font-heading text-base font-semibold text-text-primary"
+												>{section.title}</span
+											>
+											<button
+												type="button"
+												aria-label={`Sobre "${section.title}": ${section.tooltip}`}
+												title={section.tooltip}
+												class="pointer-events-auto inline-flex items-center justify-center rounded-full text-sm text-text-muted transition-colors duration-fast hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											>
+												<i class="fas fa-circle-info" aria-hidden="true"></i>
+											</button>
+										</span>
+										<span class="block truncate text-sm text-text-secondary"
+											>{section.description}</span
+										>
+									</span>
+									<span class={pillClass(status, errored)}>{pillLabel(status, errored)}</span>
+									<span
+										class={`cp-chevron-circle flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-all duration-base ${expanded ? 'bg-text-primary text-surface' : 'bg-surface-muted text-text-secondary'}`}
+									>
+										<i
+											class={`cp-chevron-icon fas fa-chevron-down text-xs transition-transform duration-base ${expanded ? 'rotate-180' : ''}`}
+											aria-hidden="true"
+										></i>
+									</span>
+								</div>
 							</h3>
 
-							<div class="rounded-lg border border-border-subtle bg-surface-muted/20 p-4">
-								{#if currentStep === 0}
-
-					<div class="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-10">
-									<!-- Linha 1: Titulo (60%) + Prioridade (40%) -->
-									<div class="flex flex-col gap-1.5 md:col-span-7">
-										<label for="cp-titulo" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-tag mr-1.5 text-primary-600" aria-hidden="true"></i>
-											Título do Projeto <span class="text-danger">*</span>
-										</label>
-										<input
-											id="cp-titulo"
-											bind:this={titleInputEl}
-											bind:value={titulo}
-											type="text"
-											required
-											placeholder="Digite o título do projeto"
-											class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										/>
-									</div>
-									<div class="flex flex-col gap-1.5 md:col-span-3">
-										<label for="cp-prioridade" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-flag mr-1.5 text-primary-600" aria-hidden="true"></i>Prioridade</label>
-										<select id="cp-prioridade" bind:value={prioridade} class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
-											{#each PRIORITIES as p (p.value)}
-												<option value={p.value}>{p.label}</option>
-											{/each}
-										</select>
-									</div>
-									<!-- Linha 2: Area Responsavel + Orgao (50/50) -->
-									<div class="flex flex-col gap-1.5 md:col-span-5">
-										<label for="cp-orgao-id" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-users mr-1.5 text-primary-600" aria-hidden="true"></i>
-											Área Responsável <span class="text-danger">*</span>
-										</label>
-										{#if orgaoOptions.length === 0}
-											<select id="cp-orgao-id" disabled class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-muted">
-												<option value="">Nenhum órgão atribuído</option>
-											</select>
-										{:else if orgaoOptions.length === 1}
-											<input type="text" value={orgaoOptions[0].label} disabled class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-muted" />
-										{:else}
-											<select id="cp-orgao-id" bind:value={orgaoId} required class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
-												<option value="" disabled>Selecione um órgão</option>
-												{#each orgaoOptions as opt (opt.value)}
-													<option value={opt.value}>{opt.label}</option>
-												{/each}
-											</select>
-										{/if}
-									</div>
-									<div class="flex flex-col gap-1.5 md:col-span-5">
-										<label for="cp-orgao-texto" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-building mr-1.5 text-primary-600" aria-hidden="true"></i>Órgão</label>
-										<input
-											id="cp-orgao-texto"
-											bind:value={orgaoTexto}
-											type="text"
-											placeholder="Digite o órgão responsável"
-											class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										/>
-									</div>
-									<!-- Linha 3: Descricao full-width (textarea 2 linhas) -->
-									<div class="flex flex-col gap-1.5 md:col-span-10">
-										<label for="cp-short-desc" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-align-left mr-1.5 text-primary-600" aria-hidden="true"></i>Descrição</label>
-										<textarea
-											id="cp-short-desc"
-											bind:value={shortDescription}
-											rows="2"
-											placeholder="Breve descrição do projeto"
-											class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										></textarea>
-									</div>
-								</div>
-				{:else if currentStep === 1}
-							<div class="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
-								<div class="flex flex-col gap-1.5">
-									<label for="cp-delivery" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-truck mr-1.5 text-primary-600" aria-hidden="true"></i>
-										Tipo de Entrega
-									</label>
-									<select
-										id="cp-delivery"
-										bind:value={deliveryType}
-										class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							<!-- PANEL colapsável (task-collapse: grid-rows 1fr↔0fr) -->
+							<div
+								id={`cp-panel-${section.id}`}
+								role="region"
+								aria-labelledby={`cp-panel-${section.id}-h`}
+								class="task-collapse px-6"
+								data-collapsed={!expanded}
+								inert={!expanded}
+								aria-hidden={!expanded}
+							>
+								<!-- overflow-visible só quando objetivos está EXPANDIDA: libera o
+								     dropdown ABEP (top-full) do overflow:hidden imposto pela regra
+								     global `.task-collapse > *`. Gate por `expanded` evita vazar
+								     conteúdo durante a animação de colapso (grid-rows → 0fr). -->
+								<div class={section.id === 'objetivos' && expanded ? 'overflow-visible' : ''}>
+									<!-- CARTÃO de formulário interno -->
+									<div
+										class="mb-4 rounded-lg border border-border-subtle bg-surface px-2 py-1"
 									>
-										<option value="">Selecione o tipo</option>
-										{#each deliveryTypes as dt (dt)}
-											<option value={dt}>{dt}</option>
-										{/each}
-									</select>
-								</div>
-								<div class="flex flex-col gap-1.5">
-									<label for="cp-special" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-star mr-1.5 text-primary-600" aria-hidden="true"></i>
-										Projetos Especiais
-									</label>
-									<select
-										id="cp-special"
-										bind:value={specialProject}
-										class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-									>
-										<option value="">Nenhum</option>
-										{#each specialOptions as sp (sp)}
-											<option value={sp}>{sp}</option>
-										{/each}
-									</select>
-								</div>
-							</div>
-						{:else if currentStep === 2}
-							<div class="flex flex-col gap-4">
-								<div class="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
-									<div class="flex flex-col gap-1.5">
-										<label for="cp-objetivo" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-bullseye mr-1.5 text-primary-600" aria-hidden="true"></i>
-											Objetivo EEGD
-										</label>
-										<select
-											id="cp-objetivo"
-											bind:value={objetivoId}
-											onchange={onObjetivoChange}
-											class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										>
-											<option value="">Selecione um objetivo</option>
-											{#each objetivos as obj (obj.id)}
-												<option value={String(obj.id)}>{obj.descricao}</option>
-											{/each}
-										</select>
-									</div>
-									<div class="flex flex-col gap-1.5">
-										<label for="cp-resultado" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-chart-line mr-1.5 text-primary-600" aria-hidden="true"></i>
-											Resultado Esperado EEGD
-										</label>
-										<select
-											id="cp-resultado"
-											bind:value={resultadoId}
-											onchange={onResultadoChange}
-											disabled={!objetivoId || resultadosLoading}
-											class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										>
-											<option value="">
-												{resultadosLoading ? 'Carregando resultados...' : 'Selecione um resultado esperado'}
-											</option>
-											{#each resultados as r (r.id)}
-												<option value={String(r.id)}>{r.descricao}</option>
-											{/each}
-										</select>
-									</div>
-								</div>
-
-								<div class="flex flex-col gap-2">
-									<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-										<i class="fas fa-list-check mr-1.5 text-primary-600" aria-hidden="true"></i>Indicadores EEGD
-									</span>
-									{#if indicadoresLoading}
-										<p role="status" aria-live="polite" class="text-sm text-text-secondary">
-											<i class="fas fa-spinner fa-spin mr-1"></i>Carregando indicadores...
-										</p>
-									{:else if !resultadoId}
-										<p class="text-sm text-text-muted">
-											<i class="fas fa-info-circle mr-1"></i>Selecione um resultado esperado para ver os indicadores disponíveis
-										</p>
-									{:else if indicadores.length === 0}
-										<p class="text-sm text-text-muted">
-											<i class="fas fa-exclamation-circle mr-1"></i>Nenhum indicador disponível para este resultado esperado
-										</p>
-									{:else}
-										<div class="flex flex-col gap-2">
-											{#each indicadores as ind (ind.id)}
-												<!-- div (nao label) p/ que SO o clique na caixa marque; a11y via aria-label. -->
-												<div
-													class="flex items-center gap-2 text-sm text-text-primary transition-[opacity,transform] duration-300 {revealedIndicadores.has(
-														ind.id
-													)
-														? 'translate-y-0 opacity-100'
-														: 'translate-y-1 opacity-0'}"
+										{#if section.id === 'principal'}
+											<!-- Título -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-titulo"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
 												>
+													<i
+														class="fas fa-tag w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Título do Projeto <span class="text-danger">*</span>
+												</label>
+												<input
+													id="cp-titulo"
+													bind:this={titleInputEl}
+													bind:value={titulo}
+													type="text"
+													required
+													placeholder="Digite o título do projeto"
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												/>
+											</div>
+											<!-- Área Responsável -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-orgao-id"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-users w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Área Responsável <span class="text-danger">*</span>
+												</label>
+												{#if orgaoOptions.length === 0}
+													<select
+														id="cp-orgao-id"
+														disabled
+														class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-muted"
+													>
+														<option value="">Nenhum órgão atribuído</option>
+													</select>
+												{:else if orgaoOptions.length === 1}
 													<input
-														type="checkbox"
-														aria-label={ind.descricao}
-														checked={selectedIndicadores.includes(ind.id)}
-														onchange={() => toggleIndicador(ind.id)}
-														class="h-4 w-4 shrink-0 rounded border-border-subtle text-primary-600 focus:ring-primary-500"
+														type="text"
+														value={orgaoOptions[0].label}
+														disabled
+														class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-muted"
 													/>
-													<span>{ind.descricao}</span>
-												</div>
-											{/each}
-										</div>
-									{/if}
-								</div>
-
-								<!-- Indicadores ABEP (combobox) -->
-								<div class="relative flex flex-col gap-1.5">
-									<label for="cp-abep" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-chart-simple mr-1.5 text-primary-600" aria-hidden="true"></i>
-										Indicadores ABEP
-									</label>
-									<input
-										id="cp-abep"
-										type="text"
-										autocomplete="off"
-										role="combobox"
-										aria-expanded={abepOpen}
-										aria-controls="cp-abep-listbox"
-										aria-autocomplete="list"
-										aria-activedescendant={abepActiveIndex >= 0
-											? `cp-abep-option-${abepActiveIndex}`
-											: undefined}
-										bind:value={abepLabel}
-										oninput={onAbepInput}
-										onfocus={openAbep}
-										onkeydown={onAbepKeydown}
-										onblur={() => setTimeout(closeAbep, 120)}
-										placeholder="Busque por número ou título do indicador ABEP"
-										class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-									/>
-									{#if abepOpen}
-										<ul
-											id="cp-abep-listbox"
-											role="listbox"
-											aria-label="Indicadores ABEP"
-											class="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-auto rounded-md border border-border-subtle bg-surface py-1 shadow-md"
-										>
-											{#if abepVisible.length === 0}
-												<li class="px-3 py-2 text-sm text-text-muted">Nenhum indicador encontrado</li>
-											{:else}
-												{#each abepVisible as option, index (option.value)}
-													<li class="contents">
-														<button
-															type="button"
-															id={`cp-abep-option-${index}`}
-															role="option"
-															aria-selected={option.value === abepValue}
-															class="block w-full cursor-pointer px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted {index ===
-															abepActiveIndex
-																? 'bg-surface-muted'
-																: ''}"
-															onmousedown={(e) => e.preventDefault()}
-															onclick={() => selectAbep(option.value, option.label)}
+												{:else}
+													<select
+														id="cp-orgao-id"
+														bind:value={orgaoId}
+														required
+														class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+													>
+														<option value="" disabled>Selecione um órgão</option>
+														{#each orgaoOptions as opt (opt.value)}
+															<option value={opt.value}>{opt.label}</option>
+														{/each}
+													</select>
+												{/if}
+											</div>
+											<!-- Prioridade -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-prioridade"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-flag w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Prioridade
+												</label>
+												<select
+													id="cp-prioridade"
+													bind:value={prioridade}
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												>
+													{#each PRIORITIES as p (p.value)}
+														<option value={p.value}>{p.label}</option>
+													{/each}
+												</select>
+											</div>
+											<!-- Órgão (texto) -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-orgao-texto"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-building w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Órgão
+												</label>
+												<input
+													id="cp-orgao-texto"
+													bind:value={orgaoTexto}
+													type="text"
+													placeholder="Digite o órgão responsável"
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												/>
+											</div>
+											<!-- Descrição -->
+											<div
+												class="grid grid-cols-1 items-start gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-short-desc"
+													class="flex items-center gap-2 pt-1.5 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-align-left w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Descrição
+												</label>
+												<textarea
+													id="cp-short-desc"
+													bind:value={shortDescription}
+													rows="2"
+													placeholder="Breve descrição do projeto"
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												></textarea>
+											</div>
+										{:else if section.id === 'classificacao'}
+											<!-- Tipo de Entrega -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-delivery"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-truck w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Tipo de Entrega
+												</label>
+												<select
+													id="cp-delivery"
+													bind:value={deliveryType}
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												>
+													<option value="">Selecione o tipo</option>
+													{#each deliveryTypes as dt (dt)}
+														<option value={dt}>{dt}</option>
+													{/each}
+												</select>
+											</div>
+											<!-- Projetos Especiais -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-special"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-star w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Projetos Especiais
+												</label>
+												<select
+													id="cp-special"
+													bind:value={specialProject}
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												>
+													<option value="">Nenhum</option>
+													{#each specialOptions as sp (sp)}
+														<option value={sp}>{sp}</option>
+													{/each}
+												</select>
+											</div>
+										{:else if section.id === 'objetivos'}
+											<!-- Objetivo EEGD -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-objetivo"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-bullseye w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Objetivo EEGD
+												</label>
+												<select
+													id="cp-objetivo"
+													bind:value={objetivoId}
+													onchange={onObjetivoChange}
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												>
+													<option value="">Selecione um objetivo</option>
+													{#each objetivos as obj (obj.id)}
+														<option value={String(obj.id)}>{obj.descricao}</option>
+													{/each}
+												</select>
+											</div>
+											<!-- Resultado Esperado EEGD -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-resultado"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-chart-line w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Resultado Esperado EEGD
+												</label>
+												<select
+													id="cp-resultado"
+													bind:value={resultadoId}
+													onchange={onResultadoChange}
+													disabled={!objetivoId || resultadosLoading}
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary disabled:opacity-60 focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												>
+													<option value="">
+														{resultadosLoading
+															? 'Carregando resultados...'
+															: 'Selecione um resultado esperado'}
+													</option>
+													{#each resultados as r (r.id)}
+														<option value={String(r.id)}>{r.descricao}</option>
+													{/each}
+												</select>
+											</div>
+											<!-- Indicadores EEGD (linha full-width) -->
+											<div
+												class="flex flex-col gap-2 rounded-md px-3 py-2.5 not-last:border-b not-last:border-border-subtle/60"
+											>
+												<span
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-list-check w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Indicadores EEGD
+												</span>
+												{#if indicadoresLoading}
+													<p role="status" aria-live="polite" class="text-sm text-text-secondary">
+														<i class="fas fa-spinner fa-spin mr-1"></i>Carregando indicadores...
+													</p>
+												{:else if !resultadoId}
+													<p class="text-sm text-text-muted">
+														<i class="fas fa-info-circle mr-1"></i>Selecione um resultado esperado
+														para ver os indicadores disponíveis
+													</p>
+												{:else if indicadores.length === 0}
+													<p class="text-sm text-text-muted">
+														<i class="fas fa-exclamation-circle mr-1"></i>Nenhum indicador
+														disponível para este resultado esperado
+													</p>
+												{:else}
+													<div class="flex flex-col gap-2">
+														{#each indicadores as ind (ind.id)}
+															<!-- div (não label) p/ que SÓ o clique na caixa marque; a11y via aria-label. -->
+															<div
+																class="cp-indicador-row flex items-center gap-2 text-sm text-text-primary transition-[opacity,transform] duration-300 {revealedIndicadores.has(
+																	ind.id
+																)
+																	? 'translate-y-0 opacity-100'
+																	: 'translate-y-1 opacity-0'}"
+															>
+																<input
+																	type="checkbox"
+																	aria-label={ind.descricao}
+																	checked={selectedIndicadores.includes(ind.id)}
+																	onchange={() => toggleIndicador(ind.id)}
+																	class="h-4 w-4 shrink-0 rounded border-border-subtle text-primary-600 focus:ring-primary-500"
+																/>
+																<span>{ind.descricao}</span>
+															</div>
+														{/each}
+													</div>
+												{/if}
+											</div>
+											<!-- Indicadores ABEP (combobox, linha full-width) -->
+											<div class="relative flex flex-col gap-2 rounded-md px-3 py-2.5">
+												<label
+													for="cp-abep"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-chart-simple w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Indicadores ABEP
+												</label>
+												<input
+													id="cp-abep"
+													type="text"
+													autocomplete="off"
+													role="combobox"
+													aria-expanded={abepOpen}
+													aria-controls="cp-abep-listbox"
+													aria-autocomplete="list"
+													aria-activedescendant={abepActiveIndex >= 0
+														? `cp-abep-option-${abepActiveIndex}`
+														: undefined}
+													bind:value={abepLabel}
+													oninput={onAbepInput}
+													onfocus={openAbep}
+													onkeydown={onAbepKeydown}
+													onblur={() => setTimeout(closeAbep, 120)}
+													placeholder="Busque por número ou título do indicador ABEP"
+													class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												/>
+												{#if abepOpen}
+													<ul
+														id="cp-abep-listbox"
+														role="listbox"
+														aria-label="Indicadores ABEP"
+														class="absolute left-3 right-3 top-full z-10 mt-1 max-h-64 overflow-auto rounded-md border border-border-subtle bg-surface py-1 shadow-md"
+													>
+														{#if abepVisible.length === 0}
+															<li class="px-3 py-2 text-sm text-text-muted">
+																Nenhum indicador encontrado
+															</li>
+														{:else}
+															{#each abepVisible as option, index (option.value)}
+																<li class="contents">
+																	<button
+																		type="button"
+																		id={`cp-abep-option-${index}`}
+																		role="option"
+																		aria-selected={option.value === abepValue}
+																		class="block w-full cursor-pointer px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted {index ===
+																		abepActiveIndex
+																			? 'bg-surface-muted'
+																			: ''}"
+																		onmousedown={(e) => e.preventDefault()}
+																		onclick={() => selectAbep(option.value, option.label)}
+																	>
+																		{option.label}
+																	</button>
+																</li>
+															{/each}
+														{/if}
+													</ul>
+												{/if}
+											</div>
+										{:else if section.id === 'links'}
+											<!-- Processo SEI -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-sei"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-file-lines w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Processo SEI-RJ
+												</label>
+												<input
+													id="cp-sei"
+													value={seiProcess}
+													oninput={onSeiInput}
+													type="text"
+													maxlength="25"
+													placeholder="SEI-000000/000000/0000"
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												/>
+											</div>
+											<!-- Link Github -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-github"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-code-branch w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Link Github
+												</label>
+												<input
+													id="cp-github"
+													bind:value={githubLink}
+													type="text"
+													placeholder="https://github.com/..."
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												/>
+											</div>
+											<!-- Link Documentação -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-doc"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-book w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Link Documentação
+												</label>
+												<input
+													id="cp-doc"
+													bind:value={documentationLink}
+													type="text"
+													placeholder="https://..."
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												/>
+											</div>
+											<!-- Link para o Produto -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-product"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-box w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Link para o Produto
+												</label>
+												<input
+													id="cp-product"
+													bind:value={productLink}
+													type="text"
+													placeholder="https://..."
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												/>
+											</div>
+											<!-- Observações -->
+											<div
+												class="grid grid-cols-1 items-start gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-obs"
+													class="flex items-center gap-2 pt-1.5 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-comment w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Observações / Descrição Detalhada
+												</label>
+												<textarea
+													id="cp-obs"
+													bind:value={observacao}
+													rows="3"
+													placeholder="Digite observações detalhadas sobre o projeto..."
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												></textarea>
+											</div>
+										{:else}
+											<!-- Importar Modelo -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-template"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-layer-group w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Importar Modelo
+												</label>
+												<select
+													id="cp-template"
+													bind:value={templateId}
+													onchange={onTemplateChange}
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												>
+													<option value="">Não importar / Limpar etapas</option>
+													{#each templates as tpl (tpl.id)}
+														<option value={String(tpl.id)}>{tpl.name}</option>
+													{/each}
+												</select>
+											</div>
+											<!-- Data de Início -->
+											<div
+												class="grid grid-cols-1 items-center gap-2 rounded-md px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/60 focus-within:bg-surface-muted/60 not-last:border-b not-last:border-border-subtle/60 sm:grid-cols-[minmax(0,40%)_1fr] sm:gap-3"
+											>
+												<label
+													for="cp-start"
+													class="flex items-center gap-2 text-sm font-medium text-text-primary"
+												>
+													<i
+														class="fas fa-calendar w-4 text-center text-text-secondary"
+														aria-hidden="true"
+													></i>
+													Data de Início (opcional)
+												</label>
+												<input
+													id="cp-start"
+													bind:value={startDate}
+													type="date"
+													title="Sem data, o preview mostra só a duração de cada etapa."
+													class="w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-primary focus:border-border-subtle focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												/>
+											</div>
+											<!-- Preview de etapas (read-only, linha full-width) -->
+											<div class="px-3 py-2.5">
+												{#if templateLoading}
+													<p role="status" aria-live="polite" class="text-sm text-text-secondary">
+														<i class="fas fa-spinner fa-spin mr-1"></i>Carregando etapas…
+													</p>
+												{:else if previewStages.length > 0}
+													<div
+														class="flex flex-col gap-2 rounded-md border border-border-subtle bg-surface-muted/30 p-3"
+													>
+														<div
+															class="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-text-muted"
 														>
-															{option.label}
-														</button>
-													</li>
-												{/each}
-											{/if}
-										</ul>
-									{/if}
-								</div>
-							</div>
-						{:else if currentStep === 3}
-							<div class="flex flex-col gap-4">
-								<div class="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
-									<div class="flex flex-col gap-1.5">
-										<label for="cp-sei" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-file-lines mr-1.5 text-primary-600" aria-hidden="true"></i>
-											Processo SEI-RJ
-										</label>
-										<input
-											id="cp-sei"
-											value={seiProcess}
-											oninput={onSeiInput}
-											type="text"
-											maxlength="25"
-											placeholder="SEI-000000/000000/0000"
-											class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										/>
-									</div>
-									<div class="flex flex-col gap-1.5">
-										<label for="cp-github" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-code-branch mr-1.5 text-primary-600" aria-hidden="true"></i>
-											Link Github
-										</label>
-										<input
-											id="cp-github"
-											bind:value={githubLink}
-											type="text"
-											placeholder="https://github.com/..."
-											class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										/>
-									</div>
-									<div class="flex flex-col gap-1.5">
-										<label for="cp-doc" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-book mr-1.5 text-primary-600" aria-hidden="true"></i>
-											Link Documentação
-										</label>
-										<input
-											id="cp-doc"
-											bind:value={documentationLink}
-											type="text"
-											placeholder="https://..."
-											class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										/>
-									</div>
-									<div class="flex flex-col gap-1.5">
-										<label for="cp-product" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-box mr-1.5 text-primary-600" aria-hidden="true"></i>
-											Link para o Produto
-										</label>
-										<input
-											id="cp-product"
-											bind:value={productLink}
-											type="text"
-											placeholder="https://..."
-											class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										/>
-									</div>
-								</div>
-								<div class="flex flex-col gap-1.5">
-									<label for="cp-obs" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-comment mr-1.5 text-primary-600" aria-hidden="true"></i>
-										Observações / Descrição Detalhada
-									</label>
-									<textarea
-										id="cp-obs"
-										bind:value={observacao}
-										rows="3"
-										placeholder="Digite observações detalhadas sobre o projeto..."
-										class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm  text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-									></textarea>
-								</div>
-							</div>
-						{:else}
-							<div class="flex flex-col gap-4">
-								<div class="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-3">
-									<div class="flex flex-col gap-1 md:col-span-2">
-										<label for="cp-template" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-layer-group mr-1.5 text-primary-600" aria-hidden="true"></i>
-											Importar Modelo
-										</label>
-										<select
-											id="cp-template"
-											bind:value={templateId}
-											onchange={onTemplateChange}
-											class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										>
-											<option value="">Não importar / Limpar etapas</option>
-											{#each templates as tpl (tpl.id)}
-												<option value={String(tpl.id)}>{tpl.name}</option>
-											{/each}
-										</select>
-									</div>
-									<div class="flex flex-col gap-1.5">
-										<label for="cp-start" class="text-xs font-semibold uppercase tracking-wide text-text-muted"><i class="fas fa-calendar mr-1.5 text-primary-600" aria-hidden="true"></i>
-											Data de Início (opcional)
-										</label>
-										<input
-											id="cp-start"
-											bind:value={startDate}
-											type="date"
-											title="Sem data, o preview mostra só a duração de cada etapa."
-											class="h-10 rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-										/>
-									</div>
-								</div>
-
-								{#if templateLoading}
-									<p role="status" aria-live="polite" class="text-sm text-text-secondary">
-										<i class="fas fa-spinner fa-spin mr-1"></i>Carregando etapas…
-									</p>
-								{:else if previewStages.length > 0}
-									<div class="flex flex-col gap-2 rounded-md border border-border-subtle bg-surface-muted/30 p-3">
-										<div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-text-muted">
-											<span>Etapas importadas</span>
-											<span>{previewStages.length} etapas · total {previewTotalDuration} dias</span>
-										</div>
-										<ol class="flex flex-col gap-1.5">
-											{#each previewStages as stage, index (index)}
-												<li class="flex items-start gap-2 text-sm text-text-primary">
-													<span class="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700">
-														{index + 1}
-													</span>
-													<span class="flex flex-col">
-														<span>{stage.name}</span>
-														<span class="text-xs text-text-muted">{stage.rangeText}</span>
-													</span>
-												</li>
-											{/each}
-										</ol>
-										{#if previewStart && previewEnd}
-											<p class="text-xs text-text-muted">
-												Previsão de término com início em <strong>{previewStart}</strong> →
-												<strong>{previewEnd}</strong>.
-											</p>
+															<span>Etapas importadas</span>
+															<span
+																>{previewStages.length} etapas · total {previewTotalDuration} dias</span
+															>
+														</div>
+														<ol class="flex flex-col gap-1.5">
+															{#each previewStages as stage, index (index)}
+																<li class="flex items-start gap-2 text-sm text-text-primary">
+																	<span
+																		class="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700"
+																	>
+																		{index + 1}
+																	</span>
+																	<span class="flex flex-col">
+																		<span>{stage.name}</span>
+																		<span class="text-xs text-text-muted">{stage.rangeText}</span>
+																	</span>
+																</li>
+															{/each}
+														</ol>
+														{#if previewStart && previewEnd}
+															<p class="text-xs text-text-muted">
+																Previsão de término com início em <strong>{previewStart}</strong> →
+																<strong>{previewEnd}</strong>.
+															</p>
+														{/if}
+													</div>
+												{:else}
+													<p class="text-sm text-text-muted">
+														<i class="fas fa-layer-group mr-1"></i>Selecione um modelo para
+														visualizar as etapas importadas.
+													</p>
+												{/if}
+											</div>
 										{/if}
 									</div>
-								{:else}
-									<p class="text-sm text-text-muted">
-										<i class="fas fa-layer-group mr-1"></i>Selecione um modelo para visualizar as etapas importadas.
-									</p>
-								{/if}
+								</div>
 							</div>
-						{/if}
-						</div>
-						</div>
-					{/key}
-				</div>
+						</section>
+					{/each}
 				</div>
 
-				<!-- Rodapé fixo: Cancelar · Voltar · Próxima · Criar -->
-				<footer class="flex flex-shrink-0 items-center justify-between gap-2 border-t border-border-subtle px-6 py-4">
+				<!-- RODAPÉ fixo: Cancelar (ghost) | Criar projeto (primário) -->
+				<footer
+					class="flex flex-shrink-0 items-center gap-3 border-t border-border-subtle px-6 py-4"
+				>
 					<button
 						type="button"
-						onclick={onClose}
+						onclick={requestClose}
 						disabled={submitting}
-						class="rounded-md px-3 py-2 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="flex-1 rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 					>
 						Cancelar
 					</button>
-					<div class="flex items-center gap-2">
-						{#if currentStep > 0}
-							<button
-								type="button"
-								onclick={prevStep}
-								disabled={submitting}
-								class="rounded-md border border-primary-500 bg-surface px-4 py-2 text-sm font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-							>
-								<i class="fas fa-arrow-left mr-1" aria-hidden="true"></i>Voltar
-							</button>
+					<button
+						type="submit"
+						disabled={!canSubmit}
+						class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-primary-700 bg-topnav-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-fast hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-border-subtle disabled:bg-surface-muted disabled:bg-none disabled:text-text-muted disabled:shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						{#if submitting}
+							<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>Criando…
+						{:else}
+							<i class="fas fa-plus-circle" aria-hidden="true"></i>Criar projeto
 						{/if}
-						{#if currentStep < WIZARD_STEPS.length - 1}
-							<button
-								type="button"
-								onclick={nextStep}
-								disabled={submitting}
-								class="rounded-md border border-primary-500 bg-surface px-4 py-2 text-sm font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-							>
-								Próxima<i class="fas fa-arrow-right ml-1" aria-hidden="true"></i>
-							</button>
-						{/if}
-						<button
-							type="submit"
-							disabled={!canSubmit}
-							class="inline-flex min-w-[126px] items-center justify-center gap-2 rounded-md border border-primary-700 bg-topnav-gradient px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-fast hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-border-subtle disabled:bg-surface-muted disabled:bg-none disabled:text-text-muted disabled:shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-						>
-							{#if submitting}
-								<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>Criando…
-							{:else}
-								<i class="fas fa-plus-circle" aria-hidden="true"></i>Criar projeto
-							{/if}
-						</button>
-					</div>
+					</button>
 				</footer>
 			</form>
 		</div>
 	</div>
 {/if}
+
+<style>
+	/* Neutraliza a transição do chevron quando o usuário prefere menos movimento;
+	   o .task-collapse já é tratado em app.css, e o fly é condicionado via reduceMotion. */
+	@media (prefers-reduced-motion: reduce) {
+		:global(.cp-chevron-icon),
+		:global(.cp-chevron-circle) {
+			transition: none !important;
+		}
+		/* Reveal escalonado dos indicadores: o JS já revela tudo de uma vez quando
+		   reduceMotion é true; aqui zeramos a transição como rede de segurança. */
+		:global(.cp-indicador-row) {
+			transition: none !important;
+		}
+	}
+</style>
