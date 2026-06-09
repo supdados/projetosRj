@@ -92,29 +92,18 @@ def _register_request_hooks(app):
             session.clear()
             g.user = None
 
-    def _refresh_failure_response():
-        """Resposta para falha de refresh Gov.br: 401 JSON p/ API, redirect p/ Jinja.
-
-        Para a SPA (requisições ``/api/*`` ou que negociam JSON via ``wants_json``),
-        devolve o envelope ``fail(code="unauthenticated")`` com HTTP 401 — assim o
-        cliente recebe erro estruturado em vez de um 302 opaco (que causaria loop).
-        Para requisições não-API o comportamento é IDÊNTICO ao anterior: redirect
-        302 para a página de login.
-        """
-        from routes.api import fail, wants_json
-
-        session.clear()
-        g.user = None
-        if request.path.startswith("/api/") or wants_json():
-            return fail(
-                "Sessão Gov.br expirada.",
-                status=401,
-                code="unauthenticated",
-            )
-        return redirect(url_for("main.login_page"))
-
     @app.before_request
-    def check_govbr_token_expiry():
+    def refresh_govbr_token_best_effort():
+        """Renova o access token Gov.br em background — mas NUNCA desloga.
+
+        O access token Gov.br é usado uma única vez, no callback de login
+        (``fetch_userinfo``), para obter a identidade; depois disso ele não é nem
+        guardado na sessão. Quem governa o tempo de login é o cookie Flask
+        (``PERMANENT_SESSION_LIFETIME`` = 8h). Por isso a expiração do token Gov.br
+        é best-effort: sem refresh token (escopo padrão não pede ``offline_access``)
+        ou se a renovação falhar, mantemos a sessão local em vez de deslogar — o
+        que antes derrubava o usuário em poucos minutos de inatividade.
+        """
         if session.get("auth_provider") != "govbr":
             return
         if not getattr(g, "user", None):
@@ -130,14 +119,19 @@ def _register_request_hooks(app):
 
         govbr_refresh_token = request.cookies.get("govbr_refresh_token")
         if not govbr_refresh_token:
-            return _refresh_failure_response()
+            # Sem refresh token não há o que renovar; para de checar e deixa a
+            # sessão local de 8h seguir.
+            session.pop("govbr_access_token_exp", None)
+            return
 
         try:
             new_tokens = refresh_access_token(
                 app.config, refresh_token=govbr_refresh_token
             )
         except GovBrOIDCError:
-            return _refresh_failure_response()
+            # Renovação falhou: não derruba a sessão local; só para de tentar.
+            session.pop("govbr_access_token_exp", None)
+            return
 
         expires_in = new_tokens.get("expires_in")
         refresh_expires_in = new_tokens.get("refresh_expires_in")
