@@ -43,6 +43,7 @@
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 	import type { Project } from '$lib/types/entities';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import CountBadge from '$lib/components/CountBadge.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
@@ -594,12 +595,8 @@
 		{#snippet titleContent()}
 			<span>Todos os Projetos</span>
 			{#if data}
-				<!-- projects-v4-meta-pill: pílula suave com a contagem. -->
-				<span
-					class="ml-2 inline-flex items-center whitespace-nowrap rounded-md border border-primary-500/40 bg-primary-100 px-2.5 py-1 align-middle text-xs font-semibold text-primary-700"
-				>
-					{totalProjects} projeto{totalProjects === 1 ? '' : 's'}
-				</span>
+				<!-- Meta-pill de contagem padronizada (Projetos/Tarefas/Pendentes). -->
+				<CountBadge class="ml-2">{totalProjects} projeto{totalProjects === 1 ? '' : 's'}</CountBadge>
 			{/if}
 		{/snippet}
 		{#snippet actions()}

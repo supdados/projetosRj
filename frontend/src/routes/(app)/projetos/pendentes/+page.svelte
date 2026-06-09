@@ -22,6 +22,7 @@
 		PendingPeriodo
 	} from '$lib/types/pendentes';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PendingProjectCard from '$lib/components/PendingProjectCard.svelte';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
@@ -251,14 +252,11 @@
 </svelte:head>
 
 <section aria-labelledby="pendentes-title" class="flex flex-col gap-6">
-	<PageHeader title="Projetos pendentes" subtitle={headerSubtitle} labelId="pendentes-title">
-		{#snippet actions()}
+	<PageHeader subtitle={headerSubtitle} labelId="pendentes-title">
+		{#snippet titleContent()}
+			<span class="align-middle">Projetos pendentes</span>
 			{#if summary}
-				<span
-					class="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-primary-500/40 bg-primary-100 px-2.5 py-1 text-xs font-semibold text-primary-700"
-				>
-					Projetos no foco: {Math.max(0, summary.total_projects - focusDelta)}
-				</span>
+				<CountBadge class="ml-2">Projetos no foco: {Math.max(0, summary.total_projects - focusDelta)}</CountBadge>
 			{/if}
 		{/snippet}
 	</PageHeader>

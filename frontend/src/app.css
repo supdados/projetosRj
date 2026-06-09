@@ -293,6 +293,12 @@
 .app-shell > main {
 	scrollbar-width: thin;
 	scrollbar-color: color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent) transparent;
+	/* Reserva SEMPRE o gutter da barra de rolagem vertical, role ou não. Sem isto,
+	   telas altas (Projetos, Tarefas-lista) rolam e consomem ~6px à direita,
+	   enquanto telas de altura limitada (Calendário, cujo grid é
+	   `clamp(30rem, calc(100vh-16rem), 52rem)`) NÃO rolam e ficam ~6px mais largas.
+	   `stable` iguala a largura útil em todas as telas. */
+	scrollbar-gutter: stable;
 }
 .app-shell > main::-webkit-scrollbar {
 	width: 6px;

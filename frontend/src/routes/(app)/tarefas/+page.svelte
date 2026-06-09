@@ -43,6 +43,8 @@
 	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
 	import KanbanBoard from '$lib/components/KanbanBoard.svelte';
 	import KanbanComposer from '$lib/components/KanbanComposer.svelte';
+	import TaskViewToggle from '$lib/components/TaskViewToggle.svelte';
+	import CountBadge from '$lib/components/CountBadge.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import { createBoardStore } from '$lib/stores/board';
@@ -667,24 +669,20 @@
 </svelte:head>
 
 <section aria-labelledby="tarefas-title" class="flex flex-col gap-6">
+	<!-- Header unificado (paridade com a referência): título + pill de contagem à
+		 esquerda; ações (arquivar / ver arquivadas) e o toggle Lista⇄Kanban à direita. -->
 	<PageHeader
-		title="Tarefas"
 		labelId="tarefas-title"
 		subtitle={view === 'kanban'
 			? 'Tarefas ativas por status. Arraste os cards entre colunas para mudar o status.'
 			: 'Tarefas agrupadas por projeto.'}
 	>
-		{#snippet actions()}
-			<span
-				class="inline-flex items-center gap-1 rounded-sm border border-primary-500 bg-primary-100 px-2 py-1 text-xs font-medium text-primary-700"
-			>
-				{totalItems} tarefa{totalItems === 1 ? '' : 's'}
-			</span>
+		{#snippet titleContent()}
+			<span class="align-middle">Tarefas</span>
+			<CountBadge class="ml-2">{totalItems} tarefa{totalItems === 1 ? '' : 's'}</CountBadge>
 		{/snippet}
-	</PageHeader>
-
-	<div class="flex flex-wrap items-center gap-3">
-		<!-- Arquivar finalizados em lote + ver arquivados (lista e kanban). -->
+		{#snippet actions()}
+			<!-- Arquivar finalizados em lote (lista e kanban). -->
 			<button
 				type="button"
 				onclick={openArchiveConfirm}
@@ -712,38 +710,10 @@
 				<span class="sr-only">Mostrar tarefas arquivadas</span>
 			</button>
 
-		<!-- Alternância de visualização (Lista <-> Kanban); Lista é o default -->
-		<div
-			role="group"
-			aria-label="Modo de visualização"
-			class="ml-auto inline-flex w-fit rounded-md border border-border-subtle bg-surface p-1"
-		>
-			<button
-				type="button"
-				data-view="list"
-				aria-pressed={view === 'list'}
-				onclick={() => selectView('list')}
-				class="rounded-sm px-4 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {view ===
-				'list'
-					? 'bg-primary-100 text-primary-700'
-					: 'text-text-secondary hover:bg-surface-muted'}"
-			>
-				Lista
-			</button>
-			<button
-				type="button"
-				data-view="kanban"
-				aria-pressed={view === 'kanban'}
-				onclick={() => selectView('kanban')}
-				class="rounded-sm px-4 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {view ===
-				'kanban'
-					? 'bg-primary-100 text-primary-700'
-					: 'text-text-secondary hover:bg-surface-muted'}"
-			>
-				Kanban
-			</button>
-		</div>
-	</div>
+			<!-- Alternância de visualização (Lista ⇄ Kanban) — porte fiel do v4.5. -->
+			<TaskViewToggle {view} onSelect={selectView} />
+		{/snippet}
+	</PageHeader>
 
 	<!-- Filtros (re-buscam server-side). Réplica da barra do v4.5
 		 (templates/tasks/hub.html + static/css/tasks/hub.css): cartão único, campos
@@ -902,23 +872,33 @@
 	{/if}
 
 	{#if view === 'kanban'}
-		{#if $board.status === 'loading' && !boardLoaded}
-			<p role="status" aria-live="polite" class="text-text-secondary">Carregando board…</p>
-		{:else if $board.status === 'error' && !boardLoaded}
+		<!-- Sem placeholder de texto na PRIMEIRA carga: a board store já fornece 5
+			 colunas vazias e o container tem altura fixa, então renderizamos o board
+			 direto (com aria-busy) em vez de colapsar o layout para uma linha de
+			 texto — era isso que causava o "mini refresh" só na primeira troca para
+			 Kanban (o ramo `!boardLoaded` encolhia e reexpandia a página). -->
+		{#if $board.status === 'error' && !boardLoaded}
 			<LoadErrorState message={$board.error ?? ''} onRetry={() => loadBoard()} />
 		{:else}
 			<div aria-busy={$board.status === 'loading'}>
 				<KanbanBoard store={board}>
 					{#snippet composer(status: TaskStatus)}
-						<KanbanComposer
-							{status}
-							projectOptions={data?.project_options ?? []}
-							defaultProject={project}
-							open={activeComposer === status}
-							onCreated={onComposerCreated}
-							onRequestOpen={(s) => (activeComposer = s)}
-							onRequestClose={() => (activeComposer = null)}
-						/>
+						<!-- Só habilita o composer DEPOIS do 1º load concluir (`boardLoaded`).
+							 Durante a primeira carga renderizamos as colunas vazias (layout
+							 estável), mas um card criado aqui via `addCard` seria sobrescrito
+							 quando o `board.load()` em voo resolvesse com o snapshot anterior
+							 (a tarefa some até outro reload). -->
+						{#if boardLoaded}
+							<KanbanComposer
+								{status}
+								projectOptions={data?.project_options ?? []}
+								defaultProject={project}
+								open={activeComposer === status}
+								onCreated={onComposerCreated}
+								onRequestOpen={(s) => (activeComposer = s)}
+								onRequestClose={() => (activeComposer = null)}
+							/>
+						{/if}
 					{/snippet}
 				</KanbanBoard>
 			</div>

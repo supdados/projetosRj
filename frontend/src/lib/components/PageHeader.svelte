@@ -65,7 +65,15 @@
 		{/if}
 	</div>
 	{#if actions}
-		<div class="flex shrink-0 items-center gap-4">
+		<!--
+			max-w-full + flex-wrap: no desktop as ações cabem numa linha (largura =
+			conteúdo) e ficam à direita via o justify-between do header. Em telas
+			estreitas, o header quebra as ações para a própria linha; o max-w-full
+			limita a largura ao container e o flex-wrap quebra os controles internos
+			(em vez de estourar horizontalmente). justify-end mantém o alinhamento à
+			direita quando quebram.
+		-->
+		<div class="flex max-w-full flex-wrap items-center justify-end gap-4">
 			{@render actions()}
 		</div>
 	{/if}
