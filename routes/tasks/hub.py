@@ -244,6 +244,10 @@ def _build_task_hub_project_options(include_archived=False, orgao_filter_id=None
     return options
 
 
+#: Grupos (projetos) por página no modo lista do hub.
+HUB_GROUPS_PER_PAGE = 10
+
+
 def build_task_hub_context(
     *,
     project_filter="",
@@ -253,6 +257,8 @@ def build_task_hub_context(
     responsavel_filter="",
     selected_orgao_id=None,
     include_archived=False,
+    page=1,
+    per_page=None,
 ):
     """Monta os dados do Hub de Tarefas em modo lista (sem kanban).
 
@@ -273,10 +279,13 @@ def build_task_hub_context(
         responsavel_filter: Filtro de responsável (substring, normalizado).
         selected_orgao_id: ID de órgão já validado para o usuário (ou ``None``).
         include_archived: Quando ``True``, lista tarefas arquivadas.
+        page: Página (1-based) quando ``per_page`` é informado.
+        per_page: GRUPOS (projetos) por página; ``None`` devolve tudo (legado).
 
     Returns:
         ``dict`` com ``groups`` (tarefas agrupadas por projeto e subagrupadas por
-        etapa), ``project_options``, os filtros selecionados e ``total_items``.
+        etapa), ``project_options``, os filtros selecionados, ``total_items``
+        (tarefas em TODOS os grupos, pré-paginação) e ``pagination``.
     """
     tasks = _build_visible_tasks_query(
         include_archived=include_archived,
@@ -292,6 +301,18 @@ def build_task_hub_context(
         include_archived=include_archived,
         orgao_filter_id=selected_orgao_id,
     )
+
+    # Paginação por GRUPO (projeto): o grupo é a unidade visual da lista —
+    # paginar por tarefa cortaria um projeto no meio entre páginas.
+    total_groups = len(groups)
+    if per_page is None:
+        current_page, total_pages = 1, 1 if total_groups else 0
+    else:
+        total_pages = (total_groups + per_page - 1) // per_page
+        current_page = max(1, min(page or 1, total_pages or 1))
+        start = (current_page - 1) * per_page
+        groups = groups[start : start + per_page]
+
     return {
         "groups": groups,
         "project_options": project_options,
@@ -303,4 +324,10 @@ def build_task_hub_context(
         "selected_responsavel": responsavel_filter,
         "include_archived": include_archived,
         "total_items": len(tasks),
+        "pagination": {
+            "page": current_page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "total_groups": total_groups,
+        },
     }

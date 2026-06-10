@@ -125,6 +125,39 @@ def test_api_tarefas_returns_ok_envelope_with_expected_shape(client_user):
         "responsavel",
         "selected_orgao",
     }
+    # Opções de órgão com value = ID (o sanitizador de ?orgao= espera id; a SPA
+    # derivava siglas e qualquer escolha era rejeitada com 422).
+    assert isinstance(data["orgaos_options"], list)
+    for option in data["orgaos_options"]:
+        assert option["value"].isdigit()
+
+
+def test_api_tarefas_filtra_por_orgao_valido(client_user, seed_data):
+    """Regressão: escolher um órgão das próprias opções não pode dar 422."""
+    data = _assert_ok_envelope(client_user.get("/api/tarefas").get_json())
+    if not data["orgaos_options"]:
+        return
+    value = data["orgaos_options"][0]["value"]
+    response = client_user.get(f"/api/tarefas?orgao={value}")
+    assert response.status_code == 200
+    filtered = _assert_ok_envelope(response.get_json())
+    assert str(filtered["filters"]["selected_orgao"]) == value
+
+
+def test_api_tarefas_pagination_shape_and_clamp(client_user):
+    """A lista do hub pagina por GRUPO de projeto; página fora do intervalo clampa."""
+    data = _assert_ok_envelope(client_user.get("/api/tarefas").get_json())
+    assert set(data["pagination"].keys()) == {
+        "page",
+        "per_page",
+        "total_pages",
+        "total_groups",
+    }
+    assert data["pagination"]["page"] == 1
+
+    clamped = _assert_ok_envelope(client_user.get("/api/tarefas?page=9999").get_json())
+    total_pages = clamped["pagination"]["total_pages"]
+    assert clamped["pagination"]["page"] == max(1, total_pages)
 
 
 def test_api_tarefas_group_reuses_task_card_serializer(client_user):
@@ -179,18 +212,14 @@ def test_api_tarefas_invalid_orgao_filter_returns_422_envelope(client_user):
 
 def test_api_projetos_pendentes_now_returns_orgaos_options(client_user):
     """O payload de Pendentes passa a entregar ``orgaos_options`` (subárvore)."""
-    data = _assert_ok_envelope(
-        client_user.get("/api/projetos-pendentes").get_json()
-    )
+    data = _assert_ok_envelope(client_user.get("/api/projetos-pendentes").get_json())
     assert "orgaos_options" in data
     assert isinstance(data["orgaos_options"], list)
 
 
 def test_api_projetos_pendentes_orgao_option_shape(client_user, seed_data):
     """Cada opção de órgão expõe ``value``/``label`` e o ``id`` no escopo."""
-    data = _assert_ok_envelope(
-        client_user.get("/api/projetos-pendentes").get_json()
-    )
+    data = _assert_ok_envelope(client_user.get("/api/projetos-pendentes").get_json())
     if not data["orgaos_options"]:
         return
     option = data["orgaos_options"][0]

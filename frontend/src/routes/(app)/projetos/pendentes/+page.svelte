@@ -24,6 +24,7 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PendingProjectCard from '$lib/components/PendingProjectCard.svelte';
+	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
@@ -395,28 +396,14 @@
 				{/each}
 			</div>
 
-			{#if pagination && pagination.total_pages > 1}
-				<nav class="flex items-center justify-center gap-3" aria-label="Paginação de projetos">
-					<button
-						type="button"
-						onclick={() => goToPage(pagination.page - 1)}
-						disabled={pagination.page <= 1}
-						class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-					>
-						Anterior
-					</button>
-					<span class="text-sm text-text-secondary" aria-live="polite">
-						Página {pagination.page} de {pagination.total_pages}
-					</span>
-					<button
-						type="button"
-						onclick={() => goToPage(pagination.page + 1)}
-						disabled={pagination.page >= pagination.total_pages}
-						class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-					>
-						Próxima
-					</button>
-				</nav>
+			{#if pagination}
+				<PaginationBar
+					page={pagination.page}
+					totalPages={pagination.total_pages}
+					label="Paginação de projetos"
+					disabled={loadState !== 'ready'}
+					onChange={goToPage}
+				/>
 			{/if}
 		{/if}
 	{/if}

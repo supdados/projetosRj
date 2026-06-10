@@ -13,6 +13,8 @@
  * o cliente NÃO recalcula a hierarquia.
  */
 
+import type { OrgaoOption } from './pendentes';
+
 /** Modo de listagem (`?modo=`): janela visível das tarefas do hub. */
 export type TaskHubModo = 'ativas' | 'arquivadas' | 'finalizadas';
 
@@ -80,6 +82,14 @@ export interface TaskHubFilters {
 	selected_orgao: string | number | null;
 }
 
+/** Metadados de paginação por GRUPO de projeto (`pagination`). */
+export interface TaskHubPagination {
+	page: number;
+	per_page: number | null;
+	total_pages: number;
+	total_groups: number;
+}
+
 /** Carga completa de GET /api/tarefas (já desempacotada do envelope). */
 export interface TaskHubData {
 	groups: TaskHubGroup[];
@@ -87,7 +97,14 @@ export interface TaskHubData {
 	filters: TaskHubFilters;
 	/** True quando a visão inclui tarefas arquivadas (`modo=arquivadas`). */
 	include_archived: boolean;
+	/** Total de tarefas em TODOS os grupos (pré-paginação). */
 	total_items: number;
+	pagination: TaskHubPagination;
+	/**
+	 * Opções de órgão para o filtro (mesma fonte de Pendentes:
+	 * `get_user_orgao_options` + `serialize_orgao_option`; `value` = id).
+	 */
+	orgaos_options: OrgaoOption[];
 }
 
 /** Filtros aceitos pelo endpoint (espelham os query params de /api/tarefas). */
@@ -99,6 +116,8 @@ export interface TaskHubQuery {
 	responsavel?: string;
 	orgao?: string | number | null;
 	modo?: TaskHubModo;
+	/** Página (1-based) da lista paginada por grupo de projeto. */
+	page?: number;
 }
 
 /**

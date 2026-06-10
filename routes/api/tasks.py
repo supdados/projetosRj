@@ -23,15 +23,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Response, request
+from flask import Response, g, request
 
 from ..blueprint import main_bp
-from ..orgao_scope import sanitize_orgao_filter_for_current_user
-from ..tasks.hub import build_task_hub_context
+from ..orgao_scope import (
+    get_user_orgao_options,
+    sanitize_orgao_filter_for_current_user,
+)
+from ..tasks.hub import HUB_GROUPS_PER_PAGE, build_task_hub_context
 from ..tasks.queries import _read_task_filter_values
 from .envelope import fail, ok
 from .negotiation import api_login_required
-from .serializers import serialize_task_card
+from .serializers import serialize_orgao_option, serialize_task_card
 
 #: Modos de listagem aceitos por ``?modo=`` e como cada um mapeia para os
 #: parâmetros de ``build_task_hub_context``. ``finalizadas`` reusa o conjunto
@@ -102,6 +105,14 @@ def _serialize_task_hub_context(context: dict[str, Any]) -> dict[str, Any]:
         },
         "include_archived": context["include_archived"],
         "total_items": context["total_items"],
+        "pagination": context["pagination"],
+        # Opções de órgão para o filtro local — MESMA fonte de Pendentes
+        # (get_user_orgao_options, escopo server-side), com value = ID de
+        # OrgaoUnidade. A SPA antes derivava SIGLAS de project_options e o
+        # sanitizador (que espera id) rejeitava qualquer escolha com 422.
+        "orgaos_options": [
+            serialize_orgao_option(node) for node in get_user_orgao_options(g.user)
+        ],
     }
 
 
@@ -139,7 +150,8 @@ def api_tarefas() -> Response | tuple[Response, int]:
     resulta em 422 JSON (``validation``) em vez do redirect 302 do fluxo Jinja.
     Os parâmetros ``?project=``, ``?prioridade=``, ``?tipo=`` e ``?responsavel=``
     espelham os filtros do hub; ``?modo=`` alterna entre ``ativas`` (default),
-    ``arquivadas`` e ``finalizadas``.
+    ``arquivadas`` e ``finalizadas``. ``?page=`` pagina por GRUPO de projeto
+    (``HUB_GROUPS_PER_PAGE`` grupos/página; metadados em ``pagination``).
 
     Returns:
         Envelope ``{"ok": true, "data": {...}}`` com HTTP 200; ou
@@ -170,5 +182,7 @@ def api_tarefas() -> Response | tuple[Response, int]:
         responsavel_filter=filter_values["responsavel_filter"],
         selected_orgao_id=selected_orgao_id,
         include_archived=include_archived,
+        page=request.args.get("page", 1, type=int),
+        per_page=HUB_GROUPS_PER_PAGE,
     )
     return ok(_serialize_task_hub_context(context))

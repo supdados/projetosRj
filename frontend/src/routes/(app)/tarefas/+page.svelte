@@ -45,6 +45,7 @@
 	import KanbanBoard from '$lib/components/KanbanBoard.svelte';
 	import KanbanComposer from '$lib/components/KanbanComposer.svelte';
 	import TaskViewToggle from '$lib/components/TaskViewToggle.svelte';
+	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
@@ -76,6 +77,10 @@
 	let modo = $state<TaskHubModo>('ativas');
 	let project = $state<string>('');
 	let orgao = $state<string>('');
+
+	// Página da lista (paginada por GRUPO de projeto no backend). Filtros e
+	// troca de modo voltam para a página 1.
+	let listPage = $state<number>(1);
 
 	// Filtros vindos por DEEP-LINK na URL (ex.: Dashboard -> /tarefas?tipo=bug).
 	// A API/hub ja filtram por estes campos; aqui apenas os lemos da URL e os
@@ -281,13 +286,16 @@
 			tipo: tipo || undefined,
 			prioridade: prioridade || undefined,
 			status: statusFilter || undefined,
-			responsavel: responsavel || undefined
+			responsavel: responsavel || undefined,
+			page: listPage
 		};
 		try {
 			const next = await fetchTarefas(query, controller.signal);
 			if (controller.signal.aborted) return;
 			data = next;
-			// Reconcilia os filtros com o que o backend efetivamente aplicou.
+			// Reconcilia página/filtros com o que o backend efetivamente aplicou
+			// (o backend clampa páginas fora do intervalo).
+			listPage = next.pagination.page;
 			project = next.filters.project ?? '';
 			orgao =
 				next.filters.selected_orgao === null || next.filters.selected_orgao === undefined
@@ -497,8 +505,16 @@
 	/** Re-busca a visualização ativa após mudança de filtro (lista e/ou board). */
 	function reloadActiveView(): void {
 		cancelAddForm();
+		listPage = 1;
 		void load();
 		if (view === 'kanban') void loadBoard();
+	}
+
+	/** Navega para outra página da lista (paginada por grupo no backend). */
+	function goToListPage(target: number): void {
+		cancelAddForm();
+		listPage = target;
+		void load();
 	}
 
 	/** Alterna entre ver tarefas ativas e arquivadas (botão-ícone de arquivo).
@@ -508,6 +524,7 @@
 		modo = modo === 'arquivadas' ? 'ativas' : 'arquivadas';
 		if (modo === 'arquivadas' && view !== 'list') selectView('list');
 		cancelAddForm();
+		listPage = 1;
 		void load();
 	}
 
@@ -622,18 +639,12 @@
 	});
 
 	/**
-	 * Opções de órgão para o filtro local: siglas distintas presentes nas
-	 * opções de projeto devolvidas pelo backend (que já respeitam o escopo).
+	 * Opções de órgão para o filtro local: vêm do backend (`orgaos_options`,
+	 * mesma fonte de Pendentes) com `value` = ID de OrgaoUnidade — o
+	 * sanitizador de `?orgao=` espera o id; siglas derivadas localmente eram
+	 * rejeitadas com 422 ("Filtro de órgão inválido").
 	 */
-	const orgaoOptions = $derived.by(() => {
-		if (!data) return [] as string[];
-		const seen = new Set<string>();
-		for (const option of data.project_options) {
-			const sigla = option.orgao_sigla?.trim();
-			if (sigla) seen.add(sigla);
-		}
-		return Array.from(seen).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-	});
+	const orgaoOptions = $derived(data?.orgaos_options ?? []);
 
 	const hasActiveFilters = $derived(
 		project !== '' ||
@@ -885,8 +896,8 @@
 				class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 			>
 				<option value="">Todos os órgãos</option>
-				{#each orgaoOptions as sigla (sigla)}
-					<option value={sigla}>{sigla}</option>
+				{#each orgaoOptions as orgaoOption (orgaoOption.value)}
+					<option value={orgaoOption.value}>{orgaoOption.label}</option>
 				{/each}
 			</select>
 		</div>
@@ -1171,6 +1182,16 @@
 						</div>
 					</section>
 				{/each}
+			</div>
+
+			<div class="mt-5">
+				<PaginationBar
+					page={data.pagination.page}
+					totalPages={data.pagination.total_pages}
+					label="Paginação de projetos da lista"
+					disabled={loadState !== 'ready'}
+					onChange={goToListPage}
+				/>
 			</div>
 		{/if}
 	{/if}
