@@ -376,12 +376,19 @@
 		{ value: 'alta', label: 'Alta' },
 		{ value: 'urgente', label: 'Urgente' }
 	];
+	// Sem "implementacao": é tipo LEGADO (`LEGACY_TIPOS`) — a criação via
+	// /api/tarefas só aceita VALID_TIPOS e descartaria o valor silenciosamente.
 	const ADD_TIPO_OPTIONS: { value: string; label: string }[] = [
 		{ value: '', label: 'Tipo' },
 		{ value: 'bug', label: 'Bug' },
 		{ value: 'melhoria', label: 'Melhoria' },
 		{ value: 'duvida', label: 'Dúvida' },
-		{ value: 'outros', label: 'Outros' },
+		{ value: 'outros', label: 'Outros' }
+	];
+	// O FILTRO inclui o legado: tarefas antigas ainda carregam "implementacao"
+	// e o Dashboard faz deep-link /tarefas?tipo=implementacao.
+	const FILTER_TIPO_OPTIONS: { value: string; label: string }[] = [
+		...ADD_TIPO_OPTIONS.slice(1),
 		{ value: 'implementacao', label: 'Implementação' }
 	];
 
@@ -908,7 +915,7 @@
 				class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				<option value="">Todos os tipos</option>
-				{#each ADD_TIPO_OPTIONS.slice(1) as option (option.value)}
+				{#each FILTER_TIPO_OPTIONS as option (option.value)}
 					<option value={option.value}>{option.label}</option>
 				{/each}
 			</select>

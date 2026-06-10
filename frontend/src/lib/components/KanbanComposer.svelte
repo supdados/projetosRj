@@ -81,13 +81,14 @@
 		{ value: 'alta', label: 'Alta' },
 		{ value: 'urgente', label: 'Urgente' }
 	];
+	// Sem "implementacao": é tipo LEGADO (`LEGACY_TIPOS`) — a criação via
+	// /api/tarefas só aceita VALID_TIPOS e descartaria o valor silenciosamente.
 	const TIPO_OPTIONS = [
 		{ value: '', label: 'Tipo' },
 		{ value: 'bug', label: 'Bug' },
 		{ value: 'melhoria', label: 'Melhoria' },
 		{ value: 'duvida', label: 'Dúvida' },
-		{ value: 'outros', label: 'Outros' },
-		{ value: 'implementacao', label: 'Implementação' }
+		{ value: 'outros', label: 'Outros' }
 	];
 
 	function requestOpen(): void {

@@ -52,17 +52,25 @@
 		{ value: 'urgente', label: 'Urgente' }
 	];
 
+	// Sem "implementacao" por padrão: é tipo LEGADO (`LEGACY_TIPOS`) e o save
+	// rejeita com 422 ("Tipo inválido."). A opção entra SÓ quando a tarefa já
+	// carrega o valor (exibição correta do legado, sem oferecê-lo a novas).
 	const TIPO_OPTIONS = [
 		{ value: '', label: '—' },
 		{ value: 'bug', label: 'Bug' },
 		{ value: 'melhoria', label: 'Melhoria' },
 		{ value: 'duvida', label: 'Dúvida' },
-		{ value: 'outros', label: 'Outros' },
-		{ value: 'implementacao', label: 'Implementação' }
+		{ value: 'outros', label: 'Outros' }
 	];
 
 	const isOpen = $derived($store.status !== 'closed');
 	const detail = $derived($store.detail);
+
+	const tipoOptions = $derived(
+		detail?.tipo_pedido === 'implementacao'
+			? [...TIPO_OPTIONS, { value: 'implementacao', label: 'Implementação (legado)' }]
+			: TIPO_OPTIONS
+	);
 
 	const autosaveLabel = $derived(
 		$store.autosave === 'saving' || $store.autosave === 'pending'
@@ -454,7 +462,7 @@
 								disabled={!detail.permissions.can_edit}
 								class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 							>
-								{#each TIPO_OPTIONS as opt (opt.value)}
+								{#each tipoOptions as opt (opt.value)}
 									<option value={opt.value}>{opt.label}</option>
 								{/each}
 							</select>
