@@ -87,9 +87,16 @@
 		}
 	}
 
-	// Resultados do objetivo atual — repopula sempre que o objetivo do projeto muda.
+	// Resultados do objetivo atual — repopula sempre que o objetivo do projeto MUDA.
+	// Guarda do último id carregado (var simples, fora da reatividade): o save de
+	// QUALQUER nível reatribui `data.project` na página, o que re-dispara estes
+	// efeitos mesmo com o id idêntico — sem a guarda, marcar um indicador
+	// re-buscava os catálogos e piscava "Carregando indicadores…".
+	let loadedResultadosForObjetivo: number | null | undefined = undefined;
 	$effect(() => {
 		const oid = objetivoId;
+		if (oid === loadedResultadosForObjetivo) return;
+		loadedResultadosForObjetivo = oid;
 		if (oid === null) {
 			resultados = [];
 			return;
@@ -99,9 +106,12 @@
 			.catch(() => (resultados = []));
 	});
 
-	// Indicadores do resultado atual — repopula quando o resultado do projeto muda.
+	// Indicadores do resultado atual — repopula quando o resultado do projeto MUDA.
+	let loadedIndicadoresForResultado: number | null | undefined = undefined;
 	$effect(() => {
 		const rid = resultadoId;
+		if (rid === loadedIndicadoresForResultado) return;
+		loadedIndicadoresForResultado = rid;
 		if (rid === null) {
 			indicadores = [];
 			indicadoresLoading = false;
@@ -121,15 +131,26 @@
 
 	// --- Salvar cada nível (cascata limpa os de baixo) ---------------------------
 
+	// O `pending` da página vale para a UNIDADE EEGD inteira; o spinner/esmaecer
+	// deve aparecer SÓ no nível que disparou o save (marcar um indicador não
+	// pode acender "carregando" em Objetivo/Resultado). Limpa quando resolve.
+	type SavingLevel = 'objetivo' | 'resultado' | 'indicadores';
+	let savingLevel = $state<SavingLevel | null>(null);
+	$effect(() => {
+		if (!pending) savingLevel = null;
+	});
+
 	function saveObjetivo(value: string): void {
 		const oid = Number(value);
 		if (oid === objetivoId) return;
+		savingLevel = 'objetivo';
 		void onSave({ objetivo_id: oid, resultado_esperado_id: null, indicadores_ids: [] });
 	}
 
 	async function saveResultado(value: string): Promise<void> {
 		const rid = Number(value);
 		if (rid === resultadoId) return;
+		savingLevel = 'resultado';
 		// "Carregando…" já no clique evita flash da lista antiga; o $effect recarrega
 		// e os checkboxes do novo resultado aparecem inline (sem clique extra).
 		indicadoresLoading = true;
@@ -144,6 +165,9 @@
 	let selected = $state<number[]>([]);
 	$effect(() => {
 		void error; // re-sincroniza também quando um save falha (reverte o otimista)
+		// NÃO re-sincroniza no MEIO do save: o `error` muda de undefined->null ao
+		// iniciar, o que revertia o otimista por um instante (piscada no item).
+		if (pending) return;
 		selected = [...indicadoresIds];
 	});
 	const atMax = $derived(selected.length >= MAX_INDICADORES);
@@ -161,6 +185,7 @@
 			next = [...selected, id];
 		}
 		selected = next; // otimista
+		savingLevel = 'indicadores';
 		void onSave({
 			objetivo_id: objetivoId,
 			resultado_esperado_id: resultadoId,
@@ -193,9 +218,7 @@
 	<div class="grid gap-4 sm:grid-cols-3">
 		<!-- Objetivo -->
 		<div class={cardClass}>
-			<span class={labelClass}>
-				<i class="fas fa-bullseye text-primary-600" aria-hidden="true"></i>Objetivo
-			</span>
+			<span class={labelClass}>Objetivo</span>
 			{#if readonly}
 				<span class="text-sm {objetivoDescricao ? 'text-text-primary' : 'text-text-muted'}">
 					{objetivoDescricao ?? 'Não definido'}
@@ -209,7 +232,8 @@
 					options={objetivoOptions}
 					emptyLabel="Não definido"
 					wrap
-					{pending}
+					pending={pending && savingLevel === 'objetivo'}
+					readonly={pending && savingLevel !== 'objetivo'}
 					onSelect={saveObjetivo}
 				/>
 			{/if}
@@ -217,9 +241,7 @@
 
 		<!-- Resultado esperado -->
 		<div class={cardClass}>
-			<span class={labelClass}>
-				<i class="fas fa-chart-line text-primary-600" aria-hidden="true"></i>Resultado esperado
-			</span>
+			<span class={labelClass}>Resultado esperado</span>
 			{#if readonly}
 				<span class="text-sm {resultadoDescricao ? 'text-text-primary' : 'text-text-muted'}">
 					{resultadoDescricao ?? 'Não definido'}
@@ -235,7 +257,8 @@
 					options={resultadoOptions}
 					emptyLabel="Não definido"
 					wrap
-					{pending}
+					pending={pending && savingLevel === 'resultado'}
+					readonly={pending && savingLevel !== 'resultado'}
 					onSelect={saveResultado}
 				/>
 			{/if}
@@ -244,7 +267,7 @@
 		<!-- Indicadores -->
 		<div class={cardClass}>
 			<span class={labelClass}>
-				<i class="fas fa-list-check text-primary-600" aria-hidden="true"></i>Indicadores
+				Indicadores
 				{#if !readonly && resultadoId !== null && !indicadoresLoading && indicadores.length > 0}
 					<!-- selecionados / TOTAL disponível neste resultado (limite de 4 ainda
 					     vale e atenua/avisa quando há mais de 4 opções). -->
@@ -262,23 +285,40 @@
 			{:else if indicadores.length === 0}
 				<p class="text-sm text-text-muted">Nenhum indicador disponível</p>
 			{:else}
-				<!-- Seleção INLINE: cada toque salva direto (sem Salvar/Cancelar). -->
-				<div class="flex flex-col gap-2">
+				<!-- Seleção INLINE: cada toque salva direto (sem Salvar/Cancelar).
+				     Linhas selecionáveis com checkbox CUSTOM nos tokens DS — o
+				     checkbox nativo usava o azul do navegador, destoando do azul
+				     primário do header. -->
+				<div class="flex flex-col gap-1.5" role="group" aria-label="Indicadores do resultado">
 					{#each indicadores as ind (ind.id)}
 						{@const isSel = selected.includes(ind.id)}
 						{@const blocked = atMax && !isSel}
-						<label
-							class="flex items-start gap-2 text-sm text-text-primary {blocked ? 'opacity-50' : ''}"
+						<button
+							type="button"
+							role="checkbox"
+							aria-checked={isSel}
+							disabled={pending || blocked}
+							onclick={() => toggleInd(ind.id)}
+							class="flex items-start gap-2.5 rounded-[5px] border px-2.5 py-2 text-left text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 disabled:cursor-not-allowed {isSel
+								? 'border-transparent bg-primary-100 text-text-primary'
+								: 'border-border-subtle bg-surface text-text-primary hover:bg-surface-muted'} {blocked
+								? 'opacity-50'
+								: ''}"
 						>
-							<input
-								type="checkbox"
-								checked={isSel}
-								disabled={pending || blocked}
-								onchange={() => toggleInd(ind.id)}
-								class="mt-0.5 h-4 w-4 shrink-0 rounded border-border-subtle text-primary-600 focus:ring-primary-500"
-							/>
-							<span>{ind.descricao}</span>
-						</label>
+							<span
+								aria-hidden="true"
+								class="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-fast {isSel
+									? 'border-primary-500 bg-primary-500'
+									: 'border-border-strong bg-surface'}"
+							>
+								{#if isSel}
+									<svg viewBox="0 0 24 24" class="h-3 w-3 text-white" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M5 13l4 4L19 7" />
+									</svg>
+								{/if}
+							</span>
+							<span class="leading-snug">{ind.descricao}</span>
+						</button>
 					{/each}
 				</div>
 			{/if}
