@@ -26,9 +26,17 @@
 		 * NÃO fechar o painel no clique-fora quando há conteúdo não salvo.
 		 */
 		dirty?: boolean;
+		/** Esconde o cabeçalho próprio ("Comentários" + contagem) quando o
+		 *  container já fornece um (ex.: a seção colapsável do drawer). */
+		showHeader?: boolean;
 	}
 
-	let { store, idPrefix = 'task', dirty = $bindable(false) }: Props = $props();
+	let {
+		store,
+		idPrefix = 'task',
+		dirty = $bindable(false),
+		showHeader = true
+	}: Props = $props();
 
 	const comments = $derived($store.detail?.comentarios ?? []);
 	const taskId = $derived($store.detail?.id ?? null);
@@ -295,14 +303,16 @@
 
 <section aria-label="Comentários" class="ict">
 	{#if comments.length > 0}
-		<header class="mb-1 flex items-center gap-2 px-1">
-			<h3 class="text-sm font-bold text-text-primary">Comentários</h3>
-			<span
-				class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-surface px-1.5 font-mono text-2xs font-semibold text-text-secondary"
-			>
-				{comments.length}
-			</span>
-		</header>
+		{#if showHeader}
+			<header class="mb-1 flex items-center gap-2 px-1">
+				<h3 class="text-sm font-bold text-text-primary">Comentários</h3>
+				<span
+					class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-surface px-1.5 font-mono text-2xs font-semibold text-text-secondary"
+				>
+					{comments.length}
+				</span>
+			</header>
+		{/if}
 
 		<ol class="ict-list">
 			{#each comments as comment (comment.id)}

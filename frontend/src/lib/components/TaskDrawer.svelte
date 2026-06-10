@@ -1,37 +1,41 @@
 <script lang="ts">
 	/**
-	 * DRAWER de Tarefa (Fase 5b-2). Painel lateral acessível (role=dialog,
-	 * aria-modal, Esc fecha, foco inicial no botão fechar) que abre UMA tarefa a
-	 * partir do board Kanban, da lista ou de uma etapa do Detalhe.
+	 * DRAWER de Tarefa (Fase 5b-2, redesenhado jun/2026 junto com o board).
+	 * Painel lateral acessível (role=dialog, aria-modal, Esc fecha) que abre UMA
+	 * tarefa a partir do board Kanban, da lista ou de uma etapa do Detalhe.
 	 *
-	 * Edição inline dos campos (descrição/prioridade/tipo/responsável) com
-	 * AUTOSAVE (debounce na store via `createAutosave`; `flush` no blur e ao
-	 * fechar — nunca perde edição). O status tem um SELETOR (#16) que chama
-	 * `POST /api/tarefas/<id>/status` (mesmo cliente `updateTaskStatus` do board):
-	 * só envia; em erro reverte a seleção e mostra a mensagem (server-autoritativo,
-	 * 403 ao finalizar sem permissão). Ações finalizar/arquivar/desarquivar/
-	 * reativar são server-autoritativas (403 → erro, sem aplicar). Comentários e
-	 * anexos ficam nos painéis dedicados. Mutações refletem no card do board via os
-	 * reconciliadores injetados na store. O foco fica preso no painel via
-	 * `use:focusTrap` (#17), que também foca o primeiro elemento ao abrir e
-	 * restaura o foco anterior ao fechar.
+	 * Anatomia: header com o NOME DA TAREFA como título e, abaixo, "projeto ·
+	 * etapa" (projeto como link, paridade com o card do kanban); corpo rolável
+	 * com campos editáveis (descrição/prioridade/tipo/responsáveis), aviso de
+	 * tarefa SEM ETAPA (com associação opcional), e os painéis de comentários
+	 * (InlineCommentsTree — o MESMO da lista) e anexos; rodapé fixo com "Salvar".
+	 *
+	 * O drawer NÃO muda status nem arquiva: essas ações acontecem no kanban
+	 * (drag) ou na lista — aqui só edição de campos. "Salvar" faz flush das
+	 * edições pendentes e fecha (o autosave já persistiu o resto). Mover de
+	 * etapa só é oferecido a tarefas SEM etapa associada (associação inicial).
+	 *
+	 * Edição inline dos campos com AUTOSAVE (debounce na store via
+	 * `createAutosave`; `flush` no blur e ao fechar — nunca perde edição).
+	 * Responsáveis usam o AssigneePicker em modo persist (mesmo componente e
+	 * avatares da lista). Mutações refletem no card do board via os
+	 * reconciliadores injetados na store. Foco preso no painel via `use:focusTrap`.
+	 *
+	 * As tintas de aviso/perigo usam color-mix sobre os tokens DS — o Tailwind
+	 * 3 NÃO gera modificadores de opacidade (`bg-x/10`) para cores definidas como
+	 * var() sem alpha-value, então elas vivem no bloco de estilo abaixo.
 	 */
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
-	import {
-		STATUS_LABELS,
-		TASK_STATUS_ORDER,
-		normalizeStatus,
-		type TaskStatus
-	} from '$lib/utils/taskStatus';
-	import { updateTaskStatus } from '$lib/api/board';
+	import type { TaskDrawerPayload } from '$lib/types/taskDrawer';
+	import type { TaskAssignee } from '$lib/types/tasks';
 	import { ApiClientError } from '$lib/api/client';
 	import { fetchProjectDetail } from '$lib/api/projectDetail';
 	import type { EtapaDetail } from '$lib/types/projectDetail';
 	import { focusTrap } from '$lib/actions/focusTrap';
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import Badge from './Badge.svelte';
-	import CommentsPanel from './CommentsPanel.svelte';
+	import AssigneePicker from './AssigneePicker.svelte';
+	import InlineCommentsTree from './InlineCommentsTree.svelte';
 	import AttachmentsPanel from './AttachmentsPanel.svelte';
 
 	interface Props {
@@ -39,16 +43,6 @@
 	}
 
 	let { store }: Props = $props();
-
-	type Tone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
-
-	const STATUS_TONE: Record<string, Tone> = {
-		nao_iniciada: 'neutral',
-		em_andamento: 'info',
-		para_validacao: 'primary',
-		para_ajustes: 'warning',
-		finalizada: 'success'
-	};
 
 	const PRIORIDADE_OPTIONS = [
 		{ value: '', label: '—' },
@@ -70,16 +64,6 @@
 	const isOpen = $derived($store.status !== 'closed');
 	const detail = $derived($store.detail);
 
-	// #16: seletor de status. Mudança de status é uma operação à parte (não passa
-	// pelo autosave de campos). Reusa o cliente `updateTaskStatus` do board.
-	let changingStatus = $state(false);
-	let statusError = $state<string | null>(null);
-
-	const STATUS_OPTIONS = TASK_STATUS_ORDER.map((value) => ({
-		value,
-		label: STATUS_LABELS[value]
-	}));
-
 	const autosaveLabel = $derived(
 		$store.autosave === 'saving' || $store.autosave === 'pending'
 			? 'Salvando…'
@@ -90,43 +74,31 @@
 					: ''
 	);
 
-	function statusTone(status: string): Tone {
-		return STATUS_TONE[normalizeStatus(status)] ?? 'neutral';
+	const DATE_FMT = new Intl.DateTimeFormat('pt-BR', {
+		day: '2-digit',
+		month: '2-digit',
+		year: 'numeric'
+	});
+
+	function formatDate(value: string | null): string | null {
+		if (!value) return null;
+		const parsed = new Date(value);
+		return Number.isNaN(parsed.getTime()) ? null : DATE_FMT.format(parsed);
 	}
 
-	/**
-	 * #16: aplica a transição de status no servidor (autoritativo). Só ENVIA; em
-	 * erro reverte o `<select>` ao status atual e mostra a mensagem. Salva edições
-	 * pendentes antes (flush) e recarrega o detalhe (reconciliando o board).
-	 */
-	async function onStatus(event: Event): Promise<void> {
-		const target = event.currentTarget as HTMLSelectElement;
-		const next = target.value as TaskStatus;
-		const current = detail ? normalizeStatus(detail.status) : null;
-		const taskId = $store.taskId;
-		if (taskId === null || current === null || next === current) return;
+	// RESPONSÁVEIS: estado local sincronizado do detalhe (mesmo padrão do
+	// TaskHubTaskRow) — o picker persiste sozinho (modo taskId) e reconcilia
+	// `assignees` com a resposta do servidor.
+	let assignees = $state<TaskAssignee[]>([]);
+	$effect(() => {
+		assignees = detail?.assignees ?? [];
+	});
 
-		changingStatus = true;
-		statusError = null;
-		try {
-			await store.flush();
-			await updateTaskStatus(taskId, next);
-			// Recarrega o detalhe canônico (e reconcilia o card no board via a store).
-			await store.open(taskId, { mode: $store.mode });
-		} catch (err) {
-			// Reverte a seleção visual ao status atual e sinaliza o erro.
-			target.value = current;
-			statusError =
-				err instanceof ApiClientError
-					? err.message
-					: 'Não foi possível alterar o status da tarefa.';
-		} finally {
-			changingStatus = false;
-		}
-	}
+	// COMENTÁRIOS colapsáveis (paridade com a lista, onde a árvore expande sob
+	// demanda). Começa recolhido; o cabeçalho mostra a contagem.
+	let commentsOpen = $state(false);
 
-	// EXCLUIR: mini-confirm inline no header (paridade com #taskItemDrawerDeleteConfirm
-	// do drawer legado — NÃO usa window.confirm). Clicar lixeira abre o confirm;
+	// EXCLUIR: mini-confirm inline (paridade com o board — NÃO usa window.confirm).
 	// Escape fecha primeiro o confirm e só depois o drawer.
 	let confirmingDelete = $state(false);
 
@@ -142,22 +114,22 @@
 		if (ok) confirmingDelete = false;
 	}
 
-	// MOVER DE ETAPA: select que aparece via toggle. As etapas do projeto são
-	// buscadas sob demanda (não vêm no payload do drawer). `warning` de etapa
-	// concluída é exibido inline (o Jinja ignorava; aqui mostramos por fidelidade
-	// à informação do backend, sem som/confete).
-	let movingEtapa = $state(false);
+	// ASSOCIAR ETAPA: só para tarefa SEM etapa (associação inicial — quem já tem
+	// etapa não move por aqui; isso é papel do detalhe do projeto). As etapas do
+	// projeto são buscadas na primeira abertura (não vêm no payload do drawer).
+	// `warning` de etapa concluída é exibido inline.
+	let choosingEtapa = $state(false);
 	let etapaOptions = $state<EtapaDetail[]>([]);
 	let etapaListLoading = $state(false);
 	let etapaWarning = $state<string | null>(null);
 	let etapaError = $state<string | null>(null);
 	let loadedEtapasForProject = $state<number | null>(null);
 
-	async function toggleMoveEtapa(): Promise<void> {
-		movingEtapa = !movingEtapa;
+	async function toggleChooseEtapa(): Promise<void> {
+		choosingEtapa = !choosingEtapa;
 		etapaWarning = null;
 		etapaError = null;
-		if (!movingEtapa) return;
+		if (!choosingEtapa) return;
 		const projectId = detail?.project?.id ?? null;
 		if (projectId === null || loadedEtapasForProject === projectId) return;
 		etapaListLoading = true;
@@ -174,23 +146,23 @@
 		}
 	}
 
-	async function onMoveEtapa(event: Event): Promise<void> {
+	async function onChooseEtapa(event: Event): Promise<void> {
 		const value = (event.currentTarget as HTMLSelectElement).value;
-		const target: number | 'sem_etapa' = value === '' ? 'sem_etapa' : Number(value);
+		if (value === '') return;
 		etapaWarning = null;
 		etapaError = null;
-		const result = await store.moveEtapa(target);
+		const result = await store.moveEtapa(Number(value));
 		if (!result.ok) {
-			etapaError = $store.error ?? 'Não foi possível mover a tarefa.';
+			etapaError = $store.error ?? 'Não foi possível associar a tarefa à etapa.';
 			return;
 		}
 		etapaWarning = result.warning ?? null;
-		if (!etapaWarning) movingEtapa = false;
+		if (!etapaWarning) choosingEtapa = false;
 	}
 
 	async function close(): Promise<void> {
 		confirmingDelete = false;
-		movingEtapa = false;
+		choosingEtapa = false;
 		await store.close();
 	}
 
@@ -217,20 +189,13 @@
 		const v = (event.currentTarget as HTMLSelectElement).value;
 		store.editField({ tipo_pedido: v === '' ? null : v });
 	}
-	function onResponsavel(event: Event): void {
-		const v = (event.currentTarget as HTMLInputElement).value;
-		store.editField({ responsavel: v === '' ? null : v });
-	}
 	function flush(): void {
 		void store.flush();
 	}
 </script>
 
 {#if isOpen}
-	<!--
-		Backdrop — fidelidade a drawer.css `.task-item-drawer-backdrop`:
-		rgba(7,20,33,0.34) + leve blur, fade 0.2s ease.
-	-->
+	<!-- Backdrop: rgba escuro + leve blur, fade 0.2s ease. -->
 	<div
 		class="fixed inset-0 z-modal bg-[rgba(7,20,33,0.34)] backdrop-blur-[1.2px]"
 		role="presentation"
@@ -238,39 +203,70 @@
 		transition:fade={{ duration: 200 }}
 	></div>
 
-	<!--
-		Painel lateral — fidelidade a drawer.css `.task-item-drawer`:
-		width min(460px,100vw), borda esquerda, sombra -14px 0 34px, e slide-in
-		translateX(100% -> 0) com 0.24s cubic-bezier(0.22,1,0.36,1) (~cubicOut).
-	-->
+	<!-- Painel lateral: 645px, header e rodapé fixos, corpo rolável no meio. -->
 	<div
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="task-drawer-title"
 		tabindex="-1"
-		class="fixed right-0 top-0 z-modal flex h-full w-[min(460px,100vw)] flex-col overflow-y-auto border-l border-border-subtle bg-surface shadow-[-14px_0_34px_rgba(12,44,74,0.16)]"
+		class="fixed right-0 top-0 z-modal flex h-full w-[min(645px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-[-18px_0_44px_rgba(12,44,74,0.18)]"
 		onkeydown={onKeydown}
 		use:focusTrap
-		transition:fly={{ x: 460, duration: 240, easing: cubicOut, opacity: 1 }}
+		transition:fly={{ x: 645, duration: 240, easing: cubicOut, opacity: 1 }}
 	>
 		<header
-			class="flex items-start justify-between gap-[0.54rem] border-b border-border-subtle bg-surface-elevated/70 px-[0.92rem] pb-[0.76rem] pt-[0.86rem]"
+			class="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle bg-surface-elevated/70 px-5 pb-3.5 pt-4"
 		>
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
-				<p
-					id="task-drawer-title"
-					class="m-0 text-2xs font-semibold uppercase tracking-wide text-text-muted"
-				>
-					Tarefa
-				</p>
-				{#if detail?.project}
-					<span class="truncate text-md font-bold text-text-primary">{detail.project.titulo}</span>
-				{/if}
-				{#if detail?.etapa}
-					<span class="truncate text-xs text-text-muted">Etapa: {detail.etapa.descricao}</span>
+				<div class="flex items-center gap-2">
+					<p class="m-0 text-2xs font-bold uppercase tracking-[0.08em] text-text-muted">
+						Tarefa{#if detail}&nbsp;#{detail.id}{/if}
+					</p>
+					{#if detail?.is_archived}
+						<span
+							class="td-archived-chip inline-flex items-center rounded-md border px-1.5 py-px text-2xs font-semibold"
+						>
+							Arquivada
+						</span>
+					{/if}
+					<span aria-live="polite" class="text-2xs text-text-muted">{autosaveLabel}</span>
+				</div>
+				{#if detail}
+					<!-- Título = nome (descrição) da tarefa; reflete edições ao vivo. -->
+					<h2
+						id="task-drawer-title"
+						class="m-0 line-clamp-2 break-words font-heading text-lg font-bold leading-snug text-text-primary"
+					>
+						{detail.descricao}
+					</h2>
+					{#if detail.project || detail.etapa}
+						<p class="m-0 flex min-w-0 items-center gap-1.5 text-xs">
+							{#if detail.project}
+								<a
+									href={`/projetos/${detail.project.id}`}
+									class="truncate rounded-sm font-semibold text-primary-600 transition-colors duration-fast hover:text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									title={detail.project.titulo}
+								>
+									{detail.project.titulo}
+								</a>
+							{/if}
+							{#if detail.project && detail.etapa}
+								<span aria-hidden="true" class="shrink-0 font-bold text-text-muted">·</span>
+							{/if}
+							{#if detail.etapa}
+								<span class="truncate text-text-muted" title={detail.etapa.descricao}>
+									{detail.etapa.descricao}
+								</span>
+							{/if}
+						</p>
+					{/if}
+				{:else}
+					<h2 id="task-drawer-title" class="m-0 font-heading text-lg font-bold text-text-primary">
+						Tarefa
+					</h2>
 				{/if}
 			</div>
-			<div class="flex shrink-0 items-center gap-[0.34rem]">
+			<div class="flex shrink-0 items-center gap-1">
 				{#if detail && detail.permissions.can_delete}
 					<button
 						type="button"
@@ -278,7 +274,7 @@
 						aria-label="Excluir tarefa"
 						title="Excluir tarefa"
 						disabled={$store.acting}
-						class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-danger/40 bg-surface text-danger transition-all duration-fast hover:border-danger/60 hover:bg-danger/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
+						class="td-danger-ghost inline-flex h-8 w-8 items-center justify-center rounded-md text-danger transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 							<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
@@ -290,7 +286,7 @@
 					type="button"
 					onclick={() => void close()}
 					aria-label="Fechar"
-					class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-border-subtle bg-surface text-lg leading-none text-text-secondary transition-all duration-fast hover:border-border-strong hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M18 6 6 18M6 6l12 12" />
@@ -299,251 +295,289 @@
 			</div>
 		</header>
 
-		<!--
-			Corpo rolável — fidelidade a drawer.css `.task-item-drawer-body`:
-			padding 0.86rem 0.92rem, coluna com gap 0.68rem.
-		-->
-		<div class="flex flex-1 flex-col gap-[0.68rem] overflow-y-auto px-[0.92rem] py-[0.86rem]">
-
-		{#if confirmingDelete}
-			<!-- Mini-confirm inline (paridade com #taskItemDrawerDeleteConfirm). -->
-			<div
-				role="alertdialog"
-				aria-label="Confirmar exclusão da tarefa"
-				class="flex flex-col gap-2 rounded-md border border-danger bg-surface px-3 py-3"
-			>
-				<p class="text-sm text-text-primary">Deseja excluir esta tarefa?</p>
-				<div class="flex gap-2">
-					<button
-						type="button"
-						onclick={cancelDeleteConfirm}
-						disabled={$store.acting}
-						class="rounded-md border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-					>
-						Cancelar
-					</button>
-					<button
-						type="button"
-						onclick={() => void confirmDelete()}
-						disabled={$store.acting}
-						class="rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
-					>
-						{$store.acting ? 'Excluindo…' : 'Excluir tarefa'}
-					</button>
-				</div>
-			</div>
-		{/if}
-
-		{#if $store.status === 'loading'}
-			<p role="status" aria-live="polite" class="text-text-secondary">Carregando tarefa…</p>
-		{:else if $store.status === 'error'}
-			<div role="alert" class="rounded-md border border-danger bg-surface px-4 py-3 text-text-primary">
-				{$store.error}
-			</div>
-		{:else if detail}
-			<!-- Status: seletor (#16) + indicador visual (Badge) + autosave -->
-			<div class="flex items-end justify-between gap-2">
-				<div class="flex min-w-44 flex-1 flex-col gap-1">
-					<label
-						for="drawer-status"
-						class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-					>
-						Status
-					</label>
-					<div class="flex items-center gap-2">
-						<select
-							id="drawer-status"
-							value={normalizeStatus(detail.status)}
-							onchange={onStatus}
-							disabled={changingStatus || $store.acting}
-							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+		<!-- Corpo rolável (barra fina padrão via .thin-scroll do app.css) -->
+		<div class="thin-scroll flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-4">
+			{#if confirmingDelete}
+				<!-- Mini-confirm inline (mesma linguagem visual do confirm do board). -->
+				<div
+					role="alertdialog"
+					aria-label="Confirmar exclusão da tarefa"
+					class="td-delete-confirm flex flex-col gap-2 rounded-lg border px-3 py-2.5"
+				>
+					<p class="m-0 text-sm font-semibold text-danger">Excluir esta tarefa?</p>
+					<p class="m-0 text-xs text-text-secondary">
+						A exclusão é permanente e remove comentários e anexos.
+					</p>
+					<div class="flex justify-end gap-2">
+						<button
+							type="button"
+							onclick={cancelDeleteConfirm}
+							disabled={$store.acting}
+							class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 						>
-							{#each STATUS_OPTIONS as opt (opt.value)}
-								<option value={opt.value}>{opt.label}</option>
-							{/each}
-						</select>
-						<Badge tone={statusTone(detail.status)}>
-							{STATUS_LABELS[normalizeStatus(detail.status)]}
-						</Badge>
+							Cancelar
+						</button>
+						<button
+							type="button"
+							onclick={() => void confirmDelete()}
+							disabled={$store.acting}
+							class="td-delete-confirm-btn rounded-md border px-3 py-1.5 text-xs font-semibold text-danger transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+						>
+							{$store.acting ? 'Excluindo…' : 'Excluir tarefa'}
+						</button>
 					</div>
-				</div>
-				<span aria-live="polite" class="pb-2 text-xs text-text-muted">{autosaveLabel}</span>
-			</div>
-
-			{#if statusError}
-				<div role="alert" class="rounded-md border border-danger bg-surface px-3 py-2 text-sm text-text-primary">
-					{statusError}
 				</div>
 			{/if}
 
-			{#if $store.error}
-				<div role="alert" class="rounded-md border border-danger bg-surface px-3 py-2 text-sm text-text-primary">
+			{#if $store.status === 'loading'}
+				<div role="status" aria-live="polite" class="flex items-center gap-2 py-2 text-sm text-text-secondary">
+					<span
+						class="h-4 w-4 animate-spin rounded-full border-2 border-border-subtle border-t-primary-600"
+						aria-hidden="true"
+					></span>
+					Carregando tarefa…
+				</div>
+			{:else if $store.status === 'error'}
+				<div role="alert" class="rounded-md border border-danger bg-surface px-4 py-3 text-sm text-text-primary">
 					{$store.error}
 				</div>
-			{/if}
-
-			<!-- Campos editáveis (autosave) -->
-			<div class="flex flex-col gap-3">
-				<div class="flex flex-col gap-1">
-					<label for="drawer-descricao" class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-						Descrição
-					</label>
-					<textarea
-						id="drawer-descricao"
-						value={detail.descricao}
-						oninput={onDescricao}
-						onblur={flush}
-						disabled={!detail.permissions.can_edit}
-						rows="3"
-						class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-					></textarea>
-				</div>
-
-				<div class="flex flex-wrap gap-3">
-					<div class="flex min-w-36 flex-1 flex-col gap-1">
-						<label for="drawer-prioridade" class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-							Prioridade
-						</label>
-						<select
-							id="drawer-prioridade"
-							value={detail.prioridade ?? ''}
-							onchange={onPrioridade}
-							disabled={!detail.permissions.can_edit}
-							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-						>
-							{#each PRIORIDADE_OPTIONS as opt (opt.value)}
-								<option value={opt.value}>{opt.label}</option>
-							{/each}
-						</select>
+			{:else if detail}
+				{#if $store.error}
+					<div role="alert" class="rounded-md border border-danger bg-surface px-3 py-2 text-sm text-text-primary">
+						{$store.error}
 					</div>
+				{/if}
 
-					<div class="flex min-w-36 flex-1 flex-col gap-1">
-						<label for="drawer-tipo" class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-							Tipo
-						</label>
-						<select
-							id="drawer-tipo"
-							value={detail.tipo_pedido ?? ''}
-							onchange={onTipo}
-							disabled={!detail.permissions.can_edit}
-							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-						>
-							{#each TIPO_OPTIONS as opt (opt.value)}
-								<option value={opt.value}>{opt.label}</option>
-							{/each}
-						</select>
-					</div>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<label for="drawer-responsavel" class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-						Responsável
-					</label>
-					<input
-						id="drawer-responsavel"
-						type="text"
-						value={detail.responsavel ?? ''}
-						oninput={onResponsavel}
-						onblur={flush}
-						disabled={!detail.permissions.can_edit}
-						class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-					/>
-				</div>
-			</div>
-
-			<!-- Mover de etapa (DnD equivalente no drawer): só projetos com etapas -->
-			{#if detail.project && detail.permissions.can_edit}
-				<div class="flex flex-col gap-2 border-t border-border-subtle pt-3">
-					<button
-						type="button"
-						onclick={() => void toggleMoveEtapa()}
-						aria-expanded={movingEtapa}
-						class="w-fit text-sm font-medium text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-					>
-						{movingEtapa ? 'Cancelar mudança de etapa' : 'Mover de etapa'}
-					</button>
-					{#if movingEtapa}
-						{#if etapaListLoading}
-							<p role="status" aria-live="polite" class="text-xs text-text-muted">
-								Carregando etapas…
+				{#if !detail.etapa}
+					<!-- AVISO de tarefa sem etapa + associação opcional (só aqui é
+					     permitido escolher; quem já tem etapa não move pelo drawer). -->
+					<section class="td-no-etapa flex flex-col gap-2 rounded-lg border px-3 py-2.5">
+						<div class="flex items-center justify-between gap-3">
+							<p class="m-0 flex items-center gap-2 text-sm font-medium">
+								<i class="fas fa-circle-exclamation text-xs" aria-hidden="true"></i>
+								Esta tarefa não está associada a nenhuma etapa.
 							</p>
-						{:else}
-							<select
-								aria-label="Mover tarefa para a etapa"
-								value={detail.etapa?.id ?? ''}
-								onchange={onMoveEtapa}
-								disabled={$store.acting}
-								class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+							{#if detail.project && detail.permissions.can_edit}
+								<button
+									type="button"
+									onclick={() => void toggleChooseEtapa()}
+									aria-expanded={choosingEtapa}
+									class="shrink-0 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								>
+									{choosingEtapa ? 'Cancelar' : 'Associar etapa'}
+								</button>
+							{/if}
+						</div>
+						{#if choosingEtapa}
+							{#if etapaListLoading}
+								<p role="status" aria-live="polite" class="m-0 text-xs text-text-muted">
+									Carregando etapas…
+								</p>
+							{:else}
+								<select
+									aria-label="Associar tarefa à etapa"
+									value=""
+									onchange={onChooseEtapa}
+									disabled={$store.acting}
+									class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+								>
+									<option value="" disabled>Escolha a etapa…</option>
+									{#each etapaOptions as etapa (etapa.id)}
+										<option value={etapa.id}>
+											{etapa.descricao ?? `Etapa ${etapa.id}`}{etapa.done ? ' (concluída)' : ''}
+										</option>
+									{/each}
+								</select>
+							{/if}
+							{#if etapaWarning}
+								<p role="status" aria-live="polite" class="m-0 text-xs text-warning">{etapaWarning}</p>
+							{/if}
+							{#if etapaError}
+								<p role="alert" class="m-0 text-xs text-danger">{etapaError}</p>
+							{/if}
+						{/if}
+					</section>
+				{/if}
+
+				<!-- Campos editáveis (autosave) -->
+				<section class="flex flex-col gap-3">
+					<div class="flex flex-col gap-1">
+						<label
+							for="drawer-descricao"
+							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+						>
+							Descrição
+						</label>
+						<textarea
+							id="drawer-descricao"
+							value={detail.descricao}
+							oninput={onDescricao}
+							onblur={flush}
+							disabled={!detail.permissions.can_edit}
+							rows="3"
+							class="w-full resize-y rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm leading-relaxed text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+						></textarea>
+					</div>
+
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+						<div class="flex min-w-0 flex-col gap-1">
+							<label
+								for="drawer-prioridade"
+								class="text-xs font-semibold uppercase tracking-wide text-text-muted"
 							>
-								<option value="">Sem etapa</option>
-								{#each etapaOptions as etapa (etapa.id)}
-									<option value={etapa.id}>
-										{etapa.descricao ?? `Etapa ${etapa.id}`}{etapa.done ? ' (concluída)' : ''}
-									</option>
+								Prioridade
+							</label>
+							<select
+								id="drawer-prioridade"
+								value={detail.prioridade ?? ''}
+								onchange={onPrioridade}
+								disabled={!detail.permissions.can_edit}
+								class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+							>
+								{#each PRIORIDADE_OPTIONS as opt (opt.value)}
+									<option value={opt.value}>{opt.label}</option>
 								{/each}
 							</select>
-						{/if}
-						{#if etapaWarning}
-							<p role="status" aria-live="polite" class="text-xs text-warning">{etapaWarning}</p>
-						{/if}
-						{#if etapaError}
-							<p role="alert" class="text-xs text-danger">{etapaError}</p>
-						{/if}
+						</div>
+
+						<div class="flex min-w-0 flex-col gap-1">
+							<label
+								for="drawer-tipo"
+								class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+							>
+								Tipo
+							</label>
+							<select
+								id="drawer-tipo"
+								value={detail.tipo_pedido ?? ''}
+								onchange={onTipo}
+								disabled={!detail.permissions.can_edit}
+								class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+							>
+								{#each TIPO_OPTIONS as opt (opt.value)}
+									<option value={opt.value}>{opt.label}</option>
+								{/each}
+							</select>
+						</div>
+
+						<div class="flex min-w-0 flex-col gap-1">
+							<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
+								Responsáveis
+							</span>
+							<!-- Mesmo picker de avatares da lista (modo persist por taskId),
+							     dentro de um campo delimitado como os selects ao lado. -->
+							<div
+								class="flex h-9 items-center rounded-lg border border-border-subtle bg-surface px-1.5"
+							>
+								<!-- `onSaved` reconcilia detalhe + card do board com a resposta
+								     do servidor (sem ele o kanban só refletia após reload). O
+								     cast é seguro: o endpoint devolve o MESMO envelope
+								     {task, detail} dos saves da store (serialize_task_detail). -->
+								<AssigneePicker
+									taskId={detail.id}
+									bind:assignees
+									disabled={!detail.permissions.can_edit}
+									onSaved={(res) =>
+										store.applyExternalPayload(res as unknown as TaskDrawerPayload)}
+								/>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				{#if formatDate(detail.created_at)}
+					<p class="m-0 -mt-2 text-2xs text-text-muted">
+						Criada em {formatDate(detail.created_at)}{detail.is_archived &&
+						formatDate(detail.archived_at)
+							? ` · arquivada em ${formatDate(detail.archived_at)}`
+							: ''}
+					</p>
+				{/if}
+
+				<!-- Comentários: MESMO componente da lista (árvore com avatares), numa
+				     seção COLAPSÁVEL — o cabeçalho aqui substitui o do componente. -->
+				<section class="flex flex-col gap-1">
+					<button
+						type="button"
+						onclick={() => (commentsOpen = !commentsOpen)}
+						aria-expanded={commentsOpen}
+						aria-controls="drawer-comments-region"
+						class="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<i
+							class="fas fa-chevron-right text-2xs text-text-muted transition-transform duration-fast {commentsOpen
+								? 'rotate-90'
+								: ''}"
+							aria-hidden="true"
+						></i>
+						<span class="text-sm font-bold text-text-primary">Comentários</span>
+						<span
+							class="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-border-subtle bg-surface px-1.5 text-2xs font-semibold text-text-secondary"
+						>
+							{detail.comentarios.length}
+						</span>
+					</button>
+					{#if commentsOpen}
+						<div id="drawer-comments-region">
+							<InlineCommentsTree {store} idPrefix="drawer" showHeader={false} />
+						</div>
 					{/if}
-				</div>
-			{/if}
-
-			<!-- Ações de ciclo de vida (server-autoritativas) -->
-			<div class="flex flex-wrap gap-2 border-t border-border-subtle pt-3">
-				{#if !detail.is_archived && normalizeStatus(detail.status) !== 'finalizada' && detail.permissions.can_finalize}
-					<button
-						type="button"
-						disabled={$store.acting}
-						onclick={() => void store.finalizar()}
-						class="rounded-md bg-success px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-success disabled:opacity-50"
-					>
-						Finalizar
-					</button>
-				{/if}
-				{#if normalizeStatus(detail.status) === 'finalizada' && !detail.is_archived}
-					<button
-						type="button"
-						disabled={$store.acting}
-						onclick={() => void store.reativar()}
-						class="rounded-md border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-					>
-						Reativar
-					</button>
-				{/if}
-				{#if detail.is_archived}
-					<button
-						type="button"
-						disabled={$store.acting}
-						onclick={() => void store.desarquivar()}
-						class="rounded-md border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-					>
-						Desarquivar
-					</button>
-				{:else}
-					<button
-						type="button"
-						disabled={$store.acting}
-						onclick={() => void store.arquivar()}
-						class="rounded-md border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-					>
-						Arquivar
-					</button>
-				{/if}
-			</div>
-
-			<!-- Painéis -->
-			<div class="border-t border-border-subtle pt-3">
-				<CommentsPanel {store} />
-			</div>
-			<div class="border-t border-border-subtle pt-3">
+				</section>
 				<AttachmentsPanel {store} />
-			</div>
-		{/if}
+			{/if}
 		</div>
+
+		{#if detail && $store.status !== 'loading'}
+			<!-- Rodapé fixo: Salvar = flush das edições pendentes + fechar (o
+			     autosave já persistiu o resto; status/arquivar vivem no board/lista). -->
+			<footer
+				class="flex shrink-0 items-center justify-end gap-2 border-t border-border-subtle bg-surface-elevated/70 px-5 py-3"
+			>
+				<button
+					type="button"
+					disabled={$store.acting}
+					onclick={() => void close()}
+					class="inline-flex items-center gap-1.5 rounded-md bg-primary-500 px-4 py-1.5 text-sm font-semibold text-white transition-opacity duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				>
+					<i class="fas fa-check text-xs" aria-hidden="true"></i>
+					Salvar
+				</button>
+			</footer>
+		{/if}
 	</div>
 {/if}
+
+<style>
+	/* Chip "Arquivada" do header (tinta âmbar suave). color-mix sobre tokens DS
+	 * (dark-safe); o Tailwind 3 não gera `bg-x/10` p/ cores via var(). */
+	.td-archived-chip {
+		color: color-mix(in srgb, var(--ds-color-warning-600) 80%, black);
+		border-color: color-mix(in srgb, var(--ds-color-warning-600) 45%, transparent);
+		background-color: color-mix(in srgb, var(--ds-color-warning-600) 12%, transparent);
+	}
+
+	/* Aviso de tarefa sem etapa (tinta âmbar, mais visível que o muted). */
+	.td-no-etapa {
+		color: color-mix(in srgb, var(--ds-color-warning-600) 72%, black);
+		border-color: color-mix(in srgb, var(--ds-color-warning-600) 40%, transparent);
+		background-color: color-mix(in srgb, var(--ds-color-warning-600) 8%, transparent);
+	}
+
+	/* Lixeira do header: ghost (só ícone); hover abre a tinta de perigo. */
+	.td-danger-ghost:hover:not(:disabled) {
+		background-color: color-mix(in srgb, var(--ds-color-danger-600) 10%, transparent);
+	}
+
+	/* Mini-confirm de exclusão (mesma linguagem do confirm do card no board). */
+	.td-delete-confirm {
+		border-color: color-mix(in srgb, var(--ds-color-danger-600) 38%, transparent);
+		background-color: color-mix(in srgb, var(--ds-color-danger-600) 5%, transparent);
+	}
+	.td-delete-confirm-btn {
+		border-color: color-mix(in srgb, var(--ds-color-danger-600) 48%, transparent);
+		background-color: color-mix(in srgb, var(--ds-color-danger-600) 10%, transparent);
+	}
+	.td-delete-confirm-btn:hover:not(:disabled) {
+		background-color: color-mix(in srgb, var(--ds-color-danger-600) 18%, transparent);
+	}
+</style>

@@ -197,7 +197,7 @@
 				ondragover={onDragOver}
 				ondragleave={onDragLeave}
 				ondrop={onDrop}
-				class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed px-3 py-1.5 text-xs font-semibold transition-colors duration-fast focus-within:ring-2 focus-within:ring-primary-500 {dragActive
+				class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed px-3 py-2.5 text-xs font-semibold transition-colors duration-fast focus-within:ring-2 focus-within:ring-primary-500 {dragActive
 					? 'border-primary-500 bg-primary-100 text-primary-700'
 					: 'border-border-strong bg-surface-muted/40 text-text-secondary hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700'} {uploading
 					? 'opacity-60'

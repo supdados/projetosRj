@@ -112,6 +112,12 @@ export interface TaskDrawerStore extends Readable<TaskDrawerState> {
 	 * quando a etapa de destino está concluída (paridade com o legado).
 	 */
 	moveEtapa(etapaId: number | 'sem_etapa' | null): Promise<{ ok: boolean; warning?: string }>;
+	/**
+	 * Aplica um envelope `{task, detail}` vindo de um save EXTERNO à store (ex.:
+	 * o AssigneePicker persiste responsáveis direto na API): atualiza o detalhe
+	 * aberto (se for a mesma tarefa) e reconcilia o card no board.
+	 */
+	applyExternalPayload(payload: TaskDrawerPayload): void;
 	addComment(content: string): Promise<boolean>;
 	editComment(commentId: number, content: string): Promise<boolean>;
 	deleteComment(commentId: number): Promise<boolean>;
@@ -154,6 +160,19 @@ export function createTaskDrawerStore(
 		} else {
 			reconcilers.onCardChanged?.(card);
 		}
+	}
+
+	/**
+	 * Save externo (fora desta store): só substitui o `detail` se o drawer ainda
+	 * está na MESMA tarefa (evita aplicar resposta atrasada de outra tarefa); o
+	 * board é reconciliado sempre (o card mudou no servidor de todo jeito).
+	 */
+	function applyExternalPayload(payload: TaskDrawerPayload): void {
+		store.update((state) => {
+			if (state.status === 'closed' || state.taskId !== payload.detail.id) return state;
+			return { ...state, detail: payload.detail };
+		});
+		reconcileBoard(payload.task);
 	}
 
 	/** Aplica o envelope `{task, detail}` no drawer e reconcilia o board. */
@@ -451,6 +470,7 @@ export function createTaskDrawerStore(
 		reativar,
 		deleteTask,
 		moveEtapa,
+		applyExternalPayload,
 		addComment: addCommentAction,
 		editComment: editCommentAction,
 		deleteComment: deleteCommentAction,

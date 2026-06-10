@@ -23,6 +23,7 @@
 	 * (setas/Enter/Esc) e com roles listbox/option.
 	 */
 	import { tick } from 'svelte';
+	import type { TaskCard } from '$lib/types/tasks';
 	import AssigneeAvatar from './AssigneeAvatar.svelte';
 	import { fetchHubResponsaveis, fetchTaskCandidates, saveTaskAssignees } from '$lib/api/tasks';
 
@@ -35,6 +36,9 @@
 		disabled?: boolean;
 		/** Chamado com a nova lista após cada mudança (parent atualiza o card). */
 		onChange?: (assignees: TaskAssignee[]) => void;
+		/** Chamado com o envelope `{task, detail}` confirmado pelo SERVIDOR após
+		 *  cada save (modo persist) — permite ao pai reconciliar board/drawer. */
+		onSaved?: (result: { task: TaskCard; detail: unknown }) => void;
 	}
 
 	let {
@@ -42,7 +46,8 @@
 		projectValue,
 		assignees = $bindable([]),
 		disabled = false,
-		onChange
+		onChange,
+		onSaved
 	}: Props = $props();
 
 	let open = $state(false);
@@ -188,6 +193,7 @@
 						assignees = res.task.assignees ?? assignees;
 						confirmed = [...assignees];
 						onChange?.(assignees);
+						onSaved?.(res);
 					}
 				} catch {
 					if (pendingIds === null) {
