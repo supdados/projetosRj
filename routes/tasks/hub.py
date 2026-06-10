@@ -1,4 +1,5 @@
 from flask import g
+from sqlalchemy import or_
 
 from models import (
     Project,
@@ -248,6 +249,95 @@ def _build_task_hub_project_options(include_archived=False, orgao_filter_id=None
 HUB_GROUPS_PER_PAGE = 10
 
 
+def _ordered_group_identities(**filters):
+    """Grupos (projeto) que casam com o filtro, ordenados, SEM carregar tarefas.
+
+    Cada item é ``(project_id, titulo)``; ``project_id is None`` representa o
+    bucket "Sem projeto". A ordem replica a de ``_group_hub_tasks_by_project``
+    (sem-projeto por último, depois por título *casefold*), com ``project_id``
+    como desempate determinístico — assim a fronteira entre páginas é estável
+    quando dois projetos têm o mesmo título.
+    """
+    rows = (
+        _build_visible_tasks_query(include_relations=False, **filters)
+        .with_entities(Project.id, Project.titulo)
+        .order_by(None)
+        .distinct()
+        .all()
+    )
+    return sorted(
+        rows,
+        key=lambda row: (
+            row[0] is None,
+            (row[1] or "Sem projeto").casefold(),
+            row[0] or 0,
+        ),
+    )
+
+
+def _page_group_filter(page_identities):
+    """Condição SQL que restringe as tarefas aos grupos desta página.
+
+    Retorna ``db.false()`` quando a página não tem grupo algum (resultado vazio),
+    para a query devolver zero tarefas em vez de todas.
+    """
+    project_ids = [pid for pid, _ in page_identities if pid is not None]
+    conditions = []
+    if project_ids:
+        conditions.append(Task.project_id.in_(project_ids))
+    if any(pid is None for pid, _ in page_identities):
+        conditions.append(Task.project_id.is_(None))
+    if not conditions:
+        return db.false()
+    return or_(*conditions)
+
+
+def _count_visible_tasks(**filters):
+    """Conta as tarefas do filtro sem materializá-las (badge "N tarefas")."""
+    return (
+        _build_visible_tasks_query(include_relations=False, **filters)
+        .order_by(None)
+        .count()
+    )
+
+
+def _load_all_groups(**filters):
+    """Modo legado (sem paginação): carrega TODAS as tarefas e agrupa."""
+    tasks = _build_visible_tasks_query(**filters).all()
+    groups = _group_hub_tasks_by_project(tasks)
+    return groups, len(groups), len(tasks)
+
+
+def _load_group_page(*, page, per_page, **filters):
+    """Pagina por GRUPO no banco: escolhe os projetos da página e só então
+    carrega as tarefas (com comentários/anexos) desses projetos.
+
+    Mantém o trabalho de banco/memória proporcional aos ``per_page`` grupos
+    pedidos — não ao conjunto filtrado inteiro. Retorna ``(groups,
+    total_groups, total_items, current_page, total_pages)``.
+    """
+    identities = _ordered_group_identities(**filters)
+    total_groups = len(identities)
+    total_pages = (total_groups + per_page - 1) // per_page
+    current_page = max(1, min(page or 1, total_pages or 1))
+    start = (current_page - 1) * per_page
+    page_identities = identities[start : start + per_page]
+
+    tasks = (
+        _build_visible_tasks_query(**filters)
+        .filter(_page_group_filter(page_identities))
+        .all()
+    )
+    groups = _group_hub_tasks_by_project(tasks)
+    return (
+        groups,
+        total_groups,
+        _count_visible_tasks(**filters),
+        current_page,
+        total_pages,
+    )
+
+
 def build_task_hub_context(
     *,
     project_filter="",
@@ -287,31 +377,32 @@ def build_task_hub_context(
         etapa), ``project_options``, os filtros selecionados, ``total_items``
         (tarefas em TODOS os grupos, pré-paginação) e ``pagination``.
     """
-    tasks = _build_visible_tasks_query(
-        include_archived=include_archived,
-        project_filter=project_filter,
-        prioridade_filter=prioridade_filter,
-        tipo_filter=tipo_filter,
-        status_filter=status_filter,
-        responsavel_filter=responsavel_filter,
-        orgao_filter_id=selected_orgao_id,
-    ).all()
-    groups = _group_hub_tasks_by_project(tasks)
+    # Paginação por GRUPO (projeto): o grupo é a unidade visual da lista —
+    # paginar por tarefa cortaria um projeto no meio entre páginas. Quando há
+    # paginação, escolhemos os projetos da página ANTES de carregar tarefas, para
+    # o trabalho de banco/memória (comentários/anexos eager) ficar proporcional
+    # aos ``per_page`` grupos pedidos, e não ao conjunto filtrado inteiro.
+    filters = {
+        "include_archived": include_archived,
+        "project_filter": project_filter,
+        "prioridade_filter": prioridade_filter,
+        "tipo_filter": tipo_filter,
+        "status_filter": status_filter,
+        "responsavel_filter": responsavel_filter,
+        "orgao_filter_id": selected_orgao_id,
+    }
+    if per_page is None:
+        groups, total_groups, total_items = _load_all_groups(**filters)
+        current_page, total_pages = 1, 1 if total_groups else 0
+    else:
+        groups, total_groups, total_items, current_page, total_pages = _load_group_page(
+            page=page, per_page=per_page, **filters
+        )
+
     project_options = _build_task_hub_project_options(
         include_archived=include_archived,
         orgao_filter_id=selected_orgao_id,
     )
-
-    # Paginação por GRUPO (projeto): o grupo é a unidade visual da lista —
-    # paginar por tarefa cortaria um projeto no meio entre páginas.
-    total_groups = len(groups)
-    if per_page is None:
-        current_page, total_pages = 1, 1 if total_groups else 0
-    else:
-        total_pages = (total_groups + per_page - 1) // per_page
-        current_page = max(1, min(page or 1, total_pages or 1))
-        start = (current_page - 1) * per_page
-        groups = groups[start : start + per_page]
 
     return {
         "groups": groups,
@@ -323,7 +414,7 @@ def build_task_hub_context(
         "selected_status": status_filter,
         "selected_responsavel": responsavel_filter,
         "include_archived": include_archived,
-        "total_items": len(tasks),
+        "total_items": total_items,
         "pagination": {
             "page": current_page,
             "per_page": per_page,
