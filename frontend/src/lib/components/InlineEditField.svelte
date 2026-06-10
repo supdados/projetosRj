@@ -109,8 +109,13 @@
 		editing = true;
 		await tick();
 		editorEl?.focus();
-		if (editorEl && kind !== 'select' && 'select' in editorEl) {
-			(editorEl as HTMLInputElement | HTMLTextAreaElement).select();
+		// Cursor no FIM (sem selecionar tudo): quem edita geralmente quer
+		// acrescentar. Só text/textarea — input de data não suporta
+		// setSelectionRange (lança InvalidStateError).
+		if (editorEl && (kind === 'text' || kind === 'textarea')) {
+			const el = editorEl as HTMLInputElement | HTMLTextAreaElement;
+			const len = el.value.length;
+			el.setSelectionRange(len, len);
 		}
 		autoResize();
 	}
@@ -308,10 +313,14 @@
 {/if}
 
 <style>
-	/* ----- Modo célula (paridade com .editable-field / .editable-field-input) ----- */
+	/* ----- Modo célula (paridade com .editable-field / .editable-field-input) -----
+	   `display: block` + min-height IGUAL ao do editor: entrar/sair de edição
+	   não pode mudar a altura da linha (o inline-block ganhava folga de
+	   baseline que o editor não tinha). */
 	.editable-field {
-		display: inline-block;
+		display: block;
 		width: 100%;
+		min-height: 1.75rem;
 		box-sizing: border-box;
 		background: none;
 		border: 1px solid transparent;
@@ -351,10 +360,12 @@
 		color: #536d89;
 	}
 
-	/* Caixa IDÊNTICA à do .editable-field (mesmo padding/borda/line-height) para
-	   que entrar em edição não cresça nem encolha a célula. */
+	/* Caixa IDÊNTICA à do .editable-field (mesmo padding/borda/line-height/
+	   min-height) para que entrar em edição não cresça nem encolha a célula. */
 	.cell-editor {
+		display: block;
 		width: 100%;
+		min-height: 1.75rem;
 		padding: 0.18rem 0.4rem;
 		border: 1px solid #c4d5e7;
 		border-radius: 8px;
@@ -365,10 +376,14 @@
 		line-height: 1.45;
 		box-sizing: border-box;
 	}
+	/* Input single-line: altura FIXA igual ao display (inputs de data podem
+	   render mais altos por padrão do navegador). */
+	.cell-editor-input {
+		height: 1.75rem;
+	}
 	.cell-editor-textarea {
 		resize: none;
 		overflow: hidden;
-		display: block;
 	}
 	/* Datas/responsável: mesma altura mínima do display centralizado (30px). */
 	.cell-editor.centered {

@@ -182,7 +182,12 @@
 		draft = (field === 'titulo' ? shownTitulo : shownDescription) ?? '';
 		await tick();
 		textEditorEl?.focus();
-		textEditorEl?.select();
+		// Cursor no FIM (sem selecionar tudo): quem edita geralmente quer
+		// acrescentar, e a seleção total forçava desfazer antes de digitar.
+		if (textEditorEl) {
+			const len = textEditorEl.value.length;
+			textEditorEl.setSelectionRange(len, len);
+		}
 		autoSizeText();
 	}
 
@@ -408,7 +413,7 @@
 					class="ph-add-description"
 					onclick={() => enterTextEdit('short_description')}
 				>
-					<i class="fas fa-pen" aria-hidden="true"></i>Adicionar descrição
+					Adicionar descrição
 				</button>
 			{/if}
 			{#if fieldStates.short_description?.error}
@@ -665,15 +670,14 @@
 		min-width: 0;
 		max-width: calc(100% - 120px);
 	}
+	/* Peso 600 e branco SÓLIDO (o degradê com clip de texto deixava o título
+	   pesado/borrado); a família vem do base layer (Manrope, como todo heading). */
 	.ph-title {
 		margin: 0 0 0.12rem;
-		font-weight: 700;
+		font-weight: 600;
 		font-size: 1.5rem;
 		line-height: 1.2;
-		background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
-		-webkit-background-clip: text;
-		background-clip: text;
-		-webkit-text-fill-color: transparent;
+		color: #ffffff;
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 5;
@@ -716,7 +720,7 @@
 		min-width: 0;
 		max-width: 100%;
 		box-sizing: border-box;
-		border-radius: 9px;
+		border-radius: 5px;
 		padding: 0 0.3rem;
 	}
 	/* Caixa da DESCRIÇÃO: persiste exibir/editar; margem-esquerda negativa mantém o
@@ -727,7 +731,7 @@
 		min-width: 0;
 		max-width: 100%;
 		box-sizing: border-box;
-		border-radius: 9px;
+		border-radius: 5px;
 		padding: 0 0.32rem;
 		margin-left: -0.32rem;
 		background: transparent;
@@ -747,13 +751,20 @@
 		background: rgba(255, 255, 255, 0.08);
 		box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
 	}
+	/* Em EDIÇÃO a descrição desce um pouco e ganha respiro vertical — exibida
+	   como texto puro ela ficava bem, mas o shell colava no título. */
+	.ph-description-field.ph-edit-shell {
+		margin-top: 0.3rem;
+		padding-top: 0.2rem;
+		padding-bottom: 0.2rem;
+	}
 	/* Prefixo "ID - " FIXO (não editável), FORA da caixa, na mesma posição/tipografia
 	   do título. */
 	.ph-title-id-prefix {
 		flex-shrink: 0;
 		color: #fff;
 		font-size: 1.5rem;
-		font-weight: 700;
+		font-weight: 600;
 		line-height: 1.2;
 		white-space: pre;
 	}
@@ -784,7 +795,7 @@
 		margin-top: 0.16rem;
 		padding: 0;
 		border: 0;
-		border-radius: 50%;
+		border-radius: 5px;
 		background: transparent;
 		color: rgba(255, 255, 255, 0.82);
 		font-size: 0.6rem;
@@ -802,7 +813,10 @@
 	.ph-edit-pen--description {
 		width: 1.25rem;
 		height: 1.25rem;
-		margin-top: 0.02rem;
+		/* Centralizado VERTICALMENTE em relação à caixa da descrição (a linha
+		   usa align-items: flex-start; sem isto o botão ficava acima do campo). */
+		align-self: center;
+		margin-top: 0;
 		font-size: 0.54rem;
 	}
 	/* Aparece só no hover/foco da linha. */
@@ -820,19 +834,21 @@
 		color: #fff;
 		outline: none;
 	}
-	/* Estado "confirmar" (editando): SEMPRE visível, botão branco com check escuro. */
+	/* Estado "confirmar" (editando): SEMPRE visível, leve — fundo translúcido
+	   discreto (sem badge branco/sombra/pop) e canto mais quadrado. */
 	.ph-edit-pen--confirm {
 		opacity: 1;
 		pointer-events: auto;
-		background: #fff;
-		color: #14365a;
-		box-shadow: 0 2px 8px rgba(0, 20, 40, 0.28);
-		transform: scale(1.06);
+		background: rgba(255, 255, 255, 0.16);
+		color: #fff;
+		border-radius: 5px;
+		box-shadow: none;
+		transform: none;
 	}
 	.ph-edit-pen--confirm:hover,
 	.ph-edit-pen--confirm:focus-visible {
-		background: #eaf3ff;
-		color: #0f2c4a;
+		background: rgba(255, 255, 255, 0.3);
+		color: #fff;
 	}
 	.ph-edit-pen:disabled {
 		cursor: default;
@@ -854,13 +870,14 @@
 			transform: none;
 		}
 	}
+	/* Sem ícone de caneta (só o texto) e raio igual ao do shell de edição,
+	   para preview e edição terem o MESMO desenho de canto. */
 	.ph-add-description {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.4rem;
-		margin-top: 0.1rem;
+		margin-top: 0.4rem;
 		padding: 0.18rem 0.55rem;
-		border-radius: 6px;
+		border-radius: 5px;
 		border: 1px dashed rgba(255, 255, 255, 0.32);
 		background: rgba(255, 255, 255, 0.06);
 		color: rgba(255, 255, 255, 0.82);
@@ -905,8 +922,10 @@
 	}
 	.ph-text-editor--title {
 		max-width: 100%;
+		/* Mesma família dos headings (o inherit pegaria a fonte do corpo). */
+		font-family: 'ManropeVariable', 'Manrope', 'Inter', system-ui, sans-serif;
 		font-size: 1.5rem;
-		font-weight: 700;
+		font-weight: 600;
 		line-height: 1.2;
 	}
 	.ph-text-editor--description {

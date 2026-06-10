@@ -188,7 +188,9 @@
 			disabled={pending}
 			onkeydown={onKeydown}
 			onblur={() => setTimeout(closeList, 120)}
-			class="ic-input h-9 w-full rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			class="ic-input w-full rounded-md border border-border-subtle bg-surface px-2 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 {wrap
+				? 'h-9'
+				: 'h-7'}"
 		/>
 		<ul
 			id={listboxId}

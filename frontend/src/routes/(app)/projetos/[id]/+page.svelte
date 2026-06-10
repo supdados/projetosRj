@@ -1079,11 +1079,13 @@
 					<i class="fas fa-circle-info text-primary-600" aria-hidden="true"></i>Informações Adicionais
 				</h3>
 				<div class="rounded-md border border-border-subtle bg-surface p-5 shadow-sm">
-					<!-- Links compactos: ícone + rótulo + valor na MESMA linha (ref. tela antiga). -->
+					<!-- Links compactos: ícone + rótulo + valor na MESMA linha (ref. tela antiga).
+					     Rótulos com largura FIXA (w-32) para os campos começarem alinhados
+					     na mesma coluna, independente do tamanho do nome. -->
 					<div class="flex flex-col gap-2.5">
 						<div class="flex items-center gap-2 text-sm">
 							<i class="fab fa-github w-4 shrink-0 text-center text-primary-600" aria-hidden="true"></i>
-							<span class="shrink-0 font-semibold text-text-primary">Github:</span>
+							<span class="w-32 shrink-0 font-semibold text-text-primary">Github:</span>
 							<div class="min-w-0 flex-1">
 								<InlineEditField
 									fieldId="project-github"
@@ -1101,7 +1103,7 @@
 						</div>
 						<div class="flex items-center gap-2 text-sm">
 							<i class="fas fa-book w-4 shrink-0 text-center text-primary-600" aria-hidden="true"></i>
-							<span class="shrink-0 font-semibold text-text-primary">Documentação:</span>
+							<span class="w-32 shrink-0 font-semibold text-text-primary">Documentação:</span>
 							<div class="min-w-0 flex-1">
 								<InlineEditField
 									fieldId="project-doc"
@@ -1119,7 +1121,7 @@
 						</div>
 						<div class="flex items-center gap-2 text-sm">
 							<i class="fas fa-box w-4 shrink-0 text-center text-primary-600" aria-hidden="true"></i>
-							<span class="shrink-0 font-semibold text-text-primary">Produto:</span>
+							<span class="w-32 shrink-0 font-semibold text-text-primary">Produto:</span>
 							<div class="min-w-0 flex-1">
 								<InlineEditField
 									fieldId="project-product"

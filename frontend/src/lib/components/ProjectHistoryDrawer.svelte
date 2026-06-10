@@ -268,12 +268,12 @@
 					bind:value={searchTerm}
 					placeholder="Buscar no histórico…"
 					aria-label="Buscar no histórico"
-					class="h-8 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="h-8 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500"
 				/>
 				<select
 					bind:value={typeFilter}
 					aria-label="Tipo de evento"
-					class="h-8 shrink-0 cursor-pointer rounded-md border border-border-subtle bg-surface px-2 text-xs text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="h-8 shrink-0 cursor-pointer rounded-md border border-border-subtle bg-surface px-2 text-xs text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500"
 				>
 					<option value="all">Todos</option>
 					<option value="project">Projeto</option>
@@ -283,7 +283,7 @@
 				<select
 					bind:value={periodFilter}
 					aria-label="Período"
-					class="h-8 shrink-0 cursor-pointer rounded-md border border-border-subtle bg-surface px-2 text-xs text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="h-8 shrink-0 cursor-pointer rounded-md border border-border-subtle bg-surface px-2 text-xs text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500"
 				>
 					<option value="all">Todo período</option>
 					<option value="7d">7 dias</option>
