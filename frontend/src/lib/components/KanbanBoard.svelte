@@ -57,6 +57,13 @@
 
 	let dragContext = $state<DragContext | null>(null);
 	let overStatus = $state<TaskStatus | null>(null);
+	/**
+	 * Índice de inserção sob o ponteiro na coluna `overStatus` (entre os cards
+	 * visíveis) — dirige o PLACEHOLDER tracejado que mostra onde o card cairá.
+	 */
+	let overIndex = $state<number | null>(null);
+	/** Altura (px) do card arrastado, medida no dragstart, para o vão do placeholder. */
+	let dragCardHeight = $state<number | null>(null);
 	/** Mensagem para leitores de tela (movimentações/erros). */
 	let liveMessage = $state<string>('');
 
@@ -122,6 +129,9 @@
 
 	function onCardDragStart(event: DragEvent, card: BoardCard, fromStatus: TaskStatus): void {
 		dragContext = { card, fromStatus };
+		// Mede o card-fonte ANTES do colapso: o placeholder abre um vão do mesmo
+		// tamanho na coluna alvo (preview fiel do espaço que o card ocupará).
+		dragCardHeight = (event.currentTarget as HTMLElement | null)?.offsetHeight ?? null;
 		if (event.dataTransfer) {
 			event.dataTransfer.effectAllowed = 'move';
 			event.dataTransfer.setData('text/plain', String(card.id));
@@ -142,6 +152,8 @@
 		}
 		dragContext = null;
 		overStatus = null;
+		overIndex = null;
+		dragCardHeight = null;
 		collapsedId = null;
 	}
 
@@ -162,13 +174,19 @@
 		event.preventDefault();
 		if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
 		overStatus = status;
+		// Recalcula o índice de inserção sob o ponteiro (dirige o placeholder).
+		const index = dropIndex(event.currentTarget as HTMLElement, event.clientY);
+		if (index !== overIndex) overIndex = index;
 	}
 
 	function onZoneDragLeave(event: DragEvent, status: TaskStatus): void {
 		const zone = event.currentTarget as HTMLElement;
 		const related = event.relatedTarget as Node | null;
 		if (related && zone.contains(related)) return;
-		if (overStatus === status) overStatus = null;
+		if (overStatus === status) {
+			overStatus = null;
+			overIndex = null;
+		}
 	}
 
 	async function onZoneDrop(event: DragEvent, status: TaskStatus): Promise<void> {
@@ -186,6 +204,8 @@
 		}
 		dragContext = null;
 		overStatus = null;
+		overIndex = null;
+		dragCardHeight = null;
 		collapsedId = null;
 
 		if (!canItemMoveToStatus(ctx.card, status, ctx.fromStatus)) {
@@ -356,6 +376,8 @@
 						{settledId}
 						canDrop={canDropOn(status)}
 						isOver={overStatus === status}
+						placeholderIndex={overStatus === status ? overIndex : null}
+						placeholderHeight={dragCardHeight}
 						{onCardDragStart}
 						{onCardDragEnd}
 						{onZoneDragEnter}

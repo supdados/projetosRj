@@ -636,6 +636,11 @@ def serialize_task_card(task: Any) -> dict[str, Any]:
         "created_at": _iso_or_none(task.created_at),
         "is_archived": bool(task.is_archived),
         "archived_at": _iso_or_none(task.archived_at),
+        # Contadores exibidos no rodapé do card do Kanban (balão de comentários e
+        # clipe de anexos). A query do board (`_build_visible_tasks_query` com
+        # ``include_relations=True``) já faz joinedload de ambos — sem N+1 ali.
+        "comments_count": len(task.comments),
+        "anexos_count": len(task.anexos),
         "permissions": {"can_finalize": bool(flags["can_finalize"])},
     }
 

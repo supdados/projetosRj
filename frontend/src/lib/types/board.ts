@@ -31,11 +31,16 @@ export interface BoardCard {
 	tipo_pedido: string | null;
 	ordem: number | null;
 	project_id: number | null;
+	/** Nome do projeto vinculado (link azul do card) — `null` em tarefa avulsa. */
+	project_titulo: string | null;
 	etapa_id: number | null;
 	created_by_id: number | null;
 	created_at: string | null; // ISO 8601
 	is_archived: boolean;
 	archived_at: string | null; // ISO 8601
+	/** Contadores do rodapé do card (balão de comentários / clipe de anexos). */
+	comments_count: number;
+	anexos_count: number;
 	permissions: BoardCardPermissions;
 }
 

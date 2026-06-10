@@ -104,6 +104,40 @@ def test_api_board_card_exposes_can_finalize_and_no_secrets(client_user, seed_da
     assert "password_hash" not in card
 
 
+def test_api_board_card_exposes_comments_and_anexos_counts(app, client_user, seed_data):
+    # Os contadores do rodapé do card (balão/clipe) devem refletir o banco.
+    from extensions import db
+    from models.task import TaskAnexo, TaskComment
+
+    with app.app_context():
+        db.session.add(
+            TaskComment(
+                content="Comentário de contagem",
+                user_id=seed_data["user_id"],
+                task_id=seed_data["task_id"],
+            )
+        )
+        db.session.add(
+            TaskAnexo(
+                task_id=seed_data["task_id"],
+                filename="evidencia.pdf",
+                stored_filename="evidencia-stored.pdf",
+                uploaded_by_id=seed_data["user_id"],
+            )
+        )
+        db.session.commit()
+
+    response = client_user.get("/api/tarefas/board")
+
+    data = _assert_ok_envelope(response.get_json())
+    seeded = {
+        card["id"]: card for column in data["columns"] for card in column["tasks"]
+    }
+    card = seeded[seed_data["task_id"]]
+    assert card["comments_count"] == 1
+    assert card["anexos_count"] == 1
+
+
 def test_api_board_requires_session(client):
     response = client.get("/api/tarefas/board")
 
