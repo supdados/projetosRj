@@ -476,11 +476,13 @@
 			</nav>
 		</div>
 
-		<!-- Centro: seletor de orgao em ARVORE ANINHADA (porte de orgao-tree-picker) -->
+		<!-- Centro: seletor de orgao em ARVORE ANINHADA (porte de orgao-tree-picker).
+		     Item de flex com mx-auto (NAO absolute): centraliza no espaco livre
+		     entre os grupos sem nunca ficar por baixo da busca global. -->
 		{#if hasOrgaoTree}
 			<div
 				bind:this={orgaoMenuEl}
-				class="orgao-tree-control app-area-control absolute left-1/2 z-[2] hidden -translate-x-1/2 lg:inline-flex"
+				class="orgao-tree-control app-area-control mx-auto hidden min-w-0 shrink lg:inline-flex"
 			>
 				<button
 					bind:this={orgaoToggleEl}
@@ -589,7 +591,10 @@
 		{/snippet}
 
 		<!-- Direita: busca + notificacoes + conta/admin + theme toggle -->
-		<div class="ml-auto flex flex-[0_0_auto] items-center justify-end gap-[1.1rem]">
+		<!-- Sem ml-auto: o justify-between do container alinha este grupo à
+		     direita; um auto-margin aqui roubaria o espaço livre do seletor
+		     central (mx-auto) e o empurraria para a esquerda. -->
+		<div class="flex flex-[0_0_auto] items-center justify-end gap-[1.1rem]">
 			<!-- Busca global LIVE (input + dropdown com debounce/teclado) -->
 			<GlobalSearchBox />
 
