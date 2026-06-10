@@ -785,8 +785,9 @@
 		done: boolean;
 	}
 
-	async function onAddStage(draft: NewStageDraft): Promise<void> {
-		if (!draft.descricao.trim() || addingStage) return;
+	/** Cria a etapa; devolve `true` no sucesso (o composer fecha com essa confirmação). */
+	async function onAddStage(draft: NewStageDraft): Promise<boolean> {
+		if (!draft.descricao.trim() || addingStage) return false;
 		// Projeto Finalizado: adicionar etapa o reativa (Vigente). Confirma antes
 		// (paridade com o reactivate-project-confirm-modal de 05-stage-composer.js).
 		const willReactivate = (data?.project.status ?? '') === 'Finalizado';
@@ -797,7 +798,7 @@
 				'Este projeto está finalizado. Ao adicionar uma nova etapa, ele voltará para o status Vigente. Deseja continuar?'
 			)
 		) {
-			return;
+			return false;
 		}
 		addingStage = true;
 		addStageError = null;
@@ -812,12 +813,12 @@
 				reactivate: willReactivate || undefined
 			});
 			await refresh();
+			return true;
 		} catch (err) {
-			if (isUnauthenticated(err)) {
-				addingStage = false;
-				return;
+			if (!isUnauthenticated(err)) {
+				addStageError = messageOf(err, 'Falha ao adicionar a etapa.');
 			}
-			addStageError = messageOf(err, 'Falha ao adicionar a etapa.');
+			return false;
 		} finally {
 			addingStage = false;
 		}

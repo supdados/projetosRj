@@ -52,7 +52,9 @@
 		onDelete: (etapaId: number) => void;
 		onOpenTasks: (etapaId: number) => void;
 		/** Adiciona uma etapa via composer inline; o pai chama a API. */
-		onAddStage: (draft: NewStageDraft) => void;
+		/** Cria a etapa e devolve `true` no sucesso — o composer só fecha (e limpa
+		 *  o rascunho) com essa confirmação; `false` mantém aberto p/ correção. */
+		onAddStage: (draft: NewStageDraft) => Promise<boolean> | boolean;
 		/** Pede o menu de contexto de dias úteis numa data; o pai exibe/aplica. */
 		onDateContextMenu: (
 			etapaId: number,
@@ -285,12 +287,17 @@
 			draft.done = false;
 		}
 	}
-	function submitComposer(): void {
+	async function submitComposer(): Promise<void> {
 		if (!draft.descricao.trim() || addingStage) {
 			descricaoEl?.focus();
 			return;
 		}
-		onAddStage({ ...draft, descricao: draft.descricao.trim() });
+		// Fecha SÓ com a confirmação do pai. Antes o fechamento dependia de um
+		// $effect observando etapas.length, que corria contra `addingStage` ainda
+		// true durante o refresh — o composer ficava aberto com o texto preenchido
+		// e cada Enter/clique fora criava uma etapa duplicada.
+		const created = await onAddStage({ ...draft, descricao: draft.descricao.trim() });
+		if (created) closeComposer();
 	}
 	function autoResizeDescricao(): void {
 		if (descricaoEl) {
