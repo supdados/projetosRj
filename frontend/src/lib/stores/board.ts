@@ -29,6 +29,7 @@ import {
 	canItemMoveToStatus,
 	type TaskStatus
 } from '$lib/utils/taskStatus';
+import { sortByPriority } from '$lib/utils/taskPriority';
 import type {
 	BoardCard,
 	BoardColumn,
@@ -361,6 +362,8 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 	 * Se o card já existe na coluna do seu status atual, é substituído no lugar
 	 * (preserva posição); se mudou de coluna ou é novo, entra no topo da coluna
 	 * correta. O status do card determina a coluna (autoritativo do servidor).
+	 * Em seguida a coluna alvo é reordenada por prioridade (paridade com o
+	 * backend) — editar a prioridade reposiciona o card sem precisar de reload.
 	 */
 	function upsertCard(card: BoardCard): void {
 		store.update((state) => {
@@ -380,16 +383,19 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 					? 0
 					: Math.min(priorIndexInTarget, target.tasks.length);
 				target.tasks.splice(idx, 0, card);
+				target.tasks = sortByPriority(target.tasks);
 			}
 			return { ...state, columns: next };
 		});
 	}
 
 	/**
-	 * Insere um card recém-criado no topo da coluna `status` (composer). O card
-	 * já vem com `status` do servidor; usamos o `status` explícito como coluna
-	 * alvo (a coluna onde o composer foi acionado). Se já existir um card com o
-	 * mesmo id (defensivo), faz upsert para não duplicar.
+	 * Insere um card recém-criado na coluna `status` (composer). O card já vem
+	 * com `status` do servidor; usamos o `status` explícito como coluna alvo (a
+	 * coluna onde o composer foi acionado). Entra no topo e a coluna é reordenada
+	 * por prioridade (paridade com o backend), para um card de baixa prioridade
+	 * não ficar no topo até o reload. Se já existir um card com o mesmo id
+	 * (defensivo), faz upsert para não duplicar.
 	 */
 	function addCard(card: BoardCard, status: TaskStatus): void {
 		// Card arquivado não pertence ao board ativo (paridade: só tarefas ativas).
@@ -402,7 +408,10 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 				if (at !== -1) column.tasks.splice(at, 1);
 			}
 			const target = next.find((column) => column.status === targetStatus);
-			if (target) target.tasks.unshift(card);
+			if (target) {
+				target.tasks.unshift(card);
+				target.tasks = sortByPriority(target.tasks);
+			}
 			return { ...state, columns: next, total: state.total + 1 };
 		});
 	}

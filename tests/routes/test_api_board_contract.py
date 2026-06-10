@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from routes.api.board import _sort_cards_by_priority
 from routes.tasks.permissions import FINALIZE_DENIED_MESSAGE
 from routes.tasks.constants import TASK_STATUS_ORDER
 
@@ -39,6 +40,39 @@ def _assert_fail_envelope(payload: Any, *, code: str) -> None:
     assert error["code"] == code
     assert isinstance(error["message"], str)
     assert error["message"]
+
+
+# ---------------------------------------------------------------------------
+# Ordenação por prioridade dentro da coluna (board já é agrupado por status)
+# ---------------------------------------------------------------------------
+
+
+def test_sort_cards_by_priority_orders_urgente_first():
+    cards = [
+        {"id": 1, "prioridade": "baixa"},
+        {"id": 2, "prioridade": "urgente"},
+        {"id": 3, "prioridade": "media"},
+        {"id": 4, "prioridade": "alta"},
+    ]
+    assert [c["id"] for c in _sort_cards_by_priority(cards)] == [2, 4, 3, 1]
+
+
+def test_sort_cards_by_priority_is_stable_for_manual_order():
+    # Mesma prioridade preserva a ordem de entrada (Task.ordem do banco/DnD).
+    cards = [
+        {"id": 7, "prioridade": "alta"},
+        {"id": 3, "prioridade": "alta"},
+        {"id": 5, "prioridade": "alta"},
+    ]
+    assert [c["id"] for c in _sort_cards_by_priority(cards)] == [7, 3, 5]
+
+
+def test_sort_cards_by_priority_puts_missing_priority_last():
+    cards = [
+        {"id": 1, "prioridade": None},
+        {"id": 2, "prioridade": "baixa"},
+    ]
+    assert [c["id"] for c in _sort_cards_by_priority(cards)] == [2, 1]
 
 
 # ---------------------------------------------------------------------------

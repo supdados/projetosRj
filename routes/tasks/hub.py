@@ -12,11 +12,26 @@ from routes.orgao_scope import (
 from routes.tasks.permissions import (
     task_permission_flags as _public_task_permission_flags,
 )
+from routes.tasks.constants import task_priority_sort_rank, task_status_sort_rank
 from routes.tasks.queries import (
     _build_visible_tasks_query,
 )
 
 ARCHIVED_TASKS_PER_PAGE = 20
+
+
+def _task_status_priority_rank(task) -> tuple[int, int]:
+    """Chave de ordenação da task DENTRO da etapa: ``(status, prioridade)``.
+
+    Ordena primeiro por status (0 = nao_iniciada … 4 = finalizada) e, em empate,
+    por prioridade (0 = urgente … 3 = baixa). A ordem manual (``Task.ordem``)
+    segue como desempate final via sort estável. Exemplo: uma task
+    nao_iniciada/baixa → ``(0, 3)``; uma task finalizada/urgente → ``(4, 0)``.
+    """
+    return (
+        task_status_sort_rank(task.status),
+        task_priority_sort_rank(task.prioridade),
+    )
 
 
 _NO_STAGE_BUCKET = {
@@ -154,13 +169,17 @@ def _flatten_stage_tasks_into_group(group, stages):
     """Reordena group['tasks'] para refletir a hierarquia de etapas.
 
     Sem etapa primeiro, depois etapas por ordem natural; tasks dentro de cada
-    etapa preservam a ordenação que veio do banco. Marca a primeira task de
-    cada etapa com ``hub_is_first_of_stage`` — o template usa esse flag para
+    etapa são ordenadas por status (nao_iniciada → em_andamento → para_validacao
+    → para_ajustes → finalizada) e, em empate, por prioridade (urgente → alta →
+    media → baixa), com a ordem manual (``Task.ordem``, já refletida na ordem do
+    banco) como desempate final via sort estável. Marca a primeira task de cada
+    etapa com ``hub_is_first_of_stage`` — o template usa esse flag para
     renderizar o sub-cabeçalho sem duplicar markup.
     """
     flat = []
     for stage in stages:
-        for index, task in enumerate(stage["tasks"]):
+        ordered_tasks = sorted(stage["tasks"], key=_task_status_priority_rank)
+        for index, task in enumerate(ordered_tasks):
             task.hub_stage_id = stage["etapa_id"]
             task.hub_stage_value = stage["etapa_value"]
             task.hub_stage_titulo = stage["etapa_titulo"]

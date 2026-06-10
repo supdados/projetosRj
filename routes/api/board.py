@@ -37,7 +37,12 @@ from models import Task, db
 
 from ..blueprint import main_bp
 from ..orgao_scope import sanitize_orgao_filter_for_current_user
-from ..tasks.constants import TASK_STATUS_ORDER, VALID_STATUSES, _task_status_label
+from ..tasks.constants import (
+    TASK_STATUS_ORDER,
+    VALID_STATUSES,
+    _task_status_label,
+    task_priority_sort_rank,
+)
 from ..tasks.notifications import notify_status_change
 from ..tasks.permissions import (
     FINALIZE_DENIED_MESSAGE,
@@ -78,14 +83,26 @@ def _load_active_board_tasks(filter_values: dict[str, str], orgao_id: int | None
     ).all()
 
 
+def _sort_cards_by_priority(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Ordena cards serializados por prioridade (urgente → alta → media → baixa).
+
+    O board já é agrupado por status (uma coluna por status), então dentro de
+    cada coluna a ordenação é só por prioridade. ``sorted`` é estável: cards de
+    mesma prioridade preservam a ordem de entrada — que é a ordem manual
+    (``Task.ordem``) vinda do banco / do drag-and-drop.
+    """
+    return sorted(cards, key=lambda card: task_priority_sort_rank(card["prioridade"]))
+
+
 def _group_tasks_into_columns(tasks: list[Any]) -> list[dict[str, Any]]:
     """Agrupa as tarefas nas 5 colunas por status, na ordem ``TASK_STATUS_ORDER``.
 
     Sempre devolve as 5 colunas (mesmo vazias), para que o cliente monte o board
     sem precisar conhecer a lista de status. Cada tarefa é serializada com
-    ``serialize_task_card`` (que já inclui ``permissions.can_finalize``). A ordem
-    das tarefas dentro de cada coluna preserva a ordenação que veio do banco
-    (``Task.ordem``), pois ``tasks`` já vem ordenada.
+    ``serialize_task_card`` (que já inclui ``permissions.can_finalize``). Dentro
+    de cada coluna os cards são ordenados por prioridade (urgente primeiro), com
+    a ordem manual (``Task.ordem``, já refletida em ``tasks``) como desempate via
+    sort estável.
 
     Args:
         tasks: Tarefas ativas (de ``_load_active_board_tasks``).
@@ -105,7 +122,7 @@ def _group_tasks_into_columns(tasks: list[Any]) -> list[dict[str, Any]]:
         {
             "status": status,
             "label": _task_status_label(status),
-            "tasks": by_status[status],
+            "tasks": _sort_cards_by_priority(by_status[status]),
         }
         for status in TASK_STATUS_ORDER
     ]
@@ -402,10 +419,15 @@ def api_tarefas_board_reordenar() -> Response | tuple[Response, int]:
         {
             "status": column["status"],
             "label": _task_status_label(column["status"]),
-            "tasks": [
-                serialize_task_card(tasks_by_id[task_id])
-                for task_id in column["task_ids"]
-            ],
+            # Reaplica a ordenação por prioridade para a resposta refletir o mesmo
+            # que ``GET /api/tarefas/board`` devolveria — evita o card "pular" só
+            # no próximo reload quando o drop quebra a ordem de prioridade.
+            "tasks": _sort_cards_by_priority(
+                [
+                    serialize_task_card(tasks_by_id[task_id])
+                    for task_id in column["task_ids"]
+                ]
+            ),
         }
         for column in columns
     ]
