@@ -68,6 +68,7 @@ export interface Project {
 	data_inicio_projeto: string | null; // ISO 8601
 	data_fim_projeto: string | null; // ISO 8601
 	total_workflow_etapas: number;
+	etapas_concluidas: number;
 	todas_etapas_concluidas: boolean;
 }
 

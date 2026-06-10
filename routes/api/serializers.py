@@ -304,6 +304,7 @@ def serialize_project_card(project: Any) -> dict[str, Any]:
         "data_inicio_projeto": _iso_or_none(project.data_inicio_projeto),
         "data_fim_projeto": _iso_or_none(project.data_fim_projeto),
         "total_workflow_etapas": project.total_workflow_etapas,
+        "etapas_concluidas": project.etapas_concluidas,
         "todas_etapas_concluidas": project.todas_etapas_concluidas,
     }
 

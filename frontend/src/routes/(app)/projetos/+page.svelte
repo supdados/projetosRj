@@ -980,7 +980,7 @@
 								</th>
 								<th
 									scope="col"
-									class="min-w-[260px] border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="min-w-[220px] border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Título
 								</th>
@@ -1019,6 +1019,12 @@
 									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Data Fim
+								</th>
+								<th
+									scope="col"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+								>
+									Etapas
 								</th>
 								<th
 									scope="col"
@@ -1118,6 +1124,21 @@
 											<time datetime={project.data_fim_projeto}>
 												{formatDateBr(project.data_fim_projeto)}
 											</time>
+										{:else}
+											<span class="italic text-text-muted">—</span>
+										{/if}
+									</td>
+									<td
+										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle font-mono whitespace-nowrap text-text-secondary"
+									>
+										{#if project.total_workflow_etapas > 0}
+											<span
+												class="text-xs font-semibold {project.todas_etapas_concluidas
+													? 'text-success-600'
+													: ''}"
+											>
+												{project.etapas_concluidas}/{project.total_workflow_etapas}
+											</span>
 										{:else}
 											<span class="italic text-text-muted">—</span>
 										{/if}

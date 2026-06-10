@@ -81,6 +81,10 @@ class Project(db.Model):
     def total_workflow_etapas(self):
         return len(self.workflow_etapas)
 
+    @property
+    def etapas_concluidas(self):
+        return sum(1 for etapa in self.workflow_etapas if etapa.iniciada and etapa.done)
+
     def __repr__(self):
         return f"<Project {self.titulo}>"
 
