@@ -73,6 +73,42 @@ def test_api_projetos_pendentes_row_reuses_card_serializers(client_user):
     assert "qtd_atrasadas" in row
 
 
+def test_api_projetos_pendentes_responsaveis_options_sem_duplicatas(
+    app, client_user, seed_data
+):
+    """Regressão: responsáveis duplicados após strip quebravam o {#each} da SPA.
+
+    O DISTINCT roda no banco ANTES do strip — "Equipe Dedup" e "Equipe Dedup "
+    são linhas distintas no SQL mas idênticas após o trim; a opção deve
+    aparecer UMA vez (each_key_duplicate derrubava a tela de pendentes).
+    """
+    from models import Etapa, db
+
+    with app.app_context():
+        db.session.add_all(
+            [
+                Etapa(
+                    descricao="Etapa dedup A",
+                    responsavel="Equipe Dedup",
+                    project_id=seed_data["project_id"],
+                    ordem=90,
+                ),
+                Etapa(
+                    descricao="Etapa dedup B",
+                    responsavel="Equipe Dedup ",
+                    project_id=seed_data["project_id"],
+                    ordem=91,
+                ),
+            ]
+        )
+        db.session.commit()
+
+    data = _assert_ok_envelope(client_user.get("/api/projetos-pendentes").get_json())
+    options = data["responsaveis_options"]
+    assert options.count("Equipe Dedup") == 1
+    assert len(options) == len(set(options))
+
+
 def test_api_projetos_pendentes_returns_401_json_when_unauthenticated(client):
     response = client.get("/api/projetos-pendentes")
 
@@ -118,9 +154,7 @@ def test_api_projeto_historico_returns_ok_envelope_with_expected_shape(
     assert "password_hash" not in (entry["user"] or {})
 
 
-def test_api_projeto_historico_returns_401_json_when_unauthenticated(
-    client, seed_data
-):
+def test_api_projeto_historico_returns_401_json_when_unauthenticated(client, seed_data):
     project_id = seed_data["project_id"]
     response = client.get(f"/api/projetos/{project_id}/historico")
 

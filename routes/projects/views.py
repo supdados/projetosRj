@@ -48,6 +48,7 @@ from routes.shared import (
     parse_abep_indicator_filter,
     parse_objetivo_filter,
 )
+
 CSV_FORMULA_PREFIXES = ("=", "+", "-", "@")
 
 
@@ -485,8 +486,11 @@ def build_projetos_pendentes_context(
         .distinct()
         .all()
     )
+    # set(): o DISTINCT roda no banco ANTES do strip — "SUPIM" e "SUPIM " viram
+    # duplicatas exatas após o trim, e a SPA quebra com chave duplicada no
+    # {#each} do filtro de responsável (each_key_duplicate).
     responsaveis_options = sorted(
-        [r[0].strip() for r in responsaveis_query if r[0] and r[0].strip()],
+        {r[0].strip() for r in responsaveis_query if r[0] and r[0].strip()},
         key=lambda value: value.casefold(),
     )
 
