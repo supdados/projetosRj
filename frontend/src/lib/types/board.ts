@@ -27,9 +27,11 @@ export interface BoardCard {
 	id: number;
 	descricao: string;
 	status: string;
+	/** Texto livre legado — NÃO usado para exibição (fonte é `assignees`);
+	 *  só guarda nomes sem usuário correspondente pós-backfill. */
 	responsavel: string | null;
 	/** Responsáveis múltiplos (`serialize_task_assignees`) — avatares no rodapé
-	 *  do card; `responsavel` (texto livre) é o fallback legado. */
+	 *  do card; única fonte de exibição de responsáveis. */
 	assignees: TaskAssignee[];
 	prioridade: string | null;
 	tipo_pedido: string | null;

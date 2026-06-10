@@ -1302,16 +1302,22 @@ def ensure_orgao_and_template_schema(emit_output=True):
 
         orgao_tipo_indexes = _index_names(inspector, "orgao_tipo")
         if "ix_orgao_tipo_nivel" not in orgao_tipo_indexes:
-            db.session.execute(text("CREATE INDEX ix_orgao_tipo_nivel ON orgao_tipo (nivel)"))
+            db.session.execute(
+                text("CREATE INDEX ix_orgao_tipo_nivel ON orgao_tipo (nivel)")
+            )
             changes.append("orgao_tipo.ix_orgao_tipo_nivel")
         if "ix_orgao_tipo_ativo" not in orgao_tipo_indexes:
-            db.session.execute(text("CREATE INDEX ix_orgao_tipo_ativo ON orgao_tipo (ativo)"))
+            db.session.execute(
+                text("CREATE INDEX ix_orgao_tipo_ativo ON orgao_tipo (ativo)")
+            )
             changes.append("orgao_tipo.ix_orgao_tipo_ativo")
         inspector = inspect(db.engine)
 
         for item in DEFAULT_ORGAO_TIPOS:
             existing_id = db.session.execute(
-                text("SELECT id FROM orgao_tipo WHERE nome = :nome OR slug = :slug LIMIT 1"),
+                text(
+                    "SELECT id FROM orgao_tipo WHERE nome = :nome OR slug = :slug LIMIT 1"
+                ),
                 {"nome": item["nome"], "slug": slugify_orgao_tipo(item["nome"])},
             ).scalar()
             if existing_id:
@@ -1359,7 +1365,9 @@ def ensure_orgao_and_template_schema(emit_output=True):
             orgao_unidade_indexes = _index_names(inspector, "orgao_unidade")
             if "ix_orgao_unidade_tipo_id" not in orgao_unidade_indexes:
                 db.session.execute(
-                    text("CREATE INDEX ix_orgao_unidade_tipo_id ON orgao_unidade (tipo_id)")
+                    text(
+                        "CREATE INDEX ix_orgao_unidade_tipo_id ON orgao_unidade (tipo_id)"
+                    )
                 )
                 changes.append("orgao_unidade.ix_orgao_unidade_tipo_id")
             if "ix_orgao_unidade_codigo_externo" not in orgao_unidade_indexes:
@@ -1406,16 +1414,14 @@ def ensure_orgao_and_template_schema(emit_output=True):
                 changes.append("orgao_unidade.tipo_id.backfill")
 
         if not _table_exists(inspector, "orgao_closure"):
-            db.session.execute(
-                text("""
+            db.session.execute(text("""
                     CREATE TABLE orgao_closure (
                         ancestor_id INTEGER NOT NULL,
                         descendant_id INTEGER NOT NULL,
                         depth INTEGER NOT NULL,
                         PRIMARY KEY (ancestor_id, descendant_id)
                     )
-                    """)
-            )
+                    """))
             changes.append("orgao_closure")
             inspector = inspect(db.engine)
 
@@ -1572,6 +1578,8 @@ def stamp_alembic_head(emit_output=True):
 
 
 def run_all_migrations(*, emit_output=True, stamp_alembic=False):
+    from scripts.migrations.backfill_task_assignees import backfill_task_assignees
+
     steps = [
         _migrate_user_areas_step(emit_output=emit_output),
         ensure_project_history_table(emit_output=emit_output),
@@ -1582,6 +1590,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         ensure_calendar_schema(emit_output=emit_output),
         ensure_orgao_and_template_schema(emit_output=emit_output),
         encrypt_plaintext_oauth_tokens(emit_output=emit_output),
+        backfill_task_assignees(emit_output=emit_output),
     ]
 
     if not all(step.get("success") for step in steps):
@@ -1610,6 +1619,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         "user_auth_columns_added": steps[0].get("auth_columns_added", []),
         "user_auth_indexes_added": steps[0].get("auth_indexes_added", []),
         "project_columns_added": project_columns_added,
+        "task_assignees_backfilled": steps[9]["assignees_created"],
         "alembic_stamped": alembic_summary["stamped"],
     }
 

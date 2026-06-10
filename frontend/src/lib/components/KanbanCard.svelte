@@ -102,8 +102,10 @@
 		card.tipo_pedido ? (TIPO_LABEL[card.tipo_pedido] ?? card.tipo_pedido) : null
 	);
 
-	// RESPONSÁVEIS: avatares de iniciais (mesma linguagem do picker da lista);
-	// `responsavel` (texto livre legado) é o fallback quando não há assignees.
+	// RESPONSÁVEIS: avatares de iniciais (mesma linguagem do picker da lista).
+	// A fonte é SÓ a relação `assignees` — o texto livre legado (`responsavel`)
+	// foi convertido em task_assignee pelo backfill e não é mais exibido, para
+	// o card nunca divergir do drawer/lista.
 	const assignees = $derived(card.assignees ?? []);
 	const MAX_CARD_AVATARS = 3;
 	const assigneeNames = $derived(assignees.map((a) => a.name).join(', '));
@@ -272,10 +274,6 @@
 					<span class="truncate text-xs text-text-secondary">{assignees[0].name}</span>
 				{/if}
 			</span>
-		{:else if card.responsavel}
-			<span class="truncate text-xs text-text-secondary" title={`Responsável: ${card.responsavel}`}
-				>{card.responsavel}</span
-			>
 		{:else}
 			<span class="truncate text-xs italic text-text-muted">Responsável não informado</span>
 		{/if}

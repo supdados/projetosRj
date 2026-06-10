@@ -306,7 +306,15 @@ def _build_visible_tasks_query(
             .replace("_", "\\_")
         )
         pattern = f"%{escaped_responsavel}%"
-        query = query.filter(Task.responsavel.ilike(pattern, escape="\\"))
+        # Pós-backfill (scripts/migrations/backfill_task_assignees.py) os
+        # responsáveis vivem em task_assignee; o texto legado só guarda nomes
+        # sem usuário correspondente — o filtro precisa cobrir as duas fontes.
+        assignee_name_match = Task.assignees.any(
+            TaskAssignee.user.has(User.name.ilike(pattern, escape="\\"))
+        )
+        query = query.filter(
+            or_(Task.responsavel.ilike(pattern, escape="\\"), assignee_name_match)
+        )
 
     query = query.filter(Task.is_archived.is_(bool(include_archived)))
 
