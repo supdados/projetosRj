@@ -11,6 +11,7 @@
  */
 
 import type { TaskStatus } from '$lib/utils/taskStatus';
+import type { TaskAssignee } from '$lib/types/tasks';
 
 /** Flags de permissão por card (UX-only; servidor é autoritativo). */
 export interface BoardCardPermissions {
@@ -27,6 +28,9 @@ export interface BoardCard {
 	descricao: string;
 	status: string;
 	responsavel: string | null;
+	/** Responsáveis múltiplos (`serialize_task_assignees`) — avatares no rodapé
+	 *  do card; `responsavel` (texto livre) é o fallback legado. */
+	assignees: TaskAssignee[];
 	prioridade: string | null;
 	tipo_pedido: string | null;
 	ordem: number | null;

@@ -23,6 +23,7 @@
 	 */
 	import { getContext } from 'svelte';
 	import type { BoardCard } from '$lib/types/board';
+	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
 
 	/**
 	 * Abertura do drawer: fornecida via contexto pela página, para não exigir
@@ -100,6 +101,12 @@
 	const tipoLabel = $derived(
 		card.tipo_pedido ? (TIPO_LABEL[card.tipo_pedido] ?? card.tipo_pedido) : null
 	);
+
+	// RESPONSÁVEIS: avatares de iniciais (mesma linguagem do picker da lista);
+	// `responsavel` (texto livre legado) é o fallback quando não há assignees.
+	const assignees = $derived(card.assignees ?? []);
+	const MAX_CARD_AVATARS = 3;
+	const assigneeNames = $derived(assignees.map((a) => a.name).join(', '));
 
 	// MINI-CONFIRM INLINE de exclusão (paridade com .task-items-kanban-delete-confirm).
 	let confirmingDelete = $state(false);
@@ -208,9 +215,14 @@
 	onkeydown={handleKeydown}
 >
 	{#if prioridadeLabel || tipoLabel}
+		<!-- Prioridade/tipo SEM badge: só o texto colorido; quando há os dois, um
+		     "·" (centralizado com a linha via items-center) os separa. -->
 		<div class="flex flex-wrap items-center gap-1.5 pr-7">
 			{#if prioridadeLabel}
 				<span class="kc-chip {prioridadeChipClass}">{prioridadeLabel}</span>
+			{/if}
+			{#if prioridadeLabel && tipoLabel}
+				<span aria-hidden="true" class="text-2xs font-bold leading-none text-text-muted">·</span>
 			{/if}
 			{#if tipoLabel}
 				<span class="kc-chip kc-chip--tipo">{tipoLabel}</span>
@@ -218,7 +230,7 @@
 		</div>
 	{/if}
 
-	<p class="m-0 line-clamp-3 break-words text-md font-semibold leading-snug text-text-primary">
+	<p class="m-0 line-clamp-3 break-words text-md font-medium leading-snug text-text-primary">
 		{card.descricao}
 	</p>
 
@@ -228,7 +240,7 @@
 		<a
 			href={`/projetos/${card.project_id}`}
 			draggable="false"
-			class="-mt-1 w-fit max-w-full truncate rounded-sm text-sm font-semibold text-primary-600 transition-colors duration-fast hover:text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			class="-mt-1 w-fit max-w-full truncate rounded-sm text-xs font-medium text-primary-600 transition-colors duration-fast hover:text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			title={card.project_titulo}
 		>
 			{card.project_titulo}
@@ -236,7 +248,31 @@
 	{/if}
 
 	<div class="mt-auto flex items-center justify-between gap-2 pt-0.5">
-		{#if card.responsavel}
+		{#if assignees.length > 0}
+			<span
+				class="flex min-w-0 items-center gap-1.5"
+				title={`Responsáve${assignees.length === 1 ? 'l' : 'is'}: ${assigneeNames}`}
+			>
+				<span class="flex shrink-0 -space-x-1">
+					{#each assignees.slice(0, MAX_CARD_AVATARS) as a, i (a.id)}
+						<!-- z decrescente: o 1º avatar fica na frente dos seguintes. -->
+						<span
+							class="relative rounded-full ring-2 ring-surface"
+							style="z-index: {MAX_CARD_AVATARS - i}"
+						>
+							<AssigneeAvatar name={a.name} initials={a.initials} size="sm" />
+						</span>
+					{/each}
+				</span>
+				{#if assignees.length > MAX_CARD_AVATARS}
+					<span class="shrink-0 text-2xs font-semibold text-text-muted"
+						>+{assignees.length - MAX_CARD_AVATARS}</span
+					>
+				{:else if assignees.length === 1}
+					<span class="truncate text-xs text-text-secondary">{assignees[0].name}</span>
+				{/if}
+			</span>
+		{:else if card.responsavel}
 			<span class="truncate text-xs text-text-secondary" title={`Responsável: ${card.responsavel}`}
 				>{card.responsavel}</span
 			>
@@ -247,9 +283,10 @@
 		<!-- Contadores: apagados quando zerados, destacados quando há conteúdo. -->
 		<span class="flex shrink-0 items-center gap-2.5 text-xs tabular-nums">
 			<span
-				class="inline-flex items-center gap-1 {card.comments_count > 0
+				class="inline-flex items-center gap-1 transition-colors duration-fast hover:text-primary-600 {card.comments_count >
+				0
 					? 'font-semibold text-text-secondary'
-					: 'text-text-muted opacity-60'}"
+					: 'text-text-muted opacity-60 hover:opacity-100'}"
 				title={card.comments_count === 1 ? '1 comentário' : `${card.comments_count} comentários`}
 			>
 				<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -258,9 +295,10 @@
 				{card.comments_count}
 			</span>
 			<span
-				class="inline-flex items-center gap-1 {card.anexos_count > 0
+				class="inline-flex items-center gap-1 transition-colors duration-fast hover:text-primary-600 {card.anexos_count >
+				0
 					? 'font-semibold text-text-secondary'
-					: 'text-text-muted opacity-60'}"
+					: 'text-text-muted opacity-60 hover:opacity-100'}"
 				title={card.anexos_count === 1 ? '1 anexo' : `${card.anexos_count} anexos`}
 			>
 				<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -278,7 +316,7 @@
 			onclick={openDeleteConfirm}
 			aria-label="Excluir tarefa"
 			title="Excluir tarefa"
-			class="kc-delete-btn absolute right-1.5 top-1.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-surface text-xs text-danger opacity-0 shadow-sm transition-[opacity,background-color,border-color] duration-fast focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger group-hover:opacity-100 group-focus-within:opacity-100"
+			class="kc-delete-btn absolute right-1.5 top-1.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs text-danger opacity-0 transition-[opacity,color] duration-fast focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger group-hover:opacity-100 group-focus-within:opacity-100"
 		>
 			<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
@@ -322,17 +360,12 @@
 
 <style>
 	/*
-	 * Chips do topo do card. As cores de prioridade usam as MESMAS vars dos
-	 * badges do hub (`--ds-color-priority-*`, dark-safe) via color-mix — o
-	 * Tailwind 3 NÃO gera modificadores de opacidade (`bg-x/10`) para cores
-	 * definidas como var() sem <alpha-value>, então a tinta vive aqui.
+	 * Rótulos do topo do card, SEM badge (texto puro). As cores de prioridade
+	 * usam as MESMAS vars dos badges do hub (`--ds-color-priority-*`, dark-safe).
 	 */
 	.kc-chip {
 		display: inline-flex;
 		align-items: center;
-		border-radius: 6px;
-		border: 1px solid transparent;
-		padding: 0.1rem 0.45rem;
 		font-size: 0.6875rem;
 		font-weight: 600;
 		line-height: 1.35;
@@ -340,41 +373,31 @@
 	}
 	.kc-chip--baixa {
 		color: var(--ds-color-priority-baixa);
-		border-color: color-mix(in srgb, var(--ds-color-priority-baixa) 38%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-priority-baixa) 10%, transparent);
 	}
 	.kc-chip--media {
 		color: var(--ds-color-priority-media);
-		border-color: color-mix(in srgb, var(--ds-color-priority-media) 38%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-priority-media) 10%, transparent);
 	}
 	.kc-chip--alta {
 		color: var(--ds-color-priority-alta);
-		border-color: color-mix(in srgb, var(--ds-color-priority-alta) 38%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-priority-alta) 10%, transparent);
 	}
 	.kc-chip--urgente {
 		color: var(--ds-color-priority-urgente);
-		border-color: color-mix(in srgb, var(--ds-color-priority-urgente) 38%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-priority-urgente) 10%, transparent);
 	}
-	/* Tipo de pedido: tinta azul-clara da marca (referência: chip "Melhoria"). */
+	/* Tipo de pedido: tinta azul da marca (referência: rótulo "Melhoria"). */
 	.kc-chip--tipo {
 		color: var(--ds-color-primary-700);
-		border-color: color-mix(in srgb, var(--ds-color-primary-500) 32%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-primary-500) 8%, transparent);
+	}
+
+	/* Lixeira sem fundo (só o ícone): o hover ACENDE o vermelho via color-mix
+	 * (não há token danger-700; escurecemos o 600 na mão). */
+	.kc-delete-btn:hover {
+		color: color-mix(in srgb, var(--ds-color-danger-600) 78%, black);
 	}
 
 	/*
-	 * Tons de perigo do excluir/confirm: o Tailwind 3 não gera `bg-danger/10`
+	 * Tons de perigo do mini-confirm: o Tailwind 3 não gera `bg-danger/10`
 	 * (cor via var sem <alpha-value>) — as tintas vivem aqui via color-mix.
 	 */
-	.kc-delete-btn {
-		border-color: color-mix(in srgb, var(--ds-color-danger-600) 38%, transparent);
-	}
-	.kc-delete-btn:hover {
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 10%, transparent);
-	}
 	.kanban-delete-confirm {
 		border-color: color-mix(in srgb, var(--ds-color-danger-600) 38%, transparent);
 		background-color: color-mix(in srgb, var(--ds-color-danger-600) 5%, transparent);

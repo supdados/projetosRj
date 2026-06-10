@@ -98,17 +98,17 @@
 		: ''}"
 	aria-labelledby={`kanban-col-${column.status}`}
 >
-	<header class="kcol-head kcol-head--{column.status} flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2.5">
+	<header class="kcol-head kcol-head--{column.status} flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5">
 		<h2
 			id={`kanban-col-${column.status}`}
-			class="font-heading truncate text-sm font-bold text-text-primary"
+			class="font-heading truncate text-[0.8125rem] font-bold text-text-primary"
 		>
 			{column.label}
 		</h2>
-		<!-- {#key count}: remonta a pílula a cada mudança p/ rodar o "pop". -->
+		<!-- {#key count}: remonta o contador a cada mudança p/ rodar o "pop". -->
 		{#key count}
 			<span
-				class="kcol-count inline-flex h-[24px] min-w-[26px] items-center justify-center rounded-full border border-border-subtle bg-surface px-1.5 text-xs font-bold tabular-nums text-text-secondary shadow-sm"
+				class="kcol-count inline-flex h-[20px] min-w-[22px] items-center justify-center rounded-md border border-border-subtle bg-surface px-1.5 text-[0.7rem] font-bold tabular-nums text-text-secondary shadow-sm"
 			>
 				{count}
 			</span>
