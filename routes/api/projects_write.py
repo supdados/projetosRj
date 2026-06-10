@@ -39,6 +39,7 @@ from ..blueprint import main_bp
 from ..orgao_scope import user_can_access_project
 from ..projects.crud import _resolve_orgao_from_form
 from ..shared import log_project_action
+from ..tasks.constants import task_priority_sort_rank, task_status_sort_rank
 from ..tasks.permissions import task_permission_flags
 from .envelope import fail, ok
 from .negotiation import api_login_required
@@ -313,6 +314,12 @@ def api_etapa_tarefas(
     Valida escopo via ``user_can_access_project`` e que a etapa pertence ao
     projeto.
 
+    A ordenação segue a MESMA regra do hub de tarefas
+    (``routes/tasks/hub._task_status_priority_rank``): status primeiro
+    (0=nao_iniciada … 4=finalizada), prioridade no empate (0=urgente …
+    3=baixa) e a ordem manual (``Task.ordem``) como desempate final via sort
+    estável sobre a query já ordenada.
+
     Returns:
         ``ok({tarefas: [...], total, done})`` (200); 404 projeto/etapa; 403; 401.
     """
@@ -338,6 +345,12 @@ def api_etapa_tarefas(
         )
         .order_by(Task.ordem.asc(), Task.created_at.asc(), Task.id.asc())
         .all()
+    )
+    tarefas.sort(
+        key=lambda task: (
+            task_status_sort_rank(task.status),
+            task_priority_sort_rank(task.prioridade),
+        )
     )
     done = sum(1 for t in tarefas if t.status == "finalizada")
     return ok(

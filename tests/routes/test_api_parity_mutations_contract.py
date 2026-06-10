@@ -166,6 +166,51 @@ def test_api_etapa_tarefas_forbidden(client_outsider, seed_data):
     _fail(response.get_json(), code="forbidden")
 
 
+def test_api_etapa_tarefas_ordered_by_status_then_priority(client_user, seed_data):
+    """Regressão: a lista da etapa segue a MESMA regra de ordenação do hub.
+
+    Status primeiro (nao_iniciada … finalizada) e prioridade no empate
+    (urgente … baixa/ausente) — ``routes/tasks/hub._task_status_priority_rank``
+    aplicada também em ``api_etapa_tarefas``. Cria tarefas embaralhadas e
+    assevera que os ranks devolvidos chegam não-decrescentes.
+    """
+    from routes.tasks.constants import (
+        task_priority_sort_rank,
+        task_status_sort_rank,
+    )
+
+    scrambled = [
+        ("para_validacao", "urgente"),
+        ("nao_iniciada", "baixa"),
+        ("em_andamento", None),
+        ("nao_iniciada", "urgente"),
+        ("em_andamento", "alta"),
+    ]
+    for index, (status, prioridade) in enumerate(scrambled):
+        response = client_user.post(
+            "/api/tarefas",
+            json={
+                "project_id": seed_data["project_id"],
+                "etapa_id": seed_data["etapa_id"],
+                "descricao": f"Tarefa ordenação {index}",
+                "status": status,
+                "prioridade": prioridade,
+            },
+        )
+        assert response.status_code == 200, response.get_json()
+
+    response = client_user.get(
+        f"/api/projetos/{seed_data['project_id']}/etapas/{seed_data['etapa_id']}/tarefas"
+    )
+    assert response.status_code == 200
+    data = _ok(response.get_json())
+    ranks = [
+        (task_status_sort_rank(t["status"]), task_priority_sort_rank(t["prioridade"]))
+        for t in data["tarefas"]
+    ]
+    assert ranks == sorted(ranks), ranks
+
+
 # ── Criar / excluir / mover tarefa ────────────────────────────────────────────
 
 
