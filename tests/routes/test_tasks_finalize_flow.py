@@ -426,10 +426,13 @@ def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(
     )
     assert "Item Auditoria" not in project_descriptions
 
-    # As telas /projeto/<id>/tarefas e /dashboard servem a shell da SPA.
-    project_tasks_page = client_user.get(f"/projeto/{project_id}/tarefas")
-    assert project_tasks_page.status_code == 200
-    assert "data-sveltekit-preload-data" in project_tasks_page.get_data(as_text=True)
+    # /projeto/<id>/tarefas e um redirect resolver 302 -> /tarefas?project=<id>
+    # (a SPA nao tem rota client-side nesse path; o filtro e lido do query param).
+    project_tasks_page = client_user.get(
+        f"/projeto/{project_id}/tarefas", follow_redirects=False
+    )
+    assert project_tasks_page.status_code == 302
+    assert f"project={project_id}" in project_tasks_page.headers["Location"]
 
 
 def test_archived_tasks_listing_returns_all_visible_archived_tasks(
@@ -458,15 +461,28 @@ def test_archived_tasks_listing_returns_all_visible_archived_tasks(
         assert f"Arquivada paginada {index:02d}" in descriptions
 
 
-def test_project_tasks_serves_spa_shell_with_project_context(client_user, seed_data):
-    # O contexto travado de projeto e a UI de troca de filtro vivem na SPA; aqui
-    # garantimos o shell no path nativo do hub de projeto (endpoint preservado).
-    response = client_user.get(f"/projeto/{seed_data['project_id']}/tarefas")
-    assert response.status_code == 200
-    assert "data-sveltekit-preload-data" in response.get_data(as_text=True)
+def test_project_tasks_redirects_to_hub_with_project_param(client_user, seed_data):
+    # A SPA nao tem rota client-side /projeto/<id>/tarefas: o endpoint preservado
+    # redireciona 302 para /tarefas?project=<id> (preservando query params como
+    # focus_task); a pagina /tarefas le esses params no mount.
+    project_id = seed_data["project_id"]
+    response = client_user.get(
+        f"/projeto/{project_id}/tarefas?focus_task=7", follow_redirects=False
+    )
+    assert response.status_code == 302
+    location = response.headers["Location"]
+    assert "/tarefas" in location
+    assert f"project={project_id}" in location
+    assert "focus_task=7" in location
+
+    # O destino do redirect serve a shell da SPA.
+    final_response = client_user.get(location)
+    assert final_response.status_code == 200
+    assert "data-sveltekit-preload-data" in final_response.get_data(as_text=True)
 
 
-def test_project_tasks_empty_project_still_serves_spa_shell(client_user, seed_data):
-    response = client_user.get(f"/projeto/{seed_data['project_complete_id']}/tarefas")
-    assert response.status_code == 200
-    assert "data-sveltekit-preload-data" in response.get_data(as_text=True)
+def test_project_tasks_empty_project_still_redirects_to_hub(client_user, seed_data):
+    project_id = seed_data["project_complete_id"]
+    response = client_user.get(f"/projeto/{project_id}/tarefas", follow_redirects=False)
+    assert response.status_code == 302
+    assert f"project={project_id}" in response.headers["Location"]

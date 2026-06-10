@@ -53,69 +53,6 @@ def test_tasks_hub_project_filter_js_allows_enter_to_clear_empty_selection():
     assert "clearProjectFilter(true);" in content
 
 
-def test_tasks_hub_global_placeholder_project_picker_scopes_projects_by_selected_orgao():
-    orchestrator_path = (
-        Path(__file__).resolve().parents[2]
-        / "static"
-        / "js"
-        / "modules"
-        / "add-item-inline.js"
-    )
-    orchestrator_content = orchestrator_path.read_text(encoding="utf-8")
-    picker_path = (
-        Path(__file__).resolve().parents[2]
-        / "static"
-        / "js"
-        / "modules"
-        / "add-item-inline"
-        / "project-picker.js"
-    )
-    picker_content = picker_path.read_text(encoding="utf-8")
-    inline_form_path = (
-        Path(__file__).resolve().parents[2]
-        / "static"
-        / "js"
-        / "modules"
-        / "add-item-inline"
-        / "inline-form-controller.js"
-    )
-    inline_form_content = inline_form_path.read_text(encoding="utf-8")
-
-    assert "function getProjectOptionsForPicker()" in orchestrator_content
-    assert "return projectOptions.slice();" in orchestrator_content
-    assert "input.addEventListener('focus', showDropdown);" not in picker_content
-    assert "input.addEventListener('click', showDropdown);" in picker_content
-    assert (
-        "if (typeof opts.containsTarget === 'function' && opts.containsTarget(event.target)) return;"
-        in inline_form_content
-    )
-
-
-def test_tasks_hub_inline_add_js_reuses_existing_group_and_skips_focus_jump():
-    group_manager_path = (
-        Path(__file__).resolve().parents[2]
-        / "static"
-        / "js"
-        / "modules"
-        / "add-item-inline"
-        / "group-manager.js"
-    )
-    group_manager_content = group_manager_path.read_text(encoding="utf-8")
-    inline_form_path = (
-        Path(__file__).resolve().parents[2]
-        / "static"
-        / "js"
-        / "modules"
-        / "add-item-inline"
-        / "inline-form-controller.js"
-    )
-    inline_form_content = inline_form_path.read_text(encoding="utf-8")
-
-    assert "return sourceGroup;" in group_manager_content
-    assert "if (opts.focusInserted !== false) {" in group_manager_content
-    assert "focusInserted: !!opts.isGlobalPlaceholder" in inline_form_content
-
-
 def test_tasks_hub_global_placeholder_css_keeps_extra_spacing_before_orgao_line():
     file_path = (
         Path(__file__).resolve().parents[2] / "static" / "css" / "tasks" / "hub.css"
@@ -196,8 +133,7 @@ def test_tasks_hub_kanban_js_keeps_grouped_list_rows_inside_project_sections():
     )
     assert (
         "function syncListOrderFromKanban() {\n"
-        "            if (!ctx.reorderUrl) return;\n"
-        in content
+        "            if (!ctx.reorderUrl) return;\n" in content
     )
     # Lista agrupada delega para syncGroupedListOrder, mantendo as linhas dentro
     # das seções de projeto (em vez de reordenar a lista plana).
@@ -205,8 +141,7 @@ def test_tasks_hub_kanban_js_keeps_grouped_list_rows_inside_project_sections():
         "            if (ctx.isTaskHubGroupedList()) {\n"
         "                syncGroupedListOrder(orderIds);\n"
         "                return;\n"
-        "            }"
-        in content
+        "            }" in content
     )
 
 
@@ -367,9 +302,10 @@ def test_tasks_hub_inline_add_action_buttons_use_square_corners():
     )
 
 
-def test_tasks_archived_serves_spa_shell(app, client_user, seed_data):
-    # O modo arquivadas tambem serve a shell da SPA; o conteudo read-only vive
-    # nos componentes Svelte e os dados em GET /api/tarefas?modo=arquivadas.
+def test_tasks_archived_redirects_to_hub_with_modo_param(app, client_user, seed_data):
+    # A SPA nao tem rota client-side /tarefas/arquivadas: o endpoint vira um
+    # redirect resolver 302 -> /tarefas?modo=arquivadas (a pagina /tarefas le o
+    # query param no mount); os dados vem de GET /api/tarefas?modo=arquivadas.
     with app.app_context():
         archived_task = Task(
             descricao="Tarefa arquivada readonly",
@@ -386,6 +322,13 @@ def test_tasks_archived_serves_spa_shell(app, client_user, seed_data):
         db.session.add(archived_task)
         db.session.commit()
 
-    response = client_user.get("/tarefas/arquivadas")
-    assert response.status_code == 200
-    assert "data-sveltekit-preload-data" in response.get_data(as_text=True)
+    response = client_user.get("/tarefas/arquivadas", follow_redirects=False)
+    assert response.status_code == 302
+    location = response.headers["Location"]
+    assert "/tarefas" in location
+    assert "modo=arquivadas" in location
+
+    # O destino do redirect serve a shell da SPA.
+    final_response = client_user.get(location)
+    assert final_response.status_code == 200
+    assert "data-sveltekit-preload-data" in final_response.get_data(as_text=True)

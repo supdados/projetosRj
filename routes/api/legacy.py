@@ -12,9 +12,9 @@ import json
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from flask import current_app, g, jsonify, request
+from flask import current_app, jsonify, request
 
-from models import Project, StageTemplate, StageTemplateItem
+from models import StageTemplate, StageTemplateItem
 from sqlalchemy import func
 from catalogs.objectives import (
     OBJETIVO_IDS,
@@ -25,7 +25,6 @@ from catalogs.objectives import (
 
 from ..blueprint import main_bp
 from ..decorators import login_required
-from ..orgao_scope import get_user_orgao_subtree_ids
 from ..shared import get_or_404
 
 
@@ -90,35 +89,6 @@ def get_template_stages(template_id):
         for item in template.items
     ]
     return jsonify(stages)
-
-
-@main_bp.route("/api/projetos_usuario", methods=["GET"])
-@login_required
-def get_user_projects_api():
-    """API para obter projetos do usuário para dropdown"""
-    if g.user.is_admin:
-        projects = Project.query.order_by(Project.titulo).all()
-    else:
-        subtree_ids = get_user_orgao_subtree_ids(g.user)
-        if subtree_ids:
-            projects = (
-                Project.query.filter(Project.orgao_id.in_(subtree_ids))
-                .order_by(Project.titulo)
-                .all()
-            )
-        else:
-            projects = []
-
-    return jsonify(
-        [
-            {
-                "id": p.id,
-                "titulo": p.titulo,
-                "orgao_sigla": p.orgao_ref.sigla if p.orgao_ref else None,
-            }
-            for p in projects
-        ]
-    )
 
 
 @main_bp.route("/api/chatbot-token", methods=["GET"])

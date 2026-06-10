@@ -51,7 +51,10 @@
                 return 'generic';
             }
 
-            if (pathname === '/dashboard') return 'dashboard';
+            // Só os kinds que AINDA possuem <template data-skeleton-template>
+            // em base.html (available_skeleton_types): login, projects, pending,
+            // project_detail. As demais telas migraram para a SPA e seus
+            // templates de skeleton foram removidos.
             if (
                 pathname === '/' ||
                 pathname === '/login' ||
@@ -60,14 +63,6 @@
             ) return 'login';
             if (pathname === '/projects') return 'projects';
             if (pathname === '/projetos_pendentes') return 'pending';
-            if (pathname === '/tarefas') return 'tasks';
-            if (pathname === '/tarefas/arquivadas') return 'tasks';
-            if (pathname === '/tarefas/finalizadas') return 'tasks';
-            if (/^\/projeto\/\d+\/tarefas$/.test(pathname)) return 'project_tasks';
-            if (pathname === '/busca') return 'search';
-            if (pathname === '/admin/templates') return 'templates_list';
-            if (pathname === '/admin/templates/new' || /^\/admin\/templates\/\d+\/edit$/.test(pathname)) return 'templates_form';
-            if (/^\/tarefas\/\d+$/.test(pathname)) return 'task_detail';
             if (/^\/project\/\d+$/.test(pathname)) return 'project_detail';
             return 'generic';
         }

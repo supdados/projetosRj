@@ -11,7 +11,10 @@ def calendars_hub():
     O endpoint ``main.calendars_hub`` permanece para que os ``url_for`` em
     ``routes/calendars/oauth.py`` e ``routes/search.py`` continuem validos; o
     corpo agora devolve a shell da SPA. A fonte de dados real do hub vive em
-    ``GET /api/calendarios`` (consumido pela SPA); o CRUD de evento continua nas
-    rotas ``routes/calendars/events.py`` (API de fato da SPA).
+    ``GET /api/calendarios`` e o CRUD de evento usado pela SPA em
+    ``/api/calendarios/eventos*`` (``routes/api/calendars_events.py``; ver
+    ``frontend/src/lib/api/calendars.ts``). ``routes/calendars/events.py`` é o
+    CRUD legado (form POST + redirect), morto para a SPA, mantido até a lane de
+    projetos.
     """
     return _render_spa()

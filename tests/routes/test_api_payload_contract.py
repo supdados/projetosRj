@@ -1,7 +1,6 @@
 import json
 
-from models import Project, StageTemplate, StageTemplateItem, db
-from tests._orgao_helpers import ensure_orgao
+from models import StageTemplate, StageTemplateItem, db
 
 
 def _client_for_user(app, user_id):
@@ -92,41 +91,6 @@ def test_api_templates_and_template_stages_return_sorted_shape(
         {"name": "Descoberta", "order": 0, "duration": 5},
         {"name": "Entrega", "order": 1, "duration": 2},
     ]
-
-
-def test_api_user_projects_respects_user_scope_and_admin_sees_all(app, seed_data):
-    with app.app_context():
-        db.session.add(
-            Project(
-                titulo="Projeto Adicional Auditoria",
-                orgao_id=ensure_orgao("Auditoria").id,
-                orgao="Orgao A",
-                prioridade="media",
-                status="Vigente",
-                objetivo_id=1,
-                resultado_esperado_id=1,
-            )
-        )
-        db.session.commit()
-
-    user_client = _client_for_user(app, seed_data["user_id"])
-    admin_client = _client_for_user(app, seed_data["admin_id"])
-
-    user_response = user_client.get("/api/projetos_usuario")
-    assert user_response.status_code == 200
-    user_payload = user_response.get_json()
-    user_titles = [item["titulo"] for item in user_payload]
-    assert "Projeto Auditoria" in user_titles
-    assert "Projeto Adicional Auditoria" in user_titles
-    assert "Projeto VPD" not in user_titles
-    assert all(item["orgao_sigla"] == "Auditoria" for item in user_payload)
-
-    admin_response = admin_client.get("/api/projetos_usuario")
-    assert admin_response.status_code == 200
-    admin_payload = admin_response.get_json()
-    admin_titles = [item["titulo"] for item in admin_payload]
-    assert "Projeto Auditoria" in admin_titles
-    assert "Projeto VPD" in admin_titles
 
 
 def test_api_chatbot_token_returns_upstream_token_payload(app, seed_data, monkeypatch):

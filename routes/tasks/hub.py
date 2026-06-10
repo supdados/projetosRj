@@ -9,7 +9,9 @@ from routes.orgao_scope import (
     expand_orgao_filter_ids,
     get_user_orgao_subtree_ids,
 )
-from routes.tasks.permissions import task_permission_flags as _public_task_permission_flags
+from routes.tasks.permissions import (
+    task_permission_flags as _public_task_permission_flags,
+)
 from routes.tasks.queries import (
     _build_visible_tasks_query,
 )
@@ -236,14 +238,13 @@ def build_task_hub_context(
     """Monta os dados do Hub de Tarefas em modo lista (sem kanban).
 
     Centraliza a montagem das tarefas agrupadas por projeto e das opções de
-    projeto que ``_render_task_hub`` produz, reusando os MESMOS helpers de query
-    e agrupamento (``_build_visible_tasks_query`` /
-    ``_group_hub_tasks_by_project`` / ``_build_task_hub_project_options``), para
-    que a rota Jinja ``/tarefas`` e o endpoint JSON da SPA (``GET /api/tarefas``)
-    compartilhem a fonte de verdade. O escopo de órgão é server-side; o chamador
-    sanitiza o filtro de órgão. Foca no modo lista — NÃO calcula as URLs/labels
-    de navegação específicas do template (paginação de arquivadas, links de
-    alternância), que continuam em ``_render_task_hub``.
+    projeto reusando os MESMOS helpers de query e agrupamento
+    (``_build_visible_tasks_query`` / ``_group_hub_tasks_by_project`` /
+    ``_build_task_hub_project_options``). Os consumidores são ``GET
+    /api/tarefas`` (``routes/api/tasks.py:30``) e ``routes/tasks/helpers.py:43``
+    — a fonte de verdade dos dados do hub; a rota ``/tarefas`` hoje serve
+    apenas a shell da SPA. O escopo de órgão é server-side; o chamador sanitiza
+    o filtro de órgão.
 
     Args:
         project_filter: ID do projeto como string, "sem_projeto" ou "" (todos).
@@ -284,4 +285,3 @@ def build_task_hub_context(
         "include_archived": include_archived,
         "total_items": len(tasks),
     }
-

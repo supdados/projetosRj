@@ -60,12 +60,17 @@ def list_tasks():
 @main_bp.route("/tarefas/arquivadas", methods=["GET"])
 @login_required
 def list_tasks_archived():
-    """Serve a SPA no path nativo ``/tarefas/arquivadas`` (KEEP-ENDPOINT).
+    """Redireciona (302) para ``/tarefas?modo=arquivadas`` (KEEP-ENDPOINT).
 
-    O modo "arquivadas" do hub e roteado client-side pela SPA; os dados vem de
-    ``GET /api/tarefas?modo=arquivadas``.
+    O endpoint permanece registrado porque ``target_url`` PERSISTIDO em
+    notificacoes (``routes/tasks/notifications.py``) e os redirects de
+    ``crud.py``/``list_tasks_finalized`` apontam para ca. A SPA NAO possui rota
+    client-side ``/tarefas/arquivadas`` — o modo "arquivadas" e estado da pagina
+    ``/tarefas``, inicializado pelo query param ``modo`` (lido no mount).
     """
-    return _serve_task_hub_spa_or_redirect()
+    query_args = request.args.to_dict(flat=True)
+    query_args["modo"] = "arquivadas"
+    return redirect(url_for("main.list_tasks", **query_args))
 
 
 @main_bp.route("/tarefas/finalizadas", methods=["GET"])
@@ -124,7 +129,9 @@ def task_detail(task_id):
             )
         params = {}
         sample_task = (
-            db.session.get(Task, legacy.sample_task_id) if legacy.sample_task_id else None
+            db.session.get(Task, legacy.sample_task_id)
+            if legacy.sample_task_id
+            else None
         )
         if sample_task and _can_view_task(g.user, sample_task):
             params["focus_task"] = legacy.sample_task_id
@@ -182,13 +189,14 @@ def list_project_etapas(project_id):
 @main_bp.route("/projeto/<int:project_id>/tarefas", methods=["GET"])
 @login_required
 def project_tasks(project_id):
-    """Serve a SPA no path nativo ``/projeto/<id>/tarefas`` (KEEP-ENDPOINT).
+    """Redireciona (302) para ``/tarefas?project=<id>`` (KEEP-ENDPOINT).
 
     Endpoint preservado (``task_detail`` redireciona para ele com ``focus_task``;
-    notificacoes e redirects apontam para ca). Mantemos a checagem de
-    existencia/permissao do projeto (302 para a Lista quando inacessivel) e, em
-    caso de acesso valido, servimos a SPA — que roteia o hub do projeto
-    client-side e busca os dados em ``GET /api/tarefas?project=<id>``.
+    notificacoes com ``target_url`` persistido e redirects apontam para ca). A
+    SPA NAO possui rota client-side ``/projeto/<id>/tarefas``: o hub filtrado por
+    projeto e a propria pagina ``/tarefas``, que le ``?project=`` (e o
+    ``?focus_task=`` preservado aqui) no mount. Mantemos a checagem de
+    existencia/permissao do projeto (302 para a Lista quando inacessivel).
     """
     project = db.session.get(Project, project_id)
     if not project:
@@ -199,4 +207,6 @@ def project_tasks(project_id):
         flash("Você não tem permissão para acessar este projeto.", "danger")
         return redirect(url_for("main.list_projects"))
 
-    return _render_spa()
+    query_args = request.args.to_dict(flat=True)
+    query_args["project"] = str(project_id)
+    return redirect(url_for("main.list_tasks", **query_args))

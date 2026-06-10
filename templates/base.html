@@ -95,34 +95,23 @@
             </nav>
             {% endif %}
 
-            {% set available_skeleton_types = ['dashboard', 'projects', 'pending', 'tasks', 'project_tasks', 'search', 'templates_list', 'templates_form', 'login', 'project_detail', 'task_detail', 'generic'] %}
+            {# Apenas endpoints que AINDA renderizam base.html têm skeleton; os
+               cortados para a SPA (dashboard, tarefas, busca, templates etc.)
+               foram removidos junto com seus tipos. #}
+            {% set available_skeleton_types = ['projects', 'pending', 'login', 'project_detail', 'generic'] %}
             {% set requested_skeleton_preview = request.args.get('preview_skeleton', '')|trim %}
             {% set skeleton_preview_enabled = requested_skeleton_preview in available_skeleton_types %}
             {% set skeleton_endpoint = request.endpoint or '' %}
             {% if skeleton_preview_enabled %}
                 {% set skeleton_type = requested_skeleton_preview %}
-            {% elif skeleton_endpoint == 'main.dashboard' %}
-                {% set skeleton_type = 'dashboard' %}
             {% elif skeleton_endpoint == 'main.list_projects' %}
                 {% set skeleton_type = 'projects' %}
             {% elif skeleton_endpoint == 'main.list_projetos_pendentes' %}
                 {% set skeleton_type = 'pending' %}
-            {% elif skeleton_endpoint == 'main.list_tasks' or skeleton_endpoint == 'main.list_tasks_archived' or skeleton_endpoint == 'main.list_tasks_finalized' %}
-                {% set skeleton_type = 'tasks' %}
-            {% elif skeleton_endpoint == 'main.project_tasks' %}
-                {% set skeleton_type = 'project_tasks' %}
-            {% elif skeleton_endpoint == 'main.global_search_page' %}
-                {% set skeleton_type = 'search' %}
-            {% elif skeleton_endpoint == 'main.list_templates' %}
-                {% set skeleton_type = 'templates_list' %}
-            {% elif skeleton_endpoint == 'main.create_template' or skeleton_endpoint == 'main.edit_template' %}
-                {% set skeleton_type = 'templates_form' %}
             {% elif skeleton_endpoint == 'main.login_page' %}
                 {% set skeleton_type = 'login' %}
             {% elif skeleton_endpoint == 'main.project_detail' %}
                 {% set skeleton_type = 'project_detail' %}
-            {% elif skeleton_endpoint == 'main.task_detail' %}
-                {% set skeleton_type = 'task_detail' %}
             {% else %}
                 {% set skeleton_type = 'generic' %}
             {% endif %}

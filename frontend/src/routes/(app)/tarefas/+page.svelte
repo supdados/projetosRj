@@ -313,8 +313,8 @@
 	// agora vive em TaskHubTaskRow, que chama `deleteCard` via a prop `onDelete`.
 	// `deleteCard` re-busca a lista no sucesso (recolhe grupos/etapas vazios).
 
-	// ADD-TAREFA NO MODO LISTA (paridade com add-item-inline.js + render_hub_add_row
-	// do hub.html legado): cada GRUPO de projeto ganha um botão "+ Nova tarefa" que
+	// ADD-TAREFA NO MODO LISTA (paridade com o add inline do hub Jinja legado, já
+	// removido do codebase): cada GRUPO de projeto ganha um botão "+ Nova tarefa" que
 	// abre um form inline. Cria via a MESMA chamada do KanbanComposer (`createTarefa`)
 	// e re-busca a lista. Apenas UM form aberto por vez (controlado pela página).
 	type AddDraft = {
@@ -547,6 +547,15 @@
 		prioridade = params.get('prioridade') ?? '';
 		statusFilter = params.get('status') ?? '';
 		responsavel = params.get('responsavel') ?? '';
+		// Deep-links resolvidos pelo Flask via 302 para ca (KEEP-ENDPOINTs sem
+		// rota client-side propria): /tarefas/arquivadas -> ?modo=arquivadas e
+		// /projeto/<id>/tarefas -> ?project=<id>. Notificacoes/busca acrescentam
+		// ?focus_task=<id> (task_detail) -> abre o drawer da tarefa em foco.
+		project = params.get('project') ?? '';
+		const modoParam = params.get('modo');
+		if (modoParam === 'arquivadas' || modoParam === 'finalizadas') modo = modoParam;
+		const focusTaskId = Number(params.get('focus_task'));
+		if (Number.isInteger(focusTaskId) && focusTaskId > 0) openTask(focusTaskId, 'list');
 		void load();
 		return () => {
 			inFlight?.abort();

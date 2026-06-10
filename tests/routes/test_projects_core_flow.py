@@ -85,10 +85,6 @@ def test_no_orgao_user_metadata_routes_fail_closed(app, client, seed_data):
     assert "Projeto Auditoria" not in dashboard_html
     assert "Projeto VPD" not in dashboard_html
 
-    projects_response = client.get("/api/projetos_usuario")
-    assert projects_response.status_code == 200
-    assert projects_response.get_json() == []
-
     search_response = client.get("/api/busca-global", query_string={"q": "Projeto"})
     assert search_response.status_code == 200
     search_payload = search_response.get_json()

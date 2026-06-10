@@ -8,7 +8,7 @@
                         <div class="app-nav-icons" role="navigation" aria-label="Navegação principal">
                             <a
                                 href="{{ build_orgao_nav_url('main.dashboard') }}"
-                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.dashboard' else '' }}"
+                                class="app-nav-link app-nav-icon-btn"
                                 data-area-nav="1"
                                 data-orgao-nav="1"
                                 data-bs-toggle="tooltip"
@@ -34,7 +34,7 @@
                             </a>
                             <a
                                 href="{{ build_orgao_nav_url('main.list_tasks') }}"
-                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_tasks' or endpoint == 'main.list_tasks_archived' or endpoint == 'main.list_tasks_finalized' or endpoint == 'main.project_tasks' else '' }}"
+                                class="app-nav-link app-nav-icon-btn"
                                 data-area-nav="1"
                                 data-orgao-nav="1"
                                 data-bs-toggle="tooltip"
@@ -60,7 +60,7 @@
                             </a>
                             <a
                                 href="{{ build_orgao_nav_url('main.calendars_hub') }}"
-                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.calendars_hub' else '' }}"
+                                class="app-nav-link app-nav-icon-btn"
                                 data-area-nav="1"
                                 data-orgao-nav="1"
                                 data-bs-toggle="tooltip"
@@ -238,7 +238,7 @@
                         <div class="app-account-tooltip">
                             <div class="dropdown app-account-menu">
                                 <button
-                                    class="btn app-nav-icon-btn app-account-trigger dropdown-toggle {{ 'active' if endpoint == 'main.change_password' or endpoint == 'main.list_users' or endpoint == 'main.list_orgaos' or endpoint == 'main.add_orgao' or endpoint == 'main.edit_orgao' or endpoint == 'main.list_orgao_tipos' or endpoint == 'main.add_orgao_tipo' or endpoint == 'main.edit_orgao_tipo' or endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') or endpoint == 'main.edit_user' else '' }}"
+                                    class="btn app-nav-icon-btn app-account-trigger dropdown-toggle {{ 'active' if endpoint == 'main.change_password' or endpoint == 'main.list_users' or endpoint == 'main.list_orgaos' or endpoint == 'main.add_orgao' or endpoint == 'main.edit_orgao' or endpoint == 'main.list_orgao_tipos' or endpoint == 'main.add_orgao_tipo' or endpoint == 'main.edit_orgao_tipo' or endpoint == 'main.edit_user' else '' }}"
                                     type="button"
                                     id="appAccountMenuDesktop"
                                     data-bs-toggle="dropdown"
@@ -275,7 +275,8 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="/admin/templates" class="dropdown-item app-dropdown-item {{ 'active' if endpoint.startswith('main.list_templates') or endpoint.startswith('main.create_template') or endpoint.startswith('main.edit_template') else '' }}">
+                                        {# /admin/templates é tela da SPA — nunca renderiza este topnav, então não há estado 'active'. #}
+                                        <a href="/admin/templates" class="dropdown-item app-dropdown-item">
                                             <span class="app-dropdown-item-main">
                                                 <i class="fas fa-layer-group"></i>
                                                 <span>Modelos de Etapas</span>

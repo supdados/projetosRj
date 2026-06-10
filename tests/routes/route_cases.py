@@ -446,7 +446,9 @@ ROUTE_CASES = [
         "rule": "/tarefas/arquivadas",
         "path": "/tarefas/arquivadas",
         "role": "user",
-        "expected_status": 200,
+        # Redirect resolver 302 -> /tarefas?modo=arquivadas (a SPA nao tem rota
+        # client-side /tarefas/arquivadas; o modo e lido do query param).
+        "expected_status": 302,
         "requires_login": True,
         "requires_admin": False,
     },
@@ -618,7 +620,9 @@ ROUTE_CASES = [
         "rule": "/projeto/<int:project_id>/tarefas",
         "path": "/projeto/{project_id}/tarefas",
         "role": "user",
-        "expected_status": 200,
+        # Redirect resolver 302 -> /tarefas?project=<id> (a SPA nao tem rota
+        # client-side /projeto/<id>/tarefas; o filtro e lido do query param).
+        "expected_status": 302,
         "requires_login": True,
         "requires_admin": False,
     },
@@ -1360,16 +1364,6 @@ ROUTE_CASES = [
         "method": "GET",
         "rule": "/api/templates/<int:template_id>",
         "path": "/api/templates/{template_id}",
-        "role": "user",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "api_user_projects_get",
-        "method": "GET",
-        "rule": "/api/projetos_usuario",
-        "path": "/api/projetos_usuario",
         "role": "user",
         "expected_status": 200,
         "requires_login": True,
@@ -2286,4 +2280,6 @@ ROUTE_CASES += [
 # /api/orgaos/escopo. 181 + 4 = 185.
 # +2 rotas antes sem cobertura: POST /api/tarefas/<id>/responsaveis e
 # GET /api/calendarios/membros. 186 + 2 = 188.
-assert len(ROUTE_CASES) == 188
+# -1 da lane de limpeza de codigo morto: GET /api/projetos_usuario removido
+# (rota sem consumidor em static/, templates/ ou frontend/). 188 - 1 = 187.
+assert len(ROUTE_CASES) == 187

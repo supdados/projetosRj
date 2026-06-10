@@ -1,4 +1,4 @@
-from flask import flash, jsonify, redirect, render_template, request, url_for
+from flask import flash, jsonify, redirect, request, url_for
 
 from models import OrgaoTipo, OrgaoUnidade, db
 from models.orgao import MAX_DEPTH, slugify_orgao_tipo
@@ -9,8 +9,6 @@ from .orgao_tree import (
     backfill_orgao_tipo_ids,
     compute_orgao_depth,
     get_orgao_descendants,
-    get_orgao_tipo_options,
-    get_tipo_rank_map,
     ensure_default_orgao_tipos,
     is_valid_parent_tipo,
     normalize_orgao_form,
@@ -74,12 +72,6 @@ def _prepare_orgao_catalogs():
     db.session.flush()
 
 
-def _render_orgao_form(**context):
-    context.setdefault("tipos", get_orgao_tipo_options())
-    context.setdefault("tipo_rank", get_tipo_rank_map())
-    return render_template("admin/orgao_form.html", **context)
-
-
 def _normalize_tipo_form(form, tipo=None):
     nome = (form.get("nome") or "").strip()
     slug = slugify_orgao_tipo(form.get("slug") or nome)
@@ -128,4 +120,3 @@ def _invalid_orgao_type_level_changes(tipo, new_nivel, new_permite_raiz):
             if filho_tipo is not None and new_nivel >= filho_tipo.nivel:
                 affected.append(filho)
     return affected
-

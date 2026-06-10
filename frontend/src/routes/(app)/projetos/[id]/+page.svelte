@@ -1141,11 +1141,11 @@
 								onSave={(v) => saveProjectField('observacao', v)}
 							/>
 						</div>
-						<!-- Navega para o hub de tarefas do projeto (KEEP-ENDPOINT Flask que
-						     serve a SPA); reload completo pois está fora do base da SPA. -->
+						<!-- Navega para o hub de tarefas filtrado por este projeto. A SPA NAO
+						     tem rota /projeto/<id>/tarefas: a pagina /tarefas le ?project= no
+						     mount (mesmo destino do 302 do KEEP-ENDPOINT main.project_tasks). -->
 						<a
-							href={`/projeto/${data.project.id}/tarefas`}
-							data-sveltekit-reload
+							href={`/tarefas?project=${data.project.id}`}
 							class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-primary-700 no-underline shadow-sm transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 						>
 							<i class="fas fa-plus-circle" aria-hidden="true"></i>Adicionar tarefa

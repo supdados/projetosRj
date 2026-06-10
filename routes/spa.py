@@ -29,17 +29,17 @@ ABORDAGEM
    matcher de paths migrados; qualquer outro path -> 404 (preserva o comportamento
    atual). Deep-link e F5 nesses paths resolvem a rota client-side correta.
 
-LIMITE CONSCIENTE (telas Jinja AINDA VIVAS de mesma URL)
---------------------------------------------------------
-``/dashboard``, ``/tarefas``, ``/busca``, ``/calendarios``, ``/admin/orgaos``,
-``/admin/orgaos/tipos`` e ``/admin/templates`` continuam com rota Jinja viva
-(coberta por testes de contrato/permissao). Como a migracao dessas telas no
-SERVIDOR ainda nao foi cortada (os testes provam que o Jinja e a tela canonica
-nessas URLs), NAO interceptamos esses GETs — fazer isso quebraria as telas Jinja
-vivas e seus guards de login/admin. A SPA possui rotas client-side para elas, mas
-o cut-over server-side (servir o index nesses paths) deve ocorrer junto da remocao
-da rota/teste Jinja correspondente, numa lane de migracao dedicada. Ate la, F5
-nesses paths cai na tela Jinja legada — SEM loop e SEM tela branca.
+LIMITE CONSCIENTE (telas Jinja AINDA VIVAS, pendentes de lane propria)
+----------------------------------------------------------------------
+``/busca``, ``/admin/orgaos``, ``/admin/orgaos/tipos`` e ``/admin/templates``
+ja foram cortados e sao servidos pelo catch-all; ``/dashboard``, ``/tarefas`` e
+``/calendarios`` foram cortados no padrao KEEP-ENDPOINT (a rota Flask estatica
+permanece registrada — pinada por ``url_for``/notificacoes — mas devolve
+``_render_spa()``). As telas Jinja remanescentes sao apenas os paths ingleses:
+``/projects``, ``/project/<id>`` (+ ``/history``, ``/edit``),
+``/projetos_pendentes``, ``/admin/users*`` e ``/etapa/<id>/edit`` — pendentes
+de lane propria (projetos/admin). Ate la, essas URLs continuam canonicamente
+Jinja — SEM loop e SEM tela branca.
 
 EXCLUSOES (nunca SPA): ``/api/*``, ``/webhook``, ``/calendar/oauth/*``,
 ``/auth/*``, ``/login*``, ``/logout``, ``/static/*``, ``/favicon.ico``,
@@ -110,6 +110,22 @@ _MIGRATED_EXACT_PATHS = frozenset(
         "admin/orgaos/tipos",
         "admin/templates",
         "busca",
+        # Cut-over dashboard/tarefas/calendarios: as rotas Flask ESTATICAS
+        # dessas URLs permanecem registradas como KEEP-ENDPOINT servindo
+        # _render_spa() (routes/dashboard.py::dashboard,
+        # routes/tasks/views.py::list_tasks,
+        # routes/calendars/views.py::calendars_hub) e tem prioridade no
+        # Werkzeug sobre este catch-all — as entradas abaixo sao defesa em
+        # profundidade/documentacao do estado migrado, nao o caminho ativo.
+        # NAO adicionar "tarefas/arquivadas", padrao dinamico "tarefas/\d+"
+        # nem "projeto/\d+/tarefas": a SPA NAO tem rota client-side para esses
+        # paths (servir a shell neles cai no 404 do SvelteKit). Os endpoints
+        # Flask correspondentes (list_tasks_archived, task_detail,
+        # project_tasks) sao redirect resolvers 302 VIVOS (URLs persistidas em
+        # notificacoes no banco) que apontam para /tarefas com query params.
+        "dashboard",
+        "tarefas",
+        "calendarios",
     }
 )
 # Segmentos dinamicos das telas migradas (``<id>`` numerico). re.fullmatch.
@@ -243,10 +259,13 @@ def spa_native_path(spa_path: str) -> str:
 
     Tem rank menor que as rotas estaticas (Werkzeug prioriza rotas estaticas),
     entao so casa o que nenhuma rota Jinja existente atendeu: ``/projetos*``,
-    ``/admin/usuarios*``, ``/admin/orgaos/novo``, ``/admin/orgaos/<id>``,
-    ``/admin``. Paths NAO migrados (ou reservados) -> 404, preservando o
-    comportamento atual (telas Jinja vivas continuam nas suas rotas; URLs
-    desconhecidas seguem 404).
+    ``/admin``, ``/admin/usuarios*``, ``/admin/orgaos*``, ``/admin/orgaos/tipos``,
+    ``/admin/templates`` e ``/busca``. ``/dashboard``, ``/tarefas`` e
+    ``/calendarios`` tambem constam no matcher, mas na
+    pratica sao atendidos pelas rotas estaticas KEEP-ENDPOINT que ja devolvem
+    ``_render_spa()`` (defesa em profundidade). Paths NAO migrados (ou
+    reservados) -> 404, preservando o comportamento atual (telas Jinja vivas
+    continuam nas suas rotas; URLs desconhecidas seguem 404).
 
     Args:
         spa_path: Caminho apos a raiz (sem barra inicial).
