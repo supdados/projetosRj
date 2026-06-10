@@ -169,6 +169,10 @@
 
 	/** Enter/Espaço abre o drawer; demais teclas vão para o board (setas movem). */
 	function handleKeydown(event: KeyboardEvent): void {
+		// Tecla vinda de um descendente focável (link do projeto, excluir, confirm)
+		// pertence ao controle: interceptar aqui roubaria o Enter/Espaço dele para
+		// abrir o drawer (e as setas moveriam o card com o foco num botão).
+		if (event.target !== event.currentTarget) return;
 		if ((event.key === 'Enter' || event.key === ' ') && openTaskDrawer) {
 			event.preventDefault();
 			openTaskDrawer(card.id);

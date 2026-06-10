@@ -32,6 +32,7 @@ from __future__ import annotations
 from typing import Any
 
 from flask import Response, g, request
+from sqlalchemy.orm import joinedload, selectinload
 
 from models import Task, db
 
@@ -351,8 +352,17 @@ def _collect_reorder_tasks(
     if not requested_ids:
         return {}, None
 
+    # Eager-load do que ``serialize_task_card`` toca ao reserializar as colunas
+    # afetadas (projeto + contadores de comentários/anexos): sem isto, cada drop
+    # dispararia 3 queries lazy POR card. ``selectinload`` nas coleções evita o
+    # produto cartesiano de um joinedload duplo.
     visible = (
         _build_visible_tasks_query(include_archived=False, include_relations=False)
+        .options(
+            joinedload(Task.project),
+            selectinload(Task.comments),
+            selectinload(Task.anexos),
+        )
         .filter(Task.id.in_(requested_ids))
         .all()
     )
