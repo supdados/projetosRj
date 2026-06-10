@@ -7,7 +7,7 @@
 	 * server-side (o `orgao_scope` é aplicado no backend).
 	 *
 	 * PARIDADE DE MUTAÇÃO (templates/projects/pendentes.html): botão de status
-	 * cíclico por etapa, quick-add de tarefas (modal por etapa reusando o
+	 * cíclico por etapa, quick-add de tarefas (drawer por etapa reusando o
 	 * TaskDrawer), expandir/recolher "outras etapas" com persistência em
 	 * localStorage e botões globais Expandir/Recolher todas. Avisos via
 	 * `<FlashToasts>` (equivalente a `window.showFlash`). Sem som/confete (o
@@ -124,7 +124,7 @@
 
 	// ── Mutações (paridade com o Jinja) ──────────────────────────────────────
 
-	/** Store do drawer reusada pelo quick-add (NÃO recriar dentro do modal). */
+	/** Store do drawer reusada pelo quick-add (NÃO recriar dentro do drawer). */
 	const drawer = createTaskDrawerStore();
 
 	/** Set de IDs de projeto expandidos (persistido em localStorage). */
@@ -422,7 +422,7 @@
 	{/if}
 </section>
 
-<!-- Quick-add de tarefas por etapa (modal). Reusa o TaskDrawer para editar. -->
+<!-- Quick-add de tarefas por etapa (drawer lateral). Reusa o TaskDrawer para editar. -->
 {#if quickAdd}
 	<StageTaskQuickAdd
 		projectId={quickAdd.projectId}

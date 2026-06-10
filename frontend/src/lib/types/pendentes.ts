@@ -11,6 +11,7 @@
  */
 
 import type { Project } from './entities';
+import type { TaskAssignee } from './tasks';
 
 /** Janela de visibilidade ativa (espelha `filtro_periodo` do backend). */
 export type PendingPeriodo = 'atrasados' | '7dias' | '14dias' | '21dias';
@@ -160,6 +161,8 @@ export interface StageTaskCard {
 	created_at: string | null; // ISO 8601
 	is_archived: boolean;
 	archived_at: string | null; // ISO 8601
+	/** Responsáveis múltiplos (avatares) — vem de `serialize_task_card`. */
+	assignees: TaskAssignee[];
 	comments_count: number;
 	anexos_count: number;
 	permissions: {
@@ -176,24 +179,6 @@ export interface StageTasksResult {
 	done: number;
 }
 
-/** Corpo de POST /api/tarefas (criar tarefa do quick-add). */
-export interface CreateTaskInput {
-	project_id: number;
-	etapa_id: number;
-	descricao: string;
-	status?: string;
-	responsavel?: string;
-	prioridade?: string;
-	tipo_pedido?: string;
-}
-
-/** Resposta de POST /api/tarefas — `task` é o card recém-criado. */
-export interface CreateTaskResult {
-	task: StageTaskCard;
-}
-
-/** Resposta de POST /api/tarefas/<id>/excluir. */
-export interface DeleteTaskResult {
-	item_id: number;
-	message: string;
-}
+// Criar/excluir tarefa no drawer da etapa usam os tipos de `$lib/types/tasks`
+// (`CreateTarefaInput`/`DeleteTarefaResult`) — mesmos contratos da página de
+// tarefas.

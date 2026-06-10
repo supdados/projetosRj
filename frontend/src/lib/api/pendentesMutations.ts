@@ -6,8 +6,9 @@
  *   - `POST /api/etapas/<id>/toggle-iniciada`  — não iniciada -> iniciada.
  *   - `POST /api/etapas/<id>/toggle`           — iniciada -> concluída.
  *   - `GET  /api/projetos/<pid>/etapas/<eid>/tarefas` — lista do quick-add.
- *   - `POST /api/tarefas`                      — cria tarefa (quick-add).
- *   - `POST /api/tarefas/<id>/excluir`         — exclui tarefa (quick-add).
+ *
+ * Criar/excluir tarefa no drawer da etapa usam `createTarefa`/`deleteTarefa`
+ * de `$lib/api/tasks` (mesmos endpoints da página de tarefas).
  *
  * O toggle de status segue o MESMO ciclo da tela do projeto: idle ->
  * `/toggle-iniciada` (vira iniciada); started -> `/toggle` (vira concluída);
@@ -17,13 +18,7 @@
 
 import { get, post } from './client';
 import type { EtapaResult } from '$lib/types/projectDetail';
-import type {
-	StageTaskCard,
-	StageTasksResult,
-	CreateTaskInput,
-	CreateTaskResult,
-	DeleteTaskResult
-} from '$lib/types/pendentes';
+import type { StageTaskCard, StageTasksResult } from '$lib/types/pendentes';
 
 /** Alterna `iniciada` da etapa (idle -> iniciada; desmarcar zera `done`). */
 export function toggleEtapaIniciada(
@@ -50,17 +45,4 @@ export function fetchStageTasks(
 	);
 }
 
-/** Cria uma tarefa dentro de uma etapa (quick-add). Devolve o card serializado. */
-export function createStageTask(
-	input: CreateTaskInput,
-	signal?: AbortSignal
-): Promise<CreateTaskResult> {
-	return post<CreateTaskResult>('/api/tarefas', input, signal);
-}
-
-/** Exclui uma tarefa (quick-add). Devolve `{item_id, message}`. */
-export function deleteStageTask(taskId: number, signal?: AbortSignal): Promise<DeleteTaskResult> {
-	return post<DeleteTaskResult>(`/api/tarefas/${taskId}/excluir`, undefined, signal);
-}
-
-export type { StageTaskCard, StageTasksResult, CreateTaskInput };
+export type { StageTaskCard, StageTasksResult };

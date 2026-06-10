@@ -117,7 +117,7 @@
 	let addingStage = $state<boolean>(false);
 	let addStageError = $state<string | null>(null);
 
-	// Quick-add de tarefas da etapa (modal).
+	// Quick-add de tarefas da etapa (drawer lateral).
 	let quickAddEtapaId = $state<number | null>(null);
 
 	// Menu de contexto de dias úteis numa célula de data (+7/+14/+21).
@@ -149,7 +149,7 @@
 
 	const canEdit = $derived(data?.permissions.can_edit ?? false);
 
-	// Etapa-alvo do quick-add de tarefas (modal).
+	// Etapa-alvo do quick-add de tarefas (drawer lateral).
 	const quickAddEtapa = $derived(
 		quickAddEtapaId === null ? null : (data?.etapas.find((e) => e.id === quickAddEtapaId) ?? null)
 	);
@@ -658,7 +658,7 @@
 		}
 	}
 
-	// --- Quick-add de tarefas da etapa (modal) -------------------------------
+	// --- Quick-add de tarefas da etapa (drawer lateral) ----------------------
 
 	function onOpenTasks(etapaId: number): void {
 		quickAddEtapaId = etapaId;
@@ -1233,7 +1233,7 @@
 			onClose={closeMeetingModal}
 		/>
 
-		<!-- Quick-add de tarefas da etapa (modal), paridade com 11-stage-task-quick-add.js -->
+		<!-- Quick-add de tarefas da etapa (drawer lateral; abre o TaskDrawer por cima) -->
 		{#if quickAddEtapa}
 			<StageTaskQuickAdd
 				{projectId}
