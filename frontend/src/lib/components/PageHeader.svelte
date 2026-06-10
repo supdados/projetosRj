@@ -38,9 +38,12 @@
 		labelId?: string;
 		/** Acoes alinhadas a direita (ex.: data + botao "Novo Projeto"). */
 		actions?: Snippet;
+		/** Variante FINA (titulo menor, sem piso de altura) — usada pelo modo
+		 *  expandido do Kanban de tarefas para devolver altura ao quadro. */
+		compact?: boolean;
 	}
 
-	let { title, titleContent, subtitle, labelId, actions }: Props = $props();
+	let { title, titleContent, subtitle, labelId, actions, compact = false }: Props = $props();
 </script>
 
 <!--
@@ -51,17 +54,29 @@
 	hero original (empilha acoes em telas estreitas).
 -->
 <header
-	class="flex min-h-[5.25rem] flex-wrap items-center justify-between gap-4 rounded-xl border border-border-subtle bg-surface px-4 py-3 shadow-sm"
+	class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border-subtle bg-surface px-4 shadow-sm motion-safe:transition-[padding,min-height] motion-safe:duration-300 motion-safe:ease-out {compact
+		? 'min-h-0 py-1.5'
+		: 'min-h-[5.25rem] py-3'}"
 >
 	<div class="min-w-0 flex-1">
 		<h1
 			id={labelId}
-			class="truncate font-heading text-3xl font-bold leading-tight text-primary-700"
+			class="truncate font-heading font-bold leading-tight text-primary-700 motion-safe:transition-[font-size] motion-safe:duration-300 motion-safe:ease-out {compact
+				? 'text-xl'
+				: 'text-3xl'}"
 		>
 			{#if titleContent}{@render titleContent()}{:else}{title}{/if}
 		</h1>
 		{#if subtitle}
-			<p class="mt-1 truncate text-sm font-medium text-text-muted">{subtitle}</p>
+			<!-- No compact o subtítulo COLAPSA (max-height + opacity) em vez de
+			     desmontar — a transição de altura do header fica contínua. -->
+			<p
+				class="truncate text-sm font-medium text-text-muted motion-safe:transition-[max-height,opacity,margin] motion-safe:duration-300 motion-safe:ease-out {compact
+					? 'mt-0 max-h-0 overflow-hidden opacity-0'
+					: 'mt-1 max-h-6 opacity-100'}"
+			>
+				{subtitle}
+			</p>
 		{/if}
 	</div>
 	{#if actions}

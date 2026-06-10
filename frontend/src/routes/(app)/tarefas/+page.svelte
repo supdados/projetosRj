@@ -18,6 +18,7 @@
 	 * vazio são anunciados via aria-live. Colapso de projeto/etapa em localStorage.
 	 */
 	import { onMount, setContext, tick } from 'svelte';
+	import { slide } from 'svelte/transition';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { get as readStore } from 'svelte/store';
 	import {
@@ -92,6 +93,40 @@
 	const board = createBoardStore();
 	let boardInFlight: AbortController | null = null;
 	let boardLoaded = $state<boolean>(false);
+
+	// MODO EXPANDIDO do Kanban (opt-in, persistido): o quadro toma quase toda a
+	// altura da viewport — filtros somem e o header encolhe. O layout padrão
+	// (lista e kanban normal) fica intocado; só vale com a visão kanban ativa.
+	const KANBAN_EXPANDED_KEY = 'tarefas:kanban:expanded';
+
+	function hydrateKanbanExpanded(): boolean {
+		if (typeof localStorage === 'undefined') return false;
+		try {
+			return localStorage.getItem(KANBAN_EXPANDED_KEY) === '1';
+		} catch {
+			return false;
+		}
+	}
+	let kanbanExpanded = $state<boolean>(hydrateKanbanExpanded());
+	const boardExpanded = $derived(view === 'kanban' && kanbanExpanded);
+
+	// Duração única das animações de expandir/restaurar (header, filtros, board)
+	// — coordenadas para a tela inteira se mover como UMA transição. Zerada sob
+	// prefers-reduced-motion (os estilos usam motion-safe; o slide usa este valor).
+	const EXPAND_ANIM_MS =
+		typeof window !== 'undefined' &&
+		window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+			? 0
+			: 300;
+
+	$effect(() => {
+		// Persiste a preferência de expansão (best-effort).
+		try {
+			localStorage.setItem(KANBAN_EXPANDED_KEY, kanbanExpanded ? '1' : '0');
+		} catch {
+			// storage indisponível/cota: ignora.
+		}
+	});
 
 	/**
 	 * CONFETE ao concluir tarefa — paridade com `taskFinalizeCelebration.trigger`
@@ -677,11 +712,18 @@
 	<title>Tarefas — ProjetosRJ</title>
 </svelte:head>
 
-<section aria-labelledby="tarefas-title" class="flex flex-col gap-6">
+<section
+	aria-labelledby="tarefas-title"
+	class="flex flex-col motion-safe:transition-[gap] motion-safe:duration-300 motion-safe:ease-out {boardExpanded
+		? 'gap-3'
+		: 'gap-6'}"
+>
 	<!-- Header unificado (paridade com a referência): título + pill de contagem à
-		 esquerda; ações (arquivar / ver arquivadas) e o toggle Lista⇄Kanban à direita. -->
+		 esquerda; ações (arquivar / ver arquivadas) e o toggle Lista⇄Kanban à direita.
+		 No modo expandido do kanban vira a variante FINA (subtítulo colapsa animado). -->
 	<PageHeader
 		labelId="tarefas-title"
+		compact={boardExpanded}
 		subtitle={view === 'kanban'
 			? 'Tarefas ativas por status. Arraste os cards entre colunas para mudar o status.'
 			: 'Tarefas agrupadas por projeto.'}
@@ -721,13 +763,42 @@
 
 			<!-- Alternância de visualização (Lista ⇄ Kanban) — porte fiel do v4.5. -->
 			<TaskViewToggle {view} onSelect={selectView} />
+
+			{#if view === 'kanban'}
+				<!-- Expandir/restaurar o quadro (fora do board, no canto direito do
+					 header): o modo expandido esconde os filtros e alarga o kanban. -->
+				<button
+					type="button"
+					onclick={() => (kanbanExpanded = !kanbanExpanded)}
+					aria-pressed={kanbanExpanded}
+					title={kanbanExpanded ? 'Restaurar tamanho do quadro' : 'Expandir quadro'}
+					class="inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {kanbanExpanded
+						? 'border-primary-500 bg-primary-100 text-primary-700'
+						: 'border-border-subtle bg-surface text-text-primary hover:bg-surface-muted'}"
+				>
+					<i
+						class="fas {kanbanExpanded
+							? 'fa-down-left-and-up-right-to-center'
+							: 'fa-up-right-and-down-left-from-center'}"
+						aria-hidden="true"
+					></i>
+					<span class="sr-only"
+						>{kanbanExpanded ? 'Restaurar tamanho do quadro' : 'Expandir quadro'}</span
+					>
+				</button>
+			{/if}
 		{/snippet}
 	</PageHeader>
 
 	<!-- Filtros (re-buscam server-side). Réplica da barra do v4.5
 		 (templates/tasks/hub.html + static/css/tasks/hub.css): cartão único, campos
-		 em UMA linha, selects limpos (h-36/borda/raio 8) e Projeto mais largo. -->
+		 em UMA linha, selects limpos (h-36/borda/raio 8) e Projeto mais largo.
+		 No modo expandido do kanban a barra some (os filtros seguem aplicados);
+		 restaurar o quadro a traz de volta. O slide acompanha a mesma duração das
+		 demais transições de expansão (EXPAND_ANIM_MS). -->
+	{#if !boardExpanded}
 	<form
+		transition:slide={{ duration: EXPAND_ANIM_MS }}
 		class="flex items-end gap-3 rounded-xl border border-border-subtle bg-surface px-4 py-3 shadow-sm"
 		aria-label="Filtros de tarefas"
 		onsubmit={(e) => e.preventDefault()}
@@ -868,6 +939,7 @@
 			</button>
 		{/if}
 	</form>
+	{/if}
 
 	{#if archiveNotice}
 		<!-- Aviso pós-arquivamento (paridade com o alert legado: sem ids / erro) -->
@@ -889,8 +961,16 @@
 		{#if $board.status === 'error' && !boardLoaded}
 			<LoadErrorState message={$board.error ?? ''} onRetry={() => loadBoard()} />
 		{:else}
-			<div aria-busy={$board.status === 'loading'}>
-				<KanbanBoard store={board}>
+			<!-- EXPANSÃO HORIZONTAL: margens negativas anulam quase todo o padding
+				 lateral do <main> (px-[clamp(1.5rem,8vw,7rem)]), deixando 1rem de
+				 respiro — o quadro alarga junto com o ganho vertical. -->
+			<div
+				aria-busy={$board.status === 'loading'}
+				class="motion-safe:transition-[margin] motion-safe:duration-300 motion-safe:ease-out {boardExpanded
+					? 'mx-[calc(1rem-clamp(1.5rem,8vw,7rem))]'
+					: 'mx-0'}"
+			>
+				<KanbanBoard store={board} expanded={boardExpanded}>
 					{#snippet composer(status: TaskStatus)}
 						<!-- Só habilita o composer DEPOIS do 1º load concluir (`boardLoaded`).
 							 Durante a primeira carga renderizamos as colunas vazias (layout

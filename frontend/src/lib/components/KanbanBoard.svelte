@@ -45,9 +45,13 @@
 		store: BoardStore;
 		/** Composer inline por coluna (Fase 5b-3), repassado para cada KanbanColumn. */
 		composer?: Snippet<[TaskStatus]>;
+		/** MODO EXPANDIDO: o quadro toma quase toda a altura da viewport — a página
+		 *  esconde os filtros, encolhe o header e alarga o container. O toggle vive
+		 *  nas ações do header da página (fora do board). */
+		expanded?: boolean;
 	}
 
-	let { store, composer }: Props = $props();
+	let { store, composer, expanded = false }: Props = $props();
 
 	/** Contexto do drag em curso (estado canônico no componente, não no DOM). */
 	interface DragContext {
@@ -359,9 +363,14 @@
 		overflow-y:auto), de modo que a PÁGINA não rola inteira quando os cards
 		excedem — paridade com `.task-items-kanban-dropzone` (height fixa + scroll).
 		Em telas estreitas faz scroll horizontal das colunas.
+		EXPANDIDO: a página esconde filtros e encolhe o header — o desconto da
+		viewport cai de 19rem (chrome completo) para 10.5rem (topnav + header fino
+		+ paddings), quase a altura toda da tela.
 	-->
 	<div
-		class="kanban-board grid h-[calc(100vh-19rem)] max-h-[calc(100vh-19rem)] min-h-[420px] w-full grid-flow-col items-stretch gap-[0.62rem] overflow-x-auto pb-2 [grid-auto-columns:minmax(220px,1fr)] sm:grid-flow-row sm:[grid-template-columns:repeat(5,minmax(200px,1fr))]"
+		class="kanban-board grid min-h-[420px] w-full grid-flow-col items-stretch gap-[0.62rem] overflow-x-auto pb-2 [grid-auto-columns:minmax(220px,1fr)] motion-safe:transition-[height,max-height] motion-safe:duration-300 motion-safe:ease-out sm:grid-flow-row sm:[grid-template-columns:repeat(5,minmax(200px,1fr))] {expanded
+			? 'h-[calc(100vh-10.5rem)] max-h-[calc(100vh-10.5rem)]'
+			: 'h-[calc(100vh-19rem)] max-h-[calc(100vh-19rem)]'}"
 		role="group"
 		aria-label="Quadro Kanban de tarefas"
 	>
