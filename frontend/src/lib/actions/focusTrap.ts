@@ -43,6 +43,9 @@ const FOCUSABLE_SELECTOR = [
 function isVisible(element: HTMLElement): boolean {
 	if (element.hidden) return false;
 	if (element.getAttribute('aria-hidden') === 'true') return false;
+	// Subárvores `inert` (ex.: fundo de um diálogo de confirmação) ficam visíveis
+	// mas não-focáveis — `focus()` nelas é no-op e quebraria o ciclo do trap.
+	if (element.closest('[inert]')) return false;
 	// `offsetParent` é `null` para elementos com `display:none` (ou ancestrais).
 	return element.offsetParent !== null || element.getClientRects().length > 0;
 }

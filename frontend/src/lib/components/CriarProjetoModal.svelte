@@ -3,11 +3,15 @@
 	 * Modal "Criar novo projeto" (Quick Create) — paridade de LÓGICA com o modal
 	 * Bootstrap `templates/projects/add_form.html` + `add_form_js.html`.
 	 *
-	 * Layout: seção principal sempre visível (título*, área responsável*,
-	 * prioridade, órgão, descrição) + acordeão EXCLUSIVO de 4 seções opcionais
-	 * (Classificação, Objetivos/resultados/indicadores, Links e observações,
-	 * Modelo de etapas). Expandir uma seção retrai a anterior; o cabeçalho de
-	 * cada seção resume o que já foi preenchido quando fechada.
+	 * Layout: seção principal (título*, área responsável*, prioridade, órgão,
+	 * descrição) + acordeão EXCLUSIVO de 4 seções opcionais (Classificação,
+	 * Objetivos/resultados/indicadores, Links e observações, Modelo de etapas).
+	 * Expandir uma seção retrai a anterior; o cabeçalho de cada seção resume o
+	 * que já foi preenchido quando fechada. A seção principal participa do
+	 * acordeão: abrir uma seção opcional a colapsa num cabeçalho compacto
+	 * (título — ou "Sem título" — + resumo do que foi/não foi respondido);
+	 * clicar nesse cabeçalho a reexpande e fecha a seção opcional aberta.
+	 * Fechar o modal com dados preenchidos pede confirmação de descarte.
 	 *
 	 * Mantém (paridade funcional):
 	 *   - combobox ABEP filtrável com navegação por teclado (Arrow/Enter/Escape);
@@ -28,7 +32,7 @@
 	 *
 	 * NÃO há som/confete (o fluxo Jinja não tem).
 	 */
-	import { tick } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { fade, fly, slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { focusTrap } from '$lib/actions/focusTrap';
@@ -107,6 +111,10 @@
 	let selectedIndicadores = $state<number[]>([]);
 	// IDs já revelados pela animação escalonada (animate-in).
 	let revealedIndicadores = $state<Set<number>>(new Set());
+	// Denominador do contador: o teto de 4 só vale quando há mais de 4 disponíveis.
+	const maxIndicadoresSelecionaveis = $derived(
+		Math.min(MAX_INDICADORES, indicadores.length)
+	);
 
 	// --- ABEP combobox -----------------------------------------------------
 	let abepValue = $state(''); // value canônico (hidden)
@@ -145,8 +153,22 @@
 	];
 	let openSection = $state<SectionId | null>(null);
 
+	// Colapso da principal é ORIENTADO A EVENTO (nunca derivado da digitação):
+	// só muda ao abrir/fechar uma seção opcional ou ao clicar no cabeçalho.
+	let mainCollapsed = $state(false);
+
 	function toggleSection(id: SectionId): void {
-		openSection = openSection === id ? null : id;
+		const opening = openSection !== id;
+		openSection = opening ? id : null;
+		// Principal retrai ao abrir qualquer opcional — mesmo sem título (o header
+		// colapsado mostra "Sem título") — e restaura ao fechar a última seção.
+		// Digitar no título nunca altera mainCollapsed (colapso só por evento).
+		mainCollapsed = opening;
+	}
+
+	function expandMainSection(): void {
+		mainCollapsed = false;
+		openSection = null; // acordeão exclusivo: reexpandir a principal fecha a opcional
 	}
 
 	const orgaoOptions = $derived<OrgaoOption[]>(options?.orgaos_options ?? []);
@@ -174,12 +196,17 @@
 	});
 
 	// Ao abrir: reseta o formulário, carrega catálogos uma vez e foca o título.
+	// untrack: resetForm lê `options` e loadCatalogs lê `catalogsLoaded` de forma
+	// síncrona — sem untrack o efeito re-rodaria quando o fetch de catálogos
+	// resolvesse (ou `options` mudasse), apagando o que o usuário digitou e
+	// fechando a seção aberta "do nada". O efeito deve depender SÓ de `open`.
 	$effect(() => {
-		if (open) {
+		if (!open) return;
+		untrack(() => {
 			resetForm();
 			void loadCatalogs();
-			void tick().then(() => titleInputEl?.focus());
-		}
+		});
+		void tick().then(() => titleInputEl?.focus());
 	});
 
 	function resetForm(): void {
@@ -211,8 +238,13 @@
 		templateId = '';
 		templateStages = [];
 		startDate = '';
+		resultadosLoading = false;
+		indicadoresLoading = false;
+		templateLoading = false;
 		openSection = null;
+		mainCollapsed = false;
 		triedSubmit = false;
+		confirmDiscardOpen = false;
 	}
 
 	async function loadCatalogs(): Promise<void> {
@@ -240,14 +272,25 @@
 		indicadores = [];
 		selectedIndicadores = [];
 		revealedIndicadores = new Set();
-		if (!objetivoId) return;
+		// Fetch de indicadores pendente ficou órfão (resultadoId mudou): o finally
+		// guardado dele NÃO vai limpar o loading — limpamos aqui.
+		indicadoresLoading = false;
+		if (!objetivoId) {
+			resultadosLoading = false; // idem para fetch de resultados pendente
+			return;
+		}
+		// Guarda de corrida: respostas fora de ordem (ou após resetForm) são
+		// descartadas — só a resposta do objetivo ATUAL pode popular o estado.
+		const requested = objetivoId;
 		resultadosLoading = true;
 		try {
-			resultados = await fetchResultados(objetivoId);
+			const data = await fetchResultados(requested);
+			if (requested !== objetivoId) return;
+			resultados = data;
 		} catch {
-			resultados = [];
+			if (requested === objetivoId) resultados = [];
 		} finally {
-			resultadosLoading = false;
+			if (requested === objetivoId) resultadosLoading = false;
 		}
 	}
 
@@ -255,22 +298,31 @@
 		indicadores = [];
 		selectedIndicadores = [];
 		revealedIndicadores = new Set();
-		if (!resultadoId) return;
+		if (!resultadoId) {
+			// Limpou a seleção com fetch em voo: o finally guardado não limpa.
+			indicadoresLoading = false;
+			return;
+		}
+		// Guarda de corrida: idem onObjetivoChange — resposta de um resultado
+		// antigo nunca pode popular os indicadores do resultado atual.
+		const requested = resultadoId;
 		indicadoresLoading = true;
 		try {
-			const data = await fetchIndicadores(resultadoId);
+			const data = await fetchIndicadores(requested);
+			if (requested !== resultadoId) return;
 			indicadores = data;
 			// Animação escalonada (animate-in): revela cada item a cada 100ms.
 			revealedIndicadores = new Set();
 			data.forEach((ind, index) => {
 				setTimeout(() => {
+					if (requested !== resultadoId) return; // lista trocou no meio
 					revealedIndicadores = new Set([...revealedIndicadores, ind.id]);
 				}, index * 100);
 			});
 		} catch {
-			indicadores = [];
+			if (requested === resultadoId) indicadores = [];
 		} finally {
-			indicadoresLoading = false;
+			if (requested === resultadoId) indicadoresLoading = false;
 		}
 	}
 
@@ -334,7 +386,13 @@
 	function onAbepKeydown(event: KeyboardEvent): void {
 		const list = abepVisible;
 		if (event.key === 'Escape') {
-			closeAbep();
+			// Consome o Esc só com o dropdown aberto (padrão APG combobox):
+			// 1º Esc fecha o popup, 2º Esc borbulha e fecha o modal.
+			if (abepOpen) {
+				event.preventDefault();
+				event.stopPropagation();
+				closeAbep();
+			}
 			return;
 		}
 		if (event.key === 'ArrowDown') {
@@ -363,15 +421,24 @@
 
 	async function onTemplateChange(): Promise<void> {
 		templateStages = [];
-		if (!templateId) return;
+		if (!templateId) {
+			// Limpou a seleção com fetch em voo: o finally guardado não limpa.
+			templateLoading = false;
+			return;
+		}
+		// Guarda de corrida: sem ela, um fetch lento sobrevivia ao resetForm e
+		// repopulava templateStages com templateId já vazio — o submit enviava
+		// etapas de um modelo nunca escolhido nesta sessão.
+		const requested = templateId;
 		templateLoading = true;
 		try {
-			const stages = await fetchTemplateStages(templateId);
+			const stages = await fetchTemplateStages(requested);
+			if (requested !== templateId) return;
 			templateStages = [...stages].sort((a, b) => (a.order || 0) - (b.order || 0));
 		} catch {
-			templateStages = [];
+			if (requested === templateId) templateStages = [];
 		} finally {
-			templateLoading = false;
+			if (requested === templateId) templateLoading = false;
 		}
 	}
 
@@ -399,6 +466,7 @@
 	/** Preview das etapas com datas/duração calculadas no client (read-only). */
 	interface PreviewStage {
 		name: string;
+		/** Intervalo "dd/mm/aaaa → dd/mm/aaaa"; vazio sem data de início. */
 		rangeText: string;
 		duration: number;
 	}
@@ -409,11 +477,11 @@
 		let cursor = start ? new Date(start.getTime()) : null;
 		return templateStages.map((etapa) => {
 			const duration = Math.max(1, Number.parseInt(String(etapa.duration), 10) || 1);
-			let rangeText = `${duration}d`;
+			let rangeText = '';
 			if (cursor) {
 				const stageStart = new Date(cursor.getTime());
 				const stageEnd = addDaysUtc(stageStart, duration - 1);
-				rangeText = `${formatBrDate(stageStart)} → ${formatBrDate(stageEnd)} · ${duration}d`;
+				rangeText = `${formatBrDate(stageStart)} → ${formatBrDate(stageEnd)}`;
 				cursor = addDaysUtc(stageEnd, 1);
 			}
 			return { name: etapa.name, rangeText, duration };
@@ -442,12 +510,23 @@
 
 	// --- Resumos das seções (exibidos no cabeçalho quando fechadas) ----------
 
+	const orgaoSelecionadoLabel = $derived.by(() => {
+		if (orgaoOptions.length === 1) return orgaoOptions[0].label;
+		return orgaoOptions.find((o) => o.value === orgaoId)?.label ?? '';
+	});
+	const prioridadeLabel = $derived(
+		PRIORITIES.find((p) => p.value === prioridade)?.label ?? prioridade
+	);
+
 	const classificacaoSummary = $derived(
 		[deliveryType, specialProject].filter(Boolean).join(' · ')
 	);
 	const objetivosSummary = $derived.by(() => {
 		const parts: string[] = [];
-		if (objetivoId) parts.push('Objetivo EEGD');
+		const objetivoNome = objetivos.find((o) => String(o.id) === objetivoId)?.descricao;
+		if (objetivoNome) parts.push(objetivoNome);
+		const resultadoNome = resultados.find((r) => String(r.id) === resultadoId)?.descricao;
+		if (resultadoNome) parts.push(resultadoNome);
 		if (selectedIndicadores.length)
 			parts.push(
 				`${selectedIndicadores.length} ${selectedIndicadores.length === 1 ? 'indicador' : 'indicadores'}`
@@ -476,16 +555,84 @@
 		etapas: etapasSummary
 	});
 
+	// --- Confirmação de descarte ao fechar com dados preenchidos -------------
+
+	let confirmDiscardOpen = $state(false);
+	let discardCancelBtn = $state<HTMLButtonElement | null>(null);
+	// Foco a restaurar quando a confirmação fecha em "Continuar editando"
+	// (o botão dela desmonta; sem isso o foco cairia no body, fora do trap).
+	let focusedBeforeDiscard: HTMLElement | null = null;
+
+	/** Há conteúdo digitado/escolhido que seria perdido ao fechar? */
+	const formIsDirty = $derived(
+		[
+			titulo,
+			shortDescription,
+			orgaoTexto,
+			seiProcess,
+			githubLink,
+			documentationLink,
+			productLink,
+			observacao,
+			abepValue
+		].some((v) => v.trim().length > 0) ||
+			// Órgão único é pré-selecionado na abertura; só conta escolha do usuário.
+			(orgaoOptions.length > 1 && orgaoId.trim().length > 0) ||
+			prioridade !== 'baixa' ||
+			deliveryType !== '' ||
+			specialProject !== '' ||
+			objetivoId !== '' ||
+			selectedIndicadores.length > 0 ||
+			templateId !== '' ||
+			startDate !== ''
+	);
+
+	/** Fecha o modal; com dados preenchidos, pede confirmação de descarte antes. */
+	function requestClose(): void {
+		if (submitting) return;
+		if (formIsDirty) {
+			focusedBeforeDiscard = document.activeElement as HTMLElement | null;
+			confirmDiscardOpen = true;
+			void tick().then(() => discardCancelBtn?.focus());
+			return;
+		}
+		onClose();
+	}
+
+	/** Fecha só a confirmação, devolvendo o foco a quem o tinha no formulário. */
+	function closeDiscardConfirm(): void {
+		confirmDiscardOpen = false;
+		void tick().then(() => {
+			if (focusedBeforeDiscard && document.contains(focusedBeforeDiscard)) {
+				focusedBeforeDiscard.focus();
+			}
+		});
+	}
+
+	function discardAndClose(): void {
+		confirmDiscardOpen = false;
+		onClose();
+	}
+
 	// Wrapper do submit: se inválido, marca os campos faltantes e foca o primeiro.
 	async function trySubmit(): Promise<void> {
 		if (!canSubmit) {
 			if (submitting) return;
 			triedSubmit = true;
+			// Reexpande a seção principal: o campo faltante pode estar oculto
+			// pelo colapso e precisa existir no DOM para receber foco.
+			expandMainSection();
 			await tick();
-			(!titulo.trim()
+			// Fallback para o título quando o select de órgão está disabled/ausente
+			// (ex.: usuário sem órgão atribuído): foco em elemento disabled é no-op
+			// e deixaria o foco fora do dialog, quebrando o focusTrap.
+			const orgaoEl = document.getElementById('cp-orgao-id') as HTMLSelectElement | null;
+			const focusTarget = !titulo.trim()
 				? titleInputEl
-				: (document.getElementById('cp-orgao-id') as HTMLElement | null)
-			)?.focus();
+				: orgaoEl && !orgaoEl.disabled
+					? orgaoEl
+					: titleInputEl;
+			focusTarget?.focus();
 			return;
 		}
 		await submit();
@@ -495,6 +642,7 @@
 	function onModalKeydown(event: KeyboardEvent): void {
 		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
 			event.preventDefault();
+			event.stopPropagation(); // evita repetição ao borbulhar para o backdrop
 			void trySubmit();
 			return;
 		}
@@ -523,7 +671,8 @@
 			github_link: githubLink.trim() || undefined,
 			documentation_link: documentationLink.trim() || undefined,
 			product_link: productLink.trim() || undefined,
-			etapas: templateStages.map((s) => ({
+			// Defesa extra contra estado órfão: etapas só valem com modelo escolhido.
+			etapas: (templateId ? templateStages : []).map((s) => ({
 				descricao: s.name,
 				duration: Math.max(1, Number.parseInt(String(s.duration), 10) || 1)
 			})),
@@ -550,7 +699,16 @@
 	function onBackdropKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape' && !submitting) {
 			event.preventDefault();
-			onClose();
+			// stopPropagation: dialog e backdrop compartilham este handler; sem
+			// consumir aqui, o mesmo Esc seria tratado DUAS vezes (abre a
+			// confirmação no dialog e fecha no backdrop — efeito líquido nulo).
+			event.stopPropagation();
+			// Primeiro Esc fecha só a confirmação de descarte; o próximo, o modal.
+			if (confirmDiscardOpen) {
+				closeDiscardConfirm();
+				return;
+			}
+			requestClose();
 		}
 	}
 
@@ -562,6 +720,23 @@
 		'w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
 	const fieldErrorClass = 'border-danger focus-visible:ring-danger';
 </script>
+
+{#snippet mainSummary()}
+	<!-- Metadados da principal colapsada: só positivos (nunca anuncia ausência
+	     de campo opcional); o único negativo permitido é o obrigatório pendente.
+	     A descrição breve é renderizada à parte, antes deste snippet. -->
+	{#if orgaoSelecionadoLabel}
+		<span class="text-text-secondary">{orgaoSelecionadoLabel}</span>
+	{:else}
+		<span class="font-medium text-danger">Área pendente</span>
+	{/if}
+	{#if prioridade !== 'baixa'}
+		· {prioridadeLabel}
+	{/if}
+	{#if orgaoTexto.trim()}
+		· {orgaoTexto.trim()}
+	{/if}
+{/snippet}
 
 {#snippet spinner()}
 	<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -579,7 +754,7 @@
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1.5px]"
 		role="presentation"
-		onclick={() => !submitting && onClose()}
+		onclick={requestClose}
 		onkeydown={onModalKeydown}
 		transition:fade={{ duration: 200 }}
 	>
@@ -587,31 +762,28 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="criar-projeto-title"
-			class="flex max-h-[calc(100dvh-4rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
+			class="relative flex max-h-[calc(100dvh-7rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={onModalKeydown}
 			tabindex="-1"
 			use:focusTrap
 			transition:fly={{ y: 18, duration: 320, easing: cubicOut }}
 		>
-			<!-- Cabeçalho fixo -->
+			<!-- Cabeçalho fixo (mesma altura do rodapé: h-14). inert: com a
+			     confirmação de descarte aberta, o fundo sai do Tab e da interação. -->
 			<header
-				class="flex flex-shrink-0 items-start justify-between gap-4 border-b border-border-subtle px-6 py-5"
+				inert={confirmDiscardOpen}
+				class="flex h-14 flex-shrink-0 items-center justify-between gap-4 border-b border-border-subtle px-6"
 			>
-				<div class="flex min-w-0 flex-col gap-0.5">
-					<h2
-						id="criar-projeto-title"
-						class="font-heading text-lg font-semibold text-text-primary"
-					>
-						Criar novo projeto
-					</h2>
-					<p class="text-sm text-text-muted">
-						Apenas título e área responsável são obrigatórios.
-					</p>
-				</div>
+				<h2
+					id="criar-projeto-title"
+					class="truncate font-heading text-base font-semibold text-text-primary"
+				>
+					Criar novo projeto
+				</h2>
 				<button
 					type="button"
-					onclick={onClose}
+					onclick={requestClose}
 					disabled={submitting}
 					aria-label="Fechar"
 					class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
@@ -623,6 +795,7 @@
 			</header>
 
 			<form
+				inert={confirmDiscardOpen}
 				onsubmit={(e) => {
 					e.preventDefault();
 					void trySubmit();
@@ -631,98 +804,167 @@
 			>
 				<!-- Corpo: única região que rola -->
 				<div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-					<!-- Seção principal (sempre visível) -->
-					<div class="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-10">
-						<div class="flex flex-col gap-1.5 md:col-span-7">
-							<label for="cp-titulo" class={labelClass}>
-								Título do projeto <span class="text-danger" aria-hidden="true">*</span>
-							</label>
-							<input
-								id="cp-titulo"
-								bind:this={titleInputEl}
-								bind:value={titulo}
-								type="text"
-								required
-								aria-invalid={tituloError}
-								placeholder="Digite o título do projeto"
-								class="{fieldClass} {tituloError ? fieldErrorClass : ''}"
-							/>
-							{#if tituloError}
-								<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
-									Informe o título do projeto.
-								</p>
-							{/if}
-						</div>
-						<div class="flex flex-col gap-1.5 md:col-span-3">
-							<label for="cp-prioridade" class={labelClass}>Prioridade</label>
-							<select id="cp-prioridade" bind:value={prioridade} class={fieldClass}>
-								{#each PRIORITIES as p (p.value)}
-									<option value={p.value}>{p.label}</option>
-								{/each}
-							</select>
-						</div>
-						<div class="flex flex-col gap-1.5 md:col-span-5">
-							<label for="cp-orgao-id" class={labelClass}>
-								Área responsável <span class="text-danger" aria-hidden="true">*</span>
-							</label>
-							{#if orgaoOptions.length === 0}
-								<select id="cp-orgao-id" disabled class={fieldClass}>
-									<option value="">Nenhum órgão atribuído</option>
-								</select>
-							{:else if orgaoOptions.length === 1}
-								<input
-									type="text"
-									value={orgaoOptions[0].label}
-									disabled
-									class={fieldClass}
-								/>
-							{:else}
-								<select
-									id="cp-orgao-id"
-									bind:value={orgaoId}
-									required
-									aria-invalid={orgaoError}
-									class="{fieldClass} {orgaoError ? fieldErrorClass : ''}"
+					<!-- Acordeão: a seção principal é o item 0, com header sempre montado
+					     (anatomia idêntica às opcionais — sem card avulso, sem swap de
+					     dois elementos com transições simultâneas). -->
+					<div
+						class="divide-y divide-border-subtle overflow-hidden rounded-lg border border-border-subtle"
+					>
+						<!-- Seção 0: informações principais -->
+						<section>
+							<h3 class="contents">
+								<!-- Expandida: o header vira informativo — sai da ordem de Tab
+								     (tabindex=-1) e anuncia aria-disabled, pois ativá-lo seria
+								     no-op (disclosure só atua no sentido colapsada→expandida). -->
+								<button
+									type="button"
+									onclick={() => {
+										if (mainCollapsed) expandMainSection();
+									}}
+									tabindex={mainCollapsed ? 0 : -1}
+									aria-disabled={!mainCollapsed}
+									aria-expanded={!mainCollapsed}
+									aria-controls={mainCollapsed ? undefined : 'cp-section-principal'}
+									class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {mainCollapsed
+										? 'hover:bg-surface-muted/60'
+										: 'cursor-default'}"
 								>
-									<option value="" disabled>Selecione um órgão</option>
-									{#each orgaoOptions as opt (opt.value)}
-										<option value={opt.value}>{opt.label}</option>
-									{/each}
-								</select>
+									<span class="flex min-w-0 flex-col gap-0.5">
+										{#if mainCollapsed}
+											{#if titulo.trim()}
+												<span class="truncate text-sm font-medium text-text-primary">
+													{titulo.trim()}
+												</span>
+											{:else}
+												<span class="truncate text-sm font-medium text-text-muted">
+													Sem título
+												</span>
+											{/if}
+											<span class="flex min-w-0 items-baseline gap-1.5 text-xs text-text-muted">
+												{#if shortDescription.trim()}
+													<span class="min-w-0 truncate">{shortDescription.trim()}</span>
+													<span aria-hidden="true" class="shrink-0">·</span>
+												{/if}
+												<span class="shrink-0 whitespace-nowrap">{@render mainSummary()}</span>
+											</span>
+										{:else}
+											<span class="text-sm font-medium text-text-primary">
+												Informações principais
+											</span>
+											<span class="text-xs text-text-muted">
+												Título e área responsável são obrigatórios
+											</span>
+										{/if}
+									</span>
+									<svg
+										viewBox="0 0 20 20"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="1.6"
+										aria-hidden="true"
+										class="h-4 w-4 flex-shrink-0 text-text-muted transition-transform duration-base {mainCollapsed
+											? ''
+											: 'rotate-180'}"
+									>
+										<path d="m5 7.5 5 5 5-5" stroke-linecap="round" stroke-linejoin="round" />
+									</svg>
+								</button>
+							</h3>
+							{#if !mainCollapsed}
+								<div
+									id="cp-section-principal"
+									transition:slide={{ duration: 280, easing: cubicOut }}
+								>
+									<!-- Linhas: 1) título · 2) área → prioridade → órgão · 3) descrição -->
+									<div class="grid grid-cols-1 gap-x-4 gap-y-4 px-4 pb-5 pt-1 md:grid-cols-12">
+										<div class="flex flex-col gap-1.5 md:col-span-12">
+											<label for="cp-titulo" class={labelClass}>
+												Título do projeto <span class="text-danger" aria-hidden="true">*</span>
+											</label>
+											<input
+												id="cp-titulo"
+												bind:this={titleInputEl}
+												bind:value={titulo}
+												type="text"
+												required
+												aria-invalid={tituloError}
+												placeholder="Digite o título do projeto"
+												class="{fieldClass} {tituloError ? fieldErrorClass : ''}"
+											/>
+											{#if tituloError}
+												<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
+													Informe o título do projeto.
+												</p>
+											{/if}
+										</div>
+										<div class="flex flex-col gap-1.5 md:col-span-5">
+											<label for="cp-orgao-id" class={labelClass}>
+												Área responsável <span class="text-danger" aria-hidden="true">*</span>
+											</label>
+											{#if orgaoOptions.length === 0}
+												<select id="cp-orgao-id" disabled class={fieldClass}>
+													<option value="">Nenhum órgão atribuído</option>
+												</select>
+											{:else if orgaoOptions.length === 1}
+												<input
+													type="text"
+													value={orgaoOptions[0].label}
+													disabled
+													class={fieldClass}
+												/>
+											{:else}
+												<select
+													id="cp-orgao-id"
+													bind:value={orgaoId}
+													required
+													aria-invalid={orgaoError}
+													class="{fieldClass} {orgaoError ? fieldErrorClass : ''}"
+												>
+													<option value="" disabled>Selecione um órgão</option>
+													{#each orgaoOptions as opt (opt.value)}
+														<option value={opt.value}>{opt.label}</option>
+													{/each}
+												</select>
+											{/if}
+											{#if orgaoError}
+												<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
+													Selecione a área responsável.
+												</p>
+											{/if}
+										</div>
+										<div class="flex flex-col gap-1.5 md:col-span-3">
+											<label for="cp-prioridade" class={labelClass}>Prioridade</label>
+											<select id="cp-prioridade" bind:value={prioridade} class={fieldClass}>
+												{#each PRIORITIES as p (p.value)}
+													<option value={p.value}>{p.label}</option>
+												{/each}
+											</select>
+										</div>
+										<div class="flex flex-col gap-1.5 md:col-span-4">
+											<label for="cp-orgao-texto" class={labelClass}>Órgão</label>
+											<input
+												id="cp-orgao-texto"
+												bind:value={orgaoTexto}
+												type="text"
+												placeholder="Digite o órgão responsável"
+												class={fieldClass}
+											/>
+										</div>
+										<div class="flex flex-col gap-1.5 md:col-span-12">
+											<label for="cp-short-desc" class={labelClass}>Descrição breve</label>
+											<textarea
+												id="cp-short-desc"
+												bind:value={shortDescription}
+												rows="2"
+												placeholder="Breve descrição do projeto"
+												class={areaClass}
+											></textarea>
+										</div>
+									</div>
+								</div>
 							{/if}
-							{#if orgaoError}
-								<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
-									Selecione a área responsável.
-								</p>
-							{/if}
-						</div>
-						<div class="flex flex-col gap-1.5 md:col-span-5">
-							<label for="cp-orgao-texto" class={labelClass}>Órgão</label>
-							<input
-								id="cp-orgao-texto"
-								bind:value={orgaoTexto}
-								type="text"
-								placeholder="Digite o órgão responsável"
-								class={fieldClass}
-							/>
-						</div>
-						<div class="flex flex-col gap-1.5 md:col-span-10">
-							<label for="cp-short-desc" class={labelClass}>Descrição</label>
-							<textarea
-								id="cp-short-desc"
-								bind:value={shortDescription}
-								rows="2"
-								placeholder="Breve descrição do projeto"
-								class={areaClass}
-							></textarea>
-						</div>
-					</div>
+						</section>
 
-					<!-- Acordeão exclusivo de detalhes opcionais -->
-					<p class="mb-2 mt-6 text-xs font-medium uppercase tracking-wide text-text-muted">
-						Detalhes opcionais
-					</p>
-					<div class="divide-y divide-border-subtle rounded-lg border border-border-subtle">
 						{#each SECTIONS as section (section.id)}
 							{@const isOpen = openSection === section.id}
 							{@const summary = sectionSummaries[section.id]}
@@ -732,7 +974,7 @@
 										type="button"
 										onclick={() => toggleSection(section.id)}
 										aria-expanded={isOpen}
-										aria-controls={`cp-section-${section.id}`}
+										aria-controls={isOpen ? `cp-section-${section.id}` : undefined}
 										class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-fast hover:bg-surface-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
 									>
 										<span class="flex min-w-0 flex-col">
@@ -825,7 +1067,7 @@
 															<span class={labelClass}>Indicadores EEGD</span>
 															{#if selectedIndicadores.length > 0}
 																<span class="text-xs text-text-muted">
-																	{selectedIndicadores.length}/{MAX_INDICADORES} selecionados
+																	{selectedIndicadores.length}/{maxIndicadoresSelecionaveis} selecionados
 																</span>
 															{/if}
 														</span>
@@ -976,7 +1218,7 @@
 													</div>
 													<div class="flex flex-col gap-1.5">
 														<label for="cp-obs" class={labelClass}>
-															Observações / descrição detalhada
+															Observações
 														</label>
 														<textarea
 															id="cp-obs"
@@ -1025,39 +1267,72 @@
 															{@render spinner()}Carregando etapas…
 														</p>
 													{:else if previewStages.length > 0}
+														<!-- Timeline minimalista: fio vertical + pontos vazados; nome à
+														     esquerda, datas tabulares à direita — sem caixa nem badges. -->
 														<div
 															transition:slide={{ duration: 240, easing: cubicOut }}
-															class="flex flex-col gap-2.5 rounded-lg border border-border-subtle bg-surface-muted/40 p-4"
+															class="flex flex-col"
 														>
 															<div
-																class="flex items-center justify-between text-xs font-medium uppercase tracking-wide text-text-muted"
+																class="flex items-baseline justify-between gap-3 border-b border-border-subtle pb-2"
 															>
-																<span>Etapas importadas</span>
-																<span>
+																<span
+																	class="text-xs font-medium uppercase tracking-wide text-text-muted"
+																>
+																	Etapas importadas
+																</span>
+																<span class="text-xs tabular-nums text-text-muted">
 																	{previewStages.length}
-																	{previewStages.length === 1 ? 'etapa' : 'etapas'} · total
+																	{previewStages.length === 1 ? 'etapa' : 'etapas'} ·
 																	{previewTotalDuration} dias
 																</span>
 															</div>
-															<ol class="flex flex-col gap-1.5">
+															<ol class="relative flex flex-col py-1.5">
+																<span
+																	aria-hidden="true"
+																	class="absolute bottom-[1.1rem] left-[3px] top-[1.1rem] w-px bg-border-subtle"
+																></span>
 																{#each previewStages as stage, index (index)}
-																	<li class="flex items-start gap-2.5 text-sm text-text-primary">
+																	<li
+																		class="relative flex items-baseline justify-between gap-4 py-2 pl-5"
+																	>
 																		<span
-																			class="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700"
-																		>
-																			{index + 1}
+																			aria-hidden="true"
+																			class="absolute left-0 top-1/2 h-[7px] w-[7px] -translate-y-1/2 rounded-full border-[1.5px] border-text-muted bg-surface"
+																		></span>
+																		<span class="flex min-w-0 items-baseline gap-2">
+																			<span class="shrink-0 text-xs tabular-nums text-text-muted">
+																				{String(index + 1).padStart(2, '0')}
+																			</span>
+																			<span class="min-w-0 truncate text-sm text-text-primary">
+																				{stage.name}
+																			</span>
 																		</span>
-																		<span class="flex flex-col">
-																			<span>{stage.name}</span>
-																			<span class="text-xs text-text-muted">{stage.rangeText}</span>
+																		<!-- Colunas fixas: intervalo (largura constante em tabular-nums)
+																		     e duração alinhada à direita — sem serrilhado entre linhas. -->
+																		<span
+																			class="flex shrink-0 items-baseline gap-1.5 text-xs tabular-nums text-text-muted"
+																		>
+																			{#if stage.rangeText}
+																				<span>{stage.rangeText}</span>
+																				<span aria-hidden="true">·</span>
+																			{/if}
+																			<span class="w-14 text-right">
+																				{stage.duration}
+																				{stage.duration === 1 ? 'dia' : 'dias'}
+																			</span>
 																		</span>
 																	</li>
 																{/each}
 															</ol>
 															{#if previewStart && previewEnd}
-																<p class="text-xs text-text-muted">
-																	Previsão de término com início em <strong>{previewStart}</strong> →
-																	<strong>{previewEnd}</strong>.
+																<p
+																	class="border-t border-border-subtle pt-2 text-xs text-text-muted"
+																>
+																	Início em
+																	<span class="font-medium text-text-secondary">{previewStart}</span>
+																	· término previsto em
+																	<span class="font-medium text-text-secondary">{previewEnd}</span>
 																</p>
 															{/if}
 														</div>
@@ -1076,9 +1351,9 @@
 					</div>
 				</div>
 
-				<!-- Rodapé fixo -->
+				<!-- Rodapé fixo (mesma altura do cabeçalho: h-14) -->
 				<footer
-					class="flex flex-shrink-0 items-center justify-between gap-3 border-t border-border-subtle px-6 py-4"
+					class="flex h-14 flex-shrink-0 items-center justify-between gap-3 border-t border-border-subtle px-6"
 				>
 					<p class="hidden items-center gap-1 text-xs text-text-muted sm:flex">
 						<kbd
@@ -1097,16 +1372,16 @@
 					<div class="flex items-center gap-2">
 						<button
 							type="button"
-							onclick={onClose}
+							onclick={requestClose}
 							disabled={submitting}
-							class="rounded-md px-4 py-2 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="inline-flex h-9 items-center rounded-md px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 						>
 							Cancelar
 						</button>
 						<button
 							type="submit"
 							disabled={submitting}
-							class="inline-flex h-10 min-w-[128px] items-center justify-center gap-2 rounded-md bg-brand-gradient px-5 text-sm font-semibold text-white shadow-sm transition-all duration-base hover:-translate-y-px hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
+							class="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-brand-gradient px-4 text-sm font-medium text-white transition-[filter,opacity] duration-fast hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
 						>
 							{#if submitting}
 								{@render spinner()}Criando…
@@ -1117,6 +1392,47 @@
 					</div>
 				</footer>
 			</form>
+
+			<!-- Confirmação de descarte: cobre o modal ao fechar com dados preenchidos -->
+			{#if confirmDiscardOpen}
+				<div
+					class="absolute inset-0 z-10 flex items-center justify-center bg-black/30 p-6 backdrop-blur-[1px]"
+					role="alertdialog"
+					aria-modal="true"
+					aria-labelledby="cp-discard-title"
+					aria-describedby="cp-discard-desc"
+					transition:fade={{ duration: 160 }}
+				>
+					<div
+						class="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-4 shadow-md"
+						transition:fly={{ y: 8, duration: 200, easing: cubicOut }}
+					>
+						<p id="cp-discard-title" class="text-sm font-semibold text-text-primary">
+							Descartar projeto?
+						</p>
+						<p id="cp-discard-desc" class="mt-1 text-xs text-text-muted">
+							As informações preenchidas serão perdidas.
+						</p>
+						<div class="mt-4 flex items-center justify-end gap-2">
+							<button
+								type="button"
+								bind:this={discardCancelBtn}
+								onclick={closeDiscardConfirm}
+								class="inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							>
+								Continuar editando
+							</button>
+							<button
+								type="button"
+								onclick={discardAndClose}
+								class="inline-flex h-8 items-center rounded-md bg-danger px-3 text-xs font-semibold text-white transition-opacity duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-1"
+							>
+								Descartar
+							</button>
+						</div>
+					</div>
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}
