@@ -26,7 +26,7 @@
 	import { onMount, setContext } from 'svelte';
 	import { page } from '$app/stores';
 	import { base } from '$app/paths';
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 	import { ApiClientError } from '$lib/api/client';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
@@ -60,6 +60,7 @@
 		MeetingPayload
 	} from '$lib/types/projectDetail';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
+	import ProjectHistoryDrawer from '$lib/components/ProjectHistoryDrawer.svelte';
 	import type { CalendarEvent, CalendarEventInput } from '$lib/types/calendar';
 	import ProjectHeader from '$lib/components/ProjectHeader.svelte';
 	import InlineEditField from '$lib/components/InlineEditField.svelte';
@@ -393,6 +394,20 @@
 		if (drawerWasOpen && !open) void refresh();
 		drawerWasOpen = open;
 	});
+
+	// --- Drawer de histórico (substitui a página /projetos/<id>/historico) ---
+	// A URL antiga segue viva: ela redireciona para cá com ?historico=1.
+	let historyOpen = $state(false);
+
+	function closeHistory(): void {
+		historyOpen = false;
+		// Limpa o deep-link para o drawer não reabrir num refresh pós-fechamento.
+		const url = new URL(window.location.href);
+		if (url.searchParams.has('historico')) {
+			url.searchParams.delete('historico');
+			replaceState(url, {});
+		}
+	}
 
 	// --- Edicao inline de campos do projeto (cabecalho + demais) -------------
 
@@ -856,6 +871,8 @@
 		// Mede o topnav fixo (sticky) para descontar no offset do cabecalho.
 		const topnav = document.querySelector('header.sticky');
 		if (topnav) topOffset = Math.round(topnav.getBoundingClientRect().height);
+		// Deep-link do histórico (redirect da antiga página /historico).
+		if ($page.url.searchParams.has('historico')) historyOpen = true;
 		void load();
 	});
 </script>
@@ -930,12 +947,13 @@
 
 			<!-- Ações no RODAPÉ do card (Ver Histórico + Concluir), à direita (ref. tela antiga). -->
 			{#snippet footer()}
-				<a
-					href={`${base}/projetos/${data?.project.id}/historico`}
-					class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				<button
+					type="button"
+					onclick={() => (historyOpen = true)}
+					class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<i class="fas fa-history" aria-hidden="true"></i>Ver Histórico
-				</a>
+				</button>
 
 				{#if canEdit && isVigente}
 					<button
@@ -1319,6 +1337,14 @@
 />
 
 <TaskDrawer store={drawer} />
+
+{#if historyOpen && data}
+	<ProjectHistoryDrawer
+		projectId={data.project.id}
+		projectTitulo={data.project.titulo}
+		onClose={closeHistory}
+	/>
+{/if}
 
 <style>
 	/* Divisor de seção "Etapas do Projeto" */
