@@ -55,6 +55,10 @@
 	import type { BoardCard, BoardQuery } from '$lib/types/board';
 	import { normalizeStatus, type TaskStatus } from '$lib/utils/taskStatus';
 	import {
+		KANBAN_EXPAND_ANIM,
+		type KanbanExpandAnimSignal
+	} from '$lib/utils/kanbanExpandAnim';
+	import {
 		triggerTaskFinalizeConfetti,
 		type CelebrationOriginLike
 	} from '$lib/celebration/confettiEpic';
@@ -115,14 +119,74 @@
 	let kanbanExpanded = $state<boolean>(hydrateKanbanExpanded());
 	const boardExpanded = $derived(view === 'kanban' && kanbanExpanded);
 
-	// Duração única das animações de expandir/restaurar (header, filtros, board)
-	// — coordenadas para a tela inteira se mover como UMA transição. Zerada sob
-	// prefers-reduced-motion (os estilos usam motion-safe; o slide usa este valor).
-	const EXPAND_ANIM_MS =
+	// Durações das animações de expandir/restaurar (header, filtros, board) —
+	// coordenadas para a tela inteira se mover como UMA transição. Assimetria
+	// intencional (Material 3): EXPANDIR usa 420ms com curva decelerate (área
+	// grande percorrida → duração maior; o painel entra com energia e assenta);
+	// RETRAIR usa 300ms com curva accelerate (sai sem prender o olhar). Zeradas
+	// sob prefers-reduced-motion (os estilos usam motion-safe; o slide e a
+	// janela de pausa do refit usam estes valores).
+	// Justificativa completa em docs/refinamento-animacao-kanban-expandir.md.
+	const PREFERS_REDUCED_MOTION =
 		typeof window !== 'undefined' &&
-		window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-			? 0
-			: 300;
+		window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+	const EXPAND_IN_MS = PREFERS_REDUCED_MOTION ? 0 : 420;
+	const EXPAND_OUT_MS = PREFERS_REDUCED_MOTION ? 0 : 300;
+
+	// Classes Tailwind de motion por direção — DEVEM casar com EXPAND_IN_MS/
+	// EXPAND_OUT_MS (Tailwind exige strings estáticas; o número não pode vir
+	// das constantes). Curvas M3: emphasized decelerate / emphasized accelerate.
+	const EXPAND_MOTION_IN =
+		'motion-safe:duration-[420ms] motion-safe:[transition-timing-function:cubic-bezier(0.05,0.7,0.1,1)]';
+	const EXPAND_MOTION_OUT =
+		'motion-safe:duration-300 motion-safe:[transition-timing-function:cubic-bezier(0.3,0,0.8,0.15)]';
+	const expandMotion = $derived(boardExpanded ? EXPAND_MOTION_IN : EXPAND_MOTION_OUT);
+
+	// Filtros saem/entram em ~0.7× da duração do board — hierarquia M3: o
+	// elemento secundário libera o palco antes de o primário terminar de assentar.
+	const filtersSlideMs = $derived(
+		Math.round((boardExpanded ? EXPAND_IN_MS : EXPAND_OUT_MS) * 0.7)
+	);
+
+	// Sinal "transição de expandir/retrair em curso", consumido pelos KanbanCard
+	// (via contexto) para SUSPENDER a medição do rodapé enquanto a largura das
+	// colunas muda a cada frame — sem isso, cada frame dispara o ResizeObserver
+	// de todos os cards (O(cards × frames) reflows forçados; era o que travava
+	// o expandir/retrair com muitos itens). O fim da transição de margin do
+	// wrapper do board (a mais longa, junto com o height do board) desliga o
+	// sinal via transitionend; o timer cobre transitionend perdido (ex.: aba em
+	// background). A janela usa SEMPRE a maior duração + folga: destravar tarde
+	// custa só uma medição adiada; destravar cedo reintroduz o jank no final.
+	const expandAnim = $state<KanbanExpandAnimSignal>({ active: false });
+	setContext(KANBAN_EXPAND_ANIM, expandAnim);
+	const EXPAND_RELEASE_MS = Math.max(EXPAND_IN_MS, EXPAND_OUT_MS) + 80;
+	let expandReleaseTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function releaseExpandAnim(): void {
+		if (expandReleaseTimer) {
+			clearTimeout(expandReleaseTimer);
+			expandReleaseTimer = null;
+		}
+		expandAnim.active = false;
+	}
+
+	function toggleKanbanExpanded(): void {
+		kanbanExpanded = !kanbanExpanded;
+		// reduced-motion: troca instantânea, sem frames intermediários — não
+		// pausar a medição dos cards.
+		if (Math.max(EXPAND_IN_MS, EXPAND_OUT_MS) === 0) return;
+		if (expandReleaseTimer) clearTimeout(expandReleaseTimer);
+		expandAnim.active = true;
+		expandReleaseTimer = setTimeout(releaseExpandAnim, EXPAND_RELEASE_MS);
+	}
+
+	function onBoardWrapperTransitionEnd(event: TransitionEvent): void {
+		// transitionend borbulha dos filhos (board, cards): só o fim da transição
+		// de margin do PRÓPRIO wrapper encerra a janela de pausa.
+		if (event.target !== event.currentTarget) return;
+		if (!event.propertyName.startsWith('margin')) return;
+		releaseExpandAnim();
+	}
 
 	$effect(() => {
 		// Persiste a preferência de expansão (best-effort).
@@ -732,7 +796,7 @@
 
 <section
 	aria-labelledby="tarefas-title"
-	class="flex flex-col motion-safe:transition-[gap] motion-safe:duration-300 motion-safe:ease-out {boardExpanded
+	class="flex flex-col motion-safe:transition-[gap] {expandMotion} {boardExpanded
 		? 'gap-3'
 		: 'gap-6'}"
 >
@@ -787,7 +851,7 @@
 					 header): o modo expandido esconde os filtros e alarga o kanban. -->
 				<button
 					type="button"
-					onclick={() => (kanbanExpanded = !kanbanExpanded)}
+					onclick={toggleKanbanExpanded}
 					aria-pressed={kanbanExpanded}
 					title={kanbanExpanded ? 'Restaurar tamanho do quadro' : 'Expandir quadro'}
 					class="inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {kanbanExpanded
@@ -812,11 +876,11 @@
 		 (templates/tasks/hub.html + static/css/tasks/hub.css): cartão único, campos
 		 em UMA linha, selects limpos (h-36/borda/raio 8) e Projeto mais largo.
 		 No modo expandido do kanban a barra some (os filtros seguem aplicados);
-		 restaurar o quadro a traz de volta. O slide acompanha a mesma duração das
-		 demais transições de expansão (EXPAND_ANIM_MS). -->
+		 restaurar o quadro a traz de volta. O slide usa ~0.7× da duração do board
+		 (filtersSlideMs): o secundário sai antes de o primário assentar. -->
 	{#if !boardExpanded}
 	<form
-		transition:slide={{ duration: EXPAND_ANIM_MS }}
+		transition:slide={{ duration: filtersSlideMs }}
 		class="flex items-end gap-3 rounded-xl border border-border-subtle bg-surface px-4 py-3 shadow-sm"
 		aria-label="Filtros de tarefas"
 		onsubmit={(e) => e.preventDefault()}
@@ -984,9 +1048,10 @@
 				 respiro — o quadro alarga junto com o ganho vertical. -->
 			<div
 				aria-busy={$board.status === 'loading'}
-				class="motion-safe:transition-[margin] motion-safe:duration-300 motion-safe:ease-out {boardExpanded
+				class="motion-safe:transition-[margin] {expandMotion} {boardExpanded
 					? 'mx-[calc(1rem-clamp(1.5rem,8vw,7rem))]'
 					: 'mx-0'}"
+				ontransitionend={onBoardWrapperTransitionEnd}
 			>
 				<KanbanBoard store={board} expanded={boardExpanded}>
 					{#snippet composer(status: TaskStatus)}

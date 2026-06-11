@@ -44,6 +44,18 @@
 	}
 
 	let { title, titleContent, subtitle, labelId, actions, compact = false }: Props = $props();
+
+	/**
+	 * Motion coordenado com a expansão do Kanban de tarefas (mesmos valores de
+	 * EXPAND_MOTION_IN/OUT em tarefas/+page.svelte): entrar no compact = 420ms
+	 * M3 emphasized decelerate; sair = 300ms M3 emphasized accelerate. Strings
+	 * estáticas porque o Tailwind não gera classes de valores computados.
+	 */
+	const HEADER_MOTION_COMPACT =
+		'motion-safe:duration-[420ms] motion-safe:[transition-timing-function:cubic-bezier(0.05,0.7,0.1,1)]';
+	const HEADER_MOTION_FULL =
+		'motion-safe:duration-300 motion-safe:[transition-timing-function:cubic-bezier(0.3,0,0.8,0.15)]';
+	const headerMotion = $derived(compact ? HEADER_MOTION_COMPACT : HEADER_MOTION_FULL);
 </script>
 
 <!--
@@ -54,14 +66,14 @@
 	hero original (empilha acoes em telas estreitas).
 -->
 <header
-	class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border-subtle bg-surface px-4 shadow-sm motion-safe:transition-[padding,min-height] motion-safe:duration-300 motion-safe:ease-out {compact
+	class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border-subtle bg-surface px-4 shadow-sm motion-safe:transition-[padding,min-height] {headerMotion} {compact
 		? 'min-h-0 py-1.5'
 		: 'min-h-[5.25rem] py-3'}"
 >
 	<div class="min-w-0 flex-1">
 		<h1
 			id={labelId}
-			class="truncate font-heading font-bold leading-tight text-primary-700 motion-safe:transition-[font-size] motion-safe:duration-300 motion-safe:ease-out {compact
+			class="truncate font-heading font-bold leading-tight text-primary-700 motion-safe:transition-[font-size] {headerMotion} {compact
 				? 'text-xl'
 				: 'text-3xl'}"
 		>
@@ -71,7 +83,7 @@
 			<!-- No compact o subtítulo COLAPSA (max-height + opacity) em vez de
 			     desmontar — a transição de altura do header fica contínua. -->
 			<p
-				class="truncate text-sm font-medium text-text-muted motion-safe:transition-[max-height,opacity,margin] motion-safe:duration-300 motion-safe:ease-out {compact
+				class="truncate text-sm font-medium text-text-muted motion-safe:transition-[max-height,opacity,margin] {headerMotion} {compact
 					? 'mt-0 max-h-0 overflow-hidden opacity-0'
 					: 'mt-1 max-h-6 opacity-100'}"
 			>

@@ -53,6 +53,19 @@
 
 	let { store, composer, expanded = false }: Props = $props();
 
+	/**
+	 * Motion coordenado com a página de tarefas (mesmos valores do bloco
+	 * EXPAND_MOTION_IN/OUT de tarefas/+page.svelte): EXPANDIR = 420ms M3
+	 * emphasized decelerate; RETRAIR = 300ms M3 emphasized accelerate. Strings
+	 * estáticas porque o Tailwind não gera classes a partir de valores
+	 * computados. Ver docs/refinamento-animacao-kanban-expandir.md.
+	 */
+	const BOARD_MOTION_IN =
+		'motion-safe:duration-[420ms] motion-safe:[transition-timing-function:cubic-bezier(0.05,0.7,0.1,1)]';
+	const BOARD_MOTION_OUT =
+		'motion-safe:duration-300 motion-safe:[transition-timing-function:cubic-bezier(0.3,0,0.8,0.15)]';
+	const boardMotion = $derived(expanded ? BOARD_MOTION_IN : BOARD_MOTION_OUT);
+
 	/** Contexto do drag em curso (estado canônico no componente, não no DOM). */
 	interface DragContext {
 		card: BoardCard;
@@ -368,7 +381,7 @@
 		+ paddings), quase a altura toda da tela.
 	-->
 	<div
-		class="kanban-board grid min-h-[420px] w-full grid-flow-col items-stretch gap-[0.62rem] overflow-x-auto pb-2 [grid-auto-columns:minmax(220px,1fr)] motion-safe:transition-[height,max-height] motion-safe:duration-300 motion-safe:ease-out sm:grid-flow-row sm:[grid-template-columns:repeat(5,minmax(200px,1fr))] {expanded
+		class="kanban-board grid min-h-[420px] w-full grid-flow-col items-stretch gap-[0.62rem] overflow-x-auto pb-2 [grid-auto-columns:minmax(220px,1fr)] motion-safe:transition-[height,max-height] {boardMotion} sm:grid-flow-row sm:[grid-template-columns:repeat(5,minmax(200px,1fr))] {expanded
 			? 'h-[calc(100vh-10.5rem)] max-h-[calc(100vh-10.5rem)]'
 			: 'h-[calc(100vh-19rem)] max-h-[calc(100vh-19rem)]'}"
 		role="group"

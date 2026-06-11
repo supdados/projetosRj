@@ -94,7 +94,7 @@
 	<alpha-value>.
 -->
 <section
-	class="kanban-column kcol--{column.status} flex h-full min-h-0 min-w-[200px] flex-1 flex-col rounded-xl transition-[box-shadow] duration-fast {isOver &&
+	class="kanban-column kcol--{column.status} flex h-full min-h-0 min-w-[200px] flex-1 flex-col rounded-xl [contain:layout] transition-[box-shadow] duration-fast {isOver &&
 	canDrop
 		? 'is-column-drag-target'
 		: ''}"
@@ -118,7 +118,7 @@
 	</header>
 
 	<ul
-		class="kanban-dropzone flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden rounded-lg px-1.5 py-2 transition-[background-color,box-shadow] duration-fast {isOver && canDrop
+		class="kanban-dropzone flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden rounded-lg px-1.5 py-2 [contain:layout] transition-[background-color,box-shadow] duration-fast {isOver && canDrop
 			? 'is-zone-over'
 			: ''} {isOver && !canDrop ? 'cursor-not-allowed opacity-60' : ''}"
 		data-status={column.status}

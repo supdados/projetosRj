@@ -25,6 +25,10 @@
 	import { getContext, tick, untrack } from 'svelte';
 	import type { BoardCard } from '$lib/types/board';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
+	import {
+		KANBAN_EXPAND_ANIM,
+		type KanbanExpandAnimSignal
+	} from '$lib/utils/kanbanExpandAnim';
 
 	/**
 	 * Abertura do drawer: fornecida via contexto pela página, para não exigir
@@ -123,10 +127,34 @@
 	 * ResizeObserver refaz a medição quando a coluna muda de largura (resize,
 	 * modo expandido), e o `$effect` re-mede quando o conteúdo relevante muda.
 	 * `refitToken` descarta medições obsoletas de uma rodada anterior em voo.
+	 *
+	 * PERFORMANCE (ver docs/refinamento-animacao-kanban-expandir.md): a medição
+	 * NUNCA roda direto no callback do ResizeObserver — `scheduleFooterRefit`
+	 * coalesce por rAF (máx. 1 medição/frame) e SUSPENDE durante a transição de
+	 * expandir/retrair do quadro (sinal da página via contexto), quando a
+	 * largura das colunas muda a cada frame e medir custaria O(cards × frames)
+	 * reflows forçados. `needsRefit` garante UMA re-medição ao fim do sinal.
 	 */
 	let footerEl = $state<HTMLElement | null>(null);
 	let fitLevel = $state(0);
 	let refitToken = 0;
+
+	const expandAnim = getContext<KanbanExpandAnimSignal | undefined>(KANBAN_EXPAND_ANIM);
+	let rafPending = false;
+	let needsRefit = $state(false);
+
+	function scheduleFooterRefit(): void {
+		if (expandAnim?.active) {
+			needsRefit = true;
+			return;
+		}
+		if (rafPending) return;
+		rafPending = true;
+		requestAnimationFrame(() => {
+			rafPending = false;
+			void refitFooter();
+		});
+	}
 
 	const overflowAvatarNames = $derived(
 		assignees
@@ -161,15 +189,24 @@
 		void card.anexos_count;
 		void assignees.length;
 		const observer = new ResizeObserver(() => {
-			void refitFooter();
+			scheduleFooterRefit();
 		});
 		observer.observe(footerEl);
 		// CRÍTICO: `refitFooter` lê e escreve `fitLevel`. Sem `untrack`, a leitura
 		// síncrona registraria `fitLevel` como dependência DESTE efeito — cada
 		// escrita re-dispararia o efeito, em loop infinito
 		// (effect_update_depth_exceeded derruba o board inteiro).
-		untrack(() => void refitFooter());
+		untrack(() => scheduleFooterRefit());
 		return () => observer.disconnect();
+	});
+
+	// Re-medição única pós-transição: quando o sinal da página desliga e houve
+	// notificações suprimidas, mede uma vez na largura final estável. Escrever
+	// `needsRefit = false` re-dispara este efeito uma única vez (o guard corta).
+	$effect(() => {
+		if (!expandAnim || expandAnim.active || !needsRefit) return;
+		needsRefit = false;
+		untrack(() => scheduleFooterRefit());
 	});
 
 	// MINI-CONFIRM INLINE de exclusão (paridade com .task-items-kanban-delete-confirm).
@@ -262,7 +299,7 @@
 	Focus-visible com ring triplo acessível.
 -->
 <div
-	class="kanban-card group relative flex cursor-pointer flex-col gap-2 rounded-[12px] bg-surface px-3.5 pb-3 pt-3 shadow-[0_1px_3px_rgba(18,28,45,0.08),0_1px_2px_rgba(18,28,45,0.05)] outline-none transition-[transform,box-shadow,background-color] duration-fast hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(18,28,45,0.13),0_1px_3px_rgba(18,28,45,0.07)] focus-visible:shadow-[0_0_0_3px_rgba(31,92,168,0.18),0_4px_12px_rgba(18,28,45,0.12)] active:cursor-grabbing {dragging
+	class="kanban-card group relative flex cursor-pointer flex-col gap-2 rounded-[12px] bg-surface px-3.5 pb-3 pt-3 [contain:layout] shadow-[0_1px_3px_rgba(18,28,45,0.08),0_1px_2px_rgba(18,28,45,0.05)] outline-none transition-[transform,box-shadow,background-color] duration-fast hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(18,28,45,0.13),0_1px_3px_rgba(18,28,45,0.07)] focus-visible:shadow-[0_0_0_3px_rgba(31,92,168,0.18),0_4px_12px_rgba(18,28,45,0.12)] active:cursor-grabbing {dragging
 		? 'is-dragging'
 		: ''} {settled ? 'is-drop-settling' : ''}"
 	draggable="true"
