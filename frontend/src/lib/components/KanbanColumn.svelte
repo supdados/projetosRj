@@ -86,29 +86,31 @@
 </script>
 
 <!--
-	Coluna — painel levemente azulado sobre o canvas, cabeçalho com tinta por
-	status (referência: cinza / azul / amarelo / vermelho / verde) e contador em
-	pílula branca. As tintas usam color-mix sobre as vars semânticas (dark-safe);
-	o Tailwind 3 não gera `bg-info/10` para cores via var sem <alpha-value>.
+	Coluna (Variação B) — SEM caixa: as colunas flutuam direto no canvas e o
+	cabeçalho vira uma FAIXA tingida por status (referência: cinza / azul /
+	amarelo / vermelho / verde) com o contador em texto na mesma cor (opacidade
+	reduzida), sem pílula. As tintas usam color-mix sobre as vars semânticas
+	(dark-safe); o Tailwind 3 não gera `bg-info/10` para cores via var sem
+	<alpha-value>.
 -->
 <section
-	class="kanban-column kcol flex h-full min-h-0 min-w-[200px] flex-1 flex-col overflow-hidden rounded-lg border border-border-subtle transition-[box-shadow,border-color] duration-fast {isOver &&
+	class="kanban-column kcol--{column.status} flex h-full min-h-0 min-w-[200px] flex-1 flex-col rounded-xl transition-[box-shadow] duration-fast {isOver &&
 	canDrop
-		? 'is-column-drag-target border-primary-500'
+		? 'is-column-drag-target'
 		: ''}"
 	aria-labelledby={`kanban-col-${column.status}`}
 >
-	<header class="kcol-head kcol-head--{column.status} flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5">
+	<header class="kcol-head kcol-head--{column.status} flex shrink-0 items-center justify-between gap-2 rounded-[10px] px-3 py-2">
 		<h2
 			id={`kanban-col-${column.status}`}
-			class="font-heading truncate text-[0.8125rem] font-bold text-text-primary"
+			class="font-heading truncate text-[0.8125rem] font-bold"
 		>
 			{column.label}
 		</h2>
 		<!-- {#key count}: remonta o contador a cada mudança p/ rodar o "pop". -->
 		{#key count}
 			<span
-				class="kcol-count inline-flex h-[20px] min-w-[22px] items-center justify-center rounded-md border border-border-subtle bg-surface px-1.5 text-[0.7rem] font-bold tabular-nums text-text-secondary shadow-sm"
+				class="kcol-count inline-flex items-center justify-center text-[0.7rem] font-bold tabular-nums opacity-70"
 			>
 				{count}
 			</span>
@@ -116,7 +118,7 @@
 	</header>
 
 	<ul
-		class="kanban-dropzone flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden p-2 transition-[background-color,box-shadow] duration-fast {isOver && canDrop
+		class="kanban-dropzone flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden rounded-lg px-1.5 py-2 transition-[background-color,box-shadow] duration-fast {isOver && canDrop
 			? 'is-zone-over'
 			: ''} {isOver && !canDrop ? 'cursor-not-allowed opacity-60' : ''}"
 		data-status={column.status}
@@ -159,41 +161,60 @@
 	</ul>
 
 	{#if composer}
-		<div class="shrink-0 border-t border-border-subtle px-[0.56rem] pb-[0.62rem] pt-[0.46rem]">
+		<!-- "+ adicionar" no rodapé: a coluna estica até a altura do board
+		     (items-stretch) e a dropzone ocupa o flex-1, então o composer fica
+		     alinhado na MESMA linha em todas as colunas. -->
+		<div class="shrink-0 px-1.5 pb-1.5 pt-1">
 			{@render composer(column.status)}
 		</div>
 	{/if}
 </section>
 
 <style>
-	/* Painel da coluna: um passo abaixo do canvas, para os cards brancos saltarem. */
-	.kcol {
-		background-color: color-mix(in srgb, var(--ds-color-primary-600) 4%, var(--color-canvas));
-		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+	/*
+	 * Fundo da COLUNA: a mesma cor do status, bem diluída (overlay translúcido
+	 * sobre o canvas — dark-safe). A faixa do cabeçalho usa a versão mais forte.
+	 */
+	.kcol--nao_iniciada {
+		background-color: color-mix(in srgb, var(--color-text-muted) 5%, transparent);
+	}
+	.kcol--em_andamento {
+		background-color: color-mix(in srgb, var(--ds-color-info-600) 5%, transparent);
+	}
+	.kcol--para_validacao {
+		background-color: color-mix(in srgb, var(--ds-color-warning-600) 6%, transparent);
+	}
+	.kcol--para_ajustes {
+		background-color: color-mix(in srgb, var(--ds-color-danger-600) 4%, transparent);
+	}
+	.kcol--finalizada {
+		background-color: color-mix(in srgb, var(--ds-color-success-600) 5%, transparent);
 	}
 
-	/* Tinta do cabeçalho por status (referência visual do board). */
-	.kcol-head {
-		border-bottom-color: var(--color-border);
-	}
+	/*
+	 * Faixa do cabeçalho por status (Variação B): fundo tingido e TEXTO na
+	 * cor do status (título e contador herdam via color), sem borda nem caixa
+	 * na coluna. Mistura sobre as vars semânticas — dark-safe.
+	 */
 	.kcol-head--nao_iniciada {
-		background-color: color-mix(in srgb, var(--color-text-muted) 10%, var(--color-surface));
+		background-color: color-mix(in srgb, var(--color-text-muted) 12%, var(--color-surface));
+		color: var(--color-text-secondary);
 	}
 	.kcol-head--em_andamento {
 		background-color: color-mix(in srgb, var(--ds-color-info-600) 14%, var(--color-surface));
-		border-bottom-color: color-mix(in srgb, var(--ds-color-info-600) 28%, transparent);
+		color: color-mix(in srgb, var(--ds-color-info-600) 62%, var(--color-text-primary));
 	}
 	.kcol-head--para_validacao {
 		background-color: color-mix(in srgb, var(--ds-color-warning-600) 16%, var(--color-surface));
-		border-bottom-color: color-mix(in srgb, var(--ds-color-warning-600) 30%, transparent);
+		color: color-mix(in srgb, var(--ds-color-warning-600) 62%, var(--color-text-primary));
 	}
 	.kcol-head--para_ajustes {
 		background-color: color-mix(in srgb, var(--ds-color-danger-600) 12%, var(--color-surface));
-		border-bottom-color: color-mix(in srgb, var(--ds-color-danger-600) 26%, transparent);
+		color: color-mix(in srgb, var(--ds-color-danger-600) 62%, var(--color-text-primary));
 	}
 	.kcol-head--finalizada {
 		background-color: color-mix(in srgb, var(--ds-color-success-600) 12%, var(--color-surface));
-		border-bottom-color: color-mix(in srgb, var(--ds-color-success-600) 26%, transparent);
+		color: color-mix(in srgb, var(--ds-color-success-600) 62%, var(--color-text-primary));
 	}
 
 	/* Pop da pílula de contagem quando o número muda (remontada via {#key}). */
@@ -245,27 +266,40 @@
 		}
 	}
 
-	/* Scroll interno da coluna: barra fina; cada coluna rola por dentro. */
+	/* Scroll interno da coluna: barra de 1px, quase invisível; cada coluna rola
+	 * por dentro. CUIDADO (armadilhas reais, ver css-scrollbars §3.1):
+	 *   1. `.app-shell > main` (app.css) define scrollbar-color, e scrollbar-color
+	 *      é propriedade HERDADA — ela desce até esta dropzone. Com o valor
+	 *      computado ≠ auto, o Chromium 121+ IGNORA todos os ::-webkit-scrollbar*
+	 *      do elemento e desenha a barra padrão (a azulada grossa). O reset
+	 *      `auto` abaixo devolve o controle aos pseudo-elementos de 1px.
+	 *   2. `@supports selector(::-webkit-scrollbar)` é TRUE também no Firefox
+	 *      (pseudo-elementos -webkit- desconhecidos parseiam por compat), então
+	 *      não serve para separar engines — o gate correto é `-moz-appearance`,
+	 *      que só o Firefox suporta (lá o mínimo nativo é `thin`). */
 	.kanban-dropzone {
-		scrollbar-width: thin;
-		scrollbar-color: rgba(92, 126, 157, 0.54) transparent;
+		scrollbar-width: auto;
+		scrollbar-color: auto;
+	}
+	@supports (-moz-appearance: none) {
+		.kanban-dropzone {
+			scrollbar-width: thin;
+			scrollbar-color: rgba(92, 126, 157, 0.32) transparent;
+		}
 	}
 	.kanban-dropzone::-webkit-scrollbar {
-		width: 8px;
+		width: 5px;
 	}
 	.kanban-dropzone::-webkit-scrollbar-track {
 		background: transparent;
 	}
 	.kanban-dropzone::-webkit-scrollbar-thumb {
-		background: rgba(92, 126, 157, 0.54);
+		background: rgba(92, 126, 157, 0.45);
 		border-radius: 999px;
-		border: 2px solid transparent;
-		background-clip: padding-box;
-		min-height: 40px;
+		min-height: 32px;
 	}
 	.kanban-dropzone::-webkit-scrollbar-thumb:hover {
-		background: rgba(70, 103, 133, 0.68);
-		background-clip: padding-box;
+		background: rgba(70, 103, 133, 0.7);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

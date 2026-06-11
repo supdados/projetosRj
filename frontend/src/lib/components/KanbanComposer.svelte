@@ -212,17 +212,17 @@
 </script>
 
 <!--
-	Composer inline da coluna — fidelidade a static/css/tasks/detail/kanban.css:
-	  o botão `+ adicionar` reproduz `.task-items-kanban-add-btn` (borda tracejada,
-	  fundo suave, radius 9px, transição 0.16s e hover que escurece o azul). O
-	  formulário reproduz `.task-items-kanban-add-form` (borda, fundo branco, radius
-	  10px, sombra inset+externa, gap 0.46rem). `is-saving` aplica opacity 0.72.
+	Composer inline da coluna — Variação B: o botão `+ adicionar` é um traço
+	discreto e transparente (borda tracejada, texto apagado) que só ganha cor
+	no hover. O formulário reproduz `.task-items-kanban-add-form` do legado
+	(borda, fundo branco, radius 10px, sombra inset+externa, gap 0.46rem).
+	`is-saving` aplica opacity 0.72.
 -->
 {#if !open}
 	<button
 		type="button"
 		onclick={requestOpen}
-		class="flex w-full items-center justify-center gap-1 rounded-[9px] border border-dashed border-border-strong bg-surface-muted px-[0.48rem] py-[0.38rem] text-xs font-semibold text-primary-700 transition-all duration-fast hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500"
+		class="flex w-full items-center justify-center gap-1 rounded-[10px] border border-dashed border-border-strong bg-transparent px-[0.48rem] py-[0.42rem] text-xs font-semibold text-text-muted transition-all duration-fast hover:border-primary-500 hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500"
 	>
 		+ adicionar
 	</button>

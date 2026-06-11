@@ -2,9 +2,10 @@
 	/**
 	 * Card de tarefa no Kanban — arrastável e clicável.
 	 *
-	 * Anatomia (referência de design do board, jun/2026): chips de prioridade e
-	 * tipo no topo, título da tarefa, link azul para o projeto, e rodapé com
-	 * responsável + contadores de comentários (balão) e anexos (clipe).
+	 * Anatomia (Variação B da referência de design, jun/2026): título da tarefa
+	 * em primeiro, link azul para o projeto, e rodapé com prioridade em ponto
+	 * colorido + rótulo, tipo em pílula neutra, contadores de comentários
+	 * (balão) e anexos (clipe) e avatares dos responsáveis.
 	 *
 	 * Interações:
 	 *   - CLIQUE em qualquer área do card abre o drawer de detalhes (o link do
@@ -21,7 +22,7 @@
 	 * O drag em si é coordenado pelo `KanbanBoard` (HTML5 nativo); aqui só
 	 * expomos `draggable` e propagamos os eventos `dragstart`/`dragend`.
 	 */
-	import { getContext } from 'svelte';
+	import { getContext, tick, untrack } from 'svelte';
 	import type { BoardCard } from '$lib/types/board';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
 
@@ -110,6 +111,67 @@
 	const MAX_CARD_AVATARS = 3;
 	const assigneeNames = $derived(assignees.map((a) => a.name).join(', '));
 
+	/**
+	 * RODAPÉ ADAPTATIVO: quando a largura do card não comporta tudo, o rodapé
+	 * degrada em degraus MEDIDOS (nada de breakpoint fixo — o conteúdo varia):
+	 *   nível 0 = tudo (prioridade, tipo, contadores, até 3 avatares);
+	 *   nível 1 = suprime o chip de TIPO (a maior fonte de largura variável);
+	 *   nível 2 = agrega os avatares em 1 visível + bolinha "+N" (nomes no hover).
+	 *
+	 * O cálculo é feito no DOM real: re-renderiza no nível 0 e sobe um degrau
+	 * enquanto `scrollWidth > clientWidth` (overflow horizontal de fato). Um
+	 * ResizeObserver refaz a medição quando a coluna muda de largura (resize,
+	 * modo expandido), e o `$effect` re-mede quando o conteúdo relevante muda.
+	 * `refitToken` descarta medições obsoletas de uma rodada anterior em voo.
+	 */
+	let footerEl = $state<HTMLElement | null>(null);
+	let fitLevel = $state(0);
+	let refitToken = 0;
+
+	const overflowAvatarNames = $derived(
+		assignees
+			.slice(1)
+			.map((a) => a.name)
+			.join(', ')
+	);
+
+	function footerOverflowing(): boolean {
+		return !!footerEl && footerEl.scrollWidth - footerEl.clientWidth > 1;
+	}
+
+	async function refitFooter(): Promise<void> {
+		const token = ++refitToken;
+		if (fitLevel !== 0) {
+			fitLevel = 0;
+			await tick();
+		}
+		while (token === refitToken && fitLevel < 2 && footerOverflowing()) {
+			fitLevel += 1;
+			await tick();
+		}
+	}
+
+	$effect(() => {
+		if (!footerEl) return;
+		// Dependências de CONTEÚDO: qualquer mudança que altere a largura
+		// necessária do rodapé dispara uma nova rodada de medição.
+		void card.prioridade;
+		void card.tipo_pedido;
+		void card.comments_count;
+		void card.anexos_count;
+		void assignees.length;
+		const observer = new ResizeObserver(() => {
+			void refitFooter();
+		});
+		observer.observe(footerEl);
+		// CRÍTICO: `refitFooter` lê e escreve `fitLevel`. Sem `untrack`, a leitura
+		// síncrona registraria `fitLevel` como dependência DESTE efeito — cada
+		// escrita re-dispararia o efeito, em loop infinito
+		// (effect_update_depth_exceeded derruba o board inteiro).
+		untrack(() => void refitFooter());
+		return () => observer.disconnect();
+	});
+
 	// MINI-CONFIRM INLINE de exclusão (paridade com .task-items-kanban-delete-confirm).
 	let confirmingDelete = $state(false);
 	let deleting = $state(false);
@@ -192,14 +254,15 @@
 </script>
 
 <!--
-	Card de tarefa — superfície branca com sombra suave; no hover o card "sobe"
-	1px e a sombra aprofunda (microinteração de affordance de arrasto/clique).
-	`is-dragging` colapsa o card-fonte (opacity:0, height:0) enquanto o
-	placeholder de inserção mostra o destino. `is-drop-settling` roda a animação
-	de assentamento pós-drop. Focus-visible com ring triplo acessível.
+	Card de tarefa (Variação B) — superfície branca SEM borda, flutuando em
+	sombra suave; no hover o card "sobe" 1px e a sombra aprofunda
+	(microinteração de affordance de arrasto/clique). `is-dragging` colapsa o
+	card-fonte (opacity:0, height:0) enquanto o placeholder de inserção mostra
+	o destino. `is-drop-settling` roda a animação de assentamento pós-drop.
+	Focus-visible com ring triplo acessível.
 -->
 <div
-	class="kanban-card group relative flex cursor-pointer flex-col gap-2 rounded-[10px] border border-border-subtle bg-surface px-3 pb-2.5 pt-2.5 shadow-[0_1px_3px_rgba(18,56,91,0.07),0_4px_12px_rgba(18,56,91,0.05)] outline-none transition-[transform,box-shadow,border-color,background-color] duration-fast hover:-translate-y-px hover:border-border-strong hover:shadow-[0_2px_6px_rgba(16,53,87,0.08),0_10px_22px_rgba(16,53,87,0.12)] focus-visible:border-primary-500 focus-visible:shadow-[0_0_0_3px_rgba(31,92,168,0.16),0_10px_22px_rgba(16,53,87,0.12)] active:cursor-grabbing {dragging
+	class="kanban-card group relative flex cursor-pointer flex-col gap-2 rounded-[12px] bg-surface px-3.5 pb-3 pt-3 shadow-[0_1px_3px_rgba(18,28,45,0.08),0_1px_2px_rgba(18,28,45,0.05)] outline-none transition-[transform,box-shadow,background-color] duration-fast hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(18,28,45,0.13),0_1px_3px_rgba(18,28,45,0.07)] focus-visible:shadow-[0_0_0_3px_rgba(31,92,168,0.18),0_4px_12px_rgba(18,28,45,0.12)] active:cursor-grabbing {dragging
 		? 'is-dragging'
 		: ''} {settled ? 'is-drop-settling' : ''}"
 	draggable="true"
@@ -216,23 +279,8 @@
 	onclick={handleCardClick}
 	onkeydown={handleKeydown}
 >
-	{#if prioridadeLabel || tipoLabel}
-		<!-- Prioridade/tipo SEM badge: só o texto colorido; quando há os dois, um
-		     "·" (centralizado com a linha via items-center) os separa. -->
-		<div class="flex flex-wrap items-center gap-1.5 pr-7">
-			{#if prioridadeLabel}
-				<span class="kc-chip {prioridadeChipClass}">{prioridadeLabel}</span>
-			{/if}
-			{#if prioridadeLabel && tipoLabel}
-				<span aria-hidden="true" class="text-2xs font-bold leading-none text-text-muted">·</span>
-			{/if}
-			{#if tipoLabel}
-				<span class="kc-chip kc-chip--tipo">{tipoLabel}</span>
-			{/if}
-		</div>
-	{/if}
-
-	<p class="m-0 line-clamp-3 break-words text-md font-medium leading-snug text-text-primary">
+	<!-- Variação B: o TÍTULO abre o card (sem linha de chips no topo). -->
+	<p class="m-0 line-clamp-3 break-words text-md font-normal leading-snug text-text-primary">
 		{card.descricao}
 	</p>
 
@@ -249,61 +297,93 @@
 		</a>
 	{/if}
 
-	<div class="mt-auto flex items-center justify-between gap-2 pt-0.5">
-		{#if assignees.length > 0}
-			<span
-				class="flex min-w-0 items-center gap-1.5"
-				title={`Responsáve${assignees.length === 1 ? 'l' : 'is'}: ${assigneeNames}`}
+	<!--
+		Rodapé (Variação B): prioridade vira PONTO colorido + rótulo e o tipo vira
+		pílula neutra, à esquerda; contadores (só quando > 0) e avatares dos
+		responsáveis, à direita. Quando falta largura, degrada por medição:
+		nível 1 suprime o tipo, nível 2 agrega os avatares (ver `refitFooter`).
+	-->
+	<div bind:this={footerEl} class="mt-auto flex min-w-0 items-center gap-1.5 pt-0.5">
+		{#if prioridadeLabel}
+			<span class="kc-chip {prioridadeChipClass}">{prioridadeLabel}</span>
+		{/if}
+		{#if prioridadeLabel && tipoLabel && fitLevel < 1}
+			<!-- Separador "·" bem sutil, centralizado na vertical pela linha. -->
+			<span aria-hidden="true" class="text-2xs font-bold leading-none text-text-muted opacity-60"
+				>·</span
 			>
-				<span class="flex shrink-0 -space-x-1">
-					{#each assignees.slice(0, MAX_CARD_AVATARS) as a, i (a.id)}
-						<!-- z decrescente: o 1º avatar fica na frente dos seguintes. -->
-						<span
-							class="relative rounded-full ring-2 ring-surface"
-							style="z-index: {MAX_CARD_AVATARS - i}"
-						>
-							<AssigneeAvatar name={a.name} initials={a.initials} size="sm" />
-						</span>
-					{/each}
-				</span>
-				{#if assignees.length > MAX_CARD_AVATARS}
-					<span class="shrink-0 text-2xs font-semibold text-text-muted"
-						>+{assignees.length - MAX_CARD_AVATARS}</span
-					>
-				{:else if assignees.length === 1}
-					<span class="truncate text-xs text-text-secondary">{assignees[0].name}</span>
-				{/if}
-			</span>
-		{:else}
-			<span class="truncate text-xs italic text-text-muted">Responsável não informado</span>
+		{/if}
+		{#if tipoLabel && fitLevel < 1}
+			<span class="kc-chip kc-chip--tipo">{tipoLabel}</span>
 		{/if}
 
-		<!-- Contadores: apagados quando zerados, destacados quando há conteúdo. -->
-		<span class="flex shrink-0 items-center gap-2.5 text-xs tabular-nums">
-			<span
-				class="inline-flex items-center gap-1 transition-colors duration-fast hover:text-primary-600 {card.comments_count >
-				0
-					? 'font-semibold text-text-secondary'
-					: 'text-text-muted opacity-60 hover:opacity-100'}"
-				title={card.comments_count === 1 ? '1 comentário' : `${card.comments_count} comentários`}
-			>
-				<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5Z" />
-				</svg>
-				{card.comments_count}
-			</span>
-			<span
-				class="inline-flex items-center gap-1 transition-colors duration-fast hover:text-primary-600 {card.anexos_count >
-				0
-					? 'font-semibold text-text-secondary'
-					: 'text-text-muted opacity-60 hover:opacity-100'}"
-				title={card.anexos_count === 1 ? '1 anexo' : `${card.anexos_count} anexos`}
-			>
-				<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-				</svg>
-				{#if card.anexos_count > 0}{card.anexos_count}{/if}
-			</span>
+		<span class="ml-auto flex shrink-0 items-center gap-2 text-xs tabular-nums">
+			{#if card.comments_count > 0}
+				<span
+					class="inline-flex items-center gap-1 font-semibold text-text-muted transition-colors duration-fast hover:text-primary-600"
+					title={card.comments_count === 1 ? '1 comentário' : `${card.comments_count} comentários`}
+				>
+					<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5Z" />
+					</svg>
+					{card.comments_count}
+				</span>
+			{/if}
+			{#if card.anexos_count > 0}
+				<span
+					class="inline-flex items-center gap-1 font-semibold text-text-muted transition-colors duration-fast hover:text-primary-600"
+					title={card.anexos_count === 1 ? '1 anexo' : `${card.anexos_count} anexos`}
+				>
+					<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+					</svg>
+					{card.anexos_count}
+				</span>
+			{/if}
+
+			{#if assignees.length > 0}
+				<span
+					class="flex items-center gap-1 pl-0.5"
+					title={`Responsáve${assignees.length === 1 ? 'l' : 'is'}: ${assigneeNames}`}
+				>
+					{#if fitLevel < 2 || assignees.length === 1}
+						<span class="flex shrink-0 -space-x-1">
+							{#each assignees.slice(0, MAX_CARD_AVATARS) as a, i (a.id)}
+								<!-- z decrescente: o 1º avatar fica na frente dos seguintes. -->
+								<span
+									class="relative rounded-full ring-2 ring-surface"
+									style="z-index: {MAX_CARD_AVATARS - i}"
+								>
+									<AssigneeAvatar name={a.name} initials={a.initials} size="sm" />
+								</span>
+							{/each}
+						</span>
+						{#if assignees.length > MAX_CARD_AVATARS}
+							<span class="shrink-0 text-2xs font-semibold text-text-muted"
+								>+{assignees.length - MAX_CARD_AVATARS}</span
+							>
+						{/if}
+					{:else}
+						<!-- Nível 2: só o 1º responsável + bolinha agregada "+N" (os
+						     demais nomes aparecem no hover via title). -->
+						<span class="flex shrink-0 -space-x-1">
+							<span class="relative z-[2] rounded-full ring-2 ring-surface">
+								<AssigneeAvatar
+									name={assignees[0].name}
+									initials={assignees[0].initials}
+									size="sm"
+								/>
+							</span>
+							<span
+								class="kc-avatar-overflow relative z-[1] inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold leading-none ring-2 ring-surface"
+								title={overflowAvatarNames}
+							>
+								+{assignees.length - 1}
+							</span>
+						</span>
+					{/if}
+				</span>
+			{/if}
 		</span>
 	</div>
 
@@ -314,7 +394,7 @@
 			onclick={openDeleteConfirm}
 			aria-label="Excluir tarefa"
 			title="Excluir tarefa"
-			class="kc-delete-btn absolute right-1.5 top-1.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs text-danger opacity-0 transition-[opacity,color] duration-fast focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger group-hover:opacity-100 group-focus-within:opacity-100"
+			class="kc-delete-btn absolute right-1.5 top-1.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface text-xs text-danger opacity-0 shadow-[0_1px_4px_rgba(18,28,45,0.14)] transition-[opacity,color] duration-fast focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger group-hover:opacity-100 group-focus-within:opacity-100"
 		>
 			<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
@@ -358,16 +438,25 @@
 
 <style>
 	/*
-	 * Rótulos do topo do card, SEM badge (texto puro). As cores de prioridade
-	 * usam as MESMAS vars dos badges do hub (`--ds-color-priority-*`, dark-safe).
+	 * Rótulos do rodapé (Variação B). As cores de prioridade usam as MESMAS
+	 * vars dos badges do hub (`--ds-color-priority-*`, dark-safe).
 	 */
 	.kc-chip {
 		display: inline-flex;
 		align-items: center;
+		gap: 0.32rem;
 		font-size: 0.6875rem;
 		font-weight: 600;
 		line-height: 1.35;
 		white-space: nowrap;
+		flex: none;
+	}
+	/* Prioridade: rótulo em texto puro na cor do status (sem ponto). */
+	.kc-chip--baixa,
+	.kc-chip--media,
+	.kc-chip--alta,
+	.kc-chip--urgente {
+		letter-spacing: 0.01em;
 	}
 	.kc-chip--baixa {
 		color: var(--ds-color-priority-baixa);
@@ -381,9 +470,17 @@
 	.kc-chip--urgente {
 		color: var(--ds-color-priority-urgente);
 	}
-	/* Tipo de pedido: tinta azul da marca (referência: rótulo "Melhoria"). */
+	/* Tipo de pedido: texto puro apagado (separado da prioridade por "·").
+	 * `flex: none` de propósito: o rótulo não trunca no meio — quando não cabe,
+	 * o rodapé adaptativo o SUPRIME inteiro (nível 1 do `refitFooter`). */
 	.kc-chip--tipo {
-		color: var(--ds-color-primary-700);
+		color: var(--color-text-secondary);
+	}
+
+	/* Bolinha agregada de responsáveis ("+N", nível 2 do rodapé adaptativo). */
+	.kc-avatar-overflow {
+		background-color: color-mix(in srgb, var(--color-text-muted) 18%, var(--color-surface));
+		color: var(--color-text-secondary);
 	}
 
 	/* Lixeira sem fundo (só o ícone): o hover ACENDE o vermelho via color-mix
@@ -439,7 +536,7 @@
 		}
 		100% {
 			transform: scale(1) translateY(0);
-			box-shadow: 0 1px 3px rgba(18, 56, 91, 0.07);
+			box-shadow: 0 1px 3px rgba(18, 28, 45, 0.08), 0 1px 2px rgba(18, 28, 45, 0.05);
 		}
 	}
 	:global(.kanban-card.is-drop-settling) {
