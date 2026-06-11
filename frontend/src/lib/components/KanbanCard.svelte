@@ -280,7 +280,7 @@
 	onkeydown={handleKeydown}
 >
 	<!-- Variação B: o TÍTULO abre o card (sem linha de chips no topo). -->
-	<p class="m-0 line-clamp-3 break-words text-md font-normal leading-snug text-text-primary">
+	<p class="m-0 line-clamp-3 break-words text-sm font-normal leading-snug text-text-primary">
 		{card.descricao}
 	</p>
 
@@ -290,7 +290,7 @@
 		<a
 			href={`/projetos/${card.project_id}`}
 			draggable="false"
-			class="-mt-1 w-fit max-w-full truncate rounded-sm text-xs font-medium text-primary-600 transition-colors duration-fast hover:text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			class="-mt-1 w-fit max-w-full truncate rounded-sm text-2xs font-medium text-primary-600 transition-colors duration-fast hover:text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			title={card.project_titulo}
 		>
 			{card.project_titulo}
