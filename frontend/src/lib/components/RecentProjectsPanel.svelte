@@ -108,7 +108,7 @@
 						</span>
 						<span role="cell" class="px-3 py-3 text-center">
 							<span
-								class="inline-flex min-w-[92px] items-center justify-center px-2 py-1 text-2xs font-bold uppercase tracking-wide {priorityClass[
+								class="inline-flex min-w-[92px] items-center justify-center px-2 py-1 text-base {priorityClass[
 									prioKey(project.prioridade)
 								] ?? 'text-text-secondary'}"
 							>

@@ -394,7 +394,7 @@
 			onclick={openDeleteConfirm}
 			aria-label="Excluir tarefa"
 			title="Excluir tarefa"
-			class="kc-delete-btn absolute right-1.5 top-1.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface text-xs text-danger opacity-0 shadow-[0_1px_4px_rgba(18,28,45,0.14)] transition-[opacity,color] duration-fast focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger group-hover:opacity-100 group-focus-within:opacity-100"
+			class="kc-delete-btn absolute right-1.5 top-1.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs text-danger opacity-0 transition-[opacity,color] duration-fast focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger group-hover:opacity-100 group-focus-within:opacity-100"
 		>
 			<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
