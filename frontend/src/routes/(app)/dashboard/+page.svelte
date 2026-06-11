@@ -218,7 +218,9 @@
 		outros: { label: 'Outros', icon: 'fa-ellipsis', color: 'var(--color-text-muted)' },
 		implementacao: { label: 'Implementação', icon: 'fa-code', color: 'var(--ds-color-primary-600)' }
 	};
-	const TYPE_ORDER = ['bug', 'melhoria', 'duvida', 'outros', 'implementacao'] as const;
+	// "outros" tem icone/cor em TYPE_META (usado na lista de recentes), mas NAO
+	// vira chip em "Por tipo" — fica de fora da ordem dos chips de propósito.
+	const TYPE_ORDER = ['bug', 'melhoria', 'duvida', 'implementacao'] as const;
 
 	// Chips "Por tipo": so os tipos com tarefas em aberto (count > 0).
 	const taskTypes = $derived.by(() => {
@@ -228,7 +230,6 @@
 			bug: d.task_tipo_bug_count,
 			melhoria: d.task_tipo_melhoria_count,
 			duvida: d.task_tipo_duvida_count,
-			outros: d.task_tipo_outros_count,
 			implementacao: d.task_tipo_implementacao_count
 		};
 		return TYPE_ORDER.filter((k) => counts[k] > 0).map((k) => ({
@@ -258,7 +259,7 @@
 		const listBottom = list.getBoundingClientRect().bottom;
 		if (list.clientHeight <= 0) return;
 		let hideRest = false;
-		let visibleCount = 0;
+		const visible: HTMLElement[] = [];
 		for (const item of items) {
 			if (hideRest) {
 				item.classList.add('tk-fit-hidden');
@@ -268,11 +269,27 @@
 				item.classList.add('tk-fit-hidden');
 				hideRest = true;
 			} else {
-				visibleCount += 1;
+				visible.push(item);
 			}
 		}
-		// Com mais de um item, espalha a sobra entre eles; com um so, mantem no topo.
-		list.style.justifyContent = visibleCount > 1 ? 'space-between' : 'flex-start';
+		if (visible.length <= 1) {
+			list.style.justifyContent = 'flex-start';
+			return;
+		}
+		// Quando escondemos algum item, a sobra restante e MENOR que a altura de um
+		// item — distribui-la entre os visiveis (`space-between`) enche a lista ate o
+		// rodape sem deixar rebarba. So quando TUDO coube com folga grande (lista
+		// curta numa tela alta) o `space-between` abriria buracos feios: nesse caso
+		// limita o vao e empacota no topo.
+		const someHidden = visible.length < items.length;
+		if (someHidden) {
+			list.style.justifyContent = 'space-between';
+			return;
+		}
+		const used = visible.reduce((sum, el) => sum + el.offsetHeight, 0);
+		const gapPerItem = (list.clientHeight - used) / (visible.length - 1);
+		const MAX_GAP_PX = 14;
+		list.style.justifyContent = gapPerItem <= MAX_GAP_PX ? 'space-between' : 'flex-start';
 	}
 
 	// Recalcula no mount, quando a lista de tarefas muda e a cada redimensionamento
@@ -517,7 +534,7 @@
 										<a
 											href={`${base}/tarefas?focus_task=${t.id}`}
 											title={t.descricao}
-											class="recent-task-item flex items-center gap-2.5 rounded-xl border border-border-subtle px-3 py-2 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="recent-task-item flex items-center gap-2.5 rounded-xl border border-border-subtle px-3 py-1.5 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 										>
 											<span
 												class="flex h-5 w-5 shrink-0 items-center justify-center"
