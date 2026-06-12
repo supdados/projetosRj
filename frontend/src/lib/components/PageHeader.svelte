@@ -41,9 +41,14 @@
 		/** Variante FINA (titulo menor, sem piso de altura) — usada pelo modo
 		 *  expandido do Kanban de tarefas para devolver altura ao quadro. */
 		compact?: boolean;
+		/** Sem chrome de card proprio (borda/fundo/sombra/raio) — para compor
+		 *  dentro de um card maior que agrupa header + outra zona (ex.: filtros)
+		 *  numa unica secao. */
+		embedded?: boolean;
 	}
 
-	let { title, titleContent, subtitle, labelId, actions, compact = false }: Props = $props();
+	let { title, titleContent, subtitle, labelId, actions, compact = false, embedded = false }: Props =
+		$props();
 
 	/**
 	 * Motion coordenado com a expansão do Kanban de tarefas (mesmos valores de
@@ -66,7 +71,9 @@
 	hero original (empilha acoes em telas estreitas).
 -->
 <header
-	class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border-subtle bg-surface px-4 shadow-sm motion-safe:transition-[padding,min-height] {headerMotion} {compact
+	class="flex flex-wrap items-center justify-between gap-4 px-4 motion-safe:transition-[padding,min-height] {headerMotion} {embedded
+		? ''
+		: 'rounded-xl border border-border-subtle bg-surface shadow-sm'} {compact
 		? 'min-h-0 py-1.5'
 		: 'min-h-[5.25rem] py-3'}"
 >

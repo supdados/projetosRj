@@ -727,9 +727,15 @@
 		? 'gap-3'
 		: 'gap-6'}"
 >
+	<!-- CARD ÚNICO header + filtros: uma só seção (chrome de card no wrapper; o
+		 PageHeader entra `embedded`, sem chrome próprio). A linha de filtros vive
+		 abaixo de um divisor fino — ocupa menos vertical que os dois cards
+		 separados de antes. -->
+	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
 	<PageHeader
 		labelId="tarefas-title"
 		compact
+		embedded
 		subtitle={view === 'kanban'
 			? 'Tarefas ativas por status. Arraste os cards entre colunas para mudar o status.'
 			: 'Tarefas agrupadas por projeto.'}
@@ -789,21 +795,20 @@
 		{/snippet}
 	</PageHeader>
 
-	<!-- Filtros (re-buscam server-side). Réplica da barra do v4.5
-		 (templates/tasks/hub.html + static/css/tasks/hub.css): cartão único, campos
-		 em UMA linha, selects limpos (h-36/borda/raio 8) e Projeto mais largo.
-		 SÓ NA VISÃO LISTA: no kanban a barra some para o quadro tomar a vertical
-		 (os filtros aplicados continuam valendo). O slide usa ~0.7× da duração da
-		 troca (filtersSlideMs): o secundário sai antes de o primário assentar. -->
+	<!-- Linha de filtros embutida no card (re-buscam server-side): campos em UMA
+		 linha, SEM rótulos — os placeholders "Todos os..." identificam cada campo
+		 (acessibilidade via aria-label). SÓ NA VISÃO LISTA: no kanban a linha some
+		 para o quadro tomar a vertical (os filtros aplicados continuam valendo).
+		 O slide usa ~0.7× da duração da troca (filtersSlideMs): o secundário sai
+		 antes de o primário assentar. -->
 	{#if !boardExpanded}
 	<form
 		transition:slide={{ duration: filtersSlideMs }}
-		class="flex items-end gap-3 rounded-xl border border-border-subtle bg-surface px-4 py-3 shadow-sm"
+		class="flex items-center gap-2 border-t border-border-subtle px-4 py-2.5"
 		aria-label="Filtros de tarefas"
 		onsubmit={(e) => e.preventDefault()}
 	>
-		<div class="relative flex min-w-0 flex-[1.9] flex-col gap-1">
-			<label id="filter_project_label" for="filter_project" class="text-xs font-semibold uppercase tracking-wide text-text-muted">Projeto</label>
+		<div class="relative min-w-0 flex-[1.9]">
 			{#if projectOpen}
 				<input
 					bind:this={projectInputEl}
@@ -817,9 +822,10 @@
 					aria-expanded="true"
 					aria-controls="filter_project_listbox"
 					aria-autocomplete="list"
+					aria-label="Filtrar por projeto"
 					placeholder="Buscar projeto…"
 					autocomplete="off"
-					class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+					class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
 				/>
 				<ul
 					id="filter_project_listbox"
@@ -856,8 +862,8 @@
 					onclick={openProjectFilter}
 					disabled={!data || data.project_options.length === 0}
 					aria-haspopup="listbox"
-					aria-labelledby="filter_project_label"
-					class="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+					aria-label="Filtrar por projeto"
+					class="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 				>
 					<span class="min-w-0 flex-1 truncate text-left {project === '' ? 'text-text-muted' : ''}"
 						>{selectedProjectLabel}</span
@@ -867,78 +873,71 @@
 			{/if}
 		</div>
 
-		<div class="flex min-w-0 flex-1 flex-col gap-1">
-			<label for="filter_orgao" class="text-xs font-semibold uppercase tracking-wide text-text-muted">Órgão</label>
-			<select
-				id="filter_orgao"
-				bind:value={orgao}
-				onchange={reloadActiveView}
-				disabled={orgaoOptions.length === 0}
-				class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-			>
-				<option value="">Todos os órgãos</option>
-				{#each orgaoOptions as orgaoOption (orgaoOption.value)}
-					<option value={orgaoOption.value}>{orgaoOption.label}</option>
-				{/each}
-			</select>
-		</div>
+		<select
+			id="filter_orgao"
+			bind:value={orgao}
+			onchange={reloadActiveView}
+			disabled={orgaoOptions.length === 0}
+			aria-label="Filtrar por órgão"
+			class="h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+		>
+			<option value="">Todos os órgãos</option>
+			{#each orgaoOptions as orgaoOption (orgaoOption.value)}
+				<option value={orgaoOption.value}>{orgaoOption.label}</option>
+			{/each}
+		</select>
 
-		<div class="flex min-w-0 flex-1 flex-col gap-1">
-			<label for="filter_prioridade" class="text-xs font-semibold uppercase tracking-wide text-text-muted">Prioridade</label>
-			<select
-				id="filter_prioridade"
-				bind:value={prioridade}
-				onchange={reloadActiveView}
-				class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<option value="">Todas as prioridades</option>
-				{#each ADD_PRIORIDADE_OPTIONS.slice(1) as option (option.value)}
-					<option value={option.value}>{option.label}</option>
-				{/each}
-			</select>
-		</div>
+		<select
+			id="filter_prioridade"
+			bind:value={prioridade}
+			onchange={reloadActiveView}
+			aria-label="Filtrar por prioridade"
+			class="h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		>
+			<option value="">Todas as prioridades</option>
+			{#each ADD_PRIORIDADE_OPTIONS.slice(1) as option (option.value)}
+				<option value={option.value}>{option.label}</option>
+			{/each}
+		</select>
 
-		<div class="flex min-w-0 flex-1 flex-col gap-1">
-			<label for="filter_tipo" class="text-xs font-semibold uppercase tracking-wide text-text-muted">Tipo</label>
-			<select
-				id="filter_tipo"
-				bind:value={tipo}
-				onchange={reloadActiveView}
-				class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<option value="">Todos os tipos</option>
-				{#each FILTER_TIPO_OPTIONS as option (option.value)}
-					<option value={option.value}>{option.label}</option>
-				{/each}
-			</select>
-		</div>
+		<select
+			id="filter_tipo"
+			bind:value={tipo}
+			onchange={reloadActiveView}
+			aria-label="Filtrar por tipo"
+			class="h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		>
+			<option value="">Todos os tipos</option>
+			{#each FILTER_TIPO_OPTIONS as option (option.value)}
+				<option value={option.value}>{option.label}</option>
+			{/each}
+		</select>
 
-		<div class="flex min-w-0 flex-1 flex-col gap-1">
-			<label for="filter_status" class="text-xs font-semibold uppercase tracking-wide text-text-muted">Status</label>
-			<select
-				id="filter_status"
-				bind:value={statusFilter}
-				onchange={reloadActiveView}
-				class="h-9 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<option value="">Todos os status</option>
-				{#each ADD_STATUS_OPTIONS as option (option.value)}
-					<option value={option.value}>{option.label}</option>
-				{/each}
-			</select>
-		</div>
+		<select
+			id="filter_status"
+			bind:value={statusFilter}
+			onchange={reloadActiveView}
+			aria-label="Filtrar por status"
+			class="h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		>
+			<option value="">Todos os status</option>
+			{#each ADD_STATUS_OPTIONS as option (option.value)}
+				<option value={option.value}>{option.label}</option>
+			{/each}
+		</select>
 
 		{#if hasActiveFilters}
 			<button
 				type="button"
 				onclick={clearFilters}
-				class="h-9 shrink-0 self-end rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 shrink-0 rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				Limpar
 			</button>
 		{/if}
 	</form>
 	{/if}
+	</div>
 
 	{#if archiveNotice}
 		<!-- Aviso pós-arquivamento (paridade com o alert legado: sem ids / erro) -->

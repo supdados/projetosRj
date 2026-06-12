@@ -583,13 +583,14 @@
 </svelte:head>
 
 <section aria-labelledby="projetos-title" class="flex flex-col gap-4">
-	<!--
-		Header padronizado (PageHeader, Fase 1): mesmo chrome/altura do home.
-		titleContent reproduz o título "Todos os Projetos" + meta-pill da contagem;
-		o subtitle e as ações (Exportar CSV admin + Novo projeto) seguem o original.
-	-->
+	<!-- CARD ÚNICO header + filtros (padrão da tela de Tarefas): chrome de card
+		 no wrapper, PageHeader compacto `embedded` e a zona de filtros embutida
+		 abaixo de um divisor fino — uma só seção, menos vertical. -->
+	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
 	<PageHeader
 		labelId="projetos-title"
+		compact
+		embedded
 		subtitle="Visualize, filtre e acompanhe seus projetos."
 	>
 		{#snippet titleContent()}
@@ -629,113 +630,82 @@
 		{/snippet}
 	</PageHeader>
 
-	<!--
-		Filtros (projects-v4-filters): card de superfície com borda + sombra. A
-		linha essencial (busca/órgão/status/prioridade + ações) cresce e empurra
-		as ações para a direita; o painel "Mais filtros" abre com slide animado.
-	-->
+	<!-- Zona de filtros embutida no card: campos em linha, SEM rótulos — os
+		 placeholders "Todos os..." identificam cada um (acessibilidade via
+		 aria-label). O painel "Mais filtros" mantém o slide animado. -->
 	<form
-		class="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface px-4 py-3.5 shadow-sm"
+		class="flex flex-col gap-2 border-t border-border-subtle px-4 py-2.5"
 		role="search"
 		aria-label="Filtros de projetos"
 		onsubmit={onSubmit}
 	>
-		<!-- Linha essencial (projects-v4-filter-essential). -->
-		<div class="flex flex-wrap items-end gap-2.5">
-			<div class="flex min-w-[15rem] flex-1 flex-col gap-1">
-				<label
-					for="projetosSearch"
-					class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-				>
-					Busca livre
-				</label>
-				<!-- projects-v4-search-wrap: ícone de lupa à esquerda, padding interno. -->
-				<div class="relative">
-					<i
-						class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
-						aria-hidden="true"
-					></i>
-					<input
-						id="projetosSearch"
-						name="search"
-						type="search"
-						autocomplete="off"
-						bind:value={search}
-						oninput={onSearchInput}
-						placeholder="Digite título, órgão ou indicador…"
-						class="h-9 w-full rounded-md border border-border-subtle bg-surface pl-8 pr-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-					/>
-				</div>
+		<!-- Linha essencial: busca/órgão/status/prioridade + ações à direita. -->
+		<div class="flex flex-wrap items-center gap-2">
+			<div class="relative min-w-[15rem] flex-1">
+				<i
+					class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
+					aria-hidden="true"
+				></i>
+				<input
+					id="projetosSearch"
+					name="search"
+					type="search"
+					autocomplete="off"
+					bind:value={search}
+					oninput={onSearchInput}
+					aria-label="Busca livre"
+					placeholder="Digite título, órgão ou indicador…"
+					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				/>
 			</div>
 
 			{#if orgaoOptions.length > 0}
-				<div class="flex min-w-[10rem] flex-col gap-1">
-					<label
-						for="projetosOrgao"
-						class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-					>
-						Órgão
-					</label>
-					<select
-						id="projetosOrgao"
-						bind:value={orgao}
-						onchange={applyFilterChange}
-						class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-					>
-						<option value="">Todos os órgãos</option>
-						{#each orgaoOptions as option (option.value)}
-							<option value={option.value}>{orgaoOptionLabel(option)}</option>
-						{/each}
-					</select>
-				</div>
+				<select
+					id="projetosOrgao"
+					bind:value={orgao}
+					onchange={applyFilterChange}
+					aria-label="Filtrar por órgão"
+					class="h-9 min-w-[10rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					<option value="">Todos os órgãos</option>
+					{#each orgaoOptions as option (option.value)}
+						<option value={option.value}>{orgaoOptionLabel(option)}</option>
+					{/each}
+				</select>
 			{/if}
 
-			<div class="flex min-w-[10rem] flex-col gap-1">
-				<label
-					for="projetosStatus"
-					class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-				>
-					Status
-				</label>
-				<select
-					id="projetosStatus"
-					bind:value={status}
-					onchange={applyFilterChange}
-					class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-				>
-					<option value="">Todos os status</option>
-					{#each statusOptions as option (option)}
-						<option value={option}>{option}</option>
-					{/each}
-				</select>
-			</div>
+			<select
+				id="projetosStatus"
+				bind:value={status}
+				onchange={applyFilterChange}
+				aria-label="Filtrar por status"
+				class="h-9 min-w-[10rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				<option value="">Todos os status</option>
+				{#each statusOptions as option (option)}
+					<option value={option}>{option}</option>
+				{/each}
+			</select>
 
-			<div class="flex min-w-[10rem] flex-col gap-1">
-				<label
-					for="projetosPrioridade"
-					class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-				>
-					Prioridade
-				</label>
-				<select
-					id="projetosPrioridade"
-					bind:value={prioridade}
-					onchange={applyFilterChange}
-					class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-				>
-					<option value="">Todas as prioridades</option>
-					{#each priorityOptions as option (option)}
-						<option value={option}>{capitalize(option)}</option>
-					{/each}
-				</select>
-			</div>
+			<select
+				id="projetosPrioridade"
+				bind:value={prioridade}
+				onchange={applyFilterChange}
+				aria-label="Filtrar por prioridade"
+				class="h-9 min-w-[10rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				<option value="">Todas as prioridades</option>
+				{#each priorityOptions as option (option)}
+					<option value={option}>{capitalize(option)}</option>
+				{/each}
+			</select>
 
-			<!-- Ações (projects-v4-filter-actions): empurradas para a direita. -->
-			<div class="ml-auto flex items-end gap-2">
+			<!-- Ações empurradas para a direita. -->
+			<div class="ml-auto flex items-center gap-2">
 				<button
 					type="submit"
 					title="Filtrar"
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary-700/25 bg-gradient-to-br from-primary-600 to-primary-700 px-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out hover:from-primary-500 hover:to-primary-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-primary-700/25 bg-gradient-to-br from-primary-600 to-primary-700 px-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out hover:from-primary-500 hover:to-primary-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<i class="fas fa-filter" aria-hidden="true"></i>
 					Filtrar
@@ -747,7 +717,7 @@
 					aria-expanded={advancedOpen}
 					aria-controls="projetosAdvancedPanel"
 					title={advancedOpen ? 'Menos filtros' : 'Mais filtros'}
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-all duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {advancedOpen
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-all duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {advancedOpen
 						? 'border-primary-500/50 bg-primary-100 text-primary-700'
 						: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-primary-700'}"
 				>
@@ -760,7 +730,7 @@
 						onclick={clearFilters}
 						title="Limpar filtros"
 						aria-label="Limpar filtros"
-						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 					>
 						<i class="fas fa-rotate-left" aria-hidden="true"></i>
 						Limpar
@@ -783,75 +753,48 @@
 			inert={!advancedOpen}
 		>
 			<div class="min-h-0 overflow-visible">
-				<div class="flex flex-wrap items-end gap-2.5">
-					<div class="flex min-w-[11rem] flex-1 flex-col gap-1">
-						<label
-							for="projetosDelivery"
-							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-						>
-							Tipo de entrega
-						</label>
-						<select
-							id="projetosDelivery"
-							bind:value={deliveryType}
-							onchange={applyFilterChange}
-							class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-						>
-							<option value="">Todos os tipos</option>
-							{#each deliveryOptions as option (option)}
-								<option value={option}>{option}</option>
-							{/each}
-						</select>
-					</div>
+				<div class="flex flex-wrap items-center gap-2">
+					<select
+						id="projetosDelivery"
+						bind:value={deliveryType}
+						onchange={applyFilterChange}
+						aria-label="Filtrar por tipo de entrega"
+						class="h-9 min-w-[11rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<option value="">Todos os tipos de entrega</option>
+						{#each deliveryOptions as option (option)}
+							<option value={option}>{option}</option>
+						{/each}
+					</select>
 
-					<div class="flex min-w-[11rem] flex-1 flex-col gap-1">
-						<label
-							for="projetosAtraso"
-							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-						>
-							Prazo
-						</label>
-						<select
-							id="projetosAtraso"
-							bind:value={atraso}
-							onchange={applyFilterChange}
-							class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-						>
-							<option value="">Todos os prazos</option>
-							{#each atrasoOptions as option (option.value)}
-								<option value={option.value}>{option.label}</option>
-							{/each}
-						</select>
-					</div>
+					<select
+						id="projetosAtraso"
+						bind:value={atraso}
+						onchange={applyFilterChange}
+						aria-label="Filtrar por prazo"
+						class="h-9 min-w-[11rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<option value="">Todos os prazos</option>
+						{#each atrasoOptions as option (option.value)}
+							<option value={option.value}>{option.label}</option>
+						{/each}
+					</select>
 
-					<div class="flex min-w-[16rem] flex-[2] flex-col gap-1">
-						<label
-							for="projetosObjetivo"
-							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-						>
-							Objetivo EEGD
-						</label>
-						<select
-							id="projetosObjetivo"
-							bind:value={objetivo}
-							onchange={applyFilterChange}
-							class="h-9 cursor-pointer rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
-						>
-							<option value="">Todos os objetivos</option>
-							{#each objetivosCatalog as option (option.id)}
-								<option value={String(option.id)}>{option.descricao}</option>
-							{/each}
-						</select>
-					</div>
+					<select
+						id="projetosObjetivo"
+						bind:value={objetivo}
+						onchange={applyFilterChange}
+						aria-label="Filtrar por objetivo EEGD"
+						class="h-9 min-w-[16rem] flex-[2] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<option value="">Todos os objetivos EEGD</option>
+						{#each objetivosCatalog as option (option.id)}
+							<option value={String(option.id)}>{option.descricao}</option>
+						{/each}
+					</select>
 
 					<!-- Indicador ABEP: combobox filtrável e navegável por teclado. -->
-					<div class="relative flex min-w-[18rem] flex-[2.4] flex-col gap-1">
-						<label
-							for="projetosAbep"
-							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-						>
-							Indicador ABEP
-						</label>
+					<div class="relative min-w-[18rem] flex-[2.4]">
 						<input
 							id="projetosAbep"
 							type="text"
@@ -868,8 +811,9 @@
 							onfocus={openAbep}
 							onkeydown={onAbepKeydown}
 							onblur={() => setTimeout(closeAbep, 120)}
-							placeholder="Busque por número ou título…"
-							class="h-9 cursor-text rounded-md border border-border-subtle bg-surface px-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/15"
+							aria-label="Filtrar por indicador ABEP"
+							placeholder="Indicador ABEP (número ou título)…"
+							class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 						/>
 						{#if abepOpen}
 							<!--
@@ -913,6 +857,7 @@
 			</div>
 		</div>
 	</form>
+	</div>
 
 	{#if loadState === 'loading'}
 		<p

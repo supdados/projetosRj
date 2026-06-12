@@ -253,112 +253,100 @@
 </svelte:head>
 
 <section aria-labelledby="pendentes-title" class="flex flex-col gap-6">
-	<PageHeader subtitle={headerSubtitle} labelId="pendentes-title">
+	<!-- CARD ÚNICO header + filtros (padrão da tela de Tarefas): chrome de card
+		 no wrapper, PageHeader compacto `embedded` e a linha de filtros embutida
+		 abaixo de um divisor fino. As ferramentas de expansão global viram ações
+		 do header (paridade funcional com pendentes.html). -->
+	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
+	<PageHeader compact embedded subtitle={headerSubtitle} labelId="pendentes-title">
 		{#snippet titleContent()}
 			<span class="align-middle">Projetos pendentes</span>
 			{#if summary}
 				<CountBadge class="ml-2">Projetos no foco: {Math.max(0, summary.total_projects - focusDelta)}</CountBadge>
 			{/if}
 		{/snippet}
-	</PageHeader>
-
-	<!-- Filtros (re-buscam server-side) -->
-	<form
-		class="flex flex-wrap items-end gap-4 rounded-lg border border-border-subtle bg-surface px-5 py-4 shadow-sm"
-		aria-label="Filtros de projetos pendentes"
-		onsubmit={(e) => e.preventDefault()}
-	>
-		<div class="flex min-w-[12rem] flex-col gap-1">
-			<label for="periodoFilter" class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-				Período
-			</label>
-			<select
-				id="periodoFilter"
-				value={periodo}
-				onchange={onPeriodoChange}
-				disabled={periodOptions.length === 0}
-				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-			>
-				{#each periodOptions as option (option.value)}
-					<option value={option.value}>{option.label}</option>
-				{/each}
-			</select>
-		</div>
-
-		<div class="flex min-w-[12rem] flex-col gap-1">
-			<label
-				for="responsavelFilter"
-				class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-			>
-				Responsável
-			</label>
-			<select
-				id="responsavelFilter"
-				value={responsavel}
-				onchange={onResponsavelChange}
-				disabled={!data || data.responsaveis_options.length === 0}
-				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-			>
-				<option value="">Todos</option>
-				{#if data}
-					{#each data.responsaveis_options as nome (nome)}
-						<option value={nome}>{nome}</option>
-					{/each}
-				{/if}
-			</select>
-		</div>
-
-		<div class="flex min-w-[12rem] flex-col gap-1">
-			<label
-				for="orgaoFilter"
-				class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-			>
-				Órgão
-			</label>
-			<select
-				id="orgaoFilter"
-				value={orgao === null ? '' : String(orgao)}
-				onchange={onOrgaoChange}
-				disabled={!data || data.orgaos_options.length === 0}
-				class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-			>
-				<option value="">Todos</option>
-				{#if data}
-					{#each data.orgaos_options as orgaoOption (orgaoOption.value)}
-						<option value={orgaoOption.value}>{orgaoOption.label}</option>
-					{/each}
-				{/if}
-			</select>
-		</div>
-
-		{#if hasActiveFilters}
-			<button
-				type="button"
-				onclick={clearFilters}
-				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				Limpar filtros
-			</button>
-		{/if}
-
-		<!-- Ferramentas de expansão global (paridade com pendentes.html) -->
-		<div class="ml-auto flex items-end gap-2">
+		{#snippet actions()}
 			<button
 				type="button"
 				onclick={expandAll}
-				class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				<i class="fas fa-plus-square" aria-hidden="true"></i> Expandir todas
 			</button>
 			<button
 				type="button"
 				onclick={collapseAll}
-				class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				<i class="fas fa-minus-square" aria-hidden="true"></i> Recolher todas
 			</button>
-		</div>
+		{/snippet}
+	</PageHeader>
+
+	<!-- Linha de filtros embutida (re-buscam server-side): campos SEM rótulos —
+		 os placeholders "Todos os..." identificam cada um (aria-label cobre a
+		 acessibilidade), no MESMO estilo dos selects da tela de Tarefas. -->
+	<form
+		class="flex flex-wrap items-center gap-2 border-t border-border-subtle px-4 py-2.5"
+		aria-label="Filtros de projetos pendentes"
+		onsubmit={(e) => e.preventDefault()}
+	>
+		<select
+			id="periodoFilter"
+			value={periodo}
+			onchange={onPeriodoChange}
+			disabled={periodOptions.length === 0}
+			aria-label="Filtrar por período"
+			class="h-9 min-w-[12rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+		>
+			{#each periodOptions as option (option.value)}
+				<option value={option.value}>{option.label}</option>
+			{/each}
+		</select>
+
+		<select
+			id="responsavelFilter"
+			value={responsavel}
+			onchange={onResponsavelChange}
+			disabled={!data || data.responsaveis_options.length === 0}
+			aria-label="Filtrar por responsável"
+			class="h-9 min-w-[12rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+		>
+			<option value="">Todos os responsáveis</option>
+			{#if data}
+				{#each data.responsaveis_options as nome (nome)}
+					<option value={nome}>{nome}</option>
+				{/each}
+			{/if}
+		</select>
+
+		<select
+			id="orgaoFilter"
+			value={orgao === null ? '' : String(orgao)}
+			onchange={onOrgaoChange}
+			disabled={!data || data.orgaos_options.length === 0}
+			aria-label="Filtrar por órgão"
+			class="h-9 min-w-[12rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+		>
+			<option value="">Todos os órgãos</option>
+			{#if data}
+				{#each data.orgaos_options as orgaoOption (orgaoOption.value)}
+					<option value={orgaoOption.value}>{orgaoOption.label}</option>
+				{/each}
+			{/if}
+		</select>
+
+		{#if hasActiveFilters}
+			<button
+				type="button"
+				onclick={clearFilters}
+				class="h-9 shrink-0 rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			>
+				Limpar
+			</button>
+		{/if}
 	</form>
+	</div>
 
 	{#if loadState === 'loading'}
 		<p role="status" aria-live="polite" class="text-text-secondary">Carregando projetos…</p>
