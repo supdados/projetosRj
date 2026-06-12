@@ -118,6 +118,10 @@ export interface PendingData {
 	/** Opções de período já rotuladas pelo backend (`period_options`). */
 	period_options: PendingPeriodOption[];
 	selected_responsavel: string;
+	/** Prioridade selecionada (ou "" quando sem filtro). */
+	selected_priority: string;
+	/** Texto de busca aplicado (título/órgão/indicador/ID). */
+	search_query: string;
 	selected_orgao: number | null;
 	responsaveis_options: string[];
 	/**
@@ -137,6 +141,8 @@ export interface PendingData {
 export interface PendingFilters {
 	periodo?: PendingPeriodo;
 	responsavel?: string;
+	prioridade?: string;
+	search?: string;
 	orgao?: number | null;
 	page?: number;
 }

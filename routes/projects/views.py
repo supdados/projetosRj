@@ -342,6 +342,8 @@ def build_projetos_pendentes_context(
     *,
     filtro_periodo="atrasados",
     selected_responsavel="",
+    selected_priority="",
+    search_query="",
     pending_page=1,
 ):
     """Monta os dados da tela "Projetos Pendentes", respeitando o escopo de órgão.
@@ -428,6 +430,27 @@ def build_projetos_pendentes_context(
                 Project.orgao_id.in_(orgao_subtree)
             )
 
+    # Filtro de prioridade e busca textual (paridade com a tela de Projetos):
+    # restringem o conjunto de projetos vigentes ANTES do cálculo de buckets.
+    if selected_priority:
+        query_projetos_base = query_projetos_base.filter(
+            Project.prioridade == selected_priority
+        )
+
+    if search_query:
+        search_pattern = f"%{search_query}%"
+        search_id = parse_db_integer_id(search_query)
+        text_filters = db.or_(
+            Project.titulo.ilike(search_pattern),
+            Project.orgao.ilike(search_pattern),
+            Project.abep_indicator.ilike(search_pattern),
+        )
+        query_projetos_base = query_projetos_base.filter(
+            db.or_(Project.id == search_id, text_filters)
+            if search_id is not None
+            else text_filters
+        )
+
     projetos_vigentes = query_projetos_base.order_by(Project.titulo.asc()).all()
     project_ids = [p.id for p in projetos_vigentes]
 
@@ -446,6 +469,8 @@ def build_projetos_pendentes_context(
             "selected_orgao": selected_orgao_id,
             "filtro_periodo": filtro_periodo,
             "selected_responsavel": selected_responsavel,
+            "selected_priority": selected_priority,
+            "search_query": search_query,
             "responsaveis_options": [],
             "period_options": [
                 ("atrasados", "Projetos Atrasados"),
@@ -673,6 +698,8 @@ def build_projetos_pendentes_context(
         "selected_orgao": selected_orgao_id,
         "filtro_periodo": filtro_periodo,
         "selected_responsavel": selected_responsavel,
+        "selected_priority": selected_priority,
+        "search_query": search_query,
         "responsaveis_options": responsaveis_options,
         "period_options": [
             ("atrasados", "Projetos Atrasados"),

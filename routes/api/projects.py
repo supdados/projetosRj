@@ -61,8 +61,7 @@ def _serialize_pending_context(context: dict[str, Any]) -> dict[str, Any]:
     period_label_map = context["period_label_map"]
     return {
         "projetos": [
-            serialize_pending_project_row(row)
-            for row in context["projetos_com_etapas"]
+            serialize_pending_project_row(row) for row in context["projetos_com_etapas"]
         ],
         "filtro_periodo": context["filtro_periodo"],
         # Rótulo legível do período selecionado, derivado da MESMA fonte de
@@ -77,6 +76,8 @@ def _serialize_pending_context(context: dict[str, Any]) -> dict[str, Any]:
             for value, label in context["period_options"]
         ],
         "selected_responsavel": context["selected_responsavel"],
+        "selected_priority": context["selected_priority"],
+        "search_query": context["search_query"],
         "selected_orgao": context["selected_orgao"],
         "responsaveis_options": context["responsaveis_options"],
         "orgaos_options": [
@@ -130,6 +131,10 @@ def api_projetos_pendentes() -> Response | tuple[Response, int]:
         selected_orgao_id,
         filtro_periodo=(request.args.get("periodo") or "atrasados").strip(),
         selected_responsavel=(request.args.get("responsavel") or "").strip(),
+        selected_priority=(request.args.get("prioridade") or "").strip(),
+        search_query=(
+            request.args.get("q") or request.args.get("search") or ""
+        ).strip(),
         pending_page=request.args.get("page", 1, type=int),
     )
     return ok(_serialize_pending_context(context))
@@ -230,7 +235,9 @@ def api_projetos() -> Response | tuple[Response, int]:
         selected_delivery_type=request.args.get("delivery_type"),
         selected_abep_indicator=request.args.get("abep_indicator"),
         selected_objetivo=request.args.get("objetivo"),
-        search_query=(request.args.get("q") or request.args.get("search") or "").strip(),
+        search_query=(
+            request.args.get("q") or request.args.get("search") or ""
+        ).strip(),
         page=request.args.get("page", 1, type=int),
     )
     return ok(_serialize_projects_list_context(context))

@@ -17,6 +17,8 @@ function buildQuery(filters: PendingFilters): string {
 	const params = new URLSearchParams();
 	if (filters.periodo) params.set('periodo', filters.periodo);
 	if (filters.responsavel) params.set('responsavel', filters.responsavel);
+	if (filters.prioridade) params.set('prioridade', filters.prioridade);
+	if (filters.search && filters.search.trim()) params.set('q', filters.search.trim());
 	if (filters.orgao !== undefined && filters.orgao !== null) {
 		params.set('orgao', String(filters.orgao));
 	}
