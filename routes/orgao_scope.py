@@ -44,10 +44,21 @@ def get_user_orgao_subtree_ids(user) -> set[int]:
 
 
 def sanitize_orgao_filter_for_user(user, selected_orgao_id):
-    """Valida o filtro ?orgao=<id> contra o subtree do usuario.
+    """Valida o filtro ?orgao=<id> contra a ARVORE VISIVEL do usuario.
 
     Retorna ``(orgao_id|None, invalid: bool)``. Invalido quando o id nao esta
-    no subtree de um nao-admin - nesse caso caller redireciona.
+    entre os orgaos VISIVEIS de um nao-admin - nesse caso o caller redireciona
+    (Jinja) ou devolve 422 (API).
+
+    O conjunto aceito e a arvore visivel (``get_visible_orgao_tree``: ancestrais
+    + orgao do vinculo + descendentes) — a MESMA fonte que popula os seletores
+    (``get_user_orgao_options``) e a arvore do topnav, onde TODO no e clicavel.
+    Validar so contra a subtree (vinculo + descendentes) rejeitava com 422 a
+    selecao de um ANCESTRAL, que e oferecido como opcao — inconsistencia
+    corrigida aqui. Aceitar um ancestral e seguro: cada consumidor ja clampa a
+    query base a subtree do usuario ANTES de aplicar ``expand_orgao_filter_ids``,
+    entao o filtro por ancestral intersecta de volta para a subtree (sem
+    vazamento de ramos irmaos).
     """
     if selected_orgao_id in (None, "", "None"):
         return None, False
@@ -61,8 +72,8 @@ def sanitize_orgao_filter_for_user(user, selected_orgao_id):
     if getattr(user, "is_admin", False):
         return orgao_id, False
 
-    subtree = get_user_orgao_subtree_ids(user)
-    if orgao_id not in subtree:
+    visible_ids = {node["id"] for node in get_visible_orgao_tree(user)}
+    if orgao_id not in visible_ids:
         return None, True
     return orgao_id, False
 
