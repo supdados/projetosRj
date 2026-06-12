@@ -291,7 +291,7 @@
 		 no wrapper, PageHeader compacto `embedded` e a linha de filtros embutida
 		 abaixo de um divisor fino. -->
 	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
-	<PageHeader compact embedded subtitle={headerSubtitle} labelId="pendentes-title">
+	<PageHeader compact embedded class="min-h-[3.5rem]" subtitle={headerSubtitle} labelId="pendentes-title">
 		{#snippet titleContent()}
 			<span class="align-middle">Projetos pendentes</span>
 			{#if summary}
@@ -310,19 +310,6 @@
 		aria-label="Filtros de projetos pendentes"
 		onsubmit={onSearchSubmit}
 	>
-		<select
-			id="periodoFilter"
-			value={periodo}
-			onchange={onPeriodoChange}
-			disabled={periodOptions.length === 0}
-			aria-label="Filtrar por período"
-			class="h-9 min-w-[11rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-		>
-			{#each periodOptions as option (option.value)}
-				<option value={option.value}>{option.label}</option>
-			{/each}
-		</select>
-
 		<div class="relative min-w-[14rem] flex-1">
 			<i
 				class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
@@ -340,6 +327,19 @@
 				class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			/>
 		</div>
+
+		<select
+			id="periodoFilter"
+			value={periodo}
+			onchange={onPeriodoChange}
+			disabled={periodOptions.length === 0}
+			aria-label="Filtrar por período"
+			class="h-9 min-w-[11rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+		>
+			{#each periodOptions as option (option.value)}
+				<option value={option.value}>{option.label}</option>
+			{/each}
+		</select>
 
 		{#if data && data.orgaos_options.length > 1}
 			<select

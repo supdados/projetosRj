@@ -21,7 +21,6 @@
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import Card from './Card.svelte';
-	import Badge from './Badge.svelte';
 	import { flash } from '$lib/stores/flash';
 	import { ApiClientError } from '$lib/api/client';
 	import { toggleEtapaIniciada, toggleEtapaDone } from '$lib/api/pendentesMutations';
@@ -163,13 +162,30 @@
 
 	const chips = $derived(
 		[
-			{ key: 'atrasadas', count: counts.atrasadas, label: 'atrasadas', tone: 'danger' },
-			{ key: '7dias', count: counts['7dias'], label: '7d', tone: 'warning' },
-			{ key: '14dias', count: counts['14dias'], label: '14d', tone: 'info' },
-			{ key: '21dias', count: counts['21dias'], label: '21d', tone: 'info' },
+			{
+				key: 'atrasadas',
+				count: counts.atrasadas,
+				label: counts.atrasadas === 1 ? 'atrasada' : 'atrasadas',
+				tone: 'danger'
+			},
+			{ key: '7dias', count: counts['7dias'], label: 'em 7d', tone: 'warning' },
+			{ key: '14dias', count: counts['14dias'], label: 'em 14d', tone: 'info' },
+			{ key: '21dias', count: counts['21dias'], label: 'em 21d', tone: 'info' },
 			{ key: 'sem_data', count: counts.sem_data, label: 'sem data', tone: 'neutral' }
 		].filter((chip) => chip.count > 0) as Chip[]
 	);
+
+	/**
+	 * Cor de TEXTO por tom do resumo de janelas. Sem pílula/ícone (condizente com
+	 * Projetos/Tarefas, que usam texto colorido em vez de badge); o vermelho de
+	 * "atrasadas" usa o token padrão `text-danger`, mais sutil como texto simples.
+	 */
+	const CHIP_TEXT_TONE: Record<Chip['tone'], string> = {
+		danger: 'text-danger',
+		warning: 'text-warning',
+		info: 'text-info',
+		neutral: 'text-text-muted'
+	};
 
 	const headingId = $derived(`pending-project-${project.id}`);
 	const isExpanded = $derived(expandedProjects.has(String(project.id)));
@@ -300,29 +316,43 @@
 	}
 </script>
 
+{#snippet stageColumns()}
+	<!-- Larguras FIXAS (table-fixed) p/ que todos os cards tenham a MESMA grade de
+		 colunas, independente do conteúdo. Etapa ocupa o restante; ações têm largura
+		 fixa. -->
+	<colgroup>
+		<col />
+		<col class="w-[18%]" />
+		<col class="w-[7.5rem]" />
+		<col class="w-[7.5rem]" />
+		<col class="w-[8.75rem]" />
+		<col class="w-[9rem]" />
+	</colgroup>
+{/snippet}
+
 {#snippet etapaRow(etapa: PendingEtapa)}
 	{@const progress = progressOf(etapa)}
 	{@const key = statusKey(etapa.id)}
 	{@const isDone = key === 'done'}
 	{@const isEmpty = progress.total === 0}
 	<tr class="group border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted/50">
-		<td class="py-2.5 pr-3 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}">
-			{etapa.descricao}
+		<td class="truncate px-2 py-2.5 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}" title={`${etapa.id} - ${etapa.descricao}`}>
+			<span class="font-mono font-normal text-text-muted">{etapa.id}</span> - {etapa.descricao}
 		</td>
-		<td class="py-2.5 pr-3 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
+		<td class="truncate px-2 py-2.5 text-center align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}" title={etapa.responsavel || 'Não informado'}>
 			{etapa.responsavel || 'Não informado'}
 		</td>
-		<td class="py-2.5 pr-3 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
+		<td class="whitespace-nowrap px-2 py-2.5 text-center align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
 			{#if etapa.data_inicio}
 				<time datetime={etapa.data_inicio}>{formatDateBr(etapa.data_inicio)}</time>
 			{:else}—{/if}
 		</td>
-		<td class="py-2.5 pr-3 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
+		<td class="whitespace-nowrap px-2 py-2.5 text-center align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
 			{#if etapa.data_fim}
 				<time datetime={etapa.data_fim}>{formatDateBr(etapa.data_fim)}</time>
 			{:else}—{/if}
 		</td>
-		<td class="py-2.5 pr-3 text-center align-middle">
+		<td class="px-2 py-2.5 text-center align-middle">
 			<button
 				type="button"
 				onclick={() => openQuickAdd(etapa)}
@@ -343,18 +373,16 @@
 				{/if}
 			</button>
 		</td>
-		<td class="py-2.5 text-center align-middle">
+		<td class="px-2 py-2.5 text-center align-middle">
+			<!-- Status: réplica fiel do botão-ciclo da etapa dentro do projeto
+				 (StageRow `.etapa-status-toggle`) — mesmas cores, ícones e rótulos. -->
 			<button
 				type="button"
 				onclick={() => void toggleStatus(etapa)}
 				disabled={inFlightEtapa === etapa.id}
 				title={STATUS_TITLE[key]}
-				class="inline-flex h-8 min-w-[7.75rem] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold leading-none transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50
-					{key === 'done'
-					? 'border-success/40 bg-surface-muted text-success hover:bg-surface-muted'
-					: key === 'started'
-						? 'border-primary-500/40 bg-primary-100 text-primary-700 hover:bg-primary-100'
-						: 'border-border-subtle bg-surface text-text-secondary hover:border-primary-500 hover:bg-surface-muted'}"
+				class="etapa-status-toggle etapa-status-toggle-{key}"
+				data-state={key}
 			>
 				<i class={STATUS_ICON[key]} aria-hidden="true"></i>
 				<span>{STATUS_LABEL[key]}</span>
@@ -369,13 +397,16 @@
 			class="-mx-5 -mt-5 flex flex-col gap-2 border-b border-border-subtle px-5 pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between"
 		>
 			<div class="flex min-w-0 flex-col gap-1">
+				<!-- ID original do projeto antes do nome (ID - Nome), no mesmo padrão
+					 do ProjectGroupHeader das tarefas: id em mono/muted + separador. -->
 				<a
 					href={`${base}/projetos/${project.id}`}
 					id={headingId}
 					title="Abrir projeto"
-					class="inline-flex min-w-0 items-center gap-2 font-heading text-lg font-bold text-text-primary no-underline transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="flex min-w-0 items-baseline gap-1.5 font-heading text-lg font-semibold text-text-primary no-underline transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
-					<i class="fas fa-folder-open shrink-0 text-primary-600" aria-hidden="true"></i>
+					<span class="shrink-0 font-mono text-base font-normal text-text-muted">{project.id}</span>
+					<span class="shrink-0 text-text-muted" aria-hidden="true">-</span>
 					<span class="truncate">{project.titulo}</span>
 				</a>
 				<span class="text-xs text-text-muted">
@@ -387,41 +418,40 @@
 				</span>
 			</div>
 
-			<ul
-				class="flex flex-wrap items-center justify-end gap-1.5"
+			<!-- Resumo de etapas por janela: texto simples (sem pílula/ícone),
+				 condizente com o status/prioridade em texto colorido das outras telas. -->
+			<div
+				class="flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5 text-xs"
 				aria-label="Resumo de etapas por janela"
 			>
-				{#each chips as chip (chip.key)}
-					<li>
-						<Badge tone={chip.tone}>
-							{#if chip.key === 'atrasadas'}
-								<i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
-							{/if}
-							<span class="font-bold">{chip.count}</span>
-							{chip.label}
-						</Badge>
-					</li>
+				{#each chips as chip, i (chip.key)}
+					{#if i > 0}<span class="text-text-muted" aria-hidden="true">·</span>{/if}
+					<span class={CHIP_TEXT_TONE[chip.tone]}>
+						<b class="font-semibold">{chip.count}</b>
+						{chip.label}
+					</span>
 				{/each}
 				{#if chips.length === 0}
-					<li><Badge tone="neutral">Sem pendências na janela</Badge></li>
+					<span class="text-text-muted">Sem pendências na janela</span>
 				{/if}
-			</ul>
+			</div>
 		</header>
 
 		{#if row.etapas_visiveis.length === 0}
 			<p class="text-sm text-text-muted">Sem etapas urgentes na janela atual.</p>
 		{:else}
 			<div class="overflow-x-auto">
-				<table class="w-full border-collapse text-sm">
+				<table class="w-full table-fixed border-collapse text-sm">
 					<caption class="sr-only">Etapas pendentes de {project.titulo}</caption>
+					{@render stageColumns()}
 					<thead>
 						<tr
-							class="border-b border-border-subtle bg-surface-muted/60 text-left text-xs font-bold uppercase tracking-caps text-text-muted"
+							class="border-b border-border-subtle bg-surface-muted text-left text-xs font-bold uppercase tracking-caps text-text-muted"
 						>
-							<th scope="col" class="px-2 py-2.5 font-bold">Etapa</th>
-							<th scope="col" class="px-2 py-2.5 font-bold">Responsável</th>
-							<th scope="col" class="px-2 py-2.5 font-bold">Início Prev.</th>
-							<th scope="col" class="px-2 py-2.5 font-bold">Fim Prev.</th>
+							<th scope="col" class="px-2 py-2.5 font-bold">Descrição</th>
+							<th scope="col" class="px-2 py-2.5 text-center font-bold">Responsável</th>
+							<th scope="col" class="px-2 py-2.5 text-center font-bold">Data Início</th>
+							<th scope="col" class="px-2 py-2.5 text-center font-bold">Data Fim</th>
 							<th scope="col" class="px-2 py-2.5 text-center font-bold">Tarefas</th>
 							<th scope="col" class="px-2 py-2.5 text-center font-bold">Status</th>
 						</tr>
@@ -442,11 +472,10 @@
 					onclick={toggleExpanded}
 					aria-expanded={isExpanded}
 					aria-controls={otherPanelId}
-					class="inline-flex w-fit items-center gap-2 rounded-md px-5 py-2.5 text-sm font-semibold text-primary-700 transition-colors duration-fast hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex w-fit items-center rounded-md px-5 py-2.5 text-sm font-semibold text-primary-700 transition-colors duration-fast hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
-					<i class={isExpanded ? 'fas fa-minus' : 'fas fa-plus'} aria-hidden="true"></i>
 					<span>
-						{#if isExpanded}Recolher{:else}+ {row.qtd_outras} outras etapas{/if}
+						{#if isExpanded}- Recolher{:else}+ {row.qtd_outras} {row.qtd_outras === 1 ? 'etapa' : 'etapas'}{/if}
 					</span>
 				</button>
 
@@ -460,16 +489,17 @@
 							Outras etapas
 						</div>
 						<div class="overflow-x-auto px-5 pb-3">
-							<table class="w-full border-collapse text-sm">
+							<table class="w-full table-fixed border-collapse text-sm">
 								<caption class="sr-only">Outras etapas de {project.titulo}</caption>
+								{@render stageColumns()}
 								<thead>
 									<tr
-										class="border-b border-border-subtle bg-surface-muted/60 text-left text-xs font-bold uppercase tracking-caps text-text-muted"
+										class="border-b border-border-subtle bg-surface-muted text-left text-xs font-bold uppercase tracking-caps text-text-muted"
 									>
-										<th scope="col" class="px-2 py-2.5 font-bold">Etapa</th>
-										<th scope="col" class="px-2 py-2.5 font-bold">Responsável</th>
-										<th scope="col" class="px-2 py-2.5 font-bold">Início Prev.</th>
-										<th scope="col" class="px-2 py-2.5 font-bold">Fim Prev.</th>
+										<th scope="col" class="px-2 py-2.5 font-bold">Descrição</th>
+										<th scope="col" class="px-2 py-2.5 text-center font-bold">Responsável</th>
+										<th scope="col" class="px-2 py-2.5 text-center font-bold">Data Início</th>
+										<th scope="col" class="px-2 py-2.5 text-center font-bold">Data Fim</th>
 										<th scope="col" class="px-2 py-2.5 text-center font-bold">Tarefas</th>
 										<th scope="col" class="px-2 py-2.5 text-center font-bold">Status</th>
 									</tr>
@@ -487,3 +517,69 @@
 		{/if}
 	</div>
 </Card>
+
+<style>
+	/* Botão de status (ciclo) — PORTE 1:1 do `.etapa-status-toggle` da etapa dentro
+	   do projeto (StageRow.svelte), para a etapa em Pendentes ter a MESMA cor,
+	   borda e aparência: branco/azul-acinzentado (não iniciada), azul (iniciada),
+	   verde (concluída). */
+	.etapa-status-toggle {
+		height: 30px;
+		min-width: 124px;
+		border-radius: 7px;
+		border: 1px solid #cbdcf0;
+		padding: 0 0.58rem;
+		background: #fff;
+		color: #2b4d6f;
+		font-weight: 600;
+		font-size: 0.78rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.3rem;
+		cursor: pointer;
+		transition: all 0.16s ease;
+	}
+	.etapa-status-toggle i {
+		font-size: 0.875rem;
+	}
+	.etapa-status-toggle:hover:not(:disabled),
+	.etapa-status-toggle:focus-visible:not(:disabled) {
+		background: #f1f7ff;
+		border-color: #b7cee5;
+		color: #20486f;
+		outline: none;
+	}
+	.etapa-status-toggle:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+	.etapa-status-toggle-done {
+		background: #eaf7f1;
+		border-color: #b9dfca;
+		color: #1d714e;
+	}
+	.etapa-status-toggle-done:hover:not(:disabled),
+	.etapa-status-toggle-done:focus-visible:not(:disabled) {
+		background: #e3f4eb;
+		border-color: #a8d5bd;
+		color: #175f41;
+	}
+	.etapa-status-toggle-started {
+		background: #edf5ff;
+		border-color: #c5d8ee;
+		color: #255585;
+	}
+	.etapa-status-toggle-started:hover:not(:disabled),
+	.etapa-status-toggle-started:focus-visible:not(:disabled) {
+		background: #e7f1fd;
+		border-color: #b8d0ea;
+		color: #214f7d;
+	}
+	/* Dark mode: paridade com o override do StageRow (só o estado base). */
+	:global(html[data-theme='dark']) .etapa-status-toggle {
+		background: #2b3a4f;
+		border-color: var(--color-border);
+		color: #d2dfec;
+	}
+</style>
