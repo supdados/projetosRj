@@ -134,8 +134,21 @@ def test_api_board_card_exposes_comments_and_anexos_counts(app, client_user, see
         card["id"]: card for column in data["columns"] for card in column["tasks"]
     }
     card = seeded[seed_data["task_id"]]
-    assert card["comments_count"] == 1
-    assert card["anexos_count"] == 1
+    # Os contadores devem refletir o banco — asserimos contra a contagem REAL,
+    # não um literal: o seed já anexa um "Comentario inicial" a esta task
+    # (TaskItemComment é alias de TaskComment), então o total de comentários é 2
+    # (seed + o adicionado aqui), enquanto o anexo do seed vai para `orphan_task`
+    # e não conta aqui. Comparar com a contagem do banco pega dupla-contagem/drift
+    # sem depender do estado exato do seed.
+    with app.app_context():
+        expected_comments = TaskComment.query.filter_by(
+            task_id=seed_data["task_id"]
+        ).count()
+        expected_anexos = TaskAnexo.query.filter_by(
+            task_id=seed_data["task_id"]
+        ).count()
+    assert card["comments_count"] == expected_comments
+    assert card["anexos_count"] == expected_anexos
 
 
 def test_api_board_requires_session(client):
