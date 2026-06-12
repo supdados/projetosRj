@@ -736,6 +736,7 @@
 		labelId="tarefas-title"
 		compact
 		embedded
+		class="min-h-[3.5rem]"
 		subtitle={view === 'kanban'
 			? 'Tarefas ativas por status. Arraste os cards entre colunas para mudar o status.'
 			: 'Tarefas agrupadas por projeto.'}

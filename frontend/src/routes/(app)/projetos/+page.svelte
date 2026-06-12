@@ -594,6 +594,7 @@
 		labelId="projetos-title"
 		compact
 		embedded
+		class="min-h-[3.5rem]"
 		subtitle="Visualize, filtre e acompanhe seus projetos."
 	>
 		{#snippet titleContent()}
@@ -622,7 +623,7 @@
 		 placeholders "Todos os..." identificam cada um (acessibilidade via
 		 aria-label). O painel "Mais filtros" mantém o slide animado. -->
 	<form
-		class="flex flex-col gap-2 border-t border-border-subtle px-4 py-2.5"
+		class="flex flex-col border-t border-border-subtle px-4 py-2.5"
 		role="search"
 		aria-label="Filtros de projetos"
 		onsubmit={onSubmit}
