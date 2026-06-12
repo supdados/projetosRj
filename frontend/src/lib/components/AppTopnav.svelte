@@ -46,8 +46,8 @@
 	const navLinks: NavLink[] = [
 		{ label: 'Inicio', path: '/dashboard', icon: 'fa-home' },
 		{ label: 'Projetos', path: '/projetos', icon: 'fa-folder-open' },
-		{ label: 'Tarefas', path: '/tarefas', icon: 'fa-tasks' },
 		{ label: 'Pendentes', path: '/projetos/pendentes', icon: 'fa-exclamation-triangle' },
+		{ label: 'Tarefas', path: '/tarefas', icon: 'fa-tasks' },
 		{ label: 'Calendario', path: '/calendarios', icon: 'fa-calendar-alt' }
 	];
 
