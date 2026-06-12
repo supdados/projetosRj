@@ -276,16 +276,12 @@
 			list.style.justifyContent = 'flex-start';
 			return;
 		}
-		// Quando escondemos algum item, a sobra restante e MENOR que a altura de um
-		// item — distribui-la entre os visiveis (`space-between`) enche a lista ate o
-		// rodape sem deixar rebarba. So quando TUDO coube com folga grande (lista
-		// curta numa tela alta) o `space-between` abriria buracos feios: nesse caso
-		// limita o vao e empacota no topo.
-		const someHidden = visible.length < items.length;
-		if (someHidden) {
-			list.style.justifyContent = 'space-between';
-			return;
-		}
+		// Distribui a folga entre os itens (`space-between`) APENAS enquanto o vão
+		// resultante fica discreto (<= MAX_GAP_PX). Se a folga for grande — um item
+		// quase coube, ou a tela é bem mais alta que a lista — empacota no topo
+		// (`flex-start`) com o gap natural e a sobra vai para o RODAPÉ, em vez de
+		// abrir buracos enormes entre os cards (era o caso especial `someHidden`,
+		// que distribuía a sobra inteira e estourava o espaçamento).
 		const used = visible.reduce((sum, el) => sum + el.offsetHeight, 0);
 		const gapPerItem = (list.clientHeight - used) / (visible.length - 1);
 		const MAX_GAP_PX = 14;
@@ -534,7 +530,7 @@
 										<a
 											href={`${base}/tarefas?focus_task=${t.id}`}
 											title={t.descricao}
-											class="recent-task-item flex items-center gap-2.5 rounded-xl border border-border-subtle px-3 py-1.5 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="recent-task-item flex items-center gap-2.5 rounded-xl border border-border-subtle px-3 py-1 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 										>
 											<span
 												class="flex h-5 w-5 shrink-0 items-center justify-center"
