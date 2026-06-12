@@ -45,10 +45,21 @@
 		 *  dentro de um card maior que agrupa header + outra zona (ex.: filtros)
 		 *  numa unica secao. */
 		embedded?: boolean;
+		/** Classes extras no <header> (ex.: `min-h-[3rem]` para igualar a altura
+		 *  de um header de outra tela quando o conteudo das acoes e mais baixo). */
+		class?: string;
 	}
 
-	let { title, titleContent, subtitle, labelId, actions, compact = false, embedded = false }: Props =
-		$props();
+	let {
+		title,
+		titleContent,
+		subtitle,
+		labelId,
+		actions,
+		compact = false,
+		embedded = false,
+		class: extraClass = ''
+	}: Props = $props();
 
 	/**
 	 * Motion coordenado com a expansão do Kanban de tarefas (mesmos valores de
@@ -74,8 +85,8 @@
 	class="flex flex-wrap items-center justify-between gap-4 px-4 motion-safe:transition-[padding,min-height] {headerMotion} {embedded
 		? ''
 		: 'rounded-xl border border-border-subtle bg-surface shadow-sm'} {compact
-		? 'min-h-0 py-1.5'
-		: 'min-h-[5.25rem] py-3'}"
+		? 'py-1.5'
+		: 'min-h-[5.25rem] py-3'} {extraClass}"
 >
 	<div class="min-w-0 flex-1">
 		<h1

@@ -863,7 +863,7 @@
 		status Google vira uma pilula ao lado do titulo: integra-se ao header sem
 		empilhar uma linha extra de controles (sem expandir a altura da tela).
 	-->
-	<PageHeader compact subtitle="Eventos e reunioes da equipe" labelId="calendarios-title">
+	<PageHeader compact class="min-h-[3rem]" subtitle="Eventos e reunioes da equipe" labelId="calendarios-title">
 		{#snippet titleContent()}
 			<span>Calendário</span>
 			{#if hub?.connection}
@@ -1271,7 +1271,8 @@
 
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		/* 1rem = mesma distância header→conteúdo da tela inicial (gap-4). */
+		gap: 1rem;
 	}
 
 	/* ── Toolbar (dentro das `actions` do PageHeader) ───────────────────
@@ -1409,7 +1410,8 @@
 		display: flex;
 		gap: 1.25rem;
 		align-items: flex-start;
-		margin-top: 0.75rem;
+		/* Sem margin-top: o respiro header→conteúdo vem do gap do .cal-page
+		   (1rem), padronizado com a tela inicial. */
 	}
 	.cal-main-col {
 		flex: 1 1 0;

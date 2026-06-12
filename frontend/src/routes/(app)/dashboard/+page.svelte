@@ -324,7 +324,7 @@
 	class="dashboard-viewport-lock flex flex-col gap-4 lg:h-full lg:min-h-0"
 >
 	<!-- Hero "Olá, <nome> / Administrador" + data + Novo Projeto -->
-	<PageHeader subtitle={welcomeContext} labelId="dashboard-title">
+	<PageHeader compact subtitle={welcomeContext} labelId="dashboard-title">
 		{#snippet titleContent()}
 			<span class="mr-1 font-semibold text-text-secondary">Olá,</span>
 			<span>{welcomeName}</span>
