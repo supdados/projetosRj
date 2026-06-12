@@ -1,7 +1,7 @@
 /**
  * Helpers PUROS de apresentação de comentários (árvore inline do hub).
- * Iniciais e cor de avatar espelham `AssigneeAvatar` (mesma regra de hash) para
- * manter a identidade visual consistente entre responsáveis e autores.
+ * Iniciais espelham `AssigneeAvatar.computeInitials`; a cor do avatar vive em
+ * `$lib/utils/avatarPalette` (paleta curada, fonte única).
  */
 
 /** Iniciais a partir do nome (mesma regra de AssigneeAvatar.computeInitials). */
@@ -10,16 +10,6 @@ export function initialsFromName(value: string): string {
 	if (parts.length === 0) return '?';
 	if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
 	return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-/** Hue determinístico por nome (idêntico a AssigneeAvatar.hueFor). */
-export function hueForName(value: string): number {
-	let hash = 0;
-	const source = value || '?';
-	for (let i = 0; i < source.length; i++) {
-		hash = (hash * 31 + source.charCodeAt(i)) % 360;
-	}
-	return hash;
 }
 
 /** Data curta "dd/mm/aa hh:mm" (PT). Vazio para ISO inválido/nulo. */
