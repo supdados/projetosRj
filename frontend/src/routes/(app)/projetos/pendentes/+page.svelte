@@ -14,21 +14,28 @@
 	 * fluxo legado não tem).
 	 */
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
+	import { goto } from '$app/navigation';
 	import { fetchPendentes } from '$lib/api/pendentes';
+	import { fetchProjects, type CreateProjectResult } from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
 	import type {
 		PendingData,
 		PendingFilters,
 		PendingPeriodo
 	} from '$lib/types/pendentes';
+	import type { ProjectsListOptions } from '$lib/types/projects';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PendingProjectCard from '$lib/components/PendingProjectCard.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
+	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
+	import { flash } from '$lib/stores/flash';
 
 	/** Chave de persistência do estado expandido (mesma semântica do legado). */
 	const EXPANDED_STORAGE_KEY = 'pendingExpandedProjects';
@@ -70,6 +77,40 @@
 	let prioridade = $state<string>('');
 	let orgao = $state<number | null>(null);
 	let page = $state<number>(1);
+
+	// Criar projeto pelo header (mesmo botão/fluxo de Home e Projetos): as opções
+	// do formulário vivem no payload de /api/projetos; busca sob demanda na 1ª
+	// abertura e reaproveita. Sucesso fecha, avisa e vai ao projeto.
+	let createModalOpen = $state(false);
+	let createOptions = $state<ProjectsListOptions | null>(null);
+	let openingCreate = $state(false);
+
+	async function openCreateModal(): Promise<void> {
+		if (openingCreate) return;
+		if (!createOptions) {
+			openingCreate = true;
+			try {
+				createOptions = (await fetchProjects({})).options;
+			} catch (err) {
+				flash.danger(
+					err instanceof Error ? err.message : 'Falha ao preparar o formulário de novo projeto.'
+				);
+				return;
+			} finally {
+				openingCreate = false;
+			}
+		}
+		createModalOpen = true;
+	}
+
+	function onProjectCreated(result: CreateProjectResult): void {
+		createModalOpen = false;
+		flash.success(result.message);
+		const target = result.redirect_to.startsWith('/')
+			? `${base}${result.redirect_to}`
+			: result.redirect_to;
+		void goto(target);
+	}
 
 	let inFlight: AbortController | null = null;
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -298,6 +339,15 @@
 				<CountBadge class="ml-2">Projetos no foco: {Math.max(0, summary.total_projects - focusDelta)}</CountBadge>
 			{/if}
 		{/snippet}
+		{#snippet actions()}
+			<!-- Mesmo botão "Novo Projeto" de Home e Projetos (Button size="sm"). -->
+			<Button size="sm" onclick={openCreateModal} disabled={openingCreate}>
+				{#snippet icon()}
+					<i class="fas fa-plus" aria-hidden="true"></i>
+				{/snippet}
+				Novo Projeto
+			</Button>
+		{/snippet}
 	</PageHeader>
 
 	<!-- Linha de filtros embutida (re-buscam server-side). Ordem: Período · Busca
@@ -465,3 +515,11 @@
 
 <!-- Drawer de tarefa (reusado da lane fe:tarefas-drawer; não reescrito). -->
 <TaskDrawer store={drawer} />
+
+<!-- Modal de criação de projeto (mesmo fluxo de Home/Projetos). -->
+<CriarProjetoModal
+	open={createModalOpen}
+	options={createOptions}
+	onClose={() => (createModalOpen = false)}
+	onCreated={onProjectCreated}
+/>

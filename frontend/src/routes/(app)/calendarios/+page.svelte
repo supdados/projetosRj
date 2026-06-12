@@ -41,6 +41,7 @@
 		CalendarMember
 	} from '$lib/types/calendar';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Button from '$lib/components/Button.svelte';
 	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import CalendarWeekGrid from '$lib/components/calendar/CalendarWeekGrid.svelte';
@@ -863,7 +864,7 @@
 		status Google vira uma pilula ao lado do titulo: integra-se ao header sem
 		empilhar uma linha extra de controles (sem expandir a altura da tela).
 	-->
-	<PageHeader compact class="min-h-[3rem]" subtitle="Eventos e reunioes da equipe" labelId="calendarios-title">
+	<PageHeader compact class="min-h-[3.5rem]" subtitle="Eventos e reunioes da equipe" labelId="calendarios-title">
 		{#snippet titleContent()}
 			<span>Calendário</span>
 			{#if hub?.connection}
@@ -913,10 +914,13 @@
 				<div class="cal-toolbar">
 					<!-- Ações de conexão Google agora vivem no menu do badge "Google"
 						 (ao lado do título). A toolbar fica só com "Novo evento". -->
-					<button class="cal-btn-new" type="button" onclick={() => openCreate()}>
-						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+					<!-- Botão padronizado (mesmo Button size="sm" das telas de projetos). -->
+					<Button size="sm" onclick={() => openCreate()}>
+						{#snippet icon()}
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+						{/snippet}
 						Novo evento
-					</button>
+					</Button>
 				</div>
 			{/if}
 		{/snippet}
@@ -1438,32 +1442,16 @@
 		background: var(--app-color-surface-muted);
 		color: var(--app-color-text-primary);
 	}
+	/* Selecionado SUTIL: tint claro de primary (primary-100) + texto primary-700,
+	   bem menos pesado que o gradiente sólido do botão "Novo evento" — antes usava
+	   o mesmo primary cheio e rivalizava com a ação primária. */
 	.cal-toggle-btn.is-active {
-		background: var(--app-color-primary);
-		color: #fff;
+		background: var(--ds-color-primary-100);
+		color: var(--ds-color-primary-700);
+		font-weight: 600;
 	}
 
 	/* ── Buttons ────────────────────────────────────────────────────── */
-	.cal-btn-new {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		padding: 0.42rem 0.85rem;
-		background: var(--app-color-primary);
-		color: #fff;
-		border: none;
-		border-radius: 0.45rem;
-		font-size: 0.84rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: background 0.13s;
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-	.cal-btn-new:hover {
-		background: var(--app-color-primary-hover);
-	}
-
 	.cal-btn-sm {
 		display: inline-flex;
 		align-items: center;
@@ -2206,7 +2194,6 @@
 
 	@media (prefers-reduced-motion: reduce) {
 		.cal-toggle-btn,
-		.cal-btn-new,
 		.cal-nav-btn,
 		.cal-today-btn,
 		.cal-cell,

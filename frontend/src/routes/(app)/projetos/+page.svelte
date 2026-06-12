@@ -610,7 +610,7 @@
 				elevada. Reproduzido com o token primary e leve elevação no hover.
 				(Exportar CSV migrou para o menu de usuário no topnav — AppTopnav.)
 			-->
-			<Button onclick={() => (createModalOpen = true)}>
+			<Button size="sm" onclick={() => (createModalOpen = true)}>
 				{#snippet icon()}
 					<i class="fas fa-plus" aria-hidden="true"></i>
 				{/snippet}
