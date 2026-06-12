@@ -18,7 +18,8 @@
 	 * vazio são anunciados via aria-live. Colapso de projeto/etapa em localStorage.
 	 */
 	import { onMount, setContext, tick } from 'svelte';
-	import { slide } from 'svelte/transition';
+	import { slide, fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { get as readStore } from 'svelte/store';
 	import {
@@ -54,10 +55,6 @@
 	import { orgaoScope } from '$lib/stores/orgaoScope';
 	import type { BoardCard, BoardQuery } from '$lib/types/board';
 	import { normalizeStatus, type TaskStatus } from '$lib/utils/taskStatus';
-	import {
-		KANBAN_EXPAND_ANIM,
-		type KanbanExpandAnimSignal
-	} from '$lib/utils/kanbanExpandAnim';
 	import {
 		triggerTaskFinalizeConfetti,
 		type CelebrationOriginLike
@@ -103,99 +100,27 @@
 	let boardInFlight: AbortController | null = null;
 	let boardLoaded = $state<boolean>(false);
 
-	// MODO EXPANDIDO do Kanban (opt-in, persistido): o quadro toma quase toda a
-	// altura da viewport — filtros somem e o header encolhe. O layout padrão
-	// (lista e kanban normal) fica intocado; só vale com a visão kanban ativa.
-	const KANBAN_EXPANDED_KEY = 'tarefas:kanban:expanded';
+	// No kanban os filtros somem e o quadro toma toda a vertical.
+	const boardExpanded = $derived(view === 'kanban');
 
-	function hydrateKanbanExpanded(): boolean {
-		if (typeof localStorage === 'undefined') return false;
-		try {
-			return localStorage.getItem(KANBAN_EXPANDED_KEY) === '1';
-		} catch {
-			return false;
-		}
-	}
-	let kanbanExpanded = $state<boolean>(hydrateKanbanExpanded());
-	const boardExpanded = $derived(view === 'kanban' && kanbanExpanded);
-
-	// Durações das animações de expandir/restaurar (header, filtros, board) —
-	// coordenadas para a tela inteira se mover como UMA transição. Assimetria
-	// intencional (Material 3): EXPANDIR usa 420ms com curva decelerate (área
-	// grande percorrida → duração maior; o painel entra com energia e assenta);
-	// RETRAIR usa 300ms com curva accelerate (sai sem prender o olhar). Zeradas
-	// sob prefers-reduced-motion (os estilos usam motion-safe; o slide e a
-	// janela de pausa do refit usam estes valores).
-	// Justificativa completa em docs/refinamento-animacao-kanban-expandir.md.
 	const PREFERS_REDUCED_MOTION =
 		typeof window !== 'undefined' &&
 		window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 	const EXPAND_IN_MS = PREFERS_REDUCED_MOTION ? 0 : 420;
 	const EXPAND_OUT_MS = PREFERS_REDUCED_MOTION ? 0 : 300;
 
-	// Classes Tailwind de motion por direção — DEVEM casar com EXPAND_IN_MS/
-	// EXPAND_OUT_MS (Tailwind exige strings estáticas; o número não pode vir
-	// das constantes). Curvas M3: emphasized decelerate / emphasized accelerate.
+	// Curvas M3 por direção — strings estáticas (Tailwind não gera classe de
+	// valor computado); durações DEVEM casar com EXPAND_IN_MS/EXPAND_OUT_MS.
 	const EXPAND_MOTION_IN =
 		'motion-safe:duration-[420ms] motion-safe:[transition-timing-function:cubic-bezier(0.05,0.7,0.1,1)]';
 	const EXPAND_MOTION_OUT =
 		'motion-safe:duration-300 motion-safe:[transition-timing-function:cubic-bezier(0.3,0,0.8,0.15)]';
 	const expandMotion = $derived(boardExpanded ? EXPAND_MOTION_IN : EXPAND_MOTION_OUT);
 
-	// Filtros saem/entram em ~0.7× da duração do board — hierarquia M3: o
-	// elemento secundário libera o palco antes de o primário terminar de assentar.
+	// Filtros deslizam em ~0.7× (hierarquia M3: o secundário sai antes).
 	const filtersSlideMs = $derived(
 		Math.round((boardExpanded ? EXPAND_IN_MS : EXPAND_OUT_MS) * 0.7)
 	);
-
-	// Sinal "transição de expandir/retrair em curso", consumido pelos KanbanCard
-	// (via contexto) para SUSPENDER a medição do rodapé enquanto a largura das
-	// colunas muda a cada frame — sem isso, cada frame dispara o ResizeObserver
-	// de todos os cards (O(cards × frames) reflows forçados; era o que travava
-	// o expandir/retrair com muitos itens). O fim da transição de margin do
-	// wrapper do board (a mais longa, junto com o height do board) desliga o
-	// sinal via transitionend; o timer cobre transitionend perdido (ex.: aba em
-	// background). A janela usa SEMPRE a maior duração + folga: destravar tarde
-	// custa só uma medição adiada; destravar cedo reintroduz o jank no final.
-	const expandAnim = $state<KanbanExpandAnimSignal>({ active: false });
-	setContext(KANBAN_EXPAND_ANIM, expandAnim);
-	const EXPAND_RELEASE_MS = Math.max(EXPAND_IN_MS, EXPAND_OUT_MS) + 80;
-	let expandReleaseTimer: ReturnType<typeof setTimeout> | null = null;
-
-	function releaseExpandAnim(): void {
-		if (expandReleaseTimer) {
-			clearTimeout(expandReleaseTimer);
-			expandReleaseTimer = null;
-		}
-		expandAnim.active = false;
-	}
-
-	function toggleKanbanExpanded(): void {
-		kanbanExpanded = !kanbanExpanded;
-		// reduced-motion: troca instantânea, sem frames intermediários — não
-		// pausar a medição dos cards.
-		if (Math.max(EXPAND_IN_MS, EXPAND_OUT_MS) === 0) return;
-		if (expandReleaseTimer) clearTimeout(expandReleaseTimer);
-		expandAnim.active = true;
-		expandReleaseTimer = setTimeout(releaseExpandAnim, EXPAND_RELEASE_MS);
-	}
-
-	function onBoardWrapperTransitionEnd(event: TransitionEvent): void {
-		// transitionend borbulha dos filhos (board, cards): só o fim da transição
-		// de margin do PRÓPRIO wrapper encerra a janela de pausa.
-		if (event.target !== event.currentTarget) return;
-		if (!event.propertyName.startsWith('margin')) return;
-		releaseExpandAnim();
-	}
-
-	$effect(() => {
-		// Persiste a preferência de expansão (best-effort).
-		try {
-			localStorage.setItem(KANBAN_EXPANDED_KEY, kanbanExpanded ? '1' : '0');
-		} catch {
-			// storage indisponível/cota: ignora.
-		}
-	});
 
 	/**
 	 * CONFETE ao concluir tarefa — paridade com `taskFinalizeCelebration.trigger`
@@ -387,6 +312,7 @@
 		archiveNotice = null;
 		confirmingArchive = true;
 	}
+	setContext('requestArchiveFinalizadas', openArchiveConfirm);
 	function cancelArchiveConfirm(): void {
 		confirmingArchive = false;
 	}
@@ -800,12 +726,9 @@
 		? 'gap-3'
 		: 'gap-6'}"
 >
-	<!-- Header unificado (paridade com a referência): título + pill de contagem à
-		 esquerda; ações (arquivar / ver arquivadas) e o toggle Lista⇄Kanban à direita.
-		 No modo expandido do kanban vira a variante FINA (subtítulo colapsa animado). -->
 	<PageHeader
 		labelId="tarefas-title"
-		compact={boardExpanded}
+		compact
 		subtitle={view === 'kanban'
 			? 'Tarefas ativas por status. Arraste os cards entre colunas para mudar o status.'
 			: 'Tarefas agrupadas por projeto.'}
@@ -815,18 +738,18 @@
 			<CountBadge class="ml-2">{totalItems} tarefa{totalItems === 1 ? '' : 's'}</CountBadge>
 		{/snippet}
 		{#snippet actions()}
-			<!-- Arquivar finalizados em lote (lista e kanban). -->
-			<button
-				type="button"
-				onclick={openArchiveConfirm}
-				disabled={archiving || loadState !== 'ready'}
-				class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-				title="Arquivar tarefas finalizadas do escopo atual"
-			>
-				Arquivar finalizados
-			</button>
+			{#if view === 'list'}
+				<button
+					type="button"
+					onclick={openArchiveConfirm}
+					disabled={archiving || loadState !== 'ready'}
+					class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					title="Arquivar tarefas finalizadas do escopo atual"
+				>
+					Arquivar finalizados
+				</button>
+			{/if}
 
-			<!-- Toggle para VER as tarefas arquivadas (ícone de arquivo). -->
 			<button
 				type="button"
 				onclick={toggleArchived}
@@ -839,45 +762,20 @@
 					? 'border-primary-500 bg-primary-100 text-primary-700'
 					: 'border-border-subtle bg-surface text-text-primary hover:bg-surface-muted'}"
 			>
-				<i class="fas fa-box-archive" aria-hidden="true"></i>
-				<span class="sr-only">Mostrar tarefas arquivadas</span>
+				Tarefas arquivadas
 			</button>
 
 			<!-- Alternância de visualização (Lista ⇄ Kanban) — porte fiel do v4.5. -->
 			<TaskViewToggle {view} onSelect={selectView} />
-
-			{#if view === 'kanban'}
-				<!-- Expandir/restaurar o quadro (fora do board, no canto direito do
-					 header): o modo expandido esconde os filtros e alarga o kanban. -->
-				<button
-					type="button"
-					onclick={toggleKanbanExpanded}
-					aria-pressed={kanbanExpanded}
-					title={kanbanExpanded ? 'Restaurar tamanho do quadro' : 'Expandir quadro'}
-					class="inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {kanbanExpanded
-						? 'border-primary-500 bg-primary-100 text-primary-700'
-						: 'border-border-subtle bg-surface text-text-primary hover:bg-surface-muted'}"
-				>
-					<i
-						class="fas {kanbanExpanded
-							? 'fa-down-left-and-up-right-to-center'
-							: 'fa-up-right-and-down-left-from-center'}"
-						aria-hidden="true"
-					></i>
-					<span class="sr-only"
-						>{kanbanExpanded ? 'Restaurar tamanho do quadro' : 'Expandir quadro'}</span
-					>
-				</button>
-			{/if}
 		{/snippet}
 	</PageHeader>
 
 	<!-- Filtros (re-buscam server-side). Réplica da barra do v4.5
 		 (templates/tasks/hub.html + static/css/tasks/hub.css): cartão único, campos
 		 em UMA linha, selects limpos (h-36/borda/raio 8) e Projeto mais largo.
-		 No modo expandido do kanban a barra some (os filtros seguem aplicados);
-		 restaurar o quadro a traz de volta. O slide usa ~0.7× da duração do board
-		 (filtersSlideMs): o secundário sai antes de o primário assentar. -->
+		 SÓ NA VISÃO LISTA: no kanban a barra some para o quadro tomar a vertical
+		 (os filtros aplicados continuam valendo). O slide usa ~0.7× da duração da
+		 troca (filtersSlideMs): o secundário sai antes de o primário assentar. -->
 	{#if !boardExpanded}
 	<form
 		transition:slide={{ duration: filtersSlideMs }}
@@ -1043,17 +941,13 @@
 		{#if $board.status === 'error' && !boardLoaded}
 			<LoadErrorState message={$board.error ?? ''} onRetry={() => loadBoard()} />
 		{:else}
-			<!-- EXPANSÃO HORIZONTAL: margens negativas anulam quase todo o padding
-				 lateral do <main> (px-[clamp(1.5rem,8vw,7rem)]), deixando 1rem de
-				 respiro — o quadro alarga junto com o ganho vertical. -->
+			<!-- Entrada via fly (transform+opacity, compositor-only): sem morph de
+				 layout, barato mesmo com muitos cards. -->
 			<div
 				aria-busy={$board.status === 'loading'}
-				class="motion-safe:transition-[margin] {expandMotion} {boardExpanded
-					? 'mx-[calc(1rem-clamp(1.5rem,8vw,7rem))]'
-					: 'mx-0'}"
-				ontransitionend={onBoardWrapperTransitionEnd}
+				in:fly={{ y: 8, duration: PREFERS_REDUCED_MOTION ? 0 : 300, easing: cubicOut }}
 			>
-				<KanbanBoard store={board} expanded={boardExpanded}>
+				<KanbanBoard store={board}>
 					{#snippet composer(status: TaskStatus)}
 						<!-- Só habilita o composer DEPOIS do 1º load concluir (`boardLoaded`).
 							 Durante a primeira carga renderizamos as colunas vazias (layout
@@ -1164,7 +1058,7 @@
 																autofocus
 																placeholder="Descreva a tarefa…"
 																aria-label="Descrição da tarefa"
-																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-[5px] border border-border-subtle bg-surface px-2 py-1.5 text-sm leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60"
+																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-[5px] border border-border-subtle bg-surface px-2 py-1.5 text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60 2xl:text-sm"
 															></textarea>
 															<select
 																bind:value={addDraft.prioridade}

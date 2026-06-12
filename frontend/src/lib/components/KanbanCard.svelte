@@ -26,9 +26,9 @@
 	import type { BoardCard } from '$lib/types/board';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
 	import {
-		KANBAN_EXPAND_ANIM,
-		type KanbanExpandAnimSignal
-	} from '$lib/utils/kanbanExpandAnim';
+		KANBAN_COLUMN_MOTION,
+		type KanbanColumnMotionSignal
+	} from '$lib/utils/kanbanColumnMotion';
 
 	/**
 	 * Abertura do drawer: fornecida via contexto pela página, para não exigir
@@ -116,35 +116,22 @@
 	const assigneeNames = $derived(assignees.map((a) => a.name).join(', '));
 
 	/**
-	 * RODAPÉ ADAPTATIVO: quando a largura do card não comporta tudo, o rodapé
-	 * degrada em degraus MEDIDOS (nada de breakpoint fixo — o conteúdo varia):
-	 *   nível 0 = tudo (prioridade, tipo, contadores, até 3 avatares);
-	 *   nível 1 = suprime o chip de TIPO (a maior fonte de largura variável);
-	 *   nível 2 = agrega os avatares em 1 visível + bolinha "+N" (nomes no hover).
-	 *
-	 * O cálculo é feito no DOM real: re-renderiza no nível 0 e sobe um degrau
-	 * enquanto `scrollWidth > clientWidth` (overflow horizontal de fato). Um
-	 * ResizeObserver refaz a medição quando a coluna muda de largura (resize,
-	 * modo expandido), e o `$effect` re-mede quando o conteúdo relevante muda.
-	 * `refitToken` descarta medições obsoletas de uma rodada anterior em voo.
-	 *
-	 * PERFORMANCE (ver docs/refinamento-animacao-kanban-expandir.md): a medição
-	 * NUNCA roda direto no callback do ResizeObserver — `scheduleFooterRefit`
-	 * coalesce por rAF (máx. 1 medição/frame) e SUSPENDE durante a transição de
-	 * expandir/retrair do quadro (sinal da página via contexto), quando a
-	 * largura das colunas muda a cada frame e medir custaria O(cards × frames)
-	 * reflows forçados. `needsRefit` garante UMA re-medição ao fim do sinal.
+	 * Rodapé adaptativo por medição: nível 0 = tudo; 1 = suprime o tipo; 2 =
+	 * agrega avatares em "+N". Sobe um degrau enquanto há overflow horizontal;
+	 * `refitToken` descarta rodadas obsoletas. A medição nunca roda direto no
+	 * ResizeObserver: coalesce por rAF e suspende durante morph de largura
+	 * (KANBAN_COLUMN_MOTION) — ver docs/refinamento-animacao-kanban-expandir.md.
 	 */
 	let footerEl = $state<HTMLElement | null>(null);
 	let fitLevel = $state(0);
 	let refitToken = 0;
 
-	const expandAnim = getContext<KanbanExpandAnimSignal | undefined>(KANBAN_EXPAND_ANIM);
+	const columnMotion = getContext<KanbanColumnMotionSignal | undefined>(KANBAN_COLUMN_MOTION);
 	let rafPending = false;
 	let needsRefit = $state(false);
 
 	function scheduleFooterRefit(): void {
-		if (expandAnim?.active) {
+		if (columnMotion?.active) {
 			needsRefit = true;
 			return;
 		}
@@ -200,11 +187,9 @@
 		return () => observer.disconnect();
 	});
 
-	// Re-medição única pós-transição: quando o sinal da página desliga e houve
-	// notificações suprimidas, mede uma vez na largura final estável. Escrever
-	// `needsRefit = false` re-dispara este efeito uma única vez (o guard corta).
+	// Re-medição única quando o sinal de morph desliga.
 	$effect(() => {
-		if (!expandAnim || expandAnim.active || !needsRefit) return;
+		if (!columnMotion || columnMotion.active || !needsRefit) return;
 		needsRefit = false;
 		untrack(() => scheduleFooterRefit());
 	});
@@ -316,9 +301,10 @@
 	onclick={handleCardClick}
 	onkeydown={handleKeydown}
 >
-	<!-- Variação B: o TÍTULO abre o card (sem linha de chips no topo). -->
-	<p class="m-0 line-clamp-3 break-words text-sm font-normal leading-snug text-text-primary">
-		{card.descricao}
+	<!-- max-height em vez de line-clamp: dentro de -webkit-box o float (que
+	     reserva o canto da 1ª linha p/ a lixeira) não flutua. -->
+	<p class="m-0 max-h-[3.75em] overflow-hidden break-words text-xs font-normal leading-snug text-text-primary 2xl:text-sm">
+		{#if deleteTask}<span aria-hidden="true" class="float-right h-3.5 w-7"></span>{/if}{card.descricao}
 	</p>
 
 	{#if card.project_id && card.project_titulo}
@@ -391,7 +377,7 @@
 									class="relative rounded-full ring-2 ring-surface"
 									style="z-index: {MAX_CARD_AVATARS - i}"
 								>
-									<AssigneeAvatar name={a.name} initials={a.initials} size="sm" />
+									<AssigneeAvatar name={a.name} initials={a.initials} size="xs" />
 								</span>
 							{/each}
 						</span>
@@ -408,11 +394,11 @@
 								<AssigneeAvatar
 									name={assignees[0].name}
 									initials={assignees[0].initials}
-									size="sm"
+									size="xs"
 								/>
 							</span>
 							<span
-								class="kc-avatar-overflow relative z-[1] inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold leading-none ring-2 ring-surface"
+								class="kc-avatar-overflow relative z-[1] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold leading-none ring-2 ring-surface"
 								title={overflowAvatarNames}
 							>
 								+{assignees.length - 1}

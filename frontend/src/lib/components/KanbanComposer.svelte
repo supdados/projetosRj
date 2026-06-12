@@ -273,7 +273,7 @@
 			rows="2"
 			placeholder="Descreva a tarefa…"
 			aria-label="Descrição da tarefa"
-			class="min-h-[64px] w-full resize-y rounded-md border border-border-subtle bg-surface px-[0.48rem] py-[0.38rem] text-sm leading-normal text-text-primary transition-shadow duration-fast focus:border-primary-500 focus:outline-none focus:shadow-[0_0_0_3px_rgba(31,92,168,0.12)] disabled:opacity-60"
+			class="min-h-[64px] w-full resize-y rounded-md border border-border-subtle bg-surface px-[0.48rem] py-[0.38rem] text-xs leading-normal text-text-primary transition-shadow duration-fast focus:border-primary-500 focus:outline-none focus:shadow-[0_0_0_3px_rgba(31,92,168,0.12)] disabled:opacity-60 2xl:text-sm"
 		></textarea>
 
 		{#if project && responsavelOptions.length > 0}

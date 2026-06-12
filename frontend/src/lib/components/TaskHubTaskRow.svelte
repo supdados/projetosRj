@@ -279,14 +279,14 @@
 				autofocus
 				rows="1"
 				aria-label="Editar descrição"
-				class="min-h-[30px] w-full min-w-0 resize-y rounded-[5px] border border-border-subtle bg-surface px-2 py-1 text-sm leading-normal text-text-primary focus:border-primary-500 focus:outline-none"
+				class="min-h-[30px] w-full min-w-0 resize-y rounded-[5px] border border-border-subtle bg-surface px-2 py-1 text-xs leading-normal text-text-primary focus:border-primary-500 focus:outline-none 2xl:text-sm"
 			></textarea>
 		{:else}
 			<div class="flex min-w-0 items-center gap-1">
 				<button
 					type="button"
 					onclick={() => onOpen(task.id)}
-					class="min-w-0 break-words text-left text-sm text-text-primary transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="min-w-0 break-words text-left text-xs text-text-primary transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 2xl:text-sm"
 				>
 					{task.descricao}
 				</button>

@@ -1,7 +1,9 @@
 <script lang="ts">
 	/**
-	 * Board do Kanban de Tarefas (Fase 5b-1): 5 colunas na ordem canônica, com
-	 * DnD nativo HTML5 (espelha `static/js/modules/kanban/board-dnd.js`).
+	 * Board do Kanban de Tarefas (jun/2026): os 4 status ativos como colunas
+	 * IGUAIS — Não iniciada | Em andamento | Para validação | Para ajustes — e a
+	 * Finalizada como trilho colapsável, com DnD nativo HTML5 (espelha
+	 * `static/js/modules/kanban/board-dnd.js`).
 	 *
 	 * FONTE DE VERDADE = STORE: o board lê `$store.columns` e despacha mutações
 	 * (`moveCard`/`reorder`) que são otimistas + confirmadas pelo backend +
@@ -18,10 +20,16 @@
 	 *     sem texto redundante duplicado abaixo da coluna;
 	 *   - um região `aria-live="polite"` anuncia as movimentações e erros.
 	 */
-	import { getContext, type Snippet } from 'svelte';
+	import { getContext, setContext, type Snippet } from 'svelte';
 	import KanbanColumn from '$lib/components/KanbanColumn.svelte';
+	import KanbanDoneColumn from '$lib/components/KanbanDoneColumn.svelte';
 	import type { BoardStore } from '$lib/stores/board';
 	import type { BoardCard } from '$lib/types/board';
+	import type { KanbanZoneView } from '$lib/types/kanbanDnd';
+	import {
+		KANBAN_COLUMN_MOTION,
+		type KanbanColumnMotionSignal
+	} from '$lib/utils/kanbanColumnMotion';
 	import {
 		STATUS_LABELS,
 		TASK_STATUS_ORDER,
@@ -45,26 +53,13 @@
 		store: BoardStore;
 		/** Composer inline por coluna (Fase 5b-3), repassado para cada KanbanColumn. */
 		composer?: Snippet<[TaskStatus]>;
-		/** MODO EXPANDIDO: o quadro toma quase toda a altura da viewport — a página
-		 *  esconde os filtros, encolhe o header e alarga o container. O toggle vive
-		 *  nas ações do header da página (fora do board). */
-		expanded?: boolean;
 	}
 
-	let { store, composer, expanded = false }: Props = $props();
+	let { store, composer }: Props = $props();
 
-	/**
-	 * Motion coordenado com a página de tarefas (mesmos valores do bloco
-	 * EXPAND_MOTION_IN/OUT de tarefas/+page.svelte): EXPANDIR = 420ms M3
-	 * emphasized decelerate; RETRAIR = 300ms M3 emphasized accelerate. Strings
-	 * estáticas porque o Tailwind não gera classes a partir de valores
-	 * computados. Ver docs/refinamento-animacao-kanban-expandir.md.
-	 */
-	const BOARD_MOTION_IN =
-		'motion-safe:duration-[420ms] motion-safe:[transition-timing-function:cubic-bezier(0.05,0.7,0.1,1)]';
-	const BOARD_MOTION_OUT =
-		'motion-safe:duration-300 motion-safe:[transition-timing-function:cubic-bezier(0.3,0,0.8,0.15)]';
-	const boardMotion = $derived(expanded ? BOARD_MOTION_IN : BOARD_MOTION_OUT);
+	// Sinal "morph de largura em curso" — ver kanbanColumnMotion.ts.
+	const columnMotion = $state<KanbanColumnMotionSignal>({ active: false });
+	setContext(KANBAN_COLUMN_MOTION, columnMotion);
 
 	/** Contexto do drag em curso (estado canônico no componente, não no DOM). */
 	interface DragContext {
@@ -117,6 +112,21 @@
 
 	const columns = $derived($store.columns);
 	const boardError = $derived($store.error);
+
+	const colNaoIniciada = $derived(columns.find((c) => c.status === 'nao_iniciada'));
+	const colEmAndamento = $derived(columns.find((c) => c.status === 'em_andamento'));
+	const colValidacao = $derived(columns.find((c) => c.status === 'para_validacao'));
+	const colAjustes = $derived(columns.find((c) => c.status === 'para_ajustes'));
+	const colFinalizada = $derived(columns.find((c) => c.status === 'finalizada'));
+
+	/** Leitura reativa do estado de drag de uma zona (evita prop por status). */
+	function zoneView(status: TaskStatus): KanbanZoneView {
+		return {
+			canDrop: canDropOn(status),
+			isOver: overStatus === status,
+			placeholderIndex: overStatus === status ? overIndex : null
+		};
+	}
 
 	/**
 	 * UX-only: a coluna `target` aceita o card em drag? Sempre `true` quando não
@@ -368,48 +378,46 @@
 	<!-- Anuncia movimentações/erros para leitores de tela. -->
 	<p class="sr-only" role="status" aria-live="polite">{liveMessage}</p>
 
-	<!--
-		Board — fidelidade a static/css/tasks/detail/kanban.css
-		(`.task-items-kanban-board`): grid de 5 colunas com minmax(200px, 1fr) e
-		gap 0.62rem. ALTURA FIXA travada na viewport (`max-h`/`h`): cada COLUNA
-		preenche a altura (items-stretch) e ROLA POR DENTRO (a dropzone tem
-		overflow-y:auto), de modo que a PÁGINA não rola inteira quando os cards
-		excedem — paridade com `.task-items-kanban-dropzone` (height fixa + scroll).
-		Em telas estreitas faz scroll horizontal das colunas.
-		EXPANDIDO: a página esconde filtros e encolhe o header — o desconto da
-		viewport cai de 19rem (chrome completo) para 10.5rem (topnav + header fino
-		+ paddings), quase a altura toda da tela.
-	-->
+	<!-- Altura travada na viewport: a página não rola — cada coluna rola por
+	     dentro. 10.5rem = topnav + header compacto + paddings. -->
 	<div
-		class="kanban-board grid min-h-[420px] w-full grid-flow-col items-stretch gap-[0.62rem] overflow-x-auto pb-2 [grid-auto-columns:minmax(220px,1fr)] motion-safe:transition-[height,max-height] {boardMotion} sm:grid-flow-row sm:[grid-template-columns:repeat(5,minmax(200px,1fr))] {expanded
-			? 'h-[calc(100vh-10.5rem)] max-h-[calc(100vh-10.5rem)]'
-			: 'h-[calc(100vh-19rem)] max-h-[calc(100vh-19rem)]'}"
+		class="kanban-board flex min-h-[420px] h-[calc(100vh-10.5rem)] max-h-[calc(100vh-10.5rem)] w-full items-stretch gap-[0.62rem] overflow-x-auto pb-2"
 		role="group"
 		aria-label="Quadro Kanban de tarefas"
 	>
-		{#each TASK_STATUS_ORDER as status (status)}
-			{@const column = columns.find((c) => c.status === status)}
-			{#if column}
-				<div class="flex min-h-0 flex-col gap-2">
-					<KanbanColumn
-						{column}
-						{composer}
-						draggingId={collapsedId}
-						{settledId}
-						canDrop={canDropOn(status)}
-						isOver={overStatus === status}
-						placeholderIndex={overStatus === status ? overIndex : null}
-						placeholderHeight={dragCardHeight}
-						{onCardDragStart}
-						{onCardDragEnd}
-						{onZoneDragEnter}
-						{onZoneDragOver}
-						{onZoneDragLeave}
-						{onZoneDrop}
-						{onCardKeydown}
-					/>
-				</div>
-			{/if}
-		{/each}
+		{#if colNaoIniciada && colEmAndamento && colValidacao && colAjustes && colFinalizada}
+			<!-- Composer só em "Não iniciada": toda tarefa nasce ali. -->
+			{#each [colNaoIniciada, colEmAndamento, colValidacao, colAjustes] as column (column.status)}
+				<KanbanColumn
+					{column}
+					composer={column.status === 'nao_iniciada' ? composer : undefined}
+					{zoneView}
+					draggingId={collapsedId}
+					{settledId}
+					placeholderHeight={dragCardHeight}
+					{onCardDragStart}
+					{onCardDragEnd}
+					{onZoneDragEnter}
+					{onZoneDragOver}
+					{onZoneDragLeave}
+					{onZoneDrop}
+					{onCardKeydown}
+				/>
+			{/each}
+			<KanbanDoneColumn
+				column={colFinalizada}
+				{zoneView}
+				draggingId={collapsedId}
+				{settledId}
+				placeholderHeight={dragCardHeight}
+				{onCardDragStart}
+				{onCardDragEnd}
+				{onZoneDragEnter}
+				{onZoneDragOver}
+				{onZoneDragLeave}
+				{onZoneDrop}
+				{onCardKeydown}
+			/>
+		{/if}
 	</div>
 </div>
