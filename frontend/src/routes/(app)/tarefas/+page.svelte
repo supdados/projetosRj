@@ -775,19 +775,24 @@
 				</button>
 			{/if}
 
+			<!-- Tarefas arquivadas: botão-ícone (histórico). Ativo quando exibindo
+				 arquivadas; alterna de volta para as ativas. -->
 			<button
 				type="button"
 				onclick={toggleArchived}
 				aria-pressed={modo === 'arquivadas'}
+				aria-label={modo === 'arquivadas'
+					? 'Voltar para as tarefas ativas'
+					: 'Mostrar tarefas arquivadas'}
 				title={modo === 'arquivadas'
 					? 'Voltar para as tarefas ativas'
 					: 'Mostrar tarefas arquivadas'}
-				class="inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {modo ===
+				class="inline-flex h-9 w-9 items-center justify-center rounded-md border transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {modo ===
 				'arquivadas'
 					? 'border-primary-500 bg-primary-100 text-primary-700'
 					: 'border-border-subtle bg-surface text-text-primary hover:bg-surface-muted'}"
 			>
-				Tarefas arquivadas
+				<i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
 			</button>
 
 			<!-- Alternância de visualização (Lista ⇄ Kanban) — porte fiel do v4.5. -->
