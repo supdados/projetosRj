@@ -237,13 +237,14 @@
 		boardInFlight?.abort();
 		const controller = new AbortController();
 		boardInFlight = controller;
-		// Propaga o ESCOPO DE ÓRGÃO global (topnav) nas chamadas de board desta
-		// tela — paridade com `?orgao=` do legado (orgaoScopeQuery). O escopo global
-		// tem precedência; sem ele cai no filtro local de órgão da própria tela.
+		// Órgão do board: o filtro LOCAL da tela vence (paridade com a Lista, que
+		// usa `orgao` direto); sem ele, cai no ESCOPO DE ÓRGÃO global do topnav.
+		// Sem essa precedência, selecionar no filtro local não fazia efeito quando
+		// havia um escopo global ativo (caso de quem tem acesso a vários órgãos).
 		const scopeId = readStore(orgaoScope).selectedId;
 		const query: BoardQuery = {
 			project: project || undefined,
-			orgao: scopeId !== null ? String(scopeId) : orgao || undefined,
+			orgao: orgao || (scopeId !== null ? String(scopeId) : undefined),
 			// Mesmos filtros da barra compartilhada aplicados ao board (o endpoint
 			// do Kanban os suporta) — sem isso a lista filtra e o board nao.
 			tipo: tipo || undefined,
@@ -738,6 +739,24 @@
 			<CountBadge class="ml-2">{totalItems} tarefa{totalItems === 1 ? '' : 's'}</CountBadge>
 		{/snippet}
 		{#snippet actions()}
+			{#if view === 'kanban' && orgaoOptions.length > 1}
+				<!-- No Kanban a barra de filtros some, mas quem tem acesso a mais de
+					 um órgão ainda precisa restringir o quadro: filtro de órgão
+					 compacto no header, replicando o select da Lista. -->
+				<select
+					id="kanban_filter_orgao"
+					bind:value={orgao}
+					onchange={reloadActiveView}
+					aria-label="Filtrar por órgão"
+					class="h-9 w-48 rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					<option value="">Todos os órgãos</option>
+					{#each orgaoOptions as orgaoOption (orgaoOption.value)}
+						<option value={orgaoOption.value}>{orgaoOption.label}</option>
+					{/each}
+				</select>
+			{/if}
+
 			{#if view === 'list'}
 				<button
 					type="button"

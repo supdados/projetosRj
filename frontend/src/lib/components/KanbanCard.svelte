@@ -346,7 +346,7 @@
 					class="inline-flex items-center gap-1 font-semibold text-text-muted transition-colors duration-fast hover:text-primary-600"
 					title={card.comments_count === 1 ? '1 comentário' : `${card.comments_count} comentários`}
 				>
-					<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<svg viewBox="0 0 24 24" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5Z" />
 					</svg>
 					{card.comments_count}
@@ -357,7 +357,7 @@
 					class="inline-flex items-center gap-1 font-semibold text-text-muted transition-colors duration-fast hover:text-primary-600"
 					title={card.anexos_count === 1 ? '1 anexo' : `${card.anexos_count} anexos`}
 				>
-					<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<svg viewBox="0 0 24 24" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
 					</svg>
 					{card.anexos_count}

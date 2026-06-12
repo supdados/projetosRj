@@ -1,8 +1,10 @@
 <script lang="ts">
 	/**
-	 * Coluna "Finalizada" como trilho colapsável (fechado por padrão, persistido
-	 * em localStorage). Fechado continua drop target. O toggle liga o sinal
-	 * KANBAN_COLUMN_MOTION durante o morph de largura — ver kanbanColumnMotion.ts.
+	 * Coluna "Finalizada" como trilho colapsável. Sempre nasce recolhida — a
+	 * preferência NÃO é persistida, então ao sair e voltar à página o trilho
+	 * volta ao estado retraído. Fechado continua drop target. O toggle liga o
+	 * sinal KANBAN_COLUMN_MOTION durante o morph de largura — ver
+	 * kanbanColumnMotion.ts.
 	 */
 	import { getContext } from 'svelte';
 	import KanbanColumnHeader from '$lib/components/KanbanColumnHeader.svelte';
@@ -22,27 +24,8 @@
 
 	const requestArchive = getContext<(() => void) | undefined>('requestArchiveFinalizadas');
 
-	const DONE_OPEN_KEY = 'tarefas:kanban:finalizada-aberta';
-
-	function hydrateDoneOpen(): boolean {
-		if (typeof localStorage === 'undefined') return false;
-		try {
-			return localStorage.getItem(DONE_OPEN_KEY) === '1';
-		} catch {
-			return false;
-		}
-	}
-
-	let open = $state<boolean>(hydrateDoneOpen());
-
-	$effect(() => {
-		// Persiste a preferência (best-effort).
-		try {
-			localStorage.setItem(DONE_OPEN_KEY, open ? '1' : '0');
-		} catch {
-			/* armazenamento indisponível: segue sem persistir */
-		}
-	});
+	// Sempre recolhida ao montar — sem persistência (volta retraída a cada visita).
+	let open = $state<boolean>(false);
 
 	const count = $derived(column.tasks.length);
 	const view = $derived(dnd.zoneView('finalizada'));
@@ -100,7 +83,7 @@
 			data-status="finalizada"
 			role="group"
 			aria-label={`Coluna ${column.label} recolhida (${count} tarefas). Aceita soltar um card para finalizar.`}
-			class="kdone-rail flex min-h-0 flex-1 flex-col items-center gap-2 rounded-xl border border-border-subtle bg-surface py-3 shadow-sm transition-[box-shadow,border-color,opacity] duration-fast hover:border-border-strong hover:shadow-md {view.isOver &&
+			class="kdone-rail flex min-h-0 flex-1 flex-col items-center gap-2 rounded-xl border border-border-subtle py-3 shadow-sm transition-[box-shadow,border-color,opacity] duration-fast hover:border-border-strong hover:shadow-md {view.isOver &&
 			view.canDrop
 				? 'is-rail-over'
 				: ''} {view.isOver && !view.canDrop ? 'cursor-not-allowed opacity-60' : ''}"
@@ -200,6 +183,11 @@
 </section>
 
 <style>
+	/* Recolhida: verde bem fraquinho para sinalizar "finalizada" sem peso visual. */
+	.kdone-rail {
+		background-color: color-mix(in srgb, var(--ds-color-success-600) 6%, var(--color-surface));
+	}
+
 	/* Trilho realçado quando é alvo válido do drag em curso (eco do is-zone-over). */
 	.is-rail-over {
 		border-color: color-mix(in srgb, var(--ds-color-primary-500) 55%, transparent);
