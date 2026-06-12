@@ -755,6 +755,20 @@
 									<span>{link.label}</span>
 								</a>
 							{/each}
+							<hr class="my-1 border-border-subtle" />
+							<!-- Exportar CSV de projetos: link direto para a rota Flask
+								 nativa /projects/download (attachment, FORA do envelope JSON).
+								 Migrado da tela de Projetos para o menu de usuário. -->
+							<a
+								role="menuitem"
+								href="/projects/download"
+								download
+								onclick={closeAdmin}
+								class="flex items-center gap-3 px-4 py-2 text-sm text-text-secondary no-underline transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+							>
+								<i class="fas fa-file-csv w-4 text-center text-text-muted" aria-hidden="true"></i>
+								<span>Exportar CSV de projetos</span>
+							</a>
 						</div>
 					{/if}
 				</div>

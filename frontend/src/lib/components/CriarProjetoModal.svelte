@@ -117,6 +117,10 @@
 	);
 
 	// --- ABEP combobox -----------------------------------------------------
+	// LEGADO (jun/2026): o campo sai da UI mas o código fica intacto para
+	// reativação futura — basta alternar SHOW_ABEP para `true`. O backend segue
+	// aceitando `abep_indicator` no payload de criação.
+	const SHOW_ABEP = false;
 	let abepValue = $state(''); // value canônico (hidden)
 	let abepLabel = $state(''); // texto exibido
 	let abepOpen = $state(false);
@@ -1112,7 +1116,9 @@
 														{/if}
 													</div>
 
-													<!-- Indicadores ABEP (combobox) -->
+													<!-- Indicadores ABEP (combobox) — LEGADO, oculto via SHOW_ABEP.
+														 Código mantido para reativação futura. -->
+													{#if SHOW_ABEP}
 													<div class="relative flex flex-col gap-1.5">
 														<label for="cp-abep" class={labelClass}>Indicadores ABEP</label>
 														<input
@@ -1169,6 +1175,7 @@
 															</ul>
 														{/if}
 													</div>
+													{/if}
 												</div>
 											{:else if section.id === 'links'}
 												<div class="flex flex-col gap-4">

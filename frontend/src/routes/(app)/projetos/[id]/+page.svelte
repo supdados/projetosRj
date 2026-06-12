@@ -458,6 +458,12 @@
 		}))
 	);
 
+	/**
+	 * Indicador ABEP é LEGADO (jun/2026): o campo sai da UI mas o código fica
+	 * intacto para reativação futura — basta alternar SHOW_ABEP para `true`.
+	 */
+	const SHOW_ABEP = false;
+
 	/** Catalogo ABEP (options.abep_indicator) -> opcoes do combobox. Filtra por value/label. */
 	const abepOptions = $derived<InlineComboOption[]>(
 		(data?.options.abep_indicator ?? []).map((o) => ({
@@ -1033,6 +1039,7 @@
 							onSave={(v) => saveProjectField('sei_process', v)}
 						/>
 					</div>
+					{#if SHOW_ABEP}
 					<!-- Indicador ABEP: combobox pesquisável do catálogo (abep_indicator). -->
 					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
 						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Indicador ABEP</span>
@@ -1049,6 +1056,7 @@
 							onSelect={saveAbepIndicator}
 						/>
 					</div>
+					{/if}
 				</div>
 
 				<!-- EEGG: cascata objetivo/resultado/indicadores editável inline. -->

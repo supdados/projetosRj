@@ -38,7 +38,6 @@
 		type ObjetivoCatalogo
 	} from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
-	import { auth } from '$lib/stores/auth';
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 	import type { Project } from '$lib/types/entities';
@@ -56,6 +55,13 @@
 
 	/** Status default aplicado pelo backend quando ?status= é omitido. */
 	const DEFAULT_STATUS = 'Vigente';
+
+	/**
+	 * Indicador ABEP é LEGADO (jun/2026): o campo sai da UI mas o código fica
+	 * intacto para reativação futura — basta alternar para `true`. O backend
+	 * continua aceitando/filtrando `abep_indicator` normalmente.
+	 */
+	const SHOW_ABEP = false;
 
 	let loadState = $state<LoadState>('loading');
 	let data = $state<ProjectsListData | null>(null);
@@ -88,9 +94,6 @@
 
 	// Modal de criação de projeto (Quick Create).
 	let createModalOpen = $state<boolean>(false);
-
-	/** Gate do botão de exportar CSV: visível somente para admin (paridade Jinja). */
-	const isAdmin = $derived($auth.user?.is_admin ?? false);
 
 	/** Opções do GET /api/projetos repassadas ao modal (órgãos/ABEP/etc.). */
 	const createOptions = $derived(data?.options ?? null);
@@ -601,25 +604,10 @@
 			{/if}
 		{/snippet}
 		{#snippet actions()}
-			{#if isAdmin}
-				<!--
-					Exportar CSV: link direto para a rota Flask nativa /projects/download
-					(download de attachment, FORA do envelope JSON). Visível só p/ admin.
-				-->
-				<a
-					href="/projects/download"
-					download
-					title="Exportar projetos (CSV)"
-					aria-label="Exportar projetos"
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-primary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<i class="fas fa-download" aria-hidden="true"></i>
-					<span class="hidden sm:inline">Exportar CSV</span>
-				</a>
-			{/if}
 			<!--
 				Botão primário (btn-projects-v4-primary): gradiente da marca + sombra
 				elevada. Reproduzido com o token primary e leve elevação no hover.
+				(Exportar CSV migrou para o menu de usuário no topnav — AppTopnav.)
 			-->
 			<Button onclick={() => (createModalOpen = true)}>
 				{#snippet icon()}
@@ -700,16 +688,10 @@
 				{/each}
 			</select>
 
-			<!-- Ações empurradas para a direita. -->
+			<!-- Ações empurradas para a direita. O botão "Filtrar" foi removido: a
+				 seleção em qualquer campo já re-busca server-side (a busca textual tem
+				 debounce e o Enter ainda submete o form). -->
 			<div class="ml-auto flex items-center gap-2">
-				<button
-					type="submit"
-					title="Filtrar"
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-primary-700/25 bg-gradient-to-br from-primary-600 to-primary-700 px-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out hover:from-primary-500 hover:to-primary-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<i class="fas fa-filter" aria-hidden="true"></i>
-					Filtrar
-				</button>
 				<!-- Toggle "Mais filtros" (btn-projects-v4-toggle). -->
 				<button
 					type="button"
@@ -730,10 +712,9 @@
 						onclick={clearFilters}
 						title="Limpar filtros"
 						aria-label="Limpar filtros"
-						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 					>
-						<i class="fas fa-rotate-left" aria-hidden="true"></i>
-						Limpar
+						<i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
 					</button>
 				{/if}
 			</div>
@@ -793,7 +774,9 @@
 						{/each}
 					</select>
 
-					<!-- Indicador ABEP: combobox filtrável e navegável por teclado. -->
+					<!-- Indicador ABEP (LEGADO, oculto via SHOW_ABEP): combobox filtrável
+						 e navegável por teclado. Código mantido para reativação futura. -->
+					{#if SHOW_ABEP}
 					<div class="relative min-w-[18rem] flex-[2.4]">
 						<input
 							id="projetosAbep"
@@ -853,6 +836,7 @@
 							</ul>
 						{/if}
 					</div>
+					{/if}
 				</div>
 			</div>
 		</div>
