@@ -570,11 +570,6 @@
 				</Card>
 			</aside>
 		</div>
-
-		<!-- Footer SETD -->
-		<footer class="pt-2 text-center text-xs text-text-muted">
-			SETD — Subsecretaria de Estado de Tecnologia Digital
-		</footer>
 	{/if}
 
 	<!-- Modal de criação aberto no proprio Dashboard (sem navegar para /projetos). -->

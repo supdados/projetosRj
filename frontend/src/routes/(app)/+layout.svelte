@@ -15,6 +15,7 @@
 	import type { Snippet } from 'svelte';
 	import { auth, loadCurrentUser } from '$lib/stores/auth';
 	import AppTopnav from '$lib/components/AppTopnav.svelte';
+	import AppFooter from '$lib/components/AppFooter.svelte';
 	import FlashToasts from '$lib/components/FlashToasts.svelte';
 
 	let { children }: { children: Snippet } = $props();
@@ -71,6 +72,11 @@
 			</div>
 		{/if}
 	</main>
+
+	<!-- Rodapé fixo do shell (assinatura SETD): vive ABAIXO do <main> rolável,
+	     entao ancora no fim da viewport em todas as paginas, sem rolar com o
+	     conteudo. -->
+	<AppFooter />
 
 	<FlashToasts />
 </div>
