@@ -18,9 +18,9 @@
 	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { base } from '$app/paths';
-	import { fetchAdminUsers, deleteAdminUser } from '$lib/api/adminUsers';
+	import { fetchAdminUsers, deleteAdminUser, fetchOrgaoOptionsForUser } from '$lib/api/adminUsers';
 	import { ApiClientError } from '$lib/api/client';
-	import type { AdminUser, AdminUsersPageMeta } from '$lib/types/adminUsers';
+	import type { AdminUser, AdminUsersPageMeta, AdminOrgaoOption } from '$lib/types/adminUsers';
 	import { auth } from '$lib/stores/auth';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -33,6 +33,40 @@
 	let meta = $state<AdminUsersPageMeta | null>(null);
 	let errorMessage = $state<string>('');
 	let page = $state<number>(1);
+
+	/** Busca de texto livre (nome/login/CPF) — debounced antes de recarregar. */
+	let searchText = $state<string>('');
+	/** Área (órgão) selecionada para filtrar; `null` = todas. */
+	let areaId = $state<number | null>(null);
+	let areaOptions = $state<AdminOrgaoOption[]>([]);
+
+	// Combobox de área (botão → input de busca + listbox), espelhando o filtro de
+	// projeto da tela /tarefas.
+	let areaOpen = $state<boolean>(false);
+	let areaQuery = $state<string>('');
+	let areaActiveIndex = $state<number>(0);
+	let areaInputEl = $state<HTMLInputElement | null>(null);
+
+	let searchDebounce: ReturnType<typeof setTimeout> | null = null;
+
+	const hasActiveFilters = $derived(searchText.trim() !== '' || areaId !== null);
+
+	const selectedAreaLabel = $derived(
+		areaId === null
+			? 'Todas as áreas'
+			: (areaOptions.find((o) => o.id === areaId)?.sigla ?? 'Todas as áreas')
+	);
+
+	/** Lista filtrada do combobox: "Todas" + órgãos casando com a busca. */
+	const areaFilterList = $derived.by<{ id: number | null; label: string }[]>(() => {
+		const q = areaQuery.trim().toLowerCase();
+		const matches = (o: AdminOrgaoOption) =>
+			!q || o.sigla.toLowerCase().includes(q) || o.nome.toLowerCase().includes(q);
+		const items = areaOptions
+			.filter(matches)
+			.map((o) => ({ id: o.id as number | null, label: `${o.sigla} — ${o.nome}` }));
+		return q ? items : [{ id: null, label: 'Todas as áreas' }, ...items];
+	});
 
 	/** Id em exclusão (desabilita o botão e evita duplo clique). */
 	let deletingId = $state<number | null>(null);
@@ -77,7 +111,10 @@
 		const controller = new AbortController();
 		inFlight = controller;
 		try {
-			const result = await fetchAdminUsers(page, controller.signal);
+			const result = await fetchAdminUsers(
+				{ page, q: searchText, areaId: areaId ?? undefined },
+				controller.signal
+			);
 			if (controller.signal.aborted) return;
 			usuarios = result.usuarios;
 			meta = result.meta;
@@ -96,6 +133,58 @@
 		if (target < 1 || target > totalPages || target === page) return;
 		page = target;
 		void load();
+	}
+
+	/** Recarrega a partir da página 1 sempre que um filtro muda. */
+	function reloadFiltered(): void {
+		page = 1;
+		void load();
+	}
+
+	function onSearchInput(): void {
+		if (searchDebounce) clearTimeout(searchDebounce);
+		searchDebounce = setTimeout(reloadFiltered, 300);
+	}
+
+	function openAreaFilter(): void {
+		areaOpen = true;
+		areaQuery = '';
+		areaActiveIndex = 0;
+		setTimeout(() => areaInputEl?.focus(), 0);
+	}
+
+	function closeAreaFilter(): void {
+		areaOpen = false;
+	}
+
+	function pickArea(value: number | null): void {
+		areaId = value;
+		areaOpen = false;
+		areaQuery = '';
+		reloadFiltered();
+	}
+
+	function onAreaKeydown(event: KeyboardEvent): void {
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			areaActiveIndex = Math.min(areaActiveIndex + 1, areaFilterList.length - 1);
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			areaActiveIndex = Math.max(areaActiveIndex - 1, 0);
+		} else if (event.key === 'Enter') {
+			event.preventDefault();
+			const opt = areaFilterList[areaActiveIndex];
+			if (opt) pickArea(opt.id);
+		} else if (event.key === 'Escape') {
+			closeAreaFilter();
+		}
+	}
+
+	function clearFilters(): void {
+		searchText = '';
+		areaId = null;
+		areaQuery = '';
+		reloadFiltered();
 	}
 
 	async function confirmDelete(user: AdminUser): Promise<void> {
@@ -121,11 +210,19 @@
 
 	onMount(() => {
 		void load();
+		void fetchOrgaoOptionsForUser()
+			.then((opts) => {
+				areaOptions = opts;
+			})
+			.catch(() => {
+				// Sem opções de área o seletor apenas oferece "Todas"; não bloqueia a tela.
+			});
 		return () => inFlight?.abort();
 	});
 
 	onDestroy(() => {
 		inFlight?.abort();
+		if (searchDebounce) clearTimeout(searchDebounce);
 		unsubAuth();
 	});
 
@@ -139,20 +236,115 @@
 </svelte:head>
 
 <section aria-labelledby="admin-usuarios-title" class="mx-auto flex w-full max-w-[1400px] flex-col gap-4">
-	<PageHeader compact class="min-h-[3.5rem]" labelId="admin-usuarios-title">
-		{#snippet titleContent()}
-			<span class="align-middle">Gerenciar Usuários</span>
-			{#if loadState !== 'loading'}
-				<CountBadge class="ml-2">{total} usuário{total === 1 ? '' : 's'}</CountBadge>
+	<!--
+		Card superior unificado (header + filtros) no mesmo padrão da tela /tarefas:
+		PageHeader embedded + linha de filtros separada por borda.
+	-->
+	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
+		<PageHeader compact embedded class="min-h-[3.5rem]" labelId="admin-usuarios-title">
+			{#snippet titleContent()}
+				<span class="align-middle">Gerenciar Usuários</span>
+				{#if loadState !== 'loading'}
+					<CountBadge class="ml-2">{total} usuário{total === 1 ? '' : 's'}</CountBadge>
+				{/if}
+			{/snippet}
+			{#snippet actions()}
+				<Button size="sm" href={`${base}/admin/usuarios/novo`}>
+					{#snippet icon()}<i class="fas fa-user-plus" aria-hidden="true"></i>{/snippet}
+					Novo Usuário
+				</Button>
+			{/snippet}
+		</PageHeader>
+
+		<form
+			class="flex items-center gap-2 border-t border-border-subtle px-4 py-2.5"
+			aria-label="Filtros de usuários"
+			onsubmit={(e) => e.preventDefault()}
+		>
+			<!-- Busca de texto livre (nome ou login). -->
+			<input
+				type="text"
+				bind:value={searchText}
+				oninput={onSearchInput}
+				aria-label="Buscar usuários por nome ou login"
+				autocomplete="off"
+				class="h-9 min-w-0 flex-[2] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			/>
+
+			<!-- Seletor de área (combobox: botão → busca + listbox). -->
+			<div class="relative min-w-0 flex-1">
+				{#if areaOpen}
+					<input
+						bind:this={areaInputEl}
+						type="text"
+						bind:value={areaQuery}
+						oninput={() => (areaActiveIndex = 0)}
+						onkeydown={onAreaKeydown}
+						onblur={() => setTimeout(closeAreaFilter, 120)}
+						role="combobox"
+						aria-expanded="true"
+						aria-controls="filter_area_listbox"
+						aria-autocomplete="list"
+						aria-label="Filtrar por área"
+						placeholder="Buscar área…"
+						autocomplete="off"
+						class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+					/>
+					<ul
+						id="filter_area_listbox"
+						role="listbox"
+						class="thin-scroll absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-md"
+					>
+						{#each areaFilterList as opt, i (opt.id ?? 'all')}
+							<li class="contents">
+								<button
+									type="button"
+									role="option"
+									aria-selected={opt.id === areaId}
+									onmousedown={(e) => {
+										e.preventDefault();
+										pickArea(opt.id);
+									}}
+									class="block w-full truncate px-3 py-1.5 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted {i ===
+									areaActiveIndex
+										? 'bg-surface-muted'
+										: ''}"
+								>
+									{opt.label}
+								</button>
+							</li>
+						{/each}
+						{#if areaFilterList.length === 0}
+							<li class="px-3 py-1.5 text-sm text-text-muted">Nenhuma área encontrada</li>
+						{/if}
+					</ul>
+				{:else}
+					<button
+						type="button"
+						onclick={openAreaFilter}
+						aria-haspopup="listbox"
+						aria-label="Filtrar por área"
+						class="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<span class="min-w-0 flex-1 truncate text-left {areaId === null ? 'text-text-muted' : ''}"
+							>{selectedAreaLabel}</span
+						>
+						<i class="fas fa-chevron-down shrink-0 text-xs text-text-muted" aria-hidden="true"></i>
+					</button>
+				{/if}
+			</div>
+
+			{#if hasActiveFilters}
+				<button
+					type="button"
+					onclick={clearFilters}
+					class="h-9 shrink-0 rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					Limpar
+				</button>
 			{/if}
-		{/snippet}
-		{#snippet actions()}
-			<Button size="sm" href={`${base}/admin/usuarios/novo`}>
-				{#snippet icon()}<i class="fas fa-user-plus" aria-hidden="true"></i>{/snippet}
-				Novo Usuário
-			</Button>
-		{/snippet}
-	</PageHeader>
+		</form>
+	</div>
 
 	{#if actionError}
 		<div role="alert" class="rounded-lg border border-danger bg-surface px-5 py-3 text-sm text-text-primary">
@@ -181,7 +373,23 @@
 			{total} usuário{total === 1 ? '' : 's'} encontrado{total === 1 ? '' : 's'}.
 		</div>
 
-		{#if usuarios.length === 0}
+		{#if usuarios.length === 0 && hasActiveFilters}
+			<!-- Vazio por filtro: mensagem dedicada (não é "primeiro cadastro"). -->
+			<div
+				class="mt-1 rounded-[13px] border border-dashed border-primary-500/40 bg-surface-muted px-4 py-8 text-center"
+			>
+				<p class="text-md text-text-secondary">
+					Nenhum usuário encontrado para os filtros aplicados.
+				</p>
+				<button
+					type="button"
+					onclick={clearFilters}
+					class="mt-3 inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				>
+					Limpar filtros
+				</button>
+			</div>
+		{:else if usuarios.length === 0}
 			<!-- Estado vazio (.admin-users-empty-state): cartão tracejado centralizado. -->
 			<div
 				class="mt-1 rounded-[13px] border border-dashed border-primary-500/40 bg-surface-muted px-4 py-8 text-center"
@@ -207,16 +415,6 @@
 				</a>
 			</div>
 		{:else}
-			<!-- Paginação atual (a contagem total agora vive no CountBadge do header). -->
-			<div class="mb-1 flex flex-wrap items-center gap-1.5">
-				<span
-					class="inline-flex items-center gap-1.5 rounded-full border border-primary-500/50 bg-surface px-2.5 py-1 text-xs font-semibold text-text-secondary"
-				>
-					<i class="fas fa-copy"></i>
-					Página {page} de {totalPages}
-				</span>
-			</div>
-
 			<!--
 				Cartão de tabela "glass" (.admin-users-table-card): superfície
 				translúcida com cabeçalho em maiúsculas e linhas com hover sutil.
@@ -231,7 +429,7 @@
 								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">Nome Completo</th>
 								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">Login</th>
 								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">Órgão</th>
-								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">Órgãos Vinculados</th>
+								<th scope="col" class="w-[160px] whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">Órgãos Vinculados</th>
 								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">CPF gov.br</th>
 								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-center text-2xs font-bold uppercase tracking-caps text-text-muted">Perfil</th>
 								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-center text-2xs font-bold uppercase tracking-caps text-text-muted">Ações</th>
@@ -242,11 +440,7 @@
 								{@const isSelf = currentUserId !== null && user.id === currentUserId}
 								<tr class="border-t border-border-subtle transition-colors duration-fast hover:bg-primary-100/40">
 									<td class="px-3 py-2.5 align-middle">
-										<span
-											class="inline-flex items-center rounded-full border border-primary-500/40 bg-surface px-1.5 py-0.5 text-xs font-bold text-text-secondary"
-										>
-											#{user.id}
-										</span>
+										<span class="text-sm font-semibold text-text-secondary">{user.id}</span>
 									</td>
 									<td class="px-3 py-2.5 align-middle">
 										<div class="flex flex-wrap items-center gap-1.5">
@@ -268,18 +462,14 @@
 											{user.orgao ?? 'Não informado'}
 										</span>
 									</td>
-									<td class="px-3 py-2.5 align-middle">
+									<td class="max-w-[160px] px-3 py-2.5 align-middle">
 										{#if user.orgaos.length > 0}
-											<div class="flex flex-wrap gap-1">
-												{#each user.orgaos as orgao (orgao.id)}
-													<span
-														class="inline-flex items-center rounded-full border border-primary-500/40 bg-surface px-2 py-0.5 text-xs font-semibold leading-snug text-text-secondary"
-														title={orgao.nome}
-													>
-														{orgao.sigla}
-													</span>
-												{/each}
-											</div>
+											<span
+												class="block truncate text-sm text-text-secondary"
+												title={user.orgaos.map((o) => o.nome).join(', ')}
+											>
+												{user.orgaos.map((o) => o.sigla).join(', ')}
+											</span>
 										{:else}
 											<span class="text-sm italic text-text-muted">Sem órgão definido</span>
 										{/if}
@@ -326,7 +516,7 @@
 												href={editHref(user)}
 												title="Editar Usuário"
 												aria-label="Editar usuário {user.name}"
-												class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-primary-500/30 bg-primary-100/60 text-primary-700 no-underline transition-colors duration-fast hover:border-primary-500/50 hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												class="inline-flex h-8 w-8 items-center justify-center rounded-md text-primary-700 no-underline transition-colors duration-fast hover:text-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 											>
 												<i class="fas fa-pen"></i>
 											</a>
@@ -336,7 +526,7 @@
 													disabled
 													title="Não é possível excluir o próprio usuário"
 													aria-label="Não é possível excluir o próprio usuário"
-													class="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-md border border-border-subtle bg-surface-muted text-text-muted"
+													class="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-md text-text-muted"
 												>
 													<i class="fas fa-trash"></i>
 												</button>
@@ -347,7 +537,7 @@
 													disabled={deletingId === user.id}
 													title="Excluir Usuário"
 													aria-label="Excluir usuário {user.name}"
-													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-danger/30 bg-surface-muted text-danger transition-colors duration-fast hover:border-danger/50 hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
+													class="inline-flex h-8 w-8 items-center justify-center rounded-md text-danger transition-colors duration-fast hover:text-danger/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
 												>
 													<i class="fas {deletingId === user.id ? 'fa-spinner fa-spin' : 'fa-trash'}"></i>
 												</button>

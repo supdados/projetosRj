@@ -23,7 +23,7 @@ from typing import Any
 
 from flask import Response, g, request
 
-from models import OrgaoUnidade, User, db
+from models import OrgaoUnidade, User, UserOrgao, db
 from time_utils import utc_now
 
 from ..admin_users import (
@@ -73,12 +73,23 @@ def api_admin_usuarios_list() -> Response | tuple[Response, int]:
         HTTP 200. ``api_admin_required`` devolve 401/403 JSON conforme a sessão.
     """
     page = request.args.get("page", 1, type=int)
+    search = (request.args.get("q") or "").strip()
+    area_id = request.args.get("area_id", type=int)
     # Soft-delete C4: a listagem admin mostra apenas usuários ATIVOS; removidos
     # (deleted_at não nulo) somem da gestão mas continuam no histórico.
-    pagination = (
-        User.query.filter(User.deleted_at.is_(None))
-        .order_by(User.name)
-        .paginate(page=page, per_page=_PER_PAGE, error_out=False)
+    query = User.query.filter(User.deleted_at.is_(None))
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                User.name.ilike(like),
+                User.username.ilike(like),
+            )
+        )
+    if area_id:
+        query = query.filter(User.orgaos.any(UserOrgao.orgao_id == area_id))
+    pagination = query.order_by(User.name).paginate(
+        page=page, per_page=_PER_PAGE, error_out=False
     )
     return ok(
         {"usuarios": [serialize_admin_user(user) for user in pagination.items]},

@@ -68,6 +68,38 @@ def test_list_returns_403_for_non_admin(client_user):
     _assert_fail_envelope(response.get_json(), code="forbidden")
 
 
+def test_list_filters_by_free_text_query(client_admin, seed_data):
+    """`?q=` casa por nome/login (ilike) — "VPD" só atinge o usuário VPD."""
+    data = _assert_ok_envelope(
+        client_admin.get("/api/admin/usuarios?q=VPD").get_json()
+    )
+    assert [user["name"] for user in data["usuarios"]] == ["Usuario VPD"]
+
+
+def test_list_filters_by_area_id(app, client_admin, seed_data):
+    """`?area_id=` restringe aos usuários vinculados àquele órgão."""
+    from models import OrgaoUnidade
+
+    with app.app_context():
+        area_id = OrgaoUnidade.query.filter_by(sigla="VPD").first().id
+
+    data = _assert_ok_envelope(
+        client_admin.get(f"/api/admin/usuarios?area_id={area_id}").get_json()
+    )
+    assert [user["name"] for user in data["usuarios"]] == ["Usuario VPD"]
+
+
+def test_list_without_filters_returns_all_active(client_admin, seed_data):
+    """Sem filtros o comportamento padrão (todos os ativos) é preservado."""
+    baseline = _assert_ok_envelope(
+        client_admin.get("/api/admin/usuarios").get_json()
+    )
+    filtered = _assert_ok_envelope(
+        client_admin.get("/api/admin/usuarios?q=Usuario").get_json()
+    )
+    assert len(filtered["usuarios"]) < len(baseline["usuarios"])
+
+
 # ---------------------------------------------------------------------------
 # GET /api/admin/usuarios/<id> (form data)
 # ---------------------------------------------------------------------------

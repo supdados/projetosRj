@@ -36,10 +36,14 @@ interface AdminUsersListEnvelope {
  * 401/CSRF com a mesma semântica do `get`/`post`).
  */
 export async function fetchAdminUsers(
-	page = 1,
+	{ page = 1, q = '', areaId }: { page?: number; q?: string; areaId?: number } = {},
 	signal?: AbortSignal
 ): Promise<AdminUsersListResult> {
-	const qs = page > 1 ? `?page=${page}` : '';
+	const params = new URLSearchParams();
+	if (page > 1) params.set('page', String(page));
+	if (q.trim()) params.set('q', q.trim());
+	if (areaId) params.set('area_id', String(areaId));
+	const qs = params.size ? `?${params}` : '';
 	const { data, meta } = await getWithMeta<AdminUsersListEnvelope>(
 		`/api/admin/usuarios${qs}`,
 		signal
