@@ -39,6 +39,9 @@
 	} from '$lib/types/adminTemplates';
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Button from '$lib/components/Button.svelte';
+	import CountBadge from '$lib/components/CountBadge.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type ViewMode = 'list' | 'form';
@@ -558,44 +561,22 @@
 		<span class="font-medium text-text-secondary">Modelos de Etapas</span>
 	</nav>
 
-	<header
-		class="flex flex-col items-start gap-4 rounded-xl border border-border-subtle bg-surface p-5 shadow-lg sm:flex-row sm:items-start"
-	>
-		<div
-			class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-lg text-primary-600"
-			aria-hidden="true"
-		>
-			<i class="fas fa-layer-group"></i>
-		</div>
-		<div class="flex min-w-0 flex-1 flex-col gap-1">
-			<div class="flex flex-wrap items-center gap-3">
-				<h1 id="tpl-title" class="font-heading text-2xl font-bold tracking-tight text-primary-700">
-					Modelos de Etapas
-				</h1>
-				{#if data}
-					<span
-						class="inline-flex items-center rounded-full border border-primary-500 bg-primary-100 px-3 py-1 text-sm font-semibold text-primary-700"
-					>
-						{totalTemplates} modelo{totalTemplates === 1 ? '' : 's'}
-					</span>
-				{/if}
-			</div>
-			<p class="text-sm text-text-secondary">
-				Padronize os ciclos dos projetos — use, duplique ou edite conforme a necessidade da
-				secretaria.
-			</p>
-		</div>
-		{#if view === 'list'}
-			<button
-				type="button"
-				onclick={openCreate}
-				class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-base hover:-translate-y-px hover:bg-primary-700 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
-			>
-				<i class="fas fa-plus" aria-hidden="true"></i>
-				<span>Novo modelo</span>
-			</button>
-		{/if}
-	</header>
+	<PageHeader compact class="min-h-[3.5rem]" labelId="tpl-title">
+		{#snippet titleContent()}
+			<span class="align-middle">Modelos de Etapas</span>
+			{#if data}
+				<CountBadge class="ml-2">{totalTemplates} modelo{totalTemplates === 1 ? '' : 's'}</CountBadge>
+			{/if}
+		{/snippet}
+		{#snippet actions()}
+			{#if view === 'list'}
+				<Button size="sm" onclick={openCreate}>
+					{#snippet icon()}<i class="fas fa-plus" aria-hidden="true"></i>{/snippet}
+					Novo modelo
+				</Button>
+			{/if}
+		{/snippet}
+	</PageHeader>
 
 	{#if view === 'form'}
 		<!-- =================== FORMULÁRIO CRIAR/EDITAR =================== -->

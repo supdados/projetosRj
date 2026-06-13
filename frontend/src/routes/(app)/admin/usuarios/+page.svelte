@@ -22,6 +22,9 @@
 	import { ApiClientError } from '$lib/api/client';
 	import type { AdminUser, AdminUsersPageMeta } from '$lib/types/adminUsers';
 	import { auth } from '$lib/stores/auth';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Button from '$lib/components/Button.svelte';
+	import CountBadge from '$lib/components/CountBadge.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -135,42 +138,21 @@
 	<title>Gerenciar Usuários — ProjetosRJ</title>
 </svelte:head>
 
-<section aria-labelledby="admin-usuarios-title" class="mx-auto flex w-full max-w-[1400px] flex-col gap-2">
-	<!--
-		Cabeçalho "glass" do original (.admin-users-header): faixa com gradiente
-		translúcido, borda azul suave e sombra; ícone arredondado à esquerda,
-		título/subtítulo ao centro e botão "Novo Usuário" (gradiente) à direita.
-	-->
-	<header
-		class="flex items-center justify-between gap-4 rounded-xl border border-primary-500/30 bg-glass-card px-4 py-3.5 shadow-md"
-	>
-		<div class="flex min-w-0 items-center gap-3">
-			<span
-				class="inline-flex h-[43px] w-[43px] shrink-0 items-center justify-center rounded-[11px] border border-primary-500/20 bg-glass-card text-lg text-primary-700"
-				aria-hidden="true"
-			>
-				<i class="fas fa-users-cog"></i>
-			</span>
-			<div class="min-w-0">
-				<h1
-					id="admin-usuarios-title"
-					class="font-heading text-2xl font-bold leading-tight text-primary-700"
-				>
-					Gerenciar Usuários
-				</h1>
-				<p class="text-md font-medium text-text-secondary">
-					Administre acessos, órgãos responsáveis e permissões de forma centralizada.
-				</p>
-			</div>
-		</div>
-		<a
-			href={`${base}/admin/usuarios/novo`}
-			class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[9px] border border-primary-700 bg-topnav-gradient px-3.5 py-2 text-md font-semibold text-white no-underline shadow-md transition-all duration-slow ease-[cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 active:translate-y-0"
-		>
-			<i class="fas fa-user-plus"></i>
-			Novo Usuário
-		</a>
-	</header>
+<section aria-labelledby="admin-usuarios-title" class="mx-auto flex w-full max-w-[1400px] flex-col gap-4">
+	<PageHeader compact class="min-h-[3.5rem]" labelId="admin-usuarios-title">
+		{#snippet titleContent()}
+			<span class="align-middle">Gerenciar Usuários</span>
+			{#if loadState !== 'loading'}
+				<CountBadge class="ml-2">{total} usuário{total === 1 ? '' : 's'}</CountBadge>
+			{/if}
+		{/snippet}
+		{#snippet actions()}
+			<Button size="sm" href={`${base}/admin/usuarios/novo`}>
+				{#snippet icon()}<i class="fas fa-user-plus" aria-hidden="true"></i>{/snippet}
+				Novo Usuário
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if actionError}
 		<div role="alert" class="rounded-lg border border-danger bg-surface px-5 py-3 text-sm text-text-primary">
@@ -225,17 +207,8 @@
 				</a>
 			</div>
 		{:else}
-			<!--
-				Linha de metadados (.admin-users-meta-row): chips arredondados com
-				contagem total e paginação atual, espelhando o original (fa-users / fa-copy).
-			-->
+			<!-- Paginação atual (a contagem total agora vive no CountBadge do header). -->
 			<div class="mb-1 flex flex-wrap items-center gap-1.5">
-				<span
-					class="inline-flex items-center gap-1.5 rounded-full border border-primary-500/50 bg-surface px-2.5 py-1 text-xs font-semibold text-text-secondary"
-				>
-					<i class="fas fa-users"></i>
-					{total} usuário{total === 1 ? '' : 's'}
-				</span>
 				<span
 					class="inline-flex items-center gap-1.5 rounded-full border border-primary-500/50 bg-surface px-2.5 py-1 text-xs font-semibold text-text-secondary"
 				>

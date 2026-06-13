@@ -26,6 +26,9 @@
 	import { ApiClientError } from '$lib/api/client';
 	import type { OrgaoNode, OrgaoTreeData, ReorderDirection } from '$lib/types/adminOrgaos';
 	import OrgaoTreeNode from '$lib/components/OrgaoTreeNode.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Button from '$lib/components/Button.svelte';
+	import CountBadge from '$lib/components/CountBadge.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -294,47 +297,28 @@
 </svelte:head>
 
 <section aria-labelledby="orgaos-title" class="flex flex-col gap-4">
-	<header class="flex flex-wrap items-center justify-between gap-3">
-		<div class="flex items-center gap-3">
-			<span
-				class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-700"
-				aria-hidden="true"
-			>
-				<i class="fas fa-sitemap text-lg"></i>
-			</span>
-			<div class="flex flex-col gap-1">
-				<h1 id="orgaos-title" class="font-heading text-2xl font-bold text-text-primary">
-					Hierarquia de Órgãos
-				</h1>
-				<p class="text-sm text-text-secondary">
-					Organize órgãos, autarquias e suas áreas em até {maxDepth} níveis.
-				</p>
-			</div>
-		</div>
-		<div class="flex items-center gap-2">
+	<PageHeader compact class="min-h-[3.5rem]" labelId="orgaos-title">
+		{#snippet titleContent()}
+			<span class="align-middle">Hierarquia de Órgãos</span>
+			{#if data}
+				<CountBadge class="ml-2">{total} unidade{total === 1 ? '' : 's'}</CountBadge>
+			{/if}
+		{/snippet}
+		{#snippet actions()}
 			<a
 				href={`${base}/admin/orgaos/tipos`}
-				class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				<i class="fas fa-layer-group" aria-hidden="true"></i>Tipos
 			</a>
-			<a
-				href={`${base}/admin/orgaos/novo`}
-				class="inline-flex items-center gap-2 rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-100/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<i class="fas fa-plus" aria-hidden="true"></i>{total === 0
-					? 'Criar Órgão Raiz'
-					: 'Nova Unidade'}
-			</a>
-		</div>
-	</header>
+			<Button size="sm" href={`${base}/admin/orgaos/novo`}>
+				{#snippet icon()}<i class="fas fa-plus" aria-hidden="true"></i>{/snippet}
+				{total === 0 ? 'Criar Órgão Raiz' : 'Nova Unidade'}
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	<div class="flex flex-wrap items-center gap-2">
-		<span
-			class="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-text-secondary"
-		>
-			<i class="fas fa-sitemap" aria-hidden="true"></i>{total} unidade{total === 1 ? '' : 's'}
-		</span>
 		<span
 			class="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-text-secondary"
 		>

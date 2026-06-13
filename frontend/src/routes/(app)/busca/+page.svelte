@@ -29,6 +29,8 @@
 		SearchResultsByType
 	} from '$lib/types/search';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import CountBadge from '$lib/components/CountBadge.svelte';
 
 	/** Estados da busca: ocioso (termo curto), buscando, pronto ou erro. */
 	type SearchState = 'idle' | 'loading' | 'ready' | 'error';
@@ -187,60 +189,55 @@
 </svelte:head>
 
 <section aria-labelledby="busca-title" class="flex flex-col gap-4">
-	<!-- Cabecalho "raised": card com titulo, subtitulo e form (search-results-header). -->
-	<header
-		class="rounded-lg border border-border-subtle bg-surface px-5 py-5 shadow-md"
-	>
-		<h1
-			id="busca-title"
-			class="m-0 flex items-center gap-2 font-heading text-xl font-bold text-text-primary"
-		>
-			<i class="fas fa-search text-primary-600" aria-hidden="true"></i>
-			Busca Global
-		</h1>
+	<!-- Card único (padrão das telas com filtro): header compacto + linha de busca
+		 embutida abaixo de um divisor fino. -->
+	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
+		<PageHeader compact embedded class="min-h-[3.5rem]" labelId="busca-title">
+			{#snippet titleContent()}
+				<span class="align-middle">Busca Global</span>
+				{#if searchState === 'ready' && data && data.counts.total > 0}
+					<CountBadge class="ml-2"
+						>{data.counts.total} referência{data.counts.total === 1 ? '' : 's'}</CountBadge
+					>
+				{/if}
+			{/snippet}
+		</PageHeader>
 
-		<!-- aria-live com a contagem; substitui o subtitulo estatico do original. -->
-		<div role="status" aria-live="polite" class="min-h-[1.25rem]">
+		<!-- aria-live (sr-only): anuncia a contagem/estado da busca p/ leitores de tela. -->
+		<div role="status" aria-live="polite" class="sr-only">
 			{#if searchState === 'ready' && data && data.counts.total > 0}
-				<p class="mt-2 mb-0 text-md text-text-secondary">
-					{data.counts.total} referência{data.counts.total === 1 ? '' : 's'} para
-					"<strong class="text-text-primary">{shownTerm}</strong>".
-				</p>
+				{data.counts.total} referência{data.counts.total === 1 ? '' : 's'} para "{shownTerm}".
 			{:else if searchState === 'loading'}
-				<p class="mt-2 mb-0 text-md text-text-secondary">Buscando…</p>
-			{:else}
-				<p class="mt-2 mb-0 text-md text-text-secondary">
-					Busque por projetos, etapas, tarefas e eventos.
-				</p>
+				Buscando…
 			{/if}
 		</div>
 
 		<form
 			role="search"
-			class="mt-4 flex flex-wrap gap-3"
+			class="flex items-center gap-2 border-t border-border-subtle px-4 py-2.5"
 			onsubmit={onSubmit}
 		>
-			<label for="busca-input" class="sr-only">Buscar projetos, etapas, tarefas e eventos</label>
-			<input
-				id="busca-input"
-				name="q"
-				type="search"
-				autocomplete="off"
-				bind:value={term}
-				oninput={onInput}
-				placeholder="Buscar projetos, etapas, tarefas e eventos…"
-				aria-describedby="busca-hint"
-				class="min-w-0 flex-[1_1_360px] rounded-lg border border-border-subtle bg-surface-muted px-4 py-2 text-base text-text-primary placeholder:text-text-muted transition-shadow duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
-			/>
-			<button
-				type="submit"
-				class="rounded-lg border-none bg-primary-600 px-4 py-2 text-base font-semibold text-white transition-colors duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				Buscar
-			</button>
+			<div class="relative min-w-0 flex-1">
+				<i
+					class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
+					aria-hidden="true"
+				></i>
+				<input
+					id="busca-input"
+					name="q"
+					type="search"
+					autocomplete="off"
+					bind:value={term}
+					oninput={onInput}
+					aria-label="Buscar projetos, etapas, tarefas e eventos"
+					aria-describedby="busca-hint"
+					placeholder="Buscar projetos, etapas, tarefas e eventos…"
+					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				/>
+			</div>
 		</form>
 		<p id="busca-hint" class="sr-only">Digite ao menos dois caracteres para iniciar a busca.</p>
-	</header>
+	</div>
 
 	{#if searchState === 'idle'}
 		<div

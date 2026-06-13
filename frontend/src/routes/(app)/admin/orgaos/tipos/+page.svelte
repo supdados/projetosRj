@@ -34,6 +34,9 @@
 	} from '$lib/types/adminOrgaoTipos';
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Button from '$lib/components/Button.svelte';
+	import CountBadge from '$lib/components/CountBadge.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type FormMode = 'create' | 'edit';
@@ -221,41 +224,31 @@
 </svelte:head>
 
 <section aria-labelledby="tipos-title" class="flex flex-col gap-6">
-	<header class="flex flex-wrap items-start justify-between gap-3">
-		<div class="flex flex-col gap-2">
-			<div class="flex flex-wrap items-center gap-3">
-				<h1 id="tipos-title" class="font-heading text-2xl font-bold text-text-primary">
-					Tipos de Órgão
-				</h1>
-				{#if loadState === 'ready'}
-					<span
-						class="inline-flex items-center gap-1 rounded-sm border border-primary-500 bg-primary-100 px-2 py-1 text-xs font-medium text-primary-700"
-					>
-						{tipos.length} tipo{tipos.length === 1 ? '' : 's'}
-					</span>
-				{/if}
-			</div>
-			<p class="text-sm text-text-secondary">
-				Configure os níveis que definem o que fica acima, abaixo ou no mesmo nível na
-				hierarquia de órgãos.
-			</p>
-		</div>
-		<div class="flex flex-wrap items-center gap-2">
+	<PageHeader
+		compact
+		class="min-h-[3.5rem]"
+		labelId="tipos-title"
+		subtitle="Configure os níveis que definem o que fica acima, abaixo ou no mesmo nível na hierarquia de órgãos."
+	>
+		{#snippet titleContent()}
+			<span class="align-middle">Tipos de Órgão</span>
+			{#if loadState === 'ready'}
+				<CountBadge class="ml-2">{tipos.length} tipo{tipos.length === 1 ? '' : 's'}</CountBadge>
+			{/if}
+		{/snippet}
+		{#snippet actions()}
 			<a
 				href="{base}/admin/orgaos"
-				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				Hierarquia
 			</a>
-			<button
-				type="button"
-				onclick={openCreate}
-				class="rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
+			<Button size="sm" onclick={openCreate}>
+				{#snippet icon()}<i class="fas fa-plus" aria-hidden="true"></i>{/snippet}
 				Novo tipo
-			</button>
-		</div>
-	</header>
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if formOpen}
 		<Card title={formMode === 'edit' ? 'Editar tipo de órgão' : 'Novo tipo de órgão'} labelId="tipo-form-title">
