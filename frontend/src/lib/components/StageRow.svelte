@@ -98,6 +98,16 @@
 		return fieldStates[field] ?? {};
 	}
 
+	// Ajusta a altura do textarea ao conteúdo (auto-grow). Sem isso, o `rows="1"`
+	// + `overflow:hidden` prendia a edição em 1 linha, rolando até o cursor e
+	// exibindo só a última palavra de um comentário com várias linhas.
+	function resizeComment(): void {
+		const el = commentEl;
+		if (!el) return;
+		el.style.height = 'auto';
+		el.style.height = `${el.scrollHeight}px`;
+	}
+
 	async function startComment(): Promise<void> {
 		if (locked || etapa.done) return;
 		commentDraft = shownComment ?? '';
@@ -106,6 +116,7 @@
 		// já no primeiro clique.
 		await tick();
 		commentEl?.focus();
+		resizeComment();
 	}
 	function commitComment(): void {
 		const text = commentDraft.trim();
@@ -242,6 +253,7 @@
 						aria-label="Comentário da etapa"
 						class="etapa-comment-editor"
 						onblur={commitComment}
+						oninput={resizeComment}
 						onkeydown={(e) => {
 							if (e.key === 'Enter' && !e.shiftKey) {
 								e.preventDefault();
