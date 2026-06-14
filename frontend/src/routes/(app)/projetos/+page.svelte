@@ -47,6 +47,7 @@
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import { flash } from '$lib/stores/flash';
 	import { auth } from '$lib/stores/auth';
 
@@ -175,16 +176,6 @@
 	const hasAdvancedActive = $derived(
 		deliveryType !== '' || atraso !== '' || objetivo !== '' || abepIndicator !== ''
 	);
-
-	/** Janela de páginas visível na paginação numerada (igual ao range Jinja). */
-	const pageWindow = $derived.by(() => {
-		const tp = pagination?.total_pages ?? 1;
-		const start = Math.max(1, page - 2);
-		const end = Math.min(tp, page + 2);
-		const out: number[] = [];
-		for (let p = start; p <= end; p++) out.push(p);
-		return out;
-	});
 
 	/** Subconjunto de indicadores ABEP que casa com o texto digitado. */
 	const abepVisible = $derived.by(() => {
@@ -1130,85 +1121,17 @@
 				</div>
 			</div>
 
-			{#if pagination && pagination.total_pages > 1}
-				<!--
-					Paginação numerada (projects-v4-pagination): info "Mostrando…" à
-					esquerda; primeira/anterior/janela/próxima/última à direita.
-				-->
-				<section
-					class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 shadow-sm"
-				>
-					<div class="text-sm font-medium text-text-secondary">
-						Mostrando {(pagination.page - 1) * pagination.per_page + 1} - {Math.min(
-							pagination.page * pagination.per_page,
-							totalProjects
-						)} de {totalProjects} projetos
-					</div>
-					<nav aria-label="Paginação de projetos">
-						<ul class="m-0 flex list-none items-center gap-1 p-0">
-							<li>
-								<button
-									type="button"
-									onclick={() => goToPage(1)}
-									disabled={pagination.page <= 1}
-									aria-label="Primeira página"
-									class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
-								>
-									««
-								</button>
-							</li>
-							<li>
-								<button
-									type="button"
-									onclick={() => goToPage(pagination.page - 1)}
-									disabled={pagination.page <= 1}
-									aria-label="Página anterior"
-									class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
-								>
-									«
-								</button>
-							</li>
-							{#each pageWindow as p (p)}
-								<li>
-									<button
-										type="button"
-										onclick={() => goToPage(p)}
-										aria-label={`Página ${p}`}
-										aria-current={p === pagination.page ? 'page' : undefined}
-										class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-3 text-sm font-semibold transition-all duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {p ===
-										pagination.page
-											? 'border-primary-700 bg-gradient-to-b from-primary-500 to-primary-700 text-white'
-											: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-primary-700'}"
-									>
-										{p}
-									</button>
-								</li>
-							{/each}
-							<li>
-								<button
-									type="button"
-									onclick={() => goToPage(pagination.page + 1)}
-									disabled={pagination.page >= pagination.total_pages}
-									aria-label="Próxima página"
-									class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
-								>
-									»
-								</button>
-							</li>
-							<li>
-								<button
-									type="button"
-									onclick={() => goToPage(pagination.total_pages)}
-									disabled={pagination.page >= pagination.total_pages}
-									aria-label="Última página"
-									class="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-text-secondary"
-								>
-									»»
-								</button>
-							</li>
-						</ul>
-					</nav>
-				</section>
+			{#if pagination}
+				<PaginationBar
+					page={pagination.page}
+					totalPages={pagination.total_pages}
+					total={pagination.total}
+					perPage={pagination.per_page}
+					itemLabel="projetos"
+					label="Paginação de projetos"
+					disabled={loadState !== 'ready'}
+					onChange={goToPage}
+				/>
 			{/if}
 		{/if}
 	{/if}

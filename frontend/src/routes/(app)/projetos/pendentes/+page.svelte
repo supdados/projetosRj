@@ -469,31 +469,37 @@
 				</p>
 			</div>
 		{:else}
-			<div class="flex flex-col gap-4" aria-busy={loadState !== 'ready'}>
-				{#each data.projetos as row (row.project.id)}
-					<PendingProjectCard
-						bind:this={cardRefs[row.project.id]}
-						{row}
-						bucketMap={data.etapa_bucket_map}
-						progressMap={data.etapa_task_progress}
-						{drawer}
-						{expandedProjects}
-						onToggleExpanded={setProjectExpanded}
-						onOpenQuickAdd={openQuickAdd}
-						{onProjectDefocused}
-					/>
-				{/each}
-			</div>
+			<!-- Lista + pager num wrapper gap-4 → distância padrão (16px) até o pager. -->
+			<div class="flex flex-col gap-4">
+				<div class="flex flex-col gap-4" aria-busy={loadState !== 'ready'}>
+					{#each data.projetos as row (row.project.id)}
+						<PendingProjectCard
+							bind:this={cardRefs[row.project.id]}
+							{row}
+							bucketMap={data.etapa_bucket_map}
+							progressMap={data.etapa_task_progress}
+							{drawer}
+							{expandedProjects}
+							onToggleExpanded={setProjectExpanded}
+							onOpenQuickAdd={openQuickAdd}
+							{onProjectDefocused}
+						/>
+					{/each}
+				</div>
 
-			{#if pagination}
-				<PaginationBar
-					page={pagination.page}
-					totalPages={pagination.total_pages}
-					label="Paginação de projetos"
-					disabled={loadState !== 'ready'}
-					onChange={goToPage}
-				/>
-			{/if}
+				{#if pagination}
+					<PaginationBar
+						page={pagination.page}
+						totalPages={pagination.total_pages}
+						total={pagination.total}
+						perPage={pagination.per_page}
+						itemLabel="projetos"
+						label="Paginação de projetos"
+						disabled={loadState !== 'ready'}
+						onChange={goToPage}
+					/>
+				{/if}
+			</div>
 		{/if}
 	{/if}
 </section>
