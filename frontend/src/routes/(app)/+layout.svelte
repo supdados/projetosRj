@@ -12,6 +12,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { afterNavigate } from '$app/navigation';
+	import { page } from '$app/stores';
 	import type { Snippet } from 'svelte';
 	import { auth, loadCurrentUser } from '$lib/stores/auth';
 	import AppTopnav from '$lib/components/AppTopnav.svelte';
@@ -19,6 +20,18 @@
 	import FlashToasts from '$lib/components/FlashToasts.svelte';
 
 	let { children }: { children: Snippet } = $props();
+
+	// Telas cujo conteudo rola o proprio <main> (sem scroll interno de altura
+	// fixa): nelas o rodape vive DENTRO do scroll, no fim da pagina, em vez de
+	// ancorado na viewport. As demais (ex.: dashboard, com paineis de scroll
+	// interno que preenchem a altura do <main>) mantem o rodape fixo no rodape.
+	const SCROLL_FOOTER_ROUTES = new Set([
+		'/projetos',
+		'/projetos/pendentes',
+		'/tarefas',
+		'/admin/usuarios'
+	]);
+	const footerInScroll = $derived(SCROLL_FOOTER_ROUTES.has($page.url.pathname));
 
 	// O scroller da pagina agora e o <main> (nao mais a janela), entao a
 	// restauracao de scroll do Kit nao se aplica: reposiciona no topo a cada
@@ -45,10 +58,7 @@
 	     relative: e o containing block dos descendentes position:absolute (ex.: inputs
 	     sr-only de anexo por linha na lista de tarefas). Sem isso eles se ancoram no
 	     <html> e esticam o scrollHeight do documento -> 2a barra rolando pagina vazia. -->
-	<main
-		bind:this={mainEl}
-		class="relative mx-auto w-full min-h-0 flex-1 overflow-y-auto px-[clamp(1.5rem,8vw,7rem)] py-6"
-	>
+	{#snippet appContent()}
 		{#if $auth.status === 'authenticated'}
 			{@render children()}
 		{:else if $auth.status === 'unauthenticated' && $auth.error}
@@ -71,12 +81,33 @@
 				<span>Carregando…</span>
 			</div>
 		{/if}
-	</main>
+	{/snippet}
 
-	<!-- Rodapé fixo do shell (assinatura SETD): vive ABAIXO do <main> rolável,
-	     entao ancora no fim da viewport em todas as paginas, sem rolar com o
-	     conteudo. -->
-	<AppFooter />
+	{#if footerInScroll}
+		<!-- Rotas que rolam o proprio <main>: rodape vive DENTRO do scroll, no fim
+		     da pagina. flex-1 no wrapper empurra o rodape para o fim da viewport
+		     quando o conteudo e curto; com scroll, ele so aparece ao rolar ate o fim. -->
+		<main
+			bind:this={mainEl}
+			class="relative flex w-full min-h-0 flex-1 flex-col overflow-y-auto"
+		>
+			<div class="mx-auto w-full flex-1 px-[clamp(1.5rem,8vw,7rem)] py-6">
+				{@render appContent()}
+			</div>
+			<AppFooter />
+		</main>
+	{:else}
+		<main
+			bind:this={mainEl}
+			class="relative mx-auto w-full min-h-0 flex-1 overflow-y-auto px-[clamp(1.5rem,8vw,7rem)] py-6"
+		>
+			{@render appContent()}
+		</main>
+
+		<!-- Rodapé fixo do shell (assinatura SETD): vive ABAIXO do <main> rolável,
+		     entao ancora no fim da viewport, sem rolar com o conteudo. -->
+		<AppFooter />
+	{/if}
 
 	<FlashToasts />
 </div>
