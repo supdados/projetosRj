@@ -19,14 +19,25 @@ jobs:
     name: pip-audit (backend)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit # observa egress do runner; trocar p/ block após mapear endpoints
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Instalar pip-audit
         run: python -m pip install --upgrade pip pip-audit
       - name: Auditar dependências de produção e dev
         run: pip-audit -r requirements -r requirements-dev.txt --strict --progress-spinner off
+      - name: Verificar locks com hashes (--require-hashes, só wheels)
+        # Defesa supply-chain: falha se algum artefato do PyPI não bater com o hash
+        # fixado em requirements*.lock (republicação maliciosa com a mesma versão).
+        # --only-binary :all: recusa sdists -> nenhum setup.py executa código no install.
+        # Instala em venvs efêmeros e isolados — não interfere no job de auditoria.
+        run: |
+          python -m venv /tmp/lock-prod && /tmp/lock-prod/bin/pip install --require-hashes --only-binary :all: -r requirements.lock
+          python -m venv /tmp/lock-dev && /tmp/lock-dev/bin/pip install --require-hashes --only-binary :all: -r requirements-dev.lock
 
   npm-audit:
     name: npm audit (frontend)
@@ -35,8 +46,11 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "20"
           cache: npm
@@ -45,3 +59,53 @@ jobs:
         run: npm ci
       - name: Auditar dependências do frontend
         run: npm audit --audit-level=high
+
+  osv-scanner:
+    # OSV.dev cobre pip e npm numa só ferramenta, incluindo deps transitivas.
+    # Falha o build em vulnerabilidades conhecidas (complementa pip-audit/npm audit).
+    name: OSV-Scanner (pip + npm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Scan de lockfiles (OSV.dev)
+        continue-on-error: true # reporta achados sem bloquear o build (rever p/ gate depois)
+        uses: google/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+        with:
+          # requirements.lock não é auto-detectado pelo nome -> declarar o parser explicitamente.
+          scan-args: |-
+            --lockfile=requirements.txt:requirements.lock
+            --lockfile=frontend/package-lock.json
+
+  sbom:
+    # Inventário de componentes (CycloneDX) para resposta a incidente: "uso esse pacote? onde?".
+    # Gera artefato; não bloqueia o build.
+    name: Gerar SBOM (CycloneDX)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: SBOM do backend (Python)
+        run: |
+          python -m pip install --upgrade pip cyclonedx-bom
+          cyclonedx-py requirements requirements.lock -o sbom-backend.cdx.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+      - name: SBOM do frontend (npm)
+        working-directory: frontend
+        run: npx --yes @cyclonedx/cyclonedx-npm@latest --package-lock-only --output-file ../sbom-frontend.cdx.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-cyclonedx
+          path: |
+            sbom-backend.cdx.json
+            sbom-frontend.cdx.json
+          retention-days: 30

@@ -1,0 +1,31 @@
+# Updates automatizados de dependências com quarentena (cooldown) de 7 dias.
+# cooldown só atrasa updates de versão; updates de SEGURANÇA (CVE) ignoram o cooldown
+# e viram PR na hora. Cobre os três ecossistemas usados pelo projeto.
+# Precisa estar no branch padrão (main) no GitHub para o Dependabot ler.
+version: 2
+updates:
+  # Backend Python (requirements / requirements-dev.txt na raiz).
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+
+  # Frontend SvelteKit/Vite (package.json em frontend/).
+  - package-ecosystem: npm
+    directory: "/frontend"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+
+  # Workflows de CI — propõe bumps de SHA mantendo o pin imutável (ver security-audit.yml).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

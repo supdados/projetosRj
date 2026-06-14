@@ -35,6 +35,8 @@ A autenticação usa **Gov.br (OpenID Connect)**.
 # 1) Backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements -r requirements-dev.txt
+# Produção: instale com verificação de hash (defesa supply chain):
+#   pip install --require-hashes -r requirements.lock
 cp .env.example .env        # preencha as variáveis (veja .env.example)
 flask db upgrade            # aplica as migrações
 python app.py               # ou: gunicorn wsgi:app
@@ -83,6 +85,8 @@ global search and **Google Calendar** integration. Authentication uses
 # 1) Backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements -r requirements-dev.txt
+# Production: install with hash verification (supply-chain defense):
+#   pip install --require-hashes -r requirements.lock
 cp .env.example .env        # fill in the variables (see .env.example)
 flask db upgrade            # apply migrations
 python app.py               # or: gunicorn wsgi:app

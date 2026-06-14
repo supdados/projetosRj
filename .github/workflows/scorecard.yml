@@ -1,0 +1,43 @@
+name: scorecard
+
+# OpenSSF Scorecard — avalia a postura de segurança do repositório (~18 checks:
+# pinned-dependencies, token-permissions, dangerous-workflow, branch-protection, etc.).
+# Resultado vai para a aba Security (code scanning) e para o painel público scorecard.dev.
+
+on:
+  branch_protection_rule:
+  schedule:
+    - cron: "0 7 * * 1" # segunda 07:00 UTC
+  push:
+    branches: [main]
+
+# Mínimo no topo; o job eleva só o necessário.
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write # upload do SARIF para code scanning
+      id-token: write # publicar resultados no scorecard.dev (repo público)
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: scorecard-results
+          path: results.sarif
+          retention-days: 5
+      - uses: github/codeql-action/upload-sarif@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3.36.2
+        with:
+          sarif_file: results.sarif
