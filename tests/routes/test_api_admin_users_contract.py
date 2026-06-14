@@ -45,7 +45,7 @@ def test_list_returns_ok_envelope_with_meta(client_admin, seed_data):
     assert data["usuarios"]
     meta = response.get_json()["meta"]
     assert set(meta.keys()) == {"page", "per_page", "total", "total_pages"}
-    assert meta["per_page"] == 10
+    assert meta["per_page"] == 20
 
 
 def test_list_never_serializes_secrets(client_admin):

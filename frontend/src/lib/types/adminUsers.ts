@@ -43,7 +43,7 @@ export interface AdminOrgaoOption {
 	depth: number;
 }
 
-/** Metadados de paginação da lista (`meta`), per_page fixo em 10. */
+/** Metadados de paginação da lista (`meta`), per_page fixo em 20. */
 export interface AdminUsersPageMeta {
 	page: number;
 	per_page: number;

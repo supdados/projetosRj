@@ -37,7 +37,7 @@ from .envelope import fail, ok
 from .negotiation import api_admin_required
 from .serializers import serialize_admin_user
 
-_PER_PAGE = 10
+_PER_PAGE = 20
 
 
 def _serialize_orgao_depth_option(row: tuple[int, str, str, int]) -> dict[str, Any]:

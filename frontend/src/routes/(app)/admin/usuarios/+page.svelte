@@ -25,6 +25,7 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
+	import PaginationBar from '$lib/components/PaginationBar.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -64,7 +65,7 @@
 			!q || o.sigla.toLowerCase().includes(q) || o.nome.toLowerCase().includes(q);
 		const items = areaOptions
 			.filter(matches)
-			.map((o) => ({ id: o.id as number | null, label: `${o.sigla} — ${o.nome}` }));
+			.map((o) => ({ id: o.id as number | null, label: o.sigla }));
 		return q ? items : [{ id: null, label: 'Todas as áreas' }, ...items];
 	});
 
@@ -83,26 +84,6 @@
 
 	const total = $derived(meta?.total ?? 0);
 	const totalPages = $derived(meta?.total_pages ?? 1);
-
-	/**
-	 * Janela de paginação no estilo Flask-SQLAlchemy `iter_pages`
-	 * (left_edge=1, right_edge=1, left_current=1, right_current=2),
-	 * espelhando o markup original. `null` representa as reticências "…".
-	 */
-	const pageWindow = $derived.by<(number | null)[]>(() => {
-		const pages: (number | null)[] = [];
-		let last = 0;
-		for (let p = 1; p <= totalPages; p += 1) {
-			const nearEdge = p <= 1 || p > totalPages - 1;
-			const nearCurrent = p >= page - 1 && p <= page + 2;
-			if (nearEdge || nearCurrent) {
-				if (last && p - last > 1) pages.push(null);
-				pages.push(p);
-				last = p;
-			}
-		}
-		return pages;
-	});
 
 	async function load(): Promise<void> {
 		loadState = usuarios.length ? loadState : 'loading';
@@ -266,13 +247,15 @@
 				type="text"
 				bind:value={searchText}
 				oninput={onSearchInput}
+				placeholder="Buscar por nome ou login…"
 				aria-label="Buscar usuários por nome ou login"
 				autocomplete="off"
-				class="h-9 min-w-0 flex-[2] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 w-full max-w-sm shrink-0 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			/>
 
-			<!-- Seletor de área (combobox: botão → busca + listbox). -->
-			<div class="relative min-w-0 flex-1">
+			<!-- Seletor de área (combobox: botão → busca + listbox). Largura fixa
+			     pequena; nenhum campo cresce → sobra espaço vazio à direita. -->
+			<div class="relative w-56 shrink-0">
 				{#if areaOpen}
 					<input
 						bind:this={areaInputEl}
@@ -496,14 +479,14 @@
 									<td class="px-3 py-2.5 text-center align-middle">
 										{#if user.is_admin}
 											<span
-												class="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-full border border-success/40 bg-surface-muted px-2.5 py-1 text-xs font-bold leading-tight text-success"
+												class="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md border border-success/40 bg-surface-muted px-2.5 py-1 text-xs font-bold leading-tight text-success"
 											>
 												<i class="fas fa-user-shield"></i>
 												Admin
 											</span>
 										{:else}
 											<span
-												class="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-full border border-border-subtle bg-surface-muted px-2.5 py-1 text-xs font-bold leading-tight text-text-secondary"
+												class="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md border border-border-subtle bg-surface-muted px-2.5 py-1 text-xs font-bold leading-tight text-text-secondary"
 											>
 												<i class="fas fa-user"></i>
 												Padrão
@@ -516,7 +499,7 @@
 												href={editHref(user)}
 												title="Editar Usuário"
 												aria-label="Editar usuário {user.name}"
-												class="inline-flex h-8 w-8 items-center justify-center rounded-md text-primary-700 no-underline transition-colors duration-fast hover:text-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted no-underline transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 											>
 												<i class="fas fa-pen"></i>
 											</a>
@@ -537,7 +520,7 @@
 													disabled={deletingId === user.id}
 													title="Excluir Usuário"
 													aria-label="Excluir usuário {user.name}"
-													class="inline-flex h-8 w-8 items-center justify-center rounded-md text-danger transition-colors duration-fast hover:text-danger/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
+													class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
 												>
 													<i class="fas {deletingId === user.id ? 'fa-spinner fa-spin' : 'fa-trash'}"></i>
 												</button>
@@ -552,51 +535,16 @@
 			</div>
 
 			{#if totalPages > 1}
-				<!--
-					Paginação NUMERADA (.admin-users-pagination): janela com reticências,
-					setas «/», item ativo em gradiente — espelha iter_pages do original.
-				-->
-				<nav class="mt-2 flex items-center justify-center gap-1" aria-label="Paginação de usuários">
-					<button
-						type="button"
-						onclick={() => goToPage(page - 1)}
-						disabled={page <= 1}
-						aria-label="Página anterior"
-						class="inline-flex min-w-[35px] items-center justify-center rounded-md border border-primary-500/40 bg-surface px-3 py-1.5 text-sm font-semibold text-text-secondary transition-colors duration-fast hover:bg-primary-100/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-text-muted disabled:opacity-70"
-					>
-						<span aria-hidden="true">«</span>
-					</button>
-					{#each pageWindow as p, i (p ?? `gap-${i}`)}
-						{#if p === null}
-							<span class="inline-flex min-w-[35px] items-center justify-center px-2 py-1.5 text-sm font-semibold text-text-muted" aria-hidden="true">…</span>
-						{:else if p === page}
-							<span
-								class="inline-flex min-w-[35px] items-center justify-center rounded-md border border-primary-700 bg-topnav-gradient px-3 py-1.5 text-sm font-semibold text-white"
-								aria-current="page"
-							>
-								{p}
-							</span>
-						{:else}
-							<button
-								type="button"
-								onclick={() => goToPage(p)}
-								aria-label={`Página ${p}`}
-								class="inline-flex min-w-[35px] items-center justify-center rounded-md border border-primary-500/40 bg-surface px-3 py-1.5 text-sm font-semibold text-text-secondary transition-colors duration-fast hover:bg-primary-100/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-							>
-								{p}
-							</button>
-						{/if}
-					{/each}
-					<button
-						type="button"
-						onclick={() => goToPage(page + 1)}
-						disabled={page >= totalPages}
-						aria-label="Próxima página"
-						class="inline-flex min-w-[35px] items-center justify-center rounded-md border border-primary-500/40 bg-surface px-3 py-1.5 text-sm font-semibold text-text-secondary transition-colors duration-fast hover:bg-primary-100/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-text-muted disabled:opacity-70"
-					>
-						<span aria-hidden="true">»</span>
-					</button>
-				</nav>
+				<PaginationBar
+					page={meta?.page ?? page}
+					totalPages={totalPages}
+					total={total}
+					perPage={meta?.per_page}
+					itemLabel="usuários"
+					label="Paginação de usuários"
+					disabled={loadState !== 'ready'}
+					onChange={goToPage}
+				/>
 			{/if}
 		{/if}
 	{/if}
