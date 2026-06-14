@@ -137,13 +137,9 @@ def test_admin_routes_deny_non_admin(case, client_user, seed_data):
 
 
 AREA_PROTECTED_CASES = [
-    {
-        "id": "outsider_project_detail",
-        "method": "GET",
-        "path": "/project/{project_id}",
-        "expected_status": 302,
-        "redirect_contains": "/projects",
-    },
+    # /project/<id> virou redirect cego (302 -> /projetos/<id>); o controle de
+    # acesso ao detalhe vive agora na API da SPA (/api/projetos/<id>), coberto
+    # em test_api_*_contract. Por isso não há mais caso "outsider" para ele aqui.
     {
         "id": "outsider_project_edit_data",
         "method": "GET",

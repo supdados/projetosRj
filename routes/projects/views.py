@@ -4,10 +4,8 @@ import io
 from collections import defaultdict
 
 from flask import (
-    current_app,
     flash,
     g,
-    jsonify,
     make_response,
     redirect,
     render_template,
@@ -20,15 +18,10 @@ from models import (
     Project,
     ProjectHistory,
     Task,
-    UserCalendarConnection,
     db,
 )
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from catalogs.inventario import any_orgao_allows_inventario
-from services.calendar_sync import hydrate_google_connection_identity
-from services.google_calendar import is_google_calendar_enabled
-from services.calendar_core import format_input_datetime
-from services.project_meetings import meeting_time_display, meeting_time_summary
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
@@ -348,12 +341,11 @@ def build_projetos_pendentes_context(
 ):
     """Monta os dados da tela "Projetos Pendentes", respeitando o escopo de órgão.
 
-    Executa EXATAMENTE as mesmas queries/agregações que a rota Jinja
-    ``/projetos_pendentes`` usa, num único lugar, para que a rota Jinja e o
-    endpoint JSON da SPA (``GET /api/projetos-pendentes``) compartilhem a fonte
-    de verdade — sem recalcular buckets/contadores no cliente. A autorização por
-    órgão é server-side: usuários não-admin ficam restritos à sua subárvore
-    (``orgao_scope``).
+    Centraliza queries/agregações num único lugar para o endpoint JSON da SPA
+    (``GET /api/projetos-pendentes``) — sucessor da extinta rota Jinja
+    ``/projetos_pendentes`` — sem recalcular buckets/contadores no cliente. A
+    autorização por órgão é server-side: usuários não-admin ficam restritos à
+    sua subárvore (``orgao_scope``).
 
     Args:
         selected_orgao_id: ID do órgão já validado/sanitizado para o usuário
@@ -368,8 +360,7 @@ def build_projetos_pendentes_context(
     Returns:
         ``dict`` com a lista paginada (``projetos_com_etapas``), os mapas de
         bucket/progresso, os contadores agregados e os metadados de paginação,
-        consumidos pelo template ``projects/pendentes.html`` e pelo serializer
-        do endpoint JSON.
+        consumidos pelo serializer do endpoint JSON da SPA.
 
     Exemplo:
         >>> ctx = build_projetos_pendentes_context(None)
@@ -723,116 +714,18 @@ def build_projetos_pendentes_context(
     }
 
 
-@main_bp.route("/projetos_pendentes")
-@login_required
-def list_projetos_pendentes():
-    """Renderiza "Projetos Pendentes" (Jinja).
-
-    Fonte de dados: ``build_projetos_pendentes_context``. Mantém o path e o
-    comportamento (sanitização de órgão + redirect 302 em filtro inválido).
-    """
-    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
-        request.args.get("orgao")
-    )
-    if invalid_orgao_filter:
-        return redirect_to_current_route_without_orgao()
-
-    context = build_projetos_pendentes_context(
-        selected_orgao_id,
-        filtro_periodo=(request.args.get("periodo") or "atrasados").strip(),
-        selected_responsavel=(request.args.get("responsavel") or "").strip(),
-        pending_page=request.args.get("page", 1, type=int),
-    )
-    return render_template("projects/pendentes.html", **context)
-
-
 @main_bp.route("/project/<int:project_id>")
 @login_required
 def project_detail(project_id):
-    project = get_or_404(Project, project_id)
-    if not user_can_access_project(g.user, project):
-        flash("Você não tem permissão para visualizar este projeto.", "danger")
-        return redirect(url_for("main.list_projects"))
+    """Resolve o deep-link Jinja e redireciona (302) para o detalhe na SPA.
 
-    # O cálculo do índice de exibição dinâmico foi removido.
-    # O ID real do projeto (project.id) será usado diretamente no template.
-
-    active_task_count = Task.query.filter_by(
-        project_id=project.id, is_archived=False
-    ).count()
-    # Progresso de tarefas por etapa (concluídas / total) — exibido na pílula
-    # "Tarefas" de cada linha de etapa como "3/10". Total e concluídas
-    # consideram apenas tarefas não arquivadas.
-    total_task_counts = dict(
-        db.session.query(Task.etapa_id, db.func.count(Task.id))
-        .filter(
-            Task.project_id == project.id,
-            Task.etapa_id.isnot(None),
-            Task.is_archived.is_(False),
-        )
-        .group_by(Task.etapa_id)
-        .all()
-    )
-    done_task_counts = dict(
-        db.session.query(Task.etapa_id, db.func.count(Task.id))
-        .filter(
-            Task.project_id == project.id,
-            Task.etapa_id.isnot(None),
-            Task.is_archived.is_(False),
-            Task.status == "finalizada",
-        )
-        .group_by(Task.etapa_id)
-        .all()
-    )
-    etapa_task_progress = {
-        etapa.id: {
-            "total": int(total_task_counts.get(etapa.id, 0)),
-            "done": int(done_task_counts.get(etapa.id, 0)),
-        }
-        for etapa in project.etapas
-    }
-    project_history_entries = (
-        ProjectHistory.query.filter_by(project_id=project.id)
-        .order_by(ProjectHistory.timestamp.desc())
-        .all()
-    )
-    calendar_connection = UserCalendarConnection.query.filter_by(
-        user_id=g.user.id
-    ).first()
-    if (
-        calendar_connection is not None
-        and not (calendar_connection.google_account_id or "").strip()
-        and is_google_calendar_enabled(current_app.config)
-    ):
-        try:
-            hydrate_google_connection_identity(current_app.config, calendar_connection)
-            db.session.commit()
-        except Exception as exc:
-            db.session.rollback()
-            current_app.logger.warning(
-                "Nao foi possivel hidratar a identidade Google da conexao %s na tela do projeto: %s",
-                calendar_connection.id,
-                exc,
-            )
-
-    return render_template(
-        "projects/detail.html",
-        project=project,
-        active_task_count=active_task_count,
-        etapa_task_progress=etapa_task_progress,
-        project_history_entries=project_history_entries,
-        calendar_connection=calendar_connection,
-        can_add_google_meeting=bool(
-            calendar_connection
-            and (calendar_connection.google_account_id or "").strip()
-        ),
-        current_google_account_id=(
-            (calendar_connection.google_account_id or "") if calendar_connection else ""
-        ),
-        calendar_input_datetime=format_input_datetime,
-        meeting_time_display=meeting_time_display,
-        meeting_time_summary=meeting_time_summary,
-    )
+    KEEP-ENDPOINT: o endpoint ``main.project_detail`` permanece porque o
+    ``target_url`` PERSISTIDO em notificações (``services/notifications.py``) e a
+    busca apontam para ``/project/<id>``. Uma notificação antiga abre agora a SPA
+    em ``/projetos/<id>``; o controle de acesso é reforçado pela API do detalhe
+    (``/api/projetos/<id>``). A tela Jinja ``detail.html`` foi cortada.
+    """
+    return redirect(f"/projetos/{project_id}")
 
 
 def build_project_history_context(project_id):

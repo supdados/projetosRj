@@ -299,66 +299,6 @@ def test_add_project_creates_stages_indicators_and_history(app, client_user, see
         assert 'Criou o projeto "Projeto Criado Completo"' in history.action_description
 
 
-def test_edit_project_updates_fields_and_history(app, client_user, seed_data):
-    with app.app_context():
-        indicator_ids = _valid_indicator_ids()
-        selected_indicator = str(indicator_ids[-1])
-
-    response = client_user.post(
-        f"/project/{seed_data['project_id']}/edit",
-        data={
-            "project_titulo": "Projeto Auditoria Editado",
-            "project_orgao": "Orgao Editado",
-            "project_orgao_id": str(seed_data["auditoria_orgao_id"]),
-            "project_prioridade": "urgente",
-            "project_status": "Suspenso",
-            "project_special_project": "TCE",
-            "project_sei_process": "SEI-123456/654321/2026",
-            "project_short_description": "Resumo novo",
-            "project_delivery_type": "Painel",
-            "project_abep_indicator": ABEP_INDICADORES_OPTIONS[1]["value"],
-            "project_github_link": "https://github.com/exemplo/editado",
-            "project_documentation_link": "https://docs.example.com/editado",
-            "project_product_link": "https://produto.example.com/editado",
-            "project_objetivo": "1",
-            "project_resultado": "1",
-            "project_indicadores": [selected_indicator],
-            "project_observacao": "Observacao atualizada",
-        },
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 302
-
-    with app.app_context():
-        project = db.session.get(Project, seed_data["project_id"])
-        assert project is not None
-        assert project.titulo == "Projeto Auditoria Editado"
-        assert project.orgao == "Orgao Editado"
-        assert project.prioridade == "urgente"
-        assert project.status == "Suspenso"
-        assert project.special_project == "TCE"
-        assert project.delivery_type == "Painel"
-        assert project.abep_indicator == ABEP_INDICADORES_OPTIONS[1]["value"]
-        assert project.product_link == "https://produto.example.com/editado"
-
-        indicator_ids = [
-            row.indicador_id
-            for row in IndicadorProjeto.query.filter_by(project_id=project.id)
-            .order_by(IndicadorProjeto.id.asc())
-            .all()
-        ]
-        assert indicator_ids == [int(selected_indicator)]
-
-        history = (
-            ProjectHistory.query.filter_by(project_id=project.id, action_type="edit")
-            .order_by(ProjectHistory.id.desc())
-            .first()
-        )
-        assert history is not None
-        assert "Projeto Auditoria Editado" in history.action_description
-
-
 def test_project_edit_data_returns_goal_payload(client_user, seed_data):
     response = client_user.get(f"/project/{seed_data['project_id']}/edit_data")
 

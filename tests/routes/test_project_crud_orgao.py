@@ -103,31 +103,3 @@ def test_add_project_rejects_missing_orgao(app, seed_data):
 
     with app.app_context():
         assert Project.query.filter_by(titulo="Projeto Sem Orgao").first() is None
-
-
-def test_edit_project_updates_orgao_and_mirrors_area(app, seed_data):
-    client = app.test_client()
-    _login(client, seed_data["admin_id"])
-
-    with app.app_context():
-        vpd = OrgaoUnidade.query.filter_by(sigla="VPD").first()
-
-    response = client.post(
-        f"/project/{seed_data['project_id']}/edit",
-        data={
-            "project_titulo": "Projeto Auditoria",
-            "project_orgao": "Livre",
-            "project_orgao_id": str(vpd.id),
-            "project_prioridade": "alta",
-            "project_status": "Vigente",
-            "project_objetivo": "1",
-            "project_resultado": "1",
-        },
-        follow_redirects=False,
-    )
-    assert response.status_code == 302
-
-    with app.app_context():
-        project = db.session.get(Project, seed_data["project_id"])
-        assert project.orgao_id == vpd.id
-        assert project.orgao_ref.sigla == "VPD"

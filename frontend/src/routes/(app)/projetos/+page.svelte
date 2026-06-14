@@ -45,8 +45,10 @@
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
+	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import { flash } from '$lib/stores/flash';
+	import { auth } from '$lib/stores/auth';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -94,9 +96,21 @@
 
 	// Modal de criação de projeto (Quick Create).
 	let createModalOpen = $state<boolean>(false);
+	// Modal de importação de projetos via CSV (Admin).
+	let importModalOpen = $state<boolean>(false);
 
 	/** Opções do GET /api/projetos repassadas ao modal (órgãos/ABEP/etc.). */
 	const createOptions = $derived(data?.options ?? null);
+
+	/** Só admin importa projetos via CSV (espelha @admin_required do backend). */
+	const isAdmin = $derived($auth.user?.is_admin ?? false);
+
+	/** Sucesso da importação CSV: flash + recarrega a lista. */
+	function onProjectsImported(count: number): void {
+		importModalOpen = false;
+		flash.success(`${count} projeto(s) importado(s) com sucesso.`);
+		void load();
+	}
 
 	/**
 	 * Sucesso da criação: replica o flash success + redirect do Jinja.
@@ -610,6 +624,14 @@
 				elevada. Reproduzido com o token primary e leve elevação no hover.
 				(Exportar CSV migrou para o menu de usuário no topnav — AppTopnav.)
 			-->
+			{#if isAdmin}
+				<Button size="sm" variant="secondary" onclick={() => (importModalOpen = true)}>
+					{#snippet icon()}
+						<i class="fas fa-file-import" aria-hidden="true"></i>
+					{/snippet}
+					Importar CSV
+				</Button>
+			{/if}
 			<Button size="sm" onclick={() => (createModalOpen = true)}>
 				{#snippet icon()}
 					<i class="fas fa-plus" aria-hidden="true"></i>
@@ -1198,6 +1220,14 @@
 	options={createOptions}
 	onClose={() => (createModalOpen = false)}
 	onCreated={onProjectCreated}
+/>
+
+<!-- Importação de projetos via CSV (Admin) — sucessor do import_modal.html Jinja. -->
+<ImportarCsvModal
+	open={importModalOpen}
+	options={createOptions}
+	onClose={() => (importModalOpen = false)}
+	onImported={onProjectsImported}
 />
 
 <!--

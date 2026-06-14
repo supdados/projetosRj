@@ -139,16 +139,6 @@ ROUTE_CASES = [
         "requires_admin": True,
     },
     {
-        "id": "projetos_pendentes_get",
-        "method": "GET",
-        "rule": "/projetos_pendentes",
-        "path": "/projetos_pendentes",
-        "role": "user",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
         "id": "add_project_post",
         "method": "POST",
         "rule": "/add_project",
@@ -171,34 +161,8 @@ ROUTE_CASES = [
         "rule": "/project/<int:project_id>",
         "path": "/project/{project_id}",
         "role": "user",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "project_edit_get",
-        "method": "GET",
-        "rule": "/project/<int:project_id>/edit",
-        "path": "/project/{project_id}/edit",
-        "role": "user",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "project_edit_post",
-        "method": "POST",
-        "rule": "/project/<int:project_id>/edit",
-        "path": "/project/{project_id}/edit",
-        "role": "user",
-        "data": {
-            "project_titulo": "Projeto Editado",
-            "project_orgao": "Orgao Editado",
-            "project_orgao_id": "{auditoria_orgao_id}",
-            "project_prioridade": "alta",
-            "project_status": "Vigente",
-            "project_observacao": "Obs atualizada",
-        },
+        # KEEP-ENDPOINT: redireciona (302) para /projetos/<id> na SPA — preserva
+        # target_url persistido em notificações e links da busca.
         "expected_status": 302,
         "requires_login": True,
         "requires_admin": False,
@@ -1919,6 +1883,18 @@ ROUTE_CASES += [
         "requires_admin": False,
     },
     {
+        # Import de projetos via CSV (Admin) — sucessor de /projects/import.
+        # Sem corpo, o handler valida e devolve 422 (órgão obrigatório).
+        "id": "api_projetos_importar_csv_post",
+        "method": "POST",
+        "rule": "/api/projetos/importar-csv",
+        "path": "/api/projetos/importar-csv",
+        "role": "admin",
+        "expected_status": 422,
+        "requires_login": True,
+        "requires_admin": True,
+    },
+    {
         "id": "api_projeto_concluir_post",
         "method": "POST",
         "rule": "/api/projetos/<int:project_id>/concluir",
@@ -2173,4 +2149,13 @@ ROUTE_CASES += [
 # -7 da lane 3: /admin/users* (Jinja) cortado — list/add(GET+POST)/edit(GET+POST)/
 # delete/remove-cpf. CRUD 100% na SPA (/admin/usuarios* + /api/admin/usuarios*).
 # 184 - 7 = 177.
-assert len(ROUTE_CASES) == 177
+# -2 da lane 4 (sub-passo edit): GET/POST /project/<id>/edit removidos (edição de
+# projeto 100% inline na SPA via /api/projetos/<id>/inline, que reusa
+# apply_project_inline_changes). 177 - 2 = 175.
+# -1 da lane 4 (sub-passo pendentes): GET /projetos_pendentes removido (tela SPA
+# /projetos/pendentes via /api/projetos/pendentes; build_projetos_pendentes_context
+# preservada). 175 - 1 = 174.
+# +1 da lane 4 (migração CSV import p/ SPA): POST /api/projetos/importar-csv
+# (sucessor de /projects/import; /projects/import sai na varredura final).
+# 174 + 1 = 175.
+assert len(ROUTE_CASES) == 175

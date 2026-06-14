@@ -16,8 +16,22 @@
  *   const data = await fetchProjects({ status: 'Vigente', q: 'painel' });
  */
 
-import { get, post, del } from './client';
+import { get, post, del, postForm } from './client';
 import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
+
+/** Resultado da importação de projetos via CSV (`POST /api/projetos/importar-csv`). */
+export interface ImportProjectsResult {
+	imported_count: number;
+}
+
+/**
+ * Importa projetos em lote de um CSV (Admin). Envia `multipart/form-data` com o
+ * arquivo em `arquivo` e os atributos comuns (`orgao_id`, `status`,
+ * `special_project`, `delivery_type`). Sucessor da rota Jinja `/projects/import`.
+ */
+export function importProjectsCsv(formData: FormData): Promise<ImportProjectsResult> {
+	return postForm<ImportProjectsResult>('/api/projetos/importar-csv', formData);
+}
 import type { Project } from '$lib/types/entities';
 
 /** Monta a querystring a partir dos filtros, omitindo valores vazios/nulos. */

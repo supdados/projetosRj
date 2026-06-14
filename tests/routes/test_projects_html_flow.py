@@ -11,46 +11,6 @@ def _follow_redirect_and_get_html(client, response):
     return unescape(followed.get_data(as_text=True))
 
 
-def test_edit_project_form_renders_full_html_contract_for_single_area_user(
-    client_user, seed_data
-):
-    response = client_user.get(f"/project/{seed_data['project_id']}/edit")
-
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    required_hooks = [
-        "Editar Projeto:",
-        f'action="/project/{seed_data["project_id"]}/edit"',
-        'id="project_titulo"',
-        'value="Projeto Auditoria"',
-        'id="project_orgao_id"',
-        'name="project_orgao_id"',
-        'id="project_orgao"',
-        'value="Orgao A"',
-        'id="project_special_project"',
-        'id="project_sei_process"',
-        'id="project_delivery_type"',
-        'id="project_abep_indicator_search"',
-        'id="project_abep_indicator"',
-        'id="project_objetivo"',
-        'id="project_resultado"',
-        'id="indicadores-container"',
-        'id="project_github_link"',
-        'id="project_documentation_link"',
-        'id="project_product_link"',
-        'id="project_observacao"',
-        f'href="/project/{seed_data["project_id"]}"',
-        "Salvar Alterações",
-    ]
-
-    for hook in required_hooks:
-        assert hook in html
-
-    assert 'name="project_orgao_id" required' in html
-    assert '<option value="Vigente" selected>Vigente</option>' in html
-
-
 def test_delete_project_html_redirects_with_flash_and_removes_project(app, client_user):
     with app.app_context():
         project = Project(

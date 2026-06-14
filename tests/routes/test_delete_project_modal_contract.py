@@ -21,23 +21,9 @@ DELETE_MODAL_HOOKS = [
 ]
 
 
-def test_project_detail_renders_delete_button_and_confirm_modal(client_user, seed_data):
-    response = client_user.get(f"/project/{seed_data['project_id']}")
-
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    # Botão vermelho de apagar, escondido até o modo edição (classe ds-hidden).
-    assert "btn-delete-project" in html
-    assert 'data-delete-url="/project/' in html
-    assert f'data-delete-url="/project/{seed_data["project_id"]}/delete"' in html
-    # O rótulo segue o ícone (</i>Apagar Projeto) e depois há whitespace antes de
-    # </button>, então casa-se o trecho contíguo. "Apagar Projeto" (P maiúsculo) é
-    # exclusivo deste botão — o modal usa "Apagar projeto" e "APAGAR PROJETO".
-    assert ">Apagar Projeto" in html
-
-    for hook in DELETE_MODAL_HOOKS:
-        assert hook in html, f"hook ausente na tela de detalhe: {hook}"
+# test_project_detail_renders_delete_button_and_confirm_modal removido na migração
+# SPA: /project/<id> virou redirect 302 (detalhe é a tela SPA /projetos/<id>). O
+# modal de exclusão na LISTA Jinja segue coberto pelo teste abaixo até a lane 4.5.
 
 
 def test_projects_list_renders_delete_form_and_confirm_modal(client_user, seed_data):

@@ -57,6 +57,7 @@ from . import session  # noqa: F401,E402
 from . import dashboard  # noqa: F401,E402
 from . import projects  # noqa: F401,E402
 from . import projects_write  # noqa: F401,E402
+from . import projects_import  # noqa: F401,E402
 from . import project_detail  # noqa: F401,E402
 from . import etapas  # noqa: F401,E402
 from . import tasks  # noqa: F401,E402

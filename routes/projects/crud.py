@@ -6,15 +6,12 @@ from flask import (
     g,
     jsonify,
     redirect,
-    render_template,
     request,
     url_for,
 )
 
 from catalogs.abep import normalize_abep_indicator
-from catalogs.inventario import sanitize_special_project_for_orgao
 from models import (
-    IndicadorProjeto,
     OrgaoUnidade,
     Project,
     db,
@@ -32,7 +29,6 @@ from routes.decorators import login_required
 from routes.orgao_scope import get_user_orgao_subtree_ids, user_can_access_project
 from routes.shared import (
     get_or_404,
-    get_goal_catalog_context,
     log_project_action,
 )
 
@@ -179,159 +175,6 @@ def add_project():
         db.session.rollback()
         flash(f"Ocorreu um erro ao adicionar o projeto: {e}", "danger")
         return redirect(request.referrer or url_for("main.dashboard"))
-
-
-@main_bp.route("/project/<int:project_id>/edit", methods=["GET", "POST"])
-@login_required
-def edit_project(project_id):
-    project_to_edit = get_or_404(Project, project_id)
-    if not user_can_access_project(g.user, project_to_edit):
-        flash("Você não tem permissão para editar este projeto.", "danger")
-        return redirect(url_for("main.list_projects"))
-
-    objetivos, resultados_por_objetivo, indicadores_por_resultado = (
-        get_goal_catalog_context()
-    )
-
-    indicadores_do_projeto_ids = [ip.indicador_id for ip in project_to_edit.indicadores]
-
-    if request.method == "POST":
-        # Capturar valores anteriores para o histórico
-        changes = []
-        old_titulo = project_to_edit.titulo
-
-        new_titulo = request.form.get("project_titulo")
-        if old_titulo != new_titulo:
-            changes.append(f'título de "{old_titulo}" para "{new_titulo}"')
-        project_to_edit.titulo = new_titulo
-
-        # Atualiza o órgão do projeto com o valor do formulário, independentemente do tipo de usuário.
-        old_orgao = project_to_edit.orgao
-        new_orgao = request.form.get("project_orgao")
-        if old_orgao != new_orgao:
-            changes.append(
-                f'órgão de "{old_orgao or "vazio"}" para "{new_orgao or "vazio"}"'
-            )
-        project_to_edit.orgao = new_orgao
-
-        orgao_unidade, orgao_error = _resolve_orgao_from_form(
-            request.form.get("project_orgao_id"),
-            current_orgao_id=project_to_edit.orgao_id,
-        )
-        if orgao_error:
-            flash(orgao_error, "warning")
-            return redirect(url_for("main.edit_project", project_id=project_id))
-        old_orgao_id = project_to_edit.orgao_id
-        if old_orgao_id != orgao_unidade.id:
-            old_sigla = (
-                project_to_edit.orgao_ref.sigla
-                if project_to_edit.orgao_ref
-                else "vazio"
-            )
-            changes.append(
-                f'órgão responsável de "{old_sigla}" para "{orgao_unidade.sigla}"'
-            )
-        project_to_edit.orgao_id = orgao_unidade.id
-
-        old_prioridade = project_to_edit.prioridade
-        new_prioridade = request.form.get("project_prioridade")
-        if old_prioridade != new_prioridade:
-            changes.append(f'prioridade de "{old_prioridade}" para "{new_prioridade}"')
-        project_to_edit.prioridade = new_prioridade
-
-        old_status = project_to_edit.status
-        new_status = request.form.get("project_status")
-        if (
-            new_status == "Finalizado"
-            and old_status != "Finalizado"
-            and not project_to_edit.todas_etapas_concluidas
-        ):
-            db.session.rollback()
-            flash(
-                "Não é possível finalizar o projeto: todas as etapas devem estar iniciadas e concluídas.",
-                "warning",
-            )
-            return redirect(url_for("main.edit_project", project_id=project_id))
-        if old_status != new_status:
-            changes.append(f'status de "{old_status}" para "{new_status}"')
-        project_to_edit.status = new_status
-
-        project_to_edit.observacao = request.form.get("project_observacao")
-
-        # Processar novos campos
-        project_to_edit.special_project = sanitize_special_project_for_orgao(
-            request.form.get("project_special_project") or None,
-            orgao_unidade.sigla,
-        )
-        project_to_edit.sei_process = request.form.get("project_sei_process") or None
-        project_to_edit.short_description = (
-            request.form.get("project_short_description") or None
-        )
-        project_to_edit.delivery_type = (
-            request.form.get("project_delivery_type") or None
-        )
-        project_to_edit.github_link = request.form.get("project_github_link") or None
-        project_to_edit.documentation_link = (
-            request.form.get("project_documentation_link") or None
-        )
-        project_to_edit.product_link = request.form.get("project_product_link") or None
-
-        try:
-            old_abep_indicator = project_to_edit.abep_indicator
-            new_abep_indicator = normalize_abep_indicator(
-                request.form.get("project_abep_indicator")
-            )
-            if old_abep_indicator != new_abep_indicator:
-                changes.append(
-                    f'indicador ABEP de "{old_abep_indicator or "vazio"}" para "{new_abep_indicator or "vazio"}"'
-                )
-            project_to_edit.abep_indicator = new_abep_indicator
-
-            objetivo_id_norm, resultado_id_norm, indicadores_ids_norm = (
-                normalize_goal_selection(
-                    request.form.get("project_objetivo"),
-                    request.form.get("project_resultado"),
-                    request.form.getlist("project_indicadores"),
-                )
-            )
-        except ValueError as e:
-            flash(str(e), "warning")
-            return redirect(url_for("main.edit_project", project_id=project_id))
-
-        project_to_edit.objetivo_id = objetivo_id_norm
-        project_to_edit.resultado_esperado_id = resultado_id_norm
-
-        # Atualizar Indicadores
-        IndicadorProjeto.query.filter_by(
-            project_id=project_id
-        ).delete()  # Remove todos os antigos
-        for indicador_id in indicadores_ids_norm:
-            indicador_projeto_novo = IndicadorProjeto(
-                project_id=project_id, indicador_id=indicador_id
-            )
-            db.session.add(indicador_projeto_novo)
-
-        # Registrar no histórico
-        if changes:
-            change_desc = ", ".join(changes)
-            log_project_action(
-                project_id=project_id,
-                action_type="edit",
-                description=f"Editou o projeto: alterou {change_desc}",
-            )
-
-        db.session.commit()
-        flash(f'Projeto "{project_to_edit.titulo}" atualizado com sucesso!', "success")
-        return redirect(url_for("main.project_detail", project_id=project_id))
-
-    return render_template(
-        "projects/form.html",
-        project=project_to_edit,
-        objetivos=objetivos,
-        resultados_por_objetivo=resultados_por_objetivo,
-        indicadores_por_resultado=indicadores_por_resultado,
-        indicadores_do_projeto=indicadores_do_projeto_ids,  # Lista de IDs dos indicadores já associados
-    )
 
 
 @main_bp.route("/project/<int:project_id>/delete", methods=["POST"])

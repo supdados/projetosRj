@@ -46,8 +46,9 @@
                                 <i class="fas fa-tasks"></i>
                             </a>
                             <a
-                                href="{{ build_orgao_nav_url('main.list_projetos_pendentes') }}"
-                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projetos_pendentes' else '' }}"
+                                {# /projetos/pendentes é tela da SPA — nunca renderiza este topnav, então não há estado 'active'. #}
+                                href="/projetos/pendentes"
+                                class="app-nav-link app-nav-icon-btn"
                                 data-area-nav="1"
                                 data-orgao-nav="1"
                                 data-bs-toggle="tooltip"
