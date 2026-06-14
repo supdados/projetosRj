@@ -1,4 +1,4 @@
-from flask import flash, g, jsonify, request, url_for
+from flask import current_app, flash, g, jsonify, request, url_for
 
 from models import OrgaoUnidade, Task, db
 
@@ -156,20 +156,37 @@ def _group_ids_by_reorder_scope(ordem_ids):
     return scope_sequence, scope_orders
 
 
+GENERIC_DB_ERROR_MESSAGE = "Não foi possível concluir a operação. Tente novamente."
+
+
 def _on_db_error(e: Exception) -> tuple:
-    """Rollback e retorna JSON 500. Para rotas que só respondem JSON."""
+    """Rollback e retorna JSON 500 genérico. Para rotas que só respondem JSON.
+
+    Loga a exceção real no servidor (com traceback) em vez de expor ``str(e)`` ao
+    cliente — evita vazamento de detalhes internos (OWASP A09/A10).
+    """
     db.session.rollback()
-    return jsonify({"success": False, "message": str(e)}), 500
+    current_app.logger.exception("Falha em mutação de tarefa: %s", type(e).__name__)
+    return jsonify({"success": False, "message": GENERIC_DB_ERROR_MESSAGE}), 500
 
 
 def _on_db_error_redirect(
     e: Exception, *, is_ajax: bool, error_prefix: str, endpoint: str, **extra_json
 ) -> tuple:
-    """Rollback e retorna JSON 500 ou flash+redirect para rotas híbridas (AJAX e form)."""
+    """Rollback e retorna JSON 500 ou flash+redirect para rotas híbridas (AJAX e form).
+
+    Mensagem genérica ao usuário; o detalhe da exceção vai apenas para o log.
+    """
     db.session.rollback()
+    current_app.logger.exception("Falha em mutação de tarefa: %s", type(e).__name__)
     if is_ajax:
-        return jsonify({"success": False, "message": str(e), **extra_json}), 500
-    flash(f"{error_prefix}: {str(e)}", "danger")
+        return (
+            jsonify(
+                {"success": False, "message": GENERIC_DB_ERROR_MESSAGE, **extra_json}
+            ),
+            500,
+        )
+    flash(f"{error_prefix}.", "danger")
     return _redirect_back_or(endpoint)
 
 

@@ -50,7 +50,7 @@ from ..orgao_tree import (
     rebuild_orgao_closure,
     validate_orgao_move,
 )
-from .envelope import fail, ok
+from .envelope import fail, fail_internal, ok
 from .negotiation import api_admin_required
 from .serializers import (
     serialize_orgao_form,
@@ -217,7 +217,13 @@ def api_admin_orgaos_create() -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:  # noqa: BLE001 — espelha o except do Jinja
         db.session.rollback()
-        return fail(f"Erro ao criar órgão: {exc}", status=409, code="validation")
+        return fail_internal(
+            exc,
+            "criar órgão",
+            status=409,
+            code="validation",
+            public_message="Não foi possível criar o órgão. Verifique os dados e tente novamente.",
+        )
 
     return ok({"orgao": serialize_orgao_form(novo)})
 
@@ -281,7 +287,13 @@ def api_admin_orgaos_update(orgao_id: int) -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:  # noqa: BLE001 — espelha o except do Jinja
         db.session.rollback()
-        return fail(f"Erro ao atualizar órgão: {exc}", status=409, code="validation")
+        return fail_internal(
+            exc,
+            "atualizar órgão",
+            status=409,
+            code="validation",
+            public_message="Não foi possível atualizar o órgão. Verifique os dados e tente novamente.",
+        )
 
     return ok({"orgao": serialize_orgao_form(orgao)})
 
@@ -320,7 +332,13 @@ def api_admin_orgaos_delete(orgao_id: int) -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:  # noqa: BLE001 — espelha o except do Jinja
         db.session.rollback()
-        return fail(f"Erro ao excluir órgão: {exc}", status=409, code="validation")
+        return fail_internal(
+            exc,
+            "excluir órgão",
+            status=409,
+            code="validation",
+            public_message="Não foi possível excluir o órgão. Verifique se há itens vinculados e tente novamente.",
+        )
 
     return ok({"deleted_id": orgao_id})
 
@@ -378,7 +396,13 @@ def api_admin_orgaos_move(orgao_id: int) -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:  # noqa: BLE001 — espelha o except do Jinja
         db.session.rollback()
-        return fail(f"Erro ao mover órgão: {exc}", status=409, code="validation")
+        return fail_internal(
+            exc,
+            "mover órgão",
+            status=409,
+            code="validation",
+            public_message="Não foi possível mover o órgão. Verifique os dados e tente novamente.",
+        )
 
     return ok({"orgao": serialize_orgao_form(orgao)})
 
@@ -431,7 +455,13 @@ def api_admin_orgaos_reorder(orgao_id: int) -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:  # noqa: BLE001 — espelha o except do Jinja
         db.session.rollback()
-        return fail(f"Erro ao reordenar: {exc}", status=409, code="validation")
+        return fail_internal(
+            exc,
+            "reordenar órgãos",
+            status=409,
+            code="validation",
+            public_message="Não foi possível reordenar. Tente novamente.",
+        )
 
     return ok({"orgao": serialize_orgao_form(orgao)})
 
@@ -456,7 +486,13 @@ def api_admin_orgaos_toggle_ativo(orgao_id: int) -> Response | tuple[Response, i
         db.session.commit()
     except Exception as exc:  # noqa: BLE001 — espelha o except do Jinja
         db.session.rollback()
-        return fail(f"Erro ao alterar status: {exc}", status=409, code="validation")
+        return fail_internal(
+            exc,
+            "alterar status do órgão",
+            status=409,
+            code="validation",
+            public_message="Não foi possível alterar o status. Tente novamente.",
+        )
     return ok({"orgao": serialize_orgao_form(orgao)})
 
 

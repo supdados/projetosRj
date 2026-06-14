@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from flask import g, jsonify, request, send_file, url_for
+from flask import current_app, g, jsonify, request, send_file, url_for
 from werkzeug.utils import secure_filename
 
 from models import (
@@ -100,8 +100,11 @@ def add_task_anexo(task_id):
     try:
         file.save(file_path)
     except Exception as e:
+        current_app.logger.exception("Falha ao salvar anexo: %s", type(e).__name__)
         return (
-            jsonify({"success": False, "message": f"Erro ao salvar arquivo: {str(e)}"}),
+            jsonify(
+                {"success": False, "message": "Não foi possível salvar o arquivo."}
+            ),
             500,
         )
 
@@ -145,7 +148,11 @@ def add_task_anexo(task_id):
             os.remove(file_path)
         except OSError:
             pass
-        return jsonify({"success": False, "message": str(e)}), 500
+        current_app.logger.exception("Falha ao registrar anexo: %s", type(e).__name__)
+        return (
+            jsonify({"success": False, "message": "Não foi possível salvar o anexo."}),
+            500,
+        )
 
 
 @main_bp.route("/tarefas/anexos/<int:anexo_id>", methods=["GET"])
@@ -202,4 +209,8 @@ def delete_task_item_anexo(anexo_id):
         )
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        current_app.logger.exception("Falha ao excluir anexo: %s", type(e).__name__)
+        return (
+            jsonify({"success": False, "message": "Não foi possível excluir o anexo."}),
+            500,
+        )

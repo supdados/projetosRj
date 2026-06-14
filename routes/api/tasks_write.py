@@ -46,7 +46,7 @@ from ..tasks.permissions import (
     _can_view_task,
 )
 from ..tasks.queries import _build_visible_tasks_query, _read_task_filter_values
-from .envelope import fail, ok
+from .envelope import fail, fail_internal, ok
 from .negotiation import api_login_required
 from .serializers import serialize_task_card
 from services.notifications import notify_task_assignment_change, notify_task_event
@@ -179,9 +179,7 @@ def api_tarefa_criar() -> Response | tuple[Response, int]:
         allowed_assignee_ids = {
             user.id for user in _get_assignable_users_for_project(project)
         }
-        desired_assignees = [
-            uid for uid in assignee_ids if uid in allowed_assignee_ids
-        ]
+        desired_assignees = [uid for uid in assignee_ids if uid in allowed_assignee_ids]
         added_assignees, removed_assignees = set_task_assignees(task, desired_assignees)
 
         notify_task_event(
@@ -206,7 +204,7 @@ def api_tarefa_criar() -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        return fail(f"Erro ao adicionar tarefa: {exc}", status=500, code="server")
+        return fail_internal(exc, "adicionar tarefa")
 
     return ok(_stage_card_payload(task))
 
@@ -261,7 +259,7 @@ def api_tarefa_excluir(task_id: int) -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        return fail(f"Erro ao excluir tarefa: {exc}", status=500, code="server")
+        return fail_internal(exc, "excluir tarefa")
 
     return ok({"item_id": task_id, "message": "Tarefa excluída com sucesso!"})
 
@@ -306,7 +304,7 @@ def api_tarefa_mover_etapa(task_id: int) -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        return fail(f"Erro ao mover a tarefa: {exc}", status=500, code="server")
+        return fail_internal(exc, "mover tarefa")
 
     payload = {
         "task_id": task.id,
@@ -370,7 +368,7 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        return fail(f"Erro ao arquivar tarefas: {exc}", status=500, code="server")
+        return fail_internal(exc, "arquivar tarefas")
 
     archived_count = len(archived_ids)
     message = (

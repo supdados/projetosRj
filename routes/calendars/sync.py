@@ -1,4 +1,4 @@
-from flask import flash, redirect, url_for
+from flask import current_app, flash, redirect, url_for
 
 from models import db
 
@@ -29,7 +29,12 @@ def disconnect_google_calendar():
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        flash(f"Falha ao desconectar Google Calendar: {exc}", "danger")
+        current_app.logger.exception(
+            "Falha ao desconectar Google Calendar: %s", type(exc).__name__
+        )
+        flash(
+            "Não foi possível desconectar o Google Calendar. Tente novamente.", "danger"
+        )
         return redirect(url_for("main.calendars_hub"))
 
     flash("Conexão Google Calendar removida.", "success")
@@ -61,7 +66,13 @@ def sync_google_calendar_now():
                 "warning",
             )
         else:
-            flash(f"Erro ao sincronizar com Google Calendar: {exc}", "danger")
+            current_app.logger.exception(
+                "Falha ao sincronizar Google Calendar: %s", type(exc).__name__
+            )
+            flash(
+                "Não foi possível sincronizar com o Google Calendar. Tente novamente.",
+                "danger",
+            )
         return redirect(url_for("main.calendars_hub"))
 
     flash(

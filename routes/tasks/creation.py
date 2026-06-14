@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-from flask import flash, g, jsonify, redirect, request, url_for
+from flask import current_app, flash, g, jsonify, redirect, request, url_for
 
 from models import (
     Etapa,
@@ -33,7 +33,9 @@ def _format_invalid_responsavel_message(invalid_names):
     return f"Responsável inválido: {invalid_str}. Selecione somente usuários com permissão de visualização."
 
 
-def _resolve_etapa_token(raw_etapa_value, project, *, allow_empty=True, allow_done=False):
+def _resolve_etapa_token(
+    raw_etapa_value, project, *, allow_empty=True, allow_done=False
+):
     """Resolve um valor cru (vindo de form/JSON) para uma ``Etapa``.
 
     Retorna ``(etapa, error_message, status_code)``. Quando ``allow_empty`` e o
@@ -430,7 +432,16 @@ def _create_task_common(default_project=None):
         return redirect(url_for("main.list_tasks"))
     except Exception as e:
         db.session.rollback()
+        current_app.logger.exception("Falha ao adicionar tarefa: %s", type(e).__name__)
         if is_ajax:
-            return jsonify({"success": False, "message": str(e)}), 500
-        flash(f"Erro ao adicionar tarefa: {str(e)}", "danger")
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Não foi possível adicionar a tarefa.",
+                    }
+                ),
+                500,
+            )
+        flash("Não foi possível adicionar a tarefa.", "danger")
         return redirect(url_for("main.list_tasks"))

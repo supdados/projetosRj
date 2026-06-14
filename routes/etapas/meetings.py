@@ -227,6 +227,9 @@ def import_model_to_project(project_id):
 
     except Exception as e:
         db.session.rollback()
-        flash(f"Erro ao importar modelo: {str(e)}", "danger")
+        current_app.logger.exception(
+            "Falha ao importar modelo de etapas: %s", type(e).__name__
+        )
+        flash("Não foi possível importar o modelo. Tente novamente.", "danger")
 
     return redirect(url_for("main.project_detail", project_id=project_id))

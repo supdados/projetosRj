@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Response, jsonify
+from flask import Response, current_app, jsonify
 
 
 def ok(
@@ -86,3 +86,37 @@ def fail(
         "error": {"code": code, "message": message},
     }
     return jsonify(body), status
+
+
+def fail_internal(
+    exc: Exception,
+    log_label: str,
+    *,
+    status: int = 500,
+    code: str = "server",
+    public_message: str = "Erro interno do servidor. Tente novamente.",
+) -> tuple[Response, int]:
+    """Loga a exceção real no servidor e devolve um erro genérico ao cliente.
+
+    Evita vazar ``str(exc)`` (stack/SQL/schema) na resposta — mitiga exposição de
+    informação (OWASP A09/A10). Use no ramo ``except Exception`` de mutações; para
+    erros de validação de domínio (``except ValueError``) continue usando ``fail``
+    com a mensagem curada.
+
+    Args:
+        exc: A exceção capturada (logada com traceback via ``logger.exception``).
+        log_label: Rótulo curto da operação para o log (ex.: ``"criar projeto"``).
+        status: HTTP a retornar (default 500).
+        code: Código canônico do envelope (default ``"server"``).
+        public_message: Mensagem genérica segura exibida ao usuário.
+
+    Returns:
+        ``fail(public_message, status, code)``.
+
+    Exemplo:
+        >>> except Exception as exc:
+        ...     db.session.rollback()
+        ...     return fail_internal(exc, "criar projeto")
+    """
+    current_app.logger.exception("Falha ao %s: %s", log_label, type(exc).__name__)
+    return fail(public_message, status=status, code=code)

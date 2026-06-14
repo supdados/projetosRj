@@ -41,7 +41,7 @@ from ..projects.crud import _resolve_orgao_from_form
 from ..shared import log_project_action
 from ..tasks.constants import task_priority_sort_rank, task_status_sort_rank
 from ..tasks.permissions import task_permission_flags
-from .envelope import fail, ok
+from .envelope import fail, fail_internal, ok
 from .negotiation import api_login_required
 from .serializers import serialize_project_card, serialize_task_card
 from services.project_completion import ProjectCompletionError, complete_project
@@ -168,11 +168,7 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
         return fail(str(exc), status=422, code="validation")
     except Exception as exc:
         db.session.rollback()
-        return fail(
-            f"Ocorreu um erro ao adicionar o projeto: {exc}",
-            status=500,
-            code="server",
-        )
+        return fail_internal(exc, "adicionar projeto")
 
     return ok(
         {

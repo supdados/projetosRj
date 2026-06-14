@@ -1,0 +1,47 @@
+name: security-audit
+
+# Varredura de vulnerabilidades de dependências (OWASP A03 — Software Supply Chain).
+# Roda no push/PR para os branches principais e semanalmente (segunda 06:00 UTC).
+
+on:
+  push:
+    branches: [main, v5.0]
+  pull_request:
+    branches: [main, v5.0]
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    name: pip-audit (backend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar pip-audit
+        run: python -m pip install --upgrade pip pip-audit
+      - name: Auditar dependências de produção e dev
+        run: pip-audit -r requirements -r requirements-dev.txt --strict --progress-spinner off
+
+  npm-audit:
+    name: npm audit (frontend)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Instalar dependências (lockfile)
+        run: npm ci
+      - name: Auditar dependências do frontend
+        run: npm audit --audit-level=high

@@ -1,4 +1,4 @@
-from flask import flash, g, jsonify, redirect, request, url_for
+from flask import current_app, flash, g, jsonify, redirect, request, url_for
 
 from models import (
     Task,
@@ -84,9 +84,20 @@ def add_task_comment(task_id):
         return redirect(url_for("main.list_tasks"))
     except Exception as e:
         db.session.rollback()
+        current_app.logger.exception(
+            "Falha ao adicionar comentário: %s", type(e).__name__
+        )
         if is_ajax:
-            return jsonify({"success": False, "message": str(e)}), 500
-        flash(f"Erro ao adicionar comentário: {str(e)}", "danger")
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Não foi possível adicionar o comentário.",
+                    }
+                ),
+                500,
+            )
+        flash("Não foi possível adicionar o comentário.", "danger")
         return redirect(url_for("main.list_tasks"))
 
 
@@ -165,9 +176,20 @@ def edit_task_item_comment(comment_id):
         return redirect(url_for("main.list_tasks"))
     except Exception as e:
         db.session.rollback()
+        current_app.logger.exception(
+            "Falha ao atualizar comentário: %s", type(e).__name__
+        )
         if is_ajax:
-            return jsonify({"success": False, "message": str(e)}), 500
-        flash(f"Erro ao atualizar comentário: {str(e)}", "danger")
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Não foi possível atualizar o comentário.",
+                    }
+                ),
+                500,
+            )
+        flash("Não foi possível atualizar o comentário.", "danger")
         return redirect(url_for("main.list_tasks"))
 
 
@@ -228,12 +250,19 @@ def delete_task_item_comment(comment_id):
         return redirect(url_for("main.list_tasks"))
     except Exception as e:
         db.session.rollback()
+        current_app.logger.exception(
+            "Falha ao excluir comentário: %s", type(e).__name__
+        )
         if is_ajax:
             return (
                 jsonify(
-                    {"success": False, "message": str(e), "comment_id": comment_id}
+                    {
+                        "success": False,
+                        "message": "Não foi possível excluir o comentário.",
+                        "comment_id": comment_id,
+                    }
                 ),
                 500,
             )
-        flash(f"Erro ao excluir comentário: {str(e)}", "danger")
+        flash("Não foi possível excluir o comentário.", "danger")
         return redirect(url_for("main.list_tasks"))

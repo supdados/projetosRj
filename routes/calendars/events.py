@@ -68,7 +68,8 @@ def create_calendar_event():
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        flash(f"Erro ao salvar evento: {exc}", "danger")
+        current_app.logger.exception("Falha ao salvar evento: %s", type(exc).__name__)
+        flash("Não foi possível salvar o evento. Tente novamente.", "danger")
         return redirect(url_for("main.calendars_hub"))
 
     if _wants_json():
@@ -152,7 +153,10 @@ def edit_calendar_event(event_id):
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        flash(f"Erro ao atualizar evento: {exc}", "danger")
+        current_app.logger.exception(
+            "Falha ao atualizar evento: %s", type(exc).__name__
+        )
+        flash("Não foi possível atualizar o evento. Tente novamente.", "danger")
         return redirect(url_for("main.calendars_hub"))
 
     if _wants_json():
@@ -208,7 +212,10 @@ def generate_meet_link(event_id):
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        flash(f"Não foi possível gerar o link do Meet: {exc}", "danger")
+        current_app.logger.exception(
+            "Falha ao gerar link do Meet: %s", type(exc).__name__
+        )
+        flash("Não foi possível gerar o link do Meet. Tente novamente.", "danger")
         return redirect(url_for("main.calendars_hub"))
 
     if _wants_json():
@@ -266,7 +273,8 @@ def delete_calendar_event(event_id):
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        flash(f"Erro ao excluir evento: {exc}", "danger")
+        current_app.logger.exception("Falha ao excluir evento: %s", type(exc).__name__)
+        flash("Não foi possível excluir o evento. Tente novamente.", "danger")
         return redirect(url_for("main.calendars_hub"))
 
     if remote_warning:

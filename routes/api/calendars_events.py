@@ -51,7 +51,7 @@ from ..calendars.helpers import (
 from ..etapas.helpers import _serialize_etapa_payload
 from ..orgao_scope import user_can_access_project
 from ..shared import get_or_404, log_project_action
-from .envelope import fail, ok
+from .envelope import fail, fail_internal, ok
 from .negotiation import api_login_required
 from .serializers import serialize_calendar_event
 
@@ -154,7 +154,7 @@ def api_calendar_event_create() -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        return fail(f"Erro ao salvar evento: {exc}", status=500, code="server")
+        return fail_internal(exc, "salvar evento")
 
     outcome, message = _sync_outcome(connection, sync_warning)
     return ok(
@@ -253,7 +253,7 @@ def api_calendar_event_edit(event_id: int) -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        return fail(f"Erro ao atualizar evento: {exc}", status=500, code="server")
+        return fail_internal(exc, "atualizar evento")
 
     if sync_warning:
         outcome, message = "sync_error", sync_warning
@@ -313,10 +313,11 @@ def api_calendar_event_generate_meet(
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        return fail(
-            f"Não foi possível gerar o link do Meet: {exc}",
+        return fail_internal(
+            exc,
+            "gerar link do Meet",
             status=502,
-            code="server",
+            public_message="Não foi possível gerar o link do Meet. Tente novamente.",
         )
 
     return ok({"event": serialize_calendar_event(event)})
@@ -373,7 +374,7 @@ def api_calendar_event_delete(event_id: int) -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        return fail(f"Erro ao excluir evento: {exc}", status=500, code="server")
+        return fail_internal(exc, "excluir evento")
 
     if remote_warning:
         return ok({"deleted": True, "remote_warning": remote_warning})

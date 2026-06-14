@@ -73,13 +73,17 @@ def _register_failed_login(user):
     if user is None:
         return
     user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+    locked = False
     if user.failed_login_attempts >= LOCAL_LOGIN_MAX_ATTEMPTS:
         user.lockout_until = utc_now() + timedelta(minutes=LOCAL_LOGIN_LOCKOUT_MINUTES)
         user.failed_login_attempts = 0
+        locked = True
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
+    if locked:
+        _log_auth_event("account_locked", user=user, provider="local")
 
 
 def _register_successful_login(user):
@@ -97,6 +101,27 @@ def _register_successful_login(user):
             db.session.commit()
         except Exception:
             db.session.rollback()
+
+
+def _log_auth_event(event, *, user=None, username=None, provider="local"):
+    """Registra um evento de autenticação para auditoria (OWASP A09).
+
+    Loga em formato estruturado (key=value) com identidade, provedor e IP de
+    origem; nunca inclui senha nem token. ``event`` é um dos rótulos:
+    ``login_success`` | ``login_failure`` | ``account_locked`` | ``logout`` |
+    ``password_changed``.
+
+    Exemplo:
+        >>> _log_auth_event("login_success", user=user, provider="govbr")
+    """
+    current_app.logger.info(
+        "auth_event event=%s provider=%s user_id=%s username=%s ip=%s",
+        event,
+        provider,
+        getattr(user, "id", None),
+        username if username is not None else getattr(user, "username", None),
+        request.remote_addr,
+    )
 
 
 def _resolve_safe_next_url(raw_next):
@@ -234,11 +259,15 @@ def login_page():
             _remember_auth_session(user, provider="local")
             g.user = user
 
+            _log_auth_event("login_success", user=user, provider="local")
             flash(f"Login bem-sucedido, {user.name}!", "success")
             return redirect(_login_redirect_target())
         else:
             if not _user_is_locked_out(user):
                 _register_failed_login(user)
+            _log_auth_event(
+                "login_failure", user=user, username=username, provider="local"
+            )
             flash("Credenciais inválidas. Tente novamente.", "danger")
             cv, cf, tt, ca = _login_stats()
             return render_template(
@@ -423,6 +452,7 @@ def login_govbr_callback():
         return redirect(url_for("main.login_page"))
 
     _remember_auth_session(user, provider="govbr", id_token=id_token)
+    _log_auth_event("login_success", user=user, provider="govbr")
     expires_in = tokens.get("expires_in")
     if expires_in:
         session["govbr_access_token_exp"] = int(time.time()) + int(expires_in)
@@ -464,6 +494,9 @@ def logout():
         except GovBrOIDCError:
             logout_url = None
 
+    _log_auth_event(
+        "logout", user=g.user, provider=session.get("auth_provider", "local")
+    )
     session.clear()
     g.user = None  # Limpa g.user também
     flash("Você foi desconectado.", "info")
@@ -551,6 +584,7 @@ def change_password():
             g.user.set_password(new_password)
         db.session.commit()
         if should_update_password:
+            _log_auth_event("password_changed", user=g.user, provider="local")
             flash("Conta atualizada e senha alterada com sucesso!", "success")
         else:
             flash("Conta atualizada com sucesso!", "success")
