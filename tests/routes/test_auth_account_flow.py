@@ -213,9 +213,9 @@ def test_manage_account_hides_cpf_and_sub_when_user_is_linked_to_govbr(
 
 
 def test_non_admin_menu_shows_manage_account_entry(client_user):
-    # /dashboard agora serve a SPA; o menu de conta vive no app-shell Jinja
-    # ainda renderizado por /projects (Lista de Projetos viva).
-    response = client_user.get("/projects", follow_redirects=False)
+    # O menu de conta vive no app-shell Jinja, renderizado nas páginas de auth
+    # (/projects virou redirect SPA). Usamos /profile/change-password (autenticada).
+    response = client_user.get("/profile/change-password", follow_redirects=False)
 
     assert response.status_code == 200
     page = response.get_data(as_text=True)

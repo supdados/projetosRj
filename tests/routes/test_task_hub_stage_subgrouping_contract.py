@@ -7,8 +7,6 @@ sub-hierarquia (etapa por tarefa + ordem dentro do projeto) e validado aqui via
 agrupamento por etapa continua coberta por ``tests/test_task_hub_grouping_unit``.
 """
 
-from pathlib import Path
-
 from models import Task, db
 
 
@@ -41,9 +39,7 @@ def test_api_hub_exposes_stage_metadata_per_task(app, client_user, seed_data):
     payload = client_user.get("/api/tarefas").get_json()
     assert payload["ok"] is True
 
-    group = next(
-        g for g in payload["data"]["groups"] if g["project_id"] == project_id
-    )
+    group = next(g for g in payload["data"]["groups"] if g["project_id"] == project_id)
     cards_by_id = {card["id"]: card for card in group["tasks"]}
 
     assert legacy_id in cards_by_id
@@ -54,15 +50,3 @@ def test_api_hub_exposes_stage_metadata_per_task(app, client_user, seed_data):
     assert cards_by_id[legacy_id]["etapa_titulo"] == "Sem etapa"
     # ``is_first_of_stage`` marca a abertura de cada subgrupo de etapa.
     assert any(card["is_first_of_stage"] for card in group["tasks"])
-
-
-def test_tasks_hub_stage_and_add_styles_are_cleaner():
-    css_path = Path(__file__).resolve().parents[2] / "static" / "css" / "tasks" / "hub.css"
-    css = css_path.read_text(encoding="utf-8")
-
-    assert ".task-hub-page .task-hub-entity-id" in css
-    assert ".task-hub-page .task-hub-project-id" in css
-    assert "text-transform: none;" in css
-    assert "font-weight: var(--ds-font-weight-regular);" in css
-    assert ".task-hub-page .task-hub-add-row {\n    border-top: 0;" in css
-    assert "border-top: 1px dashed #d6e4f2;" not in css

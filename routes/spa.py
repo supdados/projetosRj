@@ -31,17 +31,18 @@ ABORDAGEM
 
 LIMITE CONSCIENTE (telas Jinja AINDA VIVAS, pendentes de lane propria)
 ----------------------------------------------------------------------
-``/busca``, ``/admin/orgaos``, ``/admin/orgaos/tipos`` e ``/admin/templates``
-ja foram cortados e sao servidos pelo catch-all; ``/dashboard``, ``/tarefas`` e
-``/calendarios`` foram cortados no padrao KEEP-ENDPOINT (a rota Flask estatica
-permanece registrada — pinada por ``url_for``/notificacoes — mas devolve
-``_render_spa()``). A unica tela Jinja remanescente que ainda RENDERIZA e
-``/projects`` (lista) — pendente de lane propria; ``/project/<id>`` virou
-redirect 302 -> ``/projetos/<id>`` (KEEP-ENDPOINT: ``target_url`` persistido em
-notificacoes e links da busca apontam pra ca; ``detail.html`` ficou morto,
-removido na varredura final junto com ``/projects``). Ja cortadas:
+A migração Jinja->SPA está COMPLETA: nenhuma tela de aplicação renderiza mais
+Jinja — só o fluxo de auth Gov.br (``templates/auth/*``, ``base.html`` no login/
+troca de senha) permanece (congelado). Os deep-links legados ``/projects`` e
+``/project/<id>`` viraram redirect 302 -> ``/projetos`` e ``/projetos/<id>``
+(KEEP-ENDPOINT: ``target_url`` persistido em notificacoes, links da busca e
+redirects de produção apontam pra ca). ``/dashboard``, ``/tarefas`` e
+``/calendarios`` seguem como KEEP-ENDPOINT servindo ``_render_spa()``; ``/busca``,
+``/admin/*`` sao servidos pelo catch-all. Cortadas na migração:
 ``/etapa/<id>/edit``, ``/project/<id>/history``, ``/admin/users*``,
-``/project/<id>/edit`` e ``/projetos_pendentes`` — todas 100% SPA.
+``/project/<id>/edit``, ``/projetos_pendentes`` e o cluster ``/projects``
+(list/detail/add/edit/delete/concluir/import/stage-tasks) — tudo 100% SPA via
+``/api/*``.
 
 EXCLUSOES (nunca SPA): ``/api/*``, ``/webhook``, ``/calendar/oauth/*``,
 ``/auth/*``, ``/login*``, ``/logout``, ``/static/*``, ``/favicon.ico``,

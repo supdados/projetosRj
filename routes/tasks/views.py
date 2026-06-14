@@ -201,11 +201,11 @@ def project_tasks(project_id):
     project = db.session.get(Project, project_id)
     if not project:
         flash("Projeto não encontrado.", "warning")
-        return redirect(url_for("main.list_projects"))
+        return redirect("/projetos")
 
     if not _can_access_project_in_tasks(project):
         flash("Você não tem permissão para acessar este projeto.", "danger")
-        return redirect(url_for("main.list_projects"))
+        return redirect("/projetos")
 
     query_args = request.args.to_dict(flat=True)
     query_args["project"] = str(project_id)

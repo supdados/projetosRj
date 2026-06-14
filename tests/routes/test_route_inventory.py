@@ -18,4 +18,4 @@ def test_route_matrix_covers_all_registered_routes(app):
 
     assert not missing, f"Rotas sem cobertura na matriz: {sorted(missing)}"
     assert not extra, f"Casos na matriz sem rota registrada: {sorted(extra)}"
-    assert len(covered_routes) == 175
+    assert len(covered_routes) == 167

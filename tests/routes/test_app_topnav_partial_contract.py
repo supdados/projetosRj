@@ -6,17 +6,16 @@ de órgão + dropdown de conta + busca global. JS de navegação/notificações
 depende dos hooks data-* listados abaixo; um refactor que os renomeie
 quebraria silenciosamente a top-nav.
 
-Apos o cut-over KEEP-ENDPOINT, /dashboard passou a servir a shell da SPA (sem
-Jinja). Usamos a rota /projects (Lista de Projetos, ainda Jinja viva) para
-garantir que o parcial é renderizado no contexto real (com endpoint e usuário
-autenticado).
+Apos a migração SPA, as únicas páginas Jinja que renderizam o topnav são as de
+auth. Usamos /profile/change-password (autenticada, extends base.html) para
+garantir que o parcial é renderizado no contexto real (usuário autenticado).
 """
 
 from pathlib import Path
 
 
 def _topnav_html(client_admin):
-    response = client_admin.get("/projects")
+    response = client_admin.get("/profile/change-password")
     assert response.status_code == 200
     return response.get_data(as_text=True)
 
@@ -37,25 +36,14 @@ def test_topnav_has_brand_and_nav_icons(client_admin):
 
 def test_topnav_renders_primary_nav_icons(client_admin):
     html = _topnav_html(client_admin)
-    # Em /projects (Jinja viva) o link de projetos fica ativo; os icones dos
-    # links principais devem estar todos presentes.
-    assert "app-nav-link app-nav-icon-btn active" in html
-    # Fontes awesome esperados dos links principais.
+    # Ícones FontAwesome dos links principais devem estar todos presentes
+    # (estado 'active' não é testado aqui: nenhuma página de auth ativa um
+    # item da nav principal).
     assert "fas fa-home" in html
     assert "fas fa-folder-open" in html
     assert "fas fa-tasks" in html
     assert "fas fa-exclamation-triangle" in html
     assert "fas fa-calendar-alt" in html
-
-
-def test_topnav_marks_projects_link_active_on_list_projects(client_admin):
-    response = client_admin.get("/projects")
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    # O link de "Todos os projetos" deve ter classe 'active'.
-    assert 'title="Todos os projetos"' in html
-    assert 'aria-label="Todos os projetos"' in html
 
 
 def test_topnav_renders_global_search_form_hooks(client_admin):
@@ -71,7 +59,8 @@ def test_topnav_renders_global_search_form_hooks(client_admin):
 
 def test_topnav_global_search_preserves_selected_orgao(client_admin, seed_data):
     response = client_admin.get(
-        "/projects", query_string={"orgao": str(seed_data["vpd_orgao_id"])}
+        "/profile/change-password",
+        query_string={"orgao": str(seed_data["vpd_orgao_id"])},
     )
     assert response.status_code == 200
     html = response.get_data(as_text=True)
@@ -101,7 +90,7 @@ def test_topnav_admin_dropdown_has_admin_entries(client_admin):
 
 
 def test_topnav_user_dropdown_hides_admin_entries(client_user):
-    response = client_user.get("/projects")
+    response = client_user.get("/profile/change-password")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
 

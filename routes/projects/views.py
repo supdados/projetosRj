@@ -8,7 +8,6 @@ from flask import (
     g,
     make_response,
     redirect,
-    render_template,
     request,
     url_for,
 )
@@ -30,7 +29,6 @@ from routes.orgao_scope import (
     get_user_orgao_options,
     get_user_orgao_siglas,
     get_user_orgao_subtree_ids,
-    redirect_to_current_route_without_orgao,
     sanitize_orgao_filter_for_current_user,
     user_can_access_project,
 )
@@ -269,65 +267,14 @@ def build_projects_list_context(
 @main_bp.route("/projects")
 @login_required
 def list_projects():
-    """Renderiza a Lista de Projetos (Jinja).
+    """KEEP-ENDPOINT: redireciona (302) para /projetos (SPA).
 
-    Fonte de dados: ``build_projects_list_context``. Mantém o path ``/projects`` e
-    o comportamento (default de status "Vigente" + redirect 302 em filtro de
-    órgão inválido). O template recebe o mesmo conjunto de variáveis de antes
-    (``orgaos_options``/``abep_indicadores_options`` ficam disponíveis no contexto
-    mas não alteram o markup renderizado).
+    O path /projects é preservado para bookmarks antigos e para os redirects de
+    produção (``routes/tasks/views.py::project_tasks``). A UI e os dados vivem na
+    SPA (``GET /api/projetos``). A tela Jinja list.html foi cortada na migração.
     """
-    selected_status = request.args.get("status")
-    selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
-        request.args.get("orgao")
-    )
-
-    # Se nenhum status for especificado na URL, define 'Vigente' como padrão.
-    # A verificação `is None` é importante para permitir que o usuário selecione
-    # "Todos os status", que envia uma string vazia ("").
-    if selected_status is None:
-        selected_status = "Vigente"
-
-    if invalid_orgao_filter:
-        return redirect_to_current_route_without_orgao()
-
-    context = build_projects_list_context(
-        selected_priority=request.args.get("prioridade"),
-        selected_status=selected_status,
-        selected_orgao_id=selected_orgao_id,
-        selected_atraso=request.args.get("atraso"),
-        selected_special_project=request.args.get("special_project"),
-        selected_delivery_type=request.args.get("delivery_type"),
-        selected_abep_indicator=request.args.get("abep_indicator"),
-        selected_objetivo=request.args.get("objetivo"),
-        search_query=request.args.get("search", "").strip(),
-        page=request.args.get("page", 1, type=int),
-    )
-
-    return render_template(
-        "projects/list.html",
-        projects=context["projects"],
-        page=context["page"],
-        total_pages=context["total_pages"],
-        total_projects=context["total_projects"],
-        search_query=context["search_query"],
-        selected_priority=context["selected_priority"],
-        selected_status=context["selected_status"],
-        selected_atraso=context["selected_atraso"],
-        selected_special_project=context["selected_special_project"],
-        selected_delivery_type=context["selected_delivery_type"],
-        selected_abep_indicator=context["selected_abep_indicator"],
-        selected_objetivo=context["selected_objetivo"],
-        selected_orgao=context["selected_orgao"],
-        priorities=context["priorities"],
-        statuses=context["statuses"],
-        atrasos_options=context["atrasos_options"],
-        objetivos=context["objetivos"],
-        special_projects_options=context["special_projects_options"],
-        delivery_types_options=context["delivery_types_options"],
-        has_active_filters=context["has_active_filters"],
-        has_advanced_filters_active=context["has_advanced_filters_active"],
-    )
+    query = request.query_string.decode()
+    return redirect("/projetos" + ("?" + query if query else ""))
 
 
 def build_projetos_pendentes_context(

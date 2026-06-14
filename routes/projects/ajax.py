@@ -1,70 +1,19 @@
-from flask import g, jsonify, request
+"""Lógica pura de edição inline de projeto, compartilhada com a API da SPA.
+
+As rotas Jinja AJAX (``get_project_edit_data``/``update_project_inline``) foram
+cortadas na migração — restam ``ProjectInlineError`` e
+``apply_project_inline_changes``, importados por ``routes/api/project_detail.py``
+(``POST /api/projetos/<id>/inline``).
+"""
+
+from flask import g
 
 from catalogs.abep import normalize_abep_indicator
 from catalogs.inventario import sanitize_special_project_for_orgao
-from models import IndicadorProjeto, Project, db
+from models import IndicadorProjeto, OrgaoUnidade, db
 from catalogs.objectives import normalize_goal_selection
 
-from routes.blueprint import main_bp
-from routes.decorators import login_required
-from routes.orgao_scope import (
-    get_user_orgao_subtree_ids,
-    scoped_orgao_options,
-    user_can_access_project,
-)
-from models import OrgaoUnidade
-from routes.shared import (
-    get_or_404,
-    get_goal_catalog_context,
-    log_project_action,
-)
-
-
-@main_bp.route("/project/<int:project_id>/edit_data", methods=["GET"])
-@login_required
-def get_project_edit_data(project_id):
-    """Endpoint AJAX para buscar dados necessários para edição"""
-    project = get_or_404(Project, project_id)
-
-    # Verificar permissão
-    if not user_can_access_project(g.user, project):
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Você não tem permissão para editar este projeto.",
-                }
-            ),
-            403,
-        )
-
-    try:
-        objetivos, resultados_por_objetivo, indicadores_por_resultado = (
-            get_goal_catalog_context()
-        )
-
-        indicadores_do_projeto_ids = [ip.indicador_id for ip in project.indicadores]
-
-        available_orgaos = scoped_orgao_options(g.user)
-
-        return jsonify(
-            {
-                "success": True,
-                "objetivos": objetivos,
-                "resultados_por_objetivo": resultados_por_objetivo,
-                "indicadores_por_resultado": indicadores_por_resultado,
-                "indicadores_do_projeto": indicadores_do_projeto_ids,
-                "available_orgaos": available_orgaos,
-                "current_orgao_id": project.orgao_id,
-                "is_admin": g.user.is_admin,
-            }
-        )
-
-    except Exception as e:
-        return (
-            jsonify({"success": False, "message": f"Erro ao buscar dados: {str(e)}"}),
-            500,
-        )
+from routes.orgao_scope import get_user_orgao_subtree_ids
 
 
 class ProjectInlineError(Exception):
@@ -236,51 +185,3 @@ def apply_project_inline_changes(project_to_edit, data):
             db.session.add(indicador_projeto_novo)
 
     return changes
-
-
-@main_bp.route("/project/<int:project_id>/update_inline", methods=["POST"])
-@login_required
-def update_project_inline(project_id):
-    """Endpoint AJAX para atualizar projeto inline"""
-    project_to_edit = get_or_404(Project, project_id)
-
-    # Verificar permissão
-    if not user_can_access_project(g.user, project_to_edit):
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Você não tem permissão para editar este projeto.",
-                }
-            ),
-            403,
-        )
-
-    try:
-        data = request.get_json()
-        changes = apply_project_inline_changes(project_to_edit, data)
-
-        # Registrar no histórico
-        if changes:
-            change_desc = ", ".join(changes)
-            log_project_action(
-                project_id=project_id,
-                action_type="edit",
-                description=f"Editou o projeto (inline): alterou {change_desc}",
-            )
-
-        db.session.commit()
-        return jsonify({"success": True, "message": "Projeto atualizado com sucesso!"})
-
-    except ProjectInlineError as e:
-        db.session.rollback()
-        return jsonify({"success": False, "message": e.message}), e.status
-
-    except Exception as e:
-        db.session.rollback()
-        return (
-            jsonify(
-                {"success": False, "message": f"Erro ao atualizar projeto: {str(e)}"}
-            ),
-            500,
-        )

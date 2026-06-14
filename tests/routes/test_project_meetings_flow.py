@@ -205,7 +205,9 @@ def test_same_google_account_on_another_internal_user_can_reschedule_project_mee
     _login(client, shared_user_id)
 
     monkeypatch.setattr(
-        project_meetings, "sync_local_event_to_google", lambda *_args, **_kwargs: _args[1]
+        project_meetings,
+        "sync_local_event_to_google",
+        lambda *_args, **_kwargs: _args[1],
     )
 
     response = client.post(
@@ -418,11 +420,11 @@ def test_google_meeting_does_not_block_project_conclusion(app, client_user, seed
         assert project.total_workflow_etapas == 1
 
     response = client_user.post(
-        f"/project/{seed_data['project_complete_id']}/concluir",
-        follow_redirects=False,
+        f"/api/projetos/{seed_data['project_complete_id']}/concluir"
     )
 
-    assert response.status_code == 302
+    assert response.status_code == 200
+    assert response.get_json()["ok"] is True
 
     with app.app_context():
         project = db.session.get(Project, seed_data["project_complete_id"])

@@ -6,9 +6,9 @@ def _read(path):
 
 
 def test_theme_toggle_is_present_on_authenticated_pages(client_user):
-    # /dashboard agora serve a SPA; usamos /projects (Jinja viva) como pagina
-    # autenticada que renderiza o app-shell legado com o toggle de tema.
-    response = client_user.get("/projects")
+    # Páginas Jinja autenticadas restantes são as de auth; usamos
+    # /profile/change-password (extends base.html) para o app-shell com o toggle.
+    response = client_user.get("/profile/change-password")
 
     assert response.status_code == 200
     html = response.get_data(as_text=True)
@@ -78,7 +78,7 @@ def test_login_skeleton_template_tracks_new_layout_contract():
 
 
 def test_theme_toggle_is_after_notifications_and_account(client_user):
-    response = client_user.get("/projects")
+    response = client_user.get("/profile/change-password")
 
     assert response.status_code == 200
     html = response.get_data(as_text=True)
@@ -91,13 +91,13 @@ def test_theme_toggle_is_after_notifications_and_account(client_user):
 
 
 def test_dark_theme_covers_orgao_picker_and_templates_list():
-    css_path = (
-        Path(__file__).resolve().parents[2] / "static" / "css" / "theme-dark.css"
-    )
+    css_path = Path(__file__).resolve().parents[2] / "static" / "css" / "theme-dark.css"
     css = _read(css_path)
 
     assert 'html[data-theme="dark"] body.is-authenticated .orgao-tree-menu' in css
-    assert 'html[data-theme="dark"] body.is-authenticated .orgao-tree-search-input' in css
+    assert (
+        'html[data-theme="dark"] body.is-authenticated .orgao-tree-search-input' in css
+    )
     assert (
         'html[data-theme="dark"] body.is-authenticated .templates-page-v2 .tpl-hero'
         in css

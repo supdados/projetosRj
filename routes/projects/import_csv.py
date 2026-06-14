@@ -1,22 +1,17 @@
-"""Importação em lote de projetos via upload de CSV (restrito a admin).
+"""Parsing e persistência de importação em lote de projetos via CSV.
 
-O CSV precisa de cabeçalho com as colunas ``titulo`` e ``descricao``. Os demais
-atributos (órgão, projeto especial, tipo de entrega e status) são escolhidos pelo
-admin no formulário e aplicados igualmente a todas as linhas importadas.
+O CSV precisa de cabeçalho com as colunas ``titulo`` e ``descricao``. A rota
+Jinja ``/projects/import`` foi cortada na migração — estas funções puras são
+reusadas pelo endpoint da SPA ``POST /api/projetos/importar-csv``
+(``routes/api/projects_import.py``).
 """
 
 import csv
 import io
 from typing import NamedTuple
 
-from flask import current_app, flash, redirect, request, url_for
-from sqlalchemy.exc import SQLAlchemyError
+from models import Project, db
 
-from catalogs.inventario import sanitize_special_project_for_orgao
-from models import OrgaoUnidade, Project, db
-
-from routes.blueprint import main_bp
-from routes.decorators import admin_required, login_required
 from routes.shared import log_project_action
 
 ALLOWED_IMPORT_STATUSES = ("Vigente", "Suspenso", "Finalizado")
@@ -92,26 +87,6 @@ def parse_import_rows(raw: bytes) -> list[ParsedImportRow]:
     return _extract_rows(reader)
 
 
-def _resolve_import_orgao(orgao_id_raw: str | None):
-    """Valida o órgão de destino; sinaliza erro via flash e retorna None se inválido.
-
-    Admin importa para qualquer órgão ativo (a rota já é restrita a admin).
-    """
-    if not orgao_id_raw:
-        flash("Selecione o órgão de destino dos projetos.", "danger")
-        return None
-    try:
-        orgao_id = int(orgao_id_raw)
-    except (TypeError, ValueError):
-        flash(f"Órgão inválido: {orgao_id_raw!r} (esperado id numérico).", "danger")
-        return None
-    orgao = db.session.get(OrgaoUnidade, orgao_id)
-    if orgao is None or not orgao.ativo:
-        flash("O órgão selecionado é inválido ou não está mais disponível.", "danger")
-        return None
-    return orgao
-
-
 def _persist_imported_projects(
     rows: list[ParsedImportRow],
     orgao: "OrgaoUnidade",
@@ -138,55 +113,3 @@ def _persist_imported_projects(
             description=f'Importou o projeto "{row.titulo}" via CSV',
         )
     db.session.commit()
-
-
-@main_bp.route("/projects/import", methods=["POST"])
-@login_required
-@admin_required
-def import_projects():
-    """Importa projetos de um CSV (titulo/descricao). Apenas admin."""
-    orgao = _resolve_import_orgao(request.form.get("import_orgao_id"))
-    if orgao is None:
-        return redirect(url_for("main.list_projects"))
-
-    status = request.form.get("import_status") or "Vigente"
-    if status not in ALLOWED_IMPORT_STATUSES:
-        flash(
-            f"Status inválido: {status!r}. Use um de {ALLOWED_IMPORT_STATUSES}.",
-            "danger",
-        )
-        return redirect(url_for("main.list_projects"))
-
-    special_project = sanitize_special_project_for_orgao(
-        request.form.get("import_special_project") or None, orgao.sigla
-    )
-    delivery_type = request.form.get("import_delivery_type") or None
-
-    upload = request.files.get("import_file")
-    if not upload or not upload.filename:
-        flash("Selecione um arquivo CSV para importar.", "danger")
-        return redirect(url_for("main.list_projects"))
-
-    try:
-        rows = parse_import_rows(upload.read())
-    except ValueError as parse_error:
-        flash(f"Falha ao ler o CSV: {parse_error}", "danger")
-        return redirect(url_for("main.list_projects"))
-
-    if not rows:
-        flash(
-            'Nenhum projeto válido encontrado no CSV (verifique a coluna "titulo").',
-            "warning",
-        )
-        return redirect(url_for("main.list_projects"))
-
-    try:
-        _persist_imported_projects(rows, orgao, status, special_project, delivery_type)
-    except SQLAlchemyError as db_error:
-        db.session.rollback()
-        current_app.logger.error("import_projects: falha ao salvar (%s)", db_error)
-        flash("Erro ao salvar os projetos importados.", "danger")
-        return redirect(url_for("main.list_projects"))
-
-    flash(f"{len(rows)} projeto(s) importado(s) com sucesso.", "success")
-    return redirect(url_for("main.list_projects"))

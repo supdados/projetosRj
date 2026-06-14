@@ -114,7 +114,8 @@ ROUTE_CASES = [
         "rule": "/projects",
         "path": "/projects",
         "role": "user",
-        "expected_status": 200,
+        # KEEP-ENDPOINT: /projects virou redirect 302 -> /projetos (SPA).
+        "expected_status": 302,
         "requires_login": True,
         "requires_admin": False,
     },
@@ -129,33 +130,6 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
-        "id": "import_projects_post",
-        "method": "POST",
-        "rule": "/projects/import",
-        "path": "/projects/import",
-        "role": "admin",
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": True,
-    },
-    {
-        "id": "add_project_post",
-        "method": "POST",
-        "rule": "/add_project",
-        "path": "/add_project",
-        "role": "user",
-        "data": {
-            "project_titulo": "Projeto Criado no Teste",
-            "project_orgao_id": "{auditoria_orgao_id}",
-            "project_orgao": "Orgao Teste",
-            "project_prioridade": "media",
-            "project_observacao": "Observacao de teste",
-        },
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
         "id": "project_detail_get",
         "method": "GET",
         "rule": "/project/<int:project_id>",
@@ -164,67 +138,6 @@ ROUTE_CASES = [
         # KEEP-ENDPOINT: redireciona (302) para /projetos/<id> na SPA — preserva
         # target_url persistido em notificações e links da busca.
         "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "project_edit_data_get",
-        "method": "GET",
-        "rule": "/project/<int:project_id>/edit_data",
-        "path": "/project/{project_id}/edit_data",
-        "role": "user",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "project_update_inline_post",
-        "method": "POST",
-        "rule": "/project/<int:project_id>/update_inline",
-        "path": "/project/{project_id}/update_inline",
-        "role": "user",
-        "json": {"titulo": "Projeto Inline Atualizado"},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "project_delete_post",
-        "method": "POST",
-        "rule": "/project/<int:project_id>/delete",
-        "path": "/project/{project_id}/delete",
-        "role": "user",
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "project_concluir_post",
-        "method": "POST",
-        "rule": "/project/<int:project_id>/concluir",
-        "path": "/project/{project_complete_id}/concluir",
-        "role": "user",
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "project_stage_tasks_panel_get",
-        "method": "GET",
-        "rule": "/project/<int:project_id>/etapa/<int:etapa_id>/tasks",
-        "path": "/project/{project_id}/etapa/{etapa_started_id}/tasks",
-        "role": "user",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "project_legacy_tasks_panel_get",
-        "method": "GET",
-        "rule": "/project/<int:project_id>/tarefas-sem-etapa",
-        "path": "/project/{project_id}/tarefas-sem-etapa",
-        "role": "user",
-        "expected_status": 200,
         "requires_login": True,
         "requires_admin": False,
     },
@@ -2156,6 +2069,9 @@ ROUTE_CASES += [
 # /projetos/pendentes via /api/projetos/pendentes; build_projetos_pendentes_context
 # preservada). 175 - 1 = 174.
 # +1 da lane 4 (migração CSV import p/ SPA): POST /api/projetos/importar-csv
-# (sucessor de /projects/import; /projects/import sai na varredura final).
-# 174 + 1 = 175.
-assert len(ROUTE_CASES) == 175
+# (sucessor de /projects/import). 174 + 1 = 175.
+# -8 da varredura final do /projects (cluster Jinja cortado): import_projects,
+# add_project, project_edit_data, project_update_inline, project_delete,
+# project_concluir, project_stage_tasks_panel, project_legacy_tasks_panel.
+# /projects vira redirect (projects_get permanece, status 200->302). 175 - 8 = 167.
+assert len(ROUTE_CASES) == 167

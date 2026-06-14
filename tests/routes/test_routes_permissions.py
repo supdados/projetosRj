@@ -140,26 +140,9 @@ AREA_PROTECTED_CASES = [
     # /project/<id> virou redirect cego (302 -> /projetos/<id>); o controle de
     # acesso ao detalhe vive agora na API da SPA (/api/projetos/<id>), coberto
     # em test_api_*_contract. Por isso não há mais caso "outsider" para ele aqui.
-    {
-        "id": "outsider_project_edit_data",
-        "method": "GET",
-        "path": "/project/{project_id}/edit_data",
-        "expected_status": 403,
-    },
-    {
-        "id": "outsider_project_update_inline",
-        "method": "POST",
-        "path": "/project/{project_id}/update_inline",
-        "json": {"titulo": "Nao pode editar"},
-        "expected_status": 403,
-    },
-    {
-        "id": "outsider_project_delete",
-        "method": "POST",
-        "path": "/project/{project_id}/delete",
-        "expected_status": 302,
-        "redirect_contains": "/projects",
-    },
+    # edit_data/update_inline/delete (Jinja) foram cortados na migração; o
+    # controle de acesso de edição/exclusão vive na API (/api/projetos/<id>*),
+    # coberto em test_api_*_contract.
     {
         "id": "outsider_etapas_reorder",
         "method": "POST",
