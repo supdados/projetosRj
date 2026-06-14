@@ -165,13 +165,6 @@ AREA_PROTECTED_CASES = [
         "redirect_contains": "/projects",
     },
     {
-        "id": "outsider_project_history",
-        "method": "GET",
-        "path": "/project/{project_id}/history",
-        "expected_status": 302,
-        "redirect_contains": "/projects",
-    },
-    {
         "id": "outsider_etapas_reorder",
         "method": "POST",
         "path": "/project/{project_id}/etapas/reordenar",

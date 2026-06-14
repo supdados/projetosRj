@@ -158,7 +158,9 @@ def api_etapa_add(project_id: int) -> Response | tuple[Response, int]:
 
     descricao = (data.get("descricao") or "").strip()
     if not descricao:
-        return fail("A descrição da etapa é obrigatória.", status=422, code="validation")
+        return fail(
+            "A descrição da etapa é obrigatória.", status=422, code="validation"
+        )
 
     reactivate = bool(data.get("reactivate"))
     if project.status == "Finalizado" and not reactivate:
@@ -206,7 +208,8 @@ def api_etapa_add(project_id: int) -> Response | tuple[Response, int]:
 @main_bp.route("/api/etapas/<int:etapa_id>", methods=["POST"])
 @api_login_required
 def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
-    """Edita uma etapa regular (envelope), espelhando o POST de ``edit_etapa``.
+    """Edita uma etapa regular (envelope) — sucessora da extinta rota Jinja
+    ``edit_etapa`` (``/etapa/<id>/edit``, cortada na migração SPA).
 
     Atualiza descrição/responsável/comentários/datas/iniciada/done com as mesmas
     regras: concluir exige iniciada e nenhuma tarefa aberta. Reuniões Google são

@@ -2,9 +2,10 @@
 
 Fase 4 — Admin. Espelha o CRUD Jinja de ``routes/admin_users.py`` em endpoints
 ``/api/admin/usuarios*`` no envelope canônico, protegidos por
-``api_admin_required`` (401 sem sessão, 403 para não-admin). É ADITIVO: as rotas
-Jinja (``list_users``/``add_user``/``edit_user``/``remove_cpf``/``delete_user``)
-permanecem intactas (strangler).
+``api_admin_required`` (401 sem sessão, 403 para não-admin). Sucessor das rotas
+Jinja ``/admin/users*`` (``list_users``/``add_user``/``edit_user``/``remove_cpf``/
+``delete_user``), que foram CORTADAS na migração SPA — restaram só os helpers de
+parse em ``routes/admin_users.py``.
 
 Reaproveita os helpers de validação já existentes em ``routes/admin_users.py``
 (``_parse_selected_orgaos``, ``_parse_cpf_govbr``, ``_list_orgaos_with_depth``),
@@ -64,8 +65,8 @@ def _orgao_options() -> list[dict[str, Any]]:
 def api_admin_usuarios_list() -> Response | tuple[Response, int]:
     """Lista paginada de usuários para o painel admin (envelope canônico).
 
-    Espelha ``list_users`` (``/admin/users``): ordena por ``name`` e pagina em
-    blocos de 10 (mesmo ``per_page`` do Jinja). Cada usuário é serializado por
+    Sucessor da extinta rota Jinja ``list_users`` (``/admin/users``): ordena por
+    ``name`` e pagina em blocos de 10. Cada usuário é serializado por
     ``serialize_admin_user`` (sem segredos) com os órgãos vinculados.
 
     Returns:
@@ -145,9 +146,7 @@ def api_admin_usuarios_create() -> Response | tuple[Response, int]:
         criar; ``fail(..., 422)`` em erro de validação.
     """
     payload = request.get_json(silent=True) or request.form
-    selected_orgao_ids, invalid_orgaos = _parse_selected_orgaos(
-        _get_orgao_ids(payload)
-    )
+    selected_orgao_ids, invalid_orgaos = _parse_selected_orgaos(_get_orgao_ids(payload))
     username = (payload.get("username") or "").strip()
     name = (payload.get("name") or "").strip()
     password = payload.get("password") or ""
@@ -234,9 +233,14 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
         cpf_govbr, cpf_error = _parse_cpf_govbr(payload.get("cpf_govbr"))
 
     # Soft-delete C4: conta apenas administradores ATIVOS ao proteger o último.
-    if user.is_admin and not is_admin_flag and User.query.filter(
-        User.is_admin.is_(True), User.deleted_at.is_(None)
-    ).count() <= 1:
+    if (
+        user.is_admin
+        and not is_admin_flag
+        and User.query.filter(
+            User.is_admin.is_(True), User.deleted_at.is_(None)
+        ).count()
+        <= 1
+    ):
         return fail(
             "Não é possível remover o status de administrador do único "
             "administrador existente.",
@@ -254,9 +258,7 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
     if (
         should_update_cpf
         and cpf_govbr
-        and User.query.filter(
-            User.cpf_govbr == cpf_govbr, User.id != user.id
-        ).first()
+        and User.query.filter(User.cpf_govbr == cpf_govbr, User.id != user.id).first()
     ):
         return fail(
             "Já existe um usuário vinculado a este CPF gov.br.",
@@ -368,9 +370,7 @@ def _parse_bool(value: Any) -> bool:
     return str(value).strip().lower() in {"on", "true", "1", "yes"}
 
 
-def _resolve_update_orgao_ids(
-    user: User, payload: Any
-) -> tuple[list[int], list[str]]:
+def _resolve_update_orgao_ids(user: User, payload: Any) -> tuple[list[int], list[str]]:
     """Resolve os órgãos a vincular na edição, preservando inativos pré-vinculados.
 
     Espelha a lógica do POST de ``edit_user``: vínculos a órgãos inativos (que não

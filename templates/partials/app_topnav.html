@@ -21,7 +21,7 @@
                             </a>
                             <a
                                 href="{{ build_orgao_nav_url('main.list_projects') }}"
-                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projects' or endpoint == 'main.project_detail' or endpoint == 'main.project_history' else '' }}"
+                                class="app-nav-link app-nav-icon-btn {{ 'active' if endpoint == 'main.list_projects' or endpoint == 'main.project_detail' else '' }}"
                                 data-area-nav="1"
                                 data-orgao-nav="1"
                                 data-bs-toggle="tooltip"
@@ -257,7 +257,8 @@
                                     <li><hr class="dropdown-divider app-dropdown-divider"></li>
                                     {% if is_admin_user %}
                                     <li>
-                                        <a href="{{ url_for('main.list_users') }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.list_users' or (endpoint == 'main.edit_user' and request.args.get('user_id') != current_user_obj.id|string) else '' }}">
+                                        {# /admin/usuarios é tela da SPA — nunca renderiza este topnav, então não há estado 'active'. #}
+                                        <a href="/admin/usuarios" class="dropdown-item app-dropdown-item">
                                             <span class="app-dropdown-item-main">
                                                 <i class="fas fa-users-cog"></i>
                                                 <span>Gerenciar Usuários</span>
@@ -285,7 +286,8 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="{{ url_for('main.edit_user', user_id=current_user_obj.id) }}" class="dropdown-item app-dropdown-item {{ 'active' if endpoint == 'main.edit_user' and request.args.get('user_id') == current_user_obj.id|string else '' }}">
+                                        {# /admin/usuarios/<id> é tela da SPA — nunca renderiza este topnav, então não há estado 'active'. #}
+                                        <a href="/admin/usuarios/{{ current_user_obj.id }}" class="dropdown-item app-dropdown-item">
                                             <span class="app-dropdown-item-main">
                                                 <i class="fas fa-user-edit"></i>
                                                 <span>Meu Perfil (Admin)</span>

@@ -8,8 +8,9 @@ protegidos por ``api_login_required`` (401 JSON):
       (mesma fonte de verdade). Respeita o escopo de órgão server-side
       (``orgao_scope``); filtro de órgão inválido => 422 (em vez do redirect 302
       do Jinja).
-    - ``GET /api/projetos/<id>/historico`` — espelha ``/project/<id>/history``,
-      reaproveitando ``build_project_history_context`` e validando o acesso via
+    - ``GET /api/projetos/<id>/historico`` — sucessor da extinta rota Jinja
+      ``/project/<id>/history``, reaproveitando ``build_project_history_context``
+      e validando o acesso via
       ``user_can_access_project`` (404 quando o projeto não existe; 403 quando
       fora do escopo do usuário).
 

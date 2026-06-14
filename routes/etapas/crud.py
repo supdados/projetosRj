@@ -1,6 +1,6 @@
 import datetime
 
-from flask import flash, g, jsonify, redirect, render_template, request, url_for
+from flask import flash, g, jsonify, redirect, request, url_for
 
 from models import Etapa, Project, db
 from services.etapas_cascade import cascade_subsequent_dates
@@ -164,83 +164,6 @@ def add_etapa(project_id):
 
     flash(success_message, "success")
     return redirect(url_for("main.project_detail", project_id=project_id))
-
-
-@main_bp.route("/etapa/<int:etapa_id>/edit", methods=["GET", "POST"])
-@login_required
-def edit_etapa(etapa_id):
-    etapa = get_or_404(Etapa, etapa_id)
-    project_of_etapa = etapa.project
-    if not _current_user_can_edit_project(project_of_etapa):
-        flash("Você não tem permissão para editar etapas deste projeto.", "danger")
-        return redirect(url_for("main.project_detail", project_id=project_of_etapa.id))
-
-    if is_google_meeting_stage(etapa):
-        flash(
-            "Reuniões do Google devem ser editadas pelo fluxo de calendário ou pelo ajuste rápido de datas.",
-            "warning",
-        )
-        return redirect(url_for("main.project_detail", project_id=project_of_etapa.id))
-
-    if request.method == "POST":
-        old_descricao = etapa.descricao
-        etapa.descricao = request.form.get("etapa_descricao")
-        etapa.responsavel = request.form.get("etapa_responsavel")
-        etapa.comentarios = request.form.get("etapa_comentarios")
-        etapa.iniciada = request.form.get("etapa_iniciada") == "on"
-        etapa_done_form = request.form.get("etapa_done") == "on"
-
-        if not etapa.iniciada and etapa_done_form:
-            flash(
-                "A etapa não pode ser marcada como concluída pois não foi iniciada.",
-                "warning",
-            )
-            etapa.done = False
-        elif etapa_done_form and not etapa.done:
-            open_count = count_open_tasks_in_etapa(etapa.id)
-            if open_count:
-                flash(
-                    f"Finalize as {open_count} tarefa(s) pendente(s) desta etapa antes de concluí-la.",
-                    "warning",
-                )
-                etapa.done = False
-            else:
-                etapa.done = True
-        else:
-            etapa.done = etapa_done_form
-
-        data_inicio_str = request.form.get("etapa_data_inicio")
-        etapa.data_inicio = (
-            datetime.datetime.strptime(data_inicio_str, "%Y-%m-%d").date()
-            if data_inicio_str
-            else None
-        )
-        data_fim_str = request.form.get("etapa_data_fim")
-        etapa.data_fim = (
-            datetime.datetime.strptime(data_fim_str, "%Y-%m-%d").date()
-            if data_fim_str
-            else None
-        )
-
-        log_project_action(
-            project_id=etapa.project_id,
-            action_type="edit_etapa",
-            description=f'Editou a etapa "{old_descricao}"',
-        )
-
-        db.session.commit()
-        flash("Etapa atualizada com sucesso!", "success")
-        return redirect(url_for("main.project_detail", project_id=etapa.project_id))
-
-    data_inicio_f = etapa.data_inicio.strftime("%Y-%m-%d") if etapa.data_inicio else ""
-    data_fim_f = etapa.data_fim.strftime("%Y-%m-%d") if etapa.data_fim else ""
-    return render_template(
-        "etapas/form.html",
-        etapa=etapa,
-        action=url_for("main.edit_etapa", etapa_id=etapa_id),
-        data_inicio_form=data_inicio_f,
-        data_fim_form=data_fim_f,
-    )
 
 
 @main_bp.route("/etapa/<int:etapa_id>/delete", methods=["POST"])

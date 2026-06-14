@@ -36,10 +36,12 @@ ja foram cortados e sao servidos pelo catch-all; ``/dashboard``, ``/tarefas`` e
 ``/calendarios`` foram cortados no padrao KEEP-ENDPOINT (a rota Flask estatica
 permanece registrada — pinada por ``url_for``/notificacoes — mas devolve
 ``_render_spa()``). As telas Jinja remanescentes sao apenas os paths ingleses:
-``/projects``, ``/project/<id>`` (+ ``/history``, ``/edit``),
-``/projetos_pendentes``, ``/admin/users*`` e ``/etapa/<id>/edit`` — pendentes
-de lane propria (projetos/admin). Ate la, essas URLs continuam canonicamente
-Jinja — SEM loop e SEM tela branca.
+``/projects``, ``/project/<id>`` (+ ``/edit``) e ``/projetos_pendentes`` —
+pendentes de lane propria (projetos). Ate la, essas URLs continuam
+canonicamente Jinja — SEM loop e SEM tela branca. (Ja cortadas:
+``/etapa/<id>/edit``, ``/project/<id>/history`` e ``/admin/users*`` — edicao de
+etapa, historico e CRUD de usuarios sao 100% SPA, via /api/etapas/<id>,
+/api/projetos/<id>/historico e /api/admin/usuarios*.)
 
 EXCLUSOES (nunca SPA): ``/api/*``, ``/webhook``, ``/calendar/oauth/*``,
 ``/auth/*``, ``/login*``, ``/logout``, ``/static/*``, ``/favicon.ico``,

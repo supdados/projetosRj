@@ -839,12 +839,10 @@ def build_project_history_context(project_id):
     """Monta os dados do histórico de ações de um projeto.
 
     Centraliza a busca do projeto (``get_or_404``) e suas entradas de histórico
-    ordenadas (mais recente primeiro), para que a rota Jinja
-    ``/project/<id>/history`` e o endpoint JSON da SPA
-    (``GET /api/projetos/<id>/historico``) compartilhem a fonte de verdade. NÃO
-    faz controle de acesso: o chamador valida via ``user_can_access_project``
-    (a checagem difere entre Jinja, que faz flash+redirect, e a API, que devolve
-    403 no envelope).
+    ordenadas (mais recente primeiro). Consumida pelo endpoint JSON da SPA
+    (``GET /api/projetos/<id>/historico``) — a antiga rota Jinja
+    ``/project/<id>/history`` foi cortada na migração. NÃO faz controle de
+    acesso: o chamador valida via ``user_can_access_project`` (403 no envelope).
 
     Args:
         project_id: ID do projeto cujo histórico será carregado.
@@ -865,27 +863,6 @@ def build_project_history_context(project_id):
         .all()
     )
     return {"project": project, "history": history_entries}
-
-
-@main_bp.route("/project/<int:project_id>/history")
-@login_required
-def project_history(project_id):
-    """Visualizar histórico de ações de um projeto (Jinja).
-
-    Fonte de dados: ``build_project_history_context``. Mantém o controle de
-    acesso via flash+redirect (comportamento Jinja).
-    """
-    context = build_project_history_context(project_id)
-
-    if not user_can_access_project(g.user, context["project"]):
-        flash("Você não tem permissão para visualizar este projeto.", "danger")
-        return redirect(url_for("main.list_projects"))
-
-    return render_template(
-        "projects/history.html",
-        project=context["project"],
-        history=context["history"],
-    )
 
 
 @main_bp.route("/projects/download")

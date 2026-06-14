@@ -245,16 +245,6 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
-        "id": "project_history_get",
-        "method": "GET",
-        "rule": "/project/<int:project_id>/history",
-        "path": "/project/{project_id}/history",
-        "role": "user",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
         "id": "project_stage_tasks_panel_get",
         "method": "GET",
         "rule": "/project/<int:project_id>/etapa/<int:etapa_id>/tasks",
@@ -324,33 +314,6 @@ ROUTE_CASES = [
         "path": "/project/{project_id}/import_model",
         "role": "user",
         "data": {"template_id": "{template_id}", "start_date": "2026-03-10"},
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "etapa_edit_get",
-        "method": "GET",
-        "rule": "/etapa/<int:etapa_id>/edit",
-        "path": "/etapa/{etapa_id}/edit",
-        "role": "user",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "etapa_edit_post",
-        "method": "POST",
-        "rule": "/etapa/<int:etapa_id>/edit",
-        "path": "/etapa/{etapa_id}/edit",
-        "role": "user",
-        "data": {
-            "etapa_descricao": "Etapa editada",
-            "etapa_data_inicio": "2026-01-12",
-            "etapa_data_fim": "2026-01-18",
-            "etapa_responsavel": "Usuario Auditoria",
-            "etapa_comentarios": "Comentario atualizado",
-        },
         "expected_status": 302,
         "requires_login": True,
         "requires_admin": False,
@@ -1393,79 +1356,8 @@ ROUTE_CASES = [
         "requires_login": True,
         "requires_admin": False,
     },
-    # Admin users
-    {
-        "id": "admin_users_get",
-        "method": "GET",
-        "rule": "/admin/users",
-        "path": "/admin/users",
-        "role": "admin",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": True,
-    },
-    {
-        "id": "admin_users_add_get",
-        "method": "GET",
-        "rule": "/admin/users/add",
-        "path": "/admin/users/add",
-        "role": "admin",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": True,
-    },
-    {
-        "id": "admin_users_add_post",
-        "method": "POST",
-        "rule": "/admin/users/add",
-        "path": "/admin/users/add",
-        "role": "admin",
-        "data": {
-            "username": "novo_usuario_teste",
-            "name": "Novo Usuario",
-            "password": "senhaNova123",
-            "orgao": "Orgao Novo",
-            "areas_responsavel": ["Auditoria"],
-        },
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": True,
-    },
-    {
-        "id": "admin_users_edit_get",
-        "method": "GET",
-        "rule": "/admin/users/edit/<int:user_id>",
-        "path": "/admin/users/edit/{editable_user_id}",
-        "role": "admin",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": True,
-    },
-    {
-        "id": "admin_users_edit_post",
-        "method": "POST",
-        "rule": "/admin/users/edit/<int:user_id>",
-        "path": "/admin/users/edit/{editable_user_id}",
-        "role": "admin",
-        "data": {
-            "name": "Usuario Editado",
-            "orgao": "Orgao Editado",
-            "areas_responsavel": ["Auditoria"],
-        },
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": True,
-    },
-    {
-        "id": "admin_users_delete_post",
-        "method": "POST",
-        "rule": "/admin/users/delete/<int:user_id>",
-        "path": "/admin/users/delete/{deletable_user_id}",
-        "role": "admin",
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": True,
-    },
+    # Admin users (Jinja): rotas CORTADAS na migracao SPA — o CRUD vive em
+    # /admin/usuarios* (SPA) + /api/admin/usuarios* (envelope).
     # Admin templates/orgaos/tipos: rotas Jinja canonicas CORTADAS (Grupo B).
     # /admin/templates, /admin/orgaos e /admin/orgaos/tipos agora servem a SPA via
     # catch-all (_MIGRATED_EXACT_PATHS em routes/spa.py); o CRUD vive em
@@ -1488,16 +1380,6 @@ ROUTE_CASES = [
         "path": "/setup_db",
         "role": "admin",
         "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": True,
-    },
-    {
-        "id": "admin_users_remove_cpf_post",
-        "method": "POST",
-        "rule": "/admin/users/remove-cpf/<int:user_id>",
-        "path": "/admin/users/remove-cpf/{editable_user_id}",
-        "role": "admin",
-        "expected_status": 302,
         "requires_login": True,
         "requires_admin": True,
     },
@@ -2282,4 +2164,13 @@ ROUTE_CASES += [
 # GET /api/calendarios/membros. 186 + 2 = 188.
 # -1 da lane de limpeza de codigo morto: GET /api/projetos_usuario removido
 # (rota sem consumidor em static/, templates/ ou frontend/). 188 - 1 = 187.
-assert len(ROUTE_CASES) == 187
+# -2 da lane de migracao SPA (corte de duplicata Jinja): GET/POST
+# /etapa/<id>/edit removidos (edicao de etapa 100% coberta inline na SPA via
+# /api/etapas/<id>). 187 - 2 = 185.
+# -1 da lane 2: GET /project/<id>/history removido (historico vira modal na SPA
+# via /api/projetos/<id>/historico; build_project_history_context preservada).
+# 185 - 1 = 184.
+# -7 da lane 3: /admin/users* (Jinja) cortado — list/add(GET+POST)/edit(GET+POST)/
+# delete/remove-cpf. CRUD 100% na SPA (/admin/usuarios* + /api/admin/usuarios*).
+# 184 - 7 = 177.
+assert len(ROUTE_CASES) == 177
