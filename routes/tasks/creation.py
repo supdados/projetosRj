@@ -1,6 +1,6 @@
-from urllib.parse import urlparse
-
 from flask import current_app, flash, g, jsonify, redirect, request, url_for
+
+from routes.safe_redirect import safe_internal_path
 
 from models import (
     Etapa,
@@ -212,30 +212,10 @@ def _serialize_task_payload(task):
 
 
 def _get_safe_next_url():
-    raw_next = (
-        request.form.get("next")
-        or request.args.get("next")
-        or request.headers.get("Referer")
-        or request.referrer
-    )
-    if not raw_next:
-        return None
-
-    parsed = urlparse(raw_next)
-
-    if not parsed.netloc and parsed.path.startswith("/"):
-        target = parsed.path
-        if parsed.query:
-            target = f"{target}?{parsed.query}"
-        return target
-
-    if parsed.netloc and parsed.netloc == request.host:
-        target = parsed.path or "/"
-        if parsed.query:
-            target = f"{target}?{parsed.query}"
-        return target
-
-    return None
+    # Referer/referrer NÃO entram como fonte: são controláveis pelo atacante e
+    # davam open redirect (CWE-601). Só destinos explícitos via 'next', validados.
+    raw_next = request.form.get("next") or request.args.get("next")
+    return safe_internal_path(raw_next, request.host)
 
 
 def _redirect_back_or(default_endpoint, **kwargs):

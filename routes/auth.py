@@ -15,7 +15,9 @@ from flask import (
 )
 
 from models import OrgaoUnidade, Project, Task, User, db
+from routes.safe_redirect import safe_internal_path
 from time_utils import utc_now
+from services.password_policy import validate_password_strength
 from services.govbr_oidc import (
     GovBrOIDCError,
     build_authorization_url,
@@ -27,6 +29,8 @@ from services.govbr_oidc import (
     is_govbr_oidc_enabled,
     normalize_cpf,
 )
+
+from flask_limiter.util import get_remote_address
 
 from extensions import limiter
 
@@ -125,28 +129,7 @@ def _log_auth_event(event, *, user=None, username=None, provider="local"):
 
 
 def _resolve_safe_next_url(raw_next):
-    if not raw_next:
-        return None
-
-    value = str(raw_next).strip()
-    if not value:
-        return None
-
-    parsed = urlparse(value)
-    if parsed.scheme or parsed.netloc:
-        host = urlparse(request.host_url).netloc
-        if parsed.scheme not in {"http", "https"}:
-            return None
-        if parsed.netloc != host:
-            return None
-        target = parsed.path or "/"
-        if parsed.query:
-            target = f"{target}?{parsed.query}"
-        return target if target.startswith("/") else None
-
-    if not value.startswith("/") or value.startswith("//"):
-        return None
-    return value
+    return safe_internal_path(raw_next, request.host)
 
 
 def _find_user_by_cpf_for_govbr(cpf):
@@ -219,8 +202,30 @@ def home():
     return redirect(url_for("main.login_page"))
 
 
+def _login_rate_key():
+    """Chave de rate-limit por (IP + username): throttla brute-force contra UMA
+    conta a partir de um IP sem afetar o login legítimo do dono (cujo IP é outro
+    balde). Username normalizado para evitar bypass por variação de caixa."""
+    username = (request.form.get("username") or "").strip().lower()
+    return f"{get_remote_address()}|{username}"
+
+
+def _render_login_page(safe_next, *, show_local_form=False):
+    cv, cf, tt, ca = _login_stats()
+    return render_template(
+        "auth/login.html",
+        next_page=safe_next,
+        show_local_form=show_local_form,
+        count_vigente=cv,
+        count_finalizado=cf,
+        total_tasks=tt,
+        count_areas=ca,
+    )
+
+
 @main_bp.route("/login", methods=["GET", "POST"])
-@limiter.limit("10 per minute", methods=["POST"])
+@limiter.limit("10 per minute", methods=["POST"])  # geral, por IP (credential stuffing)
+@limiter.limit("5 per minute", key_func=_login_rate_key, methods=["POST"])  # por conta
 def login_page():
     if "user_id" in session and g.user:  # Se já logado e usuário válido
         return redirect(url_for("main.dashboard"))
@@ -229,66 +234,45 @@ def login_page():
         request.args.get("next") or request.form.get("next")
     )
 
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
+    if request.method != "POST":
+        return _render_login_page(safe_next)
 
-        if not username or not password:
-            flash("Usuário e senha são obrigatórios.", "warning")
-            cv, cf, tt, ca = _login_stats()
-            return render_template(
-                "auth/login.html",
-                next_page=safe_next,
-                show_local_form=True,
-                count_vigente=cv,
-                count_finalizado=cf,
-                total_tasks=tt,
-                count_areas=ca,
-            )
+    username = request.form.get("username")
+    password = request.form.get("password")
 
-        user = User.query.filter_by(username=username).first()
+    if not username or not password:
+        flash("Usuário e senha são obrigatórios.", "warning")
+        return _render_login_page(safe_next, show_local_form=True)
 
-        if user and user.check_password(password):
-            if user.needs_password_rehash():
-                user.set_password(password)
-                try:
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
-            _register_successful_login(user)
-            _remember_auth_session(user, provider="local")
-            g.user = user
+    user = User.query.filter_by(username=username).first()
 
-            _log_auth_event("login_success", user=user, provider="local")
-            flash(f"Login bem-sucedido, {user.name}!", "success")
-            return redirect(_login_redirect_target())
-        else:
-            if not _user_is_locked_out(user):
-                _register_failed_login(user)
-            _log_auth_event(
-                "login_failure", user=user, username=username, provider="local"
-            )
-            flash("Credenciais inválidas. Tente novamente.", "danger")
-            cv, cf, tt, ca = _login_stats()
-            return render_template(
-                "auth/login.html",
-                next_page=safe_next,
-                show_local_form=True,
-                count_vigente=cv,
-                count_finalizado=cf,
-                total_tasks=tt,
-                count_areas=ca,
-            )
+    # Durante o lockout, nega o login mesmo com a senha correta (CWE-307). Usa a
+    # MESMA mensagem genérica do caminho de falha para não permitir enumeração de
+    # usuários (conta bloqueada x inexistente respondem idêntico).
+    if _user_is_locked_out(user):
+        _log_auth_event("login_blocked", user=user, username=username, provider="local")
+        flash("Credenciais inválidas. Tente novamente.", "danger")
+        return _render_login_page(safe_next, show_local_form=True)
 
-    cv, cf, tt, ca = _login_stats()
-    return render_template(
-        "auth/login.html",
-        next_page=safe_next,
-        count_vigente=cv,
-        count_finalizado=cf,
-        total_tasks=tt,
-        count_areas=ca,
-    )
+    if user and user.check_password(password):
+        if user.needs_password_rehash():
+            user.set_password(password)
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+        _register_successful_login(user)
+        _remember_auth_session(user, provider="local")
+        g.user = user
+
+        _log_auth_event("login_success", user=user, provider="local")
+        flash(f"Login bem-sucedido, {user.name}!", "success")
+        return redirect(_login_redirect_target())
+
+    _register_failed_login(user)
+    _log_auth_event("login_failure", user=user, username=username, provider="local")
+    flash("Credenciais inválidas. Tente novamente.", "danger")
+    return _render_login_page(safe_next, show_local_form=True)
 
 
 @main_bp.route("/login/govbr", methods=["GET"])
@@ -573,8 +557,11 @@ def change_password():
                 "auth/change_password.html", hide_govbr_link_fields=is_govbr_linked
             )
 
-        if should_update_password and len(new_password) < 8:
-            flash("A nova senha deve ter no mínimo 8 caracteres.", "danger")
+        password_error = (
+            validate_password_strength(new_password) if should_update_password else None
+        )
+        if password_error:
+            flash(password_error, "danger")
             return render_template(
                 "auth/change_password.html", hide_govbr_link_fields=is_govbr_linked
             )

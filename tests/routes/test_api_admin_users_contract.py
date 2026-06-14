@@ -159,6 +159,15 @@ def test_create_missing_required_fields_returns_422(client_admin):
     _assert_fail_envelope(response.get_json(), code="validation")
 
 
+def test_create_rejects_weak_password_returns_422(client_admin):
+    response = client_admin.post(
+        "/api/admin/usuarios",
+        json={"username": "fraco", "name": "Senha Fraca", "password": "123"},
+    )
+    assert response.status_code == 422
+    _assert_fail_envelope(response.get_json(), code="validation")
+
+
 def test_create_duplicate_username_returns_422(client_admin, seed_data):
     response = client_admin.post(
         "/api/admin/usuarios",

@@ -25,6 +25,7 @@ from typing import Any
 from flask import Response, g, request
 
 from models import OrgaoUnidade, User, UserOrgao, db
+from services.password_policy import validate_password_strength
 from time_utils import utc_now
 
 from ..admin_users import (
@@ -160,6 +161,9 @@ def api_admin_usuarios_create() -> Response | tuple[Response, int]:
             status=422,
             code="validation",
         )
+    password_error = validate_password_strength(password)
+    if password_error:
+        return fail(password_error, status=422, code="validation")
     if cpf_error:
         return fail(f"CPF gov.br inválido: {cpf_error}", status=422, code="validation")
     if invalid_orgaos:
@@ -278,6 +282,9 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
 
     new_password = payload.get("password")
     if new_password:
+        password_error = validate_password_strength(new_password)
+        if password_error:
+            return fail(password_error, status=422, code="validation")
         user.set_password(new_password)
 
     db.session.commit()

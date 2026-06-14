@@ -43,6 +43,16 @@ def test_spa_bootstrap_script_uses_csp_nonce(client):
     assert "%CSP_NONCE%" not in body
 
 
+def test_response_sets_anti_clickjacking_headers(client):
+    """Regressão do achado de Clickjacking (CWE-1021): X-Frame-Options: DENY e
+    CSP com frame-ancestors 'none' — impedem a página de ser embutida em iframe."""
+    response = client.get("/spa")
+
+    assert response.headers.get("X-Frame-Options") == "DENY"
+    csp = response.headers.get("Content-Security-Policy", "")
+    assert "frame-ancestors 'none'" in csp
+
+
 def test_spa_subpath_dashboard_serves_same_shell(client):
     response = client.get("/spa/dashboard")
 
