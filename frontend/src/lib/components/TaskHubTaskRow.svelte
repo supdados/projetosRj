@@ -11,7 +11,7 @@
 	 */
 	import { getContext, onDestroy } from 'svelte';
 	import { get } from 'svelte/store';
-	import { slide } from 'svelte/transition';
+	import { slide, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import type { TaskAssignee, TaskCard } from '$lib/types/tasks';
@@ -422,32 +422,46 @@
 	{/if}
 
 	{#if confirming}
+		<!-- Confirmação centralizada (modal SPA), no mesmo padrão do "Arquivar finalizados". -->
+		<div
+			class="fixed inset-0 z-modal bg-black/40"
+			role="presentation"
+			onclick={() => (confirming = false)}
+			transition:fade={{ duration: 120 }}
+		></div>
 		<div
 			role="alertdialog"
+			aria-modal="true"
 			aria-label="Confirmar exclusão da tarefa"
-			class="flex items-center justify-end gap-3 border-t border-danger/40 bg-danger/5 px-3 py-2"
+			class="fixed left-1/2 top-1/2 z-modal flex w-full max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-lg border border-border-subtle bg-surface p-5 shadow-lg"
 		>
+			<h2 class="font-heading text-lg font-bold text-text-primary">Excluir tarefa</h2>
 			{#if deleteError}
-				<p role="alert" class="mr-auto text-xs text-danger">{deleteError}</p>
+				<p role="alert" class="text-sm text-danger">{deleteError}</p>
 			{:else}
-				<p class="mr-auto text-xs text-text-primary">Excluir esta tarefa?</p>
+				<p class="text-sm text-text-secondary">
+					Excluir a tarefa <b class="font-semibold text-text-primary">“{task.descricao}”</b>? Esta
+					ação não pode ser desfeita.
+				</p>
 			{/if}
-			<button
-				type="button"
-				onclick={() => (confirming = false)}
-				disabled={deleting}
-				class="rounded-md border border-border-subtle px-2.5 py-1 text-xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-			>
-				Cancelar
-			</button>
-			<button
-				type="button"
-				onclick={() => void doDelete()}
-				disabled={deleting}
-				class="rounded-md bg-danger px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
-			>
-				{deleting ? 'Excluindo…' : 'Excluir'}
-			</button>
+			<div class="flex justify-end gap-2">
+				<button
+					type="button"
+					onclick={() => (confirming = false)}
+					disabled={deleting}
+					class="rounded-md border border-border-subtle px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					onclick={() => void doDelete()}
+					disabled={deleting}
+					class="rounded-md bg-danger px-4 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+				>
+					{deleting ? 'Excluindo…' : 'Excluir'}
+				</button>
+			</div>
 		</div>
 	{/if}
 </div>

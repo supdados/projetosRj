@@ -18,6 +18,7 @@
 	 * vazio são anunciados via aria-live. Colapso de projeto/etapa em localStorage.
 	 */
 	import { onMount, setContext, tick } from 'svelte';
+	import { base } from '$app/paths';
 	import { slide, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -1007,6 +1008,8 @@
 				Nenhuma tarefa para os filtros selecionados.
 			</div>
 		{:else}
+			<!-- Lista + pager num wrapper gap-4 → distância padrão (16px) até o pager. -->
+			<div class="flex flex-col gap-4">
 			<div class="flex flex-col gap-5" aria-busy={loadState !== 'ready'}>
 				{#each data.groups as group (group.key)}
 					{@const pKey = group.key}
@@ -1026,6 +1029,7 @@
 							open={!pCollapsed}
 							onToggle={() => toggleSet(collapsedProjects, pKey)}
 							controlsId={`project-${pKey}`}
+							href={group.project_id != null ? `${base}/projetos/${group.project_id}` : null}
 						/>
 
 						<div class="task-collapse border-t border-border-subtle" data-collapsed={pCollapsed} id={`project-${pKey}`}>
@@ -1167,10 +1171,12 @@
 				{/each}
 			</div>
 
-			<div class="mt-5">
 				<PaginationBar
 					page={data.pagination.page}
 					totalPages={data.pagination.total_pages}
+					total={data.pagination.total_groups}
+					perPage={data.pagination.per_page}
+					itemLabel="projetos"
 					label="Paginação de projetos da lista"
 					disabled={loadState !== 'ready'}
 					onChange={goToListPage}
