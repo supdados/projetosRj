@@ -52,27 +52,6 @@ def notify_assignee_change(task, added_user_ids, removed_user_ids) -> None:
         )
 
 
-def notify_task_created(task) -> None:
-    notify_task_event(
-        task,
-        actor_user_id=g.user.id,
-        event_type="task_created",
-        title="Nova tarefa",
-        message=(
-            f'{g.user.name} criou a tarefa "{_preview_text(task.descricao, 90)}" '
-            f"com status {_task_status_label(task.status)}."
-        ),
-    )
-    if task.responsavel:
-        notify_task_assignment_change(
-            task,
-            task,
-            g.user.id,
-            old_responsavel=None,
-            new_responsavel=task.responsavel,
-        )
-
-
 def notify_task_edited(task, diff: TaskEditDiff) -> None:
     """Emite 'task_updated' com sumário das mudanças + reassignment se houve."""
     changes = _edit_change_descriptions(task, diff)

@@ -207,12 +207,6 @@ def resolve_task_collaborator_user_ids(task):
     return recipient_ids
 
 
-def resolve_task_item_collaborator_user_ids(task, item_id):
-    # Compatibilidade: item_id legado agora aponta para a própria tarefa.
-    del item_id
-    return resolve_task_collaborator_user_ids(task)
-
-
 def notify_project_history_action(
     project_id,
     actor_user_id,

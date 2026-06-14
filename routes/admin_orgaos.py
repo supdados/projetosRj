@@ -1,57 +1,11 @@
-from flask import flash, jsonify, redirect, request, url_for
-
 from models import OrgaoTipo, OrgaoUnidade, db
-from models.orgao import MAX_DEPTH, slugify_orgao_tipo
+from models.orgao import slugify_orgao_tipo
 
-from .blueprint import main_bp
-from .decorators import admin_required, login_required
 from .orgao_tree import (
     backfill_orgao_tipo_ids,
-    compute_orgao_depth,
-    get_orgao_descendants,
     ensure_default_orgao_tipos,
-    is_valid_parent_tipo,
-    normalize_orgao_form,
-    rebuild_orgao_closure,
-    validate_orgao_move,
+    get_orgao_descendants,
 )
-from .shared import get_or_404
-
-
-def _serialize_orgao(orgao):
-    return {
-        "id": orgao.id,
-        "nome": orgao.nome,
-        "sigla": orgao.sigla,
-        "tipo": orgao.tipo,
-        "tipo_id": orgao.tipo_id,
-        "pai_id": orgao.pai_id,
-        "ordem": orgao.ordem,
-        "ativo": orgao.ativo,
-        "codigo_externo": orgao.codigo_externo,
-    }
-
-
-def _wants_json():
-    if request.is_json:
-        return True
-    accept = request.headers.get("Accept", "")
-    if "application/json" in accept and "text/html" not in accept:
-        return True
-    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return True
-    return False
-
-
-def _ancestrais(orgao):
-    chain = []
-    current = orgao
-    seen = set()
-    while current is not None and current.id not in seen:
-        seen.add(current.id)
-        chain.insert(0, current)
-        current = current.pai
-    return chain
 
 
 def _candidate_pais(orgao=None):

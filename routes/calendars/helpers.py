@@ -11,7 +11,6 @@ from services.calendar_core import (
     extract_meet_link,
     format_human_datetime,
     format_input_datetime,
-    google_event_payload,
     parse_event_form,
     parse_google_event_datetime,
 )
@@ -193,10 +192,6 @@ def _connection_for_current_user():
 
 def _extract_meet_link(remote):
     return extract_meet_link(remote)
-
-
-def _google_event_payload(local_event, *, create_conference=False):
-    return google_event_payload(local_event, create_conference=create_conference)
 
 
 def _ensure_google_access_token(connection, *, force_refresh=False):
@@ -508,16 +503,6 @@ def _renew_watch_channel(connection):
         "channel_id": connection.watch_channel_id,
         "resource_id": connection.watch_resource_id,
         "expires_at": connection.watch_expiration,
-    }
-
-
-def _event_view_row(event):
-    return {
-        "model": event,
-        "starts_at_display": _format_human_datetime(event.starts_at),
-        "ends_at_display": _format_human_datetime(event.ends_at),
-        "starts_at_input": _format_input_datetime(event.starts_at),
-        "ends_at_input": _format_input_datetime(event.ends_at),
     }
 
 
