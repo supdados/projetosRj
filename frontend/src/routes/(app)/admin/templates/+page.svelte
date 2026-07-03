@@ -554,14 +554,12 @@
 	<title>Modelos de Etapas — Administração — ProjetosRJ</title>
 </svelte:head>
 
-<section aria-labelledby="tpl-title" class="flex flex-col gap-6">
-	<nav aria-label="Trilha" class="flex items-center gap-2 text-sm text-text-muted">
-		<span>Administração</span>
-		<span aria-hidden="true" class="text-text-muted">/</span>
-		<span class="font-medium text-text-secondary">Modelos de Etapas</span>
-	</nav>
-
-	<PageHeader compact class="min-h-[3.5rem]" labelId="tpl-title">
+<section aria-labelledby="tpl-title" class="flex flex-col gap-4">
+	<!-- CARD ÚNICO header + filtros (padrão de Projetos/Tarefas/Pendentes): chrome
+		 de card no wrapper, PageHeader compacto `embedded` e a linha de filtros
+		 embutida abaixo de um divisor fino. -->
+	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
+	<PageHeader compact embedded class="min-h-[3.5rem]" labelId="tpl-title">
 		{#snippet titleContent()}
 			<span class="align-middle">Modelos de Etapas</span>
 			{#if data}
@@ -577,6 +575,67 @@
 			{/if}
 		{/snippet}
 	</PageHeader>
+
+	{#if view === 'list'}
+		<!-- Linha de filtros embutida no card, mesmos controles h-9 das demais telas. -->
+		<form
+			class="flex flex-wrap items-center gap-2 border-t border-border-subtle px-4 py-2.5"
+			role="search"
+			aria-label="Filtros de modelos"
+			onsubmit={onSearchSubmit}
+		>
+			<div class="relative min-w-[15rem] flex-1">
+				<label for="tplSearch" class="sr-only">Busca livre</label>
+				<i
+					class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
+					aria-hidden="true"
+				></i>
+				<input
+					id="tplSearch"
+					name="q"
+					type="search"
+					autocomplete="off"
+					bind:value={search}
+					oninput={onSearchInput}
+					placeholder="Buscar modelo por nome ou descrição…"
+					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				/>
+			</div>
+
+			<div class="ml-auto flex items-center gap-2">
+				<label
+					class="inline-flex h-9 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-secondary transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted"
+				>
+					<i class="fas fa-sliders-h text-text-muted" aria-hidden="true"></i>
+					<span class="text-text-muted">Ordenar por:</span>
+					<select
+						id="tplOrder"
+						value={order}
+						onchange={onOrderChange}
+						class="cursor-pointer border-none bg-transparent text-sm font-semibold text-text-primary focus:outline-none"
+					>
+						{#each orderOptions as opt (opt)}
+							<option value={opt}>{ORDER_LABELS[opt]}</option>
+						{/each}
+					</select>
+				</label>
+
+				{#if hasActiveFilters}
+					<button
+						type="button"
+						onclick={clearFilters}
+						title="Limpar filtros"
+						aria-label="Limpar filtros"
+						class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
+					</button>
+				{/if}
+			</div>
+			<button type="submit" class="sr-only">Filtrar</button>
+		</form>
+	{/if}
+	</div>
 
 	{#if view === 'form'}
 		<!-- =================== FORMULÁRIO CRIAR/EDITAR =================== -->
@@ -816,59 +875,6 @@
 		</Card>
 	{:else}
 		<!-- ======================= LISTA ======================= -->
-		<form
-			class="flex flex-wrap items-center gap-3 rounded-xl border border-border-subtle bg-surface px-4 py-3 shadow-md"
-			role="search"
-			aria-label="Filtros de modelos"
-			onsubmit={onSearchSubmit}
-		>
-			<div class="relative min-w-[15rem] flex-1">
-				<label for="tplSearch" class="sr-only">Busca livre</label>
-				<i
-					class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted"
-					aria-hidden="true"
-				></i>
-				<input
-					id="tplSearch"
-					name="q"
-					type="search"
-					autocomplete="off"
-					bind:value={search}
-					oninput={onSearchInput}
-					placeholder="Buscar modelo por nome ou descrição…"
-					class="w-full rounded-lg border border-border-subtle bg-surface-muted py-2.5 pl-9 pr-3 text-sm text-text-primary transition-all duration-base placeholder:text-text-muted focus:border-primary-500 focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
-				/>
-			</div>
-
-			<label
-				class="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-text-secondary transition-colors duration-base hover:border-border-strong hover:bg-surface"
-			>
-				<i class="fas fa-sliders-h text-text-muted" aria-hidden="true"></i>
-				<span class="text-text-muted">Ordenar por:</span>
-				<select
-					id="tplOrder"
-					value={order}
-					onchange={onOrderChange}
-					class="cursor-pointer border-none bg-transparent text-sm font-semibold text-text-primary focus:outline-none"
-				>
-					{#each orderOptions as opt (opt)}
-						<option value={opt}>{ORDER_LABELS[opt]}</option>
-					{/each}
-				</select>
-			</label>
-
-			{#if hasActiveFilters}
-				<button
-					type="button"
-					onclick={clearFilters}
-					class="rounded-lg border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					Limpar filtros
-				</button>
-			{/if}
-			<button type="submit" class="sr-only">Filtrar</button>
-		</form>
-
 		{#if loadState === 'loading'}
 			<p role="status" aria-live="polite" class="text-text-secondary">
 				Carregando modelos…
