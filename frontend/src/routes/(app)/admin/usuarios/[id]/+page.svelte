@@ -27,6 +27,8 @@
 		AdminUserUpdatePayload
 	} from '$lib/types/adminUsers';
 	import UserForm from '../UserForm.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Button from '$lib/components/Button.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -160,35 +162,21 @@
 	<title>Editar Usuário — ProjetosRJ</title>
 </svelte:head>
 
-<section aria-labelledby="editar-usuario-title" class="mx-auto flex w-full max-w-[1220px] flex-col gap-3">
-	<nav class="text-sm text-text-muted" aria-label="Trilha de navegação">
-		<a href={listHref} class="text-primary-700 no-underline hover:underline">Usuários</a>
-		<span aria-hidden="true"> / </span>
-		<span>Editar</span>
-	</nav>
-
-	<!--
-		Cabeçalho "glass" do form (.account-page-header-main): faixa translúcida
-		com ícone fa-user-cog arredondado, título grande e subtítulo.
-	-->
-	<header
-		class="flex items-center gap-3 rounded-lg border border-primary-500/30 bg-glass-card px-3.5 py-3 shadow-md"
-	>
-		<span
-			class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary-500/20 bg-glass-card text-lg text-primary-700"
-			aria-hidden="true"
-		>
-			<i class="fas fa-user-cog"></i>
-		</span>
-		<div class="min-w-0">
-			<h1 id="editar-usuario-title" class="truncate font-heading text-3xl font-bold leading-tight text-primary-700">
+<section aria-labelledby="editar-usuario-title" class="mx-auto flex w-full max-w-[1220px] flex-col gap-4">
+	<!-- Header-card padrão das telas (mesmo chrome de Projetos/Tarefas/Usuários). -->
+	<PageHeader compact class="min-h-[3.5rem]" labelId="editar-usuario-title">
+		{#snippet titleContent()}
+			<span class="align-middle">
 				{#if usuario}Editar — {usuario.name}{:else}Editar Usuário{/if}
-			</h1>
-			<p class="text-md font-medium text-text-secondary">
-				Atualize os dados, órgãos e permissões deste usuário.
-			</p>
-		</div>
-	</header>
+			</span>
+		{/snippet}
+		{#snippet actions()}
+			<Button size="sm" variant="secondary" href={listHref}>
+				{#snippet icon()}<i class="fas fa-arrow-left" aria-hidden="true"></i>{/snippet}
+				Voltar
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if loadState === 'loading'}
 		<p role="status" aria-live="polite" class="text-text-secondary">Carregando usuário…</p>
