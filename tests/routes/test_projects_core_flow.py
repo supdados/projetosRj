@@ -9,7 +9,7 @@ vivo) e o fail-closed por órgão nas telas de leitura (dashboard SPA + busca).
 import csv
 import io
 
-from models import Project, User, db
+from models import Project, ProjectSeiProcess, User, db
 
 
 def _create_no_orgao_user(app, username="user_sem_orgao"):
@@ -54,13 +54,16 @@ def test_projects_csv_export_neutralizes_formula_text_cells(app, client_admin):
         project = Project(
             titulo='=HYPERLINK("https://attacker.example","click")',
             short_description=" +SUM(1,2)",
-            sei_process="@cmd",
             orgao="-Orgao Legado",
             prioridade="alta",
             status="Vigente",
             objetivo_id=1,
             resultado_esperado_id=1,
         )
+        project.sei_processes = [
+            ProjectSeiProcess(numero="@cmd", ordem=0),
+            ProjectSeiProcess(numero="SEI-380001/000664/2026", ordem=1),
+        ]
         db.session.add(project)
         db.session.commit()
         project_id = project.id
@@ -75,4 +78,5 @@ def test_projects_csv_export_neutralizes_formula_text_cells(app, client_admin):
     assert row[header.index("Nome")].startswith("'=")
     assert row[header.index("Descrição")].startswith("' +")
     assert row[header.index("Processo SEI-RJ")].startswith("'@")
+    assert "SEI-380001/000664/2026" in row[header.index("Processo SEI-RJ")]
     assert row[header.index("Órgão Responsável")].startswith("'-")

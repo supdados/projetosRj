@@ -72,9 +72,11 @@ def test_schema_compatibility_upgrades_legacy_project_and_task_tables(tmp_path):
                 """))
         db.session.execute(text("""
                 INSERT INTO project (
-                    id, titulo, area_responsavel, orgao, prioridade, status, observacao
+                    id, titulo, area_responsavel, orgao, prioridade, status,
+                    observacao, sei_process
                 ) VALUES (
-                    1, 'Projeto Legado', 'Auditoria', 'Orgao Legacy', 'alta', 'Vigente', 'Obs legado'
+                    1, 'Projeto Legado', 'Auditoria', 'Orgao Legacy', 'alta',
+                    'Vigente', 'Obs legado', '380001/000664/2026'
                 )
                 """))
         db.session.execute(text("""
@@ -137,6 +139,19 @@ def test_schema_compatibility_upgrades_legacy_project_and_task_tables(tmp_path):
         assert migrated_task["is_archived"] == 1
         assert migrated_task["archived_at"] is not None
         assert migrated_task["created_by_id"] == 1
+
+        assert "project_sei_process" in set(inspector.get_table_names())
+        migrated_sei = db.session.execute(text("""
+                SELECT numero, ordem FROM project_sei_process WHERE project_id = 1
+                """)).mappings().all()
+        assert [dict(row) for row in migrated_sei] == [
+            {"numero": "SEI-380001/000664/2026", "ordem": 0}
+        ]
+        legacy_sei_column = db.session.execute(
+            text("SELECT sei_process FROM project WHERE id = 1")
+        ).scalar()
+        # A coluna vira ESPELHO do primeiro filho (compat de rollback).
+        assert legacy_sei_column == "SEI-380001/000664/2026"
 
         assert summary["column_added"] is False
         assert "project.product_link" in summary["project_columns_added"]

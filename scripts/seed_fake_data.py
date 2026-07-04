@@ -29,6 +29,7 @@ from models import (
     OrgaoUnidade,
     Project,
     ProjectHistory,
+    ProjectSeiProcess,
     Task,
     TaskItem,
     TaskItemComment,
@@ -206,7 +207,6 @@ def seed_fake_data(
                 objetivo_id=objetivo_id,
                 resultado_esperado_id=resultado_id,
                 special_project=special_project,
-                sei_process=f"SEI-{project_index + 1:06d}/2026",
                 short_description=f"Projeto fake {project_index + 1:03d} do orgao {orgao.sigla}.",
                 delivery_type=delivery_type,
                 abep_indicator=abep_indicator,
@@ -216,6 +216,20 @@ def seed_fake_data(
             db.session.add(project)
             db.session.flush()
             counters["projects"] += 1
+
+            # ~1/3 dos projetos com 2-3 números para exercitar o chip "+N".
+            sei_count = {2: 2, 5: 3}.get(project_index % 6, 1)
+            for sei_index in range(sei_count):
+                db.session.add(
+                    ProjectSeiProcess(
+                        project_id=project.id,
+                        numero=(
+                            f"SEI-{380000 + project_index:06d}"
+                            f"/{sei_index + 1:06d}/2026"
+                        ),
+                        ordem=sei_index,
+                    )
+                )
 
             for indicador_id in indicador_ids:
                 db.session.add(

@@ -29,6 +29,9 @@ import type { ValueLabelOption, AbepIndicadorOption } from './projects';
  */
 export interface ProjectDetail extends Project {
 	observacao: string | null;
+	/** Opcional: backend do release anterior não emite a chave (rolling deploy). */
+	sei_processes?: string[];
+	/** Compat 1 release: primeiro número da lista (o serializer segue emitindo). */
 	sei_process: string | null;
 	delivery_type: string | null;
 	abep_indicator: string | null;
@@ -178,7 +181,7 @@ export interface EtapaTasksData {
 
 /** Corpo de POST /api/projetos/<id>/inline (campos parciais do projeto). */
 export interface ProjectInlinePayload {
-	[field: string]: string | number | number[] | null;
+	[field: string]: string | number | number[] | string[] | null;
 }
 
 /**

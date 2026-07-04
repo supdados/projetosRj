@@ -18,7 +18,10 @@
 	 *   - cascata objetivo→resultado→indicadores via `/api/resultados`/
 	 *     `indicadores` legados, com revelação escalonada (índice·100ms) e LIMITE
 	 *     de 4 indicadores (flash 'Você pode selecionar no máximo 4 indicadores');
-	 *   - máscara SEI on-input ('SEI-000000/000000/0000');
+	 *   - MÚLTIPLOS processos SEI via `SeiProcessField` (mesmo componente do
+	 *     Detalhe): 1º número + copiar + chip +N + popover com adicionar/remover,
+	 *     prefixo "SEI-" fixo e máscara que normaliza colar com o prefixo; a
+	 *     lista é estado local e o submit envia `sei_processes: [..]`;
 	 *   - import de modelo com preview read-only e cálculo de datas no client
 	 *     (dias corridos, mesmo algoritmo de `renderTemplateImportPreview`);
 	 *   - criação só com título + área válidos (validação ao tentar salvar, com
@@ -52,6 +55,7 @@
 		type TemplateStage
 	} from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
+	import SeiProcessField from '$lib/components/SeiProcessField.svelte';
 	import type {
 		AbepIndicadorOption,
 		OrgaoOption,
@@ -128,7 +132,8 @@
 	let lastSelectedAbepLabel = $state('');
 
 	// --- Links e Observação ------------------------------------------------
-	let seiProcess = $state('');
+	// Números SEI canônicos (com "SEI-") já adicionados via SeiProcessField.
+	let seiList = $state<string[]>([]);
 	let githubLink = $state('');
 	let documentationLink = $state('');
 	let productLink = $state('');
@@ -234,7 +239,7 @@
 		abepOpen = false;
 		abepActiveIndex = -1;
 		lastSelectedAbepLabel = '';
-		seiProcess = '';
+		seiList = [];
 		githubLink = '';
 		documentationLink = '';
 		productLink = '';
@@ -343,24 +348,8 @@
 		selectedIndicadores = [...selectedIndicadores, id];
 	}
 
-	// --- Máscara SEI (on-input) -------------------------------------------
-
-	function onSeiInput(event: Event): void {
-		const raw = (event.currentTarget as HTMLInputElement).value.replace(/[^0-9]/g, '');
-		if (!raw) {
-			seiProcess = '';
-			return;
-		}
-		let formatted = 'SEI-';
-		if (raw.length <= 6) {
-			formatted += raw;
-		} else if (raw.length <= 12) {
-			formatted += `${raw.substring(0, 6)}/${raw.substring(6)}`;
-		} else {
-			formatted += `${raw.substring(0, 6)}/${raw.substring(6, 12)}/${raw.substring(12, 16)}`;
-		}
-		seiProcess = formatted;
-	}
+	// Números SEI: o SeiProcessField (compartilhado com o Detalhe) gerencia
+	// máscara/adição/remoção; aqui a lista é estado local até o submit.
 
 	// --- ABEP combobox -----------------------------------------------------
 
@@ -539,7 +528,13 @@
 		return parts.join(' · ');
 	});
 	const linksSummary = $derived.by(() => {
-		const filled = [seiProcess, githubLink, documentationLink, productLink, observacao]
+		const filled = [
+			seiList.length ? 'sei' : '',
+			githubLink,
+			documentationLink,
+			productLink,
+			observacao
+		]
 			.map((v) => v.trim())
 			.filter(Boolean).length;
 		if (!filled) return '';
@@ -573,13 +568,13 @@
 			titulo,
 			shortDescription,
 			orgaoTexto,
-			seiProcess,
 			githubLink,
 			documentationLink,
 			productLink,
 			observacao,
 			abepValue
 		].some((v) => v.trim().length > 0) ||
+			seiList.length > 0 ||
 			// Órgão único é pré-selecionado na abertura; só conta escolha do usuário.
 			(orgaoOptions.length > 1 && orgaoId.trim().length > 0) ||
 			prioridade !== 'baixa' ||
@@ -668,7 +663,7 @@
 			indicadores: selectedIndicadores,
 			observacao: observacao.trim() || undefined,
 			special_project: specialProject || undefined,
-			sei_process: seiProcess.trim() || undefined,
+			sei_processes: seiList.length ? seiList : undefined,
 			short_description: shortDescription.trim() || undefined,
 			delivery_type: deliveryType || undefined,
 			abep_indicator: abepValue || undefined,
@@ -1181,15 +1176,11 @@
 												<div class="flex flex-col gap-4">
 													<div class="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
 														<div class="flex flex-col gap-1.5">
-															<label for="cp-sei" class={labelClass}>Processo SEI-RJ</label>
-															<input
-																id="cp-sei"
-																value={seiProcess}
-																oninput={onSeiInput}
-																type="text"
-																maxlength="25"
-																placeholder="SEI-000000/000000/0000"
-																class={fieldClass}
+															<span class={labelClass}>Processo SEI-RJ</span>
+															<SeiProcessField
+																fieldId="cp-sei"
+																processes={seiList}
+																onSave={(list) => (seiList = list)}
 															/>
 														</div>
 														<div class="flex flex-col gap-1.5">
@@ -1388,7 +1379,7 @@
 						<button
 							type="submit"
 							disabled={submitting}
-							class="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-brand-gradient px-4 text-sm font-medium text-white transition-[filter,opacity] duration-fast hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
+							class="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
 						>
 							{#if submitting}
 								{@render spinner()}Criando…

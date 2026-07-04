@@ -327,14 +327,14 @@
 	<title>Projetos Pendentes — ProjetosRJ</title>
 </svelte:head>
 
-<section aria-labelledby="pendentes-title" class="flex flex-col gap-6">
+<section aria-labelledby="pendentes-title" class="flex flex-col gap-4">
 	<!-- CARD ÚNICO header + filtros (padrão da tela de Tarefas): chrome de card
 		 no wrapper, PageHeader compacto `embedded` e a linha de filtros embutida
 		 abaixo de um divisor fino. -->
 	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
 	<PageHeader compact embedded class="min-h-[3.5rem]" subtitle={headerSubtitle} labelId="pendentes-title">
 		{#snippet titleContent()}
-			<span class="align-middle">Projetos pendentes</span>
+			<span>Projetos pendentes</span>
 			{#if summary}
 				<CountBadge class="ml-2">Projetos no foco: {Math.max(0, summary.total_projects - focusDelta)}</CountBadge>
 			{/if}
@@ -360,7 +360,9 @@
 		aria-label="Filtros de projetos pendentes"
 		onsubmit={onSearchSubmit}
 	>
-		<div class="relative min-w-[14rem] flex-1">
+		<!-- Largura FIXA e idêntica nas 3 telas (Projetos/Pendentes/Tarefas):
+			 flex-1 fazia a busca variar conforme os filtros vizinhos de cada tela. -->
+		<div class="relative w-full min-w-[14rem] max-w-[26rem]">
 			<i
 				class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
 				aria-hidden="true"
@@ -384,7 +386,7 @@
 			onchange={onPeriodoChange}
 			disabled={periodOptions.length === 0}
 			aria-label="Filtrar por período"
-			class="h-9 min-w-[11rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 		>
 			{#each periodOptions as option (option.value)}
 				<option value={option.value}>{option.label}</option>
@@ -397,7 +399,7 @@
 				value={orgao === null ? '' : String(orgao)}
 				onchange={onOrgaoChange}
 				aria-label="Filtrar por órgão"
-				class="h-9 min-w-[10rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				<option value="">Todos os órgãos</option>
 				{#each data.orgaos_options as orgaoOption (orgaoOption.value)}
@@ -412,7 +414,7 @@
 			onchange={onResponsavelChange}
 			disabled={!data || data.responsaveis_options.length === 0}
 			aria-label="Filtrar por responsável"
-			class="h-9 w-44 shrink-0 truncate rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+			class="h-9 min-w-[10rem] flex-1 truncate rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 		>
 			<option value="">Todos os responsáveis</option>
 			{#if data}
@@ -427,7 +429,7 @@
 			value={prioridade}
 			onchange={onPrioridadeChange}
 			aria-label="Filtrar por prioridade"
-			class="h-9 min-w-[10rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 		>
 			<option value="">Todas as prioridades</option>
 			{#each PRIORIDADE_OPTIONS as option (option.value)}
@@ -455,16 +457,22 @@
 		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if data}
 		{#if data.projetos.length === 0}
+			<!-- Estado vazio no MESMO padrão da lista de Projetos: quadro suave com
+				 ícone emoldurado (primary-100), título heading e texto muted. -->
 			<div
 				role="status"
 				aria-live="polite"
-				class="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border-subtle bg-surface px-5 py-8 text-center"
+				class="rounded-lg border border-dashed border-border-strong bg-surface-muted/40 px-4 py-8 text-center"
 			>
-				<i class="fas fa-check-circle text-4xl text-primary-600" aria-hidden="true"></i>
-				<h2 class="font-heading text-xl font-bold text-text-primary">
+				<div
+					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-primary-100 text-xl text-primary-700"
+				>
+					<i class="fas fa-check-circle" aria-hidden="true"></i>
+				</div>
+				<h2 class="m-0 font-heading text-xl font-bold text-text-primary">
 					Nenhum projeto pendente para os filtros selecionados.
 				</h2>
-				<p class="text-sm text-text-secondary">
+				<p class="mb-0 mt-1.5 text-sm text-text-muted">
 					Ajuste os filtros para explorar outras frentes de acompanhamento.
 				</p>
 			</div>
@@ -477,6 +485,7 @@
 							bind:this={cardRefs[row.project.id]}
 							{row}
 							bucketMap={data.etapa_bucket_map}
+							positionMap={data.etapa_position_map}
 							progressMap={data.etapa_task_progress}
 							{drawer}
 							{expandedProjects}

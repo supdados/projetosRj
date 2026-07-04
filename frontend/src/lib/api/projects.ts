@@ -86,7 +86,7 @@ export interface CreateProjectInput {
 	indicadores?: (string | number)[];
 	observacao?: string;
 	special_project?: string;
-	sei_process?: string;
+	sei_processes?: string[];
 	short_description?: string;
 	delivery_type?: string;
 	abep_indicator?: string;

@@ -48,6 +48,11 @@
 		bucketMap: Record<string, EtapaBucket>;
 		/** Mapa global `etapaId` -> progresso de tarefas (carga da tela). */
 		progressMap: Record<string, EtapaTaskProgress>;
+		/**
+		 * Mapa global `etapaId` -> posição 1-based no projeto, para a numeração
+		 * "<projeto>.<posição>" idêntica à do Detalhe. Opcional (backend antigo).
+		 */
+		positionMap?: Record<string, number>;
 		/** Store do drawer (compartilhada pela página). */
 		drawer: TaskDrawerStore;
 		/** Set de IDs de projeto expandidos (persistido em localStorage). */
@@ -64,6 +69,7 @@
 		row,
 		bucketMap,
 		progressMap,
+		positionMap = {},
 		drawer,
 		expandedProjects,
 		onToggleExpanded,
@@ -314,6 +320,16 @@
 		if (state.iniciada) return 'started';
 		return 'idle';
 	}
+
+	/**
+	 * Numeração de exibição "<projeto>.<posição>", idêntica à do Detalhe
+	 * (StageList.displayNumber). Fallback no id bruto quando o backend ainda
+	 * não envia o mapa (rolling deploy).
+	 */
+	function etapaDisplayNumber(etapa: PendingEtapa): string {
+		const position = positionMap[String(etapa.id)];
+		return position ? `${project.id}.${position}` : String(etapa.id);
+	}
 </script>
 
 {#snippet stageColumns()}
@@ -336,18 +352,19 @@
 	{@const isDone = key === 'done'}
 	{@const isEmpty = progress.total === 0}
 	<tr class="group border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted/50">
-		<td class="truncate px-2 py-2.5 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}" title={`${etapa.id} - ${etapa.descricao}`}>
-			<span class="font-mono font-normal text-text-muted">{etapa.id}</span> - {etapa.descricao}
+		<td class="truncate px-2 py-2.5 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}" title={`${etapaDisplayNumber(etapa)} - ${etapa.descricao}`}>
+			<span class="font-mono font-normal text-text-muted">{etapaDisplayNumber(etapa)}</span> - {etapa.descricao}
 		</td>
 		<td class="truncate px-2 py-2.5 text-center align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}" title={etapa.responsavel || 'Não informado'}>
 			{etapa.responsavel || 'Não informado'}
 		</td>
-		<td class="whitespace-nowrap px-2 py-2.5 text-center align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
+		<!-- Datas em mono, como as colunas de datas da lista de Projetos. -->
+		<td class="whitespace-nowrap px-2 py-2.5 text-center align-middle font-mono font-medium {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
 			{#if etapa.data_inicio}
 				<time datetime={etapa.data_inicio}>{formatDateBr(etapa.data_inicio)}</time>
 			{:else}—{/if}
 		</td>
-		<td class="whitespace-nowrap px-2 py-2.5 text-center align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
+		<td class="whitespace-nowrap px-2 py-2.5 text-center align-middle font-mono font-medium {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
 			{#if etapa.data_fim}
 				<time datetime={etapa.data_fim}>{formatDateBr(etapa.data_fim)}</time>
 			{:else}—{/if}
@@ -397,15 +414,16 @@
 			class="-mx-5 -mt-5 flex flex-col gap-2 border-b border-border-subtle px-5 pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between"
 		>
 			<div class="flex min-w-0 flex-col gap-1">
-				<!-- ID original do projeto antes do nome (ID - Nome), no mesmo padrão
-					 do ProjectGroupHeader das tarefas: id em mono/muted + separador. -->
+				<!-- ID original do projeto antes do nome (ID - Nome). Tipografia/cor do
+					 link espelham a coluna Título da lista de Projetos (text-base
+					 medium primary-700 + hover underline; ID em xs bold muted). -->
 				<a
 					href={`${base}/projetos/${project.id}`}
 					id={headingId}
 					title="Abrir projeto"
-					class="flex min-w-0 items-baseline gap-1.5 font-heading text-lg font-semibold text-text-primary no-underline transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="flex min-w-0 items-baseline gap-1.5 text-base font-medium text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
-					<span class="shrink-0 font-mono text-base font-normal text-text-muted">{project.id}</span>
+					<span class="shrink-0 text-xs font-bold text-text-muted">{project.id}</span>
 					<span class="shrink-0 text-text-muted" aria-hidden="true">-</span>
 					<span class="truncate">{project.titulo}</span>
 				</a>

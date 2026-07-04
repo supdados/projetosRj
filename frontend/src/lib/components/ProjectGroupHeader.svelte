@@ -1,9 +1,10 @@
 <script lang="ts">
 	/**
 	 * Header do card de PROJETO: chevron que COLAPSA o card + código (id) integrado
-	 * ao nome ("42 – Nome do Projeto"), sigla do órgão e, à direita, as contagens de
+	 * ao nome ("42 - Nome do Projeto"), sigla do órgão e, à direita, as contagens de
 	 * tarefas e etapas. O nome LINKA para a página do projeto; a expansão acontece
-	 * só ao clicar no chevron (setinha).
+	 * só ao clicar no chevron (setinha). Tipografia/cores de id/título/órgão seguem
+	 * o padrão de Projetos e Projetos Pendentes.
 	 */
 	interface Props {
 		titulo: string;
@@ -50,25 +51,30 @@
 		></i>
 	</button>
 
-	<h2 class="flex min-w-0 items-baseline gap-1.5 font-heading text-lg font-semibold text-text-primary">
+	<!-- Tipografia/cor do "ID - Nome" espelham a coluna Título da lista de
+		 Projetos e o card de Pendentes (link text-base medium primary-700 + hover
+		 underline; ID em xs bold muted). -->
+	<h2 class="flex min-w-0 items-baseline gap-1.5 text-base font-medium">
 		{#if code}
-			<span class="shrink-0 font-mono text-base font-normal text-text-muted">{code}</span>
-			<span class="shrink-0 text-text-muted" aria-hidden="true">–</span>
+			<span class="shrink-0 text-xs font-bold text-text-muted">{code}</span>
+			<span class="shrink-0 text-text-muted" aria-hidden="true">-</span>
 		{/if}
 		{#if href}
 			<a
 				{href}
-				class="truncate text-text-primary no-underline transition-colors duration-fast hover:text-primary-700 hover:underline focus:outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="truncate text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				{titulo}
 			</a>
 		{:else}
-			<span class="truncate">{titulo}</span>
+			<span class="truncate text-text-primary">{titulo}</span>
 		{/if}
 	</h2>
 
 	{#if orgaoSigla}
-		<span class="shrink-0 text-xs font-medium text-text-secondary">{orgaoSigla}</span>
+		<span class="shrink-0 text-xs text-text-muted">
+			Órgão: <strong class="font-medium text-text-secondary">{orgaoSigla}</strong>
+		</span>
 	{/if}
 
 	<span class="ml-auto flex shrink-0 items-center gap-2 text-xs text-text-secondary">

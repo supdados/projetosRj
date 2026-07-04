@@ -45,6 +45,7 @@
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
@@ -643,7 +644,8 @@
 	>
 		<!-- Linha essencial: busca/órgão/status/prioridade + ações à direita. -->
 		<div class="flex flex-wrap items-center gap-2">
-			<div class="relative min-w-[15rem] flex-1">
+			<!-- Largura FIXA e idêntica nas 3 telas (Projetos/Pendentes/Tarefas). -->
+			<div class="relative w-full min-w-[14rem] max-w-[26rem]">
 				<i
 					class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
 					aria-hidden="true"
@@ -667,7 +669,7 @@
 					bind:value={orgao}
 					onchange={applyFilterChange}
 					aria-label="Filtrar por órgão"
-					class="h-9 min-w-[10rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<option value="">Todos os órgãos</option>
 					{#each orgaoOptions as option (option.value)}
@@ -681,7 +683,7 @@
 				bind:value={status}
 				onchange={applyFilterChange}
 				aria-label="Filtrar por status"
-				class="h-9 min-w-[10rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				<option value="">Todos os status</option>
 				{#each statusOptions as option (option)}
@@ -694,7 +696,7 @@
 				bind:value={prioridade}
 				onchange={applyFilterChange}
 				aria-label="Filtrar por prioridade"
-				class="h-9 min-w-[10rem] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				<option value="">Todas as prioridades</option>
 				{#each priorityOptions as option (option)}
@@ -741,9 +743,9 @@
 		-->
 		<div
 			id="projetosAdvancedPanel"
-			class="grid transition-[grid-template-rows,opacity,margin-top,padding-top,border-top-color] duration-300 ease-out {advancedOpen
-				? 'mt-0.5 grid-rows-[1fr] border-t border-border-subtle pt-3 opacity-100'
-				: 'grid-rows-[0fr] border-t border-transparent opacity-0'}"
+			class="grid transition-[grid-template-rows,opacity,margin-top,padding-top] duration-300 ease-out {advancedOpen
+				? 'mt-0.5 grid-rows-[1fr] pt-3 opacity-100'
+				: 'grid-rows-[0fr] opacity-0'}"
 			aria-hidden={!advancedOpen}
 			inert={!advancedOpen}
 		>
@@ -890,14 +892,14 @@
 				<h2 class="m-0 font-heading text-xl font-bold text-text-primary">
 					Nenhum projeto encontrado
 				</h2>
-				<p class="mb-3.5 mt-1.5 text-md text-text-muted">
+				<p class="mb-3.5 mt-1.5 text-sm text-text-muted">
 					Os filtros aplicados não retornaram resultados. Ajuste os filtros ou crie um
 					novo projeto.
 				</p>
 				<button
 					type="button"
 					onclick={() => (createModalOpen = true)}
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-primary-700/25 bg-gradient-to-br from-primary-600 to-primary-700 px-3 text-sm font-semibold text-white shadow-md transition-all duration-fast ease-out hover:from-primary-500 hover:to-primary-600 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary-600 px-3 text-sm font-semibold text-white shadow-sm transition-all duration-fast ease-out hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<i class="fas fa-plus" aria-hidden="true"></i>
 					Criar projeto
@@ -996,7 +998,7 @@
 									<td class="border-t border-border-subtle px-2.5 py-2.5 align-middle">
 										<a
 											href={projectDetailHref(project)}
-											class="text-[15px] font-medium text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="text-base font-medium text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 										>
 											{project.titulo}
 										</a>
@@ -1077,7 +1079,7 @@
 										{#if project.total_workflow_etapas > 0}
 											<span
 												class="text-xs font-semibold {project.todas_etapas_concluidas
-													? 'text-success-600'
+													? 'text-success'
 													: ''}"
 											>
 												{project.etapas_concluidas}/{project.total_workflow_etapas}
@@ -1158,59 +1160,49 @@
 	list.js). A persistência é REAL: confirmar dispara DELETE /api/projetos/<id>
 	e a linha só some (com fade) após o sucesso; em erro mantém a linha + flash.
 -->
+<svelte:window
+	onkeydown={(e) => {
+		if (pendingDelete && e.key === 'Escape') cancelDelete();
+	}}
+/>
+
 {#if pendingDelete}
-	<div
-		class="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4"
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="deleteProjectTitle"
-		tabindex="-1"
-		onclick={(e) => {
-			if (e.target === e.currentTarget) cancelDelete();
-		}}
-		onkeydown={(e) => {
-			if (e.key === 'Escape') cancelDelete();
-		}}
-	>
-		<div
-			class="w-full max-w-md animate-dropdown-in rounded-lg border border-border-subtle bg-surface p-5 shadow-lg"
+	<Modal labelId="deleteProjectTitle" onBackdrop={cancelDelete}>
+		<h2
+			id="deleteProjectTitle"
+			class="m-0 flex items-center gap-2 font-heading text-lg font-bold text-text-primary"
 		>
-			<h2
-				id="deleteProjectTitle"
-				class="m-0 flex items-center gap-2 font-heading text-lg font-bold text-text-primary"
+			<i class="fas fa-triangle-exclamation text-danger" aria-hidden="true"></i>
+			Excluir projeto
+		</h2>
+		<p class="mt-3 text-sm text-text-secondary">
+			Tem certeza que deseja excluir <strong class="text-text-primary"
+				>{pendingDelete.titulo}</strong
+			>? Esta ação não pode ser desfeita.
+		</p>
+		<div class="mt-5 flex justify-end gap-2">
+			<button
+				type="button"
+				onclick={cancelDelete}
+				disabled={deletingId !== null}
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
 			>
-				<i class="fas fa-triangle-exclamation text-danger" aria-hidden="true"></i>
-				Excluir projeto
-			</h2>
-			<p class="mt-3 text-sm text-text-secondary">
-				Tem certeza que deseja excluir <strong class="text-text-primary"
-					>{pendingDelete.titulo}</strong
-				>? Esta ação não pode ser desfeita.
-			</p>
-			<div class="mt-5 flex justify-end gap-2">
-				<button
-					type="button"
-					onclick={cancelDelete}
-					disabled={deletingId !== null}
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
-				>
-					Cancelar
-				</button>
-				<button
-					type="button"
-					onclick={confirmDelete}
-					disabled={deletingId !== null}
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-danger/30 bg-danger px-3 text-sm font-semibold text-white transition-all duration-fast ease-out hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-60"
-				>
-					{#if deletingId !== null}
-						<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
-						Excluindo…
-					{:else}
-						<i class="fas fa-trash" aria-hidden="true"></i>
-						Excluir
-					{/if}
-				</button>
-			</div>
+				Cancelar
+			</button>
+			<button
+				type="button"
+				onclick={confirmDelete}
+				disabled={deletingId !== null}
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-danger/30 bg-danger px-3 text-sm font-semibold text-white transition-all duration-fast ease-out hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-60"
+			>
+				{#if deletingId !== null}
+					<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+					Excluindo…
+				{:else}
+					<i class="fas fa-trash" aria-hidden="true"></i>
+					Excluir
+				{/if}
+			</button>
 		</div>
-	</div>
+	</Modal>
 {/if}

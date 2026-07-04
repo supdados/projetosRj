@@ -88,6 +88,12 @@ def _serialize_pending_context(context: dict[str, Any]) -> dict[str, Any]:
             str(etapa_id): bucket
             for etapa_id, bucket in context["etapa_bucket_map"].items()
         },
+        # Posição 1-based de cada etapa na lista completa do projeto — permite
+        # ao front exibir a MESMA numeração "<projeto>.<posição>" do Detalhe.
+        "etapa_position_map": {
+            str(etapa_id): position
+            for etapa_id, position in context["etapa_position_map"].items()
+        },
         "etapa_task_progress": {
             str(etapa_id): progress
             for etapa_id, progress in context["etapa_task_progress"].items()

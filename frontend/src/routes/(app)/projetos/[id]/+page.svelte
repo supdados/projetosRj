@@ -65,6 +65,7 @@
 	import ProjectHeader from '$lib/components/ProjectHeader.svelte';
 	import InlineEditField from '$lib/components/InlineEditField.svelte';
 	import InlineCombobox from '$lib/components/InlineCombobox.svelte';
+	import SeiProcessField from '$lib/components/SeiProcessField.svelte';
 	import EeggInlineEditor from '$lib/components/EeggInlineEditor.svelte';
 	import StageList from '$lib/components/StageList.svelte';
 	import ImportModelModal from '$lib/components/ImportModelModal.svelte';
@@ -517,6 +518,26 @@
 	/** Salva o Indicador ABEP (value canonico; backend normaliza). */
 	function saveAbepIndicator(value: string): void {
 		void saveProjectField('abep_indicator', value);
+	}
+
+	/**
+	 * Salva a lista COMPLETA de processos SEI (substituicao) via /inline.
+	 * Handler dedicado porque `saveProjectField` tipa o valor como string.
+	 */
+	async function saveSeiProcesses(list: string[]): Promise<void> {
+		if (!data) return;
+		setProjectFieldState('sei_processes', { pending: true, error: null });
+		try {
+			const result = await updateProjectInline(projectId, { sei_processes: list });
+			data = { ...data, project: result.project };
+			setProjectFieldState('sei_processes', { pending: false, error: null });
+		} catch (err) {
+			if (isUnauthenticated(err)) return;
+			setProjectFieldState('sei_processes', {
+				pending: false,
+				error: messageOf(err, 'Falha ao salvar os processos SEI.')
+			});
+		}
 	}
 
 	/**
@@ -988,7 +1009,7 @@
 			<!-- Identidade + EEGG (editaveis inline, clicando direto no valor) —
 			     cada campo em um cartão com borda/sombra, hierarquia e folga. -->
 			<div class="flex flex-col gap-6">
-				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				<div class="grid gap-4 sm:grid-cols-2 {SHOW_ABEP ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}">
 					<!-- Área Responsável: combobox pesquisável de órgãos (orgao_id). -->
 					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
 						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Área Responsável</span>
@@ -1026,17 +1047,13 @@
 					<!-- Processo SEI mora na primeira linha (posição da tela antiga). -->
 					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
 						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Processo SEI</span>
-						<InlineEditField
+						<SeiProcessField
 							fieldId="project-sei"
-							label="Processo SEI"
-							value={data.project.sei_process}
-							kind="text"
-							variant="cell"
-							emptyLabel="Não informado"
+							processes={data.project.sei_processes}
 							readonly={!canEdit}
-							pending={projectFieldStates.sei_process?.pending}
-							error={projectFieldStates.sei_process?.error}
-							onSave={(v) => saveProjectField('sei_process', v)}
+							pending={projectFieldStates.sei_processes?.pending}
+							error={projectFieldStates.sei_processes?.error}
+							onSave={saveSeiProcesses}
 						/>
 					</div>
 					{#if SHOW_ABEP}
@@ -1369,7 +1386,7 @@
 		content: '';
 		flex: 1;
 		height: 1px;
-		background: var(--app-color-border, #dfe7f1);
+		background: var(--color-border);
 	}
 
 	/* Menu de contexto de dias úteis (paridade .custom-context-menu) */
@@ -1388,10 +1405,10 @@
 		margin: 0;
 		padding: 0.4rem;
 		min-width: 170px;
-		background: var(--app-color-surface, rgba(255, 255, 255, 0.98));
-		border: 1px solid var(--app-color-border, #d6e2ee);
-		border-radius: 11px;
-		box-shadow: 0 12px 28px rgba(24, 53, 86, 0.16);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 		transform-origin: top left;
 		animation: dateMenuIn 0.14s ease;
 	}
@@ -1404,7 +1421,7 @@
 		border: 0;
 		border-radius: 8px;
 		background: none;
-		color: var(--app-color-text, #365172);
+		color: var(--color-text-secondary);
 		font-size: 0.875rem;
 		text-align: left;
 		cursor: pointer;
@@ -1414,12 +1431,12 @@
 	}
 	.date-context-menu button:hover,
 	.date-context-menu button:focus-visible {
-		background-color: var(--app-color-surface-muted, #edf4fc);
-		color: var(--app-color-heading, #24476f);
+		background-color: var(--color-surface-muted);
+		color: var(--color-text-primary);
 		outline: none;
 	}
 	.date-context-menu .text-success {
-		color: var(--app-color-success, #167a44);
+		color: var(--ds-color-success-600);
 	}
 	@keyframes dateMenuIn {
 		from {
@@ -1443,18 +1460,18 @@
 		background: rgba(0, 0, 0, 0.4);
 	}
 	.cascade-modal {
-		background: var(--app-color-surface, #fff);
+		background: var(--color-surface);
 		padding: 2rem;
-		border-radius: 8px;
-		box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+		border-radius: 16px;
+		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 		max-width: 400px;
 		text-align: center;
-		color: var(--app-color-text, #304a66);
+		color: var(--color-text-secondary);
 	}
 	.cascade-modal h5 {
 		margin: 0 0 0.75rem;
 		font-weight: 700;
-		color: var(--app-color-heading, #0f172a);
+		color: var(--color-text-primary);
 	}
 	.cascade-buttons {
 		margin-top: 1.5rem;
@@ -1471,12 +1488,12 @@
 		border: 1px solid transparent;
 	}
 	.cascade-btn-secondary {
-		background: var(--app-color-surface-muted, #f1f5f9);
-		border-color: var(--app-color-border, #dfe7f1);
-		color: var(--app-color-text, #475569);
+		background: var(--color-surface-muted);
+		border-color: var(--color-border);
+		color: var(--color-text-secondary);
 	}
 	.cascade-btn-primary {
-		background: #005a92;
+		background: var(--ds-color-primary-600);
 		color: #fff;
 	}
 	.cascade-btn-primary:disabled {

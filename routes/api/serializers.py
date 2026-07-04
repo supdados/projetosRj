@@ -314,7 +314,7 @@ def serialize_project_detail(project: Any) -> dict[str, Any]:
 
     Reusa ``serialize_project_card`` (id/titulo/status/derivados read-only) e
     soma os demais campos editáveis inline do projeto que NÃO estão no card —
-    ``observacao``, ``sei_process``, ``delivery_type``, ``abep_indicator``,
+    ``observacao``, ``sei_processes``, ``delivery_type``, ``abep_indicator``,
     ``github_link``, ``documentation_link``, ``product_link`` e a seleção de
     objetivo/resultado/indicadores. NUNCA expõe segredos.
 
@@ -328,7 +328,11 @@ def serialize_project_detail(project: Any) -> dict[str, Any]:
     card.update(
         {
             "observacao": project.observacao,
-            "sei_process": project.sei_process,
+            "sei_processes": [item.numero for item in project.sei_processes],
+            # Compat 1 release: bundle SPA cacheado pré-deploy lê o escalar antigo.
+            "sei_process": (
+                project.sei_processes[0].numero if project.sei_processes else None
+            ),
             "delivery_type": project.delivery_type,
             "abep_indicator": project.abep_indicator,
             "github_link": project.github_link,

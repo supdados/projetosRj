@@ -32,6 +32,7 @@ from routes.orgao_scope import (
     sanitize_orgao_filter_for_current_user,
     user_can_access_project,
 )
+from services.etapa_positions import build_etapa_position_map
 from routes.shared import (
     get_or_404,
     get_goal_catalog_context,
@@ -423,6 +424,7 @@ def build_projetos_pendentes_context(
                 "21dias": "Próximos 21 Dias",
             },
             "etapa_bucket_map": {},
+            "etapa_position_map": {},
             "etapa_task_progress": {},
             "summary_counts": {
                 "total_projects": 0,
@@ -629,6 +631,10 @@ def build_projetos_pendentes_context(
     end_idx = start_idx + pending_per_page
     projetos_pendentes_paginated = projetos_pendentes_com_etapas[start_idx:end_idx]
 
+    etapa_position_map = build_etapa_position_map(
+        [item["projeto"].id for item in projetos_pendentes_paginated]
+    )
+
     return {
         "projetos_com_etapas": projetos_pendentes_paginated,
         "objetivos": objetivos,
@@ -652,6 +658,7 @@ def build_projetos_pendentes_context(
             "21dias": "Próximos 21 Dias",
         },
         "etapa_bucket_map": etapa_bucket_map,
+        "etapa_position_map": etapa_position_map,
         "etapa_task_progress": etapa_task_progress,
         "summary_counts": summary_counts,
         "pending_page": pending_page,
@@ -758,7 +765,7 @@ def download_projects_csv():
                 p.id,
                 _safe_csv_text(p.titulo),
                 _safe_csv_text(p.short_description),
-                _safe_csv_text(p.sei_process),
+                _safe_csv_text("; ".join(item.numero for item in p.sei_processes)),
                 _safe_csv_text(orgao_responsavel),
                 _safe_csv_text(p.status),
                 data_inicio,

@@ -23,6 +23,8 @@ class Project(db.Model):
     )
 
     special_project = db.Column(db.String(20), nullable=True)
+    # Espelho do 1º número de project_sei_process (expand-contract, 1 release):
+    # mantém rollback/instância antiga funcionando; o backfill reconcilia no boot.
     sei_process = db.Column(db.String(50), nullable=True)
     short_description = db.Column(db.Text, nullable=True)
     delivery_type = db.Column(db.String(50), nullable=True)
@@ -48,6 +50,13 @@ class Project(db.Model):
     resultado_esperado = db.relationship("ResultadoEsperado", backref="projetos")
     indicadores = db.relationship(
         "IndicadorProjeto", backref="project", lazy=True, cascade="all, delete-orphan"
+    )
+    sei_processes = db.relationship(
+        "ProjectSeiProcess",
+        backref="project",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="ProjectSeiProcess.ordem",
     )
 
     @property
@@ -87,6 +96,23 @@ class Project(db.Model):
 
     def __repr__(self):
         return f"<Project {self.titulo}>"
+
+
+class ProjectSeiProcess(db.Model):
+    __tablename__ = "project_sei_process"
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(
+        db.Integer, db.ForeignKey("project.id"), nullable=False, index=True
+    )
+    numero = db.Column(db.String(50), nullable=False)
+    ordem = db.Column(db.Integer, nullable=False, default=0)
+
+    __table_args__ = (
+        db.UniqueConstraint("project_id", "numero", name="uq_project_sei_numero"),
+    )
+
+    def __repr__(self):
+        return f"<ProjectSeiProcess {self.numero} (project {self.project_id})>"
 
 
 class ProjectHistory(db.Model):

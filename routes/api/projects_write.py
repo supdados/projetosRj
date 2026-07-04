@@ -50,6 +50,30 @@ from services.project_creation import (
     StageDraft,
     create_project_record,
 )
+from services.sei_process import SEI_MAX_PER_PROJECT, SeiProcessValidationError
+
+
+def _parse_sei_processes(data: dict) -> list[str]:
+    """Extrai ``sei_processes`` (lista) do body, com alias escalar de transição.
+
+    Raises:
+        SeiProcessValidationError: quando o valor não é lista de strings.
+    """
+    raw = data.get("sei_processes")
+    if raw is None:
+        # Compat 1 release: bundle SPA cacheado pré-deploy envia o escalar.
+        scalar = data.get("sei_process")
+        return [scalar] if isinstance(scalar, str) and scalar else []
+    if not isinstance(raw, list) or any(not isinstance(item, str) for item in raw):
+        raise SeiProcessValidationError(
+            "Processos SEI devem ser uma lista de textos; "
+            f"recebido {type(raw).__name__}."
+        )
+    if len(raw) > SEI_MAX_PER_PROJECT:
+        raise SeiProcessValidationError(
+            f"Máximo de {SEI_MAX_PER_PROJECT} processos SEI; recebidos {len(raw)}."
+        )
+    return raw
 
 
 def _coerce_int(value: Any) -> int | None:
@@ -87,7 +111,7 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
     Body JSON espelha o form: ``titulo`` (req), ``orgao_id`` (req, validado via
     ``_resolve_orgao_from_form`` contra o escopo do usuário), ``orgao``,
     ``prioridade``, ``objetivo``/``resultado``/``indicadores[]``, ``observacao``,
-    ``special_project``, ``sei_process``, ``short_description``,
+    ``special_project``, ``sei_processes[]``, ``short_description``,
     ``delivery_type``, ``abep_indicator``, ``github_link``,
     ``documentation_link``, ``product_link``, ``etapas[]{descricao,duration}``,
     ``start_date`` (``YYYY-MM-DD``), ``template_id``.
@@ -131,6 +155,11 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
         except (TypeError, ValueError):
             return fail("Formato de data inválido.", status=422, code="validation")
 
+    try:
+        sei_processes = _parse_sei_processes(data)
+    except SeiProcessValidationError as exc:
+        return fail(str(exc), status=422, code="validation")
+
     creation_input = ProjectCreationInput(
         titulo=titulo,
         orgao_unidade=orgao_unidade,
@@ -141,7 +170,7 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
         indicador_ids=indicador_ids,
         observacao=data.get("observacao") or None,
         special_project=data.get("special_project") or None,
-        sei_process=data.get("sei_process") or None,
+        sei_processes=sei_processes,
         short_description=data.get("short_description") or None,
         delivery_type=data.get("delivery_type") or None,
         abep_indicator=normalize_abep_indicator(data.get("abep_indicator")),

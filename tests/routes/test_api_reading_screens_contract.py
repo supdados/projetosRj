@@ -73,6 +73,18 @@ def test_api_projetos_pendentes_row_reuses_card_serializers(client_user):
     assert "qtd_atrasadas" in row
 
 
+def test_api_projetos_pendentes_exposes_etapa_position_map(client_user):
+    """A numeração "<projeto>.<posição>" do Detalhe depende deste mapa: cada
+    etapa exibida deve ter posição 1-based dentro do próprio projeto."""
+    data = _assert_ok_envelope(client_user.get("/api/projetos-pendentes").get_json())
+    positions = data["etapa_position_map"]
+    assert isinstance(positions, dict)
+    for row in data["projetos"]:
+        for etapa in row["etapas_visiveis"] + row["etapas_outras"]:
+            position = positions[str(etapa["id"])]
+            assert isinstance(position, int) and position >= 1
+
+
 def test_api_projetos_pendentes_responsaveis_options_sem_duplicatas(
     app, client_user, seed_data
 ):

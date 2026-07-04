@@ -14,6 +14,11 @@ from models import IndicadorProjeto, OrgaoUnidade, db
 from catalogs.objectives import normalize_goal_selection
 
 from routes.orgao_scope import get_user_orgao_subtree_ids
+from services.sei_process import (
+    SEI_MAX_PER_PROJECT,
+    SeiProcessValidationError,
+    replace_project_sei_numbers,
+)
 
 
 class ProjectInlineError(Exception):
@@ -30,6 +35,37 @@ class ProjectInlineError(Exception):
         super().__init__(message)
         self.message = message
         self.status = status
+
+
+def _apply_sei_processes_change(
+    project_to_edit, raw_value: object, changes: list[str]
+) -> None:
+    """Substitui a lista de processos SEI do projeto, validando o payload."""
+    if not isinstance(raw_value, list) or any(
+        not isinstance(item, str) for item in raw_value
+    ):
+        raise ProjectInlineError(
+            "Processos SEI devem ser uma lista de textos; "
+            f"recebido {type(raw_value).__name__}.",
+            status=400,
+        )
+    if len(raw_value) > SEI_MAX_PER_PROJECT:
+        raise ProjectInlineError(
+            f"Máximo de {SEI_MAX_PER_PROJECT} processos SEI; "
+            f"recebidos {len(raw_value)}.",
+            status=400,
+        )
+    try:
+        old_numbers, new_numbers = replace_project_sei_numbers(
+            project_to_edit, raw_value
+        )
+    except SeiProcessValidationError as exc:
+        raise ProjectInlineError(str(exc), status=400) from exc
+    if old_numbers != new_numbers:
+        changes.append(
+            f'processos SEI de "{"; ".join(old_numbers) or "vazio"}" '
+            f'para "{"; ".join(new_numbers) or "vazio"}"'
+        )
 
 
 def apply_project_inline_changes(project_to_edit, data):
@@ -121,8 +157,17 @@ def apply_project_inline_changes(project_to_edit, data):
             current_orgao.sigla if current_orgao else None,
         )
 
-    if "sei_process" in data:
-        project_to_edit.sei_process = data["sei_process"] or None
+    if "sei_processes" in data:
+        _apply_sei_processes_change(project_to_edit, data["sei_processes"], changes)
+    elif "sei_process" in data:
+        # Compat 1 release: bundle SPA cacheado pré-deploy ainda envia o escalar.
+        # O cliente antigo só enxerga o primeiro número (serializer compat), então
+        # o escalar edita apenas a posição 0 — preserva os números 2..N.
+        scalar = data["sei_process"]
+        tail = [item.numero for item in project_to_edit.sei_processes][1:]
+        _apply_sei_processes_change(
+            project_to_edit, ([scalar] if scalar else []) + tail, changes
+        )
 
     if "short_description" in data:
         project_to_edit.short_description = data["short_description"] or None

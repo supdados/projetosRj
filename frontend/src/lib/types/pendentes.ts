@@ -131,6 +131,12 @@ export interface PendingData {
 	orgaos_options: OrgaoOption[];
 	/** Mapa `etapaId` (string) -> bucket de urgência. */
 	etapa_bucket_map: Record<string, EtapaBucket>;
+	/**
+	 * Mapa `etapaId` (string) -> posição 1-based na lista completa do projeto,
+	 * para exibir a numeração "<projeto>.<posição>" do Detalhe. Opcional:
+	 * backend do release anterior não emite a chave (rolling deploy).
+	 */
+	etapa_position_map?: Record<string, number>;
 	/** Mapa `etapaId` (string) -> progresso de tarefas. */
 	etapa_task_progress: Record<string, EtapaTaskProgress>;
 	summary_counts: PendingSummaryCounts;

@@ -31,7 +31,10 @@
 		'/tarefas',
 		'/admin/usuarios'
 	]);
-	const footerInScroll = $derived(SCROLL_FOOTER_ROUTES.has($page.url.pathname));
+	const footerInScroll = $derived(
+		SCROLL_FOOTER_ROUTES.has($page.url.pathname) ||
+			/^\/projetos\/\d+$/.test($page.url.pathname)
+	);
 
 	// O scroller da pagina agora e o <main> (nao mais a janela), entao a
 	// restauracao de scroll do Kit nao se aplica: reposiciona no topo a cada

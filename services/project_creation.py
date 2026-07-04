@@ -29,6 +29,7 @@ from models import (
     StageTemplateUsage,
     db,
 )
+from services.sei_process import replace_project_sei_numbers
 
 
 @dataclass
@@ -60,7 +61,7 @@ class ProjectCreationInput:
     indicador_ids: list[int] = field(default_factory=list)
     observacao: Optional[str] = None
     special_project: Optional[str] = None
-    sei_process: Optional[str] = None
+    sei_processes: list[str] = field(default_factory=list)
     short_description: Optional[str] = None
     delivery_type: Optional[str] = None
     abep_indicator: Optional[str] = None
@@ -104,7 +105,6 @@ def create_project_record(data: ProjectCreationInput, *, created_by_id: int | No
         special_project=sanitize_special_project_for_orgao(
             data.special_project, data.orgao_unidade.sigla
         ),
-        sei_process=data.sei_process,
         short_description=data.short_description,
         delivery_type=data.delivery_type,
         abep_indicator=data.abep_indicator,
@@ -115,6 +115,7 @@ def create_project_record(data: ProjectCreationInput, *, created_by_id: int | No
     db.session.add(new_project)
     db.session.flush()
 
+    replace_project_sei_numbers(new_project, data.sei_processes)
     _add_sequential_stages(new_project, data.etapas, data.start_date)
 
     for indicador_id in data.indicador_ids:

@@ -1,0 +1,359 @@
+<script lang="ts">
+	/**
+	 * Campo de MÚLTIPLOS processos SEI, compartilhado pelo card "Detalhes do
+	 * Projeto" e pelo CriarProjetoModal.
+	 *
+	 * Linha fechada (visual de campo): primeiro número + botão copiar (SEM
+	 * precisar abrir) + chip "+N" quando há mais + chevron que abre o popover.
+	 * Popover: todos os números (copiar/remover por item) e rodapé de adição
+	 * com prefixo "SEI-" fixo — o usuário digita só os dígitos; colar o número
+	 * já com "SEI-" é normalizado pela máscara.
+	 *
+	 * CONTROLADO por callback (não chama API): `onSave(lista)` envia a lista
+	 * completa (substituição). No detalhe a página persiste via /inline e
+	 * devolve `pending`/`error`; no modal a lista é estado local até o submit.
+	 */
+	import { tick } from 'svelte';
+	import { seiDigitsOnly, formatSeiDigits, hasMinimumSeiDigits } from '$lib/utils/seiFormat';
+
+	interface Props {
+		fieldId: string;
+		/** Opcional: backend do release anterior não emite a chave (rolling deploy). */
+		processes?: string[];
+		readonly?: boolean;
+		pending?: boolean;
+		error?: string | null;
+		onSave: (list: string[]) => void;
+	}
+
+	let {
+		fieldId,
+		processes = [],
+		readonly = false,
+		pending = false,
+		error = null,
+		onSave
+	}: Props = $props();
+
+	let open = $state(false);
+	let draftDigits = $state('');
+	let copiedIndex = $state<number | null>(null);
+	let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
+	let draftInputEl = $state<HTMLInputElement | null>(null);
+	let triggerEl = $state<HTMLButtonElement | null>(null);
+	// Lista otimista: mostrada até o prop `processes` alcançar (mecânica do
+	// InlineEditField) — sem ela o campo pisca de volta enquanto a API responde.
+	let optimisticList = $state<string[] | null>(null);
+	let sawPending = $state(false);
+
+	const errorId = $derived(`${fieldId}-error`);
+	const popoverId = $derived(`${fieldId}-popover`);
+	const shownList = $derived(optimisticList ?? processes);
+	const firstNumber = $derived(shownList[0] ?? null);
+	const extraCount = $derived(Math.max(0, shownList.length - 1));
+	const draftFormatted = $derived(formatSeiDigits(draftDigits));
+	const canAddDraft = $derived(hasMinimumSeiDigits(draftDigits) && !pending);
+	// Sem números e sem permissão de editar não há o que abrir.
+	const canOpen = $derived(!readonly || shownList.length > 0);
+
+	$effect(() => {
+		if (optimisticList === null) {
+			sawPending = false;
+			return;
+		}
+		if (pending) {
+			sawPending = true;
+			return;
+		}
+		if (JSON.stringify(processes) === JSON.stringify(optimisticList) || error || sawPending) {
+			optimisticList = null;
+			sawPending = false;
+		}
+	});
+
+	function saveList(next: string[]): void {
+		optimisticList = next;
+		onSave(next);
+	}
+
+	async function copyNumber(numero: string, index: number): Promise<void> {
+		try {
+			await navigator.clipboard.writeText(numero);
+			copiedIndex = index;
+			if (copyResetTimer) clearTimeout(copyResetTimer);
+			copyResetTimer = setTimeout(() => {
+				copiedIndex = null;
+			}, 1700);
+		} catch {
+			// Clipboard indisponível: silencioso (paridade com MeetingDisplay).
+		}
+	}
+
+	function togglePopover(): void {
+		if (!canOpen) return;
+		open = !open;
+		if (!open) {
+			draftDigits = '';
+			return;
+		}
+		// Foco programático ao abrir: Safari/Firefox NÃO focam <button> no clique,
+		// e sem foco dentro do wrapper o fechamento por focusout nunca dispara.
+		void tick().then(() => {
+			(draftInputEl ?? triggerEl)?.focus();
+		});
+	}
+
+	function closePopover(): void {
+		if (!open) return;
+		open = false;
+		draftDigits = '';
+	}
+
+	function closeAndRefocus(): void {
+		closePopover();
+		triggerEl?.focus();
+	}
+
+	function onWrapperFocusOut(event: FocusEvent): void {
+		const wrapper = event.currentTarget as HTMLElement;
+		// Blur para fora do wrapper fecha (timeout no padrão do InlineCombobox:
+		// deixa o clique em botões internos resolver antes).
+		setTimeout(() => {
+			if (!wrapper.contains(document.activeElement)) closePopover();
+		}, 120);
+	}
+
+	function onDraftInput(event: Event): void {
+		const input = event.currentTarget as HTMLInputElement;
+		draftDigits = seiDigitsOnly(input.value);
+		input.value = draftFormatted;
+	}
+
+	function addDraft(): void {
+		if (!canAddDraft) return;
+		const candidate = `SEI-${draftFormatted}`;
+		// Duplicata vira no-op local: o backend deduplicaria de qualquer forma e a
+		// lista otimista não pode ter chave repetida no {#each}.
+		if (!shownList.some((n) => n.toLowerCase() === candidate.toLowerCase())) {
+			saveList([...shownList, candidate]);
+		}
+		draftDigits = '';
+		draftInputEl?.focus();
+	}
+
+	function removeAt(index: number): void {
+		saveList(shownList.filter((_, i) => i !== index));
+		// Ancora o foco no input: o botão × fica disabled no pending e um botão
+		// focado que desabilita derruba o foco para o body (fecharia o popover).
+		draftInputEl?.focus();
+	}
+
+	function onDraftKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			addDraft();
+		}
+	}
+
+	// Escape fecha o popover onde quer que o foco esteja (input ou botões).
+	function onWindowKeydown(event: KeyboardEvent): void {
+		if (open && event.key === 'Escape') {
+			event.preventDefault();
+			closeAndRefocus();
+		}
+	}
+</script>
+
+<svelte:window onkeydown={onWindowKeydown} />
+
+<div class="relative" onfocusout={onWrapperFocusOut}>
+	<!-- Linha fechada: visual de campo com o 1º número + copiar + chip +N + chevron. -->
+	<div
+		class="flex h-8 items-center gap-1.5 rounded-md border border-border-subtle bg-surface pl-2.5 pr-1.5"
+	>
+		<button
+			bind:this={triggerEl}
+			type="button"
+			id={fieldId}
+			disabled={!canOpen}
+			aria-expanded={open}
+			aria-haspopup="true"
+			aria-controls={popoverId}
+			aria-label={shownList.length
+				? `Processos SEI: ${shownList.length}. Abrir lista`
+				: 'Processos SEI: nenhum. Abrir para adicionar'}
+			onclick={togglePopover}
+			class="flex h-full min-w-0 flex-1 items-center text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-default"
+		>
+			<span class="truncate text-sm {firstNumber ? 'text-text-primary' : 'italic text-text-muted'}">
+				{firstNumber ?? 'Não informado'}
+			</span>
+		</button>
+
+		{#if firstNumber}
+			<button
+				type="button"
+				title={copiedIndex === -1 ? 'Número copiado!' : 'Copiar número'}
+				aria-label={copiedIndex === -1 ? 'Número copiado' : `Copiar ${firstNumber}`}
+				onmousedown={(e) => e.preventDefault()}
+				onclick={() => void copyNumber(firstNumber, -1)}
+				class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {copiedIndex ===
+				-1
+					? 'text-success'
+					: 'text-text-muted'}"
+			>
+				<i class="fas {copiedIndex === -1 ? 'fa-check' : 'fa-copy'}" aria-hidden="true"></i>
+			</button>
+		{/if}
+
+		{#if extraCount > 0}
+			<span
+				class="inline-flex h-5 shrink-0 items-center rounded-full bg-primary-100 px-2 text-xs font-semibold text-primary-700"
+			>
+				+{extraCount}
+			</span>
+		{/if}
+
+		{#if canOpen}
+			<button
+				type="button"
+				tabindex="-1"
+				aria-hidden="true"
+				disabled={pending}
+				onmousedown={(e) => e.preventDefault()}
+				onclick={togglePopover}
+				class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-text-primary disabled:opacity-60"
+			>
+				{#if pending}
+					<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+				{:else}
+					<i
+						class="fas fa-chevron-down transition-transform duration-fast {open ? 'rotate-180' : ''}"
+						aria-hidden="true"
+					></i>
+				{/if}
+			</button>
+		{/if}
+	</div>
+
+	{#if open}
+		<div
+			id={popoverId}
+			role="group"
+			aria-label="Processos SEI do projeto"
+			class="app-dropdown-in absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-md border border-border-subtle bg-surface py-1 shadow-md"
+		>
+			{#if shownList.length}
+				<ul class="flex flex-col">
+					{#each shownList as numero, index (numero)}
+						<li class="flex items-center gap-1.5 px-3 py-1.5 hover:bg-surface-muted">
+							<span class="min-w-0 flex-1 truncate text-sm text-text-primary">{numero}</span>
+							<button
+								type="button"
+								title={copiedIndex === index ? 'Número copiado!' : 'Copiar número'}
+								aria-label={copiedIndex === index ? 'Número copiado' : `Copiar ${numero}`}
+								onmousedown={(e) => e.preventDefault()}
+								onclick={() => void copyNumber(numero, index)}
+								class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs transition-colors duration-fast ease-out hover:bg-surface hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {copiedIndex ===
+								index
+									? 'text-success'
+									: 'text-text-muted'}"
+							>
+								<i class="fas {copiedIndex === index ? 'fa-check' : 'fa-copy'}" aria-hidden="true"
+								></i>
+							</button>
+							{#if !readonly}
+								<button
+									type="button"
+									title="Remover número"
+									aria-label={`Remover ${numero}`}
+									disabled={pending}
+									onmousedown={(e) => e.preventDefault()}
+									onclick={() => removeAt(index)}
+									class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast ease-out hover:text-danger disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								>
+									<i class="fas fa-xmark" aria-hidden="true"></i>
+								</button>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{/if}
+
+			{#if !readonly}
+				<div
+					class="flex items-center gap-1.5 px-3 pb-1.5 {shownList.length
+						? 'mt-1 border-t border-border-subtle pt-2'
+						: 'pt-1.5'}"
+				>
+					<span aria-hidden="true" class="shrink-0 text-sm font-semibold text-text-muted">SEI-</span>
+					<!-- NÃO desabilitar no pending: o input segura o foco do popover e
+					     disabled derruba o foco para o body, fechando via focusout no
+					     meio de remoções consecutivas (adicionar já é barrado por
+					     canAddDraft). -->
+					<input
+						bind:this={draftInputEl}
+						id={`${fieldId}-input`}
+						type="text"
+						inputmode="numeric"
+						autocomplete="off"
+						placeholder="000000/000000/0000"
+						aria-label="Novo número de processo SEI (somente números)"
+						value={draftFormatted}
+						oninput={onDraftInput}
+						onkeydown={onDraftKeydown}
+						class="h-7 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
+					/>
+					<button
+						type="button"
+						disabled={!canAddDraft}
+						onmousedown={(e) => e.preventDefault()}
+						onclick={addDraft}
+						class="inline-flex h-7 shrink-0 items-center rounded-full border border-primary-500 bg-surface px-3 text-xs font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						Adicionar
+					</button>
+				</div>
+			{/if}
+		</div>
+	{/if}
+
+	<span aria-live="polite" class="sr-only">
+		{copiedIndex !== null ? 'Número copiado para a área de transferência' : ''}
+	</span>
+
+	{#if error}
+		<span id={errorId} role="alert" class="sei-error">{error}</span>
+	{/if}
+</div>
+
+<style>
+	/* Animação do painel (paridade `app-dropdown-in` do InlineCombobox). */
+	.app-dropdown-in {
+		transform-origin: top center;
+		animation: sei-dropdown-in 0.16s ease-out;
+	}
+	@keyframes sei-dropdown-in {
+		from {
+			opacity: 0;
+			transform: scale(0.95);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1);
+		}
+	}
+
+	.sei-error {
+		display: block;
+		margin-top: 0.2rem;
+		font-size: 0.72rem;
+		color: var(--app-color-danger, #b42323);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.app-dropdown-in {
+			animation-duration: 1ms;
+		}
+	}
+</style>

@@ -1579,6 +1579,7 @@ def stamp_alembic_head(emit_output=True):
 
 def run_all_migrations(*, emit_output=True, stamp_alembic=False):
     from scripts.migrations.backfill_task_assignees import backfill_task_assignees
+    from scripts.migrations.backfill_sei_processes import backfill_sei_processes
 
     steps = [
         _migrate_user_areas_step(emit_output=emit_output),
@@ -1591,6 +1592,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         ensure_orgao_and_template_schema(emit_output=emit_output),
         encrypt_plaintext_oauth_tokens(emit_output=emit_output),
         backfill_task_assignees(emit_output=emit_output),
+        backfill_sei_processes(emit_output=emit_output),
     ]
 
     if not all(step.get("success") for step in steps):
@@ -1620,6 +1622,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         "user_auth_indexes_added": steps[0].get("auth_indexes_added", []),
         "project_columns_added": project_columns_added,
         "task_assignees_backfilled": steps[9]["assignees_created"],
+        "sei_processes_backfilled": steps[10]["migrated"],
         "alembic_stamped": alembic_summary["stamped"],
     }
 
