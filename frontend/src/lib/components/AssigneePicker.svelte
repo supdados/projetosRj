@@ -243,7 +243,8 @@
 		}
 	}
 
-	// Fecha ao clicar fora, rolar ou redimensionar (popover é fixed e não acompanha).
+	// Fecha ao clicar fora; scroll/resize REPOSICIONAM o popover (fixed) para
+	// seguir o gatilho — fechar no scroll impedia até rolar a própria lista.
 	$effect(() => {
 		if (!open) return;
 		const onPointer = (e: MouseEvent) => {
@@ -251,14 +252,18 @@
 			if (triggerEl?.contains(target) || popoverEl?.contains(target)) return;
 			closePicker();
 		};
-		const onScrollOrResize = () => closePicker();
+		const onScroll = (e: Event) => {
+			if (popoverEl && e.target instanceof Node && popoverEl.contains(e.target)) return;
+			computePosition();
+		};
+		const onResize = () => computePosition();
 		window.addEventListener('mousedown', onPointer, true);
-		window.addEventListener('scroll', onScrollOrResize, true);
-		window.addEventListener('resize', onScrollOrResize);
+		window.addEventListener('scroll', onScroll, true);
+		window.addEventListener('resize', onResize);
 		return () => {
 			window.removeEventListener('mousedown', onPointer, true);
-			window.removeEventListener('scroll', onScrollOrResize, true);
-			window.removeEventListener('resize', onScrollOrResize);
+			window.removeEventListener('scroll', onScroll, true);
+			window.removeEventListener('resize', onResize);
 		};
 	});
 </script>
@@ -290,7 +295,7 @@
 				{/each}
 				{#if overflowCount > 0}
 					<span
-						class="relative z-[1] inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface-muted text-[11px] font-semibold text-text-secondary ring-2 ring-surface"
+						class="relative z-[1] inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface-muted text-2xs font-semibold text-text-secondary ring-2 ring-surface"
 					>
 						+{overflowCount}
 					</span>
@@ -299,7 +304,7 @@
 					<span
 						class="relative z-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-border-subtle text-text-muted ring-2 ring-surface transition-colors duration-fast group-hover:border-primary-400 group-hover:text-primary-600"
 					>
-						<i class="fas fa-plus text-[10px]" aria-hidden="true"></i>
+						<i class="fas fa-plus text-2xs" aria-hidden="true"></i>
 					</span>
 				{/if}
 			</span>
@@ -315,9 +320,9 @@
 			aria-haspopup="listbox"
 			aria-expanded={open}
 			title="Atribuir responsável"
-			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-[11px] font-medium text-text-muted transition-colors duration-fast hover:border-primary-400 hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-2xs font-medium text-text-muted transition-colors duration-fast hover:border-primary-400 hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 		>
-			<i class="fas fa-plus text-[10px]" aria-hidden="true"></i>Atribuir
+			<i class="fas fa-plus text-2xs" aria-hidden="true"></i>Atribuir
 		</button>
 	{/if}
 </div>
