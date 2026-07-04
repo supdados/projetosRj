@@ -284,7 +284,7 @@
 	Focus-visible com ring triplo acessível.
 -->
 <div
-	class="kanban-card group relative flex cursor-pointer flex-col gap-2 rounded-[12px] bg-surface px-3.5 pb-3 pt-3 [contain:layout] shadow-[0_1px_3px_rgba(18,28,45,0.08),0_1px_2px_rgba(18,28,45,0.05)] outline-none transition-[transform,box-shadow,background-color] duration-fast hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(18,28,45,0.13),0_1px_3px_rgba(18,28,45,0.07)] focus-visible:shadow-[0_0_0_3px_rgba(31,92,168,0.18),0_4px_12px_rgba(18,28,45,0.12)] active:cursor-grabbing {dragging
+	class="kanban-card group relative flex cursor-pointer flex-col gap-2 rounded-lg bg-surface px-3.5 pb-3 pt-3 [contain:layout] shadow-sm outline-none transition-[transform,box-shadow,background-color] duration-fast hover:-translate-y-px hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary-500 active:cursor-grabbing {dragging
 		? 'is-dragging'
 		: ''} {settled ? 'is-drop-settling' : ''}"
 	draggable="true"
@@ -398,7 +398,7 @@
 								/>
 							</span>
 							<span
-								class="kc-avatar-overflow relative z-[1] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold leading-none ring-2 ring-surface"
+								class="kc-avatar-overflow relative z-[1] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs font-semibold leading-none ring-2 ring-surface"
 								title={overflowAvatarNames}
 							>
 								+{assignees.length - 1}
@@ -431,7 +431,7 @@
 		<div
 			role="alertdialog"
 			aria-label="Confirmar exclusão da tarefa"
-			class="kanban-delete-confirm mt-[0.12rem] flex flex-col gap-2 rounded-[9px] border px-[0.46rem] py-[0.42rem]"
+			class="kanban-delete-confirm mt-[0.12rem] flex flex-col gap-2 rounded-md border px-[0.46rem] py-[0.42rem]"
 		>
 			<p class="m-0 text-xs font-semibold text-danger">Excluir esta tarefa?</p>
 			{#if deleteError}
@@ -442,7 +442,7 @@
 					type="button"
 					onclick={cancelDeleteConfirm}
 					disabled={deleting}
-					class="h-[26px] rounded-[7px] border border-border-subtle bg-surface px-[0.44rem] text-2xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="h-[26px] rounded-md border border-border-subtle bg-surface px-[0.44rem] text-xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 				>
 					Cancelar
 				</button>
@@ -450,7 +450,7 @@
 					type="button"
 					onclick={() => void confirmDelete()}
 					disabled={deleting}
-					class="kc-confirm-delete-btn h-[26px] rounded-[7px] border px-[0.44rem] text-2xs font-semibold text-danger transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+					class="kc-confirm-delete-btn h-[26px] rounded-md border px-[0.44rem] text-xs font-semibold text-danger transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
 				>
 					{deleting ? 'Excluindo…' : 'Excluir'}
 				</button>
@@ -552,14 +552,14 @@
 	@keyframes td-kanban-drop-settle {
 		0% {
 			transform: scale(1.03) translateY(-2px);
-			box-shadow: 0 12px 28px rgba(13, 48, 80, 0.18);
+			box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 		}
 		50% {
 			transform: scale(0.99) translateY(1px);
 		}
 		100% {
 			transform: scale(1) translateY(0);
-			box-shadow: 0 1px 3px rgba(18, 28, 45, 0.08), 0 1px 2px rgba(18, 28, 45, 0.05);
+			box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 		}
 	}
 	:global(.kanban-card.is-drop-settling) {

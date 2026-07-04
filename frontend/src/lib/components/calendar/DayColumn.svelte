@@ -135,11 +135,11 @@
 			onkeydown={(e) => handleEventKeydown(e, p.ev)}
 			aria-label="{p.ev.title} — {fmtTime(p.ev.starts_at)} até {fmtTime(p.ev.ends_at)}"
 		>
-			<span class="block truncate text-[11px] font-semibold leading-tight">
+			<span class="block truncate text-2xs font-semibold leading-tight">
 				{p.ev.title}
 			</span>
 			{#if p.heightPx >= 32}
-				<span class="block truncate text-[10px] opacity-75">
+				<span class="block truncate text-2xs opacity-75">
 					{fmtTime(p.ev.starts_at)} – {fmtTime(p.ev.ends_at)}
 				</span>
 			{/if}

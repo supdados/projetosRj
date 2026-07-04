@@ -299,7 +299,7 @@
 							aria-checked={isSel}
 							disabled={pending || blocked}
 							onclick={() => toggleInd(ind.id)}
-							class="flex items-start gap-2.5 rounded-[5px] border px-2.5 py-2 text-left text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 disabled:cursor-not-allowed {isSel
+							class="flex items-start gap-2.5 rounded-sm border px-2.5 py-2 text-left text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed {isSel
 								? 'border-transparent bg-primary-100 text-text-primary'
 								: 'border-border-subtle bg-surface text-text-primary hover:bg-surface-muted'} {blocked
 								? 'opacity-50'
@@ -307,7 +307,7 @@
 						>
 							<span
 								aria-hidden="true"
-								class="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-fast {isSel
+								class="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-fast {isSel
 									? 'border-primary-500 bg-primary-500'
 									: 'border-border-strong bg-surface'}"
 							>

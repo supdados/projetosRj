@@ -35,6 +35,7 @@ export default {
 				warning: 'var(--ds-color-warning-600)',
 				danger: 'var(--ds-color-danger-600)',
 				info: 'var(--ds-color-info-600)',
+				pending: 'var(--ds-color-pending)',
 				// Cor da prioridade "alta" no original (#ea580c, laranja) — nao havia
 				// token semantico equivalente; mapeada para CSS var (ajusta no dark).
 				orange: 'var(--ds-color-orange-600)',
@@ -98,7 +99,7 @@ export default {
 				'2xs': '0.6875rem',
 				xs: '0.75rem',
 				sm: '0.8125rem',
-				md: '0.875rem',
+				// md (0.875rem) aposentado no contrato de estilo — usar sm ou base
 				base: '0.95rem',
 				lg: '1.05rem',
 				xl: '1.2rem',

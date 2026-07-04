@@ -19,9 +19,9 @@
 </script>
 
 <header
-	class="kcol-head kcol-head--{status} flex shrink-0 items-center gap-2 rounded-[10px] px-3 py-2"
+	class="kcol-head kcol-head--{status} flex shrink-0 items-center gap-2 rounded-lg px-3 py-2"
 >
-	<h2 id={headingId} class="font-heading truncate text-[0.8125rem] font-bold">
+	<h2 id={headingId} class="font-heading truncate text-sm font-bold">
 		{label}
 	</h2>
 	<!-- {#key count}: remonta o contador a cada mudança p/ rodar o "pop". -->

@@ -68,7 +68,7 @@
 		aria-modal="true"
 		aria-label={`Anexos — ${current.filename}`}
 		tabindex="-1"
-		class="fixed inset-0 z-[1001] m-auto flex h-fit max-h-[88vh] w-[min(92vw,52rem)] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-2xl"
+		class="fixed inset-0 z-[1001] m-auto flex h-fit max-h-[88vh] w-[min(92vw,52rem)] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
 	>
 		<header class="flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-2.5">
 			<div class="flex min-w-0 items-center gap-2">
@@ -150,7 +150,7 @@
 					target="_blank"
 					rel="noopener"
 					download={current.filename}
-					class="rounded-md border border-primary-500 bg-primary-100 px-3 py-1.5 text-xs font-semibold text-primary-700 no-underline transition-colors duration-fast hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white no-underline shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					Baixar
 				</a>

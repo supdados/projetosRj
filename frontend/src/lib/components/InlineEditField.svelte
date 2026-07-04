@@ -392,8 +392,8 @@
 	}
 	.cell-editor:focus {
 		outline: none;
-		border-color: #7ea6ce;
-		box-shadow: 0 0 0 3px rgba(30, 84, 143, 0.12);
+		border-color: var(--ds-color-primary-500);
+		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
 	}
 	.cell-error {
 		display: block;

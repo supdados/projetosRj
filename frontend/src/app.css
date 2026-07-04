@@ -41,6 +41,8 @@
 	--ds-color-warning-600: #ca8a04;
 	--ds-color-danger-600: #dc2626;
 	--ds-color-info-600: #0ea5e9;
+	/* Estado "pendente de sincronização" (calendários) */
+	--ds-color-pending: #94a3b8;
 	/* Laranja da prioridade "alta" (00-foundation.css:1650 → #ea580c) */
 	--ds-color-orange-600: #ea580c;
 
@@ -111,6 +113,7 @@
 	--ds-color-warning-600: #d8a24d;
 	--ds-color-danger-600: #d97a7a;
 	--ds-color-info-600: #63a6db;
+	--ds-color-pending: #8398ad;
 
 	/* Prioridade no dark — alinhada aos tons escuros da paleta (theme-dark.css).
 	   "alta" (laranja) amaciada para o fundo escuro; demais reusam os tons dark. */

@@ -250,7 +250,7 @@
 				placeholder="Buscar por nome ou login…"
 				aria-label="Buscar usuários por nome ou login"
 				autocomplete="off"
-				class="h-9 w-full max-w-sm shrink-0 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 w-full max-w-sm shrink-0 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:border-primary-500 focus:outline-none"
 			/>
 
 			<!-- Seletor de área (combobox: botão → busca + listbox). Largura fixa
@@ -359,9 +359,9 @@
 		{#if usuarios.length === 0 && hasActiveFilters}
 			<!-- Vazio por filtro: mensagem dedicada (não é "primeiro cadastro"). -->
 			<div
-				class="mt-1 rounded-[13px] border border-dashed border-primary-500/40 bg-surface-muted px-4 py-8 text-center"
+				class="mt-1 rounded-xl border border-dashed border-primary-500/40 bg-surface-muted px-4 py-8 text-center"
 			>
-				<p class="text-md text-text-secondary">
+				<p class="text-sm text-text-secondary">
 					Nenhum usuário encontrado para os filtros aplicados.
 				</p>
 				<button
@@ -375,10 +375,10 @@
 		{:else if usuarios.length === 0}
 			<!-- Estado vazio (.admin-users-empty-state): cartão tracejado centralizado. -->
 			<div
-				class="mt-1 rounded-[13px] border border-dashed border-primary-500/40 bg-surface-muted px-4 py-8 text-center"
+				class="mt-1 rounded-xl border border-dashed border-primary-500/40 bg-surface-muted px-4 py-8 text-center"
 			>
 				<span
-					class="mx-auto mb-2.5 inline-flex h-[52px] w-[52px] items-center justify-center rounded-[14px] border border-primary-500/25 bg-primary-100 text-primary-700"
+					class="mx-auto mb-2.5 inline-flex h-[52px] w-[52px] items-center justify-center rounded-xl border border-primary-500/25 bg-primary-100 text-primary-700"
 					aria-hidden="true"
 				>
 					<i class="fas fa-user-plus text-xl"></i>
@@ -386,12 +386,12 @@
 				<h2 class="mb-1.5 font-heading text-xl font-bold text-primary-700">
 					Nenhum usuário cadastrado
 				</h2>
-				<p class="mb-3.5 text-md text-text-secondary">
+				<p class="mb-3.5 text-sm text-text-secondary">
 					Cadastre o primeiro usuário para iniciar o gerenciamento de acesso da aplicação.
 				</p>
 				<a
 					href={`${base}/admin/usuarios/novo`}
-					class="inline-flex items-center gap-2 rounded-[9px] border border-primary-700 bg-topnav-gradient px-3.5 py-2 text-md font-semibold text-white no-underline shadow-md transition-all duration-slow ease-[cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 active:translate-y-0"
+					class="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-white no-underline shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
 				>
 					<i class="fas fa-plus"></i>
 					Criar Primeiro Usuário
@@ -402,20 +402,20 @@
 				Cartão de tabela "glass" (.admin-users-table-card): superfície
 				translúcida com cabeçalho em maiúsculas e linhas com hover sutil.
 			-->
-			<div class="overflow-hidden rounded-[13px] border border-primary-500/30 bg-glass-card shadow-md">
+			<div class="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
 				<div class="overflow-x-auto" aria-busy={loadState !== 'ready'}>
 					<table class="w-full border-collapse align-middle text-sm">
 						<caption class="sr-only">Lista de usuários do sistema</caption>
 						<thead>
-							<tr class="text-left">
-								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">ID</th>
-								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">Nome Completo</th>
-								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">Login</th>
-								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">Órgão</th>
-								<th scope="col" class="w-[160px] whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">Órgãos Vinculados</th>
-								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-2xs font-bold uppercase tracking-caps text-text-muted">CPF gov.br</th>
-								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-center text-2xs font-bold uppercase tracking-caps text-text-muted">Perfil</th>
-								<th scope="col" class="whitespace-nowrap border-b border-primary-500/40 bg-surface-muted px-3 py-2.5 text-center text-2xs font-bold uppercase tracking-caps text-text-muted">Ações</th>
+							<tr class="border-b border-border-subtle bg-surface-muted text-left">
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">ID</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">Nome Completo</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">Login</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">Órgão</th>
+								<th scope="col" class="w-[160px] whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">Órgãos Vinculados</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">CPF gov.br</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center text-2xs font-semibold uppercase tracking-caps text-text-muted">Perfil</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center text-2xs font-semibold uppercase tracking-caps text-text-muted">Ações</th>
 							</tr>
 						</thead>
 						<tbody>

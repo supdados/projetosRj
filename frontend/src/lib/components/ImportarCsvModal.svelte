@@ -11,6 +11,7 @@
 	import { ApiClientError } from '$lib/api/client';
 	import { importProjectsCsv } from '$lib/api/projects';
 	import type { ProjectsListOptions } from '$lib/types/projects';
+	import Modal from '$lib/components/Modal.svelte';
 
 	interface Props {
 		open: boolean;
@@ -80,19 +81,8 @@
 </script>
 
 {#if open}
-	<div
-		class="fixed inset-0 z-modal flex items-center justify-center bg-black/40 p-4"
-		role="presentation"
-		onclick={(e) => {
-			if (e.target === e.currentTarget) onClose();
-		}}
-	>
-		<div
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="import-csv-title"
-			class="flex w-full max-w-lg flex-col gap-4 rounded-xl border border-border-subtle bg-surface p-5 shadow-lg"
-		>
+	<Modal labelId="import-csv-title" maxWidth="max-w-lg" onBackdrop={onClose}>
+		<div class="flex flex-col gap-4">
 			<div class="flex items-start justify-between gap-3">
 				<h2 id="import-csv-title" class="font-heading text-lg font-bold text-primary-700">
 					<i class="fas fa-file-import mr-2" aria-hidden="true"></i>Importar projetos (CSV)
@@ -190,14 +180,14 @@
 					<button
 						type="button"
 						onclick={onClose}
-						class="h-9 rounded-lg border border-border-subtle bg-surface px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="h-9 rounded-md border border-border-subtle bg-surface px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 					>
 						Cancelar
 					</button>
 					<button
 						type="submit"
 						disabled={!canSubmit}
-						class="inline-flex h-9 items-center gap-2 rounded-lg border border-primary-700 bg-topnav-gradient px-4 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+						class="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<i class="fas {submitting ? 'fa-spinner fa-spin' : 'fa-file-import'}" aria-hidden="true"></i>
 						Importar
@@ -205,5 +195,5 @@
 				</div>
 			</form>
 		</div>
-	</div>
+	</Modal>
 {/if}

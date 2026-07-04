@@ -1,0 +1,85 @@
+/* Paleta e chips de status da tabela de etapas, compartilhados por
+   StageList.svelte e StageRow.svelte (antes duplicados nos dois <style>). */
+:root {
+	--stage-chip-border: #cbdcf0;
+	--stage-chip-text: #2b4d6f;
+	--stage-chip-bg-hover: #f1f7ff;
+	--stage-chip-border-hover: #b7cee5;
+	--stage-chip-text-hover: #20486f;
+	--stage-chip-done-bg: #eaf7f1;
+	--stage-chip-done-border: #b9dfca;
+	--stage-chip-done-text: #1d714e;
+	--stage-chip-done-bg-hover: #e3f4eb;
+	--stage-chip-done-border-hover: #a8d5bd;
+	--stage-chip-done-text-hover: #175f41;
+	--stage-chip-started-bg: #edf5ff;
+	--stage-chip-started-border: #c5d8ee;
+	--stage-chip-started-text: #255585;
+	--stage-chip-started-bg-hover: #e7f1fd;
+	--stage-chip-started-border-hover: #b8d0ea;
+	--stage-chip-started-text-hover: #214f7d;
+	--stage-input-border: #c4d5e7;
+	--stage-danger-text: #972d2d;
+	--stage-danger-bg-hover: rgba(169, 59, 59, 0.14);
+	--stage-danger-border-hover: rgba(184, 63, 63, 0.5);
+}
+
+.etapa-status-toggle {
+	height: 30px;
+	min-width: 124px;
+	border-radius: 7px;
+	border: 1px solid var(--stage-chip-border);
+	padding: 0 0.58rem;
+	background: #fff;
+	color: var(--stage-chip-text);
+	font-weight: 600;
+	font-size: 0.78rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.3rem;
+	cursor: pointer;
+	transition: all 0.16s ease;
+}
+.etapa-status-toggle i {
+	font-size: 0.875rem;
+}
+.etapa-status-toggle:hover:not(:disabled),
+.etapa-status-toggle:focus-visible:not(:disabled) {
+	background: var(--stage-chip-bg-hover);
+	border-color: var(--stage-chip-border-hover);
+	color: var(--stage-chip-text-hover);
+	outline: none;
+}
+.etapa-status-toggle:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+.etapa-status-toggle-done {
+	background: var(--stage-chip-done-bg);
+	border-color: var(--stage-chip-done-border);
+	color: var(--stage-chip-done-text);
+}
+.etapa-status-toggle-done:hover:not(:disabled),
+.etapa-status-toggle-done:focus-visible:not(:disabled) {
+	background: var(--stage-chip-done-bg-hover);
+	border-color: var(--stage-chip-done-border-hover);
+	color: var(--stage-chip-done-text-hover);
+}
+.etapa-status-toggle-started {
+	background: var(--stage-chip-started-bg);
+	border-color: var(--stage-chip-started-border);
+	color: var(--stage-chip-started-text);
+}
+.etapa-status-toggle-started:hover:not(:disabled),
+.etapa-status-toggle-started:focus-visible:not(:disabled) {
+	background: var(--stage-chip-started-bg-hover);
+	border-color: var(--stage-chip-started-border-hover);
+	color: var(--stage-chip-started-text-hover);
+}
+
+html[data-theme='dark'] .etapa-status-toggle {
+	background: #2b3a4f;
+	border-color: var(--color-border);
+	color: #d2dfec;
+}

@@ -21,7 +21,7 @@
 	/** Classes de cor por categoria (tokens de tema da SPA). */
 	const TONE: Record<FlashCategory, string> = {
 		success: 'border-success text-success',
-		info: 'border-primary-500 text-primary-700',
+		info: 'border-info text-info',
 		warning: 'border-warning text-warning',
 		danger: 'border-danger text-danger'
 	};

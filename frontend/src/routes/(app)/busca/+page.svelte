@@ -278,7 +278,7 @@
 									id={`busca-sec-${section.key}`}
 									class="m-0 flex items-center gap-2 text-base font-bold text-text-primary"
 								>
-									<i class="fas {section.icon} text-md text-text-muted" aria-hidden="true"></i>
+									<i class="fas {section.icon} text-sm text-text-muted" aria-hidden="true"></i>
 									{section.label}
 								</h2>
 								<span

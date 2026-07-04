@@ -50,7 +50,7 @@
 </script>
 
 <section
-	class="flex h-full flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm"
+	class="flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
 	aria-labelledby="recent-projects-title"
 >
 	<header class="flex shrink-0 items-center gap-2 border-b border-border-subtle px-5 py-4">
@@ -68,7 +68,7 @@
 				<p class="mb-3 text-sm text-text-muted">Nenhum projeto cadastrado ainda.</p>
 				<a
 					href={`${base}/projetos`}
-					class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex items-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<i class="fas fa-plus" aria-hidden="true"></i>Criar Primeiro Projeto
 				</a>

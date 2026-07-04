@@ -117,7 +117,7 @@
 	<!-- Cabecalho de dias: S T Q Q S S D (seg..dom) -->
 	<div class="mb-1 grid grid-cols-7 text-center">
 		{#each ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'] as label}
-			<span class="text-[10px] font-medium text-text-muted">{label}</span>
+			<span class="text-2xs font-medium text-text-muted">{label}</span>
 		{/each}
 	</div>
 
@@ -136,7 +136,7 @@
 						type="button"
 						onclick={() => onSelectDay?.(date)}
 						class={[
-							'relative flex h-6 w-6 flex-col items-center justify-center rounded-full text-[11px] font-medium transition-colors',
+							'relative flex h-6 w-6 flex-col items-center justify-center rounded-full text-2xs font-medium transition-colors',
 							today
 								? 'bg-primary-500 text-white'
 								: highlighted

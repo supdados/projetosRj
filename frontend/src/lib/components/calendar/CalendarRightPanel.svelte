@@ -35,7 +35,7 @@
 
 <aside class="flex w-full flex-col gap-4 lg:w-80 lg:shrink-0">
 	<!-- Mini calendario mensal -->
-	<div class="rounded-lg border border-border-subtle bg-surface p-4">
+	<div class="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
 		<MiniMonth
 			{mode}
 			{weekStart}
@@ -49,12 +49,12 @@
 	</div>
 
 	<!-- Lista de eventos da semana -->
-	<div class="rounded-lg border border-border-subtle bg-surface p-4">
+	<div class="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
 		<WeekEventList {events} {weekStart} {onSelectEvent} />
 	</div>
 
 	<!-- Lista de membros da equipe (Agente D) -->
-	<div class="rounded-lg border border-border-subtle bg-surface p-4">
+	<div class="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
 		<TeamMembersList {members} />
 	</div>
 </aside>

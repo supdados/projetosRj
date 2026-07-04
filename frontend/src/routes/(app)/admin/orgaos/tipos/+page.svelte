@@ -271,7 +271,7 @@
 					<div class="flex flex-col gap-1 sm:col-span-2">
 						<label
 							for="tipoNome"
-							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+							class="text-2xs font-bold uppercase tracking-caps text-text-muted"
 						>
 							Nome <span class="text-danger">*</span>
 						</label>
@@ -281,13 +281,13 @@
 							maxlength="80"
 							required
 							bind:value={fNome}
-							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
 						<label
 							for="tipoSlug"
-							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+							class="text-2xs font-bold uppercase tracking-caps text-text-muted"
 						>
 							Identificador
 						</label>
@@ -297,13 +297,13 @@
 							maxlength="100"
 							placeholder="gerado pelo nome"
 							bind:value={fSlug}
-							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
 						<label
 							for="tipoNivel"
-							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+							class="text-2xs font-bold uppercase tracking-caps text-text-muted"
 						>
 							Nível <span class="text-danger">*</span>
 						</label>
@@ -313,13 +313,13 @@
 							min="0"
 							required
 							bind:value={fNivel}
-							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:border-primary-500 focus:outline-none"
 						/>
 					</div>
 					<div class="flex flex-col gap-1 sm:col-span-2 lg:col-span-4">
 						<label
 							for="tipoDescricao"
-							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+							class="text-2xs font-bold uppercase tracking-caps text-text-muted"
 						>
 							Descrição
 						</label>
@@ -328,7 +328,7 @@
 							type="text"
 							maxlength="255"
 							bind:value={fDescricao}
-							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
 						/>
 					</div>
 				</div>
@@ -357,7 +357,7 @@
 					<button
 						type="submit"
 						disabled={saving}
-						class="rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+						class="inline-flex h-9 items-center rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
 					>
 						{saving
 							? 'Salvando…'
@@ -411,7 +411,7 @@
 		</div>
 
 		{#if tipos.length === 0}
-			<div class="rounded-lg border border-border-subtle bg-surface px-5 py-12 text-center">
+			<div class="rounded-xl border border-border-subtle bg-surface px-5 py-12 text-center shadow-sm">
 				<h2 class="font-heading text-lg font-semibold text-text-primary">
 					Nenhum tipo cadastrado
 				</h2>

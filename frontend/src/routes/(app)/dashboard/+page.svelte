@@ -328,7 +328,7 @@
 		{#snippet actions()}
 			<div class="flex flex-col items-end gap-0.5 text-right">
 				<span class="text-2xs font-bold uppercase tracking-caps text-text-muted">Hoje</span>
-				<span class="text-md font-semibold text-primary-600">{todayLabel}</span>
+				<span class="text-sm font-semibold text-primary-600">{todayLabel}</span>
 			</div>
 			<Button size="sm" onclick={openCreateModal} disabled={openingCreate}>
 				{#snippet icon()}
@@ -488,8 +488,8 @@
 									{#each statusLegend as s (s.key)}
 										<li class="flex items-center gap-2 leading-none">
 											<span class="h-2 w-2 shrink-0 rounded-full" style="background: {s.color};" aria-hidden="true"></span>
-											<span class="min-w-0 flex-1 truncate text-[11px] text-text-secondary">{s.label}</span>
-											<span class="shrink-0 text-[11px] font-semibold tabular-nums text-text-primary">{s.count}</span>
+											<span class="min-w-0 flex-1 truncate text-2xs text-text-secondary">{s.label}</span>
+											<span class="shrink-0 text-2xs font-semibold tabular-nums text-text-primary">{s.count}</span>
 										</li>
 									{/each}
 								</ul>

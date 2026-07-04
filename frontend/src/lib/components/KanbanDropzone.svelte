@@ -92,7 +92,7 @@
 
 	{#if showEmptyHint}
 		<li
-			class="flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-dashed border-border-subtle px-3 py-3 text-center text-xs text-text-muted"
+			class="flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-dashed border-border-strong px-3 py-3 text-center text-xs text-text-muted"
 		>
 			Sem itens nesta etapa
 		</li>
@@ -103,7 +103,7 @@
 	/* Vão de inserção: preview tracejado de onde o card aterrissará. */
 	.kanban-placeholder {
 		flex-shrink: 0;
-		border-radius: 10px;
+		border-radius: 12px;
 		border: 1.5px dashed color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent);
 		background-color: color-mix(in srgb, var(--ds-color-primary-500) 8%, transparent);
 		pointer-events: none;

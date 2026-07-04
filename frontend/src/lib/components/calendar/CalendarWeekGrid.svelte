@@ -97,7 +97,7 @@
 	O <main> da página é o único scroller.
 -->
 <div
-	class="cal-grid-card w-full min-w-0 rounded-lg border border-border-subtle bg-surface text-text-primary"
+	class="cal-grid-card w-full min-w-0 rounded-xl border border-border-subtle bg-surface text-text-primary shadow-sm"
 	role="grid"
 	aria-label="Grade semanal de eventos"
 >
@@ -123,7 +123,7 @@
 				role="columnheader"
 				aria-label={day.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
 			>
-				<span class="text-[11px] font-medium uppercase tracking-wide text-text-muted">
+				<span class="text-2xs font-medium uppercase tracking-wide text-text-muted">
 					{shortName(day)}
 				</span>
 				<span
@@ -151,7 +151,7 @@
 			class="flex w-14 shrink-0 items-start justify-end border-r border-border-subtle px-1 pt-1"
 			aria-hidden="true"
 		>
-			<span class="text-[9px] font-medium uppercase tracking-wide text-text-muted">
+			<span class="text-2xs font-medium uppercase tracking-wide text-text-muted">
 				dia int.
 			</span>
 		</div>
@@ -170,7 +170,7 @@
 					{@const colors = eventColorClasses(ev)}
 					<button
 						type="button"
-						class="mb-0.5 block w-full truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium leading-tight transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {colors.block}"
+						class="mb-0.5 block w-full truncate rounded px-1.5 py-0.5 text-left text-2xs font-medium leading-tight transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {colors.block}"
 						onclick={() => onSelectEvent?.(ev)}
 						aria-label="{ev.title} — dia inteiro"
 					>
@@ -196,7 +196,7 @@
 					class="absolute right-0 flex w-full items-start justify-end pr-1.5"
 					style="top: {(hour - START_HOUR) * PX_PER_HOUR - 7}px;"
 				>
-					<span class="text-[10px] font-medium text-text-muted">
+					<span class="text-2xs font-medium text-text-muted">
 						{String(hour).padStart(2, '0')}:00
 					</span>
 				</div>

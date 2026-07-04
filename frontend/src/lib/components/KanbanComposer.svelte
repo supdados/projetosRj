@@ -215,20 +215,19 @@
 	Composer inline da coluna — Variação B: o botão `+ adicionar` é um traço
 	discreto e transparente (borda tracejada, texto apagado) que só ganha cor
 	no hover. O formulário reproduz `.task-items-kanban-add-form` do legado
-	(borda, fundo branco, radius 10px, sombra inset+externa, gap 0.46rem).
-	`is-saving` aplica opacity 0.72.
+	(borda, fundo branco, gap 0.46rem). `is-saving` aplica opacity 0.72.
 -->
 {#if !open}
 	<button
 		type="button"
 		onclick={requestOpen}
-		class="flex w-full items-center justify-center gap-1 rounded-[10px] border border-dashed border-border-strong bg-transparent px-[0.48rem] py-[0.42rem] text-xs font-semibold text-text-muted transition-all duration-fast hover:border-primary-500 hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500"
+		class="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-transparent px-[0.48rem] py-[0.42rem] text-xs font-semibold text-text-muted transition-all duration-fast hover:border-primary-500 hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500"
 	>
 		+ adicionar
 	</button>
 {:else}
 	<form
-		class="flex flex-col gap-[0.46rem] rounded-[10px] border border-border-subtle bg-surface p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_8px_18px_rgba(19,63,101,0.08)] transition-opacity duration-fast {saving
+		class="flex flex-col gap-[0.46rem] rounded-lg border border-border-subtle bg-surface p-2 shadow-md transition-opacity duration-fast {saving
 			? 'pointer-events-none opacity-[0.72]'
 			: ''}"
 		aria-label="Nova tarefa em {status}"
@@ -243,7 +242,7 @@
 			onchange={() => void onProjectChange()}
 			disabled={saving}
 			aria-label="Projeto"
-			class="rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+			class="rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
 		>
 			<option value="">Selecione o projeto…</option>
 			{#each projectOptions as option (option.value)}
@@ -256,7 +255,7 @@
 				bind:value={etapa}
 				disabled={saving || etapaLoading}
 				aria-label="Etapa"
-				class="rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+				class="rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
 			>
 				<option value="">{etapaLoading ? 'Carregando etapas…' : 'Sem etapa'}</option>
 				{#each etapaOptions as e (e.id)}
@@ -273,7 +272,7 @@
 			rows="2"
 			placeholder="Descreva a tarefa…"
 			aria-label="Descrição da tarefa"
-			class="min-h-[64px] w-full resize-y rounded-md border border-border-subtle bg-surface px-[0.48rem] py-[0.38rem] text-xs leading-normal text-text-primary transition-shadow duration-fast focus:border-primary-500 focus:outline-none focus:shadow-[0_0_0_3px_rgba(31,92,168,0.12)] disabled:opacity-60 2xl:text-sm"
+			class="min-h-[64px] w-full resize-y rounded-md border border-border-subtle bg-surface px-[0.48rem] py-[0.38rem] text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60 2xl:text-sm"
 		></textarea>
 
 		{#if project && responsavelOptions.length > 0}
@@ -281,7 +280,7 @@
 				bind:value={responsavel}
 				disabled={saving}
 				aria-label="Responsável"
-				class="rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+				class="rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
 			>
 				<option value="">Sem responsável</option>
 				{#each responsavelOptions as user (user.id)}
@@ -295,7 +294,7 @@
 				bind:value={prioridade}
 				disabled={saving}
 				aria-label="Prioridade"
-				class="flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+				class="flex-1 rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
 			>
 				{#each PRIORIDADE_OPTIONS as opt (opt.value)}
 					<option value={opt.value}>{opt.label}</option>
@@ -305,7 +304,7 @@
 				bind:value={tipo}
 				disabled={saving}
 				aria-label="Tipo de pedido"
-				class="flex-1 rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+				class="flex-1 rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
 			>
 				{#each TIPO_OPTIONS as opt (opt.value)}
 					<option value={opt.value}>{opt.label}</option>
@@ -329,7 +328,7 @@
 			<button
 				type="submit"
 				disabled={saving}
-				class="h-[30px] rounded-md border border-primary-500 bg-primary-100 px-[0.56rem] text-xs font-semibold text-primary-700 transition-all duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				class="h-[30px] rounded-md bg-primary-600 px-[0.56rem] text-xs font-semibold text-white shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 			>
 				{saving ? 'Salvando…' : 'Salvar'}
 			</button>

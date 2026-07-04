@@ -355,7 +355,7 @@
 			<div
 				role="status"
 				aria-live="polite"
-				class="flex flex-col items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-12 text-center"
+				class="flex flex-col items-center gap-3 rounded-xl border border-border-subtle bg-surface px-5 py-12 text-center shadow-sm"
 			>
 				<span
 					class="flex h-14 w-14 items-center justify-center rounded-full bg-surface-muted text-text-muted"
@@ -372,7 +372,7 @@
 				</p>
 				<a
 					href={`${base}/admin/orgaos/novo`}
-					class="mt-2 inline-flex items-center gap-2 rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-100/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="mt-2 inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-white no-underline shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
 				>
 					<i class="fas fa-plus" aria-hidden="true"></i>Criar Órgão Raiz
 				</a>
@@ -440,8 +440,8 @@
 	.orgao-tree-card {
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
-		border-radius: 12px;
-		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+		border-radius: 16px;
+		box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 		overflow: hidden;
 	}
 
@@ -469,26 +469,24 @@
 		top: 50%;
 		transform: translateY(-50%);
 		color: var(--color-text-muted);
-		font-size: 0.85rem;
+		font-size: 0.8125rem;
 		pointer-events: none;
 	}
 
 	.orgao-search-input {
 		width: 100%;
-		padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+		height: 2.25rem;
+		padding: 0 0.75rem 0 2.25rem;
 		border: 1px solid var(--color-border);
-		border-radius: 999px;
+		border-radius: 12px;
 		background: var(--color-surface);
-		font-size: 0.875rem;
+		font-size: 0.8125rem;
 		color: var(--color-text-primary);
-		transition:
-			border-color 120ms ease,
-			box-shadow 120ms ease;
+		transition: border-color 120ms ease;
 	}
 	.orgao-search-input:focus {
 		outline: none;
-		border-color: var(--ds-color-primary-600);
-		box-shadow: 0 0 0 3px var(--ds-color-primary-light-bg, rgba(0, 90, 146, 0.15));
+		border-color: var(--ds-color-primary-500);
 	}
 
 	.orgao-tree-toolbar-actions {
@@ -518,7 +516,7 @@
 	}
 	.orgao-toolbar-link:focus-visible {
 		outline: none;
-		box-shadow: 0 0 0 2px var(--ds-color-primary-600);
+		box-shadow: 0 0 0 2px var(--ds-color-primary-500);
 	}
 
 	/* Lista rolável até 70vh (espelha .orgao-tree do v4.5). */

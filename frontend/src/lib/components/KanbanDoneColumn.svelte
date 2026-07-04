@@ -117,7 +117,7 @@
 					</span>
 				{/key}
 				<span
-					class="font-heading text-[0.8125rem] font-bold tracking-wide text-text-secondary [writing-mode:vertical-rl]"
+					class="font-heading text-sm font-bold tracking-wide text-text-secondary [writing-mode:vertical-rl]"
 				>
 					{column.label}
 				</span>
@@ -172,7 +172,7 @@
 					onclick={requestArchive}
 					disabled={count === 0}
 					title="Arquivar tarefas finalizadas do escopo atual"
-					class="inline-flex w-full items-center justify-center gap-2 rounded-[10px] border border-border-subtle px-3 py-2 text-sm font-medium text-text-muted transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50 disabled:hover:border-border-subtle disabled:hover:bg-transparent disabled:hover:text-text-muted"
+					class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-text-muted transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50 disabled:hover:border-border-subtle disabled:hover:bg-transparent disabled:hover:text-text-muted"
 				>
 					<i class="fas fa-box-archive" aria-hidden="true"></i>
 					Arquivar finalizados

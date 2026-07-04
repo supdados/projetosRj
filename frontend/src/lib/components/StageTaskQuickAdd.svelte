@@ -323,7 +323,7 @@
 	// Rótulos de coluna (mesmo token visual do StageGroupHeader do hub, um
 	// degrau menor — acompanha a variante compacta da grade).
 	const COL_LABEL =
-		'self-center text-center text-[10px] font-bold uppercase tracking-[0.08em] text-text-secondary';
+		'self-center text-center text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary';
 </script>
 
 <svelte:window onkeydown={onWindowKeydown} />
@@ -430,7 +430,7 @@
 				     como no hub — colunas sempre alinhadas. -->
 				<div class="overflow-x-auto overflow-y-hidden">
 					<div class="task-hub-grid bg-primary-100 px-3 py-2">
-						<span class="text-[10px] font-bold uppercase tracking-[0.08em] text-text-secondary">
+						<span class="text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary">
 							Tarefa
 						</span>
 						<span class={COL_LABEL}>Prioridade</span>
@@ -486,13 +486,13 @@
 										rows="1"
 										placeholder="Descreva a tarefa…"
 										aria-label="Descrição da tarefa"
-										class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-[5px] border border-border-subtle bg-surface px-2 py-1.5 text-sm leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60"
+										class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-sm border border-border-subtle bg-surface px-2 py-1.5 text-sm leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60"
 									></textarea>
 									<select
 										bind:value={addDraft.prioridade}
 										disabled={addDraft.saving}
 										aria-label="Prioridade"
-										class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+										class="h-[34px] w-full rounded-sm border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 									>
 										{#each ADD_PRIORIDADE_OPTIONS as opt (opt.value)}
 											<option value={opt.value}>{opt.label}</option>
@@ -502,7 +502,7 @@
 										bind:value={addDraft.tipo}
 										disabled={addDraft.saving}
 										aria-label="Tipo de pedido"
-										class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+										class="h-[34px] w-full rounded-sm border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 									>
 										{#each ADD_TIPO_OPTIONS as opt (opt.value)}
 											<option value={opt.value}>{opt.label}</option>
@@ -512,7 +512,7 @@
 										bind:value={addDraft.status}
 										disabled={addDraft.saving}
 										aria-label="Status"
-										class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+										class="h-[34px] w-full rounded-sm border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 									>
 										{#each ADD_STATUS_OPTIONS as opt (opt.value)}
 											<option value={opt.value}>{opt.label}</option>
@@ -529,7 +529,7 @@
 											disabled={addDraft.saving}
 											title="Salvar"
 											aria-label="Salvar tarefa"
-											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-[5px] border border-primary-500 bg-primary-100 text-primary-700 transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-sm border border-primary-500 bg-primary-100 text-primary-700 transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 										>
 											<i class="fas fa-check text-xs" aria-hidden="true"></i>
 										</button>
@@ -539,7 +539,7 @@
 											disabled={addDraft.saving}
 											title="Cancelar"
 											aria-label="Cancelar"
-											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-[5px] border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-sm border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 										>
 											<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 										</button>

@@ -542,7 +542,7 @@
 						<button
 							type="submit"
 							disabled={busy || draft.trim() === ''}
-							class="inline-flex items-center rounded-md bg-primary-500 px-3 py-1 text-2xs font-semibold text-white transition-colors duration-fast hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+							class="inline-flex items-center rounded-md bg-primary-600 px-3 py-1 text-2xs font-semibold text-white transition-colors duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							Comentar
 						</button>

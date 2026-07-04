@@ -3,7 +3,7 @@
 	 * Alternância Lista ⇄ Kanban — segmented control clean.
 	 *
 	 * Trilho `surface-muted` com um indicador (thumb) no azul de marca
-	 * (`bg-brand-gradient`, o mesmo dos botões primários) que DESLIZA entre os dois
+	 * (`bg-primary-600`, o mesmo dos botões primários) que DESLIZA entre os dois
 	 * lados via `transform: translateX` (compositor-only → fluido e barato), com o
 	 * rótulo ativo em branco. Substitui o toggle SVG pesado anterior
 	 * (divisor em curva-S morfando + gradientes) por algo coerente com o resto da
@@ -34,7 +34,7 @@
 		 própria largura (= metade do trilho) para a direita. -->
 	<span
 		aria-hidden="true"
-		class="pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-md bg-brand-gradient shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none {view ===
+		class="pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-md bg-primary-600 shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none {view ===
 		'kanban'
 			? 'translate-x-full'
 			: 'translate-x-0'}"

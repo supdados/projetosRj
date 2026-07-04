@@ -44,15 +44,15 @@
 	const fromItem = $derived(perPage ? (page - 1) * perPage + 1 : 0);
 	const toItem = $derived(perPage ? Math.min(page * perPage, total ?? 0) : 0);
 
-	// Setas discretas com realce azul no hover; página ativa = brand-gradient (cor
+	// Setas discretas com realce azul no hover; página ativa = primary-600 (cor
 	// do CTA primário). A transição cobre só background-color/border-color — nunca
-	// `color` nem `background-image`: o gradiente não interpola (snap), e animar o
-	// texto junto causaria flicker branco-sobre-branco na troca de página ativa.
+	// `color`: animar o texto junto causaria flicker branco-sobre-branco na troca
+	// de página ativa.
 	const ARROW =
 		'inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-[background-color,border-color] duration-fast ease-out hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-subtle disabled:hover:bg-surface disabled:hover:text-text-secondary';
 	const PAGE_BASE =
 		'inline-flex h-8 min-w-9 items-center justify-center rounded-md border px-2.5 text-sm font-semibold tabular-nums transition-[background-color,border-color,box-shadow] duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed';
-	const PAGE_ACTIVE = 'border-transparent bg-brand-gradient text-white shadow-sm';
+	const PAGE_ACTIVE = 'border-transparent bg-primary-600 text-white shadow-sm';
 	const PAGE_IDLE =
 		'border-border-subtle bg-surface text-text-secondary hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700';
 	// Reticências: mesmo box (h-8 min-w-9) que um número, sem borda/hover — mantém

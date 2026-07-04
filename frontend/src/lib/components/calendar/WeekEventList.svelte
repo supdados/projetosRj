@@ -73,7 +73,7 @@
 							<p class="truncate text-xs font-medium text-text-primary group-hover:text-text-primary">
 								{ev.title}
 							</p>
-							<p class="mt-0.5 text-[11px] text-text-muted">
+							<p class="mt-0.5 text-2xs text-text-muted">
 								{formatEventDate(ev)}
 							</p>
 						</div>

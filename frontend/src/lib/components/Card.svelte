@@ -26,7 +26,7 @@
 </script>
 
 <section
-	class="rounded-lg border border-border-subtle bg-surface shadow-sm {fill
+	class="rounded-xl border border-border-subtle bg-surface shadow-sm {fill
 		? 'flex h-full flex-col'
 		: ''}"
 	aria-labelledby={labelId}

@@ -132,7 +132,7 @@
 		'rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
 	const labelClass = 'text-xs font-semibold uppercase tracking-wide text-text-muted';
 	const sectionTitleClass =
-		'font-heading text-md font-semibold text-text-primary';
+		'font-heading text-sm font-semibold text-text-primary';
 	const cardClass =
 		'flex flex-col gap-4 rounded-lg border border-border-subtle bg-surface p-5 shadow-sm';
 </script>

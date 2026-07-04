@@ -203,9 +203,9 @@
 </script>
 
 {#if isOpen}
-	<!-- Backdrop: rgba escuro + leve blur, fade 0.2s ease. -->
+	<!-- Backdrop: fade 0.2s ease. -->
 	<div
-		class="fixed inset-0 z-modal bg-[rgba(7,20,33,0.34)] backdrop-blur-[1.2px]"
+		class="fixed inset-0 z-modal bg-black/40"
 		role="presentation"
 		onclick={() => void close()}
 		transition:fade={{ duration: 200 }}
@@ -217,7 +217,7 @@
 		aria-modal="true"
 		aria-labelledby="task-drawer-title"
 		tabindex="-1"
-		class="fixed right-0 top-0 z-modal flex h-full w-[min(645px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-[-18px_0_44px_rgba(12,44,74,0.18)]"
+		class="fixed right-0 top-0 z-modal flex h-full w-[min(645px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-lg"
 		onkeydown={onKeydown}
 		use:focusTrap
 		transition:fly={{ x: 645, duration: 240, easing: cubicOut, opacity: 1 }}
@@ -310,7 +310,7 @@
 				<div
 					role="alertdialog"
 					aria-label="Confirmar exclusão da tarefa"
-					class="td-delete-confirm flex flex-col gap-2 rounded-lg border px-3 py-2.5"
+					class="td-delete-confirm flex flex-col gap-2 rounded-md border px-3 py-2.5"
 				>
 					<p class="m-0 text-sm font-semibold text-danger">Excluir esta tarefa?</p>
 					<p class="m-0 text-xs text-text-secondary">
@@ -387,7 +387,7 @@
 									value=""
 									onchange={onChooseEtapa}
 									disabled={$store.acting}
-									class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+									class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
 								>
 									<option value="" disabled>Escolha a etapa…</option>
 									{#each etapaOptions as etapa (etapa.id)}
@@ -423,7 +423,7 @@
 							onblur={flush}
 							disabled={!detail.permissions.can_edit}
 							rows="3"
-							class="w-full resize-y rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm leading-relaxed text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+							class="w-full resize-y rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm leading-relaxed text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60"
 						></textarea>
 					</div>
 
@@ -440,7 +440,7 @@
 								value={detail.prioridade ?? ''}
 								onchange={onPrioridade}
 								disabled={!detail.permissions.can_edit}
-								class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+								class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
 							>
 								{#each PRIORIDADE_OPTIONS as opt (opt.value)}
 									<option value={opt.value}>{opt.label}</option>
@@ -460,7 +460,7 @@
 								value={detail.tipo_pedido ?? ''}
 								onchange={onTipo}
 								disabled={!detail.permissions.can_edit}
-								class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+								class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
 							>
 								{#each tipoOptions as opt (opt.value)}
 									<option value={opt.value}>{opt.label}</option>
@@ -545,7 +545,7 @@
 					type="button"
 					disabled={$store.acting}
 					onclick={() => void close()}
-					class="inline-flex items-center gap-1.5 rounded-md bg-primary-500 px-4 py-1.5 text-sm font-semibold text-white transition-opacity duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 				>
 					<i class="fas fa-check text-xs" aria-hidden="true"></i>
 					Salvar

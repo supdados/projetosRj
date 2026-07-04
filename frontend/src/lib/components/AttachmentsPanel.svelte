@@ -197,7 +197,7 @@
 				ondragover={onDragOver}
 				ondragleave={onDragLeave}
 				ondrop={onDrop}
-				class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed px-3 py-2.5 text-xs font-semibold transition-colors duration-fast focus-within:ring-2 focus-within:ring-primary-500 {dragActive
+				class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-3 py-2.5 text-xs font-semibold transition-colors duration-fast focus-within:ring-2 focus-within:ring-primary-500 {dragActive
 					? 'border-primary-500 bg-primary-100 text-primary-700'
 					: 'border-border-strong bg-surface-muted/40 text-text-secondary hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700'} {uploading
 					? 'opacity-60'
@@ -237,7 +237,7 @@
 		aria-label={`Preview de ${preview.filename}`}
 		tabindex="-1"
 		onkeydown={onPreviewKeydown}
-		class="fixed inset-0 z-[1001] m-auto flex h-fit max-h-[88vh] w-[min(92vw,52rem)] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-2xl"
+		class="fixed inset-0 z-[1001] m-auto flex h-fit max-h-[88vh] w-[min(92vw,52rem)] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
 	>
 		<header class="flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-2.5">
 			<h6 class="m-0 truncate text-sm font-semibold text-text-primary">{preview.filename}</h6>
@@ -286,7 +286,7 @@
 				target="_blank"
 				rel="noopener"
 				download={preview.filename}
-				class="rounded-md border border-primary-500 bg-primary-100 px-3 py-1.5 text-xs font-semibold text-primary-700 no-underline transition-colors duration-fast hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="rounded-md bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white no-underline shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				Baixar
 			</a>

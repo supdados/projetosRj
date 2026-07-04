@@ -209,14 +209,14 @@
 {#if open}
 	<!-- Fundo: clicar fora fecha. Fade ~280ms ease-out (paridade .modal). -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
 		role="presentation"
 		transition:fade={{ duration: 280, easing: cubicOut }}
 		onclick={onClose}
 		onkeydown={onKeydown}
 	>
 		<!--
-			Diálogo: para o clique de borbulhar para o fundo. Raio 16px (rounded-2xl)
+			Diálogo: para o clique de borbulhar para o fundo. Raio 16px (rounded-xl)
 			e entrada translateY+escala em ~320ms cubic-bezier(0.22,1,0.36,1) (cubicOut)
 			como o .modal-content do detalhe.
 		-->
@@ -224,7 +224,7 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="import-model-title"
-			class="flex w-full max-w-lg flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-5 shadow-lg"
+			class="flex w-full max-w-lg flex-col gap-4 rounded-xl border border-border-subtle bg-surface p-5 shadow-lg"
 			transition:fly={{ y: 18, duration: 320, easing: cubicOut }}
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={onKeydown}
@@ -381,7 +381,7 @@
 					type="button"
 					onclick={confirm}
 					disabled={!canConfirm}
-					class="rounded-md border border-primary-500 bg-primary-100 px-4 py-2 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					{submitting ? 'Importando…' : 'Importar'}
 				</button>

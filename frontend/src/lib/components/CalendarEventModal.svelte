@@ -531,7 +531,7 @@
 </script>
 
 {#if open}
-	<!-- Fundo: clicar fora fecha. Overlay rgba(0,0,0,0.3) + fade do original. -->
+	<!-- Fundo: clicar fora fecha. Overlay rgba(0,0,0,0.4) + fade do original. -->
 	<div
 		class="cal-modal-overlay"
 		role="presentation"
@@ -922,7 +922,7 @@
 	.cal-modal-overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.3);
+		background: rgba(0, 0, 0, 0.4);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -932,7 +932,7 @@
 	}
 	.cal-modal {
 		background: var(--color-surface);
-		border-radius: 0.85rem;
+		border-radius: 12px;
 		width: 100%;
 		max-width: 31rem;
 		box-shadow: 0 24px 64px rgba(0, 0, 0, 0.16), 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -990,15 +990,15 @@
 		gap: 0.8rem;
 	}
 	.cal-modal-sync-warn {
-		font-size: 0.84rem;
+		font-size: 0.8125rem;
 		color: var(--ds-color-warning-600);
-		border: 1px solid rgba(202, 138, 4, 0.3);
+		border: 1px solid color-mix(in srgb, var(--ds-color-warning-600) 30%, transparent);
 		background: var(--color-surface-muted);
-		border-radius: 0.4rem;
+		border-radius: 6px;
 		padding: 0.4rem 0.6rem;
 	}
 	.cal-modal-error {
-		font-size: 0.84rem;
+		font-size: 0.8125rem;
 		color: var(--ds-color-danger-600);
 	}
 
@@ -1051,7 +1051,7 @@
 		cursor: pointer;
 	}
 	.cal-allday-label {
-		font-size: 0.82rem;
+		font-size: 0.8125rem;
 		color: var(--color-text-secondary);
 		user-select: none;
 	}
@@ -1079,16 +1079,16 @@
 		gap: 0.45rem;
 	}
 	.cal-datetime-sublabel {
-		font-size: 0.72rem;
+		font-size: 0.75rem;
 		color: var(--color-text-muted);
 	}
 
 	.cal-field-input {
 		width: 100%;
 		border: 1px solid var(--color-border);
-		border-radius: 0.38rem;
+		border-radius: 6px;
 		padding: 0.38rem 0.55rem;
-		font-size: 0.84rem;
+		font-size: 0.8125rem;
 		color: var(--color-text-primary);
 		background: var(--color-surface);
 		outline: none;
@@ -1097,7 +1097,7 @@
 	}
 	.cal-field-input:focus {
 		border-color: var(--ds-color-primary-600);
-		box-shadow: 0 0 0 3px rgba(0, 90, 146, 0.09);
+		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
 	}
 	.cal-field-time {
 		font-variant-numeric: tabular-nums;
@@ -1151,7 +1151,7 @@
 		gap: 0.55rem;
 		padding: 0.5rem 0.6rem;
 		border: 1px solid var(--color-border);
-		border-radius: 0.48rem;
+		border-radius: 8px;
 		cursor: pointer;
 		transition: background 0.12s, border-color 0.12s;
 	}
@@ -1165,8 +1165,8 @@
 	.cal-meet-icon-wrap {
 		width: 1.4rem;
 		height: 1.4rem;
-		border-radius: 0.28rem;
-		background: #00832d;
+		border-radius: 6px;
+		background: var(--ds-color-success-600);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -1179,17 +1179,17 @@
 		gap: 0.05rem;
 	}
 	.cal-meet-label {
-		font-size: 0.84rem;
+		font-size: 0.8125rem;
 		color: var(--color-text-primary);
 	}
 	.cal-meet-sub {
-		font-size: 0.73rem;
+		font-size: 0.75rem;
 		color: var(--color-text-muted);
 	}
 
 	.cal-meet-existing {
 		border: 1px solid var(--color-border);
-		border-radius: 0.48rem;
+		border-radius: 8px;
 		overflow: hidden;
 	}
 	.cal-meet-info-row {
@@ -1224,7 +1224,7 @@
 		justify-content: center;
 		width: 1.55rem;
 		height: 1.55rem;
-		border-radius: 0.3rem;
+		border-radius: 6px;
 		border: 1px solid var(--color-border);
 		background: var(--color-surface);
 		color: var(--color-text-muted);
@@ -1241,7 +1241,7 @@
 	}
 	.cal-meet-url {
 		display: block;
-		font-size: 0.72rem;
+		font-size: 0.75rem;
 		color: var(--color-text-muted);
 		white-space: nowrap;
 		overflow: hidden;
@@ -1268,7 +1268,7 @@
 		display: flex;
 	}
 	.cal-meet-regen-msg span {
-		font-size: 0.78rem;
+		font-size: 0.75rem;
 		color: var(--color-text-secondary);
 	}
 	.cal-meet-action-btn {
@@ -1276,9 +1276,9 @@
 		align-items: center;
 		gap: 0.25rem;
 		padding: 0.28rem 0.6rem;
-		font-size: 0.78rem;
+		font-size: 0.75rem;
 		font-weight: 500;
-		border-radius: 0.35rem;
+		border-radius: 6px;
 		border: 1px solid var(--color-border);
 		background: var(--color-surface);
 		color: var(--color-text-secondary);
@@ -1307,8 +1307,8 @@
 		background: var(--color-text-primary);
 		color: var(--color-surface);
 		padding: 0.45rem 1rem;
-		border-radius: 0.45rem;
-		font-size: 0.82rem;
+		border-radius: 8px;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		pointer-events: none;
 		z-index: 10;
@@ -1325,9 +1325,9 @@
 	.cal-field-textarea {
 		width: 100%;
 		border: 1px solid var(--color-border);
-		border-radius: 0.38rem;
+		border-radius: 6px;
 		padding: 0.4rem 0.55rem;
-		font-size: 0.84rem;
+		font-size: 0.8125rem;
 		color: var(--color-text-primary);
 		background: var(--color-surface);
 		resize: vertical;
@@ -1338,7 +1338,7 @@
 	}
 	.cal-field-textarea:focus {
 		border-color: var(--ds-color-primary-600);
-		box-shadow: 0 0 0 3px rgba(0, 90, 146, 0.09);
+		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
 	}
 
 	.cal-modal-footer {
@@ -1360,21 +1360,21 @@
 		padding: 0.38rem 0.65rem;
 		background: none;
 		border: none;
-		border-radius: 0.38rem;
-		font-size: 0.82rem;
+		border-radius: 6px;
+		font-size: 0.8125rem;
 		color: var(--ds-color-danger-600);
 		cursor: pointer;
 		transition: background 0.12s;
 	}
 	.cal-btn-delete:hover {
-		background: rgba(220, 38, 38, 0.07);
+		background: color-mix(in srgb, var(--ds-color-danger-600) 7%, transparent);
 	}
 	.cal-btn-cancel {
 		padding: 0.4rem 0.85rem;
 		background: none;
 		border: 1px solid var(--color-border);
-		border-radius: 0.38rem;
-		font-size: 0.84rem;
+		border-radius: 6px;
+		font-size: 0.8125rem;
 		color: var(--color-text-secondary);
 		cursor: pointer;
 		transition: background 0.12s;
@@ -1387,8 +1387,8 @@
 		background: var(--ds-color-primary-600);
 		color: #fff;
 		border: none;
-		border-radius: 0.38rem;
-		font-size: 0.84rem;
+		border-radius: 6px;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		cursor: pointer;
 		transition: background 0.12s;
@@ -1419,7 +1419,7 @@
 		z-index: 1110;
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
-		border-radius: 0.65rem;
+		border-radius: 12px;
 		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
 		overflow: hidden;
 	}
@@ -1440,7 +1440,7 @@
 		padding: 0.55rem 0.55rem 0.35rem;
 	}
 	.cdp-month-label {
-		font-size: 0.84rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--color-text-primary);
 		user-select: none;
@@ -1469,7 +1469,7 @@
 	}
 	.cdp-weekdays span {
 		text-align: center;
-		font-size: 0.66rem;
+		font-size: 0.6875rem;
 		color: var(--color-text-muted);
 		font-weight: 500;
 		padding: 0.18rem 0;
@@ -1489,7 +1489,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 0.78rem;
+		font-size: 0.75rem;
 		border-radius: 50%;
 		cursor: pointer;
 		border: none;
@@ -1532,19 +1532,19 @@
 		justify-content: center;
 	}
 	.cdp-today-btn {
-		font-size: 0.76rem;
+		font-size: 0.75rem;
 		font-weight: 500;
 		color: var(--ds-color-primary-600);
 		background: none;
 		border: none;
 		cursor: pointer;
 		padding: 0.22rem 0.65rem;
-		border-radius: 0.3rem;
+		border-radius: 6px;
 		transition: background 0.12s;
 		font-family: inherit;
 	}
 	.cdp-today-btn:hover {
-		background: rgba(0, 90, 146, 0.07);
+		background: color-mix(in srgb, var(--ds-color-primary-600) 7%, transparent);
 	}
 
 	.cdp-timelist {
@@ -1567,10 +1567,10 @@
 		display: block;
 		width: 100%;
 		padding: 0.34rem 0.5rem;
-		font-size: 0.82rem;
+		font-size: 0.8125rem;
 		font-variant-numeric: tabular-nums;
 		color: var(--color-text-primary);
-		border-radius: 0.3rem;
+		border-radius: 6px;
 		cursor: pointer;
 		border: none;
 		background: none;
@@ -1599,7 +1599,7 @@
 	}
 	.cdp-trigger.cdp-active {
 		border-color: var(--ds-color-primary-600);
-		box-shadow: 0 0 0 3px rgba(0, 90, 146, 0.09);
+		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
 	}
 
 	@media (max-width: 600px) {

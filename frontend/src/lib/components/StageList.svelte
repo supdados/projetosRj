@@ -18,6 +18,7 @@
 	 */
 	import StageRow from './StageRow.svelte';
 	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
+	import '$lib/styles/stage-chips.css';
 
 	interface FieldState {
 		pending?: boolean;
@@ -671,7 +672,7 @@
 	.composer-input {
 		width: 100%;
 		padding: 0.38rem 0.58rem;
-		border: 1px solid #c4d5e7;
+		border: 1px solid var(--stage-input-border);
 		border-radius: 7px;
 		font-size: 0.875rem;
 		color: #3e556f;
@@ -688,8 +689,8 @@
 	.composer-textarea:focus,
 	.composer-input:focus {
 		outline: none;
-		border-color: #7ea6ce;
-		box-shadow: 0 0 0 3px rgba(30, 84, 143, 0.12);
+		border-color: var(--ds-color-primary-500);
+		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
 	}
 	.etapa-task-pill-placeholder {
 		color: #9fb1c6;
@@ -739,25 +740,25 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		border: 1px solid #cbdcf0;
+		border: 1px solid var(--stage-chip-border);
 		background: #fff;
 		cursor: pointer;
 		transition: all 0.16s ease;
 	}
 	.composer-confirm {
-		color: #1d714e;
-		border-color: #b9dfca;
-		background: #eaf7f1;
+		color: var(--stage-chip-done-text);
+		border-color: var(--stage-chip-done-border);
+		background: var(--stage-chip-done-bg);
 	}
 	.composer-confirm:hover:not(:disabled) {
-		background: #e3f4eb;
+		background: var(--stage-chip-done-bg-hover);
 	}
 	.composer-cancel {
-		color: #972d2d;
+		color: var(--stage-danger-text);
 	}
 	.composer-cancel:hover:not(:disabled) {
-		background: rgba(169, 59, 59, 0.14);
-		border-color: rgba(184, 63, 63, 0.5);
+		background: var(--stage-danger-bg-hover);
+		border-color: var(--stage-danger-border-hover);
 	}
 	.composer-icon-btn:disabled {
 		opacity: 0.5;
@@ -780,34 +781,6 @@
 	}
 	.no-etapas-cell p {
 		margin: 0;
-	}
-
-	.etapa-status-toggle {
-		height: 30px;
-		min-width: 124px;
-		border-radius: 7px;
-		border: 1px solid #cbdcf0;
-		padding: 0 0.58rem;
-		background: #fff;
-		color: #2b4d6f;
-		font-weight: 600;
-		font-size: 0.78rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.3rem;
-		cursor: pointer;
-		transition: all 0.16s ease;
-	}
-	.etapa-status-toggle-done {
-		background: #eaf7f1;
-		border-color: #b9dfca;
-		color: #1d714e;
-	}
-	.etapa-status-toggle-started {
-		background: #edf5ff;
-		border-color: #c5d8ee;
-		color: #255585;
 	}
 
 	.sr-only {

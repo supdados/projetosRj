@@ -371,9 +371,8 @@
 
 <style>
 	/* === Busca global — porte 1:1 de static/css/legacy/00-foundation.css:905+ ===
-	   Cores claras fixas no campo/dropdown (igual ao v4.5: o widget vive na barra
-	   azul, com painel branco proprio). Tokens semanticos nao se aplicam aqui
-	   porque o original tambem usava cores fixas para esse contraste especifico. */
+	   O CAMPO mantem cores claras fixas (vive na barra azul do topnav, contraste
+	   deliberado); o DROPDOWN usa os tokens semanticos (adapta ao dark). */
 	.app-global-search {
 		position: relative;
 		width: clamp(220px, 24vw, 340px);
@@ -409,7 +408,7 @@
 
 	.app-global-search-icon {
 		color: #1769a8;
-		font-size: 0.8rem;
+		font-size: 0.8125rem;
 	}
 
 	.app-global-search-input {
@@ -419,7 +418,7 @@
 		outline: none;
 		background: transparent;
 		color: #14304d;
-		font-size: 0.85rem;
+		font-size: 0.875rem;
 		line-height: 1.3;
 	}
 
@@ -441,17 +440,17 @@
 		min-width: 360px;
 		max-height: min(70vh, 560px);
 		overflow-y: auto;
-		border: 1px solid #d9e5f1;
+		border: 1px solid var(--color-border);
 		border-radius: 12px;
-		background: #ffffff;
+		background: var(--color-surface);
 		box-shadow: 0 16px 36px rgba(20, 32, 52, 0.18);
 		padding: 0.4rem;
 	}
 
 	.app-global-search-state {
 		padding: 0.62rem 0.72rem;
-		color: #6c7e94;
-		font-size: 0.85rem;
+		color: var(--color-text-muted);
+		font-size: 0.875rem;
 	}
 
 	.app-global-search-results {
@@ -461,10 +460,10 @@
 	}
 
 	.app-global-search-group {
-		border: 1px solid #e6edf5;
+		border: 1px solid var(--color-border);
 		border-radius: 10px;
 		overflow: hidden;
-		background: #fbfdff;
+		background: var(--color-surface-muted);
 	}
 
 	.app-global-search-group-title {
@@ -472,25 +471,25 @@
 		align-items: center;
 		gap: 0.42rem;
 		padding: 0.42rem 0.6rem;
-		border-bottom: 1px solid #edf2f8;
-		font-size: 0.7rem;
+		border-bottom: 1px solid var(--color-border);
+		font-size: 0.6875rem;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		font-weight: 700;
-		color: #64768d;
+		color: var(--color-text-muted);
 	}
 
 	.app-global-search-group-title i {
-		font-size: 0.7rem;
+		font-size: 0.6875rem;
 	}
 
 	.app-global-search-group-count {
 		margin-left: auto;
 		border-radius: 999px;
 		padding: 0.1rem 0.46rem;
-		background: #e9f2fc;
-		color: #38618a;
-		font-size: 0.65rem;
+		background: var(--ds-color-primary-100);
+		color: var(--ds-color-primary-700);
+		font-size: 0.6875rem;
 	}
 
 	.app-global-search-item {
@@ -499,9 +498,9 @@
 		justify-content: space-between;
 		gap: 0.65rem;
 		text-decoration: none;
-		color: #203249;
+		color: var(--color-text-primary);
 		padding: 0.56rem 0.66rem;
-		border-top: 1px solid #f2f5fa;
+		border-top: 1px solid var(--color-border);
 		transition:
 			background 0.16s ease,
 			border-color 0.16s ease;
@@ -513,8 +512,8 @@
 
 	.app-global-search-item:hover,
 	.app-global-search-item.active {
-		background: #eef6ff;
-		border-color: #dbe9f6;
+		background: var(--ds-color-primary-light-bg);
+		border-color: var(--color-border);
 	}
 
 	.app-global-search-item-main {
@@ -560,9 +559,9 @@
 	}
 
 	.app-global-search-item-title {
-		font-size: 0.8rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
-		color: #1e3047;
+		color: var(--color-text-primary);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -570,8 +569,8 @@
 
 	.app-global-search-item-subtitle,
 	.app-global-search-item-meta {
-		font-size: 0.7rem;
-		color: #697c93;
+		font-size: 0.6875rem;
+		color: var(--color-text-muted);
 		line-height: 1.3;
 		white-space: nowrap;
 		overflow: hidden;
@@ -592,15 +591,15 @@
 		width: fit-content;
 		border-radius: 999px;
 		padding: 0.08rem 0.42rem;
-		font-size: 0.65rem;
+		font-size: 0.6875rem;
 		font-weight: 700;
-		background: #eef2f7;
-		color: #4d6280;
+		background: var(--color-surface-muted);
+		color: var(--color-text-secondary);
 	}
 
 	.app-global-search-match-text {
-		font-size: 0.7rem;
-		color: #6a7a91;
+		font-size: 0.6875rem;
+		color: var(--color-text-muted);
 		line-height: 1.3;
 		white-space: nowrap;
 		overflow: hidden;
@@ -608,15 +607,15 @@
 	}
 
 	.app-global-search-item-arrow {
-		color: #97a6ba;
-		font-size: 0.7rem;
+		color: var(--color-text-muted);
+		font-size: 0.6875rem;
 		margin-top: 0.16rem;
 	}
 
 	.app-global-search-footer {
 		margin-top: 0.24rem;
 		padding-top: 0.2rem;
-		border-top: 1px solid #edf2f8;
+		border-top: 1px solid var(--color-border);
 	}
 
 	.app-global-search-footer-link {
@@ -625,11 +624,11 @@
 		justify-content: space-between;
 		gap: 0.45rem;
 		text-decoration: none;
-		border: 1px solid #d9e5f1;
+		border: 1px solid var(--color-border);
 		border-radius: 9px;
-		background: #f7fbff;
-		color: #255a87;
-		font-size: 0.8rem;
+		background: var(--color-surface-muted);
+		color: var(--ds-color-primary-700);
+		font-size: 0.8125rem;
 		font-weight: 600;
 		line-height: 1.2;
 		padding: 0.48rem 0.62rem;
@@ -641,9 +640,9 @@
 
 	.app-global-search-footer-link:hover,
 	.app-global-search-footer-link:focus {
-		background: #edf6ff;
-		border-color: #cadef1;
-		color: #1f4f79;
+		background: var(--ds-color-primary-100);
+		border-color: var(--color-border-strong);
+		color: var(--ds-color-primary-700);
 	}
 
 	@media (max-width: 767px) {

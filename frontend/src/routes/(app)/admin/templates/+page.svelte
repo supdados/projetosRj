@@ -39,6 +39,7 @@
 	} from '$lib/types/adminTemplates';
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
@@ -598,7 +599,7 @@
 					bind:value={search}
 					oninput={onSearchInput}
 					placeholder="Buscar modelo por nome ou descrição…"
-					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
 				/>
 			</div>
 
@@ -677,7 +678,7 @@
 							bind:value={formName}
 							required
 							placeholder="Ex.: Aquisição simples"
-							class="w-full rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-base font-semibold text-text-primary transition-all duration-fast placeholder:font-normal placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-primary-500 focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+							class="w-full rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-base font-semibold text-text-primary transition-all duration-fast placeholder:font-normal placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-primary-500 focus:bg-surface focus:outline-none"
 						/>
 
 						<label
@@ -691,7 +692,7 @@
 							bind:value={formDescription}
 							rows="2"
 							placeholder="Para que serve este modelo?"
-							class="w-full resize-y rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-text-primary transition-all duration-fast placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-primary-500 focus:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+							class="w-full resize-y rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-text-primary transition-all duration-fast placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-primary-500 focus:bg-surface focus:outline-none"
 						></textarea>
 					</div>
 
@@ -776,7 +777,7 @@
 												aria-label={`Nome da etapa ${index + 1}`}
 												onkeydown={(e) => onStageNameKeydown(e, index)}
 												onfocusout={() => onStageFocusOut(index)}
-												class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-all duration-fast placeholder:text-text-muted focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+												class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-all duration-fast placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
 											/>
 											<div
 												class="flex h-[34px] items-center justify-center rounded-md border border-border-subtle bg-surface-muted"
@@ -912,7 +913,7 @@
 
 			{#if data.templates.length === 0}
 				<div
-					class="flex flex-col items-center gap-2 rounded-xl border border-border-subtle bg-surface px-6 py-12 text-center shadow-md"
+					class="flex flex-col items-center gap-2 rounded-xl border border-border-subtle bg-surface px-6 py-12 text-center shadow-sm"
 				>
 					<span class="mb-1 text-4xl text-text-muted/60" aria-hidden="true">
 						{#if search.trim()}
@@ -953,7 +954,7 @@
 				</div>
 			{:else}
 				<div
-					class="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-md"
+					class="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
 				>
 					<div class="overflow-x-auto" aria-busy={loadState !== 'ready'}>
 						<table class="w-full border-collapse text-sm">
@@ -1178,15 +1179,7 @@
 
 <!-- ================= MODAL DE CONFIRMAÇÃO DE EXCLUSÃO ================= -->
 {#if confirmDeleteRow}
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="tpl-delete-title"
-	>
-		<div
-			class="w-full max-w-md animate-modal-slide-in rounded-xl border border-border-subtle bg-surface p-6 shadow-lg"
-		>
+	<Modal labelId="tpl-delete-title">
 			<div class="flex items-center gap-3">
 				<span
 					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger/10 text-danger"
@@ -1204,7 +1197,7 @@
 			</p>
 			<label
 				for="tplDeleteConfirm"
-				class="mt-4 block text-xs font-semibold uppercase tracking-wide text-text-muted"
+				class="mt-4 block text-2xs font-bold uppercase tracking-caps text-text-muted"
 			>
 				Digite <strong>{DELETE_PHRASE}</strong> para confirmar
 			</label>
@@ -1213,7 +1206,7 @@
 				type="text"
 				bind:value={confirmPhrase}
 				autocomplete="off"
-				class="mt-1 w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="mt-1 w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:border-primary-500 focus:outline-none"
 			/>
 			{#if deleteError}
 				<p role="alert" class="mt-2 text-sm text-danger">{deleteError}</p>
@@ -1236,6 +1229,5 @@
 					{busyRowId === confirmDeleteRow.id ? 'Apagando…' : 'Apagar modelo'}
 				</button>
 			</div>
-		</div>
-	</div>
+	</Modal>
 {/if}

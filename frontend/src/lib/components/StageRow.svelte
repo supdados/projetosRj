@@ -20,6 +20,7 @@
 	import { tick } from 'svelte';
 	import InlineEditField from './InlineEditField.svelte';
 	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
+	import '$lib/styles/stage-chips.css';
 
 	interface FieldState {
 		pending?: boolean;
@@ -545,14 +546,14 @@
 	.etapa-comment-editor {
 		color: #3e556f;
 		background: #fff;
-		border-color: #c4d5e7;
+		border-color: var(--stage-input-border);
 		resize: none;
 		overflow: hidden;
 	}
 	.etapa-comment-editor:focus {
 		outline: none;
-		border-color: #7ea6ce;
-		box-shadow: 0 0 0 3px rgba(30, 84, 143, 0.12);
+		border-color: var(--ds-color-primary-500);
+		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
 	}
 
 	.cell-date {
@@ -664,60 +665,6 @@
 		width: 150px;
 		text-align: center;
 	}
-	/* Botão de status (ciclo) — paridade com etapa-status-tasks.css */
-	.etapa-status-toggle {
-		height: 30px;
-		min-width: 124px;
-		border-radius: 7px;
-		border: 1px solid #cbdcf0;
-		padding: 0 0.58rem;
-		background: #fff;
-		color: #2b4d6f;
-		font-weight: 600;
-		font-size: 0.78rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.3rem;
-		cursor: pointer;
-		transition: all 0.16s ease;
-	}
-	.etapa-status-toggle i {
-		font-size: 0.875rem;
-	}
-	.etapa-status-toggle:hover:not(:disabled),
-	.etapa-status-toggle:focus-visible:not(:disabled) {
-		background: #f1f7ff;
-		border-color: #b7cee5;
-		color: #20486f;
-		outline: none;
-	}
-	.etapa-status-toggle:disabled {
-		opacity: 0.45;
-		cursor: not-allowed;
-	}
-	.etapa-status-toggle-done {
-		background: #eaf7f1;
-		border-color: #b9dfca;
-		color: #1d714e;
-	}
-	.etapa-status-toggle-done:hover:not(:disabled),
-	.etapa-status-toggle-done:focus-visible:not(:disabled) {
-		background: #e3f4eb;
-		border-color: #a8d5bd;
-		color: #175f41;
-	}
-	.etapa-status-toggle-started {
-		background: #edf5ff;
-		border-color: #c5d8ee;
-		color: #255585;
-	}
-	.etapa-status-toggle-started:hover:not(:disabled),
-	.etapa-status-toggle-started:focus-visible:not(:disabled) {
-		background: #e7f1fd;
-		border-color: #b8d0ea;
-		color: #214f7d;
-	}
 
 	.cell-actions {
 		width: 72px;
@@ -742,9 +689,9 @@
 			background-color 0.16s ease;
 	}
 	.btn-floating:hover:not(:disabled) {
-		border-color: rgba(184, 63, 63, 0.5);
-		color: #972d2d;
-		background: rgba(169, 59, 59, 0.14);
+		border-color: var(--stage-danger-border-hover);
+		color: var(--stage-danger-text);
+		background: var(--stage-danger-bg-hover);
 	}
 	.btn-floating:disabled {
 		opacity: 0.5;
@@ -787,11 +734,6 @@
 
 	/* Dark mode (data-theme=dark) */
 	:global(html[data-theme='dark']) .etapa-descricao {
-		color: #d2dfec;
-	}
-	:global(html[data-theme='dark']) .etapa-status-toggle {
-		background: #2b3a4f;
-		border-color: var(--app-color-border);
 		color: #d2dfec;
 	}
 	:global(html[data-theme='dark']) .etapa-task-pill {

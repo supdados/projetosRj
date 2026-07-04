@@ -170,7 +170,7 @@
 				<button
 					type="submit"
 					disabled={submitting}
-					class="rounded-md border border-primary-500 bg-primary-100 px-5 py-2 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-100/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+					class="inline-flex h-9 items-center rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
 				>
 					{submitting ? 'Criando…' : 'Criar órgão'}
 				</button>
