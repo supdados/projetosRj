@@ -123,6 +123,7 @@ def test_api_tarefas_returns_ok_envelope_with_expected_shape(client_user):
         "tipo",
         "status",
         "responsavel",
+        "search",
         "selected_orgao",
     }
     # Opções de órgão com value = ID (o sanitizador de ?orgao= espera id; a SPA

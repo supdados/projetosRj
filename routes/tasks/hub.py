@@ -345,6 +345,7 @@ def build_task_hub_context(
     tipo_filter="",
     status_filter="",
     responsavel_filter="",
+    search_filter="",
     selected_orgao_id=None,
     include_archived=False,
     page=1,
@@ -367,6 +368,8 @@ def build_task_hub_context(
         tipo_filter: Filtro de tipo de pedido (ou "").
         status_filter: Filtro de status da tarefa (ou "").
         responsavel_filter: Filtro de responsável (substring, normalizado).
+        search_filter: Busca livre por substring na descrição da tarefa ou no
+            título do projeto (ou "").
         selected_orgao_id: ID de órgão já validado para o usuário (ou ``None``).
         include_archived: Quando ``True``, lista tarefas arquivadas.
         page: Página (1-based) quando ``per_page`` é informado.
@@ -389,6 +392,7 @@ def build_task_hub_context(
         "tipo_filter": tipo_filter,
         "status_filter": status_filter,
         "responsavel_filter": responsavel_filter,
+        "search_filter": search_filter,
         "orgao_filter_id": selected_orgao_id,
     }
     if per_page is None:
@@ -413,6 +417,7 @@ def build_task_hub_context(
         "selected_tipo": tipo_filter,
         "selected_status": status_filter,
         "selected_responsavel": responsavel_filter,
+        "selected_search": search_filter,
         "include_archived": include_archived,
         "total_items": total_items,
         "pagination": {

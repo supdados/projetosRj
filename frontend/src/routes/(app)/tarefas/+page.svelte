@@ -17,7 +17,7 @@
 	 * finalizadas) traduz para o `?modo=` do endpoint. Estados de loading/erro/
 	 * vazio são anunciados via aria-live. Colapso de projeto/etapa em localStorage.
 	 */
-	import { onMount, setContext, tick } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import { base } from '$app/paths';
 	import { slide, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
@@ -79,6 +79,16 @@
 	let modo = $state<TaskHubModo>('ativas');
 	let project = $state<string>('');
 	let orgao = $state<string>('');
+
+	// Busca livre (descrição da tarefa ou título do projeto), com debounce —
+	// mesmo padrão/estilo das telas de Projetos e Pendentes (350ms).
+	let search = $state<string>('');
+	const SEARCH_DEBOUNCE_MS = 350;
+	let searchDebounce: ReturnType<typeof setTimeout> | null = null;
+	function onSearchInput(): void {
+		if (searchDebounce) clearTimeout(searchDebounce);
+		searchDebounce = setTimeout(() => reloadActiveView(), SEARCH_DEBOUNCE_MS);
+	}
 
 	// Página da lista (paginada por GRUPO de projeto no backend). Filtros e
 	// troca de modo voltam para a página 1.
@@ -274,6 +284,7 @@
 			modo,
 			project,
 			orgao,
+			search: search.trim() || undefined,
 			tipo: tipo || undefined,
 			prioridade: prioridade || undefined,
 			status: statusFilter || undefined,
@@ -521,73 +532,15 @@
 	}
 
 	function clearFilters(): void {
+		if (searchDebounce) clearTimeout(searchDebounce);
+		search = '';
 		project = '';
 		orgao = '';
 		tipo = '';
 		prioridade = '';
 		statusFilter = '';
 		responsavel = '';
-		closeProjectFilter();
 		reloadActiveView();
-	}
-
-	// ── Filtro de PROJETO pesquisável (produção tem centenas de projetos) ──────
-	// Combobox boxed: fechado mostra o rótulo do projeto; aberto vira input de
-	// busca + listbox filtrada (paridade com o project-search do v4.5).
-	let projectQuery = $state('');
-	let projectOpen = $state(false);
-	let projectActiveIndex = $state(0);
-	let projectInputEl = $state<HTMLInputElement | null>(null);
-
-	/** Rótulo exibido no estado fechado (selecionado ou "Todos os projetos"). */
-	const selectedProjectLabel = $derived.by(() => {
-		if (!project) return 'Todos os projetos';
-		return data?.project_options.find((o) => o.value === project)?.label ?? project;
-	});
-
-	/** Opções filtradas pelo texto digitado (inclui "Todos os projetos"). */
-	const projectFilterList = $derived.by(() => {
-		const all = [
-			{ value: '', label: 'Todos os projetos' },
-			...(data?.project_options ?? []).map((o) => ({ value: o.value, label: o.label }))
-		];
-		const q = projectQuery.trim().toLowerCase();
-		return q ? all.filter((o) => o.label.toLowerCase().includes(q)) : all;
-	});
-
-	async function openProjectFilter(): Promise<void> {
-		if (!data || data.project_options.length === 0) return;
-		projectQuery = '';
-		projectActiveIndex = 0;
-		projectOpen = true;
-		await tick();
-		projectInputEl?.focus();
-	}
-	function closeProjectFilter(): void {
-		projectOpen = false;
-		projectQuery = '';
-	}
-	function pickProject(value: string): void {
-		closeProjectFilter();
-		if (value === project) return;
-		project = value;
-		reloadActiveView();
-	}
-	function onProjectFilterKeydown(event: KeyboardEvent): void {
-		if (event.key === 'ArrowDown') {
-			event.preventDefault();
-			projectActiveIndex = Math.min(projectFilterList.length - 1, projectActiveIndex + 1);
-		} else if (event.key === 'ArrowUp') {
-			event.preventDefault();
-			projectActiveIndex = Math.max(0, projectActiveIndex - 1);
-		} else if (event.key === 'Enter') {
-			event.preventDefault();
-			const opt = projectFilterList[projectActiveIndex];
-			if (opt) pickProject(opt.value);
-		} else if (event.key === 'Escape') {
-			event.preventDefault();
-			closeProjectFilter();
-		}
 	}
 
 	onMount(() => {
@@ -609,6 +562,7 @@
 		if (Number.isInteger(focusTaskId) && focusTaskId > 0) openTask(focusTaskId, 'list');
 		void load();
 		return () => {
+			if (searchDebounce) clearTimeout(searchDebounce);
 			inFlight?.abort();
 			boardInFlight?.abort();
 		};
@@ -815,69 +769,23 @@
 		aria-label="Filtros de tarefas"
 		onsubmit={(e) => e.preventDefault()}
 	>
-		<div class="relative min-w-0 flex-[1.9]">
-			{#if projectOpen}
-				<input
-					bind:this={projectInputEl}
-					id="filter_project"
-					type="text"
-					bind:value={projectQuery}
-					oninput={() => (projectActiveIndex = 0)}
-					onkeydown={onProjectFilterKeydown}
-					onblur={() => setTimeout(closeProjectFilter, 120)}
-					role="combobox"
-					aria-expanded="true"
-					aria-controls="filter_project_listbox"
-					aria-autocomplete="list"
-					aria-label="Filtrar por projeto"
-					placeholder="Buscar projeto…"
-					autocomplete="off"
-					class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
-				/>
-				<ul
-					id="filter_project_listbox"
-					role="listbox"
-					class="thin-scroll absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-md"
-				>
-					{#each projectFilterList as opt, i (opt.value)}
-						<li class="contents">
-							<button
-								type="button"
-								role="option"
-								aria-selected={opt.value === project}
-								onmousedown={(e) => {
-									e.preventDefault();
-									pickProject(opt.value);
-								}}
-								class="block w-full truncate px-3 py-1.5 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted {i ===
-								projectActiveIndex
-									? 'bg-surface-muted'
-									: ''}"
-							>
-								{opt.label}
-							</button>
-						</li>
-					{/each}
-					{#if projectFilterList.length === 0}
-						<li class="px-3 py-1.5 text-sm text-text-muted">Nenhum projeto encontrado</li>
-					{/if}
-				</ul>
-			{:else}
-				<button
-					id="filter_project"
-					type="button"
-					onclick={openProjectFilter}
-					disabled={!data || data.project_options.length === 0}
-					aria-haspopup="listbox"
-					aria-label="Filtrar por projeto"
-					class="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-				>
-					<span class="min-w-0 flex-1 truncate text-left {project === '' ? 'text-text-muted' : ''}"
-						>{selectedProjectLabel}</span
-					>
-					<i class="fas fa-chevron-down shrink-0 text-xs text-text-muted" aria-hidden="true"></i>
-				</button>
-			{/if}
+		<!-- Largura FIXA e idêntica nas 3 telas (Projetos/Pendentes/Tarefas). -->
+		<div class="relative w-full min-w-[14rem] max-w-[26rem]">
+			<i
+				class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
+				aria-hidden="true"
+			></i>
+			<input
+				id="tarefasSearch"
+				name="search"
+				type="search"
+				autocomplete="off"
+				bind:value={search}
+				oninput={onSearchInput}
+				aria-label="Busca livre"
+				placeholder="Digite tarefa ou projeto…"
+				class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			/>
 		</div>
 
 		<select
@@ -886,7 +794,7 @@
 			onchange={reloadActiveView}
 			disabled={orgaoOptions.length === 0}
 			aria-label="Filtrar por órgão"
-			class="h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 		>
 			<option value="">Todos os órgãos</option>
 			{#each orgaoOptions as orgaoOption (orgaoOption.value)}
@@ -899,7 +807,7 @@
 			bind:value={prioridade}
 			onchange={reloadActiveView}
 			aria-label="Filtrar por prioridade"
-			class="h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 		>
 			<option value="">Todas as prioridades</option>
 			{#each ADD_PRIORIDADE_OPTIONS.slice(1) as option (option.value)}
@@ -912,7 +820,7 @@
 			bind:value={tipo}
 			onchange={reloadActiveView}
 			aria-label="Filtrar por tipo"
-			class="h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 		>
 			<option value="">Todos os tipos</option>
 			{#each FILTER_TIPO_OPTIONS as option (option.value)}
@@ -925,7 +833,7 @@
 			bind:value={statusFilter}
 			onchange={reloadActiveView}
 			aria-label="Filtrar por status"
-			class="h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 		>
 			<option value="">Todos os status</option>
 			{#each ADD_STATUS_OPTIONS as option (option.value)}
@@ -1086,13 +994,13 @@
 																autofocus
 																placeholder="Descreva a tarefa…"
 																aria-label="Descrição da tarefa"
-																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-[5px] border border-border-subtle bg-surface px-2 py-1.5 text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60 2xl:text-sm"
+																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60 2xl:text-sm"
 															></textarea>
 															<select
 																bind:value={addDraft.prioridade}
 																disabled={addDraft.saving}
 																aria-label="Prioridade"
-																class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+																class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 															>
 																{#each ADD_PRIORIDADE_OPTIONS as opt (opt.value)}
 																	<option value={opt.value}>{opt.label}</option>
@@ -1102,7 +1010,7 @@
 																bind:value={addDraft.tipo}
 																disabled={addDraft.saving}
 																aria-label="Tipo de pedido"
-																class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+																class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 															>
 																{#each ADD_TIPO_OPTIONS as opt (opt.value)}
 																	<option value={opt.value}>{opt.label}</option>
@@ -1112,7 +1020,7 @@
 																bind:value={addDraft.status}
 																disabled={addDraft.saving}
 																aria-label="Status"
-																class="h-[34px] w-full rounded-[5px] border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+																class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
 															>
 																{#each ADD_STATUS_OPTIONS as opt (opt.value)}
 																	<option value={opt.value}>{opt.label}</option>
@@ -1129,7 +1037,7 @@
 																	disabled={addDraft.saving}
 																	title="Salvar"
 																	aria-label="Salvar tarefa"
-																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-[5px] border border-primary-500 bg-primary-100 text-primary-700 transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md bg-primary-600 text-white shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 																>
 																	<i class="fas fa-check text-xs" aria-hidden="true"></i>
 																</button>
@@ -1139,7 +1047,7 @@
 																	disabled={addDraft.saving}
 																	title="Cancelar"
 																	aria-label="Cancelar"
-																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-[5px] border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 																>
 																	<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 																</button>
@@ -1153,7 +1061,7 @@
 													<button
 														type="button"
 														onclick={() => openAddForm(group, stage)}
-														class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-primary-100/30 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+														class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-primary-100/30 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 													>
 														<i class="fas fa-plus text-2xs text-primary-500" aria-hidden="true"></i>
 														Adicionar nova tarefa
@@ -1193,7 +1101,7 @@
 		role="alertdialog"
 		aria-modal="true"
 		aria-labelledby="archive-confirm-title"
-		class="fixed left-1/2 top-1/2 z-modal flex w-full max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-lg border border-border-subtle bg-surface p-5 shadow-lg"
+		class="fixed left-1/2 top-1/2 z-modal flex w-full max-w-md -translate-x-1/2 -translate-y-1/2 animate-modal-slide-in flex-col gap-4 rounded-xl border border-border-subtle bg-surface p-6 shadow-lg"
 	>
 		<h2 id="archive-confirm-title" class="font-heading text-lg font-bold text-text-primary">
 			Arquivar finalizados
@@ -1212,7 +1120,7 @@
 				type="button"
 				onclick={() => void confirmArchive()}
 				disabled={archiving}
-				class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 			>
 				{archiving ? 'Arquivando…' : 'Arquivar'}
 			</button>

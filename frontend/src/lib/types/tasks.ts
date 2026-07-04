@@ -78,6 +78,8 @@ export interface TaskHubFilters {
 	tipo: string;
 	status: string;
 	responsavel: string;
+	/** Busca livre aplicada (descrição da tarefa ou título do projeto). */
+	search: string;
 	/** Órgão efetivamente aplicado pelo `orgao_scope` (id sanitizado). */
 	selected_orgao: string | number | null;
 }
@@ -114,6 +116,8 @@ export interface TaskHubQuery {
 	tipo?: string;
 	status?: string;
 	responsavel?: string;
+	/** Busca livre por descrição da tarefa ou título do projeto. */
+	search?: string;
 	orgao?: string | number | null;
 	modo?: TaskHubModo;
 	/** Página (1-based) da lista paginada por grupo de projeto. */

@@ -101,6 +101,7 @@ def _serialize_task_hub_context(context: dict[str, Any]) -> dict[str, Any]:
             "tipo": context["selected_tipo"],
             "status": context["selected_status"],
             "responsavel": context["selected_responsavel"],
+            "search": context["selected_search"],
             "selected_orgao": context["selected_orgao"],
         },
         "include_archived": context["include_archived"],
@@ -149,7 +150,8 @@ def api_tarefas() -> Response | tuple[Response, int]:
     é sanitizado para o usuário corrente; um valor inválido (fora do escopo)
     resulta em 422 JSON (``validation``) em vez do redirect 302 do fluxo Jinja.
     Os parâmetros ``?project=``, ``?prioridade=``, ``?tipo=`` e ``?responsavel=``
-    espelham os filtros do hub; ``?modo=`` alterna entre ``ativas`` (default),
+    espelham os filtros do hub; ``?search=`` busca por substring na descrição da
+    tarefa ou no título do projeto; ``?modo=`` alterna entre ``ativas`` (default),
     ``arquivadas`` e ``finalizadas``. ``?page=`` pagina por GRUPO de projeto
     (``HUB_GROUPS_PER_PAGE`` grupos/página; metadados em ``pagination``).
 
@@ -180,6 +182,7 @@ def api_tarefas() -> Response | tuple[Response, int]:
         tipo_filter=filter_values["tipo_filter"],
         status_filter=status_filter,
         responsavel_filter=filter_values["responsavel_filter"],
+        search_filter=filter_values["search_filter"],
         selected_orgao_id=selected_orgao_id,
         include_archived=include_archived,
         page=request.args.get("page", 1, type=int),

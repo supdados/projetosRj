@@ -82,6 +82,7 @@ def _read_task_filter_values(source):
         "tipo_filter": (source.get("tipo") or "").strip(),
         "status_filter": (source.get("status") or "").strip(),
         "responsavel_filter": _normalize_person_name(source.get("responsavel") or ""),
+        "search_filter": (source.get("search") or "").strip(),
     }
 
 
@@ -93,6 +94,7 @@ def _merge_task_filter_values(*values_list):
         "tipo_filter": "",
         "status_filter": "",
         "responsavel_filter": "",
+        "search_filter": "",
     }
 
     for values in values_list:
@@ -234,6 +236,11 @@ def _task_active_target_url(task):
     return url_for("main.list_tasks")
 
 
+def _escape_like_pattern(value: str) -> str:
+    """Escapa curingas de LIKE (\\, % e _) para busca por substring literal."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def _build_visible_tasks_query(
     include_archived=False,
     project_filter="",
@@ -241,6 +248,7 @@ def _build_visible_tasks_query(
     tipo_filter="",
     status_filter="",
     responsavel_filter="",
+    search_filter="",
     include_relations=True,
     orgao_filter_id=None,
 ):
@@ -299,13 +307,17 @@ def _build_visible_tasks_query(
     if status_filter:
         query = query.filter(Task.status == status_filter)
 
-    if responsavel_filter:
-        escaped_responsavel = (
-            responsavel_filter.replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
+    if search_filter:
+        search_pattern = f"%{_escape_like_pattern(search_filter)}%"
+        query = query.filter(
+            or_(
+                Task.descricao.ilike(search_pattern, escape="\\"),
+                Project.titulo.ilike(search_pattern, escape="\\"),
+            )
         )
-        pattern = f"%{escaped_responsavel}%"
+
+    if responsavel_filter:
+        pattern = f"%{_escape_like_pattern(responsavel_filter)}%"
         # Pós-backfill (scripts/migrations/backfill_task_assignees.py) os
         # responsáveis vivem em task_assignee; o texto legado só guarda nomes
         # sem usuário correspondente — o filtro precisa cobrir as duas fontes.

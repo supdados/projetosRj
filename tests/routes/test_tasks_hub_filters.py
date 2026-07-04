@@ -1,4 +1,4 @@
-from models import Task, db
+from models import Project, Task, db
 from time_utils import utc_now
 
 
@@ -51,6 +51,43 @@ def test_tasks_hub_filters_by_priority_type_status_and_responsavel(
     assert "Tarefa filtro alvo" in descriptions
     assert "Tarefa fora do filtro" not in descriptions
     assert "Item Auditoria" not in descriptions
+
+
+def test_tasks_hub_search_matches_descricao_and_project_title(
+    app, client_user, seed_data
+):
+    """`?search=` casa substring na descrição da tarefa OU no título do projeto."""
+    with app.app_context():
+        by_description = Task(
+            descricao="Revisar contrato XYZQ",
+            status="em_andamento",
+            ordem=20,
+            project_id=seed_data["project_id"],
+            created_by_id=seed_data["user_id"],
+        )
+        unrelated = Task(
+            descricao="Outra tarefa qualquer",
+            status="em_andamento",
+            ordem=21,
+            project_id=seed_data["project_id"],
+            created_by_id=seed_data["user_id"],
+        )
+        db.session.add_all([by_description, unrelated])
+        db.session.commit()
+
+    found = _hub_descriptions(client_user, "/api/tarefas?search=xyzq")
+    assert "Revisar contrato XYZQ" in found
+    assert "Outra tarefa qualquer" not in found
+
+    # Busca pelo título do projeto devolve TODAS as tarefas do projeto.
+    with app.app_context():
+        project_title = db.session.get(Project, seed_data["project_id"]).titulo
+    by_project = _hub_descriptions(client_user, f"/api/tarefas?search={project_title}")
+    assert "Outra tarefa qualquer" in by_project
+
+    # O filtro aplicado é ecoado em `filters.search`.
+    payload = client_user.get("/api/tarefas?search=xyzq").get_json()
+    assert payload["data"]["filters"]["search"] == "xyzq"
 
 
 def test_finalized_listing_filters_by_priority_type_status_and_responsavel(

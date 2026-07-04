@@ -33,6 +33,7 @@ function buildQuery(query: TaskHubQuery): string {
 	if (query.tipo) params.set('tipo', query.tipo);
 	if (query.status) params.set('status', query.status);
 	if (query.responsavel) params.set('responsavel', query.responsavel);
+	if (query.search) params.set('search', query.search);
 	if (query.orgao !== undefined && query.orgao !== null && query.orgao !== '') {
 		params.set('orgao', String(query.orgao));
 	}
