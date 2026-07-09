@@ -44,9 +44,9 @@
 	/**
 	 * Secoes na ordem de exibicao, com rotulo, chave em `results`, icone Font
 	 * Awesome (`fas fa-*`, 1:1 com o template v4.5) e classes de cor da pilula de
-	 * tipo. As cores das badges sao do v4.5: projeto=azul, etapa=ambar,
-	 * tarefa=verde, evento=indigo/info — mapeadas para tokens semanticos com
-	 * opacidade para que o dark mode troque sozinho.
+	 * tipo — os mesmos tons do Badge compartilhado (Badge.svelte): primary usa
+	 * `bg-primary-100`, demais tons `bg-surface-muted` + texto colorido
+	 * (dark-safe via tokens).
 	 */
 	const SECTIONS: ReadonlyArray<{
 		key: keyof SearchResultsByType;
@@ -64,19 +64,19 @@
 			key: 'stages',
 			label: 'Etapas',
 			icon: 'fa-list-check',
-			badgeClass: 'bg-warning/15 text-warning'
+			badgeClass: 'bg-surface-muted text-warning'
 		},
 		{
 			key: 'tasks',
 			label: 'Tarefas',
 			icon: 'fa-clipboard-list',
-			badgeClass: 'bg-success/15 text-success'
+			badgeClass: 'bg-surface-muted text-success'
 		},
 		{
 			key: 'events',
 			label: 'Eventos',
 			icon: 'fa-calendar-alt',
-			badgeClass: 'bg-info/15 text-info'
+			badgeClass: 'bg-surface-muted text-info'
 		}
 	];
 
@@ -193,6 +193,26 @@
 		return data?.results[key] ?? [];
 	}
 
+	/** Segmento de meta: par "Rotulo: valor" ou texto simples (label null). */
+	type MetaSegment = { label: string | null; value: string };
+
+	/**
+	 * Quebra subtitle/meta do backend ("Status: X | Responsavel: Y") em pares
+	 * "Rotulo: valor" para renderizar no padrao de meta da referencia
+	 * (PendingProjectCard: rotulo muted + valor em strong text-secondary, "·").
+	 */
+	function toMetaSegments(raw: string): MetaSegment[] {
+		return raw
+			.split(' | ')
+			.map((part) => part.trim())
+			.filter((part) => part.length > 0)
+			.map((part) => {
+				const sep = part.indexOf(': ');
+				if (sep <= 0) return { label: null, value: part };
+				return { label: part.slice(0, sep), value: part.slice(sep + 2) };
+			});
+	}
+
 	onDestroy(() => {
 		if (debounceTimer) clearTimeout(debounceTimer);
 		cancelInFlight();
@@ -202,6 +222,15 @@
 <svelte:head>
 	<title>Busca Global — ProjetosRJ</title>
 </svelte:head>
+
+<!-- Meta no padrao "Rotulo: valor" da referencia (PendingProjectCard.svelte:430). -->
+{#snippet metaLine(raw: string)}
+	<span class="truncate text-xs text-text-muted">
+		{#each toMetaSegments(raw) as segment, i (i)}{i > 0 ? ' · ' : ''}{#if segment.label !== null}{segment.label}:
+			<strong class="font-medium text-text-secondary">{segment.value}</strong
+			>{:else}{segment.value}{/if}{/each}
+	</span>
+{/snippet}
 
 <section aria-labelledby="busca-title" class="flex flex-col gap-4">
 	<!-- Card único (padrão das telas com filtro): header compacto + linha de busca
@@ -229,10 +258,10 @@
 
 		<form
 			role="search"
-			class="flex items-center gap-2 border-t border-border-subtle px-4 py-2.5"
+			class="flex flex-wrap items-center gap-2 border-t border-border-subtle px-4 py-2.5"
 			onsubmit={onSubmit}
 		>
-			<div class="relative min-w-0 flex-1">
+			<div class="relative w-full min-w-[14rem] max-w-[26rem]">
 				<i
 					class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
 					aria-hidden="true"
@@ -255,52 +284,70 @@
 	</div>
 
 	{#if searchState === 'idle'}
+		<!-- Estado inicial no mesmo padrão do vazio das outras telas (Pendentes):
+			 quadro suave com ícone emoldurado, título font-heading e texto muted. -->
 		<div
-			class="rounded-lg border border-dashed border-border-subtle bg-surface-muted px-5 py-4 text-text-secondary"
+			role="status"
+			aria-live="polite"
+			class="rounded-lg border border-dashed border-border-strong bg-surface-muted/40 px-4 py-8 text-center"
 		>
-			Digite um termo para iniciar a busca.
+			<div
+				class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-primary-100 text-xl text-primary-700"
+			>
+				<i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+			</div>
+			<h2 class="m-0 font-heading text-xl font-bold text-text-primary">
+				Digite um termo para buscar
+			</h2>
+			<p class="mb-0 mt-1.5 text-sm text-text-muted">
+				Pesquise por projetos, etapas, tarefas e eventos — ao menos dois caracteres.
+			</p>
 		</div>
 	{:else if searchState === 'loading'}
-		<div
-			class="rounded-lg border border-dashed border-border-subtle bg-surface-muted px-5 py-4 text-text-secondary"
-		>
-			Buscando…
-		</div>
+		<p role="status" aria-live="polite" class="text-text-secondary">Buscando…</p>
 	{:else if searchState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={retry} />
 	{:else if data}
 		{#if data.counts.total === 0}
 			<div
-				class="rounded-lg border border-dashed border-border-subtle bg-surface-muted px-5 py-4 text-text-secondary"
+				role="status"
+				aria-live="polite"
+				class="rounded-lg border border-dashed border-border-strong bg-surface-muted/40 px-4 py-8 text-center"
 			>
-				Nenhuma referência encontrada para "<strong class="text-text-primary">{shownTerm}</strong>".
+				<div
+					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-primary-100 text-xl text-primary-700"
+				>
+					<i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+				</div>
+				<h2 class="m-0 font-heading text-xl font-bold text-text-primary">
+					Nenhuma referência encontrada
+				</h2>
+				<p class="mb-0 mt-1.5 text-sm text-text-muted">
+					Nada corresponde a “{shownTerm}”. Ajuste o termo e tente novamente.
+				</p>
 			</div>
 		{:else}
-			<!-- Grade de secoes (search-results-grid): coluna unica, gap 0.85rem. -->
-			<div class="grid grid-cols-1 gap-3">
+			<!-- Seções de resultados no padrão de cards das outras telas (gap 16px). -->
+			<div class="flex flex-col gap-4">
 				{#each SECTIONS as section (section.key)}
 					{@const items = sectionItems(section.key)}
 					{#if items.length > 0}
 						<section
 							aria-labelledby={`busca-sec-${section.key}`}
-							class="overflow-hidden rounded-lg border border-border-subtle bg-surface"
+							class="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
 						>
-							<!-- Cabecalho da secao: icone + titulo a esquerda, pilula de contagem a direita. -->
+							<!-- Cabecalho da secao no padrao do Card compartilhado. -->
 							<div
-								class="flex items-center justify-between gap-3 border-b border-border-subtle bg-surface-muted px-4 py-3"
+								class="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-4"
 							>
 								<h2
 									id={`busca-sec-${section.key}`}
-									class="m-0 flex items-center gap-2 text-base font-bold text-text-primary"
+									class="m-0 flex items-center gap-2 font-heading text-lg font-semibold text-text-primary"
 								>
 									<i class="fas {section.icon} text-sm text-text-muted" aria-hidden="true"></i>
 									{section.label}
 								</h2>
-								<span
-									class="rounded-full bg-surface-muted px-2 py-0.5 text-2xs font-bold text-text-secondary"
-								>
-									{items.length}
-								</span>
+								<CountBadge>{items.length}</CountBadge>
 							</div>
 
 							<ul class="flex flex-col" aria-labelledby={`busca-sec-${section.key}`}>
@@ -311,35 +358,35 @@
 											class="group mx-1.5 my-1 flex items-start justify-between gap-3 rounded-md border border-border-subtle px-3 py-3 text-text-primary no-underline transition-[background-color,border-color] duration-fast hover:border-border-strong hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 										>
 											<span class="flex min-w-0 flex-1 flex-col gap-1">
-												<span class="flex items-center gap-1.5">
+												<span class="flex min-w-0 items-center gap-1.5">
 													<span
-														class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-2xs font-bold uppercase tracking-wide {section.badgeClass}"
+														class="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide {section.badgeClass}"
 													>
 														{item.type_label}
 													</span>
-													<span class="truncate font-semibold text-text-primary">
+													<span
+														class="truncate text-base font-medium text-primary-700 group-hover:underline"
+													>
 														{item.title}
 													</span>
 												</span>
 												{#if item.subtitle}
-													<span class="truncate text-sm text-text-secondary">
-														{item.subtitle}
-													</span>
+													{@render metaLine(item.subtitle)}
 												{/if}
 												{#if item.meta}
-													<span class="truncate text-sm text-text-secondary">{item.meta}</span>
+													{@render metaLine(item.meta)}
 												{/if}
 												{#if item.match_field === 'comentarios' && (item.match_label || item.match_excerpt)}
 													<span class="mt-1 flex min-w-0 flex-col gap-0.5">
 														{#if item.match_label}
 															<span
-																class="inline-flex w-fit items-center rounded-full bg-surface-muted px-2 py-0.5 text-2xs font-bold text-text-secondary"
+																class="inline-flex w-fit items-center rounded-full bg-surface-muted px-3 py-1 text-xs font-semibold text-text-secondary"
 															>
 																Encontrado em: {item.match_label}
 															</span>
 														{/if}
 														{#if item.match_excerpt}
-															<span class="truncate text-sm text-text-secondary">{item.match_excerpt}</span>
+															<span class="truncate text-xs text-text-muted">{item.match_excerpt}</span>
 														{/if}
 													</span>
 												{/if}
