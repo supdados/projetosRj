@@ -405,10 +405,25 @@
 		display: block;
 		margin-top: 0.2rem;
 		font-size: 0.72rem;
-		color: var(--app-color-danger, #b42323);
+		color: var(--ds-color-danger-600);
 	}
 
 	:global(html[data-theme='dark']) .editable-field:hover:not(:disabled) {
-		background-color: rgba(99, 166, 219, 0.18);
+		background-color: rgba(196, 210, 222, 0.18);
+	}
+	:global([data-theme='dark']) .editable-field-empty {
+		color: var(--color-text-muted);
+		background: transparent;
+		border-color: var(--color-border);
+	}
+	:global([data-theme='dark']) .editable-field-empty:hover:not(:disabled) {
+		background: rgba(196, 210, 222, 0.12);
+		border-color: var(--color-border-strong);
+		color: var(--color-text-secondary);
+	}
+	:global([data-theme='dark']) .cell-editor {
+		background: var(--color-surface);
+		color: var(--color-text-primary);
+		border-color: var(--color-border);
 	}
 </style>

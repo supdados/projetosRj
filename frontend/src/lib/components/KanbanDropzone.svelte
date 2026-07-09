@@ -138,7 +138,7 @@
 	@supports (-moz-appearance: none) {
 		.kanban-dropzone {
 			scrollbar-width: thin;
-			scrollbar-color: rgba(92, 126, 157, 0.32) transparent;
+			scrollbar-color: var(--color-border-strong) transparent;
 		}
 	}
 	.kanban-dropzone::-webkit-scrollbar {
@@ -148,12 +148,12 @@
 		background: transparent;
 	}
 	.kanban-dropzone::-webkit-scrollbar-thumb {
-		background: rgba(92, 126, 157, 0.45);
+		background: color-mix(in srgb, var(--color-border-strong) 80%, transparent);
 		border-radius: 999px;
 		min-height: 32px;
 	}
 	.kanban-dropzone::-webkit-scrollbar-thumb:hover {
-		background: rgba(70, 103, 133, 0.7);
+		background: var(--color-border-strong);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

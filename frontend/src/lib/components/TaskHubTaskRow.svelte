@@ -269,7 +269,7 @@
 </script>
 
 <div class="group/row border-b border-border-subtle last:border-b-0">
-	<div class="task-hub-grid px-3 py-2 transition-colors duration-fast {commentsOpen ? '' : 'hover:bg-primary-100/40'}">
+	<div class="task-hub-grid px-3 py-2 transition-colors duration-fast {commentsOpen ? '' : 'hover:bg-primary-100'}">
 		<!-- Descrição: texto abre o drawer; caneta habilita edição inline -->
 		{#if editingDesc}
 			<!-- svelte-ignore a11y_autofocus -->
@@ -386,7 +386,7 @@
 				onclick={askDelete}
 				aria-label="Excluir tarefa"
 				title="Excluir tarefa"
-				class="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+				class="trash-btn inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 			>
 				<i class="fas fa-trash-can text-xs" aria-hidden="true"></i>
 			</button>
@@ -402,7 +402,7 @@
 			transition:slide={slideParams}
 			onkeydown={onPanelKeydown}
 			use:closeCommentsOnClickOutside
-			class="border-t border-border-subtle bg-surface-muted/40 px-3 py-3"
+			class="border-t border-border-subtle bg-surface-muted px-3 py-3"
 		>
 			{#if loadingComments}
 				<p role="status" aria-live="polite" class="text-xs text-text-secondary">Carregando comentários…</p>
@@ -450,7 +450,7 @@
 						type="button"
 						onclick={() => void doDelete()}
 						disabled={deleting}
-						class="rounded-md bg-danger px-4 py-2 text-sm font-semibold text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+						class="delete-confirm-btn rounded-md bg-danger px-4 py-2 text-sm font-semibold text-danger-fg hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
 					>
 						{deleting ? 'Excluindo…' : 'Excluir'}
 					</button>
@@ -459,3 +459,9 @@
 		</Modal>
 	{/if}
 </div>
+
+<style>
+	.trash-btn:hover:not(:disabled) {
+		background-color: color-mix(in srgb, var(--ds-color-danger-600) 10%, transparent);
+	}
+</style>

@@ -451,7 +451,10 @@
 
 	/* Realce de busca (espelha .orgao-node.is-match do v4.5). */
 	.orgao-row.is-match {
-		background: var(--ds-color-warning-light-bg, rgba(254, 240, 138, 0.45));
+		background: var(--ds-color-warning-light-bg, rgba(202, 138, 4, 0.10));
+	}
+	:global([data-theme='dark']) .orgao-row.is-match {
+		background: rgba(216, 162, 77, 0.16);
 	}
 
 	.orgao-row.is-drop-target {
@@ -651,5 +654,28 @@
 		.orgao-actions {
 			gap: 0;
 		}
+	}
+
+	:global([data-theme='dark']) .orgao-tipo-dot[data-tipo='estado'] {
+		background: #a9bac9;
+	}
+	:global([data-theme='dark']) .orgao-tipo-dot[data-tipo='secretaria'] {
+		background: #6ea8fe;
+	}
+	:global([data-theme='dark']) .orgao-tipo-dot[data-tipo='autarquia'] {
+		background: var(--ds-color-violet-600);
+	}
+	:global([data-theme='dark']) .orgao-tipo-dot[data-tipo='fundacao'] {
+		background: #f472b6;
+	}
+	:global([data-theme='dark']) .orgao-tipo-dot[data-tipo='empresa-publica'] {
+		background: #f9a8d4;
+	}
+	:global([data-theme='dark']) .orgao-tipo-dot[data-tipo='coordenacao'],
+	:global([data-theme='dark']) .orgao-tipo-dot[data-tipo='nucleo'] {
+		background: #fbbf24;
+	}
+	:global([data-theme='dark']) .orgao-tipo-dot[data-tipo='departamento'] {
+		background: #9ca3af;
 	}
 </style>

@@ -221,7 +221,7 @@
 		Card superior unificado (header + filtros) no mesmo padrão da tela /tarefas:
 		PageHeader embedded + linha de filtros separada por borda.
 	-->
-	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
+	<div class="rounded-xl border border-border-subtle bg-surface">
 		<PageHeader compact embedded class="min-h-[3.5rem]" labelId="admin-usuarios-title">
 			{#snippet titleContent()}
 				<span class="align-middle">Gerenciar Usuários</span>
@@ -276,7 +276,7 @@
 					<ul
 						id="filter_area_listbox"
 						role="listbox"
-						class="thin-scroll absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-md"
+						class="thin-scroll absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-border-subtle bg-surface py-1" style="box-shadow: var(--ds-glass-shadow)"
 					>
 						{#each areaFilterList as opt, i (opt.id ?? 'all')}
 							<li class="contents">
@@ -378,12 +378,12 @@
 				class="mt-1 rounded-xl border border-dashed border-primary-500/40 bg-surface-muted px-4 py-8 text-center"
 			>
 				<span
-					class="mx-auto mb-2.5 inline-flex h-[52px] w-[52px] items-center justify-center rounded-xl border border-primary-500/25 bg-primary-100 text-primary-700"
+					class="mx-auto mb-2.5 inline-flex h-[52px] w-[52px] items-center justify-center rounded-xl border border-primary-500/25 bg-surface-elevated text-primary-500"
 					aria-hidden="true"
 				>
 					<i class="fas fa-user-plus text-xl"></i>
 				</span>
-				<h2 class="mb-1.5 font-heading text-xl font-bold text-primary-700">
+				<h2 class="mb-1.5 font-heading text-xl font-bold text-primary-500">
 					Nenhum usuário cadastrado
 				</h2>
 				<p class="mb-3.5 text-sm text-text-secondary">
@@ -391,7 +391,7 @@
 				</p>
 				<a
 					href={`${base}/admin/usuarios/novo`}
-					class="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-white no-underline shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+					class="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-primary-fg no-underline transition-all duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
 				>
 					<i class="fas fa-plus"></i>
 					Criar Primeiro Usuário
@@ -402,7 +402,7 @@
 				Cartão de tabela "glass" (.admin-users-table-card): superfície
 				translúcida com cabeçalho em maiúsculas e linhas com hover sutil.
 			-->
-			<div class="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+			<div class="overflow-hidden rounded-xl border border-border-subtle bg-surface">
 				<div class="overflow-x-auto" aria-busy={loadState !== 'ready'}>
 					<table class="w-full border-collapse align-middle text-sm">
 						<caption class="sr-only">Lista de usuários do sistema</caption>
@@ -421,7 +421,7 @@
 						<tbody>
 							{#each usuarios as user (user.id)}
 								{@const isSelf = currentUserId !== null && user.id === currentUserId}
-								<tr class="border-t border-border-subtle transition-colors duration-fast hover:bg-primary-100/40">
+								<tr class="border-t border-border-subtle transition-colors duration-fast hover:bg-surface-muted">
 									<td class="px-3 py-2.5 align-middle">
 										<span class="text-sm font-semibold text-text-secondary">{user.id}</span>
 									</td>
@@ -430,7 +430,7 @@
 											<span class="font-semibold text-text-primary">{user.name}</span>
 											{#if isSelf}
 												<span
-													class="inline-flex items-center rounded-full border border-primary-500/30 bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-700"
+													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-primary-500"
 												>
 													Você
 												</span>
@@ -462,12 +462,12 @@
 											<!-- Original: dois chips ("CPF cadastrado" + estado do vínculo). -->
 											<div class="flex flex-wrap items-center gap-1.5">
 												<span
-													class="inline-flex items-center rounded-full border border-primary-500/30 bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-700"
+													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-primary-500"
 												>
 													CPF cadastrado
 												</span>
 												<span
-													class="inline-flex items-center rounded-full border border-primary-500/30 bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-700"
+													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-primary-500"
 												>
 													{user.has_govbr_link ? 'Vinculado' : 'Pendente'}
 												</span>

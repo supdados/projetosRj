@@ -209,7 +209,7 @@
 {#if open}
 	<!-- Fundo: clicar fora fecha. Fade ~280ms ease-out (paridade .modal). -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
 		role="presentation"
 		transition:fade={{ duration: 280, easing: cubicOut }}
 		onclick={onClose}

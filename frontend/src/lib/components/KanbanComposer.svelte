@@ -328,7 +328,7 @@
 			<button
 				type="submit"
 				disabled={saving}
-				class="h-[30px] rounded-md bg-primary-600 px-[0.56rem] text-xs font-semibold text-white shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				class="h-[30px] rounded-md bg-primary-600 px-[0.56rem] text-xs font-semibold text-primary-fg shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 			>
 				{saving ? 'Salvando…' : 'Salvar'}
 			</button>

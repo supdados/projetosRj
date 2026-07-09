@@ -26,7 +26,7 @@
 </script>
 
 <div
-	class="fixed inset-0 z-[1050] flex items-center justify-center bg-black/40 p-4"
+	class="fixed inset-0 z-[1050] flex items-center justify-center bg-overlay p-4"
 	role="presentation"
 	onclick={handleBackdropClick}
 >

@@ -57,8 +57,8 @@
 		width: 100%;
 		height: 100%;
 		border-radius: calc(var(--cs-size) * 0.1);
-		background: #fff;
-		border: 1px solid rgba(148, 163, 184, 0.5);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
 		box-shadow: 0 3px 8px rgba(15, 42, 71, 0.16);
 		padding: calc(var(--cs-size) * 0.085);
 		transform-origin: bottom center;
@@ -148,5 +148,14 @@
 		.cs-stamp {
 			transform: translate(-50%, -50%) rotate(-8deg) scale(1);
 		}
+	}
+
+	:global([data-theme='dark']) .cs-board {
+		box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+	}
+	:global([data-theme='dark']) .cs-root:is(:hover, :focus-within) .cs-board,
+	:global([data-theme='dark'] .group:hover) .cs-board,
+	:global([data-theme='dark'] .group:focus-within) .cs-board {
+		box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
 	}
 </style>

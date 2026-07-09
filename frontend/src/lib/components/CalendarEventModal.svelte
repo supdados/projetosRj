@@ -705,7 +705,7 @@
 						<div class="cal-field-content">
 							<label class="cal-meet-row" class:is-active={createConference}>
 								<span class="cal-meet-icon-wrap">
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="white" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" /></svg>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" /></svg>
 								</span>
 								<span class="cal-meet-text">
 									<span class="cal-meet-label">Google Meet</span>
@@ -732,7 +732,7 @@
 								<div class="cal-meet-info-row">
 									<a class="cal-meet-existing-info" href={meetLink} target="_blank" rel="noopener noreferrer">
 										<span class="cal-meet-icon-wrap">
-											<svg width="14" height="14" viewBox="0 0 24 24" fill="white" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" /></svg>
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" /></svg>
 										</span>
 										<span class="cal-meet-existing-text">
 											<span class="cal-meet-label">Google Meet</span>
@@ -943,6 +943,9 @@
 		position: relative;
 		animation: cal-modal-in 0.16s ease both;
 	}
+	:global([data-theme='dark']) .cal-modal {
+		box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 0 4px 16px rgba(0, 0, 0, 0.40);
+	}
 	@keyframes cal-overlay-in {
 		from { opacity: 0; }
 		to { opacity: 1; }
@@ -1131,7 +1134,7 @@
 		width: 0.85rem;
 		height: 0.85rem;
 		border-radius: 50%;
-		background: #fff;
+		background: var(--color-surface-elevated);
 		left: 0.175rem;
 		top: 50%;
 		transform: translateY(-50%);
@@ -1159,14 +1162,15 @@
 		background: var(--color-surface-muted);
 	}
 	.cal-meet-row.is-active {
-		border-color: #1a73e8;
-		background: rgba(26, 115, 232, 0.05);
+		border-color: var(--ds-color-primary-600);
+		background: color-mix(in srgb, var(--ds-color-primary-600) 10%, transparent);
 	}
 	.cal-meet-icon-wrap {
 		width: 1.4rem;
 		height: 1.4rem;
 		border-radius: 6px;
 		background: var(--ds-color-success-600);
+		color: var(--ds-color-success-fg);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -1385,7 +1389,7 @@
 	.cal-btn-save {
 		padding: 0.4rem 1rem;
 		background: var(--ds-color-primary-600);
-		color: #fff;
+		color: var(--ds-color-primary-fg);
 		border: none;
 		border-radius: 6px;
 		font-size: 0.8125rem;
@@ -1422,6 +1426,9 @@
 		border-radius: 12px;
 		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
 		overflow: hidden;
+	}
+	:global([data-theme='dark']) .cdp-popover {
+		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.50), 0 2px 8px rgba(0, 0, 0, 0.35);
 	}
 	.cdp-popover.is-open {
 		animation: cdp-in 0.14s ease both;
@@ -1510,7 +1517,7 @@
 	}
 	.cdp-day--selected {
 		background: var(--ds-color-primary-600);
-		color: #fff;
+		color: var(--ds-color-primary-fg);
 		font-weight: 600;
 	}
 	.cdp-day--selected:hover {
@@ -1584,7 +1591,7 @@
 	}
 	.cdp-time-option--selected {
 		background: var(--ds-color-primary-600);
-		color: #fff;
+		color: var(--ds-color-primary-fg);
 		font-weight: 500;
 	}
 	.cdp-time-option--disabled {

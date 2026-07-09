@@ -43,7 +43,7 @@
 	<button
 		type="button"
 		class="{segmentClass} {view === 'list'
-			? 'text-white'
+			? 'text-primary-fg'
 			: 'text-text-muted hover:text-text-secondary'}"
 		aria-pressed={view === 'list'}
 		onclick={() => onSelect('list')}
@@ -53,7 +53,7 @@
 	<button
 		type="button"
 		class="{segmentClass} {view === 'kanban'
-			? 'text-white'
+			? 'text-primary-fg'
 			: 'text-text-muted hover:text-text-secondary'}"
 		aria-pressed={view === 'kanban'}
 		onclick={() => onSelect('kanban')}

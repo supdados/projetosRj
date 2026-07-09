@@ -438,28 +438,28 @@
 
 <style>
 	.etapa-row :global(td) {
-		border-top: 1px solid var(--app-color-border, #edf2f8);
+		border-top: 1px solid var(--color-border);
 		padding: 0.62rem 0.7rem;
 		vertical-align: middle;
-		color: var(--app-color-text, #304a66);
+		color: var(--color-text-primary);
 		font-size: 0.875rem;
 	}
 	.etapa-row:hover :global(td) {
-		background: var(--app-color-surface-muted, #f6fafe);
+		background: var(--color-surface-muted);
 	}
 
 	.cell-drag {
 		width: 44px;
-		color: #9fb1c6;
+		color: var(--color-text-muted);
 	}
 	.drag-handle {
 		display: inline-flex;
 		cursor: grab;
-		color: #9fb1c6;
+		color: var(--color-text-muted);
 		transition: color 0.16s ease;
 	}
 	.drag-handle:hover {
-		color: #5f7691;
+		color: var(--color-text-secondary);
 	}
 	.drag-handle:active {
 		cursor: grabbing;
@@ -468,7 +468,7 @@
 	.cell-number {
 		width: 64px;
 		font-family: var(--ds-font-family-mono, ui-monospace, monospace);
-		color: #5f7691;
+		color: var(--color-text-secondary);
 		font-weight: 500;
 		white-space: nowrap;
 		text-align: center;
@@ -491,11 +491,11 @@
 	}
 	.etapa-descricao {
 		font-weight: 600;
-		color: var(--app-color-heading, #263f59);
+		color: var(--color-text-primary);
 	}
 	.etapa-done .etapa-descricao,
 	.etapa-done-text {
-		color: #7b8fa7 !important;
+		color: var(--color-text-muted) !important;
 		text-decoration: line-through;
 	}
 	/* Reserva a altura de uma linha de comentário para que a célula tenha a MESMA
@@ -527,12 +527,12 @@
 	.etapa-comentario-display,
 	.etapa-comentario-placeholder {
 		background: none;
-		color: #6f859f;
+		color: var(--color-text-secondary);
 		cursor: pointer;
 	}
 	.etapa-comentario-display:hover,
 	.etapa-comentario-placeholder:hover {
-		color: #4d77a5;
+		color: var(--ds-color-primary-500);
 	}
 	.etapa-comentario-display:disabled {
 		cursor: default;
@@ -549,8 +549,8 @@
 		opacity: 1;
 	}
 	.etapa-comment-editor {
-		color: #3e556f;
-		background: #fff;
+		color: var(--color-text-primary);
+		background: var(--color-surface);
 		border-color: var(--stage-input-border);
 		resize: none;
 		overflow: hidden;
@@ -565,7 +565,7 @@
 		width: 130px;
 		text-align: center;
 		font-family: var(--ds-font-family-mono, ui-monospace, monospace);
-		color: #5f7691;
+		color: var(--color-text-secondary);
 		font-weight: 500;
 		white-space: nowrap;
 	}
@@ -596,14 +596,14 @@
 		border-radius: 8px;
 	}
 	.cell-readonly.editable-field-empty {
-		color: #6f859f;
-		background: #f6f9fc;
-		border: 1px dashed #d6e2ef;
+		color: var(--color-text-secondary);
+		background: var(--color-surface-muted);
+		border: 1px dashed var(--color-border);
 	}
 	.etapa-done .cell-readonly.editable-field-empty {
 		background: transparent;
 		border-color: transparent;
-		color: #8ea1b7;
+		color: var(--color-text-muted);
 	}
 
 	.cell-tasks {
@@ -639,6 +639,12 @@
 		color: #1d4ed8;
 		outline: none;
 	}
+	:global([data-theme='dark']) .etapa-task-pill:hover,
+	:global([data-theme='dark']) .etapa-task-pill:focus-visible {
+		background: rgba(78, 149, 204, 0.18);
+		border-color: rgba(196, 210, 222, 0.46);
+		color: var(--ds-color-primary-500);
+	}
 	.etapa-task-pill-has,
 	.etapa-task-pill-add {
 		display: inline-flex;
@@ -666,6 +672,15 @@
 		background: rgba(37, 99, 235, 0.07);
 		border-color: #9fc0e8;
 		color: #1d4ed8;
+	}
+	:global([data-theme='dark']) .etapa-task-pill.is-empty {
+		border-color: var(--color-border);
+		color: var(--color-text-secondary);
+	}
+	:global([data-theme='dark']) .etapa-task-pill.is-empty:hover,
+	:global([data-theme='dark']) .etapa-task-pill.is-empty:focus-visible {
+		background: rgba(78, 149, 204, 0.12);
+		border-color: var(--color-border-strong);
 	}
 	.etapa-task-pill.is-empty .etapa-task-pill-has {
 		display: none;
@@ -698,7 +713,7 @@
 		border: 1px solid transparent;
 		font-size: 0.875rem;
 		background: transparent;
-		color: #768ba2;
+		color: var(--color-text-secondary);
 		cursor: pointer;
 		transition:
 			color 0.16s ease,
@@ -716,7 +731,7 @@
 	}
 
 	.text-muted-small {
-		color: #9fb1c6;
+		color: var(--color-text-muted);
 		font-size: 0.78rem;
 	}
 
@@ -735,7 +750,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		color: #5f7691;
+		color: var(--color-text-secondary);
 		font-size: 0.72rem;
 		font-weight: 500;
 		margin-top: 0.15rem;
@@ -744,13 +759,9 @@
 		margin-top: 0.4rem;
 	}
 
-	/* Dark mode (data-theme=dark) */
-	:global(html[data-theme='dark']) .etapa-descricao {
-		color: #d2dfec;
-	}
-	:global(html[data-theme='dark']) .etapa-task-pill {
+	:global([data-theme='dark']) .etapa-task-pill {
 		background: rgba(78, 149, 204, 0.18);
-		border-color: rgba(99, 166, 219, 0.46);
-		color: #cfe6ff;
+		border-color: rgba(196, 210, 222, 0.46);
+		color: var(--ds-color-primary-500);
 	}
 </style>

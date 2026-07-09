@@ -62,8 +62,8 @@ export function eventColorClasses(ev: CalendarEvent): EventColorClasses {
 	return {
 		block: [
 			'bg-primary-500/15 dark:bg-primary-500/20',
-			'text-primary-700 dark:text-primary-300',
-			'border border-primary-300/60 dark:border-primary-500/30',
+			'text-primary-700 dark:text-primary-500',
+			'border border-primary-500/30',
 		].join(' '),
 		dot: 'bg-primary-500',
 	};

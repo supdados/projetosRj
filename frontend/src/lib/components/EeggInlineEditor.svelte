@@ -312,7 +312,7 @@
 									: 'border-border-strong bg-surface'}"
 							>
 								{#if isSel}
-									<svg viewBox="0 0 24 24" class="h-3 w-3 text-white" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+									<svg viewBox="0 0 24 24" class="h-3 w-3 text-primary-fg" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
 										<path d="M5 13l4 4L19 7" />
 									</svg>
 								{/if}

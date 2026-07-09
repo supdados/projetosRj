@@ -594,10 +594,37 @@
 		border-color: #b8d0ea;
 		color: #214f7d;
 	}
-	/* Dark mode: paridade com o override do StageRow (só o estado base). */
 	:global(html[data-theme='dark']) .etapa-status-toggle {
-		background: #2b3a4f;
+		background: var(--stage-chip-bg, #262626);
 		border-color: var(--color-border);
-		color: #d2dfec;
+		color: var(--stage-chip-text, #e0e0e0);
+	}
+	:global(html[data-theme='dark']) .etapa-status-toggle:hover:not(:disabled),
+	:global(html[data-theme='dark']) .etapa-status-toggle:focus-visible:not(:disabled) {
+		background: var(--color-surface-elevated);
+		border-color: var(--color-border-strong);
+		color: var(--color-text-primary);
+	}
+	:global(html[data-theme='dark']) .etapa-status-toggle-done {
+		background: var(--ds-color-success-light-bg);
+		border-color: var(--ds-color-success-600);
+		color: var(--ds-color-success-600);
+	}
+	:global(html[data-theme='dark']) .etapa-status-toggle-done:hover:not(:disabled),
+	:global(html[data-theme='dark']) .etapa-status-toggle-done:focus-visible:not(:disabled) {
+		background: rgba(73, 185, 135, 0.22);
+		border-color: var(--ds-color-success-600);
+		color: var(--ds-color-success-600);
+	}
+	:global(html[data-theme='dark']) .etapa-status-toggle-started {
+		background: var(--ds-color-primary-100);
+		border-color: var(--ds-color-primary-500);
+		color: var(--ds-color-primary-500);
+	}
+	:global(html[data-theme='dark']) .etapa-status-toggle-started:hover:not(:disabled),
+	:global(html[data-theme='dark']) .etapa-status-toggle-started:focus-visible:not(:disabled) {
+		background: rgba(78, 149, 204, 0.28);
+		border-color: var(--ds-color-primary-500);
+		color: var(--ds-color-primary-500);
 	}
 </style>

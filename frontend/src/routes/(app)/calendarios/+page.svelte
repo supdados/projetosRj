@@ -1340,7 +1340,7 @@
 		border: 1px solid var(--app-color-border);
 		border-radius: 8px;
 		background: var(--app-color-surface);
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+		box-shadow: var(--ds-shadow-lg);
 	}
 	.cal-gmenu-item {
 		display: flex;
@@ -1842,7 +1842,7 @@
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: 16px;
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+		box-shadow: var(--ds-shadow-lg);
 		min-width: 15rem;
 		max-width: min(19rem, calc(100vw - 1rem));
 		overflow: hidden;
@@ -1951,7 +1951,7 @@
 	.cal-popover-item--span {
 		display: block;
 		padding: 0.34rem 0.72rem;
-		color: #fff;
+		color: var(--ds-color-primary-fg);
 		background: var(--ds-color-primary-600);
 		border-radius: 12px;
 		position: relative;
@@ -1993,7 +1993,7 @@
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: 12px;
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+		box-shadow: var(--ds-shadow-lg);
 		overflow: hidden;
 	}
 	.cal-event-popover-head {

@@ -73,6 +73,14 @@
 		-webkit-backdrop-filter: blur(2px);
 	}
 
+	:global([data-theme='dark']) .project-conclude-celebration__backdrop {
+		background: radial-gradient(
+			circle at center,
+			rgba(0, 0, 0, 0.14) 0%,
+			rgba(0, 0, 0, 0.55) 100%
+		);
+	}
+
 	.project-conclude-celebration__card {
 		position: relative;
 		width: min(360px, calc(100vw - 2rem));
@@ -90,6 +98,14 @@
 		padding: 2rem 1.25rem 1.5rem;
 		transform: translateY(14px) scale(0.92);
 		opacity: 0;
+	}
+
+	:global([data-theme='dark']) .project-conclude-celebration__card {
+		border-color: var(--color-border-strong);
+		background: linear-gradient(155deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+		box-shadow:
+			0 16px 34px rgba(0, 0, 0, 0.55),
+			inset 0 1px 0 rgba(255, 255, 255, 0.06);
 	}
 
 	.project-conclude-celebration.is-active .project-conclude-celebration__card {
@@ -135,7 +151,7 @@
 
 	.project-conclude-celebration__title {
 		margin: 1rem 0 0.35rem;
-		color: #1e3a5f;
+		color: var(--color-text-primary);
 		font-size: 1.25rem;
 		font-weight: 700;
 		line-height: 1.3;
@@ -143,7 +159,7 @@
 
 	.project-conclude-celebration__message {
 		margin: 0;
-		color: #486581;
+		color: var(--color-text-secondary);
 		font-size: 1rem;
 		line-height: 1.5;
 	}

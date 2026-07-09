@@ -147,8 +147,8 @@
 		width: 92%;
 		height: 74%;
 		border-radius: calc(var(--fr-size) * 0.07);
-		background: #fff;
-		border: 1px solid rgba(148, 163, 184, 0.45);
+		background: var(--color-surface-elevated);
+		border: 1px solid var(--color-border);
 		box-shadow: 0 6px 14px rgba(15, 42, 71, 0.18);
 		overflow: hidden;
 		transform-origin: bottom center;
@@ -233,6 +233,10 @@
 	:global(.group:focus-within) .fr-paper--2 {
 		transform: translate(-8%, -58%) rotate(17deg) scale(1);
 		transition-delay: 0.08s;
+	}
+
+	:global([data-theme='dark']) .fr-paper {
+		box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

@@ -441,7 +441,7 @@
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: 16px;
-		box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+		box-shadow: var(--ds-shadow-sm);
 		overflow: hidden;
 	}
 
@@ -512,7 +512,7 @@
 	}
 	.orgao-toolbar-link:hover {
 		color: var(--ds-color-primary-700);
-		background: var(--ds-color-info-light-bg);
+		background: var(--ds-color-primary-light-bg);
 	}
 	.orgao-toolbar-link:focus-visible {
 		outline: none;

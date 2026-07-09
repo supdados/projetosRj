@@ -214,7 +214,7 @@
 	const TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
 		bug: { label: 'Bug', icon: 'fa-bug', color: 'var(--ds-color-danger-600)' },
 		melhoria: { label: 'Melhoria', icon: 'fa-arrow-up', color: 'var(--ds-color-warning-600)' },
-		duvida: { label: 'Dúvida', icon: 'fa-circle-question', color: '#7c3aed' },
+		duvida: { label: 'Dúvida', icon: 'fa-circle-question', color: 'var(--ds-color-violet-600)' },
 		outros: { label: 'Outros', icon: 'fa-ellipsis', color: 'var(--color-text-muted)' },
 		implementacao: { label: 'Implementação', icon: 'fa-code', color: 'var(--ds-color-primary-600)' }
 	};

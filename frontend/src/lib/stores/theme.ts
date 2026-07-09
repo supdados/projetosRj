@@ -31,7 +31,7 @@ function applyTheme(theme: Theme): void {
 	if (typeof document !== 'undefined') {
 		document.documentElement.setAttribute('data-theme', theme);
 		const meta = document.querySelector<HTMLMetaElement>('#appThemeColorMeta');
-		if (meta) meta.content = theme === 'dark' ? '#1f2936' : '#005A92';
+		if (meta) meta.content = theme === 'dark' ? '#000000' : '#005A92';
 	}
 	try {
 		window.localStorage.setItem(STORAGE_KEY, theme);

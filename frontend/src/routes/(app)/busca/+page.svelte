@@ -323,7 +323,7 @@
 <section aria-labelledby="busca-title" class="flex flex-col gap-4">
 	<!-- Card único (padrão das telas com filtro): header compacto + linha de busca
 		 embutida abaixo de um divisor fino. -->
-	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
+	<div class="rounded-xl border border-border-subtle bg-surface shadow-token">
 		<PageHeader compact embedded class="min-h-[3.5rem]" labelId="busca-title">
 			{#snippet titleContent()}
 				<span class="align-middle">Busca Global</span>
@@ -446,7 +446,7 @@
 					{#if items.length > 0}
 						<section
 							aria-labelledby={`busca-sec-${section.key}`}
-							class="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
+							class="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-token"
 						>
 							<!-- Cabecalho da secao no padrao do Card compartilhado. -->
 							<div

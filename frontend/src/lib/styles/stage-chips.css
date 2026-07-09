@@ -1,6 +1,7 @@
 /* Paleta e chips de status da tabela de etapas, compartilhados por
    StageList.svelte e StageRow.svelte (antes duplicados nos dois <style>). */
 :root {
+	--stage-chip-bg: #fff;
 	--stage-chip-border: #cbdcf0;
 	--stage-chip-text: #2b4d6f;
 	--stage-chip-bg-hover: #f1f7ff;
@@ -24,13 +25,38 @@
 	--stage-danger-border-hover: rgba(184, 63, 63, 0.5);
 }
 
+[data-theme='dark'] {
+	--stage-chip-bg: #262626;
+	--stage-chip-border: var(--color-border);
+	--stage-chip-text: #e0e0e0;
+	--stage-chip-bg-hover: #303030;
+	--stage-chip-border-hover: var(--color-border-strong);
+	--stage-chip-text-hover: #fcfcfc;
+	--stage-chip-done-bg: #1a3328;
+	--stage-chip-done-border: #2f5a44;
+	--stage-chip-done-text: #49b987;
+	--stage-chip-done-bg-hover: #1f3d30;
+	--stage-chip-done-border-hover: #3a6b52;
+	--stage-chip-done-text-hover: #5fc79a;
+	--stage-chip-started-bg: #1a2f48;
+	--stage-chip-started-border: #2e4d6e;
+	--stage-chip-started-text: #c4d2de;
+	--stage-chip-started-bg-hover: #21374f;
+	--stage-chip-started-border-hover: #3a5d80;
+	--stage-chip-started-text-hover: #d8e2ec;
+	--stage-input-border: var(--color-border-strong);
+	--stage-danger-text: #d97a7a;
+	--stage-danger-bg-hover: rgba(217, 122, 122, 0.14);
+	--stage-danger-border-hover: rgba(217, 122, 122, 0.5);
+}
+
 .etapa-status-toggle {
 	height: 30px;
 	min-width: 124px;
 	border-radius: 7px;
 	border: 1px solid var(--stage-chip-border);
 	padding: 0 0.58rem;
-	background: #fff;
+	background: var(--stage-chip-bg);
 	color: var(--stage-chip-text);
 	font-weight: 600;
 	font-size: 0.78rem;
@@ -76,10 +102,4 @@
 	background: var(--stage-chip-started-bg-hover);
 	border-color: var(--stage-chip-started-border-hover);
 	color: var(--stage-chip-started-text-hover);
-}
-
-html[data-theme='dark'] .etapa-status-toggle {
-	background: #2b3a4f;
-	border-color: var(--color-border);
-	color: #d2dfec;
 }

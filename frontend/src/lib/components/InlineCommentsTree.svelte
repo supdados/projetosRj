@@ -593,4 +593,7 @@
 	.ict-cmt:last-child::after {
 		display: none;
 	}
+	:global([data-theme='dark']) .ict-composer .shadow-md {
+		box-shadow: var(--ds-shadow-md);
+	}
 </style>

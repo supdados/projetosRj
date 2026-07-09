@@ -41,6 +41,12 @@
 	--ds-color-warning-600: #ca8a04;
 	--ds-color-danger-600: #dc2626;
 	--ds-color-info-600: #0ea5e9;
+	--ds-color-violet-600: #7c3aed;
+	/* Texto sobre fills sólidos (primary/success/danger); no dark os fills clareiam
+	   e o fg inverte para tinta escura (método siorg). */
+	--ds-color-primary-fg: #ffffff;
+	--ds-color-success-fg: #ffffff;
+	--ds-color-danger-fg: #ffffff;
 	/* Estado "pendente de sincronização" (calendários) */
 	--ds-color-pending: #94a3b8;
 	/* Laranja da prioridade "alta" (00-foundation.css:1650 → #ea580c) */
@@ -81,6 +87,21 @@
 		inset 0 1px 0 rgba(255, 255, 255, 0.8);
 	--ds-glass-border-hover: rgba(0, 90, 146, 0.15);
 
+	/* Sombras (mesmos literais do antigo boxShadow do tailwind.config; re-temperadas no dark) */
+	--ds-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+	--ds-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+	--ds-shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.12);
+
+	/* Badges por tipo da busca global (literais de GlobalSearchBox.svelte) */
+	--search-badge-project-bg: #ddefff;
+	--search-badge-project-fg: #03568c;
+	--search-badge-stage-bg: #f9f0d0;
+	--search-badge-stage-fg: #6c5000;
+	--search-badge-task-bg: #e0f6df;
+	--search-badge-task-fg: #24571f;
+	--search-badge-event-bg: #e7eefb;
+	--search-badge-event-fg: #304d80;
+
 	/* Semanticas (light) — consumidas pelo tailwind.config (canvas/surface/text/border) */
 	--color-canvas: #f7f9fc;
 	--color-surface: #ffffff;
@@ -91,29 +112,40 @@
 	--color-text-primary: #212529;
 	--color-text-secondary: #475569;
 	--color-text-muted: #6c757d;
+	--color-overlay: rgba(0, 0, 0, 0.4);
 }
 
-/* Dark — valores 1:1 de design-system.css:152-203 */
+/* Dark — esquema carvão do produto irmão (siorg-rj): canvas preto, cards #202020,
+   color-blocking em vez de azul-acinzentado; acentos seguem o azul de marca. */
 [data-theme='dark'] {
-	--color-canvas: #1f2936;
-	--color-surface: #273447;
-	--color-surface-elevated: #2d3c51;
-	--color-surface-muted: #223042;
-	--color-border: #3c4f65;
-	--color-border-strong: #4a6078;
-	--color-text-primary: #e6edf5;
-	--color-text-secondary: #c5d2e0;
-	--color-text-muted: #a8b8ca;
+	--color-canvas: #000000;
+	--color-surface: #202020;
+	--color-surface-elevated: #2a2a2a;
+	--color-surface-muted: #181818;
+	--color-border: #3f3f3f;
+	--color-border-strong: #555555;
+	--color-text-primary: #fcfcfc;
+	--color-text-secondary: #e0e0e0;
+	--color-text-muted: #b5b5b5;
+	--color-overlay: rgba(0, 0, 0, 0.6);
 
-	--ds-color-primary-700: #3f84b9;
-	--ds-color-primary-600: #4e95cc;
-	--ds-color-primary-500: #63a6db;
-	--ds-color-primary-100: rgba(78, 149, 204, 0.2);
+	/* Primária no dark: azul-ACINZENTADO quase neutro (links/títulos não devem
+	   gritar sobre o carvão; azul saturado fica só nos fills de marca). */
+	--ds-color-primary-700: #8fa1b3;
+	--ds-color-primary-600: #a9bac9;
+	--ds-color-primary-500: #c4d2de;
+	/* Wash de destaque NEUTRO no dark (faixas de seção, chips, estados ativos):
+	   cinza elevado em vez de banho azul — o azul fica só em texto/ícone. */
+	--ds-color-primary-100: rgba(255, 255, 255, 0.07);
 	--ds-color-success-600: #49b987;
 	--ds-color-warning-600: #d8a24d;
 	--ds-color-danger-600: #d97a7a;
-	--ds-color-info-600: #63a6db;
+	--ds-color-info-600: #a9bac9;
 	--ds-color-pending: #8398ad;
+	--ds-color-violet-600: #a78bfa;
+	--ds-color-primary-fg: #0d1a2d;
+	--ds-color-success-fg: #052010;
+	--ds-color-danger-fg: #2d0a09;
 
 	/* Prioridade no dark — alinhada aos tons escuros da paleta (theme-dark.css).
 	   "alta" (laranja) amaciada para o fundo escuro; demais reusam os tons dark. */
@@ -124,18 +156,17 @@
 	--ds-color-priority-urgente: #d97a7a;
 
 	/* Stat-card translucidos no dark (mesmos hues, alfa levemente maior) */
-	--ds-color-primary-light-bg: rgba(78, 149, 204, 0.14);
+	--ds-color-primary-light-bg: rgba(169, 186, 201, 0.14);
 	--ds-color-success-light-bg: rgba(73, 185, 135, 0.14);
 	--ds-color-info-light-bg: rgba(216, 162, 77, 0.14);
 	--ds-color-danger-light-bg: rgba(217, 122, 122, 0.14);
 
-	/* Topbar no dark (theme-dark.css:56 → surface translucido) */
-	--ds-color-topnav-from: rgba(39, 52, 71, 0.94);
-	--ds-color-topnav-to: rgba(39, 52, 71, 0.94);
+	/* Topbar no dark: carvão translúcido sobre o canvas preto (color-blocking) */
+	--ds-color-topnav-from: rgba(24, 24, 24, 0.94);
+	--ds-color-topnav-to: rgba(24, 24, 24, 0.94);
 
-	/* Skeleton shimmer no dark (theme-dark.css:691) */
-	--ds-color-skeleton-base: #32445b;
-	--ds-color-skeleton-highlight: #3a4f68;
+	--ds-color-skeleton-base: #2a2a2a;
+	--ds-color-skeleton-highlight: #363636;
 
 	/* Glass card no dark (theme-dark.css:525-540 → surface solido) */
 	--ds-glass-card-from: var(--color-surface);
@@ -143,8 +174,21 @@
 	--ds-glass-header-from: var(--color-surface-elevated);
 	--ds-glass-header-to: var(--color-surface-elevated);
 	--ds-glass-border: var(--color-border);
-	--ds-glass-shadow: 0 12px 30px rgba(7, 11, 18, 0.35);
+	--ds-glass-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
 	--ds-glass-border-hover: var(--color-border-strong);
+
+	--ds-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+	--ds-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+	--ds-shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.55);
+
+	--search-badge-project-bg: rgba(196, 210, 222, 0.18);
+	--search-badge-project-fg: var(--ds-color-primary-500);
+	--search-badge-stage-bg: rgba(216, 162, 77, 0.18);
+	--search-badge-stage-fg: var(--ds-color-warning-600);
+	--search-badge-task-bg: rgba(73, 185, 135, 0.18);
+	--search-badge-task-fg: var(--ds-color-success-600);
+	--search-badge-event-bg: rgba(196, 210, 222, 0.14);
+	--search-badge-event-fg: var(--ds-color-primary-500);
 
 	color-scheme: dark;
 }

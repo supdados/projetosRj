@@ -134,7 +134,7 @@
 	const sectionTitleClass =
 		'font-heading text-sm font-semibold text-text-primary';
 	const cardClass =
-		'flex flex-col gap-4 rounded-lg border border-border-subtle bg-surface p-5 shadow-sm';
+		'flex flex-col gap-4 rounded-lg border border-border-subtle bg-surface p-5';
 </script>
 
 <div class="flex flex-col gap-5">
@@ -315,7 +315,7 @@
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: 10px;
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+		box-shadow: var(--ds-shadow-lg);
 		z-index: 50;
 		padding: 4px;
 	}

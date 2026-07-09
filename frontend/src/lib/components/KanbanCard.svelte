@@ -509,7 +509,7 @@
 	/* Lixeira sem fundo (só o ícone): o hover ACENDE o vermelho via color-mix
 	 * (não há token danger-700; escurecemos o 600 na mão). */
 	.kc-delete-btn:hover {
-		color: color-mix(in srgb, var(--ds-color-danger-600) 78%, black);
+		color: color-mix(in srgb, var(--ds-color-danger-600) 78%, var(--color-text-primary));
 	}
 
 	/*
@@ -526,6 +526,16 @@
 	}
 	.kc-confirm-delete-btn:hover:not(:disabled) {
 		background-color: color-mix(in srgb, var(--ds-color-danger-600) 18%, transparent);
+	}
+	:global([data-theme='dark']) .kanban-delete-confirm {
+		background-color: color-mix(in srgb, var(--ds-color-danger-600) 12%, transparent);
+	}
+	:global([data-theme='dark']) .kc-confirm-delete-btn {
+		background-color: color-mix(in srgb, var(--ds-color-danger-600) 20%, transparent);
+		border-color: color-mix(in srgb, var(--ds-color-danger-600) 65%, transparent);
+	}
+	:global([data-theme='dark']) .kc-confirm-delete-btn:hover:not(:disabled) {
+		background-color: color-mix(in srgb, var(--ds-color-danger-600) 30%, transparent);
 	}
 
 	/*
@@ -552,14 +562,14 @@
 	@keyframes td-kanban-drop-settle {
 		0% {
 			transform: scale(1.03) translateY(-2px);
-			box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+			box-shadow: var(--ds-shadow-lg);
 		}
 		50% {
 			transform: scale(0.99) translateY(1px);
 		}
 		100% {
 			transform: scale(1) translateY(0);
-			box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+			box-shadow: var(--ds-shadow-sm);
 		}
 	}
 	:global(.kanban-card.is-drop-settling) {

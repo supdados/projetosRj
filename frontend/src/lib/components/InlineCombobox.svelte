@@ -317,7 +317,11 @@
 		display: block;
 		margin-top: 0.2rem;
 		font-size: 0.72rem;
-		color: var(--app-color-danger, #b42323);
+		color: var(--ds-color-danger-600);
+	}
+
+	:global([data-theme='dark']) .ic-listbox {
+		box-shadow: var(--ds-shadow-md);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

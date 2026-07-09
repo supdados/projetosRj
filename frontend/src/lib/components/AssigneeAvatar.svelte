@@ -36,7 +36,7 @@
 </script>
 
 <span
-	class="inline-flex shrink-0 items-center justify-center rounded-full font-semibold leading-none text-white ring-1 ring-black/10 {dim}"
+	class="inline-flex shrink-0 items-center justify-center rounded-full font-semibold leading-none text-white ring-1 ring-border-subtle {dim}"
 	style="background-color: {bgColor};"
 	title={title ?? name}
 	aria-hidden="true"

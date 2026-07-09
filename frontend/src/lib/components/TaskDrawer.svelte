@@ -223,7 +223,7 @@
 		transition:fly={{ x: 645, duration: 240, easing: cubicOut, opacity: 1 }}
 	>
 		<header
-			class="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle bg-surface-elevated/70 px-5 pb-3.5 pt-4"
+			class="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle bg-surface-elevated px-5 pb-3.5 pt-4"
 		>
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
 				<div class="flex items-center gap-2">
@@ -539,13 +539,13 @@
 			<!-- Rodapé fixo: Salvar = flush das edições pendentes + fechar (o
 			     autosave já persistiu o resto; status/arquivar vivem no board/lista). -->
 			<footer
-				class="flex shrink-0 items-center justify-end gap-2 border-t border-border-subtle bg-surface-elevated/70 px-5 py-3"
+				class="flex shrink-0 items-center justify-end gap-2 border-t border-border-subtle bg-surface-elevated px-5 py-3"
 			>
 				<button
 					type="button"
 					disabled={$store.acting}
 					onclick={() => void close()}
-					class="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-4 py-1.5 text-sm font-semibold text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 				>
 					<i class="fas fa-check text-xs" aria-hidden="true"></i>
 					Salvar

@@ -61,7 +61,7 @@
 <svelte:window onkeydown={onKeydown} />
 
 {#if current}
-	<div class="fixed inset-0 z-[1000] bg-black/60" onclick={onClose} role="presentation"></div>
+	<div class="fixed inset-0 z-[1000] bg-overlay" onclick={onClose} role="presentation"></div>
 	<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 	<section
 		role="dialog"
@@ -102,7 +102,7 @@
 				<iframe
 					src={current.url}
 					title={current.filename}
-					class="h-[68vh] w-full rounded-md border-none bg-white"
+					class="h-[68vh] w-full rounded-md border-none bg-surface"
 				></iframe>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-12 text-center text-text-secondary">
@@ -150,7 +150,7 @@
 					target="_blank"
 					rel="noopener"
 					download={current.filename}
-					class="rounded-md bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white no-underline shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-primary-fg no-underline shadow-sm transition-colors duration-fast hover:opacity-90 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					Baixar
 				</a>

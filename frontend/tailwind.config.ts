@@ -28,13 +28,22 @@ export default {
 					500: 'var(--ds-color-primary-500)',
 					600: 'var(--ds-color-primary-600)',
 					700: 'var(--ds-color-primary-700)',
-					DEFAULT: 'var(--ds-color-primary-600)'
+					DEFAULT: 'var(--ds-color-primary-600)',
+					fg: 'var(--ds-color-primary-fg)'
 				},
 				secondary: 'var(--ds-color-secondary-600)',
-				success: 'var(--ds-color-success-600)',
+				success: {
+					DEFAULT: 'var(--ds-color-success-600)',
+					fg: 'var(--ds-color-success-fg)'
+				},
 				warning: 'var(--ds-color-warning-600)',
-				danger: 'var(--ds-color-danger-600)',
+				danger: {
+					DEFAULT: 'var(--ds-color-danger-600)',
+					fg: 'var(--ds-color-danger-fg)'
+				},
 				info: 'var(--ds-color-info-600)',
+				violet: 'var(--ds-color-violet-600)',
+				overlay: 'var(--color-overlay)',
 				pending: 'var(--ds-color-pending)',
 				// Cor da prioridade "alta" no original (#ea580c, laranja) — nao havia
 				// token semantico equivalente; mapeada para CSS var (ajusta no dark).
@@ -147,10 +156,10 @@ export default {
 				xl: '16px'
 			},
 			boxShadow: {
-				// --ds-shadow-*
-				sm: '0 2px 8px rgba(15, 23, 42, 0.06)',
-				md: '0 4px 12px rgba(15, 23, 42, 0.08)',
-				lg: '0 8px 24px rgba(15, 23, 42, 0.12)'
+				// --ds-shadow-* (vars em app.css; mesmos literais no light, re-temperadas no dark)
+				sm: 'var(--ds-shadow-sm)',
+				md: 'var(--ds-shadow-md)',
+				lg: 'var(--ds-shadow-lg)'
 			},
 			transitionDuration: {
 				// --ds-transition-*

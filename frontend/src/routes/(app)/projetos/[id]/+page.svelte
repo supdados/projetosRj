@@ -1483,6 +1483,9 @@
 		transform-origin: top left;
 		animation: dateMenuIn 0.14s ease;
 	}
+	:global([data-theme='dark']) .date-context-menu {
+		box-shadow: var(--ds-shadow-md);
+	}
 	.date-context-menu button {
 		display: flex;
 		align-items: center;
@@ -1528,7 +1531,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(0, 0, 0, 0.4);
+		background: var(--color-overlay);
 	}
 	.cascade-modal {
 		background: var(--color-surface);
@@ -1538,6 +1541,9 @@
 		max-width: 400px;
 		text-align: center;
 		color: var(--color-text-secondary);
+	}
+	:global([data-theme='dark']) .cascade-modal {
+		box-shadow: var(--ds-shadow-md);
 	}
 	.cascade-modal h5 {
 		margin: 0 0 0.75rem;
@@ -1565,7 +1571,7 @@
 	}
 	.cascade-btn-primary {
 		background: var(--ds-color-primary-600);
-		color: #fff;
+		color: var(--ds-color-primary-fg);
 	}
 	.cascade-btn-primary:disabled {
 		opacity: 0.6;

@@ -357,15 +357,15 @@
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--stage-chip-text);
-		background: #fff;
+		background: var(--color-surface);
 	}
 	.stage-resp-chip--overflow {
 		color: var(--stage-chip-text-hover);
 		background: var(--stage-chip-bg-hover);
 	}
 	:global(html[data-theme='dark']) .stage-resp-chip {
-		background: #2b3a4f;
+		background: var(--color-surface-elevated);
 		border-color: var(--color-border);
-		color: #d2dfec;
+		color: var(--color-text-secondary);
 	}
 </style>

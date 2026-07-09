@@ -330,7 +330,7 @@
 
 <!-- Backdrop: mesma tinta/blur do TaskDrawer, fade 200ms. -->
 <div
-	class="fixed inset-0 z-modal bg-[rgba(7,20,33,0.34)] backdrop-blur-[1.2px]"
+	class="fixed inset-0 z-modal bg-overlay backdrop-blur-[1.2px]"
 	role="presentation"
 	transition:fade={{ duration: 200 }}
 	onclick={attemptClose}
@@ -346,7 +346,7 @@
 	tabindex="-1"
 	use:focusTrap
 	transition:fly={{ x: 880, duration: 240, easing: cubicOut, opacity: 1 }}
-	class="fixed right-0 top-0 z-modal flex h-full w-[min(880px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-[-18px_0_44px_rgba(12,44,74,0.18)]"
+	class="stq-panel fixed right-0 top-0 z-modal flex h-full w-[min(880px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-[-18px_0_44px_rgba(12,44,74,0.18)]"
 >
 	<header
 		class="flex shrink-0 flex-col gap-3 border-b border-border-subtle bg-surface-elevated/70 px-5 pb-3.5 pt-4"
@@ -627,6 +627,9 @@
 
 	/* Tintas via color-mix sobre tokens DS (o Tailwind 3 não gera `bg-x/10`
 	 * para cores definidas como var() sem alpha-value). */
+	:global([data-theme='dark']) .stq-panel {
+		box-shadow: -18px 0 44px rgba(0, 0, 0, 0.5);
+	}
 	.stq-discard-confirm {
 		border-color: color-mix(in srgb, var(--ds-color-warning-600) 40%, transparent);
 		background-color: color-mix(in srgb, var(--ds-color-warning-600) 8%, transparent);

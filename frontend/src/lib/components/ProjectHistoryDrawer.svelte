@@ -219,7 +219,7 @@
 	use:focusTrap
 	onkeydown={onKeydown}
 	transition:fly={{ x: 620, duration: 240, easing: cubicOut, opacity: 1 }}
-	class="fixed right-0 top-0 z-modal flex h-full w-[min(620px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-[-18px_0_44px_rgba(12,44,74,0.18)]"
+	class="history-drawer-panel fixed right-0 top-0 z-modal flex h-full w-[min(620px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-[-18px_0_44px_rgba(12,44,74,0.18)]"
 >
 	<header
 		class="flex shrink-0 flex-col gap-3 border-b border-border-subtle bg-surface-elevated/70 px-5 pb-3.5 pt-4"
@@ -407,3 +407,9 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	:global([data-theme='dark']) .history-drawer-panel {
+		box-shadow: -18px 0 44px rgba(0, 0, 0, 0.55);
+	}
+</style>

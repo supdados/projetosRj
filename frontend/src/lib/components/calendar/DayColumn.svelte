@@ -101,7 +101,7 @@
 >
 	{#if todayCol}
 		<div
-			class="pointer-events-none absolute inset-0 bg-primary-500/5 dark:bg-primary-500/8"
+			class="pointer-events-none absolute inset-0 bg-primary-500/10 dark:bg-primary-500/20"
 			aria-hidden="true"
 		></div>
 	{/if}

@@ -1379,7 +1379,7 @@
 						<button
 							type="submit"
 							disabled={submitting}
-							class="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
+							class="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
 						>
 							{#if submitting}
 								{@render spinner()}Criando…
@@ -1423,7 +1423,7 @@
 							<button
 								type="button"
 								onclick={discardAndClose}
-								class="inline-flex h-8 items-center rounded-md bg-danger px-3 text-xs font-semibold text-white transition-opacity duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-1"
+								class="inline-flex h-8 items-center rounded-md bg-danger px-3 text-xs font-semibold text-danger-fg transition-opacity duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-1"
 							>
 								Descartar
 							</button>

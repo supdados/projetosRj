@@ -426,6 +426,30 @@
 		color: rgba(23, 105, 168, 0.65);
 	}
 
+	/* No dark o topnav é carvão: a busca vira inset translúcido em vez de pill branco. */
+	:global([data-theme='dark']) .app-global-search-form {
+		border-color: var(--color-border);
+		background: rgba(255, 255, 255, 0.08);
+	}
+	:global([data-theme='dark']) .app-global-search-form:hover {
+		background: rgba(255, 255, 255, 0.12);
+		border-color: var(--color-border-strong);
+	}
+	:global([data-theme='dark']) .app-global-search-form:focus-within {
+		background: rgba(255, 255, 255, 0.12);
+		border-color: var(--color-border-strong);
+		box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+	}
+	:global([data-theme='dark']) .app-global-search-icon {
+		color: var(--color-text-muted);
+	}
+	:global([data-theme='dark']) .app-global-search-input {
+		color: var(--color-text-primary);
+	}
+	:global([data-theme='dark']) .app-global-search-input::placeholder {
+		color: var(--color-text-muted);
+	}
+
 	/* Remove o "x" nativo do type=search para manter o visual do v4.5. */
 	.app-global-search-input::-webkit-search-cancel-button {
 		-webkit-appearance: none;
@@ -443,7 +467,7 @@
 		border: 1px solid var(--color-border);
 		border-radius: 12px;
 		background: var(--color-surface);
-		box-shadow: 0 16px 36px rgba(20, 32, 52, 0.18);
+		box-shadow: var(--ds-shadow-lg);
 		padding: 0.4rem;
 	}
 
@@ -539,23 +563,23 @@
 	}
 
 	.app-global-search-item-type.type-project {
-		background: #ddefff;
-		color: #03568c;
+		background: var(--search-badge-project-bg);
+		color: var(--search-badge-project-fg);
 	}
 
 	.app-global-search-item-type.type-stage {
-		background: #f9f0d0;
-		color: #6c5000;
+		background: var(--search-badge-stage-bg);
+		color: var(--search-badge-stage-fg);
 	}
 
 	.app-global-search-item-type.type-task {
-		background: #e0f6df;
-		color: #24571f;
+		background: var(--search-badge-task-bg);
+		color: var(--search-badge-task-fg);
 	}
 
 	.app-global-search-item-type.type-event {
-		background: #e7eefb;
-		color: #304d80;
+		background: var(--search-badge-event-bg);
+		color: var(--search-badge-event-fg);
 	}
 
 	.app-global-search-item-title {

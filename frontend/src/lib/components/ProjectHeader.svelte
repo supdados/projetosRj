@@ -1174,6 +1174,11 @@
 		justify-content: space-between;
 		gap: 0.85rem;
 	}
+	:global([data-theme='dark']) .project-compact-inner {
+		background: var(--color-surface-elevated);
+		border-color: var(--color-border);
+		box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+	}
 	.project-compact-main {
 		min-width: 0;
 		flex: 1;
@@ -1187,6 +1192,9 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
+	:global([data-theme='dark']) .project-compact-title {
+		color: var(--color-text-primary);
+	}
 	.project-compact-description {
 		margin: 0.3rem 0 0;
 		font-size: 0.875rem;
@@ -1194,6 +1202,9 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+	:global([data-theme='dark']) .project-compact-description {
+		color: var(--color-text-secondary);
 	}
 	.project-compact-meta {
 		margin-top: 0.6rem;
@@ -1216,6 +1227,11 @@
 		line-height: 1;
 		white-space: nowrap;
 	}
+	:global([data-theme='dark']) .pc-chip {
+		background: var(--color-surface-muted);
+		color: var(--color-text-secondary);
+		border-color: var(--color-border);
+	}
 	.pc-chip i {
 		font-size: 0.62rem;
 		opacity: 0.92;
@@ -1224,7 +1240,7 @@
 		width: 7px;
 		height: 7px;
 		border-radius: 50%;
-		background: #16a34a;
+		background: var(--ds-color-success-600);
 	}
 	.pc-chip--status-suspenso i {
 		color: #9a6212;
@@ -1247,6 +1263,27 @@
 	.pc-chip--special i {
 		color: #6d28d9;
 	}
+	:global([data-theme='dark']) .pc-chip--status-suspenso i {
+		color: var(--ds-color-warning-600);
+	}
+	:global([data-theme='dark']) .pc-chip--prio-urgente i {
+		color: var(--ds-color-priority-urgente);
+	}
+	:global([data-theme='dark']) .pc-chip--prio-alta i {
+		color: var(--ds-color-priority-alta);
+	}
+	:global([data-theme='dark']) .pc-chip--prio-media i {
+		color: var(--ds-color-priority-media);
+	}
+	:global([data-theme='dark']) .pc-chip--prio-baixa i {
+		color: var(--ds-color-priority-baixa);
+	}
+	:global([data-theme='dark']) .pc-chip--delivery i {
+		color: var(--ds-color-primary-500);
+	}
+	:global([data-theme='dark']) .pc-chip--special i {
+		color: var(--ds-color-violet-600);
+	}
 	.project-compact-back {
 		display: inline-flex;
 		align-items: center;
@@ -1265,6 +1302,14 @@
 	.project-compact-back:hover {
 		background: #f4f8fc;
 		color: #2f455d;
+	}
+	:global([data-theme='dark']) .project-compact-back {
+		background: var(--color-surface-muted);
+		border-color: var(--color-border);
+		color: var(--color-text-primary);
+	}
+	:global([data-theme='dark']) .project-compact-back:hover {
+		background: var(--color-surface-elevated);
 	}
 
 	@media (max-width: 991.98px) {

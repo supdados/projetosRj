@@ -735,7 +735,7 @@
 									<!-- Indicador de soltura ANTES desta etapa (linha azul flutuante) -->
 									{#if dragStageIndex !== null && dropBeforeIndex === index}
 										<span
-											class="pointer-events-none absolute left-0 right-0 -mt-1 h-[3px] -translate-y-1/2 rounded-full bg-primary-600 shadow-[0_2px_8px_rgba(0,90,146,0.35)]"
+											class="drop-indicator pointer-events-none absolute left-0 right-0 -mt-1 h-[3px] -translate-y-1/2 rounded-full bg-primary-600"
 											style="top: 0"
 											aria-hidden="true"
 										></span>
@@ -831,7 +831,7 @@
 							<!-- Indicador de soltura AO FINAL da lista -->
 							{#if dragStageIndex !== null && dropBeforeIndex === formStages.length}
 								<span
-									class="pointer-events-none -mt-1 h-[3px] rounded-full bg-primary-600 shadow-[0_2px_8px_rgba(0,90,146,0.35)]"
+									class="drop-indicator pointer-events-none -mt-1 h-[3px] rounded-full bg-primary-600"
 									aria-hidden="true"
 								></span>
 							{/if}
@@ -841,7 +841,7 @@
 							<button
 								type="button"
 								onclick={() => addStage({ draft: true })}
-								class="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-primary-100/40 px-4 py-2.5 text-sm font-semibold text-primary-700 transition-all duration-fast hover:border-primary-500 hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								class="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-muted px-4 py-2.5 text-sm font-semibold text-primary-500 transition-all duration-fast hover:border-primary-500 hover:bg-surface-elevated focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 							>
 								<i class="fas fa-plus-circle" aria-hidden="true"></i>
 								<span>Adicionar nova etapa</span>
@@ -860,7 +860,7 @@
 						<button
 							type="submit"
 							disabled={formSaving || !formValid}
-							class="inline-flex h-9 items-center rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
+							class="inline-flex h-9 items-center rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-primary-fg shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
 						>
 							{#if formSaving}
 								Salvando…
@@ -883,7 +883,7 @@
 		{:else if loadState === 'error'}
 			<div
 				role="alert"
-				class="flex flex-col items-start gap-3 rounded-xl border border-danger bg-danger/5 px-5 py-4 shadow-md"
+				class="flex flex-col items-start gap-3 rounded-xl border border-danger bg-danger/5 px-5 py-4"
 			>
 				<p class="font-medium text-text-primary">{errorMessage}</p>
 				<button
@@ -1018,7 +1018,7 @@
 										<td class="min-w-[280px] px-4 py-3 align-middle">
 											<div class="flex items-center gap-3">
 												<span
-													class="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xs font-bold tracking-wide text-primary-700"
+													class="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg bg-surface-elevated text-xs font-bold tracking-wide text-primary-500"
 													aria-hidden="true"
 												>
 													{row.initials}
@@ -1154,7 +1154,7 @@
 									aria-current={p === meta.page ? 'page' : undefined}
 									class="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border px-2 text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {p ===
 									meta.page
-										? 'border-primary-600 bg-primary-600 font-semibold text-white'
+										? 'border-primary-600 bg-primary-600 font-semibold text-primary-fg'
 										: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-text-primary'}"
 								>
 									{p}
@@ -1224,10 +1224,16 @@
 					onclick={confirmDelete}
 					disabled={busyRowId === confirmDeleteRow.id ||
 						confirmPhrase.trim().toUpperCase() !== DELETE_PHRASE}
-					class="rounded-md border border-danger bg-danger px-4 py-2 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="rounded-md border border-danger bg-danger px-4 py-2 text-sm font-medium text-danger-fg transition-colors duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 				>
 					{busyRowId === confirmDeleteRow.id ? 'Apagando…' : 'Apagar modelo'}
 				</button>
 			</div>
 	</Modal>
 {/if}
+
+<style>
+	:global(.drop-indicator) {
+		box-shadow: 0 2px 8px color-mix(in srgb, var(--ds-color-primary-600) 35%, transparent);
+	}
+</style>

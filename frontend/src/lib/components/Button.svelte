@@ -50,7 +50,7 @@
 
 	const variantClass: Record<Variant, string> = {
 		primary:
-			'bg-primary-600 text-white shadow-sm hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md active:translate-y-0',
+			'bg-primary-600 text-primary-fg shadow-sm hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md active:translate-y-0',
 		// Espelha .btn-glass-secondary: superficie clara, borda/texto primary.
 		secondary:
 			'border border-primary-500 bg-surface text-primary-700 shadow-sm hover:-translate-y-0.5 hover:bg-primary-100 hover:shadow-md active:translate-y-0',

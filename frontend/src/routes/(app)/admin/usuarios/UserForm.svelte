@@ -144,7 +144,7 @@
 
 	<!-- Identificação -->
 	<fieldset
-		class="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-5 py-4 shadow-sm"
+		class="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-5 py-4"
 	>
 		<legend class="sr-only">Identificação</legend>
 		<div class="flex flex-col gap-0.5">
@@ -257,7 +257,7 @@
 
 	<!-- Credenciais -->
 	<fieldset
-		class="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-5 py-4 shadow-sm"
+		class="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-5 py-4"
 	>
 		<legend class="sr-only">Credenciais</legend>
 		<div class="flex flex-col gap-0.5">
@@ -290,7 +290,7 @@
 
 	<!-- Vínculo e Permissões -->
 	<fieldset
-		class="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-5 py-4 shadow-sm"
+		class="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-5 py-4"
 	>
 		<legend class="sr-only">Vínculo e Permissões</legend>
 		<div class="flex flex-col gap-0.5">
@@ -304,7 +304,7 @@
 		<!-- Permissão de administrador como cartão de opção destacado. -->
 		<label
 			class="flex cursor-pointer items-start gap-3 rounded-lg border px-4 py-3 transition-colors duration-fast {values.is_admin
-				? 'border-primary-500/50 bg-primary-100/40'
+				? 'border-primary-500/50 bg-surface-elevated'
 				: 'border-border-subtle bg-surface-muted/40 hover:border-border-strong hover:bg-surface-muted'}"
 		>
 			<input
@@ -364,7 +364,7 @@
 						>
 							{#each selectedOrgaos as orgao (orgao.id)}
 								<span
-									class="inline-flex items-center gap-1 rounded-full border border-primary-500/30 bg-primary-100 py-0.5 pl-2.5 pr-1 text-xs font-semibold text-primary-700"
+									class="inline-flex items-center gap-1 rounded-full border border-primary-500/30 bg-surface-elevated py-0.5 pl-2.5 pr-1 text-xs font-semibold text-primary-500"
 								>
 									{orgao.sigla}
 									<button
@@ -372,7 +372,7 @@
 										onclick={() => toggleOrgao(orgao.id, false)}
 										disabled={saving}
 										aria-label={`Remover ${orgao.sigla}`}
-										class="inline-flex h-4 w-4 items-center justify-center rounded-full text-primary-700/70 transition-colors duration-fast hover:bg-primary-500/20 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										class="inline-flex h-4 w-4 items-center justify-center rounded-full text-primary-500/70 transition-colors duration-fast hover:bg-primary-500/20 hover:text-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 									>
 										<i class="fas fa-times text-[10px]" aria-hidden="true"></i>
 									</button>
@@ -404,7 +404,7 @@
 									class="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm text-text-primary transition-colors duration-fast {values.orgaos_responsavel.includes(
 										orgao.id
 									)
-										? 'border-primary-500/40 bg-primary-100/40'
+										? 'border-primary-500/40 bg-surface-elevated'
 										: 'border-transparent hover:bg-surface-muted'}"
 								>
 									<input
@@ -445,7 +445,7 @@
 		<button
 			type="submit"
 			disabled={saving}
-			class="inline-flex h-9 items-center rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
+			class="inline-flex h-9 items-center rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-primary-fg shadow-token transition-all duration-fast hover:bg-primary-700 hover:shadow-token-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
 		>
 			{saving ? 'Salvando…' : submitLabel}
 		</button>

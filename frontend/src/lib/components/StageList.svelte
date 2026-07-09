@@ -534,12 +534,15 @@
 
 <style>
 	.etapa-table-card {
-		background: var(--app-color-surface, #fff);
-		border: 1px solid var(--app-color-border, #dfe8f2);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
 		border-radius: 14px;
 		box-shadow: 0 8px 24px rgba(20, 45, 78, 0.06);
 		overflow-x: hidden;
 		overflow-y: visible;
+	}
+	:global([data-theme='dark']) .etapa-table-card {
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40);
 	}
 	.etapa-table-wrap {
 		overflow-x: auto;
@@ -554,12 +557,12 @@
 		border-collapse: separate;
 		border-spacing: 0;
 		margin: 0;
-		background: var(--app-color-surface, #fff);
+		background: var(--color-surface);
 	}
 	.etapa-table thead th {
-		border-bottom: 1px solid var(--app-color-border, #dfe7f1);
-		background: var(--app-color-surface-muted, #f4f8fc);
-		color: #546f8d;
+		border-bottom: 1px solid var(--color-border);
+		background: var(--color-surface-muted);
+		color: var(--color-text-secondary);
 		font-size: 0.72rem;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
@@ -607,13 +610,17 @@
 	:global(.stage-drop-indicator) {
 		position: fixed;
 		height: 3px;
-		background: linear-gradient(90deg, #005a92 0%, rgba(0, 90, 146, 0.8) 50%, #005a92 100%);
+		background: linear-gradient(90deg, var(--ds-color-primary-600) 0%, rgba(0, 90, 146, 0.8) 50%, var(--ds-color-primary-600) 100%);
 		border-radius: 2px;
 		z-index: 1000;
 		opacity: 0;
 		transition: opacity 0.2s ease;
 		box-shadow: 0 2px 8px rgba(0, 90, 146, 0.4);
 		pointer-events: none;
+	}
+	:global([data-theme='dark'] .stage-drop-indicator) {
+		background: linear-gradient(90deg, var(--ds-color-primary-500) 0%, rgba(196, 210, 222, 0.8) 50%, var(--ds-color-primary-500) 100%);
+		box-shadow: 0 2px 8px rgba(196, 210, 222, 0.5);
 	}
 	:global(.stage-drop-indicator.show) {
 		opacity: 1;
@@ -632,10 +639,16 @@
 		font-size: 0.875rem;
 		font-weight: 600;
 	}
+	:global([data-theme='dark'] .stage-drag-ghost) {
+		background: var(--color-surface-elevated);
+		border-color: var(--color-border);
+		color: var(--color-text-primary);
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+	}
 
 	.etapa-entry-row td,
 	.etapa-composer-row td {
-		border-top: 1px solid var(--app-color-border, #edf2f8);
+		border-top: 1px solid var(--color-border);
 		padding: 0.5rem 0.7rem;
 	}
 	/* Ocupa a linha inteira e centraliza: o tracejado vira a "última linha"
@@ -647,10 +660,10 @@
 		justify-content: center;
 		gap: 0.45rem;
 		background: none;
-		border: 1px dashed #c3d3e8;
+		border: 1px dashed var(--color-border-strong);
 		border-radius: 8px;
 		padding: 0.6rem 0.9rem;
-		color: #2856b6;
+		color: var(--ds-color-primary-600);
 		font-size: 0.82rem;
 		font-weight: 600;
 		cursor: pointer;
@@ -660,10 +673,10 @@
 	}
 	.etapa-entry-btn:hover {
 		background: rgba(37, 99, 235, 0.07);
-		border-color: #9fc0e8;
+		border-color: var(--color-border-strong);
 	}
 	.composer-drag-placeholder {
-		color: #c3d3e8;
+		color: var(--color-border-strong);
 	}
 	.composer-textarea,
 	.composer-input {
@@ -672,8 +685,8 @@
 		border: 1px solid var(--stage-input-border);
 		border-radius: 7px;
 		font-size: 0.875rem;
-		color: #3e556f;
-		background: #fff;
+		color: var(--color-text-primary);
+		background: var(--color-surface);
 		font-family: inherit;
 		line-height: 1.45;
 		box-sizing: border-box;
@@ -690,7 +703,7 @@
 		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
 	}
 	.etapa-task-pill-placeholder {
-		color: #9fb1c6;
+		color: var(--color-text-muted);
 		font-weight: 500;
 	}
 	.cell-drag {
@@ -699,7 +712,7 @@
 	.cell-number {
 		width: 64px;
 		font-family: var(--ds-font-family-mono, ui-monospace, monospace);
-		color: #5f7691;
+		color: var(--color-text-secondary);
 		font-weight: 500;
 	}
 	.cell-desc {
@@ -738,7 +751,7 @@
 		align-items: center;
 		justify-content: center;
 		border: 1px solid var(--stage-chip-border);
-		background: #fff;
+		background: var(--color-surface);
 		cursor: pointer;
 		transition: all 0.16s ease;
 	}
@@ -765,14 +778,14 @@
 	.no-etapas-cell {
 		padding: 0.7rem;
 		text-align: center;
-		color: #64748b;
+		color: var(--color-text-secondary);
 	}
 	.composer-error {
-		color: var(--app-color-danger, #b42323);
+		color: var(--ds-color-danger-600);
 	}
 	.no-etapas-cell i {
 		font-size: 1.5rem;
-		color: #94a3b8;
+		color: var(--color-text-muted);
 		display: block;
 		margin-bottom: 0.5rem;
 	}

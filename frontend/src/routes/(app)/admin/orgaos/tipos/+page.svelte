@@ -357,7 +357,7 @@
 					<button
 						type="submit"
 						disabled={saving}
-						class="inline-flex h-9 items-center rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
+						class="inline-flex h-9 items-center rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-primary-fg shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
 					>
 						{saving
 							? 'Salvando…'
@@ -411,7 +411,7 @@
 		</div>
 
 		{#if tipos.length === 0}
-			<div class="rounded-xl border border-border-subtle bg-surface px-5 py-12 text-center shadow-sm">
+			<div class="rounded-xl border border-border-subtle bg-surface px-5 py-12 text-center">
 				<h2 class="font-heading text-lg font-semibold text-text-primary">
 					Nenhum tipo cadastrado
 				</h2>

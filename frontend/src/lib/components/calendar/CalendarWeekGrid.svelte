@@ -129,7 +129,7 @@
 				<span
 					class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold leading-none transition-colors"
 					class:bg-primary-600={today}
-					class:text-white={today}
+					class:text-primary-fg={today}
 					class:text-text-primary={!today}
 				>
 					{day.getDate()}

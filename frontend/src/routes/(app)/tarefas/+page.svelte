@@ -1037,7 +1037,7 @@
 																	disabled={addDraft.saving}
 																	title="Salvar"
 																	aria-label="Salvar tarefa"
-																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md bg-primary-600 text-white shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md bg-primary-600 text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 																>
 																	<i class="fas fa-check text-xs" aria-hidden="true"></i>
 																</button>
@@ -1096,7 +1096,7 @@
 
 {#if confirmingArchive}
 	<!-- Confirmação de arquivamento (modal SPA com o MESMO texto do legado) -->
-	<div class="fixed inset-0 z-modal bg-black/40" role="presentation" onclick={cancelArchiveConfirm}></div>
+	<div class="fixed inset-0 z-modal bg-overlay" role="presentation" onclick={cancelArchiveConfirm}></div>
 	<div
 		role="alertdialog"
 		aria-modal="true"
@@ -1120,7 +1120,7 @@
 				type="button"
 				onclick={() => void confirmArchive()}
 				disabled={archiving}
-				class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-primary-fg shadow-sm hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 			>
 				{archiving ? 'Arquivando…' : 'Arquivar'}
 			</button>

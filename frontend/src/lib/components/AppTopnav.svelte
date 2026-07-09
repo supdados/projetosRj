@@ -293,7 +293,7 @@
 			>
 				{#if pill.ready}
 					<span
-						class="nav-pill pointer-events-none absolute left-0 top-0 z-0 h-[1.95rem] rounded-md bg-white {pillSlides
+						class="nav-pill pointer-events-none absolute left-0 top-0 z-0 h-[1.95rem] rounded-md bg-white dark:bg-white/15 {pillSlides
 							? 'nav-pill--slide'
 							: ''}"
 						style="width: {pill.w}px; transform: translate3d({pill.x}px, 0, 0);"
@@ -307,7 +307,7 @@
 						aria-current={active ? 'page' : undefined}
 						title={link.label}
 						class="relative z-[1] inline-flex h-[1.95rem] items-center gap-2 rounded-md px-3 text-[0.85rem] font-medium leading-none no-underline transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {active
-							? 'text-primary-700'
+							? 'text-primary-700 dark:text-white'
 							: 'text-white/[0.78] hover:text-white'}"
 					>
 						<i class="fas {link.icon} shrink-0" aria-hidden="true"></i>
@@ -336,7 +336,7 @@
 					title="Notificacoes"
 					aria-label="Notificacoes"
 					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {notifOpen
-						? 'border-white bg-white text-primary-700'
+						? 'border-white bg-white text-primary-700 dark:border-white/10 dark:bg-white/15 dark:text-white'
 						: 'bg-transparent text-white/[0.78] hover:bg-white/10 hover:text-white'}"
 				>
 					<i class="fas fa-bell" aria-hidden="true"></i>
@@ -354,7 +354,8 @@
 					<div
 						role="menu"
 						aria-label="Notificacoes"
-						class="app-notifications-dropdown absolute right-0 top-full z-dropdown mt-2 w-[min(360px,90vw)] origin-top-right animate-dropdown-in overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
+						class="app-notifications-dropdown absolute right-0 top-full z-dropdown mt-2 w-[min(360px,90vw)] origin-top-right animate-dropdown-in overflow-hidden rounded-xl border border-border-subtle bg-surface"
+						style="box-shadow: var(--ds-glass-shadow);"
 					>
 						<div
 							class="app-notifications-dropdown-header flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-3"
@@ -443,7 +444,7 @@
 						aria-label="Conta e administracao"
 						class="inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {adminActive ||
 						adminOpen
-							? 'border-white bg-white text-primary-700'
+							? 'border-white bg-white text-primary-700 dark:border-white/10 dark:bg-white/15 dark:text-white'
 							: 'bg-transparent text-white/[0.78] hover:bg-white/10 hover:text-white'}"
 					>
 						<i class="fas fa-user-circle" aria-hidden="true"></i>
@@ -453,7 +454,8 @@
 						<div
 							role="menu"
 							aria-label="Administracao"
-							class="absolute right-0 top-full z-dropdown mt-2 min-w-[14rem] origin-top-right animate-dropdown-in overflow-hidden rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
+							class="absolute right-0 top-full z-dropdown mt-2 min-w-[14rem] origin-top-right animate-dropdown-in overflow-hidden rounded-lg border border-border-subtle bg-surface py-1"
+							style="box-shadow: var(--ds-glass-shadow);"
 						>
 							{#if user}
 								<div class="px-4 py-2" aria-hidden="true">
@@ -649,6 +651,12 @@
 		box-shadow:
 			0 0 0 0.0625em var(--primary),
 			0 0.125em 0.5em rgba(15, 28, 47, 0.18);
+	}
+
+	:global(html[data-theme='dark']) .app-theme-switch__input:focus-visible {
+		box-shadow:
+			0 0 0 0.0625em var(--primary),
+			0 0.125em 0.5em rgba(255, 255, 255, 0.2);
 	}
 
 	/* Icones do trilho — fixos nas pontas; o lado oposto a pilula atua como hint. */
