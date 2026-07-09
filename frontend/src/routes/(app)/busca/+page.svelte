@@ -21,6 +21,7 @@
 	 * rotas Jinja) — href direto, sem prefixo `base` da SPA.
 	 */
 	import { onDestroy } from 'svelte';
+	import { page } from '$app/state';
 	import { get, ApiClientError } from '$lib/api/client';
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type {
@@ -162,6 +163,20 @@
 	function retry(): void {
 		void runSearch(term);
 	}
+
+	// Hidrata o termo a partir do `?q=` da URL e dispara a busca: é assim que o
+	// "Ver tudo" do GlobalSearchBox chega aqui (deep-link). Reage a novas
+	// navegações para /busca?q=... (mesma rota, sem remontar); digitar não mexe
+	// na URL, então não sobrescreve o que o usuário escreve.
+	let syncedUrlQuery: string | null = null;
+	$effect(() => {
+		const urlQuery = (page.url.searchParams.get('q') ?? '').trim();
+		if (urlQuery === syncedUrlQuery) return;
+		syncedUrlQuery = urlQuery;
+		term = urlQuery;
+		if (debounceTimer) clearTimeout(debounceTimer);
+		if (urlQuery.length >= MIN_TERM_LENGTH) void runSearch(urlQuery);
+	});
 
 	// Reexecuta a busca (imediatamente, sem debounce) quando o escopo de orgao
 	// do topnav muda, para que os resultados respeitem o novo filtro. Ler
