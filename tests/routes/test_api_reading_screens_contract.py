@@ -209,6 +209,48 @@ def test_api_busca_returns_ok_envelope_with_expected_shape(client_user):
     assert "has_more" in data["meta"]
 
 
+def test_api_busca_limit_all_returns_every_record_without_cap(
+    app, client_user, seed_data
+):
+    """`limit=all` (tela cheia) traz TODOS os registros — sem cap por tipo nem has_more.
+
+    O dropdown do topo continua mandando `limit=5` (cap + has_more); a página de
+    busca manda `limit=all` para não esconder registros.
+    """
+    from models import Project, db
+    from tests._orgao_helpers import ensure_orgao
+
+    with app.app_context():
+        orgao_id = ensure_orgao("Auditoria").id
+        for index in range(6):
+            db.session.add(
+                Project(
+                    titulo=f"BuscaLimitAll Projeto {index}",
+                    orgao_id=orgao_id,
+                    orgao="Orgao BuscaLimitAll",
+                    prioridade="media",
+                    status="Vigente",
+                    objetivo_id=1,
+                    resultado_esperado_id=1,
+                )
+            )
+        db.session.commit()
+
+    capped = _assert_ok_envelope(
+        client_user.get("/api/busca?q=BuscaLimitAll&limit=5").get_json()
+    )
+    assert len(capped["results"]["projects"]) == 5
+    assert capped["meta"]["has_more"]["projects"] is True
+
+    full = _assert_ok_envelope(
+        client_user.get("/api/busca?q=BuscaLimitAll&limit=all").get_json()
+    )
+    assert len(full["results"]["projects"]) == 6
+    assert full["meta"]["limit_per_type"] is None
+    assert full["meta"]["has_more"]["projects"] is False
+    assert full["meta"]["has_more"]["any"] is False
+
+
 def test_api_busca_short_term_returns_empty_payload_envelope(client_user):
     """Termo com menos de 2 caracteres => payload vazio canônico (sem varredura)."""
     response = client_user.get("/api/busca?q=a")

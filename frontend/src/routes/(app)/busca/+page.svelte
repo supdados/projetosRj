@@ -117,8 +117,9 @@
 		try {
 			// Propaga o escopo de orgao do topnav (`?orgao=<id>` | ''); o backend
 			// sanitiza o filtro para o usuario corrente. Espelha o `?orgao=` que o
-			// v4.5 propagava em todas as telas (routes/search.py).
-			const params = new URLSearchParams({ q: trimmed });
+			// v4.5 propagava em todas as telas (routes/search.py). `limit=all`: a
+			// tela cheia mostra TODOS os registros (o dropdown do topo usa limit=5).
+			const params = new URLSearchParams({ q: trimmed, limit: 'all' });
 			const scope = $orgaoScopeQuery;
 			const path = scope ? `/api/busca?${params}&${scope}` : `/api/busca?${params}`;
 			const result = await get<GlobalSearchData>(path, controller.signal);

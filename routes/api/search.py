@@ -55,10 +55,18 @@ def api_busca() -> Response | tuple[Response, int]:
     selected_orgao_id, _ = sanitize_orgao_filter_for_current_user(
         request.args.get("orgao")
     )
-    limit_per_type = _normalize_global_search_limit(
-        request.args.get("limit"),
-        default_limit=GLOBAL_SEARCH_DEFAULT_LIMIT,
-        max_limit=GLOBAL_SEARCH_API_MAX_LIMIT,
+    # `limit=all`: a TELA de busca (página inteira) traz todos os registros; o
+    # dropdown do topo continua mandando `limit=5`. limit_per_type=None => sem
+    # LIMIT no SQL e has_more sempre False (não há "ver mais" na página cheia).
+    unlimited = request.args.get("limit") == "all"
+    limit_per_type = (
+        None
+        if unlimited
+        else _normalize_global_search_limit(
+            request.args.get("limit"),
+            default_limit=GLOBAL_SEARCH_DEFAULT_LIMIT,
+            max_limit=GLOBAL_SEARCH_API_MAX_LIMIT,
+        )
     )
 
     if len(search_term) < GLOBAL_SEARCH_MIN_TERM_LENGTH:
@@ -68,7 +76,7 @@ def api_busca() -> Response | tuple[Response, int]:
         search_term,
         g.user,
         limit_per_type=limit_per_type,
-        include_has_more=True,
+        include_has_more=not unlimited,
         selected_orgao_id=selected_orgao_id,
     )
     return ok(payload)
