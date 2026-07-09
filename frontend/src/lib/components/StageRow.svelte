@@ -19,6 +19,7 @@
 	 */
 	import { tick } from 'svelte';
 	import InlineEditField from './InlineEditField.svelte';
+	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
 	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
 	import '$lib/styles/stage-chips.css';
 
@@ -43,6 +44,8 @@
 		onDelete: () => void;
 		/** Abre o quick-add de tarefas (pílula). */
 		onOpenTasks: () => void;
+		/** Etapa confirmada pelo servidor após salvar áreas responsáveis. */
+		onResponsaveisSaved: (etapa: EtapaDetail) => void;
 		/** Menu de contexto de dias úteis numa célula de data. */
 		onDateContextMenu: (field: 'data_inicio' | 'data_fim', clientX: number, clientY: number) => void;
 		/** Teclado na alça de arraste (ArrowUp/ArrowDown) — fallback acessível do DnD. */
@@ -62,6 +65,7 @@
 		onSaveComentario,
 		onDelete,
 		onOpenTasks,
+		onResponsaveisSaved,
 		onDateContextMenu,
 		onHandleKeydown
 	}: Props = $props();
@@ -163,12 +167,18 @@
 				? 'fas fa-play-circle'
 				: 'far fa-circle'
 	);
+	// UX preventivo: a validação dura de datas na conclusão é do backend.
+	const missingDatesForDone = $derived(
+		statusState === 'started' && (!etapa.data_inicio || !etapa.data_fim)
+	);
 	const statusTitle = $derived(
-		statusState === 'done'
-			? 'Clique para voltar para não iniciada'
-			: statusState === 'started'
-				? 'Clique para marcar como concluída'
-				: 'Clique para marcar como iniciada'
+		missingDatesForDone
+			? 'Defina as datas de início e fim antes de concluir a etapa'
+			: statusState === 'done'
+				? 'Clique para voltar para não iniciada'
+				: statusState === 'started'
+					? 'Clique para marcar como concluída'
+					: 'Clique para marcar como iniciada'
 	);
 
 	const rowTextClass = $derived(etapa.done && !isMeeting ? 'etapa-done-text' : '');
@@ -340,24 +350,25 @@
 			{/if}
 		</td>
 
-		<!-- Responsável -->
+		<!-- Responsável (áreas) -->
 		<td class="cell-responsavel {rowTextClass}">
 			{#if locked || etapa.done}
-				<span class="cell-readonly" class:editable-field-empty={!etapa.responsavel}>
-					{etapa.responsavel || 'Sem responsável'}
-				</span>
+				{#if etapa.responsaveis.length > 0}
+					<span class="stage-resp-chips" aria-label="Áreas responsáveis">
+						{#each etapa.responsaveis as r (r.area_id ?? r.label)}
+							<span class="stage-resp-chip">{r.label}</span>
+						{/each}
+					</span>
+				{:else}
+					<span class="cell-readonly" class:editable-field-empty={!etapa.responsavel}>
+						{etapa.responsavel || 'Sem responsável'}
+					</span>
+				{/if}
 			{:else}
-				<InlineEditField
-					variant="cell"
-					kind="textarea"
-					centered
-					fieldId={`etapa-${etapa.id}-responsavel`}
-					label="Responsável"
-					value={etapa.responsavel}
-					emptyLabel="Sem responsável"
-					pending={fieldState('responsavel').pending}
-					error={fieldState('responsavel').error}
-					onSave={(v) => onUpdateField('responsavel', v)}
+				<AreaResponsavelPicker
+					etapaId={etapa.id}
+					selecionadas={etapa.responsaveis}
+					onSaved={(e) => onResponsaveisSaved(e)}
 				/>
 			{/if}
 		</td>
@@ -422,12 +433,6 @@
 				<span class="text-muted-small">-</span>
 			{/if}
 		</td>
-	</tr>
-{/if}
-
-{#if rowError}
-	<tr>
-		<td colspan="9" class="cell-row-error" aria-live="assertive" aria-atomic="true">{rowError}</td>
 	</tr>
 {/if}
 
@@ -569,6 +574,18 @@
 		min-width: 170px;
 		text-align: center;
 	}
+	.stage-resp-chips {
+		display: inline-flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		justify-content: center;
+	}
+	.stage-resp-chip {
+		border: 1px solid var(--stage-chip-border);
+		border-radius: 6px;
+		font-size: 0.75rem;
+		padding: 0.1rem 0.45rem;
+	}
 	.cell-readonly {
 		display: inline-flex;
 		align-items: center;
@@ -701,11 +718,6 @@
 	.text-muted-small {
 		color: #9fb1c6;
 		font-size: 0.78rem;
-	}
-	.cell-row-error {
-		color: var(--app-color-danger, #b42323);
-		font-size: 0.78rem;
-		padding-top: 0;
 	}
 
 	.etapa-meeting-drag-icon {

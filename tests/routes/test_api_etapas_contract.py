@@ -28,7 +28,11 @@ def _error(response):
 def test_add_etapa_returns_envelope_with_etapa(app, client_user, seed_data):
     response = client_user.post(
         f"/api/projetos/{seed_data['project_id']}/etapas",
-        json={"descricao": "Etapa criada", "data_inicio": "2026-04-01"},
+        json={
+            "descricao": "Etapa criada",
+            "data_inicio": "2026-04-01",
+            "responsaveis": [{"area_id": None, "label": "Outras"}],
+        },
     )
 
     assert response.status_code == 200
@@ -150,9 +154,7 @@ def test_cascade_rejects_excessive_days(app, client_user, seed_data):
 
 
 def test_toggle_iniciada_flips_flag(app, client_user, seed_data):
-    response = client_user.post(
-        f"/api/etapas/{seed_data['etapa_id']}/toggle-iniciada"
-    )
+    response = client_user.post(f"/api/etapas/{seed_data['etapa_id']}/toggle-iniciada")
 
     assert response.status_code == 200
     assert _data(response)["etapa"]["iniciada"] is True
@@ -215,9 +217,7 @@ def test_etapa_not_found_returns_404(app, client_user, seed_data):
 
 
 def test_unauthenticated_returns_401(app, client, seed_data):
-    response = client.post(
-        f"/api/etapas/{seed_data['etapa_id']}/toggle-iniciada"
-    )
+    response = client.post(f"/api/etapas/{seed_data['etapa_id']}/toggle-iniciada")
 
     assert response.status_code == 401
     assert _error(response)["code"] == "unauthenticated"

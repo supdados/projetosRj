@@ -46,6 +46,8 @@
 		/** Altura do topnav fixo (px) para o offset do sticky. */
 		topOffset?: number;
 		fieldStates?: Partial<Record<HeaderField, FieldState>>;
+		/** Projeto finalizado: header inteiro vira somente leitura (reabrir só pelo botão). */
+		locked?: boolean;
 		onEditField: (field: HeaderField, value: string) => void;
 	}
 
@@ -56,11 +58,12 @@
 		derivedData,
 		topOffset = 0,
 		fieldStates = {},
+		locked = false,
 		onEditField
 	}: Props = $props();
 
 	let compact = $state(false);
-	const canEdit = $derived(permissions.can_edit);
+	const canEdit = $derived(permissions.can_edit && !locked);
 
 	// Folga (px) entre a base do topnav e o header compacto, para que ele não
 	// fique colado no topo. O GATILHO usa `topOffset` puro (sincronia exata com
@@ -234,6 +237,11 @@
 		if (editingField === field) commitText();
 		else void enterTextEdit(field);
 	}
+
+	// "Finalizado" NUNCA é selecionável no dropdown: a única transição para
+	// Finalizado é o botão Concluir (POST /api/projetos/<id>/concluir). Filtro
+	// defensivo caso o backend ainda oferte a opção.
+	const statusOptions = $derived(options.status.filter((opt) => opt.value !== 'Finalizado'));
 
 	const statusKey = $derived((project.status ?? '').toLowerCase() || 'na');
 	const prioKey = $derived(project.prioridade ?? 'na');
@@ -454,7 +462,7 @@
 						aria-label="Status do projeto"
 						onchange={(e) => selectChip('status', e.currentTarget.value)}
 					>
-						{#each options.status as opt (opt.value)}
+						{#each statusOptions as opt (opt.value)}
 							<option value={opt.value} selected={opt.value === (project.status ?? '')}
 								>{opt.label}</option
 							>

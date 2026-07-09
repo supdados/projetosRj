@@ -17,7 +17,8 @@
 	 * e RE-BUSCA. Acessibilidade: DnD com fallback por teclado (mover ↑/↓ na alça).
 	 */
 	import StageRow from './StageRow.svelte';
-	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
+	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
+	import type { EtapaDetail, EtapaInlineField, EtapaResponsavelArea } from '$lib/types/projectDetail';
 	import '$lib/styles/stage-chips.css';
 
 	interface FieldState {
@@ -28,7 +29,7 @@
 		descricao: string;
 		data_inicio: string;
 		data_fim: string;
-		responsavel: string;
+		responsaveis: EtapaResponsavelArea[];
 		iniciada: boolean;
 		done: boolean;
 	}
@@ -56,6 +57,8 @@
 		/** Cria a etapa e devolve `true` no sucesso — o composer só fecha (e limpa
 		 *  o rascunho) com essa confirmação; `false` mantém aberto p/ correção. */
 		onAddStage: (draft: NewStageDraft) => Promise<boolean> | boolean;
+		/** Etapa confirmada pelo servidor após salvar áreas responsáveis inline. */
+		onResponsaveisSaved: (etapa: EtapaDetail) => void;
 		/** Pede o menu de contexto de dias úteis numa data; o pai exibe/aplica. */
 		onDateContextMenu: (
 			etapaId: number,
@@ -82,6 +85,7 @@
 		onDelete,
 		onOpenTasks,
 		onAddStage,
+		onResponsaveisSaved,
 		onDateContextMenu,
 		meetingSlot
 	}: Props = $props();
@@ -236,7 +240,7 @@
 		descricao: '',
 		data_inicio: '',
 		data_fim: '',
-		responsavel: '',
+		responsaveis: [],
 		iniciada: false,
 		done: false
 	});
@@ -272,7 +276,7 @@
 			descricao: '',
 			data_inicio: '',
 			data_fim: '',
-			responsavel: '',
+			responsaveis: [],
 			iniciada: false,
 			done: false
 		};
@@ -400,6 +404,7 @@
 						onSaveComentario={(c) => onSaveComentario(etapa.id, c)}
 						onDelete={() => onDelete(etapa.id)}
 						onOpenTasks={() => onOpenTasks(etapa.id)}
+						onResponsaveisSaved={(e) => onResponsaveisSaved(e)}
 						onDateContextMenu={(field, x, y) => onDateContextMenu(etapa.id, field, x, y)}
 						onHandleKeydown={(e) => handleHandleKeydown(e, index)}
 						{meetingSlot}
@@ -459,15 +464,7 @@
 								/>
 							</td>
 							<td class="cell-responsavel">
-								<label class="sr-only" for="composer-responsavel">Responsável</label>
-								<input
-									id="composer-responsavel"
-									type="text"
-									bind:value={draft.responsavel}
-									placeholder="Responsável"
-									class="composer-input"
-									onkeydown={composerKeydown}
-								/>
+								<AreaResponsavelPicker bind:selecionadas={draft.responsaveis} />
 							</td>
 							<td class="cell-tasks">
 								<span class="etapa-task-pill-placeholder" aria-hidden="true">—</span>

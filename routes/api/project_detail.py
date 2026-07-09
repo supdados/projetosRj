@@ -48,8 +48,13 @@ from .serializers import (
 )
 
 # Opções fixas dos seletores de edição inline (espelham templates/projects/
-# form.html). "Finalizado" só é ofertado quando o projeto já está finalizado ou
-# tem todas as etapas concluídas — mesma regra do template Jinja.
+# form.html).
+# Status selecionáveis no dropdown. "Finalizado" NUNCA é ofertado aqui: a única
+# transição para Finalizado é POST /api/projetos/<id>/concluir (botão Concluir).
+_STATUS_OPTIONS = [
+    {"value": "Vigente", "label": "Vigente"},
+    {"value": "Suspenso", "label": "Suspenso"},
+]
 _PRIORIDADE_OPTIONS = [
     {"value": "baixa", "label": "Baixa"},
     {"value": "media", "label": "Média"},
@@ -65,25 +70,6 @@ _DELIVERY_TYPE_OPTIONS = [
     "Fluxo Processual",
     "Outro",
 ]
-
-
-def _status_options(project: Project) -> list[dict[str, str]]:
-    """Monta as opções de status do projeto, espelhando ``form.html``.
-
-    "Finalizado" só entra quando o projeto já está com esse status ou todas as
-    etapas de workflow estão concluídas (mesma condição do template Jinja).
-
-    Args:
-        project: Instância de ``Project``.
-
-    Returns:
-        Lista de ``{"value", "label"}`` na ordem do formulário.
-    """
-    options = [{"value": "Vigente", "label": "Vigente"}]
-    if project.status == "Finalizado" or project.todas_etapas_concluidas:
-        options.append({"value": "Finalizado", "label": "Finalizado"})
-    options.append({"value": "Suspenso", "label": "Suspenso"})
-    return options
 
 
 def _task_counts_by_etapa(project: Project) -> dict[int, dict[str, int]]:
@@ -186,7 +172,7 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
             "todas_etapas_concluidas": project.todas_etapas_concluidas,
         },
         "options": {
-            "status": _status_options(project),
+            "status": _STATUS_OPTIONS,
             "prioridade": _PRIORIDADE_OPTIONS,
             "special_project": special_project_options,
             "delivery_type": _DELIVERY_TYPE_OPTIONS,
@@ -265,15 +251,23 @@ def api_projeto_inline(project_id: int) -> Response | tuple[Response, int]:
     if not isinstance(data, dict):
         return fail("Corpo JSON inválido.", status=422, code="validation")
 
+    previous_status = project.status
     try:
         changes = apply_project_inline_changes(project, data)
         if changes:
-            change_desc = ", ".join(changes)
-            log_project_action(
-                project_id=project.id,
-                action_type="edit",
-                description=f"Editou o projeto (inline): alterou {change_desc}",
-            )
+            if previous_status == "Finalizado" and project.status == "Vigente":
+                log_project_action(
+                    project_id=project.id,
+                    action_type="reactivate",
+                    description='Reabriu o projeto (status de "Finalizado" para "Vigente")',
+                )
+            else:
+                change_desc = ", ".join(changes)
+                log_project_action(
+                    project_id=project.id,
+                    action_type="edit",
+                    description=f"Editou o projeto (inline): alterou {change_desc}",
+                )
         db.session.commit()
     except ProjectInlineError as exc:
         db.session.rollback()

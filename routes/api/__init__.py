@@ -70,6 +70,7 @@ from . import calendars  # noqa: F401,E402
 from . import calendars_events  # noqa: F401,E402
 from . import search  # noqa: F401,E402
 from . import orgaos  # noqa: F401,E402
+from . import areas  # noqa: F401,E402
 from . import admin_users  # noqa: F401,E402
 from . import admin_orgaos  # noqa: F401,E402
 from . import admin_templates  # noqa: F401,E402

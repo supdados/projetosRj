@@ -21,6 +21,13 @@ class Etapa(db.Model):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    responsaveis = db.relationship(
+        "EtapaResponsavel",
+        cascade="all, delete-orphan",
+        order_by="EtapaResponsavel.ordem",
+        lazy="select",
+        backref="etapa",
+    )
 
     @property
     def is_google_meeting(self):
@@ -28,6 +35,36 @@ class Etapa(db.Model):
 
     def __repr__(self):
         return f"<Etapa {self.descricao[:50]}>"
+
+
+class EtapaResponsavel(db.Model):
+    """Área responsável por uma etapa (N:N Etapa↔OrgaoUnidade).
+
+    area_id=None + label='Outras' representa a opção especial "Outras".
+    label guarda a sigla no momento do save (fallback se o órgão sumir).
+    """
+
+    __tablename__ = "etapa_responsavel"
+
+    id = db.Column(db.Integer, primary_key=True)
+    etapa_id = db.Column(
+        db.Integer,
+        db.ForeignKey("etapa.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    area_id = db.Column(db.Integer, db.ForeignKey("orgao_unidade.id"), nullable=True)
+    label = db.Column(db.String(255), nullable=False)
+    ordem = db.Column(db.Integer, nullable=False, default=0)
+
+    area = db.relationship("OrgaoUnidade", lazy="joined")
+
+    __table_args__ = (
+        db.UniqueConstraint("etapa_id", "area_id", name="uq_etapa_responsavel_area"),
+    )
+
+    def __repr__(self):
+        return f"<EtapaResponsavel etapa={self.etapa_id} area={self.area_id} {self.label!r}>"
 
 
 class ProjectStageMeeting(db.Model):

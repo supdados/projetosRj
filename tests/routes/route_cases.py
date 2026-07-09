@@ -778,6 +778,7 @@ ROUTE_CASES = [
             "data_inicio": "2026-03-02",
             "data_fim": "2026-03-06",
             "responsavel": "Usuario Auditoria",
+            "responsaveis": [{"area_id": None, "label": "Outras"}],
         },
         "expected_status": 200,
         "requires_login": True,
@@ -850,6 +851,27 @@ ROUTE_CASES = [
         "path": "/api/etapas/{etapa_id}/toggle",
         "role": "user",
         "expected_status": 422,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_etapa_responsaveis_post",
+        "method": "POST",
+        "rule": "/api/etapas/<int:etapa_id>/responsaveis",
+        "path": "/api/etapas/{etapa_id}/responsaveis",
+        "role": "user",
+        "json": {"areas": [{"area_id": None, "label": "Outras"}]},
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_areas_get",
+        "method": "GET",
+        "rule": "/api/areas",
+        "path": "/api/areas",
+        "role": "user",
+        "expected_status": 200,
         "requires_login": True,
         "requires_admin": False,
     },
@@ -2074,4 +2096,6 @@ ROUTE_CASES += [
 # add_project, project_edit_data, project_update_inline, project_delete,
 # project_concluir, project_stage_tasks_panel, project_legacy_tasks_panel.
 # /projects vira redirect (projects_get permanece, status 200->302). 175 - 8 = 167.
-assert len(ROUTE_CASES) == 167
+# +2 da mudança #3 (responsáveis de etapa por área): GET /api/areas e
+# POST /api/etapas/<id>/responsaveis. 167 + 2 = 169.
+assert len(ROUTE_CASES) == 169

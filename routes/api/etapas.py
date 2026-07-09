@@ -32,6 +32,11 @@ from flask import Response, g, request
 
 from models import Etapa, Project, StageTemplate, StageTemplateItem, db
 from sqlalchemy import func
+from services.etapa_responsaveis import (
+    apply_responsaveis_entries,
+    parse_responsaveis_entries,
+    replace_etapa_responsaveis,
+)
 from services.etapas_cascade import cascade_subsequent_dates
 from services.etapas_import import import_template_stages
 from services.etapas_mutation import (
@@ -83,6 +88,17 @@ def _load_etapa_or_error(etapa_id: int) -> tuple[Etapa | None, Any]:
             code="forbidden",
         )
     return etapa, None
+
+
+def _reject_etapa_de_projeto_finalizado(etapa: Etapa) -> Any | None:
+    """Projeto Finalizado congela as etapas — reabrir (ou add, que reativa) libera."""
+    if etapa.project.status == "Finalizado":
+        return fail(
+            "Projeto finalizado: reabra o projeto para alterar suas etapas.",
+            status=422,
+            code="validation",
+        )
+    return None
 
 
 # ── Serialização ──────────────────────────────────────────────────────────────
@@ -162,6 +178,11 @@ def api_etapa_add(project_id: int) -> Response | tuple[Response, int]:
             "A descrição da etapa é obrigatória.", status=422, code="validation"
         )
 
+    try:
+        responsaveis_entries = parse_responsaveis_entries(data.get("responsaveis"))
+    except ValueError as exc:
+        return fail(str(exc), status=422, code="validation")
+
     reactivate = bool(data.get("reactivate"))
     if project.status == "Finalizado" and not reactivate:
         return fail(
@@ -186,11 +207,12 @@ def api_etapa_add(project_id: int) -> Response | tuple[Response, int]:
             descricao=descricao,
             data_inicio=data_inicio,
             data_fim=data_fim,
-            responsavel=(data.get("responsavel") or "").strip() or None,
+            responsavel=None,
             comentarios=(data.get("comentarios") or "").strip() or None,
             iniciada=iniciada,
             done=done,
         )
+        apply_responsaveis_entries(new_etapa, responsaveis_entries)
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -221,6 +243,9 @@ def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
+    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
+    if finalizado is not None:
+        return finalizado
     if is_google_meeting_stage(etapa):
         return fail(
             "Reuniões do Google devem ser editadas pelo fluxo de calendário.",
@@ -293,6 +318,9 @@ def api_etapa_delete(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
+    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
+    if finalizado is not None:
+        return finalizado
     if is_google_meeting_stage(etapa):
         return fail(
             "Reuniões do Google são excluídas pelo fluxo de calendário.",
@@ -333,6 +361,9 @@ def api_etapa_update_field(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
+    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
+    if finalizado is not None:
+        return finalizado
     if is_google_meeting_stage(etapa):
         return fail(
             "Nesta reunião o ajuste de datas passa pelo fluxo de calendário.",
@@ -413,6 +444,67 @@ def api_etapa_comentario(etapa_id: int) -> Response | tuple[Response, int]:
     return ok({"message": message, "etapa": _etapa_payload(etapa)})
 
 
+# ── Áreas responsáveis ────────────────────────────────────────────────────────
+
+
+@main_bp.route("/api/etapas/<int:etapa_id>/responsaveis", methods=["POST"])
+@api_login_required
+def api_etapa_responsaveis(etapa_id: int) -> Response | tuple[Response, int]:
+    """Substitui as áreas responsáveis da etapa (envelope), mudança #3.
+
+    Corpo: ``{"areas": [{"area_id": 12, "label": "SES"}, {"area_id": null,
+    "label": "Outras"}]}``. Reusa ``replace_etapa_responsaveis`` (substituição
+    N:N + mirror legado ``etapa.responsavel``). Reuniões Google e etapas
+    concluídas são recusadas.
+
+    Returns:
+        Envelope com a etapa atualizada; 404/403 de acesso; 422 validação.
+    """
+    etapa, error = _load_etapa_or_error(etapa_id)
+    if error is not None:
+        return error
+    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
+    if finalizado is not None:
+        return finalizado
+    if is_google_meeting_stage(etapa):
+        return fail(
+            "Reuniões do Google não têm áreas responsáveis editáveis.",
+            status=422,
+            code="validation",
+        )
+    if etapa.done:
+        return fail(
+            "Não é possível editar responsáveis de uma etapa concluída.",
+            status=422,
+            code="validation",
+        )
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return fail("Corpo JSON inválido.", status=422, code="validation")
+
+    areas = data.get("areas")
+    if not isinstance(areas, list) or not areas:
+        return fail(
+            f"Pelo menos uma área responsável é obrigatória (recebido: {data.get('areas')!r}; "
+            "esperado: lista não-vazia de objetos {area_id, label}).",
+            status=422,
+            code="validation",
+        )
+
+    try:
+        replace_etapa_responsaveis(etapa, data["areas"])
+        db.session.commit()
+    except ValueError as exc:
+        db.session.rollback()
+        return fail(str(exc), status=422, code="validation")
+    except Exception:
+        db.session.rollback()
+        return fail("Erro ao salvar responsáveis.", status=422, code="validation")
+
+    return ok({"etapa": _etapa_payload(etapa)})
+
+
 # ── Toggles ───────────────────────────────────────────────────────────────────
 
 
@@ -430,6 +522,9 @@ def api_etapa_toggle_iniciada(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
+    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
+    if finalizado is not None:
+        return finalizado
     if is_google_meeting_stage(etapa):
         return fail(
             "Reuniões Google não participam do fluxo de início/conclusão.",
@@ -455,8 +550,9 @@ def api_etapa_toggle_iniciada(etapa_id: int) -> Response | tuple[Response, int]:
 def api_etapa_toggle(etapa_id: int) -> Response | tuple[Response, int]:
     """Alterna ``done`` da etapa (envelope), espelhando ``toggle_etapa``.
 
-    Bloqueia concluir etapa não iniciada (422) e etapa com tarefas abertas (422,
-    ``open_task_count``). Reuniões Google são recusadas.
+    Bloqueia concluir etapa não iniciada (422), sem datas de início/término
+    definidas (422) e etapa com tarefas abertas (422, ``open_task_count``).
+    Reuniões Google são recusadas.
 
     Returns:
         Envelope com a etapa atualizada; 404/403; 422 com a regra violada.
@@ -464,6 +560,9 @@ def api_etapa_toggle(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
+    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
+    if finalizado is not None:
+        return finalizado
     if is_google_meeting_stage(etapa):
         return fail(
             "Reuniões Google não participam do fluxo de início/conclusão.",
@@ -474,6 +573,12 @@ def api_etapa_toggle(etapa_id: int) -> Response | tuple[Response, int]:
     if not etapa.iniciada and not etapa.done:
         return fail(
             "Não é possível concluir uma etapa que não foi iniciada.",
+            status=422,
+            code="validation",
+        )
+    if not etapa.done and (etapa.data_inicio is None or etapa.data_fim is None):
+        return fail(
+            "Defina as datas de início e de término da etapa antes de concluí-la.",
             status=422,
             code="validation",
         )

@@ -420,6 +420,13 @@ def serialize_etapa_detail(
         "data_inicio": _iso_or_none(etapa.data_inicio),
         "data_fim": _iso_or_none(etapa.data_fim),
         "responsavel": etapa.responsavel,
+        "responsaveis": [
+            {
+                "area_id": r.area_id,
+                "label": r.area.sigla if r.area is not None else r.label,
+            }
+            for r in etapa.responsaveis
+        ],
         "ordem": etapa.ordem,
         "iniciada": bool(etapa.iniciada),
         "done": bool(etapa.done),

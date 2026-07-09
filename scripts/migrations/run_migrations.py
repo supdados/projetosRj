@@ -1539,6 +1539,24 @@ def ensure_orgao_and_template_schema(emit_output=True):
         return {"success": False, "changes": changes}
 
 
+def ensure_etapa_responsavel_table(emit_output=True):
+    """Garante a tabela etapa_responsavel (mudança #3 — áreas responsáveis N:N)."""
+    _emit("→ Garantindo tabela etapa_responsavel...", emit_output)
+    try:
+        inspector = inspect(db.engine)
+        existed = "etapa_responsavel" in inspector.get_table_names()
+        if existed:
+            _emit("   ✓ Tabela etapa_responsavel já existe.", emit_output)
+            return {"success": True, "created": False}
+        db.create_all()
+        _emit("   ✓ Tabela etapa_responsavel criada.", emit_output)
+        return {"success": True, "created": True}
+    except Exception as exc:
+        db.session.rollback()
+        _emit(f"   ✗ ERRO ao criar etapa_responsavel: {exc}", emit_output)
+        return {"success": False, "created": False}
+
+
 def stamp_alembic_head(emit_output=True):
     if db.engine.dialect.name != "mysql":
         return {"success": True, "stamped": False}
@@ -1593,6 +1611,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         encrypt_plaintext_oauth_tokens(emit_output=emit_output),
         backfill_task_assignees(emit_output=emit_output),
         backfill_sei_processes(emit_output=emit_output),
+        ensure_etapa_responsavel_table(emit_output=emit_output),
     ]
 
     if not all(step.get("success") for step in steps):
@@ -1623,6 +1642,7 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         "project_columns_added": project_columns_added,
         "task_assignees_backfilled": steps[9]["assignees_created"],
         "sei_processes_backfilled": steps[10]["migrated"],
+        "etapa_responsavel_created": steps[11]["created"],
         "alembic_stamped": alembic_summary["stamped"],
     }
 

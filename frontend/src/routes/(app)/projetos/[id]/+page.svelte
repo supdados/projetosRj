@@ -54,6 +54,7 @@
 		ProjectDetailData,
 		EtapaDetail,
 		EtapaInlineField,
+		EtapaResponsavelArea,
 		StageTemplateOption,
 		ProjectInlinePayload,
 		ProjectGoalsSelection,
@@ -194,9 +195,13 @@
 	// quando o projeto está Vigente e TODAS as etapas estão concluídas (paridade
 	// com verificarEAtualizarBotaoConcluir do legado).
 	const isVigente = $derived((data?.project.status ?? '') === 'Vigente');
+	const isFinalizado = $derived((data?.project.status ?? '') === 'Finalizado');
+	// Projeto finalizado: campos inline viram somente leitura (reabrir libera).
+	const fieldsLocked = $derived(!canEdit || isFinalizado);
 	const canConclude = $derived(
 		canEdit && isVigente && (data?.derived.todas_etapas_concluidas ?? false)
 	);
+	let reopenInFlight = $state<boolean>(false);
 
 	function wait(ms: number): Promise<void> {
 		return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -233,6 +238,30 @@
 			flash.show(messageOf(err, 'Não foi possível concluir o projeto.'), category);
 		} finally {
 			concludeInFlight = false;
+		}
+	}
+
+	/** Reabre um projeto Finalizado (status volta a Vigente) via /inline. */
+	async function onReopenProject(): Promise<void> {
+		if (!data || reopenInFlight || !isFinalizado || !canEdit) return;
+		if (
+			typeof window !== 'undefined' &&
+			!window.confirm(
+				'Este projeto está finalizado. Reabrir o projeto voltará o status para Vigente e permitirá edições. Deseja continuar?'
+			)
+		)
+			return;
+		reopenInFlight = true;
+		try {
+			const result = await updateProjectInline(projectId, { status: 'Vigente' });
+			data = { ...data, project: result.project };
+			flash.success('Projeto reaberto: status Vigente.');
+			await refresh();
+		} catch (err) {
+			if (isUnauthenticated(err)) return;
+			flash.danger(messageOf(err, 'Não foi possível reabrir o projeto.'));
+		} finally {
+			reopenInFlight = false;
 		}
 	}
 
@@ -353,6 +382,13 @@
 	/** Trata 401 (no-op: client.ts ja redirecionou) e devolve true se foi 401. */
 	function isUnauthenticated(err: unknown): boolean {
 		return err instanceof ApiClientError && err.code === 'unauthenticated';
+	}
+
+	/** Erros de etapa viram toast global (danger p/ forbidden, warning p/ validação). */
+	function flashEtapaError(err: unknown, fallback: string): void {
+		const category =
+			err instanceof ApiClientError && err.code === 'forbidden' ? 'danger' : 'warning';
+		flash.show(messageOf(err, fallback), category);
 	}
 
 	async function load(): Promise<void> {
@@ -592,6 +628,11 @@
 		};
 	}
 
+	/** Etapa confirmada pelo servidor após salvar áreas responsáveis inline. */
+	function onEtapaResponsaveisSaved(etapa: EtapaDetail): void {
+		replaceEtapa(etapa);
+	}
+
 	// --- Etapas: edicao inline de campo (cascata server-side) ----------------
 
 	/**
@@ -621,9 +662,11 @@
 			}
 		} catch (err) {
 			if (isUnauthenticated(err)) return;
+			const isDateField = field === 'data_inicio' || field === 'data_fim';
+			if (isDateField) flashEtapaError(err, 'Falha ao salvar o campo da etapa.');
 			setRowFieldState(etapaId, field, {
 				pending: false,
-				error: messageOf(err, 'Falha ao salvar o campo da etapa.')
+				error: isDateField ? null : messageOf(err, 'Falha ao salvar o campo da etapa.')
 			});
 		}
 	}
@@ -639,6 +682,10 @@
 		const etapa = data?.etapas.find((e) => e.id === etapaId);
 		if (!etapa) return;
 		const state = etapa.done ? 'done' : etapa.iniciada ? 'started' : 'idle';
+		if (state === 'started' && (!etapa.data_inicio || !etapa.data_fim)) {
+			flash.warning('Defina as datas de início e de término da etapa antes de concluí-la.');
+			return;
+		}
 		setRowBusy(etapaId, true);
 		try {
 			const result =
@@ -647,8 +694,9 @@
 			setRowBusy(etapaId, false);
 			await refresh();
 		} catch (err) {
+			setRowBusy(etapaId, false);
 			if (isUnauthenticated(err)) return;
-			setRowBusy(etapaId, false, messageOf(err, 'Falha ao alternar o status da etapa.'));
+			flashEtapaError(err, 'Falha ao alternar o status da etapa.');
 		}
 	}
 
@@ -659,8 +707,9 @@
 			replaceEtapa(result.etapa);
 			setRowBusy(etapaId, false);
 		} catch (err) {
+			setRowBusy(etapaId, false);
 			if (isUnauthenticated(err)) return;
-			setRowBusy(etapaId, false, messageOf(err, 'Falha ao salvar o comentario.'));
+			flashEtapaError(err, 'Falha ao salvar o comentario.');
 		}
 	}
 
@@ -672,8 +721,9 @@
 			// Exclusao reordena/recalcula derivados no backend -> re-busca.
 			await refresh();
 		} catch (err) {
+			setRowBusy(etapaId, false);
 			if (isUnauthenticated(err)) return;
-			setRowBusy(etapaId, false, messageOf(err, 'Falha ao excluir a etapa.'));
+			flashEtapaError(err, 'Falha ao excluir a etapa.');
 		}
 	}
 
@@ -807,7 +857,7 @@
 		descricao: string;
 		data_inicio: string;
 		data_fim: string;
-		responsavel: string;
+		responsaveis: EtapaResponsavelArea[];
 		iniciada: boolean;
 		done: boolean;
 	}
@@ -815,6 +865,10 @@
 	/** Cria a etapa; devolve `true` no sucesso (o composer fecha com essa confirmação). */
 	async function onAddStage(draft: NewStageDraft): Promise<boolean> {
 		if (!draft.descricao.trim() || addingStage) return false;
+		if (draft.responsaveis.length === 0) {
+			addStageError = 'Selecione pelo menos uma área responsável para a etapa.';
+			return false;
+		}
 		// Projeto Finalizado: adicionar etapa o reativa (Vigente). Confirma antes
 		// (paridade com o reactivate-project-confirm-modal de 05-stage-composer.js).
 		const willReactivate = (data?.project.status ?? '') === 'Finalizado';
@@ -834,7 +888,7 @@
 				descricao: draft.descricao.trim(),
 				data_inicio: draft.data_inicio || null,
 				data_fim: draft.data_fim || null,
-				responsavel: draft.responsavel || null,
+				responsaveis: draft.responsaveis,
 				iniciada: draft.iniciada,
 				done: draft.done,
 				reactivate: willReactivate || undefined
@@ -950,6 +1004,7 @@
 			options={data.options}
 			permissions={data.permissions}
 			derivedData={data.derived}
+			locked={isFinalizado}
 			{topOffset}
 			fieldStates={{
 				titulo: projectFieldStates.titulo,
@@ -1003,6 +1058,21 @@
 							Concluir Projeto
 						{/if}
 					</button>
+				{:else if canEdit && isFinalizado}
+					<button
+						type="button"
+						id="btn-reabrir-projeto"
+						onclick={onReopenProject}
+						disabled={reopenInFlight}
+						title="Voltar o projeto para o status Vigente e liberar a edição"
+						class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						{#if reopenInFlight}
+							<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Reabrindo...
+						{:else}
+							<i class="fas fa-lock-open" aria-hidden="true"></i> Reabrir Projeto
+						{/if}
+					</button>
 				{/if}
 			{/snippet}
 
@@ -1022,7 +1092,7 @@
 							displayLabel={data.project.orgao_sigla}
 							options={orgaoOptions}
 							emptyLabel="Não informado"
-							readonly={!canEdit}
+							readonly={fieldsLocked}
 							pending={projectFieldStates.orgao_id?.pending}
 							error={projectFieldStates.orgao_id?.error}
 							onSelect={saveOrgao}
@@ -1038,7 +1108,7 @@
 							kind="text"
 							variant="cell"
 							emptyLabel="Não informado"
-							readonly={!canEdit}
+							readonly={fieldsLocked}
 							pending={projectFieldStates.orgao?.pending}
 							error={projectFieldStates.orgao?.error}
 							onSave={(v) => saveProjectField('orgao', v)}
@@ -1050,7 +1120,7 @@
 						<SeiProcessField
 							fieldId="project-sei"
 							processes={data.project.sei_processes}
-							readonly={!canEdit}
+							readonly={fieldsLocked}
 							pending={projectFieldStates.sei_processes?.pending}
 							error={projectFieldStates.sei_processes?.error}
 							onSave={saveSeiProcesses}
@@ -1067,7 +1137,7 @@
 							displayLabel={abepDisplayLabel}
 							options={abepOptions}
 							emptyLabel="Não informado"
-							readonly={!canEdit}
+							readonly={fieldsLocked}
 							pending={projectFieldStates.abep_indicator?.pending}
 							error={projectFieldStates.abep_indicator?.error}
 							onSelect={saveAbepIndicator}
@@ -1090,7 +1160,7 @@
 						objetivoDescricao={data.project.objetivo_descricao}
 						resultadoDescricao={data.project.resultado_esperado_descricao}
 						indicadoresDescricoes={data.project.indicadores_descricoes}
-						readonly={!canEdit}
+						readonly={fieldsLocked}
 						pending={projectFieldStates.eegg?.pending}
 						error={projectFieldStates.eegg?.error}
 						onSave={saveEegg}
@@ -1120,7 +1190,7 @@
 									kind="text"
 									variant="cell"
 									emptyLabel="Não informado"
-									readonly={!canEdit}
+									readonly={fieldsLocked}
 									pending={projectFieldStates.github_link?.pending}
 									error={projectFieldStates.github_link?.error}
 									onSave={(v) => saveProjectField('github_link', v)}
@@ -1138,7 +1208,7 @@
 									kind="text"
 									variant="cell"
 									emptyLabel="Não informado"
-									readonly={!canEdit}
+									readonly={fieldsLocked}
 									pending={projectFieldStates.documentation_link?.pending}
 									error={projectFieldStates.documentation_link?.error}
 									onSave={(v) => saveProjectField('documentation_link', v)}
@@ -1156,7 +1226,7 @@
 									kind="text"
 									variant="cell"
 									emptyLabel="Não informado"
-									readonly={!canEdit}
+									readonly={fieldsLocked}
 									pending={projectFieldStates.product_link?.pending}
 									error={projectFieldStates.product_link?.error}
 									onSave={(v) => saveProjectField('product_link', v)}
@@ -1181,7 +1251,7 @@
 								kind="textarea"
 								variant="cell"
 								emptyLabel="Nenhuma observação registrada."
-								readonly={!canEdit}
+								readonly={fieldsLocked}
 								pending={projectFieldStates.observacao?.pending}
 								error={projectFieldStates.observacao?.error}
 								onSave={(v) => saveProjectField('observacao', v)}
@@ -1232,7 +1302,7 @@
 		<StageList
 			etapas={data.etapas}
 			{projectId}
-			readonly={!canEdit}
+			readonly={fieldsLocked}
 			{reordering}
 			{reorderError}
 			{addingStage}
@@ -1245,6 +1315,7 @@
 			onDelete={onDeleteEtapa}
 			{onOpenTasks}
 			{onAddStage}
+			onResponsaveisSaved={onEtapaResponsaveisSaved}
 			{onDateContextMenu}
 		>
 			{#snippet meetingSlot(etapa)}

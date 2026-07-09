@@ -26,16 +26,14 @@ from services.project_meetings import (
 
 # ── Bloqueio por tarefas abertas ─────────────────────────────────────────────
 
+
 def count_open_tasks_in_etapa(etapa_id: int) -> int:
     """Quantas tarefas da etapa ainda estão abertas (não arquivadas, não finalizadas)."""
-    return (
-        Task.query.filter(
-            Task.etapa_id == etapa_id,
-            Task.is_archived.is_(False),
-            ~Task.status.in_(FINALIZED_TASK_STATUSES),
-        )
-        .count()
-    )
+    return Task.query.filter(
+        Task.etapa_id == etapa_id,
+        Task.is_archived.is_(False),
+        ~Task.status.in_(FINALIZED_TASK_STATUSES),
+    ).count()
 
 
 def _clear_tasks_from_etapa(etapa) -> None:

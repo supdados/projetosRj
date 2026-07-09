@@ -89,6 +89,25 @@ def apply_project_inline_changes(project_to_edit, data):
         ProjectInlineError: Quando um campo é inválido (órgão inexistente/
             inativo) ou o usuário não pode mover o projeto para o órgão alvo.
     """
+    # Regra 1: finalizar NUNCA passa pelo inline — só pelo botão Concluir
+    # (POST /api/projetos/<id>/concluir, services/project_completion.py).
+    if data.get("status") == "Finalizado":
+        raise ProjectInlineError(
+            "Não é possível finalizar o projeto pela edição de status. "
+            'Use o botão "Concluir Projeto".',
+            status=400,
+        )
+    # Regra 2: projeto Finalizado é somente leitura; a ÚNICA edição aceita é a
+    # reabertura ({"status": "Vigente"} sozinho, enviada pelo botão Reabrir).
+    if project_to_edit.status == "Finalizado":
+        is_reopen = set(data) == {"status"} and data["status"] == "Vigente"
+        if not is_reopen:
+            raise ProjectInlineError(
+                'Projeto finalizado é somente leitura. Use "Reabrir Projeto" '
+                "para voltar o status a Vigente e editar os campos.",
+                status=400,
+            )
+
     project_id = project_to_edit.id
     changes = []
 

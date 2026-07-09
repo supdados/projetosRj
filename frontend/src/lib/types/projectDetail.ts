@@ -54,6 +54,16 @@ export interface EtapaTaskCount {
 }
 
 /**
+ * Uma área responsável de etapa (serialize_etapa_detail.responsaveis). N:N com
+ * OrgaoUnidade; `area_id === null` representa a opção especial "Outras" (o rótulo
+ * fica em `label`). Espelha `EtapaResponsavel` (models/etapa.py).
+ */
+export interface EtapaResponsavelArea {
+	area_id: number | null;
+	label: string;
+}
+
+/**
  * Bloco read-only da reunião Google de uma etapa (Fase 6). Espelha
  * `meeting_payload_block` (services/etapas_dates.py) — a MESMA fonte usada pelos
  * endpoints de criar/editar reunião. NUNCA contém tokens OAuth; `owner_email` é
@@ -90,6 +100,8 @@ export interface EtapaDetail {
 	data_inicio: string | null; // ISO 8601 (YYYY-MM-DD) ou null
 	data_fim: string | null; // ISO 8601 (YYYY-MM-DD) ou null
 	responsavel: string | null;
+	/** Áreas responsáveis (N:N). Backend sempre emite; vazio cai no legado `responsavel`. */
+	responsaveis: EtapaResponsavelArea[];
 	ordem: number | null;
 	iniciada: boolean;
 	done: boolean;
@@ -208,6 +220,8 @@ export interface EtapaAddPayload {
 	descricao: string;
 	data_inicio?: string | null; // YYYY-MM-DD
 	data_fim?: string | null; // YYYY-MM-DD
+	/** Obrigatório (≥1) no backend; o legado `responsavel` é ignorado na criação. */
+	responsaveis: EtapaResponsavelArea[];
 	responsavel?: string | null;
 	comentarios?: string | null;
 	iniciada?: boolean;

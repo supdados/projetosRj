@@ -286,7 +286,7 @@
 					{#if display}
 						{@render display(shownValue)}
 					{:else if hasValue}
-						<span class="break-words"
+						<span class="value-text"
 							>{#if icon}<i class="{icon} mr-1.5 text-primary-600" aria-hidden="true"></i
 								>{/if}{shownValue}</span
 						>
@@ -313,6 +313,12 @@
 {/if}
 
 <style>
+	/* Quebra URLs/tokens longos sem espaço para não vazar o container. */
+	.value-text {
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+
 	/* ----- Modo célula (paridade com .editable-field / .editable-field-input) -----
 	   `display: block` + min-height IGUAL ao do editor: entrar/sair de edição
 	   não pode mudar a altura da linha (o inline-block ganhava folga de
