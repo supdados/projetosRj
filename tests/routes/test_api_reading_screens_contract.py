@@ -267,3 +267,192 @@ def test_api_busca_returns_401_json_when_unauthenticated(client):
 
     assert response.status_code == 401
     _assert_fail_envelope(response.get_json(), code="unauthenticated")
+
+
+# ---------------------------------------------------------------------------
+# /api/busca — modo paginado (?page=)
+# ---------------------------------------------------------------------------
+
+
+def _seed_busca_paginada(app, seed_data) -> None:
+    """Semeia 3 projetos + 3 etapas que casam com o termo "BuscaPaginada"."""
+    from models import Etapa, Project, db
+    from tests._orgao_helpers import ensure_orgao
+
+    with app.app_context():
+        orgao_id = ensure_orgao("Auditoria").id
+        for index in range(3):
+            db.session.add(
+                Project(
+                    titulo=f"BuscaPaginada Projeto {index}",
+                    orgao_id=orgao_id,
+                    orgao="Orgao BuscaPaginada",
+                    prioridade="media",
+                    status="Vigente",
+                    objetivo_id=1,
+                    resultado_esperado_id=1,
+                )
+            )
+            db.session.add(
+                Etapa(
+                    descricao=f"BuscaPaginada Etapa {index}",
+                    project_id=seed_data["project_id"],
+                    ordem=70 + index,
+                )
+            )
+        db.session.commit()
+
+
+def test_api_busca_paginated_returns_pagination_meta(app, client_user, seed_data):
+    _seed_busca_paginada(app, seed_data)
+
+    data = _assert_ok_envelope(
+        client_user.get("/api/busca?q=BuscaPaginada&page=1").get_json()
+    )
+
+    assert data["meta"]["pagination"] == {
+        "page": 1,
+        "per_page": 40,
+        "total_pages": 1,
+        "total": 6,
+    }
+    assert data["meta"]["type_counts"] == {
+        "projects": 3,
+        "stages": 3,
+        "tasks": 0,
+        "events": 0,
+    }
+    assert data["meta"]["selected_types"] == ["projects", "stages", "tasks", "events"]
+    assert data["meta"]["limit_per_type"] is None
+    assert data["meta"]["has_more"]["any"] is False
+    total_items = sum(len(items) for items in data["results"].values())
+    assert total_items == 6
+    assert data["counts"]["total"] == 6
+
+
+def test_api_busca_paginated_page_crosses_type_boundary(app, client_user, seed_data):
+    """A lista plana projetos → etapas corta no meio: página 1 leva a cauda de
+    projetos + o início de etapas; página 2 leva o restante das etapas."""
+    _seed_busca_paginada(app, seed_data)
+
+    page_one = _assert_ok_envelope(
+        client_user.get("/api/busca?q=BuscaPaginada&page=1&per_page=4").get_json()
+    )
+    assert len(page_one["results"]["projects"]) == 3
+    assert len(page_one["results"]["stages"]) == 1
+    assert page_one["meta"]["pagination"]["total_pages"] == 2
+
+    page_two = _assert_ok_envelope(
+        client_user.get("/api/busca?q=BuscaPaginada&page=2&per_page=4").get_json()
+    )
+    assert page_two["results"]["projects"] == []
+    assert len(page_two["results"]["stages"]) == 2
+    assert page_two["meta"]["pagination"]["page"] == 2
+
+    page_one_titles = {item["title"] for item in page_one["results"]["stages"]}
+    page_two_titles = {item["title"] for item in page_two["results"]["stages"]}
+    assert not page_one_titles & page_two_titles
+
+
+def test_api_busca_paginated_types_filter_combines_selected_types(
+    app, client_user, seed_data
+):
+    _seed_busca_paginada(app, seed_data)
+
+    data = _assert_ok_envelope(
+        client_user.get(
+            "/api/busca?q=BuscaPaginada&page=1&types=projects,events"
+        ).get_json()
+    )
+
+    assert data["meta"]["selected_types"] == ["projects", "events"]
+    assert data["results"]["stages"] == []
+    assert data["results"]["tasks"] == []
+    assert len(data["results"]["projects"]) == 3
+    assert data["meta"]["pagination"]["total"] == 3
+    assert data["counts"] == {
+        "projects": 3,
+        "stages": 0,
+        "tasks": 0,
+        "events": 0,
+        "total": 3,
+    }
+    assert data["meta"]["type_counts"]["stages"] == 3
+
+
+def test_api_busca_paginated_types_only_stages(app, client_user, seed_data):
+    _seed_busca_paginada(app, seed_data)
+
+    data = _assert_ok_envelope(
+        client_user.get("/api/busca?q=BuscaPaginada&page=1&types=stages").get_json()
+    )
+
+    assert data["meta"]["selected_types"] == ["stages"]
+    assert data["results"]["projects"] == []
+    assert len(data["results"]["stages"]) == 3
+    assert data["counts"]["total"] == 3
+    assert data["meta"]["type_counts"]["projects"] == 3
+
+
+def test_api_busca_paginated_invalid_params_fall_back_and_clamp(
+    app, client_user, seed_data
+):
+    _seed_busca_paginada(app, seed_data)
+
+    invalid_types = _assert_ok_envelope(
+        client_user.get("/api/busca?q=BuscaPaginada&page=1&types=banana,").get_json()
+    )
+    assert invalid_types["meta"]["selected_types"] == [
+        "projects",
+        "stages",
+        "tasks",
+        "events",
+    ]
+
+    clamped_per_page = _assert_ok_envelope(
+        client_user.get("/api/busca?q=BuscaPaginada&page=1&per_page=999").get_json()
+    )
+    assert clamped_per_page["meta"]["pagination"]["per_page"] == 100
+
+    clamped_page = _assert_ok_envelope(
+        client_user.get("/api/busca?q=BuscaPaginada&page=999&per_page=4").get_json()
+    )
+    assert clamped_page["meta"]["pagination"]["page"] == 2
+    assert len(clamped_page["results"]["stages"]) == 2
+
+
+def test_api_busca_paginated_short_term_returns_empty_paginated_payload(client_user):
+    data = _assert_ok_envelope(client_user.get("/api/busca?q=a&page=3").get_json())
+
+    assert data["counts"]["total"] == 0
+    assert data["results"]["projects"] == []
+    assert data["meta"]["pagination"] == {
+        "page": 1,
+        "per_page": 40,
+        "total_pages": 0,
+        "total": 0,
+    }
+    assert data["meta"]["type_counts"] == {
+        "projects": 0,
+        "stages": 0,
+        "tasks": 0,
+        "events": 0,
+    }
+    assert data["meta"]["selected_types"] == ["projects", "stages", "tasks", "events"]
+
+
+def test_api_busca_dropdown_mode_has_no_pagination_keys(app, client_user, seed_data):
+    """Regressão: sem ``page`` o payload do dropdown fica bit-a-bit igual ao
+    atual (cap por tipo + has_more, sem chaves de paginação)."""
+    _seed_busca_paginada(app, seed_data)
+
+    data = _assert_ok_envelope(
+        client_user.get("/api/busca?q=BuscaPaginada&limit=2").get_json()
+    )
+
+    assert len(data["results"]["projects"]) == 2
+    assert data["meta"]["has_more"]["projects"] is True
+    assert data["meta"]["limit_per_type"] == 2
+    assert "pagination" not in data["meta"]
+    assert "type_counts" not in data["meta"]
+    assert "selected_types" not in data["meta"]

@@ -1,7 +1,17 @@
-import datetime
-from zoneinfo import ZoneInfo
+"""Busca global: escopo, queries por tipo e os dois modos de payload.
 
-from flask import g, jsonify, render_template, request, url_for
+Modo dropdown (``limit`` por tipo + ``has_more``) alimenta o GlobalSearchBox e
+o legado ``/api/busca-global``; o modo paginado (``page``/``per_page``/
+``types``) alimenta a tela ``/busca`` da SPA via ``/api/busca`` com lista plana
+na ordem canônica projetos → etapas → tarefas → eventos.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from math import ceil
+
+from flask import g, jsonify, request
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import joinedload
 
@@ -12,113 +22,185 @@ from .decorators import login_required
 from .orgao_scope import (
     expand_orgao_filter_ids,
     get_user_orgao_subtree_ids,
-    redirect_to_current_route_without_orgao,
     sanitize_orgao_filter_for_current_user,
+)
+from .search_serializers import (
+    _serialize_event_rows,
+    _serialize_project_rows,
+    _serialize_stage_rows,
+    _serialize_task_rows,
 )
 from .shared import parse_db_integer_id
 
 GLOBAL_SEARCH_DEFAULT_LIMIT = 5
 GLOBAL_SEARCH_API_MAX_LIMIT = 20
-GLOBAL_SEARCH_PAGE_LIMIT = 50
-TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
+GLOBAL_SEARCH_PAGE_SIZE = 40
+GLOBAL_SEARCH_PAGE_MAX_PER_PAGE = 100
+SEARCH_TYPE_KEYS = ("projects", "stages", "tasks", "events")
+
+_SEARCH_SERIALIZERS = {
+    "projects": _serialize_project_rows,
+    "stages": _serialize_stage_rows,
+    "tasks": _serialize_task_rows,
+    "events": _serialize_event_rows,
+}
 
 
-def _truncate_text(value, max_length=140):
-    text_value = " ".join((value or "").split())
-    if len(text_value) <= max_length:
-        return text_value
-    return text_value[: max_length - 3].rstrip() + "..."
+@dataclass(frozen=True)
+class _SearchScope:
+    user_scope_restricted: bool
+    user_subtree_ids: set[int]
+    selected_subtree_ids: set[int]
 
 
-def _build_match_excerpt(value, term, max_length=110):
-    text_value = " ".join((value or "").split())
-    if not text_value:
-        return ""
+def _resolve_search_scope(user, selected_orgao_id) -> _SearchScope:
+    if user and not user.is_admin:
+        user_subtree_ids = get_user_orgao_subtree_ids(user)
+        user_scope_restricted = True
+    else:
+        user_subtree_ids = set()
+        user_scope_restricted = False
 
-    normalized_term = (term or "").strip().lower()
-    if not normalized_term:
-        return _truncate_text(text_value, max_length)
-
-    lowered_value = text_value.lower()
-    match_index = lowered_value.find(normalized_term)
-    if match_index == -1:
-        return _truncate_text(text_value, max_length)
-
-    context_before = max_length // 3
-    start = max(0, match_index - context_before)
-    end = min(len(text_value), start + max_length)
-    snippet = text_value[start:end].strip()
-
-    if start > 0:
-        snippet = f"...{snippet}"
-    if end < len(text_value):
-        snippet = f"{snippet}..."
-    return snippet
+    selected_subtree_ids = (
+        expand_orgao_filter_ids(selected_orgao_id) if selected_orgao_id else set()
+    )
+    return _SearchScope(
+        user_scope_restricted=user_scope_restricted,
+        user_subtree_ids=user_subtree_ids,
+        selected_subtree_ids=selected_subtree_ids,
+    )
 
 
-def _build_project_display_title(project, max_length=120):
-    base_title = project.titulo or f"Projeto #{project.id}"
-    return _truncate_text(f"{project.id}-{base_title}", max_length)
+def _prefix_order_for(column, prefix_pattern: str):
+    return case(
+        (func.lower(func.coalesce(column, "")).like(prefix_pattern), 0), else_=1
+    )
 
 
-def _to_local_datetime(utc_naive):
-    if utc_naive is None:
-        return None
-    return utc_naive.replace(tzinfo=datetime.timezone.utc).astimezone(TIMEZONE_BR)
+def _project_search_query(term: str, user, scope: _SearchScope):
+    search_pattern = f"%{term}%"
+    search_id = parse_db_integer_id(term)
+    project_id_filter = (Project.id == search_id) if search_id is not None else None
+
+    project_text_filters = or_(
+        Project.titulo.ilike(search_pattern),
+        Project.orgao.ilike(search_pattern),
+        Project.short_description.ilike(search_pattern),
+        Project.observacao.ilike(search_pattern),
+    )
+
+    project_query = Project.query.filter(
+        or_(project_id_filter, project_text_filters)
+        if project_id_filter is not None
+        else project_text_filters
+    )
+    if scope.user_scope_restricted:
+        if scope.user_subtree_ids:
+            project_query = project_query.filter(
+                Project.orgao_id.in_(scope.user_subtree_ids)
+            )
+        else:
+            project_query = project_query.filter(Project.id == -1)
+    if scope.selected_subtree_ids:
+        project_query = project_query.filter(
+            Project.orgao_id.in_(scope.selected_subtree_ids)
+        )
+    return project_query.order_by(
+        _prefix_order_for(Project.titulo, f"{term.lower()}%"), Project.id.desc()
+    )
 
 
-def _format_calendar_event_period(event):
-    if not event.starts_at:
-        return ""
+def _stage_search_query(term: str, user, scope: _SearchScope):
+    search_pattern = f"%{term}%"
+    stage_query = (
+        Etapa.query.join(Project, Etapa.project_id == Project.id)
+        .options(joinedload(Etapa.project))
+        .filter(
+            or_(
+                Etapa.descricao.ilike(search_pattern),
+                Etapa.comentarios.ilike(search_pattern),
+                Etapa.responsavel.ilike(search_pattern),
+            )
+        )
+    )
+    if scope.user_scope_restricted:
+        if scope.user_subtree_ids:
+            stage_query = stage_query.filter(
+                Project.orgao_id.in_(scope.user_subtree_ids)
+            )
+        else:
+            stage_query = stage_query.filter(Project.id == -1)
+    if scope.selected_subtree_ids:
+        stage_query = stage_query.filter(
+            Project.orgao_id.in_(scope.selected_subtree_ids)
+        )
+    return stage_query.order_by(
+        _prefix_order_for(Etapa.descricao, f"{term.lower()}%"), Etapa.id.desc()
+    )
 
-    starts_at = _to_local_datetime(event.starts_at)
-    ends_at = _to_local_datetime(event.ends_at)
 
-    if event.is_all_day:
-        display_end = starts_at.date()
-        if ends_at:
-            display_end = ends_at.date()
-            if ends_at > starts_at and ends_at.time() == datetime.time(0, 0):
-                display_end = (ends_at - datetime.timedelta(days=1)).date()
-            if display_end < starts_at.date():
-                display_end = starts_at.date()
-        if display_end != starts_at.date():
-            return f"{starts_at:%d/%m/%Y} ate {display_end:%d/%m/%Y}"
-        return starts_at.strftime("%d/%m/%Y")
+def _task_search_query(term: str, user, scope: _SearchScope):
+    search_pattern = f"%{term}%"
+    task_query = (
+        Task.query.outerjoin(Project, Task.project_id == Project.id)
+        .options(joinedload(Task.project))
+        .filter(
+            or_(
+                Task.descricao.ilike(search_pattern),
+                Task.responsavel.ilike(search_pattern),
+                Task.status.ilike(search_pattern),
+                Task.prioridade.ilike(search_pattern),
+                Task.tipo_pedido.ilike(search_pattern),
+            )
+        )
+    )
+    if scope.user_scope_restricted:
+        if scope.user_subtree_ids:
+            task_query = task_query.filter(
+                or_(
+                    and_(
+                        Task.project_id.isnot(None),
+                        Project.orgao_id.in_(scope.user_subtree_ids),
+                    ),
+                    and_(Task.project_id.is_(None), Task.created_by_id == user.id),
+                )
+            )
+        else:
+            task_query = task_query.filter(
+                and_(Task.project_id.is_(None), Task.created_by_id == user.id)
+            )
+    if scope.selected_subtree_ids:
+        task_query = task_query.filter(
+            Task.project_id.isnot(None),
+            Project.orgao_id.in_(scope.selected_subtree_ids),
+        )
+    return task_query.order_by(
+        _prefix_order_for(Task.descricao, f"{term.lower()}%"), Task.id.desc()
+    )
 
-    if ends_at:
-        if starts_at.date() == ends_at.date():
-            return f"{starts_at:%d/%m/%Y} {starts_at:%H:%M} - {ends_at:%H:%M}"
-        return f"{starts_at:%d/%m/%Y %H:%M} - {ends_at:%d/%m/%Y %H:%M}"
 
-    return starts_at.strftime("%d/%m/%Y %H:%M")
-
-
-def _resolve_match_info(term, ordered_fields):
-    normalized_term = (term or "").strip().lower()
-    if not normalized_term:
-        return {
-            "match_field": "",
-            "match_label": "",
-            "match_excerpt": "",
-        }
-
-    for field_name, field_label, field_value in ordered_fields:
-        normalized_value = " ".join((field_value or "").split())
-        if not normalized_value:
-            continue
-        if normalized_term in normalized_value.lower():
-            return {
-                "match_field": field_name,
-                "match_label": field_label,
-                "match_excerpt": _build_match_excerpt(normalized_value, term),
-            }
-
-    return {
-        "match_field": "",
-        "match_label": "",
-        "match_excerpt": "",
-    }
+def _event_search_query(term: str, user, scope: _SearchScope):
+    search_pattern = f"%{term}%"
+    search_id = parse_db_integer_id(term)
+    event_id_filter = (CalendarEvent.id == search_id) if search_id is not None else None
+    event_text_filters = or_(
+        CalendarEvent.title.ilike(search_pattern),
+        CalendarEvent.description.ilike(search_pattern),
+        CalendarEvent.location.ilike(search_pattern),
+    )
+    event_query = CalendarEvent.query.filter(
+        CalendarEvent.user_id == user.id,
+        (
+            or_(event_id_filter, event_text_filters)
+            if event_id_filter is not None
+            else event_text_filters
+        ),
+    )
+    return event_query.order_by(
+        _prefix_order_for(CalendarEvent.title, f"{term.lower()}%"),
+        CalendarEvent.starts_at.desc(),
+        CalendarEvent.id.desc(),
+    )
 
 
 def _empty_global_search_payload(term):
@@ -151,6 +233,21 @@ def _empty_global_search_payload(term):
     }
 
 
+def _empty_paginated_search_payload(
+    term, selected_types: tuple[str, ...], per_page: int
+) -> dict:
+    payload = _empty_global_search_payload(term)
+    payload["meta"]["pagination"] = {
+        "page": 1,
+        "per_page": per_page,
+        "total_pages": 0,
+        "total": 0,
+    }
+    payload["meta"]["type_counts"] = {key: 0 for key in SEARCH_TYPE_KEYS}
+    payload["meta"]["selected_types"] = list(selected_types)
+    return payload
+
+
 def _normalize_global_search_limit(
     raw_limit,
     default_limit=GLOBAL_SEARCH_DEFAULT_LIMIT,
@@ -165,6 +262,15 @@ def _normalize_global_search_limit(
     return max(1, min(parsed, max_limit))
 
 
+def _search_queries_by_type(term: str, user, scope: _SearchScope) -> dict:
+    return {
+        "projects": _project_search_query(term, user, scope),
+        "stages": _stage_search_query(term, user, scope),
+        "tasks": _task_search_query(term, user, scope),
+        "events": _event_search_query(term, user, scope),
+    }
+
+
 def build_global_search_results(
     term,
     user,
@@ -176,321 +282,32 @@ def build_global_search_results(
     if not normalized_term:
         return _empty_global_search_payload(normalized_term)
 
-    search_pattern = f"%{normalized_term}%"
-    prefix_pattern = f"{normalized_term.lower()}%"
-
-    # Escopo de visibilidade por subtree de órgão.
-    if user and not user.is_admin:
-        user_subtree_ids = get_user_orgao_subtree_ids(user)
-        user_scope_restricted = True
-    else:
-        user_subtree_ids = set()
-        user_scope_restricted = False
-
-    selected_subtree_ids = (
-        expand_orgao_filter_ids(selected_orgao_id) if selected_orgao_id else set()
-    )
+    scope = _resolve_search_scope(user, selected_orgao_id)
+    queries = _search_queries_by_type(normalized_term, user, scope)
 
     effective_limit = limit_per_type
     if include_has_more and limit_per_type is not None:
         effective_limit = limit_per_type + 1
 
-    def apply_optional_limit(query):
+    def fetch_rows(query):
         if effective_limit is not None:
-            return query.limit(effective_limit)
-        return query
-
-    def trim_limited_rows(rows):
+            query = query.limit(effective_limit)
+        rows = query.all()
         if not include_has_more or limit_per_type is None:
             return rows, False
         if len(rows) > limit_per_type:
             return rows[:limit_per_type], True
         return rows, False
 
-    def prefix_order_for(column):
-        return case(
-            (func.lower(func.coalesce(column, "")).like(prefix_pattern), 0), else_=1
-        )
+    results = {}
+    has_more = {}
+    for key in SEARCH_TYPE_KEYS:
+        rows, rows_has_more = fetch_rows(queries[key])
+        results[key] = _SEARCH_SERIALIZERS[key](rows, normalized_term)
+        has_more[key] = rows_has_more
 
-    search_id = parse_db_integer_id(normalized_term)
-
-    project_id_filter = (Project.id == search_id) if search_id is not None else None
-
-    project_text_filters = or_(
-        Project.titulo.ilike(search_pattern),
-        Project.orgao.ilike(search_pattern),
-        Project.short_description.ilike(search_pattern),
-        Project.observacao.ilike(search_pattern),
-    )
-
-    project_query = Project.query.filter(
-        or_(project_id_filter, project_text_filters)
-        if project_id_filter is not None
-        else project_text_filters
-    )
-    if user_scope_restricted:
-        if user_subtree_ids:
-            project_query = project_query.filter(Project.orgao_id.in_(user_subtree_ids))
-        else:
-            project_query = project_query.filter(Project.id == -1)
-    if selected_subtree_ids:
-        project_query = project_query.filter(Project.orgao_id.in_(selected_subtree_ids))
-    project_query = apply_optional_limit(
-        project_query.order_by(prefix_order_for(Project.titulo), Project.id.desc())
-    )
-    projects = project_query.all()
-    projects, projects_has_more = trim_limited_rows(projects)
-
-    stage_query = (
-        Etapa.query.join(Project, Etapa.project_id == Project.id)
-        .options(joinedload(Etapa.project))
-        .filter(
-            or_(
-                Etapa.descricao.ilike(search_pattern),
-                Etapa.comentarios.ilike(search_pattern),
-                Etapa.responsavel.ilike(search_pattern),
-            )
-        )
-    )
-    if user_scope_restricted:
-        if user_subtree_ids:
-            stage_query = stage_query.filter(Project.orgao_id.in_(user_subtree_ids))
-        else:
-            stage_query = stage_query.filter(Project.id == -1)
-    if selected_subtree_ids:
-        stage_query = stage_query.filter(Project.orgao_id.in_(selected_subtree_ids))
-    stage_query = apply_optional_limit(
-        stage_query.order_by(prefix_order_for(Etapa.descricao), Etapa.id.desc())
-    )
-    stages = stage_query.all()
-    stages, stages_has_more = trim_limited_rows(stages)
-
-    task_query = (
-        Task.query.outerjoin(Project, Task.project_id == Project.id)
-        .options(joinedload(Task.project))
-        .filter(
-            or_(
-                Task.descricao.ilike(search_pattern),
-                Task.responsavel.ilike(search_pattern),
-                Task.status.ilike(search_pattern),
-                Task.prioridade.ilike(search_pattern),
-                Task.tipo_pedido.ilike(search_pattern),
-            )
-        )
-    )
-    if user_scope_restricted:
-        if user_subtree_ids:
-            task_query = task_query.filter(
-                or_(
-                    and_(
-                        Task.project_id.isnot(None),
-                        Project.orgao_id.in_(user_subtree_ids),
-                    ),
-                    and_(Task.project_id.is_(None), Task.created_by_id == user.id),
-                )
-            )
-        else:
-            task_query = task_query.filter(
-                and_(Task.project_id.is_(None), Task.created_by_id == user.id)
-            )
-    if selected_subtree_ids:
-        task_query = task_query.filter(
-            Task.project_id.isnot(None), Project.orgao_id.in_(selected_subtree_ids)
-        )
-    task_query = apply_optional_limit(
-        task_query.order_by(prefix_order_for(Task.descricao), Task.id.desc())
-    )
-    tasks = task_query.all()
-    tasks, tasks_has_more = trim_limited_rows(tasks)
-
-    event_id_filter = (CalendarEvent.id == search_id) if search_id is not None else None
-    event_text_filters = or_(
-        CalendarEvent.title.ilike(search_pattern),
-        CalendarEvent.description.ilike(search_pattern),
-        CalendarEvent.location.ilike(search_pattern),
-    )
-    event_query = CalendarEvent.query.filter(
-        CalendarEvent.user_id == user.id,
-        (
-            or_(event_id_filter, event_text_filters)
-            if event_id_filter is not None
-            else event_text_filters
-        ),
-    )
-    event_query = apply_optional_limit(
-        event_query.order_by(
-            prefix_order_for(CalendarEvent.title),
-            CalendarEvent.starts_at.desc(),
-            CalendarEvent.id.desc(),
-        )
-    )
-    events = event_query.all()
-    events, events_has_more = trim_limited_rows(events)
-
-    status_labels = {
-        "nao_iniciada": "Não iniciada",
-        "em_andamento": "Em andamento",
-        "para_validacao": "Para validação",
-        "para_ajustes": "Para ajustes",
-        "finalizada": "Finalizada",
-    }
-
-    project_results = [
-        {
-            "type": "project",
-            "type_label": "Projeto",
-            "title": _truncate_text(project.titulo or f"Projeto #{project.id}", 120),
-            "display_title": _build_project_display_title(project),
-            "subtitle": (
-                f"Orgao: {_truncate_text(project.orgao, 90)}" if project.orgao else ""
-            ),
-            "meta": (
-                f"Orgao responsavel: {project.orgao_ref.sigla}"
-                if project.orgao_ref
-                else "Orgao responsavel nao informado"
-            ),
-            "url": url_for("main.project_detail", project_id=project.id),
-            **_resolve_match_info(
-                normalized_term,
-                [
-                    ("titulo", "Titulo", project.titulo),
-                    ("orgao", "Orgao", project.orgao),
-                    ("short_description", "Descricao curta", project.short_description),
-                    ("observacao", "Observacao", project.observacao),
-                ],
-            ),
-        }
-        for project in projects
-    ]
-
-    stage_results = []
-    for stage in stages:
-        project = stage.project
-        stage_match = _resolve_match_info(
-            normalized_term,
-            [
-                ("descricao", "Descricao", stage.descricao),
-                ("comentarios", "Comentario", stage.comentarios),
-                ("responsavel", "Responsavel", stage.responsavel),
-            ],
-        )
-        stage_results.append(
-            {
-                "type": "stage",
-                "type_label": "Etapa",
-                "title": _truncate_text(stage.descricao or f"Etapa #{stage.id}", 120),
-                "subtitle": (
-                    f"Projeto: {_truncate_text(project.titulo, 95)}" if project else ""
-                ),
-                "meta": (
-                    f"Responsavel: {_truncate_text(stage.responsavel, 80)}"
-                    if stage.responsavel
-                    else "Responsavel nao informado"
-                ),
-                "url": url_for(
-                    "main.project_detail",
-                    project_id=stage.project_id,
-                    focus_etapa=stage.id,
-                ),
-                **stage_match,
-            }
-        )
-
-    task_results = []
-    for task in tasks:
-        task_match = _resolve_match_info(
-            normalized_term,
-            [
-                ("descricao", "Descrição", task.descricao),
-                ("responsavel", "Responsável", task.responsavel),
-                ("status", "Status", task.status),
-                ("prioridade", "Prioridade", task.prioridade),
-                ("tipo_pedido", "Tipo", task.tipo_pedido),
-            ],
-        )
-        status_label = status_labels.get(task.status, task.status or "")
-        task_meta_parts = []
-        if status_label:
-            task_meta_parts.append(f"Status: {status_label}")
-        if task.responsavel:
-            task_meta_parts.append(
-                f"Responsavel: {_truncate_text(task.responsavel, 80)}"
-            )
-        if task.prioridade:
-            task_meta_parts.append(f"Prioridade: {task.prioridade}")
-
-        task_results.append(
-            {
-                "type": "task",
-                "type_label": "Tarefa",
-                "title": _truncate_text(task.descricao or f"Tarefa #{task.id}", 120),
-                "subtitle": (
-                    f"Projeto: {_truncate_text(task.project.titulo, 95)}"
-                    if task.project
-                    else "Sem projeto"
-                ),
-                "meta": " | ".join(task_meta_parts),
-                "url": url_for("main.task_detail", task_id=task.id),
-                **task_match,
-            }
-        )
-
-    event_sync_labels = {
-        "pending": "Pendente",
-        "ok": "Sincronizado",
-        "error": "Erro",
-    }
-    event_results = []
-    for event in events:
-        event_match = _resolve_match_info(
-            normalized_term,
-            [
-                ("title", "Titulo", event.title),
-                ("description", "Descricao", event.description),
-                ("location", "Local", event.location),
-            ],
-        )
-        event_meta_parts = []
-        event_period = _format_calendar_event_period(event)
-        if event_period:
-            event_meta_parts.append(f"Quando: {event_period}")
-        if event.location:
-            event_meta_parts.append(f"Local: {_truncate_text(event.location, 80)}")
-        sync_label = event_sync_labels.get(event.sync_status, event.sync_status or "")
-        if sync_label:
-            event_meta_parts.append(f"Sync: {sync_label}")
-
-        event_results.append(
-            {
-                "type": "event",
-                "type_label": "Evento",
-                "title": _truncate_text(event.title or f"Evento #{event.id}", 120),
-                "subtitle": (
-                    _truncate_text(event.description, 95) if event.description else ""
-                ),
-                "meta": " | ".join(event_meta_parts),
-                "url": url_for("main.calendars_hub"),
-                **event_match,
-            }
-        )
-
-    counts = {
-        "projects": len(project_results),
-        "stages": len(stage_results),
-        "tasks": len(task_results),
-        "events": len(event_results),
-    }
-    counts["total"] = (
-        counts["projects"] + counts["stages"] + counts["tasks"] + counts["events"]
-    )
-
-    has_more = {
-        "projects": projects_has_more,
-        "stages": stages_has_more,
-        "tasks": tasks_has_more,
-        "events": events_has_more,
-    }
-    has_more_any = any(has_more.values())
+    counts = {key: len(results[key]) for key in SEARCH_TYPE_KEYS}
+    counts["total"] = sum(counts[key] for key in SEARCH_TYPE_KEYS)
 
     return {
         "query": normalized_term,
@@ -498,16 +315,85 @@ def build_global_search_results(
             "limit_per_type": limit_per_type,
             "has_more": {
                 **has_more,
-                "any": has_more_any,
+                "any": any(has_more.values()),
             },
         },
         "counts": counts,
-        "results": {
-            "projects": project_results,
-            "stages": stage_results,
-            "tasks": task_results,
-            "events": event_results,
+        "results": results,
+    }
+
+
+def build_paginated_global_search(
+    term: str,
+    user,
+    *,
+    selected_types: tuple[str, ...],
+    page: int,
+    per_page: int,
+    selected_orgao_id: int | None = None,
+) -> dict:
+    normalized_term = (term or "").strip()
+    ordered_selected = tuple(k for k in SEARCH_TYPE_KEYS if k in selected_types)
+    if not ordered_selected:
+        ordered_selected = SEARCH_TYPE_KEYS
+    if not normalized_term:
+        return _empty_paginated_search_payload(
+            normalized_term, ordered_selected, per_page
+        )
+
+    scope = _resolve_search_scope(user, selected_orgao_id)
+    queries = _search_queries_by_type(normalized_term, user, scope)
+    type_counts = {key: query.order_by(None).count() for key, query in queries.items()}
+
+    total = sum(type_counts[key] for key in ordered_selected)
+    total_pages = ceil(total / per_page) if total else 0
+    page = min(max(page, 1), total_pages) if total_pages else 1
+
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_results = {key: [] for key in SEARCH_TYPE_KEYS}
+    cursor = 0
+    for key in ordered_selected:
+        type_start, type_end = cursor, cursor + type_counts[key]
+        window_lo, window_hi = max(start, type_start), min(end, type_end)
+        if window_lo < window_hi:
+            rows = (
+                queries[key]
+                .offset(window_lo - type_start)
+                .limit(window_hi - window_lo)
+                .all()
+            )
+            page_results[key] = _SEARCH_SERIALIZERS[key](rows, normalized_term)
+        cursor = type_end
+
+    counts = {
+        key: type_counts[key] if key in ordered_selected else 0
+        for key in SEARCH_TYPE_KEYS
+    }
+    counts["total"] = total
+
+    return {
+        "query": normalized_term,
+        "meta": {
+            "limit_per_type": None,
+            "has_more": {
+                "projects": False,
+                "stages": False,
+                "tasks": False,
+                "events": False,
+                "any": False,
+            },
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total_pages": total_pages,
+                "total": total,
+            },
+            "type_counts": type_counts,
+            "selected_types": list(ordered_selected),
         },
+        "counts": counts,
+        "results": page_results,
     }
 
 
@@ -535,4 +421,3 @@ def global_search_api():
         selected_orgao_id=selected_orgao_id,
     )
     return jsonify(payload)
-

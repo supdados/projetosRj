@@ -50,10 +50,33 @@ export interface SearchHasMore {
 	any: boolean;
 }
 
+/** Chave plural de tipo usada em results/types= (espelha SEARCH_TYPE_KEYS). */
+export type SearchTypeKey = keyof SearchResultsByType;
+
+/** Paginação do modo paginado de /api/busca (?page=). */
+export interface SearchPagination {
+	page: number;
+	per_page: number;
+	total_pages: number;
+	total: number;
+}
+
+/** Contagem total por tipo para termo+escopo, independente da seleção. */
+export interface SearchTypeCounts {
+	projects: number;
+	stages: number;
+	tasks: number;
+	events: number;
+}
+
 /** Metadados da busca (limite por tipo aplicado no servidor). */
 export interface SearchMeta {
 	limit_per_type: number | null;
 	has_more: SearchHasMore;
+	/** Presentes só no modo paginado (?page=). */
+	pagination?: SearchPagination;
+	type_counts?: SearchTypeCounts;
+	selected_types?: SearchTypeKey[];
 }
 
 /** Resultados agrupados por tipo. */

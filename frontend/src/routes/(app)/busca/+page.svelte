@@ -14,6 +14,9 @@
 	 *     fora de ordem.
 	 *   - Termo < 2 chars => estado "digite para buscar" (sem fetch; o servidor
 	 *     tambem devolveria payload vazio).
+	 *   - Modo PAGINADO (`?page=`): 40 itens/pagina sobre a lista plana
+	 *     projetos -> etapas -> tarefas -> eventos, com filtros de tipo
+	 *     combinaveis (`?types=`) e URL sync (q+types+page) via replaceState.
 	 *   - Acessibilidade: input rotulado, contagem anunciada via aria-live,
 	 *     resultados em listas com headings por secao, foco visivel em cada link.
 	 *
@@ -21,17 +24,21 @@
 	 * rotas Jinja) — href direto, sem prefixo `base` da SPA.
 	 */
 	import { onDestroy } from 'svelte';
-	import { page } from '$app/state';
+	import { page as pageState } from '$app/state';
+	import { base } from '$app/paths';
+	import { replaceState } from '$app/navigation';
 	import { get, ApiClientError } from '$lib/api/client';
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type {
 		GlobalSearchData,
 		SearchResultItem,
-		SearchResultsByType
+		SearchResultsByType,
+		SearchTypeKey
 	} from '$lib/types/search';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
+	import PaginationBar from '$lib/components/PaginationBar.svelte';
 
 	/** Estados da busca: ocioso (termo curto), buscando, pronto ou erro. */
 	type SearchState = 'idle' | 'loading' | 'ready' | 'error';
@@ -40,6 +47,10 @@
 	const MIN_TERM_LENGTH = 2;
 	/** Janela de debounce do campo de busca (ms). */
 	const DEBOUNCE_MS = 300;
+	/** Itens por pagina do modo paginado (contrato do backend). */
+	const PER_PAGE = 40;
+	/** Ordem canonica dos tipos (espelha SEARCH_TYPE_KEYS do backend). */
+	const ALL_TYPES: readonly SearchTypeKey[] = ['projects', 'stages', 'tasks', 'events'];
 
 	/**
 	 * Secoes na ordem de exibicao, com rotulo, chave em `results`, icone Font
@@ -84,6 +95,8 @@
 	let searchState = $state<SearchState>('idle');
 	let data = $state<GlobalSearchData | null>(null);
 	let errorMessage = $state<string>('');
+	let selectedTypes = $state<SearchTypeKey[]>([...ALL_TYPES]);
+	let page = $state(1);
 
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let inFlight: AbortController | null = null;
@@ -116,17 +129,24 @@
 
 		try {
 			// Propaga o escopo de orgao do topnav (`?orgao=<id>` | ''); o backend
-			// sanitiza o filtro para o usuario corrente. Espelha o `?orgao=` que o
-			// v4.5 propagava em todas as telas (routes/search.py). `limit=all`: a
-			// tela cheia mostra TODOS os registros (o dropdown do topo usa limit=5).
-			const params = new URLSearchParams({ q: trimmed, limit: 'all' });
+			// sanitiza o filtro para o usuario corrente. `page` presente = modo
+			// paginado (40/pagina; o dropdown do topo segue com limit=5).
+			const params = new URLSearchParams({
+				q: trimmed,
+				page: String(page),
+				per_page: String(PER_PAGE)
+			});
+			if (selectedTypes.length < ALL_TYPES.length) params.set('types', selectedTypes.join(','));
 			const scope = $orgaoScopeQuery;
 			const path = scope ? `/api/busca?${params}&${scope}` : `/api/busca?${params}`;
 			const result = await get<GlobalSearchData>(path, controller.signal);
 			// Ignora respostas de buscas ja superadas por uma mais recente.
 			if (controller.signal.aborted) return;
 			data = result;
+			// Reconcilia o clamp do servidor (page > total_pages).
+			page = result.meta.pagination?.page ?? 1;
 			searchState = 'ready';
+			syncUrlFromSearch();
 		} catch (err) {
 			if (controller.signal.aborted) return;
 			// 401 ja redirecionou em client.ts; demais erros viram alerta.
@@ -139,9 +159,10 @@
 		}
 	}
 
-	/** Agenda a busca com debounce ao digitar. */
+	/** Agenda a busca com debounce ao digitar (termo novo => volta a pagina 1). */
 	function onInput(): void {
 		if (debounceTimer) clearTimeout(debounceTimer);
+		page = 1;
 		const current = term;
 		// Resposta imediata ao limpar/encurtar: sai do estado de resultados.
 		if (current.trim().length < MIN_TERM_LENGTH) {
@@ -158,6 +179,7 @@
 	function onSubmit(event: SubmitEvent): void {
 		event.preventDefault();
 		if (debounceTimer) clearTimeout(debounceTimer);
+		page = 1;
 		void runSearch(term);
 	}
 
@@ -165,28 +187,93 @@
 		void runSearch(term);
 	}
 
-	// Hidrata o termo a partir do `?q=` da URL e dispara a busca: é assim que o
-	// "Ver tudo" do GlobalSearchBox chega aqui (deep-link). Reage a novas
-	// navegações para /busca?q=... (mesma rota, sem remontar); digitar não mexe
-	// na URL, então não sobrescreve o que o usuário escreve.
+	/** Liga/desliga um tipo; nunca permite zerar a selecao (ultimo chip e no-op). */
+	function toggleType(key: SearchTypeKey): void {
+		const active = selectedTypes.includes(key);
+		if (active && selectedTypes.length === 1) return;
+		selectedTypes = active
+			? selectedTypes.filter((t) => t !== key)
+			: ALL_TYPES.filter((t) => t === key || selectedTypes.includes(t));
+		page = 1;
+		if (term.trim().length >= MIN_TERM_LENGTH) void runSearch(term);
+	}
+
+	function goToPage(target: number): void {
+		const tp = data?.meta.pagination?.total_pages ?? 1;
+		if (target < 1 || target > tp || target === page) return;
+		page = target;
+		void runSearch(term);
+	}
+
+	/** csv -> tipos validos em ordem canonica; ausente/vazio/invalido => todos. */
+	function parseTypesParam(raw: string | null): SearchTypeKey[] {
+		if (!raw) return [...ALL_TYPES];
+		const tokens = raw.split(',').map((token) => token.trim());
+		const valid = ALL_TYPES.filter((key) => tokens.includes(key));
+		return valid.length > 0 ? valid : [...ALL_TYPES];
+	}
+
+	function parsePageParam(raw: string | null): number {
+		const parsed = Number.parseInt(raw ?? '', 10);
+		return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+	}
+
+	function urlStateKey(query: string, types: readonly SearchTypeKey[], pageNum: number): string {
+		return `${query}|${types.join(',')}|${pageNum}`;
+	}
+
+	/** Reflete q+types+page na URL (replaceState) para reload/voltar/deep-link. */
+	function syncUrlFromSearch(): void {
+		const trimmed = term.trim();
+		const params = new URLSearchParams();
+		if (trimmed.length >= MIN_TERM_LENGTH) params.set('q', trimmed);
+		if (selectedTypes.length < ALL_TYPES.length) params.set('types', selectedTypes.join(','));
+		if (page > 1) params.set('page', String(page));
+		// Atualiza a chave de dedupe ANTES do replaceState para o $effect de
+		// hidratacao nao re-disparar o fetch.
+		syncedUrlQuery = urlStateKey(trimmed, selectedTypes, page);
+		const qs = params.toString();
+		const target = `${base}/busca${qs ? `?${qs}` : ''}`;
+		try {
+			replaceState(target, {});
+		} catch {
+			// replaceState exige contexto de roteamento; ignora fora dele (SSR/teste).
+		}
+	}
+
+	// Hidrata termo/tipos/pagina a partir da URL e dispara a busca: é assim que
+	// o "Ver tudo" do GlobalSearchBox chega aqui (deep-link). A chave de dedupe
+	// composta (q|types|page) evita re-fetch quando o proprio syncUrlFromSearch
+	// reescreve a URL; digitar não mexe na URL, então não sobrescreve o input.
 	let syncedUrlQuery: string | null = null;
 	$effect(() => {
-		const urlQuery = (page.url.searchParams.get('q') ?? '').trim();
-		if (urlQuery === syncedUrlQuery) return;
-		syncedUrlQuery = urlQuery;
+		const urlQuery = (pageState.url.searchParams.get('q') ?? '').trim();
+		const urlTypes = parseTypesParam(pageState.url.searchParams.get('types'));
+		const urlPage = parsePageParam(pageState.url.searchParams.get('page'));
+		const key = urlStateKey(urlQuery, urlTypes, urlPage);
+		if (key === syncedUrlQuery) return;
+		syncedUrlQuery = key;
 		term = urlQuery;
+		selectedTypes = urlTypes;
+		page = urlPage;
 		if (debounceTimer) clearTimeout(debounceTimer);
 		if (urlQuery.length >= MIN_TERM_LENGTH) void runSearch(urlQuery);
 	});
 
-	// Reexecuta a busca (imediatamente, sem debounce) quando o escopo de orgao
-	// do topnav muda, para que os resultados respeitem o novo filtro. Ler
-	// `$orgaoScopeQuery` registra a dependencia reativa; so refaz a busca se ja
-	// houver um termo valido em tela (>= MIN_TERM_LENGTH).
+	// Reexecuta a busca (imediatamente, sem debounce, voltando a pagina 1)
+	// quando o escopo de orgao do topnav MUDA de fato — o guard com o valor
+	// anterior evita que a primeira execucao (montagem) clobbe o `page` vindo
+	// de deep-link e que mudancas de `term` re-disparem este efeito.
+	let lastOrgaoScope: string | null = null;
 	$effect(() => {
-		void $orgaoScopeQuery;
+		const scope = $orgaoScopeQuery;
+		if (lastOrgaoScope === scope) return;
+		const isFirstRun = lastOrgaoScope === null;
+		lastOrgaoScope = scope;
+		if (isFirstRun) return;
 		if (term.trim().length < MIN_TERM_LENGTH) return;
 		if (debounceTimer) clearTimeout(debounceTimer);
+		page = 1;
 		void runSearch(term);
 	});
 
@@ -280,6 +367,30 @@
 					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				/>
 			</div>
+			<div
+				class="flex flex-wrap items-center gap-1.5"
+				role="group"
+				aria-label="Filtrar por tipo de resultado"
+			>
+				{#each SECTIONS as section (section.key)}
+					{@const active = selectedTypes.includes(section.key)}
+					{@const typeCount =
+						searchState === 'ready' ? data?.meta.type_counts?.[section.key] : undefined}
+					<button
+						type="button"
+						aria-pressed={active}
+						onclick={() => toggleType(section.key)}
+						class="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {active
+							? 'border-primary-500 bg-primary-100 text-primary-700'
+							: 'border-border-subtle bg-surface text-text-secondary hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700'}"
+					>
+						<i class="fas {section.icon} text-2xs" aria-hidden="true"></i>
+						{section.label}{#if typeCount !== undefined}
+							<span class="tabular-nums font-normal">({typeCount})</span>
+						{/if}
+					</button>
+				{/each}
+			</div>
 		</form>
 		<p id="busca-hint" class="sr-only">Digite ao menos dois caracteres para iniciar a busca.</p>
 	</div>
@@ -304,7 +415,7 @@
 				Pesquise por projetos, etapas, tarefas e eventos — ao menos dois caracteres.
 			</p>
 		</div>
-	{:else if searchState === 'loading'}
+	{:else if searchState === 'loading' && !data}
 		<p role="status" aria-live="polite" class="text-text-secondary">Buscando…</p>
 	{:else if searchState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={retry} />
@@ -329,7 +440,7 @@
 			</div>
 		{:else}
 			<!-- Seções de resultados no padrão de cards das outras telas (gap 16px). -->
-			<div class="flex flex-col gap-4">
+			<div class="flex flex-col gap-4" aria-busy={searchState === 'loading'}>
 				{#each SECTIONS as section (section.key)}
 					{@const items = sectionItems(section.key)}
 					{#if items.length > 0}
@@ -348,11 +459,11 @@
 									<i class="fas {section.icon} text-sm text-text-muted" aria-hidden="true"></i>
 									{section.label}
 								</h2>
-								<CountBadge>{items.length}</CountBadge>
+								<CountBadge>{data.meta.type_counts?.[section.key] ?? items.length}</CountBadge>
 							</div>
 
 							<ul class="flex flex-col" aria-labelledby={`busca-sec-${section.key}`}>
-								{#each items as item (`${item.type}-${item.url}`)}
+								{#each items as item, i (`${item.type}-${item.url}-${i}`)}
 									<li>
 										<a
 											href={item.url}
@@ -404,6 +515,18 @@
 					{/if}
 				{/each}
 			</div>
+			{#if data.meta.pagination}
+				<PaginationBar
+					page={data.meta.pagination.page}
+					totalPages={data.meta.pagination.total_pages}
+					total={data.meta.pagination.total}
+					perPage={data.meta.pagination.per_page}
+					itemLabel="referências"
+					label="Paginação da busca"
+					disabled={searchState === 'loading'}
+					onChange={goToPage}
+				/>
+			{/if}
 		{/if}
 	{/if}
 </section>
