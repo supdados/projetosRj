@@ -430,7 +430,7 @@
 				{/if}
 			</div>
 
-			{#if user?.is_admin}
+			{#if user}
 				<div bind:this={adminMenuEl} class="relative inline-flex">
 					<button
 						type="button"
@@ -456,34 +456,36 @@
 							class="absolute right-0 top-full z-dropdown mt-2 min-w-[14rem] origin-top-right animate-dropdown-in overflow-hidden rounded-lg border border-border-subtle bg-surface py-1"
 							style="box-shadow: var(--ds-glass-shadow);"
 						>
-							{#if user}
-								<div class="px-4 py-2" aria-hidden="true">
-									<span class="block truncate text-sm font-semibold text-text-primary">
-										{user.name}
-									</span>
-									<span class="block text-xs text-text-secondary">Administrador</span>
-								</div>
+							<div class="px-4 py-2" aria-hidden="true">
+								<span class="block truncate text-sm font-semibold text-text-primary">
+									{user.name}
+								</span>
+								<span class="block text-xs text-text-secondary">
+									{user.is_admin ? 'Administrador' : user.username}
+								</span>
+							</div>
+							<hr class="my-1 border-border-subtle" />
+							{#if user.is_admin}
+								{#each adminLinks as link (link.path)}
+									{@const active = isActive(link.path, pathname)}
+									<a
+										role="menuitem"
+										href={`${base}${link.path}`}
+										aria-current={active ? 'page' : undefined}
+										onclick={closeAdmin}
+										class="flex items-center gap-3 px-4 py-2 text-sm no-underline transition-colors duration-fast focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {active
+											? 'bg-surface-muted text-text-primary'
+											: 'text-text-secondary hover:bg-surface-muted hover:text-text-primary'}"
+									>
+										<i
+											class="fas {link.icon} w-4 text-center text-text-muted"
+											aria-hidden="true"
+										></i>
+										<span>{link.label}</span>
+									</a>
+								{/each}
 								<hr class="my-1 border-border-subtle" />
 							{/if}
-							{#each adminLinks as link (link.path)}
-								{@const active = isActive(link.path, pathname)}
-								<a
-									role="menuitem"
-									href={`${base}${link.path}`}
-									aria-current={active ? 'page' : undefined}
-									onclick={closeAdmin}
-									class="flex items-center gap-3 px-4 py-2 text-sm no-underline transition-colors duration-fast focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {active
-										? 'bg-surface-muted text-text-primary'
-										: 'text-text-secondary hover:bg-surface-muted hover:text-text-primary'}"
-								>
-									<i
-										class="fas {link.icon} w-4 text-center text-text-muted"
-										aria-hidden="true"
-									></i>
-									<span>{link.label}</span>
-								</a>
-							{/each}
-							<hr class="my-1 border-border-subtle" />
 							<!-- Exportar CSV de projetos: link direto para a rota Flask
 								 nativa /projects/download (attachment, FORA do envelope JSON).
 								 Migrado da tela de Projetos para o menu de usuário. -->
@@ -496,6 +498,18 @@
 							>
 								<i class="fas fa-file-csv w-4 text-center text-text-muted" aria-hidden="true"></i>
 								<span>Exportar CSV de projetos</span>
+							</a>
+							<hr class="my-1 border-border-subtle" />
+							<!-- Logout: rota Flask nativa /logout (fluxo fora da SPA), como no
+								 dropdown do topnav Jinja v4.5. -->
+							<a
+								role="menuitem"
+								href="/logout"
+								data-sveltekit-reload
+								class="flex items-center gap-3 px-4 py-2 text-sm text-danger no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+							>
+								<i class="fas fa-sign-out-alt w-4 text-center" aria-hidden="true"></i>
+								<span>Sair</span>
 							</a>
 						</div>
 					{/if}
@@ -561,12 +575,6 @@
 				</span>
 				<span class="app-theme-switch__sr">Alternar tema</span>
 			</label>
-
-			{#if user && !user.is_admin}
-				<span class="hidden text-sm text-white/90 sm:inline" title={user.username}>
-					{user.name}
-				</span>
-			{/if}
 		</div>
 	</div>
 </header>
