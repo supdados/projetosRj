@@ -11,7 +11,9 @@
 	import { ApiClientError } from '$lib/api/client';
 	import { importProjectsCsv } from '$lib/api/projects';
 	import type { ProjectsListOptions } from '$lib/types/projects';
+	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import Modal from '$lib/components/Modal.svelte';
+	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 
 	interface Props {
 		open: boolean;
@@ -34,6 +36,17 @@
 	let fileInputEl = $state<HTMLInputElement | null>(null);
 
 	const orgaoOptions = $derived(options?.orgaos_options ?? []);
+	// Adapta a lista plana ao shape numérico do OrgaoTreeSelect.
+	const orgaoTreeOptions = $derived<OrgaoSelectOption[]>(
+		orgaoOptions.map((o) => ({
+			value: Number(o.value),
+			label: o.label,
+			sigla: o.sigla,
+			nome: o.nome,
+			pai_id: o.pai_id,
+			is_inactive: o.is_inactive
+		}))
+	);
 	const deliveryTypes = $derived(options?.delivery_types_options ?? []);
 	const specialOptions = $derived(options?.special_projects_options ?? []);
 
@@ -122,19 +135,18 @@
 					/>
 				</label>
 
-				<label class="flex flex-col gap-1 text-sm">
-					<span class="font-semibold text-text-secondary">Órgão de destino</span>
-					<select
-						bind:value={orgaoId}
-						required
-						class="h-9 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-					>
-						<option value="" disabled>Selecione o órgão…</option>
-						{#each orgaoOptions as opt (opt.value)}
-							<option value={opt.value}>{opt.label}</option>
-						{/each}
-					</select>
-				</label>
+				<div class="flex flex-col gap-1 text-sm">
+					<label for="import-csv-orgao" class="font-semibold text-text-secondary">
+						Órgão de destino
+					</label>
+					<OrgaoTreeSelect
+						id="import-csv-orgao"
+						options={orgaoTreeOptions}
+						value={orgaoId ? Number(orgaoId) : null}
+						onSelect={(v) => (orgaoId = v == null ? '' : String(v))}
+						placeholder="Selecione o órgão…"
+					/>
+				</div>
 
 				<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
 					<label class="flex flex-col gap-1 text-sm">

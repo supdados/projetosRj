@@ -56,6 +56,8 @@
 	} from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
 	import SeiProcessField from '$lib/components/SeiProcessField.svelte';
+	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
+	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import type {
 		AbepIndicadorOption,
 		OrgaoOption,
@@ -181,6 +183,17 @@
 	}
 
 	const orgaoOptions = $derived<OrgaoOption[]>(options?.orgaos_options ?? []);
+	// Adapta a lista plana ao shape numérico do OrgaoTreeSelect.
+	const orgaoTreeOptions = $derived<OrgaoSelectOption[]>(
+		orgaoOptions.map((o) => ({
+			value: Number(o.value),
+			label: o.label,
+			sigla: o.sigla,
+			nome: o.nome,
+			pai_id: o.pai_id,
+			is_inactive: o.is_inactive
+		}))
+	);
 	const abepOptions = $derived<AbepIndicadorOption[]>(
 		options?.abep_indicadores_options ?? []
 	);
@@ -912,18 +925,13 @@
 													class={fieldClass}
 												/>
 											{:else}
-												<select
+												<OrgaoTreeSelect
 													id="cp-orgao-id"
-													bind:value={orgaoId}
-													required
-													aria-invalid={orgaoError}
-													class="{fieldClass} {orgaoError ? fieldErrorClass : ''}"
-												>
-													<option value="" disabled>Selecione um órgão</option>
-													{#each orgaoOptions as opt (opt.value)}
-														<option value={opt.value}>{opt.label}</option>
-													{/each}
-												</select>
+													options={orgaoTreeOptions}
+													value={orgaoId ? Number(orgaoId) : null}
+													onSelect={(v) => (orgaoId = v == null ? '' : String(v))}
+													placeholder="Selecione um órgão"
+												/>
 											{/if}
 											{#if orgaoError}
 												<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>

@@ -30,6 +30,8 @@
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PendingProjectCard from '$lib/components/PendingProjectCard.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
+	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
+	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
@@ -183,9 +185,9 @@
 		void load();
 	}
 
-	function onOrgaoChange(event: Event): void {
-		const raw = (event.currentTarget as HTMLSelectElement).value;
-		orgao = raw === '' ? null : Number(raw);
+	/** Seleção no OrgaoTreeSelect (null = "Todos os órgãos"): mesmo fluxo do onchange. */
+	function onOrgaoSelect(selecionado: number | null): void {
+		orgao = selecionado;
 		page = 1;
 		void load();
 	}
@@ -306,6 +308,19 @@
 			prioridade !== '' ||
 			orgao !== null
 	);
+	// Opções achatadas p/ o OrgaoTreeSelect (a árvore é montada por `pai_id`).
+	const orgaoTreeOptions = $derived(
+		(data?.orgaos_options ?? []).map(
+			(o): OrgaoSelectOption => ({
+				value: Number(o.value),
+				label: o.label,
+				sigla: o.sigla,
+				nome: o.nome,
+				pai_id: o.pai_id,
+				is_inactive: o.is_inactive
+			})
+		)
+	);
 	const selectedOrgaoLabel = $derived(
 		orgao === null
 			? ''
@@ -394,18 +409,17 @@
 		</select>
 
 		{#if data && data.orgaos_options.length > 1}
-			<select
-				id="orgaoFilter"
-				value={orgao === null ? '' : String(orgao)}
-				onchange={onOrgaoChange}
-				aria-label="Filtrar por órgão"
-				class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<option value="">Todos os órgãos</option>
-				{#each data.orgaos_options as orgaoOption (orgaoOption.value)}
-					<option value={orgaoOption.value}>{orgaoOption.label}</option>
-				{/each}
-			</select>
+			<div class="min-w-[10rem] flex-1">
+				<OrgaoTreeSelect
+					id="orgaoFilter"
+					options={orgaoTreeOptions}
+					value={orgao}
+					onSelect={onOrgaoSelect}
+					allowTodos
+					ariaLabel="Filtrar por órgão"
+					placeholder="Todos os órgãos"
+				/>
+			</div>
 		{/if}
 
 		<select

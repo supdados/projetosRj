@@ -4,7 +4,7 @@ Cobrem o escopo da lista de órgãos atribuíveis usada no picker de Área
 Responsável do Detalhe de Projeto: admin enxerga todos os órgãos ativos; não
 admin enxerga apenas a própria subtree (vínculo + descendentes), sempre restrita
 a ativos; não admin sem vínculo recebe lista vazia. O shape devolvido é
-``{id, sigla, nome}`` ordenado por ``sigla``.
+``{id, sigla, nome, pai_id}`` ordenado por ``sigla``.
 
 Reusa o mesmo padrão de helpers nomeados de ``test_orgao_scope_unit.py`` (sem
 stubs inline) sobre a fixture ``app``/banco real.
@@ -52,9 +52,11 @@ def test_admin_options_include_all_active_orgaos_sorted_by_sigla(app):
         assert "AAA" in siglas and "BBB" in siglas
         assert "CCC" not in siglas
         assert siglas == sorted(siglas)
-        assert {"id", "sigla", "nome"} == set(options[0].keys())
+        assert {"id", "sigla", "nome", "pai_id"} == set(options[0].keys())
         assert options[siglas.index("AAA")]["id"] == a.id
+        assert options[siglas.index("AAA")]["pai_id"] is None
         assert options[siglas.index("BBB")]["nome"] == "Nome BBB"
+        assert options[siglas.index("BBB")]["pai_id"] == a.id
 
 
 def test_non_admin_options_restricted_to_subtree_active(app):

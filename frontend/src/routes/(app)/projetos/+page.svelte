@@ -49,6 +49,8 @@
 	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
+	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
+	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import { flash } from '$lib/stores/flash';
 	import { auth } from '$lib/stores/auth';
 
@@ -156,6 +158,19 @@
 	const deliveryOptions = $derived(data?.options.delivery_types_options ?? []);
 	const atrasoOptions = $derived(data?.options.atrasos_options ?? []);
 	const orgaoOptions = $derived(data?.options.orgaos_options ?? []);
+	// Opções achatadas p/ o OrgaoTreeSelect (a árvore é montada por `pai_id`).
+	const orgaoTreeOptions = $derived(
+		orgaoOptions.map(
+			(o): OrgaoSelectOption => ({
+				value: Number(o.value),
+				label: o.label,
+				sigla: o.sigla,
+				nome: o.nome,
+				pai_id: o.pai_id,
+				is_inactive: o.is_inactive
+			})
+		)
+	);
 	const specialOptions = $derived(data?.options.special_projects_options ?? []);
 	const abepOptions = $derived(data?.options.abep_indicadores_options ?? []);
 	const pagination = $derived(data?.pagination ?? null);
@@ -330,6 +345,12 @@
 	function applyFilterChange(): void {
 		page = 1;
 		void load();
+	}
+
+	/** Seleção no OrgaoTreeSelect (null = "Todos os órgãos"): mesmo fluxo do onchange. */
+	function onOrgaoSelect(selecionado: number | null): void {
+		orgao = selecionado == null ? '' : String(selecionado);
+		applyFilterChange();
 	}
 
 	/** Alterna o painel "Mais filtros" (slide animado + inert/aria). */
@@ -566,15 +587,6 @@
 		return value.charAt(0).toUpperCase() + value.slice(1);
 	}
 
-	/** Rótulo do órgão no <select>: apenas a SIGLA (nome completo polui o campo). */
-	function orgaoOptionLabel(option: {
-		sigla: string | null;
-		nome: string | null;
-		label: string;
-	}): string {
-		return option.sigla ?? option.label;
-	}
-
 	// Cor do texto por tom (SEM fundo/pilula). Espelha os tons do Badge, mas para
 	// renderizar Prioridade/Status como TEXTO colorido em vez de badge preenchido.
 	const toneTextClass: Record<string, string> = {
@@ -663,19 +675,18 @@
 				/>
 			</div>
 
-			{#if orgaoOptions.length > 0}
-				<select
-					id="projetosOrgao"
-					bind:value={orgao}
-					onchange={applyFilterChange}
-					aria-label="Filtrar por órgão"
-					class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<option value="">Todos os órgãos</option>
-					{#each orgaoOptions as option (option.value)}
-						<option value={option.value}>{orgaoOptionLabel(option)}</option>
-					{/each}
-				</select>
+			{#if orgaoTreeOptions.length > 0}
+				<div class="min-w-[10rem] flex-1">
+					<OrgaoTreeSelect
+						id="projetosOrgao"
+						options={orgaoTreeOptions}
+						value={orgao ? Number(orgao) : null}
+						onSelect={onOrgaoSelect}
+						allowTodos
+						ariaLabel="Filtrar por órgão"
+						placeholder="Todos os órgãos"
+					/>
+				</div>
 			{/if}
 
 			<select

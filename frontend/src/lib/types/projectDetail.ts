@@ -136,6 +136,8 @@ export interface OrgaoDetailOption {
 	id: number;
 	sigla: string;
 	nome: string;
+	/** id do órgão pai (null = raiz); alimenta a árvore do OrgaoTreeSelect. */
+	pai_id: number | null;
 }
 
 /** Opções dos seletores de edição inline (_serialize_detail.options). */

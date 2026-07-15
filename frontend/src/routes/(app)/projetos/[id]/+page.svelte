@@ -66,6 +66,8 @@
 	import ProjectHeader from '$lib/components/ProjectHeader.svelte';
 	import InlineEditField from '$lib/components/InlineEditField.svelte';
 	import InlineCombobox from '$lib/components/InlineCombobox.svelte';
+	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
+	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import SeiProcessField from '$lib/components/SeiProcessField.svelte';
 	import EeggInlineEditor from '$lib/components/EeggInlineEditor.svelte';
 	import StageList from '$lib/components/StageList.svelte';
@@ -486,12 +488,14 @@
 		sublabel?: string;
 	}
 
-	/** Orgaos escopados (options.orgaos) -> opcoes do combobox da Area Responsavel. */
-	const orgaoOptions = $derived<InlineComboOption[]>(
+	/** Orgaos escopados (options.orgaos) -> opcoes do OrgaoTreeSelect (arvore por pai_id). */
+	const orgaoOptions = $derived<OrgaoSelectOption[]>(
 		(data?.options.orgaos ?? []).map((o) => ({
-			value: String(o.id),
+			value: o.id,
 			label: o.sigla,
-			sublabel: o.nome
+			sigla: o.sigla,
+			nome: o.nome,
+			pai_id: o.pai_id
 		}))
 	);
 
@@ -515,11 +519,11 @@
 	 * `projectFieldStates`; 403 (fora de escopo) aparece inline e o valor reverte
 	 * naturalmente porque o projeto so e substituido em caso de sucesso.
 	 */
-	async function saveOrgao(value: string): Promise<void> {
-		if (!data) return;
+	async function saveOrgao(value: number | null): Promise<void> {
+		if (!data || value == null) return;
 		setProjectFieldState('orgao_id', { pending: true, error: null });
 		try {
-			const result = await updateProjectInline(projectId, { orgao_id: Number(value) });
+			const result = await updateProjectInline(projectId, { orgao_id: value });
 			data = { ...data, project: result.project };
 			setProjectFieldState('orgao_id', { pending: false, error: null });
 		} catch (err) {
@@ -1080,23 +1084,28 @@
 			     cada campo em um cartão com borda/sombra, hierarquia e folga. -->
 			<div class="flex flex-col gap-6">
 				<div class="grid gap-4 sm:grid-cols-2 {SHOW_ABEP ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}">
-					<!-- Área Responsável: combobox pesquisável de órgãos (orgao_id). -->
-					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
-						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Área Responsável</span>
-						<InlineCombobox
-							fieldId="project-orgao-id"
-							label="Área Responsável, editar"
-							value={data.project.orgao_id !== null && data.project.orgao_id !== undefined
-								? String(data.project.orgao_id)
-								: null}
-							displayLabel={data.project.orgao_sigla}
+					<!-- Área Responsável: seletor em árvore de órgãos (orgao_id). -->
+					<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface px-4 py-1.5 text-sm shadow-sm">
+						<label
+							for="project-orgao-id"
+							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+						>
+							Área Responsável
+						</label>
+						<OrgaoTreeSelect
+							id="project-orgao-id"
+							value={data.project.orgao_id ?? null}
 							options={orgaoOptions}
-							emptyLabel="Não informado"
-							readonly={fieldsLocked}
-							pending={projectFieldStates.orgao_id?.pending}
-							error={projectFieldStates.orgao_id?.error}
+							placeholder="Não informado"
+							fallbackLabel={data.project.orgao_sigla}
+							disabled={fieldsLocked || (projectFieldStates.orgao_id?.pending ?? false)}
 							onSelect={saveOrgao}
 						/>
+						{#if projectFieldStates.orgao_id?.error}
+							<span role="alert" class="text-[0.72rem] text-danger"
+								>{projectFieldStates.orgao_id.error}</span
+							>
+						{/if}
 					</div>
 					<!-- Órgão: texto livre legado (orgao). -->
 					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">

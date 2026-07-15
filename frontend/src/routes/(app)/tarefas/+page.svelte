@@ -48,6 +48,8 @@
 	import KanbanComposer from '$lib/components/KanbanComposer.svelte';
 	import TaskViewToggle from '$lib/components/TaskViewToggle.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
+	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
+	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
@@ -592,6 +594,24 @@
 	 */
 	const orgaoOptions = $derived(data?.orgaos_options ?? []);
 
+	// `serialize_orgao_option` manda `value`/`pai_id` como string; o
+	// OrgaoTreeSelect trabalha com `number` para montar a árvore por `pai_id`.
+	const orgaoTreeOptions = $derived<OrgaoSelectOption[]>(
+		orgaoOptions.map((o) => ({
+			value: Number(o.value),
+			label: o.label,
+			sigla: o.sigla,
+			nome: o.nome,
+			pai_id: o.pai_id === null ? null : Number(o.pai_id),
+			is_inactive: o.is_inactive
+		}))
+	);
+
+	function selectOrgao(next: number | null): void {
+		orgao = next === null ? '' : String(next);
+		reloadActiveView();
+	}
+
 	const hasActiveFilters = $derived(
 		project !== '' ||
 			orgao !== '' ||
@@ -705,18 +725,16 @@
 				<!-- No Kanban a barra de filtros some, mas quem tem acesso a mais de
 					 um órgão ainda precisa restringir o quadro: filtro de órgão
 					 compacto no header, replicando o select da Lista. -->
-				<select
-					id="kanban_filter_orgao"
-					bind:value={orgao}
-					onchange={reloadActiveView}
-					aria-label="Filtrar por órgão"
-					class="h-9 w-48 rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<option value="">Todos os órgãos</option>
-					{#each orgaoOptions as orgaoOption (orgaoOption.value)}
-						<option value={orgaoOption.value}>{orgaoOption.label}</option>
-					{/each}
-				</select>
+				<div class="w-48">
+					<OrgaoTreeSelect
+						id="kanban_filter_orgao"
+						options={orgaoTreeOptions}
+						value={orgao === '' ? null : Number(orgao)}
+						onSelect={selectOrgao}
+						allowTodos={true}
+						ariaLabel="Filtrar por órgão"
+					/>
+				</div>
 			{/if}
 
 			{#if view === 'list'}
@@ -788,19 +806,17 @@
 			/>
 		</div>
 
-		<select
-			id="filter_orgao"
-			bind:value={orgao}
-			onchange={reloadActiveView}
-			disabled={orgaoOptions.length === 0}
-			aria-label="Filtrar por órgão"
-			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-		>
-			<option value="">Todos os órgãos</option>
-			{#each orgaoOptions as orgaoOption (orgaoOption.value)}
-				<option value={orgaoOption.value}>{orgaoOption.label}</option>
-			{/each}
-		</select>
+		<div class="min-w-[10rem] flex-1">
+			<OrgaoTreeSelect
+				id="filter_orgao"
+				options={orgaoTreeOptions}
+				value={orgao === '' ? null : Number(orgao)}
+				onSelect={selectOrgao}
+				allowTodos={true}
+				ariaLabel="Filtrar por órgão"
+				disabled={orgaoOptions.length === 0}
+			/>
+		</div>
 
 		<select
 			id="filter_prioridade"

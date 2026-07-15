@@ -287,8 +287,9 @@ def scoped_orgao_options(user) -> list[dict]:
         user: Instância de ``User`` (ou ``None``).
 
     Returns:
-        Lista de ``{id, sigla, nome}`` ordenada por ``sigla``; vazia quando um
-        não-admin não tem vínculos.
+        Lista de ``{id, sigla, nome, pai_id}`` ordenada por ``sigla``; vazia
+        quando um não-admin não tem vínculos. ``pai_id`` alimenta a árvore do
+        OrgaoTreeSelect no frontend.
     """
     query = OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True))
     if not getattr(user, "is_admin", False):
@@ -297,7 +298,9 @@ def scoped_orgao_options(user) -> list[dict]:
             return []
         query = query.filter(OrgaoUnidade.id.in_(subtree_ids))
     rows = query.order_by(OrgaoUnidade.sigla).all()
-    return [{"id": o.id, "sigla": o.sigla, "nome": o.nome} for o in rows]
+    return [
+        {"id": o.id, "sigla": o.sigla, "nome": o.nome, "pai_id": o.pai_id} for o in rows
+    ]
 
 
 def user_can_access_project(user, project) -> bool:
