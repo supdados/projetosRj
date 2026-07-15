@@ -7,7 +7,7 @@
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import { fetchDashboard } from '$lib/api/dashboard';
+	import { fetchDashboard, peekDashboard } from '$lib/api/dashboard';
 	import { ApiClientError } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth';
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
@@ -24,6 +24,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import DashboardSkeleton from '$lib/components/DashboardSkeleton.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import { fetchProjects, type CreateProjectResult } from '$lib/api/projects';
 	import { flash } from '$lib/stores/flash';
@@ -31,8 +32,13 @@
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
-	let loadState = $state<LoadState>('loading');
-	let data = $state<DashboardData | null>(null);
+	// SWR: reabre com o ultimo dado bom do escopo corrente (cache de modulo em
+	// $lib/api/dashboard) e revalida em background — sem flash de loading ao
+	// voltar para a rota. O skeleton so aparece quando NAO ha cache (1a visita
+	// ou escopo de orgao nunca carregado).
+	const initialData = peekDashboard($orgaoScopeQuery);
+	let data = $state<DashboardData | null>(initialData);
+	let loadState = $state<LoadState>(initialData ? 'ready' : 'loading');
 	let errorMessage = $state<string>('');
 
 	// Aborta a busca anterior quando o escopo muda durante um carregamento em
@@ -44,7 +50,16 @@
 		const controller = new AbortController();
 		inFlight = controller;
 
-		loadState = 'loading';
+		// SWR: com cache do escopo mostra o dado antigo ja (sem skeleton) e a
+		// revalidacao abaixo troca em silencio; sem cache, skeleton.
+		const cached = peekDashboard($orgaoScopeQuery);
+		if (cached) {
+			data = cached;
+			loadState = 'ready';
+		} else {
+			data = null;
+			loadState = 'loading';
+		}
 		errorMessage = '';
 		try {
 			// Propaga o escopo de orgao do topnav (`?orgao=<id>` | ''); o backend
@@ -57,8 +72,15 @@
 			if (controller.signal.aborted) return;
 			// 401 ja redirecionou; aqui tratamos os demais erros.
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			errorMessage =
+			const message =
 				err instanceof Error ? err.message : 'Falha ao carregar o dashboard.';
+			// Revalidacao falhou com dado stale na tela: mantem o dado e avisa via
+			// flash, em vez de trocar o dashboard inteiro pelo painel de erro.
+			if (data) {
+				flash.danger(message);
+				return;
+			}
+			errorMessage = message;
 			loadState = 'error';
 		}
 	}
@@ -340,9 +362,8 @@
 	</PageHeader>
 
 	{#if loadState === 'loading'}
-		<p role="status" aria-live="polite" class="text-text-secondary">
-			Carregando dados…
-		</p>
+		<p role="status" aria-live="polite" class="sr-only">Carregando dados…</p>
+		<DashboardSkeleton />
 	{:else if loadState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={load} />
 	{:else if data}

@@ -17,7 +17,17 @@
  */
 
 import { get, post, del, postForm } from './client';
+import { createSwrCache } from './swrCache';
 import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
+
+// Ultimo payload bom por chave de filtros (querystring de `buildQuery`). SWR:
+// a tela reabre com o dado antigo e revalida em silencio (ver dashboard.ts).
+const projectsCache = createSwrCache<ProjectsListData>();
+
+/** Ultima lista carregada para os filtros, ou null (sincrono, 1o render). */
+export function peekProjects(query: ProjectsListQuery = {}): ProjectsListData | null {
+	return projectsCache.peek(buildQuery(query));
+}
 
 /** Resultado da importação de projetos via CSV (`POST /api/projetos/importar-csv`). */
 export interface ImportProjectsResult {
@@ -57,11 +67,14 @@ function buildQuery(query: ProjectsListQuery): string {
  * Busca a "Lista de Projetos" do usuário autenticado, respeitando o escopo de
  * órgão server-side. Sem `status` explícito o backend assume "Vigente".
  */
-export function fetchProjects(
+export async function fetchProjects(
 	query: ProjectsListQuery = {},
 	signal?: AbortSignal
 ): Promise<ProjectsListData> {
-	return get<ProjectsListData>(`/api/projetos${buildQuery(query)}`, signal);
+	const qs = buildQuery(query);
+	const data = await get<ProjectsListData>(`/api/projetos${qs}`, signal);
+	projectsCache.store(qs, data);
+	return data;
 }
 
 /** Etapa do Quick Create (espelha `etapa_descricao[]`/`etapa_duration[]`). */

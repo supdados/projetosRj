@@ -15,6 +15,7 @@
  */
 
 import { get, getWithMeta, post, put, del } from './client';
+import { createSwrCache } from './swrCache';
 import type {
 	AdminUsersListResult,
 	AdminUserDetail,
@@ -30,20 +31,44 @@ interface AdminUsersListEnvelope {
 	usuarios: AdminUser[];
 }
 
+/** Filtros da listagem paginada de usuários. */
+export interface AdminUsersListParams {
+	page?: number;
+	q?: string;
+	areaId?: number;
+}
+
+/** Monta a querystring da listagem, omitindo valores vazios/default. */
+function buildAdminUsersQuery({ page = 1, q = '', areaId }: AdminUsersListParams): string {
+	const params = new URLSearchParams();
+	if (page > 1) params.set('page', String(page));
+	if (q.trim()) params.set('q', q.trim());
+	if (areaId) params.set('area_id', String(areaId));
+	const qs = params.toString();
+	return qs ? `?${qs}` : '';
+}
+
+// Ultimo payload bom por chave de filtros (querystring de
+// `buildAdminUsersQuery`). SWR: a tela reabre com o dado antigo e revalida em
+// silencio (ver dashboard.ts).
+const adminUsersCache = createSwrCache<AdminUsersListResult>();
+
+/** Ultima listagem carregada para os filtros, ou null (sincrono, 1o render). */
+export function peekAdminUsers(params: AdminUsersListParams = {}): AdminUsersListResult | null {
+	return adminUsersCache.peek(buildAdminUsersQuery(params));
+}
+
 /**
  * Lista paginada de usuários (GET /api/admin/usuarios), capturando a `meta`
  * de paginação via `getWithMeta` do client (que preserva `meta` e trata
  * 401/CSRF com a mesma semântica do `get`/`post`).
  */
 export async function fetchAdminUsers(
-	{ page = 1, q = '', areaId }: { page?: number; q?: string; areaId?: number } = {},
+	params: AdminUsersListParams = {},
 	signal?: AbortSignal
 ): Promise<AdminUsersListResult> {
-	const params = new URLSearchParams();
-	if (page > 1) params.set('page', String(page));
-	if (q.trim()) params.set('q', q.trim());
-	if (areaId) params.set('area_id', String(areaId));
-	const qs = params.size ? `?${params}` : '';
+	const { page = 1 } = params;
+	const qs = buildAdminUsersQuery(params);
 	const { data, meta } = await getWithMeta<AdminUsersListEnvelope>(
 		`/api/admin/usuarios${qs}`,
 		signal
@@ -54,7 +79,9 @@ export async function fetchAdminUsers(
 		total: data.usuarios.length,
 		total_pages: 1
 	};
-	return { usuarios: data.usuarios, meta: pageMeta };
+	const result: AdminUsersListResult = { usuarios: data.usuarios, meta: pageMeta };
+	adminUsersCache.store(qs, result);
+	return result;
 }
 
 /**
@@ -63,19 +90,42 @@ export async function fetchAdminUsers(
  * devolve a lista achatada (somente ativos, ordenados por `(depth, sigla)`)
  * — o front não precisa mais achatar a árvore de `/api/admin/orgaos`.
  */
+// Ultimas opcoes boas (endpoint sem filtros — mesma lista serve criação e
+// edição). SWR: a tela reabre com o dado antigo e revalida em silencio.
+const orgaoOptionsCache = createSwrCache<AdminOrgaoOption[]>();
+const ORGAO_OPTIONS_KEY = 'opcoes';
+
+/** Ultimas opções de órgão carregadas, ou null (sincrono, para o 1o render). */
+export function peekOrgaoOptionsForUser(): AdminOrgaoOption[] | null {
+	return orgaoOptionsCache.peek(ORGAO_OPTIONS_KEY);
+}
+
 export async function fetchOrgaoOptionsForUser(
 	signal?: AbortSignal
 ): Promise<AdminOrgaoOption[]> {
 	const opcoes = await get<AdminOrgaoOption[]>('/api/admin/orgaos/opcoes', signal);
-	return Array.isArray(opcoes) ? opcoes : [];
+	const result = Array.isArray(opcoes) ? opcoes : [];
+	orgaoOptionsCache.store(ORGAO_OPTIONS_KEY, result);
+	return result;
+}
+
+// Ultimo detalhe bom por id de usuário. SWR: a tela reabre com o dado antigo e
+// revalida em silencio (ver dashboard.ts).
+const adminUserDetailCache = createSwrCache<AdminUserDetail>();
+
+/** Ultimo detalhe carregado do usuário, ou null (sincrono, 1o render). */
+export function peekAdminUserDetail(userId: number): AdminUserDetail | null {
+	return adminUserDetailCache.peek(String(userId));
 }
 
 /** Detalhe + opções de órgãos de um usuário (GET /api/admin/usuarios/<id>). */
-export function fetchAdminUserDetail(
+export async function fetchAdminUserDetail(
 	userId: number,
 	signal?: AbortSignal
 ): Promise<AdminUserDetail> {
-	return get<AdminUserDetail>(`/api/admin/usuarios/${userId}`, signal);
+	const data = await get<AdminUserDetail>(`/api/admin/usuarios/${userId}`, signal);
+	adminUserDetailCache.store(String(userId), data);
+	return data;
 }
 
 /** Cria um usuário (POST /api/admin/usuarios). */

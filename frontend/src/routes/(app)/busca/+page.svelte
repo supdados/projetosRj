@@ -27,8 +27,10 @@
 	import { page as pageState } from '$app/state';
 	import { base } from '$app/paths';
 	import { replaceState } from '$app/navigation';
-	import { get, ApiClientError } from '$lib/api/client';
+	import { ApiClientError } from '$lib/api/client';
+	import { fetchGlobalSearch, peekGlobalSearch, type GlobalSearchParams } from '$lib/api/search';
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
+	import { flash } from '$lib/stores/flash';
 	import type {
 		GlobalSearchData,
 		SearchResultItem,
@@ -39,6 +41,7 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
+	import BuscaSkeleton from '$lib/components/skeletons/BuscaSkeleton.svelte';
 
 	/** Estados da busca: ocioso (termo curto), buscando, pronto ou erro. */
 	type SearchState = 'idle' | 'loading' | 'ready' | 'error';
@@ -91,12 +94,31 @@
 		}
 	];
 
-	let term = $state<string>('');
-	let searchState = $state<SearchState>('idle');
-	let data = $state<GlobalSearchData | null>(null);
+	// SWR: hidrata o estado inicial a partir da URL (deep-link) + peek do cache
+	// de modulo (mesma chave que fetchGlobalSearch grava) — evita o flash de
+	// "Digite um termo"/skeleton quando a revisita ja tem dado bom.
+	const initialTerm = (pageState.url.searchParams.get('q') ?? '').trim();
+	const initialTypes = parseTypesParam(pageState.url.searchParams.get('types'));
+	const initialPage = parsePageParam(pageState.url.searchParams.get('page'));
+	const initialData =
+		initialTerm.length >= MIN_TERM_LENGTH
+			? peekGlobalSearch({
+					q: initialTerm,
+					page: initialPage,
+					perPage: PER_PAGE,
+					types: initialTypes.length < ALL_TYPES.length ? initialTypes : undefined,
+					orgaoQuery: $orgaoScopeQuery
+				})
+			: null;
+
+	let term = $state<string>(initialTerm);
+	let searchState = $state<SearchState>(
+		initialTerm.length < MIN_TERM_LENGTH ? 'idle' : initialData ? 'ready' : 'loading'
+	);
+	let data = $state<GlobalSearchData | null>(initialData);
 	let errorMessage = $state<string>('');
-	let selectedTypes = $state<SearchTypeKey[]>([...ALL_TYPES]);
-	let page = $state(1);
+	let selectedTypes = $state<SearchTypeKey[]>(initialTypes);
+	let page = $state(initialPage);
 
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let inFlight: AbortController | null = null;
@@ -124,22 +146,32 @@
 		cancelInFlight();
 		const controller = new AbortController();
 		inFlight = controller;
-		searchState = 'loading';
 		errorMessage = '';
 
+		// Propaga o escopo de orgao do topnav (`?orgao=<id>` | ''); o backend
+		// sanitiza o filtro para o usuario corrente. `page` presente = modo
+		// paginado (40/pagina; o dropdown do topo segue com limit=5).
+		const params: GlobalSearchParams = {
+			q: trimmed,
+			page,
+			perPage: PER_PAGE,
+			types: selectedTypes.length < ALL_TYPES.length ? selectedTypes : undefined,
+			orgaoQuery: $orgaoScopeQuery
+		};
+
+		// SWR: com cache da mesma chave mostra o dado antigo ja (sem skeleton) e
+		// revalida em silencio abaixo; sem cache, skeleton.
+		const cached = peekGlobalSearch(params);
+		if (cached) {
+			data = cached;
+			searchState = 'ready';
+		} else {
+			data = null;
+			searchState = 'loading';
+		}
+
 		try {
-			// Propaga o escopo de orgao do topnav (`?orgao=<id>` | ''); o backend
-			// sanitiza o filtro para o usuario corrente. `page` presente = modo
-			// paginado (40/pagina; o dropdown do topo segue com limit=5).
-			const params = new URLSearchParams({
-				q: trimmed,
-				page: String(page),
-				per_page: String(PER_PAGE)
-			});
-			if (selectedTypes.length < ALL_TYPES.length) params.set('types', selectedTypes.join(','));
-			const scope = $orgaoScopeQuery;
-			const path = scope ? `/api/busca?${params}&${scope}` : `/api/busca?${params}`;
-			const result = await get<GlobalSearchData>(path, controller.signal);
+			const result = await fetchGlobalSearch(params, controller.signal);
 			// Ignora respostas de buscas ja superadas por uma mais recente.
 			if (controller.signal.aborted) return;
 			data = result;
@@ -151,8 +183,14 @@
 			if (controller.signal.aborted) return;
 			// 401 ja redirecionou em client.ts; demais erros viram alerta.
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			errorMessage =
-				err instanceof Error ? err.message : 'Falha ao realizar a busca.';
+			const message = err instanceof Error ? err.message : 'Falha ao realizar a busca.';
+			// Revalidacao falhou com dado stale na tela: mantem o dado e avisa via
+			// flash, em vez de trocar a lista inteira pelo painel de erro.
+			if (data) {
+				flash.danger(message);
+				return;
+			}
+			errorMessage = message;
 			searchState = 'error';
 		} finally {
 			if (inFlight === controller) inFlight = null;
@@ -416,7 +454,8 @@
 			</p>
 		</div>
 	{:else if searchState === 'loading' && !data}
-		<p role="status" aria-live="polite" class="text-text-secondary">Buscando…</p>
+		<p role="status" aria-live="polite" class="sr-only">Buscando…</p>
+		<BuscaSkeleton />
 	{:else if searchState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={retry} />
 	{:else if data}

@@ -13,6 +13,7 @@
  */
 
 import { get, getWithMeta, post, put, del } from './client';
+import { createSwrCache } from './swrCache';
 import type {
 	TemplateDetailResult,
 	TemplateListMeta,
@@ -40,6 +41,15 @@ interface TemplateListEnvelope {
 	order_options: TemplateOrder[];
 }
 
+// Ultimo payload bom por chave de filtros (querystring de `buildListQuery`).
+// SWR: a tela reabre com o dado antigo e revalida em silencio (dashboard.ts).
+const templateListCache = createSwrCache<TemplateListResult>();
+
+/** Ultima listagem carregada para os filtros, ou null (sincrono, 1o render). */
+export function peekTemplateList(query: TemplateListQuery = {}): TemplateListResult | null {
+	return templateListCache.peek(buildListQuery(query));
+}
+
 /**
  * Busca a lista de modelos + métricas + paginação.
  *
@@ -51,8 +61,9 @@ export async function fetchTemplateList(
 	query: TemplateListQuery = {},
 	signal?: AbortSignal
 ): Promise<TemplateListResult> {
+	const qs = buildListQuery(query);
 	const { data, meta } = await getWithMeta<TemplateListEnvelope>(
-		`/api/admin/templates${buildListQuery(query)}`,
+		`/api/admin/templates${qs}`,
 		signal
 	);
 	const listMeta: TemplateListMeta = (meta as TemplateListMeta | undefined) ?? {
@@ -63,11 +74,13 @@ export async function fetchTemplateList(
 		order: (query.order ?? 'mais_usados') as TemplateOrder,
 		q: query.q ?? ''
 	};
-	return {
+	const result: TemplateListResult = {
 		templates: data.templates,
 		order_options: data.order_options,
 		meta: listMeta
 	};
+	templateListCache.store(qs, result);
+	return result;
 }
 
 /** Carrega um modelo com suas etapas (form de edição). */

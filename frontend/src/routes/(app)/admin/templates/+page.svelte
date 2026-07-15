@@ -24,6 +24,7 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import {
 		fetchTemplateList,
+		peekTemplateList,
 		fetchTemplateDetail,
 		createTemplate,
 		updateTemplate,
@@ -31,8 +32,10 @@
 		deleteTemplate
 	} from '$lib/api/adminTemplates';
 	import { ApiClientError } from '$lib/api/client';
+	import { flash } from '$lib/stores/flash';
 	import type {
 		TemplateListResult,
+		TemplateListQuery,
 		TemplateOrder,
 		TemplateRow,
 		TemplateStageInput
@@ -43,6 +46,7 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
+	import AdminTemplatesSkeleton from '$lib/components/skeletons/AdminTemplatesSkeleton.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type ViewMode = 'list' | 'form';
@@ -84,8 +88,12 @@
 		edicao_recente: 'edição recente'
 	};
 
-	let loadState = $state<LoadState>('loading');
-	let data = $state<TemplateListResult | null>(null);
+	// SWR: reabre com a ultima listagem boa dos filtros correntes (cache de
+	// modulo em $lib/api/adminTemplates) e revalida em silencio — sem flash de
+	// "Carregando…" ao voltar para a tela. So sem cache mostra o skeleton.
+	const initialData = peekTemplateList({ q: undefined, order: DEFAULT_ORDER, page: 1 });
+	let loadState = $state<LoadState>(initialData ? 'ready' : 'loading');
+	let data = $state<TemplateListResult | null>(initialData);
 	let errorMessage = $state<string>('');
 
 	let view = $state<ViewMode>('list');
@@ -137,17 +145,25 @@
 	);
 
 	async function load(): Promise<void> {
-		loadState = data ? loadState : 'loading';
-		errorMessage = '';
 		inFlight?.abort();
 		const controller = new AbortController();
 		inFlight = controller;
 
+		// SWR: com cache dos filtros correntes mostra o dado antigo ja (sem
+		// skeleton) e a revalidacao abaixo troca em silencio; sem cache, skeleton.
+		const query: TemplateListQuery = { q: search.trim() || undefined, order, page };
+		const cached = peekTemplateList(query);
+		if (cached) {
+			data = cached;
+			loadState = 'ready';
+		} else {
+			data = null;
+			loadState = 'loading';
+		}
+		errorMessage = '';
+
 		try {
-			const next = await fetchTemplateList(
-				{ q: search.trim() || undefined, order, page },
-				controller.signal
-			);
+			const next = await fetchTemplateList(query, controller.signal);
 			if (controller.signal.aborted) return;
 			data = next;
 			// Reconcilia os filtros com o que o backend efetivamente aplicou.
@@ -158,8 +174,15 @@
 		} catch (err) {
 			if (controller.signal.aborted) return;
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			errorMessage =
+			const message =
 				err instanceof Error ? err.message : 'Falha ao carregar os modelos.';
+			// Revalidacao falhou com dado stale na tela: mantem o dado e avisa via
+			// flash, em vez de trocar a lista inteira pelo painel de erro.
+			if (data) {
+				flash.danger(message);
+				return;
+			}
+			errorMessage = message;
 			loadState = 'error';
 		}
 	}
@@ -877,9 +900,8 @@
 	{:else}
 		<!-- ======================= LISTA ======================= -->
 		{#if loadState === 'loading'}
-			<p role="status" aria-live="polite" class="text-text-secondary">
-				Carregando modelos…
-			</p>
+			<p role="status" aria-live="polite" class="sr-only">Carregando modelos…</p>
+			<AdminTemplatesSkeleton />
 		{:else if loadState === 'error'}
 			<div
 				role="alert"

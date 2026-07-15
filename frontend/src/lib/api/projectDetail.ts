@@ -14,6 +14,7 @@
  */
 
 import { get, post } from './client';
+import { createSwrCache } from './swrCache';
 import type {
 	ProjectDetailData,
 	ProjectInlinePayload,
@@ -38,12 +39,25 @@ import type {
 	MeetingMutationResult
 } from '$lib/types/projectDetail';
 
+// Ultimo payload bom por id de projeto. SWR: a tela reabre com o dado antigo e
+// revalida em silencio (ver dashboard.ts). Mutations do detalhe (inline/etapas/
+// reunioes) RE-BUSCAM o estado via seus proprios endpoints — nao passam por
+// este cache; a proxima chamada a fetchProjectDetail e que atualiza a entrada.
+const projectDetailCache = createSwrCache<ProjectDetailData>();
+
+/** Ultimo detalhe carregado do projeto, ou null (sincrono, para o 1o render). */
+export function peekProjectDetail(projectId: number): ProjectDetailData | null {
+	return projectDetailCache.peek(String(projectId));
+}
+
 /** Carrega o payload completo do Detalhe de Projeto. */
-export function fetchProjectDetail(
+export async function fetchProjectDetail(
 	projectId: number,
 	signal?: AbortSignal
 ): Promise<ProjectDetailData> {
-	return get<ProjectDetailData>(`/api/projetos/${projectId}/detalhe`, signal);
+	const data = await get<ProjectDetailData>(`/api/projetos/${projectId}/detalhe`, signal);
+	projectDetailCache.store(String(projectId), data);
+	return data;
 }
 
 /** Lista SOMENTE LEITURA as tarefas de uma etapa (Fase 5a). */

@@ -34,6 +34,7 @@
 		fetchProjects,
 		fetchObjetivosCatalogo,
 		deleteProject,
+		peekProjects,
 		type CreateProjectResult,
 		type ObjetivoCatalogo
 	} from '$lib/api/projects';
@@ -49,6 +50,7 @@
 	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
+	import ProjetosSkeleton from '$lib/components/skeletons/ProjetosSkeleton.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import { flash } from '$lib/stores/flash';
@@ -68,10 +70,6 @@
 	 * continua aceitando/filtrando `abep_indicator` normalmente.
 	 */
 	const SHOW_ABEP = false;
-
-	let loadState = $state<LoadState>('loading');
-	let data = $state<ProjectsListData | null>(null);
-	let errorMessage = $state<string>('');
 
 	// Filtros controlados pela UI; a busca acontece server-side.
 	let search = $state<string>('');
@@ -102,9 +100,6 @@
 	let createModalOpen = $state<boolean>(false);
 	// Modal de importação de projetos via CSV (Admin).
 	let importModalOpen = $state<boolean>(false);
-
-	/** Opções do GET /api/projetos repassadas ao modal (órgãos/ABEP/etc.). */
-	const createOptions = $derived(data?.options ?? null);
 
 	/** Só admin importa projetos via CSV (espelha @admin_required do backend). */
 	const isAdmin = $derived($auth.user?.is_admin ?? false);
@@ -151,30 +146,6 @@
 		const id = Number.parseInt(match[1], 10);
 		return Number.isFinite(id) ? id : undefined;
 	}
-
-	/** Opções de filtro derivadas do payload (com fallbacks canônicos). */
-	const statusOptions = $derived(data?.options.statuses ?? ['Vigente', 'Finalizado']);
-	const priorityOptions = $derived(data?.options.priorities ?? []);
-	const deliveryOptions = $derived(data?.options.delivery_types_options ?? []);
-	const atrasoOptions = $derived(data?.options.atrasos_options ?? []);
-	const orgaoOptions = $derived(data?.options.orgaos_options ?? []);
-	// Opções achatadas p/ o OrgaoTreeSelect (a árvore é montada por `pai_id`).
-	const orgaoTreeOptions = $derived(
-		orgaoOptions.map(
-			(o): OrgaoSelectOption => ({
-				value: Number(o.value),
-				label: o.label,
-				sigla: o.sigla,
-				nome: o.nome,
-				pai_id: o.pai_id,
-				is_inactive: o.is_inactive
-			})
-		)
-	);
-	const specialOptions = $derived(data?.options.special_projects_options ?? []);
-	const abepOptions = $derived(data?.options.abep_indicadores_options ?? []);
-	const pagination = $derived(data?.pagination ?? null);
-	const totalProjects = $derived(data?.pagination.total ?? 0);
 
 	const hasActiveFilters = $derived(
 		search.trim() !== '' ||
@@ -229,6 +200,66 @@
 		}
 	}
 
+	// Hidrata os filtros a partir da URL ANTES do estado/peek inicial — a chave
+	// de cache (`buildProjectsQuery()`) precisa refletir os filtros já
+	// resolvidos (click-through de KPIs, deep-link) para casar com o que
+	// `load()` vai buscar.
+	hydrateFiltersFromUrl();
+
+	/** Monta o `ProjectsListQuery` atual a partir dos filtros controlados pela UI. */
+	function buildProjectsQuery(): ProjectsListQuery {
+		return {
+			status,
+			prioridade: prioridade || undefined,
+			delivery_type: deliveryType || undefined,
+			atraso: atraso || undefined,
+			objetivo: objetivo || undefined,
+			special_project: specialProject || undefined,
+			abep_indicator: abepIndicator || undefined,
+			// Filtro de órgão da tela tem precedência; senão, herda o escopo global
+			// do topnav (orgaoScopeQuery). Vazio => sem filtro ("Todos os órgãos").
+			orgao: orgao ? Number.parseInt(orgao, 10) : scopeOrgaoId(),
+			q: search.trim() || undefined,
+			page
+		};
+	}
+
+	// SWR: reabre com o último payload bom para a chave de filtros corrente
+	// (cache de módulo em $lib/api/projects) e revalida em background — sem
+	// flash de loading ao voltar para a rota. O skeleton só aparece quando NÃO
+	// há cache para esses filtros (1ª visita ou combinação nunca carregada).
+	const initialData = peekProjects(buildProjectsQuery());
+	let data = $state<ProjectsListData | null>(initialData);
+	let loadState = $state<LoadState>(initialData ? 'ready' : 'loading');
+	let errorMessage = $state<string>('');
+
+	/** Opções do GET /api/projetos repassadas ao modal (órgãos/ABEP/etc.). */
+	const createOptions = $derived(data?.options ?? null);
+
+	/** Opções de filtro derivadas do payload (com fallbacks canônicos). */
+	const statusOptions = $derived(data?.options.statuses ?? ['Vigente', 'Finalizado']);
+	const priorityOptions = $derived(data?.options.priorities ?? []);
+	const deliveryOptions = $derived(data?.options.delivery_types_options ?? []);
+	const atrasoOptions = $derived(data?.options.atrasos_options ?? []);
+	const orgaoOptions = $derived(data?.options.orgaos_options ?? []);
+	// Opções achatadas p/ o OrgaoTreeSelect (a árvore é montada por `pai_id`).
+	const orgaoTreeOptions = $derived(
+		orgaoOptions.map(
+			(o): OrgaoSelectOption => ({
+				value: Number(o.value),
+				label: o.label,
+				sigla: o.sigla,
+				nome: o.nome,
+				pai_id: o.pai_id,
+				is_inactive: o.is_inactive
+			})
+		)
+	);
+	const specialOptions = $derived(data?.options.special_projects_options ?? []);
+	const abepOptions = $derived(data?.options.abep_indicadores_options ?? []);
+	const pagination = $derived(data?.pagination ?? null);
+	const totalProjects = $derived(data?.pagination.total ?? 0);
+
 	/** Reflete os filtros ativos na URL (replaceState) para reload/voltar/deep-link. */
 	function syncUrlFromFilters(): void {
 		const params = new URLSearchParams();
@@ -253,26 +284,24 @@
 	}
 
 	async function load(): Promise<void> {
-		loadState = data ? loadState : 'loading';
-		errorMessage = '';
 		inFlight?.abort();
 		const controller = new AbortController();
 		inFlight = controller;
 
-		const query: ProjectsListQuery = {
-			status,
-			prioridade: prioridade || undefined,
-			delivery_type: deliveryType || undefined,
-			atraso: atraso || undefined,
-			objetivo: objetivo || undefined,
-			special_project: specialProject || undefined,
-			abep_indicator: abepIndicator || undefined,
-			// Filtro de órgão da tela tem precedência; senão, herda o escopo global
-			// do topnav (orgaoScopeQuery). Vazio => sem filtro ("Todos os órgãos").
-			orgao: orgao ? Number.parseInt(orgao, 10) : scopeOrgaoId(),
-			q: search.trim() || undefined,
-			page
-		};
+		const query = buildProjectsQuery();
+
+		// SWR: com cache para esses filtros mostra o dado antigo já (sem
+		// skeleton) e a revalidação abaixo troca em silêncio; sem cache,
+		// skeleton.
+		const cached = peekProjects(query);
+		if (cached) {
+			data = cached;
+			loadState = 'ready';
+		} else {
+			data = null;
+			loadState = 'loading';
+		}
+		errorMessage = '';
 		try {
 			const next = await fetchProjects(query, controller.signal);
 			if (controller.signal.aborted) return;
@@ -293,8 +322,15 @@
 		} catch (err) {
 			if (controller.signal.aborted) return;
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			errorMessage =
+			const message =
 				err instanceof Error ? err.message : 'Falha ao carregar os projetos.';
+			// Revalidação falhou com dado stale na tela: mantém o dado e avisa
+			// via flash, em vez de trocar a lista inteira pelo painel de erro.
+			if (data) {
+				flash.danger(message);
+				return;
+			}
+			errorMessage = message;
 			loadState = 'error';
 		}
 	}
@@ -515,7 +551,8 @@
 	}
 
 	onMount(() => {
-		hydrateFiltersFromUrl();
+		// Filtros já foram hidratados da URL no topo do script (antes do peek
+		// inicial); aqui só o atalho "Novo Projeto" e o load/revalidação.
 		openCreateModalFromUrl();
 		void load();
 		return () => inFlight?.abort();
@@ -871,13 +908,8 @@
 	</div>
 
 	{#if loadState === 'loading'}
-		<p
-			role="status"
-			aria-live="polite"
-			class="rounded-lg border border-border-subtle bg-surface px-4 py-8 text-center text-sm text-text-muted shadow-sm"
-		>
-			Carregando projetos…
-		</p>
+		<p role="status" aria-live="polite" class="sr-only">Carregando projetos…</p>
+		<ProjetosSkeleton />
 	{:else if loadState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if data}

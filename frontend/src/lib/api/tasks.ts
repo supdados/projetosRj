@@ -11,6 +11,7 @@
  */
 
 import { get, post } from './client';
+import { createSwrCache } from './swrCache';
 import type {
 	ArchiveFinalizadasResult,
 	CreateTarefaInput,
@@ -43,17 +44,31 @@ function buildQuery(query: TaskHubQuery): string {
 	return qs ? `?${qs}` : '';
 }
 
+// Ultimo payload bom por chave de filtros (querystring de `buildQuery`, modo
+// lista). SWR: a tela reabre com o dado antigo e revalida em silencio (ver
+// dashboard.ts). O modo kanban (board.ts/stores/board.ts) fica de fora — e
+// uma store com estado proprio de colunas, nao um simples fetch de pagina.
+const tarefasCache = createSwrCache<TaskHubData>();
+
+/** Ultimo hub (modo lista) carregado para os filtros, ou null (1o render). */
+export function peekTarefas(query: TaskHubQuery = {}): TaskHubData | null {
+	return tarefasCache.peek(buildQuery(query));
+}
+
 /**
  * Busca o Hub de Tarefas (modo lista) do usuário autenticado.
  *
  * Um filtro de órgão fora do escopo do usuário faz o backend devolver
  * `fail(422,'validation')`, que `client.ts` converte em `ApiClientError`.
  */
-export function fetchTarefas(
+export async function fetchTarefas(
 	query: TaskHubQuery = {},
 	signal?: AbortSignal
 ): Promise<TaskHubData> {
-	return get<TaskHubData>(`/api/tarefas${buildQuery(query)}`, signal);
+	const qs = buildQuery(query);
+	const data = await get<TaskHubData>(`/api/tarefas${qs}`, signal);
+	tarefasCache.store(qs, data);
+	return data;
 }
 
 /**

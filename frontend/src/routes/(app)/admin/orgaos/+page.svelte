@@ -13,8 +13,15 @@
 	 * via aria-live/role=alert.
 	 */
 	import { onMount } from 'svelte';
-	import { fetchOrgaoTree, siorgStatus, siorgSync, SiorgApiError } from '$lib/api/adminOrgaos';
+	import {
+		fetchOrgaoTree,
+		peekOrgaoTree,
+		siorgStatus,
+		siorgSync,
+		SiorgApiError
+	} from '$lib/api/adminOrgaos';
 	import { ApiClientError } from '$lib/api/client';
+	import { flash } from '$lib/stores/flash';
 	import type {
 		OrgaoNode,
 		OrgaoTreeData,
@@ -22,14 +29,18 @@
 		SiorgSyncResult
 	} from '$lib/types/adminOrgaos';
 	import OrgaoTreeNode from '$lib/components/OrgaoTreeNode.svelte';
+	import AdminOrgaosSkeleton from '$lib/components/skeletons/AdminOrgaosSkeleton.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
-	let loadState = $state<LoadState>('loading');
-	let data = $state<OrgaoTreeData | null>(null);
+	// SWR: reabre com a ultima arvore boa (cache de modulo em $lib/api/adminOrgaos)
+	// e revalida em silencio — sem flash de loading nas revisitas.
+	const initialData = peekOrgaoTree();
+	let loadState = $state<LoadState>(initialData ? 'ready' : 'loading');
+	let data = $state<OrgaoTreeData | null>(initialData);
 	let errorMessage = $state<string>('');
 	/** Distingue 403 (sem permissão) do erro genérico para a UI. */
 	let errorKind = $state<'forbidden' | 'generic'>('generic');
@@ -44,7 +55,9 @@
 	let syncError = $state<string>('');
 
 	/** Ids de nós expandidos; abre níveis 0 e 1 ao carregar. */
-	let expandedIds = $state<Set<number>>(new Set());
+	let expandedIds = $state<Set<number>>(
+		initialData ? collectInitialExpanded(initialData.arvore) : new Set()
+	);
 	/** Termo de busca por sigla/nome (debounced). */
 	let searchQuery = $state<string>('');
 	/** Termo efetivamente aplicado ao filtro (após debounce de 120ms). */
@@ -56,12 +69,22 @@
 	let inFlight: AbortController | null = null;
 
 	async function load(): Promise<void> {
-		loadState = data ? loadState : 'loading';
-		errorMessage = '';
-		errorKind = 'generic';
 		inFlight?.abort();
 		const controller = new AbortController();
 		inFlight = controller;
+
+		// SWR: com cache mostra a arvore antiga ja (sem skeleton) e a revalidacao
+		// abaixo troca em silencio; sem cache, skeleton.
+		const cached = peekOrgaoTree();
+		if (cached) {
+			data = cached;
+			loadState = 'ready';
+		} else {
+			data = null;
+			loadState = 'loading';
+		}
+		errorMessage = '';
+		errorKind = 'generic';
 		try {
 			const next = await fetchOrgaoTree(controller.signal);
 			if (controller.signal.aborted) return;
@@ -78,10 +101,18 @@
 			if (err instanceof ApiClientError && err.code === 'forbidden') {
 				errorKind = 'forbidden';
 				errorMessage = 'Você não tem permissão para visualizar órgãos.';
-			} else {
-				errorMessage =
-					err instanceof Error ? err.message : 'Falha ao carregar a árvore de órgãos.';
+				loadState = 'error';
+				return;
 			}
+			const message =
+				err instanceof Error ? err.message : 'Falha ao carregar a árvore de órgãos.';
+			// Revalidacao falhou com dado stale na tela: mantem a arvore e avisa via
+			// flash, em vez de trocar a tela inteira pelo painel de erro.
+			if (data) {
+				flash.danger(message);
+				return;
+			}
+			errorMessage = message;
 			loadState = 'error';
 		}
 	}
@@ -296,7 +327,8 @@
 	{/if}
 
 	{#if loadState === 'loading'}
-		<p role="status" aria-live="polite" class="text-text-secondary">Carregando árvore de órgãos…</p>
+		<p role="status" class="sr-only">Carregando árvore de órgãos…</p>
+		<AdminOrgaosSkeleton />
 	{:else if loadState === 'error'}
 		<div
 			role="alert"

@@ -16,7 +16,7 @@
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import { fetchPendentes } from '$lib/api/pendentes';
+	import { fetchPendentes, peekPendentes } from '$lib/api/pendentes';
 	import { fetchProjects, type CreateProjectResult } from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
 	import type {
@@ -36,6 +36,7 @@
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import PendentesSkeleton from '$lib/components/skeletons/PendentesSkeleton.svelte';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import { flash } from '$lib/stores/flash';
 
@@ -57,8 +58,22 @@
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
-	let loadState = $state<LoadState>('loading');
-	let data = $state<PendingData | null>(null);
+	/**
+	 * SWR: chave = os mesmos filtros default do estado inicial (nenhum vem de
+	 * querystring de rota nesta tela). Com cache mostra os pendentes já e revalida
+	 * em silêncio; sem cache, skeleton (ver `load()` abaixo).
+	 */
+	const initialFilters: PendingFilters = {
+		periodo: 'atrasados',
+		search: '',
+		responsavel: '',
+		prioridade: '',
+		orgao: null,
+		page: 1
+	};
+	const initialData = peekPendentes(initialFilters);
+	let loadState = $state<LoadState>(initialData ? 'ready' : 'loading');
+	let data = $state<PendingData | null>(initialData);
 	let errorMessage = $state<string>('');
 
 	/** Janela de debounce da busca textual (ms) — paridade com a tela de Projetos. */
@@ -118,13 +133,22 @@
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	async function load(): Promise<void> {
-		loadState = data ? loadState : 'loading';
+		const filters: PendingFilters = { periodo, search, responsavel, prioridade, orgao, page };
+		// SWR: com cache dos filtros correntes mostra o dado antigo já (sem
+		// skeleton) e a revalidação abaixo troca em silêncio; sem cache, skeleton.
+		const cached = peekPendentes(filters);
+		if (cached) {
+			data = cached;
+			loadState = 'ready';
+		} else {
+			data = null;
+			loadState = 'loading';
+		}
 		errorMessage = '';
 		inFlight?.abort();
 		const controller = new AbortController();
 		inFlight = controller;
 
-		const filters: PendingFilters = { periodo, search, responsavel, prioridade, orgao, page };
 		try {
 			const next = await fetchPendentes(filters, controller.signal);
 			if (controller.signal.aborted) return;
@@ -144,8 +168,15 @@
 			if (controller.signal.aborted) return;
 			// 401 já redirecionou; aqui tratamos os demais erros.
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			errorMessage =
+			const message =
 				err instanceof Error ? err.message : 'Falha ao carregar os projetos pendentes.';
+			// Revalidação falhou com dado stale na tela: mantém o dado e avisa via
+			// flash, em vez de trocar a lista inteira pelo painel de erro.
+			if (data) {
+				flash.danger(message);
+				return;
+			}
+			errorMessage = message;
 			loadState = 'error';
 		}
 	}
@@ -466,7 +497,8 @@
 	</div>
 
 	{#if loadState === 'loading'}
-		<p role="status" aria-live="polite" class="text-text-secondary">Carregando projetos…</p>
+		<p role="status" aria-live="polite" class="sr-only">Carregando projetos pendentes…</p>
+		<PendentesSkeleton />
 	{:else if loadState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if data}

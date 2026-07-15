@@ -17,10 +17,12 @@
 	import { goto } from '$app/navigation';
 	import {
 		fetchAdminUserDetail,
+		peekAdminUserDetail,
 		updateAdminUser,
 		removeAdminUserCpf
 	} from '$lib/api/adminUsers';
 	import { ApiClientError } from '$lib/api/client';
+	import { flash } from '$lib/stores/flash';
 	import type {
 		AdminOrgaoOption,
 		AdminUser,
@@ -29,40 +31,31 @@
 	import UserForm from '../UserForm.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
+	import AdminUsuarioEditSkeleton from '$lib/components/skeletons/AdminUsuarioEditSkeleton.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
 	const userId = $derived(Number($page.params.id));
 
-	let loadState = $state<LoadState>('loading');
+	// SWR: reabre com o ultimo detalhe bom deste id (cache de modulo em
+	// $lib/api/adminUsers) e revalida em background — sem flash de loading ao
+	// voltar para a rota. O skeleton so aparece sem cache (1a visita do id).
+	const initialDetail = peekAdminUserDetail(Number($page.params.id));
+
+	let loadState = $state<LoadState>(initialDetail ? 'ready' : 'loading');
 	let loadError = $state<string>('');
 	let errorKind = $state<'not_found' | 'generic'>('generic');
 
-	let usuario = $state<AdminUser | null>(null);
-	let orgaosOptions = $state<AdminOrgaoOption[]>([]);
+	let usuario = $state<AdminUser | null>(initialDetail?.usuario ?? null);
+	let orgaosOptions = $state<AdminOrgaoOption[]>(initialDetail?.orgaos_options ?? []);
 
 	let saving = $state<boolean>(false);
 	let removingCpf = $state<boolean>(false);
 	let formError = $state<string>('');
 
-	let values = $state({
-		name: '',
-		username: '',
-		orgao: '',
-		cpf_govbr: '',
-		password: '',
-		is_admin: false,
-		orgaos_responsavel: [] as number[]
-	});
-
-	let inFlight: AbortController | null = null;
-
-	const listHref = `${base}/admin/usuarios`;
-
-	/** Preenche o estado do form a partir do usuário carregado. */
-	function hydrate(user: AdminUser, orgaoIds: number[]): void {
-		usuario = user;
-		values = {
+	/** Monta os valores do form a partir do usuário carregado (função pura). */
+	function valuesFromUser(user: AdminUser, orgaoIds: number[]) {
+		return {
 			name: user.name ?? '',
 			username: user.username ?? '',
 			orgao: user.orgao ?? '',
@@ -73,13 +66,46 @@
 		};
 	}
 
+	const initialValues = initialDetail
+		? valuesFromUser(initialDetail.usuario, initialDetail.orgao_ids)
+		: {
+				name: '',
+				username: '',
+				orgao: '',
+				cpf_govbr: '',
+				password: '',
+				is_admin: false,
+				orgaos_responsavel: [] as number[]
+			};
+	let values = $state(initialValues);
+
+	let inFlight: AbortController | null = null;
+
+	const listHref = `${base}/admin/usuarios`;
+
+	/** Preenche o estado do form a partir do usuário carregado. */
+	function hydrate(user: AdminUser, orgaoIds: number[]): void {
+		usuario = user;
+		values = valuesFromUser(user, orgaoIds);
+	}
+
 	async function load(): Promise<void> {
-		loadState = 'loading';
 		loadError = '';
 		errorKind = 'generic';
 		inFlight?.abort();
 		const controller = new AbortController();
 		inFlight = controller;
+
+		// SWR: com cache deste id mostra o dado antigo ja (sem skeleton) e a
+		// revalidacao abaixo troca em silencio; sem cache, skeleton.
+		const cached = peekAdminUserDetail(userId);
+		if (cached) {
+			orgaosOptions = cached.orgaos_options;
+			hydrate(cached.usuario, cached.orgao_ids);
+			loadState = 'ready';
+		} else {
+			loadState = 'loading';
+		}
 		try {
 			const detail = await fetchAdminUserDetail(userId, controller.signal);
 			if (controller.signal.aborted) return;
@@ -97,7 +123,14 @@
 					return;
 				}
 			}
-			loadError = err instanceof Error ? err.message : 'Falha ao carregar o usuário.';
+			const message = err instanceof Error ? err.message : 'Falha ao carregar o usuário.';
+			// Revalidacao falhou com dado stale na tela: mantem o dado e avisa via
+			// flash, em vez de trocar o form inteiro pelo painel de erro.
+			if (cached) {
+				flash.danger(message);
+				return;
+			}
+			loadError = message;
 			loadState = 'error';
 		}
 	}
@@ -179,7 +212,8 @@
 	</PageHeader>
 
 	{#if loadState === 'loading'}
-		<p role="status" aria-live="polite" class="text-text-secondary">Carregando usuário…</p>
+		<p role="status" aria-live="polite" class="sr-only">Carregando usuário…</p>
+		<AdminUsuarioEditSkeleton />
 	{:else if loadState === 'error'}
 		<div
 			role="alert"

@@ -11,13 +11,26 @@
  */
 
 import { get } from './client';
+import { createSwrCache } from './swrCache';
 import type { OrgaoTreeData, SiorgStatusData, SiorgSyncResult } from '$lib/types/adminOrgaos';
 
 const BASE = '/api/admin/orgaos';
 
+// Ultima arvore boa (endpoint sem filtros). SWR: a tela reabre com o dado
+// antigo e revalida em silencio (ver dashboard.ts).
+const orgaoTreeCache = createSwrCache<OrgaoTreeData>();
+const ORGAO_TREE_KEY = 'tree';
+
+/** Ultima arvore carregada, ou null (sincrono, para o 1o render). */
+export function peekOrgaoTree(): OrgaoTreeData | null {
+	return orgaoTreeCache.peek(ORGAO_TREE_KEY);
+}
+
 /** Carrega a árvore completa de órgãos (visualização). */
-export function fetchOrgaoTree(signal?: AbortSignal): Promise<OrgaoTreeData> {
-	return get<OrgaoTreeData>(BASE, signal);
+export async function fetchOrgaoTree(signal?: AbortSignal): Promise<OrgaoTreeData> {
+	const data = await get<OrgaoTreeData>(BASE, signal);
+	orgaoTreeCache.store(ORGAO_TREE_KEY, data);
+	return data;
 }
 
 /** Erro dos endpoints SIORG: preserva o HTTP status (409 lock, 502 indisponível). */

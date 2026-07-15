@@ -25,11 +25,13 @@
 	import { get as readStore } from 'svelte/store';
 	import {
 		fetchTarefas,
+		peekTarefas,
 		deleteTarefa,
 		archiveFinalizadas,
 		createTarefa
 	} from '$lib/api/tasks';
 	import { ApiClientError } from '$lib/api/client';
+	import { flash } from '$lib/stores/flash';
 	import type {
 		TaskAssignee,
 		TaskCard,
@@ -53,6 +55,7 @@
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import TarefasSkeleton from '$lib/components/skeletons/TarefasSkeleton.svelte';
 	import { createBoardStore } from '$lib/stores/board';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import { orgaoScope } from '$lib/stores/orgaoScope';
@@ -73,8 +76,6 @@
 	// são usados pelos componentes da lista (TaskHubTaskRow). As opções dos
 	// selects do form de "+ Nova tarefa" continuam abaixo (ADD_*_OPTIONS).
 
-	let loadState = $state<LoadState>('loading');
-	let data = $state<TaskHubData | null>(null);
 	let errorMessage = $state<string>('');
 
 	// Filtros controlados pela UI; a busca acontece server-side.
@@ -103,6 +104,29 @@
 	let prioridade = $state<string>('');
 	let statusFilter = $state<string>('');
 	let responsavel = $state<string>('');
+
+	/** Filtros atuais montados na forma de `TaskHubQuery` (chave do cache SWR). */
+	function buildActiveQuery(): TaskHubQuery {
+		return {
+			modo,
+			project,
+			orgao,
+			search: search.trim() || undefined,
+			tipo: tipo || undefined,
+			prioridade: prioridade || undefined,
+			status: statusFilter || undefined,
+			responsavel: responsavel || undefined,
+			page: listPage
+		};
+	}
+
+	// SWR: reabre com o ultimo dado bom desta combinacao de filtros (cache de
+	// modulo em $lib/api/tasks) e revalida em background — sem flash de loading.
+	// So cobre o valor DEFAULT dos filtros (deep-links resolvidos so em onMount,
+	// abaixo, re-buscam com a chave correta se o cache nao bater).
+	const initialData = peekTarefas(buildActiveQuery());
+	let data = $state<TaskHubData | null>(initialData);
+	let loadState = $state<LoadState>(initialData ? 'ready' : 'loading');
 
 	let inFlight: AbortController | null = null;
 
@@ -276,23 +300,22 @@
 	}
 
 	async function load(): Promise<void> {
-		loadState = data ? loadState : 'loading';
-		errorMessage = '';
 		inFlight?.abort();
 		const controller = new AbortController();
 		inFlight = controller;
 
-		const query: TaskHubQuery = {
-			modo,
-			project,
-			orgao,
-			search: search.trim() || undefined,
-			tipo: tipo || undefined,
-			prioridade: prioridade || undefined,
-			status: statusFilter || undefined,
-			responsavel: responsavel || undefined,
-			page: listPage
-		};
+		const query = buildActiveQuery();
+		// SWR: com cache desta combinacao de filtros mostra o dado antigo ja (sem
+		// skeleton) e a revalidacao abaixo troca em silencio; sem cache, skeleton.
+		const cached = peekTarefas(query);
+		if (cached) {
+			data = cached;
+			loadState = 'ready';
+		} else {
+			data = null;
+			loadState = 'loading';
+		}
+		errorMessage = '';
 		try {
 			const next = await fetchTarefas(query, controller.signal);
 			if (controller.signal.aborted) return;
@@ -310,8 +333,15 @@
 			if (controller.signal.aborted) return;
 			// 401 já redirecionou; aqui tratamos os demais erros.
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			errorMessage =
+			const message =
 				err instanceof Error ? err.message : 'Falha ao carregar as tarefas.';
+			// Revalidacao falhou com dado stale na tela: mantem o dado e avisa via
+			// flash, em vez de trocar a lista inteira pelo painel de erro.
+			if (data) {
+				flash.danger(message);
+				return;
+			}
+			errorMessage = message;
 			loadState = 'error';
 		}
 	}
@@ -919,7 +949,8 @@
 			</div>
 		{/if}
 	{:else if loadState === 'loading'}
-		<p role="status" aria-live="polite" class="text-text-secondary">Carregando tarefas…</p>
+		<p role="status" aria-live="polite" class="sr-only">Carregando tarefas…</p>
+		<TarefasSkeleton />
 	{:else if loadState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if data}

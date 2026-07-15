@@ -22,6 +22,7 @@
 	import { browser } from '$app/environment';
 	import {
 		getCalendarHub,
+		peekCalendarHub,
 		disconnectGoogle,
 		syncNow,
 		renewWatch,
@@ -32,6 +33,7 @@
 		fetchCalendarMembers
 	} from '$lib/api/calendars';
 	import { ApiClientError } from '$lib/api/client';
+	import { flash } from '$lib/stores/flash';
 	import type {
 		CalendarEvent,
 		CalendarEventInput,
@@ -46,6 +48,7 @@
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import CalendarWeekGrid from '$lib/components/calendar/CalendarWeekGrid.svelte';
 	import CalendarRightPanel from '$lib/components/calendar/CalendarRightPanel.svelte';
+	import CalendariosSkeleton from '$lib/components/skeletons/CalendariosSkeleton.svelte';
 	import {
 		startOfWeek,
 		fmtWeekRangeLabel,
@@ -62,8 +65,11 @@
 	];
 	const WDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-	let loadState = $state<LoadState>('loading');
-	let hub = $state<CalendarHub | null>(null);
+	// SWR: reabre com o ultimo hub bom (cache de modulo em $lib/api/calendars) e
+	// revalida em background — sem flash de loading ao voltar para a rota.
+	const initialHub = peekCalendarHub();
+	let loadState = $state<LoadState>(initialHub ? 'ready' : 'loading');
+	let hub = $state<CalendarHub | null>(initialHub);
 	let errorMessage = $state<string>('');
 	let connectionBusy = $state<boolean>(false);
 
@@ -104,7 +110,16 @@
 	}
 
 	async function load(): Promise<void> {
-		loadState = hub ? loadState : 'loading';
+		// SWR: com cache mostra o hub antigo ja (sem skeleton) e revalida em
+		// silencio; sem cache, skeleton.
+		const cached = peekCalendarHub();
+		if (cached) {
+			hub = cached;
+			loadState = 'ready';
+		} else {
+			hub = null;
+			loadState = 'loading';
+		}
 		errorMessage = '';
 		inFlight?.abort();
 		const controller = new AbortController();
@@ -117,7 +132,14 @@
 		} catch (err) {
 			if (controller.signal.aborted) return;
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			errorMessage = readErrorMessage(err, 'Falha ao carregar o calendario.');
+			const message = readErrorMessage(err, 'Falha ao carregar o calendario.');
+			// Revalidacao falhou com dado stale na tela: mantem o hub e avisa via
+			// flash, em vez de trocar tudo pelo painel de erro.
+			if (hub) {
+				flash.danger(message);
+				return;
+			}
+			errorMessage = message;
 			loadState = 'error';
 		}
 	}
@@ -927,7 +949,8 @@
 	</PageHeader>
 
 	{#if loadState === 'loading'}
-		<p role="status" aria-live="polite" class="text-text-secondary">Carregando calendario…</p>
+		<p role="status" aria-live="polite" class="sr-only">Carregando calendário…</p>
+		<CalendariosSkeleton />
 	{:else if loadState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if hub}

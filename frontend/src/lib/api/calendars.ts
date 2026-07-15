@@ -23,6 +23,7 @@
  */
 
 import { get, post } from './client';
+import { createSwrCache } from './swrCache';
 import type {
 	CalendarEvent,
 	CalendarEventInput,
@@ -50,9 +51,21 @@ export interface CalendarWatchRenewResult {
 	expires_at_display: string | null;
 }
 
+// Ultimo hub bom (sem filtros/escopo — endpoint nao aceita querystring). SWR:
+// a tela reabre com o dado antigo e revalida em silencio (ver dashboard.ts).
+const calendarHubCache = createSwrCache<CalendarHub>();
+const CALENDAR_HUB_KEY = 'hub';
+
+/** Ultimo hub carregado, ou null (sincrono, para o 1o render). */
+export function peekCalendarHub(): CalendarHub | null {
+	return calendarHubCache.peek(CALENDAR_HUB_KEY);
+}
+
 /** Busca o hub do calendario (eventos + estado da conexao Google). */
-export function getCalendarHub(signal?: AbortSignal): Promise<CalendarHub> {
-	return get<CalendarHub>('/api/calendarios', signal);
+export async function getCalendarHub(signal?: AbortSignal): Promise<CalendarHub> {
+	const data = await get<CalendarHub>('/api/calendarios', signal);
+	calendarHubCache.store(CALENDAR_HUB_KEY, data);
+	return data;
 }
 
 /** Busca os membros do Time visiveis no calendario do usuario logado. */

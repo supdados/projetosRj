@@ -12,18 +12,30 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import { fetchOrgaoOptionsForUser, createAdminUser } from '$lib/api/adminUsers';
+	import {
+		fetchOrgaoOptionsForUser,
+		peekOrgaoOptionsForUser,
+		createAdminUser
+	} from '$lib/api/adminUsers';
 	import { ApiClientError } from '$lib/api/client';
+	import { flash } from '$lib/stores/flash';
 	import type { AdminOrgaoOption, AdminUserCreatePayload } from '$lib/types/adminUsers';
 	import UserForm from '../UserForm.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
+	import AdminUsuarioNovoSkeleton from '$lib/components/skeletons/AdminUsuarioNovoSkeleton.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
-	let loadState = $state<LoadState>('loading');
+	// SWR: reabre com as ultimas opcoes de orgao boas (cache de modulo em
+	// $lib/api/adminUsers, compartilhado com a tela de edicao) e revalida em
+	// background — sem flash de loading ao voltar para a rota. O skeleton so
+	// aparece sem cache (1a visita).
+	const initialOptions = peekOrgaoOptionsForUser();
+
+	let loadState = $state<LoadState>(initialOptions ? 'ready' : 'loading');
 	let loadError = $state<string>('');
-	let orgaosOptions = $state<AdminOrgaoOption[]>([]);
+	let orgaosOptions = $state<AdminOrgaoOption[]>(initialOptions ?? []);
 
 	let saving = $state<boolean>(false);
 	let formError = $state<string>('');
@@ -43,20 +55,37 @@
 	const listHref = `${base}/admin/usuarios`;
 
 	async function loadOptions(): Promise<void> {
-		loadState = 'loading';
 		loadError = '';
 		inFlight?.abort();
 		const controller = new AbortController();
 		inFlight = controller;
+
+		// SWR: com cache mostra as opcoes antigas ja (sem skeleton) e a
+		// revalidacao abaixo troca em silencio; sem cache, skeleton.
+		const cached = peekOrgaoOptionsForUser();
+		if (cached) {
+			orgaosOptions = cached;
+			loadState = 'ready';
+		} else {
+			loadState = 'loading';
+		}
 		try {
-			orgaosOptions = await fetchOrgaoOptionsForUser(controller.signal);
+			const result = await fetchOrgaoOptionsForUser(controller.signal);
 			if (controller.signal.aborted) return;
+			orgaosOptions = result;
 			loadState = 'ready';
 		} catch (err) {
 			if (controller.signal.aborted) return;
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			loadError =
+			const message =
 				err instanceof Error ? err.message : 'Falha ao carregar as opções de órgãos.';
+			// Revalidacao falhou com dado stale na tela: mantem as opcoes e avisa
+			// via flash, em vez de trocar o form inteiro pelo painel de erro.
+			if (cached) {
+				flash.danger(message);
+				return;
+			}
+			loadError = message;
 			loadState = 'error';
 		}
 	}
@@ -108,7 +137,8 @@
 	</PageHeader>
 
 	{#if loadState === 'loading'}
-		<p role="status" aria-live="polite" class="text-text-secondary">Carregando…</p>
+		<p role="status" aria-live="polite" class="sr-only">Carregando…</p>
+		<AdminUsuarioNovoSkeleton />
 	{:else if loadState === 'error'}
 		<div
 			role="alert"

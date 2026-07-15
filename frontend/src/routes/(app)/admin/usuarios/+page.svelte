@@ -18,7 +18,13 @@
 	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { base } from '$app/paths';
-	import { fetchAdminUsers, deleteAdminUser, fetchOrgaoOptionsForUser } from '$lib/api/adminUsers';
+	import {
+		fetchAdminUsers,
+		peekAdminUsers,
+		deleteAdminUser,
+		fetchOrgaoOptionsForUser,
+		peekOrgaoOptionsForUser
+	} from '$lib/api/adminUsers';
 	import { ApiClientError } from '$lib/api/client';
 	import type { AdminUser, AdminUsersPageMeta, AdminOrgaoOption } from '$lib/types/adminUsers';
 	import { auth } from '$lib/stores/auth';
@@ -26,20 +32,28 @@
 	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
+	import AdminUsuariosSkeleton from '$lib/components/skeletons/AdminUsuariosSkeleton.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
-	let loadState = $state<LoadState>('loading');
-	let usuarios = $state<AdminUser[]>([]);
-	let meta = $state<AdminUsersPageMeta | null>(null);
-	let errorMessage = $state<string>('');
 	let page = $state<number>(1);
-
 	/** Busca de texto livre (nome/login/CPF) — debounced antes de recarregar. */
 	let searchText = $state<string>('');
 	/** Área (órgão) selecionada para filtrar; `null` = todas. */
 	let areaId = $state<number | null>(null);
-	let areaOptions = $state<AdminOrgaoOption[]>([]);
+
+	// SWR: reabre com o ultimo dado bom dos filtros correntes (cache de modulo em
+	// $lib/api/adminUsers) e revalida em background — sem flash de loading ao
+	// voltar para a rota. O skeleton so aparece quando NAO ha cache (1a visita
+	// ou filtros nunca carregados).
+	// Chave inicial = defaults literais dos filtros acima (page 1, sem busca/área).
+	const initialUsers = peekAdminUsers({ page: 1, q: '', areaId: undefined });
+	let loadState = $state<LoadState>(initialUsers ? 'ready' : 'loading');
+	let usuarios = $state<AdminUser[]>(initialUsers?.usuarios ?? []);
+	let meta = $state<AdminUsersPageMeta | null>(initialUsers?.meta ?? null);
+	let errorMessage = $state<string>('');
+
+	let areaOptions = $state<AdminOrgaoOption[]>(peekOrgaoOptionsForUser() ?? []);
 
 	// Combobox de área (botão → input de busca + listbox), espelhando o filtro de
 	// projeto da tela /tarefas.
@@ -86,7 +100,16 @@
 	const totalPages = $derived(meta?.total_pages ?? 1);
 
 	async function load(): Promise<void> {
-		loadState = usuarios.length ? loadState : 'loading';
+		// SWR: com cache dos filtros correntes mostra o dado antigo ja (sem
+		// skeleton) e a revalidacao abaixo troca em silencio; sem cache, skeleton.
+		const cached = peekAdminUsers({ page, q: searchText, areaId: areaId ?? undefined });
+		if (cached) {
+			usuarios = cached.usuarios;
+			meta = cached.meta;
+			loadState = 'ready';
+		} else {
+			loadState = 'loading';
+		}
 		errorMessage = '';
 		inFlight?.abort();
 		const controller = new AbortController();
@@ -336,7 +359,8 @@
 	{/if}
 
 	{#if loadState === 'loading'}
-		<p role="status" aria-live="polite" class="text-text-secondary">Carregando usuários…</p>
+		<p role="status" class="sr-only">Carregando usuários…</p>
+		<AdminUsuariosSkeleton />
 	{:else if loadState === 'error'}
 		<div
 			role="alert"

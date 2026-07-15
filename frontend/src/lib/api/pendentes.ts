@@ -10,7 +10,17 @@
  */
 
 import { get } from './client';
+import { createSwrCache } from './swrCache';
 import type { PendingData, PendingFilters } from '$lib/types/pendentes';
+
+// Ultimo payload bom por chave de filtros (querystring de `buildQuery`). SWR:
+// a tela reabre com o dado antigo e revalida em silencio (ver dashboard.ts).
+const pendentesCache = createSwrCache<PendingData>();
+
+/** Ultima listagem carregada para os filtros, ou null (sincrono, 1o render). */
+export function peekPendentes(filters: PendingFilters = {}): PendingData | null {
+	return pendentesCache.peek(buildQuery(filters));
+}
 
 /** Monta a querystring a partir dos filtros, omitindo valores vazios/nulos. */
 function buildQuery(filters: PendingFilters): string {
@@ -33,9 +43,12 @@ function buildQuery(filters: PendingFilters): string {
  * Um filtro de órgão fora do escopo do usuário faz o backend devolver
  * `fail(422,'validation')`, que `client.ts` converte em `ApiClientError`.
  */
-export function fetchPendentes(
+export async function fetchPendentes(
 	filters: PendingFilters = {},
 	signal?: AbortSignal
 ): Promise<PendingData> {
-	return get<PendingData>(`/api/projetos-pendentes${buildQuery(filters)}`, signal);
+	const qs = buildQuery(filters);
+	const data = await get<PendingData>(`/api/projetos-pendentes${qs}`, signal);
+	pendentesCache.store(qs, data);
+	return data;
 }

@@ -9,8 +9,18 @@
  */
 
 import { get } from './client';
+import { createSwrCache } from './swrCache';
 import type { Project } from '$lib/types/entities';
 import type { DashboardData, DashboardRecentTask } from '$lib/types/dashboard';
+
+// Ultimo payload bom por escopo de orgao (chave = orgaoScopeQuery). Permite a
+// pagina reabrir com dado instantaneo (SWR) em vez do flash de loading.
+const dashboardCache = createSwrCache<DashboardData>();
+
+/** Ultimo dashboard carregado para o escopo, ou null (sincrono, para o 1o render). */
+export function peekDashboard(orgaoQuery = ''): DashboardData | null {
+	return dashboardCache.peek(orgaoQuery);
+}
 
 /** Forma crua devolvida pelo backend (contadores aninhados em `counts`). */
 interface RawDashboardData {
@@ -114,5 +124,7 @@ export async function fetchDashboard(
 ): Promise<DashboardData> {
 	const path = orgaoQuery ? `/api/dashboard?${orgaoQuery}` : '/api/dashboard';
 	const raw = await get<RawDashboardData>(path, signal);
-	return flattenDashboard(raw);
+	const data = flattenDashboard(raw);
+	dashboardCache.store(orgaoQuery, data);
+	return data;
 }

@@ -33,6 +33,7 @@
 	import { flash } from '$lib/stores/flash';
 	import {
 		fetchProjectDetail,
+		peekProjectDetail,
 		updateProjectInline,
 		saveProjectGoals,
 		addEtapa,
@@ -74,6 +75,7 @@
 	import ImportModelModal from '$lib/components/ImportModelModal.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import ConcludeCelebrationOverlay from '$lib/components/ConcludeCelebrationOverlay.svelte';
+	import ProjetoDetalheSkeleton from '$lib/components/skeletons/ProjetoDetalheSkeleton.svelte';
 	import MeetingDisplay from '$lib/components/MeetingDisplay.svelte';
 	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
 	import {
@@ -105,8 +107,13 @@
 
 	const projectId = $derived(Number($page.params.id));
 
-	let loadState = $state<LoadState>('loading');
-	let data = $state<ProjectDetailData | null>(null);
+	// SWR: reabre com o ultimo detalhe bom deste id (cache de modulo em
+	// $lib/api/projectDetail) e revalida em background — sem flash de loading.
+	// `$page.params.id` (store) e lido direto, como orgaoScopeQuery no dashboard,
+	// para nao disparar o warning state_referenced_locally.
+	const initialData = peekProjectDetail(Number($page.params.id));
+	let loadState = $state<LoadState>(initialData ? 'ready' : 'loading');
+	let data = $state<ProjectDetailData | null>(initialData);
 	let errorMessage = $state<string>('');
 	let errorKind = $state<'forbidden' | 'not_found' | 'generic'>('generic');
 
@@ -394,11 +401,21 @@
 	}
 
 	async function load(): Promise<void> {
-		loadState = 'loading';
 		errorMessage = '';
 		errorKind = 'generic';
+		// SWR: com cache do id mostra o dado antigo ja (sem skeleton) e a
+		// revalidacao abaixo troca em silencio; sem cache, skeleton.
+		const cached = peekProjectDetail(projectId);
+		if (cached) {
+			data = cached;
+			loadState = 'ready';
+		} else {
+			data = null;
+			loadState = 'loading';
+		}
 		try {
-			data = await fetchProjectDetail(projectId);
+			const result = await fetchProjectDetail(projectId);
+			data = result;
 			loadState = 'ready';
 		} catch (err) {
 			if (isUnauthenticated(err)) return;
@@ -406,7 +423,14 @@
 				if (err.code === 'not_found') errorKind = 'not_found';
 				else if (err.code === 'forbidden') errorKind = 'forbidden';
 			}
-			errorMessage = messageOf(err, 'Falha ao carregar o detalhe do projeto.');
+			const message = messageOf(err, 'Falha ao carregar o detalhe do projeto.');
+			// Revalidacao falhou com dado stale na tela: mantem o dado e avisa via
+			// flash, em vez de trocar o detalhe inteiro pelo painel de erro.
+			if (data) {
+				flash.danger(message);
+				return;
+			}
+			errorMessage = message;
 			loadState = 'error';
 		}
 	}
@@ -969,7 +993,8 @@
 
 <section aria-labelledby="project-detail-title" class="flex flex-col gap-6">
 	{#if loadState === 'loading'}
-		<p role="status" aria-live="polite" class="text-text-secondary">Carregando projeto…</p>
+		<p role="status" aria-live="polite" class="sr-only">Carregando projeto…</p>
+		<ProjetoDetalheSkeleton />
 	{:else if loadState === 'error'}
 		<div
 			role="alert"
