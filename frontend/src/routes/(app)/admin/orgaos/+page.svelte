@@ -1,30 +1,26 @@
 <script lang="ts">
 	/**
-	 * Tela "Admin > Órgãos" (árvore). URL `/spa/admin/orgaos`. Consome
-	 * `GET /api/admin/orgaos` via `$lib/api/adminOrgaos` e renderiza a hierarquia
-	 * com o componente recursivo `OrgaoTreeNode`. As operações (reordenar, mover,
-	 * ativar/desativar, excluir) chamam os endpoints `/api/admin/orgaos/*` e
-	 * recarregam a árvore; criar/editar navegam para os forms
-	 * (`/admin/orgaos/novo`, `/admin/orgaos/[id]`).
+	 * Tela "Admin > Órgãos" (árvore READ-ONLY). URL `/spa/admin/orgaos`.
 	 *
-	 * Só admins acessam: o backend devolve 403 (`forbidden`) para não-admin e 401
-	 * já redireciona para `/login` em `client.ts`. Estados loading/erro/vazio são
-	 * anunciados via aria-live/role=alert; o delete exige confirmação. Links
-	 * internos são base-aware (`$app/paths`).
+	 * A estrutura organizacional é espelho do SIORG-RJ: nada se cria/edita/move
+	 * aqui. A tela renderiza a hierarquia (`GET /api/admin/orgaos`) com o
+	 * componente recursivo `OrgaoTreeNode`, mostra a última sincronização
+	 * (`GET /api/admin/siorg/status`) e oferece o botão "Atualizar estrutura"
+	 * (`POST /api/admin/siorg/sync`; 409 = sync em andamento, 502 = SIORG fora, 503 = não configurado).
 	 *
-	 * Referência visual: templates/admin/orgao_tree.html e _orgao_node.html.
+	 * Só admins acessam: o backend devolve 403 (`forbidden`) para não-admin e
+	 * 401 já redireciona para `/login`. Estados loading/erro/vazio anunciados
+	 * via aria-live/role=alert.
 	 */
 	import { onMount } from 'svelte';
-	import { base } from '$app/paths';
-	import {
-		fetchOrgaoTree,
-		reorderOrgao,
-		toggleOrgaoAtivo,
-		moveOrgao,
-		deleteOrgao
-	} from '$lib/api/adminOrgaos';
+	import { fetchOrgaoTree, siorgStatus, siorgSync, SiorgApiError } from '$lib/api/adminOrgaos';
 	import { ApiClientError } from '$lib/api/client';
-	import type { OrgaoNode, OrgaoTreeData, ReorderDirection } from '$lib/types/adminOrgaos';
+	import type {
+		OrgaoNode,
+		OrgaoTreeData,
+		SiorgStatusData,
+		SiorgSyncResult
+	} from '$lib/types/adminOrgaos';
 	import OrgaoTreeNode from '$lib/components/OrgaoTreeNode.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -38,27 +34,25 @@
 	/** Distingue 403 (sem permissão) do erro genérico para a UI. */
 	let errorKind = $state<'forbidden' | 'generic'>('generic');
 
-	/** True enquanto uma mutação está em voo (desabilita ações da árvore). */
-	let mutating = $state(false);
-	/** Mensagem de erro de uma mutação (ex.: 409 ao mover/excluir). */
-	let actionError = $state<string>('');
+	/** Estado da integração SIORG (null enquanto carrega/indisponível). */
+	let siorg = $state<SiorgStatusData | null>(null);
+	/** True enquanto o POST /sync está em voo. */
+	let syncing = $state(false);
+	/** Resultado do último sync disparado nesta sessão de tela. */
+	let syncResult = $state<SiorgSyncResult | null>(null);
+	/** Mensagem de erro do sync (409/502/rede). */
+	let syncError = $state<string>('');
 
-	/**
-	 * Conjunto de ids de nós expandidos. Espelha o v4.5 (orgao_tree.js): a árvore
-	 * abre os níveis 0 e 1 ao carregar; "expandir/recolher tudo" e a busca
-	 * manipulam este set. Mantê-lo na página (e não em cada nó) preserva o estado
-	 * de expand/collapse entre recargas após uma mutação.
-	 */
+	/** Ids de nós expandidos; abre níveis 0 e 1 ao carregar. */
 	let expandedIds = $state<Set<number>>(new Set());
-	/** Termo de busca por sigla/nome (debounced, espelha #orgaoTreeSearch do v4.5). */
+	/** Termo de busca por sigla/nome (debounced). */
 	let searchQuery = $state<string>('');
 	/** Termo efetivamente aplicado ao filtro (após debounce de 120ms). */
 	let filterQuery = $state<string>('');
-	/** Id do nó selecionado (clique na linha → realce, espelha is-selected do v4.5). */
+	/** Id do nó selecionado (clique na linha → realce). */
 	let selectedId = $state<number | null>(null);
 
 	let searchTimer: ReturnType<typeof setTimeout> | null = null;
-
 	let inFlight: AbortController | null = null;
 
 	async function load(): Promise<void> {
@@ -72,9 +66,6 @@
 			const next = await fetchOrgaoTree(controller.signal);
 			if (controller.signal.aborted) return;
 			data = next;
-			// Espelha orgao_tree.js: ao montar, abre níveis 0 e 1; nas recargas
-			// pós-mutação, preserva o que o usuário já tinha expandido e garante
-			// que os ancestrais de qualquer nó recém-criado fiquem visíveis.
 			if (expandedIds.size === 0) {
 				expandedIds = collectInitialExpanded(next.arvore);
 			} else {
@@ -86,7 +77,7 @@
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
 			if (err instanceof ApiClientError && err.code === 'forbidden') {
 				errorKind = 'forbidden';
-				errorMessage = 'Você não tem permissão para gerenciar órgãos.';
+				errorMessage = 'Você não tem permissão para visualizar órgãos.';
 			} else {
 				errorMessage =
 					err instanceof Error ? err.message : 'Falha ao carregar a árvore de órgãos.';
@@ -95,118 +86,57 @@
 		}
 	}
 
-	/**
-	 * Executa uma mutação e recarrega a árvore. Concentra o tratamento de erro
-	 * (409/422/404) para todas as ações dos nós, evitando duplicação.
-	 */
-	async function runMutation(action: () => Promise<unknown>): Promise<void> {
-		if (mutating) return;
-		mutating = true;
-		actionError = '';
+	async function loadSiorgStatus(): Promise<void> {
 		try {
-			await action();
-			await load();
+			siorg = await siorgStatus();
 		} catch (err) {
-			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			actionError =
-				err instanceof Error ? err.message : 'Não foi possível concluir a operação.';
+			// Status indisponível não bloqueia a árvore nem o botão; o POST de sync resolve.
+			console.warn('Falha ao consultar status do SIORG', err);
+			siorg = null;
+		}
+	}
+
+	async function handleSync(): Promise<void> {
+		if (syncDisabled) return;
+		syncing = true;
+		syncError = '';
+		syncResult = null;
+		try {
+			syncResult = await siorgSync();
+			await Promise.all([load(), loadSiorgStatus()]);
+		} catch (err) {
+			syncError = syncErrorMessage(err);
+			await loadSiorgStatus();
 		} finally {
-			mutating = false;
+			syncing = false;
 		}
 	}
 
-	function handleReorder(orgaoId: number, direction: ReorderDirection): void {
-		void runMutation(() => reorderOrgao(orgaoId, direction));
-	}
-
-	/** Localiza um nó por id em qualquer profundidade da árvore. */
-	function findNode(nodes: OrgaoNode[], orgaoId: number): OrgaoNode | null {
-		for (const n of nodes) {
-			if (n.id === orgaoId) return n;
-			const hit = findNode(n.filhos, orgaoId);
-			if (hit) return hit;
+	function syncErrorMessage(err: unknown): string {
+		if (err instanceof SiorgApiError && err.status === 409) {
+			return `Já existe uma sincronização em andamento: ${err.message}`;
 		}
-		return null;
-	}
-
-	/** Conjunto de ids do nó + todos os seus descendentes. */
-	function collectDescendantIds(node: OrgaoNode): Set<number> {
-		const ids = new Set<number>([node.id]);
-		for (const child of node.filhos) {
-			for (const id of collectDescendantIds(child)) ids.add(id);
+		if (err instanceof SiorgApiError && err.status === 502) {
+			return `SIORG indisponível no momento: ${err.message}`;
 		}
-		return ids;
-	}
-
-	/**
-	 * Validação de pai por tipo, espelhando `isValidParentTipo` do orgao_tree.js:
-	 * o pai precisa ter rank (nível) ESTRITAMENTE menor que o do filho. Sem rank
-	 * conhecido, permite (o backend faz a validação final).
-	 */
-	function isValidParentTipo(parentTipo: string | null, childTipo: string | null): boolean {
-		const ranks = data?.tipo_rank ?? {};
-		const pr = parentTipo != null ? ranks[parentTipo] : undefined;
-		const cr = childTipo != null ? ranks[childTipo] : undefined;
-		if (pr === undefined || cr === undefined) return true;
-		return pr < cr;
-	}
-
-	/**
-	 * Decide se um nó pode receber outro como filho via drag-and-drop. Espelha as
-	 * guardas de `dragover`/`drop` do v4.5: não pode soltar sobre si mesmo nem
-	 * sobre um descendente (criaria ciclo), e o tipo do alvo precisa poder ser
-	 * pai do tipo arrastado.
-	 */
-	function canDropOn(draggedId: number, targetId: number): boolean {
-		if (!data || draggedId === targetId) return false;
-		const dragged = findNode(data.arvore, draggedId);
-		const target = findNode(data.arvore, targetId);
-		if (!dragged || !target) return false;
-		if (collectDescendantIds(dragged).has(targetId)) return false;
-		// Já é o pai atual: nada a fazer.
-		if (dragged.pai_id === targetId) return false;
-		return isValidParentTipo(target.tipo, dragged.tipo);
-	}
-
-	/**
-	 * Drag-and-drop = REPARENTING (igual ao v4.5): soltar `draggedId` sobre
-	 * `targetId` torna o alvo o novo pai, via POST `/move`. Após mover, garante
-	 * que o novo pai fique expandido e seleciona o nó movido (espelha
-	 * `reparentNode`/`is-selected`).
-	 */
-	function handleReparent(draggedId: number, targetId: number): void {
-		if (!canDropOn(draggedId, targetId)) {
-			const dragged = data ? findNode(data.arvore, draggedId) : null;
-			const target = data ? findNode(data.arvore, targetId) : null;
-			if (dragged && target && !isValidParentTipo(target.tipo, dragged.tipo)) {
-				actionError = `Um órgão do tipo "${target.tipo}" não pode ser pai de "${dragged.tipo}".`;
-			}
-			return;
+		if (err instanceof SiorgApiError && err.status === 503) {
+			return `Integração SIORG não configurada: ${err.message}`;
 		}
-		void runMutation(async () => {
-			await moveOrgao(draggedId, targetId);
-			expandedIds = new Set([...expandedIds, targetId]);
-			selectedId = draggedId;
-		});
+		if (err instanceof Error) return err.message;
+		return 'Não foi possível sincronizar com o SIORG.';
 	}
 
-	function handleToggleAtivo(orgaoId: number): void {
-		void runMutation(() => toggleOrgaoAtivo(orgaoId));
+	/** Formata ISO em data/hora pt-BR curta; null vira em-dash. */
+	function formatDateTime(iso: string | null): string {
+		if (!iso) return '—';
+		const parsed = new Date(iso);
+		if (Number.isNaN(parsed.getTime())) return iso;
+		return parsed.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 	}
 
-	function handleMove(orgaoId: number, paiId: number | null): void {
-		void runMutation(() => moveOrgao(orgaoId, paiId));
-	}
+	// === Expand / collapse ===
 
-	function handleDelete(node: OrgaoNode): void {
-		const confirmed = confirm(`Excluir o órgão ${node.sigla}? Esta ação não pode ser desfeita.`);
-		if (!confirmed) return;
-		void runMutation(() => deleteOrgao(node.id));
-	}
-
-	// === Expand / collapse (espelha orgao_tree.js) ===
-
-	/** Ids dos nós nos níveis 0 e 1 (estado inicial de expansão do v4.5). */
+	/** Ids dos nós nos níveis 0 e 1 (estado inicial de expansão). */
 	function collectInitialExpanded(nodes: OrgaoNode[], depth = 0): Set<number> {
 		const ids = new Set<number>();
 		for (const n of nodes) {
@@ -256,31 +186,27 @@
 
 	function collapseAll(): void {
 		if (!data) return;
-		// v4.5 mantém apenas a raiz (depth 0) aberta ao recolher tudo.
 		expandedIds = new Set(data.arvore.map((n) => n.id));
 	}
 
-	// === Busca (debounce 120ms, espelha applyFilter do orgao_tree.js) ===
+	// === Busca (debounce 120ms) ===
 	function onSearchInput(event: Event): void {
 		const value = (event.currentTarget as HTMLInputElement).value;
 		searchQuery = value;
 		if (searchTimer) clearTimeout(searchTimer);
 		searchTimer = setTimeout(() => {
 			filterQuery = value.trim().toLowerCase();
-			if (filterQuery) {
-				// Ao buscar, abre tudo para revelar os matches (como expandToRoot).
-				expandAll();
-			}
+			if (filterQuery) expandAll();
 		}, 120);
 	}
 
-	/** Marca um nó como selecionado ao clicar na linha (não nas ações/chevron). */
 	function selectNode(orgaoId: number): void {
 		selectedId = orgaoId;
 	}
 
 	onMount(() => {
 		void load();
+		void loadSiorgStatus();
 		return () => {
 			inFlight?.abort();
 			if (searchTimer) clearTimeout(searchTimer);
@@ -288,8 +214,9 @@
 	});
 
 	const total = $derived(data?.total ?? 0);
-	const candidatosPai = $derived(data?.candidatos_pai ?? []);
-	const maxDepth = $derived(data?.max_depth ?? 0);
+	const ultimaSync = $derived(siorg?.ultima_sincronizacao ?? null);
+	// Status indisponível (siorg === null) mantém o botão habilitado: o POST reporta o erro real.
+	const syncDisabled = $derived(syncing || siorg?.configurado === false);
 </script>
 
 <svelte:head>
@@ -305,30 +232,66 @@
 			{/if}
 		{/snippet}
 		{#snippet actions()}
-			<a
-				href={`${base}/admin/orgaos/tipos`}
-				class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<i class="fas fa-layer-group" aria-hidden="true"></i>Tipos
-			</a>
-			<Button size="sm" href={`${base}/admin/orgaos/novo`}>
-				{#snippet icon()}<i class="fas fa-plus" aria-hidden="true"></i>{/snippet}
-				{total === 0 ? 'Criar Órgão Raiz' : 'Nova Unidade'}
+			<Button size="sm" onclick={handleSync} disabled={syncDisabled} aria-busy={syncing}>
+				{#snippet icon()}
+					<i class="fas {syncing ? 'fa-circle-notch fa-spin' : 'fa-sync-alt'}" aria-hidden="true"
+					></i>
+				{/snippet}
+				{syncing ? 'Sincronizando…' : 'Atualizar estrutura'}
 			</Button>
 		{/snippet}
 	</PageHeader>
 
-	<div class="flex flex-wrap items-center gap-2">
-		<span
-			class="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-text-secondary"
-		>
-			<i class="fas fa-layer-group" aria-hidden="true"></i>Profundidade máxima: {maxDepth}
-		</span>
+	<div class="siorg-card" aria-live="polite">
+		<div class="siorg-card-main">
+			<span class="siorg-card-icon" aria-hidden="true">
+				<i class="fas fa-satellite-dish"></i>
+			</span>
+			<div class="siorg-card-body">
+				<span class="siorg-card-title">Última sincronização com o SIORG</span>
+				{#if siorg && !siorg.configurado}
+					<span class="siorg-warn">
+						<i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+						Integração SIORG não configurada
+					</span>
+				{:else if ultimaSync}
+					<span class="siorg-card-line">
+						<span class="siorg-status" data-status={ultimaSync.status}>{ultimaSync.status}</span>
+						em {formatDateTime(ultimaSync.finalizado_em ?? ultimaSync.iniciado_em)}
+						{#if ultimaSync.disparado_por_nome}
+							por {ultimaSync.disparado_por_nome}
+						{/if}
+						— {ultimaSync.criadas} criada{ultimaSync.criadas === 1 ? '' : 's'},
+						{ultimaSync.atualizadas} atualizada{ultimaSync.atualizadas === 1 ? '' : 's'},
+						{ultimaSync.desativadas} desativada{ultimaSync.desativadas === 1 ? '' : 's'}
+					</span>
+					{#if ultimaSync.erro}
+						<span class="siorg-warn">
+							<i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+							{ultimaSync.erro}
+						</span>
+					{/if}
+				{:else if siorg}
+					<span class="siorg-card-line">Nenhuma sincronização registrada ainda.</span>
+				{:else}
+					<span class="siorg-card-line">Status da integração indisponível.</span>
+				{/if}
+			</div>
+		</div>
 	</div>
 
-	{#if actionError}
-		<div role="alert" class="rounded-md border border-danger bg-surface px-4 py-3 text-sm text-text-primary">
-			{actionError}
+	{#if syncResult}
+		<div role="status" class="siorg-feedback is-success">
+			<i class="fas fa-check-circle" aria-hidden="true"></i>
+			Estrutura atualizada: {syncResult.criadas} criada{syncResult.criadas === 1 ? '' : 's'},
+			{syncResult.atualizadas} atualizada{syncResult.atualizadas === 1 ? '' : 's'},
+			{syncResult.desativadas} desativada{syncResult.desativadas === 1 ? '' : 's'}.
+		</div>
+	{/if}
+	{#if syncError}
+		<div role="alert" class="siorg-feedback is-error">
+			<i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+			{syncError}
 		</div>
 	{/if}
 
@@ -367,15 +330,9 @@
 					Nenhum órgão cadastrado
 				</h2>
 				<p class="max-w-md text-sm text-text-secondary">
-					Comece criando o órgão raiz "Estado do Rio de Janeiro" para depois adicionar secretarias
-					e suas áreas.
+					A estrutura organizacional vem do SIORG. Use "Atualizar estrutura" para importar as
+					unidades.
 				</p>
-				<a
-					href={`${base}/admin/orgaos/novo`}
-					class="mt-2 inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-white no-underline shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
-				>
-					<i class="fas fa-plus" aria-hidden="true"></i>Criar Órgão Raiz
-				</a>
 			</div>
 		{:else}
 			<div class="orgao-tree-card">
@@ -402,33 +359,23 @@
 					</div>
 				</div>
 
-				<ul class="orgao-tree" role="tree" aria-label="Hierarquia de órgãos" aria-busy={mutating}>
-					{#each data.arvore as raiz, i (raiz.id)}
+				<ul class="orgao-tree" role="tree" aria-label="Hierarquia de órgãos" aria-busy={syncing}>
+					{#each data.arvore as raiz (raiz.id)}
 						<OrgaoTreeNode
 							node={raiz}
 							depth={0}
-							index={i}
-							siblingCount={data.arvore.length}
-							paiOptions={candidatosPai}
-							busy={mutating}
 							{expandedIds}
 							{selectedId}
 							{filterQuery}
-							{canDropOn}
 							onToggle={toggleExpanded}
 							onSelect={selectNode}
-							onReorder={handleReorder}
-							onReparent={handleReparent}
-							onToggleAtivo={handleToggleAtivo}
-							onMove={handleMove}
-							onDelete={handleDelete}
 						/>
 					{/each}
 				</ul>
 
 				<div class="orgao-tree-footnote">
-					<i class="fas fa-arrows-alt" aria-hidden="true"></i>
-					Arraste uma unidade sobre outra para mudar o pai.
+					<i class="fas fa-lock" aria-hidden="true"></i>
+					Estrutura gerenciada pelo SIORG-RJ — somente leitura.
 				</div>
 			</div>
 		{/if}
@@ -539,5 +486,94 @@
 		background: var(--color-surface-muted);
 		font-size: 0.75rem;
 		color: var(--color-text-muted);
+	}
+
+	/* Card "última sincronização" (dados do SiorgSyncLog). */
+	.siorg-card {
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		box-shadow: var(--ds-shadow-sm);
+		padding: 0.75rem 1rem;
+	}
+
+	.siorg-card-main {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.75rem;
+	}
+
+	.siorg-card-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25rem;
+		height: 2.25rem;
+		border-radius: 10px;
+		background: var(--color-surface-muted);
+		color: var(--color-text-muted);
+		flex-shrink: 0;
+	}
+
+	.siorg-card-body {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		min-width: 0;
+	}
+
+	.siorg-card-title {
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		font-weight: 600;
+		color: var(--color-text-muted);
+	}
+
+	.siorg-card-line {
+		font-size: 0.8125rem;
+		color: var(--color-text-secondary);
+	}
+
+	.siorg-status {
+		font-weight: 700;
+		text-transform: capitalize;
+		color: var(--color-text-primary);
+	}
+	.siorg-status[data-status='sucesso'] {
+		color: var(--ds-color-success-600, #15803d);
+	}
+	.siorg-status[data-status='erro'] {
+		color: var(--ds-color-danger-600, #b91c1c);
+	}
+
+	.siorg-warn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--ds-color-warning-600, #b45309);
+	}
+
+	.siorg-feedback {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		border-radius: 10px;
+		padding: 0.625rem 1rem;
+		font-size: 0.875rem;
+		border: 1px solid transparent;
+		background: var(--color-surface);
+	}
+	.siorg-feedback.is-success {
+		border-color: var(--ds-color-success-600, #15803d);
+		color: var(--ds-color-success-600, #15803d);
+		background: var(--ds-color-success-light-bg, rgba(21, 128, 61, 0.08));
+	}
+	.siorg-feedback.is-error {
+		border-color: var(--ds-color-danger-600, #b91c1c);
+		color: var(--ds-color-danger-600, #b91c1c);
+		background: var(--ds-color-danger-light-bg, rgba(185, 28, 28, 0.08));
 	}
 </style>

@@ -38,7 +38,6 @@ from .serializers import (  # noqa: F401
     serialize_orgao_form,
     serialize_orgao_node,
     serialize_orgao_option,
-    serialize_orgao_tipo,
     serialize_pending_project_row,
     serialize_project_card,
     serialize_project_detail,
@@ -73,6 +72,7 @@ from . import orgaos  # noqa: F401,E402
 from . import areas  # noqa: F401,E402
 from . import admin_users  # noqa: F401,E402
 from . import admin_orgaos  # noqa: F401,E402
+from . import admin_siorg  # noqa: F401,E402
 from . import admin_templates  # noqa: F401,E402
 
 # Errorhandlers JSON para /api/* (B1): exceções não tratadas sob /api viram o
@@ -97,7 +97,6 @@ __all__ = [
     "serialize_orgao_option",
     "serialize_orgao_node",
     "serialize_orgao_form",
-    "serialize_orgao_tipo",
     "serialize_pending_project_row",
     "serialize_project_history_entry",
     "serialize_template_detail",

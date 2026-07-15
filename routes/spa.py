@@ -22,8 +22,8 @@ ABORDAGEM
    nos paths nativos das telas migradas QUE NAO POSSUEM rota Jinja viva de mesma
    URL: ``/projetos``, ``/projetos/pendentes``, ``/projetos/<id>``,
    ``/projetos/<id>/historico``, ``/admin``, ``/admin/usuarios``,
-   ``/admin/usuarios/novo``, ``/admin/usuarios/<id>``, ``/admin/orgaos/novo`` e
-   ``/admin/orgaos/<id>``. Sao atendidos por um catch-all dinamico
+   ``/admin/usuarios/novo``, ``/admin/usuarios/<id>`` e ``/admin/orgaos``
+   (read-only SIORG). Sao atendidos por um catch-all dinamico
    ``/<path:spa_path>`` (rank MENOR que rotas estaticas — Werkzeug prioriza rotas
    estaticas — entao so casa o que nenhuma rota Jinja atendeu), restrito ao
    matcher de paths migrados; qualquer outro path -> 404 (preserva o comportamento
@@ -104,13 +104,12 @@ _MIGRATED_EXACT_PATHS = frozenset(
         "projetos",
         "projetos/pendentes",
         "admin",
-        "admin/orgaos/novo",
         "admin/usuarios",
         "admin/usuarios/novo",
         # Telas do Grupo B cujas rotas Jinja canonicas foram cortadas: agora o
         # catch-all serve a SPA nesses paths nativos (deep-link/F5).
+        # Órgãos read-only (SIORG): subpáginas novo/<id>/tipos foram cortadas.
         "admin/orgaos",
-        "admin/orgaos/tipos",
         "admin/templates",
         "busca",
         # Cut-over dashboard/tarefas/calendarios: as rotas Flask ESTATICAS
@@ -135,7 +134,6 @@ _MIGRATED_EXACT_PATHS = frozenset(
 _MIGRATED_DYNAMIC_PATTERNS = (
     re.compile(r"projetos/\d+"),
     re.compile(r"projetos/\d+/historico"),
-    re.compile(r"admin/orgaos/\d+"),
     re.compile(r"admin/usuarios/\d+"),
 )
 
@@ -262,7 +260,7 @@ def spa_native_path(spa_path: str) -> str:
 
     Tem rank menor que as rotas estaticas (Werkzeug prioriza rotas estaticas),
     entao so casa o que nenhuma rota Jinja existente atendeu: ``/projetos*``,
-    ``/admin``, ``/admin/usuarios*``, ``/admin/orgaos*``, ``/admin/orgaos/tipos``,
+    ``/admin``, ``/admin/usuarios*``, ``/admin/orgaos``,
     ``/admin/templates`` e ``/busca``. ``/dashboard``, ``/tarefas`` e
     ``/calendarios`` tambem constam no matcher, mas na
     pratica sao atendidos pelas rotas estaticas KEEP-ENDPOINT que ja devolvem

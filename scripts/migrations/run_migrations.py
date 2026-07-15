@@ -27,7 +27,7 @@ from models.orgao import DEFAULT_ORGAO_TIPOS, slugify_orgao_tipo
 from catalogs.objectives import sync_goal_catalog_to_db
 from time_utils import utc_now
 
-ALEMBIC_HEAD = "d2e4f6a8b1c0"
+ALEMBIC_HEAD = "b7c9e1f3a5d2"
 VALID_TASK_STATUSES = {
     "nao_iniciada",
     "em_andamento",
@@ -1373,7 +1373,7 @@ def ensure_orgao_and_template_schema(emit_output=True):
             if "ix_orgao_unidade_codigo_externo" not in orgao_unidade_indexes:
                 db.session.execute(
                     text(
-                        "CREATE INDEX ix_orgao_unidade_codigo_externo "
+                        "CREATE UNIQUE INDEX ix_orgao_unidade_codigo_externo "
                         "ON orgao_unidade (codigo_externo)"
                     )
                 )
@@ -1557,6 +1557,72 @@ def ensure_etapa_responsavel_table(emit_output=True):
         return {"success": False, "created": False}
 
 
+def ensure_siorg_sync_log_table(emit_output=True):
+    """Garante a tabela siorg_sync_log (integração SIORG — auditoria de sync)."""
+    _emit("→ Garantindo tabela siorg_sync_log...", emit_output)
+    try:
+        inspector = inspect(db.engine)
+        if _table_exists(inspector, "siorg_sync_log"):
+            colunas = {c["name"] for c in inspector.get_columns("siorg_sync_log")}
+            if "codigo_raiz" not in colunas:
+                db.session.execute(
+                    text("ALTER TABLE siorg_sync_log ADD COLUMN codigo_raiz INTEGER")
+                )
+                db.session.commit()
+                _emit("   ✓ Coluna codigo_raiz adicionada.", emit_output)
+                return {"success": True, "created": True}
+            _emit("   ✓ Tabela siorg_sync_log já existe.", emit_output)
+            return {"success": True, "created": False}
+        db.create_all()
+        _emit("   ✓ Tabela siorg_sync_log criada.", emit_output)
+        return {"success": True, "created": True}
+    except Exception as exc:
+        db.session.rollback()
+        _emit(f"   ✗ ERRO ao criar siorg_sync_log: {exc}", emit_output)
+        return {"success": False, "created": False}
+
+
+def ensure_codigo_externo_unique_index(emit_output=True):
+    """Garante índice ÚNICO em orgao_unidade.codigo_externo (backstop do sync SIORG)."""
+    _emit("→ Garantindo índice único de orgao_unidade.codigo_externo...", emit_output)
+    try:
+        inspector = inspect(db.engine)
+        if not _table_exists(inspector, "orgao_unidade"):
+            _emit(
+                "   ✓ Tabela orgao_unidade ainda não existe (nada a fazer).",
+                emit_output,
+            )
+            return {"success": True, "changed": False}
+        indexes = inspector.get_indexes("orgao_unidade")
+        atual = next(
+            (i for i in indexes if i["name"] == "ix_orgao_unidade_codigo_externo"),
+            None,
+        )
+        if atual is not None and atual.get("unique"):
+            _emit("   ✓ Índice único já existe.", emit_output)
+            return {"success": True, "changed": False}
+        if atual is not None:
+            drop_sql = (
+                "DROP INDEX ix_orgao_unidade_codigo_externo ON orgao_unidade"
+                if db.engine.dialect.name == "mysql"
+                else "DROP INDEX ix_orgao_unidade_codigo_externo"
+            )
+            db.session.execute(text(drop_sql))
+        db.session.execute(
+            text(
+                "CREATE UNIQUE INDEX ix_orgao_unidade_codigo_externo "
+                "ON orgao_unidade (codigo_externo)"
+            )
+        )
+        db.session.commit()
+        _emit("   ✓ Índice único criado.", emit_output)
+        return {"success": True, "changed": True}
+    except Exception as exc:
+        db.session.rollback()
+        _emit(f"   ✗ ERRO ao criar índice único de codigo_externo: {exc}", emit_output)
+        return {"success": False, "changed": False}
+
+
 def stamp_alembic_head(emit_output=True):
     if db.engine.dialect.name != "mysql":
         return {"success": True, "stamped": False}
@@ -1612,6 +1678,8 @@ def run_all_migrations(*, emit_output=True, stamp_alembic=False):
         backfill_task_assignees(emit_output=emit_output),
         backfill_sei_processes(emit_output=emit_output),
         ensure_etapa_responsavel_table(emit_output=emit_output),
+        ensure_siorg_sync_log_table(emit_output=emit_output),
+        ensure_codigo_externo_unique_index(emit_output=emit_output),
     ]
 
     if not all(step.get("success") for step in steps):

@@ -106,8 +106,8 @@
 		if (current === target) return true;
 		if (!current.startsWith(`${target}/`)) return false;
 		// Nao marcar um link quando outro mais especifico cobre o path
-		// (ex.: "/projetos" vs "/projetos/pendentes", "/admin/orgaos" vs
-		// "/admin/orgaos/tipos"). Considera nav + admin para desambiguar.
+		// (ex.: "/projetos" vs "/projetos/pendentes"). Considera nav + admin
+		// para desambiguar.
 		return ![...navLinks, ...adminLinks].some(
 			(other) =>
 				other.path !== linkPath &&
@@ -123,7 +123,6 @@
 	const adminLinks: NavLink[] = [
 		{ label: 'Usuarios', path: '/admin/usuarios', icon: 'fa-users-cog' },
 		{ label: 'Orgaos', path: '/admin/orgaos', icon: 'fa-sitemap' },
-		{ label: 'Tipos de orgao', path: '/admin/orgaos/tipos', icon: 'fa-layer-group' },
 		{ label: 'Templates', path: '/admin/templates', icon: 'fa-clone' }
 	];
 

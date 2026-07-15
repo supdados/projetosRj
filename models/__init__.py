@@ -16,6 +16,7 @@ from .task import (
     TaskItemAnexo,
     TaskAssignee,
 )
+from .siorg_sync import SiorgSyncLog, SIORG_SYNC_STATUSES
 from .orgao import (
     ALLOWED_TIPOS,
     DEFAULT_ORGAO_TIPOS,
@@ -60,6 +61,8 @@ __all__ = [
     "TaskItemAnexo",
     "TaskAssignee",
     "OrgaoUnidade",
+    "SiorgSyncLog",
+    "SIORG_SYNC_STATUSES",
     "ALLOWED_TIPOS",
     "DEFAULT_ORGAO_TIPOS",
     "MAX_DEPTH",

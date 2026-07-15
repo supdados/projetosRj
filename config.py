@@ -109,6 +109,13 @@ def build_app_config(*, is_testing=False, is_debug=False):
         GOOGLE_CALENDAR_WATCH_TTL_SECONDS=_env_int(
             "GOOGLE_CALENDAR_WATCH_TTL_SECONDS", default=604800
         ),
+        SIORG_BASE_URL=os.getenv("SIORG_BASE_URL", "http://localhost:5000")
+        .strip()
+        .rstrip("/")
+        or "http://localhost:5000",
+        SIORG_API_KEY=os.getenv("SIORG_API_KEY", "").strip(),
+        SIORG_TIMEOUT_SECONDS=_env_int("SIORG_TIMEOUT_SECONDS", default=10),
+        SIORG_RAIZ_CODIGO=_env_int("SIORG_RAIZ_CODIGO", default=2),
         CHATBOT_ENABLED=_env_flag_is_true("CHATBOT_ENABLED", default="false"),
         CHATBOT_BASE_URL=os.getenv("CHATBOT_BASE_URL", "").strip().rstrip("/"),
         CHATBOT_PORTAL_API_KEY=os.getenv("CHATBOT_PORTAL_API_KEY", "").strip(),

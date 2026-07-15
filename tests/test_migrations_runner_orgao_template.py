@@ -29,7 +29,7 @@ from scripts.migrations.run_migrations import (
 def test_alembic_head_matches_latest_migration():
     # Se alguma migração nova for adicionada sem atualizar esta constante,
     # MySQL em produção pode ficar com alembic_version stale após rodar o script.
-    assert ALEMBIC_HEAD == "d2e4f6a8b1c0"
+    assert ALEMBIC_HEAD == "b7c9e1f3a5d2"
 
 
 def test_stage_template_audit_columns_cover_fase_0_audit_fields():
@@ -73,4 +73,6 @@ def test_stage_template_has_all_audit_columns_after_runner(app):
         assert "orgao_closure" in inspector.get_table_names()
         orgao_columns = {c["name"] for c in inspector.get_columns("orgao_unidade")}
         for column_name, _ in ORGAO_UNIDADE_INCREMENTAL_COLUMNS:
-            assert column_name in orgao_columns, f"orgao_unidade sem coluna {column_name}"
+            assert (
+                column_name in orgao_columns
+            ), f"orgao_unidade sem coluna {column_name}"

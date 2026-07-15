@@ -71,7 +71,6 @@ def serialize_orgao_node(orgao: Any) -> dict[str, Any]:
     Inclui os campos editáveis do nó (``id``, ``sigla``, ``nome``, ``tipo``,
     ``tipo_id``, ``pai_id``, ``ordem``, ``ativo``, ``codigo_externo``) e a lista
     ``filhos`` (serializados recursivamente, ordenados por ``ordem``/``sigla``).
-    Espelha ``_serialize_orgao`` de ``routes/admin_orgaos.py`` somando a árvore.
     NÃO expõe segredos.
 
     Args:
@@ -101,8 +100,7 @@ def serialize_orgao_node(orgao: Any) -> dict[str, Any]:
 def serialize_orgao_form(orgao: Any) -> dict[str, Any]:
     """Serializa um órgão para o formulário de edição (sem ``filhos``).
 
-    Espelha ``_serialize_orgao`` de ``routes/admin_orgaos.py``, somando as datas
-    de vigência (ISO 8601) usadas pelo form. NÃO expõe segredos.
+    Soma as datas de vigência (ISO 8601) usadas pelo form. NÃO expõe segredos.
 
     Args:
         orgao: Instância de ``OrgaoUnidade``.
@@ -124,31 +122,6 @@ def serialize_orgao_form(orgao: Any) -> dict[str, Any]:
             getattr(orgao, "data_inicio_vigencia", None)
         ),
         "data_fim_vigencia": _iso_or_none(getattr(orgao, "data_fim_vigencia", None)),
-    }
-
-
-def serialize_orgao_tipo(tipo: Any) -> dict[str, Any]:
-    """Serializa um tipo de órgão (catálogo/CRUD admin).
-
-    Usa CAMPOS REAIS de ``OrgaoTipo`` (``nome``, ``slug``, ``nivel``,
-    ``descricao``, ``ativo``, ``is_system``, ``permite_raiz``). ``is_system``
-    sinaliza tipos-padrão protegidos. NÃO expõe segredos.
-
-    Args:
-        tipo: Instância de ``OrgaoTipo``.
-
-    Returns:
-        ``dict`` JSON-safe com os campos do tipo de órgão.
-    """
-    return {
-        "id": tipo.id,
-        "nome": tipo.nome,
-        "slug": tipo.slug,
-        "nivel": tipo.nivel,
-        "descricao": tipo.descricao,
-        "ativo": bool(tipo.ativo),
-        "is_system": bool(tipo.is_system),
-        "permite_raiz": bool(tipo.permite_raiz),
     }
 
 

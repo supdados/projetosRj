@@ -8,8 +8,7 @@
 	 *
 	 * Espelha o combobox ABEP de `CriarProjetoModal.svelte` (input `role=combobox`
 	 * + `ul role=listbox`, setas/Enter/Esc, `aria-activedescendant`,
-	 * `onmousedown preventDefault` nas opções, `onblur setTimeout(close,120)`) e a
-	 * a11y de `OrgaoFormFields.svelte`.
+	 * `onmousedown preventDefault` nas opções, `onblur setTimeout(close,120)`).
 	 *
 	 * O componente NÃO chama API — emite `onSelect(value)` (só quando o valor
 	 * muda); a página orquestra e devolve `pending`/`error` (UI otimista).

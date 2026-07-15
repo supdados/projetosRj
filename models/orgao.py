@@ -96,7 +96,8 @@ class OrgaoUnidade(db.Model):
         db.Index("ix_orgao_unidade_pai_ordem", "pai_id", "ordem"),
         db.Index("ix_orgao_unidade_ativo", "ativo"),
         db.Index("ix_orgao_unidade_tipo_id", "tipo_id"),
-        db.Index("ix_orgao_unidade_codigo_externo", "codigo_externo"),
+        # Backstop contra duplicação no sync SIORG; NULLs múltiplos permitidos.
+        db.Index("ix_orgao_unidade_codigo_externo", "codigo_externo", unique=True),
     )
 
     @property
