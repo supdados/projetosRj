@@ -56,6 +56,7 @@
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import TarefasSkeleton from '$lib/components/skeletons/TarefasSkeleton.svelte';
 	import { createBoardStore } from '$lib/stores/board';
@@ -1165,37 +1166,35 @@
 </section>
 
 {#if confirmingArchive}
-	<!-- Confirmação de arquivamento (modal SPA com o MESMO texto do legado) -->
-	<div class="fixed inset-0 z-modal bg-overlay" role="presentation" onclick={cancelArchiveConfirm}></div>
-	<div
-		role="alertdialog"
-		aria-modal="true"
-		aria-labelledby="archive-confirm-title"
-		class="fixed left-1/2 top-1/2 z-modal flex w-full max-w-md -translate-x-1/2 -translate-y-1/2 animate-modal-slide-in flex-col gap-4 rounded-xl border border-border-subtle bg-surface p-6 shadow-lg"
-	>
-		<h2 id="archive-confirm-title" class="font-heading text-lg font-bold text-text-primary">
-			Arquivar finalizados
-		</h2>
-		<p class="text-sm text-text-secondary">Arquivar tarefas finalizadas do escopo atual?</p>
-		<div class="flex justify-end gap-2">
-			<button
-				type="button"
-				onclick={cancelArchiveConfirm}
-				disabled={archiving}
-				class="rounded-md border border-border-subtle px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-			>
-				Cancelar
-			</button>
-			<button
-				type="button"
-				onclick={() => void confirmArchive()}
-				disabled={archiving}
-				class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-primary-fg shadow-sm hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-			>
-				{archiving ? 'Arquivando…' : 'Arquivar'}
-			</button>
+	<!-- Confirmação de arquivamento no chrome compartilhado (Modal centraliza por
+	     flex; o bespoke anterior perdia o translate de centralização para o
+	     fill-mode da animação e abria deslocado). -->
+	<Modal labelId="archive-confirm-title" onBackdrop={cancelArchiveConfirm}>
+		<div class="flex flex-col gap-4">
+			<h2 id="archive-confirm-title" class="font-heading text-lg font-bold text-text-primary">
+				Arquivar finalizados
+			</h2>
+			<p class="text-sm text-text-secondary">Arquivar tarefas finalizadas do escopo atual?</p>
+			<div class="flex justify-end gap-2">
+				<button
+					type="button"
+					onclick={cancelArchiveConfirm}
+					disabled={archiving}
+					class="rounded-md border border-border-subtle px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					onclick={() => void confirmArchive()}
+					disabled={archiving}
+					class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-primary-fg shadow-sm hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				>
+					{archiving ? 'Arquivando…' : 'Arquivar'}
+				</button>
+			</div>
 		</div>
-	</div>
+	</Modal>
 {/if}
 
 <TaskDrawer store={drawer} />

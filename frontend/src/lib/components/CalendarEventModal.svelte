@@ -352,6 +352,8 @@
 	}
 
 	async function openDatePicker(field: DateField, e: MouseEvent): Promise<void> {
+		// currentTarget vira null ao fim do dispatch (spec DOM): capturar ANTES do await.
+		const anchor = e.currentTarget as HTMLElement;
 		closeTimePicker();
 		if (datePicker?.field === field) {
 			closeDatePicker();
@@ -361,7 +363,7 @@
 		const [y, m] = val.split('-').map(Number);
 		datePicker = { field, x: 0, y: 0, year: y, month: m - 1 };
 		await tick();
-		positionPicker('.cdp-calendar', e.currentTarget as HTMLElement, 'date');
+		positionPicker('.cdp-calendar', anchor, 'date');
 	}
 	function closeDatePicker(): void {
 		datePicker = null;
@@ -448,6 +450,8 @@
 		}
 	}
 	async function openTimePicker(field: 'start' | 'end', e: MouseEvent): Promise<void> {
+		// currentTarget vira null ao fim do dispatch (spec DOM): capturar ANTES do await.
+		const anchor = e.currentTarget as HTMLElement;
 		closeDatePicker();
 		if (timePicker?.field === field) {
 			closeTimePicker();
@@ -455,7 +459,7 @@
 		}
 		timePicker = { field, x: 0, y: 0 };
 		await tick();
-		positionPicker('.cdp-timelist', e.currentTarget as HTMLElement, 'time');
+		positionPicker('.cdp-timelist', anchor, 'time');
 		// Scroll ate o selecionado.
 		const sel = document.querySelector('.cdp-time-option--selected') as HTMLElement | null;
 		sel?.scrollIntoView({ block: 'center' });
