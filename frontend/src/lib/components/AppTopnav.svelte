@@ -120,10 +120,11 @@
 	const pathname = $derived($page.url.pathname);
 
 	// Links do menu Admin (so renderizados quando user.is_admin === true).
-	const adminLinks: NavLink[] = [
-		{ label: 'Usuarios', path: '/admin/usuarios', icon: 'fa-users-cog' },
-		{ label: 'Orgaos', path: '/admin/orgaos', icon: 'fa-sitemap' },
-		{ label: 'Templates', path: '/admin/templates', icon: 'fa-clone' }
+	// iconHover: cor do icone no hover do item — uma cor por item (tokens DS).
+	const adminLinks: (NavLink & { iconHover: string })[] = [
+		{ label: 'Usuarios', path: '/admin/usuarios', icon: 'fa-users-cog', iconHover: 'group-hover:text-info' },
+		{ label: 'Orgaos', path: '/admin/orgaos', icon: 'fa-sitemap', iconHover: 'group-hover:text-violet' },
+		{ label: 'Templates', path: '/admin/templates', icon: 'fa-clone', iconHover: 'group-hover:text-success' }
 	];
 
 	// Dropdown acessivel: estado aberto + ativacao por teclado/aria.
@@ -473,12 +474,12 @@
 										href={`${base}${link.path}`}
 										aria-current={active ? 'page' : undefined}
 										onclick={closeAdmin}
-										class="flex items-center gap-3 px-4 py-2 text-sm no-underline transition-colors duration-fast focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {active
+										class="group flex items-center gap-3 px-4 py-2 text-sm no-underline transition-colors duration-fast focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {active
 											? 'bg-surface-muted text-text-primary'
 											: 'text-text-secondary hover:bg-surface-muted hover:text-text-primary'}"
 									>
 										<i
-											class="fas {link.icon} w-4 text-center text-text-muted"
+											class="fas {link.icon} w-4 text-center text-text-muted transition-colors duration-fast {link.iconHover}"
 											aria-hidden="true"
 										></i>
 										<span>{link.label}</span>
@@ -494,9 +495,12 @@
 								href="/projects/download"
 								download
 								onclick={closeAdmin}
-								class="flex items-center gap-3 px-4 py-2 text-sm text-text-secondary no-underline transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+								class="group flex items-center gap-3 px-4 py-2 text-sm text-text-secondary no-underline transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
 							>
-								<i class="fas fa-file-csv w-4 text-center text-text-muted" aria-hidden="true"></i>
+								<i
+									class="fas fa-file-csv w-4 text-center text-text-muted transition-colors duration-fast group-hover:text-orange"
+									aria-hidden="true"
+								></i>
 								<span>Exportar CSV de projetos</span>
 							</a>
 							<hr class="my-1 border-border-subtle" />
