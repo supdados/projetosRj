@@ -33,14 +33,14 @@ export interface AdminUser {
 }
 
 /**
- * Opção de órgão (ativo) com profundidade, para o seletor em árvore do form.
- * Espelha `_serialize_orgao_depth_option`: `(id, sigla, nome, depth)`.
+ * Opção de órgão (ativo) com hierarquia, para o seletor em árvore do form.
+ * Espelha `_serialize_orgao_option_row`: `(id, sigla, nome, pai_id)`.
  */
 export interface AdminOrgaoOption {
 	id: number;
 	sigla: string;
 	nome: string;
-	depth: number;
+	pai_id: number | null;
 }
 
 /** Metadados de paginação da lista (`meta`), per_page fixo em 20. */

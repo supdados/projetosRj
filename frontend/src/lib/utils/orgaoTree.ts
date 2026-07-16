@@ -120,6 +120,52 @@ export function flattenTreeWithPath<T extends OrgaoTreeOptionLike>(
 	return out;
 }
 
+export type OrgaoCoverage = 'selected' | 'covered' | 'none';
+
+/**
+ * Estado de cobertura por nó para seleção com herança descendente: um nó
+ * `selected` cobre TODA a sua subárvore (`covered`, com `coveredBy` apontando
+ * o ancestral). Espelha `get_user_orgao_subtree_ids` do backend.
+ */
+export function computeOrgaoCoverage<T extends OrgaoTreeOptionLike>(
+	tree: OrgaoTreeNode<T>[],
+	selectedIds: ReadonlySet<number>
+): Map<number, { state: OrgaoCoverage; coveredBy: number | null }> {
+	const out = new Map<number, { state: OrgaoCoverage; coveredBy: number | null }>();
+	const walk = (nodes: OrgaoTreeNode<T>[], coveringAncestor: number | null): void => {
+		for (const node of nodes) {
+			if (coveringAncestor != null) {
+				out.set(node.value, { state: 'covered', coveredBy: coveringAncestor });
+				walk(node.children, coveringAncestor);
+				continue;
+			}
+			const selected = selectedIds.has(node.value);
+			out.set(node.value, { state: selected ? 'selected' : 'none', coveredBy: null });
+			walk(node.children, selected ? node.value : null);
+		}
+	};
+	walk(tree, null);
+	return out;
+}
+
+/** Remove da seleção todo id cujo ancestral também esteja selecionado — payload mínimo. */
+export function minimizeOrgaoSelection<T extends OrgaoTreeOptionLike>(
+	tree: OrgaoTreeNode<T>[],
+	selectedIds: number[]
+): number[] {
+	const selectedSet = new Set(selectedIds);
+	const kept: number[] = [];
+	const walk = (nodes: OrgaoTreeNode<T>[], ancestorSelected: boolean): void => {
+		for (const node of nodes) {
+			const isSelected = selectedSet.has(node.value);
+			if (isSelected && !ancestorSelected) kept.push(node.value);
+			walk(node.children, ancestorSelected || isSelected);
+		}
+	};
+	walk(tree, false);
+	return kept;
+}
+
 /** Linhas visíveis: árvore respeitando expansão, ou matches achatados na busca. */
 export function buildOrgaoTreeRows<T extends OrgaoTreeOptionLike>(
 	tree: OrgaoTreeNode<T>[],

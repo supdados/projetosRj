@@ -29,6 +29,7 @@
 		AdminUserUpdatePayload
 	} from '$lib/types/adminUsers';
 	import UserForm from '../UserForm.svelte';
+	import { buildOrgaoTree, minimizeOrgaoSelection } from '$lib/utils/orgaoTree';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import AdminUsuarioEditSkeleton from '$lib/components/skeletons/AdminUsuarioEditSkeleton.svelte';
@@ -53,6 +54,16 @@
 	let removingCpf = $state<boolean>(false);
 	let formError = $state<string>('');
 
+	/**
+	 * Normaliza vínculos legados redundantes (pai+filho salvos pela grade
+	 * antiga): mantém só os ancestrais — mesma cobertura, payload mínimo.
+	 * Só chega ao backend se o usuário submeter o form.
+	 */
+	function minimizeIds(orgaoIds: number[], options: AdminOrgaoOption[]): number[] {
+		const tree = buildOrgaoTree(options.map((o) => ({ value: o.id, pai_id: o.pai_id })));
+		return minimizeOrgaoSelection(tree, orgaoIds);
+	}
+
 	/** Monta os valores do form a partir do usuário carregado (função pura). */
 	function valuesFromUser(user: AdminUser, orgaoIds: number[]) {
 		return {
@@ -67,7 +78,10 @@
 	}
 
 	const initialValues = initialDetail
-		? valuesFromUser(initialDetail.usuario, initialDetail.orgao_ids)
+		? valuesFromUser(
+				initialDetail.usuario,
+				minimizeIds(initialDetail.orgao_ids, initialDetail.orgaos_options)
+			)
 		: {
 				name: '',
 				username: '',
@@ -86,7 +100,7 @@
 	/** Preenche o estado do form a partir do usuário carregado. */
 	function hydrate(user: AdminUser, orgaoIds: number[]): void {
 		usuario = user;
-		values = valuesFromUser(user, orgaoIds);
+		values = valuesFromUser(user, minimizeIds(orgaoIds, orgaosOptions));
 	}
 
 	async function load(): Promise<void> {

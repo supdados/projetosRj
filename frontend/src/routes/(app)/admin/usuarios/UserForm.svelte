@@ -10,14 +10,20 @@
 	 *   - CPF gov.br não editável quando o vínculo está travado
 	 *     (`govbr_link_locked`) — nesse caso oferece "Retirar CPF".
 	 *
-	 * O seletor de órgãos responsáveis tem busca (sem acentos), chips removíveis
-	 * dos selecionados e grade rolável em até 3 colunas — filhos são marcados
-	 * com "↳"; a busca inclui os ancestrais dos resultados para dar contexto.
+	 * O seletor de órgãos responsáveis é o OrgaoTreeMultiSelect: árvore com
+	 * herança descendente (selecionar um pai cobre os filhos, que saem do
+	 * payload), busca e chips dos selecionados diretos.
 	 *
 	 * A submissão é delegada ao pai via `onSubmit` (que chama o módulo
 	 * `adminUsers.ts` com `client.post`). Acessível: labels associadas,
 	 * `required`/`aria-invalid`, erro em `role=alert`.
 	 */
+	import OrgaoTreeMultiSelect from '$lib/components/OrgaoTreeMultiSelect.svelte';
+	import {
+		buildOrgaoTree,
+		computeOrgaoCoverage,
+		type OrgaoTreeNode
+	} from '$lib/utils/orgaoTree';
 	import type { AdminOrgaoOption } from '$lib/types/adminUsers';
 
 	type Mode = 'create' | 'edit';
@@ -75,55 +81,17 @@
 	const labelClass = 'text-2xs font-bold uppercase tracking-caps text-text-muted';
 
 	// --- Seletor de órgãos responsáveis ------------------------------------
-
-	let orgaoSearch = $state<string>('');
-
-	/** Normaliza para busca sem acentos e sem caixa. */
-	function normalize(value: string): string {
-		return value
-			.normalize('NFD')
-			.replace(/[\u0300-\u036f]/g, '')
-			.toLowerCase();
-	}
-
-	/**
-	 * Órgãos visíveis na lista: sem busca, a árvore inteira; com busca, os que
-	 * batem com sigla/nome MAIS seus ancestrais (para a indentação fazer
-	 * sentido). Os ancestrais são reconstruídos pela pilha de profundidade,
-	 * já que a lista chega achatada em pré-ordem.
-	 */
-	const visibleOrgaos = $derived.by(() => {
-		const query = normalize(orgaoSearch.trim());
-		if (!query) return orgaosOptions;
-		const keep = new Set<number>();
-		const ancestors: AdminOrgaoOption[] = [];
-		for (const orgao of orgaosOptions) {
-			ancestors[orgao.depth - 1] = orgao;
-			ancestors.length = orgao.depth;
-			if (normalize(`${orgao.sigla} ${orgao.nome}`).includes(query)) {
-				for (const ancestor of ancestors) keep.add(ancestor.id);
-			}
-		}
-		return orgaosOptions.filter((orgao) => keep.has(orgao.id));
-	});
-
-	const selectedOrgaos = $derived(
-		orgaosOptions.filter((orgao) => values.orgaos_responsavel.includes(orgao.id))
+	// Contador "N selecionados · cobre M unidades": M = selecionados + cobertos
+	// pela herança descendente (mesma conta do backend).
+	const orgaoTree = $derived.by(() =>
+		buildOrgaoTree(
+			orgaosOptions.map((o) => ({ value: o.id, pai_id: o.pai_id, sigla: o.sigla, nome: o.nome }))
+		)
 	);
-
-	function toggleOrgao(orgaoId: number, checked: boolean): void {
-		if (checked) {
-			if (!values.orgaos_responsavel.includes(orgaoId)) {
-				values.orgaos_responsavel = [...values.orgaos_responsavel, orgaoId];
-			}
-		} else {
-			values.orgaos_responsavel = values.orgaos_responsavel.filter((id) => id !== orgaoId);
-		}
-	}
-
-	function clearOrgaos(): void {
-		values.orgaos_responsavel = [];
-	}
+	const coveredCount = $derived.by(() => {
+		const coverage = computeOrgaoCoverage(orgaoTree, new Set(values.orgaos_responsavel));
+		return [...coverage.values()].filter((c) => c.state !== 'none').length;
+	});
 
 	function handleSubmit(event: SubmitEvent): void {
 		event.preventDefault();
@@ -329,108 +297,23 @@
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<span class={labelClass}>Órgãos Responsáveis</span>
 				<span class="text-xs text-text-muted" aria-live="polite">
-					{selectedOrgaos.length} de {orgaosOptions.length} selecionado{selectedOrgaos.length ===
-					1
-						? ''
-						: 's'}
+					{values.orgaos_responsavel.length}
+					{values.orgaos_responsavel.length === 1 ? 'selecionado' : 'selecionados'} · cobre {coveredCount}
+					{coveredCount === 1 ? 'unidade' : 'unidades'}
 				</span>
 			</div>
 
 			{#if orgaosOptions.length === 0}
 				<p class="text-sm text-text-muted">Nenhum órgão ativo disponível.</p>
 			{:else}
-				<div class="overflow-hidden rounded-lg border border-border-subtle">
-					<!-- Busca do seletor -->
-					<div class="relative border-b border-border-subtle bg-surface-muted/40">
-						<i
-							class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted"
-							aria-hidden="true"
-						></i>
-						<input
-							type="search"
-							bind:value={orgaoSearch}
-							disabled={saving}
-							placeholder="Buscar órgão por sigla ou nome…"
-							aria-label="Buscar órgão por sigla ou nome"
-							autocomplete="off"
-							class="h-10 w-full border-none bg-transparent pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
-						/>
-					</div>
-
-					<!-- Chips dos selecionados: visão imediata + remoção em 1 clique. -->
-					{#if selectedOrgaos.length > 0}
-						<div
-							class="flex flex-wrap items-center gap-1.5 border-b border-border-subtle bg-surface-muted/40 px-3 py-2"
-						>
-							{#each selectedOrgaos as orgao (orgao.id)}
-								<span
-									class="inline-flex items-center gap-1 rounded-full border border-primary-500/30 bg-surface-elevated py-0.5 pl-2.5 pr-1 text-xs font-semibold text-primary-500"
-								>
-									{orgao.sigla}
-									<button
-										type="button"
-										onclick={() => toggleOrgao(orgao.id, false)}
-										disabled={saving}
-										aria-label={`Remover ${orgao.sigla}`}
-										class="inline-flex h-4 w-4 items-center justify-center rounded-full text-primary-500/70 transition-colors duration-fast hover:bg-primary-500/20 hover:text-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-									>
-										<i class="fas fa-times text-[10px]" aria-hidden="true"></i>
-									</button>
-								</span>
-							{/each}
-							<button
-								type="button"
-								onclick={clearOrgaos}
-								disabled={saving}
-								class="ml-1 text-xs font-semibold text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-							>
-								Limpar tudo
-							</button>
-						</div>
-					{/if}
-
-					<!-- Grade de órgãos (3 colunas no desktop). Filhos ganham o marcador
-					     "↳" no lugar da indentação da árvore, que não sobrevive à grade. -->
-					<ul
-						class="thin-scroll grid max-h-80 grid-cols-1 gap-1 overflow-y-auto p-2 sm:grid-cols-2 lg:grid-cols-3"
-						aria-label="Órgãos responsáveis"
-					>
-						{#each visibleOrgaos as orgao (orgao.id)}
-							<li class="min-w-0">
-								<label
-									title={orgao.nome && orgao.nome !== orgao.sigla
-										? `${orgao.sigla} — ${orgao.nome}`
-										: orgao.sigla}
-									class="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm text-text-primary transition-colors duration-fast {values.orgaos_responsavel.includes(
-										orgao.id
-									)
-										? 'border-primary-500/40 bg-surface-elevated'
-										: 'border-transparent hover:bg-surface-muted'}"
-								>
-									<input
-										type="checkbox"
-										disabled={saving}
-										checked={values.orgaos_responsavel.includes(orgao.id)}
-										onchange={(e) => toggleOrgao(orgao.id, e.currentTarget.checked)}
-										class="h-4 w-4 shrink-0 rounded border-border-subtle text-primary-700 focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-primary-500"
-									/>
-									{#if orgao.depth > 1}
-										<span class="shrink-0 text-xs text-text-muted" aria-hidden="true">↳</span>
-									{/if}
-									<span class="min-w-0 truncate">
-										<span class="font-semibold">{orgao.sigla}</span
-										>{#if orgao.nome && orgao.nome !== orgao.sigla}
-											<span class="text-text-muted"> — {orgao.nome}</span>{/if}
-									</span>
-								</label>
-							</li>
-						{:else}
-							<li class="col-span-full px-3 py-4 text-center text-sm text-text-muted">
-								Nenhum órgão encontrado para "{orgaoSearch.trim()}".
-							</li>
-						{/each}
-					</ul>
-				</div>
+				<OrgaoTreeMultiSelect
+					options={orgaosOptions}
+					value={values.orgaos_responsavel}
+					onChange={(next) => (values.orgaos_responsavel = next)}
+					disabled={saving}
+					id="user-orgaos"
+					ariaLabel="Órgãos responsáveis"
+				/>
 			{/if}
 		</div>
 	</fieldset>

@@ -1633,8 +1633,8 @@ ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 #   reusa a MESMA query/serializacao (_stage_templates_payload em
 #   routes/api/etapas.py), com api_login_required. role=user.
 # + GET /api/admin/orgaos/opcoes (#10): opcoes de orgaos ATIVOS ja achatadas
-#   (id/sigla/nome/depth) para o select do form de usuario, reusando
-#   _list_orgaos_with_depth (routes/admin_users.py). Anexado em
+#   (id/sigla/nome/pai_id) para o seletor do form de usuario, reusando
+#   _list_orgaos_with_parent (routes/admin_users.py). Anexado em
 #   routes/api/admin_orgaos.py, com api_admin_required. role=admin.
 # Total: 206.
 #

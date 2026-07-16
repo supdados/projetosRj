@@ -22,7 +22,7 @@ from flask import Response
 from models import OrgaoUnidade, db
 from models.orgao import MAX_DEPTH
 
-from ..admin_users import _list_orgaos_with_depth
+from ..admin_users import _list_orgaos_with_parent
 from ..blueprint import main_bp
 from .envelope import fail, ok
 from .negotiation import api_admin_required
@@ -56,18 +56,19 @@ def api_admin_orgaos_tree() -> Response | tuple[Response, int]:
 @main_bp.route("/api/admin/orgaos/opcoes", methods=["GET"])
 @api_admin_required
 def api_admin_orgaos_opcoes() -> Response | tuple[Response, int]:
-    """Opções de órgãos (ativos, achatadas) para o select do form de usuário.
+    """Opções de órgãos (ativos, achatadas) para o seletor do form de usuário.
 
-    Reusa ``_list_orgaos_with_depth`` (``routes/admin_users.py``): somente
-    órgãos ativos, ordenados por ``(depth, sigla)``, já achatados.
+    Reusa ``_list_orgaos_with_parent`` (``routes/admin_users.py``): somente
+    órgãos ativos, ordenados por sigla; a árvore é montada por ``pai_id`` no
+    client.
 
     Returns:
-        Envelope ``{"ok": true, "data": [{"id", "sigla", "nome", "depth"}, ...]}``
+        Envelope ``{"ok": true, "data": [{"id", "sigla", "nome", "pai_id"}, ...]}``
         com HTTP 200; 401 JSON sem sessão; 403 JSON para não-admin.
     """
     opcoes = [
-        {"id": orgao_id, "sigla": sigla, "nome": nome, "depth": depth}
-        for orgao_id, sigla, nome, depth in _list_orgaos_with_depth()
+        {"id": orgao_id, "sigla": sigla, "nome": nome, "pai_id": pai_id}
+        for orgao_id, sigla, nome, pai_id in _list_orgaos_with_parent()
     ]
     return ok(opcoes)
 

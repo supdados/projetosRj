@@ -8,7 +8,7 @@ Jinja ``/admin/users*`` (``list_users``/``add_user``/``edit_user``/``remove_cpf`
 parse em ``routes/admin_users.py``.
 
 Reaproveita os helpers de validação já existentes em ``routes/admin_users.py``
-(``_parse_selected_orgaos``, ``_parse_cpf_govbr``, ``_list_orgaos_with_depth``),
+(``_parse_selected_orgaos``, ``_parse_cpf_govbr``, ``_list_orgaos_with_parent``),
 preservando o comportamento das rotas Jinja. As regras de negócio (CPF gov.br,
 unicidade de username/CPF, proteção do último admin, vínculos a órgãos inativos)
 são mantidas; erros de validação resultam em ``fail(..., 422, "validation")`` em
@@ -29,7 +29,7 @@ from services.password_policy import validate_password_strength
 from time_utils import utc_now
 
 from ..admin_users import (
-    _list_orgaos_with_depth,
+    _list_orgaos_with_parent,
     _parse_cpf_govbr,
     _parse_selected_orgaos,
 )
@@ -41,24 +41,26 @@ from .serializers import serialize_admin_user
 _PER_PAGE = 20
 
 
-def _serialize_orgao_depth_option(row: tuple[int, str, str, int]) -> dict[str, Any]:
-    """Serializa uma linha de ``_list_orgaos_with_depth`` como opção de form.
+def _serialize_orgao_option_row(
+    row: tuple[int, str, str, int | None],
+) -> dict[str, Any]:
+    """Serializa uma linha de ``_list_orgaos_with_parent`` como opção de form.
 
     Args:
-        row: Tupla ``(orgao_id, sigla, nome, depth)`` produzida por
-            ``_list_orgaos_with_depth`` (já ordenada por profundidade/sigla).
+        row: Tupla ``(orgao_id, sigla, nome, pai_id)`` produzida por
+            ``_list_orgaos_with_parent`` (ordenada por sigla).
 
     Returns:
-        ``dict`` JSON-safe ``{id, sigla, nome, depth}`` para indentação de árvore
-        no seletor de órgãos da tela.
+        ``dict`` JSON-safe ``{id, sigla, nome, pai_id}`` — a árvore do seletor
+        de órgãos é montada por ``pai_id`` no client.
     """
-    orgao_id, sigla, nome, depth = row
-    return {"id": orgao_id, "sigla": sigla, "nome": nome, "depth": depth}
+    orgao_id, sigla, nome, pai_id = row
+    return {"id": orgao_id, "sigla": sigla, "nome": nome, "pai_id": pai_id}
 
 
 def _orgao_options() -> list[dict[str, Any]]:
-    """Opções de órgãos (ativos) com profundidade para o form de usuário."""
-    return [_serialize_orgao_depth_option(row) for row in _list_orgaos_with_depth()]
+    """Opções de órgãos (ativos) com hierarquia para o form de usuário."""
+    return [_serialize_orgao_option_row(row) for row in _list_orgaos_with_parent()]
 
 
 @main_bp.route("/api/admin/usuarios", methods=["GET"])
@@ -381,7 +383,7 @@ def _resolve_update_orgao_ids(user: User, payload: Any) -> tuple[list[int], list
     """Resolve os órgãos a vincular na edição, preservando inativos pré-vinculados.
 
     Espelha a lógica do POST de ``edit_user``: vínculos a órgãos inativos (que não
-    aparecem como checkbox em ``_list_orgaos_with_depth``) são preservados para
+    aparecem como opção em ``_list_orgaos_with_parent``) são preservados para
     não serem apagados silenciosamente. Sempre substitui o conjunto de vínculos
     (o form admin sempre envia o estado completo dos órgãos).
 

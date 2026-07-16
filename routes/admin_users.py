@@ -9,15 +9,16 @@ cortadas na migração SPA — o CRUD vive em ``/admin/usuarios*`` (SPA) +
 from models import OrgaoUnidade, db
 from services.govbr_oidc import normalize_cpf
 
-from .orgao_tree import compute_orgao_depth
 
-
-def _list_orgaos_with_depth():
-    """[(orgao_id, sigla, nome, depth)] ordenado por (depth, sigla) para UI de arvore."""
-    orgaos = OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True)).all()
-    rows = [(o.id, o.sigla, o.nome, compute_orgao_depth(o)) for o in orgaos]
-    rows.sort(key=lambda row: (row[3], row[1].lower()))
-    return rows
+def _list_orgaos_with_parent():
+    """[(orgao_id, sigla, nome, pai_id)] ordenado por sigla; a árvore é montada
+    por ``pai_id`` no client (irmãos ficam alfabéticos)."""
+    orgaos = (
+        OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True))
+        .order_by(OrgaoUnidade.sigla)
+        .all()
+    )
+    return [(o.id, o.sigla, o.nome, o.pai_id) for o in orgaos]
 
 
 def _parse_selected_orgaos(raw_ids):
