@@ -474,13 +474,13 @@
 		text-align: center;
 	}
 
+	/* SEM display:flex aqui: flex num <td> o tira do layout de tabela — a célula
+	   deixa de esticar até a altura da linha e a border-top desalinha das outras
+	   colunas (o "buraco" na divisória). Os filhos já empilham como blocos. */
 	.cell-desc {
 		width: 306px;
 		min-width: 306px;
 		padding-left: 0.4rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.05rem;
 	}
 	/* Mesma altura da caixa do .editable-field (editável) para que a descrição
 	   tenha altura constante entre os estados editável e concluído (read-only). */

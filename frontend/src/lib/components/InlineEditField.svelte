@@ -135,7 +135,10 @@
 	}
 
 	function commit(): void {
-		const trimmed = kind === 'date' || kind === 'select' ? draft : draft.trim();
+		// kind=text edita em textarea (wrap visual), mas o VALOR é de linha única:
+		// newlines colados/acidentais viram espaço.
+		const normalized = kind === 'text' ? draft.replace(/\s*\n\s*/g, ' ') : draft;
+		const trimmed = kind === 'date' || kind === 'select' ? normalized : normalized.trim();
 		editing = false;
 		if (trimmed !== (value ?? '')) {
 			optimisticValue = trimmed; // segura o valor novo no display até o servidor confirmar
@@ -174,7 +177,10 @@
 	<!-- ===== Modo CÉLULA: clique-para-editar, blur salva. kind=date mantém o
 	     botão de display montado (âncora) e abre o calendário custom. ===== -->
 	{#if editing && kind !== 'date'}
-		{#if kind === 'textarea'}
+		{#if kind === 'textarea' || kind === 'text'}
+			<!-- kind=text também edita em textarea auto-resize: valores longos sem
+			     espaço (URLs) mostram TUDO quebrando linha, em vez de input de linha
+			     única com scroll. Enter salva; newlines viram espaço no commit. -->
 			<textarea
 				bind:this={editorEl}
 				bind:value={draft}
@@ -355,6 +361,9 @@
 		width: 100%;
 		min-height: 1.75rem;
 		box-sizing: border-box;
+		/* URLs/tokens sem espaço (ex.: link de documentação) quebram dentro da
+		   caixa em vez de estourar o container. */
+		overflow-wrap: anywhere;
 		background: none;
 		border: 1px solid transparent;
 		border-radius: 8px;
@@ -417,6 +426,7 @@
 	.cell-editor-textarea {
 		resize: none;
 		overflow: hidden;
+		overflow-wrap: anywhere;
 	}
 	/* Datas/responsável: mesma altura mínima do display centralizado (30px). */
 	.cell-editor.centered {
