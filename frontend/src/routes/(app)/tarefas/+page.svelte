@@ -716,11 +716,9 @@
 		return `${group.key}::${sub}`;
 	}
 
-	// Colapso de PROJETOS e ETAPAS, persistido em localStorage (default: tudo
-	// expandido). Chaves separadas; o mesmo toggleSet serve aos dois conjuntos.
-	const COLLAPSE_STAGES_KEY = 'tarefas:list:collapsed:stages';
+	// Colapso de PROJETOS, persistido em localStorage (default: tudo expandido).
+	// Etapas não colapsam — só o projeto expande/retrai.
 	const COLLAPSE_PROJECTS_KEY = 'tarefas:list:collapsed:projects';
-	let collapsedStages = $state(new SvelteSet<string>());
 	let collapsedProjects = $state(new SvelteSet<string>());
 
 	function toggleSet(set: SvelteSet<string>, key: string): void {
@@ -739,17 +737,7 @@
 			// JSON corrompido / storage indisponível: começa tudo expandido.
 		}
 	}
-	hydrateSet(COLLAPSE_STAGES_KEY, collapsedStages);
 	hydrateSet(COLLAPSE_PROJECTS_KEY, collapsedProjects);
-
-	$effect(() => {
-		// Persiste sempre que o conjunto de etapas recolhidas mudar (best-effort).
-		try {
-			localStorage.setItem(COLLAPSE_STAGES_KEY, JSON.stringify([...collapsedStages]));
-		} catch {
-			// storage indisponível/cota: ignora.
-		}
-	});
 
 	$effect(() => {
 		// Persiste o conjunto de projetos recolhidos (best-effort).
@@ -1037,7 +1025,6 @@
 								<div class="flex flex-col gap-3 p-3">
 								{#each groupStages as stage (stageKey(group, stage))}
 									{@const sKey = stageKey(group, stage)}
-									{@const stCollapsed = collapsedStages.has(sKey)}
 									<div class="overflow-hidden rounded-lg border border-border-subtle">
 										<!-- Scroller horizontal UNICO: header de etapa (com labels) + linhas compartilham o mesmo scroll -> colunas alinhadas. -->
 										<div class="overflow-x-auto overflow-y-hidden">
@@ -1045,14 +1032,9 @@
 												stageCode={stage.tasks[0]?.etapa_display_id ?? null}
 												titulo={stage.titulo}
 												count={stage.tasks.length}
-												collapsed={stCollapsed}
-												onToggle={() => toggleSet(collapsedStages, sKey)}
-												controlsId={`stage-${sKey}`}
 											/>
 
-											<div class="task-collapse" data-collapsed={stCollapsed} id={`stage-${sKey}`}>
-												<div>
-												{#each stage.tasks as task (task.id)}
+											{#each stage.tasks as task (task.id)}
 													<TaskHubTaskRow
 														{task}
 														onOpen={(id) => openTask(id, 'list')}
@@ -1156,9 +1138,7 @@
 														<i class="fas fa-plus text-2xs text-primary-500" aria-hidden="true"></i>
 														Adicionar nova tarefa
 													</button>
-												{/if}
-												</div>
-											</div>
+											{/if}
 										</div>
 									</div>
 								{/each}
