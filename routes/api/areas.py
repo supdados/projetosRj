@@ -6,6 +6,10 @@ COMPLETO de ``OrgaoUnidade`` ativas para qualquer usuário logado — a busca é
 100% client-side no ``AreaResponsavelPicker`` (mesmo padrão do AssigneePicker).
 
 Anexa ao ``main_bp`` ÚNICO; NÃO cria blueprint novo.
+
+Payload inclui ``pai_id`` para permitir montagem de árvore client-side
+(mesmo padrão de ``serialize_orgao_option``, usado pelo picker de Responsável
+da etapa).
 """
 
 from __future__ import annotations
@@ -25,7 +29,7 @@ def api_areas_listar() -> Response | tuple[Response, int]:
     """Lista TODAS as áreas (OrgaoUnidade) ativas, ordenadas por sigla.
 
     Returns:
-        ``ok({"areas": [{"id", "sigla", "nome"}, ...]})`` (200); 401 sem sessão.
+        ``ok({"areas": [{"id", "sigla", "nome", "pai_id"}, ...]})`` (200); 401 sem sessão.
     """
     areas = (
         OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True))
@@ -33,5 +37,10 @@ def api_areas_listar() -> Response | tuple[Response, int]:
         .all()
     )
     return ok(
-        {"areas": [{"id": o.id, "sigla": o.sigla, "nome": o.nome} for o in areas]}
+        {
+            "areas": [
+                {"id": o.id, "sigla": o.sigla, "nome": o.nome, "pai_id": o.pai_id}
+                for o in areas
+            ]
+        }
     )

@@ -4,26 +4,43 @@
 	// Lista global de áreas: uma fetch por sessão de página; erro zera p/ retry.
 	let areasPromise: Promise<AreaOption[]> | null = null;
 
+	/** Candidato: `AreaOption` real ou o nó sintético "Outras" (value -1). */
 	interface AreaCandidate {
+		value: number;
+		pai_id: number | null;
+		sigla: string;
+		nome: string;
 		area_id: number | null;
-		label: string;
-		sublabel: string;
 	}
+
+	const OUTRAS: AreaCandidate = {
+		value: -1,
+		pai_id: null,
+		sigla: 'Outras',
+		nome: 'Área não cadastrada',
+		area_id: null
+	};
 </script>
 
 <script lang="ts">
 	/**
-	 * Picker multi-select de ÁREAS responsáveis da etapa (mudança #3).
+	 * Picker multi-select de ÁREAS responsáveis da etapa, BUSCA-FIRST: input com
+	 * autofocus filtra a lista achatada (o caminho hierárquico aparece como texto
+	 * secundário, sem árvore navegável) e a seção "Selecionadas" fica fixa no topo
+	 * do painel, imune ao filtro, com remoção em 1 clique. Lista TODAS as áreas
+	 * (sem filtro de escopo do usuário) + "Outras" (area_id null) por último.
 	 *
-	 * Adaptado do AssigneePicker: popover `position: fixed` que segue o gatilho
-	 * no scroll, busca client-side (sigla/nome), checkbox, teclado ↑/↓/Enter/Esc
-	 * e saves serializados single-flight latest-wins. A opção especial "Outras"
-	 * (area_id null) é SEMPRE o último candidato.
+	 * Painel no top layer (Popover API) — imune a overflow/transform de ancestrais
+	 * (célula de tabela, drawers). Saves serializados single-flight latest-wins; o
+	 * backend exige ≥1 área, então remover a última é bloqueado com aviso.
 	 */
 	import { tick } from 'svelte';
 	import '$lib/styles/stage-chips.css';
 	import { saveEtapaResponsaveis } from '$lib/api/areas';
+	import { ApiClientError } from '$lib/api/client';
+	import { flash } from '$lib/stores/flash';
 	import type { EtapaDetail, EtapaResponsavelArea } from '$lib/types/projectDetail';
+	import { buildOrgaoTree, flattenTreeWithPath, type OrgaoTreeRow } from '$lib/utils/orgaoTree';
 
 	interface Props {
 		/** Quando presente: modo PERSIST — cada toggle salva via POST /api/etapas/<id>/responsaveis. */
@@ -39,20 +56,21 @@
 
 	let { etapaId, selecionadas = $bindable([]), disabled = false, onChange, onSaved }: Props = $props();
 
-	const OUTRAS: AreaCandidate = { area_id: null, label: 'Outras', sublabel: 'Área não cadastrada' };
-
 	let open = $state(false);
-	let query = $state('');
+	let term = $state('');
+	let highlight = $state(0);
 	let allCandidates = $state<AreaCandidate[]>([]);
 	let candidatesLoaded = $state(false);
 	let loadingCandidates = $state(false);
-	let highlight = $state(-1);
-	let pos = $state<{ top: number; left: number; width: number; flip: boolean }>({
-		top: 0,
-		left: 0,
-		width: 280,
-		flip: false
-	});
+
+	interface PanelPos {
+		top: number | null;
+		bottom: number | null;
+		left: number;
+		width: number;
+		maxHeight: number;
+	}
+	let pos = $state<PanelPos>({ top: 0, bottom: null, left: 0, width: 280, maxHeight: 400 });
 
 	let triggerEl = $state<HTMLButtonElement | null>(null);
 	let popoverEl = $state<HTMLDivElement | null>(null);
@@ -79,14 +97,23 @@
 	const MAX_CHIPS = 2;
 	const visibleChips = $derived(lista.slice(0, MAX_CHIPS));
 	const overflowCount = $derived(Math.max(0, lista.length - MAX_CHIPS));
-	const selectedKeys = $derived(new Set(lista.map((s) => s.area_id ?? 'outras')));
+	const selectedKeys = $derived(new Set(lista.map((s) => s.area_id ?? -1)));
 
-	const filteredCandidates = $derived.by(() => {
-		const q = query.trim().toLowerCase();
-		if (!q) return allCandidates;
-		return allCandidates.filter(
-			(c) => c.label.toLowerCase().includes(q) || c.sublabel.toLowerCase().includes(q)
-		);
+	const listboxId = $derived(etapaId != null ? `arp-listbox-${etapaId}` : 'arp-listbox-local');
+	const optId = (index: number): string => `${listboxId}-opt-${index}`;
+
+	// Lista achatada com caminho hierárquico como `path`; `term` vazio = tudo.
+	// Todas as áreas descendem de GOVRJ — a raiz sai do caminho exibido.
+	const rows = $derived.by<OrgaoTreeRow<AreaCandidate>[]>(() =>
+		flattenTreeWithPath(buildOrgaoTree(allCandidates), term, { omitRootAncestor: true })
+	);
+
+	// Nome completo do item selecionado (para a linha da seção "Selecionadas").
+	const nomeByKey = $derived(new Map(allCandidates.map((c) => [c.area_id ?? -1, c.nome])));
+
+	$effect(() => {
+		term;
+		highlight = 0;
 	});
 
 	async function ensureCandidates(): Promise<void> {
@@ -95,13 +122,16 @@
 		try {
 			if (!areasPromise) areasPromise = fetchAreas().then((r) => r.areas);
 			const areas = await areasPromise;
-			const seen = new Set<string>();
-			const unicos = areas.filter((a) => {
-				if (seen.has(a.sigla)) return false;
-				seen.add(a.sigla);
-				return true;
-			});
-			allCandidates = [...unicos.map((a) => ({ area_id: a.id, label: a.sigla, sublabel: a.nome })), OUTRAS];
+			allCandidates = [
+				...areas.map((a) => ({
+					value: a.id,
+					pai_id: a.pai_id,
+					sigla: a.sigla,
+					nome: a.nome,
+					area_id: a.id
+				})),
+				OUTRAS
+			];
 		} catch {
 			allCandidates = [];
 			areasPromise = null; // permite novo retry
@@ -111,20 +141,33 @@
 		}
 	}
 
+	// Painel no top layer via Popover API — mesmo padrão do SelectMenu.
+	function activatePopover(node: HTMLElement): void {
+		if (typeof node.showPopover === 'function') node.showPopover();
+	}
+
 	function computePosition(): void {
 		if (!triggerEl) return;
 		const r = triggerEl.getBoundingClientRect();
-		const width = Math.min(320, Math.max(260, r.width));
-		const estimatedHeight = 320;
-		const flip = r.bottom + estimatedHeight > window.innerHeight && r.top > estimatedHeight;
-		const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
-		pos = { top: flip ? r.top : r.bottom + 4, left, width, flip };
+		const gap = 6;
+		const margin = 8;
+		const width = Math.min(448, Math.max(364, r.width), window.innerWidth - margin * 2);
+		const spaceBelow = window.innerHeight - r.bottom - gap - margin;
+		const spaceAbove = r.top - gap - margin;
+		const flip = spaceBelow < 240 && spaceAbove > spaceBelow;
+		pos = {
+			top: flip ? null : r.bottom + gap,
+			bottom: flip ? window.innerHeight - r.top + gap : null,
+			left: Math.min(Math.max(margin, r.left), window.innerWidth - width - margin),
+			width,
+			maxHeight: Math.min(420, Math.max(160, flip ? spaceAbove : spaceBelow))
+		};
 	}
 
 	async function openPicker(): Promise<void> {
 		if (disabled) return;
 		confirmed = [...lista];
-		query = '';
+		term = '';
 		highlight = 0;
 		await ensureCandidates();
 		computePosition();
@@ -168,7 +211,12 @@
 						onChange?.(lista);
 						onSaved?.(res.etapa);
 					}
-				} catch {
+				} catch (err) {
+					flash.danger(
+						err instanceof ApiClientError
+							? err.message
+							: 'Não foi possível salvar as áreas responsáveis.'
+					);
 					if (pendingAreas === null) {
 						lista = [...confirmed]; // reverte ao último confirmado pelo servidor
 						localDirty = false;
@@ -181,12 +229,12 @@
 		}
 	}
 
-	function toggle(candidate: AreaCandidate): void {
-		const key = candidate.area_id ?? 'outras';
-		const has = selectedKeys.has(key);
-		const next = has
-			? lista.filter((s) => (s.area_id ?? 'outras') !== key)
-			: [...lista, { area_id: candidate.area_id, label: candidate.label }];
+	/** Aplica a nova seleção; o backend exige ≥1 área, então bloqueia esvaziar. */
+	function applySelection(next: EtapaResponsavelArea[]): void {
+		if (etapaId != null && next.length === 0) {
+			flash.warning('A etapa precisa de ao menos uma área responsável.');
+			return;
+		}
 		lista = next;
 		onChange?.(next);
 		if (etapaId != null) {
@@ -199,6 +247,29 @@
 		}
 	}
 
+	function toggle(candidate: AreaCandidate): void {
+		const key = candidate.area_id ?? -1;
+		const has = selectedKeys.has(key);
+		applySelection(
+			has
+				? lista.filter((s) => (s.area_id ?? -1) !== key)
+				: [...lista, { area_id: candidate.area_id, label: candidate.sigla }]
+		);
+	}
+
+	function removeSelected(item: EtapaResponsavelArea): void {
+		const key = item.area_id ?? -1;
+		applySelection(lista.filter((s) => (s.area_id ?? -1) !== key));
+	}
+
+	function moveHighlight(step: number): void {
+		if (rows.length === 0) return;
+		highlight = (highlight + step + rows.length) % rows.length;
+		tick().then(() => {
+			document.getElementById(optId(highlight))?.scrollIntoView({ block: 'nearest' });
+		});
+	}
+
 	function onInputKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape') {
 			event.preventDefault();
@@ -206,25 +277,34 @@
 			triggerEl?.focus();
 			return;
 		}
+		if (event.key === 'Tab') {
+			closePicker();
+			return;
+		}
 		if (event.key === 'ArrowDown') {
 			event.preventDefault();
-			highlight = Math.min(highlight + 1, filteredCandidates.length - 1);
+			moveHighlight(1);
 			return;
 		}
 		if (event.key === 'ArrowUp') {
 			event.preventDefault();
-			highlight = Math.max(highlight - 1, 0);
+			moveHighlight(-1);
 			return;
 		}
 		if (event.key === 'Enter') {
 			event.preventDefault();
-			const candidate = filteredCandidates[highlight];
-			if (candidate) toggle(candidate);
+			const row = rows[highlight];
+			if (row) toggle(row.option);
+			return;
+		}
+		if (event.key === 'Backspace' && term === '' && lista.length > 0) {
+			event.preventDefault();
+			removeSelected(lista[lista.length - 1]);
 		}
 	}
 
-	// Fecha ao clicar fora; scroll/resize REPOSICIONAM o popover (fixed) para
-	// seguir o gatilho — fechar no scroll impedia até rolar a própria lista.
+	// Fecha ao clicar fora; scroll/resize REPOSICIONAM o popover para seguir o
+	// gatilho — fechar no scroll impedia até rolar a própria lista.
 	$effect(() => {
 		if (!open) return;
 		const onPointer = (e: MouseEvent) => {
@@ -288,59 +368,131 @@
 {#if open}
 	<div
 		bind:this={popoverEl}
-		role="listbox"
-		aria-label="Selecionar áreas responsáveis"
-		class="fixed z-dropdown w-[280px] overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
-		style="left: {pos.left}px; width: {pos.width}px; {pos.flip
-			? `bottom: ${window.innerHeight - pos.top + 4}px`
-			: `top: ${pos.top}px`}"
+		popover="manual"
+		use:activatePopover
+		class="arp-panel fixed z-dropdown flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
+		style:top={pos.top != null ? `${pos.top}px` : undefined}
+		style:bottom={pos.bottom != null ? `${pos.bottom}px` : undefined}
+		style:left="{pos.left}px"
+		style:width="{pos.width}px"
+		style:max-height="{pos.maxHeight}px"
 	>
-		<div class="flex items-center gap-2 border-b border-border-subtle px-3 py-2">
+		{#if lista.length > 0}
+			<div class="shrink-0 border-b border-border-subtle px-2 pb-1.5 pt-2">
+				<div class="px-1 pb-1 text-2xs font-bold uppercase tracking-[0.08em] text-text-muted">
+					Selecionadas
+				</div>
+				<ul class="thin-scroll flex max-h-[140px] flex-col overflow-y-auto">
+					{#each lista as item (item.area_id ?? item.label)}
+						<li class="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors duration-fast hover:bg-surface-muted">
+							<span class="shrink-0 font-mono text-[11.5px] font-bold text-text-primary">{item.label}</span>
+							<span
+								class="min-w-0 flex-1 truncate text-2xs text-text-muted"
+								title={nomeByKey.get(item.area_id ?? -1) ?? undefined}
+							>
+								{nomeByKey.get(item.area_id ?? -1) ?? ''}
+							</span>
+							<button
+								type="button"
+								onclick={() => removeSelected(item)}
+								aria-label={`Remover ${item.label}`}
+								title={`Remover ${item.label}`}
+								class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-text-muted transition-colors duration-fast hover:bg-border-subtle hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							>
+								<i class="fas fa-xmark text-2xs" aria-hidden="true"></i>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
+
+		<div class="flex shrink-0 items-center gap-2 border-b border-border-subtle px-3 py-2">
 			<i class="fas fa-magnifying-glass text-2xs text-text-muted" aria-hidden="true"></i>
 			<input
 				bind:this={inputEl}
-				bind:value={query}
-				oninput={() => (highlight = 0)}
+				bind:value={term}
 				onkeydown={onInputKeydown}
 				type="text"
+				role="combobox"
+				aria-expanded="true"
+				aria-controls={listboxId}
+				aria-activedescendant={rows.length > 0 ? optId(highlight) : undefined}
+				autocomplete="off"
 				placeholder="Buscar área..."
 				aria-label="Buscar áreas"
 				class="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
 			/>
 		</div>
-		<ul class="max-h-[40vh] overflow-y-auto py-1">
+
+		<!-- SEM flex-1: base 0 num flex-col de altura auto colapsa a lista para 0px;
+		     com basis auto ela cresce pelo conteúdo e encolhe (shrink) só quando o
+		     painel atinge o max-height. -->
+		<ul
+			id={listboxId}
+			role="listbox"
+			aria-multiselectable="true"
+			aria-label="Áreas disponíveis"
+			class="thin-scroll min-h-0 overflow-y-auto py-1"
+		>
 			{#if loadingCandidates}
 				<li class="px-3 py-2 text-xs text-text-muted">Carregando…</li>
-			{:else if filteredCandidates.length === 0}
+			{:else if rows.length === 0}
 				<li class="px-3 py-2 text-xs text-text-muted">Nenhuma área encontrada.</li>
 			{:else}
-				{#each filteredCandidates as candidate, i (candidate.area_id ?? 'outras')}
-					{@const selected = selectedKeys.has(candidate.area_id ?? 'outras')}
-					<li role="option" aria-selected={selected}>
-						<button
-							type="button"
-							onclick={() => toggle(candidate)}
-							onmouseenter={() => (highlight = i)}
-							class="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors duration-fast focus:outline-none {i ===
-							highlight
-								? 'bg-primary-100/50'
-								: 'hover:bg-surface-muted'}"
-						>
-							<span class="min-w-0 flex-1">
-								<span class="stage-resp-chip">{candidate.label}</span>
-							</span>
+				{#each rows as row, index (row.value)}
+					{@const selected = selectedKeys.has(row.option.area_id ?? -1)}
+					<!-- Mesma tipografia das linhas do OrgaoTreeSelect: caminho muted
+					     inline + sigla mono bold, sem chip/borda. -->
+					<li
+						id={optId(index)}
+						role="option"
+						aria-selected={selected}
+						tabindex="-1"
+						onclick={() => toggle(row.option)}
+						onmouseenter={() => (highlight = index)}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') {
+								e.preventDefault();
+								toggle(row.option);
+							}
+						}}
+						class="flex min-h-[30px] w-full cursor-pointer items-start gap-2 px-3 py-1.5 text-left transition-colors duration-fast {index ===
+						highlight
+							? 'bg-surface-muted'
+							: ''}"
+					>
+						<span class="mt-0.5 flex h-[16px] w-[18px] shrink-0 items-center justify-center">
 							{#if selected}
 								<i class="fas fa-check text-xs text-primary-600" aria-hidden="true"></i>
 							{/if}
-						</button>
+						</span>
+						<!-- Sem truncate: o caminho completo SEMPRE aparece, quebrando linha
+						     quando não couber. -->
+						<span class="min-w-0 flex-1 whitespace-normal break-words leading-snug" title={row.option.nome}>
+							{#if row.path}<span class="font-mono text-[11px] text-text-muted">{row.path} › </span
+								>{/if}<span class="font-mono text-[11.5px] font-bold text-text-primary"
+								>{row.option.sigla}</span
+							>
+						</span>
 					</li>
 				{/each}
 			{/if}
 		</ul>
+
+		<span class="sr-only" aria-live="polite">
+			{lista.length} {lista.length === 1 ? 'área selecionada' : 'áreas selecionadas'}
+		</span>
 	</div>
 {/if}
 
 <style>
+	/* Neutraliza a UA stylesheet de [popover] (inset:0 + margin:auto), que
+	   competiria com as coordenadas inline calculadas em JS. */
+	.arp-panel {
+		margin: 0;
+		inset: auto;
+	}
 	.stage-resp-chips {
 		display: inline-flex;
 		flex-wrap: wrap;

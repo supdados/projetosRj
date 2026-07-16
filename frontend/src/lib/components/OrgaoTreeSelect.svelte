@@ -10,6 +10,14 @@
 	 */
 	import { tick } from 'svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
+	import {
+		normalizeSearchText,
+		buildOrgaoTree,
+		computeDefaultExpanded,
+		buildOrgaoTreeRows,
+		type OrgaoTreeNode,
+		type OrgaoTreeRow
+	} from '$lib/utils/orgaoTree';
 
 	interface Props {
 		options: OrgaoSelectOption[];
@@ -38,23 +46,6 @@
 		fallbackLabel = null
 	}: Props = $props();
 
-	interface TreeNode {
-		value: number;
-		option: OrgaoSelectOption;
-		children: TreeNode[];
-	}
-
-	interface Row {
-		value: number;
-		sigla: string | null;
-		nome: string | null;
-		depth: number;
-		hasChildren: boolean;
-		expanded: boolean;
-		path: string;
-		isSearch: boolean;
-	}
-
 	let open = $state(false);
 	let term = $state('');
 	let inputEl = $state<HTMLInputElement | null>(null);
@@ -65,49 +56,11 @@
 
 	const listboxId = $derived(id ? `${id}-listbox` : 'orgao-tree-listbox');
 
-	const COMBINING_MARKS = /[̀-ͯ]/g;
-	const norm = (s: string | null | undefined): string =>
-		(s ?? '').normalize('NFD').replace(COMBINING_MARKS, '').toLowerCase();
+	const norm = normalizeSearchText;
 
-	const isSubsecretaria = (nome: string | null): boolean =>
-		norm(nome).startsWith('subsecretaria');
+	const tree = $derived.by<OrgaoTreeNode<OrgaoSelectOption>[]>(() => buildOrgaoTree(options));
 
-	/** Monta a árvore por `pai_id`, preservando a ordem de chegada. */
-	const tree = $derived.by<TreeNode[]>(() => {
-		const byId = new Map<number, TreeNode>();
-		for (const option of options) {
-			byId.set(Number(option.value), { value: Number(option.value), option, children: [] });
-		}
-		const roots: TreeNode[] = [];
-		for (const option of options) {
-			const node = byId.get(Number(option.value))!;
-			const parentId = option.pai_id;
-			const parent = parentId == null ? undefined : byId.get(Number(parentId));
-			if (parent) parent.children.push(node);
-			else roots.push(node);
-		}
-		return roots;
-	});
-
-	/**
-	 * Default de expansão (spec, exigência do usuário): raízes sempre expandidas;
-	 * nó "Subsecretaria..." e TODOS os seus descendentes expandidos; demais nós
-	 * expandidos só quando têm ≤ 7 filhos diretos.
-	 */
-	const defaultExpanded = $derived.by<Set<number>>(() => {
-		const out = new Set<number>();
-		const seed = (nodes: TreeNode[], force: boolean, isRoot: boolean): void => {
-			for (const node of nodes) {
-				const sub = isSubsecretaria(node.option.nome);
-				if (node.children.length > 0) {
-					if (isRoot || force || sub || node.children.length <= 7) out.add(node.value);
-				}
-				seed(node.children, force || sub, false);
-			}
-		};
-		seed(tree, false, true);
-		return out;
-	});
+	const defaultExpanded = $derived.by<Set<number>>(() => computeDefaultExpanded(tree));
 
 	const isExpanded = (v: number): boolean =>
 		overrides.has(v) ? overrides.get(v)! : defaultExpanded.has(v);
@@ -118,51 +71,9 @@
 		overrides = next;
 	}
 
-	/** Linhas visíveis: árvore respeitando expansão, ou matches achatados na busca. */
-	const rows = $derived.by<Row[]>(() => {
-		const query = norm(term.trim());
-		const out: Row[] = [];
-		if (query) {
-			const walk = (nodes: TreeNode[], ancestors: TreeNode[]): void => {
-				for (const node of nodes) {
-					if (norm(node.option.sigla).includes(query) || norm(node.option.nome).includes(query)) {
-						out.push({
-							value: node.value,
-							sigla: node.option.sigla,
-							nome: node.option.nome,
-							depth: 0,
-							hasChildren: false,
-							expanded: false,
-							path: ancestors.map((a) => a.option.sigla || a.option.nome || '').join(' › '),
-							isSearch: true
-						});
-					}
-					walk(node.children, [...ancestors, node]);
-				}
-			};
-			walk(tree, []);
-			return out;
-		}
-		const flatten = (nodes: TreeNode[], depth: number): void => {
-			for (const node of nodes) {
-				const hasChildren = node.children.length > 0;
-				const expanded = isExpanded(node.value);
-				out.push({
-					value: node.value,
-					sigla: node.option.sigla,
-					nome: node.option.nome,
-					depth,
-					hasChildren,
-					expanded,
-					path: '',
-					isSearch: false
-				});
-				if (hasChildren && expanded) flatten(node.children, depth + 1);
-			}
-		};
-		flatten(tree, 0);
-		return out;
-	});
+	const rows = $derived.by<OrgaoTreeRow<OrgaoSelectOption>[]>(() =>
+		buildOrgaoTreeRows(tree, isExpanded, term)
+	);
 
 	const selected = $derived(
 		value == null ? null : (options.find((o) => Number(o.value) === Number(value)) ?? null)
@@ -365,10 +276,10 @@
 								<span class="h-[5px] w-[5px] rounded-full bg-primary-500" aria-hidden="true"></span>
 							{/if}
 						</div>
-						<span class="min-w-0 flex-1 truncate" title={row.nome ?? undefined}>
+						<span class="min-w-0 flex-1 truncate" title={row.option.nome ?? undefined}>
 							{#if row.path}<span class="font-mono text-[11px] text-text-muted">{row.path} › </span
 								>{/if}<span class="font-mono text-[11.5px] font-bold text-text-primary"
-								>{row.sigla ?? row.nome ?? ''}</span
+								>{row.option.sigla ?? row.option.nome ?? ''}</span
 							>
 						</span>
 						{#if isSelected}

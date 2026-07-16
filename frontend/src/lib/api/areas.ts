@@ -10,6 +10,7 @@ export interface AreaOption {
 	id: number;
 	sigla: string;
 	nome: string;
+	pai_id: number | null;
 }
 
 /** GET /api/areas — TODAS as áreas ativas (busca é client-side). */
