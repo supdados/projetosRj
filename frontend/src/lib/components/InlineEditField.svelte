@@ -15,6 +15,7 @@
 	 */
 	import { tick } from 'svelte';
 	import SelectMenu from './SelectMenu.svelte';
+	import DatePickerPanel from './DatePickerPanel.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 
 	type FieldKind = 'text' | 'textarea' | 'select' | 'date';
@@ -65,6 +66,9 @@
 	let editing = $state(false);
 	let draft = $state('');
 	let editorEl = $state<HTMLInputElement | HTMLTextAreaElement | null>(null);
+	// Âncora do calendário (kind=date): o próprio botão de display permanece
+	// montado e o painel abre ancorado nele.
+	let dateAnchorEl = $state<HTMLElement | null>(null);
 	// Valor otimista: mostrado entre o blur e a confirmação do servidor para que o
 	// campo não pisque de volta no valor antigo enquanto a API responde.
 	let optimisticValue = $state<string | null>(null);
@@ -139,6 +143,12 @@
 		}
 	}
 
+	/** Confirma a data escolhida no calendário (null = limpar). */
+	function commitDate(iso: string | null): void {
+		draft = iso ?? '';
+		commit();
+	}
+
 	function cancel(): void {
 		editing = false;
 		draft = value ?? '';
@@ -161,8 +171,9 @@
 </script>
 
 {#if variant === 'cell'}
-	<!-- ===== Modo CÉLULA: clique-para-editar, blur salva ===== -->
-	{#if editing}
+	<!-- ===== Modo CÉLULA: clique-para-editar, blur salva. kind=date mantém o
+	     botão de display montado (âncora) e abre o calendário custom. ===== -->
+	{#if editing && kind !== 'date'}
 		{#if kind === 'textarea'}
 			<textarea
 				bind:this={editorEl}
@@ -182,7 +193,7 @@
 				bind:this={editorEl}
 				bind:value={draft}
 				id={fieldId}
-				type={kind === 'date' ? 'date' : 'text'}
+				type="text"
 				disabled={pending}
 				aria-label={label}
 				class="cell-editor cell-editor-input"
@@ -193,16 +204,29 @@
 		{/if}
 	{:else}
 		<button
+			bind:this={dateAnchorEl}
 			type="button"
 			class="editable-field"
 			class:centered
 			class:editable-field-empty={!hasValue}
 			disabled={readonly || pending}
 			aria-label={label ? `Editar ${label}` : 'Editar campo'}
-			onclick={enterEdit}
+			aria-expanded={kind === 'date' ? editing : undefined}
+			onclick={() => (editing ? cancel() : void enterEdit())}
 		>
 			{#if display}{@render display(shownValue)}{:else if hasValue}{shownValue}{:else}{emptyLabel}{/if}
 		</button>
+	{/if}
+	{#if editing && kind === 'date' && dateAnchorEl}
+		<DatePickerPanel
+			anchor={dateAnchorEl}
+			value={shownValue || null}
+			allowClear
+			ariaLabel={label || 'Selecionar data'}
+			onPick={(iso) => commitDate(iso)}
+			onClear={() => commitDate(null)}
+			onClose={cancel}
+		/>
 	{/if}
 	{#if error}
 		<span id={errorId} role="alert" class="cell-error">{error}</span>

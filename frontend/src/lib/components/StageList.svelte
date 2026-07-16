@@ -18,6 +18,7 @@
 	 */
 	import StageRow from './StageRow.svelte';
 	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
+	import DatePickerPanel from './DatePickerPanel.svelte';
 	import type { EtapaDetail, EtapaInlineField, EtapaResponsavelArea } from '$lib/types/projectDetail';
 	import '$lib/styles/stage-chips.css';
 
@@ -245,6 +246,29 @@
 		done: false
 	});
 
+	// Date picker custom do composer (mesmo calendário das células/calendário).
+	let composerDateField = $state<'data_inicio' | 'data_fim' | null>(null);
+	let composerDateAnchors = $state<Record<'data_inicio' | 'data_fim', HTMLElement | null>>({
+		data_inicio: null,
+		data_fim: null
+	});
+
+	function toggleComposerDate(field: 'data_inicio' | 'data_fim'): void {
+		composerDateField = composerDateField === field ? null : field;
+	}
+
+	function pickComposerDate(iso: string | null): void {
+		if (composerDateField) draft[composerDateField] = iso ?? '';
+		composerDateField = null;
+	}
+
+	/** dd/mm/aaaa para exibição no trigger do composer; ISO fica no draft. */
+	function composerDateLabel(iso: string): string {
+		if (!iso) return '';
+		const [y, m, d] = iso.split('-');
+		return `${d}/${m}/${y}`;
+	}
+
 	const composerStatusState = $derived(draft.done ? 'done' : draft.iniciada ? 'started' : 'idle');
 	const composerStatusLabel = $derived(
 		composerStatusState === 'done'
@@ -333,7 +357,8 @@
 			closeComposer();
 		} else if (event.key === 'Enter' && !event.shiftKey) {
 			const target = event.target as HTMLElement;
-			if (target?.closest('.composer-status-btn')) return;
+			// Enter no status/data alterna o próprio controle, não submete o form.
+			if (target?.closest('.composer-status-btn, .composer-date-trigger')) return;
 			event.preventDefault();
 			submitComposer();
 		}
@@ -444,24 +469,57 @@
 								></textarea>
 							</td>
 							<td class="cell-date">
-								<label class="sr-only" for="composer-data-inicio">Data de início</label>
-								<input
+								<button
 									id="composer-data-inicio"
-									type="date"
-									bind:value={draft.data_inicio}
-									class="composer-input"
+									bind:this={composerDateAnchors.data_inicio}
+									type="button"
+									aria-label="Data de início"
+									aria-expanded={composerDateField === 'data_inicio'}
+									onclick={() => toggleComposerDate('data_inicio')}
 									onkeydown={composerKeydown}
-								/>
+									class="composer-input composer-date-trigger"
+									class:composer-date-trigger--empty={!draft.data_inicio}
+								>
+									{composerDateLabel(draft.data_inicio) || 'Sem data'}
+								</button>
+								{#if composerDateField === 'data_inicio' && composerDateAnchors.data_inicio}
+									<DatePickerPanel
+										anchor={composerDateAnchors.data_inicio}
+										value={draft.data_inicio || null}
+										allowClear
+										ariaLabel="Data de início"
+										onPick={pickComposerDate}
+										onClear={() => pickComposerDate(null)}
+										onClose={() => (composerDateField = null)}
+									/>
+								{/if}
 							</td>
 							<td class="cell-date">
-								<label class="sr-only" for="composer-data-fim">Data de fim</label>
-								<input
+								<button
 									id="composer-data-fim"
-									type="date"
-									bind:value={draft.data_fim}
-									class="composer-input"
+									bind:this={composerDateAnchors.data_fim}
+									type="button"
+									aria-label="Data de fim"
+									aria-expanded={composerDateField === 'data_fim'}
+									onclick={() => toggleComposerDate('data_fim')}
 									onkeydown={composerKeydown}
-								/>
+									class="composer-input composer-date-trigger"
+									class:composer-date-trigger--empty={!draft.data_fim}
+								>
+									{composerDateLabel(draft.data_fim) || 'Sem data'}
+								</button>
+								{#if composerDateField === 'data_fim' && composerDateAnchors.data_fim}
+									<DatePickerPanel
+										anchor={composerDateAnchors.data_fim}
+										value={draft.data_fim || null}
+										allowClear
+										ariaLabel="Data de fim"
+										min={draft.data_inicio || null}
+										onPick={pickComposerDate}
+										onClear={() => pickComposerDate(null)}
+										onClose={() => (composerDateField = null)}
+									/>
+								{/if}
 							</td>
 							<td class="cell-responsavel">
 								<AreaResponsavelPicker bind:selecionadas={draft.responsaveis} />
@@ -701,6 +759,14 @@
 		outline: none;
 		border-color: var(--ds-color-primary-500);
 		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
+	}
+	.composer-date-trigger {
+		cursor: pointer;
+		text-align: center;
+		font-variant-numeric: tabular-nums;
+	}
+	.composer-date-trigger--empty {
+		color: var(--color-text-muted);
 	}
 	.etapa-task-pill-placeholder {
 		color: var(--color-text-muted);
