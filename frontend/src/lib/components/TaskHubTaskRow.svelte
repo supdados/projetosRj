@@ -302,7 +302,7 @@
 </script>
 
 <div class="group/row border-b border-border-subtle last:border-b-0">
-	<div class="task-hub-grid px-3 py-2 transition-colors duration-fast {commentsOpen ? '' : 'hover:bg-primary-100'}">
+	<div class="task-hub-grid px-3 py-2 transition-colors duration-fast {commentsOpen ? '' : 'hover:bg-surface-muted'}">
 		<!-- Descrição: texto abre o drawer; caneta habilita edição inline -->
 		{#if editingDesc}
 			<!-- svelte-ignore a11y_autofocus -->
@@ -336,44 +336,51 @@
 			</div>
 		{/if}
 
-		<!-- Prioridade (chip editável via SelectMenu) -->
-		<SelectMenu
-			options={prioridadeMenuOptions}
-			value={task.prioridade ?? ''}
-			onSelect={(v) => saveField({ prioridade: v || null })}
-			disabled={savingField}
-			id={`${panelId}-prioridade`}
-			ariaLabel="Prioridade"
-			size="sm"
-			unstyled
-			trigger={prioridadeTrigger}
-		/>
+		<!-- Prioridade (chip editável via SelectMenu; wrapper text-center alinha o
+		     chip ao centro da coluna, como o cabeçalho) -->
+		<div class="text-center">
+			<SelectMenu
+				options={prioridadeMenuOptions}
+				value={task.prioridade ?? ''}
+				onSelect={(v) => saveField({ prioridade: v || null })}
+				disabled={savingField}
+				id={`${panelId}-prioridade`}
+				ariaLabel="Prioridade"
+				size="sm"
+				unstyled
+				trigger={prioridadeTrigger}
+			/>
+		</div>
 
 		<!-- Tipo (chip editável via SelectMenu) -->
-		<SelectMenu
-			options={tipoMenuOptions}
-			value={task.tipo_pedido ?? ''}
-			onSelect={(v) => saveField({ tipo_pedido: v || null })}
-			disabled={savingField}
-			id={`${panelId}-tipo`}
-			ariaLabel="Tipo de pedido"
-			size="sm"
-			unstyled
-			trigger={tipoTrigger}
-		/>
+		<div class="text-center">
+			<SelectMenu
+				options={tipoMenuOptions}
+				value={task.tipo_pedido ?? ''}
+				onSelect={(v) => saveField({ tipo_pedido: v || null })}
+				disabled={savingField}
+				id={`${panelId}-tipo`}
+				ariaLabel="Tipo de pedido"
+				size="sm"
+				unstyled
+				trigger={tipoTrigger}
+			/>
+		</div>
 
 		<!-- Status (chip editável via SelectMenu; rota própria) -->
-		<SelectMenu
-			options={statusMenuOptions}
-			value={task.status}
-			onSelect={(v) => changeStatus(v ?? task.status, statusChipEl ?? undefined)}
-			disabled={savingField}
-			id={`${panelId}-status`}
-			ariaLabel="Status"
-			size="sm"
-			unstyled
-			trigger={statusTrigger}
-		/>
+		<div class="text-center">
+			<SelectMenu
+				options={statusMenuOptions}
+				value={task.status}
+				onSelect={(v) => changeStatus(v ?? task.status, statusChipEl ?? undefined)}
+				disabled={savingField}
+				id={`${panelId}-status`}
+				ariaLabel="Status"
+				size="sm"
+				unstyled
+				trigger={statusTrigger}
+			/>
+		</div>
 
 		<!-- Responsáveis (múltiplos): avatares de iniciais + popover de busca -->
 		<AssigneePicker taskId={task.id} bind:assignees disabled={savingField} />
@@ -493,27 +500,44 @@
 	{/if}
 </div>
 
-{#snippet prioridadeTrigger({ selected }: { selected: SelectMenuOption | null })}
+{#snippet chipCaret(open: boolean)}
+	<svg
+		width="8"
+		height="5"
+		viewBox="0 0 10 6"
+		class="shrink-0 opacity-60 transition-transform duration-fast"
+		style:transform={open ? 'rotate(180deg)' : 'none'}
+		aria-hidden="true"
+	>
+		<path
+			d="M1 1 L5 5 L9 1"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="1.8"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		/>
+	</svg>
+{/snippet}
+
+{#snippet prioridadeTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}
 	<span class="{chipClass(prioridadeTone(task.prioridade))} {CHIP_TRIGGER} gap-1">
-		{#if selected?.dot}
-			<span class="h-1.5 w-1.5 shrink-0 rounded-full" style:background={selected.dot}></span>
-		{/if}
 		{selected?.label ?? '—'}
+		{@render chipCaret(open)}
 	</span>
 {/snippet}
 
-{#snippet tipoTrigger({ selected }: { selected: SelectMenuOption | null })}
-	<span class="{chipClass(task.tipo_pedido ? 'primary' : 'neutral')} {CHIP_TRIGGER}">
+{#snippet tipoTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}
+	<span class="{chipClass(task.tipo_pedido ? 'primary' : 'neutral')} {CHIP_TRIGGER} gap-1">
 		{selected?.label ?? '—'}
+		{@render chipCaret(open)}
 	</span>
 {/snippet}
 
-{#snippet statusTrigger({ selected }: { selected: SelectMenuOption | null })}
+{#snippet statusTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}
 	<span bind:this={statusChipEl} class="{chipClass(statusTone(task.status))} {CHIP_TRIGGER} gap-1">
-		{#if selected?.dot}
-			<span class="h-1.5 w-1.5 shrink-0 rounded-full" style:background={selected.dot}></span>
-		{/if}
 		{selected?.label ?? statusLabel(task.status)}
+		{@render chipCaret(open)}
 	</span>
 {/snippet}
 

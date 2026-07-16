@@ -9,7 +9,7 @@
  */
 
 /** Tons do `Badge` (= união aceita por `Badge.svelte`). */
-export type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+export type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'orange' | 'danger' | 'info';
 
 const STATUS_LABEL: Record<string, string> = {
 	nao_iniciada: 'Não iniciada',
@@ -43,10 +43,12 @@ const PRIORIDADE_LABEL: Record<string, string> = {
 	urgente: 'Urgente'
 };
 
+// Tons alinhados aos dots do SelectMenu (--ds-color-priority-*): baixa verde,
+// média amarelo, alta laranja, urgente vermelho.
 const PRIORIDADE_TONE: Record<string, BadgeTone> = {
-	baixa: 'neutral',
-	media: 'info',
-	alta: 'warning',
+	baixa: 'success',
+	media: 'warning',
+	alta: 'orange',
 	urgente: 'danger'
 };
 
@@ -95,10 +97,11 @@ export const CHIP_BASE =
 	'inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md border px-2 py-1 text-[11px] font-semibold uppercase leading-none tracking-wide';
 
 const CHIP_TONE: Record<BadgeTone, string> = {
-	neutral: 'border-border-subtle bg-surface-muted text-text-secondary dark:border-white/10',
-	primary: 'border-primary-500/30 bg-primary-100 text-primary-700 dark:border-white/10',
+	neutral: 'border-border-subtle bg-surface text-text-secondary dark:border-white/10',
+	primary: 'border-primary-500/30 bg-primary-500/10 text-primary-700 dark:border-white/10',
 	info: 'border-info/30 bg-info/10 text-info dark:border-white/10',
 	warning: 'border-warning/40 bg-warning/10 text-warning dark:border-white/10',
+	orange: 'border-orange/40 bg-orange/10 text-orange dark:border-white/10',
 	success: 'border-success/40 bg-success/10 text-success dark:border-white/10',
 	danger: 'border-danger/40 bg-danger/10 text-danger dark:border-white/10'
 };
