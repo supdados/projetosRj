@@ -3,8 +3,8 @@
 	 * Linha de tarefa do hub (modo lista) — nível 3 da hierarquia
 	 * Projeto → Etapa → Tarefa. Edição INLINE na própria linha:
 	 *   - descrição: caneta ao lado → textarea inline (Enter salva, Esc cancela);
-	 *   - prioridade/tipo/status/responsável: <select> editável estilo-chip (clica,
-	 *     abre o dropdown, escolhe) — salva direto via API e revalida a lista;
+	 *   - prioridade/tipo/status/responsável: chip editável (SelectMenu unstyled,
+	 *     clica, abre o dropdown, escolhe) — salva direto via API e revalida a lista;
 	 *   - comentários: painel inline expansível sob a linha (CommentsPanel + store
 	 *     por linha, lazy); anexos: o ícone abre o seletor de arquivo direto.
 	 * O clique na descrição (texto) abre o TaskDrawer completo.
@@ -30,6 +30,8 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import InlineCommentsTree from '$lib/components/InlineCommentsTree.svelte';
 	import AttachmentLightbox from '$lib/components/AttachmentLightbox.svelte';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 
 	interface Props {
 		task: TaskCard;
@@ -65,12 +67,43 @@
 		{ value: 'finalizada', label: 'Finalizada' }
 	];
 
-	// Classe base do <select> estilo-chip (some o caret nativo; clica e abre o
-	// dropdown). A cor vem do chipClass do tom atual.
-	// `text-align-last: center` centraliza o VALOR exibido do <select> de forma
-	// confiável entre navegadores (Safari/macOS não respeita só `text-center`).
-	const SELECT_CHIP =
-		'w-full cursor-pointer appearance-none text-center [text-align-last:center] disabled:opacity-50';
+	// Trigger do SelectMenu unstyled: o próprio chip (chipClass do tom atual).
+	const CHIP_TRIGGER = 'w-full cursor-pointer';
+
+	// Dots dos chips: mesmas cores já usadas no hub (priority-* tokens e tons de
+	// STATUS_TONE/STATUS_BAR_CLASS de taskLabels.ts), não inventadas aqui.
+	const PRIORIDADE_DOT: Record<string, string> = {
+		baixa: 'var(--ds-color-priority-baixa)',
+		media: 'var(--ds-color-priority-media)',
+		alta: 'var(--ds-color-priority-alta)',
+		urgente: 'var(--ds-color-priority-urgente)'
+	};
+	const STATUS_DOT: Record<string, string> = {
+		nao_iniciada: 'var(--color-text-muted)',
+		em_andamento: 'var(--ds-color-info-600)',
+		para_validacao: 'var(--ds-color-primary-500)',
+		para_ajustes: 'var(--ds-color-warning-600)',
+		finalizada: 'var(--ds-color-success-600)'
+	};
+
+	const prioridadeMenuOptions: SelectMenuOption[] = PRIORIDADE_OPTS.map((opt) => ({
+		value: opt.value,
+		label: opt.label,
+		dot: PRIORIDADE_DOT[opt.value]
+	}));
+	const tipoMenuOptions: SelectMenuOption[] = TIPO_OPTS.map((opt) => ({
+		value: opt.value,
+		label: opt.label
+	}));
+	const statusMenuOptions: SelectMenuOption[] = STATUS_OPTS.map((opt) => ({
+		value: opt.value,
+		label: statusLabel(opt.value),
+		dot: STATUS_DOT[opt.value]
+	}));
+
+	// Referência do chip de status: origem do confete de finalização (mesmo ponto
+	// que antes era `e.currentTarget` do <select> nativo).
+	let statusChipEl = $state<HTMLElement | null>(null);
 
 	let savingField = $state(false);
 
@@ -303,44 +336,44 @@
 			</div>
 		{/if}
 
-		<!-- Prioridade (select estilo-chip) -->
-		<select
+		<!-- Prioridade (chip editável via SelectMenu) -->
+		<SelectMenu
+			options={prioridadeMenuOptions}
 			value={task.prioridade ?? ''}
+			onSelect={(v) => saveField({ prioridade: v || null })}
 			disabled={savingField}
-			aria-label="Prioridade"
-			onchange={(e) => saveField({ prioridade: e.currentTarget.value || null })}
-			class="{chipClass(prioridadeTone(task.prioridade))} {SELECT_CHIP}"
-		>
-			{#each PRIORIDADE_OPTS as opt (opt.value)}
-				<option value={opt.value}>{opt.label}</option>
-			{/each}
-		</select>
+			id={`${panelId}-prioridade`}
+			ariaLabel="Prioridade"
+			size="sm"
+			unstyled
+			trigger={prioridadeTrigger}
+		/>
 
-		<!-- Tipo (select estilo-chip) -->
-		<select
+		<!-- Tipo (chip editável via SelectMenu) -->
+		<SelectMenu
+			options={tipoMenuOptions}
 			value={task.tipo_pedido ?? ''}
+			onSelect={(v) => saveField({ tipo_pedido: v || null })}
 			disabled={savingField}
-			aria-label="Tipo de pedido"
-			onchange={(e) => saveField({ tipo_pedido: e.currentTarget.value || null })}
-			class="{chipClass(task.tipo_pedido ? 'primary' : 'neutral')} {SELECT_CHIP}"
-		>
-			{#each TIPO_OPTS as opt (opt.value)}
-				<option value={opt.value}>{opt.label}</option>
-			{/each}
-		</select>
+			id={`${panelId}-tipo`}
+			ariaLabel="Tipo de pedido"
+			size="sm"
+			unstyled
+			trigger={tipoTrigger}
+		/>
 
-		<!-- Status (select estilo-chip; rota própria) -->
-		<select
+		<!-- Status (chip editável via SelectMenu; rota própria) -->
+		<SelectMenu
+			options={statusMenuOptions}
 			value={task.status}
+			onSelect={(v) => changeStatus(v ?? task.status, statusChipEl ?? undefined)}
 			disabled={savingField}
-			aria-label="Status"
-			onchange={(e) => changeStatus(e.currentTarget.value, e.currentTarget)}
-			class="{chipClass(statusTone(task.status))} {SELECT_CHIP}"
-		>
-			{#each STATUS_OPTS as opt (opt.value)}
-				<option value={opt.value}>{statusLabel(opt.value)}</option>
-			{/each}
-		</select>
+			id={`${panelId}-status`}
+			ariaLabel="Status"
+			size="sm"
+			unstyled
+			trigger={statusTrigger}
+		/>
 
 		<!-- Responsáveis (múltiplos): avatares de iniciais + popover de busca -->
 		<AssigneePicker taskId={task.id} bind:assignees disabled={savingField} />
@@ -459,6 +492,30 @@
 		</Modal>
 	{/if}
 </div>
+
+{#snippet prioridadeTrigger({ selected }: { selected: SelectMenuOption | null })}
+	<span class="{chipClass(prioridadeTone(task.prioridade))} {CHIP_TRIGGER} gap-1">
+		{#if selected?.dot}
+			<span class="h-1.5 w-1.5 shrink-0 rounded-full" style:background={selected.dot}></span>
+		{/if}
+		{selected?.label ?? '—'}
+	</span>
+{/snippet}
+
+{#snippet tipoTrigger({ selected }: { selected: SelectMenuOption | null })}
+	<span class="{chipClass(task.tipo_pedido ? 'primary' : 'neutral')} {CHIP_TRIGGER}">
+		{selected?.label ?? '—'}
+	</span>
+{/snippet}
+
+{#snippet statusTrigger({ selected }: { selected: SelectMenuOption | null })}
+	<span bind:this={statusChipEl} class="{chipClass(statusTone(task.status))} {CHIP_TRIGGER} gap-1">
+		{#if selected?.dot}
+			<span class="h-1.5 w-1.5 shrink-0 rounded-full" style:background={selected.dot}></span>
+		{/if}
+		{selected?.label ?? statusLabel(task.status)}
+	</span>
+{/snippet}
 
 <style>
 	.trash-btn:hover:not(:disabled) {

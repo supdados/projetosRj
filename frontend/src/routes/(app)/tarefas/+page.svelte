@@ -52,6 +52,8 @@
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
@@ -434,6 +436,43 @@
 		...ADD_TIPO_OPTIONS.slice(1),
 		{ value: 'implementacao', label: 'Implementação' }
 	];
+
+	// Dots dos SelectMenu de prioridade/status — mesmas cores dos chips/barra da
+	// lista (taskLabels.ts: PRIORIDADE_TONE/STATUS_TONE/STATUS_BAR_CLASS), via
+	// tokens do design system (sem hex hardcoded).
+	const PRIORIDADE_DOT: Record<string, string> = {
+		baixa: 'var(--ds-color-priority-baixa)',
+		media: 'var(--ds-color-priority-media)',
+		alta: 'var(--ds-color-priority-alta)',
+		urgente: 'var(--ds-color-priority-urgente)'
+	};
+	const STATUS_DOT: Record<string, string> = {
+		nao_iniciada: 'var(--color-text-muted)',
+		em_andamento: 'var(--ds-color-info-600)',
+		para_validacao: 'var(--ds-color-primary-500)',
+		para_ajustes: 'var(--ds-color-warning-600)',
+		finalizada: 'var(--ds-color-success-600)'
+	};
+
+	// Opções dos SelectMenu — derivadas das constantes acima (sem duplicar dados).
+	// Prioridade e Status são compartilhadas entre o filtro (allowAll) e o form
+	// inline; Tipo difere (filtro inclui o legado "implementacao").
+	const prioridadeSelectOptions = $derived<SelectMenuOption[]>(
+		ADD_PRIORIDADE_OPTIONS.slice(1).map((o) => ({
+			value: o.value,
+			label: o.label,
+			dot: PRIORIDADE_DOT[o.value]
+		}))
+	);
+	const statusSelectOptions = $derived<SelectMenuOption[]>(
+		ADD_STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label, dot: STATUS_DOT[o.value] }))
+	);
+	const tipoFilterSelectOptions = $derived<SelectMenuOption[]>(
+		FILTER_TIPO_OPTIONS.map((o) => ({ value: o.value, label: o.label }))
+	);
+	const tipoFormSelectOptions = $derived<SelectMenuOption[]>(
+		ADD_TIPO_OPTIONS.slice(1).map((o) => ({ value: o.value, label: o.label }))
+	);
 
 	// Chave do grupo cujo form de adição está aberto (só um por vez), + rascunho.
 	// "+ Nova tarefa" POR ETAPA: só um form aberto por vez (chave = stageKey). A
@@ -848,44 +887,50 @@
 			/>
 		</div>
 
-		<select
-			id="filter_prioridade"
-			bind:value={prioridade}
-			onchange={reloadActiveView}
-			aria-label="Filtrar por prioridade"
-			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-		>
-			<option value="">Todas as prioridades</option>
-			{#each ADD_PRIORIDADE_OPTIONS.slice(1) as option (option.value)}
-				<option value={option.value}>{option.label}</option>
-			{/each}
-		</select>
+		<div class="min-w-[10rem] flex-1">
+			<SelectMenu
+				id="filter_prioridade"
+				options={prioridadeSelectOptions}
+				value={prioridade || null}
+				onSelect={(v) => {
+					prioridade = v ?? '';
+					reloadActiveView();
+				}}
+				allowAll
+				allLabel="Todas as prioridades"
+				ariaLabel="Filtrar por prioridade"
+			/>
+		</div>
 
-		<select
-			id="filter_tipo"
-			bind:value={tipo}
-			onchange={reloadActiveView}
-			aria-label="Filtrar por tipo"
-			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-		>
-			<option value="">Todos os tipos</option>
-			{#each FILTER_TIPO_OPTIONS as option (option.value)}
-				<option value={option.value}>{option.label}</option>
-			{/each}
-		</select>
+		<div class="min-w-[10rem] flex-1">
+			<SelectMenu
+				id="filter_tipo"
+				options={tipoFilterSelectOptions}
+				value={tipo || null}
+				onSelect={(v) => {
+					tipo = v ?? '';
+					reloadActiveView();
+				}}
+				allowAll
+				allLabel="Todos os tipos"
+				ariaLabel="Filtrar por tipo"
+			/>
+		</div>
 
-		<select
-			id="filter_status"
-			bind:value={statusFilter}
-			onchange={reloadActiveView}
-			aria-label="Filtrar por status"
-			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-		>
-			<option value="">Todos os status</option>
-			{#each ADD_STATUS_OPTIONS as option (option.value)}
-				<option value={option.value}>{option.label}</option>
-			{/each}
-		</select>
+		<div class="min-w-[10rem] flex-1">
+			<SelectMenu
+				id="filter_status"
+				options={statusSelectOptions}
+				value={statusFilter || null}
+				onSelect={(v) => {
+					statusFilter = v ?? '';
+					reloadActiveView();
+				}}
+				allowAll
+				allLabel="Todos os status"
+				ariaLabel="Filtrar por status"
+			/>
+		</div>
 
 		{#if hasActiveFilters}
 			<button
@@ -1043,36 +1088,34 @@
 																aria-label="Descrição da tarefa"
 																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60 2xl:text-sm"
 															></textarea>
-															<select
-																bind:value={addDraft.prioridade}
+															<SelectMenu
+																size="sm"
+																options={prioridadeSelectOptions}
+																value={addDraft.prioridade || null}
+																onSelect={(v) => (addDraft.prioridade = v ?? '')}
 																disabled={addDraft.saving}
-																aria-label="Prioridade"
-																class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-															>
-																{#each ADD_PRIORIDADE_OPTIONS as opt (opt.value)}
-																	<option value={opt.value}>{opt.label}</option>
-																{/each}
-															</select>
-															<select
-																bind:value={addDraft.tipo}
+																placeholder="Prioridade"
+																ariaLabel="Prioridade"
+															/>
+															<SelectMenu
+																size="sm"
+																options={tipoFormSelectOptions}
+																value={addDraft.tipo || null}
+																onSelect={(v) => (addDraft.tipo = v ?? '')}
 																disabled={addDraft.saving}
-																aria-label="Tipo de pedido"
-																class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-															>
-																{#each ADD_TIPO_OPTIONS as opt (opt.value)}
-																	<option value={opt.value}>{opt.label}</option>
-																{/each}
-															</select>
-															<select
-																bind:value={addDraft.status}
+																placeholder="Tipo"
+																ariaLabel="Tipo de pedido"
+															/>
+															<SelectMenu
+																size="sm"
+																options={statusSelectOptions}
+																value={addDraft.status}
+																onSelect={(v) => {
+																	if (v) addDraft.status = v;
+																}}
 																disabled={addDraft.saving}
-																aria-label="Status"
-																class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-															>
-																{#each ADD_STATUS_OPTIONS as opt (opt.value)}
-																	<option value={opt.value}>{opt.label}</option>
-																{/each}
-															</select>
+																ariaLabel="Status"
+															/>
 															<AssigneePicker
 																projectValue={addTarget?.projectValue}
 																bind:assignees={addDraft.assignees}

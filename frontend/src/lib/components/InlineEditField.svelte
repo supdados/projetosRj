@@ -14,6 +14,8 @@
 	 * devolve `pending`/`error`.
 	 */
 	import { tick } from 'svelte';
+	import SelectMenu from './SelectMenu.svelte';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 
 	type FieldKind = 'text' | 'textarea' | 'select' | 'date';
 	type Variant = 'block' | 'cell';
@@ -62,13 +64,16 @@
 
 	let editing = $state(false);
 	let draft = $state('');
-	let editorEl = $state<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null);
+	let editorEl = $state<HTMLInputElement | HTMLTextAreaElement | null>(null);
 	// Valor otimista: mostrado entre o blur e a confirmação do servidor para que o
 	// campo não pisque de volta no valor antigo enquanto a API responde.
 	let optimisticValue = $state<string | null>(null);
 	let sawPending = $state(false);
 
 	const errorId = $derived(`${fieldId}-error`);
+	const selectMenuOptions = $derived<SelectMenuOption[]>(
+		options.map((opt) => ({ value: opt.value, label: opt.label }))
+	);
 	// O que o display realmente mostra (otimista tem prioridade sobre o prop).
 	const shownValue = $derived(optimisticValue ?? value);
 	const hasValue = $derived(shownValue !== null && shownValue !== '');
@@ -108,7 +113,12 @@
 		draft = shownValue ?? '';
 		editing = true;
 		await tick();
-		editorEl?.focus();
+		// SelectMenu não é bind:this-ável (não é um elemento nativo) — foca pelo id.
+		if (kind === 'select') {
+			document.getElementById(fieldId)?.focus();
+		} else {
+			editorEl?.focus();
+		}
 		// Cursor no FIM (sem selecionar tudo): quem edita geralmente quer
 		// acrescentar. Só text/textarea — input de data não suporta
 		// setSelectionRange (lança InvalidStateError).
@@ -223,21 +233,14 @@
 						class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 					></textarea>
 				{:else if kind === 'select'}
-					<select
-						bind:this={editorEl}
-						bind:value={draft}
+					<SelectMenu
 						id={fieldId}
+						options={selectMenuOptions}
+						value={draft || null}
+						onSelect={(v) => (draft = v ?? '')}
 						disabled={pending}
-						aria-labelledby={`${fieldId}-label`}
-						aria-describedby={error ? errorId : undefined}
-						aria-invalid={error ? 'true' : undefined}
-						onkeydown={onKeydown}
-						class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-					>
-						{#each options as opt (opt.value)}
-							<option value={opt.value}>{opt.label}</option>
-						{/each}
-					</select>
+						ariaLabel={label}
+					/>
 				{:else}
 					<input
 						bind:this={editorEl}

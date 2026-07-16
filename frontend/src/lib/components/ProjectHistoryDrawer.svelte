@@ -22,6 +22,8 @@
 	import { fetchProjectHistory } from '$lib/api/history';
 	import { ApiClientError } from '$lib/api/client';
 	import { focusTrap } from '$lib/actions/focusTrap';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type { HistoryEntry } from '$lib/types/history';
 
 	interface Props {
@@ -98,6 +100,29 @@
 	let searchTerm = $state<string>('');
 	let typeFilter = $state<'all' | 'project' | 'stage' | 'system'>('all');
 	let periodFilter = $state<'all' | '7d' | '30d' | '90d'>('all');
+
+	const TYPE_FILTER_LABELS: Record<'project' | 'stage' | 'system', string> = {
+		project: 'Projeto',
+		stage: 'Etapas',
+		system: 'Sistema'
+	};
+	const typeFilterOptions = $derived<SelectMenuOption[]>(
+		(Object.keys(TYPE_FILTER_LABELS) as Array<keyof typeof TYPE_FILTER_LABELS>).map((value) => ({
+			value,
+			label: TYPE_FILTER_LABELS[value]
+		}))
+	);
+
+	const PERIOD_FILTER_LABELS: Record<'7d' | '30d' | '90d', string> = {
+		'7d': '7 dias',
+		'30d': '30 dias',
+		'90d': '90 dias'
+	};
+	const periodFilterOptions = $derived<SelectMenuOption[]>(
+		(Object.keys(PERIOD_FILTER_LABELS) as Array<keyof typeof PERIOD_FILTER_LABELS>).map(
+			(value) => ({ value, label: PERIOD_FILTER_LABELS[value] })
+		)
+	);
 
 	function entryTextBlob(entry: HistoryEntry): string {
 		return [
@@ -270,26 +295,25 @@
 					aria-label="Buscar no histórico"
 					class="h-8 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
 				/>
-				<select
-					bind:value={typeFilter}
-					aria-label="Tipo de evento"
-					class="h-8 shrink-0 cursor-pointer rounded-md border border-border-subtle bg-surface px-2 text-xs text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<option value="all">Todos</option>
-					<option value="project">Projeto</option>
-					<option value="stage">Etapas</option>
-					<option value="system">Sistema</option>
-				</select>
-				<select
-					bind:value={periodFilter}
-					aria-label="Período"
-					class="h-8 shrink-0 cursor-pointer rounded-md border border-border-subtle bg-surface px-2 text-xs text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<option value="all">Todo período</option>
-					<option value="7d">7 dias</option>
-					<option value="30d">30 dias</option>
-					<option value="90d">90 dias</option>
-				</select>
+				<div class="w-36 shrink-0">
+					<SelectMenu
+						options={typeFilterOptions}
+						value={typeFilter === 'all' ? null : typeFilter}
+						onSelect={(v) => (typeFilter = (v as typeof typeFilter) ?? 'all')}
+						allowAll
+						ariaLabel="Tipo de evento"
+					/>
+				</div>
+				<div class="w-36 shrink-0">
+					<SelectMenu
+						options={periodFilterOptions}
+						value={periodFilter === 'all' ? null : periodFilter}
+						onSelect={(v) => (periodFilter = (v as typeof periodFilter) ?? 'all')}
+						allowAll
+						allLabel="Todo período"
+						ariaLabel="Período"
+					/>
+				</div>
 			</div>
 		{/if}
 	</header>

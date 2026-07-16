@@ -28,6 +28,8 @@
 	import type { BoardCard } from '$lib/types/board';
 	import type { EtapaDetail } from '$lib/types/projectDetail';
 	import type { TaskStatus } from '$lib/utils/taskStatus';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 
 	interface Props {
 		/** Status (coluna) onde a tarefa será criada. */
@@ -72,24 +74,32 @@
 	let responsavelOptions = $state<{ id: number; name: string }[]>([]);
 
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
-	let projectEl = $state<HTMLSelectElement | null>(null);
+	const PROJECT_TRIGGER_ID = `kanban-composer-project-${status}`;
 
-	const PRIORIDADE_OPTIONS = [
-		{ value: '', label: 'Prioridade' },
-		{ value: 'baixa', label: 'Baixa' },
-		{ value: 'media', label: 'Média' },
-		{ value: 'alta', label: 'Alta' },
-		{ value: 'urgente', label: 'Urgente' }
+	const PRIORIDADE_OPTIONS: SelectMenuOption[] = [
+		{ value: 'baixa', label: 'Baixa', dot: 'var(--ds-color-priority-baixa)' },
+		{ value: 'media', label: 'Média', dot: 'var(--ds-color-priority-media)' },
+		{ value: 'alta', label: 'Alta', dot: 'var(--ds-color-priority-alta)' },
+		{ value: 'urgente', label: 'Urgente', dot: 'var(--ds-color-priority-urgente)' }
 	];
 	// Sem "implementacao": é tipo LEGADO (`LEGACY_TIPOS`) — a criação via
 	// /api/tarefas só aceita VALID_TIPOS e descartaria o valor silenciosamente.
-	const TIPO_OPTIONS = [
-		{ value: '', label: 'Tipo' },
+	const TIPO_OPTIONS: SelectMenuOption[] = [
 		{ value: 'bug', label: 'Bug' },
 		{ value: 'melhoria', label: 'Melhoria' },
 		{ value: 'duvida', label: 'Dúvida' },
 		{ value: 'outros', label: 'Outros' }
 	];
+
+	const etapaMenuOptions = $derived<SelectMenuOption[]>(
+		etapaOptions.map((e) => ({
+			value: String(e.id),
+			label: `${e.descricao ?? `Etapa ${e.id}`}${e.done ? ' (concluída)' : ''}`
+		}))
+	);
+	const responsavelMenuOptions = $derived<SelectMenuOption[]>(
+		responsavelOptions.map((u) => ({ value: u.name, label: u.name }))
+	);
 
 	function requestOpen(): void {
 		onRequestOpen(status);
@@ -185,7 +195,7 @@
 		// Sem projeto: aviso inline + foca o picker (paridade com o alert legado).
 		if (!project) {
 			errorMessage = 'Selecione um projeto para criar a tarefa.';
-			projectEl?.focus();
+			document.getElementById(PROJECT_TRIGGER_ID)?.focus();
 			return;
 		}
 
@@ -236,32 +246,33 @@
 			void submit();
 		}}
 	>
-		<select
-			bind:this={projectEl}
-			bind:value={project}
-			onchange={() => void onProjectChange()}
+		<SelectMenu
+			id={PROJECT_TRIGGER_ID}
+			options={projectOptions}
+			value={project || null}
+			onSelect={(v) => {
+				project = v ?? '';
+				void onProjectChange();
+			}}
 			disabled={saving}
-			aria-label="Projeto"
-			class="rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
-		>
-			<option value="">Selecione o projeto…</option>
-			{#each projectOptions as option (option.value)}
-				<option value={option.value}>{option.label}</option>
-			{/each}
-		</select>
+			searchable
+			size="sm"
+			placeholder="Selecione o projeto…"
+			ariaLabel="Projeto"
+		/>
 
 		{#if project}
-			<select
-				bind:value={etapa}
+			<SelectMenu
+				options={etapaMenuOptions}
+				value={etapa || null}
+				onSelect={(v) => (etapa = v ?? '')}
 				disabled={saving || etapaLoading}
-				aria-label="Etapa"
-				class="rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
-			>
-				<option value="">{etapaLoading ? 'Carregando etapas…' : 'Sem etapa'}</option>
-				{#each etapaOptions as e (e.id)}
-					<option value={e.id}>{e.descricao ?? `Etapa ${e.id}`}{e.done ? ' (concluída)' : ''}</option>
-				{/each}
-			</select>
+				searchable
+				size="sm"
+				allowAll
+				allLabel={etapaLoading ? 'Carregando etapas…' : 'Sem etapa'}
+				ariaLabel="Etapa"
+			/>
 		{/if}
 
 		<textarea
@@ -276,40 +287,42 @@
 		></textarea>
 
 		{#if project && responsavelOptions.length > 0}
-			<select
-				bind:value={responsavel}
+			<SelectMenu
+				options={responsavelMenuOptions}
+				value={responsavel || null}
+				onSelect={(v) => (responsavel = v ?? '')}
 				disabled={saving}
-				aria-label="Responsável"
-				class="rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
-			>
-				<option value="">Sem responsável</option>
-				{#each responsavelOptions as user (user.id)}
-					<option value={user.name}>{user.name}</option>
-				{/each}
-			</select>
+				searchable
+				size="sm"
+				allowAll
+				allLabel="Sem responsável"
+				ariaLabel="Responsável"
+			/>
 		{/if}
 
 		<div class="flex gap-2">
-			<select
-				bind:value={prioridade}
-				disabled={saving}
-				aria-label="Prioridade"
-				class="flex-1 rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
-			>
-				{#each PRIORIDADE_OPTIONS as opt (opt.value)}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
-			<select
-				bind:value={tipo}
-				disabled={saving}
-				aria-label="Tipo de pedido"
-				class="flex-1 rounded-lg border border-border-subtle bg-surface px-2 py-1.5 text-xs text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
-			>
-				{#each TIPO_OPTIONS as opt (opt.value)}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
+			<div class="flex-1">
+				<SelectMenu
+					options={PRIORIDADE_OPTIONS}
+					value={prioridade || null}
+					onSelect={(v) => (prioridade = v ?? '')}
+					disabled={saving}
+					size="sm"
+					placeholder="Prioridade"
+					ariaLabel="Prioridade"
+				/>
+			</div>
+			<div class="flex-1">
+				<SelectMenu
+					options={TIPO_OPTIONS}
+					value={tipo || null}
+					onSelect={(v) => (tipo = v ?? '')}
+					disabled={saving}
+					size="sm"
+					placeholder="Tipo"
+					ariaLabel="Tipo de pedido"
+				/>
+			</div>
 		</div>
 
 		{#if errorMessage}

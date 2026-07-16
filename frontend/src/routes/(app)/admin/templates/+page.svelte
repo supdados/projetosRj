@@ -47,6 +47,8 @@
 	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import AdminTemplatesSkeleton from '$lib/components/skeletons/AdminTemplatesSkeleton.svelte';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type ViewMode = 'list' | 'form';
@@ -133,6 +135,9 @@
 			'edicao_recente'
 		]
 	);
+	const orderSelectOptions = $derived<SelectMenuOption[]>(
+		orderOptions.map((opt) => ({ value: opt, label: ORDER_LABELS[opt] }))
+	);
 	const meta = $derived(data?.meta ?? null);
 	const totalTemplates = $derived(data?.meta.total ?? 0);
 	const hasActiveFilters = $derived(search.trim() !== '' || order !== DEFAULT_ORDER);
@@ -202,8 +207,8 @@
 		void load();
 	}
 
-	function onOrderChange(event: Event): void {
-		order = (event.currentTarget as HTMLSelectElement).value as TemplateOrder;
+	function onOrderChange(next: TemplateOrder): void {
+		order = next;
 		page = 1;
 		void load();
 	}
@@ -627,22 +632,24 @@
 			</div>
 
 			<div class="ml-auto flex items-center gap-2">
-				<label
+				<div
 					class="inline-flex h-9 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-secondary transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted"
 				>
 					<i class="fas fa-sliders-h text-text-muted" aria-hidden="true"></i>
 					<span class="text-text-muted">Ordenar por:</span>
-					<select
+					<SelectMenu
 						id="tplOrder"
+						unstyled
+						options={orderSelectOptions}
 						value={order}
-						onchange={onOrderChange}
-						class="cursor-pointer border-none bg-transparent text-sm font-semibold text-text-primary focus:outline-none"
+						onSelect={(v) => onOrderChange((v as TemplateOrder) ?? DEFAULT_ORDER)}
+						ariaLabel="Ordenar por"
 					>
-						{#each orderOptions as opt (opt)}
-							<option value={opt}>{ORDER_LABELS[opt]}</option>
-						{/each}
-					</select>
-				</label>
+						{#snippet trigger({ label })}
+							<span class="cursor-pointer text-sm font-semibold text-text-primary">{label}</span>
+						{/snippet}
+					</SelectMenu>
+				</div>
 
 				{#if hasActiveFilters}
 					<button

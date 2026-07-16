@@ -28,6 +28,7 @@
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
 	import type { TaskDrawerPayload } from '$lib/types/taskDrawer';
 	import type { TaskAssignee } from '$lib/types/tasks';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { ApiClientError } from '$lib/api/client';
 	import { fetchProjectDetail } from '$lib/api/projectDetail';
 	import type { EtapaDetail } from '$lib/types/projectDetail';
@@ -37,6 +38,7 @@
 	import AssigneePicker from './AssigneePicker.svelte';
 	import InlineCommentsTree from './InlineCommentsTree.svelte';
 	import AttachmentsPanel from './AttachmentsPanel.svelte';
+	import SelectMenu from './SelectMenu.svelte';
 
 	interface Props {
 		store: TaskDrawerStore;
@@ -44,19 +46,17 @@
 
 	let { store }: Props = $props();
 
-	const PRIORIDADE_OPTIONS = [
-		{ value: '', label: '—' },
-		{ value: 'baixa', label: 'Baixa' },
-		{ value: 'media', label: 'Média' },
-		{ value: 'alta', label: 'Alta' },
-		{ value: 'urgente', label: 'Urgente' }
+	const PRIORIDADE_OPTIONS: SelectMenuOption[] = [
+		{ value: 'baixa', label: 'Baixa', dot: 'var(--ds-color-priority-baixa)' },
+		{ value: 'media', label: 'Média', dot: 'var(--ds-color-priority-media)' },
+		{ value: 'alta', label: 'Alta', dot: 'var(--ds-color-priority-alta)' },
+		{ value: 'urgente', label: 'Urgente', dot: 'var(--ds-color-priority-urgente)' }
 	];
 
 	// Sem "implementacao" por padrão: é tipo LEGADO (`LEGACY_TIPOS`) e o save
 	// rejeita com 422 ("Tipo inválido."). A opção entra SÓ quando a tarefa já
 	// carrega o valor (exibição correta do legado, sem oferecê-lo a novas).
-	const TIPO_OPTIONS = [
-		{ value: '', label: '—' },
+	const TIPO_OPTIONS: SelectMenuOption[] = [
 		{ value: 'bug', label: 'Bug' },
 		{ value: 'melhoria', label: 'Melhoria' },
 		{ value: 'duvida', label: 'Dúvida' },
@@ -66,7 +66,7 @@
 	const isOpen = $derived($store.status !== 'closed');
 	const detail = $derived($store.detail);
 
-	const tipoOptions = $derived(
+	const tipoOptions = $derived<SelectMenuOption[]>(
 		detail?.tipo_pedido === 'implementacao'
 			? [...TIPO_OPTIONS, { value: 'implementacao', label: 'Implementação (legado)' }]
 			: TIPO_OPTIONS
@@ -133,6 +133,13 @@
 	let etapaError = $state<string | null>(null);
 	let loadedEtapasForProject = $state<number | null>(null);
 
+	const etapaSelectOptions = $derived<SelectMenuOption[]>(
+		etapaOptions.map((etapa) => ({
+			value: String(etapa.id),
+			label: `${etapa.descricao ?? `Etapa ${etapa.id}`}${etapa.done ? ' (concluída)' : ''}`
+		}))
+	);
+
 	async function toggleChooseEtapa(): Promise<void> {
 		choosingEtapa = !choosingEtapa;
 		etapaWarning = null;
@@ -154,9 +161,8 @@
 		}
 	}
 
-	async function onChooseEtapa(event: Event): Promise<void> {
-		const value = (event.currentTarget as HTMLSelectElement).value;
-		if (value === '') return;
+	async function onChooseEtapa(value: string | null): Promise<void> {
+		if (value === null) return;
 		etapaWarning = null;
 		etapaError = null;
 		const result = await store.moveEtapa(Number(value));
@@ -188,14 +194,6 @@
 
 	function onDescricao(event: Event): void {
 		store.editField({ descricao: (event.currentTarget as HTMLTextAreaElement).value });
-	}
-	function onPrioridade(event: Event): void {
-		const v = (event.currentTarget as HTMLSelectElement).value;
-		store.editField({ prioridade: v === '' ? null : v });
-	}
-	function onTipo(event: Event): void {
-		const v = (event.currentTarget as HTMLSelectElement).value;
-		store.editField({ tipo_pedido: v === '' ? null : v });
 	}
 	function flush(): void {
 		void store.flush();
@@ -382,20 +380,16 @@
 									Carregando etapas…
 								</p>
 							{:else}
-								<select
-									aria-label="Associar tarefa à etapa"
-									value=""
-									onchange={onChooseEtapa}
+								<SelectMenu
+									id="drawer-etapa-select"
+									ariaLabel="Associar tarefa à etapa"
+									options={etapaSelectOptions}
+									value={null}
+									onSelect={(v) => void onChooseEtapa(v)}
+									placeholder="Escolha a etapa…"
 									disabled={$store.acting}
-									class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
-								>
-									<option value="" disabled>Escolha a etapa…</option>
-									{#each etapaOptions as etapa (etapa.id)}
-										<option value={etapa.id}>
-											{etapa.descricao ?? `Etapa ${etapa.id}`}{etapa.done ? ' (concluída)' : ''}
-										</option>
-									{/each}
-								</select>
+									searchable
+								/>
 							{/if}
 							{#if etapaWarning}
 								<p role="status" aria-live="polite" class="m-0 text-xs text-warning">{etapaWarning}</p>
@@ -435,17 +429,16 @@
 							>
 								Prioridade
 							</label>
-							<select
+							<SelectMenu
 								id="drawer-prioridade"
-								value={detail.prioridade ?? ''}
-								onchange={onPrioridade}
+								ariaLabel="Prioridade"
+								options={PRIORIDADE_OPTIONS}
+								value={detail.prioridade ?? null}
+								onSelect={(v) => store.editField({ prioridade: v })}
+								allowAll
+								allLabel="—"
 								disabled={!detail.permissions.can_edit}
-								class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
-							>
-								{#each PRIORIDADE_OPTIONS as opt (opt.value)}
-									<option value={opt.value}>{opt.label}</option>
-								{/each}
-							</select>
+							/>
 						</div>
 
 						<div class="flex min-w-0 flex-col gap-1">
@@ -455,17 +448,16 @@
 							>
 								Tipo
 							</label>
-							<select
+							<SelectMenu
 								id="drawer-tipo"
-								value={detail.tipo_pedido ?? ''}
-								onchange={onTipo}
+								ariaLabel="Tipo"
+								options={tipoOptions}
+								value={detail.tipo_pedido ?? null}
+								onSelect={(v) => store.editField({ tipo_pedido: v })}
+								allowAll
+								allLabel="—"
 								disabled={!detail.permissions.can_edit}
-								class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none disabled:opacity-60"
-							>
-								{#each tipoOptions as opt (opt.value)}
-									<option value={opt.value}>{opt.label}</option>
-								{/each}
-							</select>
+							/>
 						</div>
 
 						<div class="flex min-w-0 flex-col gap-1">

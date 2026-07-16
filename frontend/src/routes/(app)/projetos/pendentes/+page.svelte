@@ -37,6 +37,8 @@
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import PendentesSkeleton from '$lib/components/skeletons/PendentesSkeleton.svelte';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import { flash } from '$lib/stores/flash';
 
@@ -80,11 +82,11 @@
 	const DEBOUNCE_MS = 300;
 
 	/** Opções de prioridade (lista canônica; o backend filtra por igualdade). */
-	const PRIORIDADE_OPTIONS: { value: string; label: string }[] = [
-		{ value: 'baixa', label: 'Baixa' },
-		{ value: 'media', label: 'Média' },
-		{ value: 'alta', label: 'Alta' },
-		{ value: 'urgente', label: 'Urgente' }
+	const PRIORIDADE_OPTIONS: SelectMenuOption[] = [
+		{ value: 'baixa', label: 'Baixa', dot: 'var(--ds-color-priority-baixa)' },
+		{ value: 'media', label: 'Média', dot: 'var(--ds-color-priority-media)' },
+		{ value: 'alta', label: 'Alta', dot: 'var(--ds-color-priority-alta)' },
+		{ value: 'urgente', label: 'Urgente', dot: 'var(--ds-color-priority-urgente)' }
 	];
 
 	// Filtros controlados pela UI; a busca acontece server-side.
@@ -181,8 +183,8 @@
 		}
 	}
 
-	function onPeriodoChange(event: Event): void {
-		periodo = (event.currentTarget as HTMLSelectElement).value as PendingPeriodo;
+	function onPeriodoSelect(value: string | null): void {
+		periodo = (value ?? 'atrasados') as PendingPeriodo;
 		page = 1;
 		void load();
 	}
@@ -204,14 +206,14 @@
 		void load();
 	}
 
-	function onResponsavelChange(event: Event): void {
-		responsavel = (event.currentTarget as HTMLSelectElement).value;
+	function onResponsavelSelect(value: string | null): void {
+		responsavel = value ?? '';
 		page = 1;
 		void load();
 	}
 
-	function onPrioridadeChange(event: Event): void {
-		prioridade = (event.currentTarget as HTMLSelectElement).value;
+	function onPrioridadeSelect(value: string | null): void {
+		prioridade = value ?? '';
 		page = 1;
 		void load();
 	}
@@ -325,6 +327,12 @@
 	const pagination = $derived(data?.pagination ?? null);
 	/** Opções de período rotuladas pelo backend (`period_options`). */
 	const periodOptions = $derived(data?.period_options ?? []);
+	const periodoMenuOptions = $derived<SelectMenuOption[]>(
+		periodOptions.map((option) => ({ value: option.value, label: option.label }))
+	);
+	const responsavelMenuOptions = $derived<SelectMenuOption[]>(
+		(data?.responsaveis_options ?? []).map((nome) => ({ value: nome, label: nome }))
+	);
 	/**
 	 * Rótulo da janela ativa. Deriva do estado local `periodo` (já definido no
 	 * primeiro render) via `PERIOD_LABELS`, então o subtítulo aparece JUNTO com o
@@ -426,18 +434,16 @@
 			/>
 		</div>
 
-		<select
-			id="periodoFilter"
-			value={periodo}
-			onchange={onPeriodoChange}
-			disabled={periodOptions.length === 0}
-			aria-label="Filtrar por período"
-			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-		>
-			{#each periodOptions as option (option.value)}
-				<option value={option.value}>{option.label}</option>
-			{/each}
-		</select>
+		<div class="min-w-[10rem] flex-1">
+			<SelectMenu
+				id="periodoFilter"
+				options={periodoMenuOptions}
+				value={periodo}
+				onSelect={onPeriodoSelect}
+				disabled={periodOptions.length === 0}
+				ariaLabel="Filtrar por período"
+			/>
+		</div>
 
 		{#if data && data.orgaos_options.length > 1}
 			<div class="min-w-[10rem] flex-1">
@@ -453,34 +459,30 @@
 			</div>
 		{/if}
 
-		<select
-			id="responsavelFilter"
-			value={responsavel}
-			onchange={onResponsavelChange}
-			disabled={!data || data.responsaveis_options.length === 0}
-			aria-label="Filtrar por responsável"
-			class="h-9 min-w-[10rem] flex-1 truncate rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-		>
-			<option value="">Todos os responsáveis</option>
-			{#if data}
-				{#each data.responsaveis_options as nome (nome)}
-					<option value={nome}>{nome}</option>
-				{/each}
-			{/if}
-		</select>
+		<div class="min-w-[10rem] flex-1">
+			<SelectMenu
+				id="responsavelFilter"
+				options={responsavelMenuOptions}
+				value={responsavel || null}
+				onSelect={onResponsavelSelect}
+				disabled={!data || data.responsaveis_options.length === 0}
+				allowAll
+				allLabel="Todos os responsáveis"
+				ariaLabel="Filtrar por responsável"
+			/>
+		</div>
 
-		<select
-			id="prioridadeFilter"
-			value={prioridade}
-			onchange={onPrioridadeChange}
-			aria-label="Filtrar por prioridade"
-			class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-		>
-			<option value="">Todas as prioridades</option>
-			{#each PRIORIDADE_OPTIONS as option (option.value)}
-				<option value={option.value}>{option.label}</option>
-			{/each}
-		</select>
+		<div class="min-w-[10rem] flex-1">
+			<SelectMenu
+				id="prioridadeFilter"
+				options={PRIORIDADE_OPTIONS}
+				value={prioridade || null}
+				onSelect={onPrioridadeSelect}
+				allowAll
+				allLabel="Todas as prioridades"
+				ariaLabel="Filtrar por prioridade"
+			/>
+		</div>
 
 		{#if hasActiveFilters}
 			<button

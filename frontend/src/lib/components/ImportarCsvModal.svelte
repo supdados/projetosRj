@@ -12,8 +12,10 @@
 	import { importProjectsCsv } from '$lib/api/projects';
 	import type { ProjectsListOptions } from '$lib/types/projects';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import Modal from '$lib/components/Modal.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
 
 	interface Props {
 		open: boolean;
@@ -25,6 +27,11 @@
 	let { open, options, onClose, onImported }: Props = $props();
 
 	const STATUS_OPTIONS = ['Vigente', 'Suspenso', 'Finalizado'];
+	const STATUS_DOT: Record<string, string> = {
+		Vigente: 'var(--ds-color-success-600)',
+		Suspenso: 'var(--ds-color-warning-600)',
+		Finalizado: 'var(--ds-color-primary-500)'
+	};
 
 	let file = $state<File | null>(null);
 	let orgaoId = $state<string>('');
@@ -49,6 +56,16 @@
 	);
 	const deliveryTypes = $derived(options?.delivery_types_options ?? []);
 	const specialOptions = $derived(options?.special_projects_options ?? []);
+
+	const statusMenuOptions = $derived<SelectMenuOption[]>(
+		STATUS_OPTIONS.map((opt) => ({ value: opt, label: opt, dot: STATUS_DOT[opt] }))
+	);
+	const deliveryMenuOptions = $derived<SelectMenuOption[]>(
+		deliveryTypes.map((opt) => ({ value: opt, label: opt }))
+	);
+	const specialMenuOptions = $derived<SelectMenuOption[]>(
+		specialOptions.map((opt) => ({ value: opt, label: opt }))
+	);
 
 	const canSubmit = $derived(!submitting && file !== null && orgaoId.trim().length > 0);
 
@@ -149,43 +166,48 @@
 				</div>
 
 				<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-					<label class="flex flex-col gap-1 text-sm">
-						<span class="font-semibold text-text-secondary">Status</span>
-						<select
-							bind:value={status}
-							class="h-9 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none"
-						>
-							{#each STATUS_OPTIONS as opt (opt)}
-								<option value={opt}>{opt}</option>
-							{/each}
-						</select>
-					</label>
+					<div class="flex flex-col gap-1 text-sm">
+						<label for="import-csv-status" class="font-semibold text-text-secondary">
+							Status
+						</label>
+						<SelectMenu
+							id="import-csv-status"
+							options={statusMenuOptions}
+							value={status}
+							onSelect={(v) => (status = v ?? status)}
+							ariaLabel="Status"
+						/>
+					</div>
 
-					<label class="flex flex-col gap-1 text-sm">
-						<span class="font-semibold text-text-secondary">Tipo de entrega</span>
-						<select
-							bind:value={deliveryType}
-							class="h-9 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none"
-						>
-							<option value="">—</option>
-							{#each deliveryTypes as opt (opt)}
-								<option value={opt}>{opt}</option>
-							{/each}
-						</select>
-					</label>
+					<div class="flex flex-col gap-1 text-sm">
+						<label for="import-csv-delivery" class="font-semibold text-text-secondary">
+							Tipo de entrega
+						</label>
+						<SelectMenu
+							id="import-csv-delivery"
+							options={deliveryMenuOptions}
+							value={deliveryType || null}
+							onSelect={(v) => (deliveryType = v ?? '')}
+							allowAll
+							allLabel="—"
+							ariaLabel="Tipo de entrega"
+						/>
+					</div>
 
-					<label class="flex flex-col gap-1 text-sm">
-						<span class="font-semibold text-text-secondary">Projeto especial</span>
-						<select
-							bind:value={specialProject}
-							class="h-9 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none"
-						>
-							<option value="">—</option>
-							{#each specialOptions as opt (opt)}
-								<option value={opt}>{opt}</option>
-							{/each}
-						</select>
-					</label>
+					<div class="flex flex-col gap-1 text-sm">
+						<label for="import-csv-special" class="font-semibold text-text-secondary">
+							Projeto especial
+						</label>
+						<SelectMenu
+							id="import-csv-special"
+							options={specialMenuOptions}
+							value={specialProject || null}
+							onSelect={(v) => (specialProject = v ?? '')}
+							allowAll
+							allLabel="—"
+							ariaLabel="Projeto especial"
+						/>
+					</div>
 				</div>
 
 				<div class="mt-1 flex justify-end gap-2">

@@ -35,6 +35,8 @@
 	import { normalizeStatus } from '$lib/utils/taskStatus';
 	import TaskHubTaskRow from '$lib/components/TaskHubTaskRow.svelte';
 	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import {
 		triggerTaskFinalizeConfetti,
 		type CelebrationOriginLike
@@ -183,6 +185,35 @@
 		{ value: 'duvida', label: 'Dúvida' },
 		{ value: 'outros', label: 'Outros' }
 	];
+
+	// Dots dos chips: mesmas cores dos tons já usados no hub (taskLabels.ts —
+	// STATUS_TONE/STATUS_BAR_CLASS e priority-* tokens), não inventadas aqui.
+	const PRIORIDADE_DOT: Record<string, string> = {
+		baixa: 'var(--ds-color-priority-baixa)',
+		media: 'var(--ds-color-priority-media)',
+		alta: 'var(--ds-color-priority-alta)',
+		urgente: 'var(--ds-color-priority-urgente)'
+	};
+	const STATUS_DOT: Record<string, string> = {
+		nao_iniciada: 'var(--color-text-muted)',
+		em_andamento: 'var(--ds-color-info-600)',
+		para_validacao: 'var(--ds-color-primary-500)',
+		para_ajustes: 'var(--ds-color-warning-600)',
+		finalizada: 'var(--ds-color-success-600)'
+	};
+
+	// Placeholder "" vira `SelectMenu` sem opção (value null = mostra o placeholder).
+	const PRIORIDADE_MENU_OPTIONS: SelectMenuOption[] = ADD_PRIORIDADE_OPTIONS.filter(
+		(opt) => opt.value
+	).map((opt) => ({ value: opt.value, label: opt.label, dot: PRIORIDADE_DOT[opt.value] }));
+	const TIPO_MENU_OPTIONS: SelectMenuOption[] = ADD_TIPO_OPTIONS.filter((opt) => opt.value).map(
+		(opt) => ({ value: opt.value, label: opt.label })
+	);
+	const STATUS_MENU_OPTIONS: SelectMenuOption[] = ADD_STATUS_OPTIONS.map((opt) => ({
+		value: opt.value,
+		label: opt.label,
+		dot: STATUS_DOT[opt.value]
+	}));
 
 	let addOpen = $state(false);
 	let addDraft = $state<AddDraft>(emptyAddDraft());
@@ -488,36 +519,32 @@
 										aria-label="Descrição da tarefa"
 										class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-sm border border-border-subtle bg-surface px-2 py-1.5 text-sm leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60"
 									></textarea>
-									<select
-										bind:value={addDraft.prioridade}
+									<SelectMenu
+										options={PRIORIDADE_MENU_OPTIONS}
+										value={addDraft.prioridade || null}
+										onSelect={(v) => (addDraft.prioridade = v ?? '')}
+										placeholder="Prioridade"
 										disabled={addDraft.saving}
-										aria-label="Prioridade"
-										class="h-[34px] w-full rounded-sm border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-									>
-										{#each ADD_PRIORIDADE_OPTIONS as opt (opt.value)}
-											<option value={opt.value}>{opt.label}</option>
-										{/each}
-									</select>
-									<select
-										bind:value={addDraft.tipo}
+										ariaLabel="Prioridade"
+										size="sm"
+									/>
+									<SelectMenu
+										options={TIPO_MENU_OPTIONS}
+										value={addDraft.tipo || null}
+										onSelect={(v) => (addDraft.tipo = v ?? '')}
+										placeholder="Tipo"
 										disabled={addDraft.saving}
-										aria-label="Tipo de pedido"
-										class="h-[34px] w-full rounded-sm border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-									>
-										{#each ADD_TIPO_OPTIONS as opt (opt.value)}
-											<option value={opt.value}>{opt.label}</option>
-										{/each}
-									</select>
-									<select
-										bind:value={addDraft.status}
+										ariaLabel="Tipo de pedido"
+										size="sm"
+									/>
+									<SelectMenu
+										options={STATUS_MENU_OPTIONS}
+										value={addDraft.status}
+										onSelect={(v) => (addDraft.status = v ?? 'nao_iniciada')}
 										disabled={addDraft.saving}
-										aria-label="Status"
-										class="h-[34px] w-full rounded-sm border border-border-subtle bg-surface px-1.5 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
-									>
-										{#each ADD_STATUS_OPTIONS as opt (opt.value)}
-											<option value={opt.value}>{opt.label}</option>
-										{/each}
-									</select>
+										ariaLabel="Status"
+										size="sm"
+									/>
 									<AssigneePicker
 										projectValue={String(projectId)}
 										bind:assignees={addDraft.assignees}

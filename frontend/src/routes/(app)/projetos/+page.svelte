@@ -53,6 +53,8 @@
 	import ProjetosSkeleton from '$lib/components/skeletons/ProjetosSkeleton.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { flash } from '$lib/stores/flash';
 	import { auth } from '$lib/stores/auth';
 
@@ -259,6 +261,41 @@
 	const abepOptions = $derived(data?.options.abep_indicadores_options ?? []);
 	const pagination = $derived(data?.pagination ?? null);
 	const totalProjects = $derived(data?.pagination.total ?? 0);
+
+	/** Dot semântico de status (spec §3): só os 3 valores mapeados; demais sem dot. */
+	function statusDot(value: string): string | undefined {
+		switch (value.toLowerCase()) {
+			case 'vigente':
+				return 'var(--ds-color-success-600)';
+			case 'suspenso':
+				return 'var(--ds-color-warning-600)';
+			case 'finalizado':
+				return 'var(--ds-color-primary-500)';
+			default:
+				return undefined;
+		}
+	}
+
+	// Opções dos filtros nativos convertidas para SelectMenuOption[] (sem duplicar dados).
+	const statusMenuOptions = $derived<SelectMenuOption[]>(
+		statusOptions.map((o) => ({ value: o, label: o, dot: statusDot(o) }))
+	);
+	const priorityMenuOptions = $derived<SelectMenuOption[]>(
+		priorityOptions.map((o) => ({
+			value: o,
+			label: capitalize(o),
+			dot: `var(--ds-color-priority-${o.toLowerCase()})`
+		}))
+	);
+	const deliveryMenuOptions = $derived<SelectMenuOption[]>(
+		deliveryOptions.map((o) => ({ value: o, label: o }))
+	);
+	const atrasoMenuOptions = $derived<SelectMenuOption[]>(
+		atrasoOptions.map((o) => ({ value: o.value, label: o.label }))
+	);
+	const objetivoMenuOptions = $derived<SelectMenuOption[]>(
+		objetivosCatalog.map((o) => ({ value: String(o.id), label: o.descricao }))
+	);
 
 	/** Reflete os filtros ativos na URL (replaceState) para reload/voltar/deep-link. */
 	function syncUrlFromFilters(): void {
@@ -726,31 +763,35 @@
 				</div>
 			{/if}
 
-			<select
-				id="projetosStatus"
-				bind:value={status}
-				onchange={applyFilterChange}
-				aria-label="Filtrar por status"
-				class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<option value="">Todos os status</option>
-				{#each statusOptions as option (option)}
-					<option value={option}>{option}</option>
-				{/each}
-			</select>
+			<div class="min-w-[10rem] flex-1">
+				<SelectMenu
+					id="projetosStatus"
+					options={statusMenuOptions}
+					value={status || null}
+					onSelect={(v) => {
+						status = v ?? '';
+						applyFilterChange();
+					}}
+					allowAll
+					allLabel="Todos os status"
+					ariaLabel="Filtrar por status"
+				/>
+			</div>
 
-			<select
-				id="projetosPrioridade"
-				bind:value={prioridade}
-				onchange={applyFilterChange}
-				aria-label="Filtrar por prioridade"
-				class="h-9 min-w-[10rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<option value="">Todas as prioridades</option>
-				{#each priorityOptions as option (option)}
-					<option value={option}>{capitalize(option)}</option>
-				{/each}
-			</select>
+			<div class="min-w-[10rem] flex-1">
+				<SelectMenu
+					id="projetosPrioridade"
+					options={priorityMenuOptions}
+					value={prioridade || null}
+					onSelect={(v) => {
+						prioridade = v ?? '';
+						applyFilterChange();
+					}}
+					allowAll
+					allLabel="Todas as prioridades"
+					ariaLabel="Filtrar por prioridade"
+				/>
+			</div>
 
 			<!-- Ações empurradas para a direita. O botão "Filtrar" foi removido: a
 				 seleção em qualquer campo já re-busca server-side (a busca textual tem
@@ -799,44 +840,50 @@
 		>
 			<div class="min-h-0 overflow-visible">
 				<div class="flex flex-wrap items-center gap-2">
-					<select
-						id="projetosDelivery"
-						bind:value={deliveryType}
-						onchange={applyFilterChange}
-						aria-label="Filtrar por tipo de entrega"
-						class="h-9 min-w-[11rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-					>
-						<option value="">Todos os tipos de entrega</option>
-						{#each deliveryOptions as option (option)}
-							<option value={option}>{option}</option>
-						{/each}
-					</select>
+					<div class="min-w-[11rem] flex-1">
+						<SelectMenu
+							id="projetosDelivery"
+							options={deliveryMenuOptions}
+							value={deliveryType || null}
+							onSelect={(v) => {
+								deliveryType = v ?? '';
+								applyFilterChange();
+							}}
+							allowAll
+							allLabel="Todos os tipos de entrega"
+							ariaLabel="Filtrar por tipo de entrega"
+						/>
+					</div>
 
-					<select
-						id="projetosAtraso"
-						bind:value={atraso}
-						onchange={applyFilterChange}
-						aria-label="Filtrar por prazo"
-						class="h-9 min-w-[11rem] flex-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-					>
-						<option value="">Todos os prazos</option>
-						{#each atrasoOptions as option (option.value)}
-							<option value={option.value}>{option.label}</option>
-						{/each}
-					</select>
+					<div class="min-w-[11rem] flex-1">
+						<SelectMenu
+							id="projetosAtraso"
+							options={atrasoMenuOptions}
+							value={atraso || null}
+							onSelect={(v) => {
+								atraso = v ?? '';
+								applyFilterChange();
+							}}
+							allowAll
+							allLabel="Todos os prazos"
+							ariaLabel="Filtrar por prazo"
+						/>
+					</div>
 
-					<select
-						id="projetosObjetivo"
-						bind:value={objetivo}
-						onchange={applyFilterChange}
-						aria-label="Filtrar por objetivo EEGD"
-						class="h-9 min-w-[16rem] flex-[2] rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-					>
-						<option value="">Todos os objetivos EEGD</option>
-						{#each objetivosCatalog as option (option.id)}
-							<option value={String(option.id)}>{option.descricao}</option>
-						{/each}
-					</select>
+					<div class="min-w-[16rem] flex-[2]">
+						<SelectMenu
+							id="projetosObjetivo"
+							options={objetivoMenuOptions}
+							value={objetivo || null}
+							onSelect={(v) => {
+								objetivo = v ?? '';
+								applyFilterChange();
+							}}
+							allowAll
+							allLabel="Todos os objetivos EEGD"
+							ariaLabel="Filtrar por objetivo EEGD"
+						/>
+					</div>
 
 					<!-- Indicador ABEP (LEGADO, oculto via SHOW_ABEP): combobox filtrável
 						 e navegável por teclado. Código mantido para reativação futura. -->

@@ -57,7 +57,9 @@
 	import { ApiClientError } from '$lib/api/client';
 	import SeiProcessField from '$lib/components/SeiProcessField.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type {
 		AbepIndicadorOption,
 		OrgaoOption,
@@ -199,6 +201,30 @@
 	);
 	const deliveryTypes = $derived(options?.delivery_types_options ?? DELIVERY_TYPES);
 	const specialOptions = $derived(options?.special_projects_options ?? SPECIAL_PROJECTS);
+
+	// --- Opções dos SelectMenu (derivadas das constantes/catálogos acima) --
+	const priorityMenuOptions = $derived<SelectMenuOption[]>(
+		PRIORITIES.map((p) => ({
+			value: p.value,
+			label: p.label,
+			dot: `var(--ds-color-priority-${p.value})`
+		}))
+	);
+	const deliveryTypeMenuOptions = $derived<SelectMenuOption[]>(
+		deliveryTypes.map((dt) => ({ value: dt, label: dt }))
+	);
+	const specialProjectMenuOptions = $derived<SelectMenuOption[]>(
+		specialOptions.map((sp) => ({ value: sp, label: sp }))
+	);
+	const objetivoMenuOptions = $derived<SelectMenuOption[]>(
+		objetivos.map((o) => ({ value: String(o.id), label: o.descricao }))
+	);
+	const resultadoMenuOptions = $derived<SelectMenuOption[]>(
+		resultados.map((r) => ({ value: String(r.id), label: r.descricao }))
+	);
+	const templateMenuOptions = $derived<SelectMenuOption[]>(
+		templates.map((t) => ({ value: String(t.id), label: t.name }))
+	);
 
 	// Criação só com título + área (paridade com updateSubmitState).
 	const canSubmit = $derived(
@@ -914,9 +940,15 @@
 												Área responsável <span class="text-danger" aria-hidden="true">*</span>
 											</label>
 											{#if orgaoOptions.length === 0}
-												<select id="cp-orgao-id" disabled class={fieldClass}>
-													<option value="">Nenhum órgão atribuído</option>
-												</select>
+												<SelectMenu
+													id="cp-orgao-id"
+													options={[]}
+													value={null}
+													onSelect={() => {}}
+													disabled
+													placeholder="Nenhum órgão atribuído"
+													ariaLabel="Área responsável"
+												/>
 											{:else if orgaoOptions.length === 1}
 												<input
 													type="text"
@@ -941,11 +973,13 @@
 										</div>
 										<div class="flex flex-col gap-1.5 md:col-span-3">
 											<label for="cp-prioridade" class={labelClass}>Prioridade</label>
-											<select id="cp-prioridade" bind:value={prioridade} class={fieldClass}>
-												{#each PRIORITIES as p (p.value)}
-													<option value={p.value}>{p.label}</option>
-												{/each}
-											</select>
+											<SelectMenu
+												id="cp-prioridade"
+												options={priorityMenuOptions}
+												value={prioridade}
+												onSelect={(v) => (prioridade = v ?? 'baixa')}
+												ariaLabel="Prioridade"
+											/>
 										</div>
 										<div class="flex flex-col gap-1.5 md:col-span-4">
 											<label for="cp-orgao-texto" class={labelClass}>Órgão</label>
@@ -1014,21 +1048,27 @@
 												<div class="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
 													<div class="flex flex-col gap-1.5">
 														<label for="cp-delivery" class={labelClass}>Tipo de entrega</label>
-														<select id="cp-delivery" bind:value={deliveryType} class={fieldClass}>
-															<option value="">Selecione o tipo</option>
-															{#each deliveryTypes as dt (dt)}
-																<option value={dt}>{dt}</option>
-															{/each}
-														</select>
+														<SelectMenu
+															id="cp-delivery"
+															options={deliveryTypeMenuOptions}
+															value={deliveryType || null}
+															onSelect={(v) => (deliveryType = v ?? '')}
+															allowAll
+															allLabel="Selecione o tipo"
+															ariaLabel="Tipo de entrega"
+														/>
 													</div>
 													<div class="flex flex-col gap-1.5">
 														<label for="cp-special" class={labelClass}>Projetos especiais</label>
-														<select id="cp-special" bind:value={specialProject} class={fieldClass}>
-															<option value="">Nenhum</option>
-															{#each specialOptions as sp (sp)}
-																<option value={sp}>{sp}</option>
-															{/each}
-														</select>
+														<SelectMenu
+															id="cp-special"
+															options={specialProjectMenuOptions}
+															value={specialProject || null}
+															onSelect={(v) => (specialProject = v ?? '')}
+															allowAll
+															allLabel="Nenhum"
+															ariaLabel="Projetos especiais"
+														/>
 													</div>
 												</div>
 											{:else if section.id === 'objetivos'}
@@ -1036,36 +1076,36 @@
 													<div class="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
 														<div class="flex flex-col gap-1.5">
 															<label for="cp-objetivo" class={labelClass}>Objetivo EEGD</label>
-															<select
+															<SelectMenu
 																id="cp-objetivo"
-																bind:value={objetivoId}
-																onchange={onObjetivoChange}
-																class={fieldClass}
-															>
-																<option value="">Selecione um objetivo</option>
-																{#each objetivos as obj (obj.id)}
-																	<option value={String(obj.id)}>{obj.descricao}</option>
-																{/each}
-															</select>
+																options={objetivoMenuOptions}
+																value={objetivoId || null}
+																onSelect={(v) => {
+																	objetivoId = v ?? '';
+																	void onObjetivoChange();
+																}}
+																allowAll
+																allLabel="Selecione um objetivo"
+																ariaLabel="Objetivo EEGD"
+															/>
 														</div>
 														<div class="flex flex-col gap-1.5">
 															<label for="cp-resultado" class={labelClass}>Resultado esperado EEGD</label>
-															<select
+															<SelectMenu
 																id="cp-resultado"
-																bind:value={resultadoId}
-																onchange={onResultadoChange}
+																options={resultadoMenuOptions}
+																value={resultadoId || null}
+																onSelect={(v) => {
+																	resultadoId = v ?? '';
+																	void onResultadoChange();
+																}}
 																disabled={!objetivoId || resultadosLoading}
-																class={fieldClass}
-															>
-																<option value="">
-																	{resultadosLoading
-																		? 'Carregando resultados...'
-																		: 'Selecione um resultado esperado'}
-																</option>
-																{#each resultados as r (r.id)}
-																	<option value={String(r.id)}>{r.descricao}</option>
-																{/each}
-															</select>
+																allowAll
+																allLabel={resultadosLoading
+																	? 'Carregando resultados...'
+																	: 'Selecione um resultado esperado'}
+																ariaLabel="Resultado esperado EEGD"
+															/>
 														</div>
 													</div>
 
@@ -1240,17 +1280,19 @@
 													<div class="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-3">
 														<div class="flex flex-col gap-1.5 md:col-span-2">
 															<label for="cp-template" class={labelClass}>Importar modelo</label>
-															<select
+															<SelectMenu
 																id="cp-template"
-																bind:value={templateId}
-																onchange={onTemplateChange}
-																class={fieldClass}
-															>
-																<option value="">Não importar / limpar etapas</option>
-																{#each templates as tpl (tpl.id)}
-																	<option value={String(tpl.id)}>{tpl.name}</option>
-																{/each}
-															</select>
+																options={templateMenuOptions}
+																value={templateId || null}
+																onSelect={(v) => {
+																	templateId = v ?? '';
+																	void onTemplateChange();
+																}}
+																allowAll
+																allLabel="Não importar / limpar etapas"
+																searchable
+																ariaLabel="Importar modelo"
+															/>
 														</div>
 														<div class="flex flex-col gap-1.5">
 															<label for="cp-start" class={labelClass}>Data de início</label>

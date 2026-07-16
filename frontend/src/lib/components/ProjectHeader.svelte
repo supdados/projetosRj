@@ -17,6 +17,8 @@
 	 */
 	import { tick } from 'svelte';
 	import { stickyHeader } from '$lib/actions/stickyHeader';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type {
 		ProjectDetail,
 		ProjectDetailOptions,
@@ -72,10 +74,7 @@
 	const compactTop = $derived(topOffset + COMPACT_TOP_GAP);
 
 	// --- Edição inline de chip (status/prioridade/tipo/especial) -------------
-	// Um <select> nativo INVISÍVEL fica sobreposto ao chip: o clique cai direto
-	// no select e o dropdown nativo abre de primeira (sem swap de elemento nem
-	// timing de showPicker, que exigia cliques extras). O chip estilizado por
-	// baixo dá o visual rico (ícone/cor); o select por cima captura o clique.
+	// SelectMenu unstyled: o trigger é o próprio chip (snippet), painel custom.
 	function selectChip(field: HeaderField, value: string): void {
 		onEditField(field, value);
 	}
@@ -258,6 +257,31 @@
 		media: 'fa-minus',
 		baixa: 'fa-angle-double-down'
 	};
+	const PRIO_DOT: Record<string, string> = {
+		urgente: 'var(--ds-color-priority-urgente)',
+		alta: 'var(--ds-color-priority-alta)',
+		media: 'var(--ds-color-priority-media)',
+		baixa: 'var(--ds-color-priority-baixa)'
+	};
+	const STATUS_DOT: Record<string, string> = {
+		Vigente: 'var(--ds-color-success-600)',
+		Suspenso: 'var(--ds-color-warning-600)',
+		Finalizado: 'var(--ds-color-primary-500)'
+	};
+
+	// --- Opções dos 4 SelectMenu de chip (mapeadas das constantes existentes) --
+	const statusMenuOptions = $derived<SelectMenuOption[]>(
+		statusOptions.map((opt) => ({ value: opt.value, label: opt.label, dot: STATUS_DOT[opt.value] }))
+	);
+	const prioMenuOptions = $derived<SelectMenuOption[]>(
+		options.prioridade.map((opt) => ({ value: opt.value, label: opt.label, dot: PRIO_DOT[opt.value] }))
+	);
+	const deliveryMenuOptions = $derived<SelectMenuOption[]>(
+		options.delivery_type.map((opt) => ({ value: opt, label: opt }))
+	);
+	const specialMenuOptions = $derived<SelectMenuOption[]>(
+		options.special_project.map((opt) => ({ value: opt, label: opt }))
+	);
 
 	/** Formata ISO (YYYY-MM-DD) em pt-BR; null => vazio. */
 	function formatDateBr(iso: string | null): string {
@@ -437,37 +461,21 @@
 	</div>
 
 	<div class="project-header-chips">
-		<!-- Status (editável inline: select nativo invisível sobre o chip) -->
+		<!-- Status (editável inline: SelectMenu unstyled com o chip como trigger) -->
 		<div class="ph-field">
 			<span class="ph-field-label">Status</span>
 			<div class="ph-chip-wrap" class:ph-chip-wrap--editable={canEdit}>
-				<span
-					class="ph-chip ph-chip--status ph-chip--status-{statusKey}"
-					data-value={project.status ?? ''}
-				>
-					{#if project.status === 'Vigente'}
-						<span class="ph-chip-dot" aria-hidden="true"></span>Vigente
-					{:else if project.status === 'Finalizado'}
-						<i class="fas fa-flag-checkered" aria-hidden="true"></i>Finalizado
-					{:else if project.status === 'Suspenso'}
-						<i class="fas fa-pause" aria-hidden="true"></i>Suspenso
-					{:else}
-						{project.status || 'Sem status'}
-					{/if}
-					{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
-				</span>
 				{#if canEdit}
-					<select
-						class="ph-chip-overlay"
-						aria-label="Status do projeto"
-						onchange={(e) => selectChip('status', e.currentTarget.value)}
-					>
-						{#each statusOptions as opt (opt.value)}
-							<option value={opt.value} selected={opt.value === (project.status ?? '')}
-								>{opt.label}</option
-							>
-						{/each}
-					</select>
+					<SelectMenu
+						options={statusMenuOptions}
+						value={project.status}
+						onSelect={(v) => selectChip('status', v ?? '')}
+						unstyled
+						ariaLabel="Status do projeto"
+						trigger={statusChipContent}
+					/>
+				{:else}
+					{@render statusChipContent()}
 				{/if}
 			</div>
 		</div>
@@ -476,27 +484,19 @@
 		<div class="ph-field">
 			<span class="ph-field-label">Prioridade</span>
 			<div class="ph-chip-wrap" class:ph-chip-wrap--editable={canEdit}>
-				<span class="ph-chip ph-chip--prio ph-chip--prio-{prioKey}">
-					{#if project.prioridade && PRIO_ICON[project.prioridade]}
-						<i class="fas {PRIO_ICON[project.prioridade]}" aria-hidden="true"></i>{PRIO_LABEL[
-							project.prioridade
-						]}
-					{:else}
-						Sem prioridade
-					{/if}
-					{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
-				</span>
 				{#if canEdit}
-					<select
-						class="ph-chip-overlay"
-						aria-label="Prioridade do projeto"
-						onchange={(e) => selectChip('prioridade', e.currentTarget.value)}
-					>
-						<option value="" selected={!project.prioridade}>Sem prioridade</option>
-						{#each options.prioridade as opt (opt.value)}
-							<option value={opt.value} selected={opt.value === project.prioridade}>{opt.label}</option>
-						{/each}
-					</select>
+					<SelectMenu
+						options={prioMenuOptions}
+						value={project.prioridade}
+						onSelect={(v) => selectChip('prioridade', v ?? '')}
+						allowAll
+						allLabel="Sem prioridade"
+						unstyled
+						ariaLabel="Prioridade do projeto"
+						trigger={prioChipContent}
+					/>
+				{:else}
+					{@render prioChipContent()}
 				{/if}
 			</div>
 		</div>
@@ -505,21 +505,19 @@
 		<div class="ph-field">
 			<span class="ph-field-label">Tipo de entrega</span>
 			<div class="ph-chip-wrap" class:ph-chip-wrap--editable={canEdit}>
-				<span class="ph-chip ph-chip--delivery" data-value={project.delivery_type ?? ''}>
-					<i class="fas fa-box" aria-hidden="true"></i>{project.delivery_type || 'Sem tipo'}
-					{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
-				</span>
 				{#if canEdit}
-					<select
-						class="ph-chip-overlay"
-						aria-label="Tipo de entrega do projeto"
-						onchange={(e) => selectChip('delivery_type', e.currentTarget.value)}
-					>
-						<option value="" selected={!project.delivery_type}>Sem tipo</option>
-						{#each options.delivery_type as opt (opt)}
-							<option value={opt} selected={opt === project.delivery_type}>{opt}</option>
-						{/each}
-					</select>
+					<SelectMenu
+						options={deliveryMenuOptions}
+						value={project.delivery_type}
+						onSelect={(v) => selectChip('delivery_type', v ?? '')}
+						allowAll
+						allLabel="Sem tipo"
+						unstyled
+						ariaLabel="Tipo de entrega do projeto"
+						trigger={deliveryChipContent}
+					/>
+				{:else}
+					{@render deliveryChipContent()}
 				{/if}
 			</div>
 		</div>
@@ -528,21 +526,19 @@
 		<div class="ph-field">
 			<span class="ph-field-label">Projeto especial</span>
 			<div class="ph-chip-wrap" class:ph-chip-wrap--editable={canEdit}>
-				<span class="ph-chip ph-chip--special" data-value={project.special_project ?? ''}>
-					<i class="fas fa-star" aria-hidden="true"></i>{project.special_project || 'Sem categoria'}
-					{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
-				</span>
 				{#if canEdit}
-					<select
-						class="ph-chip-overlay"
-						aria-label="Projeto especial"
-						onchange={(e) => selectChip('special_project', e.currentTarget.value)}
-					>
-						<option value="" selected={!project.special_project}>Sem categoria</option>
-						{#each options.special_project as opt (opt)}
-							<option value={opt} selected={opt === project.special_project}>{opt}</option>
-						{/each}
-					</select>
+					<SelectMenu
+						options={specialMenuOptions}
+						value={project.special_project}
+						onSelect={(v) => selectChip('special_project', v ?? '')}
+						allowAll
+						allLabel="Sem categoria"
+						unstyled
+						ariaLabel="Projeto especial"
+						trigger={specialChipContent}
+					/>
+				{:else}
+					{@render specialChipContent()}
 				{/if}
 			</div>
 		</div>
@@ -567,6 +563,48 @@
 			</span>
 		{/if}
 	</div>
+
+	{#snippet statusChipContent()}
+		<span class="ph-chip ph-chip--status ph-chip--status-{statusKey}" data-value={project.status ?? ''}>
+			{#if project.status === 'Vigente'}
+				<span class="ph-chip-dot" aria-hidden="true"></span>Vigente
+			{:else if project.status === 'Finalizado'}
+				<i class="fas fa-flag-checkered" aria-hidden="true"></i>Finalizado
+			{:else if project.status === 'Suspenso'}
+				<i class="fas fa-pause" aria-hidden="true"></i>Suspenso
+			{:else}
+				{project.status || 'Sem status'}
+			{/if}
+			{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
+		</span>
+	{/snippet}
+
+	{#snippet prioChipContent()}
+		<span class="ph-chip ph-chip--prio ph-chip--prio-{prioKey}">
+			{#if project.prioridade && PRIO_ICON[project.prioridade]}
+				<i class="fas {PRIO_ICON[project.prioridade]}" aria-hidden="true"></i>{PRIO_LABEL[
+					project.prioridade
+				]}
+			{:else}
+				Sem prioridade
+			{/if}
+			{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
+		</span>
+	{/snippet}
+
+	{#snippet deliveryChipContent()}
+		<span class="ph-chip ph-chip--delivery" data-value={project.delivery_type ?? ''}>
+			<i class="fas fa-box" aria-hidden="true"></i>{project.delivery_type || 'Sem tipo'}
+			{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
+		</span>
+	{/snippet}
+
+	{#snippet specialChipContent()}
+		<span class="ph-chip ph-chip--special" data-value={project.special_project ?? ''}>
+			<i class="fas fa-star" aria-hidden="true"></i>{project.special_project || 'Sem categoria'}
+			{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
+		</span>
+	{/snippet}
 </header>
 
 <!-- ===================== COMPACT HEADER (sticky) ===================== -->
@@ -1028,8 +1066,7 @@
 		line-height: 1;
 		white-space: nowrap;
 	}
-	/* Wrapper do chip editável: um <select> invisível por cima captura o clique
-	   e abre o dropdown nativo de primeira (sem swap de elemento). */
+	/* Wrapper do chip editável: o SelectMenu unstyled usa o chip como trigger. */
 	.ph-chip-wrap {
 		position: relative;
 		display: inline-flex;
@@ -1044,23 +1081,6 @@
 	.ph-chip-wrap:focus-within .ph-chip {
 		background: rgba(255, 255, 255, 0.2);
 		border-color: rgba(255, 255, 255, 0.4);
-	}
-	.ph-chip-overlay {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		margin: 0;
-		padding: 0;
-		border: 0;
-		opacity: 0;
-		cursor: pointer;
-		font: inherit;
-	}
-	/* Popup nativo legível (o select em si fica invisível, mas as opções não). */
-	.ph-chip-overlay option {
-		color: #1f2d3d;
-		background-color: #fff;
 	}
 	.ph-chip-caret {
 		margin-left: 0.05rem;

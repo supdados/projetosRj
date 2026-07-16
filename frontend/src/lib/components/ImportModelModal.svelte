@@ -25,7 +25,9 @@
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import type { StageTemplateOption } from '$lib/types/projectDetail';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { fetchTemplateStages, type TemplateStage } from '$lib/api/projects';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
 
 	interface Props {
 		/** Diálogo aberto? (controlado pela página). */
@@ -67,7 +69,6 @@
 	// valor inicial aqui é intencional.
 	// svelte-ignore state_referenced_locally
 	let startDate = $state<string>(defaultStartDate ?? today());
-	let selectEl = $state<HTMLSelectElement | null>(null);
 
 	// Etapas do modelo selecionado (detalhe). Buscadas sob demanda para o preview.
 	let stages = $state<TemplateStage[]>([]);
@@ -78,6 +79,9 @@
 		templates.find((t) => String(t.id) === selectedId) ?? null
 	);
 	const canConfirm = $derived(!submitting && selectedId !== '' && startDate !== '');
+	const templateMenuOptions = $derived<SelectMenuOption[]>(
+		templates.map((t) => ({ value: String(t.id), label: t.name }))
+	);
 
 	// Ao abrir, reseta seleção/data/preview e foca o seletor.
 	$effect(() => {
@@ -86,7 +90,7 @@
 			startDate = defaultStartDate ?? today();
 			stages = [];
 			stagesError = null;
-			void tick().then(() => selectEl?.focus());
+			void tick().then(() => document.getElementById('import-model-select')?.focus());
 		}
 	});
 
@@ -268,18 +272,16 @@
 					<label for="import-model-select" class="text-sm font-medium text-text-primary">
 						Modelo
 					</label>
-					<select
-						bind:this={selectEl}
-						bind:value={selectedId}
+					<SelectMenu
 						id="import-model-select"
+						options={templateMenuOptions}
+						value={selectedId || null}
+						onSelect={(v) => (selectedId = v ?? '')}
 						disabled={submitting}
-						class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-					>
-						<option value="">Selecione um modelo…</option>
-						{#each templates as template (template.id)}
-							<option value={String(template.id)}>{template.name}</option>
-						{/each}
-					</select>
+						placeholder="Selecione um modelo…"
+						searchable
+						ariaLabel="Modelo"
+					/>
 				</div>
 
 				{#if selectedTemplate}
