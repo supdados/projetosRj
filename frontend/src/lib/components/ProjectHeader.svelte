@@ -1015,7 +1015,7 @@
 		flex-wrap: wrap;
 		align-items: flex-end;
 		gap: 0.42rem 0.5rem;
-		margin-top: 0.95rem;
+		margin-top: 1.5rem;
 	}
 
 	/* Campo do cabeçalho: legenda minimalista (título) que SÓ aparece ao passar o

@@ -120,11 +120,8 @@
 
 	onMount(() => {
 		void loadTasks();
-		// O form de adição nasce aberto (espírito quick-add), com foco na descrição.
-		if (!stageDone) {
-			addOpen = true;
-			void tick().then(() => addTextareaEl?.focus());
-		}
+		// O form de adição nasce FECHADO: o painel abre mostrando "+ Adicionar
+		// nova tarefa" e só expande o form ao clicar (paridade com o hub).
 	});
 
 	// Re-lista ao FECHAR o TaskDrawer (edição inline pode mudar status/contador).
@@ -367,8 +364,9 @@
 	onclick={attemptClose}
 ></div>
 
-<!-- Painel lateral: 880px para acomodar a grade do hub (min-width 760px);
-     o TaskDrawer (645px) abre por cima ao clicar numa tarefa. -->
+<!-- Painel lateral: 880px fixo (fullscreen abaixo disso via min()); a grade
+     interna usa larguras próprias (.stq-compact, min 800px + scroll-x).
+     O TaskDrawer (645px) abre por cima ao clicar numa tarefa. -->
 <div
 	bind:this={panelEl}
 	role="dialog"
@@ -624,32 +622,23 @@
 </div>
 
 <style>
-	/* VARIANTE COMPACTA da grade do hub, só neste drawer: colunas de chips mais
-	 * estreitas e fontes menores para a coluna de descrição (1fr) ganhar o
-	 * espaço — a página /tarefas segue com os defaults de `.task-hub-grid`
-	 * (as larguras lá vêm dos fallbacks `var(--th-col-*, ...)` do app.css). */
+	/* VARIANTE da grade do hub, só neste drawer — a página /tarefas segue com os
+	 * defaults de `.task-hub-grid` (fallbacks `var(--th-col-*, ...)` do app.css).
+	 * Larguras dimensionadas pelo PIOR rótulo de cada SelectMenu (dot + label +
+	 * chevron sem truncar): "Urgente"/"Prioridade" 120px, "Melhoria" 108px,
+	 * "Para validação" 160px. */
 	.stq-compact {
-		--th-col-prio: 80px;
-		--th-col-tipo: 92px;
-		--th-col-status: 112px;
+		--th-col-prio: 120px;
+		--th-col-tipo: 108px;
+		--th-col-status: 160px;
 		--th-col-owner: 128px;
 		--th-col-actions: 84px;
 	}
 	.stq-compact :global(.task-hub-grid) {
-		min-width: 580px;
+		/* 600px de colunas fixas + gaps + mínimo legível da descrição; abaixo
+		   disso o overflow-x-auto do card assume o scroll. */
+		min-width: 800px;
 		column-gap: 0.45rem;
-	}
-	/* Chips-select (prioridade/tipo/status) das LINHAS um degrau menores que os
-	 * do hub (h-7/11px); o seletor por elemento vence as utilities de classe
-	 * única. Restrito a `.group/row` para NÃO encolher os selects do form de
-	 * adição (h-34px, pareados com a textarea). */
-	.stq-compact :global(.group\/row .task-hub-grid > select) {
-		height: 1.5rem;
-		padding-top: 0;
-		padding-bottom: 0;
-		padding-left: 0.375rem;
-		padding-right: 0.375rem;
-		font-size: 10px;
 	}
 
 	/* Tintas via color-mix sobre tokens DS (o Tailwind 3 não gera `bg-x/10`
