@@ -758,6 +758,9 @@
 		width: fit-content;
 		max-width: 100%;
 	}
+	.ph-description-row {
+		margin-top: 0.35rem;
+	}
 	/* Caixa do TÍTULO: só existe ao editar (envolve apenas o textarea), depois do
 	   prefixo fixo. Pequeno padding p/ folga dentro da moldura. */
 	.ph-title-field {
@@ -797,10 +800,10 @@
 		background: rgba(255, 255, 255, 0.08);
 		box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
 	}
-	/* Em EDIÇÃO a descrição desce um pouco e ganha respiro vertical — exibida
-	   como texto puro ela ficava bem, mas o shell colava no título. */
+	/* Em EDIÇÃO o shell ganha respiro vertical; margem negativa compensa o
+	   padding p/ o texto não saltar em relação ao modo exibição. */
 	.ph-description-field.ph-edit-shell {
-		margin-top: 0.3rem;
+		margin-top: -0.2rem;
 		padding-top: 0.2rem;
 		padding-bottom: 0.2rem;
 	}
@@ -999,12 +1002,15 @@
 		font-weight: 600;
 		text-decoration: none;
 		color: #fff;
-		background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
-		border: 1px solid rgba(255, 255, 255, 0.25);
-		transition: background 0.16s ease;
+		background: rgba(255, 255, 255, 0.12);
+		border: 1px solid rgba(255, 255, 255, 0.28);
+		transition:
+			background-color 0.16s ease,
+			border-color 0.16s ease;
 	}
 	.ph-back-button:hover {
-		background: rgba(255, 255, 255, 0.28);
+		background: rgba(255, 255, 255, 0.2);
+		border-color: rgba(255, 255, 255, 0.5);
 	}
 
 	/* ----- Chips ----- */
@@ -1074,13 +1080,13 @@
 	.ph-chip-wrap--editable .ph-chip {
 		cursor: pointer;
 		transition:
-			background 0.16s ease,
+			background-color 0.16s ease,
 			border-color 0.16s ease;
 	}
 	.ph-chip-wrap--editable:hover .ph-chip,
 	.ph-chip-wrap:focus-within .ph-chip {
-		background: rgba(255, 255, 255, 0.2);
-		border-color: rgba(255, 255, 255, 0.4);
+		background: rgba(255, 255, 255, 0.1);
+		border-color: rgba(255, 255, 255, 0.5);
 	}
 	.ph-chip-caret {
 		margin-left: 0.05rem;
