@@ -962,12 +962,12 @@
 	.cal-modal-header {
 		display: flex;
 		align-items: center;
-		padding: 1rem 1.1rem 0.75rem;
+		padding: 0.6rem 1.1rem 0.5rem;
 		border-bottom: 1px solid var(--color-border);
 	}
 	.cal-modal-title {
 		flex: 1;
-		font-size: 0.95rem;
+		font-size: 0.85rem;
 		font-weight: 600;
 		color: var(--color-text-primary);
 		margin: 0;
