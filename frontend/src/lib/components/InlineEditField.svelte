@@ -34,6 +34,12 @@
 		emptyLabel?: string;
 		/** No modo cell, alinha o conteúdo ao centro (datas/responsável). */
 		centered?: boolean;
+		/**
+		 * Modo cell: caixa com borda e altura fixa (--control-h-md) para alinhar
+		 * com controles vizinhos (OrgaoTreeSelect/SeiProcessField). Desliga o
+		 * auto-resize — a caixa não cresce entre display e edição.
+		 */
+		boxed?: boolean;
 		readonly?: boolean;
 		pending?: boolean;
 		error?: string | null;
@@ -53,6 +59,7 @@
 		options = [],
 		emptyLabel = '—',
 		centered = false,
+		boxed = false,
 		readonly = false,
 		pending = false,
 		error = null,
@@ -101,6 +108,7 @@
 	});
 
 	function autoResize(): void {
+		if (boxed) return; // altura fixa por design: sem auto-grow, sem disputa de CSS
 		if (editorEl && editorEl.tagName === 'TEXTAREA') {
 			const ta = editorEl as HTMLTextAreaElement;
 			ta.style.height = 'auto';
@@ -190,6 +198,7 @@
 				aria-label={label}
 				class="cell-editor cell-editor-textarea"
 				class:centered
+				class:boxed
 				oninput={autoResize}
 				onblur={commit}
 				onkeydown={onKeydown}
@@ -204,6 +213,7 @@
 				aria-label={label}
 				class="cell-editor cell-editor-input"
 				class:centered
+				class:boxed
 				onblur={commit}
 				onkeydown={onKeydown}
 			/>
@@ -214,6 +224,7 @@
 			type="button"
 			class="editable-field"
 			class:centered
+			class:boxed
 			class:editable-field-empty={!hasValue}
 			disabled={readonly || pending}
 			aria-label={label ? `Editar ${label}` : 'Editar campo'}
@@ -376,6 +387,25 @@
 		transition:
 			background-color 0.16s ease,
 			border-color 0.16s ease;
+	}
+	/* Modo boxed: caixa de campo com o token de altura padrão — mesma caixa nos
+	   dois estados (display/edição), alinhada aos controles vizinhos. */
+	.editable-field.boxed {
+		display: flex;
+		align-items: center;
+		height: var(--control-h-md);
+		min-height: var(--control-h-md);
+		border: 1px solid var(--color-border);
+		border-radius: 0.5rem;
+		padding: 0 0.75rem;
+	}
+	.cell-editor.boxed {
+		height: var(--control-h-md);
+		min-height: var(--control-h-md);
+		padding: 0 0.75rem;
+		/* textarea/input não centralizam por flex: line-height = altura interna
+		   (token menos as bordas) centraliza a linha única. */
+		line-height: calc(var(--control-h-md) - 2px);
 	}
 	.editable-field.centered {
 		text-align: center;

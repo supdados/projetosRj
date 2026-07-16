@@ -113,6 +113,12 @@
 	--color-text-secondary: #475569;
 	--color-text-muted: #6c757d;
 	--color-overlay: rgba(0, 0, 0, 0.4);
+
+	/* Altura de controles de formulário (trigger/campo) — escala única, em REM
+	   para escalar com o zoom de texto do usuário (WCAG 1.4.4). Não se aplica a
+	   botões de ação/linhas de tabela, que têm densidade própria. */
+	--control-h-sm: 2.125rem; /* 34px — SelectMenu size="sm", forms compactos */
+	--control-h-md: 2.375rem; /* 38px — campos de detalhe (Área/Órgão/SEI) */
 }
 
 /* Dark — esquema carvão do produto irmão (siorg-rj): canvas preto, cards #202020,

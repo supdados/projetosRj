@@ -1133,7 +1133,7 @@
 						{/if}
 					</div>
 					<!-- Órgão: texto livre legado (orgao). -->
-					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
+					<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface px-4 py-1.5 text-sm shadow-sm">
 						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Órgão</span>
 						<InlineEditField
 							fieldId="project-orgao"
@@ -1141,6 +1141,7 @@
 							value={data.project.orgao}
 							kind="text"
 							variant="cell"
+							boxed
 							emptyLabel="Não informado"
 							readonly={fieldsLocked}
 							pending={projectFieldStates.orgao?.pending}
@@ -1149,7 +1150,7 @@
 						/>
 					</div>
 					<!-- Processo SEI mora na primeira linha (posição da tela antiga). -->
-					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
+					<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface px-4 py-1.5 text-sm shadow-sm">
 						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Processo SEI</span>
 						<SeiProcessField
 							fieldId="project-sei"

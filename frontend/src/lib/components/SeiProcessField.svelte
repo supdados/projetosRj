@@ -168,8 +168,9 @@
 
 <div class="relative" onfocusout={onWrapperFocusOut}>
 	<!-- Linha fechada: visual de campo com o 1º número + copiar + chip +N + chevron. -->
+	<!-- Token de altura padrão de campo — linha de Detalhes alinhada. -->
 	<div
-		class="flex h-8 items-center gap-1.5 rounded-md border border-border-subtle bg-surface pl-2.5 pr-1.5"
+		class="flex h-[var(--control-h-md)] items-center gap-1.5 rounded-lg border border-border-subtle bg-surface pl-3 pr-1.5"
 	>
 		<button
 			bind:this={triggerEl}

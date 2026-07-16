@@ -276,7 +276,10 @@
 		}
 		const base =
 			'flex w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface text-left transition-colors duration-fast hover:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50';
-		const sizeClass = size === 'sm' ? 'h-[34px] px-2.5 text-[12.5px]' : 'px-3 py-2 text-sm';
+		const sizeClass =
+			size === 'sm'
+				? 'h-[var(--control-h-sm)] px-2.5 text-[12.5px]'
+				: 'h-[var(--control-h-md)] px-3 text-sm';
 		return `${base} ${sizeClass}`;
 	});
 </script>
