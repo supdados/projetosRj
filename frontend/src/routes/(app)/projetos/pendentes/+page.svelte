@@ -430,7 +430,7 @@
 				oninput={onSearchInput}
 				aria-label="Busca livre"
 				placeholder="Digite título, órgão ou indicador…"
-				class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
 			/>
 		</div>
 
