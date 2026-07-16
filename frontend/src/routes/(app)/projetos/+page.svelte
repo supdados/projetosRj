@@ -1191,7 +1191,7 @@
 												href={projectEditHref(project)}
 												title="Editar projeto"
 												aria-label="Editar projeto"
-												class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-sm text-text-muted transition-colors duration-fast hover:border-primary-500/50 hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-primary-500"
 											>
 												<i class="fas fa-pen" aria-hidden="true"></i>
 											</a>
@@ -1200,7 +1200,7 @@
 												onclick={() => requestDelete(project)}
 												title="Excluir projeto"
 												aria-label="Excluir projeto"
-												class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-sm text-text-muted transition-colors duration-fast hover:border-danger/50 hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger"
 											>
 												<i class="fas fa-trash" aria-hidden="true"></i>
 											</button>

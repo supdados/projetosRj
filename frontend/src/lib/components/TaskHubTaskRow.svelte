@@ -329,7 +329,7 @@
 					onclick={startEditDesc}
 					title="Editar descrição"
 					aria-label="Editar descrição"
-					class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted opacity-0 transition-all duration-fast hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-primary-500 group-hover/row:opacity-100"
+					class="inline-flex h-6 w-6 shrink-0 items-center justify-center text-text-muted opacity-0 transition-all duration-fast hover:text-primary-700 focus:outline-none focus-visible:opacity-100 focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-primary-500 group-hover/row:opacity-100"
 				>
 					<i class="fas fa-pen text-2xs" aria-hidden="true"></i>
 				</button>
@@ -426,7 +426,7 @@
 				onclick={askDelete}
 				aria-label="Excluir tarefa"
 				title="Excluir tarefa"
-				class="trash-btn inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+				class="inline-flex h-7 w-7 items-center justify-center text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger"
 			>
 				<i class="fas fa-trash-can text-xs" aria-hidden="true"></i>
 			</button>
@@ -541,8 +541,3 @@
 	</span>
 {/snippet}
 
-<style>
-	.trash-btn:hover:not(:disabled) {
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 10%, transparent);
-	}
-</style>
