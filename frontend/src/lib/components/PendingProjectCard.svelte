@@ -330,6 +330,9 @@
 		const position = positionMap[String(etapa.id)];
 		return position ? `${project.id}.${position}` : String(etapa.id);
 	}
+
+	// Rótulo de coluna: mesmo estilo do StageGroupHeader do hub de Tarefas.
+	const TH = 'px-2 py-2 text-center text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary';
 </script>
 
 {#snippet stageColumns()}
@@ -346,12 +349,27 @@
 	</colgroup>
 {/snippet}
 
+{#snippet stageTableHead()}
+	<!-- Faixa azul com labels de coluna — mesma linguagem do StageGroupHeader do
+	     hub de Tarefas (bg-primary-100, text-2xs bold uppercase text-text-secondary). -->
+	<thead>
+		<tr class="border-b border-border-subtle bg-primary-100 text-left">
+			<th scope="col" class={`${TH} text-left`}>Descrição</th>
+			<th scope="col" class={TH}>Responsável</th>
+			<th scope="col" class={TH}>Data Início</th>
+			<th scope="col" class={TH}>Data Fim</th>
+			<th scope="col" class={TH}>Tarefas</th>
+			<th scope="col" class={TH}>Status</th>
+		</tr>
+	</thead>
+{/snippet}
+
 {#snippet etapaRow(etapa: PendingEtapa)}
 	{@const progress = progressOf(etapa)}
 	{@const key = statusKey(etapa.id)}
 	{@const isDone = key === 'done'}
 	{@const isEmpty = progress.total === 0}
-	<tr class="group border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted/50">
+	<tr class="group border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted">
 		<td class="truncate px-2 py-2.5 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}" title={`${etapaDisplayNumber(etapa)} - ${etapa.descricao}`}>
 			<span class="font-mono font-normal text-text-muted">{etapaDisplayNumber(etapa)}</span> - {etapa.descricao}
 		</td>
@@ -459,21 +477,10 @@
 			<p class="text-sm text-text-muted">Sem etapas urgentes na janela atual.</p>
 		{:else}
 			<div class="overflow-x-auto">
-				<table class="w-full table-fixed border-collapse text-sm">
+				<table class="w-full table-fixed border-collapse text-xs 2xl:text-sm">
 					<caption class="sr-only">Etapas pendentes de {project.titulo}</caption>
 					{@render stageColumns()}
-					<thead>
-						<tr
-							class="border-b border-border-subtle bg-surface-muted text-left text-xs font-bold uppercase tracking-caps text-text-muted"
-						>
-							<th scope="col" class="px-2 py-2.5 font-bold">Descrição</th>
-							<th scope="col" class="px-2 py-2.5 text-center font-bold">Responsável</th>
-							<th scope="col" class="px-2 py-2.5 text-center font-bold">Data Início</th>
-							<th scope="col" class="px-2 py-2.5 text-center font-bold">Data Fim</th>
-							<th scope="col" class="px-2 py-2.5 text-center font-bold">Tarefas</th>
-							<th scope="col" class="px-2 py-2.5 text-center font-bold">Status</th>
-						</tr>
-					</thead>
+					{@render stageTableHead()}
 					<tbody>
 						{#each row.etapas_visiveis as etapa (etapa.id)}
 							{@render etapaRow(etapa)}
@@ -503,25 +510,14 @@
 						class="overflow-hidden border-t border-dashed border-border-subtle"
 						transition:slide={{ duration: 340, easing: cubicOut }}
 					>
-						<div class="px-5 py-2 text-xs font-semibold uppercase tracking-caps text-text-muted">
+						<div class="px-5 py-2 text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary">
 							Outras etapas
 						</div>
 						<div class="overflow-x-auto px-5 pb-3">
-							<table class="w-full table-fixed border-collapse text-sm">
+							<table class="w-full table-fixed border-collapse text-xs 2xl:text-sm">
 								<caption class="sr-only">Outras etapas de {project.titulo}</caption>
 								{@render stageColumns()}
-								<thead>
-									<tr
-										class="border-b border-border-subtle bg-surface-muted text-left text-xs font-bold uppercase tracking-caps text-text-muted"
-									>
-										<th scope="col" class="px-2 py-2.5 font-bold">Descrição</th>
-										<th scope="col" class="px-2 py-2.5 text-center font-bold">Responsável</th>
-										<th scope="col" class="px-2 py-2.5 text-center font-bold">Data Início</th>
-										<th scope="col" class="px-2 py-2.5 text-center font-bold">Data Fim</th>
-										<th scope="col" class="px-2 py-2.5 text-center font-bold">Tarefas</th>
-										<th scope="col" class="px-2 py-2.5 text-center font-bold">Status</th>
-									</tr>
-								</thead>
+								{@render stageTableHead()}
 								<tbody>
 									{#each row.etapas_outras as etapa (etapa.id)}
 										{@render etapaRow(etapa)}

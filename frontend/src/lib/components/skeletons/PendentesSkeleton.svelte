@@ -29,7 +29,7 @@
 
 				<!-- Tabela de etapas: mesma grade fixa de colunas (skel-stage-grid). -->
 				<div class="flex flex-col gap-2.5">
-					<div class="skel-stage-grid items-center border-b border-border-subtle bg-surface-muted">
+					<div class="skel-stage-grid items-center border-b border-border-subtle bg-primary-100">
 						<span class="px-2 py-2.5"><Skeleton class="h-2.5 w-16 rounded" /></span>
 						<span class="flex justify-center px-2 py-2.5"><Skeleton class="h-2.5 w-14 rounded" /></span>
 						<span class="flex justify-center px-2 py-2.5"><Skeleton class="h-2.5 w-14 rounded" /></span>
