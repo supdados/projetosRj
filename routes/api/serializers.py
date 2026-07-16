@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from services.calendar_core import format_human_datetime, format_input_datetime
+from time_utils import iso_utc
 
 
 def _orgao_ref_brief(orgao: Any) -> dict[str, Any]:
@@ -240,10 +241,12 @@ def serialize_admin_user(user: Any) -> dict[str, Any]:
 
 
 def _iso_or_none(value: Any) -> Optional[str]:
-    """Converte ``date``/``datetime`` para ISO 8601, ou ``None``."""
-    if value is None:
-        return None
-    return value.isoformat()
+    """Converte ``date``/``datetime`` para ISO 8601, ou ``None``.
+
+    Datetimes (UTC naive das colunas legadas) saem com sufixo ``Z`` explícito
+    para o browser converter ao fuso do usuário; ``date`` puro sai YYYY-MM-DD.
+    """
+    return iso_utc(value)
 
 
 def serialize_project_card(project: Any) -> dict[str, Any]:

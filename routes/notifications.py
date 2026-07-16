@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload
 
 from models import Project, UserNotification, db
 from routes.orgao_scope import user_can_access_project
-from time_utils import utc_now
+from time_utils import iso_utc, utc_now
 
 from .api.envelope import fail, ok
 from .api.negotiation import api_login_required
@@ -62,7 +62,7 @@ def _serialize_notification(notification: UserNotification) -> dict[str, Any]:
         "event_type": notification.event_type,
         "title": notification.title,
         "message": notification.message,
-        "created_at": created_at.isoformat() if created_at is not None else None,
+        "created_at": iso_utc(created_at),
         "actor_name": actor.name if actor else "",
         "is_unread": not bool(notification.is_read),
         "target_url": notification.target_url,

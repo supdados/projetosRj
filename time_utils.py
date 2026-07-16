@@ -9,6 +9,28 @@ def utc_now():
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
+def iso_utc(value):
+    """ISO 8601 com fuso EXPLÍCITO para datetimes; ``None`` passa direto.
+
+    As colunas legadas guardam UTC naive (``utc_now``); serializar com
+    ``isoformat()`` puro produz string sem offset, que o ``new Date()`` do
+    browser interpreta como hora LOCAL — exibindo o dígito UTC cru (+3h no
+    Brasil). Aqui o datetime naive é assumido UTC e ganha sufixo ``Z``;
+    aware é convertido para UTC. ``date`` puro sai como ``YYYY-MM-DD``.
+
+    Exemplo: ``iso_utc(utc_now())`` -> ``"2026-07-16T18:27:00.123456Z"``.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime.datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=datetime.timezone.utc)
+        else:
+            value = value.astimezone(datetime.timezone.utc)
+        return value.isoformat().replace("+00:00", "Z")
+    return value.isoformat()
+
+
 def _adapt_sqlite_datetime(value):
     """Serializa datetime sem depender do adaptador padrão depreciado do sqlite3."""
     if value.tzinfo is not None:

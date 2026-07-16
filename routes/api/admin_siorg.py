@@ -16,13 +16,15 @@ from flask import Response, current_app, g, jsonify
 from models import SiorgSyncLog
 from services.siorg_client import SiorgApiError, siorg_client_from_config
 from services.siorg_sync import SiorgSyncEmAndamento, executar_sync_siorg
+from time_utils import iso_utc
 
 from ..blueprint import main_bp
 from .negotiation import api_admin_required
 
 
 def _iso_or_none(value: Any) -> str | None:
-    return value.isoformat() if value is not None else None
+    # Sufixo Z explícito: sem ele o browser interpreta o UTC cru como hora local.
+    return iso_utc(value)
 
 
 def _serialize_sync_log(log: SiorgSyncLog) -> dict[str, Any]:
