@@ -1224,6 +1224,7 @@
 									value={data.project.github_link}
 									kind="text"
 									variant="cell"
+									linkify
 									emptyLabel="Não informado"
 									readonly={fieldsLocked}
 									pending={projectFieldStates.github_link?.pending}
@@ -1242,6 +1243,7 @@
 									value={data.project.documentation_link}
 									kind="text"
 									variant="cell"
+									linkify
 									emptyLabel="Não informado"
 									readonly={fieldsLocked}
 									pending={projectFieldStates.documentation_link?.pending}
@@ -1260,6 +1262,7 @@
 									value={data.project.product_link}
 									kind="text"
 									variant="cell"
+									linkify
 									emptyLabel="Não informado"
 									readonly={fieldsLocked}
 									pending={projectFieldStates.product_link?.pending}

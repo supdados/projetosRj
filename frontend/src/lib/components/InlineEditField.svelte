@@ -46,6 +46,8 @@
 		fieldId: string;
 		/** Classe FontAwesome completa (ex.: "fab fa-github") exibida antes do valor. */
 		icon?: string;
+		/** Trata o valor como URL: exibe ícone ao final do texto que abre em nova guia. */
+		linkify?: boolean;
 		display?: import('svelte').Snippet<[string | null]>;
 		onSave: (value: string) => void;
 		onCancel?: () => void;
@@ -65,6 +67,7 @@
 		error = null,
 		fieldId,
 		icon = '',
+		linkify = false,
 		display,
 		onSave,
 		onCancel
@@ -88,6 +91,15 @@
 	// O que o display realmente mostra (otimista tem prioridade sobre o prop).
 	const shownValue = $derived(optimisticValue ?? value);
 	const hasValue = $derived(shownValue !== null && shownValue !== '');
+
+	const externalHref = $derived(
+		linkify && hasValue ? (/^https?:\/\//i.test(shownValue!) ? shownValue! : `https://${shownValue}`) : null
+	);
+
+	function openExternalLink(event: MouseEvent): void {
+		event.stopPropagation();
+		if (externalHref) window.open(externalHref, '_blank', 'noopener,noreferrer');
+	}
 
 	// Solta o valor otimista quando a gravação se resolve: o prop alcançou o valor
 	// salvo, houve erro (reverte para o antigo), ou o pending voltou a false após
@@ -231,7 +243,12 @@
 			aria-expanded={kind === 'date' ? editing : undefined}
 			onclick={() => (editing ? cancel() : void enterEdit())}
 		>
-			{#if display}{@render display(shownValue)}{:else if hasValue}{shownValue}{:else}{emptyLabel}{/if}
+			{#if display}{@render display(shownValue)}{:else if hasValue}{shownValue}{#if externalHref}<span
+						class="cell-link-open"
+						title="Abrir link em nova guia"
+						aria-hidden="true"
+						onclick={openExternalLink}><i class="fas fa-arrow-up-right-from-square"></i></span
+					>{/if}{:else}{emptyLabel}{/if}
 		</button>
 	{/if}
 	{#if editing && kind === 'date' && dateAnchorEl}
@@ -420,6 +437,19 @@
 	.editable-field:disabled {
 		cursor: default;
 		background: none;
+	}
+	/* Ícone "abrir link" ao final do TEXTO (inline, acompanha a quebra de linha).
+	   Discreto no repouso; ganha cor primária no hover. */
+	.cell-link-open {
+		display: inline-block;
+		margin-left: 0.45rem;
+		font-size: 0.72rem;
+		color: #8aa2bc;
+		cursor: pointer;
+		transition: color 0.16s ease;
+	}
+	.cell-link-open:hover {
+		color: var(--ds-color-primary-500);
 	}
 	.editable-field-empty {
 		color: #6f859f;
