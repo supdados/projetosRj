@@ -391,7 +391,6 @@
 					onclick={() => !etapa.done && onOpenTasks()}
 				>
 					<span class="etapa-task-pill-has">
-						<i class="fas fa-clipboard-list" aria-hidden="true"></i>
 						<span class="etapa-task-pill-count">{etapa.task_count.done}/{etapa.task_count.total}</span>
 					</span>
 					<span class="etapa-task-pill-add">

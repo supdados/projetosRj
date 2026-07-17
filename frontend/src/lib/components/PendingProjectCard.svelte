@@ -159,40 +159,6 @@
 		return 'Etapa sem datas definidas';
 	}
 
-	interface Chip {
-		key: string;
-		count: number;
-		label: string;
-		tone: 'danger' | 'warning' | 'info' | 'neutral';
-	}
-
-	const chips = $derived(
-		[
-			{
-				key: 'atrasadas',
-				count: counts.atrasadas,
-				label: counts.atrasadas === 1 ? 'atrasada' : 'atrasadas',
-				tone: 'danger'
-			},
-			{ key: '7dias', count: counts['7dias'], label: 'em 7d', tone: 'warning' },
-			{ key: '14dias', count: counts['14dias'], label: 'em 14d', tone: 'info' },
-			{ key: '21dias', count: counts['21dias'], label: 'em 21d', tone: 'info' },
-			{ key: 'sem_data', count: counts.sem_data, label: 'sem data', tone: 'neutral' }
-		].filter((chip) => chip.count > 0) as Chip[]
-	);
-
-	/**
-	 * Cor de TEXTO por tom do resumo de janelas. Sem pílula/ícone (condizente com
-	 * Projetos/Tarefas, que usam texto colorido em vez de badge); o vermelho de
-	 * "atrasadas" usa o token padrão `text-danger`, mais sutil como texto simples.
-	 */
-	const CHIP_TEXT_TONE: Record<Chip['tone'], string> = {
-		danger: 'text-danger',
-		warning: 'text-warning',
-		info: 'text-info',
-		neutral: 'text-text-muted'
-	};
-
 	const headingId = $derived(`pending-project-${project.id}`);
 	const isExpanded = $derived(expandedProjects.has(String(project.id)));
 	const otherPanelId = $derived(`outras-etapas-${project.id}`);
@@ -332,7 +298,7 @@
 	}
 
 	// Rótulo de coluna: mesmo estilo do StageGroupHeader do hub de Tarefas.
-	const TH = 'px-2 py-2 text-center text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary';
+	const TH = 'px-2 py-2 text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary';
 </script>
 
 {#snippet stageColumns()}
@@ -354,12 +320,12 @@
 	     hub de Tarefas (bg-primary-100, text-2xs bold uppercase text-text-secondary). -->
 	<thead>
 		<tr class="border-b border-border-subtle bg-primary-100 text-left">
-			<th scope="col" class={`${TH} text-left`}>Descrição</th>
-			<th scope="col" class={TH}>Responsável</th>
-			<th scope="col" class={TH}>Data Início</th>
-			<th scope="col" class={TH}>Data Fim</th>
-			<th scope="col" class={TH}>Tarefas</th>
-			<th scope="col" class={TH}>Status</th>
+			<th scope="col" class={`${TH} text-left`}>Etapa</th>
+			<th scope="col" class={`${TH} text-center`}>Responsável</th>
+			<th scope="col" class={`${TH} text-center`}>Data Início</th>
+			<th scope="col" class={`${TH} text-center`}>Data Fim</th>
+			<th scope="col" class={`${TH} text-center`}>Tarefas</th>
+			<th scope="col" class={`${TH} text-center`}>Status</th>
 		</tr>
 	</thead>
 {/snippet}
@@ -403,7 +369,6 @@
 					<i class="fas fa-plus" aria-hidden="true"></i>
 					<span>Tarefas</span>
 				{:else}
-					<i class="fas fa-clipboard-list" aria-hidden="true"></i>
 					<span class="font-bold">{progress.done}/{progress.total}</span>
 				{/if}
 			</button>
@@ -431,7 +396,7 @@
 		<header
 			class="-mx-5 -mt-5 flex flex-col gap-2 border-b border-border-subtle px-5 pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between"
 		>
-			<div class="flex min-w-0 flex-col gap-1">
+			<div class="flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-1">
 				<!-- ID original do projeto antes do nome (ID - Nome). Tipografia/cor do
 					 link espelham a coluna Título da lista de Projetos (text-base
 					 medium primary-700 + hover underline; ID em xs bold muted). -->
@@ -441,42 +406,26 @@
 					title="Abrir projeto"
 					class="flex min-w-0 items-baseline gap-1.5 text-base font-medium text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
-					<span class="shrink-0 text-xs font-bold text-text-muted">{project.id}</span>
-					<span class="shrink-0 text-text-muted" aria-hidden="true">-</span>
+					<span class="shrink-0 font-mono text-xs font-bold text-text-muted">{project.id}</span>
+					<span class="shrink-0 text-text-muted" aria-hidden="true">–</span>
 					<span class="truncate">{project.titulo}</span>
 				</a>
-				<span class="text-xs text-text-muted">
+				<span class="whitespace-nowrap text-xs text-text-muted">
 					Órgão: <strong class="font-medium text-text-secondary">{orgaoLabel}</strong>
-					{#if row.max_overdue_days > 0}
-						· Maior atraso:
-						<strong class="font-medium text-danger">{row.max_overdue_days} dia(s)</strong>
-					{/if}
 				</span>
 			</div>
-
-			<!-- Resumo de etapas por janela: texto simples (sem pílula/ícone),
-				 condizente com o status/prioridade em texto colorido das outras telas. -->
-			<div
-				class="flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5 text-xs"
-				aria-label="Resumo de etapas por janela"
-			>
-				{#each chips as chip, i (chip.key)}
-					{#if i > 0}<span class="text-text-muted" aria-hidden="true">·</span>{/if}
-					<span class={CHIP_TEXT_TONE[chip.tone]}>
-						<b class="font-semibold">{chip.count}</b>
-						{chip.label}
-					</span>
-				{/each}
-				{#if chips.length === 0}
-					<span class="text-text-muted">Sem pendências na janela</span>
-				{/if}
-			</div>
+			{#if row.max_overdue_days > 0}
+				<span class="shrink-0 whitespace-nowrap text-xs text-text-muted sm:self-center">
+					Maior atraso:
+					<strong class="font-medium text-danger">{row.max_overdue_days} dia(s)</strong>
+				</span>
+			{/if}
 		</header>
 
 		{#if row.etapas_visiveis.length === 0}
 			<p class="text-sm text-text-muted">Sem etapas urgentes na janela atual.</p>
 		{:else}
-			<div class="overflow-x-auto">
+			<div class="overflow-x-auto rounded-lg border border-border-subtle">
 				<table class="w-full table-fixed border-collapse text-xs 2xl:text-sm">
 					<caption class="sr-only">Etapas pendentes de {project.titulo}</caption>
 					{@render stageColumns()}
@@ -491,29 +440,29 @@
 		{/if}
 
 		{#if row.qtd_outras > 0}
-			<div class="-mx-5 -mb-5 flex flex-col border-t border-border-subtle bg-surface-muted/30">
+			<div class="flex flex-col gap-2">
 				<button
 					type="button"
 					onclick={toggleExpanded}
 					aria-expanded={isExpanded}
 					aria-controls={otherPanelId}
-					class="inline-flex w-fit items-center rounded-md px-5 py-2.5 text-sm font-semibold text-primary-700 transition-colors duration-fast hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex w-fit items-center rounded-md text-sm font-semibold text-primary-700 transition-colors duration-fast hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<span>
-						{#if isExpanded}- Recolher{:else}+ {row.qtd_outras} {row.qtd_outras === 1 ? 'etapa' : 'etapas'}{/if}
+						{#if isExpanded}− Recolher{:else}+ {row.qtd_outras} {row.qtd_outras === 1 ? 'etapa fora do escopo' : 'etapas fora do escopo'}{/if}
 					</span>
 				</button>
 
 				{#if isExpanded}
 					<div
 						id={otherPanelId}
-						class="overflow-hidden border-t border-dashed border-border-subtle"
+						class="overflow-hidden border-t border-dashed border-border-subtle pt-3"
 						transition:slide={{ duration: 340, easing: cubicOut }}
 					>
-						<div class="px-5 py-2 text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary">
+						<div class="pb-2 text-2xs font-bold uppercase tracking-[0.08em] text-text-muted">
 							Outras etapas
 						</div>
-						<div class="overflow-x-auto px-5 pb-3">
+						<div class="overflow-x-auto rounded-lg border border-border-subtle">
 							<table class="w-full table-fixed border-collapse text-xs 2xl:text-sm">
 								<caption class="sr-only">Outras etapas de {project.titulo}</caption>
 								{@render stageColumns()}
@@ -556,6 +505,11 @@
 	}
 	.etapa-status-toggle i {
 		font-size: 0.875rem;
+	}
+	.etapa-status-toggle span {
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+		font-size: 0.7rem;
 	}
 	.etapa-status-toggle:hover:not(:disabled),
 	.etapa-status-toggle:focus-visible:not(:disabled) {

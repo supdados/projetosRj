@@ -397,7 +397,8 @@
 		{#snippet titleContent()}
 			<span>Projetos pendentes</span>
 			{#if summary}
-				<CountBadge class="ml-2">Projetos no foco: {Math.max(0, summary.total_projects - focusDelta)}</CountBadge>
+				{@const totalFoco = Math.max(0, summary.total_projects - focusDelta)}
+				<CountBadge class="ml-2">{totalFoco} {totalFoco === 1 ? 'projeto' : 'projetos'} no foco</CountBadge>
 			{/if}
 		{/snippet}
 		{#snippet actions()}
