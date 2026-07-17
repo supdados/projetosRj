@@ -7,13 +7,17 @@ Cobre helpers puros sem depender de banco:
   * meeting_time_summary / meeting_time_display
   * sync_etapa_from_meeting
   * update_meeting_from_calendar_event / mark_project_meeting_sync_error
+  * _shift_weekend_meeting_payload / _weekend_shift_message
 """
 
 import datetime
 from types import SimpleNamespace
 
+from services.calendar_core import to_local_datetime, to_utc_naive
 from services.project_meetings import (
     MEETING_ENTRY_TYPE,
+    _shift_weekend_meeting_payload,
+    _weekend_shift_message,
     can_manage_project_meeting,
     is_google_meeting_stage,
     local_meeting_dates,
@@ -304,3 +308,63 @@ def test_mark_project_meeting_sync_error_sets_status_and_resets_etapa():
 def test_mark_project_meeting_sync_error_is_noop_when_meeting_missing():
     # Não deve levantar.
     mark_project_meeting_sync_error(None, message="x")
+
+
+def _payload_for_local(start_local, end_local):
+    return {
+        "starts_at": to_utc_naive(start_local),
+        "ends_at": to_utc_naive(end_local),
+    }
+
+
+def test_shift_weekend_meeting_payload_pushes_saturday_to_monday():
+    # Regressão: reunião marcada num sábado (via /calendarios) precisa cair no
+    # próximo dia útil, igual à edição manual de data_inicio de uma etapa.
+    payload = _payload_for_local(
+        datetime.datetime(2026, 7, 18, 14, 0),  # sábado
+        datetime.datetime(2026, 7, 18, 15, 0),
+    )
+
+    shifted, shift = _shift_weekend_meeting_payload(payload)
+
+    assert shift == (datetime.date(2026, 7, 18), datetime.date(2026, 7, 20))
+    shifted_start = to_local_datetime(shifted["starts_at"])
+    shifted_end = to_local_datetime(shifted["ends_at"])
+    assert shifted_start.date() == datetime.date(2026, 7, 20)  # segunda
+    assert shifted_start.hour == 14  # horário preservado
+    assert (shifted_end - shifted_start) == datetime.timedelta(
+        hours=1
+    )  # duração preservada
+
+
+def test_shift_weekend_meeting_payload_pushes_sunday_to_monday():
+    payload = _payload_for_local(
+        datetime.datetime(2026, 7, 19, 9, 0),  # domingo
+        datetime.datetime(2026, 7, 19, 10, 0),
+    )
+
+    shifted, shift = _shift_weekend_meeting_payload(payload)
+
+    assert shift == (datetime.date(2026, 7, 19), datetime.date(2026, 7, 20))
+    assert to_local_datetime(shifted["starts_at"]).date() == datetime.date(2026, 7, 20)
+
+
+def test_shift_weekend_meeting_payload_leaves_business_day_untouched():
+    payload = _payload_for_local(
+        datetime.datetime(2026, 7, 20, 9, 0),  # segunda
+        datetime.datetime(2026, 7, 20, 10, 0),
+    )
+
+    shifted, shift = _shift_weekend_meeting_payload(payload)
+
+    assert shift is None
+    assert shifted == payload
+
+
+def test_weekend_shift_message_formats_dates_br_and_handles_none():
+    message = _weekend_shift_message(
+        (datetime.date(2026, 7, 18), datetime.date(2026, 7, 20))
+    )
+    assert "18/07/2026" in message
+    assert "20/07/2026" in message
+    assert _weekend_shift_message(None) is None

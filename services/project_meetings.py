@@ -1,8 +1,48 @@
+import datetime
+
 from services.calendar_core import format_human_datetime, to_local_datetime
 from services.calendar_sync import sync_local_event_to_google
 from models import CalendarEvent, Etapa, ProjectStageMeeting, db
 
 MEETING_ENTRY_TYPE = "google_meeting"
+
+
+def _shift_weekend_meeting_payload(payload):
+    """Se o início da reunião cair num sábado/domingo, empurra `starts_at`/
+    `ends_at` (UTC-naive) pro próximo dia útil, preservando duração e horário
+    local BR — mesma regra de `etapas_dates._normalize_to_business_day` usada
+    na edição manual da data da etapa, agora também no caminho de reunião
+    Google (que gravava a data direto, sem essa checagem).
+
+    Returns:
+        ``(payload_ajustado, (data_antiga, data_nova) | None)``.
+    """
+    # Import tardio evita ciclo project_meetings <-> etapas_dates.
+    from services.etapas_dates import _normalize_to_business_day
+
+    start_local = to_local_datetime(payload["starts_at"])
+    old_date = start_local.date()
+    if old_date.weekday() < 5:
+        return payload, None
+
+    new_date = _normalize_to_business_day(old_date, forward=True)
+    day_delta = datetime.timedelta(days=(new_date - old_date).days)
+
+    shifted = dict(payload)
+    shifted["starts_at"] = payload["starts_at"] + day_delta
+    shifted["ends_at"] = payload["ends_at"] + day_delta
+    return shifted, (old_date, new_date)
+
+
+def _weekend_shift_message(weekend_shift):
+    if not weekend_shift:
+        return None
+    old_date, new_date = weekend_shift
+    return (
+        f"A data da reunião caiu num fim de semana ({old_date.strftime('%d/%m/%Y')}) "
+        f"e foi movida automaticamente para o próximo dia útil "
+        f"({new_date.strftime('%d/%m/%Y')})."
+    )
 
 
 def is_google_meeting_stage(etapa):
@@ -160,13 +200,17 @@ def create_stage_meeting(app_config, project, connection, payload, *, actor_user
         actor_user_id: ID do usuário criador.
 
     Returns:
-        ``(etapa, sync_warning)`` — ``sync_warning`` é ``None`` quando o sync com
-        o Google foi bem-sucedido, ou a mensagem de erro quando falhou (o evento
-        persiste local com ``sync_status='error'``, igual ao legado).
+        ``(etapa, sync_warning, weekend_shift_message)`` — ``sync_warning`` é
+        ``None`` quando o sync com o Google foi bem-sucedido, ou a mensagem de
+        erro quando falhou (o evento persiste local com ``sync_status='error'``,
+        igual ao legado). ``weekend_shift_message`` é ``None`` exceto quando a
+        data escolhida caiu num fim de semana e foi movida automaticamente.
     """
     # Import tardio evita ciclo project_meetings <-> etapas_dates (etapas_dates
     # reexporta símbolos deste módulo).
     from services.etapas_dates import _next_etapa_order
+
+    payload, weekend_shift = _shift_weekend_meeting_payload(payload)
 
     event = CalendarEvent(
         user_id=actor_user_id,
@@ -226,7 +270,7 @@ def create_stage_meeting(app_config, project, connection, payload, *, actor_user
     update_meeting_from_calendar_event(meeting, event)
     sync_etapa_from_meeting(etapa, meeting, title=event.title)
     sync_local_calendar_event_mirrors(meeting, title=event.title)
-    return etapa, sync_warning
+    return etapa, sync_warning, _weekend_shift_message(weekend_shift)
 
 
 def update_stage_meeting(app_config, etapa, connection, payload):
@@ -241,8 +285,11 @@ def update_stage_meeting(app_config, etapa, connection, payload):
         payload: dict de ``parse_event_form``.
 
     Returns:
-        ``(etapa, sync_warning)`` — mesma semântica de ``create_stage_meeting``.
+        ``(etapa, sync_warning, weekend_shift_message)`` — mesma semântica de
+        ``create_stage_meeting``.
     """
+    payload, weekend_shift = _shift_weekend_meeting_payload(payload)
+
     meeting = etapa.meeting
     event = meeting.calendar_event
     if event is None:
@@ -291,7 +338,7 @@ def update_stage_meeting(app_config, etapa, connection, payload):
     update_meeting_from_calendar_event(meeting, event)
     sync_etapa_from_meeting(etapa, meeting, title=event.title)
     sync_local_calendar_event_mirrors(meeting, title=event.title)
-    return etapa, sync_warning
+    return etapa, sync_warning, _weekend_shift_message(weekend_shift)
 
 
 def find_project_meeting_by_google_event(

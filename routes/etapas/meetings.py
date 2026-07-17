@@ -57,7 +57,7 @@ def add_project_meeting(project_id):
         flash(str(exc), "warning")
         return redirect(url_for("main.project_detail", project_id=project_id))
 
-    etapa, sync_warning = create_stage_meeting(
+    etapa, sync_warning, weekend_shift_message = create_stage_meeting(
         current_app.config,
         project,
         connection,
@@ -71,6 +71,12 @@ def add_project_meeting(project_id):
             action_type="add_google_meeting",
             description=f'Adicionou a reunião "{etapa.descricao}"',
         )
+        if weekend_shift_message:
+            log_project_action(
+                project_id=project.id,
+                action_type="google_meeting_weekend_shift",
+                description=weekend_shift_message,
+            )
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -90,6 +96,7 @@ def add_project_meeting(project_id):
                 "success": True,
                 "message": success_message,
                 "warning": sync_warning,
+                "weekend_shift_message": weekend_shift_message,
                 "etapa": _serialize_etapa_payload(etapa, connection=connection),
             }
         )
@@ -97,6 +104,8 @@ def add_project_meeting(project_id):
     flash(success_message, "warning" if sync_warning else "success")
     if sync_warning:
         flash(sync_warning, "warning")
+    if weekend_shift_message:
+        flash(weekend_shift_message, "warning")
     return redirect(url_for("main.project_detail", project_id=project_id))
 
 
@@ -141,7 +150,7 @@ def edit_project_meeting(etapa_id):
         flash(str(exc), "warning")
         return redirect(url_for("main.project_detail", project_id=project.id))
 
-    etapa, sync_warning = update_stage_meeting(
+    etapa, sync_warning, weekend_shift_message = update_stage_meeting(
         current_app.config, etapa, connection, payload
     )
 
@@ -151,6 +160,12 @@ def edit_project_meeting(etapa_id):
             action_type="edit_google_meeting",
             description=f'Editou a reunião "{etapa.descricao}"',
         )
+        if weekend_shift_message:
+            log_project_action(
+                project_id=project.id,
+                action_type="google_meeting_weekend_shift",
+                description=weekend_shift_message,
+            )
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -170,6 +185,7 @@ def edit_project_meeting(etapa_id):
                 "success": True,
                 "message": success_message,
                 "warning": sync_warning,
+                "weekend_shift_message": weekend_shift_message,
                 "etapa": _serialize_etapa_payload(etapa, connection=connection),
             }
         )
@@ -177,6 +193,8 @@ def edit_project_meeting(etapa_id):
     flash(success_message, "warning" if sync_warning else "success")
     if sync_warning:
         flash(sync_warning, "warning")
+    if weekend_shift_message:
+        flash(weekend_shift_message, "warning")
     return redirect(url_for("main.project_detail", project_id=project.id))
 
 

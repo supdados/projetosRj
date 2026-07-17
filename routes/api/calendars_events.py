@@ -37,6 +37,8 @@ from services.project_meetings import (
     find_project_meeting_for_calendar_event,
     is_google_meeting_stage,
     update_stage_meeting,
+    _shift_weekend_meeting_payload,
+    _weekend_shift_message,
 )
 
 from ..blueprint import main_bp
@@ -220,6 +222,14 @@ def api_calendar_event_edit(event_id: int) -> Response | tuple[Response, int]:
     if parse_error is not None:
         return parse_error
 
+    # Evento vinculado a uma reuniao de etapa: mesma regra de negocio de
+    # create/update_stage_meeting (nao deixar a etapa cair num fim de semana).
+    # Evento avulso (sem etapa) segue livre para qualquer dia.
+    weekend_shift_message = None
+    if linked_meeting is not None:
+        payload, weekend_shift = _shift_weekend_meeting_payload(payload)
+        weekend_shift_message = _weekend_shift_message(weekend_shift)
+
     event.title = payload["title"]
     event.description = payload["description"]
     event.location = payload["location"]
@@ -250,6 +260,12 @@ def api_calendar_event_edit(event_id: int) -> Response | tuple[Response, int]:
         )
 
     try:
+        if weekend_shift_message:
+            log_project_action(
+                project_id=linked_meeting.project_id,
+                action_type="google_meeting_weekend_shift",
+                description=weekend_shift_message,
+            )
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
@@ -264,11 +280,14 @@ def api_calendar_event_edit(event_id: int) -> Response | tuple[Response, int]:
             "synced",
             "Evento atualizado e sincronizado com Google Calendar.",
         )
+    if weekend_shift_message:
+        message = f"{message} {weekend_shift_message}"
     return ok(
         {
             "event": serialize_calendar_event(event),
             "sync_outcome": outcome,
             "sync_message": message,
+            "weekend_shift_message": weekend_shift_message,
         }
     )
 
@@ -385,14 +404,23 @@ def api_calendar_event_delete(event_id: int) -> Response | tuple[Response, int]:
 
 
 def _meeting_response(
-    etapa: Etapa, connection: Any, sync_warning: str | None, *, message: str
+    etapa: Etapa,
+    connection: Any,
+    sync_warning: str | None,
+    *,
+    message: str,
+    weekend_shift_message: str | None = None,
 ):
     """Monta o envelope de sucesso de criar/editar reunião (etapa + warning)."""
+    full_message = (
+        f"{message} {weekend_shift_message}" if weekend_shift_message else message
+    )
     return ok(
         {
             "etapa": _serialize_etapa_payload(etapa, connection=connection),
             "warning": sync_warning,
-            "message": message,
+            "weekend_shift_message": weekend_shift_message,
+            "message": full_message,
         }
     )
 
@@ -434,7 +462,7 @@ def api_project_meeting_create(
     if parse_error is not None:
         return parse_error
 
-    etapa, sync_warning = create_stage_meeting(
+    etapa, sync_warning, weekend_shift_message = create_stage_meeting(
         current_app.config, project, connection, payload, actor_user_id=g.user.id
     )
 
@@ -444,6 +472,12 @@ def api_project_meeting_create(
             action_type="add_google_meeting",
             description=f'Adicionou a reunião "{etapa.descricao}"',
         )
+        if weekend_shift_message:
+            log_project_action(
+                project_id=project.id,
+                action_type="google_meeting_weekend_shift",
+                description=weekend_shift_message,
+            )
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -455,7 +489,13 @@ def api_project_meeting_create(
             "Reunião adicionada ao projeto, mas houve falha na sincronização com "
             "o Google Calendar."
         )
-    return _meeting_response(etapa, connection, sync_warning, message=message)
+    return _meeting_response(
+        etapa,
+        connection,
+        sync_warning,
+        message=message,
+        weekend_shift_message=weekend_shift_message,
+    )
 
 
 @main_bp.route("/api/etapas/<int:etapa_id>/reuniao", methods=["POST"])
@@ -509,7 +549,7 @@ def api_project_meeting_edit(etapa_id: int) -> Response | tuple[Response, int]:
     if parse_error is not None:
         return parse_error
 
-    etapa, sync_warning = update_stage_meeting(
+    etapa, sync_warning, weekend_shift_message = update_stage_meeting(
         current_app.config, etapa, connection, payload
     )
 
@@ -519,6 +559,12 @@ def api_project_meeting_edit(etapa_id: int) -> Response | tuple[Response, int]:
             action_type="edit_google_meeting",
             description=f'Editou a reunião "{etapa.descricao}"',
         )
+        if weekend_shift_message:
+            log_project_action(
+                project_id=project.id,
+                action_type="google_meeting_weekend_shift",
+                description=weekend_shift_message,
+            )
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -530,7 +576,13 @@ def api_project_meeting_edit(etapa_id: int) -> Response | tuple[Response, int]:
             "Reunião atualizada, mas houve falha na sincronização com o Google "
             "Calendar."
         )
-    return _meeting_response(etapa, connection, sync_warning, message=message)
+    return _meeting_response(
+        etapa,
+        connection,
+        sync_warning,
+        message=message,
+        weekend_shift_message=weekend_shift_message,
+    )
 
 
 @main_bp.route("/api/etapas/<int:etapa_id>/reuniao/excluir", methods=["POST"])
