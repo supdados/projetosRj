@@ -1536,9 +1536,10 @@
 		display: flex;
 		flex-direction: column;
 		/* Altura RESPONSIVA: cresce com a viewport (telas maiores => mês maior),
-		   clampada p/ caber sem scroll (≈ a mesma da visão Semana). 16rem ≈ chrome
-		   acima/abaixo (topnav, header da página, barra de navegação, respiros). */
-		min-height: clamp(30rem, calc(100vh - 16rem), 52rem);
+		   clampada p/ caber sem scroll (≈ a mesma da visão Semana). 17rem ≈ chrome
+		   acima/abaixo (topnav, header da página, barra de navegação, respiros) —
+		   16rem deixava a grade ~1rem alta demais e sobrava um mini scroll vertical. */
+		min-height: clamp(30rem, calc(100vh - 17rem), 52rem);
 	}
 
 	/* ── Month nav ──────────────────────────────────────────────────────

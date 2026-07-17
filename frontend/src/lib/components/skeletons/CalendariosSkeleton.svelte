@@ -178,7 +178,7 @@
 		border-radius: 0 0 12px 12px;
 		overflow: hidden;
 		background: var(--color-surface);
-		min-height: clamp(30rem, calc(100vh - 16rem), 52rem);
+		min-height: clamp(30rem, calc(100vh - 17rem), 52rem);
 		display: flex;
 		flex-direction: column;
 	}
