@@ -44,6 +44,9 @@
 		pending?: boolean;
 		error?: string | null;
 		fieldId: string;
+		/** kind="date": limites do calendário (ISO yyyy-mm-dd). */
+		minDate?: string | null;
+		maxDate?: string | null;
 		/** Classe FontAwesome completa (ex.: "fab fa-github") exibida antes do valor. */
 		icon?: string;
 		/** Trata o valor como URL: exibe ícone ao final do texto que abre em nova guia. */
@@ -66,6 +69,8 @@
 		pending = false,
 		error = null,
 		fieldId,
+		minDate = null,
+		maxDate = null,
 		icon = '',
 		linkify = false,
 		display,
@@ -255,6 +260,8 @@
 		<DatePickerPanel
 			anchor={dateAnchorEl}
 			value={shownValue || null}
+			min={minDate}
+			max={maxDate}
 			allowClear
 			ariaLabel={label || 'Selecionar data'}
 			onPick={(iso) => commitDate(iso)}

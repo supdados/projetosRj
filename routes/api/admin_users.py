@@ -239,14 +239,9 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
         cpf_govbr, cpf_error = _parse_cpf_govbr(payload.get("cpf_govbr"))
 
     # Soft-delete C4: conta apenas administradores ATIVOS ao proteger o último.
-    if (
-        user.is_admin
-        and not is_admin_flag
-        and User.query.filter(
-            User.is_admin.is_(True), User.deleted_at.is_(None)
-        ).count()
-        <= 1
-    ):
+    # Lock pessimista (bug 2.22): evita que dois requests concorrentes
+    # despromovam ambos os 2 últimos admins antes de qualquer commit.
+    if user.is_admin and not is_admin_flag and _lock_and_count_active_admins() <= 1:
         return fail(
             "Não é possível remover o status de administrador do único "
             "administrador existente.",
@@ -346,10 +341,9 @@ def api_admin_usuarios_delete(user_id: int) -> Response | tuple[Response, int]:
             code="validation",
         )
     # O guard do "único admin" conta apenas administradores ATIVOS (deleted_at
-    # is None) — admins já removidos não contam como existentes.
-    active_admins = User.query.filter(
-        User.is_admin.is_(True), User.deleted_at.is_(None)
-    ).count()
+    # is None) — admins já removidos não contam como existentes. Lock
+    # pessimista (bug 2.22): evita TOCTOU entre duas exclusões concorrentes.
+    active_admins = _lock_and_count_active_admins()
     if user.is_admin and user.deleted_at is None and active_admins == 1:
         return fail(
             "Não é possível excluir o único administrador do sistema.",
@@ -360,6 +354,23 @@ def api_admin_usuarios_delete(user_id: int) -> Response | tuple[Response, int]:
     user.deleted_at = utc_now()
     db.session.commit()
     return ok({"deleted_id": user_id})
+
+
+def _lock_and_count_active_admins() -> int:
+    """Conta admins ativos com lock pessimista (evita TOCTOU concorrente).
+
+    ``with_for_update()`` emite ``SELECT ... FOR UPDATE``, travando as linhas
+    até o commit da transação corrente — dois requests despromovendo/excluindo
+    os 2 últimos admins em paralelo deixam de passar ambos pela checagem
+    (bug 2.22). No SQLite dos testes ``with_for_update`` é no-op; o lock real
+    só existe em Postgres/produção.
+    """
+    admins = (
+        User.query.filter(User.is_admin.is_(True), User.deleted_at.is_(None))
+        .with_for_update()
+        .all()
+    )
+    return len(admins)
 
 
 def _get_orgao_ids(payload: Any) -> list[Any]:

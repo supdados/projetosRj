@@ -324,8 +324,11 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
     Replica ``archive_finalized_tasks``: monta a query de tarefas visíveis,
     não-arquivadas, ``status == "finalizada"`` no escopo dos filtros do corpo
     (``project``/``orgao``/``prioridade``/``tipo``/``status``/``responsavel``),
-    arquiva via ``bulk_archive_finalized`` e dispara ``notify_task_archived_in_batch``.
-    Filtro de órgão fora do escopo => 422 (padrão do ``/api/tarefas``).
+    restringe a autor/admin (``_can_manage_task_restricted_actions`` — MESMO
+    guard do arquivar individual; auditoria 2.6) e arquiva via
+    ``bulk_archive_finalized``, disparando ``notify_task_archived_in_batch``.
+    Tarefas alheias no escopo ficam intactas (não é erro do lote). Filtro de
+    órgão fora do escopo => 422 (padrão do ``/api/tarefas``).
 
     Returns:
         ``ok({archived_count, archived_task_ids, message})`` (200); 422 órgão; 401.
@@ -360,6 +363,13 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
         .filter(Task.status == "finalizada")
         .all()
     )
+    # lote arquiva só as tarefas em que o usuário é autor/admin (auditoria 2.6);
+    # as demais ficam intactas, sem erro (não é falha do lote).
+    finalized_tasks = [
+        task
+        for task in finalized_tasks
+        if _can_manage_task_restricted_actions(g.user, task)
+    ]
 
     try:
         archived_ids = bulk_archive_finalized(finalized_tasks)

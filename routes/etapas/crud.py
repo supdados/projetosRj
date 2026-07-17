@@ -152,6 +152,12 @@ def add_etapa(project_id):
                     ),
                 }
             )
+    except ValueError as exc:
+        db.session.rollback()
+        if ajax_request:
+            return jsonify({"success": False, "message": str(exc)}), 400
+        flash(str(exc), "warning")
+        return redirect(url_for("main.project_detail", project_id=project_id))
     except Exception:
         db.session.rollback()
         if ajax_request:
@@ -564,6 +570,9 @@ def update_etapa_field(etapa_id):
         response_data = update_regular_field(etapa, field, value)
         db.session.commit()
         return jsonify(response_data)
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(exc)}), 400
     except Exception:
         db.session.rollback()
         return (

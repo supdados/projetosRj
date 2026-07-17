@@ -318,6 +318,7 @@
 					label="Data de início"
 					value={etapa.data_inicio}
 					emptyLabel="Sem data"
+					maxDate={etapa.data_inicio ? null : etapa.data_fim}
 					pending={fieldState('data_inicio').pending}
 					error={fieldState('data_inicio').error}
 					onSave={(v) => onUpdateField('data_inicio', v)}
@@ -347,6 +348,7 @@
 					label="Data de fim"
 					value={etapa.data_fim}
 					emptyLabel="Sem data"
+					minDate={etapa.data_inicio}
 					pending={fieldState('data_fim').pending}
 					error={fieldState('data_fim').error}
 					onSave={(v) => onUpdateField('data_fim', v)}

@@ -73,6 +73,7 @@ def create_etapa_record(
         project_id=project.id,
         ordem=nova_ordem,
     )
+    _validate_date_range(etapa, data_inicio, data_fim)
     db.session.add(etapa)
 
     project_was_reactivated = False
@@ -258,6 +259,23 @@ def _date_br(d: "datetime.date | None", empty: str = "Sem data") -> str:
     return d.strftime("%d/%m/%Y") if d else empty
 
 
+def _validate_date_range(
+    etapa, novo_inicio: "datetime.date | None", novo_fim: "datetime.date | None"
+) -> None:
+    """Garante data_fim >= data_inicio de uma etapa regular.
+
+    Datas parcialmente preenchidas (uma das pontas ``None``) não são validadas
+    aqui — a etapa pode ter só início ou só fim definido.
+    """
+    if novo_inicio is None or novo_fim is None:
+        return
+    if novo_fim < novo_inicio:
+        raise ValueError(
+            f"A data de fim ({_date_br(novo_fim)}) não pode ser anterior à data "
+            f'de início ({_date_br(novo_inicio)}) da etapa "{etapa.descricao}".'
+        )
+
+
 def _log_etapa_field_change(
     etapa, field_display: str, old_str: str, new_str: str
 ) -> None:
@@ -273,6 +291,19 @@ def _log_etapa_field_change(
 def _update_data_inicio(etapa, value: str | None, out: dict) -> None:
     old_date = etapa.data_inicio
     new_date = _parse_and_normalize_date(value)
+
+    # Cascata legítima: mover o início empurra o fim junto (dias úteis) —
+    # validamos o PAR FINAL resultante, não o intermediário.
+    days_diff = (
+        _business_days_between(old_date, new_date) if old_date and new_date else None
+    )
+    new_end_date = etapa.data_fim
+    if days_diff is not None and etapa.data_fim:
+        new_end_date = _normalize_to_business_day(
+            _add_business_days(etapa.data_fim, days_diff), forward=True
+        )
+    _validate_date_range(etapa, new_date, new_end_date)
+
     _log_etapa_field_change(
         etapa,
         _FIELD_DISPLAY_NAMES["data_inicio"],
@@ -283,20 +314,19 @@ def _update_data_inicio(etapa, value: str | None, out: dict) -> None:
     out["newValue"] = _date_iso(new_date)
     out["displayValue"] = _date_br(new_date)
 
-    if old_date and new_date:
-        days_diff = _business_days_between(old_date, new_date)
+    if days_diff is not None:
         out["daysDiff"] = days_diff
         if etapa.data_fim:
-            etapa.data_fim = _normalize_to_business_day(
-                _add_business_days(etapa.data_fim, days_diff), forward=True
-            )
-            out["updatedEndDate"] = _date_iso(etapa.data_fim)
-            out["updatedEndDateDisplay"] = _date_br(etapa.data_fim)
+            etapa.data_fim = new_end_date
+            out["updatedEndDate"] = _date_iso(new_end_date)
+            out["updatedEndDateDisplay"] = _date_br(new_end_date)
 
 
 def _update_data_fim(etapa, value: str | None, out: dict) -> None:
     old_date = etapa.data_fim
     new_date = _parse_and_normalize_date(value)
+    _validate_date_range(etapa, etapa.data_inicio, new_date)
+
     _log_etapa_field_change(
         etapa,
         _FIELD_DISPLAY_NAMES["data_fim"],

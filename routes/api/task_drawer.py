@@ -77,9 +77,7 @@ EDIT_RESTRICTED_DENIED_MESSAGE = (
 
 #: Campos válidos do AUTOSAVE inline. ``status`` é deliberadamente EXCLUÍDO — ele
 #: continua sendo mudado por ``POST /api/tarefas/<id>/status`` (Fase 5b-1).
-_INLINE_FIELDS = frozenset(
-    {"descricao", "prioridade", "tipo_pedido", "responsavel"}
-)
+_INLINE_FIELDS = frozenset({"descricao", "prioridade", "tipo_pedido", "responsavel"})
 
 
 def _anexo_download_url(anexo: Any) -> str:
@@ -202,9 +200,7 @@ def _apply_inline_fields(task: Task, fields: dict[str, Any]) -> Any | None:
     Returns:
         ``None`` em sucesso (mutação em memória); ou um ``fail(...)`` (403/422).
     """
-    touches_restricted = bool(
-        {"descricao", "prioridade", "responsavel"} & set(fields)
-    )
+    touches_restricted = bool({"descricao", "prioridade", "responsavel"} & set(fields))
     if touches_restricted and not _can_manage_task_restricted_actions(g.user, task):
         _audit_denied_task_action(task, "forbidden_edit_restricted")
         return fail(EDIT_RESTRICTED_DENIED_MESSAGE, status=403, code="forbidden")
@@ -395,6 +391,8 @@ def _unarchive_and_respond(task_id: int) -> Response | tuple[Response, int]:
 
     Reseta ``is_archived``/``archived_at`` e status para "nao_iniciada" (MESMA
     regra de ``unarchive_task`` legada). Dispara ``notify_task_unarchived``.
+    Restrito a autor/admin — MESMO guard de ``arquivar``/``finalizar`` (403
+    ``forbidden``); ver auditoria 2.5.
 
     Args:
         task_id: ID da tarefa.
@@ -405,6 +403,14 @@ def _unarchive_and_respond(task_id: int) -> Response | tuple[Response, int]:
     task, error = _load_drawer_task(task_id)
     if error is not None:
         return error
+
+    if not _can_manage_task_restricted_actions(g.user, task):
+        _audit_denied_task_action(task, "forbidden_edit_restricted")
+        return fail(
+            "Somente o autor da tarefa ou um administrador pode desarquivá-la.",
+            status=403,
+            code="forbidden",
+        )
 
     mutate_unarchive_task(task)
 
@@ -497,7 +503,9 @@ def api_tarefa_responsaveis(task_id: int) -> Response | tuple[Response, int]:
     payload = request.get_json(silent=True) or {}
     raw_ids = payload.get("user_ids")
     if not isinstance(raw_ids, list):
-        return fail("'user_ids' deve ser uma lista de inteiros.", status=422, code="validation")
+        return fail(
+            "'user_ids' deve ser uma lista de inteiros.", status=422, code="validation"
+        )
 
     allowed_ids = {user.id for user in _get_assignable_users_for_project(task.project)}
     desired: list[int] = []
@@ -520,7 +528,9 @@ def api_tarefa_responsaveis(task_id: int) -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception:
         db.session.rollback()
-        current_app.logger.exception("Erro ao salvar responsaveis da tarefa %s", task_id)
+        current_app.logger.exception(
+            "Erro ao salvar responsaveis da tarefa %s", task_id
+        )
         return fail("Erro ao salvar responsáveis.", status=422, code="validation")
 
     return ok(_drawer_detail_payload(task))

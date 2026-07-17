@@ -578,6 +578,7 @@
 										value={draft.data_inicio || null}
 										allowClear
 										ariaLabel="Data de início"
+										max={draft.data_fim || null}
 										onPick={pickComposerDate}
 										onClear={() => pickComposerDate(null)}
 										onClose={() => (composerDateField = null)}

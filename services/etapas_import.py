@@ -12,6 +12,7 @@ import datetime
 
 from models import Etapa, StageTemplate, StageTemplateUsage, db
 from routes.shared import log_project_action
+from services.etapas_dates import _add_business_days, _normalize_to_business_day
 
 
 def import_template_stages(
@@ -24,9 +25,12 @@ def import_template_stages(
 ) -> int:
     """Cria etapas sequenciais a partir das ``items`` de um modelo.
 
-    Cada etapa começa no dia seguinte ao fim da anterior; a primeira começa em
-    ``start_date``. A duração de cada etapa vem de ``item.duration_days``. Registra
-    o histórico e a ``StageTemplateUsage``. NÃO faz commit.
+    Cada etapa começa no dia útil seguinte ao fim da anterior; a primeira começa
+    no primeiro dia útil a partir de ``start_date``. A duração de cada etapa vem
+    de ``item.duration_days`` em dias ÚTEIS (mínimo 1). Mesma semântica do
+    preview do modal de importação (``addBusinessDays`` em
+    ``ImportModelModal.svelte``), para que a data salva bata com a exibida.
+    Registra o histórico e a ``StageTemplateUsage``. NÃO faz commit.
 
     Args:
         project: Instância de ``Project`` destino das etapas.
@@ -46,11 +50,12 @@ def import_template_stages(
     )
     ordem_inicial = (ultima_etapa.ordem + 1) if ultima_etapa else 0
 
-    current_date = start_date
+    current_date = _normalize_to_business_day(start_date, forward=True)
     etapas_criadas = 0
     for index, item in enumerate(template.items):
+        duration_days = item.duration_days if item.duration_days > 0 else 1
         data_inicio = current_date
-        data_fim = current_date + datetime.timedelta(days=item.duration_days - 1)
+        data_fim = _add_business_days(data_inicio, duration_days - 1)
         nova_etapa = Etapa(
             descricao=item.name,
             data_inicio=data_inicio,
@@ -62,7 +67,7 @@ def import_template_stages(
         )
         db.session.add(nova_etapa)
         etapas_criadas += 1
-        current_date = data_fim + datetime.timedelta(days=1)
+        current_date = _add_business_days(data_fim, 1)
 
     log_project_action(
         project_id=project.id,

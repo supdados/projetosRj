@@ -40,6 +40,7 @@ from services.etapa_responsaveis import (
 from services.etapas_cascade import cascade_subsequent_dates
 from services.etapas_import import import_template_stages
 from services.etapas_mutation import (
+    _validate_date_range,
     count_open_tasks_in_etapa,
     create_etapa_record,
     delete_regular_etapa,
@@ -214,6 +215,9 @@ def api_etapa_add(project_id: int) -> Response | tuple[Response, int]:
         )
         apply_responsaveis_entries(new_etapa, responsaveis_entries)
         db.session.commit()
+    except ValueError as exc:
+        db.session.rollback()
+        return fail(str(exc), status=422, code="validation")
     except Exception:
         db.session.rollback()
         return fail("Erro ao adicionar etapa.", status=422, code="validation")
@@ -261,6 +265,10 @@ def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
     data_fim, ok_f = _parse_date(data.get("data_fim"))
     if not ok_i or not ok_f:
         return fail("Formato de data inválido.", status=422, code="validation")
+    try:
+        _validate_date_range(etapa, data_inicio, data_fim)
+    except ValueError as exc:
+        return fail(str(exc), status=422, code="validation")
 
     iniciada = bool(data.get("iniciada"))
     done_requested = bool(data.get("done"))
@@ -389,9 +397,9 @@ def api_etapa_update_field(etapa_id: int) -> Response | tuple[Response, int]:
     try:
         field_update = update_regular_field(etapa, field, value)
         db.session.commit()
-    except ValueError:
+    except ValueError as exc:
         db.session.rollback()
-        return fail("Formato de data inválido.", status=422, code="validation")
+        return fail(str(exc), status=422, code="validation")
     except Exception:
         db.session.rollback()
         return fail("Erro ao salvar a alteração.", status=422, code="validation")

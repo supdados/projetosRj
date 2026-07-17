@@ -36,12 +36,15 @@ def test_import_model_creates_stages_with_sequential_dates_and_history(
             "Planejamento",
             "Execucao",
         ]
+        # Planejamento (2 dias úteis) não cruza fim de semana: inicio/fim iguais ao cálculo corrido.
         assert etapas[2].ordem == 2
         assert etapas[2].data_inicio == datetime.date(2026, 3, 10)
         assert etapas[2].data_fim == datetime.date(2026, 3, 11)
+        # Execucao (3 dias úteis) começa numa quinta; dias úteis são qui/sex/seg — bate
+        # com o preview (addBusinessDays) do ImportModelModal, nunca cai em sábado/domingo.
         assert etapas[3].ordem == 3
         assert etapas[3].data_inicio == datetime.date(2026, 3, 12)
-        assert etapas[3].data_fim == datetime.date(2026, 3, 14)
+        assert etapas[3].data_fim == datetime.date(2026, 3, 16)
 
         history = (
             ProjectHistory.query.filter_by(
@@ -55,6 +58,45 @@ def test_import_model_creates_stages_with_sequential_dates_and_history(
             'Importou 2 etapa(s) do modelo "Template Base"'
             in history.action_description
         )
+
+
+def test_import_model_stage_dates_always_fall_on_business_days(
+    app, client_user, seed_data
+):
+    """Regressão: import_template_stages somava dias corridos e podia persistir
+    data_fim em fim de semana, divergindo do preview do frontend (addBusinessDays
+    em ImportModelModal.svelte). Início em sexta força a 1ª etapa a cruzar o fim
+    de semana; nenhuma data gerada pode cair em sábado/domingo.
+    """
+    response = client_user.post(
+        f"/project/{seed_data['project_id']}/import_model",
+        data={
+            "template_id": str(seed_data["template_id"]),
+            "start_date": "2026-03-13",  # sexta-feira
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+
+    with app.app_context():
+        etapas = (
+            Etapa.query.filter_by(project_id=seed_data["project_id"])
+            .order_by(Etapa.ordem.asc(), Etapa.id.asc())
+            .all()
+        )
+        planejamento, execucao = etapas[-2], etapas[-1]
+
+        for etapa in (planejamento, execucao):
+            assert etapa.data_inicio.weekday() < 5
+            assert etapa.data_fim.weekday() < 5
+
+        # Idêntico ao cálculo do preview: Planejamento (2 dias úteis) sex->seg;
+        # Execucao (3 dias úteis) ter->qui, encadeada no dia útil seguinte.
+        assert planejamento.data_inicio == datetime.date(2026, 3, 13)
+        assert planejamento.data_fim == datetime.date(2026, 3, 16)
+        assert execucao.data_inicio == datetime.date(2026, 3, 17)
+        assert execucao.data_fim == datetime.date(2026, 3, 19)
 
 
 def test_reorder_etapas_updates_order_for_project_only(app, client_user, seed_data):

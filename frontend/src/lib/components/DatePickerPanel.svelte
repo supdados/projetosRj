@@ -12,6 +12,8 @@
 		value: string | null;
 		/** Data mínima selecionável (ISO), opcional. */
 		min?: string | null;
+		/** Data máxima selecionável (ISO), opcional. */
+		max?: string | null;
 		/** Exibe "Limpar" no rodapé (para campos que aceitam ficar sem data). */
 		allowClear?: boolean;
 		ariaLabel?: string;
@@ -25,6 +27,7 @@
 		anchor,
 		value,
 		min = null,
+		max = null,
 		allowClear = false,
 		ariaLabel = 'Selecionar data',
 		onPick,
@@ -196,7 +199,7 @@
 	</div>
 	<div class="dfp-days">
 		{#each cells as c (c.dateStr)}
-			{@const disabled = !!min && c.dateStr < min}
+			{@const disabled = (!!min && c.dateStr < min) || (!!max && c.dateStr > max)}
 			<button
 				type="button"
 				class="dfp-day"
