@@ -737,10 +737,10 @@
 	// --- Classes utilitárias (campos com visual unificado) -------------------
 	const labelClass = 'text-xs font-medium uppercase tracking-wide text-text-muted';
 	const fieldClass =
-		'h-10 w-full rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60';
+		'h-10 w-full rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60';
 	const areaClass =
-		'w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
-	const fieldErrorClass = 'border-danger focus-visible:ring-danger';
+		'w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none';
+	const fieldErrorClass = 'border-danger focus:border-danger';
 	const sectionTitleClass = 'font-heading text-base font-semibold text-text-primary';
 	const emptyBoxClass =
 		'rounded-lg border border-dashed border-border-subtle bg-surface-muted px-4 py-3.5 text-sm text-text-muted';
@@ -773,7 +773,7 @@
 				: 'text-text-secondary hover:bg-surface/60'}"
 		>
 			<span
-				class="grid h-6 w-6 flex-none place-items-center rounded-full text-xs font-semibold {isActive
+				class="grid h-6 w-6 flex-none place-items-center rounded-md text-xs font-semibold {isActive
 					? 'bg-primary-600 text-primary-fg'
 					: isDone
 						? 'bg-[var(--ds-color-success-light-bg)] text-success'
@@ -1203,7 +1203,7 @@
 											</div>
 										{:else if activeSection === 2}
 											<h3 class={sectionTitleClass}>Links e observações</h3>
-											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
+											<div class="flex flex-col gap-5">
 												<div class="flex flex-col gap-1.5">
 													<span class={labelClass}>Processo SEI-RJ</span>
 													<SeiProcessField
@@ -1299,10 +1299,8 @@
 													>
 														{#each previewStages as stage, index (index)}
 															<li class="flex items-center gap-3 px-3.5 py-2.5">
-																<span
-																	class="grid h-6 w-6 flex-none place-items-center rounded-full bg-primary-100 text-xs font-semibold text-primary-600"
-																>
-																	{index + 1}
+																<span class="flex-none text-sm font-semibold tabular-nums text-primary-600">
+																	{index + 1} <span aria-hidden="true" class="text-text-muted">-</span>
 																</span>
 																<span class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
 																	{stage.name}
