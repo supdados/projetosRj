@@ -2,11 +2,11 @@
  * Helpers puros de data para o calendario semanal.
  * Sem dependencias de Svelte ou Flask — testavel em isolamento.
  *
- * Semana: segunda (weekStartsOn=1) a domingo por padrao.
+ * Semana: domingo (weekStartsOn=0) a sabado por padrao.
  */
 
-/** Retorna a segunda-feira (ou dia de inicio customizado) da semana que contem `date`. */
-export function startOfWeek(date: Date, weekStartsOn: number = 1): Date {
+/** Retorna o domingo (ou dia de inicio customizado) da semana que contem `date`. */
+export function startOfWeek(date: Date, weekStartsOn: number = 0): Date {
 	const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 	const dow = d.getDay(); // 0=Dom ... 6=Sab
 	const diff = ((dow - weekStartsOn + 7) % 7);
@@ -14,7 +14,7 @@ export function startOfWeek(date: Date, weekStartsOn: number = 1): Date {
 	return d;
 }
 
-/** Retorna array de 7 datas [seg..dom] a partir de `weekStart`. */
+/** Retorna array de 7 datas [dom..sab] a partir de `weekStart`. */
 export function weekDays(weekStart: Date): [Date, Date, Date, Date, Date, Date, Date] {
 	return [0, 1, 2, 3, 4, 5, 6].map((n) => addDays(weekStart, n)) as [
 		Date, Date, Date, Date, Date, Date, Date
@@ -100,16 +100,16 @@ export function hoursRange(start: number = 7, end: number = 20): number[] {
 
 /**
  * Matriz de semanas para o mini-calendario mensal.
- * Cada linha e um array de 7 Dates; a semana comeca em `weekStartsOn` (1=seg).
+ * Cada linha e um array de 7 Dates; a semana comeca em `weekStartsOn` (0=dom).
  * Inclui dias do mes anterior/posterior para completar a grade.
  *
  * @example
- * monthMatrix(2026, 5, 1) // junho de 2026, semana seg-dom
+ * monthMatrix(2026, 5, 0) // junho de 2026, semana dom-sab
  */
 export function monthMatrix(
 	year: number,
 	monthIndex: number,
-	weekStartsOn: number = 1
+	weekStartsOn: number = 0
 ): Date[][] {
 	const firstOfMonth = new Date(year, monthIndex, 1);
 	const gridStart = startOfWeek(firstOfMonth, weekStartsOn);

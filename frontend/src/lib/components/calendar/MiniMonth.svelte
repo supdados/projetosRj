@@ -39,7 +39,7 @@
 		`${PT_MONTHS[month.getMonth()]} ${month.getFullYear()}`
 	);
 
-	const matrix = $derived(monthMatrix(month.getFullYear(), month.getMonth(), 1));
+	const matrix = $derived(monthMatrix(month.getFullYear(), month.getMonth(), 0));
 
 	const daysWithEvent = $derived(
 		new Set(events.map((ev) => isoDayKey(new Date(ev.starts_at))))

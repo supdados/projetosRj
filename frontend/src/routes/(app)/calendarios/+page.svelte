@@ -302,7 +302,7 @@
 	const monthLabel = $derived(`${MONTHS[curMonth]} ${curYear}`);
 
 	// Visoes Semana/Dia + painel direito derivam de anchorDate.
-	const weekStart = $derived(startOfWeek(anchorDate, 1));
+	const weekStart = $derived(startOfWeek(anchorDate, 0));
 	const weekRangeLabel = $derived(fmtWeekRangeLabel(weekStart));
 	const miniMonthDate = $derived(new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1));
 	const dayLabel = $derived(

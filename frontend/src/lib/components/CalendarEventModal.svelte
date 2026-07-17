@@ -63,7 +63,7 @@
 		'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
 		'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 	];
-	const WEEKDAYS_PT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+	const WEEKDAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 	function pad(n: number): string {
 		return String(n).padStart(2, '0');
@@ -395,7 +395,7 @@
 		if (!datePicker) return [];
 		const { year, month } = datePicker;
 		const firstDay = new Date(year, month, 1).getDay();
-		const startOffset = (firstDay + 6) % 7;
+		const startOffset = firstDay; // semana começa no domingo
 		const daysInMonth = new Date(year, month + 1, 0).getDate();
 		const daysInPrev = new Date(year, month, 0).getDate();
 		const cells: PickerDay[] = [];

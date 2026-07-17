@@ -36,7 +36,7 @@
 		'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
 		'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
 	];
-	const WEEKDAYS_PT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+	const WEEKDAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 	const pad = (n: number): string => String(n).padStart(2, '0');
 	function todayStr(): string {
@@ -73,7 +73,7 @@
 	}
 	const cells = $derived.by<DayCell[]>(() => {
 		const firstDay = new Date(year, month, 1).getDay();
-		const startOffset = (firstDay + 6) % 7; // semana começa na segunda
+		const startOffset = firstDay; // semana começa no domingo
 		const daysInMonth = new Date(year, month + 1, 0).getDate();
 		const daysInPrev = new Date(year, month, 0).getDate();
 		const out: DayCell[] = [];
