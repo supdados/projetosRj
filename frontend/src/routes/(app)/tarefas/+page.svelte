@@ -1039,6 +1039,7 @@
 													<TaskHubTaskRow
 														{task}
 														onOpen={(id) => openTask(id, 'list')}
+														nestedInDrawer={false}
 														onDelete={deleteCard}
 														onChanged={() => void load()}
 													/>

@@ -17,8 +17,9 @@
 	 *  - etapa concluída bloqueia criação (aviso no lugar do form).
 	 *
 	 * Toda mutação re-busca a lista (server-autoritativo, paridade com o hub).
-	 * O TaskDrawer (store injetada por prop; NÃO recriar aqui) abre por cima ao
-	 * clicar na descrição e, ao fechar, a lista é re-buscada. O confete de
+	 * O clique na descrição das linhas NÃO abre o TaskDrawer por cima
+	 * (`nestedInDrawer={true}` — edita inline); a store `drawer` segue
+	 * compartilhada e injetada por prop (NÃO recriar aqui). O confete de
 	 * finalização é fornecido às linhas via contexto `celebrateFinalize`
 	 * (mesmo motor da página de tarefas).
 	 */
@@ -124,7 +125,8 @@
 		// nova tarefa" e só expande o form ao clicar (paridade com o hub).
 	});
 
-	// Re-lista ao FECHAR o TaskDrawer (edição inline pode mudar status/contador).
+	// Re-lista ao FECHAR o TaskDrawer — defensivo: o clique na linha não o abre
+	// mais (nestedInDrawer), mas a store compartilhada pode abrir por outro caminho.
 	let drawerWasOpen = false;
 	$effect(() => {
 		const open = $drawer.status !== 'closed';
@@ -328,7 +330,8 @@
 
 	/**
 	 * Escape global do drawer — só fecha quando nenhum filho tratou a tecla:
-	 *  - TaskDrawer aberto por cima trata o Esc dele (e faz stopPropagation);
+	 *  - TaskDrawer na mesma store trata o Esc dele (defensivo: o clique na
+	 *    linha não o abre mais, mas outro caminho futuro pode);
 	 *  - `defaultPrevented`: edição inline de descrição, popover do
 	 *    AssigneePicker e o form de adição cancelam com preventDefault;
 	 *  - painel de comentários da linha fecha a si mesmo (região identificável);
@@ -365,8 +368,7 @@
 ></div>
 
 <!-- Painel lateral: 880px fixo (fullscreen abaixo disso via min()); a grade
-     interna usa larguras próprias (.stq-compact, min 800px + scroll-x).
-     O TaskDrawer (645px) abre por cima ao clicar numa tarefa. -->
+     interna usa larguras próprias (.stq-compact, min 800px + scroll-x). -->
 <div
 	bind:this={panelEl}
 	role="dialog"
@@ -479,6 +481,7 @@
 								<TaskHubTaskRow
 									{task}
 									onOpen={openDrawer}
+									nestedInDrawer={true}
 									onDelete={deleteCard}
 									onChanged={() => void loadTasks()}
 								/>

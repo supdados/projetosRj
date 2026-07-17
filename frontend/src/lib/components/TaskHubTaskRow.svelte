@@ -7,7 +7,8 @@
 	 *     clica, abre o dropdown, escolhe) — salva direto via API e revalida a lista;
 	 *   - comentários: painel inline expansível sob a linha (CommentsPanel + store
 	 *     por linha, lazy); anexos: o ícone abre o seletor de arquivo direto.
-	 * O clique na descrição (texto) abre o TaskDrawer completo.
+	 * O clique na descrição (texto) abre o TaskDrawer (ou edita inline quando
+	 * `nestedInDrawer`).
 	 */
 	import { getContext, onDestroy, tick } from 'svelte';
 	import { get } from 'svelte/store';
@@ -41,9 +42,12 @@
 		onDelete: (id: number) => Promise<boolean>;
 		/** Revalida a lista após uma edição inline (re-fetch server-autoritativo). */
 		onChanged: () => void;
+		/** true quando a linha está dentro de outro drawer (StageTaskQuickAdd):
+		 *  o clique na descrição edita inline em vez de empilhar o TaskDrawer. */
+		nestedInDrawer: boolean;
 	}
 
-	let { task, onOpen, onDelete, onChanged }: Props = $props();
+	let { task, onOpen, onDelete, onChanged, nestedInDrawer }: Props = $props();
 
 	const PRIORIDADE_OPTS = [
 		{ value: '', label: '—' },
@@ -170,6 +174,14 @@
 			editingDesc = false;
 		}
 	}
+	function onDescriptionClick(): void {
+		if (nestedInDrawer) {
+			void startEditDesc();
+			return;
+		}
+		onOpen(task.id);
+	}
+
 	async function submitDesc(): Promise<void> {
 		const value = descDraft.trim();
 		if (!value || savingField) return;
@@ -325,13 +337,14 @@
 				autofocus
 				rows="1"
 				aria-label="Editar descrição"
-				class="min-h-[30px] w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs leading-normal text-text-primary focus:border-primary-500 focus:outline-none 2xl:text-sm"
+				class="min-h-7 w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs leading-normal text-text-primary focus:border-primary-500 focus:outline-none 2xl:text-sm"
 			></textarea>
 		{:else}
 			<div class="flex min-w-0 items-center gap-1">
 				<button
 					type="button"
-					onclick={() => onOpen(task.id)}
+					onclick={onDescriptionClick}
+					title={nestedInDrawer ? 'Editar descrição' : undefined}
 					class="min-w-0 break-words text-left text-xs text-text-primary transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 2xl:text-sm"
 				>
 					{task.descricao}
