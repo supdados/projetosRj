@@ -13,8 +13,8 @@
 	 * descrição abre o `TaskDrawer` completo.
 	 *
 	 * Os filtros de projeto e órgão re-buscam server-side (o `orgao_scope` é
-	 * aplicado no backend); a alternância de status (ativas/arquivadas/
-	 * finalizadas) traduz para o `?modo=` do endpoint. Estados de loading/erro/
+	 * aplicado no backend); arquivadas vivem no ArchivedTasksDrawer (painel
+	 * lateral com `?modo=arquivadas` próprio). Estados de loading/erro/
 	 * vazio são anunciados via aria-live. Colapso de projeto/etapa em localStorage.
 	 */
 	import { onMount, setContext } from 'svelte';
@@ -56,6 +56,7 @@
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
+	import ArchivedTasksDrawer from '$lib/components/ArchivedTasksDrawer.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import TarefasSkeleton from '$lib/components/skeletons/TarefasSkeleton.svelte';
@@ -592,15 +593,20 @@
 		void load();
 	}
 
-	/** Alterna entre ver tarefas ativas e arquivadas (botão-ícone de arquivo).
-	 *  Arquivadas só existem no modo lista (o board mostra apenas ativas), então
-	 *  ao ligar arquivadas no Kanban caímos para a Lista. */
-	function toggleArchived(): void {
-		modo = modo === 'arquivadas' ? 'ativas' : 'arquivadas';
-		if (modo === 'arquivadas' && view !== 'list') selectView('list');
-		cancelAddForm();
-		listPage = 1;
+	// TAREFAS ARQUIVADAS: drawer lateral dedicado (ArchivedTasksDrawer) no lugar
+	// do antigo filtro `?modo=arquivadas` que trocava a lista inteira. Abrir uma
+	// tarefa de lá FECHA o drawer de arquivadas antes do TaskDrawer (sem
+	// empilhar); desarquivar re-busca a visão ativa.
+	let archivedDrawerOpen = $state(false);
+
+	function openTaskFromArchived(taskId: number): void {
+		archivedDrawerOpen = false;
+		openTask(taskId, 'list');
+	}
+
+	function onTaskUnarchived(): void {
 		void load();
+		if (view === 'kanban') void loadBoard();
 	}
 
 	function clearFilters(): void {
@@ -624,12 +630,14 @@
 		statusFilter = params.get('status') ?? '';
 		responsavel = params.get('responsavel') ?? '';
 		// Deep-links resolvidos pelo Flask via 302 para ca (KEEP-ENDPOINTs sem
-		// rota client-side propria): /tarefas/arquivadas -> ?modo=arquivadas e
-		// /projeto/<id>/tarefas -> ?project=<id>. Notificacoes/busca acrescentam
-		// ?focus_task=<id> (task_detail) -> abre o drawer da tarefa em foco.
+		// rota client-side propria): /tarefas/arquivadas -> ?modo=arquivadas
+		// (abre o DRAWER de arquivadas) e /projeto/<id>/tarefas -> ?project=<id>.
+		// Notificacoes/busca acrescentam ?focus_task=<id> -> abre o drawer da
+		// tarefa em foco.
 		project = params.get('project') ?? '';
 		const modoParam = params.get('modo');
-		if (modoParam === 'arquivadas' || modoParam === 'finalizadas') modo = modoParam;
+		if (modoParam === 'arquivadas') archivedDrawerOpen = true;
+		else if (modoParam === 'finalizadas') modo = modoParam;
 		const focusTaskId = Number(params.get('focus_task'));
 		if (Number.isInteger(focusTaskId) && focusTaskId > 0) openTask(focusTaskId, 'list');
 		void load();
@@ -807,22 +815,15 @@
 				</button>
 			{/if}
 
-			<!-- Tarefas arquivadas: botão-ícone (histórico). Ativo quando exibindo
-				 arquivadas; alterna de volta para as ativas. -->
+			<!-- Tarefas arquivadas: abre o drawer lateral de histórico. -->
 			<button
 				type="button"
-				onclick={toggleArchived}
-				aria-pressed={modo === 'arquivadas'}
-				aria-label={modo === 'arquivadas'
-					? 'Voltar para as tarefas ativas'
-					: 'Mostrar tarefas arquivadas'}
-				title={modo === 'arquivadas'
-					? 'Voltar para as tarefas ativas'
-					: 'Mostrar tarefas arquivadas'}
-				class="inline-flex h-9 w-9 items-center justify-center rounded-md border transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {modo ===
-				'arquivadas'
-					? 'border-primary-500 bg-primary-100 text-primary-700'
-					: 'border-border-subtle bg-surface text-text-primary hover:bg-surface-muted'}"
+				onclick={() => (archivedDrawerOpen = true)}
+				aria-haspopup="dialog"
+				aria-expanded={archivedDrawerOpen}
+				aria-label="Ver tarefas arquivadas"
+				title="Ver tarefas arquivadas"
+				class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border-subtle bg-surface text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				<i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
 			</button>
@@ -1199,3 +1200,10 @@
 {/if}
 
 <TaskDrawer store={drawer} />
+
+<ArchivedTasksDrawer
+	open={archivedDrawerOpen}
+	onClose={() => (archivedDrawerOpen = false)}
+	onOpenTask={openTaskFromArchived}
+	onUnarchived={onTaskUnarchived}
+/>
