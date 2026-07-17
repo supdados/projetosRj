@@ -54,7 +54,7 @@
 		<p class="text-xs text-text-muted">Sem eventos esta semana.</p>
 	{:else}
 		<!-- max-height interno ao card — nao usa altura de viewport -->
-		<ul class="max-h-60 overflow-y-auto pr-0.5 [scrollbar-width:thin]" role="list">
+		<ul class="max-h-60 overflow-y-auto pr-0.5" role="list">
 			{#each weekEvents as ev (ev.id)}
 				{@const colors = eventColorClasses(ev)}
 				<li>

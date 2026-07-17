@@ -137,22 +137,7 @@
 	   a logica `flex:1; min-height:0; overflow` da v4.5). */
 	.rp-scroll {
 		max-height: min(60vh, 520px);
-		/* Barra fina e azul-clara (refinada). Cor via token primario -> adapta no dark mode. */
-		scrollbar-width: thin;
-		scrollbar-color: color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent) transparent;
-	}
-	.rp-scroll::-webkit-scrollbar {
-		width: 6px;
-	}
-	.rp-scroll::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	.rp-scroll::-webkit-scrollbar-thumb {
-		background-color: color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent);
-		border-radius: 9999px;
-	}
-	.rp-scroll::-webkit-scrollbar-thumb:hover {
-		background-color: color-mix(in srgb, var(--ds-color-primary-500) 70%, transparent);
+		/* Barra fina coberta pela regra universal em app.css. */
 	}
 	@media (min-width: 1024px) {
 		.rp-scroll {

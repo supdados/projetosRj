@@ -120,41 +120,8 @@
 		}
 	}
 
-	/* Scroll interno da zona: barra de 5px, quase invisível; cada zona rola
-	 * por dentro. CUIDADO (armadilhas reais, ver css-scrollbars §3.1):
-	 *   1. `.app-shell > main` (app.css) define scrollbar-color, e scrollbar-color
-	 *      é propriedade HERDADA — ela desce até esta dropzone. Com o valor
-	 *      computado ≠ auto, o Chromium 121+ IGNORA todos os ::-webkit-scrollbar*
-	 *      do elemento e desenha a barra padrão (a azulada grossa). O reset
-	 *      `auto` abaixo devolve o controle aos pseudo-elementos.
-	 *   2. `@supports selector(::-webkit-scrollbar)` é TRUE também no Firefox
-	 *      (pseudo-elementos -webkit- desconhecidos parseiam por compat), então
-	 *      não serve para separar engines — o gate correto é `-moz-appearance`,
-	 *      que só o Firefox suporta (lá o mínimo nativo é `thin`). */
-	.kanban-dropzone {
-		scrollbar-width: auto;
-		scrollbar-color: auto;
-	}
-	@supports (-moz-appearance: none) {
-		.kanban-dropzone {
-			scrollbar-width: thin;
-			scrollbar-color: var(--color-border-strong) transparent;
-		}
-	}
-	.kanban-dropzone::-webkit-scrollbar {
-		width: 5px;
-	}
-	.kanban-dropzone::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	.kanban-dropzone::-webkit-scrollbar-thumb {
-		background: color-mix(in srgb, var(--color-border-strong) 80%, transparent);
-		border-radius: 999px;
-		min-height: 32px;
-	}
-	.kanban-dropzone::-webkit-scrollbar-thumb:hover {
-		background: var(--color-border-strong);
-	}
+	/* Scroll interno da zona: coberto pela regra universal em app.css
+	   (::-webkit-scrollbar + @supports Firefox via :where(:not(.native-scroll))). */
 
 	@media (prefers-reduced-motion: reduce) {
 		.kanban-placeholder {

@@ -344,8 +344,6 @@
 /* Barra de rolagem da pagina: fina e azul-clara (refinada), igual ao painel.
    Cor via token primario -> adapta no dark mode. */
 .app-shell > main {
-	scrollbar-width: thin;
-	scrollbar-color: color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent) transparent;
 	/* Reserva SEMPRE o gutter da barra de rolagem vertical, role ou não. Sem isto,
 	   telas altas (Projetos, Tarefas-lista) rolam e consomem ~6px à direita,
 	   enquanto telas de altura limitada (Calendário, cujo grid é
@@ -353,38 +351,42 @@
 	   `stable` iguala a largura útil em todas as telas. */
 	scrollbar-gutter: stable;
 }
-.app-shell > main::-webkit-scrollbar {
+
+/* Scrollbar do design system — UNIVERSAL (nenhuma classe necessária).
+   Chromium/Safari: via ::-webkit-scrollbar (6px, thumb arredondado).
+   Firefox: via scrollbar-width/color, gated no @supports abaixo — as standard
+   props NAO podem vazar para o Chromium, senao o Blink ignora as regras
+   ::-webkit-scrollbar (gotcha documentado em KanbanDropzone.svelte).
+   :where() mantem especificidade 0 -> qualquer override local ainda vence. */
+:where(:not(.native-scroll))::-webkit-scrollbar {
 	width: 6px;
+	height: 6px; /* cobre tambem os scrolls horizontais (tabelas, kanban, steppers) */
 }
-.app-shell > main::-webkit-scrollbar-track {
+:where(:not(.native-scroll))::-webkit-scrollbar-track {
 	background: transparent;
 }
-.app-shell > main::-webkit-scrollbar-thumb {
+:where(:not(.native-scroll))::-webkit-scrollbar-thumb {
 	background-color: color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent);
 	border-radius: 9999px;
 }
-.app-shell > main::-webkit-scrollbar-thumb:hover {
+:where(:not(.native-scroll))::-webkit-scrollbar-thumb:hover {
 	background-color: color-mix(in srgb, var(--ds-color-primary-500) 70%, transparent);
+}
+@supports (-moz-appearance: none) {
+	:where(:not(.native-scroll)) {
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent) transparent;
+	}
 }
 
-/* Scroll fino reutilizável (mesma aparência da barra da página) para listas
-   internas — ex.: dropdown de busca de projeto no filtro de tarefas. */
+/* Escape hatch: restaura a scrollbar nativa do SO num elemento especifico. */
+.native-scroll {
+	scrollbar-width: auto;
+	scrollbar-color: auto;
+}
+
+/* Legado: coberto pelo universal acima. Manter vazio ate limpar o markup. */
 .thin-scroll {
-	scrollbar-width: thin;
-	scrollbar-color: color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent) transparent;
-}
-.thin-scroll::-webkit-scrollbar {
-	width: 6px;
-}
-.thin-scroll::-webkit-scrollbar-track {
-	background: transparent;
-}
-.thin-scroll::-webkit-scrollbar-thumb {
-	background-color: color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent);
-	border-radius: 9999px;
-}
-.thin-scroll::-webkit-scrollbar-thumb:hover {
-	background-color: color-mix(in srgb, var(--ds-color-primary-500) 70%, transparent);
 }
 
 /* === Lista de tarefas (hub) — grade compartilhada e colapso ===

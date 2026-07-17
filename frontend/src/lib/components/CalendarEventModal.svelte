@@ -1566,13 +1566,7 @@
 		overflow-y: auto;
 		padding: 0.25rem;
 		scroll-behavior: smooth;
-	}
-	.cdp-timelist-scroll::-webkit-scrollbar {
-		width: 4px;
-	}
-	.cdp-timelist-scroll::-webkit-scrollbar-thumb {
-		background: var(--color-border);
-		border-radius: 4px;
+		/* Barra fina coberta pela regra universal em app.css. */
 	}
 	.cdp-time-option {
 		display: block;
