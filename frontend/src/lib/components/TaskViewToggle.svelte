@@ -26,7 +26,7 @@
 </script>
 
 <div
-	class="relative inline-flex h-8 w-40 items-stretch rounded-lg border border-border-subtle bg-surface-muted"
+	class="relative inline-flex h-8 w-40 items-stretch rounded-md border border-border-subtle bg-surface-muted"
 	role="group"
 	aria-label="Alternar visualização de tarefas"
 >
@@ -34,7 +34,7 @@
 		 própria largura (= metade do trilho) para a direita. -->
 	<span
 		aria-hidden="true"
-		class="pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-md bg-primary-600 shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none {view ===
+		class="pointer-events-none absolute inset-y-0 left-0 w-1/2 rounded-md bg-primary-600 shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none {view ===
 		'kanban'
 			? 'translate-x-full'
 			: 'translate-x-0'}"
