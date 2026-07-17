@@ -131,6 +131,12 @@
 		void goto(target);
 	}
 
+	/** Sucesso dispensado sem "Ver o projeto": flash + lista atualizada. */
+	function onProjectCreatedDismissed(result: CreateProjectResult): void {
+		flash.success(result.message);
+		void load();
+	}
+
 	let inFlight: AbortController | null = null;
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -585,4 +591,5 @@
 	options={createOptions}
 	onClose={() => (createModalOpen = false)}
 	onCreated={onProjectCreated}
+	onCreatedDismissed={onProjectCreatedDismissed}
 />

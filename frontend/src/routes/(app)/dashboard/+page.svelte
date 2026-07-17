@@ -168,6 +168,12 @@
 		void goto(target);
 	}
 
+	/** Sucesso dispensado sem "Ver o projeto": flash + contadores atualizados. */
+	function onProjectCreatedDismissed(result: CreateProjectResult): void {
+		flash.success(result.message);
+		void load();
+	}
+
 	// --- Apresentacao do painel de tarefas (read-only) ---
 	// Transposicao do mock "concept4": anel de % concluido + legenda por status,
 	// chips "Por tipo" e mini-lista de recentes (tipo/comentarios/anexos/avatar).
@@ -599,6 +605,7 @@
 		options={createOptions}
 		onClose={() => (createModalOpen = false)}
 		onCreated={onProjectCreated}
+		onCreatedDismissed={onProjectCreatedDismissed}
 	/>
 </section>
 

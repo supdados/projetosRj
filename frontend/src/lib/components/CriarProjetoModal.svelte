@@ -1,39 +1,26 @@
 <script lang="ts">
 	/**
-	 * Modal "Criar novo projeto" (Quick Create) — paridade de LÓGICA com o modal
-	 * Bootstrap `templates/projects/add_form.html` + `add_form_js.html`.
+	 * Modal "Criar novo projeto" (Quick Create) — wizard com sidebar de 4 seções
+	 * ("Informações", "Classificação e Objetivos", "Links e Observações",
+	 * "Etapas"), uma seção visível por vez, barra de progresso e tela de sucesso
+	 * interna ("Criar outro projeto" / "Ver o projeto").
 	 *
-	 * Layout: seção principal (título*, área responsável*, prioridade, órgão,
-	 * descrição) + acordeão EXCLUSIVO de 4 seções opcionais (Classificação,
-	 * Objetivos/resultados/indicadores, Links e observações, Modelo de etapas).
-	 * Expandir uma seção retrai a anterior; o cabeçalho de cada seção resume o
-	 * que já foi preenchido quando fechada. A seção principal participa do
-	 * acordeão: abrir uma seção opcional a colapsa num cabeçalho compacto
-	 * (título — ou "Sem título" — + resumo do que foi/não foi respondido);
-	 * clicar nesse cabeçalho a reexpande e fecha a seção opcional aberta.
-	 * Fechar o modal com dados preenchidos pede confirmação de descarte.
-	 *
-	 * Mantém (paridade funcional):
-	 *   - combobox ABEP filtrável com navegação por teclado (Arrow/Enter/Escape);
+	 * Mantém (paridade funcional com a versão acordeão):
+	 *   - combobox ABEP filtrável (LEGADO, oculto via SHOW_ABEP);
 	 *   - cascata objetivo→resultado→indicadores via `/api/resultados`/
 	 *     `indicadores` legados, com revelação escalonada (índice·100ms) e LIMITE
 	 *     de 4 indicadores (flash 'Você pode selecionar no máximo 4 indicadores');
-	 *   - MÚLTIPLOS processos SEI via `SeiProcessField` (mesmo componente do
-	 *     Detalhe): 1º número + copiar + chip +N + popover com adicionar/remover,
-	 *     prefixo "SEI-" fixo e máscara que normaliza colar com o prefixo; a
-	 *     lista é estado local e o submit envia `sei_processes: [..]`;
-	 *   - import de modelo com preview read-only e cálculo de datas no client
-	 *     (dias corridos, mesmo algoritmo de `renderTemplateImportPreview`);
+	 *   - MÚLTIPLOS processos SEI via `SeiProcessField`;
+	 *   - import de modelo com preview read-only e cálculo de datas no client;
 	 *   - criação só com título + área válidos (validação ao tentar salvar, com
 	 *     foco no campo faltante);
-	 *   - Esc fecha · Ctrl/Cmd+Enter salva.
+	 *   - Esc fecha · Ctrl/Cmd+Enter salva · confirmação de descarte.
 	 *
-	 * Submit: `POST /api/projetos` (via `createProject`). Em sucesso o COMPONENTE
-	 * NÃO navega nem mostra flash — emite `onCreated(result)` e a página decide
-	 * (showFlash + goto), replicando o flash success + redirect do Jinja. Em erro,
-	 * exibe a mensagem do envelope como flash danger/warning (sem fechar o modal).
-	 *
-	 * NÃO há som/confete (o fluxo Jinja não tem).
+	 * Submit: `POST /api/projetos` (via `createProject`). Em sucesso o modal
+	 * mostra a tela "Projeto criado"; `onCreated(result)` só dispara em
+	 * "Ver o projeto" — a página então faz flash + goto(redirect_to), como antes.
+	 * "Criar outro projeto" reseta o formulário sem fechar. Em erro, exibe a
+	 * mensagem do envelope como flash danger/warning (sem fechar o modal).
 	 */
 	import { tick, untrack } from 'svelte';
 	import { fade, fly, slide } from 'svelte/transition';
@@ -55,6 +42,8 @@
 		type TemplateStage
 	} from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
+	import { triggerTaskFinalizeConfetti } from '$lib/celebration/confettiEpic';
+	import '$lib/celebration/confetti.css';
 	import SeiProcessField from '$lib/components/SeiProcessField.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
@@ -76,9 +65,11 @@
 		onClose: () => void;
 		/** Criação concluída com sucesso; a página faz flash + navegação. */
 		onCreated: (result: CreateProjectResult) => void;
+		/** Modal dispensado (✕/Esc/backdrop) após criar sem "Ver o projeto". */
+		onCreatedDismissed?: (result: CreateProjectResult) => void;
 	}
 
-	let { open, options, onClose, onCreated }: Props = $props();
+	let { open, options, onClose, onCreated, onCreatedDismissed }: Props = $props();
 
 	const DELIVERY_TYPES = [
 		'Sistema',
@@ -97,7 +88,7 @@
 	];
 	const MAX_INDICADORES = 4;
 
-	// --- Campos da seção principal ------------------------------------------
+	// --- Campos da seção "Informações" ---------------------------------------
 	let titulo = $state('');
 	let orgaoId = $state('');
 	let prioridade = $state('baixa');
@@ -155,33 +146,36 @@
 	let catalogsLoaded = $state(false);
 	let titleInputEl = $state<HTMLInputElement | null>(null);
 	let triedSubmit = $state(false); // marca erro de título/área só após tentativa
+	// Projeto criado nesta abertura: troca o corpo pela tela de sucesso.
+	let createdResult = $state<CreateProjectResult | null>(null);
+	let verProjetoBtn = $state<HTMLButtonElement | null>(null);
+	// Sobrevive ao reset de "Criar outro projeto": garante onCreatedDismissed.
+	let lastCreatedThisOpen: CreateProjectResult | null = null;
 
-	// --- Acordeão exclusivo: no máximo UMA seção opcional aberta -------------
-	type SectionId = 'classificacao' | 'objetivos' | 'links' | 'etapas';
-	const SECTIONS: { id: SectionId; label: string }[] = [
-		{ id: 'classificacao', label: 'Classificação' },
-		{ id: 'objetivos', label: 'Objetivos e indicadores' },
-		{ id: 'links', label: 'Links e observações' },
-		{ id: 'etapas', label: 'Modelo de etapas' }
+	// --- Wizard: uma seção visível por vez ----------------------------------
+	const NAV_SECTIONS = [
+		'Informações',
+		'Classificação e Objetivos',
+		'Links e Observações',
+		'Etapas'
 	];
-	let openSection = $state<SectionId | null>(null);
+	let activeSection = $state(0);
 
-	// Colapso da principal é ORIENTADO A EVENTO (nunca derivado da digitação):
-	// só muda ao abrir/fechar uma seção opcional ou ao clicar no cabeçalho.
-	let mainCollapsed = $state(false);
-
-	function toggleSection(id: SectionId): void {
-		const opening = openSection !== id;
-		openSection = opening ? id : null;
-		// Principal retrai ao abrir qualquer opcional — mesmo sem título (o header
-		// colapsado mostra "Sem título") — e restaura ao fechar a última seção.
-		// Digitar no título nunca altera mainCollapsed (colapso só por evento).
-		mainCollapsed = opening;
+	function goToSection(index: number): void {
+		activeSection = Math.min(NAV_SECTIONS.length - 1, Math.max(0, index));
 	}
 
-	function expandMainSection(): void {
-		mainCollapsed = false;
-		openSection = null; // acordeão exclusivo: reexpandir a principal fecha a opcional
+	function onNavKeydown(event: KeyboardEvent): void {
+		const delta =
+			event.key === 'ArrowDown' || event.key === 'ArrowRight'
+				? 1
+				: event.key === 'ArrowUp' || event.key === 'ArrowLeft'
+					? -1
+					: 0;
+		if (!delta) return;
+		event.preventDefault();
+		goToSection(activeSection + delta);
+		void tick().then(() => document.getElementById(`cp-nav-${activeSection}`)?.focus());
 	}
 
 	const orgaoOptions = $derived<OrgaoOption[]>(options?.orgaos_options ?? []);
@@ -203,13 +197,6 @@
 	const specialOptions = $derived(options?.special_projects_options ?? SPECIAL_PROJECTS);
 
 	// --- Opções dos SelectMenu (derivadas das constantes/catálogos acima) --
-	const priorityMenuOptions = $derived<SelectMenuOption[]>(
-		PRIORITIES.map((p) => ({
-			value: p.value,
-			label: p.label,
-			dot: `var(--ds-color-priority-${p.value})`
-		}))
-	);
 	const deliveryTypeMenuOptions = $derived<SelectMenuOption[]>(
 		deliveryTypes.map((dt) => ({ value: dt, label: dt }))
 	);
@@ -233,6 +220,23 @@
 	const tituloError = $derived(triedSubmit && !titulo.trim());
 	const orgaoError = $derived(triedSubmit && !orgaoId.trim());
 
+	const orgaoSelecionadoLabel = $derived.by(() => {
+		if (orgaoOptions.length === 1) return orgaoOptions[0].label;
+		return orgaoOptions.find((o) => o.value === orgaoId)?.label ?? '';
+	});
+
+	// Critérios de seção "preenchida" (badge ✓ + barra de progresso).
+	const sectionDone = $derived<boolean[]>([
+		titulo.trim().length > 0 && orgaoId.trim().length > 0,
+		deliveryType !== '' && objetivoId !== '' && resultadoId !== '',
+		seiList.length > 0 ||
+			[githubLink, documentationLink, productLink, observacao].some(
+				(v) => v.trim().length > 0
+			),
+		templateId !== ''
+	]);
+	const doneCount = $derived(sectionDone.filter(Boolean).length);
+
 	/** Subconjunto de indicadores ABEP que casa com o texto digitado. */
 	const abepVisible = $derived.by(() => {
 		const term = abepLabel.trim().toLowerCase();
@@ -246,11 +250,12 @@
 	// Ao abrir: reseta o formulário, carrega catálogos uma vez e foca o título.
 	// untrack: resetForm lê `options` e loadCatalogs lê `catalogsLoaded` de forma
 	// síncrona — sem untrack o efeito re-rodaria quando o fetch de catálogos
-	// resolvesse (ou `options` mudasse), apagando o que o usuário digitou e
-	// fechando a seção aberta "do nada". O efeito deve depender SÓ de `open`.
+	// resolvesse (ou `options` mudasse), apagando o que o usuário digitou.
+	// O efeito deve depender SÓ de `open`.
 	$effect(() => {
 		if (!open) return;
 		untrack(() => {
+			lastCreatedThisOpen = null;
 			resetForm();
 			void loadCatalogs();
 		});
@@ -289,10 +294,16 @@
 		resultadosLoading = false;
 		indicadoresLoading = false;
 		templateLoading = false;
-		openSection = null;
-		mainCollapsed = false;
+		activeSection = 0;
 		triedSubmit = false;
+		createdResult = null;
 		confirmDiscardOpen = false;
+	}
+
+	/** "Criar outro projeto" na tela de sucesso: limpa e volta ao formulário. */
+	function startAnotherProject(): void {
+		resetForm();
+		void tick().then(() => titleInputEl?.focus());
 	}
 
 	async function loadCatalogs(): Promise<void> {
@@ -495,11 +506,20 @@
 		return `${d}/${m}/${y}`;
 	}
 
+	const MONTHS_PT_ABBR = [
+		'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+		'jul', 'ago', 'set', 'out', 'nov', 'dez'
+	];
+
+	function formatBrShort(date: Date): string {
+		return `${String(date.getUTCDate()).padStart(2, '0')} ${MONTHS_PT_ABBR[date.getUTCMonth()]}`;
+	}
+
 	/** Preview das etapas com datas/duração calculadas no client (read-only). */
 	interface PreviewStage {
 		name: string;
-		/** Intervalo "dd/mm/aaaa → dd/mm/aaaa"; vazio sem data de início. */
-		rangeText: string;
+		/** "início DD mmm" cumulativo; vazio sem data de início. */
+		startText: string;
 		duration: number;
 	}
 
@@ -509,14 +529,14 @@
 		let cursor = start ? new Date(start.getTime()) : null;
 		return templateStages.map((etapa) => {
 			const duration = Math.max(1, Number.parseInt(String(etapa.duration), 10) || 1);
-			let rangeText = '';
+			let startText = '';
 			if (cursor) {
 				const stageStart = new Date(cursor.getTime());
 				const stageEnd = addDaysUtc(stageStart, duration - 1);
-				rangeText = `${formatBrDate(stageStart)} → ${formatBrDate(stageEnd)}`;
+				startText = `início ${formatBrShort(stageStart)}`;
 				cursor = addDaysUtc(stageEnd, 1);
 			}
-			return { name: etapa.name, rangeText, duration };
+			return { name: etapa.name, startText, duration };
 		});
 	});
 
@@ -538,59 +558,6 @@
 			cursor = addDaysUtc(lastEnd, 1);
 		}
 		return formatBrDate(lastEnd);
-	});
-
-	// --- Resumos das seções (exibidos no cabeçalho quando fechadas) ----------
-
-	const orgaoSelecionadoLabel = $derived.by(() => {
-		if (orgaoOptions.length === 1) return orgaoOptions[0].label;
-		return orgaoOptions.find((o) => o.value === orgaoId)?.label ?? '';
-	});
-	const prioridadeLabel = $derived(
-		PRIORITIES.find((p) => p.value === prioridade)?.label ?? prioridade
-	);
-
-	const classificacaoSummary = $derived(
-		[deliveryType, specialProject].filter(Boolean).join(' · ')
-	);
-	const objetivosSummary = $derived.by(() => {
-		const parts: string[] = [];
-		const objetivoNome = objetivos.find((o) => String(o.id) === objetivoId)?.descricao;
-		if (objetivoNome) parts.push(objetivoNome);
-		const resultadoNome = resultados.find((r) => String(r.id) === resultadoId)?.descricao;
-		if (resultadoNome) parts.push(resultadoNome);
-		if (selectedIndicadores.length)
-			parts.push(
-				`${selectedIndicadores.length} ${selectedIndicadores.length === 1 ? 'indicador' : 'indicadores'}`
-			);
-		if (abepValue) parts.push('ABEP');
-		return parts.join(' · ');
-	});
-	const linksSummary = $derived.by(() => {
-		const filled = [
-			seiList.length ? 'sei' : '',
-			githubLink,
-			documentationLink,
-			productLink,
-			observacao
-		]
-			.map((v) => v.trim())
-			.filter(Boolean).length;
-		if (!filled) return '';
-		return filled === 1 ? '1 campo preenchido' : `${filled} campos preenchidos`;
-	});
-	const etapasSummary = $derived.by(() => {
-		if (!templateId) return '';
-		const name = templates.find((t) => String(t.id) === templateId)?.name ?? 'Modelo';
-		return previewStages.length
-			? `${name} · ${previewStages.length} ${previewStages.length === 1 ? 'etapa' : 'etapas'}`
-			: name;
-	});
-	const sectionSummaries = $derived<Record<SectionId, string>>({
-		classificacao: classificacaoSummary,
-		objetivos: objetivosSummary,
-		links: linksSummary,
-		etapas: etapasSummary
 	});
 
 	// --- Confirmação de descarte ao fechar com dados preenchidos -------------
@@ -625,16 +592,23 @@
 			startDate !== ''
 	);
 
+	/** Fecha avisando a página se houve criação sem "Ver o projeto". */
+	function closeAndNotify(): void {
+		if (lastCreatedThisOpen) onCreatedDismissed?.(lastCreatedThisOpen);
+		onClose();
+	}
+
 	/** Fecha o modal; com dados preenchidos, pede confirmação de descarte antes. */
 	function requestClose(): void {
 		if (submitting) return;
-		if (formIsDirty) {
-			focusedBeforeDiscard = document.activeElement as HTMLElement | null;
-			confirmDiscardOpen = true;
-			void tick().then(() => discardCancelBtn?.focus());
+		// Tela de sucesso: nada a perder — fecha direto.
+		if (createdResult || !formIsDirty) {
+			closeAndNotify();
 			return;
 		}
-		onClose();
+		focusedBeforeDiscard = document.activeElement as HTMLElement | null;
+		confirmDiscardOpen = true;
+		void tick().then(() => discardCancelBtn?.focus());
 	}
 
 	/** Fecha só a confirmação, devolvendo o foco a quem o tinha no formulário. */
@@ -649,17 +623,18 @@
 
 	function discardAndClose(): void {
 		confirmDiscardOpen = false;
-		onClose();
+		closeAndNotify();
 	}
 
 	// Wrapper do submit: se inválido, marca os campos faltantes e foca o primeiro.
 	async function trySubmit(): Promise<void> {
+		if (createdResult) return;
 		if (!canSubmit) {
 			if (submitting) return;
 			triedSubmit = true;
-			// Reexpande a seção principal: o campo faltante pode estar oculto
-			// pelo colapso e precisa existir no DOM para receber foco.
-			expandMainSection();
+			// Volta à seção "Informações": o campo faltante precisa existir no DOM
+			// para receber foco.
+			activeSection = 0;
 			await tick();
 			// Fallback para o título quando o select de órgão está disabled/ausente
 			// (ex.: usuário sem órgão atribuído): foco em elemento disabled é no-op
@@ -690,7 +665,7 @@
 	// --- Submit ------------------------------------------------------------
 
 	async function submit(): Promise<void> {
-		if (!canSubmit) return;
+		if (!canSubmit || createdResult) return;
 		submitting = true;
 		const input: CreateProjectInput = {
 			titulo: titulo.trim(),
@@ -719,7 +694,16 @@
 		};
 		try {
 			const result = await createProject(input);
-			onCreated(result);
+			// Tela de sucesso interna; onCreated dispara em "Ver o projeto".
+			createdResult = result;
+			lastCreatedThisOpen = result;
+			// Sem origem o helper usa fallback no canto superior direito; centro da tela.
+			triggerTaskFinalizeConfetti({
+				x: window.innerWidth / 2,
+				y: window.innerHeight / 2
+			});
+			// O form desmonta e levaria o foco ao body, matando Esc/focusTrap.
+			void tick().then(() => verProjetoBtn?.focus());
 		} catch (err) {
 			if (err instanceof ApiClientError) {
 				if (err.code === 'unauthenticated') return; // já redirecionou
@@ -757,24 +741,10 @@
 	const areaClass =
 		'w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
 	const fieldErrorClass = 'border-danger focus-visible:ring-danger';
+	const sectionTitleClass = 'font-heading text-base font-semibold text-text-primary';
+	const emptyBoxClass =
+		'rounded-lg border border-dashed border-border-subtle bg-surface-muted px-4 py-3.5 text-sm text-text-muted';
 </script>
-
-{#snippet mainSummary()}
-	<!-- Metadados da principal colapsada: só positivos (nunca anuncia ausência
-	     de campo opcional); o único negativo permitido é o obrigatório pendente.
-	     A descrição breve é renderizada à parte, antes deste snippet. -->
-	{#if orgaoSelecionadoLabel}
-		<span class="text-text-secondary">{orgaoSelecionadoLabel}</span>
-	{:else}
-		<span class="font-medium text-danger">Área pendente</span>
-	{/if}
-	{#if prioridade !== 'baixa'}
-		· {prioridadeLabel}
-	{/if}
-	{#if orgaoTexto.trim()}
-		· {orgaoTexto.trim()}
-	{/if}
-{/snippet}
 
 {#snippet spinner()}
 	<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -786,6 +756,40 @@
 			stroke-linecap="round"
 		/>
 	</svg>
+{/snippet}
+
+{#snippet navItems(orientation: 'vertical' | 'horizontal')}
+	{#each NAV_SECTIONS as label, index (index)}
+		{@const isActive = activeSection === index}
+		{@const isDone = sectionDone[index]}
+		<button
+			type="button"
+			id={orientation === 'vertical' ? `cp-nav-${index}` : undefined}
+			onclick={() => goToSection(index)}
+			onkeydown={orientation === 'vertical' ? onNavKeydown : undefined}
+			aria-current={isActive ? 'step' : undefined}
+			class="flex shrink-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {isActive
+				? 'bg-surface font-semibold text-primary-600 shadow-sm'
+				: 'text-text-secondary hover:bg-surface/60'}"
+		>
+			<span
+				class="grid h-6 w-6 flex-none place-items-center rounded-full text-xs font-semibold {isActive
+					? 'bg-primary-600 text-primary-fg'
+					: isDone
+						? 'bg-[var(--ds-color-success-light-bg)] text-success'
+						: 'bg-border-subtle/60 text-text-muted'}"
+			>
+				{#if isDone && !isActive}
+					<svg viewBox="0 0 20 20" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+						<path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round" />
+					</svg>
+				{:else}
+					{index + 1}
+				{/if}
+			</span>
+			<span class="min-w-0 {orientation === 'vertical' ? 'leading-snug' : 'whitespace-nowrap'}">{label}</span>
+		</button>
+	{/each}
 {/snippet}
 
 {#if open}
@@ -800,15 +804,15 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="criar-projeto-title"
-			class="relative flex max-h-[calc(100dvh-7rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
+			class="relative flex max-h-[92vh] w-full max-w-[870px] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={onModalKeydown}
 			tabindex="-1"
 			use:focusTrap
 			transition:fly={{ y: 18, duration: 320, easing: cubicOut }}
 		>
-			<!-- Cabeçalho fixo (mesma altura do rodapé: h-14). inert: com a
-			     confirmação de descarte aberta, o fundo sai do Tab e da interação. -->
+			<!-- Cabeçalho fixo. inert: com a confirmação de descarte aberta, o fundo
+			     sai do Tab e da interação. -->
 			<header
 				inert={confirmDiscardOpen}
 				class="flex h-14 flex-shrink-0 items-center justify-between gap-4 border-b border-border-subtle px-6"
@@ -832,614 +836,562 @@
 				</button>
 			</header>
 
-			<form
-				inert={confirmDiscardOpen}
-				onsubmit={(e) => {
-					e.preventDefault();
-					void trySubmit();
-				}}
-				class="flex min-h-0 flex-1 flex-col"
-			>
-				<!-- Corpo: única região que rola -->
-				<div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-					<!-- Acordeão: a seção principal é o item 0, com header sempre montado
-					     (anatomia idêntica às opcionais — sem card avulso, sem swap de
-					     dois elementos com transições simultâneas). -->
-					<div
-						class="divide-y divide-border-subtle overflow-hidden rounded-lg border border-border-subtle"
+			{#if createdResult}
+				<!-- Tela de sucesso: substitui corpo e rodapé -->
+				<div
+					class="flex h-[560px] max-h-[calc(92vh-3.5rem)] min-h-0 animate-panel-in flex-col items-center justify-center gap-3.5 overflow-y-auto px-10 py-16"
+				>
+					<img
+						src="/static/img/confete-popper.png"
+						alt=""
+						class="cp-success-icon h-32 w-32"
+						aria-hidden="true"
+					/>
+					<p class="font-heading text-xl font-bold text-text-primary">Projeto criado!</p>
+					<p class="max-w-md text-center text-sm text-text-secondary">
+						{createdResult.project?.titulo ?? titulo.trim()}{orgaoSelecionadoLabel
+							? ` · ${orgaoSelecionadoLabel}`
+							: ''}
+					</p>
+					<div class="mt-2 flex items-center gap-2.5">
+						<button
+							type="button"
+							onclick={startAnotherProject}
+							class="inline-flex h-10 items-center rounded-md border border-border-subtle bg-surface px-4 text-sm font-semibold text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						>
+							Criar outro projeto
+						</button>
+						<button
+							type="button"
+							bind:this={verProjetoBtn}
+							onclick={() => onCreated(createdResult!)}
+							class="inline-flex h-10 items-center rounded-md bg-primary-600 px-4 text-sm font-semibold text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
+						>
+							Ver o projeto
+						</button>
+					</div>
+				</div>
+			{:else}
+				<form
+					inert={confirmDiscardOpen}
+					onsubmit={(e) => {
+						e.preventDefault();
+						void trySubmit();
+					}}
+					class="flex h-[560px] max-h-[calc(92vh-3.5rem)] min-h-0 flex-col"
+				>
+					<!-- Stepper compacto (mobile): mesma navegação da sidebar -->
+					<nav
+						aria-label="Seções do formulário"
+						class="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border-subtle bg-surface-muted px-3 py-2 md:hidden"
 					>
-						<!-- Seção 0: informações principais -->
-						<section>
-							<h3 class="contents">
-								<!-- Expandida: o header vira informativo — sai da ordem de Tab
-								     (tabindex=-1) e anuncia aria-disabled, pois ativá-lo seria
-								     no-op (disclosure só atua no sentido colapsada→expandida). -->
-								<button
-									type="button"
-									onclick={() => {
-										if (mainCollapsed) expandMainSection();
-									}}
-									tabindex={mainCollapsed ? 0 : -1}
-									aria-disabled={!mainCollapsed}
-									aria-expanded={!mainCollapsed}
-									aria-controls={mainCollapsed ? undefined : 'cp-section-principal'}
-									class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {mainCollapsed
-										? 'hover:bg-surface-muted/60'
-										: 'cursor-default'}"
-								>
-									<span class="flex min-w-0 flex-col gap-0.5">
-										{#if mainCollapsed}
-											{#if titulo.trim()}
-												<span class="truncate text-sm font-medium text-text-primary">
-													{titulo.trim()}
-												</span>
-											{:else}
-												<span class="truncate text-sm font-medium text-text-muted">
-													Sem título
-												</span>
-											{/if}
-											<span class="flex min-w-0 items-baseline gap-1.5 text-xs text-text-muted">
-												{#if shortDescription.trim()}
-													<span class="min-w-0 truncate">{shortDescription.trim()}</span>
-													<span aria-hidden="true" class="shrink-0">·</span>
-												{/if}
-												<span class="shrink-0 whitespace-nowrap">{@render mainSummary()}</span>
-											</span>
-										{:else}
-											<span class="text-sm font-medium text-text-primary">
-												Informações principais
-											</span>
-											<span class="text-xs text-text-muted">
-												Título e área responsável são obrigatórios
-											</span>
-										{/if}
-									</span>
-									<svg
-										viewBox="0 0 20 20"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.6"
-										aria-hidden="true"
-										class="h-4 w-4 flex-shrink-0 text-text-muted transition-transform duration-base {mainCollapsed
-											? ''
-											: 'rotate-180'}"
-									>
-										<path d="m5 7.5 5 5 5-5" stroke-linecap="round" stroke-linejoin="round" />
-									</svg>
-								</button>
-							</h3>
-							{#if !mainCollapsed}
-								<div
-									id="cp-section-principal"
-									transition:slide={{ duration: 280, easing: cubicOut }}
-								>
-									<!-- Linhas: 1) título · 2) área → prioridade → órgão · 3) descrição -->
-									<div class="grid grid-cols-1 gap-x-4 gap-y-4 px-4 pb-5 pt-1 md:grid-cols-12">
-										<div class="flex flex-col gap-1.5 md:col-span-12">
-											<label for="cp-titulo" class={labelClass}>
-												Título do projeto <span class="text-danger" aria-hidden="true">*</span>
-											</label>
-											<input
-												id="cp-titulo"
-												bind:this={titleInputEl}
-												bind:value={titulo}
-												type="text"
-												required
-												aria-invalid={tituloError}
-												placeholder="Digite o título do projeto"
-												class="{fieldClass} {tituloError ? fieldErrorClass : ''}"
-											/>
-											{#if tituloError}
-												<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
-													Informe o título do projeto.
-												</p>
-											{/if}
-										</div>
-										<div class="flex flex-col gap-1.5 md:col-span-5">
-											<label for="cp-orgao-id" class={labelClass}>
-												Área responsável <span class="text-danger" aria-hidden="true">*</span>
-											</label>
-											{#if orgaoOptions.length === 0}
-												<SelectMenu
-													id="cp-orgao-id"
-													options={[]}
-													value={null}
-													onSelect={() => {}}
-													disabled
-													placeholder="Nenhum órgão atribuído"
-													ariaLabel="Área responsável"
-												/>
-											{:else if orgaoOptions.length === 1}
-												<input
-													type="text"
-													value={orgaoOptions[0].label}
-													disabled
-													class={fieldClass}
-												/>
-											{:else}
-												<OrgaoTreeSelect
-													id="cp-orgao-id"
-													options={orgaoTreeOptions}
-													value={orgaoId ? Number(orgaoId) : null}
-													onSelect={(v) => (orgaoId = v == null ? '' : String(v))}
-													placeholder="Selecione um órgão"
-												/>
-											{/if}
-											{#if orgaoError}
-												<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
-													Selecione a área responsável.
-												</p>
-											{/if}
-										</div>
-										<div class="flex flex-col gap-1.5 md:col-span-3">
-											<label for="cp-prioridade" class={labelClass}>Prioridade</label>
-											<SelectMenu
-												id="cp-prioridade"
-												options={priorityMenuOptions}
-												value={prioridade}
-												onSelect={(v) => (prioridade = v ?? 'baixa')}
-												ariaLabel="Prioridade"
-											/>
-										</div>
-										<div class="flex flex-col gap-1.5 md:col-span-4">
-											<label for="cp-orgao-texto" class={labelClass}>Órgão</label>
-											<input
-												id="cp-orgao-texto"
-												bind:value={orgaoTexto}
-												type="text"
-												placeholder="Digite o órgão responsável"
-												class={fieldClass}
-											/>
-										</div>
-										<div class="flex flex-col gap-1.5 md:col-span-12">
-											<label for="cp-short-desc" class={labelClass}>Descrição breve</label>
-											<textarea
-												id="cp-short-desc"
-												bind:value={shortDescription}
-												rows="2"
-												placeholder="Breve descrição do projeto"
-												class={areaClass}
-											></textarea>
-										</div>
-									</div>
-								</div>
-							{/if}
-						</section>
+						{@render navItems('horizontal')}
+					</nav>
 
-						{#each SECTIONS as section (section.id)}
-							{@const isOpen = openSection === section.id}
-							{@const summary = sectionSummaries[section.id]}
-							<section>
-								<h3 class="contents">
-									<button
-										type="button"
-										onclick={() => toggleSection(section.id)}
-										aria-expanded={isOpen}
-										aria-controls={isOpen ? `cp-section-${section.id}` : undefined}
-										class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-fast hover:bg-surface-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
-									>
-										<span class="flex min-w-0 flex-col">
-											<span class="text-sm font-medium text-text-primary">{section.label}</span>
-											{#if summary && !isOpen}
-												<span class="truncate text-xs text-primary-600">{summary}</span>
-											{/if}
-										</span>
-										<svg
-											viewBox="0 0 20 20"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="1.6"
-											aria-hidden="true"
-											class="h-4 w-4 flex-shrink-0 text-text-muted transition-transform duration-base {isOpen
-												? 'rotate-180'
-												: ''}"
-										>
-											<path d="m5 7.5 5 5 5-5" stroke-linecap="round" stroke-linejoin="round" />
-										</svg>
-									</button>
-								</h3>
-								{#if isOpen}
+					<div class="flex min-h-0 flex-1 overflow-hidden">
+						<!-- Sidebar de navegação entre seções -->
+						<nav
+							aria-label="Seções do formulário"
+							class="hidden w-[206px] flex-none flex-col gap-0.5 overflow-y-auto border-r border-border-subtle bg-surface-muted p-3.5 md:flex"
+						>
+							{@render navItems('vertical')}
+							<div class="flex-1"></div>
+							<div class="mx-0.5 mt-2.5 flex flex-col gap-2 border-t border-border-subtle px-2 pt-3.5">
+								<p
+									class="truncate text-sm font-semibold {titulo.trim()
+										? 'text-text-primary'
+										: 'text-text-muted'}"
+								>
+									{titulo.trim() || 'Sem título'}
+								</p>
+								{#if orgaoSelecionadoLabel}
+									<p class="truncate text-xs text-text-secondary">{orgaoSelecionadoLabel}</p>
+								{:else}
+									<p class="truncate text-xs font-medium text-danger">Área pendente</p>
+								{/if}
+								<div class="mt-1 h-1 overflow-hidden rounded-full bg-border-subtle">
 									<div
-										id={`cp-section-${section.id}`}
-										transition:slide={{ duration: 280, easing: cubicOut }}
-									>
-										<div class="px-4 pb-5 pt-1">
-											{#if section.id === 'classificacao'}
-												<div class="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
-													<div class="flex flex-col gap-1.5">
-														<label for="cp-delivery" class={labelClass}>Tipo de entrega</label>
-														<SelectMenu
-															id="cp-delivery"
-															options={deliveryTypeMenuOptions}
-															value={deliveryType || null}
-															onSelect={(v) => (deliveryType = v ?? '')}
-															allowAll
-															allLabel="Selecione o tipo"
-															ariaLabel="Tipo de entrega"
-														/>
-													</div>
-													<div class="flex flex-col gap-1.5">
-														<label for="cp-special" class={labelClass}>Projetos especiais</label>
-														<SelectMenu
-															id="cp-special"
-															options={specialProjectMenuOptions}
-															value={specialProject || null}
-															onSelect={(v) => (specialProject = v ?? '')}
-															allowAll
-															allLabel="Nenhum"
-															ariaLabel="Projetos especiais"
-														/>
-													</div>
-												</div>
-											{:else if section.id === 'objetivos'}
-												<div class="flex flex-col gap-4">
-													<div class="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
-														<div class="flex flex-col gap-1.5">
-															<label for="cp-objetivo" class={labelClass}>Objetivo EEGD</label>
-															<SelectMenu
-																id="cp-objetivo"
-																options={objetivoMenuOptions}
-																value={objetivoId || null}
-																onSelect={(v) => {
-																	objetivoId = v ?? '';
-																	void onObjetivoChange();
-																}}
-																allowAll
-																allLabel="Selecione um objetivo"
-																ariaLabel="Objetivo EEGD"
-															/>
-														</div>
-														<div class="flex flex-col gap-1.5">
-															<label for="cp-resultado" class={labelClass}>Resultado esperado EEGD</label>
-															<SelectMenu
-																id="cp-resultado"
-																options={resultadoMenuOptions}
-																value={resultadoId || null}
-																onSelect={(v) => {
-																	resultadoId = v ?? '';
-																	void onResultadoChange();
-																}}
-																disabled={!objetivoId || resultadosLoading}
-																allowAll
-																allLabel={resultadosLoading
-																	? 'Carregando resultados...'
-																	: 'Selecione um resultado esperado'}
-																ariaLabel="Resultado esperado EEGD"
-															/>
-														</div>
-													</div>
+										class="h-full rounded-full bg-primary-600 transition-[width] duration-base"
+										style="width: {doneCount * 25}%"
+									></div>
+								</div>
+								<p class="text-[11px] font-medium leading-none text-text-muted">
+									{doneCount} de 4 seções preenchidas
+								</p>
+							</div>
+						</nav>
 
-													<div class="flex flex-col gap-2">
-														<span class="flex items-baseline justify-between gap-2">
-															<span class={labelClass}>Indicadores EEGD</span>
-															{#if selectedIndicadores.length > 0}
-																<span class="text-xs text-text-muted">
-																	{selectedIndicadores.length}/{maxIndicadoresSelecionaveis} selecionados
-																</span>
-															{/if}
-														</span>
-														{#if indicadoresLoading}
-															<p
-																role="status"
-																aria-live="polite"
-																class="flex items-center gap-2 text-sm text-text-secondary"
-															>
-																{@render spinner()}Carregando indicadores...
-															</p>
-														{:else if !resultadoId}
-															<p class="text-sm text-text-muted">
-																Selecione um resultado esperado para ver os indicadores disponíveis.
-															</p>
-														{:else if indicadores.length === 0}
-															<p class="text-sm text-text-muted">
-																Nenhum indicador disponível para este resultado esperado.
-															</p>
-														{:else}
-															<div class="flex flex-col gap-1">
-																{#each indicadores as ind (ind.id)}
-																	<!-- div (não label) p/ que SÓ o clique na caixa marque; a11y via aria-label. -->
-																	<div
-																		class="flex items-start gap-2.5 py-1 text-sm text-text-primary transition-[opacity,transform] duration-300 {revealedIndicadores.has(
-																			ind.id
-																		)
-																			? 'translate-y-0 opacity-100'
-																			: 'translate-y-1 opacity-0'}"
-																	>
-																		<input
-																			type="checkbox"
-																			aria-label={ind.descricao}
-																			checked={selectedIndicadores.includes(ind.id)}
-																			onchange={() => toggleIndicador(ind.id)}
-																			class="mt-0.5 h-4 w-4 shrink-0 rounded border-border-subtle text-primary-600 focus:ring-primary-500"
-																		/>
-																		<span>{ind.descricao}</span>
-																	</div>
-																{/each}
-															</div>
-														{/if}
-													</div>
-
-													<!-- Indicadores ABEP (combobox) — LEGADO, oculto via SHOW_ABEP.
-														 Código mantido para reativação futura. -->
-													{#if SHOW_ABEP}
-													<div class="relative flex flex-col gap-1.5">
-														<label for="cp-abep" class={labelClass}>Indicadores ABEP</label>
+						<!-- Conteúdo da seção ativa -->
+						<div class="flex min-w-0 flex-1 flex-col">
+							<div class="min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-8">
+								{#key activeSection}
+									<div class="flex animate-panel-in flex-col gap-5">
+										{#if activeSection === 0}
+											<h3 class={sectionTitleClass}>Informações principais</h3>
+											<div class="flex flex-col gap-1.5">
+												<label for="cp-titulo" class={labelClass}>
+													Título do projeto <span class="text-danger" aria-hidden="true">*</span>
+												</label>
+												<input
+													id="cp-titulo"
+													bind:this={titleInputEl}
+													bind:value={titulo}
+													type="text"
+													required
+													aria-invalid={tituloError}
+													placeholder="Digite o título do projeto"
+													class="{fieldClass} {tituloError ? fieldErrorClass : ''}"
+												/>
+												{#if tituloError}
+													<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
+														Informe o título do projeto.
+													</p>
+												{/if}
+											</div>
+											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-5">
+												<div class="flex flex-col gap-1.5 md:col-span-2">
+													<label for="cp-orgao-id" class={labelClass}>
+														Área responsável <span class="text-danger" aria-hidden="true">*</span>
+													</label>
+													{#if orgaoOptions.length === 0}
+														<SelectMenu
+															id="cp-orgao-id"
+															options={[]}
+															value={null}
+															onSelect={() => {}}
+															disabled
+															placeholder="Nenhum órgão atribuído"
+															ariaLabel="Área responsável"
+														/>
+													{:else if orgaoOptions.length === 1}
 														<input
-															id="cp-abep"
 															type="text"
-															autocomplete="off"
-															role="combobox"
-															aria-expanded={abepOpen}
-															aria-controls="cp-abep-listbox"
-															aria-autocomplete="list"
-															aria-activedescendant={abepActiveIndex >= 0
-																? `cp-abep-option-${abepActiveIndex}`
-																: undefined}
-															bind:value={abepLabel}
-															oninput={onAbepInput}
-															onfocus={openAbep}
-															onkeydown={onAbepKeydown}
-															onblur={() => setTimeout(closeAbep, 120)}
-															placeholder="Busque por número ou título do indicador ABEP"
+															value={orgaoOptions[0].label}
+															disabled
 															class={fieldClass}
 														/>
-														{#if abepOpen}
-															<ul
-																id="cp-abep-listbox"
-																role="listbox"
-																aria-label="Indicadores ABEP"
-																transition:fly={{ y: -4, duration: 160, easing: cubicOut }}
-																class="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-auto rounded-md border border-border-subtle bg-surface py-1 shadow-md"
-															>
-																{#if abepVisible.length === 0}
-																	<li class="px-3 py-2 text-sm text-text-muted">
-																		Nenhum indicador encontrado
-																	</li>
-																{:else}
-																	{#each abepVisible as option, index (option.value)}
-																		<li class="contents">
-																			<button
-																				type="button"
-																				id={`cp-abep-option-${index}`}
-																				role="option"
-																				aria-selected={option.value === abepValue}
-																				class="block w-full cursor-pointer px-3 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted {index ===
-																				abepActiveIndex
-																					? 'bg-surface-muted'
-																					: ''}"
-																				onmousedown={(e) => e.preventDefault()}
-																				onclick={() => selectAbep(option.value, option.label)}
-																			>
-																				{option.label}
-																			</button>
-																		</li>
-																	{/each}
-																{/if}
-															</ul>
-														{/if}
-													</div>
+													{:else}
+														<OrgaoTreeSelect
+															id="cp-orgao-id"
+															options={orgaoTreeOptions}
+															value={orgaoId ? Number(orgaoId) : null}
+															onSelect={(v) => (orgaoId = v == null ? '' : String(v))}
+															placeholder="Selecione um órgão"
+														/>
+													{/if}
+													{#if orgaoError}
+														<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
+															Selecione a área responsável.
+														</p>
 													{/if}
 												</div>
-											{:else if section.id === 'links'}
-												<div class="flex flex-col gap-4">
-													<div class="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
-														<div class="flex flex-col gap-1.5">
-															<span class={labelClass}>Processo SEI-RJ</span>
-															<SeiProcessField
-																fieldId="cp-sei"
-																processes={seiList}
-																onSave={(list) => (seiList = list)}
-															/>
-														</div>
-														<div class="flex flex-col gap-1.5">
-															<label for="cp-github" class={labelClass}>Link GitHub</label>
-															<input
-																id="cp-github"
-																bind:value={githubLink}
-																type="text"
-																placeholder="https://github.com/..."
-																class={fieldClass}
-															/>
-														</div>
-														<div class="flex flex-col gap-1.5">
-															<label for="cp-doc" class={labelClass}>Link documentação</label>
-															<input
-																id="cp-doc"
-																bind:value={documentationLink}
-																type="text"
-																placeholder="https://..."
-																class={fieldClass}
-															/>
-														</div>
-														<div class="flex flex-col gap-1.5">
-															<label for="cp-product" class={labelClass}>Link para o produto</label>
-															<input
-																id="cp-product"
-																bind:value={productLink}
-																type="text"
-																placeholder="https://..."
-																class={fieldClass}
-															/>
-														</div>
-													</div>
-													<div class="flex flex-col gap-1.5">
-														<label for="cp-obs" class={labelClass}>
-															Observações
-														</label>
-														<textarea
-															id="cp-obs"
-															bind:value={observacao}
-															rows="3"
-															placeholder="Digite observações detalhadas sobre o projeto..."
-															class={areaClass}
-														></textarea>
+												<div class="flex flex-col gap-1.5 md:col-span-3">
+													<span class={labelClass} id="cp-prioridade-label">Prioridade</span>
+													<div
+														id="cp-prioridade"
+														role="group"
+														aria-labelledby="cp-prioridade-label"
+														class="flex h-10 flex-wrap items-center gap-1.5"
+													>
+														{#each PRIORITIES as p (p.value)}
+															{@const selected = prioridade === p.value}
+															<button
+																type="button"
+																aria-pressed={selected}
+																onclick={() => (prioridade = p.value)}
+																style={selected
+																	? `background: var(--ds-color-priority-${p.value}); border-color: var(--ds-color-priority-${p.value});`
+																	: ''}
+																class="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-lg border px-2 text-xs transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
+																	? 'font-semibold text-white'
+																	: 'border-border-subtle bg-surface font-medium text-text-secondary hover:bg-surface-muted'}"
+															>
+																{p.label}
+															</button>
+														{/each}
 													</div>
 												</div>
-											{:else}
-												<div class="flex flex-col gap-4">
-													<div class="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-3">
-														<div class="flex flex-col gap-1.5 md:col-span-2">
-															<label for="cp-template" class={labelClass}>Importar modelo</label>
-															<SelectMenu
-																id="cp-template"
-																options={templateMenuOptions}
-																value={templateId || null}
-																onSelect={(v) => {
-																	templateId = v ?? '';
-																	void onTemplateChange();
-																}}
-																allowAll
-																allLabel="Não importar / limpar etapas"
-																searchable
-																ariaLabel="Importar modelo"
-															/>
-														</div>
-														<div class="flex flex-col gap-1.5">
-															<label for="cp-start" class={labelClass}>Data de início</label>
-															<input
-																id="cp-start"
-																bind:value={startDate}
-																type="date"
-																title="Sem data, o preview mostra só a duração de cada etapa."
-																class={fieldClass}
-															/>
-														</div>
-													</div>
+											</div>
+											<div class="flex flex-col gap-1.5">
+												<label for="cp-orgao-texto" class={labelClass}>Órgão</label>
+												<input
+													id="cp-orgao-texto"
+													bind:value={orgaoTexto}
+													type="text"
+													placeholder="Digite o órgão responsável"
+													class={fieldClass}
+												/>
+											</div>
+											<div class="flex flex-col gap-1.5">
+												<label for="cp-short-desc" class={labelClass}>Descrição breve</label>
+												<textarea
+													id="cp-short-desc"
+													bind:value={shortDescription}
+													rows="3"
+													placeholder="Breve descrição do projeto"
+													class={areaClass}
+												></textarea>
+											</div>
+										{:else if activeSection === 1}
+											<h3 class={sectionTitleClass}>Classificação</h3>
+											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
+												<div class="flex flex-col gap-1.5">
+													<label for="cp-delivery" class={labelClass}>Tipo de entrega</label>
+													<SelectMenu
+														id="cp-delivery"
+														options={deliveryTypeMenuOptions}
+														value={deliveryType || null}
+														onSelect={(v) => (deliveryType = v ?? '')}
+														allowAll
+														allLabel="Selecione o tipo"
+														ariaLabel="Tipo de entrega"
+													/>
+												</div>
+												<div class="flex flex-col gap-1.5">
+													<label for="cp-special" class={labelClass}>Projetos especiais</label>
+													<SelectMenu
+														id="cp-special"
+														options={specialProjectMenuOptions}
+														value={specialProject || null}
+														onSelect={(v) => (specialProject = v ?? '')}
+														allowAll
+														allLabel="Nenhum"
+														ariaLabel="Projetos especiais"
+													/>
+												</div>
+											</div>
 
-													{#if templateLoading}
+											<div class="flex flex-col gap-5 border-t border-border-subtle pt-5">
+												<h3 class={sectionTitleClass}>Objetivos e indicadores</h3>
+												<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
+													<div class="flex flex-col gap-1.5">
+														<label for="cp-objetivo" class={labelClass}>Objetivo EEGD</label>
+														<SelectMenu
+															id="cp-objetivo"
+															options={objetivoMenuOptions}
+															value={objetivoId || null}
+															onSelect={(v) => {
+																objetivoId = v ?? '';
+																void onObjetivoChange();
+															}}
+															allowAll
+															allLabel="Selecione um objetivo"
+															ariaLabel="Objetivo EEGD"
+														/>
+													</div>
+													<div class="flex flex-col gap-1.5">
+														<label for="cp-resultado" class={labelClass}>Resultado esperado EEGD</label>
+														<SelectMenu
+															id="cp-resultado"
+															options={resultadoMenuOptions}
+															value={resultadoId || null}
+															onSelect={(v) => {
+																resultadoId = v ?? '';
+																void onResultadoChange();
+															}}
+															disabled={!objetivoId || resultadosLoading}
+															allowAll
+															allLabel={resultadosLoading
+																? 'Carregando resultados...'
+																: 'Selecione um resultado esperado'}
+															ariaLabel="Resultado esperado EEGD"
+														/>
+													</div>
+												</div>
+
+												<div class="flex flex-col gap-2">
+													<span class={labelClass}>Indicadores EEGD</span>
+													{#if indicadoresLoading}
 														<p
 															role="status"
 															aria-live="polite"
 															class="flex items-center gap-2 text-sm text-text-secondary"
 														>
-															{@render spinner()}Carregando etapas…
+															{@render spinner()}Carregando indicadores...
 														</p>
-													{:else if previewStages.length > 0}
-														<!-- Timeline minimalista: fio vertical + pontos vazados; nome à
-														     esquerda, datas tabulares à direita — sem caixa nem badges. -->
-														<div
-															transition:slide={{ duration: 240, easing: cubicOut }}
-															class="flex flex-col"
-														>
-															<div
-																class="flex items-baseline justify-between gap-3 border-b border-border-subtle pb-2"
-															>
-																<span
-																	class="text-xs font-medium uppercase tracking-wide text-text-muted"
-																>
-																	Etapas importadas
-																</span>
-																<span class="text-xs tabular-nums text-text-muted">
-																	{previewStages.length}
-																	{previewStages.length === 1 ? 'etapa' : 'etapas'} ·
-																	{previewTotalDuration} dias
-																</span>
-															</div>
-															<ol class="relative flex flex-col py-1.5">
-																<span
-																	aria-hidden="true"
-																	class="absolute bottom-[1.1rem] left-[3px] top-[1.1rem] w-px bg-border-subtle"
-																></span>
-																{#each previewStages as stage, index (index)}
-																	<li
-																		class="relative flex items-baseline justify-between gap-4 py-2 pl-5"
-																	>
-																		<span
-																			aria-hidden="true"
-																			class="absolute left-0 top-1/2 h-[7px] w-[7px] -translate-y-1/2 rounded-full border-[1.5px] border-text-muted bg-surface"
-																		></span>
-																		<span class="flex min-w-0 items-baseline gap-2">
-																			<span class="shrink-0 text-xs tabular-nums text-text-muted">
-																				{String(index + 1).padStart(2, '0')}
-																			</span>
-																			<span class="min-w-0 truncate text-sm text-text-primary">
-																				{stage.name}
-																			</span>
-																		</span>
-																		<!-- Colunas fixas: intervalo (largura constante em tabular-nums)
-																		     e duração alinhada à direita — sem serrilhado entre linhas. -->
-																		<span
-																			class="flex shrink-0 items-baseline gap-1.5 text-xs tabular-nums text-text-muted"
-																		>
-																			{#if stage.rangeText}
-																				<span>{stage.rangeText}</span>
-																				<span aria-hidden="true">·</span>
-																			{/if}
-																			<span class="w-14 text-right">
-																				{stage.duration}
-																				{stage.duration === 1 ? 'dia' : 'dias'}
-																			</span>
-																		</span>
-																	</li>
-																{/each}
-															</ol>
-															{#if previewStart && previewEnd}
-																<p
-																	class="border-t border-border-subtle pt-2 text-xs text-text-muted"
-																>
-																	Início em
-																	<span class="font-medium text-text-secondary">{previewStart}</span>
-																	· término previsto em
-																	<span class="font-medium text-text-secondary">{previewEnd}</span>
-																</p>
-															{/if}
-														</div>
+													{:else if !resultadoId}
+														<p class={emptyBoxClass}>
+															Selecione um resultado esperado para ver os indicadores disponíveis.
+														</p>
+													{:else if indicadores.length === 0}
+														<p class={emptyBoxClass}>
+															Nenhum indicador disponível para este resultado esperado.
+														</p>
 													{:else}
-														<p class="text-sm text-text-muted">
-															Selecione um modelo para visualizar as etapas importadas.
-														</p>
+														<div class="flex flex-wrap gap-2">
+															{#each indicadores as ind (ind.id)}
+																{@const checked = selectedIndicadores.includes(ind.id)}
+																<button
+																	type="button"
+																	aria-pressed={checked}
+																	onclick={() => toggleIndicador(ind.id)}
+																	class="inline-flex items-center rounded-lg border px-3 py-2 text-left text-xs transition-[opacity,transform,color,background-color,border-color] duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {checked
+																		? 'border-primary-500 bg-primary-100 font-medium text-primary-700'
+																		: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:text-text-primary'} {revealedIndicadores.has(
+																		ind.id
+																	)
+																		? 'translate-y-0 opacity-100'
+																		: 'translate-y-1 opacity-0'}"
+																>
+																	{ind.descricao}
+																</button>
+															{/each}
+														</div>
 													{/if}
 												</div>
-											{/if}
-										</div>
-									</div>
-								{/if}
-							</section>
-						{/each}
-					</div>
-				</div>
 
-				<!-- Rodapé fixo (mesma altura do cabeçalho: h-14) -->
-				<footer
-					class="flex h-14 flex-shrink-0 items-center justify-between gap-3 border-t border-border-subtle px-6"
-				>
-					<p class="hidden items-center gap-1 text-xs text-text-muted sm:flex">
-						<kbd
-							class="rounded border border-border-subtle bg-surface-muted px-1.5 py-0.5 font-mono text-2xs text-text-secondary"
-						>
-							Ctrl
-						</kbd>
-						<span aria-hidden="true">+</span>
-						<kbd
-							class="rounded border border-border-subtle bg-surface-muted px-1.5 py-0.5 font-mono text-2xs text-text-secondary"
-						>
-							Enter
-						</kbd>
-						<span class="ml-1">para criar</span>
-					</p>
-					<div class="flex items-center gap-2">
-						<button
-							type="button"
-							onclick={requestClose}
-							disabled={submitting}
-							class="inline-flex h-9 items-center rounded-md px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-						>
-							Cancelar
-						</button>
-						<button
-							type="submit"
-							disabled={submitting}
-							class="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
-						>
-							{#if submitting}
-								{@render spinner()}Criando…
-							{:else}
-								Criar projeto
-							{/if}
-						</button>
+												<!-- Indicadores ABEP (combobox) — LEGADO, oculto via SHOW_ABEP.
+													 Código mantido para reativação futura. -->
+												{#if SHOW_ABEP}
+												<div class="relative flex flex-col gap-1.5">
+													<label for="cp-abep" class={labelClass}>Indicadores ABEP</label>
+													<input
+														id="cp-abep"
+														type="text"
+														autocomplete="off"
+														role="combobox"
+														aria-expanded={abepOpen}
+														aria-controls="cp-abep-listbox"
+														aria-autocomplete="list"
+														aria-activedescendant={abepActiveIndex >= 0
+															? `cp-abep-option-${abepActiveIndex}`
+															: undefined}
+														bind:value={abepLabel}
+														oninput={onAbepInput}
+														onfocus={openAbep}
+														onkeydown={onAbepKeydown}
+														onblur={() => setTimeout(closeAbep, 120)}
+														placeholder="Busque por número ou título do indicador ABEP"
+														class={fieldClass}
+													/>
+													{#if abepOpen}
+														<ul
+															id="cp-abep-listbox"
+															role="listbox"
+															aria-label="Indicadores ABEP"
+															transition:fly={{ y: -4, duration: 160, easing: cubicOut }}
+															class="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-auto rounded-md border border-border-subtle bg-surface py-1 shadow-md"
+														>
+															{#if abepVisible.length === 0}
+																<li class="px-3 py-2 text-sm text-text-muted">
+																	Nenhum indicador encontrado
+																</li>
+															{:else}
+																{#each abepVisible as option, index (option.value)}
+																	<li class="contents">
+																		<button
+																			type="button"
+																			id={`cp-abep-option-${index}`}
+																			role="option"
+																			aria-selected={option.value === abepValue}
+																			class="block w-full cursor-pointer px-3 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted {index ===
+																			abepActiveIndex
+																				? 'bg-surface-muted'
+																				: ''}"
+																			onmousedown={(e) => e.preventDefault()}
+																			onclick={() => selectAbep(option.value, option.label)}
+																		>
+																			{option.label}
+																		</button>
+																	</li>
+																{/each}
+															{/if}
+														</ul>
+													{/if}
+												</div>
+												{/if}
+											</div>
+										{:else if activeSection === 2}
+											<h3 class={sectionTitleClass}>Links e observações</h3>
+											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
+												<div class="flex flex-col gap-1.5">
+													<span class={labelClass}>Processo SEI-RJ</span>
+													<SeiProcessField
+														fieldId="cp-sei"
+														processes={seiList}
+														onSave={(list) => (seiList = list)}
+													/>
+												</div>
+												<div class="flex flex-col gap-1.5">
+													<label for="cp-github" class={labelClass}>Link GitHub</label>
+													<input
+														id="cp-github"
+														bind:value={githubLink}
+														type="text"
+														placeholder="https://github.com/..."
+														class={fieldClass}
+													/>
+												</div>
+												<div class="flex flex-col gap-1.5">
+													<label for="cp-doc" class={labelClass}>Link documentação</label>
+													<input
+														id="cp-doc"
+														bind:value={documentationLink}
+														type="text"
+														placeholder="https://..."
+														class={fieldClass}
+													/>
+												</div>
+												<div class="flex flex-col gap-1.5">
+													<label for="cp-product" class={labelClass}>Link para o produto</label>
+													<input
+														id="cp-product"
+														bind:value={productLink}
+														type="text"
+														placeholder="https://..."
+														class={fieldClass}
+													/>
+												</div>
+											</div>
+											<div class="flex flex-col gap-1.5">
+												<label for="cp-obs" class={labelClass}>Observações</label>
+												<textarea
+													id="cp-obs"
+													bind:value={observacao}
+													rows="4"
+													placeholder="Digite observações detalhadas sobre o projeto..."
+													class={areaClass}
+												></textarea>
+											</div>
+										{:else}
+											<h3 class={sectionTitleClass}>Modelo de etapas</h3>
+											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-5">
+												<div class="flex flex-col gap-1.5 md:col-span-3">
+													<label for="cp-template" class={labelClass}>Importar modelo</label>
+													<SelectMenu
+														id="cp-template"
+														options={templateMenuOptions}
+														value={templateId || null}
+														onSelect={(v) => {
+															templateId = v ?? '';
+															void onTemplateChange();
+														}}
+														allowAll
+														allLabel="Não importar / limpar etapas"
+														searchable
+														ariaLabel="Importar modelo"
+													/>
+												</div>
+												<div class="flex flex-col gap-1.5 md:col-span-2">
+													<label for="cp-start" class={labelClass}>Data de início</label>
+													<input
+														id="cp-start"
+														bind:value={startDate}
+														type="date"
+														title="Sem data, o preview mostra só a duração de cada etapa."
+														class={fieldClass}
+													/>
+												</div>
+											</div>
+
+											{#if templateLoading}
+												<p
+													role="status"
+													aria-live="polite"
+													class="flex items-center gap-2 text-sm text-text-secondary"
+												>
+													{@render spinner()}Carregando etapas…
+												</p>
+											{:else if previewStages.length > 0}
+												<div class="flex flex-col gap-2" transition:slide={{ duration: 240, easing: cubicOut }}>
+													<ol
+														class="flex flex-col divide-y divide-border-subtle overflow-hidden rounded-lg border border-border-subtle"
+													>
+														{#each previewStages as stage, index (index)}
+															<li class="flex items-center gap-3 px-3.5 py-2.5">
+																<span
+																	class="grid h-6 w-6 flex-none place-items-center rounded-full bg-primary-100 text-xs font-semibold text-primary-600"
+																>
+																	{index + 1}
+																</span>
+																<span class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
+																	{stage.name}
+																</span>
+																{#if stage.startText}
+																	<span class="shrink-0 text-xs tabular-nums text-text-muted">
+																		{stage.startText}
+																	</span>
+																{/if}
+																<span
+																	class="shrink-0 rounded-full bg-surface-muted px-2.5 py-1 text-xs font-medium tabular-nums text-text-secondary"
+																>
+																	{stage.duration}
+																	{stage.duration === 1 ? 'dia' : 'dias'}
+																</span>
+															</li>
+														{/each}
+													</ol>
+													<p class="text-xs text-text-muted">
+														{previewStages.length}
+														{previewStages.length === 1 ? 'etapa' : 'etapas'} ·
+														{previewTotalDuration} dias
+														{#if previewStart && previewEnd}
+															· início em
+															<span class="font-medium text-text-secondary">{previewStart}</span>
+															· término previsto em
+															<span class="font-medium text-text-secondary">{previewEnd}</span>
+														{/if}
+													</p>
+												</div>
+											{:else}
+												<p class={emptyBoxClass}>
+													Selecione um modelo para visualizar as etapas importadas.
+												</p>
+											{/if}
+										{/if}
+									</div>
+								{/key}
+							</div>
+
+							<!-- Rodapé fixo -->
+							<footer
+								class="flex h-14 flex-shrink-0 items-center gap-2 border-t border-border-subtle px-5"
+							>
+								<div class="flex-1"></div>
+								{#if activeSection > 0}
+									<button
+										type="button"
+										onclick={() => goToSection(activeSection - 1)}
+										class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									>
+										<svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+											<path d="M12.5 5 7.5 10l5 5" stroke-linecap="round" stroke-linejoin="round" />
+										</svg>
+										Voltar
+									</button>
+								{/if}
+								{#if activeSection < NAV_SECTIONS.length - 1}
+									<button
+										type="button"
+										onclick={() => goToSection(activeSection + 1)}
+										class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary-100 px-3.5 text-sm font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									>
+										Próximo
+										<svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+											<path d="m7.5 5 5 5-5 5" stroke-linecap="round" stroke-linejoin="round" />
+										</svg>
+									</button>
+								{/if}
+								<div aria-hidden="true" class="mx-1 h-6 w-px bg-border-subtle"></div>
+								<button
+									type="submit"
+									disabled={submitting}
+									class="inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 {canSubmit ||
+									submitting
+										? 'bg-primary-600 text-primary-fg shadow-sm hover:bg-primary-700 hover:shadow-md'
+										: 'border border-border-subtle bg-surface-muted text-text-muted'}"
+								>
+									{#if submitting}
+										{@render spinner()}Criando…
+									{:else}
+										Criar projeto
+									{/if}
+								</button>
+							</footer>
+						</div>
 					</div>
-				</footer>
-			</form>
+				</form>
+			{/if}
 
 			<!-- Confirmação de descarte: cobre o modal ao fechar com dados preenchidos -->
 			{#if confirmDiscardOpen}
@@ -1484,3 +1436,37 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	/* Ícone de celebração: pop + tremida UMA vez ao montar, depois fica parado. */
+	.cp-success-icon {
+		display: inline-block;
+		transform-origin: 35% 75%;
+		animation: cp-si-pop-shake 0.9s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+	}
+	@keyframes cp-si-pop-shake {
+		0% {
+			opacity: 0;
+			transform: scale(0.5) rotate(0deg);
+		}
+		35% {
+			opacity: 1;
+			transform: scale(1.06) rotate(-9deg);
+		}
+		55% {
+			transform: scale(1) rotate(7deg);
+		}
+		75% {
+			transform: rotate(-4deg);
+		}
+		100% {
+			opacity: 1;
+			transform: scale(1) rotate(0deg);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.cp-success-icon {
+			animation: none;
+		}
+	}
+</style>

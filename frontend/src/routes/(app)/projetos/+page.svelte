@@ -125,6 +125,12 @@
 		void goto(target);
 	}
 
+	/** Sucesso dispensado sem "Ver o projeto": flash + lista atualizada. */
+	function onProjectCreatedDismissed(result: CreateProjectResult): void {
+		flash.success(result.message);
+		void load();
+	}
+
 	// Guarda o rótulo do item selecionado para não filtrar a lista logo após
 	// escolher uma opção (o input passa a exibir o rótulo completo).
 	let lastSelectedAbepLabel = $state<string>('');
@@ -1235,6 +1241,7 @@
 	options={createOptions}
 	onClose={() => (createModalOpen = false)}
 	onCreated={onProjectCreated}
+	onCreatedDismissed={onProjectCreatedDismissed}
 />
 
 <!-- Importação de projetos via CSV (Admin) — sucessor do import_modal.html Jinja. -->
