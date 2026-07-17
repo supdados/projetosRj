@@ -163,7 +163,6 @@
 			data = next;
 			// Reset do decremento local: o backend já reflete o estado atual.
 			focusDelta = 0;
-			cardRefs = {};
 			// Reconcilia os filtros com o que o backend efetivamente aplicou.
 			periodo = next.filtro_periodo;
 			search = next.search_query;
@@ -312,6 +311,8 @@
 	/** Sincroniza a pílula done/total do card após mutação no quick-add. */
 	function syncEtapaProgress(etapaId: number, done: number, total: number): void {
 		if (!quickAdd) return;
+		// Também no mapa da página: o card se re-semeia dele a cada recarga.
+		if (data) data.etapa_task_progress[String(etapaId)] = { done, total };
 		cardRefs[quickAdd.projectId]?.syncEtapaProgress(etapaId, done, total);
 	}
 
