@@ -33,6 +33,10 @@
 		/** Número de exibição "projectId.index" (1-based). */
 		displayNumber: string;
 		readonly?: boolean;
+		/** Linha-fonte colapsada durante o drag (o placeholder mostra o destino). */
+		dragging?: boolean;
+		/** Acabou de aterrissar no drop — pulso de assentamento. */
+		settled?: boolean;
 		fieldStates?: Partial<Record<EtapaInlineField, FieldState>>;
 		busy?: boolean;
 		rowError?: string | null;
@@ -56,6 +60,8 @@
 		etapa,
 		displayNumber,
 		readonly = false,
+		dragging = false,
+		settled = false,
 		fieldStates = {},
 		busy = false,
 		rowError = null,
@@ -211,6 +217,8 @@
 			: etapa.iniciada
 				? 'etapa-iniciada'
 				: ''}"
+		class:is-dragging={dragging}
+		class:is-drop-settling={settled}
 		data-etapa-id={etapa.id}
 		aria-busy={busy}
 	>
@@ -445,6 +453,43 @@
 	}
 	.etapa-row:hover :global(td) {
 		background: var(--color-surface-muted);
+	}
+
+	/* Linha-fonte colapsada durante o drag: altura de <tr> vem do conteúdo, então
+	   o colapso zera padding/borda das células E o conteúdo (display:none nos
+	   filhos + font-size 0 para nós de texto soltos, ex. o número da etapa). */
+	.etapa-row.is-dragging {
+		opacity: 0;
+		pointer-events: none;
+	}
+	.etapa-row.is-dragging :global(td) {
+		padding-top: 0;
+		padding-bottom: 0;
+		border-top-width: 0;
+		font-size: 0;
+		line-height: 0;
+	}
+	.etapa-row.is-dragging :global(td > *) {
+		display: none;
+	}
+
+	/* Pulso de assentamento pós-drop (paridade com o kanban; background/sombra
+	   em vez de transform — scale em display:table-row é imprevisível). */
+	@keyframes stage-drop-settle {
+		0% {
+			background-color: color-mix(in srgb, var(--ds-color-primary-500) 14%, transparent);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+	.etapa-row.is-drop-settling :global(td) {
+		animation: stage-drop-settle 0.45s ease;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.etapa-row.is-drop-settling :global(td) {
+			animation: none;
+		}
 	}
 
 	.cell-drag {

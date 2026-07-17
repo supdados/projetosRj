@@ -105,30 +105,73 @@
 	// ---- Drag and drop (HTML5 nativo, alça) ----
 	let draggedId = $state<number | null>(null);
 	let ghostEl: HTMLDivElement | null = null;
-	let dropIndicatorEl: HTMLDivElement | null = null;
 	let overId = $state<number | null>(null);
 	let overPosition = $state<'top' | 'bottom'>('bottom');
+	/** Altura (px) da linha arrastada, medida no dragstart, para o vão do placeholder. */
+	let draggedRowHeight = $state<number | null>(null);
+	/**
+	 * Linha-fonte que colapsa durante o drag. Aplicado num setTimeout(0) DEPOIS
+	 * do dragstart: colapsar o nó de forma síncrona dentro do dragstart cancela
+	 * o drag nativo no Chrome/Firefox (mesma técnica do KanbanBoard).
+	 */
+	let collapsedId = $state<number | null>(null);
+	let collapseTimer: ReturnType<typeof setTimeout> | null = null;
+	/** Linha que acabou de aterrissar — recebe o pulso de assentamento. */
+	let settledId = $state<number | null>(null);
+	let settleTimer: ReturnType<typeof setTimeout> | null = null;
 
-	function ensureDropIndicator(): HTMLDivElement {
-		if (!dropIndicatorEl) {
-			dropIndicatorEl = document.createElement('div');
-			dropIndicatorEl.className = 'stage-drop-indicator';
-			document.body.appendChild(dropIndicatorEl);
+	/** Id da etapa diante da qual o vão do placeholder abre (`-1` = fim da lista). */
+	const placeholderBeforeId = $derived.by(() => {
+		if (draggedId === null || overId === null) return null;
+		if (overPosition === 'top') return overId;
+		const idx = etapas.findIndex((e) => e.id === overId);
+		if (idx === -1) return null;
+		return idx + 1 < etapas.length ? etapas[idx + 1].id : -1;
+	});
+	/** Altura do vão (desconta o padding da célula; fallback ~ linha comum). */
+	const gapHeight = $derived(Math.max((draggedRowHeight ?? 56) - 6, 40));
+
+	function markSettled(etapaId: number): void {
+		if (
+			typeof window !== 'undefined' &&
+			window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+		) {
+			return;
 		}
-		return dropIndicatorEl;
+		if (settleTimer) clearTimeout(settleTimer);
+		settledId = etapaId;
+		settleTimer = setTimeout(() => {
+			settledId = null;
+			settleTimer = null;
+		}, 480);
 	}
-	function showDropIndicator(row: HTMLElement, position: 'top' | 'bottom'): void {
-		if (!tbodyEl) return;
-		const ind = ensureDropIndicator();
-		const rect = row.getBoundingClientRect();
-		const tableRect = tbodyEl.getBoundingClientRect();
-		ind.style.left = `${tableRect.left}px`;
-		ind.style.width = `${tableRect.width}px`;
-		ind.style.top = position === 'top' ? `${rect.top - 2}px` : `${rect.bottom - 1}px`;
-		ind.classList.add('show');
-	}
-	function hideDropIndicator(): void {
-		dropIndicatorEl?.classList.remove('show');
+
+	/**
+	 * Ghost de arraste = clone da PRÓPRIA linha, embrulhado numa tabela offscreen
+	 * com as larguras de coluna copiadas (table-layout fixed sem thead usa a
+	 * primeira linha para dimensionar). O clone mantém as classes scoped do
+	 * Svelte, então herda o CSS real da tabela — o snapshot vira um cartão fiel.
+	 */
+	function buildRowGhost(row: HTMLElement): HTMLDivElement {
+		const wrap = document.createElement('div');
+		wrap.className = 'stage-drag-ghost-row';
+		wrap.style.width = `${row.offsetWidth}px`;
+		const sourceTable = row.closest('table');
+		const table = document.createElement('table');
+		table.className = sourceTable?.className ?? '';
+		table.style.width = `${row.offsetWidth}px`;
+		table.style.minWidth = '0';
+		table.style.tableLayout = 'fixed';
+		const tbody = document.createElement('tbody');
+		const clone = row.cloneNode(true) as HTMLElement;
+		Array.from(row.children).forEach((cell, i) => {
+			const cloned = clone.children[i] as HTMLElement | undefined;
+			if (cloned) cloned.style.width = `${(cell as HTMLElement).offsetWidth}px`;
+		});
+		tbody.appendChild(clone);
+		table.appendChild(tbody);
+		wrap.appendChild(table);
+		return wrap;
 	}
 
 	function onDragStart(event: DragEvent): void {
@@ -140,21 +183,24 @@
 		}
 		const id = Number(row.dataset.etapaId);
 		draggedId = id;
+		// Mede ANTES do colapso: o placeholder abre um vão do mesmo tamanho.
+		draggedRowHeight = row.getBoundingClientRect().height;
+		if (collapseTimer) clearTimeout(collapseTimer);
+		collapseTimer = setTimeout(() => {
+			if (draggedId === id) collapsedId = id;
+			collapseTimer = null;
+		}, 0);
 		if (event.dataTransfer) {
 			event.dataTransfer.effectAllowed = 'move';
 			event.dataTransfer.setData('text/plain', String(id));
-			// Ghost customizado (paridade com .drag-ghost-custom do legado).
-			// Construído com DOM seguro (textContent), sem innerHTML.
-			ghostEl = document.createElement('div');
-			ghostEl.className = 'stage-drag-ghost';
-			const icon = document.createElement('i');
-			icon.className = 'fas fa-arrows-alt';
-			const label = document.createElement('span');
-			const desc = row.querySelector('.etapa-descricao')?.textContent?.trim() ?? 'Movendo etapa…';
-			label.textContent = desc.slice(0, 60) + (desc.length > 60 ? '…' : '');
-			ghostEl.append(icon, label);
+			ghostEl = buildRowGhost(row);
 			document.body.appendChild(ghostEl);
-			event.dataTransfer.setDragImage(ghostEl, 20, 20);
+			const rect = row.getBoundingClientRect();
+			event.dataTransfer.setDragImage(
+				ghostEl,
+				Math.max(event.clientX - rect.left, 0),
+				Math.max(event.clientY - rect.top, 0)
+			);
 		}
 		setTimeout(() => {
 			ghostEl?.remove();
@@ -162,20 +208,39 @@
 		}, 0);
 	}
 
+	/** Mantém o alvo atual (cursor sobre o placeholder/linha não-alvo) e permite o drop. */
+	function keepCurrentDropTarget(event: DragEvent): void {
+		if (overId === null) return;
+		event.preventDefault();
+		if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+	}
+
 	function onDragOver(event: DragEvent): void {
 		if (draggedId === null) return;
 		const row = (event.target as HTMLElement)?.closest('tr[data-etapa-id]') as HTMLElement | null;
-		if (!row) return;
+		if (!row) {
+			keepCurrentDropTarget(event);
+			return;
+		}
 		const id = Number(row.dataset.etapaId);
 		const etapa = etapas.find((e) => e.id === id);
-		if (!etapa || etapa.is_google_meeting || id === draggedId) return;
+		if (!etapa || etapa.is_google_meeting || id === draggedId) {
+			keepCurrentDropTarget(event);
+			return;
+		}
 		event.preventDefault();
 		if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
 		const rect = row.getBoundingClientRect();
 		const position = event.clientY < rect.top + rect.height / 2 ? 'top' : 'bottom';
 		overId = id;
 		overPosition = position;
-		showDropIndicator(row, position);
+	}
+
+	/** Saiu da tbody: fecha o vão (dragend cobre o cancelamento do drag). */
+	function onTbodyDragLeave(event: DragEvent): void {
+		const related = event.relatedTarget as Node | null;
+		if (tbodyEl && related && tbodyEl.contains(related)) return;
+		overId = null;
 	}
 
 	function onDrop(event: DragEvent): void {
@@ -198,14 +263,21 @@
 		}
 		const insertAt = overPosition === 'top' ? toIdx : toIdx + 1;
 		ids.splice(insertAt, 0, moved);
+		const movedId = draggedId;
 		onReorder(ids);
 		resetDrag();
+		markSettled(movedId);
 	}
 
 	function resetDrag(): void {
+		if (collapseTimer) {
+			clearTimeout(collapseTimer);
+			collapseTimer = null;
+		}
 		draggedId = null;
 		overId = null;
-		hideDropIndicator();
+		collapsedId = null;
+		draggedRowHeight = null;
 	}
 
 	/** Fallback por teclado: move a etapa uma posição (mesma intenção do DnD). */
@@ -412,15 +484,25 @@
 				bind:this={tbodyEl}
 				ondragstart={onDragStart}
 				ondragover={onDragOver}
+				ondragleave={onTbodyDragLeave}
 				ondrop={onDrop}
 				ondragend={resetDrag}
 			>
 				{#each etapas as etapa, index (etapa.id)}
 					{@const st = rowState(etapa.id)}
+					{#if placeholderBeforeId === etapa.id}
+						<tr class="stage-placeholder-row" aria-hidden="true">
+							<td colspan="9">
+								<div class="stage-placeholder-fill" style:height={`${gapHeight}px`}></div>
+							</td>
+						</tr>
+					{/if}
 					<StageRow
 						{etapa}
 						displayNumber={displayNumber(index)}
 						{readonly}
+						dragging={collapsedId === etapa.id}
+						settled={settledId === etapa.id}
 						fieldStates={st.fields}
 						busy={st.busy}
 						rowError={st.error}
@@ -435,6 +517,14 @@
 						{meetingSlot}
 					/>
 				{/each}
+
+				{#if placeholderBeforeId === -1}
+					<tr class="stage-placeholder-row" aria-hidden="true">
+						<td colspan="9">
+							<div class="stage-placeholder-fill" style:height={`${gapHeight}px`}></div>
+						</td>
+					</tr>
+				{/if}
 
 				{#if !readonly}
 					{#if !composerOpen}
@@ -665,43 +755,55 @@
 		position: relative;
 	}
 
-	:global(.stage-drop-indicator) {
-		position: fixed;
-		height: 3px;
-		background: linear-gradient(90deg, var(--ds-color-primary-600) 0%, rgba(0, 90, 146, 0.8) 50%, var(--ds-color-primary-600) 100%);
-		border-radius: 2px;
-		z-index: 1000;
-		opacity: 0;
-		transition: opacity 0.2s ease;
-		box-shadow: 0 2px 8px rgba(0, 90, 146, 0.4);
+	/* Vão de inserção: preview tracejado de onde a linha aterrissará (paridade
+	   com .kanban-placeholder). Altura/animação SÓ no <div> interno — height e
+	   transition em <tr>/<td> são ignorados/recalculados pelo layout de tabela. */
+	.stage-placeholder-row td {
+		padding: 3px 8px;
+		border-top: 1px solid var(--color-border);
+	}
+	.stage-placeholder-fill {
+		border-radius: 10px;
+		border: 1.5px dashed color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent);
+		background-color: color-mix(in srgb, var(--ds-color-primary-500) 8%, transparent);
 		pointer-events: none;
+		animation: stage-placeholder-in 0.14s ease;
 	}
-	:global([data-theme='dark'] .stage-drop-indicator) {
-		background: linear-gradient(90deg, var(--ds-color-primary-500) 0%, rgba(196, 210, 222, 0.8) 50%, var(--ds-color-primary-500) 100%);
-		box-shadow: 0 2px 8px rgba(196, 210, 222, 0.5);
+	@keyframes stage-placeholder-in {
+		from {
+			opacity: 0;
+			transform: scaleY(0.85);
+		}
+		to {
+			opacity: 1;
+			transform: scaleY(1);
+		}
 	}
-	:global(.stage-drop-indicator.show) {
-		opacity: 1;
+	@media (prefers-reduced-motion: reduce) {
+		.stage-placeholder-fill {
+			animation: none;
+		}
 	}
-	:global(.stage-drag-ghost) {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: rgba(255, 255, 255, 0.95);
-		backdrop-filter: blur(20px);
-		border: 1px solid #dfe7f1;
-		box-shadow: 0 8px 32px rgba(0, 90, 146, 0.2);
+	/* Ghost = cartão com o clone fiel da linha (ver buildRowGhost). Offscreen no
+	   DOM só o suficiente para o browser tirar o snapshot do setDragImage. */
+	:global(.stage-drag-ghost-row) {
+		position: fixed;
+		top: -1200px;
+		left: 0;
+		z-index: -1;
+		pointer-events: none;
+		overflow: hidden;
 		border-radius: 12px;
-		padding: 0.75rem 1.25rem;
-		color: #263f59;
-		font-size: 0.875rem;
-		font-weight: 600;
+		border: 1px solid var(--ds-color-primary-300, #9db8d2);
+		background: var(--color-surface);
+		box-shadow: 0 12px 36px rgba(0, 90, 146, 0.28);
 	}
-	:global([data-theme='dark'] .stage-drag-ghost) {
-		background: var(--color-surface-elevated);
-		border-color: var(--color-border);
-		color: var(--color-text-primary);
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+	:global(.stage-drag-ghost-row td) {
+		border-top: 0 !important;
+	}
+	:global([data-theme='dark'] .stage-drag-ghost-row) {
+		border-color: var(--color-border-strong);
+		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
 	}
 
 	.etapa-entry-row td,
