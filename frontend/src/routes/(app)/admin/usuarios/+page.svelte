@@ -33,6 +33,8 @@
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import AdminUsuariosSkeleton from '$lib/components/skeletons/AdminUsuariosSkeleton.svelte';
+	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
+	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -55,33 +57,20 @@
 
 	let areaOptions = $state<AdminOrgaoOption[]>(peekOrgaoOptionsForUser() ?? []);
 
-	// Combobox de área (botão → input de busca + listbox), espelhando o filtro de
-	// projeto da tela /tarefas.
-	let areaOpen = $state<boolean>(false);
-	let areaQuery = $state<string>('');
-	let areaActiveIndex = $state<number>(0);
-	let areaInputEl = $state<HTMLInputElement | null>(null);
+	/** Opções no shape esperado pelo `OrgaoTreeSelect` (mesmo padrão de UserForm/CriarProjetoModal). */
+	const areaTreeOptions = $derived<OrgaoSelectOption[]>(
+		areaOptions.map((o) => ({
+			value: o.id,
+			label: o.sigla,
+			sigla: o.sigla,
+			nome: o.nome,
+			pai_id: o.pai_id
+		}))
+	);
 
 	let searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
 	const hasActiveFilters = $derived(searchText.trim() !== '' || areaId !== null);
-
-	const selectedAreaLabel = $derived(
-		areaId === null
-			? 'Todas as áreas'
-			: (areaOptions.find((o) => o.id === areaId)?.sigla ?? 'Todas as áreas')
-	);
-
-	/** Lista filtrada do combobox: "Todas" + órgãos casando com a busca. */
-	const areaFilterList = $derived.by<{ id: number | null; label: string }[]>(() => {
-		const q = areaQuery.trim().toLowerCase();
-		const matches = (o: AdminOrgaoOption) =>
-			!q || o.sigla.toLowerCase().includes(q) || o.nome.toLowerCase().includes(q);
-		const items = areaOptions
-			.filter(matches)
-			.map((o) => ({ id: o.id as number | null, label: o.sigla }));
-		return q ? items : [{ id: null, label: 'Todas as áreas' }, ...items];
-	});
 
 	/** Id em exclusão (desabilita o botão e evita duplo clique). */
 	let deletingId = $state<number | null>(null);
@@ -150,44 +139,14 @@
 		searchDebounce = setTimeout(reloadFiltered, 300);
 	}
 
-	function openAreaFilter(): void {
-		areaOpen = true;
-		areaQuery = '';
-		areaActiveIndex = 0;
-		setTimeout(() => areaInputEl?.focus(), 0);
-	}
-
-	function closeAreaFilter(): void {
-		areaOpen = false;
-	}
-
 	function pickArea(value: number | null): void {
 		areaId = value;
-		areaOpen = false;
-		areaQuery = '';
 		reloadFiltered();
-	}
-
-	function onAreaKeydown(event: KeyboardEvent): void {
-		if (event.key === 'ArrowDown') {
-			event.preventDefault();
-			areaActiveIndex = Math.min(areaActiveIndex + 1, areaFilterList.length - 1);
-		} else if (event.key === 'ArrowUp') {
-			event.preventDefault();
-			areaActiveIndex = Math.max(areaActiveIndex - 1, 0);
-		} else if (event.key === 'Enter') {
-			event.preventDefault();
-			const opt = areaFilterList[areaActiveIndex];
-			if (opt) pickArea(opt.id);
-		} else if (event.key === 'Escape') {
-			closeAreaFilter();
-		}
 	}
 
 	function clearFilters(): void {
 		searchText = '';
 		areaId = null;
-		areaQuery = '';
 		reloadFiltered();
 	}
 
@@ -276,68 +235,18 @@
 				class="h-9 w-full max-w-sm shrink-0 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:border-primary-500 focus:outline-none"
 			/>
 
-			<!-- Seletor de área (combobox: botão → busca + listbox). Largura fixa
-			     pequena; nenhum campo cresce → sobra espaço vazio à direita. -->
-			<div class="relative w-56 shrink-0">
-				{#if areaOpen}
-					<input
-						bind:this={areaInputEl}
-						type="text"
-						bind:value={areaQuery}
-						oninput={() => (areaActiveIndex = 0)}
-						onkeydown={onAreaKeydown}
-						onblur={() => setTimeout(closeAreaFilter, 120)}
-						role="combobox"
-						aria-expanded="true"
-						aria-controls="filter_area_listbox"
-						aria-autocomplete="list"
-						aria-label="Filtrar por área"
-						placeholder="Buscar área…"
-						autocomplete="off"
-						class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
-					/>
-					<ul
-						id="filter_area_listbox"
-						role="listbox"
-						class="thin-scroll absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-border-subtle bg-surface py-1" style="box-shadow: var(--ds-glass-shadow)"
-					>
-						{#each areaFilterList as opt, i (opt.id ?? 'all')}
-							<li class="contents">
-								<button
-									type="button"
-									role="option"
-									aria-selected={opt.id === areaId}
-									onmousedown={(e) => {
-										e.preventDefault();
-										pickArea(opt.id);
-									}}
-									class="block w-full truncate px-3 py-1.5 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted {i ===
-									areaActiveIndex
-										? 'bg-surface-muted'
-										: ''}"
-								>
-									{opt.label}
-								</button>
-							</li>
-						{/each}
-						{#if areaFilterList.length === 0}
-							<li class="px-3 py-1.5 text-sm text-text-muted">Nenhuma área encontrada</li>
-						{/if}
-					</ul>
-				{:else}
-					<button
-						type="button"
-						onclick={openAreaFilter}
-						aria-haspopup="listbox"
-						aria-label="Filtrar por área"
-						class="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-					>
-						<span class="min-w-0 flex-1 truncate text-left {areaId === null ? 'text-text-muted' : ''}"
-							>{selectedAreaLabel}</span
-						>
-						<i class="fas fa-chevron-down shrink-0 text-xs text-text-muted" aria-hidden="true"></i>
-					</button>
-				{/if}
+			<!-- Seletor de área em árvore (mesmo componente de UserForm/CriarProjetoModal).
+			     Largura fixa pequena; nenhum campo cresce → sobra espaço vazio à direita. -->
+			<div class="w-56 shrink-0">
+				<OrgaoTreeSelect
+					id="admin-usuarios-area-filter"
+					options={areaTreeOptions}
+					value={areaId}
+					onSelect={pickArea}
+					allowTodos
+					todosLabel="Todas as áreas"
+					ariaLabel="Filtrar por área"
+				/>
 			</div>
 
 			{#if hasActiveFilters}
