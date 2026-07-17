@@ -47,6 +47,7 @@
 	import SeiProcessField from '$lib/components/SeiProcessField.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import DatePickerPanel from '$lib/components/DatePickerPanel.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type {
@@ -140,6 +141,8 @@
 	let templateStages = $state<TemplateStage[]>([]);
 	let templateLoading = $state(false);
 	let startDate = $state('');
+	let startDateAnchorEl = $state<HTMLElement | null>(null);
+	let startDatePickerOpen = $state(false);
 
 	// --- Estado geral ------------------------------------------------------
 	let submitting = $state(false);
@@ -503,6 +506,13 @@
 		const d = String(date.getUTCDate()).padStart(2, '0');
 		const m = String(date.getUTCMonth() + 1).padStart(2, '0');
 		const y = date.getUTCFullYear();
+		return `${d}/${m}/${y}`;
+	}
+
+	/** dd/mm/aaaa para exibição no trigger; startDate continua ISO. */
+	function startDateLabel(iso: string): string {
+		if (!iso) return '';
+		const [y, m, d] = iso.split('-');
 		return `${d}/${m}/${y}`;
 	}
 
@@ -1274,13 +1284,37 @@
 												</div>
 												<div class="flex flex-col gap-1.5 md:col-span-2">
 													<label for="cp-start" class={labelClass}>Data de início</label>
-													<input
+													<button
 														id="cp-start"
-														bind:value={startDate}
-														type="date"
+														type="button"
+														bind:this={startDateAnchorEl}
+														aria-haspopup="dialog"
+														aria-expanded={startDatePickerOpen}
 														title="Sem data, o preview mostra só a duração de cada etapa."
-														class={fieldClass}
-													/>
+														onclick={() => (startDatePickerOpen = !startDatePickerOpen)}
+														class="{fieldClass} flex items-center text-left"
+													>
+														<span class={startDate ? '' : 'text-text-muted'}>
+															{startDateLabel(startDate) || 'Selecionar data'}
+														</span>
+													</button>
+													{#if startDatePickerOpen && startDateAnchorEl}
+														<DatePickerPanel
+															anchor={startDateAnchorEl}
+															value={startDate || null}
+															allowClear
+															ariaLabel="Data de início"
+															onPick={(iso) => {
+																startDate = iso;
+																startDatePickerOpen = false;
+															}}
+															onClear={() => {
+																startDate = '';
+																startDatePickerOpen = false;
+															}}
+															onClose={() => (startDatePickerOpen = false)}
+														/>
+													{/if}
 												</div>
 											</div>
 

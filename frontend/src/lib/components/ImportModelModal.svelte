@@ -28,6 +28,7 @@
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { fetchTemplateStages, type TemplateStage } from '$lib/api/projects';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import DatePickerPanel from '$lib/components/DatePickerPanel.svelte';
 
 	interface Props {
 		/** Diálogo aberto? (controlado pela página). */
@@ -69,6 +70,8 @@
 	// valor inicial aqui é intencional.
 	// svelte-ignore state_referenced_locally
 	let startDate = $state<string>(defaultStartDate ?? today());
+	let startDateAnchorEl = $state<HTMLElement | null>(null);
+	let startDatePickerOpen = $state(false);
 
 	// Etapas do modelo selecionado (detalhe). Buscadas sob demanda para o preview.
 	let stages = $state<TemplateStage[]>([]);
@@ -88,6 +91,7 @@
 		if (open) {
 			selectedId = '';
 			startDate = defaultStartDate ?? today();
+			startDatePickerOpen = false;
 			stages = [];
 			stagesError = null;
 			void tick().then(() => document.getElementById('import-model-select')?.focus());
@@ -151,6 +155,13 @@
 			year: 'numeric',
 			timeZone: 'UTC'
 		});
+	}
+
+	/** dd/mm/aaaa para exibição no trigger; startDate continua ISO. */
+	function startDateLabel(iso: string): string {
+		if (!iso) return '';
+		const [y, m, d] = iso.split('-');
+		return `${d}/${m}/${y}`;
 	}
 
 	/** Uma linha do preview: número, nome, datas calculadas e duração. */
@@ -295,13 +306,32 @@
 					<label for="import-model-start" class="text-sm font-medium text-text-primary">
 						Data de início
 					</label>
-					<input
-						bind:value={startDate}
+					<button
 						id="import-model-start"
-						type="date"
+						type="button"
+						bind:this={startDateAnchorEl}
 						disabled={submitting}
-						class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-					/>
+						aria-haspopup="dialog"
+						aria-expanded={startDatePickerOpen}
+						onclick={() => (startDatePickerOpen = !startDatePickerOpen)}
+						class="flex w-full items-center rounded-md border border-border-subtle bg-surface px-3 py-2 text-left text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+					>
+						<span class={startDate ? '' : 'text-text-muted'}>
+							{startDateLabel(startDate) || 'Selecionar data'}
+						</span>
+					</button>
+					{#if startDatePickerOpen && startDateAnchorEl}
+						<DatePickerPanel
+							anchor={startDateAnchorEl}
+							value={startDate || null}
+							ariaLabel="Data de início"
+							onPick={(iso) => {
+								startDate = iso;
+								startDatePickerOpen = false;
+							}}
+							onClose={() => (startDatePickerOpen = false)}
+						/>
+					{/if}
 				</div>
 
 				<!-- Preview das etapas com datas calculadas a partir da data de início. -->
