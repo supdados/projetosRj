@@ -9,7 +9,7 @@
 	 *     por linha, lazy); anexos: o ícone abre o seletor de arquivo direto.
 	 * O clique na descrição (texto) abre o TaskDrawer completo.
 	 */
-	import { getContext, onDestroy } from 'svelte';
+	import { getContext, onDestroy, tick } from 'svelte';
 	import { get } from 'svelte/store';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
@@ -147,9 +147,19 @@
 	// --- Edição inline da DESCRIÇÃO (caneta) ---
 	let editingDesc = $state(false);
 	let descDraft = $state('');
-	function startEditDesc(): void {
+	let descEl = $state<HTMLTextAreaElement | null>(null);
+	// Auto-grow: sem isso, rows="1" prendia a edição em 1 linha (padrão de StageRow::resizeComment).
+	function resizeDesc(): void {
+		const el = descEl;
+		if (!el) return;
+		el.style.height = 'auto';
+		el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
+	}
+	async function startEditDesc(): Promise<void> {
 		descDraft = task.descricao;
 		editingDesc = true;
+		await tick();
+		resizeDesc();
 	}
 	function onDescKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Enter' && !event.shiftKey) {
@@ -307,9 +317,11 @@
 		{#if editingDesc}
 			<!-- svelte-ignore a11y_autofocus -->
 			<textarea
+				bind:this={descEl}
 				bind:value={descDraft}
 				onkeydown={onDescKeydown}
 				onblur={submitDesc}
+				oninput={resizeDesc}
 				autofocus
 				rows="1"
 				aria-label="Editar descrição"
