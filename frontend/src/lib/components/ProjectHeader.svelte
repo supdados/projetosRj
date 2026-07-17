@@ -959,9 +959,6 @@
 		overflow-wrap: anywhere;
 		white-space: pre-wrap;
 		resize: none;
-		transition:
-			width 0.12s ease,
-			height 0.12s ease;
 	}
 	.ph-text-editor:focus {
 		outline: none;
