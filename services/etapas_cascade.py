@@ -8,6 +8,7 @@ from services.project_meetings import MEETING_ENTRY_TYPE
 def cascade_subsequent_dates(project_id, base_etapa_ordem, days_to_add):
     """Desloca datas de todas as etapas após ``base_etapa_ordem`` em ``days_to_add`` dias úteis.
 
+    Etapas concluídas (``done``) são imutáveis e ficam fora da cascata.
     Não faz commit — a rota é responsável pela transação.
     """
     subsequent_etapas = (
@@ -15,6 +16,7 @@ def cascade_subsequent_dates(project_id, base_etapa_ordem, days_to_add):
             Etapa.project_id == project_id,
             Etapa.ordem > base_etapa_ordem,
             Etapa.entry_type != MEETING_ENTRY_TYPE,
+            Etapa.done.is_(False),
         )
         .order_by(Etapa.ordem.asc(), Etapa.id.asc())
         .all()

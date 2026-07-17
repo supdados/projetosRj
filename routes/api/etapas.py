@@ -370,6 +370,12 @@ def api_etapa_update_field(etapa_id: int) -> Response | tuple[Response, int]:
             status=422,
             code="validation",
         )
+    if etapa.done:
+        return fail(
+            "Etapa concluída não pode ser modificada.",
+            status=422,
+            code="validation",
+        )
 
     data = request.get_json(silent=True)
     if not isinstance(data, dict):

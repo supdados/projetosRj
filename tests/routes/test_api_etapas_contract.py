@@ -88,6 +88,26 @@ def test_update_field_data_inicio_triggers_business_day_cascade(
         assert etapa.data_fim > datetime.date(2026, 1, 15)
 
 
+def test_update_field_rejects_done_etapa(app, client_user, seed_data):
+    # Regressão: etapa concluída é imutável também no backend.
+    with app.app_context():
+        etapa = db.session.get(Etapa, seed_data["etapa_id"])
+        etapa.iniciada = True
+        etapa.done = True
+        db.session.commit()
+
+    response = client_user.post(
+        f"/api/etapas/{seed_data['etapa_id']}/update-field",
+        json={"field": "data_inicio", "value": "2026-02-02"},
+    )
+
+    assert response.status_code == 422
+    assert _error(response)["code"] == "validation"
+    with app.app_context():
+        etapa = db.session.get(Etapa, seed_data["etapa_id"])
+        assert etapa.data_inicio == datetime.date(2026, 1, 10)
+
+
 # ── Reordenar dispara cascata e devolve estado atualizado ─────────────────────
 
 
@@ -138,6 +158,41 @@ def test_cascade_endpoint_shifts_subsequent_dates(app, client_user, seed_data):
     with app.app_context():
         after = db.session.get(Etapa, seed_data["etapa_started_id"]).data_inicio
         assert after > before
+
+
+def test_cascade_skips_done_etapas(app, client_user, seed_data):
+    # Regressão: etapa concluída é imutável — a cascata não pode deslocá-la.
+    with app.app_context():
+        etapa_done = Etapa(
+            descricao="Etapa Concluída",
+            data_inicio=datetime.date(2026, 1, 21),
+            data_fim=datetime.date(2026, 1, 23),
+            responsavel="Usuario Auditoria",
+            iniciada=True,
+            done=True,
+            project_id=seed_data["project_id"],
+            ordem=2,
+        )
+        db.session.add(etapa_done)
+        db.session.commit()
+        etapa_done_id = etapa_done.id
+        started_before = db.session.get(
+            Etapa, seed_data["etapa_started_id"]
+        ).data_inicio
+
+    response = client_user.post(
+        f"/api/projetos/{seed_data['project_id']}/cascade",
+        json={"etapa_id": seed_data["etapa_id"], "days_diff": 3},
+    )
+
+    assert response.status_code == 200
+    with app.app_context():
+        etapa_done = db.session.get(Etapa, etapa_done_id)
+        assert etapa_done.data_inicio == datetime.date(2026, 1, 21)
+        assert etapa_done.data_fim == datetime.date(2026, 1, 23)
+        # A etapa não concluída subsequente continua sendo deslocada.
+        started_after = db.session.get(Etapa, seed_data["etapa_started_id"]).data_inicio
+        assert started_after > started_before
 
 
 def test_cascade_rejects_excessive_days(app, client_user, seed_data):
