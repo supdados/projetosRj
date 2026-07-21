@@ -282,6 +282,7 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 		const before = readStore(store).columns;
 		const found = findCard(before, cardId);
 		if (!found) return false;
+		const originIndex = columnIds(before, found.status).indexOf(cardId);
 
 		// Guard de UX: bloqueia drop inválido sem ir ao servidor.
 		if (!canItemMoveToStatus(found.card, toStatus, fromStatus)) {
@@ -307,7 +308,9 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 					];
 
 		try {
-			const result = await reorderBoard({ columns: affected });
+			// `moved_task_id` diz ao backend qual card pode transicionar de status
+			// (ids stale de mudança concorrente são ignorados lá — bug 2.10).
+			const result = await reorderBoard({ columns: affected, moved_task_id: cardId });
 			store.update((state) => ({
 				...state,
 				columns: withColumnsMerged(state.columns, result.columns),
@@ -315,10 +318,13 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 			}));
 			return true;
 		} catch (err) {
-			// 3) Rollback: o servidor recusou (ex.: 403 finalizar). Volta ao snapshot.
+			// 3) Rollback pela operação INVERSA sobre o estado ATUAL — restaurar o
+			//    snapshot `before` apagaria moves concorrentes já confirmados (bug 2.11).
 			store.update((state) => ({
 				...state,
-				columns: before,
+				columns: findCard(state.columns, cardId)
+					? withCardMoved(state.columns, cardId, found.status, originIndex)
+					: state.columns,
 				error: errorMessage(err, 'Não foi possível mover a tarefa.')
 			}));
 			return false;
@@ -348,9 +354,12 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 			}));
 			return true;
 		} catch (err) {
+			// Rollback só da coluna afetada, sobre o estado ATUAL: reaplica a ordem
+			// anterior aos ids ainda presentes; cards que chegaram em voo vão ao fim.
+			const previousIds = columnIds(before, status);
 			store.update((state) => ({
 				...state,
-				columns: before,
+				columns: withColumnReordered(state.columns, status, previousIds),
 				error: errorMessage(err, 'Não foi possível reordenar a coluna.')
 			}));
 			return false;
@@ -420,14 +429,17 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 	function removeCard(taskId: number): void {
 		store.update((state) => {
 			const next = cloneColumns(state.columns);
+			let removed = false;
 			for (const column of next) {
 				const at = column.tasks.findIndex((task) => task.id === taskId);
 				if (at !== -1) {
 					column.tasks.splice(at, 1);
+					removed = true;
 					break;
 				}
 			}
-			return { ...state, columns: next };
+			if (!removed) return { ...state, columns: next };
+			return { ...state, columns: next, total: Math.max(0, state.total - 1) };
 		});
 	}
 

@@ -305,8 +305,128 @@ def test_api_reorder_cross_column_finalize_denied_is_403(client_editable, seed_d
     task_id = seed_data["task_id"]
     response = client_editable.post(
         "/api/tarefas/board/reordenar",
-        json={"columns": [{"status": "finalizada", "task_ids": [task_id]}]},
+        json={
+            "columns": [{"status": "finalizada", "task_ids": [task_id]}],
+            "moved_task_id": task_id,
+        },
     )
 
     assert response.status_code == 403
     _assert_fail_envelope(response.get_json(), code="forbidden")
+
+
+def test_api_reorder_moved_task_id_applies_status_transition(
+    app, client_user, seed_data
+):
+    """O card movido (``moved_task_id``) transiciona para o status da coluna."""
+    task_id = seed_data["task_id"]
+    response = client_user.post(
+        "/api/tarefas/board/reordenar",
+        json={
+            "columns": [{"status": "em_andamento", "task_ids": [task_id]}],
+            "moved_task_id": task_id,
+        },
+    )
+
+    assert response.status_code == 200
+    data = _assert_ok_envelope(response.get_json())
+    assert [card["id"] for card in data["columns"][0]["tasks"]] == [task_id]
+    with app.app_context():
+        from models import Task, db
+
+        assert db.session.get(Task, task_id).status == "em_andamento"
+
+
+def test_api_reorder_stale_id_does_not_override_concurrent_move(
+    app, client_user, seed_data
+):
+    """Regressão bug 2.10: id stale no payload NÃO desfaz o move de outro usuário.
+
+    Cenário: B move a orphan_task para 'em_andamento' (persistido); A reordena a
+    coluna 'nao_iniciada' com o snapshot antigo (que ainda contém a orphan_task).
+    O backend deve ignorar o id stale: sem transição de status, sem reescrever a
+    ordem dele, e a resposta não o inclui na coluna errada.
+    """
+    task_id = seed_data["task_id"]
+    stale_id = seed_data["orphan_task_id"]
+    with app.app_context():
+        from models import Task, db
+
+        stale = db.session.get(Task, stale_id)
+        stale.status = "em_andamento"
+        stale.ordem = 5
+        db.session.commit()
+
+    response = client_user.post(
+        "/api/tarefas/board/reordenar",
+        json={"columns": [{"status": "nao_iniciada", "task_ids": [stale_id, task_id]}]},
+    )
+
+    assert response.status_code == 200
+    data = _assert_ok_envelope(response.get_json())
+    column = data["columns"][0]
+    assert column["status"] == "nao_iniciada"
+    assert [card["id"] for card in column["tasks"]] == [task_id]
+    with app.app_context():
+        from models import Task, db
+
+        stale = db.session.get(Task, stale_id)
+        assert stale.status == "em_andamento"
+        assert stale.ordem == 5
+
+
+def test_api_reorder_stale_id_ignored_even_with_moved_task_id(
+    app, client_user, seed_data
+):
+    """Só o ``moved_task_id`` transiciona; um id stale na MESMA carga é ignorado."""
+    task_id = seed_data["task_id"]
+    stale_id = seed_data["orphan_task_id"]
+    with app.app_context():
+        from models import Task, db
+
+        db.session.get(Task, stale_id).status = "para_validacao"
+        db.session.commit()
+
+    response = client_user.post(
+        "/api/tarefas/board/reordenar",
+        json={
+            "columns": [{"status": "em_andamento", "task_ids": [stale_id, task_id]}],
+            "moved_task_id": task_id,
+        },
+    )
+
+    assert response.status_code == 200
+    data = _assert_ok_envelope(response.get_json())
+    assert [card["id"] for card in data["columns"][0]["tasks"]] == [task_id]
+    with app.app_context():
+        from models import Task, db
+
+        assert db.session.get(Task, stale_id).status == "para_validacao"
+        assert db.session.get(Task, task_id).status == "em_andamento"
+
+
+def test_api_reorder_moved_task_id_outside_payload_is_422(client_user, seed_data):
+    task_id = seed_data["task_id"]
+    response = client_user.post(
+        "/api/tarefas/board/reordenar",
+        json={
+            "columns": [{"status": "nao_iniciada", "task_ids": [task_id]}],
+            "moved_task_id": 999999,
+        },
+    )
+
+    assert response.status_code == 422
+    _assert_fail_envelope(response.get_json(), code="validation")
+
+
+def test_api_reorder_non_integer_moved_task_id_is_422(client_user, seed_data):
+    response = client_user.post(
+        "/api/tarefas/board/reordenar",
+        json={
+            "columns": [{"status": "nao_iniciada", "task_ids": [seed_data["task_id"]]}],
+            "moved_task_id": "abc",
+        },
+    )
+
+    assert response.status_code == 422
+    _assert_fail_envelope(response.get_json(), code="validation")

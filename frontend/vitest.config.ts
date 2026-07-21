@@ -10,8 +10,15 @@
  * deve arrastar o plugin do SvelteKit nem exigir `svelte-kit sync`.
  */
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
+	// alias manual (sem plugin do SvelteKit) para resolver imports `$lib/...` nos testes.
+	resolve: {
+		alias: {
+			$lib: fileURLToPath(new URL('./src/lib', import.meta.url))
+		}
+	},
 	test: {
 		environment: 'node',
 		include: ['src/**/*.{test,spec}.ts'],

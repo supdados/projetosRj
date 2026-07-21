@@ -102,6 +102,9 @@ export interface BoardReorderColumn {
 /** Corpo de `POST /api/tarefas/board/reordenar`. */
 export interface BoardReorderPayload {
 	columns: BoardReorderColumn[];
+	/** Card arrastado entre colunas — o ÚNICO que pode mudar de status no
+	 *  servidor (omitido em reorder na mesma coluna). */
+	moved_task_id?: number;
 }
 
 /** Resposta de `POST /api/tarefas/board/reordenar`: colunas afetadas. */

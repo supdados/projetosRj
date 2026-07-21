@@ -64,9 +64,10 @@ export function updateTaskStatus(
 }
 
 /**
- * Persiste a nova ordem (e eventuais mudanças de status) das colunas afetadas.
- * O estado canônico vem da store; o backend valida transições e reescreve
- * `Task.ordem`, devolvendo as colunas afetadas para reconciliação.
+ * Persiste a nova ordem das colunas afetadas. Só o `moved_task_id` (quando
+ * enviado) pode mudar de status; ids com status divergente no servidor
+ * (mudança concorrente) são ignorados e não voltam na resposta — o backend
+ * reescreve `Task.ordem` e devolve as colunas afetadas para reconciliação.
  */
 export function reorderBoard(
 	payload: BoardReorderPayload,

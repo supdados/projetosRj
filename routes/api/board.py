@@ -17,8 +17,8 @@ tarefas visíveis do Hub, ``_build_visible_tasks_query``):
       ``update_task_status``), respondendo 403 ``forbidden`` com
       ``FINALIZE_DENIED_MESSAGE`` quando finalizar sem permissão.
     - ``POST /api/tarefas/board/reordenar``      — persiste a nova ordem dos cards
-      (dentro/entre colunas) e, quando um card mudou de coluna, aplica também a
-      mudança de status — sujeita à mesma validação de transição.
+      (dentro/entre colunas) e, quando o payload traz ``moved_task_id``, aplica a
+      mudança de status SÓ a esse card — sujeita à mesma validação de transição.
 
 ADITIVO: anexa ao ``main_bp`` ÚNICO (``routes/blueprint.py``); NÃO cria blueprint
 novo, NÃO altera as rotas Jinja/JSON legadas (``update_task_status``,
@@ -332,6 +332,78 @@ def _parse_reorder_columns(payload: Any) -> tuple[list[dict[str, Any]] | None, A
     return normalized, None
 
 
+def _parse_moved_task_id(
+    payload: dict[str, Any], columns: list[dict[str, Any]]
+) -> tuple[int | None, Any]:
+    """Valida o campo opcional ``moved_task_id`` do corpo de reordenação.
+
+    Quando presente, identifica o ÚNICO card que o usuário arrastou entre
+    colunas — só ele pode transicionar de status. Deve referenciar um id que
+    esteja em alguma ``column.task_ids`` do payload.
+
+    Args:
+        payload: Corpo JSON já validado como dict por ``_parse_reorder_columns``.
+        columns: Colunas normalizadas.
+
+    Returns:
+        ``(moved_task_id, None)`` (``None`` quando ausente); ou
+        ``(None, fail_response)`` (422) quando inválido ou fora das colunas.
+    """
+    raw = payload.get("moved_task_id")
+    if raw is None:
+        return None, None
+    try:
+        moved_task_id = int(raw)
+    except (TypeError, ValueError):
+        return None, fail(
+            f"moved_task_id inválido: {raw!r}.", status=422, code="validation"
+        )
+    if all(moved_task_id not in column["task_ids"] for column in columns):
+        return None, fail(
+            "moved_task_id fora das colunas enviadas.", status=422, code="validation"
+        )
+    return moved_task_id, None
+
+
+def _apply_moved_task_transition(
+    columns: list[dict[str, Any]],
+    tasks_by_id: dict[int, Task],
+    moved_task_id: int | None,
+) -> Any | None:
+    """Aplica a transição de status APENAS ao card movido (``moved_task_id``).
+
+    Os demais ids do payload NUNCA transicionam: um snapshot obsoleto do cliente
+    não pode desfazer a mudança de coluna feita por outro usuário (bug 2.10).
+
+    Returns:
+        ``None`` em sucesso/ausência de move; ou ``fail(...)`` (403) negado.
+    """
+    if moved_task_id is None:
+        return None
+    task = tasks_by_id[moved_task_id]
+    for column in columns:
+        if moved_task_id in column["task_ids"] and task.status != column["status"]:
+            return _apply_status_transition(task, column["status"])
+    return None
+
+
+def _drop_stale_task_ids(
+    columns: list[dict[str, Any]], tasks_by_id: dict[int, Task]
+) -> None:
+    """Remove das colunas os ids cujo status atual difere da coluna.
+
+    São snapshot obsoleto (a task já migrou de coluna por ação concorrente):
+    ficam de fora da atribuição de ordem e da resposta, preservando o estado
+    persistido pelo outro usuário.
+    """
+    for column in columns:
+        column["task_ids"] = [
+            task_id
+            for task_id in column["task_ids"]
+            if tasks_by_id[task_id].status == column["status"]
+        ]
+
+
 def _collect_reorder_tasks(
     columns: list[dict[str, Any]],
 ) -> tuple[dict[int, Task] | None, Any]:
@@ -382,38 +454,41 @@ def _collect_reorder_tasks(
 def api_tarefas_board_reordenar() -> Response | tuple[Response, int]:
     """Persiste a nova ordem dos cards do Kanban (dentro/entre colunas).
 
-    Recebe o estado das colunas afetadas (``{"columns": [{"status", "task_ids"}]}``)
-    e, numa única transação: (1) quando um card mudou de coluna, aplica a mudança
-    de status — sujeita à MESMA validação de transição autoritativa
-    (``_can_transition_task_to_status``), respondendo 403 ``forbidden`` /
-    ``FINALIZE_DENIED_MESSAGE`` se negada; (2) reescreve ``Task.ordem`` 1..N na
-    ordem enviada, por coluna. Devolve o estado atualizado das colunas afetadas
-    (cards reserializados) para o cliente reconciliar a store.
+    Recebe o estado das colunas afetadas (``{"columns": [{"status", "task_ids"}],
+    "moved_task_id"?: int}``) e, numa única transação: (1) aplica a mudança de
+    status APENAS ao ``moved_task_id`` — sujeita à MESMA validação de transição
+    autoritativa (``_can_transition_task_to_status``), respondendo 403
+    ``forbidden`` / ``FINALIZE_DENIED_MESSAGE`` se negada; (2) ignora ids cujo
+    status atual difere da coluna (snapshot obsoleto de mudança concorrente) sem
+    tocar status nem ordem deles; (3) reescreve ``Task.ordem`` 1..N na ordem
+    enviada, por coluna. Devolve as colunas afetadas só com as tasks que de fato
+    pertencem a cada coluna, para o cliente reconciliar a store.
 
     Returns:
         Envelope ``{"ok": true, "data": {"columns": [...]}}`` (200) com as colunas
-        afetadas; 422 (formato/status inválido), 404 (tarefa fora de escopo),
-        403 (transição negada); 401 JSON sem sessão.
+        afetadas; 422 (formato/status/``moved_task_id`` inválido), 404 (tarefa
+        fora de escopo), 403 (transição negada); 401 JSON sem sessão.
     """
-    columns, error = _parse_reorder_columns(request.get_json(silent=True))
+    payload = request.get_json(silent=True)
+    columns, error = _parse_reorder_columns(payload)
     if error is not None:
         return error
+    moved_task_id, moved_error = _parse_moved_task_id(payload, columns)
+    if moved_error is not None:
+        return moved_error
 
     tasks_by_id, load_error = _collect_reorder_tasks(columns)
     if load_error is not None:
         return load_error
 
     # Aplica status (com validação autoritativa) antes da ordem, para abortar a
-    # transação inteira se qualquer transição for negada.
-    for column in columns:
-        target_status = column["status"]
-        for task_id in column["task_ids"]:
-            task = tasks_by_id[task_id]
-            if task.status != target_status:
-                transition_error = _apply_status_transition(task, target_status)
-                if transition_error is not None:
-                    db.session.rollback()
-                    return transition_error
+    # transação inteira se a transição for negada.
+    transition_error = _apply_moved_task_transition(columns, tasks_by_id, moved_task_id)
+    if transition_error is not None:
+        db.session.rollback()
+        return transition_error
+
+    _drop_stale_task_ids(columns, tasks_by_id)
 
     for column in columns:
         for index, task_id in enumerate(column["task_ids"], start=1):
