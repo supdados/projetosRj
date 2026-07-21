@@ -35,11 +35,13 @@ from services.google_calendar import (
     update_google_calendar_event,
 )
 from services.project_meetings import (
+    _weekend_shift_message,
     can_manage_project_meeting,
     delete_local_calendar_event_mirrors,
     find_project_meeting_by_google_event,
     find_project_meeting_for_calendar_event,
     mark_project_meeting_sync_error,
+    shift_weekend_calendar_event,
     sync_etapa_from_meeting,
     sync_local_calendar_event_mirrors,
     update_meeting_from_calendar_event,
@@ -244,10 +246,45 @@ def _sync_project_meeting_from_calendar_event(event, *, connection=None, user=No
     if not _user_can_edit_meeting_project(actor, meeting):
         return None
 
+    _enforce_meeting_weekend_rule(event, meeting, connection)
     update_meeting_from_calendar_event(meeting, event)
     sync_etapa_from_meeting(meeting.etapa, meeting, title=event.title)
     sync_local_calendar_event_mirrors(meeting, title=event.title)
     return meeting
+
+
+def _enforce_meeting_weekend_rule(event, meeting, connection) -> None:
+    """Edição feita direto no Google pode cair em fim de semana; shift local +
+    UM write-back corrige o Google. O eco do webhook já chega em dia útil,
+    então o shift vira no-op e não há loop de sync.
+    """
+    weekend_shift = shift_weekend_calendar_event(event)
+    if weekend_shift is None:
+        return
+
+    from routes.shared import log_project_action
+
+    log_project_action(
+        project_id=meeting.project_id,
+        action_type="google_meeting_weekend_shift",
+        description=_weekend_shift_message(weekend_shift),
+        # Webhook do Google roda sem g.user; sem ator explícito não haveria auditoria.
+        actor_user_id=_weekend_shift_actor_id(meeting, connection),
+    )
+    if connection is None:
+        return
+    try:
+        _sync_local_event_to_google(event, connection)
+    except Exception as exc:
+        event.sync_status = "error"
+        event.sync_error = str(exc)
+
+
+def _weekend_shift_actor_id(meeting, connection) -> "int | None":
+    connection_user_id = getattr(connection, "user_id", None)
+    if connection_user_id is not None:
+        return connection_user_id
+    return getattr(meeting, "creator_user_id", None)
 
 
 def _mark_project_meeting_removed_by_google(

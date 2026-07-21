@@ -25,6 +25,8 @@ from typing import Any
 
 from flask import Response, current_app, g
 from models import CalendarEvent, User, UserOrgao, db
+
+import routes.calendars.helpers as _cal_helpers
 from routes.tasks.queries import assignee_initials, serialize_assignee
 from services.google_calendar import is_google_calendar_enabled
 
@@ -77,13 +79,31 @@ def _serialize_connection(connection: Any) -> dict[str, Any] | None:
         "provider": connection.provider,
         "calendar_id": connection.calendar_id,
         "google_account_email": connection.google_account_email,
-        "token_expires_at_display": _format_human_datetime(
-            connection.token_expires_at
-        ),
+        "token_expires_at_display": _format_human_datetime(connection.token_expires_at),
         "watch_expiration_display": _format_human_datetime(watch_expiration),
         "watch_expiring_soon": watch_expiring_soon,
         "last_sync_at_display": _format_human_datetime(connection.last_sync_at),
     }
+
+
+def _run_hub_auto_maintenance(connection: Any) -> list[str]:
+    """Renova watch/sync do Google no hub; sem isso o push morre em ~7 dias.
+
+    O throttle vive em ``_run_auto_calendar_maintenance`` (``_should_auto_sync``
+    e ``_should_auto_renew_watch``): fora do intervalo a chamada é no-op.
+    """
+    if connection is None:
+        return []
+    issues = _cal_helpers._run_auto_calendar_maintenance(connection)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Falha ao persistir manutenção do calendário")
+        issues.append(
+            "Ocorreu um erro interno ao manter o calendário. Tente recarregar a página."
+        )
+    return issues
 
 
 @main_bp.route("/api/calendarios", methods=["GET"])
@@ -93,19 +113,24 @@ def api_calendars_hub() -> Response | tuple[Response, int]:
 
     Reaproveita os mesmos helpers do fluxo Jinja
     (``_connection_for_current_user``, ``_format_human_datetime``,
-    ``is_google_calendar_enabled``). Não dispara sync automático — apenas lê o
-    estado atual. NUNCA expõe tokens.
+    ``is_google_calendar_enabled``). Dispara a manutenção automática THROTTLED
+    do Google (renova watch e sincroniza fora do intervalo). NUNCA expõe
+    tokens.
 
     Returns:
         Envelope ``{"ok": true, "data": {...}}`` com ``events``, ``connection``
-        (ou ``None``), ``google_calendar_enabled`` e ``last_sync_display``.
+        (ou ``None``), ``google_calendar_enabled``, ``last_sync_display`` e
+        ``maintenance_issues``.
     """
+    connection = _connection_for_current_user()
+    maintenance_issues = _run_hub_auto_maintenance(connection)
+    if maintenance_issues:
+        connection = _connection_for_current_user()
     events = (
         CalendarEvent.query.filter_by(user_id=g.user.id)
         .order_by(CalendarEvent.starts_at.asc(), CalendarEvent.id.asc())
         .all()
     )
-    connection = _connection_for_current_user()
     last_sync_display = (
         _format_human_datetime(connection.last_sync_at)
         if connection is not None
@@ -120,6 +145,7 @@ def api_calendars_hub() -> Response | tuple[Response, int]:
                 is_google_calendar_enabled(current_app.config)
             ),
             "last_sync_display": last_sync_display,
+            "maintenance_issues": maintenance_issues,
         }
     )
 

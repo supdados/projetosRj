@@ -45,6 +45,23 @@ def _weekend_shift_message(weekend_shift):
     )
 
 
+def shift_weekend_calendar_event(event) -> "tuple[datetime.date, datetime.date] | None":
+    """Aplica a regra de fim de semana num ``CalendarEvent`` já preenchido —
+    caminho inbound (webhook/sync Google→app), que não passa pelo payload de
+    formulário coberto por ``_shift_weekend_meeting_payload``.
+
+    Returns:
+        ``(data_antiga, data_nova)`` quando houve shift, senão ``None``.
+    """
+    payload = {"starts_at": event.starts_at, "ends_at": event.ends_at}
+    shifted, weekend_shift = _shift_weekend_meeting_payload(payload)
+    if weekend_shift is None:
+        return None
+    event.starts_at = shifted["starts_at"]
+    event.ends_at = shifted["ends_at"]
+    return weekend_shift
+
+
 def is_google_meeting_stage(etapa):
     return bool(etapa and etapa.entry_type == MEETING_ENTRY_TYPE)
 

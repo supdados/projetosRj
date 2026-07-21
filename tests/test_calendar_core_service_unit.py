@@ -141,6 +141,19 @@ def _event_stub():
         location="Sala A",
         starts_at=datetime.datetime(2026, 1, 15, 13, 0),
         ends_at=datetime.datetime(2026, 1, 15, 14, 0),
+        is_all_day=False,
+    )
+
+
+def _all_day_event_stub(*, days=1):
+    # Meia-noite BRT == 03:00 UTC; fim inclusivo local == 23:59 do último dia.
+    return SimpleNamespace(
+        title="Feriado",
+        description=None,
+        location=None,
+        starts_at=datetime.datetime(2026, 1, 15, 3, 0),
+        ends_at=datetime.datetime(2026, 1, 15 + days, 2, 59),
+        is_all_day=True,
     )
 
 
@@ -163,6 +176,44 @@ def test_google_event_payload_with_conference_adds_create_request():
     create_request = payload["conferenceData"]["createRequest"]
     assert "requestId" in create_request
     assert create_request["conferenceSolutionKey"] == {"type": "hangoutsMeet"}
+
+
+def test_google_event_payload_all_day_uses_date_keys():
+    payload = google_event_payload(_all_day_event_stub())
+
+    assert payload["start"] == {"date": "2026-01-15"}
+    # Fim exclusivo: dia seguinte ao último dia do evento.
+    assert payload["end"] == {"date": "2026-01-16"}
+    assert "dateTime" not in payload["start"]
+    assert "dateTime" not in payload["end"]
+
+
+def test_google_event_payload_all_day_multi_day_end_exclusive():
+    payload = google_event_payload(_all_day_event_stub(days=3))
+
+    assert payload["start"] == {"date": "2026-01-15"}
+    assert payload["end"] == {"date": "2026-01-18"}
+
+
+def test_google_event_payload_without_is_all_day_attr_defaults_to_timed():
+    event = _event_stub()
+    del event.is_all_day
+    payload = google_event_payload(event)
+    assert "dateTime" in payload["start"]
+
+
+def test_all_day_round_trip_preserves_flag_and_local_dates():
+    event = _all_day_event_stub(days=2)
+    payload = google_event_payload(event)
+
+    starts_at, starts_all_day = parse_google_event_datetime(payload["start"])
+    ends_at, ends_all_day = parse_google_event_datetime(payload["end"])
+
+    assert starts_all_day is True
+    assert ends_all_day is True
+    assert starts_at == event.starts_at
+    # Parse devolve o fim exclusivo; a convenção local (helpers) subtrai 1 min.
+    assert ends_at - datetime.timedelta(minutes=1) == event.ends_at
 
 
 def test_google_event_payload_handles_empty_description_and_location():

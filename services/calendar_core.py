@@ -83,11 +83,20 @@ def extract_meet_link(remote):
     return remote.get("hangoutLink") or None
 
 
-def google_event_payload(local_event, *, create_conference=False):
-    payload = {
-        "summary": local_event.title,
-        "description": local_event.description or "",
-        "location": local_event.location or "",
+def _all_day_time_payload(local_event) -> dict:
+    start_date = to_local_datetime(local_event.starts_at).date()
+    # Fim local é inclusivo; a API do Google exige "date" de fim exclusivo.
+    end_date = to_local_datetime(local_event.ends_at).date() + datetime.timedelta(
+        days=1
+    )
+    return {
+        "start": {"date": start_date.isoformat()},
+        "end": {"date": end_date.isoformat()},
+    }
+
+
+def _timed_time_payload(local_event) -> dict:
+    return {
         "start": {
             "dateTime": utc_naive_to_rfc3339(local_event.starts_at),
             "timeZone": "UTC",
@@ -96,6 +105,21 @@ def google_event_payload(local_event, *, create_conference=False):
             "dateTime": utc_naive_to_rfc3339(local_event.ends_at),
             "timeZone": "UTC",
         },
+    }
+
+
+def google_event_payload(local_event, *, create_conference=False):
+    is_all_day = bool(getattr(local_event, "is_all_day", False))
+    time_payload = (
+        _all_day_time_payload(local_event)
+        if is_all_day
+        else _timed_time_payload(local_event)
+    )
+    payload = {
+        "summary": local_event.title,
+        "description": local_event.description or "",
+        "location": local_event.location or "",
+        **time_payload,
     }
     if create_conference:
         payload["conferenceData"] = {

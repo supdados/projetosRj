@@ -29,18 +29,28 @@ def format_local_time(dt, fmt="%d/%m %H:%M"):
 
 
 def log_project_action(
-    project_id, action_type, description, old_value=None, new_value=None
+    project_id,
+    action_type,
+    description,
+    old_value=None,
+    new_value=None,
+    actor_user_id=None,
 ):
     """
     Registra uma ação no histórico do projeto.
+
+    `actor_user_id` permite registrar ações fora de request autenticada
+    (ex.: webhook do Google Calendar), onde `g.user` não existe.
     """
     try:
-        if not getattr(g, "user", None):
+        if actor_user_id is None:
+            actor_user_id = getattr(getattr(g, "user", None), "id", None)
+        if actor_user_id is None:
             return
 
         history_entry = ProjectHistory(
             project_id=project_id,
-            user_id=g.user.id,
+            user_id=actor_user_id,
             action_type=action_type,
             action_description=description,
             old_value=old_value,
@@ -51,7 +61,7 @@ def log_project_action(
         try:
             notify_project_history_action(
                 project_id=project_id,
-                actor_user_id=g.user.id,
+                actor_user_id=actor_user_id,
                 action_type=action_type,
                 action_description=description,
                 old_value=old_value,

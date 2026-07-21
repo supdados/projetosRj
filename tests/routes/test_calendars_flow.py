@@ -106,6 +106,87 @@ def test_calendars_hub_does_not_run_auto_maintenance_on_get(
     assert calls["count"] == 0
 
 
+class FakeGoogleMaintenanceGateway:
+    """Simula renovação de watch e sync, gravando os efeitos que destravam o throttle."""
+
+    def __init__(self):
+        self.renew_calls = 0
+        self.sync_calls = 0
+
+    def renew_watch(self, connection):
+        self.renew_calls += 1
+        connection.watch_channel_id = "chan-regression"
+        connection.watch_resource_id = "res-regression"
+        connection.watch_expiration = datetime.datetime(2030, 1, 1)
+
+    def sync_events(self, connection, *, force_full=False):
+        self.sync_calls += 1
+        connection.last_sync_at = calendar_helpers.utc_now()
+
+
+def _seed_google_connection(app, seed_data):
+    with app.app_context():
+        connection = UserCalendarConnection(
+            user_id=seed_data["user_id"],
+            provider="google",
+            calendar_id="primary",
+            refresh_token="refresh-token",
+        )
+        db.session.add(connection)
+        db.session.commit()
+
+
+def _patch_maintenance_gateway(monkeypatch):
+    fake = FakeGoogleMaintenanceGateway()
+    monkeypatch.setattr(calendar_helpers, "_renew_watch_channel", fake.renew_watch)
+    monkeypatch.setattr(calendar_helpers, "_sync_events_from_google", fake.sync_events)
+    return fake
+
+
+def test_api_calendars_hub_runs_auto_maintenance(
+    app, client_user, seed_data, monkeypatch
+):
+    # Regressão bug 2.13: eb135df removeu o único call site e o watch expirava.
+    _seed_google_connection(app, seed_data)
+    fake = _patch_maintenance_gateway(monkeypatch)
+
+    response = client_user.get("/api/calendarios")
+
+    assert response.status_code == 200
+    assert fake.renew_calls == 1
+    assert fake.sync_calls == 1
+    payload = response.get_json()
+    assert payload["ok"] is True
+    assert payload["data"]["maintenance_issues"] == []
+
+
+def test_api_calendars_hub_throttles_repeated_maintenance(
+    app, client_user, seed_data, monkeypatch
+):
+    _seed_google_connection(app, seed_data)
+    fake = _patch_maintenance_gateway(monkeypatch)
+
+    first = client_user.get("/api/calendarios")
+    second = client_user.get("/api/calendarios")
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert fake.renew_calls == 1
+    assert fake.sync_calls == 1
+
+
+def test_api_calendars_hub_without_connection_skips_maintenance(
+    app, client_user, seed_data, monkeypatch
+):
+    fake = _patch_maintenance_gateway(monkeypatch)
+
+    response = client_user.get("/api/calendarios")
+
+    assert response.status_code == 200
+    assert fake.renew_calls == 0
+    assert fake.sync_calls == 0
+
+
 def test_create_calendar_event_without_google_connection_marks_pending(
     app, client_user, seed_data
 ):
@@ -468,12 +549,13 @@ def test_edit_calendar_event_updates_linked_project_meeting(
         etapa = db.session.get(Etapa, etapa_id)
         meeting = ProjectStageMeeting.query.filter_by(etapa_id=etapa_id).first()
         assert etapa.descricao == "Reunião atualizada"
-        assert etapa.data_inicio == datetime.date(2026, 3, 21)
-        assert etapa.data_fim == datetime.date(2026, 3, 21)
+        # 21/03/2026 é sábado: a regra de fim de semana empurra para segunda 23/03.
+        assert etapa.data_inicio == datetime.date(2026, 3, 23)
+        assert etapa.data_fim == datetime.date(2026, 3, 23)
         assert meeting.location == "Sala 202"
         assert (
             calendar_helpers._format_human_datetime(meeting.starts_at)
-            == "21/03/2026 10:00"
+            == "23/03/2026 10:00"
         )
 
 
