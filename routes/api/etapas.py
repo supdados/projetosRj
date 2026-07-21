@@ -655,23 +655,15 @@ def api_etapas_reordenar(project_id: int) -> Response | tuple[Response, int]:
         return cascade_error
 
     try:
-        for index, eid in enumerate(ids_int):
-            etapa = Etapa.query.filter_by(id=eid, project_id=project.id).first()
-            if etapa is not None:
-                etapa.ordem = index
+        _renumber_etapas_pinning_meetings(project, ids_int)
 
         if cascade_info is not None:
             _stale_ordem, days_diff = cascade_info
-            # A ordem-base deve refletir o layout RESULTANTE pós-reorder; usar a
-            # posição do ID base na lista reordenada (ids_int) evita cascatear
-            # sobre a ordem antiga já lida por _resolve_cascade_request (ver
-            # docs/analise-testes-falhando.md §2.7).
-            base_etapa_id = int(data["etapa_id"])
-            base_ordem = (
-                ids_int.index(base_etapa_id)
-                if base_etapa_id in ids_int
-                else _stale_ordem
-            )
+            # A ordem-base deve refletir o layout RESULTANTE pós-reorder (ver
+            # docs/analise-testes-falhando.md §2.7); após a renumeração acima, a
+            # própria ``ordem`` da etapa base já é essa posição.
+            base_etapa = db.session.get(Etapa, int(data["etapa_id"]))
+            base_ordem = base_etapa.ordem if base_etapa is not None else _stale_ordem
             cascade_subsequent_dates(project_id, base_ordem, days_diff)
 
         db.session.commit()
@@ -680,6 +672,50 @@ def api_etapas_reordenar(project_id: int) -> Response | tuple[Response, int]:
         return fail("Erro ao reordenar etapas.", status=422, code="validation")
 
     return ok({"etapas": _ordered_etapas_payload(project)})
+
+
+def _renumber_etapas_pinning_meetings(project: Project, ids_int: list[int]) -> None:
+    """Renumera TODAS as etapas 0..n-1 pinando as reuniões Google no rank atual.
+
+    As reuniões mantêm a POSIÇÃO relativa (rank entre as etapas ordenadas), não o
+    valor bruto de ``ordem`` — congelar o valor colidiria com a renumeração
+    compactada das demais e o empate seria resolvido arbitrariamente pelo banco
+    (bug 2.17 da auditoria; mesma semântica do teclado/DnD do front). As etapas
+    regulares seguem a sequência do payload; ausentes vão para o fim na ordem
+    atual, mantendo a renumeração self-healing após deleções.
+    """
+    atuais = (
+        Etapa.query.filter_by(project_id=project.id)
+        .order_by(Etapa.ordem.asc(), Etapa.id.asc())
+        .all()
+    )
+    por_id = {etapa.id: etapa for etapa in atuais}
+    reunioes_por_rank = {
+        rank: etapa
+        for rank, etapa in enumerate(atuais)
+        if is_google_meeting_stage(etapa)
+    }
+
+    enviadas: list[Etapa] = []
+    vistos: set[int] = set()
+    for eid in ids_int:
+        etapa = por_id.get(eid)
+        if etapa is None or is_google_meeting_stage(etapa) or eid in vistos:
+            continue
+        vistos.add(eid)
+        enviadas.append(etapa)
+    faltantes = [
+        etapa
+        for etapa in atuais
+        if not is_google_meeting_stage(etapa) and etapa.id not in vistos
+    ]
+
+    fila_regulares = iter(enviadas + faltantes)
+    for rank in range(len(atuais)):
+        etapa = reunioes_por_rank.get(rank)
+        if etapa is None:
+            etapa = next(fila_regulares)
+        etapa.ordem = rank
 
 
 def _resolve_cascade_request(

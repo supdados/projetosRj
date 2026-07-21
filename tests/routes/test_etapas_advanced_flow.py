@@ -118,6 +118,55 @@ def test_reorder_etapas_updates_order_for_project_only(app, client_user, seed_da
         assert etapa_a.ordem == 1
 
 
+def test_reorder_etapas_pins_google_meeting_order(app, client_user, seed_data):
+    """Bug 2.17: reordenar pina a reunião Google no RANK visual atual (aqui a
+    última posição, ordem 5 no layout etapa=0 < started=2 < reunião=5) e
+    renumera todas 0..n-1; a posição da reunião no payload é ignorada. Com o
+    código antigo (ordem = índice do payload) a reunião cairia em 1; congelando
+    o valor bruto ficaria 5 — ambos falham o assert de rank compactado."""
+    with app.app_context():
+        etapa_started = db.session.get(Etapa, seed_data["etapa_started_id"])
+        etapa_started.ordem = 2
+        meeting = Etapa(
+            descricao="Reunião Google",
+            entry_type="google_meeting",
+            project_id=seed_data["project_id"],
+            ordem=5,
+        )
+        db.session.add(meeting)
+        db.session.commit()
+        meeting_id = meeting.id
+
+    response = client_user.post(
+        f"/api/projetos/{seed_data['project_id']}/etapas/reordenar",
+        json={
+            "etapa_ids": [
+                seed_data["etapa_started_id"],
+                meeting_id,
+                seed_data["etapa_id"],
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["ok"] is True
+
+    with app.app_context():
+        meeting = db.session.get(Etapa, meeting_id)
+        etapa = db.session.get(Etapa, seed_data["etapa_id"])
+        etapa_started = db.session.get(Etapa, seed_data["etapa_started_id"])
+        # Reunião fica no rank atual (última); regulares seguem o payload.
+        assert etapa_started.ordem == 0
+        assert etapa.ordem == 1
+        assert meeting.ordem == 2
+        assert [e["id"] for e in payload["data"]["etapas"]] == [
+            seed_data["etapa_started_id"],
+            seed_data["etapa_id"],
+            meeting_id,
+        ]
+
+
 def test_toggle_iniciada_clears_done_when_stage_is_reopened(
     app, client_user, seed_data
 ):

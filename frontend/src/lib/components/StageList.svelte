@@ -20,6 +20,7 @@
 	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
 	import DatePickerPanel from './DatePickerPanel.svelte';
 	import type { EtapaDetail, EtapaInlineField, EtapaResponsavelArea } from '$lib/types/projectDetail';
+	import { dropStagePinningMeetings, moveStageSkippingMeetings } from '$lib/utils/stageReorder';
 	import '$lib/styles/stage-chips.css';
 
 	interface FieldState {
@@ -249,20 +250,11 @@
 			resetDrag();
 			return;
 		}
-		const ids = etapas.map((e) => e.id);
-		const fromIdx = ids.indexOf(draggedId);
-		if (fromIdx === -1) {
+		const ids = dropStagePinningMeetings(etapas, draggedId, overId, overPosition);
+		if (!ids) {
 			resetDrag();
 			return;
 		}
-		const [moved] = ids.splice(fromIdx, 1);
-		const toIdx = ids.indexOf(overId);
-		if (toIdx === -1) {
-			resetDrag();
-			return;
-		}
-		const insertAt = overPosition === 'top' ? toIdx : toIdx + 1;
-		ids.splice(insertAt, 0, moved);
 		const movedId = draggedId;
 		onReorder(ids);
 		resetDrag();
@@ -280,14 +272,10 @@
 		draggedRowHeight = null;
 	}
 
-	/** Fallback por teclado: move a etapa uma posição (mesma intenção do DnD). */
+	/** Fallback por teclado: move a etapa uma posição pulando reuniões (paridade DnD). */
 	function moveByKeyboard(index: number, delta: number): void {
-		const target = index + delta;
-		if (target < 0 || target >= etapas.length) return;
-		const ids = etapas.map((e) => e.id);
-		const [moved] = ids.splice(index, 1);
-		ids.splice(target, 0, moved);
-		onReorder(ids);
+		const ids = moveStageSkippingMeetings(etapas, index, delta);
+		if (ids) onReorder(ids);
 	}
 
 	function handleHandleKeydown(event: KeyboardEvent, index: number): void {
