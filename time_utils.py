@@ -85,11 +85,12 @@ def format_relative_time_pt(value, *, now=None):
     days = hours // 24
     if days < 7:
         return f'há {days} dia{"s" if days != 1 else ""}'
-    weeks = days // 7
-    if weeks < 4:
+    if days < 28:
+        weeks = days // 7
         return f'há {weeks} semana{"s" if weeks != 1 else ""}'
-    months = days // 30
-    if months < 12:
+    # max(1, ...) evita "há 0 meses" na faixa 28-29 dias (bucket sai das semanas antes de fechar 30)
+    if days < 360:
+        months = max(1, days // 30)
         return f'há {months} {"mês" if months == 1 else "meses"}'
-    years = days // 365
+    years = max(1, days // 365)
     return f'há {years} ano{"s" if years != 1 else ""}'
