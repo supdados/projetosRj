@@ -77,4 +77,4 @@ def backfill_sei_processes(emit_output: bool = True) -> dict:
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO no backfill de processos SEI: {exc}", emit_output)
-        return {"success": False, "migrated": 0}
+        return {"success": False, "error": str(exc), "migrated": 0}

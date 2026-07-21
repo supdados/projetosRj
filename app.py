@@ -1,3 +1,4 @@
+import json
 import os
 import secrets
 import time
@@ -240,6 +241,32 @@ def _register_context_processors(app):
 # ---------------------------------------------------------------------------
 
 
+def _abort_boot_on_migration_failure(summary: dict) -> None:
+    if summary.get("success"):
+        return
+    detail = json.dumps(
+        {
+            "event": "schema_migration_failed",
+            "failed_steps": summary.get("failed_steps", []),
+            "step_errors": summary.get("step_errors", {}),
+        },
+        ensure_ascii=False,
+    )
+    raise RuntimeError(f"Migração de schema falhou no boot; app não sobe: {detail}")
+
+
+def _run_startup_db_init(app: Flask) -> None:
+    with app.app_context():
+        startup_summary = initialize_database()
+        _abort_boot_on_migration_failure(startup_summary)
+        if startup_summary["column_added"]:
+            app.logger.info("Coluna project.abep_indicator criada com sucesso.")
+        app.logger.info(
+            "Catalogo de objetivos sincronizado: %s",
+            startup_summary["sync_summary"],
+        )
+
+
 def create_app(test_config=None):
     app = Flask(__name__)
 
@@ -270,18 +297,7 @@ def create_app(test_config=None):
     _register_context_processors(app)
 
     if not app.config.get("SKIP_STARTUP_DB_INIT"):
-        with app.app_context():
-            try:
-                startup_summary = initialize_database()
-                if startup_summary["column_added"]:
-                    print("Coluna project.abep_indicator criada com sucesso.")
-                print(
-                    f"Catalogo de objetivos sincronizado: {startup_summary['sync_summary']}"
-                )
-            except Exception as exc:
-                print(
-                    f"Erro durante a inicialização/verificação do banco de dados em app.py: {exc}"
-                )
+        _run_startup_db_init(app)
 
     return app
 

@@ -1,3 +1,6 @@
+import json
+import logging
+
 from sqlalchemy import inspect, text
 
 from models import db
@@ -56,20 +59,14 @@ def _rebuild_task_table_with_etapa_fk() -> None:
     col_list = ", ".join(cols)
 
     db.session.execute(text("PRAGMA foreign_keys=OFF"))
-    db.session.execute(
-        text(
-            """
+    db.session.execute(text("""
             CREATE TABLE task_with_etapa_fk_tmp AS
             SELECT * FROM task WHERE 0
-            """
-        )
-    )
+            """))
     # CREATE AS SELECT não preserva FKs; usamos a definição declarativa
     # via reflexão do schema atual + adiciona FK manualmente.
     db.session.execute(text("DROP TABLE task_with_etapa_fk_tmp"))
-    db.session.execute(
-        text(
-            f"""
+    db.session.execute(text(f"""
             CREATE TABLE task_new (
                 id INTEGER NOT NULL PRIMARY KEY,
                 titulo VARCHAR(255),
@@ -92,15 +89,21 @@ def _rebuild_task_table_with_etapa_fk() -> None:
                 FOREIGN KEY(legacy_parent_task_id) REFERENCES task(id),
                 FOREIGN KEY(created_by_id) REFERENCES user(id)
             )
-            """
-        )
+            """))
+    db.session.execute(
+        text(f"INSERT INTO task_new ({col_list}) SELECT {col_list} FROM task")
     )
-    db.session.execute(text(f"INSERT INTO task_new ({col_list}) SELECT {col_list} FROM task"))
     db.session.execute(text("DROP TABLE task"))
     db.session.execute(text("ALTER TABLE task_new RENAME TO task"))
-    db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_task_is_archived ON task (is_archived)"))
-    db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_task_status ON task (status)"))
-    db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_task_etapa_id ON task (etapa_id)"))
+    db.session.execute(
+        text("CREATE INDEX IF NOT EXISTS ix_task_is_archived ON task (is_archived)")
+    )
+    db.session.execute(
+        text("CREATE INDEX IF NOT EXISTS ix_task_status ON task (status)")
+    )
+    db.session.execute(
+        text("CREATE INDEX IF NOT EXISTS ix_task_etapa_id ON task (etapa_id)")
+    )
     db.session.execute(text("PRAGMA foreign_keys=ON"))
     db.session.commit()
 
@@ -314,22 +317,36 @@ def ensure_task_core_columns():
             db.session.commit()
             added.append("task.ix_task_status")
         if "ix_task_etapa_id" not in indexes:
-            db.session.execute(
-                text("CREATE INDEX ix_task_etapa_id ON task (etapa_id)")
-            )
+            db.session.execute(text("CREATE INDEX ix_task_etapa_id ON task (etapa_id)"))
             db.session.commit()
             added.append("task.ix_task_etapa_id")
 
     return added
 
 
-def initialize_database():
+def _log_migration_failure(summary: dict) -> None:
+    logging.getLogger(__name__).error(
+        json.dumps(
+            {
+                "event": "schema_migration_failed",
+                "failed_steps": summary.get("failed_steps", []),
+                "step_errors": summary.get("step_errors", {}),
+            },
+            ensure_ascii=False,
+        )
+    )
+
+
+def initialize_database() -> dict:
     """
     Inicializa/normaliza o schema usando a rotina canônica de migração.
     """
     from scripts.migrations.run_migrations import run_all_migrations
 
     summary = run_all_migrations(emit_output=False, stamp_alembic=False)
+    if not summary.get("success"):
+        _log_migration_failure(summary)
+        return summary
     # Soft-delete C4: garante user.deleted_at no banco de dev no próximo boot,
     # sem migração manual (aditivo, mesmo padrão das demais ensure_*).
     ensure_user_deleted_at_column()

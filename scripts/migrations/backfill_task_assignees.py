@@ -124,4 +124,9 @@ def backfill_task_assignees(emit_output: bool = True) -> dict:
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO no backfill de responsáveis: {exc}", emit_output)
-        return {"success": False, "converted_tasks": 0, "assignees_created": 0}
+        return {
+            "success": False,
+            "error": str(exc),
+            "converted_tasks": 0,
+            "assignees_created": 0,
+        }

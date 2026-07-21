@@ -922,6 +922,7 @@ def _migrate_user_areas_step(emit_output=True):
         _emit(f"   ✗ ERRO na migração de áreas: {exc}", emit_output)
         return {
             "success": False,
+            "error": str(exc),
             "migrated_count": migrated_count,
             "auth_columns_added": auth_columns_added,
             "auth_indexes_added": auth_indexes_added,
@@ -941,7 +942,7 @@ def ensure_project_history_table(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao garantir histórico de projetos: {exc}", emit_output)
-        return {"success": False}
+        return {"success": False, "error": str(exc)}
 
 
 def create_history_table(emit_output=True):
@@ -1010,7 +1011,7 @@ def ensure_project_columns(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao garantir colunas de projeto/etapa: {exc}", emit_output)
-        return {"success": False, "added_columns": added_columns}
+        return {"success": False, "error": str(exc), "added_columns": added_columns}
 
 
 def ensure_abep_indicator_column(emit_output=True):
@@ -1117,7 +1118,7 @@ def ensure_task_schema(emit_output=True):
         db.session.rollback()
         _enable_foreign_keys()
         _emit(f"   ✗ ERRO ao consolidar schema de tarefas: {exc}", emit_output)
-        return {"success": False, "changes": changes}
+        return {"success": False, "error": str(exc), "changes": changes}
 
 
 def sync_goal_catalog(emit_output=True):
@@ -1133,7 +1134,7 @@ def sync_goal_catalog(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO na sincronizacao do catalogo: {exc}", emit_output)
-        return {"success": False, "summary": None}
+        return {"success": False, "error": str(exc), "summary": None}
 
 
 def sync_area_catalog(emit_output=True):
@@ -1146,7 +1147,7 @@ def sync_area_catalog(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao executar create_all: {exc}", emit_output)
-        return {"success": False, "areas": None}
+        return {"success": False, "error": str(exc), "areas": None}
 
 
 def ensure_calendar_schema(emit_output=True):
@@ -1184,7 +1185,7 @@ def ensure_calendar_schema(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao garantir schema do calendário: {exc}", emit_output)
-        return {"success": False, "changes": changes}
+        return {"success": False, "error": str(exc), "changes": changes}
 
 
 def encrypt_plaintext_oauth_tokens(emit_output=True):
@@ -1244,7 +1245,7 @@ def encrypt_plaintext_oauth_tokens(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao criptografar tokens: {exc}", emit_output)
-        return {"success": False, "rows_encrypted": changes}
+        return {"success": False, "error": str(exc), "rows_encrypted": changes}
 
 
 def ensure_orgao_and_template_schema(emit_output=True):
@@ -1536,7 +1537,7 @@ def ensure_orgao_and_template_schema(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao garantir schema de órgãos/templates: {exc}", emit_output)
-        return {"success": False, "changes": changes}
+        return {"success": False, "error": str(exc), "changes": changes}
 
 
 def ensure_etapa_responsavel_table(emit_output=True):
@@ -1554,7 +1555,7 @@ def ensure_etapa_responsavel_table(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao criar etapa_responsavel: {exc}", emit_output)
-        return {"success": False, "created": False}
+        return {"success": False, "error": str(exc), "created": False}
 
 
 def ensure_siorg_sync_log_table(emit_output=True):
@@ -1579,7 +1580,7 @@ def ensure_siorg_sync_log_table(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao criar siorg_sync_log: {exc}", emit_output)
-        return {"success": False, "created": False}
+        return {"success": False, "error": str(exc), "created": False}
 
 
 def ensure_codigo_externo_unique_index(emit_output=True):
@@ -1620,7 +1621,7 @@ def ensure_codigo_externo_unique_index(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao criar índice único de codigo_externo: {exc}", emit_output)
-        return {"success": False, "changed": False}
+        return {"success": False, "error": str(exc), "changed": False}
 
 
 def stamp_alembic_head(emit_output=True):
@@ -1658,61 +1659,88 @@ def stamp_alembic_head(emit_output=True):
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao sincronizar alembic_version: {exc}", emit_output)
-        return {"success": False, "stamped": False}
+        return {"success": False, "error": str(exc), "stamped": False}
 
 
-def run_all_migrations(*, emit_output=True, stamp_alembic=False):
+def _run_migration_steps(emit_output: bool) -> list[tuple[str, dict]]:
     from scripts.migrations.backfill_task_assignees import backfill_task_assignees
     from scripts.migrations.backfill_sei_processes import backfill_sei_processes
 
     steps = [
-        _migrate_user_areas_step(emit_output=emit_output),
-        ensure_project_history_table(emit_output=emit_output),
-        ensure_project_columns(emit_output=emit_output),
-        ensure_task_schema(emit_output=emit_output),
-        sync_goal_catalog(emit_output=emit_output),
-        sync_area_catalog(emit_output=emit_output),
-        ensure_calendar_schema(emit_output=emit_output),
-        ensure_orgao_and_template_schema(emit_output=emit_output),
-        encrypt_plaintext_oauth_tokens(emit_output=emit_output),
-        backfill_task_assignees(emit_output=emit_output),
-        backfill_sei_processes(emit_output=emit_output),
-        ensure_etapa_responsavel_table(emit_output=emit_output),
-        ensure_siorg_sync_log_table(emit_output=emit_output),
-        ensure_codigo_externo_unique_index(emit_output=emit_output),
+        ("migrate_user_areas", _migrate_user_areas_step),
+        ("ensure_project_history_table", ensure_project_history_table),
+        ("ensure_project_columns", ensure_project_columns),
+        ("ensure_task_schema", ensure_task_schema),
+        ("sync_goal_catalog", sync_goal_catalog),
+        ("sync_area_catalog", sync_area_catalog),
+        ("ensure_calendar_schema", ensure_calendar_schema),
+        ("ensure_orgao_and_template_schema", ensure_orgao_and_template_schema),
+        ("encrypt_plaintext_oauth_tokens", encrypt_plaintext_oauth_tokens),
+        ("backfill_task_assignees", backfill_task_assignees),
+        ("backfill_sei_processes", backfill_sei_processes),
+        ("ensure_etapa_responsavel_table", ensure_etapa_responsavel_table),
+        ("ensure_siorg_sync_log_table", ensure_siorg_sync_log_table),
+        ("ensure_codigo_externo_unique_index", ensure_codigo_externo_unique_index),
     ]
+    return [(name, step(emit_output=emit_output)) for name, step in steps]
 
-    if not all(step.get("success") for step in steps):
-        return {"success": False}
+
+def _collect_step_errors(step_results: list[tuple[str, dict]]) -> dict[str, str]:
+    return {
+        name: result.get("error", "erro não informado pelo step")
+        for name, result in step_results
+        if not result.get("success")
+    }
+
+
+def _build_migration_summary(
+    results: dict[str, dict], alembic_summary: dict
+) -> dict[str, object]:
+    project_columns_added = results["ensure_project_columns"].get("added_columns", [])
+    user_areas = results["migrate_user_areas"]
+    return {
+        "column_added": "project.abep_indicator" in project_columns_added,
+        "task_core_cols": results["ensure_task_schema"].get("changes", []),
+        "calendar_changes": results["ensure_calendar_schema"].get("changes", []),
+        "orgao_template_changes": results["ensure_orgao_and_template_schema"].get(
+            "changes", []
+        ),
+        "area_catalog_choices": results["sync_area_catalog"].get("areas"),
+        "sync_summary": results["sync_goal_catalog"].get("summary"),
+        "user_areas_migrated": user_areas.get("migrated_count", 0),
+        "user_auth_columns_added": user_areas.get("auth_columns_added", []),
+        "user_auth_indexes_added": user_areas.get("auth_indexes_added", []),
+        "project_columns_added": project_columns_added,
+        "task_assignees_backfilled": results["backfill_task_assignees"].get(
+            "assignees_created", 0
+        ),
+        "sei_processes_backfilled": results["backfill_sei_processes"].get(
+            "migrated", 0
+        ),
+        "etapa_responsavel_created": results["ensure_etapa_responsavel_table"].get(
+            "created", False
+        ),
+        "alembic_stamped": alembic_summary.get("stamped", False),
+    }
+
+
+def run_all_migrations(*, emit_output=True, stamp_alembic=False):
+    step_results = _run_migration_steps(emit_output)
+    step_errors = _collect_step_errors(step_results)
 
     alembic_summary = {"success": True, "stamped": False}
-    if stamp_alembic:
+    if stamp_alembic and not step_errors:
         alembic_summary = stamp_alembic_head(emit_output=emit_output)
         if not alembic_summary["success"]:
-            return {"success": False}
+            step_errors["stamp_alembic_head"] = alembic_summary.get(
+                "error", "erro não informado pelo step"
+            )
 
-    project_columns_added = steps[2]["added_columns"]
-    task_changes = steps[3]["changes"]
-    calendar_changes = steps[6]["changes"]
-    orgao_template_changes = steps[7]["changes"]
-
-    return {
-        "success": True,
-        "column_added": "project.abep_indicator" in project_columns_added,
-        "task_core_cols": task_changes,
-        "calendar_changes": calendar_changes,
-        "orgao_template_changes": orgao_template_changes,
-        "area_catalog_choices": steps[5]["areas"],
-        "sync_summary": steps[4]["summary"],
-        "user_areas_migrated": steps[0]["migrated_count"],
-        "user_auth_columns_added": steps[0].get("auth_columns_added", []),
-        "user_auth_indexes_added": steps[0].get("auth_indexes_added", []),
-        "project_columns_added": project_columns_added,
-        "task_assignees_backfilled": steps[9]["assignees_created"],
-        "sei_processes_backfilled": steps[10]["migrated"],
-        "etapa_responsavel_created": steps[11]["created"],
-        "alembic_stamped": alembic_summary["stamped"],
-    }
+    summary = _build_migration_summary(dict(step_results), alembic_summary)
+    summary["success"] = not step_errors
+    summary["failed_steps"] = sorted(step_errors)
+    summary["step_errors"] = step_errors
+    return summary
 
 
 def main():
