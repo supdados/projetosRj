@@ -211,9 +211,22 @@ export function createTaskDrawerStore(
 	/** Snapshot acumulado dos campos editados (a última edição vence). */
 	let pendingFields: TaskFieldEdits = {};
 
-	async function open(taskId: number, options: OpenDrawerOptions = {}): Promise<void> {
+	/**
+	 * Persiste edições pendentes da tarefa CORRENTE e zera o acumulador, antes de
+	 * trocar ou fechar o drawer. O `flush` precede a troca de `taskId` no store
+	 * (o `persistFn` mira a tarefa que estava aberta). Falha do save é reportada
+	 * pelo `onError` do autosave; a rejeição é engolida para não bloquear a troca.
+	 */
+	async function flushPending(): Promise<void> {
+		try {
+			await autosave.flush();
+		} catch {}
 		autosave.cancel();
 		pendingFields = {};
+	}
+
+	async function open(taskId: number, options: OpenDrawerOptions = {}): Promise<void> {
+		await flushPending();
 		store.set({
 			...INITIAL,
 			status: 'loading',
@@ -234,10 +247,7 @@ export function createTaskDrawerStore(
 	}
 
 	async function close(): Promise<void> {
-		// Garante que nenhuma edição pendente seja perdida ANTES de fechar.
-		await autosave.flush();
-		autosave.cancel();
-		pendingFields = {};
+		await flushPending();
 		store.set({ ...INITIAL });
 	}
 

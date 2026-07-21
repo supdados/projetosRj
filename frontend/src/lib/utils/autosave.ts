@@ -9,7 +9,8 @@
  *   - COALESCING (`hasPendingSave`): se o usuário editar DURANTE um save em voo,
  *     enfileira UM novo save para rodar assim que o atual terminar.
  *   - `flush()`: salva IMEDIATAMENTE o pendente (ao fechar o drawer / blur),
- *     cancelando o debounce. NUNCA perde edição.
+ *     cancelando o debounce e AGUARDANDO o save em voo assentar. NUNCA perde
+ *     edição — nem a coalescida durante um save em andamento.
  *
  * `persistFn` recebe o snapshot mais recente e devolve uma Promise; o resultado
  * só é entregue ao `onSaved` se o token ainda for o corrente. A função é agnóstica
@@ -94,20 +95,26 @@ export function createAutosave<S, R = unknown>(
 		}, debounceMs);
 	}
 
+	/** Promise do save em voo — `flush` aguarda por ela antes de decidir que não há pendente. */
+	let inFlight: Promise<void> | null = null;
+
 	/**
 	 * Executa o save do snapshot pendente, se houver. Se já há um save em voo,
 	 * apenas marca `hasPending` (coalescing) — o próprio `finally` re-dispara.
 	 */
-	async function runSave(): Promise<void> {
+	function runSave(): Promise<void> {
 		clearTimer();
-		if (!hasPending || pendingSnapshot === null) return;
+		if (!hasPending || pendingSnapshot === null) return Promise.resolve();
 		if (isSaving) {
 			// Edição durante save em andamento: enfileira (coalescing).
 			hasPending = true;
-			return;
+			return inFlight ?? Promise.resolve();
 		}
+		inFlight = performSave(pendingSnapshot);
+		return inFlight;
+	}
 
-		const snapshot = pendingSnapshot;
+	async function performSave(snapshot: S): Promise<void> {
 		const token = ++saveToken;
 		hasPending = false;
 		pendingSnapshot = null;
@@ -138,10 +145,10 @@ export function createAutosave<S, R = unknown>(
 
 	async function flush(): Promise<void> {
 		clearTimer();
-		await runSave();
-		// Se o save acima coalesceu outro pendente, drena até assentar.
-		while (hasPending && !isSaving) {
-			await runSave();
+		// Aguarda o voo assentar: retornar com save em curso deixaria o pendente
+		// coalescido à mercê de um cancel() seguinte (perda silenciosa de edição).
+		while (isSaving || hasPending) {
+			await (isSaving ? inFlight : runSave());
 		}
 	}
 

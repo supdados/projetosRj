@@ -156,6 +156,38 @@ describe('createAutosave flush', () => {
 		await auto.flush();
 		expect(persistFn).not.toHaveBeenCalled();
 	});
+
+	it('flush aguarda o save em voo e drena a edição coalescida (não perde edição)', async () => {
+		// Regressão (auditoria 2026-07-17): flush retornava com save em voo e o
+		// cancel() seguinte do drawer descartava o snapshot coalescido.
+		const { persistFn, calls, resolve } = deferredPersist<string, string>();
+		const auto = createAutosave<string, string>(persistFn, { debounceMs: 10 });
+
+		auto.schedule('first');
+		await vi.advanceTimersByTimeAsync(10);
+		expect(auto.isSaving).toBe(true);
+
+		// Edição durante o voo, coalescida; flush ANTES do save assentar.
+		auto.schedule('second');
+		let settled = false;
+		const flushed = auto.flush().then(() => {
+			settled = true;
+		});
+		await flushMicrotasks();
+		expect(settled).toBe(false);
+
+		// 1º save assenta -> o coalescido re-dispara; flush segue aguardando.
+		resolve('r1');
+		await flushMicrotasks();
+		expect(calls).toEqual(['first', 'second']);
+		expect(settled).toBe(false);
+
+		resolve('r2');
+		await flushMicrotasks();
+		await flushed;
+		expect(auto.hasPendingSave).toBe(false);
+		expect(auto.isSaving).toBe(false);
+	});
 });
 
 describe('createAutosave cancel', () => {
