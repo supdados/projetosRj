@@ -120,9 +120,7 @@ def test_api_comentario_edit_foreign_is_403(client_user, seed_data):
 
 def test_api_comentario_edit_empty_is_422(client_user, seed_data):
     comment_id = seed_data["comment_id"]
-    response = client_user.post(
-        f"/api/comentarios/{comment_id}", json={"content": ""}
-    )
+    response = client_user.post(f"/api/comentarios/{comment_id}", json={"content": ""})
 
     assert response.status_code == 422
     _assert_fail_envelope(response.get_json(), code="validation")
@@ -283,7 +281,9 @@ def test_api_anexo_download_unknown_is_404_envelope(client_user):
     _assert_fail_envelope(response.get_json(), code="not_found")
 
 
-def test_api_anexo_download_out_of_scope_is_403(client_outsider, seed_data, client_user):
+def test_api_anexo_download_out_of_scope_is_403(
+    client_outsider, seed_data, client_user
+):
     """Anexo de tarefa fora do escopo do usuário => 403 envelopado."""
     task_id = seed_data["task_id"]
     upload = client_user.post(

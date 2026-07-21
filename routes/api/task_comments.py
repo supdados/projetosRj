@@ -207,7 +207,7 @@ def api_comentario_edit(comment_id: int) -> Response | tuple[Response, int]:
             event_type="task_comment_updated",
             title="Comentário atualizado em tarefa",
             message=(
-                f'{g.user.name} editou um comentário na tarefa '
+                f"{g.user.name} editou um comentário na tarefa "
                 f'"{_preview_text(comment.task.descricao, 90)}": '
                 f'"{_preview_text(old_content, 70)}" -> '
                 f'"{_preview_text(comment.content, 70)}".'
@@ -253,7 +253,7 @@ def api_comentario_delete(comment_id: int) -> Response | tuple[Response, int]:
             event_type="task_comment_deleted",
             title="Comentário removido em tarefa",
             message=(
-                f'{g.user.name} removeu um comentário na tarefa '
+                f"{g.user.name} removeu um comentário na tarefa "
                 f'"{_preview_text(task.descricao, 90)}".'
             ),
         )

@@ -70,9 +70,7 @@ def test_list_returns_403_for_non_admin(client_user):
 
 def test_list_filters_by_free_text_query(client_admin, seed_data):
     """`?q=` casa por nome/login (ilike) — "VPD" só atinge o usuário VPD."""
-    data = _assert_ok_envelope(
-        client_admin.get("/api/admin/usuarios?q=VPD").get_json()
-    )
+    data = _assert_ok_envelope(client_admin.get("/api/admin/usuarios?q=VPD").get_json())
     assert [user["name"] for user in data["usuarios"]] == ["Usuario VPD"]
 
 
@@ -91,9 +89,7 @@ def test_list_filters_by_area_id(app, client_admin, seed_data):
 
 def test_list_without_filters_returns_all_active(client_admin, seed_data):
     """Sem filtros o comportamento padrão (todos os ativos) é preservado."""
-    baseline = _assert_ok_envelope(
-        client_admin.get("/api/admin/usuarios").get_json()
-    )
+    baseline = _assert_ok_envelope(client_admin.get("/api/admin/usuarios").get_json())
     filtered = _assert_ok_envelope(
         client_admin.get("/api/admin/usuarios?q=Usuario").get_json()
     )
@@ -274,9 +270,7 @@ def test_delete_returns_ok_envelope(client_admin, seed_data):
 
 
 def test_delete_self_returns_422(client_admin, seed_data):
-    response = client_admin.delete(
-        f"/api/admin/usuarios/{seed_data['admin_id']}"
-    )
+    response = client_admin.delete(f"/api/admin/usuarios/{seed_data['admin_id']}")
     assert response.status_code == 422
     _assert_fail_envelope(response.get_json(), code="validation")
 

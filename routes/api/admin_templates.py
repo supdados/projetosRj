@@ -46,9 +46,7 @@ from .serializers import serialize_template_detail, serialize_template_row
 def _usage_count_for(template_id: int) -> int:
     """Conta projetos distintos que usaram um modelo (espelha a lista Jinja)."""
     return (
-        db.session.query(
-            func.count(func.distinct(StageTemplateUsage.project_id))
-        )
+        db.session.query(func.count(func.distinct(StageTemplateUsage.project_id)))
         .filter(StageTemplateUsage.template_id == template_id)
         .scalar()
         or 0
@@ -82,7 +80,9 @@ def _parse_stages(payload: Any) -> tuple[list[dict[str, Any]], str | None]:
         name = (raw_name or "").strip()
         if not name:
             continue
-        stages.append({"name": name, "duration_days": _stage_duration(durations, index)})
+        stages.append(
+            {"name": name, "duration_days": _stage_duration(durations, index)}
+        )
     if not stages:
         return [], "Informe pelo menos uma etapa."
     return stages, None

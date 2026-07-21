@@ -268,8 +268,6 @@ def test_delete_returns_404_for_unknown(client_admin):
 
 
 def test_delete_returns_403_for_non_admin(client_user, seed_data):
-    response = client_user.delete(
-        f"/api/admin/templates/{seed_data['template_id']}"
-    )
+    response = client_user.delete(f"/api/admin/templates/{seed_data['template_id']}")
     assert response.status_code == 403
     _assert_fail_envelope(response.get_json(), code="forbidden")

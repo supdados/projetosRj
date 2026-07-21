@@ -83,7 +83,9 @@ def api_method_not_allowed(
     """
     if not _is_api_request():
         return error
-    return fail("Método não permitido para este recurso.", status=405, code="validation")
+    return fail(
+        "Método não permitido para este recurso.", status=405, code="validation"
+    )
 
 
 @main_bp.app_errorhandler(Exception)

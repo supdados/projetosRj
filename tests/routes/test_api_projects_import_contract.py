@@ -66,7 +66,9 @@ def test_import_creates_one_project_per_row(app, client_admin, seed_data):
         data={
             "orgao_id": str(seed_data["auditoria_orgao_id"]),
             "status": "Vigente",
-            **_csv("titulo;descricao\nProjeto CSV 1;desc 1\nProjeto CSV 2;desc 2\n;sem titulo"),
+            **_csv(
+                "titulo;descricao\nProjeto CSV 1;desc 1\nProjeto CSV 2;desc 2\n;sem titulo"
+            ),
         },
         content_type="multipart/form-data",
     )

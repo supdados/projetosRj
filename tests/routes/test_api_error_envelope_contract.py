@@ -38,9 +38,7 @@ def test_unhandled_exception_under_api_returns_json_500_envelope(
 
     # A view get_resultados chama get_resultados_for_objetivo; forçamos o estouro
     # DEPOIS da checagem de id (objetivo 1 existe no catálogo semeado).
-    monkeypatch.setattr(
-        "routes.api.legacy.get_resultados_for_objetivo", _boom
-    )
+    monkeypatch.setattr("routes.api.legacy.get_resultados_for_objetivo", _boom)
 
     response = client_user.get("/api/resultados/1")
 

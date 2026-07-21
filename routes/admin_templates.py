@@ -88,4 +88,3 @@ def _build_template_rows(templates, usage_map, now):
             }
         )
     return rows
-

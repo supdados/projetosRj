@@ -55,4 +55,9 @@ def test_other_host_with_same_path_is_rejected():
 
 def test_host_with_port_must_match_exactly():
     assert safe_internal_path("http://projetos.rj.gov.br:8080/x", HOST) is None
-    assert safe_internal_path("http://projetos.rj.gov.br:8080/x", "projetos.rj.gov.br:8080") == "/x"
+    assert (
+        safe_internal_path(
+            "http://projetos.rj.gov.br:8080/x", "projetos.rj.gov.br:8080"
+        )
+        == "/x"
+    )

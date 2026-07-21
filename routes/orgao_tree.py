@@ -86,7 +86,9 @@ def resolve_orgao_tipo(orgao):
         return None
     if getattr(orgao, "tipo_ref", None) is not None:
         return orgao.tipo_ref
-    return find_orgao_tipo(getattr(orgao, "tipo_id", None) or getattr(orgao, "tipo", None))
+    return find_orgao_tipo(
+        getattr(orgao, "tipo_id", None) or getattr(orgao, "tipo", None)
+    )
 
 
 def is_valid_parent_tipo(parent_tipo: str, child_tipo: str) -> bool:
@@ -153,7 +155,10 @@ def normalize_orgao_form(
         pai_tipo = resolve_orgao_tipo(pai)
         pai_tipo_nome = pai_tipo.nome if pai_tipo else pai.tipo
         if not is_valid_parent_tipo(pai_tipo_nome, tipo_obj.nome):
-            return None, f'Um órgão do tipo "{pai_tipo_nome}" não pode ser pai de "{tipo_obj.nome}".'
+            return (
+                None,
+                f'Um órgão do tipo "{pai_tipo_nome}" não pode ser pai de "{tipo_obj.nome}".',
+            )
 
     try:
         ordem = int(ordem_raw) if ordem_raw not in (None, "") else 0
@@ -295,9 +300,13 @@ def validate_orgao_move(
     if orgao is None:
         return "Órgão não encontrado."
 
-    child_tipo_obj = find_orgao_tipo(child_tipo) if child_tipo else resolve_orgao_tipo(orgao)
+    child_tipo_obj = (
+        find_orgao_tipo(child_tipo) if child_tipo else resolve_orgao_tipo(orgao)
+    )
     effective_child_tipo = (
-        child_tipo_obj.nome if child_tipo_obj else child_tipo or getattr(orgao, "tipo", None)
+        child_tipo_obj.nome
+        if child_tipo_obj
+        else child_tipo or getattr(orgao, "tipo", None)
     )
 
     if new_pai_id is None:

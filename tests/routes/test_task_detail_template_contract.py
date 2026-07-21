@@ -27,9 +27,7 @@ def test_task_detail_route_redirects_to_hub_for_sem_projeto_with_focus_task(
     assert f"focus_task={seed_data['orphan_task_id']}" in location
 
 
-def test_legacy_task_redirect_hides_cross_area_project_ids(
-    app, client_user, seed_data
-):
+def test_legacy_task_redirect_hides_cross_area_project_ids(app, client_user, seed_data):
     legacy_id = 987654
     with app.app_context():
         db.session.add(

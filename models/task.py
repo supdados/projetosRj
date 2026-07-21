@@ -194,9 +194,7 @@ class TaskAssignee(db.Model):
 @event.listens_for(Etapa, "before_delete")
 def _clear_task_stage_refs_before_etapa_delete(mapper, connection, target):
     connection.execute(
-        Task.__table__.update()
-        .where(Task.etapa_id == target.id)
-        .values(etapa_id=None)
+        Task.__table__.update().where(Task.etapa_id == target.id).values(etapa_id=None)
     )
 
 
