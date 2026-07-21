@@ -35,3 +35,5 @@ CLAUDE.md
 
 # Arquivos temporarios de depuracao/probe na raiz (ex.: tmp_*_probe.html).
 /tmp_*
+
+node_modules/
