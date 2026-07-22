@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * Modal "Criar novo projeto" (Quick Create) — wizard com sidebar de 4 seções
-	 * ("Informações", "Classificação e Objetivos", "Links e Observações",
+	 * ("Informações", "Objetivos e Indicadores", "Classificação e Links",
 	 * "Etapas"), uma seção visível por vez, barra de progresso e tela de sucesso
 	 * interna ("Criar outro projeto" / "Ver o projeto").
 	 *
@@ -161,8 +161,8 @@
 	// --- Wizard: uma seção visível por vez ----------------------------------
 	const NAV_SECTIONS = [
 		'Informações',
-		'Classificação e Objetivos',
-		'Links e Observações',
+		'Objetivos e Indicadores',
+		'Classificação e Links',
 		'Etapas'
 	];
 	let activeSection = $state(0);
@@ -225,11 +225,12 @@
 	// Critérios de seção "preenchida" (badge ✓ + barra de progresso).
 	const sectionDone = $derived<boolean[]>([
 		titulo.trim().length > 0 && orgaoId.trim().length > 0,
-		deliveryType !== '' && objetivoId !== '' && resultadoId !== '',
-		seiList.length > 0 ||
-			[githubLink, documentationLink, productLink, observacao].some(
-				(v) => v.trim().length > 0
-			),
+		objetivoId !== '' && resultadoId !== '',
+		deliveryType !== '' &&
+			(seiList.length > 0 ||
+				[githubLink, documentationLink, productLink, observacao].some(
+					(v) => v.trim().length > 0
+				)),
 		templateId !== ''
 	]);
 	const doneCount = $derived(sectionDone.filter(Boolean).length);
@@ -1065,6 +1066,89 @@
 												></textarea>
 											</div>
 										{:else if activeSection === 1}
+											<h3 class={sectionTitleClass}>Objetivos e indicadores</h3>
+											<ObjetivoPicker
+												{objetivos}
+												{objetivoId}
+												{resultados}
+												{resultadoId}
+												{resultadosLoading}
+												{indicadores}
+												{indicadoresLoading}
+												{selectedIndicadores}
+												{revealedIndicadores}
+												onObjetivoSelect={(id) => {
+													objetivoId = id;
+													void onObjetivoChange();
+												}}
+												onResultadoSelect={(id) => {
+													resultadoId = id;
+													void onResultadoChange();
+												}}
+												onToggleIndicador={toggleIndicador}
+											/>
+
+											<!-- Indicadores ABEP (combobox) — LEGADO, oculto via SHOW_ABEP.
+												 Código mantido para reativação futura. -->
+											{#if SHOW_ABEP}
+											<div class="relative flex flex-col gap-1.5">
+												<label for="cp-abep" class={labelClass}>Indicadores ABEP</label>
+												<input
+													id="cp-abep"
+													type="text"
+													autocomplete="off"
+													role="combobox"
+													aria-expanded={abepOpen}
+													aria-controls="cp-abep-listbox"
+													aria-autocomplete="list"
+													aria-activedescendant={abepActiveIndex >= 0
+														? `cp-abep-option-${abepActiveIndex}`
+														: undefined}
+													bind:value={abepLabel}
+													oninput={onAbepInput}
+													onfocus={openAbep}
+													onkeydown={onAbepKeydown}
+													onblur={() => setTimeout(closeAbep, 120)}
+													placeholder="Busque por número ou título do indicador ABEP"
+													class={fieldClass}
+												/>
+												{#if abepOpen}
+													<ul
+														id="cp-abep-listbox"
+														role="listbox"
+														aria-label="Indicadores ABEP"
+														transition:fly={{ y: -4, duration: 160, easing: cubicOut }}
+														class="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-auto rounded-md border border-border-subtle bg-surface py-1 shadow-md"
+													>
+														{#if abepVisible.length === 0}
+															<li class="px-3 py-2 text-sm text-text-muted">
+																Nenhum indicador encontrado
+															</li>
+														{:else}
+															{#each abepVisible as option, index (option.value)}
+																<li class="contents">
+																	<button
+																		type="button"
+																		id={`cp-abep-option-${index}`}
+																		role="option"
+																		aria-selected={option.value === abepValue}
+																		class="block w-full cursor-pointer px-3 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted {index ===
+																		abepActiveIndex
+																			? 'bg-surface-muted'
+																			: ''}"
+																		onmousedown={(e) => e.preventDefault()}
+																		onclick={() => selectAbep(option.value, option.label)}
+																	>
+																		{option.label}
+																	</button>
+																</li>
+															{/each}
+														{/if}
+													</ul>
+												{/if}
+											</div>
+											{/if}
+										{:else if activeSection === 2}
 											<h3 class={sectionTitleClass}>Classificação</h3>
 											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
 												<div class="flex flex-col gap-1.5">
@@ -1105,142 +1189,59 @@
 											</div>
 
 											<div class="flex flex-col gap-5 border-t border-border-subtle pt-5">
-												<h3 class={sectionTitleClass}>Objetivos e indicadores</h3>
-												<ObjetivoPicker
-													{objetivos}
-													{objetivoId}
-													{resultados}
-													{resultadoId}
-													{resultadosLoading}
-													{indicadores}
-													{indicadoresLoading}
-													{selectedIndicadores}
-													{revealedIndicadores}
-													onObjetivoSelect={(id) => {
-														objetivoId = id;
-														void onObjetivoChange();
-													}}
-													onResultadoSelect={(id) => {
-														resultadoId = id;
-														void onResultadoChange();
-													}}
-													onToggleIndicador={toggleIndicador}
-												/>
-
-												<!-- Indicadores ABEP (combobox) — LEGADO, oculto via SHOW_ABEP.
-													 Código mantido para reativação futura. -->
-												{#if SHOW_ABEP}
-												<div class="relative flex flex-col gap-1.5">
-													<label for="cp-abep" class={labelClass}>Indicadores ABEP</label>
-													<input
-														id="cp-abep"
-														type="text"
-														autocomplete="off"
-														role="combobox"
-														aria-expanded={abepOpen}
-														aria-controls="cp-abep-listbox"
-														aria-autocomplete="list"
-														aria-activedescendant={abepActiveIndex >= 0
-															? `cp-abep-option-${abepActiveIndex}`
-															: undefined}
-														bind:value={abepLabel}
-														oninput={onAbepInput}
-														onfocus={openAbep}
-														onkeydown={onAbepKeydown}
-														onblur={() => setTimeout(closeAbep, 120)}
-														placeholder="Busque por número ou título do indicador ABEP"
-														class={fieldClass}
+												<h3 class={sectionTitleClass}>Links e observações</h3>
+												<div class="rounded-lg border border-border-subtle">
+													<LinkFieldRow
+														id="cp-sei"
+														label="Processo SEI-RJ"
+														first
+														filled={seiList.length > 0}
+														preview={seiRowPreview}
+														onEditorOpen={onSeiRowOpen}
+														onEditorConfirm={onSeiRowConfirm}
+														onEditorCancel={onSeiRowCancel}
+													>
+														{#snippet editor()}
+															<SeiProcessField
+																fieldId="cp-sei"
+																processes={seiList}
+																onSave={(list) => (seiList = list)}
+															/>
+														{/snippet}
+													</LinkFieldRow>
+													<LinkFieldRow
+														id="cp-github"
+														label="Link GitHub"
+														placeholder="https://github.com/..."
+														value={githubLink}
+														onCommit={(v) => (githubLink = v)}
 													/>
-													{#if abepOpen}
-														<ul
-															id="cp-abep-listbox"
-															role="listbox"
-															aria-label="Indicadores ABEP"
-															transition:fly={{ y: -4, duration: 160, easing: cubicOut }}
-															class="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-auto rounded-md border border-border-subtle bg-surface py-1 shadow-md"
-														>
-															{#if abepVisible.length === 0}
-																<li class="px-3 py-2 text-sm text-text-muted">
-																	Nenhum indicador encontrado
-																</li>
-															{:else}
-																{#each abepVisible as option, index (option.value)}
-																	<li class="contents">
-																		<button
-																			type="button"
-																			id={`cp-abep-option-${index}`}
-																			role="option"
-																			aria-selected={option.value === abepValue}
-																			class="block w-full cursor-pointer px-3 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-surface-muted {index ===
-																			abepActiveIndex
-																				? 'bg-surface-muted'
-																				: ''}"
-																			onmousedown={(e) => e.preventDefault()}
-																			onclick={() => selectAbep(option.value, option.label)}
-																		>
-																			{option.label}
-																		</button>
-																	</li>
-																{/each}
-															{/if}
-														</ul>
-													{/if}
+													<LinkFieldRow
+														id="cp-doc"
+														label="Link documentação"
+														placeholder="https://..."
+														value={documentationLink}
+														onCommit={(v) => (documentationLink = v)}
+													/>
+													<LinkFieldRow
+														id="cp-product"
+														label="Link para o produto"
+														placeholder="https://..."
+														value={productLink}
+														onCommit={(v) => (productLink = v)}
+													/>
+													<LinkFieldRow
+														id="cp-obs"
+														label="Observações"
+														multiline
+														last
+														placeholder="Digite observações detalhadas sobre o projeto..."
+														value={observacao}
+														onCommit={(v) => (observacao = v)}
+													/>
 												</div>
-												{/if}
+												<p class="-mt-2 text-xs text-text-muted">{linkRowsSummary}</p>
 											</div>
-										{:else if activeSection === 2}
-											<h3 class={sectionTitleClass}>Links e observações</h3>
-											<div class="rounded-lg border border-border-subtle">
-												<LinkFieldRow
-													id="cp-sei"
-													label="Processo SEI-RJ"
-													first
-													filled={seiList.length > 0}
-													preview={seiRowPreview}
-													onEditorOpen={onSeiRowOpen}
-													onEditorConfirm={onSeiRowConfirm}
-													onEditorCancel={onSeiRowCancel}
-												>
-													{#snippet editor()}
-														<SeiProcessField
-															fieldId="cp-sei"
-															processes={seiList}
-															onSave={(list) => (seiList = list)}
-														/>
-													{/snippet}
-												</LinkFieldRow>
-												<LinkFieldRow
-													id="cp-github"
-													label="Link GitHub"
-													placeholder="https://github.com/..."
-													value={githubLink}
-													onCommit={(v) => (githubLink = v)}
-												/>
-												<LinkFieldRow
-													id="cp-doc"
-													label="Link documentação"
-													placeholder="https://..."
-													value={documentationLink}
-													onCommit={(v) => (documentationLink = v)}
-												/>
-												<LinkFieldRow
-													id="cp-product"
-													label="Link para o produto"
-													placeholder="https://..."
-													value={productLink}
-													onCommit={(v) => (productLink = v)}
-												/>
-												<LinkFieldRow
-													id="cp-obs"
-													label="Observações"
-													multiline
-													last
-													placeholder="Digite observações detalhadas sobre o projeto..."
-													value={observacao}
-													onCommit={(v) => (observacao = v)}
-												/>
-											</div>
-											<p class="-mt-2 text-xs text-text-muted">{linkRowsSummary}</p>
 										{:else}
 											<h3 class={sectionTitleClass}>Modelo de etapas</h3>
 											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-5">
