@@ -49,6 +49,36 @@ def test_no_orgao_user_metadata_routes_fail_closed(app, client, seed_data):
     assert "Projeto VPD" not in search_response.get_data(as_text=True)
 
 
+def test_project_detail_redirect_preserves_focus_etapa_query(client_user, seed_data):
+    """KEEP-ENDPOINT /project/<id> deve carregar o query string ao redirecionar.
+
+    Regressão do bug 2.15: o deep-link ?focus_etapa=<id> vindo da busca global era
+    descartado, então a SPA nunca recebia a etapa-alvo.
+    """
+    project_id = seed_data["project_id"]
+
+    response = client_user.get(
+        f"/project/{project_id}?focus_etapa=12", follow_redirects=False
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith(
+        f"/projetos/{project_id}?focus_etapa=12"
+    )
+
+
+def test_project_detail_redirect_without_query_has_no_dangling_question_mark(
+    client_user, seed_data
+):
+    project_id = seed_data["project_id"]
+
+    response = client_user.get(f"/project/{project_id}", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith(f"/projetos/{project_id}")
+    assert "?" not in response.headers["Location"]
+
+
 def test_projects_csv_export_neutralizes_formula_text_cells(app, client_admin):
     with app.app_context():
         project = Project(

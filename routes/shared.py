@@ -2,11 +2,11 @@ import datetime
 from zoneinfo import ZoneInfo
 
 from flask import abort, current_app, g, request, url_for
-from sqlalchemy import inspect
+from sqlalchemy import ColumnElement, and_, inspect, or_
 
 from catalogs.abep import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
 from catalogs.inventario import INVENTARIO_ORGAO_SIGLAS
-from models import ProjectHistory, db
+from models import OrgaoUnidade, Project, ProjectHistory, db
 from catalogs.objectives import (
     OBJETIVO_IDS,
     get_indicadores_por_resultado,
@@ -106,6 +106,29 @@ def parse_db_integer_id(raw_value):
     if parsed_id < DB_INTEGER_MIN or parsed_id > DB_INTEGER_MAX:
         return None
     return parsed_id
+
+
+def project_orgao_search_filter(pattern: str) -> ColumnElement[bool]:
+    """Casa o órgão de um projeto contra ``pattern`` (ilike), preferindo o atual.
+
+    Bug 2.8: ``Project.orgao`` (texto legado) dessincroniza de ``Project.orgao_id``
+    — a SPA ao trocar Área Responsável grava só ``orgao_id``, deixando o texto
+    stale/None. Casamos o órgão ATUAL via relacionamento (sigla/nome) com
+    ``.has()`` (EXISTS, sem join que duplique linhas) e usamos o texto legado
+    APENAS como fallback para projetos SEM ``orgao_id``.
+
+    Exemplo de uso:
+        >>> query.filter(project_orgao_search_filter(f"%{term}%"))
+    """
+    return or_(
+        Project.orgao_ref.has(
+            or_(
+                OrgaoUnidade.sigla.ilike(pattern),
+                OrgaoUnidade.nome.ilike(pattern),
+            )
+        ),
+        and_(Project.orgao_id.is_(None), Project.orgao.ilike(pattern)),
+    )
 
 
 def parse_abep_indicator_filter(raw_value):

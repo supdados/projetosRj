@@ -30,7 +30,7 @@ from .search_serializers import (
     _serialize_stage_rows,
     _serialize_task_rows,
 )
-from .shared import parse_db_integer_id
+from .shared import parse_db_integer_id, project_orgao_search_filter
 
 GLOBAL_SEARCH_DEFAULT_LIMIT = 5
 GLOBAL_SEARCH_API_MAX_LIMIT = 20
@@ -84,7 +84,7 @@ def _project_search_query(term: str, user, scope: _SearchScope):
 
     project_text_filters = or_(
         Project.titulo.ilike(search_pattern),
-        Project.orgao.ilike(search_pattern),
+        project_orgao_search_filter(search_pattern),
         Project.short_description.ilike(search_pattern),
         Project.observacao.ilike(search_pattern),
     )

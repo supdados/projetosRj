@@ -23,7 +23,7 @@
 	 *   - 404 `not_found`; 403 `forbidden`; 401 ja redireciona em `client.ts`.
 	 * Links internos sao base-aware (`$app/paths`).
 	 */
-	import { onMount, setContext } from 'svelte';
+	import { onMount, setContext, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { base } from '$app/paths';
 	import { goto, replaceState } from '$app/navigation';
@@ -72,6 +72,7 @@
 	import SeiProcessField from '$lib/components/SeiProcessField.svelte';
 	import EeggInlineEditor from '$lib/components/EeggInlineEditor.svelte';
 	import StageList from '$lib/components/StageList.svelte';
+	import { resolveFocusEtapaId } from '$lib/utils/focusEtapa';
 	import ImportModelModal from '$lib/components/ImportModelModal.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import ConcludeCelebrationOverlay from '$lib/components/ConcludeCelebrationOverlay.svelte';
@@ -471,6 +472,46 @@
 			replaceState(url, {});
 		}
 	}
+
+	// --- Deep-link ?focus_etapa=<id> (etapa vinda da busca global) -----------
+	// Após as etapas carregarem, rola até a linha da etapa-alvo e a destaca por
+	// alguns segundos; o param é consumido UMA vez e removido da URL (replaceState)
+	// para não repetir num refresh/voltar. Etapa inexistente => ignora em silêncio.
+	let highlightEtapaId = $state<number | null>(null);
+	let highlightTimer: ReturnType<typeof setTimeout> | null = null;
+	let focusEtapaConsumed = false;
+
+	function clearFocusEtapaParam(): void {
+		const url = new URL(window.location.href);
+		if (url.searchParams.has('focus_etapa')) {
+			url.searchParams.delete('focus_etapa');
+			replaceState(url, {});
+		}
+	}
+
+	async function focusEtapaRow(etapaId: number): Promise<void> {
+		await tick();
+		const row = document.querySelector<HTMLElement>(`tr[data-etapa-id="${etapaId}"]`);
+		if (!row) return;
+		row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		highlightEtapaId = etapaId;
+		if (highlightTimer) clearTimeout(highlightTimer);
+		highlightTimer = setTimeout(() => {
+			highlightEtapaId = null;
+			highlightTimer = null;
+		}, 2400);
+	}
+
+	$effect(() => {
+		if (focusEtapaConsumed || loadState !== 'ready' || !data) return;
+		focusEtapaConsumed = true;
+		const target = resolveFocusEtapaId(
+			window.location.search,
+			data.etapas.map((e) => e.id)
+		);
+		clearFocusEtapaParam();
+		if (target !== null) void focusEtapaRow(target);
+	});
 
 	// --- Edicao inline de campos do projeto (cabecalho + demais) -------------
 
@@ -984,6 +1025,9 @@
 		// Deep-link do histórico (redirect da antiga página /historico).
 		if ($page.url.searchParams.has('historico')) historyOpen = true;
 		void load();
+		return () => {
+			if (highlightTimer) clearTimeout(highlightTimer);
+		};
 	});
 </script>
 
@@ -1340,6 +1384,7 @@
 		<StageList
 			etapas={data.etapas}
 			{projectId}
+			{highlightEtapaId}
 			readonly={fieldsLocked}
 			{reordering}
 			{reorderError}

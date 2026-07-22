@@ -39,6 +39,7 @@ from routes.shared import (
     parse_db_integer_id,
     parse_abep_indicator_filter,
     parse_objetivo_filter,
+    project_orgao_search_filter,
 )
 
 CSV_FORMULA_PREFIXES = ("=", "+", "-", "@")
@@ -131,7 +132,7 @@ def build_projects_list_context(
         search_id = parse_db_integer_id(search_query)
         text_filters = db.or_(
             Project.titulo.ilike(search_pattern),
-            Project.orgao.ilike(search_pattern),
+            project_orgao_search_filter(search_pattern),
             Project.abep_indicator.ilike(search_pattern),
         )
         query = query.filter(
@@ -168,6 +169,12 @@ def build_projects_list_context(
     # Aplicar paginação manualmente (já que alguns filtros são em Python)
     total_projects = len(all_projects_filtered)
     total_pages = (total_projects + per_page - 1) // per_page  # Ceiling division
+
+    # Clampar page fora do intervalo válido (evita slice negativo com page<=0)
+    if total_pages == 0:
+        page = 1
+    else:
+        page = max(1, min(page or 1, total_pages))
 
     # Calcular índices para slice
     start_idx = (page - 1) * per_page
@@ -381,7 +388,7 @@ def build_projetos_pendentes_context(
         search_id = parse_db_integer_id(search_query)
         text_filters = db.or_(
             Project.titulo.ilike(search_pattern),
-            Project.orgao.ilike(search_pattern),
+            project_orgao_search_filter(search_pattern),
             Project.abep_indicator.ilike(search_pattern),
         )
         query_projetos_base = query_projetos_base.filter(
@@ -678,8 +685,13 @@ def project_detail(project_id):
     busca apontam para ``/project/<id>``. Uma notificação antiga abre agora a SPA
     em ``/projetos/<id>``; o controle de acesso é reforçado pela API do detalhe
     (``/api/projetos/<id>``). A tela Jinja ``detail.html`` foi cortada.
+
+    Preserva o query string original (ex.: ``?focus_etapa=<id>`` vindo da busca)
+    para que o deep-link chegue intacto à SPA.
     """
-    return redirect(f"/projetos/{project_id}")
+    query_string = request.query_string.decode("utf-8")
+    suffix = f"?{query_string}" if query_string else ""
+    return redirect(f"/projetos/{project_id}{suffix}")
 
 
 def build_project_history_context(project_id):

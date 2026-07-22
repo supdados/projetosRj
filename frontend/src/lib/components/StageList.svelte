@@ -39,6 +39,8 @@
 	interface Props {
 		etapas: EtapaDetail[];
 		projectId: number;
+		/** Etapa em destaque temporário (deep-link ?focus_etapa da busca global). */
+		highlightEtapaId?: number | null;
 		readonly?: boolean;
 		reordering?: boolean;
 		reorderError?: string | null;
@@ -74,6 +76,7 @@
 	let {
 		etapas,
 		projectId,
+		highlightEtapaId = null,
 		readonly = false,
 		reordering = false,
 		reorderError = null,
@@ -491,6 +494,7 @@
 						{readonly}
 						dragging={collapsedId === etapa.id}
 						settled={settledId === etapa.id}
+						highlighted={highlightEtapaId === etapa.id}
 						fieldStates={st.fields}
 						busy={st.busy}
 						rowError={st.error}

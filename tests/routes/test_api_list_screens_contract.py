@@ -88,6 +88,29 @@ def test_api_projetos_card_reuses_serializer_without_secrets(client_user):
     assert "password_hash" not in card
 
 
+def test_api_projetos_page_negative_or_zero_clamps_to_first_page(client_user):
+    """Bug 2.20: page<=0 não deve gerar slice negativo; deve clampar para 1."""
+    data_page_1 = _assert_ok_envelope(client_user.get("/api/projetos").get_json())
+    data_neg = _assert_ok_envelope(client_user.get("/api/projetos?page=-1").get_json())
+    data_zero = _assert_ok_envelope(client_user.get("/api/projetos?page=0").get_json())
+
+    assert data_neg["pagination"]["page"] == 1
+    assert data_zero["pagination"]["page"] == 1
+    assert data_neg["projetos"] == data_page_1["projetos"]
+    assert data_zero["projetos"] == data_page_1["projetos"]
+
+
+def test_api_projetos_page_beyond_total_clamps_to_last_page(client_user):
+    """page maior que o total de páginas deve clampar para a última página."""
+    data = _assert_ok_envelope(client_user.get("/api/projetos").get_json())
+    total_pages = data["pagination"]["total_pages"]
+
+    response = client_user.get("/api/projetos?page=999999")
+    data_beyond = _assert_ok_envelope(response.get_json())
+
+    assert data_beyond["pagination"]["page"] == max(1, total_pages)
+
+
 def test_api_projetos_returns_401_json_when_unauthenticated(client):
     response = client.get("/api/projetos")
 

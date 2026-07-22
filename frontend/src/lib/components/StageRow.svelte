@@ -37,6 +37,8 @@
 		dragging?: boolean;
 		/** Acabou de aterrissar no drop — pulso de assentamento. */
 		settled?: boolean;
+		/** Destaque temporário (deep-link ?focus_etapa da busca global). */
+		highlighted?: boolean;
 		fieldStates?: Partial<Record<EtapaInlineField, FieldState>>;
 		busy?: boolean;
 		rowError?: string | null;
@@ -62,6 +64,7 @@
 		readonly = false,
 		dragging = false,
 		settled = false,
+		highlighted = false,
 		fieldStates = {},
 		busy = false,
 		rowError = null,
@@ -192,7 +195,11 @@
 
 {#if isMeeting}
 	<!-- ===== Linha de reunião Google (read-only) ===== -->
-	<tr class="etapa-row etapa-row-google-meeting" data-etapa-id={etapa.id}>
+	<tr
+		class="etapa-row etapa-row-google-meeting"
+		class:is-focus-highlight={highlighted}
+		data-etapa-id={etapa.id}
+	>
 		<td class="cell-drag cell-meeting-drag">
 			<i class="fab fa-google etapa-meeting-drag-icon" aria-hidden="true"></i>
 		</td>
@@ -219,6 +226,7 @@
 				: ''}"
 		class:is-dragging={dragging}
 		class:is-drop-settling={settled}
+		class:is-focus-highlight={highlighted}
 		data-etapa-id={etapa.id}
 		aria-busy={busy}
 	>
@@ -491,6 +499,27 @@
 	@media (prefers-reduced-motion: reduce) {
 		.etapa-row.is-drop-settling :global(td) {
 			animation: none;
+		}
+	}
+
+	/* Destaque do deep-link ?focus_etapa (busca global): segura o realce e some
+	   suave. Aplica no <td> pela mesma razão do pulso de drop (background). */
+	@keyframes stage-focus-highlight {
+		0%,
+		62% {
+			background-color: color-mix(in srgb, var(--ds-color-primary-500) 16%, transparent);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+	.etapa-row.is-focus-highlight :global(td) {
+		animation: stage-focus-highlight 2.4s ease;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.etapa-row.is-focus-highlight :global(td) {
+			animation: none;
+			background-color: color-mix(in srgb, var(--ds-color-primary-500) 12%, transparent);
 		}
 	}
 
