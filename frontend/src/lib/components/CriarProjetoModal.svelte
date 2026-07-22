@@ -14,7 +14,8 @@
 	 *   - import de modelo com preview read-only e cálculo de datas no client;
 	 *   - criação só com título + área válidos (validação ao tentar salvar, com
 	 *     foco no campo faltante);
-	 *   - Esc fecha · Ctrl/Cmd+Enter salva · confirmação de descarte.
+	 *   - Esc fecha · Ctrl/Cmd+Enter salva (fora dos editores de linha, onde
+	 *     Enter/Ctrl+Enter salvam a linha) · confirmação de descarte.
 	 *
 	 * Submit: `POST /api/projetos` (via `createProject`). Em sucesso o modal
 	 * mostra a tela "Projeto criado"; `onCreated(result)` só dispara em
@@ -45,6 +46,8 @@
 	import { triggerTaskFinalizeConfetti } from '$lib/celebration/confettiEpic';
 	import '$lib/celebration/confetti.css';
 	import SeiProcessField from '$lib/components/SeiProcessField.svelte';
+	import LinkFieldRow from '$lib/components/LinkFieldRow.svelte';
+	import ObjetivoPicker from '$lib/components/ObjetivoPicker.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import DatePickerPanel from '$lib/components/DatePickerPanel.svelte';
@@ -202,15 +205,6 @@
 	// --- Opções dos SelectMenu (derivadas das constantes/catálogos acima) --
 	const deliveryTypeMenuOptions = $derived<SelectMenuOption[]>(
 		deliveryTypes.map((dt) => ({ value: dt, label: dt }))
-	);
-	const specialProjectMenuOptions = $derived<SelectMenuOption[]>(
-		specialOptions.map((sp) => ({ value: sp, label: sp }))
-	);
-	const objetivoMenuOptions = $derived<SelectMenuOption[]>(
-		objetivos.map((o) => ({ value: String(o.id), label: o.descricao }))
-	);
-	const resultadoMenuOptions = $derived<SelectMenuOption[]>(
-		resultados.map((r) => ({ value: String(r.id), label: r.descricao }))
 	);
 	const templateMenuOptions = $derived<SelectMenuOption[]>(
 		templates.map((t) => ({ value: String(t.id), label: t.name }))
@@ -403,6 +397,34 @@
 
 	// Números SEI: o SeiProcessField (compartilhado com o Detalhe) gerencia
 	// máscara/adição/remoção; aqui a lista é estado local até o submit.
+	// Snapshot da lista ao abrir a linha SEI: o onSave grava direto em seiList,
+	// então "cancelar" restaura e "confirmar" só decide a celebração.
+	let seiListSnapshot: string[] = [];
+
+	function onSeiRowOpen(): void {
+		seiListSnapshot = [...seiList];
+	}
+
+	function onSeiRowConfirm(): boolean {
+		return seiList.length > 0 && JSON.stringify(seiList) !== JSON.stringify(seiListSnapshot);
+	}
+
+	function onSeiRowCancel(): void {
+		seiList = [...seiListSnapshot];
+	}
+
+	const seiRowPreview = $derived(seiList.join(' · '));
+	const linkRowsFilled = $derived(
+		(seiList.length > 0 ? 1 : 0) +
+			[githubLink, documentationLink, productLink, observacao].filter(
+				(v) => v.trim().length > 0
+			).length
+	);
+	const linkRowsSummary = $derived(
+		linkRowsFilled === 0
+			? 'Nenhum item preenchido — você pode avançar direto.'
+			: `${linkRowsFilled} de 5 itens preenchidos.`
+	);
 
 	// --- ABEP combobox -----------------------------------------------------
 
@@ -1058,97 +1080,52 @@
 													/>
 												</div>
 												<div class="flex flex-col gap-1.5">
-													<label for="cp-special" class={labelClass}>Projetos especiais</label>
-													<SelectMenu
+													<span id="cp-special-label" class={labelClass}>Projetos especiais</span>
+													<div
 														id="cp-special"
-														options={specialProjectMenuOptions}
-														value={specialProject || null}
-														onSelect={(v) => (specialProject = v ?? '')}
-														allowAll
-														allLabel="Nenhum"
-														ariaLabel="Projetos especiais"
-													/>
+														role="group"
+														aria-labelledby="cp-special-label"
+														class="flex h-10 items-center gap-2"
+													>
+														{#each specialOptions as sp (sp)}
+															{@const selected = specialProject === sp}
+															<button
+																type="button"
+																aria-pressed={selected}
+																onclick={() => (specialProject = selected ? '' : sp)}
+																class="inline-flex h-10 flex-1 items-center justify-center rounded-lg border px-3 text-sm font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
+																	? 'border-primary-600 bg-primary-600 text-primary-fg'
+																	: 'border-border-subtle bg-surface text-text-secondary hover:border-primary-500'}"
+															>
+																{sp}
+															</button>
+														{/each}
+													</div>
 												</div>
 											</div>
 
 											<div class="flex flex-col gap-5 border-t border-border-subtle pt-5">
 												<h3 class={sectionTitleClass}>Objetivos e indicadores</h3>
-												<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
-													<div class="flex flex-col gap-1.5">
-														<label for="cp-objetivo" class={labelClass}>Objetivo EEGD</label>
-														<SelectMenu
-															id="cp-objetivo"
-															options={objetivoMenuOptions}
-															value={objetivoId || null}
-															onSelect={(v) => {
-																objetivoId = v ?? '';
-																void onObjetivoChange();
-															}}
-															allowAll
-															allLabel="Selecione um objetivo"
-															ariaLabel="Objetivo EEGD"
-														/>
-													</div>
-													<div class="flex flex-col gap-1.5">
-														<label for="cp-resultado" class={labelClass}>Resultado esperado EEGD</label>
-														<SelectMenu
-															id="cp-resultado"
-															options={resultadoMenuOptions}
-															value={resultadoId || null}
-															onSelect={(v) => {
-																resultadoId = v ?? '';
-																void onResultadoChange();
-															}}
-															disabled={!objetivoId || resultadosLoading}
-															allowAll
-															allLabel={resultadosLoading
-																? 'Carregando resultados...'
-																: 'Selecione um resultado esperado'}
-															ariaLabel="Resultado esperado EEGD"
-														/>
-													</div>
-												</div>
-
-												<div class="flex flex-col gap-2">
-													<span class={labelClass}>Indicadores EEGD</span>
-													{#if indicadoresLoading}
-														<p
-															role="status"
-															aria-live="polite"
-															class="flex items-center gap-2 text-sm text-text-secondary"
-														>
-															{@render spinner()}Carregando indicadores...
-														</p>
-													{:else if !resultadoId}
-														<p class={emptyBoxClass}>
-															Selecione um resultado esperado para ver os indicadores disponíveis.
-														</p>
-													{:else if indicadores.length === 0}
-														<p class={emptyBoxClass}>
-															Nenhum indicador disponível para este resultado esperado.
-														</p>
-													{:else}
-														<div class="flex flex-wrap gap-2">
-															{#each indicadores as ind (ind.id)}
-																{@const checked = selectedIndicadores.includes(ind.id)}
-																<button
-																	type="button"
-																	aria-pressed={checked}
-																	onclick={() => toggleIndicador(ind.id)}
-																	class="inline-flex items-center rounded-lg border px-3 py-2 text-left text-xs transition-[opacity,transform,color,background-color,border-color] duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {checked
-																		? 'border-primary-500 bg-primary-100 font-medium text-primary-700'
-																		: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:text-text-primary'} {revealedIndicadores.has(
-																		ind.id
-																	)
-																		? 'translate-y-0 opacity-100'
-																		: 'translate-y-1 opacity-0'}"
-																>
-																	{ind.descricao}
-																</button>
-															{/each}
-														</div>
-													{/if}
-												</div>
+												<ObjetivoPicker
+													{objetivos}
+													{objetivoId}
+													{resultados}
+													{resultadoId}
+													{resultadosLoading}
+													{indicadores}
+													{indicadoresLoading}
+													{selectedIndicadores}
+													{revealedIndicadores}
+													onObjetivoSelect={(id) => {
+														objetivoId = id;
+														void onObjetivoChange();
+													}}
+													onResultadoSelect={(id) => {
+														resultadoId = id;
+														void onResultadoChange();
+													}}
+													onToggleIndicador={toggleIndicador}
+												/>
 
 												<!-- Indicadores ABEP (combobox) — LEGADO, oculto via SHOW_ABEP.
 													 Código mantido para reativação futura. -->
@@ -1213,56 +1190,57 @@
 											</div>
 										{:else if activeSection === 2}
 											<h3 class={sectionTitleClass}>Links e observações</h3>
-											<div class="flex flex-col gap-5">
-												<div class="flex flex-col gap-1.5">
-													<span class={labelClass}>Processo SEI-RJ</span>
-													<SeiProcessField
-														fieldId="cp-sei"
-														processes={seiList}
-														onSave={(list) => (seiList = list)}
-													/>
-												</div>
-												<div class="flex flex-col gap-1.5">
-													<label for="cp-github" class={labelClass}>Link GitHub</label>
-													<input
-														id="cp-github"
-														bind:value={githubLink}
-														type="text"
-														placeholder="https://github.com/..."
-														class={fieldClass}
-													/>
-												</div>
-												<div class="flex flex-col gap-1.5">
-													<label for="cp-doc" class={labelClass}>Link documentação</label>
-													<input
-														id="cp-doc"
-														bind:value={documentationLink}
-														type="text"
-														placeholder="https://..."
-														class={fieldClass}
-													/>
-												</div>
-												<div class="flex flex-col gap-1.5">
-													<label for="cp-product" class={labelClass}>Link para o produto</label>
-													<input
-														id="cp-product"
-														bind:value={productLink}
-														type="text"
-														placeholder="https://..."
-														class={fieldClass}
-													/>
-												</div>
-											</div>
-											<div class="flex flex-col gap-1.5">
-												<label for="cp-obs" class={labelClass}>Observações</label>
-												<textarea
+											<div class="rounded-lg border border-border-subtle">
+												<LinkFieldRow
+													id="cp-sei"
+													label="Processo SEI-RJ"
+													first
+													filled={seiList.length > 0}
+													preview={seiRowPreview}
+													onEditorOpen={onSeiRowOpen}
+													onEditorConfirm={onSeiRowConfirm}
+													onEditorCancel={onSeiRowCancel}
+												>
+													{#snippet editor()}
+														<SeiProcessField
+															fieldId="cp-sei"
+															processes={seiList}
+															onSave={(list) => (seiList = list)}
+														/>
+													{/snippet}
+												</LinkFieldRow>
+												<LinkFieldRow
+													id="cp-github"
+													label="Link GitHub"
+													placeholder="https://github.com/..."
+													value={githubLink}
+													onCommit={(v) => (githubLink = v)}
+												/>
+												<LinkFieldRow
+													id="cp-doc"
+													label="Link documentação"
+													placeholder="https://..."
+													value={documentationLink}
+													onCommit={(v) => (documentationLink = v)}
+												/>
+												<LinkFieldRow
+													id="cp-product"
+													label="Link para o produto"
+													placeholder="https://..."
+													value={productLink}
+													onCommit={(v) => (productLink = v)}
+												/>
+												<LinkFieldRow
 													id="cp-obs"
-													bind:value={observacao}
-													rows="4"
+													label="Observações"
+													multiline
+													last
 													placeholder="Digite observações detalhadas sobre o projeto..."
-													class={areaClass}
-												></textarea>
+													value={observacao}
+													onCommit={(v) => (observacao = v)}
+												/>
 											</div>
+											<p class="-mt-2 text-xs text-text-muted">{linkRowsSummary}</p>
 										{:else}
 											<h3 class={sectionTitleClass}>Modelo de etapas</h3>
 											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-5">
