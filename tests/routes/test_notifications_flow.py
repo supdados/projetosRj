@@ -299,3 +299,99 @@ def test_legacy_project_without_owner_notifies_area_admin(app):
             .first()
         )
         assert notification is not None
+
+
+def _add_notification(recipient_user_id, title, target_url):
+    notification = UserNotification(
+        recipient_user_id=recipient_user_id,
+        actor_user_id=None,
+        event_type="task_comment_added",
+        title=title,
+        message=f"Mensagem de {title}",
+        target_url=target_url,
+    )
+    db.session.add(notification)
+    return notification
+
+
+def test_task_notification_outside_scope_hidden_from_list_and_unread(
+    app, client_user, seed_data
+):
+    with app.app_context():
+        _add_notification(
+            seed_data["user_id"],
+            "Tarefa VPD oculta",
+            f"/tarefas/{seed_data['foreign_task_id']}",
+        )
+        _add_notification(
+            seed_data["user_id"],
+            "Tarefa propria visivel",
+            f"/tarefas/{seed_data['task_id']}",
+        )
+        db.session.commit()
+
+    response = client_user.get("/api/notificacoes")
+    assert response.status_code == 200
+    data = response.get_json()["data"]
+    titles = [item["title"] for item in data["items"]]
+    assert "Tarefa propria visivel" in titles
+    assert "Tarefa VPD oculta" not in titles
+    assert data["unread_count"] == 1
+
+    dropdown_response = client_user.post("/api/notificacoes/dropdown")
+    assert dropdown_response.status_code == 200
+    dropdown_titles = [item["title"] for item in dropdown_response.get_json()["items"]]
+    assert "Tarefa propria visivel" in dropdown_titles
+    assert "Tarefa VPD oculta" not in dropdown_titles
+
+
+def test_deleted_task_notification_keeps_snapshot_visible(app, client_user, seed_data):
+    with app.app_context():
+        _add_notification(
+            seed_data["user_id"], "Tarefa apagada snapshot", "/tarefas/999999"
+        )
+        db.session.commit()
+
+    data = client_user.get("/api/notificacoes").get_json()["data"]
+    titles = [item["title"] for item in data["items"]]
+    assert "Tarefa apagada snapshot" in titles
+    assert data["unread_count"] == 1
+
+
+def test_project_tasks_focus_target_outside_scope_hidden(app, client_user, seed_data):
+    with app.app_context():
+        _add_notification(
+            seed_data["user_id"],
+            "Focus fora do escopo",
+            f"/projeto/{seed_data['foreign_project_id']}/tarefas"
+            f"?focus_task={seed_data['foreign_task_id']}",
+        )
+        db.session.commit()
+
+    data = client_user.get("/api/notificacoes").get_json()["data"]
+    assert all(item["title"] != "Focus fora do escopo" for item in data["items"])
+    assert data["unread_count"] == 0
+
+
+def test_spa_project_target_outside_scope_hidden(app, client_user, seed_data):
+    with app.app_context():
+        _add_notification(
+            seed_data["user_id"],
+            "Projeto SPA fora do escopo",
+            f"/projetos/{seed_data['foreign_project_id']}",
+        )
+        db.session.commit()
+
+    data = client_user.get("/api/notificacoes").get_json()["data"]
+    assert all(item["title"] != "Projeto SPA fora do escopo" for item in data["items"])
+    assert data["unread_count"] == 0
+
+
+def test_unrecognized_target_notification_visible(app, client_user, seed_data):
+    with app.app_context():
+        _add_notification(seed_data["user_id"], "Alvo generico", "/calendario?evento=3")
+        db.session.commit()
+
+    data = client_user.get("/api/notificacoes").get_json()["data"]
+    assert any(item["title"] == "Alvo generico" for item in data["items"])
+    assert data["unread_count"] == 1

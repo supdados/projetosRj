@@ -3,46 +3,115 @@ from urllib.parse import urlparse
 from typing import Any
 
 from flask import Response, g, jsonify
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
-from models import Project, UserNotification, db
-from routes.orgao_scope import user_can_access_project
+from models import Etapa, Project, Task, UserNotification, db
+from routes.orgao_scope import get_user_orgao_subtree_ids
 from time_utils import iso_utc, utc_now
 
-from .api.envelope import fail, ok
+from .api.envelope import ok
 from .api.negotiation import api_login_required
 from .blueprint import main_bp
 from .decorators import login_required
 from .shared import format_local_time
 
-PROJECT_TARGET_RE = re.compile(r"^/project/(\d+)(?:$|/|\?)")
+PROJECT_TARGET_RE = re.compile(r"^/(?:project|projetos?)/(\d+)(?:$|/)")
+TASK_TARGET_RE = re.compile(r"^/tarefas/(\d+)(?:$|/)")
+
+TargetRef = tuple[str, int]
 
 
-def _project_id_from_notification_target(target_url):
+def _notification_target_ref(target_url: str | None) -> TargetRef | None:
+    """Extrai ``("project"|"task", id)`` do ``target_url``; ``None`` se não reconhecido.
+
+    Cobre ``/project/<id>``, ``/projeto/<id>[/tarefas]``, ``/projetos/<id>`` e
+    ``/tarefas/<id>``. URL desconhecida mantém a notificação visível.
+    """
     path = urlparse(target_url or "").path
-    match = PROJECT_TARGET_RE.match(path)
-    if not match:
-        return None
-    try:
-        return int(match.group(1))
-    except ValueError:
-        return None
+    project_match = PROJECT_TARGET_RE.match(path)
+    if project_match:
+        return ("project", int(project_match.group(1)))
+    task_match = TASK_TARGET_RE.match(path)
+    if task_match:
+        return ("task", int(task_match.group(1)))
+    return None
 
 
-def _can_show_notification(notification):
-    project_id = _project_id_from_notification_target(notification.target_url)
+def _project_ids_by_task(task_ids: set[int]) -> dict[int, int | None]:
+    """Mapeia task_id → project_id em uma query (coalesce cobre legadas via etapa)."""
+    if not task_ids:
+        return {}
+    rows = (
+        db.session.query(Task.id, func.coalesce(Task.project_id, Etapa.project_id))
+        .outerjoin(Etapa, Task.etapa_id == Etapa.id)
+        .filter(Task.id.in_(task_ids))
+        .all()
+    )
+    return {task_id: project_id for task_id, project_id in rows}
+
+
+def _accessible_project_ids(project_ids: set[int]) -> set[int]:
+    """Filtra em lote os projetos que ``g.user`` pode ver (escopo de órgão).
+
+    Mesma semântica de ``user_can_access_project`` (admin sempre; ``orgao_id``
+    None nega), mas resolve o subtree UMA vez — evita 1 query de closure por
+    projeto no badge da topnav.
+    """
+    if not project_ids or g.user is None:
+        return set()
+    projects = Project.query.filter(Project.id.in_(project_ids)).all()
+    if getattr(g.user, "is_admin", False):
+        return {p.id for p in projects}
+    subtree = get_user_orgao_subtree_ids(g.user)
+    return {p.id for p in projects if p.orgao_id is not None and p.orgao_id in subtree}
+
+
+def _can_show_notification(
+    ref: TargetRef | None,
+    accessible_project_ids: set[int],
+    project_ids_by_task: dict[int, int | None],
+) -> bool:
+    if ref is None:
+        return True
+    kind, ref_id = ref
+    if kind == "project":
+        return ref_id in accessible_project_ids
+    if ref_id not in project_ids_by_task:
+        # Tarefa deletada: o snapshot histórico da notificação permanece visível.
+        return True
+    project_id = project_ids_by_task[ref_id]
     if project_id is None:
         return True
+    return project_id in accessible_project_ids
 
-    project = db.session.get(Project, project_id)
-    return bool(project and user_can_access_project(g.user, project))
+
+def _filter_visible_notifications(
+    notifications: list[UserNotification],
+) -> list[UserNotification]:
+    """Aplica o escopo de órgão resolvendo projeto/tarefa dos targets em lote.
+
+    Prefetch em 2 queries (tasks e projects via ``in_``) para evitar N+1 ao
+    iterar todas as notificações do usuário.
+    """
+    refs = [_notification_target_ref(n.target_url) for n in notifications]
+    task_ids = {ref[1] for ref in refs if ref and ref[0] == "task"}
+    project_ids_by_task = _project_ids_by_task(task_ids)
+    project_ids = {ref[1] for ref in refs if ref and ref[0] == "project"}
+    project_ids.update(pid for pid in project_ids_by_task.values() if pid is not None)
+    accessible = _accessible_project_ids(project_ids)
+    return [
+        notification
+        for notification, ref in zip(notifications, refs)
+        if _can_show_notification(ref, accessible, project_ids_by_task)
+    ]
 
 
 def _visible_notifications_for_current_user() -> list[UserNotification]:
     """Notificações do usuário corrente, mais recentes primeiro, já filtradas.
 
-    Reusa a MESMA query e o MESMO ``_can_show_notification`` do dropdown legado
-    (escopo de órgão server-side), para que SPA e legado nunca divirjam.
+    Reusa a MESMA query e o MESMO ``_filter_visible_notifications`` do dropdown
+    legado (escopo de órgão server-side), para que SPA e legado nunca divirjam.
     """
     candidates = (
         UserNotification.query.filter(UserNotification.recipient_user_id == g.user.id)
@@ -50,7 +119,7 @@ def _visible_notifications_for_current_user() -> list[UserNotification]:
         .order_by(UserNotification.created_at.desc(), UserNotification.id.desc())
         .all()
     )
-    return [n for n in candidates if _can_show_notification(n)]
+    return _filter_visible_notifications(candidates)
 
 
 def _serialize_notification(notification: UserNotification) -> dict[str, Any]:
@@ -127,11 +196,7 @@ def notifications_dropdown_api():
         .order_by(UserNotification.created_at.desc(), UserNotification.id.desc())
         .all()
     )
-    visible_notifications = [
-        notification
-        for notification in candidate_notifications
-        if _can_show_notification(notification)
-    ]
+    visible_notifications = _filter_visible_notifications(candidate_notifications)
     notifications = visible_notifications[:20]
     visible_unread_ids = [
         notification.id
