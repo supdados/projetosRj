@@ -164,6 +164,37 @@
 	}
 </script>
 
+{#snippet copyIcon()}
+	<svg
+		viewBox="0 0 24 24"
+		class="h-3.5 w-3.5"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"
+	>
+		<rect x="9" y="9" width="13" height="13" rx="2" />
+		<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+	</svg>
+{/snippet}
+
+{#snippet checkIcon()}
+	<svg
+		viewBox="0 0 24 24"
+		class="h-3.5 w-3.5"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"
+	>
+		<path d="M5 13l4.5 4.5L19 7" />
+	</svg>
+{/snippet}
+
 <svelte:window onkeydown={onWindowKeydown} />
 
 <div class="relative" onfocusout={onWrapperFocusOut}>
@@ -198,12 +229,16 @@
 				aria-label={copiedIndex === -1 ? 'Número copiado' : `Copiar ${firstNumber}`}
 				onmousedown={(e) => e.preventDefault()}
 				onclick={() => void copyNumber(firstNumber, -1)}
-				class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {copiedIndex ===
+				class="grid h-7 w-7 flex-none place-items-center rounded-md transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {copiedIndex ===
 				-1
-					? 'text-success'
+					? 'text-primary-600'
 					: 'text-text-muted'}"
 			>
-				<i class="fas {copiedIndex === -1 ? 'fa-check' : 'fa-copy'}" aria-hidden="true"></i>
+				{#if copiedIndex === -1}
+					{@render checkIcon()}
+				{:else}
+					{@render copyIcon()}
+				{/if}
 			</button>
 		{/if}
 
@@ -223,15 +258,26 @@
 				disabled={pending}
 				onmousedown={(e) => e.preventDefault()}
 				onclick={togglePopover}
-				class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-text-primary disabled:opacity-60"
+				class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 			>
 				{#if pending}
-					<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+					<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+						<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25" />
+						<path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+					</svg>
 				{:else}
-					<i
-						class="fas fa-chevron-down transition-transform duration-fast {open ? 'rotate-180' : ''}"
+					<svg
+						viewBox="0 0 24 24"
+						class="h-3.5 w-3.5 transition-transform duration-fast {open ? 'rotate-180' : ''}"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
 						aria-hidden="true"
-					></i>
+					>
+						<path d="M6 9l6 6 6-6" />
+					</svg>
 				{/if}
 			</button>
 		{/if}
@@ -255,13 +301,16 @@
 								aria-label={copiedIndex === index ? 'Número copiado' : `Copiar ${numero}`}
 								onmousedown={(e) => e.preventDefault()}
 								onclick={() => void copyNumber(numero, index)}
-								class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs transition-colors duration-fast ease-out hover:bg-surface hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {copiedIndex ===
+								class="grid h-7 w-7 flex-none place-items-center rounded-md transition-colors duration-fast hover:bg-surface hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {copiedIndex ===
 								index
-									? 'text-success'
+									? 'text-primary-600'
 									: 'text-text-muted'}"
 							>
-								<i class="fas {copiedIndex === index ? 'fa-check' : 'fa-copy'}" aria-hidden="true"
-								></i>
+								{#if copiedIndex === index}
+									{@render checkIcon()}
+								{:else}
+									{@render copyIcon()}
+								{/if}
 							</button>
 							{#if !readonly}
 								<button
@@ -271,9 +320,19 @@
 									disabled={pending}
 									onmousedown={(e) => e.preventDefault()}
 									onclick={() => removeAt(index)}
-									class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast ease-out hover:text-danger disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface hover:text-danger active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 								>
-									<i class="fas fa-xmark" aria-hidden="true"></i>
+									<svg
+										viewBox="0 0 24 24"
+										class="h-3.5 w-3.5"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										aria-hidden="true"
+									>
+										<path d="M6 6l12 12M18 6L6 18" />
+									</svg>
 								</button>
 							{/if}
 						</li>

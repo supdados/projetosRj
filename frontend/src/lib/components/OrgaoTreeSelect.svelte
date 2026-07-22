@@ -204,7 +204,7 @@
 					role="option"
 					aria-selected={value == null}
 					onclick={chooseTodos}
-					class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-[12.5px] font-semibold transition-colors duration-fast hover:bg-surface-muted {value ==
+					class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-[12.5px] font-medium transition-colors duration-fast hover:bg-surface-muted {value ==
 					null
 						? 'bg-primary-100 text-primary-700'
 						: 'text-text-primary'}"
@@ -278,7 +278,7 @@
 						</div>
 						<span class="min-w-0 flex-1 truncate" title={row.option.nome ?? undefined}>
 							{#if row.path}<span class="font-mono text-[11px] text-text-muted">{row.path} › </span
-								>{/if}<span class="font-mono text-[11.5px] font-bold text-text-primary"
+								>{/if}<span class="font-mono text-[11.5px] font-medium text-text-primary"
 								>{row.option.sigla ?? row.option.nome ?? ''}</span
 							>
 						</span>

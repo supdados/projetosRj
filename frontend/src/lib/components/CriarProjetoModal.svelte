@@ -162,7 +162,7 @@
 	const NAV_SECTIONS = [
 		'Informações',
 		'Objetivos e Indicadores',
-		'Classificação e Links',
+		'Links e Observações',
 		'Etapas'
 	];
 	let activeSection = $state(0);
@@ -226,11 +226,10 @@
 	const sectionDone = $derived<boolean[]>([
 		titulo.trim().length > 0 && orgaoId.trim().length > 0,
 		objetivoId !== '' && resultadoId !== '',
-		deliveryType !== '' &&
-			(seiList.length > 0 ||
-				[githubLink, documentationLink, productLink, observacao].some(
-					(v) => v.trim().length > 0
-				)),
+		seiList.length > 0 ||
+			[githubLink, documentationLink, productLink, observacao].some(
+				(v) => v.trim().length > 0
+			),
 		templateId !== ''
 	]);
 	const doneCount = $derived(sectionDone.filter(Boolean).length);
@@ -807,7 +806,7 @@
 				class="grid h-6 w-6 flex-none place-items-center rounded-md text-xs font-semibold {isActive
 					? 'bg-primary-600 text-primary-fg'
 					: isDone
-						? 'bg-[var(--ds-color-success-light-bg)] text-success'
+						? 'bg-[color-mix(in_srgb,var(--ds-color-primary-600)_10%,transparent)] text-primary-600'
 						: 'bg-border-subtle/60 text-text-muted'}"
 			>
 				{#if isDone && !isActive}
@@ -878,7 +877,7 @@
 						class="cp-success-icon h-32 w-32"
 						aria-hidden="true"
 					/>
-					<p class="font-heading text-xl font-bold text-text-primary">Projeto criado!</p>
+					<p class="font-heading text-xl font-semibold text-text-primary">Projeto criado!</p>
 					<p class="max-w-md text-center text-sm text-text-secondary">
 						{createdResult.project?.titulo ?? titulo.trim()}{orgaoSelecionadoLabel
 							? ` · ${orgaoSelecionadoLabel}`
@@ -929,7 +928,7 @@
 							<div class="flex-1"></div>
 							<div class="mx-0.5 mt-2.5 flex flex-col gap-2 border-t border-border-subtle px-2 pt-3.5">
 								<p
-									class="truncate text-sm font-semibold {titulo.trim()
+									class="truncate text-sm font-medium {titulo.trim()
 										? 'text-text-primary'
 										: 'text-text-muted'}"
 								>
@@ -959,28 +958,28 @@
 									<div class="flex animate-panel-in flex-col gap-5">
 										{#if activeSection === 0}
 											<h3 class={sectionTitleClass}>Informações principais</h3>
-											<div class="flex flex-col gap-1.5">
-												<label for="cp-titulo" class={labelClass}>
-													Título do projeto <span class="text-danger" aria-hidden="true">*</span>
-												</label>
-												<input
-													id="cp-titulo"
-													bind:this={titleInputEl}
-													bind:value={titulo}
-													type="text"
-													required
-													aria-invalid={tituloError}
-													placeholder="Digite o título do projeto"
-													class="{fieldClass} {tituloError ? fieldErrorClass : ''}"
-												/>
-												{#if tituloError}
-													<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
-														Informe o título do projeto.
-													</p>
-												{/if}
-											</div>
-											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-5">
-												<div class="flex flex-col gap-1.5 md:col-span-2">
+											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-10">
+												<div class="flex flex-col gap-1.5 md:col-span-7">
+													<label for="cp-titulo" class={labelClass}>
+														Título do projeto <span class="text-danger" aria-hidden="true">*</span>
+													</label>
+													<input
+														id="cp-titulo"
+														bind:this={titleInputEl}
+														bind:value={titulo}
+														type="text"
+														required
+														aria-invalid={tituloError}
+														placeholder="Digite o título do projeto"
+														class="{fieldClass} {tituloError ? fieldErrorClass : ''}"
+													/>
+													{#if tituloError}
+														<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
+															Informe o título do projeto.
+														</p>
+													{/if}
+												</div>
+												<div class="flex flex-col gap-1.5 md:col-span-3">
 													<label for="cp-orgao-id" class={labelClass}>
 														Área responsável <span class="text-danger" aria-hidden="true">*</span>
 													</label>
@@ -1016,6 +1015,18 @@
 														</p>
 													{/if}
 												</div>
+											</div>
+											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-5">
+												<div class="flex flex-col gap-1.5 md:col-span-2">
+													<label for="cp-orgao-texto" class={labelClass}>Órgão</label>
+													<input
+														id="cp-orgao-texto"
+														bind:value={orgaoTexto}
+														type="text"
+														placeholder="Digite o órgão responsável"
+														class={fieldClass}
+													/>
+												</div>
 												<div class="flex flex-col gap-1.5 md:col-span-3">
 													<span class={labelClass} id="cp-prioridade-label">Prioridade</span>
 													<div
@@ -1043,15 +1054,42 @@
 													</div>
 												</div>
 											</div>
-											<div class="flex flex-col gap-1.5">
-												<label for="cp-orgao-texto" class={labelClass}>Órgão</label>
-												<input
-													id="cp-orgao-texto"
-													bind:value={orgaoTexto}
-													type="text"
-													placeholder="Digite o órgão responsável"
-													class={fieldClass}
-												/>
+											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
+												<div class="flex flex-col gap-1.5">
+													<label for="cp-delivery" class={labelClass}>Tipo de entrega</label>
+													<SelectMenu
+														id="cp-delivery"
+														options={deliveryTypeMenuOptions}
+														value={deliveryType || null}
+														onSelect={(v) => (deliveryType = v ?? '')}
+														allowAll
+														allLabel="Selecione o tipo"
+														ariaLabel="Tipo de entrega"
+													/>
+												</div>
+												<div class="flex flex-col gap-1.5">
+													<span id="cp-special-label" class={labelClass}>Projetos especiais</span>
+													<div
+														id="cp-special"
+														role="group"
+														aria-labelledby="cp-special-label"
+														class="flex h-10 items-center gap-2"
+													>
+														{#each specialOptions as sp (sp)}
+															{@const selected = specialProject === sp}
+															<button
+																type="button"
+																aria-pressed={selected}
+																onclick={() => (specialProject = selected ? '' : sp)}
+																class="inline-flex h-10 flex-1 items-center justify-center rounded-lg border px-3 text-sm font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
+																	? 'border-primary-600 bg-primary-600 text-primary-fg'
+																	: 'border-border-subtle bg-surface text-text-secondary hover:border-primary-500'}"
+															>
+																{sp}
+															</button>
+														{/each}
+													</div>
+												</div>
 											</div>
 											<div class="flex flex-col gap-1.5">
 												<label for="cp-short-desc" class={labelClass}>Descrição breve</label>
@@ -1147,46 +1185,7 @@
 											</div>
 											{/if}
 										{:else if activeSection === 2}
-											<h3 class={sectionTitleClass}>Classificação</h3>
-											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
-												<div class="flex flex-col gap-1.5">
-													<label for="cp-delivery" class={labelClass}>Tipo de entrega</label>
-													<SelectMenu
-														id="cp-delivery"
-														options={deliveryTypeMenuOptions}
-														value={deliveryType || null}
-														onSelect={(v) => (deliveryType = v ?? '')}
-														allowAll
-														allLabel="Selecione o tipo"
-														ariaLabel="Tipo de entrega"
-													/>
-												</div>
-												<div class="flex flex-col gap-1.5">
-													<span id="cp-special-label" class={labelClass}>Projetos especiais</span>
-													<div
-														id="cp-special"
-														role="group"
-														aria-labelledby="cp-special-label"
-														class="flex h-10 items-center gap-2"
-													>
-														{#each specialOptions as sp (sp)}
-															{@const selected = specialProject === sp}
-															<button
-																type="button"
-																aria-pressed={selected}
-																onclick={() => (specialProject = selected ? '' : sp)}
-																class="inline-flex h-10 flex-1 items-center justify-center rounded-lg border px-3 text-sm font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
-																	? 'border-primary-600 bg-primary-600 text-primary-fg'
-																	: 'border-border-subtle bg-surface text-text-secondary hover:border-primary-500'}"
-															>
-																{sp}
-															</button>
-														{/each}
-													</div>
-												</div>
-											</div>
-
-											<div class="flex flex-col gap-5 border-t border-border-subtle pt-5">
+											<div class="flex flex-col gap-5">
 												<h3 class={sectionTitleClass}>Links e observações</h3>
 												<div class="rounded-lg border border-border-subtle">
 													<LinkFieldRow

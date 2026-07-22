@@ -155,14 +155,14 @@
 	>
 		<span
 			class="cp-lrow-dot grid h-[22px] w-[22px] flex-none place-items-center rounded-full border-[1.5px] {isFilled
-				? 'border-success bg-success'
+				? 'border-primary-600 bg-primary-600'
 				: 'border-dashed border-border-strong bg-surface'}"
 			class:cp-lrow-dot-pop={celebrating}
 			aria-hidden="true"
 		>
 			<svg
 				viewBox="0 0 24 24"
-				class="h-3 w-3 text-success-fg transition-opacity duration-fast {isFilled
+				class="h-3 w-3 text-primary-fg transition-opacity duration-fast {isFilled
 					? 'opacity-100'
 					: 'opacity-0'}"
 				fill="none"
@@ -187,7 +187,7 @@
 				<span
 					class="text-sm text-text-primary {multiline
 						? 'cp-lrow-preview-obs'
-						: 'truncate font-semibold'}"
+						: 'truncate font-medium'}"
 					class:cp-lrow-fade-slide={celebrating}
 				>
 					{previewText}
@@ -205,7 +205,7 @@
 					aria-expanded={open}
 					aria-controls={editorId}
 					onclick={openEditor}
-					class="flex h-8 w-8 flex-none items-center justify-center rounded-md border border-border-subtle bg-surface text-text-muted transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<svg
 						viewBox="0 0 24 24"
@@ -234,7 +234,7 @@
 				</button>
 			{/if}
 		{:else}
-			<span class="flex flex-none gap-2">
+			<span class="flex flex-none gap-1.5">
 				<button
 					type="button"
 					title="Cancelar (Esc)"
@@ -244,15 +244,16 @@
 						cancelRow(true);
 					}}
 					onclick={() => cancelRow(true)}
-					class="cp-lrow-btn-in flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-surface text-text-muted transition-colors duration-fast hover:border-danger hover:text-danger active:scale-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="cp-lrow-btn-in grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<svg
 						viewBox="0 0 24 24"
 						class="h-3.5 w-3.5"
 						fill="none"
 						stroke="currentColor"
-						stroke-width="2.5"
+						stroke-width="2"
 						stroke-linecap="round"
+						stroke-linejoin="round"
 						aria-hidden="true"
 					>
 						<path d="M6 6l12 12M18 6L6 18" />
@@ -267,14 +268,14 @@
 						confirmRow(true);
 					}}
 					onclick={() => confirmRow(true)}
-					class="cp-lrow-btn-in-delay flex h-8 w-8 items-center justify-center rounded-md bg-primary-600 text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 active:scale-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
+					class="cp-lrow-btn-in-delay grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				>
 					<svg
 						viewBox="0 0 24 24"
-						class="h-4 w-4"
+						class="h-3.5 w-3.5"
 						fill="none"
 						stroke="currentColor"
-						stroke-width="2.5"
+						stroke-width="2"
 						stroke-linecap="round"
 						stroke-linejoin="round"
 						aria-hidden="true"
@@ -394,7 +395,7 @@
 	}
 	@keyframes cp-lrow-row-flash {
 		0% {
-			background-color: var(--ds-color-success-light-bg);
+			background-color: color-mix(in srgb, var(--ds-color-primary-600) 8%, transparent);
 		}
 		100% {
 			background-color: transparent;
@@ -416,7 +417,7 @@
 	}
 	@keyframes cp-lrow-ring-burst {
 		0% {
-			box-shadow: 0 0 0 0 color-mix(in srgb, var(--ds-color-success-600) 45%, transparent);
+			box-shadow: 0 0 0 0 color-mix(in srgb, var(--ds-color-primary-600) 45%, transparent);
 		}
 		100% {
 			box-shadow: 0 0 0 16px transparent;
