@@ -363,16 +363,13 @@
 
 	{#if showObjPicker}
 		<div bind:this={objZoneEl} class="cp-op-zone-in flex flex-col gap-3">
-			<p id="cp-op-obj-question" class={questionClass}>
-				Qual objetivo EEGD este projeto atende?
-			</p>
 			{#if objetivos.length === 0}
 				<p class={emptyBoxClass}>Nenhum objetivo disponível.</p>
 			{:else}
 				<div
 					role="group"
-					aria-labelledby="cp-op-obj-question"
-					class="grid grid-cols-1 gap-2.5 md:grid-cols-2"
+					aria-label="Objetivos EEGD"
+					class="grid grid-cols-1 gap-2.5 md:grid-cols-3"
 				>
 					{#each objetivos as objetivo, index (objetivo.id)}
 						{@const theme = themeFor(index)}
@@ -432,7 +429,7 @@
 				<div
 					role="group"
 					aria-labelledby="cp-op-res-question"
-					class="grid grid-cols-1 gap-2.5 md:grid-cols-2"
+					class="grid grid-cols-1 gap-2.5 md:grid-cols-3"
 				>
 					{#each resultados as resultado, index (resultado.id)}
 						{@const selected = String(resultado.id) === resultadoId}

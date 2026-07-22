@@ -422,9 +422,7 @@
 			).length
 	);
 	const linkRowsSummary = $derived(
-		linkRowsFilled === 0
-			? 'Nenhum item preenchido — você pode avançar direto.'
-			: `${linkRowsFilled} de 5 itens preenchidos.`
+		linkRowsFilled === 0 ? '' : `${linkRowsFilled} de 5 itens preenchidos.`
 	);
 
 	// --- ABEP combobox -----------------------------------------------------
@@ -1240,7 +1238,9 @@
 														onCommit={(v) => (observacao = v)}
 													/>
 												</div>
-												<p class="-mt-2 text-xs text-text-muted">{linkRowsSummary}</p>
+												{#if linkRowsSummary}
+													<p class="-mt-2 text-xs text-text-muted">{linkRowsSummary}</p>
+												{/if}
 											</div>
 										{:else}
 											<h3 class={sectionTitleClass}>Modelo de etapas</h3>
