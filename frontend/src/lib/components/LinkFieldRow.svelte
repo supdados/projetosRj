@@ -80,12 +80,16 @@
 		expandTimer = setTimeout(() => {
 			if (open) expandEnded = true;
 		}, 420);
+		// preventScroll: sem ele o focus scrolla o clip ainda colapsado (0fr) e a
+		// caixa abre cortada no topo, "descendo" até o fim da expansão.
 		void tick().then(() => {
 			if (editor) {
-				editorAreaEl?.querySelector<HTMLElement>('button:not([disabled]), input, textarea')?.focus();
+				editorAreaEl
+					?.querySelector<HTMLElement>('button:not([disabled]), input, textarea')
+					?.focus({ preventScroll: true });
 				return;
 			}
-			inputEl?.focus();
+			inputEl?.focus({ preventScroll: true });
 		});
 	}
 
@@ -289,7 +293,8 @@
 			if (e.target === e.currentTarget && open) expandEnded = true;
 		}}
 	>
-		<div class="min-h-0 {expandEnded ? '' : 'overflow-hidden'}">
+		<!-- clip (não hidden): clip não é scroll container, focus não desloca; hidden é fallback. -->
+		<div class="min-h-0 {expandEnded ? '' : 'overflow-hidden overflow-clip'}">
 			<div
 				id={editorId}
 				inert={!open}
