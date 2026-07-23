@@ -162,6 +162,8 @@
 	let dialogEl = $state<HTMLDivElement | null>(null);
 	let continuarFichaBtn = $state<HTMLButtonElement | null>(null);
 	let verProjetoBtn = $state<HTMLButtonElement | null>(null);
+	// Descrição do passo 2 cresce com o conteúdo (underline sempre colado ao texto).
+	let assistDescEl = $state<HTMLTextAreaElement | null>(null);
 	let triedAssist1 = $state(false);
 	let triedAssist2 = $state(false);
 	// Projeto criado nesta abertura: habilita as fases ficha/form.
@@ -179,7 +181,7 @@
 	];
 	const FICHA_SECTIONS = [
 		{ title: 'Objetivos e indicadores', subtitle: 'Resultados esperados e medição' },
-		{ title: 'Detalhes', subtitle: 'Órgão, tipo de entrega e descrição' },
+		{ title: 'Detalhes', subtitle: 'Órgão, tipo de entrega e observações' },
 		{ title: 'Links', subtitle: 'Processos SEI e documentos' },
 		{ title: 'Etapas', subtitle: 'Marcos e prazos' }
 	];
@@ -307,6 +309,25 @@
 	$effect(() => {
 		if (open && orgaoOptions.length === 1 && orgaoId === '') {
 			orgaoId = orgaoOptions[0].value;
+		}
+	});
+
+	function resizeTextarea(el: HTMLTextAreaElement | null): void {
+		if (!el) return;
+		el.style.height = 'auto';
+		el.style.height = `${el.scrollHeight}px`;
+	}
+
+	function autoGrowDesc(event: Event): void {
+		resizeTextarea(event.currentTarget as HTMLTextAreaElement);
+	}
+
+	// Reajusta a altura ao (re)montar no passo 2 — ex.: voltar do passo 1 com
+	// descrição já digitada — sem depender de um novo input.
+	$effect(() => {
+		if (phase === 'assist2' && assistDescEl) {
+			void shortDescription;
+			void tick().then(() => resizeTextarea(assistDescEl));
 		}
 	});
 
@@ -707,9 +728,7 @@
 			return;
 		}
 		phase = 'assist2';
-		focusAfterTick(() =>
-			document.querySelector<HTMLElement>('#cp-prioridade button')
-		);
+		focusAfterTick(() => assistDescEl);
 	}
 
 	function backToAssist1(): void {
@@ -1048,15 +1067,17 @@
 					class="flex animate-panel-in flex-col gap-6 overflow-visible p-8"
 				>
 					{@render stepBars(2)}
-					<h3 class="font-heading text-2xl font-semibold text-text-primary">Prioridade e área</h3>
-					<div class="flex flex-col gap-1.5">
-						<label for="cp-assist-desc" class={labelClass}>Descrição breve</label>
+					<h3 class="font-heading text-2xl font-semibold text-text-primary">Descrição breve</h3>
+					<div class="flex flex-col gap-2">
 						<textarea
 							id="cp-assist-desc"
+							aria-label="Descrição breve"
+							bind:this={assistDescEl}
 							bind:value={shortDescription}
-							rows="3"
+							rows="1"
 							placeholder="Breve descrição do projeto"
-							class={areaClass}
+							oninput={autoGrowDesc}
+							class="w-full resize-none overflow-hidden border-0 border-b-2 border-border-subtle bg-transparent px-0 py-1.5 text-lg leading-snug text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-600 focus:outline-none"
 						></textarea>
 					</div>
 					<div class="flex flex-col gap-6 sm:flex-row">
@@ -1155,6 +1176,12 @@
 							<p class={microLabelClass}>Área responsável</p>
 							<p class="text-sm font-semibold text-text-primary">{orgaoSelecionadoLabel}</p>
 						</div>
+						{#if shortDescription.trim()}
+							<div class="flex flex-col gap-1">
+								<p class={microLabelClass}>Descrição breve</p>
+								<p class="text-sm leading-snug text-text-secondary">{shortDescription.trim()}</p>
+							</div>
+						{/if}
 						<div class="mt-auto flex flex-col gap-1.5">
 							<div class="flex items-center justify-between text-xs">
 								<span class="text-text-muted">Cadastro</span>
@@ -1502,6 +1529,7 @@
 														id="cp-sei"
 														label="Processo SEI-RJ"
 														first
+														startOpen
 														filled={seiList.length > 0}
 														preview={seiRowPreview}
 														onEditorOpen={onSeiRowOpen}
@@ -1519,6 +1547,7 @@
 													<LinkFieldRow
 														id="cp-github"
 														label="Link GitHub"
+														startOpen
 														placeholder="https://github.com/..."
 														value={githubLink}
 														onCommit={(v) => (githubLink = v)}
@@ -1526,6 +1555,7 @@
 													<LinkFieldRow
 														id="cp-doc"
 														label="Link documentação"
+														startOpen
 														placeholder="https://..."
 														value={documentationLink}
 														onCommit={(v) => (documentationLink = v)}
@@ -1533,6 +1563,7 @@
 													<LinkFieldRow
 														id="cp-product"
 														label="Link para o produto"
+														startOpen
 														placeholder="https://..."
 														last
 														value={productLink}

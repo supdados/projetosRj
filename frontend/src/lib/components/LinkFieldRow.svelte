@@ -15,6 +15,8 @@
 		multiline?: boolean;
 		first?: boolean;
 		last?: boolean;
+		/** Abre o editor já expandido ao montar (sem roubar o foco). */
+		startOpen?: boolean;
 		value?: string;
 		onCommit?: (value: string) => void;
 		/** Sobrescreve o estado "preenchido" quando o editor é custom. */
@@ -35,6 +37,7 @@
 		multiline = false,
 		first = false,
 		last = false,
+		startOpen = false,
 		value = '',
 		onCommit,
 		filled,
@@ -45,10 +48,20 @@
 		onEditorCancel
 	}: Props = $props();
 
-	let open = $state(false);
+	// startOpen: nasce expandido SÓ quando ainda vazio (sem animar/roubar foco);
+	// se já houver valor (ex.: voltar à seção depois de salvar), nasce colapsado
+	// mostrando o preview. O snapshot do editor custom (SEI) é feito uma vez via
+	// onEditorOpen para que "cancelar" restaure. Init único a partir das props.
+	// svelte-ignore state_referenced_locally
+	const startExpanded = startOpen && !(filled ?? value.trim().length > 0);
+	// svelte-ignore state_referenced_locally
+	let open = $state(startExpanded);
 	// Libera o overflow só após a expansão: o popover do SEI precisa vazar a área.
-	let expandEnded = $state(false);
-	let draft = $state('');
+	let expandEnded = $state(startExpanded);
+	// svelte-ignore state_referenced_locally
+	let draft = $state(startExpanded ? value : '');
+	// svelte-ignore state_referenced_locally
+	if (startExpanded) onEditorOpen?.();
 	let celebrating = $state(false);
 	let celebrateTimer: ReturnType<typeof setTimeout> | null = null;
 	let expandTimer: ReturnType<typeof setTimeout> | null = null;
@@ -104,14 +117,17 @@
 		if (!open) return;
 		if (editor) {
 			const changed = onEditorConfirm?.() ?? false;
-			closeEditor(refocus);
+			// startOpen vazio: mantém aberto por padrão; caso contrário colapsa.
+			if (!(startOpen && !isFilled)) closeEditor(refocus);
 			if (changed) celebrate();
 			return;
 		}
 		const next = draft.trim();
 		const changed = next.length > 0 && next !== value.trim();
+		// Sempre propaga (inclui limpar, para o status/preview não ficarem presos).
 		onCommit?.(next);
-		closeEditor(refocus);
+		// startOpen vazio: não colapsa; com conteúdo, colapsa com a animação.
+		if (!(startOpen && next.length === 0)) closeEditor(refocus);
 		if (changed) celebrate();
 	}
 
@@ -233,7 +249,7 @@
 					Adicionar
 				</button>
 			{/if}
-		{:else}
+		{:else if !startOpen}
 			<span class="flex flex-none gap-1.5">
 				<button
 					type="button"
