@@ -98,7 +98,7 @@
 	const MAX_INDICADORES = 4;
 
 	// --- Fases do assistente -------------------------------------------------
-	let phase = $state<'assist1' | 'assist2' | 'ficha' | 'form' | 'success'>('assist1');
+	let phase = $state<'assist1' | 'assist2' | 'assist3' | 'ficha' | 'form' | 'success'>('assist1');
 
 	// --- Campos definidos na criação (assist1/assist2) -----------------------
 	let titulo = $state('');
@@ -272,7 +272,9 @@
 	const outerAlignClass = 'items-start justify-center pt-[14vh]';
 	// Passos compactos (assist) e sucesso deixam o dropdown de área escapar do
 	// card (overflow visível) em vez de ser cortado.
-	const isCompactPhase = $derived(phase === 'assist1' || phase === 'assist2');
+	const isCompactPhase = $derived(
+		phase === 'assist1' || phase === 'assist2' || phase === 'assist3'
+	);
 	const dialogOverflowClass = $derived(
 		isCompactPhase || phase === 'success' ? 'overflow-visible' : 'overflow-hidden'
 	);
@@ -736,6 +738,16 @@
 		focusAfterTick(() => titleInputEl);
 	}
 
+	function goToAssist3(): void {
+		phase = 'assist3';
+		focusAfterTick(() => document.querySelector<HTMLElement>('#cp-prioridade button'));
+	}
+
+	function backToAssist2(): void {
+		phase = 'assist2';
+		focusAfterTick(() => assistDescEl);
+	}
+
 	function enterForm(index: number): void {
 		phase = 'form';
 		activeSection = index;
@@ -846,6 +858,10 @@
 			return;
 		}
 		if (phase === 'assist2') {
+			goToAssist3();
+			return;
+		}
+		if (phase === 'assist3') {
 			goToFicha();
 			return;
 		}
@@ -928,6 +944,7 @@
 	<div class="flex items-center gap-1.5" aria-hidden="true">
 		<div class="h-[5px] w-9 rounded-[3px] bg-primary-600"></div>
 		<div class="h-[5px] w-9 rounded-[3px] {step >= 2 ? 'bg-primary-600' : 'bg-border-subtle'}"></div>
+		<div class="h-[5px] w-9 rounded-[3px] {step >= 3 ? 'bg-primary-600' : 'bg-border-subtle'}"></div>
 	</div>
 {/snippet}
 
@@ -967,7 +984,7 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-50 flex {outerAlignClass} bg-black/40 p-4 backdrop-blur-[1.5px]"
+		class="fixed inset-0 z-50 flex {outerAlignClass} bg-[rgba(7,20,33,0.34)] p-4 backdrop-blur-[1.5px]"
 		role="presentation"
 		onclick={requestClose}
 		onkeydown={onModalKeydown}
@@ -1020,10 +1037,10 @@
 						e.preventDefault();
 						goToAssist2();
 					}}
-					class="flex animate-panel-in flex-col gap-6 overflow-visible p-8"
+					class="flex min-h-[17rem] animate-panel-in flex-col gap-6 overflow-visible p-8"
 				>
 					{@render stepBars(1)}
-					<h3 id="cp-assist1-title" class="font-heading text-2xl font-semibold text-text-primary">
+					<h3 id="cp-assist1-title" class="font-heading text-2xl font-semibold text-text-secondary">
 						Como vai se chamar o projeto?
 					</h3>
 					<div class="flex flex-col gap-1.5">
@@ -1045,8 +1062,8 @@
 							</p>
 						{/if}
 					</div>
-					<div class="mt-2 flex items-center justify-between">
-						<span class="text-xs text-text-muted">Passo 1 de 2</span>
+					<div class="mt-auto flex items-center justify-between">
+						<span class="text-xs text-text-muted">Passo 1 de 3</span>
 						<div class="flex items-center gap-2">
 							<button type="button" onclick={requestClose} class={btnSecondaryClass}>
 								Cancelar
@@ -1062,13 +1079,13 @@
 					inert={confirmDiscardOpen}
 					onsubmit={(e) => {
 						e.preventDefault();
-						goToFicha();
+						goToAssist3();
 					}}
-					class="flex animate-panel-in flex-col gap-6 overflow-visible p-8"
+					class="flex min-h-[17rem] animate-panel-in flex-col gap-6 overflow-visible p-8"
 				>
 					{@render stepBars(2)}
-					<h3 class="font-heading text-2xl font-semibold text-text-primary">Descrição breve</h3>
-					<div class="flex flex-col gap-2">
+					<h3 class="font-heading text-2xl font-semibold text-text-secondary">Descrição breve</h3>
+					<div class="flex flex-col gap-1.5">
 						<textarea
 							id="cp-assist-desc"
 							aria-label="Descrição breve"
@@ -1077,9 +1094,40 @@
 							rows="1"
 							placeholder="Breve descrição do projeto"
 							oninput={autoGrowDesc}
-							class="w-full resize-none overflow-hidden border-0 border-b-2 border-border-subtle bg-transparent px-0 py-1.5 text-lg leading-snug text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-600 focus:outline-none"
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault();
+									goToAssist3();
+								}
+							}}
+							class="w-full resize-none overflow-hidden border-0 border-b-2 border-primary-600 bg-transparent px-0 py-2 text-lg text-text-primary placeholder:text-text-muted focus:outline-none"
 						></textarea>
 					</div>
+					<div class="mt-auto flex items-center justify-between gap-2">
+						<span class="text-xs text-text-muted">Passo 2 de 3</span>
+						<div class="flex items-center gap-2">
+							<button type="button" onclick={backToAssist1} class={btnSecondaryClass}>
+								Voltar
+							</button>
+							<button type="submit" class={btnPrimaryClass}>
+								Próximo <span aria-hidden="true">→</span>
+							</button>
+						</div>
+					</div>
+				</form>
+			{:else if phase === 'assist3'}
+				<form
+					inert={confirmDiscardOpen}
+					onsubmit={(e) => {
+						e.preventDefault();
+						goToFicha();
+					}}
+					class="flex min-h-[17rem] animate-panel-in flex-col gap-6 overflow-visible p-8"
+				>
+					{@render stepBars(3)}
+					<h3 class="font-heading text-2xl font-semibold text-text-secondary">
+						Prioridade e responsável
+					</h3>
 					<div class="flex flex-col gap-6 sm:flex-row">
 						<div class="flex flex-1 flex-col gap-1.5">
 							<span class={labelClass} id="cp-prioridade-label">Prioridade</span>
@@ -1144,10 +1192,10 @@
 							{/if}
 						</div>
 					</div>
-					<div class="mt-2 flex items-center justify-between gap-2">
-						<span class="text-xs text-text-muted">Passo 2 de 2</span>
+					<div class="mt-auto flex items-center justify-between gap-2">
+						<span class="text-xs text-text-muted">Passo 3 de 3</span>
 						<div class="flex items-center gap-2">
-							<button type="button" onclick={backToAssist1} class={btnSecondaryClass}>
+							<button type="button" onclick={backToAssist2} class={btnSecondaryClass}>
 								Voltar
 							</button>
 							<button type="submit" class={btnPrimaryClass}>
