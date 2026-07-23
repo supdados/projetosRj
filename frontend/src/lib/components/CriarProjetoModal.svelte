@@ -1,27 +1,32 @@
 <script lang="ts">
 	/**
-	 * Modal "Criar novo projeto" (Quick Create) — wizard com sidebar de 4 seções
-	 * ("Informações", "Objetivos e Indicadores", "Classificação e Links",
-	 * "Etapas"), uma seção visível por vez, barra de progresso e tela de sucesso
-	 * interna ("Criar outro projeto" / "Ver o projeto").
+	 * Modal "Criar novo projeto" — assistente em 5 fases internas. Nada é criado
+	 * até uma ação explícita de criação; o `POST /api/projetos` é ÚNICO e leva
+	 * tudo que estiver preenchido:
+	 *   1. `assist1` — título (card compacto, sem header; "Cancelar"/"Continuar");
+	 *   2. `assist2` — prioridade + área; "Próximo" só avança à ficha;
+	 *   3. `ficha` — revisão: sidebar (título, prioridade, área, % do cadastro) e
+	 *      lista das 4 seções. "Concluir" cria o projeto (mínimo) → sucesso;
+	 *      "Continuar preenchendo" abre o wizard SEM criar nem festejar;
+	 *   4. `form` — wizard 4-seções (Detalhes · Objetivos e Indicadores ·
+	 *      Links e Observações · Etapas); "Criar projeto" faz o POST com tudo,
+	 *      dispara confete e vai para a tela de sucesso;
+	 *   5. `success` — "Projeto criado!" com "Criar outro projeto" (reseta) e
+	 *      "Ver o projeto" (`onCreated(result)` → a página navega).
 	 *
-	 * Mantém (paridade funcional com a versão acordeão):
+	 * Mantém (paridade funcional):
 	 *   - combobox ABEP filtrável (LEGADO, oculto via SHOW_ABEP);
 	 *   - cascata objetivo→resultado→indicadores via `/api/resultados`/
 	 *     `indicadores` legados, com revelação escalonada (índice·100ms) e LIMITE
 	 *     de 4 indicadores (flash 'Você pode selecionar no máximo 4 indicadores');
 	 *   - MÚLTIPLOS processos SEI via `SeiProcessField`;
 	 *   - import de modelo com preview read-only e cálculo de datas no client;
-	 *   - criação só com título + área válidos (validação ao tentar salvar, com
-	 *     foco no campo faltante);
-	 *   - Esc fecha · Ctrl/Cmd+Enter salva (fora dos editores de linha, onde
-	 *     Enter/Ctrl+Enter salvam a linha) · confirmação de descarte.
+	 *   - Esc: fecha nas fases assist (com confirmação de descarte se sujo);
+	 *     no form volta à ficha; na ficha fecha · Ctrl/Cmd+Enter dispara a ação
+	 *     primária da fase (Continuar / Próximo / Continuar preenchendo / Salvar).
 	 *
-	 * Submit: `POST /api/projetos` (via `createProject`). Em sucesso o modal
-	 * mostra a tela "Projeto criado"; `onCreated(result)` só dispara em
-	 * "Ver o projeto" — a página então faz flash + goto(redirect_to), como antes.
-	 * "Criar outro projeto" reseta o formulário sem fechar. Em erro, exibe a
-	 * mensagem do envelope como flash danger/warning (sem fechar o modal).
+	 * `onCreated` permanece nas props (as páginas passam), sem uso interno no
+	 * fluxo atual; `onCreatedDismissed(result)` dispara ao fechar após criar.
 	 */
 	import { tick, untrack } from 'svelte';
 	import { fade, fly, slide } from 'svelte/transition';
@@ -92,14 +97,17 @@
 	];
 	const MAX_INDICADORES = 4;
 
-	// --- Campos da seção "Informações" ---------------------------------------
+	// --- Fases do assistente -------------------------------------------------
+	let phase = $state<'assist1' | 'assist2' | 'ficha' | 'form' | 'success'>('assist1');
+
+	// --- Campos definidos na criação (assist1/assist2) -----------------------
 	let titulo = $state('');
 	let orgaoId = $state('');
 	let prioridade = $state('baixa');
+
+	// --- Seção "Detalhes" ----------------------------------------------------
 	let shortDescription = $state('');
 	let orgaoTexto = $state('');
-
-	// --- Classificação -----------------------------------------------------
 	let deliveryType = $state('');
 	let specialProject = $state('');
 
@@ -151,23 +159,33 @@
 	let submitting = $state(false);
 	let catalogsLoaded = $state(false);
 	let titleInputEl = $state<HTMLInputElement | null>(null);
-	let triedSubmit = $state(false); // marca erro de título/área só após tentativa
-	// Projeto criado nesta abertura: troca o corpo pela tela de sucesso.
-	let createdResult = $state<CreateProjectResult | null>(null);
+	let dialogEl = $state<HTMLDivElement | null>(null);
+	let continuarFichaBtn = $state<HTMLButtonElement | null>(null);
 	let verProjetoBtn = $state<HTMLButtonElement | null>(null);
-	// Sobrevive ao reset de "Criar outro projeto": garante onCreatedDismissed.
+	let triedAssist1 = $state(false);
+	let triedAssist2 = $state(false);
+	// Projeto criado nesta abertura: habilita as fases ficha/form.
+	let createdResult = $state<CreateProjectResult | null>(null);
+	// Garante onCreatedDismissed em qualquer caminho de fechamento pós-criação.
 	let lastCreatedThisOpen: CreateProjectResult | null = null;
 
 	// --- Wizard: uma seção visível por vez ----------------------------------
 	const NAV_SECTIONS = [
-		'Informações',
-		'Objetivos e Indicadores',
-		'Links e Observações',
+		'Detalhes',
+		'Objetivos e indicadores',
+		'Links e observações',
 		'Etapas'
+	];
+	const FICHA_SECTIONS = [
+		{ title: 'Detalhes', subtitle: 'Órgão, tipo de entrega e descrição' },
+		{ title: 'Objetivos e indicadores', subtitle: 'Resultados esperados e medição' },
+		{ title: 'Links e observações', subtitle: 'Processos SEI e documentos' },
+		{ title: 'Etapas', subtitle: 'Marcos e prazos' }
 	];
 	let activeSection = $state(0);
 
 	function goToSection(index: number): void {
+		startDatePickerOpen = false;
 		activeSection = Math.min(NAV_SECTIONS.length - 1, Math.max(0, index));
 	}
 
@@ -210,21 +228,23 @@
 		templates.map((t) => ({ value: String(t.id), label: t.name }))
 	);
 
-	// Criação só com título + área (paridade com updateSubmitState).
-	const canSubmit = $derived(
-		!submitting && titulo.trim().length > 0 && orgaoId.trim().length > 0
-	);
-	const tituloError = $derived(triedSubmit && !titulo.trim());
-	const orgaoError = $derived(triedSubmit && !orgaoId.trim());
+	const assistTituloError = $derived(triedAssist1 && !titulo.trim());
+	const assistOrgaoError = $derived(triedAssist2 && !orgaoId.trim());
 
 	const orgaoSelecionadoLabel = $derived.by(() => {
 		if (orgaoOptions.length === 1) return orgaoOptions[0].label;
 		return orgaoOptions.find((o) => o.value === orgaoId)?.label ?? '';
 	});
+	const createdTitulo = $derived(createdResult?.project?.titulo ?? titulo.trim());
+	const prioridadeLabel = $derived(
+		PRIORITIES.find((p) => p.value === prioridade)?.label ?? 'Baixa'
+	);
 
-	// Critérios de seção "preenchida" (badge ✓ + barra de progresso).
+	// Critérios de seção "preenchida" (✓ na navegação/ficha + % do cadastro).
 	const sectionDone = $derived<boolean[]>([
-		titulo.trim().length > 0 && orgaoId.trim().length > 0,
+		[orgaoTexto, deliveryType, specialProject, shortDescription].some(
+			(v) => v.trim().length > 0
+		),
 		objetivoId !== '' && resultadoId !== '',
 		seiList.length > 0 ||
 			[githubLink, documentationLink, productLink, observacao].some(
@@ -233,6 +253,27 @@
 		templateId !== ''
 	]);
 	const doneCount = $derived(sectionDone.filter(Boolean).length);
+	const cadastroPct = $derived(Math.min(100, 20 + doneCount * 20));
+
+	const headerTitle = $derived(
+		phase === 'form'
+			? 'Preencher cadastro'
+			: phase === 'ficha'
+				? 'Projeto criado'
+				: 'Criar novo projeto'
+	);
+	const dialogWidthClass = $derived(
+		phase === 'form' ? 'max-w-[870px]' : phase === 'ficha' ? 'max-w-[680px]' : 'max-w-[560px]'
+	);
+	// Todas as fases ancoram o topo no mesmo ponto (não centralizam), para o card
+	// não subir/descer conforme a altura do conteúdo.
+	const outerAlignClass = 'items-start justify-center pt-[14vh]';
+	// Passos compactos (assist) e sucesso deixam o dropdown de área escapar do
+	// card (overflow visível) em vez de ser cortado.
+	const isCompactPhase = $derived(phase === 'assist1' || phase === 'assist2');
+	const dialogOverflowClass = $derived(
+		isCompactPhase || phase === 'success' ? 'overflow-visible' : 'overflow-hidden'
+	);
 
 	/** Subconjunto de indicadores ABEP que casa com o texto digitado. */
 	const abepVisible = $derived.by(() => {
@@ -259,7 +300,18 @@
 		void tick().then(() => titleInputEl?.focus());
 	});
 
+	// Pré-seleção tardia de órgão único: `options` pode resolver DEPOIS do open
+	// (ex.: /projetos?new=1 abre o modal antes do fetch da lista), quando o
+	// resetForm já rodou com a lista vazia. Sem isto a UI de órgão único fica
+	// read-only com orgaoId vazio — beco sem saída no "Próximo"/"Concluir".
+	$effect(() => {
+		if (open && orgaoOptions.length === 1 && orgaoId === '') {
+			orgaoId = orgaoOptions[0].value;
+		}
+	});
+
 	function resetForm(): void {
+		phase = 'assist1';
 		titulo = '';
 		// Pré-seleciona quando há um único órgão disponível (paridade Jinja).
 		const opts = options?.orgaos_options ?? [];
@@ -288,19 +340,15 @@
 		templateId = '';
 		templateStages = [];
 		startDate = '';
+		startDatePickerOpen = false;
 		resultadosLoading = false;
 		indicadoresLoading = false;
 		templateLoading = false;
 		activeSection = 0;
-		triedSubmit = false;
+		triedAssist1 = false;
+		triedAssist2 = false;
 		createdResult = null;
 		confirmDiscardOpen = false;
-	}
-
-	/** "Criar outro projeto" na tela de sucesso: limpa e volta ao formulário. */
-	function startAnotherProject(): void {
-		resetForm();
-		void tick().then(() => titleInputEl?.focus());
 	}
 
 	async function loadCatalogs(): Promise<void> {
@@ -396,7 +444,7 @@
 	}
 
 	// Números SEI: o SeiProcessField (compartilhado com o Detalhe) gerencia
-	// máscara/adição/remoção; aqui a lista é estado local até o submit.
+	// máscara/adição/remoção; aqui a lista é estado local até o "Salvar".
 	// Snapshot da lista ao abrir a linha SEI: o onSave grava direto em seiList,
 	// então "cancelar" restaura e "confirmar" só decide a celebração.
 	let seiListSnapshot: string[] = [];
@@ -453,7 +501,7 @@
 		const list = abepVisible;
 		if (event.key === 'Escape') {
 			// Consome o Esc só com o dropdown aberto (padrão APG combobox):
-			// 1º Esc fecha o popup, 2º Esc borbulha e fecha o modal.
+			// 1º Esc fecha o popup, 2º Esc borbulha para o modal.
 			if (abepOpen) {
 				event.preventDefault();
 				event.stopPropagation();
@@ -493,7 +541,7 @@
 			return;
 		}
 		// Guarda de corrida: sem ela, um fetch lento sobrevivia ao resetForm e
-		// repopulava templateStages com templateId já vazio — o submit enviava
+		// repopulava templateStages com templateId já vazio — o "Salvar" enviava
 		// etapas de um modelo nunca escolhido nesta sessão.
 		const requested = templateId;
 		templateLoading = true;
@@ -590,7 +638,7 @@
 		return formatBrDate(lastEnd);
 	});
 
-	// --- Confirmação de descarte ao fechar com dados preenchidos -------------
+	// --- Confirmação de descarte (só nas fases assist*) ----------------------
 
 	let confirmDiscardOpen = $state(false);
 	let discardCancelBtn = $state<HTMLButtonElement | null>(null);
@@ -598,40 +646,24 @@
 	// (o botão dela desmonta; sem isso o foco cairia no body, fora do trap).
 	let focusedBeforeDiscard: HTMLElement | null = null;
 
-	/** Há conteúdo digitado/escolhido que seria perdido ao fechar? */
+	/** Escolha do usuário que seria perdida ao fechar antes de criar. */
 	const formIsDirty = $derived(
-		[
-			titulo,
-			shortDescription,
-			orgaoTexto,
-			githubLink,
-			documentationLink,
-			productLink,
-			observacao,
-			abepValue
-		].some((v) => v.trim().length > 0) ||
-			seiList.length > 0 ||
-			// Órgão único é pré-selecionado na abertura; só conta escolha do usuário.
-			(orgaoOptions.length > 1 && orgaoId.trim().length > 0) ||
+		titulo.trim().length > 0 ||
 			prioridade !== 'baixa' ||
-			deliveryType !== '' ||
-			specialProject !== '' ||
-			objetivoId !== '' ||
-			selectedIndicadores.length > 0 ||
-			templateId !== '' ||
-			startDate !== ''
+			// Órgão único é pré-selecionado na abertura; só conta escolha do usuário.
+			(orgaoOptions.length > 1 && orgaoId.trim().length > 0)
 	);
 
-	/** Fecha avisando a página se houve criação sem "Ver o projeto". */
+	/** Fecha avisando a página se houve criação nesta abertura. */
 	function closeAndNotify(): void {
 		if (lastCreatedThisOpen) onCreatedDismissed?.(lastCreatedThisOpen);
 		onClose();
 	}
 
-	/** Fecha o modal; com dados preenchidos, pede confirmação de descarte antes. */
+	/** Fecha o modal; com dados preenchidos antes de criar, pede confirmação. */
 	function requestClose(): void {
 		if (submitting) return;
-		// Tela de sucesso: nada a perder — fecha direto.
+		// Pós-criação: nada a perder — fecha direto.
 		if (createdResult || !formIsDirty) {
 			closeAndNotify();
 			return;
@@ -656,46 +688,87 @@
 		closeAndNotify();
 	}
 
-	// Wrapper do submit: se inválido, marca os campos faltantes e foca o primeiro.
-	async function trySubmit(): Promise<void> {
-		if (createdResult) return;
-		if (!canSubmit) {
-			if (submitting) return;
-			triedSubmit = true;
-			// Volta à seção "Informações": o campo faltante precisa existir no DOM
-			// para receber foco.
-			activeSection = 0;
-			await tick();
-			// Fallback para o título quando o select de órgão está disabled/ausente
-			// (ex.: usuário sem órgão atribuído): foco em elemento disabled é no-op
-			// e deixaria o foco fora do dialog, quebrando o focusTrap.
-			const orgaoEl = document.getElementById('cp-orgao-id') as HTMLSelectElement | null;
-			const focusTarget = !titulo.trim()
-				? titleInputEl
-				: orgaoEl && !orgaoEl.disabled
-					? orgaoEl
-					: titleInputEl;
-			focusTarget?.focus();
-			return;
-		}
-		await submit();
+	// --- Navegação entre fases ----------------------------------------------
+
+	// Trocar de fase desmonta quem tinha o foco; sem re-focar, Esc/focusTrap morrem.
+	// offsetParent null = elemento com display:none (ex.: nav desktop no mobile):
+	// .focus() seria no-op e o foco cairia no body, fora do trap.
+	function focusAfterTick(getEl: () => HTMLElement | null | undefined): void {
+		void tick().then(() => {
+			const el = getEl();
+			const visible = el && el.offsetParent !== null ? el : dialogEl;
+			visible?.focus();
+		});
 	}
 
-	// Esc fecha; Ctrl/Cmd+Enter salva de qualquer lugar do modal.
-	function onModalKeydown(event: KeyboardEvent): void {
-		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-			event.preventDefault();
-			event.stopPropagation(); // evita repetição ao borbulhar para o backdrop
-			void trySubmit();
+	function goToAssist2(): void {
+		triedAssist1 = true;
+		if (!titulo.trim()) {
+			titleInputEl?.focus();
 			return;
 		}
-		onBackdropKeydown(event);
+		phase = 'assist2';
+		focusAfterTick(() =>
+			document.querySelector<HTMLElement>('#cp-prioridade button')
+		);
 	}
 
-	// --- Submit ------------------------------------------------------------
+	function backToAssist1(): void {
+		phase = 'assist1';
+		focusAfterTick(() => titleInputEl);
+	}
 
-	async function submit(): Promise<void> {
-		if (!canSubmit || createdResult) return;
+	function enterForm(index: number): void {
+		phase = 'form';
+		activeSection = index;
+		focusAfterTick(() => document.getElementById(`cp-nav-${activeSection}`));
+	}
+
+	function backToFicha(): void {
+		phase = 'ficha';
+		startDatePickerOpen = false;
+		focusAfterTick(() => continuarFichaBtn);
+	}
+
+	function flashApiError(err: unknown, fallback: string): void {
+		if (err instanceof ApiClientError) {
+			if (err.code === 'unauthenticated') return; // já redirecionou
+			// 403 forbidden -> danger; 422 validation -> warning (paridade).
+			const tone = err.code === 'forbidden' ? 'danger' : 'warning';
+			flash.show(err.message, err.status >= 500 ? 'danger' : tone);
+			return;
+		}
+		flash.danger(fallback);
+	}
+
+	// --- Ficha (revisão) → criação (única) -----------------------------------
+
+	// "Próximo" só avança à ficha de revisão — nada é criado ainda.
+	function goToFicha(): void {
+		triedAssist2 = true;
+		if (!titulo.trim()) {
+			triedAssist1 = true;
+			backToAssist1();
+			return;
+		}
+		if (!orgaoId.trim()) return; // erro inline via assistOrgaoError
+		phase = 'ficha';
+		focusAfterTick(() => continuarFichaBtn);
+	}
+
+	// "Continuar preenchendo": abre o wizard SEM criar nem festejar — a criação
+	// (com tudo que for preenchido) só acontece no botão "Criar projeto".
+	function continuarPreenchendo(): void {
+		enterForm(0);
+	}
+
+	/**
+	 * Criação ÚNICA do projeto com tudo que estiver preenchido (ficha mínima ou
+	 * wizard completo). Dispara confete e vai para a tela de sucesso. Chamada por
+	 * "Concluir" (ficha) e "Criar projeto" (form).
+	 */
+	async function createProjectNow(): Promise<void> {
+		if (submitting || createdResult) return;
 		submitting = true;
 		const input: CreateProjectInput = {
 			titulo: titulo.trim(),
@@ -714,7 +787,7 @@
 			github_link: githubLink.trim() || undefined,
 			documentation_link: documentationLink.trim() || undefined,
 			product_link: productLink.trim() || undefined,
-			// Defesa extra contra estado órfão: etapas só valem com modelo escolhido.
+			// Defesa extra: etapas só valem com modelo escolhido.
 			etapas: (templateId ? templateStages : []).map((s) => ({
 				descricao: s.name,
 				duration: Math.max(1, Number.parseInt(String(s.duration), 10) || 1)
@@ -724,7 +797,6 @@
 		};
 		try {
 			const result = await createProject(input);
-			// Tela de sucesso interna; onCreated dispara em "Ver o projeto".
 			createdResult = result;
 			lastCreatedThisOpen = result;
 			// Sem origem o helper usa fallback no canto superior direito; centro da tela.
@@ -732,32 +804,71 @@
 				x: window.innerWidth / 2,
 				y: window.innerHeight / 2
 			});
-			// O form desmonta e levaria o foco ao body, matando Esc/focusTrap.
+			phase = 'success';
 			void tick().then(() => verProjetoBtn?.focus());
 		} catch (err) {
-			if (err instanceof ApiClientError) {
-				if (err.code === 'unauthenticated') return; // já redirecionou
-				// 403 forbidden -> danger; 422 validation -> warning (paridade).
-				const tone = err.code === 'forbidden' ? 'danger' : 'warning';
-				flash.show(err.message, err.status >= 500 ? 'danger' : tone);
-			} else {
-				flash.danger('Ocorreu um erro ao adicionar o projeto.');
-			}
+			flashApiError(err, 'Ocorreu um erro ao adicionar o projeto.');
 		} finally {
 			submitting = false;
 		}
 	}
 
+	/** "Criar outro projeto" na tela de sucesso: limpa e volta ao passo 1. */
+	function startAnotherProject(): void {
+		resetForm();
+		void tick().then(() => titleInputEl?.focus());
+	}
+
+	/** Ação primária da fase atual (botão principal e Ctrl/Cmd+Enter). */
+	function phasePrimaryAction(): void {
+		if (phase === 'assist1') {
+			goToAssist2();
+			return;
+		}
+		if (phase === 'assist2') {
+			goToFicha();
+			return;
+		}
+		if (phase === 'ficha') {
+			continuarPreenchendo();
+			return;
+		}
+		if (phase === 'success') {
+			if (createdResult) onCreated(createdResult);
+			return;
+		}
+		void createProjectNow();
+	}
+
+	// Ctrl/Cmd+Enter dispara a ação primária de qualquer lugar do modal.
+	function onModalKeydown(event: KeyboardEvent): void {
+		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+			event.preventDefault();
+			event.stopPropagation(); // evita repetição ao borbulhar para o backdrop
+			phasePrimaryAction();
+			return;
+		}
+		onBackdropKeydown(event);
+	}
+
 	function onBackdropKeydown(event: KeyboardEvent): void {
+		// Esc já consumido por um popover filho (SelectMenu/OrgaoTreeSelect/SEI):
+		// não empilhar a ação de fase no mesmo keystroke.
+		if (event.defaultPrevented) return;
 		if (event.key === 'Escape' && !submitting) {
 			event.preventDefault();
 			// stopPropagation: dialog e backdrop compartilham este handler; sem
-			// consumir aqui, o mesmo Esc seria tratado DUAS vezes (abre a
-			// confirmação no dialog e fecha no backdrop — efeito líquido nulo).
+			// consumir aqui, o mesmo Esc seria tratado DUAS vezes.
 			event.stopPropagation();
 			// Primeiro Esc fecha só a confirmação de descarte; o próximo, o modal.
 			if (confirmDiscardOpen) {
 				closeDiscardConfirm();
+				return;
+			}
+			// No form o Esc volta à ficha; na ficha, requestClose decide entre
+			// fechar direto (já criado) ou confirmar descarte (ainda não criado).
+			if (phase === 'form') {
+				backToFicha();
 				return;
 			}
 			requestClose();
@@ -766,14 +877,19 @@
 
 	// --- Classes utilitárias (campos com visual unificado) -------------------
 	const labelClass = 'text-xs font-medium uppercase tracking-wide text-text-muted';
+	const microLabelClass =
+		'text-[10px] font-bold uppercase tracking-[.16em] text-text-muted';
 	const fieldClass =
 		'h-10 w-full rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60';
 	const areaClass =
 		'w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none';
-	const fieldErrorClass = 'border-danger focus:border-danger';
 	const sectionTitleClass = 'font-heading text-base font-semibold text-text-primary';
 	const emptyBoxClass =
 		'rounded-lg border border-dashed border-border-subtle bg-surface-muted px-4 py-3.5 text-sm text-text-muted';
+	const btnPrimaryClass =
+		'inline-flex h-9 items-center justify-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
+	const btnSecondaryClass =
+		'inline-flex h-9 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60';
 </script>
 
 {#snippet spinner()}
@@ -786,6 +902,13 @@
 			stroke-linecap="round"
 		/>
 	</svg>
+{/snippet}
+
+{#snippet stepBars(step: number)}
+	<div class="flex items-center gap-1.5" aria-hidden="true">
+		<div class="h-[5px] w-9 rounded-[3px] bg-primary-600"></div>
+		<div class="h-[5px] w-9 rounded-[3px] {step >= 2 ? 'bg-primary-600' : 'bg-border-subtle'}"></div>
+	</div>
 {/snippet}
 
 {#snippet navItems(orientation: 'vertical' | 'horizontal')}
@@ -824,7 +947,7 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1.5px]"
+		class="fixed inset-0 z-50 flex {outerAlignClass} bg-black/40 p-4 backdrop-blur-[1.5px]"
 		role="presentation"
 		onclick={requestClose}
 		onkeydown={onModalKeydown}
@@ -833,82 +956,270 @@
 		<div
 			role="dialog"
 			aria-modal="true"
-			aria-labelledby="criar-projeto-title"
-			class="relative flex max-h-[92vh] w-full max-w-[870px] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
+			aria-labelledby={phase === 'assist1' ? 'cp-assist1-title' : 'criar-projeto-title'}
+			bind:this={dialogEl}
+			class="relative flex max-h-[92vh] w-full flex-col {dialogOverflowClass} rounded-xl border border-border-subtle bg-surface shadow-lg transition-[max-width] duration-base {dialogWidthClass}"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={onModalKeydown}
 			tabindex="-1"
 			use:focusTrap
 			transition:fly={{ y: 18, duration: 320, easing: cubicOut }}
 		>
-			<!-- Cabeçalho fixo. inert: com a confirmação de descarte aberta, o fundo
-			     sai do Tab e da interação. -->
-			<header
-				inert={confirmDiscardOpen}
-				class="flex h-14 flex-shrink-0 items-center justify-between gap-4 border-b border-border-subtle px-6"
-			>
-				<h2
-					id="criar-projeto-title"
-					class="truncate font-heading text-base font-semibold text-text-primary"
+			<!-- Cabeçalho fixo só na fase de preenchimento; as demais têm o título
+			     no próprio corpo. inert: descarte aberto tira o fundo do Tab. -->
+			{#if phase === 'form'}
+				<header
+					inert={confirmDiscardOpen}
+					class="flex h-14 flex-shrink-0 items-center justify-between gap-4 border-b border-border-subtle px-6"
 				>
-					Criar novo projeto
-				</h2>
-				<button
-					type="button"
-					onclick={requestClose}
-					disabled={submitting}
-					aria-label="Fechar"
-					class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-						<path d="m5 5 10 10M15 5 5 15" stroke-linecap="round" />
-					</svg>
-				</button>
-			</header>
+					<h2
+						id="criar-projeto-title"
+						class="truncate font-heading text-base font-semibold text-text-primary"
+					>
+						{headerTitle}
+					</h2>
+					<button
+						type="button"
+						onclick={requestClose}
+						disabled={submitting}
+						aria-label="Fechar"
+						class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+							<path d="m5 5 10 10M15 5 5 15" stroke-linecap="round" />
+						</svg>
+					</button>
+				</header>
+			{/if}
 
-			{#if createdResult}
-				<!-- Tela de sucesso: substitui corpo e rodapé -->
-				<div
-					class="flex h-[560px] max-h-[calc(92vh-3.5rem)] min-h-0 animate-panel-in flex-col items-center justify-center gap-3.5 overflow-y-auto px-10 py-16"
-				>
-					<img
-						src="/static/img/confete-popper.png"
-						alt=""
-						class="cp-success-icon h-32 w-32"
-						aria-hidden="true"
-					/>
-					<p class="font-heading text-xl font-semibold text-text-primary">Projeto criado!</p>
-					<p class="max-w-md text-center text-sm text-text-secondary">
-						{createdResult.project?.titulo ?? titulo.trim()}{orgaoSelecionadoLabel
-							? ` · ${orgaoSelecionadoLabel}`
-							: ''}
-					</p>
-					<div class="mt-2 flex items-center gap-2.5">
-						<button
-							type="button"
-							onclick={startAnotherProject}
-							class="inline-flex h-10 items-center rounded-md border border-border-subtle bg-surface px-4 text-sm font-semibold text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-						>
-							Criar outro projeto
-						</button>
-						<button
-							type="button"
-							bind:this={verProjetoBtn}
-							onclick={() => onCreated(createdResult!)}
-							class="inline-flex h-10 items-center rounded-md bg-primary-600 px-4 text-sm font-semibold text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
-						>
-							Ver o projeto
-						</button>
-					</div>
-				</div>
-			{:else}
+			{#if phase === 'assist1'}
 				<form
 					inert={confirmDiscardOpen}
 					onsubmit={(e) => {
 						e.preventDefault();
-						void trySubmit();
+						goToAssist2();
 					}}
-					class="flex h-[560px] max-h-[calc(92vh-3.5rem)] min-h-0 flex-col"
+					class="flex animate-panel-in flex-col gap-6 overflow-visible p-8"
+				>
+					{@render stepBars(1)}
+					<h3 id="cp-assist1-title" class="font-heading text-2xl font-semibold text-text-primary">
+						Como vai se chamar o projeto?
+					</h3>
+					<div class="flex flex-col gap-1.5">
+						<input
+							id="cp-titulo"
+							bind:this={titleInputEl}
+							bind:value={titulo}
+							type="text"
+							aria-labelledby="cp-assist1-title"
+							aria-invalid={assistTituloError}
+							placeholder="Digite o nome do projeto…"
+							class="w-full border-0 border-b-2 bg-transparent px-0 py-2 text-lg text-text-primary placeholder:text-text-muted focus:outline-none {assistTituloError
+								? 'border-danger'
+								: 'border-primary-600'}"
+						/>
+						{#if assistTituloError}
+							<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
+								Informe o título do projeto.
+							</p>
+						{/if}
+					</div>
+					<div class="mt-2 flex items-center justify-between">
+						<span class="text-xs text-text-muted">Passo 1 de 2</span>
+						<div class="flex items-center gap-2">
+							<button type="button" onclick={requestClose} class={btnSecondaryClass}>
+								Cancelar
+							</button>
+							<button type="submit" class={btnPrimaryClass}>
+								Próximo <span aria-hidden="true">→</span>
+							</button>
+						</div>
+					</div>
+				</form>
+			{:else if phase === 'assist2'}
+				<form
+					inert={confirmDiscardOpen}
+					onsubmit={(e) => {
+						e.preventDefault();
+						goToFicha();
+					}}
+					class="flex animate-panel-in flex-col gap-6 overflow-visible p-8"
+				>
+					{@render stepBars(2)}
+					<h3 class="font-heading text-2xl font-semibold text-text-primary">Prioridade e área</h3>
+					<div class="flex flex-col gap-6 sm:flex-row">
+						<div class="flex flex-1 flex-col gap-1.5">
+							<span class={labelClass} id="cp-prioridade-label">Prioridade</span>
+							<div
+								id="cp-prioridade"
+								role="group"
+								aria-labelledby="cp-prioridade-label"
+								class="flex h-10 flex-wrap items-center gap-1.5"
+							>
+								{#each PRIORITIES as p (p.value)}
+									{@const selected = prioridade === p.value}
+									<button
+										type="button"
+										aria-pressed={selected}
+										onclick={() => (prioridade = p.value)}
+										style={selected
+											? `background: var(--ds-color-priority-${p.value}); border-color: var(--ds-color-priority-${p.value});`
+											: ''}
+										class="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-lg border px-2 text-xs transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
+											? 'font-semibold text-primary-fg'
+											: 'border-border-subtle bg-surface font-medium text-text-secondary hover:bg-surface-muted'}"
+									>
+										{p.label}
+									</button>
+								{/each}
+							</div>
+						</div>
+						<div class="flex w-full flex-col gap-1.5 sm:w-[220px]">
+							<span class={labelClass} id="cp-orgao-label">Área responsável</span>
+							{#if orgaoOptions.length === 0}
+								<div
+									class="flex items-center justify-between gap-2 rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-text-muted opacity-60"
+								>
+									<span class="truncate">Nenhum órgão atribuído</span>
+								</div>
+							{:else if orgaoOptions.length === 1}
+								<div
+									class="flex items-center justify-between gap-2 rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-text-primary"
+								>
+									<span class="truncate">{orgaoOptions[0].label}</span>
+									<svg viewBox="0 0 20 20" class="h-3.5 w-3.5 flex-none text-text-muted" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+										<rect x="4.5" y="9" width="11" height="7.5" rx="1.5" />
+										<path d="M7 9V6.5a3 3 0 0 1 6 0V9" />
+									</svg>
+								</div>
+								<p class="text-[11px] text-text-muted">Definida pelo seu perfil</p>
+							{:else}
+								<OrgaoTreeSelect
+									id="cp-orgao-id"
+									options={orgaoTreeOptions}
+									value={orgaoId ? Number(orgaoId) : null}
+									onSelect={(v) => (orgaoId = v == null ? '' : String(v))}
+									placeholder="Selecionar área"
+								/>
+							{/if}
+							{#if assistOrgaoError}
+								<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
+									{orgaoOptions.length === 0
+										? 'Nenhum órgão atribuído ao seu perfil.'
+										: 'Selecione a área responsável.'}
+								</p>
+							{/if}
+						</div>
+					</div>
+					<div class="mt-2 flex items-center justify-between gap-2">
+						<span class="text-xs text-text-muted">Passo 2 de 2</span>
+						<div class="flex items-center gap-2">
+							<button type="button" onclick={backToAssist1} class={btnSecondaryClass}>
+								Voltar
+							</button>
+							<button type="submit" class={btnPrimaryClass}>
+								Próximo <span aria-hidden="true">→</span>
+							</button>
+						</div>
+					</div>
+				</form>
+			{:else if phase === 'ficha'}
+				<div
+					inert={confirmDiscardOpen}
+					class="flex max-h-[calc(92vh-3.5rem)] min-h-[420px] animate-panel-in overflow-hidden"
+				>
+					<aside
+						class="hidden w-[236px] flex-none flex-col gap-6 border-r border-border-subtle bg-surface-muted p-7 sm:flex"
+					>
+						<p class={microLabelClass}>Título do projeto</p>
+						<p class="text-lg font-extrabold leading-snug text-text-primary">{createdTitulo}</p>
+						<div class="flex flex-col gap-1">
+							<p class={microLabelClass}>Prioridade</p>
+							<p class="text-sm font-bold" style="color: var(--ds-color-priority-{prioridade});">
+								{prioridadeLabel}
+							</p>
+						</div>
+						<div class="flex flex-col gap-1">
+							<p class={microLabelClass}>Área responsável</p>
+							<p class="text-sm font-semibold text-text-primary">{orgaoSelecionadoLabel}</p>
+						</div>
+						<div class="mt-auto flex flex-col gap-1.5">
+							<div class="flex items-center justify-between text-xs">
+								<span class="text-text-muted">Cadastro</span>
+								<span class="font-semibold tabular-nums text-text-primary">{cadastroPct}%</span>
+							</div>
+							<div class="h-[3px] overflow-hidden rounded-full bg-border-subtle">
+								<div
+									class="h-full rounded-full bg-primary-600 transition-[width] duration-base"
+									style="width: {cadastroPct}%"
+								></div>
+							</div>
+						</div>
+					</aside>
+					<div class="flex min-w-0 flex-1 flex-col overflow-y-auto p-7">
+						<p class={microLabelClass}>Próximas seções</p>
+						<div class="mt-2 flex flex-col">
+							{#each FICHA_SECTIONS as section, index (index)}
+								<button
+									type="button"
+									onclick={() => enterForm(index)}
+									class="flex w-full items-center gap-3.5 py-3.5 text-left transition-colors duration-fast hover:bg-surface-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {index <
+									FICHA_SECTIONS.length - 1
+										? 'border-b border-border-subtle/60'
+										: ''}"
+								>
+									{#if sectionDone[index]}
+										<span class="w-5 flex-none text-success" aria-label="Seção preenchida">
+											<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+												<path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round" />
+											</svg>
+										</span>
+									{:else}
+										<span class="w-5 flex-none text-xs font-semibold tabular-nums text-text-muted">
+											{String(index + 1).padStart(2, '0')}
+										</span>
+									{/if}
+									<span class="flex min-w-0 flex-1 flex-col">
+										<span class="text-sm font-bold text-text-primary">{section.title}</span>
+										<span class="text-xs text-text-muted">{section.subtitle}</span>
+									</span>
+									<span class="flex-none text-lg leading-none text-text-muted" aria-hidden="true">›</span>
+								</button>
+							{/each}
+						</div>
+						<div class="mt-auto flex items-center justify-end gap-4 pt-6">
+							<button
+								type="button"
+								onclick={() => void createProjectNow()}
+								disabled={submitting}
+								class="inline-flex items-center gap-2 text-sm font-semibold text-text-muted transition-colors duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+							>
+								{#if submitting}
+									{@render spinner()}Criando…
+								{:else}
+									Concluir
+								{/if}
+							</button>
+							<button
+								type="button"
+								bind:this={continuarFichaBtn}
+								onclick={continuarPreenchendo}
+								disabled={submitting}
+								class={btnPrimaryClass}
+							>
+								Continuar preenchendo
+							</button>
+						</div>
+					</div>
+				</div>
+			{:else if phase === 'form'}
+				<form
+					inert={confirmDiscardOpen}
+					onsubmit={(e) => {
+						e.preventDefault();
+						void createProjectNow();
+					}}
+					class="flex h-[560px] max-h-[calc(92vh-3.5rem)] min-h-0 animate-panel-in flex-col"
 				>
 					<!-- Stepper compacto (mobile): mesma navegação da sidebar -->
 					<nav
@@ -927,27 +1238,22 @@
 							{@render navItems('vertical')}
 							<div class="flex-1"></div>
 							<div class="mx-0.5 mt-2.5 flex flex-col gap-2 border-t border-border-subtle px-2 pt-3.5">
-								<p
-									class="truncate text-sm font-medium {titulo.trim()
-										? 'text-text-primary'
-										: 'text-text-muted'}"
-								>
-									{titulo.trim() || 'Sem título'}
-								</p>
+								<p class="truncate text-sm font-medium text-text-primary">{createdTitulo}</p>
 								{#if orgaoSelecionadoLabel}
 									<p class="truncate text-xs text-text-secondary">{orgaoSelecionadoLabel}</p>
-								{:else}
-									<p class="truncate text-xs font-medium text-danger">Área pendente</p>
 								{/if}
-								<div class="mt-1 h-1 overflow-hidden rounded-full bg-border-subtle">
+								<div class="flex items-center justify-between">
+									<span class="text-[11px] font-medium leading-none text-text-muted">Cadastro</span>
+									<span class="text-[11px] font-semibold leading-none tabular-nums text-text-primary">
+										{cadastroPct}%
+									</span>
+								</div>
+								<div class="h-1 overflow-hidden rounded-full bg-border-subtle">
 									<div
 										class="h-full rounded-full bg-primary-600 transition-[width] duration-base"
-										style="width: {doneCount * 25}%"
+										style="width: {cadastroPct}%"
 									></div>
 								</div>
-								<p class="text-[11px] font-medium leading-none text-text-muted">
-									{doneCount} de 4 seções preenchidas
-								</p>
 							</div>
 						</nav>
 
@@ -957,67 +1263,9 @@
 								{#key activeSection}
 									<div class="flex animate-panel-in flex-col gap-5">
 										{#if activeSection === 0}
-											<h3 class={sectionTitleClass}>Informações principais</h3>
-											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-10">
-												<div class="flex flex-col gap-1.5 md:col-span-7">
-													<label for="cp-titulo" class={labelClass}>
-														Título do projeto <span class="text-danger" aria-hidden="true">*</span>
-													</label>
-													<input
-														id="cp-titulo"
-														bind:this={titleInputEl}
-														bind:value={titulo}
-														type="text"
-														required
-														aria-invalid={tituloError}
-														placeholder="Digite o título do projeto"
-														class="{fieldClass} {tituloError ? fieldErrorClass : ''}"
-													/>
-													{#if tituloError}
-														<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
-															Informe o título do projeto.
-														</p>
-													{/if}
-												</div>
-												<div class="flex flex-col gap-1.5 md:col-span-3">
-													<label for="cp-orgao-id" class={labelClass}>
-														Área responsável <span class="text-danger" aria-hidden="true">*</span>
-													</label>
-													{#if orgaoOptions.length === 0}
-														<SelectMenu
-															id="cp-orgao-id"
-															options={[]}
-															value={null}
-															onSelect={() => {}}
-															disabled
-															placeholder="Nenhum órgão atribuído"
-															ariaLabel="Área responsável"
-														/>
-													{:else if orgaoOptions.length === 1}
-														<input
-															type="text"
-															value={orgaoOptions[0].label}
-															disabled
-															class={fieldClass}
-														/>
-													{:else}
-														<OrgaoTreeSelect
-															id="cp-orgao-id"
-															options={orgaoTreeOptions}
-															value={orgaoId ? Number(orgaoId) : null}
-															onSelect={(v) => (orgaoId = v == null ? '' : String(v))}
-															placeholder="Selecione um órgão"
-														/>
-													{/if}
-													{#if orgaoError}
-														<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
-															Selecione a área responsável.
-														</p>
-													{/if}
-												</div>
-											</div>
-											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-5">
-												<div class="flex flex-col gap-1.5 md:col-span-2">
+											<h3 class={sectionTitleClass}>Detalhes</h3>
+											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
+												<div class="flex flex-col gap-1.5">
 													<label for="cp-orgao-texto" class={labelClass}>Órgão</label>
 													<input
 														id="cp-orgao-texto"
@@ -1027,34 +1275,6 @@
 														class={fieldClass}
 													/>
 												</div>
-												<div class="flex flex-col gap-1.5 md:col-span-3">
-													<span class={labelClass} id="cp-prioridade-label">Prioridade</span>
-													<div
-														id="cp-prioridade"
-														role="group"
-														aria-labelledby="cp-prioridade-label"
-														class="flex h-10 flex-wrap items-center gap-1.5"
-													>
-														{#each PRIORITIES as p (p.value)}
-															{@const selected = prioridade === p.value}
-															<button
-																type="button"
-																aria-pressed={selected}
-																onclick={() => (prioridade = p.value)}
-																style={selected
-																	? `background: var(--ds-color-priority-${p.value}); border-color: var(--ds-color-priority-${p.value});`
-																	: ''}
-																class="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-lg border px-2 text-xs transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
-																	? 'font-semibold text-white'
-																	: 'border-border-subtle bg-surface font-medium text-text-secondary hover:bg-surface-muted'}"
-															>
-																{p.label}
-															</button>
-														{/each}
-													</div>
-												</div>
-											</div>
-											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
 												<div class="flex flex-col gap-1.5">
 													<label for="cp-delivery" class={labelClass}>Tipo de entrega</label>
 													<SelectMenu
@@ -1067,6 +1287,8 @@
 														ariaLabel="Tipo de entrega"
 													/>
 												</div>
+											</div>
+											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
 												<div class="flex flex-col gap-1.5">
 													<span id="cp-special-label" class={labelClass}>Projetos especiais</span>
 													<div
@@ -1357,12 +1579,20 @@
 							<footer
 								class="flex h-14 flex-shrink-0 items-center gap-2 border-t border-border-subtle px-5"
 							>
+								{#if activeSection === 0}
+									<button type="button" onclick={backToFicha} class={btnSecondaryClass}>
+										<svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+											<path d="M12.5 5 7.5 10l5 5" stroke-linecap="round" stroke-linejoin="round" />
+										</svg>
+										Voltar à ficha
+									</button>
+								{/if}
 								<div class="flex-1"></div>
 								{#if activeSection > 0}
 									<button
 										type="button"
 										onclick={() => goToSection(activeSection - 1)}
-										class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										class={btnSecondaryClass}
 									>
 										<svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
 											<path d="M12.5 5 7.5 10l5 5" stroke-linecap="round" stroke-linejoin="round" />
@@ -1383,14 +1613,7 @@
 									</button>
 								{/if}
 								<div aria-hidden="true" class="mx-1 h-6 w-px bg-border-subtle"></div>
-								<button
-									type="submit"
-									disabled={submitting}
-									class="inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 {canSubmit ||
-									submitting
-										? 'bg-primary-600 text-primary-fg shadow-sm hover:bg-primary-700 hover:shadow-md'
-										: 'border border-border-subtle bg-surface-muted text-text-muted'}"
-								>
+								<button type="submit" disabled={submitting} class={btnPrimaryClass}>
 									{#if submitting}
 										{@render spinner()}Criando…
 									{:else}
@@ -1401,6 +1624,40 @@
 						</div>
 					</div>
 				</form>
+			{:else}
+				<!-- Tela de sucesso: "Criar outro projeto" reseta · "Ver o projeto"
+				     dispara onCreated (a página faz flash + navegação). -->
+				<div
+					class="flex h-[560px] max-h-[calc(92vh-3.5rem)] min-h-0 animate-panel-in flex-col items-center justify-center gap-3.5 overflow-y-auto px-10 py-16"
+				>
+					<img
+						src="/static/img/confete-popper.png"
+						alt=""
+						class="cp-success-icon h-32 w-32"
+						aria-hidden="true"
+					/>
+					<p class="font-heading text-xl font-semibold text-text-primary">Projeto criado!</p>
+					<p class="max-w-md text-center text-sm text-text-secondary">
+						{createdTitulo}{orgaoSelecionadoLabel ? ` · ${orgaoSelecionadoLabel}` : ''}
+					</p>
+					<div class="mt-2 flex items-center gap-2.5">
+						<button
+							type="button"
+							onclick={startAnotherProject}
+							class="inline-flex h-10 items-center rounded-md border border-border-subtle bg-surface px-4 text-sm font-semibold text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						>
+							Criar outro projeto
+						</button>
+						<button
+							type="button"
+							bind:this={verProjetoBtn}
+							onclick={() => createdResult && onCreated(createdResult)}
+							class="inline-flex h-10 items-center rounded-md bg-primary-600 px-4 text-sm font-semibold text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
+						>
+							Ver o projeto
+						</button>
+					</div>
+				</div>
 			{/if}
 
 			<!-- Confirmação de descarte: cobre o modal ao fechar com dados preenchidos -->

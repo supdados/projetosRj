@@ -156,6 +156,16 @@
 	}
 
 	// Escape fecha o popover onde quer que o foco esteja (input ou botões).
+	// stopPropagation no wrapper: sem ele o mesmo Esc borbulha até o modal
+	// hospedeiro e dispara a ação de fase (voltar/fechar) junto.
+	function onWrapperKeydown(event: KeyboardEvent): void {
+		if (open && event.key === 'Escape') {
+			event.preventDefault();
+			event.stopPropagation();
+			closeAndRefocus();
+		}
+	}
+
 	function onWindowKeydown(event: KeyboardEvent): void {
 		if (open && event.key === 'Escape') {
 			event.preventDefault();
@@ -197,7 +207,8 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-<div class="relative" onfocusout={onWrapperFocusOut}>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="relative" onfocusout={onWrapperFocusOut} onkeydown={onWrapperKeydown}>
 	<!-- Linha fechada: visual de campo com o 1º número + copiar + chip +N + chevron. -->
 	<!-- Token de altura padrão de campo — linha de Detalhes alinhada. -->
 	<div
