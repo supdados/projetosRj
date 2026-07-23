@@ -339,7 +339,7 @@
 				<div
 					role="group"
 					aria-label="Objetivos EEGD"
-					class="grid grid-cols-1 gap-2.5 md:grid-cols-3"
+					class="grid grid-cols-1 gap-2.5 md:grid-cols-3 md:min-w-[var(--cp-grid-w,599px)] md:[contain:layout]"
 				>
 					{#each objetivos as objetivo, index (objetivo.id)}
 						{@const selected = String(objetivo.id) === objetivoId}

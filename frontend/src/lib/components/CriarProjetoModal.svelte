@@ -9,7 +9,7 @@
 	 *      lista das 4 seções. "Concluir" cria o projeto (mínimo) → sucesso;
 	 *      "Continuar preenchendo" abre o wizard SEM criar nem festejar;
 	 *   4. `form` — wizard 4-seções (Detalhes · Objetivos e Indicadores ·
-	 *      Links e Observações · Etapas); "Criar projeto" faz o POST com tudo,
+	 *      Links · Etapas); "Criar projeto" faz o POST com tudo,
 	 *      dispara confete e vai para a tela de sucesso;
 	 *   5. `success` — "Projeto criado!" com "Criar outro projeto" (reseta) e
 	 *      "Ver o projeto" (`onCreated(result)` → a página navega).
@@ -171,15 +171,16 @@
 
 	// --- Wizard: uma seção visível por vez ----------------------------------
 	const NAV_SECTIONS = [
-		'Detalhes',
+		'Informações essenciais',
 		'Objetivos e indicadores',
-		'Links e observações',
+		'Detalhes',
+		'Links',
 		'Etapas'
 	];
 	const FICHA_SECTIONS = [
-		{ title: 'Detalhes', subtitle: 'Órgão, tipo de entrega e descrição' },
 		{ title: 'Objetivos e indicadores', subtitle: 'Resultados esperados e medição' },
-		{ title: 'Links e observações', subtitle: 'Processos SEI e documentos' },
+		{ title: 'Detalhes', subtitle: 'Órgão, tipo de entrega e descrição' },
+		{ title: 'Links', subtitle: 'Processos SEI e documentos' },
 		{ title: 'Etapas', subtitle: 'Marcos e prazos' }
 	];
 	let activeSection = $state(0);
@@ -218,7 +219,6 @@
 		options?.abep_indicadores_options ?? []
 	);
 	const deliveryTypes = $derived(options?.delivery_types_options ?? DELIVERY_TYPES);
-	const specialOptions = $derived(options?.special_projects_options ?? SPECIAL_PROJECTS);
 
 	// --- Opções dos SelectMenu (derivadas das constantes/catálogos acima) --
 	const deliveryTypeMenuOptions = $derived<SelectMenuOption[]>(
@@ -241,19 +241,19 @@
 	);
 
 	// Critérios de seção "preenchida" (✓ na navegação/ficha + % do cadastro).
+	// Índice 0 = "Informações essenciais" (título/prioridade/área), já feito ao
+	// chegar aqui; os demais são as 4 seções do detalhamento.
 	const sectionDone = $derived<boolean[]>([
-		[orgaoTexto, deliveryType, specialProject, shortDescription].some(
-			(v) => v.trim().length > 0
-		),
+		titulo.trim().length > 0 && orgaoId.trim().length > 0,
 		objetivoId !== '' && resultadoId !== '',
+		[orgaoTexto, deliveryType, specialProject, observacao].some((v) => v.trim().length > 0),
 		seiList.length > 0 ||
-			[githubLink, documentationLink, productLink, observacao].some(
-				(v) => v.trim().length > 0
-			),
+			[githubLink, documentationLink, productLink].some((v) => v.trim().length > 0),
 		templateId !== ''
 	]);
-	const doneCount = $derived(sectionDone.filter(Boolean).length);
-	const cadastroPct = $derived(Math.min(100, 20 + doneCount * 20));
+	// % do cadastro: 20% pela criação + 20% por seção de detalhamento (1..4).
+	const detailDoneCount = $derived(sectionDone.slice(1).filter(Boolean).length);
+	const cadastroPct = $derived(Math.min(100, 20 + detailDoneCount * 20));
 
 	const headerTitle = $derived(
 		phase === 'form'
@@ -464,12 +464,10 @@
 	const seiRowPreview = $derived(seiList.join(' · '));
 	const linkRowsFilled = $derived(
 		(seiList.length > 0 ? 1 : 0) +
-			[githubLink, documentationLink, productLink, observacao].filter(
-				(v) => v.trim().length > 0
-			).length
+			[githubLink, documentationLink, productLink].filter((v) => v.trim().length > 0).length
 	);
 	const linkRowsSummary = $derived(
-		linkRowsFilled === 0 ? '' : `${linkRowsFilled} de 5 itens preenchidos.`
+		linkRowsFilled === 0 ? '' : `${linkRowsFilled} de 4 itens preenchidos.`
 	);
 
 	// --- ABEP combobox -----------------------------------------------------
@@ -649,6 +647,7 @@
 	/** Escolha do usuário que seria perdida ao fechar antes de criar. */
 	const formIsDirty = $derived(
 		titulo.trim().length > 0 ||
+			shortDescription.trim().length > 0 ||
 			prioridade !== 'baixa' ||
 			// Órgão único é pré-selecionado na abertura; só conta escolha do usuário.
 			(orgaoOptions.length > 1 && orgaoId.trim().length > 0)
@@ -759,7 +758,9 @@
 	// "Continuar preenchendo": abre o wizard SEM criar nem festejar — a criação
 	// (com tudo que for preenchido) só acontece no botão "Criar projeto".
 	function continuarPreenchendo(): void {
-		enterForm(0);
+		// Cai direto em "Detalhes" (1); "Informações essenciais" (0) fica atrás
+		// para revisão, já que o usuário acabou de preenchê-las.
+		enterForm(1);
 	}
 
 	/**
@@ -959,6 +960,7 @@
 			aria-labelledby={phase === 'assist1' ? 'cp-assist1-title' : 'criar-projeto-title'}
 			bind:this={dialogEl}
 			class="relative flex max-h-[92vh] w-full flex-col {dialogOverflowClass} rounded-xl border border-border-subtle bg-surface shadow-lg transition-[max-width] duration-base {dialogWidthClass}"
+			style="--cp-grid-w: calc(min(870px, 100vw - 2rem) - 206px - 4rem);"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={onModalKeydown}
 			tabindex="-1"
@@ -1047,6 +1049,16 @@
 				>
 					{@render stepBars(2)}
 					<h3 class="font-heading text-2xl font-semibold text-text-primary">Prioridade e área</h3>
+					<div class="flex flex-col gap-1.5">
+						<label for="cp-assist-desc" class={labelClass}>Descrição breve</label>
+						<textarea
+							id="cp-assist-desc"
+							bind:value={shortDescription}
+							rows="3"
+							placeholder="Breve descrição do projeto"
+							class={areaClass}
+						></textarea>
+					</div>
 					<div class="flex flex-col gap-6 sm:flex-row">
 						<div class="flex flex-1 flex-col gap-1.5">
 							<span class={labelClass} id="cp-prioridade-label">Prioridade</span>
@@ -1162,13 +1174,13 @@
 							{#each FICHA_SECTIONS as section, index (index)}
 								<button
 									type="button"
-									onclick={() => enterForm(index)}
+									onclick={() => enterForm(index + 1)}
 									class="flex w-full items-center gap-3.5 py-3.5 text-left transition-colors duration-fast hover:bg-surface-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {index <
 									FICHA_SECTIONS.length - 1
 										? 'border-b border-border-subtle/60'
 										: ''}"
 								>
-									{#if sectionDone[index]}
+									{#if sectionDone[index + 1]}
 										<span class="w-5 flex-none text-success" aria-label="Seção preenchida">
 											<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
 												<path d="m4.5 10.5 3.5 3.5 7.5-8" stroke-linecap="round" stroke-linejoin="round" />
@@ -1259,23 +1271,101 @@
 
 						<!-- Conteúdo da seção ativa -->
 						<div class="flex min-w-0 flex-1 flex-col">
-							<div class="min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-8">
+							<div class="min-h-0 flex-1 overflow-y-auto overflow-x-clip px-6 py-6 md:px-8">
 								{#key activeSection}
 									<div class="flex animate-panel-in flex-col gap-5">
 										{#if activeSection === 0}
-											<h3 class={sectionTitleClass}>Detalhes</h3>
+											<h3 class={sectionTitleClass}>Informações essenciais</h3>
+											<div class="flex flex-col gap-1.5">
+												<label for="cp-form-titulo" class={labelClass}>Título do projeto</label>
+												<input
+													id="cp-form-titulo"
+													bind:value={titulo}
+													type="text"
+													placeholder="Nome do projeto"
+													class={fieldClass}
+												/>
+											</div>
+											<div class="flex flex-col gap-1.5">
+												<label for="cp-form-desc" class={labelClass}>Descrição breve</label>
+												<textarea
+													id="cp-form-desc"
+													bind:value={shortDescription}
+													rows="3"
+													placeholder="Breve descrição do projeto"
+													class={areaClass}
+												></textarea>
+											</div>
 											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
 												<div class="flex flex-col gap-1.5">
+													<span class={labelClass} id="cp-form-area-label">Área responsável</span>
+													{#if orgaoOptions.length <= 1}
+														<div
+															class="flex items-center justify-between gap-2 rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-sm {orgaoOptions.length ===
+															1
+																? 'text-text-primary'
+																: 'text-text-muted opacity-60'}"
+														>
+															<span class="truncate">
+																{orgaoSelecionadoLabel || 'Nenhum órgão atribuído'}
+															</span>
+															{#if orgaoOptions.length === 1}
+																<svg viewBox="0 0 20 20" class="h-3.5 w-3.5 flex-none text-text-muted" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+																	<rect x="4.5" y="9" width="11" height="7.5" rx="1.5" />
+																	<path d="M7 9V6.5a3 3 0 0 1 6 0V9" />
+																</svg>
+															{/if}
+														</div>
+													{:else}
+														<OrgaoTreeSelect
+															id="cp-form-orgao"
+															options={orgaoTreeOptions}
+															value={orgaoId ? Number(orgaoId) : null}
+															onSelect={(v) => (orgaoId = v == null ? '' : String(v))}
+															placeholder="Selecionar área"
+														/>
+													{/if}
+												</div>
+												<div class="flex flex-col gap-1.5">
+													<span class={labelClass} id="cp-form-prioridade-label">Prioridade</span>
+													<div
+														role="group"
+														aria-labelledby="cp-form-prioridade-label"
+														class="flex flex-wrap items-center gap-1.5"
+													>
+														{#each PRIORITIES as p (p.value)}
+															{@const selected = prioridade === p.value}
+															<button
+																type="button"
+																aria-pressed={selected}
+																onclick={() => (prioridade = p.value)}
+																style={selected
+																	? `background: var(--ds-color-priority-${p.value}); border-color: var(--ds-color-priority-${p.value});`
+																	: ''}
+																class="inline-flex h-9 flex-1 items-center justify-center rounded-lg border px-3 text-xs transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
+																	? 'font-semibold text-primary-fg'
+																	: 'border-border-subtle bg-surface font-medium text-text-secondary hover:bg-surface-muted'}"
+															>
+																{p.label}
+															</button>
+														{/each}
+													</div>
+												</div>
+											</div>
+										{:else if activeSection === 2}
+											<h3 class={sectionTitleClass}>Detalhes</h3>
+											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-12">
+												<div class="flex flex-col gap-1.5 md:col-span-4">
 													<label for="cp-orgao-texto" class={labelClass}>Órgão</label>
 													<input
 														id="cp-orgao-texto"
 														bind:value={orgaoTexto}
 														type="text"
-														placeholder="Digite o órgão responsável"
+														placeholder="Órgão responsável"
 														class={fieldClass}
 													/>
 												</div>
-												<div class="flex flex-col gap-1.5">
+												<div class="flex flex-col gap-1.5 md:col-span-5">
 													<label for="cp-delivery" class={labelClass}>Tipo de entrega</label>
 													<SelectMenu
 														id="cp-delivery"
@@ -1287,9 +1377,7 @@
 														ariaLabel="Tipo de entrega"
 													/>
 												</div>
-											</div>
-											<div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2">
-												<div class="flex flex-col gap-1.5">
+												<div class="flex flex-col gap-1.5 md:col-span-3">
 													<span id="cp-special-label" class={labelClass}>Projetos especiais</span>
 													<div
 														id="cp-special"
@@ -1297,7 +1385,7 @@
 														aria-labelledby="cp-special-label"
 														class="flex h-10 items-center gap-2"
 													>
-														{#each specialOptions as sp (sp)}
+														{#each SPECIAL_PROJECTS as sp (sp)}
 															{@const selected = specialProject === sp}
 															<button
 																type="button"
@@ -1314,12 +1402,12 @@
 												</div>
 											</div>
 											<div class="flex flex-col gap-1.5">
-												<label for="cp-short-desc" class={labelClass}>Descrição breve</label>
+												<label for="cp-obs" class={labelClass}>Observações</label>
 												<textarea
-													id="cp-short-desc"
-													bind:value={shortDescription}
+													id="cp-obs"
+													bind:value={observacao}
 													rows="3"
-													placeholder="Breve descrição do projeto"
+													placeholder="Digite observações detalhadas sobre o projeto…"
 													class={areaClass}
 												></textarea>
 											</div>
@@ -1406,9 +1494,9 @@
 												{/if}
 											</div>
 											{/if}
-										{:else if activeSection === 2}
+										{:else if activeSection === 3}
 											<div class="flex flex-col gap-5">
-												<h3 class={sectionTitleClass}>Links e observações</h3>
+												<h3 class={sectionTitleClass}>Links</h3>
 												<div class="rounded-lg border border-border-subtle">
 													<LinkFieldRow
 														id="cp-sei"
@@ -1446,17 +1534,9 @@
 														id="cp-product"
 														label="Link para o produto"
 														placeholder="https://..."
+														last
 														value={productLink}
 														onCommit={(v) => (productLink = v)}
-													/>
-													<LinkFieldRow
-														id="cp-obs"
-														label="Observações"
-														multiline
-														last
-														placeholder="Digite observações detalhadas sobre o projeto..."
-														value={observacao}
-														onCommit={(v) => (observacao = v)}
 													/>
 												</div>
 												{#if linkRowsSummary}
