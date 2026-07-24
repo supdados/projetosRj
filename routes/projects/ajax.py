@@ -14,6 +14,11 @@ from models import IndicadorProjeto, OrgaoUnidade, db
 from catalogs.objectives import normalize_goal_selection
 
 from routes.orgao_scope import get_user_orgao_subtree_ids
+from services.link_validation import LinkValidationError, normalize_link_url
+from services.project_custom_links import (
+    parse_custom_links_payload,
+    replace_project_custom_links,
+)
 from services.sei_process import (
     SEI_MAX_PER_PROJECT,
     SeiProcessValidationError,
@@ -66,6 +71,36 @@ def _apply_sei_processes_change(
             f'processos SEI de "{"; ".join(old_numbers) or "vazio"}" '
             f'para "{"; ".join(new_numbers) or "vazio"}"'
         )
+
+
+def _links_summary(links: list[dict]) -> str:
+    """Rótulos dos links personalizados para o histórico ("vazio" se lista vazia)."""
+    return "; ".join(link["label"] for link in links) or "vazio"
+
+
+def _apply_custom_links_change(
+    project_to_edit, raw_value: object, changes: list[str]
+) -> None:
+    """Substitui a lista de links personalizados do projeto, validando o payload."""
+    try:
+        items = parse_custom_links_payload(raw_value)
+        old_links, new_links = replace_project_custom_links(project_to_edit, items)
+    except LinkValidationError as exc:
+        raise ProjectInlineError(str(exc), status=400) from exc
+    if old_links != new_links:
+        changes.append(
+            f'links personalizados de "{_links_summary(old_links)}" '
+            f'para "{_links_summary(new_links)}"'
+        )
+
+
+def _normalize_inline_link(raw_value: object) -> str | None:
+    """Normaliza/valida um link fixo; scheme inválido vira ProjectInlineError 400."""
+    value = raw_value if isinstance(raw_value, str) else None
+    try:
+        return normalize_link_url(value)
+    except LinkValidationError as exc:
+        raise ProjectInlineError(str(exc), status=400) from exc
 
 
 def apply_project_inline_changes(project_to_edit, data):
@@ -204,13 +239,18 @@ def apply_project_inline_changes(project_to_edit, data):
         project_to_edit.abep_indicator = new_abep
 
     if "github_link" in data:
-        project_to_edit.github_link = data["github_link"] or None
+        project_to_edit.github_link = _normalize_inline_link(data["github_link"])
 
     if "documentation_link" in data:
-        project_to_edit.documentation_link = data["documentation_link"] or None
+        project_to_edit.documentation_link = _normalize_inline_link(
+            data["documentation_link"]
+        )
 
     if "product_link" in data:
-        project_to_edit.product_link = data["product_link"] or None
+        project_to_edit.product_link = _normalize_inline_link(data["product_link"])
+
+    if "custom_links" in data:
+        _apply_custom_links_change(project_to_edit, data["custom_links"], changes)
 
     if "observacao" in data:
         project_to_edit.observacao = data["observacao"] or None

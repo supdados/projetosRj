@@ -58,6 +58,13 @@ class Project(db.Model):
         cascade="all, delete-orphan",
         order_by="ProjectSeiProcess.ordem",
     )
+    custom_links = db.relationship(
+        "ProjectCustomLink",
+        backref="project",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="ProjectCustomLink.ordem",
+    )
 
     @property
     def data_inicio_projeto(self):
@@ -113,6 +120,22 @@ class ProjectSeiProcess(db.Model):
 
     def __repr__(self):
         return f"<ProjectSeiProcess {self.numero} (project {self.project_id})>"
+
+
+# Clone da tabela filha ProjectSeiProcess (mesmo padrão multi-valor por projeto),
+# sem UniqueConstraint: labels repetidas são inócuas para links livres.
+class ProjectCustomLink(db.Model):
+    __tablename__ = "project_custom_link"
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(
+        db.Integer, db.ForeignKey("project.id"), nullable=False, index=True
+    )
+    label = db.Column(db.String(80), nullable=False)
+    url = db.Column(db.String(500), nullable=False)
+    ordem = db.Column(db.Integer, nullable=False, default=0)
+
+    def __repr__(self):
+        return f"<ProjectCustomLink {self.label!r} (project {self.project_id})>"
 
 
 class ProjectHistory(db.Model):

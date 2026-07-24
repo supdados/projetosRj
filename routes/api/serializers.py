@@ -291,8 +291,8 @@ def serialize_project_detail(project: Any) -> dict[str, Any]:
     Reusa ``serialize_project_card`` (id/titulo/status/derivados read-only) e
     soma os demais campos editáveis inline do projeto que NÃO estão no card —
     ``observacao``, ``sei_processes``, ``delivery_type``, ``abep_indicator``,
-    ``github_link``, ``documentation_link``, ``product_link`` e a seleção de
-    objetivo/resultado/indicadores. NUNCA expõe segredos.
+    ``github_link``, ``documentation_link``, ``product_link``, ``custom_links``
+    e a seleção de objetivo/resultado/indicadores. NUNCA expõe segredos.
 
     Args:
         project: Instância de ``Project``.
@@ -314,6 +314,9 @@ def serialize_project_detail(project: Any) -> dict[str, Any]:
             "github_link": project.github_link,
             "documentation_link": project.documentation_link,
             "product_link": project.product_link,
+            "custom_links": [
+                {"label": link.label, "url": link.url} for link in project.custom_links
+            ],
             "objetivo_id": project.objetivo_id,
             "resultado_esperado_id": project.resultado_esperado_id,
             "indicadores_ids": [ip.indicador_id for ip in project.indicadores],

@@ -646,6 +646,88 @@
 	}
 
 	/**
+	 * Salva a lista COMPLETA de links personalizados (substituicao) via /inline.
+	 * Retorna sucesso para os chamadores fecharem UI local (form de adicao).
+	 */
+	async function saveCustomLinks(
+		next: { label: string; url: string }[],
+		stateKey: string
+	): Promise<boolean> {
+		if (!data) return false;
+		setProjectFieldState(stateKey, { pending: true, error: null });
+		try {
+			const result = await updateProjectInline(projectId, { custom_links: next });
+			data = { ...data, project: result.project };
+			setProjectFieldState(stateKey, { pending: false, error: null });
+			return true;
+		} catch (err) {
+			if (isUnauthenticated(err)) return false;
+			setProjectFieldState(stateKey, {
+				pending: false,
+				error: messageOf(err, 'Falha ao salvar o link personalizado.')
+			});
+			return false;
+		}
+	}
+
+	/** URL vazia remove o item; o backend valida/normaliza cada URL. */
+	function saveCustomLinkUrl(index: number, url: string): void {
+		const next = (data?.project.custom_links ?? [])
+			.map((link, i) => (i === index ? { label: link.label, url } : link))
+			.filter((link) => link.url.trim() !== '');
+		void saveCustomLinks(next, `custom_link_${index}`);
+	}
+
+	/** Nome vazio e no-op (o backend rejeitaria; manter o anterior e mais util). */
+	function saveCustomLinkLabel(index: number, label: string): void {
+		if (label.trim() === '') return;
+		const next = (data?.project.custom_links ?? []).map((link, i) =>
+			i === index ? { label, url: link.url } : link
+		);
+		void saveCustomLinks(next, `custom_link_${index}`);
+	}
+
+	function removeCustomLink(index: number): void {
+		const next = (data?.project.custom_links ?? []).filter((_, i) => i !== index);
+		void saveCustomLinks(next, `custom_link_${index}`);
+	}
+
+	// Form inline de adicao (nome + URL) — null quando fechado.
+	let customLinkDraft = $state<{ label: string; url: string } | null>(null);
+
+	async function confirmCustomLinkDraft(): Promise<void> {
+		const draft = customLinkDraft;
+		if (!draft || draft.label.trim() === '' || draft.url.trim() === '') return;
+		const next = [...(data?.project.custom_links ?? []), { ...draft }];
+		if (await saveCustomLinks(next, 'custom_link_add')) customLinkDraft = null;
+	}
+
+	// Clique fora do form ainda vazio descarta a linha em vez de deixa-la aberta.
+	function onCustomLinkDraftFocusOut(event: FocusEvent): void {
+		const wrapper = event.currentTarget as HTMLElement;
+		if (event.relatedTarget instanceof Node && wrapper.contains(event.relatedTarget)) return;
+		const draft = customLinkDraft;
+		if (draft && draft.label.trim() === '' && draft.url.trim() === '') {
+			customLinkDraft = null;
+			setProjectFieldState('custom_link_add', { pending: false, error: null });
+		}
+	}
+
+	function onCustomLinkDraftKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			void confirmCustomLinkDraft();
+			return;
+		}
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			event.stopPropagation();
+			customLinkDraft = null;
+			setProjectFieldState('custom_link_add', { pending: false, error: null });
+		}
+	}
+
+	/**
 	 * Salva a cascata EEGG (objetivo/resultado/indicadores) num unico request.
 	 * Reusa o estado otimista por campo (`projectFieldStates.eegg`) e re-renderiza
 	 * o projeto com a resposta (descricoes EEGG atualizadas).
@@ -1315,6 +1397,124 @@
 								/>
 							</div>
 						</div>
+
+						<!-- Links personalizados (nomeados pelo usuario, ate 3). Nome tambem
+						     editavel inline; lixeira remove o item inteiro. -->
+						{#each data.project.custom_links ?? [] as link, i (i)}
+							<div class="flex items-center gap-2 text-sm">
+								<i
+									class="fas fa-link w-4 shrink-0 text-center text-primary-600"
+									aria-hidden="true"
+								></i>
+								<div class="w-32 min-w-0 shrink-0 font-semibold text-text-primary" title={link.label}>
+									<InlineEditField
+										fieldId={`project-custom-label-${i}`}
+										label={`Nome do link: ${link.label}`}
+										value={link.label}
+										kind="text"
+										variant="cell"
+										emptyLabel="Sem nome"
+										readonly={fieldsLocked}
+										pending={projectFieldStates[`custom_link_${i}`]?.pending}
+										error={projectFieldStates[`custom_link_${i}`]?.error}
+										onSave={(v) => saveCustomLinkLabel(i, v)}
+									/>
+								</div>
+								<div class="min-w-0 flex-1">
+									<InlineEditField
+										fieldId={`project-custom-link-${i}`}
+										label={`Link: ${link.label}`}
+										value={link.url}
+										kind="text"
+										variant="cell"
+										linkify
+										emptyLabel="Não informado"
+										readonly={fieldsLocked}
+										pending={projectFieldStates[`custom_link_${i}`]?.pending}
+										error={projectFieldStates[`custom_link_${i}`]?.error}
+										onSave={(v) => saveCustomLinkUrl(i, v)}
+									/>
+								</div>
+								{#if !fieldsLocked}
+									<button
+										type="button"
+										title="Remover link"
+										aria-label={`Remover ${link.label}`}
+										disabled={projectFieldStates[`custom_link_${i}`]?.pending}
+										onclick={() => removeCustomLink(i)}
+										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									>
+										<i class="fas fa-trash-can text-xs" aria-hidden="true"></i>
+									</button>
+								{/if}
+							</div>
+						{/each}
+
+						{#if !fieldsLocked && (data.project.custom_links ?? []).length < 3}
+							{#if customLinkDraft}
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div class="flex items-center gap-2 text-sm" onfocusout={onCustomLinkDraftFocusOut}>
+									<i
+										class="fas fa-link w-4 shrink-0 text-center text-primary-600"
+										aria-hidden="true"
+									></i>
+									<!-- svelte-ignore a11y_autofocus -->
+									<input
+										bind:value={customLinkDraft.label}
+										type="text"
+										maxlength="80"
+										placeholder="Nome do link"
+										aria-label="Nome do novo link personalizado"
+										autofocus
+										onkeydown={onCustomLinkDraftKeydown}
+										class="h-8 w-32 shrink-0 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
+									/>
+									<input
+										bind:value={customLinkDraft.url}
+										type="text"
+										maxlength="500"
+										placeholder="https://..."
+										aria-label="URL do novo link personalizado"
+										onkeydown={onCustomLinkDraftKeydown}
+										class="h-8 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
+									/>
+									<button
+										type="button"
+										title="Salvar (Enter)"
+										aria-label="Salvar novo link personalizado"
+										disabled={projectFieldStates.custom_link_add?.pending ||
+											customLinkDraft.label.trim() === '' ||
+											customLinkDraft.url.trim() === ''}
+										onclick={() => void confirmCustomLinkDraft()}
+										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									>
+										<i class="fas fa-check text-xs" aria-hidden="true"></i>
+									</button>
+									<button
+										type="button"
+										title="Cancelar (Esc)"
+										aria-label="Cancelar novo link personalizado"
+										onclick={() => (customLinkDraft = null)}
+										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									>
+										<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
+									</button>
+								</div>
+								{#if projectFieldStates.custom_link_add?.error}
+									<p role="alert" class="text-xs text-danger">
+										{projectFieldStates.custom_link_add.error}
+									</p>
+								{/if}
+							{:else}
+								<button
+									type="button"
+									onclick={() => (customLinkDraft = { label: '', url: '' })}
+									class="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-dashed border-border-subtle bg-surface px-3 text-sm font-medium text-primary-600 transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								>
+									<i class="fas fa-plus text-xs" aria-hidden="true"></i>Adicionar link personalizado
+								</button>
+							{/if}
+						{/if}
 					</div>
 
 					<div class="my-4 border-t border-border-subtle"></div>

@@ -50,6 +50,11 @@ from services.project_creation import (
     StageDraft,
     create_project_record,
 )
+from services.link_validation import LinkValidationError, normalize_link_url
+from services.project_custom_links import (
+    parse_custom_links_payload,
+    replace_project_custom_links,
+)
 from services.sei_process import SEI_MAX_PER_PROJECT, SeiProcessValidationError
 
 
@@ -113,8 +118,9 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
     ``prioridade``, ``objetivo``/``resultado``/``indicadores[]``, ``observacao``,
     ``special_project``, ``sei_processes[]``, ``short_description``,
     ``delivery_type``, ``abep_indicator``, ``github_link``,
-    ``documentation_link``, ``product_link``, ``etapas[]{descricao,duration}``,
-    ``start_date`` (``YYYY-MM-DD``), ``template_id``.
+    ``documentation_link``, ``product_link``, ``custom_links[]{label,url}``,
+    ``etapas[]{descricao,duration}``, ``start_date`` (``YYYY-MM-DD``),
+    ``template_id``.
 
     Returns:
         ``ok({id, redirect_to, message})`` (200); 422 validação; 403 órgão fora
@@ -160,6 +166,14 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
     except SeiProcessValidationError as exc:
         return fail(str(exc), status=422, code="validation")
 
+    try:
+        custom_links = parse_custom_links_payload(data.get("custom_links"))
+        github_link = normalize_link_url(data.get("github_link"))
+        documentation_link = normalize_link_url(data.get("documentation_link"))
+        product_link = normalize_link_url(data.get("product_link"))
+    except LinkValidationError as exc:
+        return fail(str(exc), status=422, code="validation")
+
     creation_input = ProjectCreationInput(
         titulo=titulo,
         orgao_unidade=orgao_unidade,
@@ -174,9 +188,9 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
         short_description=data.get("short_description") or None,
         delivery_type=data.get("delivery_type") or None,
         abep_indicator=normalize_abep_indicator(data.get("abep_indicator")),
-        github_link=data.get("github_link") or None,
-        documentation_link=data.get("documentation_link") or None,
-        product_link=data.get("product_link") or None,
+        github_link=github_link,
+        documentation_link=documentation_link,
+        product_link=product_link,
         etapas=_parse_creation_etapas(data.get("etapas")),
         start_date=start_date,
         template_id=_coerce_int(data.get("template_id")),
@@ -186,6 +200,7 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
         new_project = create_project_record(
             creation_input, created_by_id=g.user.id if g.user else None
         )
+        replace_project_custom_links(new_project, custom_links)
         log_project_action(
             project_id=new_project.id,
             action_type="create",

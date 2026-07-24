@@ -1,6 +1,6 @@
 from .base import db, TaskQuery, TaskItemQuery
 from .user import User, UserOrgao, UserNotification
-from .project import Project, ProjectHistory, ProjectSeiProcess
+from .project import Project, ProjectCustomLink, ProjectHistory, ProjectSeiProcess
 from .etapa import Etapa, EtapaResponsavel, ProjectStageMeeting
 from .catalog import Objetivo, ResultadoEsperado, Indicador, IndicadorProjeto
 from .template import StageTemplate, StageTemplateItem, StageTemplateUsage
@@ -35,6 +35,7 @@ __all__ = [
     "UserOrgao",
     "UserNotification",
     "Project",
+    "ProjectCustomLink",
     "ProjectHistory",
     "ProjectSeiProcess",
     "Etapa",

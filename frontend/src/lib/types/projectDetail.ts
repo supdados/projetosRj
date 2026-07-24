@@ -38,6 +38,8 @@ export interface ProjectDetail extends Project {
 	github_link: string | null;
 	documentation_link: string | null;
 	product_link: string | null;
+	/** Links extras nomeados pelo usuário (até 3). Só no detail, não no card. */
+	custom_links: { label: string; url: string }[];
 	objetivo_id: number | null;
 	resultado_esperado_id: number | null;
 	indicadores_ids: number[];
@@ -195,7 +197,7 @@ export interface EtapaTasksData {
 
 /** Corpo de POST /api/projetos/<id>/inline (campos parciais do projeto). */
 export interface ProjectInlinePayload {
-	[field: string]: string | number | number[] | string[] | null;
+	[field: string]: string | number | number[] | string[] | { label: string; url: string }[] | null;
 }
 
 /**

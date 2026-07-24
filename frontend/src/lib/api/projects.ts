@@ -106,6 +106,7 @@ export interface CreateProjectInput {
 	github_link?: string;
 	documentation_link?: string;
 	product_link?: string;
+	custom_links?: { label: string; url: string }[];
 	etapas?: CreateProjectStage[];
 	start_date?: string; // YYYY-MM-DD
 	template_id?: number | null;

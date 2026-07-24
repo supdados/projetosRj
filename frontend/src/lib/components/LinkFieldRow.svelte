@@ -156,6 +156,16 @@
 	function onInputBlur(): void {
 		if (open) confirmRow(false);
 	}
+
+	// API para editores custom (snippet): confirmam/cancelam a LINHA, não só o
+	// próprio estado — sem isso a linha com startOpen nunca colapsa.
+	export function confirmFromEditor(): void {
+		confirmRow(false);
+	}
+
+	export function cancelFromEditor(): void {
+		cancelRow(true);
+	}
 </script>
 
 <div

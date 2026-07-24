@@ -96,6 +96,7 @@
 		{ value: 'urgente', label: 'Urgente' }
 	];
 	const MAX_INDICADORES = 4;
+	const CUSTOM_LINK_MAX = 3;
 
 	// --- Fases do assistente -------------------------------------------------
 	let phase = $state<'assist1' | 'assist2' | 'assist3' | 'ficha' | 'form' | 'success'>('assist1');
@@ -144,6 +145,10 @@
 	let githubLink = $state('');
 	let documentationLink = $state('');
 	let productLink = $state('');
+	// Links personalizados (até 3): pares {nome, url} livres. Snapshot restaura no
+	// Escape; carrega o índice p/ não restaurar valores de OUTRA linha aberta.
+	let customLinks = $state<{ label: string; url: string }[]>([]);
+	let customLinkSnapshot = $state<{ index: number; label: string; url: string } | null>(null);
 	let observacao = $state('');
 
 	// --- Modelo de etapas --------------------------------------------------
@@ -250,7 +255,8 @@
 		objetivoId !== '' && resultadoId !== '',
 		seiList.length > 0 ||
 			[orgaoTexto, deliveryType, specialProject, observacao].some((v) => v.trim().length > 0),
-		[githubLink, documentationLink, productLink].some((v) => v.trim().length > 0),
+		[githubLink, documentationLink, productLink].some((v) => v.trim().length > 0) ||
+			customLinks.some((cl) => cl.label.trim().length > 0 && cl.url.trim().length > 0),
 		templateId !== ''
 	]);
 	// % do cadastro: 20% pela criação + 20% por seção de detalhamento (1..4).
@@ -359,6 +365,8 @@
 		githubLink = '';
 		documentationLink = '';
 		productLink = '';
+		customLinks = [];
+		customLinkSnapshot = null;
 		observacao = '';
 		templateId = '';
 		templateStages = [];
@@ -468,12 +476,108 @@
 
 	// Números SEI: o SeiProcessField (compartilhado com o Detalhe) gerencia
 	// máscara/adição/remoção; aqui a lista é estado local até o "Salvar".
+	const customLinksFilled = $derived(
+		customLinks.filter((cl) => cl.label.trim().length > 0 && cl.url.trim().length > 0).length
+	);
 	const linkRowsFilled = $derived(
-		[githubLink, documentationLink, productLink].filter((v) => v.trim().length > 0).length
+		[githubLink, documentationLink, productLink].filter((v) => v.trim().length > 0).length +
+			customLinksFilled
 	);
-	const linkRowsSummary = $derived(
-		linkRowsFilled === 0 ? '' : `${linkRowsFilled} de 3 itens preenchidos.`
-	);
+	const totalLinkSlots = $derived(3 + customLinks.length);
+	const linkRowsSummary = $derived.by(() => {
+		if (linkRowsFilled === 0) return '';
+		const base = `${linkRowsFilled} de ${totalLinkSlots} itens preenchidos.`;
+		if (customLinks.length >= CUSTOM_LINK_MAX) {
+			return `${base} Limite de ${CUSTOM_LINK_MAX} links personalizados atingido.`;
+		}
+		return base;
+	});
+
+	function addCustomLink(): void {
+		if (customLinks.length >= CUSTOM_LINK_MAX) return;
+		customLinks = [...customLinks, { label: '', url: '' }];
+		// Adicionar ja declara intencao de digitar: foca o Nome da linha nova.
+		void tick().then(() => {
+			const cards = document.querySelectorAll('.cp-custom-link-card');
+			cards[cards.length - 1]?.querySelector<HTMLInputElement>('input')?.focus();
+		});
+	}
+
+	function removeCustomLink(index: number): void {
+		customLinks = customLinks.filter((_, i) => i !== index);
+		customLinkSnapshot = null;
+	}
+
+	function snapshotCustomLink(index: number): void {
+		const cl = customLinks[index];
+		customLinkSnapshot = cl ? { index, label: cl.label, url: cl.url } : null;
+	}
+
+	// Confirma a edição (descarta o snapshot); retorna se houve mudança.
+	function confirmCustomLink(index: number): boolean {
+		const snap = customLinkSnapshot;
+		if (!snap || snap.index !== index) return false;
+		customLinkSnapshot = null;
+		const cl = customLinks[index];
+		if (!cl) return false;
+		return cl.label.trim() !== snap.label.trim() || cl.url.trim() !== snap.url.trim();
+	}
+
+	function cancelCustomLink(index: number): void {
+		const snap = customLinkSnapshot;
+		if (!snap || snap.index !== index) return;
+		customLinkSnapshot = null;
+		const cl = customLinks[index];
+		if (!cl) return;
+		cl.label = snap.label;
+		cl.url = snap.url;
+	}
+
+	let customRowRefs = $state<LinkFieldRow[]>([]);
+
+	function focusCustomUrl(event: KeyboardEvent): void {
+		const card = (event.currentTarget as HTMLElement).closest('.cp-custom-link-card');
+		card?.querySelector<HTMLElement>('[data-cp-custom-url]')?.focus();
+	}
+
+	// Blur para fora do editor confirma a linha (paridade com o editor default);
+	// linha ainda totalmente vazia e descartada em vez de ficar aberta.
+	function onCustomEditorFocusOut(event: FocusEvent, index: number): void {
+		const wrapper = event.currentTarget as HTMLElement;
+		if (event.relatedTarget instanceof Node && wrapper.contains(event.relatedTarget)) return;
+		const cl = customLinks[index];
+		if (cl && cl.label.trim() === '' && cl.url.trim() === '') {
+			removeCustomLink(index);
+			return;
+		}
+		customRowRefs[index]?.confirmFromEditor();
+	}
+
+	function onCustomLabelKeydown(event: KeyboardEvent, index: number): void {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			focusCustomUrl(event);
+			return;
+		}
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			event.stopPropagation();
+			customRowRefs[index]?.cancelFromEditor();
+		}
+	}
+
+	function onCustomUrlKeydown(event: KeyboardEvent, index: number): void {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			customRowRefs[index]?.confirmFromEditor();
+			return;
+		}
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			event.stopPropagation();
+			customRowRefs[index]?.cancelFromEditor();
+		}
+	}
 
 	// --- ABEP combobox -----------------------------------------------------
 
@@ -784,6 +888,9 @@
 	async function createProjectNow(): Promise<void> {
 		if (submitting || createdResult) return;
 		submitting = true;
+		const customLinksPayload = customLinks
+			.filter((cl) => cl.label.trim().length > 0 && cl.url.trim().length > 0)
+			.map((cl) => ({ label: cl.label.trim(), url: cl.url.trim() }));
 		const input: CreateProjectInput = {
 			titulo: titulo.trim(),
 			orgao_id: orgaoId,
@@ -801,6 +908,7 @@
 			github_link: githubLink.trim() || undefined,
 			documentation_link: documentationLink.trim() || undefined,
 			product_link: productLink.trim() || undefined,
+			custom_links: customLinksPayload.length ? customLinksPayload : undefined,
 			// Defesa extra: etapas só valem com modelo escolhido.
 			etapas: (templateId ? templateStages : []).map((s) => ({
 				descricao: s.name,
@@ -1599,7 +1707,88 @@
 															onCommit={(v) => (productLink = v)}
 														/>
 													</div>
+													{#each customLinks as cl, index (cl)}
+														<div class="cp-custom-link-card rounded-lg border border-border-subtle">
+															<LinkFieldRow
+																bind:this={customRowRefs[index]}
+																id={`cp-custom-${index}`}
+																label={cl.label.trim() || 'Link personalizado'}
+																first
+																last
+																startOpen
+																filled={cl.label.trim().length > 0 && cl.url.trim().length > 0}
+																preview={cl.url}
+																onEditorOpen={() => snapshotCustomLink(index)}
+																onEditorConfirm={() => confirmCustomLink(index)}
+																onEditorCancel={() => cancelCustomLink(index)}
+															>
+																{#snippet editor()}
+																	<!-- svelte-ignore a11y_no_static_element_interactions -->
+																	<div
+																		class="flex items-start gap-1.5"
+																		onfocusout={(e) => onCustomEditorFocusOut(e, index)}
+																	>
+																		<div class="flex min-w-0 flex-1 flex-col gap-2">
+																			<input
+																				bind:value={cl.label}
+																				type="text"
+																				maxlength="80"
+																				placeholder="Nome do link (ex.: Painel de BI)"
+																				aria-label="Nome do link personalizado"
+																				onkeydown={(e) => onCustomLabelKeydown(e, index)}
+																				class="h-10 w-full rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+																			/>
+																			<input
+																				data-cp-custom-url
+																				bind:value={cl.url}
+																				type="text"
+																				maxlength="500"
+																				placeholder="https://..."
+																				aria-label="URL do link personalizado"
+																				onkeydown={(e) => onCustomUrlKeydown(e, index)}
+																				class="h-10 w-full rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+																			/>
+																		</div>
+																		<button
+																			type="button"
+																			title="Remover link"
+																			aria-label={`Remover ${cl.label.trim() || 'link personalizado'}`}
+																			onmousedown={(e) => e.preventDefault()}
+																			onclick={() => removeCustomLink(index)}
+																			class="grid h-10 w-9 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+																		>
+																				<svg
+																					viewBox="0 0 24 24"
+																					class="h-4 w-4"
+																					fill="none"
+																					stroke="currentColor"
+																					stroke-width="2"
+																					stroke-linecap="round"
+																					stroke-linejoin="round"
+																					aria-hidden="true"
+																				>
+																					<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+																					<path d="M10 11v6M14 11v6" />
+																				</svg>
+																		</button>
+																	</div>
+																{/snippet}
+															</LinkFieldRow>
+														</div>
+													{/each}
 												</div>
+												{#if customLinks.length < CUSTOM_LINK_MAX}
+													<button
+														type="button"
+														onclick={addCustomLink}
+														class="inline-flex h-9 w-fit items-center gap-1.5 rounded-md border border-dashed border-border-subtle bg-surface px-3.5 text-sm font-medium text-primary-600 transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+													>
+														<svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+															<path d="M10 4.5v11M4.5 10h11" stroke-linecap="round" />
+														</svg>
+														Adicionar link personalizado
+													</button>
+												{/if}
 												{#if linkRowsSummary}
 													<p class="-mt-2 text-xs text-text-muted">{linkRowsSummary}</p>
 												{/if}
