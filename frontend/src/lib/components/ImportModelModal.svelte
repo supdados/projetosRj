@@ -27,6 +27,7 @@
 	import type { StageTemplateOption } from '$lib/types/projectDetail';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { fetchTemplateStages, type TemplateStage } from '$lib/api/projects';
+	import { addBusinessDays, nextBusinessDay } from '$lib/utils/businessDays';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import DatePickerPanel from '$lib/components/DatePickerPanel.svelte';
 
@@ -126,27 +127,6 @@
 			});
 		return () => controller.abort();
 	});
-
-	/** Soma N dias úteis (pula sáb/dom) a uma data, em UTC, sem mutá-la. */
-	function addBusinessDays(base: Date, days: number): Date {
-		const result = new Date(base.getTime());
-		let added = 0;
-		while (added < days) {
-			result.setUTCDate(result.getUTCDate() + 1);
-			const weekday = result.getUTCDay();
-			if (weekday !== 0 && weekday !== 6) added += 1;
-		}
-		return result;
-	}
-
-	/** Avança a data inicial até o primeiro dia útil (>= ela mesma). */
-	function nextBusinessDay(base: Date): Date {
-		const result = new Date(base.getTime());
-		while (result.getUTCDay() === 0 || result.getUTCDay() === 6) {
-			result.setUTCDate(result.getUTCDate() + 1);
-		}
-		return result;
-	}
 
 	function formatDateBr(date: Date): string {
 		return date.toLocaleDateString('pt-BR', {
