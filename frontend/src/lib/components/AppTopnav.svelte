@@ -20,6 +20,8 @@
 		marcarNotificacoesLidas
 	} from '$lib/api/notifications';
 	import GlobalSearchBox from '$lib/components/GlobalSearchBox.svelte';
+	import Nav3dIcon from '$lib/components/Nav3dIcon.svelte';
+	import type { NavIconKind } from '$lib/nav3d/palettes';
 	import type { User } from '$lib/types/entities';
 	import type { Notificacao } from '$lib/types/notifications';
 
@@ -36,14 +38,28 @@
 		icon: string;
 	}
 
+	/** Item da nav principal: tem modelo 3D; o FA continua sendo o fallback. */
+	interface MainNavLink extends NavLink {
+		kind: NavIconKind;
+	}
+
 	// Ordem do v4.5 (sem item "Busca" — a busca virou o campo live a direita).
-	const navLinks: NavLink[] = [
-		{ label: 'Inicio', path: '/dashboard', icon: 'fa-home' },
-		{ label: 'Projetos', path: '/projetos', icon: 'fa-folder-open' },
-		{ label: 'Pendentes', path: '/projetos/pendentes', icon: 'fa-exclamation-triangle' },
-		{ label: 'Tarefas', path: '/tarefas', icon: 'fa-tasks' },
-		{ label: 'Calendario', path: '/calendarios', icon: 'fa-calendar-alt' }
+	const navLinks: MainNavLink[] = [
+		{ label: 'Inicio', path: '/dashboard', icon: 'fa-home', kind: 'inicio' },
+		{ label: 'Projetos', path: '/projetos', icon: 'fa-folder-open', kind: 'projetos' },
+		{
+			label: 'Pendentes',
+			path: '/projetos/pendentes',
+			icon: 'fa-exclamation-triangle',
+			kind: 'pendentes'
+		},
+		{ label: 'Tarefas', path: '/tarefas', icon: 'fa-tasks', kind: 'tarefas' },
+		{ label: 'Calendario', path: '/calendarios', icon: 'fa-calendar-alt', kind: 'calendario' }
 	];
+
+	// Item com o ponteiro/Enter pressionado — dirige o "pop" de acionamento do
+	// icone 3D. So visual e reversivel (WCAG 2.5.2): navegar continua no click.
+	let pressedPath = $state<string | null>(null);
 
 	// Indicador unico (pilula branca) que DESLIZA entre os itens da nav. Um so
 	// elemento persistente, posicionado por transform+width medindo o <a> ativo —
@@ -306,11 +322,32 @@
 						href={`${base}${link.path}`}
 						aria-current={active ? 'page' : undefined}
 						title={link.label}
+						onpointerdown={(e) => {
+							// Botao direito/meio: o menu de contexto engole o pointerup e o
+							// icone ficaria afundado.
+							if (e.button === 0) pressedPath = link.path;
+						}}
+						onpointerup={() => (pressedPath = null)}
+						onpointerleave={() => (pressedPath = null)}
+						onpointercancel={() => (pressedPath = null)}
+						onblur={() => (pressedPath = null)}
+						onkeydown={(e) => {
+							// Espaco fica de fora de proposito: em <a href> ele rola a pagina.
+							if (e.key === 'Enter' && !e.repeat) pressedPath = link.path;
+						}}
+						onkeyup={(e) => {
+							if (e.key === 'Enter') pressedPath = null;
+						}}
 						class="relative z-[1] inline-flex h-[1.95rem] items-center gap-2 rounded-md px-3 text-[0.85rem] font-medium leading-none no-underline transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {active
 							? 'text-primary-700 dark:text-white'
 							: 'text-white/[0.78] hover:text-white'}"
 					>
-						<i class="fas {link.icon} shrink-0" aria-hidden="true"></i>
+						<Nav3dIcon
+							faIcon={link.icon}
+							kind={link.kind}
+							{active}
+							pressed={pressedPath === link.path}
+						/>
 						<span class="whitespace-nowrap">{link.label}</span>
 					</a>
 				{/each}
