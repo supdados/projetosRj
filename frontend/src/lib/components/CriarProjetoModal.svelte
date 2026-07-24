@@ -1562,33 +1562,43 @@
 										{:else if activeSection === 3}
 											<div class="flex flex-col gap-5">
 												<h3 class={sectionTitleClass}>Links</h3>
-												<div class="rounded-lg border border-border-subtle">
-													<LinkFieldRow
-														id="cp-github"
-														label="Link GitHub"
-														first
-														startOpen
-														placeholder="https://github.com/..."
-														value={githubLink}
-														onCommit={(v) => (githubLink = v)}
-													/>
-													<LinkFieldRow
-														id="cp-doc"
-														label="Link documentação"
-														startOpen
-														placeholder="https://..."
-														value={documentationLink}
-														onCommit={(v) => (documentationLink = v)}
-													/>
-													<LinkFieldRow
-														id="cp-product"
-														label="Link para o produto"
-														startOpen
-														placeholder="https://..."
-														last
-														value={productLink}
-														onCommit={(v) => (productLink = v)}
-													/>
+												<div class="flex flex-col gap-3">
+													<div class="rounded-lg border border-border-subtle">
+														<LinkFieldRow
+															id="cp-github"
+															label="Link GitHub"
+															first
+															last
+															startOpen
+															placeholder="https://github.com/..."
+															value={githubLink}
+															onCommit={(v) => (githubLink = v)}
+														/>
+													</div>
+													<div class="rounded-lg border border-border-subtle">
+														<LinkFieldRow
+															id="cp-doc"
+															label="Link documentação"
+															first
+															last
+															startOpen
+															placeholder="https://..."
+															value={documentationLink}
+															onCommit={(v) => (documentationLink = v)}
+														/>
+													</div>
+													<div class="rounded-lg border border-border-subtle">
+														<LinkFieldRow
+															id="cp-product"
+															label="Link para o produto"
+															first
+															last
+															startOpen
+															placeholder="https://..."
+															value={productLink}
+															onCommit={(v) => (productLink = v)}
+														/>
+													</div>
 												</div>
 												{#if linkRowsSummary}
 													<p class="-mt-2 text-xs text-text-muted">{linkRowsSummary}</p>
