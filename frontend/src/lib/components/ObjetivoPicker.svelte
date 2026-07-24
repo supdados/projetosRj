@@ -339,7 +339,7 @@
 				<div
 					role="group"
 					aria-label="Objetivos EEGD"
-					class="grid grid-cols-1 gap-2.5 md:grid-cols-3 md:min-w-[var(--cp-grid-w,599px)] md:[contain:layout]"
+					class="grid grid-cols-1 gap-3 md:grid-cols-3 md:min-w-[var(--cp-grid-w,880px)] md:[contain:layout]"
 				>
 					{#each objetivos as objetivo, index (objetivo.id)}
 						{@const selected = String(objetivo.id) === objetivoId}
@@ -348,10 +348,30 @@
 							aria-pressed={selected}
 							onclick={() => pickObjetivo(objetivo)}
 							style="animation-delay: {index * 30}ms"
-							class="cp-op-opt-in relative min-h-[90px] overflow-hidden rounded-lg border px-3.5 py-4 text-left transition-[border-color,box-shadow,transform] duration-fast hover:-translate-y-px hover:border-primary-500 hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
-								? 'border-primary-500 bg-[color-mix(in_srgb,var(--ds-color-primary-600)_6%,transparent)]'
+							class="cp-op-opt-in relative min-h-[90px] overflow-hidden rounded-lg border-[1.5px] px-4 py-4 pr-10 text-left transition-[border-color,box-shadow,transform] duration-fast hover:-translate-y-px hover:border-primary-500 hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
+								? 'border-primary-600 bg-primary-100'
 								: 'border-border-subtle bg-surface'}"
 						>
+							<span
+								class="absolute right-3 top-3 z-10 grid h-5 w-5 place-items-center rounded-full border-[1.5px] transition-colors duration-fast {selected
+									? 'border-primary-600 bg-primary-600'
+									: 'border-border-strong bg-surface'}"
+								aria-hidden="true"
+							>
+								<svg
+									viewBox="0 0 24 24"
+									class="h-3 w-3 text-primary-fg transition-opacity duration-fast {selected
+										? 'opacity-100'
+										: 'opacity-0'}"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="3.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
+									<path d="M5 13l4.5 4.5L19 7" />
+								</svg>
+							</span>
 							<span
 								class="pointer-events-none absolute -bottom-4 right-2 text-[64px] font-extralight leading-none tabular-nums {selected
 									? 'text-[color-mix(in_srgb,var(--ds-color-primary-600)_22%,transparent)]'
@@ -361,7 +381,7 @@
 								{String(index + 1).padStart(2, '0')}
 							</span>
 							<span
-								class="relative block max-w-[86%] text-[13px] font-medium leading-snug text-text-primary"
+								class="relative block max-w-[86%] text-[13.5px] font-semibold leading-snug text-text-primary"
 							>
 								<span class="sr-only">Objetivo {index + 1}:</span>
 								{semNumeroInicial(objetivo.descricao)}
