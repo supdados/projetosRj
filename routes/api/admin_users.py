@@ -34,6 +34,7 @@ from ..admin_users import (
     _parse_selected_orgaos,
 )
 from ..blueprint import main_bp
+from ..pagination import clamp_page
 from .envelope import fail, ok
 from .negotiation import api_admin_required
 from .serializers import serialize_admin_user
@@ -92,16 +93,18 @@ def api_admin_usuarios_list() -> Response | tuple[Response, int]:
         )
     if area_id:
         query = query.filter(User.orgaos.any(UserOrgao.orgao_id == area_id))
-    pagination = query.order_by(User.name).paginate(
-        page=page, per_page=_PER_PAGE, error_out=False
-    )
+    ordered = query.order_by(User.name)
+    # `error_out=False` devolveria items=[] ecoando a página pedida; a UI não
+    # distingue isso de "o filtro não achou ninguém".
+    safe_page, total_pages = clamp_page(page, ordered.count(), _PER_PAGE)
+    pagination = ordered.paginate(page=safe_page, per_page=_PER_PAGE, error_out=False)
     return ok(
         {"usuarios": [serialize_admin_user(user) for user in pagination.items]},
         meta={
-            "page": pagination.page,
+            "page": safe_page,
             "per_page": _PER_PAGE,
             "total": pagination.total,
-            "total_pages": pagination.pages,
+            "total_pages": total_pages,
         },
     )
 

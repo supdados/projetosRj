@@ -39,10 +39,23 @@
 		onChange
 	}: Props = $props();
 
+	/**
+	 * Página efetiva. O pai pode passar uma página fora de faixa (deep-link
+	 * antigo, itens apagados sob os pés do usuário); sem o clamp o pager fica
+	 * sem nenhum botão ativo e a contagem imprime "Mostrando 321 - 320 de 320".
+	 */
+	const safePage = $derived(Math.min(Math.max(page, 1), Math.max(totalPages, 1)));
+
 	// "Mostrando X - Y de N <itemLabel>" — só quando há contagem disponível.
 	const showCount = $derived(total != null && perPage != null && perPage > 0);
-	const fromItem = $derived(perPage ? (page - 1) * perPage + 1 : 0);
-	const toItem = $derived(perPage ? Math.min(page * perPage, total ?? 0) : 0);
+	const fromItem = $derived(perPage ? (safePage - 1) * perPage + 1 : 0);
+	const toItem = $derived(perPage ? Math.min(safePage * perPage, total ?? 0) : 0);
+
+	/** Ignora alvos fora de faixa e no-ops — o pai nunca recebe página inválida. */
+	function requestPage(target: number): void {
+		if (target < 1 || target > totalPages || target === safePage) return;
+		onChange(target);
+	}
 
 	// Setas discretas com realce azul no hover; página ativa = primary-600 (cor
 	// do CTA primário). A transição cobre só background-color/border-color — nunca
@@ -76,8 +89,8 @@
 
 		if (tp <= PAGER_SLOTS) return range(1, tp);
 
-		const left = Math.max(page - 1, 1);
-		const right = Math.min(page + 1, tp);
+		const left = Math.max(safePage - 1, 1);
+		const right = Math.min(safePage + 1, tp);
 		const showLeftDots = left > 2;
 		const showRightDots = right < tp - 1;
 
@@ -105,8 +118,8 @@
 					<button
 						type="button"
 						class={ARROW}
-						disabled={disabled || page <= 1}
-						onclick={() => onChange(1)}
+						disabled={disabled || safePage <= 1}
+						onclick={() => requestPage(1)}
 						aria-label="Primeira página"
 					>
 						««
@@ -117,8 +130,8 @@
 				<button
 					type="button"
 					class={ARROW}
-					disabled={disabled || page <= 1}
-					onclick={() => onChange(page - 1)}
+					disabled={disabled || safePage <= 1}
+					onclick={() => requestPage(safePage - 1)}
 					aria-label="Página anterior"
 				>
 					«
@@ -131,11 +144,11 @@
 					{:else}
 						<button
 							type="button"
-							class="{PAGE_BASE} {p === page ? PAGE_ACTIVE : PAGE_IDLE}"
-							disabled={disabled && p !== page}
-							onclick={() => onChange(p)}
+							class="{PAGE_BASE} {p === safePage ? PAGE_ACTIVE : PAGE_IDLE}"
+							disabled={disabled && p !== safePage}
+							onclick={() => requestPage(p)}
 							aria-label={`Página ${p}`}
-							aria-current={p === page ? 'page' : undefined}
+							aria-current={p === safePage ? 'page' : undefined}
 						>
 							{p}
 						</button>
@@ -146,8 +159,8 @@
 				<button
 					type="button"
 					class={ARROW}
-					disabled={disabled || page >= totalPages}
-					onclick={() => onChange(page + 1)}
+					disabled={disabled || safePage >= totalPages}
+					onclick={() => requestPage(safePage + 1)}
 					aria-label="Próxima página"
 				>
 					»
@@ -158,8 +171,8 @@
 					<button
 						type="button"
 						class={ARROW}
-						disabled={disabled || page >= totalPages}
-						onclick={() => onChange(totalPages)}
+						disabled={disabled || safePage >= totalPages}
+						onclick={() => requestPage(totalPages)}
 						aria-label="Última página"
 					>
 						»»

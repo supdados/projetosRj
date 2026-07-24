@@ -18,6 +18,13 @@ export interface SwrCache<T> {
 	peek(key: string): T | null;
 	/** Grava o dado fresco da chave (chamar apenas em sucesso de fetch). */
 	store(key: string, value: T): void;
+	/**
+	 * Descarta TODAS as entradas. Chamar apos qualquer escrita que mude a
+	 * colecao (criar/excluir/importar): as chaves sao querystrings de filtro +
+	 * pagina, entao uma exclusao invalida potencialmente todas as paginas, nao
+	 * so a que estava na tela.
+	 */
+	invalidate(): void;
 }
 
 export function createSwrCache<T>(): SwrCache<T> {
@@ -26,6 +33,9 @@ export function createSwrCache<T>(): SwrCache<T> {
 		peek: (key: string): T | null => entries.get(key) ?? null,
 		store: (key: string, value: T): void => {
 			entries.set(key, value);
+		},
+		invalidate: (): void => {
+			entries.clear();
 		}
 	};
 }

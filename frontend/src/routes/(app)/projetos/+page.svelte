@@ -267,6 +267,15 @@
 	const abepOptions = $derived(data?.options.abep_indicadores_options ?? []);
 	const pagination = $derived(data?.pagination ?? null);
 	const totalProjects = $derived(data?.pagination.total ?? 0);
+	const lastPage = $derived(Math.max(1, pagination?.total_pages ?? 1));
+	/**
+	 * Lista vazia com o filtro ainda tendo resultados = a página pedida não
+	 * existe (itens apagados, ou deep-link antigo). Sem isso a tela acusa os
+	 * filtros por um problema que é de paginação.
+	 */
+	const pageOutOfRange = $derived(
+		data !== null && data.projetos.length === 0 && totalProjects > 0
+	);
 
 	/** Dot semântico de status (spec §3): só os 3 valores mapeados; demais sem dot. */
 	function statusDot(value: string): string | undefined {
@@ -559,14 +568,19 @@
 		removingIds = new Set([...removingIds, id]);
 		setTimeout(() => {
 			if (data) {
+				const total = Math.max(0, data.pagination.total - 1);
+				const totalPages = Math.max(1, Math.ceil(total / data.pagination.per_page));
 				data = {
 					...data,
 					projetos: data.projetos.filter((p) => p.id !== id),
-					pagination: {
-						...data.pagination,
-						total: Math.max(0, data.pagination.total - 1)
-					}
+					pagination: { ...data.pagination, total, total_pages: totalPages }
 				};
+				// Apagar o último item da última página deixaria a tela vazia com
+				// o pager escondido e o contador cheio. Recua e recarrega.
+				if (data.projetos.length === 0 && total > 0) {
+					page = Math.min(page, totalPages);
+					void load();
+				}
 			}
 			removingIds = new Set([...removingIds].filter((x) => x !== id));
 			flash.success(`Projeto "${titulo}" excluído.`);
@@ -986,20 +1000,36 @@
 					<i class="fas fa-folder-open" aria-hidden="true"></i>
 				</div>
 				<h2 class="m-0 font-heading text-xl font-bold text-text-primary">
-					Nenhum projeto encontrado
+					{pageOutOfRange ? 'Esta página não existe mais' : 'Nenhum projeto encontrado'}
 				</h2>
 				<p class="mb-3.5 mt-1.5 text-sm text-text-muted">
-					Os filtros aplicados não retornaram resultados. Ajuste os filtros ou crie um
-					novo projeto.
+					{#if pageOutOfRange}
+						Os {totalProjects} projetos deste filtro cabem em {lastPage}
+						{lastPage === 1 ? 'página' : 'páginas'}. Você está na {page}.
+					{:else}
+						Os filtros aplicados não retornaram resultados. Ajuste os filtros ou crie um
+						novo projeto.
+					{/if}
 				</p>
-				<button
-					type="button"
-					onclick={() => (createModalOpen = true)}
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary-600 px-3 text-sm font-semibold text-primary-fg shadow-sm transition-all duration-fast ease-out hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					<i class="fas fa-plus" aria-hidden="true"></i>
-					Criar projeto
-				</button>
+				{#if pageOutOfRange}
+					<button
+						type="button"
+						onclick={() => goToPage(lastPage)}
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary-600 px-3 text-sm font-semibold text-primary-fg shadow-sm transition-all duration-fast ease-out hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<i class="fas fa-arrow-left" aria-hidden="true"></i>
+						Ir para a última página
+					</button>
+				{:else}
+					<button
+						type="button"
+						onclick={() => (createModalOpen = true)}
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary-600 px-3 text-sm font-semibold text-primary-fg shadow-sm transition-all duration-fast ease-out hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<i class="fas fa-plus" aria-hidden="true"></i>
+						Criar projeto
+					</button>
+				{/if}
 			</div>
 		{:else}
 			<!--

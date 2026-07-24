@@ -39,8 +39,10 @@ export interface ImportProjectsResult {
  * arquivo em `arquivo` e os atributos comuns (`orgao_id`, `status`,
  * `special_project`, `delivery_type`). Sucessor da rota Jinja `/projects/import`.
  */
-export function importProjectsCsv(formData: FormData): Promise<ImportProjectsResult> {
-	return postForm<ImportProjectsResult>('/api/projetos/importar-csv', formData);
+export async function importProjectsCsv(formData: FormData): Promise<ImportProjectsResult> {
+	const result = await postForm<ImportProjectsResult>('/api/projetos/importar-csv', formData);
+	projectsCache.invalidate();
+	return result;
 }
 import type { Project } from '$lib/types/entities';
 
@@ -131,8 +133,10 @@ export interface CreateProjectResult {
  *     titulo: 'Painel X', orgao_id: 12
  *   });
  */
-export function createProject(input: CreateProjectInput): Promise<CreateProjectResult> {
-	return post<CreateProjectResult>('/api/projetos', input);
+export async function createProject(input: CreateProjectInput): Promise<CreateProjectResult> {
+	const result = await post<CreateProjectResult>('/api/projetos', input);
+	projectsCache.invalidate();
+	return result;
 }
 
 /** Sucesso de `DELETE /api/projetos/<id>` (já desempacotado do envelope). */
@@ -151,8 +155,12 @@ export interface DeleteProjectResult {
  * Exemplo:
  *   await deleteProject(42); // remove a linha só após sucesso
  */
-export function deleteProject(projectId: number): Promise<DeleteProjectResult> {
-	return del<DeleteProjectResult>(`/api/projetos/${projectId}`);
+export async function deleteProject(projectId: number): Promise<DeleteProjectResult> {
+	const result = await del<DeleteProjectResult>(`/api/projetos/${projectId}`);
+	// Excluir desloca itens entre paginas: invalida TODAS as chaves, senao a
+	// pagina vizinha volta do cache com o item ja apagado.
+	projectsCache.invalidate();
+	return result;
 }
 
 /** Objetivo EEGD (catálogo `GET /api/catalogos/objetivos`). */

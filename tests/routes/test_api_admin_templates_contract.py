@@ -69,6 +69,28 @@ def test_list_respects_order_query(client_admin, seed_data):
     assert payload["meta"]["page"] == 1
 
 
+def test_list_page_out_of_range_clamps_to_last_page(client_admin, seed_data):
+    """Sem teto o offset caía depois do fim e devolvia lista vazia."""
+    baseline = client_admin.get("/api/admin/templates").get_json()
+    total_pages = baseline["meta"]["total_pages"]
+    last_page = client_admin.get(f"/api/admin/templates?page={total_pages}").get_json()
+
+    payload = client_admin.get("/api/admin/templates?page=999999").get_json()
+
+    data = _assert_ok_envelope(payload)
+    assert payload["meta"]["page"] == total_pages
+    assert data["templates"] == _assert_ok_envelope(last_page)["templates"]
+
+
+def test_list_page_zero_or_negative_clamps_to_first_page(client_admin, seed_data):
+    first = _assert_ok_envelope(client_admin.get("/api/admin/templates").get_json())
+
+    for query in ("page=0", "page=-3"):
+        payload = client_admin.get(f"/api/admin/templates?{query}").get_json()
+        assert payload["meta"]["page"] == 1
+        assert _assert_ok_envelope(payload)["templates"] == first["templates"]
+
+
 def test_list_returns_401_when_unauthenticated(client):
     response = client.get("/api/admin/templates")
     assert response.status_code == 401

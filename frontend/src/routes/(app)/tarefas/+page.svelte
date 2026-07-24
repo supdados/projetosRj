@@ -588,6 +588,8 @@
 
 	/** Navega para outra página da lista (paginada por grupo no backend). */
 	function goToListPage(target: number): void {
+		const tp = data?.pagination.total_pages ?? 1;
+		if (target < 1 || target > tp || target === listPage) return;
 		cancelAddForm();
 		listPage = target;
 		void load();

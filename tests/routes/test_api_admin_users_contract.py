@@ -36,6 +36,35 @@ def _assert_fail_envelope(payload: Any, *, code: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+def test_list_page_out_of_range_clamps_to_last_page(client_admin, seed_data):
+    """Página além do fim devolve a ÚLTIMA página, nunca uma lista vazia.
+
+    `paginate(error_out=False)` ecoava a página pedida com `items=[]`, e a UI
+    não distingue isso de "o filtro não achou ninguém".
+    """
+    baseline = client_admin.get("/api/admin/usuarios").get_json()
+    total_pages = baseline["meta"]["total_pages"]
+    last_page = client_admin.get(f"/api/admin/usuarios?page={total_pages}").get_json()
+
+    response = client_admin.get("/api/admin/usuarios?page=999999")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    data = _assert_ok_envelope(payload)
+    assert payload["meta"]["page"] == total_pages
+    assert data["usuarios"]
+    assert data["usuarios"] == _assert_ok_envelope(last_page)["usuarios"]
+
+
+def test_list_page_zero_or_negative_clamps_to_first_page(client_admin, seed_data):
+    first = _assert_ok_envelope(client_admin.get("/api/admin/usuarios").get_json())
+
+    for query in ("page=0", "page=-3"):
+        payload = client_admin.get(f"/api/admin/usuarios?{query}").get_json()
+        assert payload["meta"]["page"] == 1
+        assert _assert_ok_envelope(payload)["usuarios"] == first["usuarios"]
+
+
 def test_list_returns_ok_envelope_with_meta(client_admin, seed_data):
     response = client_admin.get("/api/admin/usuarios")
 

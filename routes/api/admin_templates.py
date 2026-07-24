@@ -38,6 +38,7 @@ from ..admin_templates import (
     _build_template_rows,
 )
 from ..blueprint import main_bp
+from ..pagination import clamp_page
 from .envelope import fail, ok
 from .negotiation import api_admin_required
 from .serializers import serialize_template_detail, serialize_template_row
@@ -174,6 +175,9 @@ def api_admin_templates_list() -> Response | tuple[Response, int]:
     total = (
         query.with_entities(func.count(func.distinct(StageTemplate.id))).scalar() or 0
     )
+    # Sem teto o offset cai depois do fim e devolve lista vazia — indistinguível
+    # de "a busca não achou nada" na UI.
+    page, total_pages = clamp_page(page, total, PAGE_SIZE)
     query = _apply_order(
         query, order, usage_count_expr, stage_count_expr, total_duration_expr
     )
@@ -194,7 +198,6 @@ def api_admin_templates_list() -> Response | tuple[Response, int]:
         usage_map = {tid: count for tid, count in usage_rows}
 
     rows = _build_template_rows(templates, usage_map, utc_now())
-    total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
     return ok(
         {
             "templates": [serialize_template_row(row) for row in rows],

@@ -222,6 +222,8 @@
 	}
 
 	function goToPage(target: number): void {
+		const tp = meta?.total_pages ?? 1;
+		if (target < 1 || target > tp || target === page) return;
 		page = target;
 		void load();
 	}
