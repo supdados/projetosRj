@@ -127,7 +127,11 @@
 			event.preventDefault();
 			closePanel();
 			triggerEl?.focus();
+			return;
 		}
+		// O campo de busca é o único input do painel: sem isto, Enter dispara o
+		// submit implícito do <form> que envolve o seletor.
+		if (event.key === 'Enter' && event.target === inputEl) event.preventDefault();
 	}
 
 	// Fecha ao clicar fora do componente.
