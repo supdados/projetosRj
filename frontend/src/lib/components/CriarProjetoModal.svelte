@@ -181,8 +181,8 @@
 	];
 	const FICHA_SECTIONS = [
 		{ title: 'Objetivos e indicadores', subtitle: 'Resultados esperados e medição' },
-		{ title: 'Detalhes', subtitle: 'Órgão, tipo de entrega e observações' },
-		{ title: 'Links', subtitle: 'Processos SEI e documentos' },
+		{ title: 'Detalhes', subtitle: 'Órgão, tipo de entrega, processo SEI e observações' },
+		{ title: 'Links', subtitle: 'Documentos e links do projeto' },
 		{ title: 'Etapas', subtitle: 'Marcos e prazos' }
 	];
 	let activeSection = $state(0);
@@ -248,9 +248,9 @@
 	const sectionDone = $derived<boolean[]>([
 		titulo.trim().length > 0 && orgaoId.trim().length > 0,
 		objetivoId !== '' && resultadoId !== '',
-		[orgaoTexto, deliveryType, specialProject, observacao].some((v) => v.trim().length > 0),
 		seiList.length > 0 ||
-			[githubLink, documentationLink, productLink].some((v) => v.trim().length > 0),
+			[orgaoTexto, deliveryType, specialProject, observacao].some((v) => v.trim().length > 0),
+		[githubLink, documentationLink, productLink].some((v) => v.trim().length > 0),
 		templateId !== ''
 	]);
 	// % do cadastro: 20% pela criação + 20% por seção de detalhamento (1..4).
@@ -468,29 +468,11 @@
 
 	// Números SEI: o SeiProcessField (compartilhado com o Detalhe) gerencia
 	// máscara/adição/remoção; aqui a lista é estado local até o "Salvar".
-	// Snapshot da lista ao abrir a linha SEI: o onSave grava direto em seiList,
-	// então "cancelar" restaura e "confirmar" só decide a celebração.
-	let seiListSnapshot: string[] = [];
-
-	function onSeiRowOpen(): void {
-		seiListSnapshot = [...seiList];
-	}
-
-	function onSeiRowConfirm(): boolean {
-		return seiList.length > 0 && JSON.stringify(seiList) !== JSON.stringify(seiListSnapshot);
-	}
-
-	function onSeiRowCancel(): void {
-		seiList = [...seiListSnapshot];
-	}
-
-	const seiRowPreview = $derived(seiList.join(' · '));
 	const linkRowsFilled = $derived(
-		(seiList.length > 0 ? 1 : 0) +
-			[githubLink, documentationLink, productLink].filter((v) => v.trim().length > 0).length
+		[githubLink, documentationLink, productLink].filter((v) => v.trim().length > 0).length
 	);
 	const linkRowsSummary = $derived(
-		linkRowsFilled === 0 ? '' : `${linkRowsFilled} de 4 itens preenchidos.`
+		linkRowsFilled === 0 ? '' : `${linkRowsFilled} de 3 itens preenchidos.`
 	);
 
 	// --- ABEP combobox -----------------------------------------------------
@@ -1477,6 +1459,14 @@
 												</div>
 											</div>
 											<div class="flex flex-col gap-1.5">
+												<label for="cp-sei" class={labelClass}>Processo SEI-RJ</label>
+												<SeiProcessField
+													fieldId="cp-sei"
+													processes={seiList}
+													onSave={(list) => (seiList = list)}
+												/>
+											</div>
+											<div class="flex flex-col gap-1.5">
 												<label for="cp-obs" class={labelClass}>Observações</label>
 												<textarea
 													id="cp-obs"
@@ -1574,27 +1564,9 @@
 												<h3 class={sectionTitleClass}>Links</h3>
 												<div class="rounded-lg border border-border-subtle">
 													<LinkFieldRow
-														id="cp-sei"
-														label="Processo SEI-RJ"
-														first
-														startOpen
-														filled={seiList.length > 0}
-														preview={seiRowPreview}
-														onEditorOpen={onSeiRowOpen}
-														onEditorConfirm={onSeiRowConfirm}
-														onEditorCancel={onSeiRowCancel}
-													>
-														{#snippet editor()}
-															<SeiProcessField
-																fieldId="cp-sei"
-																processes={seiList}
-																onSave={(list) => (seiList = list)}
-															/>
-														{/snippet}
-													</LinkFieldRow>
-													<LinkFieldRow
 														id="cp-github"
 														label="Link GitHub"
+														first
 														startOpen
 														placeholder="https://github.com/..."
 														value={githubLink}
