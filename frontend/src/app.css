@@ -114,6 +114,20 @@
 	--color-text-muted: #6c757d;
 	--color-overlay: rgba(0, 0, 0, 0.4);
 
+	/* Tons "faint" do CriarProjetoModal v2 (spec Novo Projeto v2) */
+	--color-text-faint: #8395a3;
+	--color-text-label: #5a6b78;
+	--color-icon-faint: #a9bcc8;
+	--color-border-faint: #e8eef2;
+	--color-border-hairline: #edf2f5;
+	--color-surface-chip: #e9eff3;
+	--color-progress-track: #e3eaef;
+	--ds-color-success-700: #1b7f4d;
+	--ds-color-success-200: #cfe3d8;
+	--ds-color-success-100: #e7f4ec;
+	--ds-color-danger-700: #b4483e;
+	--ds-shadow-modal: 0 24px 64px rgba(10, 30, 45, 0.35);
+
 	/* Altura de controles de formulário (trigger/campo) — escala única, em REM
 	   para escalar com o zoom de texto do usuário (WCAG 1.4.4). Não se aplica a
 	   botões de ação/linhas de tabela, que têm densidade própria. */
@@ -134,6 +148,19 @@
 	--color-text-secondary: #e0e0e0;
 	--color-text-muted: #b5b5b5;
 	--color-overlay: rgba(0, 0, 0, 0.6);
+
+	--color-text-faint: #8a8a8a;
+	--color-text-label: #a3a3a3;
+	--color-icon-faint: #6f6f6f;
+	--color-border-faint: #2f2f2f;
+	--color-border-hairline: #2a2a2a;
+	--color-surface-chip: #2a2a2a;
+	--color-progress-track: #3a3a3a;
+	--ds-color-success-700: #6fcf9f;
+	--ds-color-success-200: rgba(73, 185, 135, 0.28);
+	--ds-color-success-100: rgba(73, 185, 135, 0.14);
+	--ds-color-danger-700: #e59a9a;
+	--ds-shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
 
 	/* Primária no dark: azul-ACINZENTADO quase neutro (links/títulos não devem
 	   gritar sobre o carvão; azul saturado fica só nos fills de marca). */

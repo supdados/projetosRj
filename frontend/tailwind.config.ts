@@ -23,6 +23,13 @@ export default {
 				'text-primary': 'var(--color-text-primary)',
 				'text-secondary': 'var(--color-text-secondary)',
 				'text-muted': 'var(--color-text-muted)',
+				'text-faint': 'var(--color-text-faint)',
+				'text-label': 'var(--color-text-label)',
+				'icon-faint': 'var(--color-icon-faint)',
+				'border-faint': 'var(--color-border-faint)',
+				'border-hairline': 'var(--color-border-hairline)',
+				'surface-chip': 'var(--color-surface-chip)',
+				'progress-track': 'var(--color-progress-track)',
 				primary: {
 					100: 'var(--ds-color-primary-100)',
 					500: 'var(--ds-color-primary-500)',
@@ -33,11 +40,15 @@ export default {
 				},
 				secondary: 'var(--ds-color-secondary-600)',
 				success: {
+					100: 'var(--ds-color-success-100)',
+					200: 'var(--ds-color-success-200)',
+					700: 'var(--ds-color-success-700)',
 					DEFAULT: 'var(--ds-color-success-600)',
 					fg: 'var(--ds-color-success-fg)'
 				},
 				warning: 'var(--ds-color-warning-600)',
 				danger: {
+					700: 'var(--ds-color-danger-700)',
 					DEFAULT: 'var(--ds-color-danger-600)',
 					fg: 'var(--ds-color-danger-fg)'
 				},
@@ -152,6 +163,7 @@ export default {
 				// --ds-radius-*
 				sm: '6px',
 				md: '8px',
+				control: '10px',
 				lg: '12px',
 				xl: '16px'
 			},
@@ -159,7 +171,8 @@ export default {
 				// --ds-shadow-* (vars em app.css; mesmos literais no light, re-temperadas no dark)
 				sm: 'var(--ds-shadow-sm)',
 				md: 'var(--ds-shadow-md)',
-				lg: 'var(--ds-shadow-lg)'
+				lg: 'var(--ds-shadow-lg)',
+				modal: 'var(--ds-shadow-modal)'
 			},
 			transitionDuration: {
 				// --ds-transition-*
