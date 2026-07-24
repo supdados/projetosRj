@@ -11,7 +11,7 @@
 	 *      essenciais via `/inline`;
 	 *   3. `secao` — uma seção por vez; salva via `/inline` (ou
 	 *      `/importar-modelo` nas Etapas) e pula para a próxima pendente;
-	 *   4. `done` — "Cadastro concluído": "Criar outro projeto" (reseta) e
+	 *   4. `done` — "Cadastro concluído": "Criar novo projeto" (reseta) e
 	 *      "Ver o projeto" (`onCreated(result)` → a página navega).
 	 *
 	 * Mantém (paridade funcional):
@@ -189,6 +189,8 @@
 	let titleInputEl = $state<HTMLInputElement | null>(null);
 	let dialogEl = $state<HTMLDivElement | null>(null);
 	let hubPrimaryBtn = $state<HTMLButtonElement | null>(null);
+	// Origem do confete: a própria arte do popper na tela de sucesso.
+	let successIconEl = $state<HTMLElement | null>(null);
 	let verProjetoBtn = $state<HTMLButtonElement | null>(null);
 	let secaoHeadingEl = $state<HTMLHeadingElement | null>(null);
 	// Descrição do passo 2 cresce com o conteúdo (underline sempre colado ao texto).
@@ -252,9 +254,9 @@
 	);
 
 	const dialogWidthClass = $derived.by(() => {
-		if (fase === 'hub') return 'max-w-[760px]';
+		if (fase === 'hub') return 'max-w-[560px]';
 		if (fase === 'secao' && secaoAtiva === 0) return 'max-w-[980px]';
-		return 'max-w-[680px]';
+		return 'max-w-[620px]';
 	});
 	// Todas as fases ancoram o topo no mesmo ponto (não centralizam), para o card
 	// não subir/descer conforme a altura do conteúdo.
@@ -889,11 +891,16 @@
 			});
 			projetoCriado = result;
 			lastCreatedThisOpen = result;
-			// Sem origem o helper usa fallback no canto superior direito; centro da tela.
-			triggerTaskFinalizeConfetti({
-				x: window.innerWidth / 2,
-				y: window.innerHeight / 2
-			});
+			// Confete só depois da tela de sucesso pintar (animate-panel-in ~320ms),
+			// com origem medida na arte do popper — nunca no centro do viewport.
+			setTimeout(() => {
+				if (!open || fase !== 'hub' || !justCreated || !successIconEl) return;
+				const rect = successIconEl.getBoundingClientRect();
+				triggerTaskFinalizeConfetti({
+					x: rect.left + rect.width / 2,
+					y: rect.top + rect.height / 2
+				});
+			}, 420);
 			justCreated = true;
 			fase = 'hub';
 			focusAfterTick(() => hubPrimaryBtn);
@@ -1106,24 +1113,30 @@
 	// --- Classes utilitárias (campos com visual unificado) -------------------
 	const labelClass = 'text-2xs font-bold uppercase tracking-[.08em] text-text-label';
 	const microLabelClass = 'text-2xs font-bold uppercase tracking-[.07em] text-text-faint';
-	const fieldClass =
-		'h-11 w-full rounded-control border border-border-strong bg-surface px-3.5 text-base leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-primary-600 focus:outline-none disabled:opacity-60';
+	const fieldBaseClass =
+		'w-full rounded-control border border-border-strong bg-surface px-3.5 leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-primary-600 focus:outline-none disabled:opacity-60';
+	const fieldClass = `h-11 text-base ${fieldBaseClass}`;
+	// Altura dos controles compostos (SelectMenu/SEI/OrgaoTreeSelect) — usada onde
+	// campos nativos dividem linha com eles.
+	const fieldMdClass = `h-[var(--control-h-md)] text-sm ${fieldBaseClass}`;
 	const areaClass =
 		'w-full rounded-control border border-border-strong bg-surface px-3.5 py-3 text-base text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-primary-600 focus:outline-none';
-	const sectionTitleClass = 'font-heading text-3xl font-bold text-text-primary';
+	const sectionTitleClass = 'font-heading text-2xl font-semibold text-text-primary';
 	const emptyBoxClass =
 		'rounded-control border border-dashed border-icon-faint bg-surface-muted px-4 py-3.5 text-sm text-text-faint';
+	// whitespace-nowrap: o rodapé tem 3 ações e o card do hub é estreito — sem
+	// isso os rótulos quebram em duas linhas.
 	const btnPrimaryClass =
-		'inline-flex h-11 items-center justify-center gap-2 rounded-control bg-primary-600 px-6 text-base font-semibold text-primary-fg transition-colors duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
+		'inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-control bg-primary-600 px-5 text-[15px] font-semibold text-primary-fg transition-colors duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
 	const btnSecondaryClass =
-		'inline-flex h-11 items-center gap-1.5 rounded-control border border-border-subtle bg-surface px-5 text-base font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60';
+		'inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-control border border-border-subtle bg-surface px-4 text-[15px] font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60';
 	const btnGhostClass =
-		'inline-flex h-10 items-center rounded-md px-3 text-base font-semibold text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60';
+		'inline-flex h-10 items-center whitespace-nowrap rounded-md px-2.5 text-[15px] font-semibold text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60';
 	const dashedAddClass =
 		'inline-flex h-10 w-fit items-center gap-1.5 rounded-control border border-dashed border-icon-faint bg-surface px-4 text-sm font-semibold text-primary-600 transition-colors duration-fast hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
 	const bodyClass = 'max-h-[70vh] min-h-0 flex-1 overflow-y-auto px-10 pb-8 pt-9';
 	// Passos essenciais não rolam: o dropdown de área precisa escapar do card.
-	const bodyOpenClass = 'px-10 pb-8 pt-9';
+	const bodyOpenClass = 'px-8 pb-6 pt-7';
 </script>
 
 {#snippet spinner()}
@@ -1139,7 +1152,7 @@
 {/snippet}
 
 {#snippet segmentProgress(total: number, done: number, label: string)}
-	<div class="mb-[26px] flex flex-col gap-2">
+	<div class="mb-5 flex flex-col gap-2">
 		<div
 			class="flex max-w-[220px] gap-1.5"
 			role="progressbar"
@@ -1200,7 +1213,11 @@
 				<button type="button" onclick={ghostAction} class={btnGhostClass} disabled={submitting}>
 					{ghostLabel}
 				</button>
-			{:else if fase === 'hub' || fase === 'secao'}
+			{:else if fase === 'hub'}
+				<button type="button" onclick={startAnotherProject} class={btnGhostClass}>
+					Criar novo projeto
+				</button>
+			{:else if fase === 'secao'}
 				<button
 					type="button"
 					onclick={salvarEFechar}
@@ -1211,7 +1228,7 @@
 				</button>
 			{:else}
 				<button type="button" onclick={startAnotherProject} class={btnGhostClass}>
-					Criar outro projeto
+					Criar novo projeto
 				</button>
 			{/if}
 		</div>
@@ -1306,7 +1323,7 @@
 					class="flex animate-panel-in flex-col"
 				>
 					<div class={bodyOpenClass}>
-						{@render segmentProgress(3, 1, 'Essencial · passo 1 de 3')}
+						{@render segmentProgress(3, 1, 'Passo 1 de 3')}
 						<h3 id="criar-projeto-title" class={sectionTitleClass}>
 							Como vai se chamar o projeto?
 						</h3>
@@ -1319,7 +1336,7 @@
 								aria-labelledby="criar-projeto-title"
 								aria-invalid={assistTituloError}
 								placeholder="Digite o nome do projeto…"
-								class="w-full border-0 border-b-2 bg-transparent px-0 py-1.5 text-2xl text-text-primary placeholder:text-text-faint focus:outline-none {assistTituloError
+								class="w-full border-0 border-b-2 bg-transparent px-0 py-1.5 text-xl text-text-primary placeholder:text-text-faint focus:outline-none {assistTituloError
 									? 'border-danger'
 									: 'border-primary-600'}"
 							/>
@@ -1342,7 +1359,7 @@
 					class="flex animate-panel-in flex-col"
 				>
 					<div class={bodyOpenClass}>
-						{@render segmentProgress(3, 2, 'Essencial · passo 2 de 3')}
+						{@render segmentProgress(3, 2, 'Passo 2 de 3')}
 						<h3 id="criar-projeto-title" class={sectionTitleClass}>Descrição breve</h3>
 						<div class="mt-6 flex flex-col gap-1.5">
 							<textarea
@@ -1375,7 +1392,7 @@
 					class="flex animate-panel-in flex-col"
 				>
 					<div class={bodyOpenClass}>
-						{@render segmentProgress(3, 3, 'Essencial · passo 3 de 3')}
+						{@render segmentProgress(3, 3, 'Passo 3 de 3')}
 						<h3 id="criar-projeto-title" class={sectionTitleClass}>Prioridade e responsável</h3>
 						<div class="mt-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-9">
 							<div class="flex flex-col gap-2">
@@ -1449,12 +1466,15 @@
 					<div class={bodyClass}>
 						{#if justCreated}
 							<div class="relative flex flex-col items-center gap-2.5 pb-7 pt-2">
-								<img
-									src="/static/img/confete-popper.png"
-									alt=""
-									class="cp-success-icon h-28 w-28"
-									aria-hidden="true"
-								/>
+								<!-- Wrapper sem transform: rect estável para a origem do confete. -->
+								<span bind:this={successIconEl} class="block h-28 w-28">
+									<img
+										src="/static/img/confete-popper.png"
+										alt=""
+										class="cp-success-icon h-28 w-28"
+										aria-hidden="true"
+									/>
+								</span>
 								<h2
 									id="criar-projeto-title"
 									class="font-heading text-[24px] font-bold text-text-primary"
@@ -1483,6 +1503,12 @@
 								{@render editarEssenciaisBtn()}
 							</div>
 						{/if}
+
+						<p class="pb-3 text-sm text-text-faint">
+							{secoesSalvas === HUB_SECTIONS.length
+								? 'Todas as informações complementares foram preenchidas.'
+								: 'Estas informações ainda não foram preenchidas.'}
+						</p>
 
 						<div class="flex flex-col">
 							{#each HUB_SECTIONS as section, index (index)}
@@ -1522,7 +1548,7 @@
 						{@render segmentProgress(
 							4,
 							Math.max(secoesSalvas, secaoAtiva + 1),
-							`Cadastro complementar · seção ${secaoAtiva + 1} de 4`
+							`Seção ${secaoAtiva + 1} de 4`
 						)}
 						<h3
 							id="criar-projeto-title"
@@ -1532,7 +1558,6 @@
 						>
 							{HUB_SECTIONS[secaoAtiva].title}
 						</h3>
-						<p class="mt-1.5 text-sm text-text-faint">{HUB_SECTIONS[secaoAtiva].subtitle}</p>
 
 						<div class="mt-7 flex flex-col gap-5">
 							{#if secaoAtiva === 0}
@@ -1626,7 +1651,7 @@
 											bind:value={orgaoTexto}
 											type="text"
 											placeholder="Órgão responsável"
-											class={fieldClass}
+											class={fieldMdClass}
 										/>
 									</div>
 									<div class="flex flex-col gap-1.5">
@@ -1663,7 +1688,7 @@
 													type="button"
 													aria-pressed={selected}
 													onclick={() => (specialProject = selected ? '' : sp)}
-													class="inline-flex h-11 flex-1 items-center justify-center rounded-control border px-3 text-base font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
+													class="inline-flex h-[var(--control-h-md)] flex-1 items-center justify-center rounded-control border px-3 text-sm font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
 														? 'border-primary-600 bg-primary-600 text-primary-fg'
 														: 'border-border-strong bg-surface text-text-secondary hover:border-primary-600'}"
 												>
@@ -1927,14 +1952,12 @@
 			{:else}
 				<div class="flex animate-panel-in flex-col">
 					<div class="flex flex-col items-center gap-3 px-10 pb-10 pt-16">
-						<span
-							class="cp-done-check grid h-16 w-16 place-items-center rounded-full bg-primary-100"
+						<img
+							src="/static/img/confete-popper.png"
+							alt=""
+							class="cp-success-icon h-28 w-28"
 							aria-hidden="true"
-						>
-							<span class="grid h-10 w-10 place-items-center rounded-full bg-primary-600 text-primary-fg">
-								{@render checkIcon('h-5 w-5')}
-							</span>
-						</span>
+						/>
 						<h2 id="criar-projeto-title" class="font-heading text-[24px] font-bold text-text-primary">
 							Cadastro concluído
 						</h2>
@@ -2017,25 +2040,8 @@
 			transform: scale(1) rotate(0deg);
 		}
 	}
-	.cp-done-check {
-		animation: cp-pop 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both;
-	}
-	@keyframes cp-pop {
-		0% {
-			transform: scale(0.4);
-			opacity: 0;
-		}
-		70% {
-			transform: scale(1.08);
-		}
-		100% {
-			transform: scale(1);
-			opacity: 1;
-		}
-	}
 	@media (prefers-reduced-motion: reduce) {
-		.cp-success-icon,
-		.cp-done-check {
+		.cp-success-icon {
 			animation: none;
 		}
 	}
