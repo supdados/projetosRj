@@ -1,7 +1,6 @@
 <script lang="ts">
 	/**
-	 * Raiz da SPA. No piloto, redireciona para o Dashboard (unica tela migrada).
-	 * Usa `goto` com `base` para respeitar paths.base=/static/spa.
+	 * Raiz da SPA. Usa `goto` com `base` para respeitar paths.base=/static/spa.
 	 */
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';

@@ -8,9 +8,6 @@
  * CASCATA DE DATAS É SERVER-SIDE: ao reordenar etapas ou editar uma data, o
  * backend recalcula dias úteis e RE-BUSCA o estado; o front NUNCA reimplementa
  * dias úteis nem recalcula datas — apenas envia o pedido e renderiza a resposta.
- *
- * ADIADO: tarefas das etapas são SOMENTE LEITURA aqui (Fase 5b cobre o CRUD);
- * reuniões Google ficam para a Fase 6.
  */
 
 import { get, post } from './client';

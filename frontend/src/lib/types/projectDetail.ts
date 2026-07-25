@@ -193,8 +193,6 @@ export interface EtapaTasksData {
 	tasks: EtapaTask[];
 }
 
-// ── Payloads de mutação (entrada) ────────────────────────────────────────────
-
 /** Corpo de POST /api/projetos/<id>/inline (campos parciais do projeto). */
 export interface ProjectInlinePayload {
 	[field: string]: string | number | number[] | string[] | { label: string; url: string }[] | null;

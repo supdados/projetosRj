@@ -1,11 +1,9 @@
-"""Criação de projeto reusável por Jinja (``add_project``) e API (``POST /api/projetos``).
+"""Criação de projeto usada por ``POST /api/projetos``.
 
-Extrai a lógica de montagem de ``Project`` + etapas (com cálculo sequencial de
-datas a partir de ``start_date`` e durações em dias), indicadores e
-``StageTemplateUsage`` que antes vivia inline em ``routes/projects/crud.py``
-(item 6 da sequência de refatoração do CLAUDE.md). NÃO faz commit nem flash:
-isso fica a cargo do chamador (rota Jinja vs. envelope JSON), preservando a
-fonte de verdade única das REGRAS de criação.
+Monta ``Project`` + etapas (com cálculo sequencial de datas a partir de
+``start_date`` e durações em dias), indicadores e ``StageTemplateUsage``.
+NÃO faz commit: isso fica a cargo do chamador, preservando a fonte de verdade
+única das REGRAS de criação.
 
 Não trata permissão de órgão aqui — o chamador resolve o ``OrgaoUnidade`` via
 ``_resolve_orgao_from_form`` (mesma validação de escopo) e passa a instância.
@@ -37,7 +35,7 @@ class StageDraft:
     """Etapa importada de um modelo no momento da criação (descrição + duração).
 
     ``duration_days`` é opcional; quando ausente, a etapa é criada sem datas
-    calculadas (mesmo comportamento do form Jinja quando não há ``start_date``).
+    calculadas.
     """
 
     descricao: str
@@ -46,10 +44,9 @@ class StageDraft:
 
 @dataclass
 class ProjectCreationInput:
-    """Campos normalizados para criar um projeto (espelha o form Jinja).
+    """Campos normalizados para criar um projeto.
 
     ``titulo`` e ``orgao_unidade`` são obrigatórios e validados pelo chamador.
-    Os demais espelham 1:1 os campos de ``add_project`` no form.
     """
 
     titulo: str
@@ -77,9 +74,9 @@ def create_project_record(data: ProjectCreationInput, *, created_by_id: int | No
     """Cria o ``Project`` + etapas + indicadores + usage SEM commit.
 
     Reusa ``normalize_goal_selection``/``normalize_abep_indicator`` (já aplicados
-    pelo chamador) e replica o cálculo sequencial de datas das etapas de
-    ``add_project``: cada etapa começa no dia seguinte ao fim da anterior, com
-    ``data_fim = data_inicio + (duração - 1)`` (o início conta como dia 1).
+    pelo chamador). Cálculo sequencial de datas: cada etapa começa no dia
+    seguinte ao fim da anterior, com ``data_fim = data_inicio + (duração - 1)``
+    (o início conta como dia 1).
 
     Args:
         data: Campos normalizados do projeto.

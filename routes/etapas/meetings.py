@@ -204,7 +204,6 @@ def import_model_to_project(project_id):
     """Importa etapas de um modelo para um projeto existente"""
     project = get_or_404(Project, project_id)
 
-    # Verificar permissão
     if not user_can_access_project(g.user, project):
         flash("Você não tem permissão para importar modelos neste projeto.", "danger")
         return redirect(url_for("main.project_detail", project_id=project_id))
@@ -216,7 +215,6 @@ def import_model_to_project(project_id):
         flash("Selecione um modelo e defina a data de início.", "warning")
         return redirect(url_for("main.project_detail", project_id=project_id))
 
-    # Buscar o modelo
     template = get_or_404(StageTemplate, template_id)
 
     if not template.items:
@@ -226,7 +224,6 @@ def import_model_to_project(project_id):
     try:
         from datetime import datetime
 
-        # Converter data de início
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
 
         etapas_criadas = import_template_stages(

@@ -93,8 +93,6 @@
 	});
 
 	// --- Apresentacao do hero (read-only) ---
-	// Nome de boas-vindas: espelha {{ current_user_obj.name or username }} do
-	// template Jinja (read-only do store de auth, sem alterar logica).
 	const welcomeName = $derived(
 		$auth.user?.name?.trim() || $auth.user?.username || ''
 	);
@@ -107,9 +105,6 @@
 					'Sem órgão vinculado'
 	);
 
-	// Data "Hoje" formatada em pt-BR, identica ao script do index.html original
-	// (Intl.DateTimeFormat com weekday/day/month/year, 1a letra maiuscula).
-	// Puramente decorativa/informativa — nenhuma logica de dominio.
 	function formatToday(now: Date): string {
 		try {
 			const raw = new Intl.DateTimeFormat('pt-BR', {
@@ -308,8 +303,7 @@
 		// resultante fica discreto (<= MAX_GAP_PX). Se a folga for grande — um item
 		// quase coube, ou a tela é bem mais alta que a lista — empacota no topo
 		// (`flex-start`) com o gap natural e a sobra vai para o RODAPÉ, em vez de
-		// abrir buracos enormes entre os cards (era o caso especial `someHidden`,
-		// que distribuía a sobra inteira e estourava o espaçamento).
+		// abrir buracos enormes entre os cards.
 		const used = visible.reduce((sum, el) => sum + el.offsetHeight, 0);
 		const gapPerItem = (list.clientHeight - used) / (visible.length - 1);
 		const MAX_GAP_PX = 14;

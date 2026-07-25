@@ -1,13 +1,10 @@
 /**
  * Acesso tipado ao CRUD de Modelos de Etapas (Admin) — `/api/admin/templates*`.
  *
- * Mutations usam `client.post` (que injeta `X-CSRFToken` e trata 401/CSRF);
- * NÃO editamos `client.ts`. A LISTAGEM precisa do bloco `meta` (paginação +
- * `order`/`q` reconciliados pelo backend), que `client.get` descarta ao
- * desempacotar o envelope. Por isso a leitura da lista usa um fetch local
- * (`fetchTemplateList`) que lê `data` + `meta` do envelope cru — encapsulado
- * neste módulo da tela, sem tocar no cliente compartilhado (evita corrida).
- * As demais leituras/escritas reusam `get`/`post`.
+ * Mutations usam `client.post` (que injeta `X-CSRFToken` e trata 401/CSRF).
+ * A LISTAGEM precisa do bloco `meta` (paginação + `order`/`q` reconciliados
+ * pelo backend), que `client.get` descarta ao desempacotar o envelope — por
+ * isso usa `getWithMeta`. As demais leituras/escritas reusam `get`/`post`.
  *
  * Backend: routes/api/admin_templates.py (envelope ok/fail, api_admin_required).
  */

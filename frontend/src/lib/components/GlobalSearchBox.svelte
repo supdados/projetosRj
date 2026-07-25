@@ -370,8 +370,7 @@
 </div>
 
 <style>
-	/* === Busca global — porte 1:1 de static/css/legacy/00-foundation.css:905+ ===
-	   O CAMPO mantem cores claras fixas (vive na barra azul do topnav, contraste
+	/* O CAMPO mantem cores claras fixas (vive na barra azul do topnav, contraste
 	   deliberado); o DROPDOWN usa os tokens semanticos (adapta ao dark). */
 	.app-global-search {
 		position: relative;

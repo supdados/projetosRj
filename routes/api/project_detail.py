@@ -47,8 +47,6 @@ from .serializers import (
     serialize_task_card,
 )
 
-# Opções fixas dos seletores de edição inline (espelham templates/projects/
-# form.html).
 # Status selecionáveis no dropdown. "Finalizado" NUNCA é ofertado aqui: a única
 # transição para Finalizado é POST /api/projetos/<id>/concluir (botão Concluir).
 _STATUS_OPTIONS = [

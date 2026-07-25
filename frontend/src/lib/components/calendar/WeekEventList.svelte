@@ -17,12 +17,10 @@
 		'jul', 'ago', 'set', 'out', 'nov', 'dez',
 	];
 
-	// Chaves ISO dos 7 dias da semana
 	const weekDayKeys = $derived(
 		Array.from({ length: 7 }, (_, i) => isoDayKey(addDays(weekStart, i)))
 	);
 
-	// Eventos filtrados e ordenados pela data de inicio
 	const weekEvents = $derived(
 		events
 			.filter((ev) => weekDayKeys.includes(isoDayKey(parseLocal(ev.starts_at))))

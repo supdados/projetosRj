@@ -1,9 +1,8 @@
 """Importação de etapas de um modelo (``StageTemplate``) para um projeto.
 
-Extrai a lógica de criação em sequência de etapas a partir de um modelo, antes
-inline em ``routes/etapas/meetings.py`` (``import_model_to_project``). Compartilhada
-pela rota Jinja legada e pelo endpoint JSON da SPA (``routes/api/etapas.py``) —
-mesma regra de datas, sem duplicação. Não faz commit; a rota é dona da transação.
+Cria em sequência as etapas a partir de um modelo. Compartilhada pelas rotas e
+pelo endpoint JSON da SPA (``routes/api/etapas.py``) — mesma regra de datas, sem
+duplicação. Não faz commit; a rota é dona da transação.
 """
 
 from __future__ import annotations

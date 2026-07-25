@@ -34,7 +34,6 @@
 	interface NavLink {
 		label: string;
 		path: string;
-		/** Classe Font Awesome do icone (presentacional, 1:1 do markup v4.5). */
 		icon: string;
 	}
 
@@ -176,9 +175,7 @@
 		}
 	}
 
-	// ============================================================
 	// Notificacoes (sino): GET /api/notificacoes + POST marcar-lidas (api/notifications.ts)
-	// ============================================================
 	let notifOpen = $state(false);
 	let notifMenuEl = $state<HTMLDivElement | null>(null);
 	let notifToggleEl = $state<HTMLButtonElement | null>(null);

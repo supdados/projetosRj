@@ -48,7 +48,6 @@
 
 	/** Termo minimo (mesma regra do backend: < 2 chars nao dispara busca). */
 	const MIN_TERM_LENGTH = 2;
-	/** Janela de debounce do campo de busca (ms). */
 	const DEBOUNCE_MS = 300;
 	/** Itens por pagina do modo paginado (contrato do backend). */
 	const PER_PAGE = 40;

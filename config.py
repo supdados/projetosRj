@@ -57,7 +57,6 @@ def _resolve_secret_key(*, is_testing=False, is_debug=False):
 
 
 def build_app_config(*, is_testing=False, is_debug=False):
-    """Retorna o dicionário completo de configuração do Flask."""
     return dict(
         SECRET_KEY=_resolve_secret_key(is_testing=is_testing, is_debug=is_debug),
         SQLALCHEMY_DATABASE_URI=_resolve_database_uri(),

@@ -1,20 +1,12 @@
 /**
- * Motor dos ícones 3D do topnav: UM contexto WebGL para os 5 ícones.
+ * Motor dos ícones 3D do topnav: UM contexto WebGL para os 5 ícones, com um
+ * tile por ícone copiado para o `<canvas>` 2D de cada item. Um renderer por
+ * ícone consumiria 5 dos ~8-16 contextos da aba, e ao estourar o limite o
+ * navegador descarta o mais antigo — que seria o da navbar.
  *
- * Decisões que divergem do protótipo (`micro/docs/protos/navbar-3d.html`) e o
- * porquê — o resultado visual é o mesmo:
- *
- *  - UM `WebGLRenderer` offscreen com um tile por ícone, copiado para os
- *    `<canvas>` 2D de cada item. O protótipo criava 5 renderers = 5 dos ~8-16
- *    contextos WebGL da aba, presos numa navbar que existe em toda tela; ao
- *    estourar o limite o navegador descarta o contexto MAIS ANTIGO, que seria
- *    justamente o da navbar.
- *  - Render sob demanda: a pose de repouso é estática, então um rAF perpétuo
- *    só repinta frames idênticos queimando GPU. O loop nasce na interação e se
- *    auto-cancela quando as molas assentam.
- *  - `three` entra por `import()` em idle: são ~600KB de módulo fora do
- *    caminho crítico. Até resolver (e se falhar), o `<i>` Font Awesome segue
- *    na tela — não há estado intermediário vazio.
+ * Render sob demanda: a pose de repouso é estática, então o loop nasce na
+ * interação e se auto-cancela quando as molas assentam. `three` entra por
+ * `import()` em idle; até chegar, o `<i>` Font Awesome segue na tela.
  *
  * Exemplo:
  *     const handle = await attachNavIcon(canvasEl, 'projetos', true);

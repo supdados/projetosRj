@@ -384,10 +384,8 @@
 			descricaoEl?.focus();
 			return;
 		}
-		// Fecha SÓ com a confirmação do pai. Antes o fechamento dependia de um
-		// $effect observando etapas.length, que corria contra `addingStage` ainda
-		// true durante o refresh — o composer ficava aberto com o texto preenchido
-		// e cada Enter/clique fora criava uma etapa duplicada.
+		// Fecha SÓ com a confirmação do pai: fechar antes do retorno deixa o texto
+		// preenchido e cada Enter/clique fora cria uma etapa duplicada.
 		const created = await onAddStage({ ...draft, descricao: draft.descricao.trim() });
 		if (created) closeComposer();
 	}

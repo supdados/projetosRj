@@ -65,11 +65,6 @@ def _build_csp_header(nonce, chatbot_origin):
     )
 
 
-# ---------------------------------------------------------------------------
-# Request hooks
-# ---------------------------------------------------------------------------
-
-
 def _register_request_hooks(app):
     @app.before_request
     def assign_csp_nonce():
@@ -180,11 +175,6 @@ def _register_request_hooks(app):
         return response
 
 
-# ---------------------------------------------------------------------------
-# Template filters & context processors
-# ---------------------------------------------------------------------------
-
-
 def _register_template_filters(app):
     @app.template_filter("local_time")
     def local_time_filter(dt, fmt="%d/%m %H:%M"):
@@ -234,11 +224,6 @@ def _register_context_processors(app):
             .strip()
             .rstrip("/"),
         }
-
-
-# ---------------------------------------------------------------------------
-# App factory
-# ---------------------------------------------------------------------------
 
 
 def _abort_boot_on_migration_failure(summary: dict) -> None:

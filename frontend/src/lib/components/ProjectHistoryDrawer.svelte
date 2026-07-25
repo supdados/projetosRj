@@ -29,7 +29,6 @@
 	interface Props {
 		projectId: number;
 		projectTitulo: string;
-		/** Fecha o drawer. */
 		onClose: () => void;
 	}
 
@@ -44,7 +43,7 @@
 	// ── Apresentação dos tipos de evento ────────────────────────────────────
 	// Rótulos espelham a tela original; o "tom" foi reduzido a 3 estados para
 	// o ponto da timeline: positivo (criar/concluir), destrutivo (excluir) e
-	// neutro (todo o resto) — antes cada categoria tinha uma cor própria.
+	// neutro (todo o resto).
 	type DotTone = 'positive' | 'destructive' | 'neutral';
 
 	interface ActionPresentation {

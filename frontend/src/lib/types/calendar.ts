@@ -75,14 +75,7 @@ export interface CalendarHub {
 	last_sync_display: string | null;
 }
 
-/**
- * Campos do formulario de criacao/edicao de evento.
- *
- * Enviados como `multipart/form-data` para as rotas legadas (request.form,
- * via `parse_event_form`): `title`, `description`, `location`, `starts_at`,
- * `ends_at`, `all_day`, `create_conference`. `is_all_day`/`create_conference`
- * sao booleanos no cliente; o cliente os converte para os campos de form.
- */
+/** Campos do formulario de criacao/edicao de evento. */
 export interface CalendarEventInput {
 	title: string;
 	description: string;

@@ -1,11 +1,11 @@
 <script lang="ts">
 	/**
-	 * Tela "Admin > Usuários > Editar" (FASE 4). Form de EDIÇÃO, consumindo
+	 * Tela "Admin > Usuários > Editar". Form de EDIÇÃO, consumindo
 	 * `GET /api/admin/usuarios/<id>` (detalhe + opções de órgãos) e
 	 * `POST /api/admin/usuarios/<id>` via `$lib/api/adminUsers` (`client.post`).
 	 * Suporta também "Retirar CPF" (POST .../remover-cpf).
 	 *
-	 * Espelha templates/admin/user_form.html: `username` imutável, senha opcional
+	 * Regras: `username` imutável, senha opcional
 	 * (só altera se preenchida), CPF não editável quando o vínculo gov.br está
 	 * travado. O `id` vem do parâmetro de rota (`[id]`). Erros 404/422/genérico
 	 * tratados explicitamente; 401 já redireciona em `client.ts`. Links
@@ -97,7 +97,6 @@
 
 	const listHref = `${base}/admin/usuarios`;
 
-	/** Preenche o estado do form a partir do usuário carregado. */
 	function hydrate(user: AdminUser, orgaoIds: number[]): void {
 		usuario = user;
 		values = valuesFromUser(user, minimizeIds(orgaoIds, orgaosOptions));

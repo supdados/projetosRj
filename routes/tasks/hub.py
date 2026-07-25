@@ -114,7 +114,6 @@ def _group_hub_tasks_by_project(tasks):
                 "project_titulo": project_title,
                 "project_orgao_sigla": project_orgao_sigla,
                 "tasks": [],
-                # Compatibilidade com template/JS legado.
                 "items": [],
                 "stages": [],
             }

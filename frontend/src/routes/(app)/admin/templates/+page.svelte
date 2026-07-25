@@ -1,10 +1,8 @@
 <script lang="ts">
 	/**
-	 * Tela "Admin > Modelos de Etapas" (FASE 4). CRUD completo de modelos de
+	 * Tela "Admin > Modelos de Etapas". CRUD completo de modelos de
 	 * etapas (`StageTemplate`) consumindo `/api/admin/templates*` via
-	 * `$lib/api/adminTemplates`. Espelha visualmente
-	 * `templates/admin/template_list.html` (lista + métricas + ordenação) e
-	 * `template_form.html` (criar/editar com etapas nome/duração).
+	 * `$lib/api/adminTemplates`.
 	 *
 	 * A tela alterna entre dois modos sem trocar de rota:
 	 *   - `list`: tabela com busca (debounce), ordenação, métricas
@@ -671,7 +669,6 @@
 	</div>
 
 	{#if view === 'form'}
-		<!-- =================== FORMULÁRIO CRIAR/EDITAR =================== -->
 		<Card>
 			<form class="flex flex-col gap-5" onsubmit={saveForm} novalidate>
 				<div class="flex flex-col gap-1">
@@ -907,7 +904,6 @@
 			</form>
 		</Card>
 	{:else}
-		<!-- ======================= LISTA ======================= -->
 		{#if loadState === 'loading'}
 			<p role="status" aria-live="polite" class="sr-only">Carregando modelos…</p>
 			<AdminTemplatesSkeleton />
@@ -1208,7 +1204,6 @@
 	{/if}
 </section>
 
-<!-- ================= MODAL DE CONFIRMAÇÃO DE EXCLUSÃO ================= -->
 {#if confirmDeleteRow}
 	<Modal labelId="tpl-delete-title">
 			<div class="flex items-center gap-3">

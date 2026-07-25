@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * Tela "Detalhe de Projeto" (FASE 5a). URL: /spa/projetos/<id>.
+	 * Tela "Detalhe de Projeto". URL: /spa/projetos/<id>.
 	 *
 	 * Carrega `GET /api/projetos/<id>/detalhe` (modulo `$lib/api/projectDetail`) e
 	 * compoe ProjectHeader (sticky/compacto + edicao inline de titulo/status/
@@ -12,11 +12,6 @@
 	 * etapas ou editar uma data/campo de etapa, chamamos o endpoint e RE-BUSCAMOS o
 	 * estado do servidor (a cascata pode mudar as etapas seguintes). O front NUNCA
 	 * recalcula datas nem dias uteis.
-	 *
-	 * Restricoes da fase:
-	 *   - Tarefas das etapas sao SOMENTE LEITURA (contagem + lista simples sob
-	 *     demanda); sem mutacao (Fase 5b cobre drawer/quick-add).
-	 *   - Reunioes Google ficam read-only (Fase 6); StageRow ja as trata.
 	 *
 	 * Acessivel: heading de nivel 1 (no ProjectHeader), estados loading/erro/vazio
 	 * anunciados via aria-live/role=alert, retry focavel. Erros tratados:
@@ -162,7 +157,6 @@
 
 	const canEdit = $derived(data?.permissions.can_edit ?? false);
 
-	// Etapa-alvo do quick-add de tarefas (drawer lateral).
 	const quickAddEtapa = $derived(
 		quickAddEtapaId === null ? null : (data?.etapas.find((e) => e.id === quickAddEtapaId) ?? null)
 	);
@@ -1553,7 +1547,6 @@
 			</div>
 		</Card>
 
-		<!-- Secao de Etapas (divisor + acoes + tabela), paridade com v4.5 -->
 		<div class="section-divider">
 			<h2 id="project-stages-title" class="font-heading text-lg font-bold text-text-primary">
 				Etapas do Projeto
@@ -1650,7 +1643,6 @@
 	{/if}
 </section>
 
-<!-- Menu de contexto de dias úteis (+7/+14/+21), paridade com 07-stage-dnd.js -->
 {#if dateMenu}
 	<button
 		type="button"
@@ -1729,7 +1721,6 @@
 {/if}
 
 <style>
-	/* Divisor de seção "Etapas do Projeto" */
 	.section-divider {
 		display: flex;
 		align-items: center;

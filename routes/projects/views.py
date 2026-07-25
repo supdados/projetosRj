@@ -67,9 +67,7 @@ def build_projects_list_context(
 ):
     """Monta os dados da Lista de Projetos, respeitando o escopo de órgão.
 
-    Centraliza as queries/filtros/paginação que a rota Jinja ``/projects``
-    (``list_projects``) usa, para que a rota Jinja e o endpoint JSON da SPA
-    (``GET /api/projetos``) compartilhem a MESMA fonte de verdade. O escopo de
+    Centraliza as queries/filtros/paginação de ``GET /api/projetos``. O escopo de
     órgão é server-side (não-admin restrito à subárvore). O chamador é
     responsável por sanitizar o filtro de órgão via
     ``sanitize_orgao_filter_for_current_user`` antes de passar
@@ -126,7 +124,6 @@ def build_projects_list_context(
     if selected_objetivo and objetivo_filter_id is not None:
         query = query.filter(Project.objetivo_id == objetivo_filter_id)
 
-    # Filtro de busca (título, órgão, indicador ABEP)
     if search_query:
         search_pattern = f"%{search_query}%"
         search_id = parse_db_integer_id(search_query)
@@ -176,11 +173,9 @@ def build_projects_list_context(
     else:
         page = max(1, min(page or 1, total_pages))
 
-    # Calcular índices para slice
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
 
-    # Paginar os projetos
     projects_paginated = all_projects_filtered[start_idx:end_idx]
 
     options_query = Project.query
@@ -203,7 +198,6 @@ def build_projects_list_context(
         get_goal_catalog_context()
     )  # Para o modal de adicionar projeto e filtro
 
-    # Novas opções para filtros
     special_projects_options = ["ABEP", "TCE"]
     if g.user.is_admin or any_orgao_allows_inventario(get_user_orgao_siglas(g.user)):
         special_projects_options.append("Inventário")
@@ -239,9 +233,7 @@ def build_projects_list_context(
         has_active_filters = True
 
     # Subárvore de órgãos visível ao usuário (escopo server-side) para popular o
-    # <select> de filtro de órgão na SPA. O template Jinja não usa esta chave (a
-    # topnav já injeta a árvore via context processor); fica disponível para o
-    # endpoint JSON sem alterar o comportamento renderizado.
+    # <select> de filtro de órgão na SPA.
     orgaos_options = get_user_orgao_options(g.user)
 
     return {

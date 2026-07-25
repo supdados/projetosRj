@@ -315,7 +315,6 @@ def fetch_userinfo(config, *, access_token):
 
 
 def refresh_access_token(config, *, refresh_token):
-    """Usa o refresh token para obter novos tokens do IdP."""
     settings = get_govbr_oidc_settings(config)
     payload = _http_json_request(
         method="POST",

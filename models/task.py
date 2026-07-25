@@ -106,7 +106,6 @@ class Task(db.Model):
     def __repr__(self):
         return f"<Task {self.descricao[:50]}>"
 
-    # ── Aliases de compatibilidade legada ─────────────────────────────────────
     # Mantidos porque templates e rotas legadas ainda referenciam esses nomes.
 
     @property

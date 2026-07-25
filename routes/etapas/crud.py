@@ -197,7 +197,6 @@ def delete_etapa(etapa_id):
         flash(message, "danger")
         return redirect(url_for("main.project_detail", project_id=project_of_etapa.id))
 
-    # ── Exclusão de reunião Google ──
     meeting = (
         etapa_to_delete.meeting if is_google_meeting_stage(etapa_to_delete) else None
     )
@@ -271,7 +270,6 @@ def delete_etapa(etapa_id):
             url_for("main.project_detail", project_id=project_id_for_redirect)
         )
 
-    # ── Exclusão de etapa normal ──
     try:
         delete_regular_etapa(etapa_to_delete)
         db.session.commit()
@@ -492,7 +490,6 @@ def update_etapa_field(etapa_id):
     field = data.get("field")
     value = data.get("value")
 
-    # ── Reunião Google: somente datas ──
     if is_google_meeting_stage(etapa):
         meeting = etapa.meeting
         connection = _connection_for_current_user()
@@ -562,7 +559,6 @@ def update_etapa_field(etapa_id):
             )
         return jsonify(response_data)
 
-    # ── Campo regular ──
     if field not in ["descricao", "data_inicio", "data_fim", "responsavel"]:
         return jsonify({"success": False, "message": "Campo inválido."}), 400
 

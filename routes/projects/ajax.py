@@ -203,7 +203,6 @@ def apply_project_inline_changes(project_to_edit, data):
                 project_to_edit.special_project, new_orgao_obj.sigla
             )
 
-    # Novos campos
     if "special_project" in data:
         current_orgao = db.session.get(OrgaoUnidade, project_to_edit.orgao_id)
         project_to_edit.special_project = sanitize_special_project_for_orgao(
@@ -255,7 +254,6 @@ def apply_project_inline_changes(project_to_edit, data):
     if "observacao" in data:
         project_to_edit.observacao = data["observacao"] or None
 
-    # Objetivo, Resultado e Indicadores
     goal_fields_present = any(
         field in data
         for field in ("objetivo_id", "resultado_esperado_id", "indicadores_ids")
@@ -279,7 +277,6 @@ def apply_project_inline_changes(project_to_edit, data):
         project_to_edit.objetivo_id = objetivo_norm
         project_to_edit.resultado_esperado_id = resultado_norm
 
-        # Atualizar indicadores
         IndicadorProjeto.query.filter_by(project_id=project_id).delete()
         for indicador_id in indicadores_norm:
             indicador_projeto_novo = IndicadorProjeto(

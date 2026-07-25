@@ -73,8 +73,6 @@ export function eventColorClasses(ev: CalendarEvent): EventColorClasses {
  * Verdadeiro quando o evento cobre o dia inteiro ou virtualmente todo o dia
  * (tolerancia de 1 minuto nas bordas), para fins de renderizacao.
  *
- * Porta de +page.svelte:159-162 — mantida logica identica.
- *
  * @param ev - Evento a verificar.
  * @param day - Qualquer instancia de Date dentro do dia alvo (usa meia-noite local).
  */

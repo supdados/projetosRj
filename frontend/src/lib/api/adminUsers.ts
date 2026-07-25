@@ -7,11 +7,8 @@
  * rotas Flask POST da Fase 4.
  *
  * Exceção: a LISTA paginada precisa da `meta` do envelope (page/per_page/
- * total/total_pages), que `client.get` descarta ao devolver só `data`. Como
- * `client.ts` NÃO pode ser editado, esta função faz um fetch GET próprio
- * (sem CSRF — leitura) e reaproveita `ApiClientError` para os erros. O 401 é
- * tratado aqui com a MESMA semântica de `client.ts` (navegação top-level para
- * /login), porque o callback Gov.br depende do cookie SameSite=Strict.
+ * total/total_pages), que `client.get` descarta ao devolver só `data` — por
+ * isso usa `getWithMeta`.
  */
 
 import { get, getWithMeta, post, put, del } from './client';

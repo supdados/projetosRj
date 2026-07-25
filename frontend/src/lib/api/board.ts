@@ -1,8 +1,7 @@
 /**
  * Acesso tipado ao Kanban de Tarefas (Fase 5b-1).
  *
- * Endpoints NOVOS, aditivos (envelope canônico, `api_login_required`,
- * `orgao_scope`), que coexistem com as rotas Jinja/JSON legadas:
+ * Endpoints no envelope canônico (`api_login_required`, `orgao_scope`):
  *   - `GET  /api/tarefas/board`            -> colunas + cards (read-only + DnD).
  *   - `POST /api/tarefas/<id>/status`      -> muda o status de UMA tarefa.
  *   - `POST /api/tarefas/board/reordenar`  -> persiste ordem (e status) das colunas.

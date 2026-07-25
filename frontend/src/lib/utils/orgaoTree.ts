@@ -1,8 +1,7 @@
 /**
  * Lógica pura de montagem de árvore por `pai_id`, compartilhada entre
  * `OrgaoTreeSelect.svelte` (single-select) e `AreaResponsavelPicker.svelte`
- * (multi-select). Extraído de `OrgaoTreeSelect.svelte` para eliminar
- * duplicação — comportamento idêntico ao original.
+ * (multi-select).
  */
 
 export interface OrgaoTreeOptionLike {

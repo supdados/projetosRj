@@ -117,8 +117,7 @@
 		return idx >= 0 ? idx : firstEnabledIndex();
 	}
 
-	// Altura estimada de uma linha do painel (py-1.5 + texto 12.5px), calibrada por
-	// leitura das classes — ajuste fino esperado após QA visual.
+	// Altura estimada de uma linha do painel (py-1.5 + texto 12.5px).
 	const ROW_H = 30;
 
 	// Painel promovido ao top layer via Popover API: por spec, ignora containing

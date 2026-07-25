@@ -110,7 +110,6 @@
 		</div>
 	{/if}
 
-	<!-- Identificação -->
 	<fieldset
 		class="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-5 py-4"
 	>
@@ -223,7 +222,6 @@
 		</div>
 	</fieldset>
 
-	<!-- Credenciais -->
 	<fieldset
 		class="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-5 py-4"
 	>
@@ -256,7 +254,6 @@
 		</div>
 	</fieldset>
 
-	<!-- Vínculo e Permissões -->
 	<fieldset
 		class="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface px-5 py-4"
 	>

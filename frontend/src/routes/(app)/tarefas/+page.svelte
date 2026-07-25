@@ -73,7 +73,6 @@
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
-	/** Visualização da tela: lista (default) ou kanban. */
 	type ViewMode = 'list' | 'kanban';
 
 	// Rótulos, tons e cor da barra de status vivem em $lib/utils/taskLabels.ts e
@@ -395,10 +394,10 @@
 	// agora vive em TaskHubTaskRow, que chama `deleteCard` via a prop `onDelete`.
 	// `deleteCard` re-busca a lista no sucesso (recolhe grupos/etapas vazios).
 
-	// ADD-TAREFA NO MODO LISTA (paridade com o add inline do hub Jinja legado, já
-	// removido do codebase): cada GRUPO de projeto ganha um botão "+ Nova tarefa" que
-	// abre um form inline. Cria via a MESMA chamada do KanbanComposer (`createTarefa`)
-	// e re-busca a lista. Apenas UM form aberto por vez (controlado pela página).
+	// ADD-TAREFA NO MODO LISTA: cada GRUPO de projeto ganha um botão "+ Nova tarefa"
+	// que abre um form inline. Cria via a MESMA chamada do KanbanComposer
+	// (`createTarefa`) e re-busca a lista. Apenas UM form aberto por vez
+	// (controlado pela página).
 	type AddDraft = {
 		descricao: string;
 		prioridade: string;
@@ -830,7 +829,6 @@
 				<i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
 			</button>
 
-			<!-- Alternância de visualização (Lista ⇄ Kanban) — porte fiel do v4.5. -->
 			<TaskViewToggle {view} onSelect={selectView} />
 		{/snippet}
 	</PageHeader>

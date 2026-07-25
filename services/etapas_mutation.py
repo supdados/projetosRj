@@ -24,8 +24,6 @@ from services.project_meetings import (
     update_meeting_from_calendar_event,
 )
 
-# ── Bloqueio por tarefas abertas ─────────────────────────────────────────────
-
 
 def count_open_tasks_in_etapa(etapa_id: int) -> int:
     """Quantas tarefas da etapa ainda estão abertas (não arquivadas, não finalizadas)."""
@@ -40,9 +38,6 @@ def _clear_tasks_from_etapa(etapa) -> None:
     Task.query.filter(Task.etapa_id == etapa.id).update(
         {Task.etapa_id: None}, synchronize_session=False
     )
-
-
-# ── Criação ──────────────────────────────────────────────────────────────────
 
 
 def create_etapa_record(
@@ -94,9 +89,6 @@ def create_etapa_record(
     return etapa, project_was_reactivated
 
 
-# ── Exclusão ─────────────────────────────────────────────────────────────────
-
-
 def delete_meeting_etapa(etapa, connection):
     """Exclui uma etapa de reunião Google (evento remoto + mirrors locais).
 
@@ -141,9 +133,6 @@ def delete_regular_etapa(etapa):
     )
     _clear_tasks_from_etapa(etapa)
     db.session.delete(etapa)
-
-
-# ── Edição inline — reunião Google ───────────────────────────────────────────
 
 
 def update_meeting_dates(etapa, field, new_date, connection):
@@ -233,8 +222,6 @@ def update_meeting_dates(etapa, field, new_date, connection):
 
     return response_data
 
-
-# ── Edição inline — campo regular ────────────────────────────────────────────
 
 _FIELD_DISPLAY_NAMES = {
     "descricao": "descrição",
@@ -384,9 +371,6 @@ def update_regular_field(etapa, field: str, value: str | None) -> dict:
     if updater:
         updater(etapa, value, response_data)
     return response_data
-
-
-# ── Comentário ───────────────────────────────────────────────────────────────
 
 
 def save_etapa_comentario(etapa, comentario):

@@ -14,9 +14,7 @@
 	 *   <LoadErrorState message={errorMessage} onRetry={() => load()} />
 	 */
 	interface Props {
-		/** Mensagem de erro exibida ao usuário. */
 		message: string;
-		/** Callback do botão "Tentar novamente". */
 		onRetry: () => void;
 		/** Rótulo do botão (default: "Tentar novamente"). */
 		retryLabel?: string;

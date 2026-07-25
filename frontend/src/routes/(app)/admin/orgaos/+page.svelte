@@ -45,11 +45,8 @@
 	/** Distingue 403 (sem permissão) do erro genérico para a UI. */
 	let errorKind = $state<'forbidden' | 'generic'>('generic');
 
-	/** Estado da integração SIORG (null enquanto carrega/indisponível). */
 	let siorg = $state<SiorgStatusData | null>(null);
-	/** True enquanto o POST /sync está em voo. */
 	let syncing = $state(false);
-	/** Resultado do último sync disparado nesta sessão de tela. */
 	let syncResult = $state<SiorgSyncResult | null>(null);
 	/** Mensagem de erro do sync (409/502/rede). */
 	let syncError = $state<string>('');
@@ -190,7 +187,6 @@
 		return alive;
 	}
 
-	/** Todos os ids da árvore (para "expandir tudo"). */
 	function collectAllIds(nodes: OrgaoNode[]): Set<number> {
 		const ids = new Set<number>();
 		const walk = (list: OrgaoNode[]): void => {
@@ -415,7 +411,7 @@
 </section>
 
 <style>
-	/* Espelha static/css/admin/orgao_tree.css (v4.5). Tokens semânticos p/ dark. */
+	/* Tokens semânticos p/ dark. */
 	.orgao-tree-card {
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);

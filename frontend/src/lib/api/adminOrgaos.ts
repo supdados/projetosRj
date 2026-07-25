@@ -1,10 +1,9 @@
 /**
  * Leitura da árvore de Órgãos do Admin + integração SIORG.
  *
- * A estrutura organizacional é espelho read-only do SIORG-RJ: as funções de
- * escrita (create/update/delete/move/reorder/toggle) foram removidas junto com
- * os endpoints. Restam a leitura da árvore (`GET /api/admin/orgaos`, envelope
- * `{ok, data}` via `client.ts`) e os endpoints SIORG, que respondem no formato
+ * A estrutura organizacional é espelho read-only do SIORG-RJ: não há escrita.
+ * Restam a leitura da árvore (`GET /api/admin/orgaos`, envelope `{ok, data}` via
+ * `client.ts`) e os endpoints SIORG, que respondem no formato
  * do contrato (`{"configurado": ...}` / `{"status": "sucesso", ...}` /
  * `{"error": "..."}` em 409/502) — por isso usam fetch próprio tolerante a
  * envelope, e não `client.request`.

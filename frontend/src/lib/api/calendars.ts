@@ -19,7 +19,6 @@
  *     Google NAO e erro HTTP (o evento persiste): criar/editar devolvem
  *     `sync_outcome`/`sync_message` (espelhando o flash legado) para a SPA
  *     exibir o aviso equivalente; excluir devolve `remote_warning` opcional.
- *     O poster legado `postLegacyEventForm`/`buildEventFormData` foi removido.
  */
 
 import { get, post } from './client';
@@ -102,15 +101,9 @@ export function renewWatch(
 	);
 }
 
-// ---------------------------------------------------------------------------
 // CRUD de evento via endpoints /api dedicados (envelope `{ok,data}`, issue #20).
-//
 // O corpo e enviado como JSON (`client.post`); o backend (routes/api/
-// calendars_events.py) adapta para `parse_event_form` internamente. O input
-// `CalendarEventInput` ja casa com o contrato JSON do backend (title,
-// description, location, starts_at, ends_at, is_all_day, create_conference),
-// entao nao ha mais montagem de FormData.
-// ---------------------------------------------------------------------------
+// calendars_events.py) adapta para `parse_event_form` internamente.
 
 /**
  * Cria um evento (`POST /api/calendarios/eventos`).

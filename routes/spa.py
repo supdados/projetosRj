@@ -1,12 +1,5 @@
 """Serve a SPA SvelteKit (CSR) nos PATHS NATIVOS, com deep-link e F5 robustos.
 
-PROBLEMA RESOLVIDO (item #1)
----------------------------
-O roteador do SvelteKit precisa operar na MESMA base da URL servida. Antes, o
-``paths.base`` era ``/static/spa`` mas o index (com CSP nonce) so era servido em
-``/spa`` -> num deep-link/refresh o cliente iniciava com base ``/static/spa``
-enquanto a URL era ``/spa/...``: descasamento -> loop / tela branca.
-
 ABORDAGEM
 ---------
 1) ``frontend/svelte.config.js`` passa a usar ``paths.base = ''`` (RAIZ). Assim o
@@ -29,8 +22,8 @@ ABORDAGEM
    matcher de paths migrados; qualquer outro path -> 404 (preserva o comportamento
    atual). Deep-link e F5 nesses paths resolvem a rota client-side correta.
 
-LIMITE CONSCIENTE (telas Jinja AINDA VIVAS, pendentes de lane propria)
-----------------------------------------------------------------------
+ESTADO ATUAL
+------------
 A migração Jinja->SPA está COMPLETA: nenhuma tela de aplicação renderiza mais
 Jinja — só o fluxo de auth Gov.br (``templates/auth/*``, ``base.html`` no login/
 troca de senha) permanece (congelado). Os deep-links legados ``/projects`` e
@@ -92,10 +85,9 @@ _RESERVED_SUBPATH_PREFIXES = (
     "spa",
 )
 
-# --- Matcher dos PATHS NATIVOS servidos pelo catch-all da SPA ---------------
 # Conjunto exato (sem barra inicial) e padroes dinamicos. SO inclui paths
 # migrados que NAO possuem rota Jinja viva de mesma URL (os colidentes — ver
-# "LIMITE CONSCIENTE" no docstring — continuam no Jinja e nao entram aqui).
+# "ESTADO ATUAL" no docstring — continuam no Jinja e nao entram aqui).
 # Atualizar quando uma tela for migrada para um path nativo livre OU quando uma
 # rota Jinja colidente for cortada (entao seu path entra aqui e o catch-all passa
 # a servi-lo, pois sem a rota estatica o dinamico finalmente casa).

@@ -43,7 +43,6 @@ export async function primeConcludeAudioContext(): Promise<void> {
 	}
 }
 
-/** Toca o chime de sucesso da conclusão (porte 1:1 do legado). */
 export function playConcludeSuccessChime(): void {
 	const context = getConcludeAudioContext();
 	if (!context) return;

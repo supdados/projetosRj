@@ -176,8 +176,7 @@ async function request<T>(path: string, config: RequestConfig): Promise<T> {
 /**
  * Como `request<T>`, mas devolve `{ data, meta }` em vez de descartar a `meta`
  * do envelope. Reusa o MESMO pipeline (`sendOnce` + 401 -> /login + retry de
- * CSRF), so que preservando `meta` para chamadores que paginam (#9 — antes
- * `fetchAdminUsers`/`fetchTemplateList` faziam fetch nativo so para ler `meta`).
+ * CSRF), so que preservando `meta` para chamadores que paginam (#9).
  */
 async function requestWithMeta<T>(
 	path: string,

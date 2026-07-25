@@ -197,7 +197,7 @@ def _remember_auth_session(user, *, provider, id_token=None):
 
 @main_bp.route("/", methods=["GET"])
 def home():
-    if "user_id" in session and g.user:  # Se logado e usuário válido
+    if "user_id" in session and g.user:
         return redirect(url_for("main.dashboard"))
     return redirect(url_for("main.login_page"))
 
@@ -227,7 +227,7 @@ def _render_login_page(safe_next, *, show_local_form=False):
 @limiter.limit("10 per minute", methods=["POST"])  # geral, por IP (credential stuffing)
 @limiter.limit("5 per minute", key_func=_login_rate_key, methods=["POST"])  # por conta
 def login_page():
-    if "user_id" in session and g.user:  # Se já logado e usuário válido
+    if "user_id" in session and g.user:
         return redirect(url_for("main.dashboard"))
 
     safe_next = _resolve_safe_next_url(
@@ -458,7 +458,7 @@ def login_govbr_callback():
 
 
 @main_bp.route("/logout")
-@login_required  # Só pode fazer logout se estiver logado
+@login_required
 def logout():
     logout_url = None
     if (
@@ -482,7 +482,7 @@ def logout():
         "logout", user=g.user, provider=session.get("auth_provider", "local")
     )
     session.clear()
-    g.user = None  # Limpa g.user também
+    g.user = None
     flash("Você foi desconectado.", "info")
     response = redirect(logout_url or url_for("main.login_page"))
     response.delete_cookie("govbr_refresh_token", samesite="Strict")

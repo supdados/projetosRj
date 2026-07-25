@@ -60,7 +60,6 @@
 	// Em mode=week a faixa e continua com cantos apenas nas extremidades da semana;
 	// em mode=day destaca so o dia selecionado como celula arredondada isolada.
 	function cellHighlightClass(date: Date): string {
-		// Fundo CLARAMENTE visivel (era /60, quase invisivel sobre o branco).
 		const bg = 'bg-primary-100 dark:bg-primary-500/25';
 
 		if (mode === 'day') {
@@ -68,7 +67,6 @@
 			return '';
 		}
 
-		// mode === 'week'
 		if (!isInHighlightedWeek(date)) return '';
 		const isFirst = isSameDay(date, weekStart);
 		const isLast = isSameDay(date, weekEnd);
@@ -85,7 +83,6 @@
 </script>
 
 <div class="select-none">
-	<!-- Header -->
 	<div class="mb-2 flex items-center justify-between px-1">
 		<button
 			type="button"
@@ -121,7 +118,6 @@
 		{/each}
 	</div>
 
-	<!-- Semanas -->
 	{#each matrix as week}
 		<div class="grid grid-cols-7">
 			{#each week as date}

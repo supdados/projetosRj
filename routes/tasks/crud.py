@@ -47,14 +47,8 @@ from services.task_mutation import (
     unarchive_task as mutate_unarchive_task,
 )
 
-# FINALIZE_DENIED_MESSAGE é definido em routes/tasks/permissions.py (fonte única,
-# junto da regra _can_transition_task_to_status) e reexportado por helpers; o nome
-# permanece disponível neste módulo, sem mudança de comportamento.
 DELETE_DENIED_MESSAGE = "Somente o autor da tarefa ou um administrador pode excluí-la."
 EDIT_RESTRICTED_FIELDS_DENIED_MESSAGE = "Somente o autor da tarefa ou um administrador pode editar descrição, prioridade e responsável."
-
-
-# ── Helpers locais ────────────────────────────────────────────────────────────
 
 
 def _wants_json() -> bool:
@@ -188,9 +182,6 @@ def _on_db_error_redirect(
         )
     flash(f"{error_prefix}.", "danger")
     return _redirect_back_or(endpoint)
-
-
-# ── Rotas ─────────────────────────────────────────────────────────────────────
 
 
 @main_bp.route("/tarefas/add", methods=["POST"])

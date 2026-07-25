@@ -1,20 +1,10 @@
 <script lang="ts">
 	/**
-	 * Tela "Admin > Usuários" (FASE 4 — CRUD). Lista paginada de usuários via
-	 * `GET /api/admin/usuarios` (módulo `$lib/api/adminUsers`), com ações de
-	 * editar/excluir. Espelha templates/admin/list_users.html: ID, nome,
-	 * login, órgão legado, órgãos vinculados (chips), CPF gov.br, perfil.
+	 * Tela "Admin > Usuários". Lista paginada via `GET /api/admin/usuarios`
+	 * (módulo `$lib/api/adminUsers`), com ações de editar/excluir.
 	 *
-	 * Paridade v4.5 (templates/admin/list_users.html + 20-glass-forms-and-admin.css):
-	 *   - Ícones Font Awesome (fas fa-*) idênticos ao markup original (fa-users-cog,
-	 *     fa-user-plus, fa-users, fa-copy, fa-user-shield, fa-user, fa-pen, fa-trash).
-	 *   - Coluna CPF com DOIS chips ("CPF cadastrado" + "Vinculado"/"Pendente").
-	 *   - Tag "Você" no usuário corrente (via store `auth`), e botão excluir
-	 *     desabilitado para o próprio usuário (não pode excluir a si mesmo).
-	 *   - Paginação NUMERADA com janela (left/right edge + current) e setas «/».
-	 *
-	 * Mutations (exclusão) usam `client.post`/`del` via adminUsers.ts e pedem
-	 * confirmação antes de executar.
+	 * O botão excluir fica desabilitado para o próprio usuário (não pode
+	 * excluir a si mesmo); a exclusão pede confirmação antes de executar.
 	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { base } from '$app/paths';
@@ -392,7 +382,6 @@
 									</td>
 									<td class="px-3 py-2.5 align-middle">
 										{#if user.cpf_govbr}
-											<!-- Original: dois chips ("CPF cadastrado" + estado do vínculo). -->
 											<div class="flex flex-wrap items-center gap-1.5">
 												<span
 													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-primary-500"

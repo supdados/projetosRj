@@ -105,8 +105,7 @@
 		dot: STATUS_DOT[opt.value]
 	}));
 
-	// Referência do chip de status: origem do confete de finalização (mesmo ponto
-	// que antes era `e.currentTarget` do <select> nativo).
+	// Referência do chip de status: origem do confete de finalização.
 	let statusChipEl = $state<HTMLElement | null>(null);
 
 	let savingField = $state(false);

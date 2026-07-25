@@ -6,12 +6,9 @@
 	 * (`PendingProjectCard`). Filtros de período, responsável e órgão re-buscam
 	 * server-side (o `orgao_scope` é aplicado no backend).
 	 *
-	 * PARIDADE DE MUTAÇÃO (templates/projects/pendentes.html): botão de status
-	 * cíclico por etapa, quick-add de tarefas (drawer por etapa reusando o
-	 * TaskDrawer), expandir/recolher "outras etapas" com persistência em
-	 * localStorage e botões globais Expandir/Recolher todas. Avisos via
-	 * `<FlashToasts>` (equivalente a `window.showFlash`). Sem som/confete (o
-	 * fluxo legado não tem).
+	 * Mutações: botão de status cíclico por etapa, quick-add de tarefas (drawer
+	 * por etapa reusando o TaskDrawer), expandir/recolher "outras etapas" com
+	 * persistência em localStorage e botões globais Expandir/Recolher todas.
 	 */
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
@@ -247,8 +244,6 @@
 		page = target;
 		void load();
 	}
-
-	// ── Mutações (paridade com o Jinja) ──────────────────────────────────────
 
 	/** Store do drawer reusada pelo quick-add (NÃO recriar dentro do drawer). */
 	const drawer = createTaskDrawerStore();

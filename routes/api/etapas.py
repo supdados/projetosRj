@@ -60,9 +60,6 @@ MAX_CASCADE_BUSINESS_DAYS = 365
 _REGULAR_FIELDS = {"descricao", "data_inicio", "data_fim", "responsavel"}
 
 
-# ── Carregamento + escopo ─────────────────────────────────────────────────────
-
-
 def _load_project_or_error(project_id: int) -> tuple[Project | None, Any]:
     """Carrega o projeto validando existência (404) e escopo de órgão (403)."""
     project = db.session.get(Project, project_id)
@@ -100,9 +97,6 @@ def _reject_etapa_de_projeto_finalizado(etapa: Etapa) -> Any | None:
             code="validation",
         )
     return None
-
-
-# ── Serialização ──────────────────────────────────────────────────────────────
 
 
 def _etapa_payload(etapa: Etapa) -> dict[str, Any]:
@@ -146,9 +140,6 @@ def _parse_date(value: str | None) -> tuple[datetime.date | None, bool]:
         return datetime.datetime.strptime(value, "%Y-%m-%d").date(), True
     except ValueError:
         return None, False
-
-
-# ── CRUD ──────────────────────────────────────────────────────────────────────
 
 
 @main_bp.route("/api/projetos/<int:project_id>/etapas", methods=["POST"])
@@ -349,9 +340,6 @@ def api_etapa_delete(etapa_id: int) -> Response | tuple[Response, int]:
     return ok({"deleted_id": etapa_id, "project_id": project_id, "total_etapas": total})
 
 
-# ── Edição inline de campo (cascata server-side) ──────────────────────────────
-
-
 @main_bp.route("/api/etapas/<int:etapa_id>/update-field", methods=["POST"])
 @api_login_required
 def api_etapa_update_field(etapa_id: int) -> Response | tuple[Response, int]:
@@ -413,9 +401,6 @@ def api_etapa_update_field(etapa_id: int) -> Response | tuple[Response, int]:
     )
 
 
-# ── Comentário ────────────────────────────────────────────────────────────────
-
-
 @main_bp.route("/api/etapas/<int:etapa_id>/comentario", methods=["POST"])
 @api_login_required
 def api_etapa_comentario(etapa_id: int) -> Response | tuple[Response, int]:
@@ -456,9 +441,6 @@ def api_etapa_comentario(etapa_id: int) -> Response | tuple[Response, int]:
         return fail("Erro ao salvar comentário.", status=422, code="validation")
 
     return ok({"message": message, "etapa": _etapa_payload(etapa)})
-
-
-# ── Áreas responsáveis ────────────────────────────────────────────────────────
 
 
 @main_bp.route("/api/etapas/<int:etapa_id>/responsaveis", methods=["POST"])
@@ -517,9 +499,6 @@ def api_etapa_responsaveis(etapa_id: int) -> Response | tuple[Response, int]:
         return fail("Erro ao salvar responsáveis.", status=422, code="validation")
 
     return ok({"etapa": _etapa_payload(etapa)})
-
-
-# ── Toggles ───────────────────────────────────────────────────────────────────
 
 
 @main_bp.route("/api/etapas/<int:etapa_id>/toggle-iniciada", methods=["POST"])
@@ -614,9 +593,6 @@ def api_etapa_toggle(etapa_id: int) -> Response | tuple[Response, int]:
     )
     db.session.commit()
     return ok({"etapa": _etapa_payload(etapa)})
-
-
-# ── Reordenação + cascata ─────────────────────────────────────────────────────
 
 
 @main_bp.route("/api/projetos/<int:project_id>/etapas/reordenar", methods=["POST"])
@@ -795,9 +771,6 @@ def api_projeto_cascade(project_id: int) -> Response | tuple[Response, int]:
     return ok({"etapas": _ordered_etapas_payload(project)})
 
 
-# ── Modelos de etapas (listagem para o modal de importação) ───────────────────
-
-
 def _stage_templates_payload() -> list[dict[str, Any]]:
     """Lista os modelos de etapas com contadores (mesma forma do legado).
 
@@ -850,9 +823,6 @@ def api_etapas_templates() -> Response | tuple[Response, int]:
         "total_duration_days"}, ...]}`` com HTTP 200; 401 JSON sem sessão.
     """
     return ok(_stage_templates_payload())
-
-
-# ── Importar modelo ───────────────────────────────────────────────────────────
 
 
 @main_bp.route("/api/projetos/<int:project_id>/importar-modelo", methods=["POST"])

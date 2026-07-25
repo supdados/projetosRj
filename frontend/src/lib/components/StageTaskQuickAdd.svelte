@@ -55,7 +55,6 @@
 		stageDone: boolean;
 		/** Store do drawer (reusada da página; NÃO recriar aqui). */
 		drawer: TaskDrawerStore;
-		/** Fecha o drawer. */
 		onClose: () => void;
 		/** Notifica a página do novo done/total para sincronizar a pílula. */
 		onProgressChange: (etapaId: number, done: number, total: number) => void;

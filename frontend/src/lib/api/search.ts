@@ -5,15 +5,6 @@
  * respeitando o `orgao_scope` aplicado no servidor. Termos com menos de 2
  * caracteres retornam (no servidor) o payload vazio canonico.
  *
- * ATENCAO: a tela `busca/+page.svelte` HOJE monta a querystring e chama
- * `get<GlobalSearchData>` diretamente de `$lib/api/client` (nao importa este
- * modulo) — por isso `buildSearchQuery` abaixo replica EXATAMENTE a mesma
- * ordem/regras de parametros (`q`, `page`, `per_page`, `types`, escopo de
- * orgao) usada la, para que um peek feito com os mesmos argumentos bata com a
- * chave que `fetchGlobalSearch` gravaria no cache. Ate a pagina migrar para
- * consumir este modulo, o cache aqui fica pronto porem NAO e alimentado pela
- * tela atual.
- *
  * Aceita um `AbortSignal` para cancelar a requisicao anterior em buscas com
  * debounce (evita resultados fora de ordem).
  */

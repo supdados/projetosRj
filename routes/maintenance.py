@@ -10,7 +10,6 @@ from .blueprint import main_bp
 from .decorators import admin_required, login_required
 
 
-# Rota específica para servir o favicon
 @main_bp.route("/favicon.ico")
 def favicon():
     response = send_from_directory(
@@ -30,14 +29,12 @@ def favicon():
 @admin_required
 def setup_db():
     # Lembre-se que a tabela 'user' foi criada manualmente.
-    # db.create_all() aqui NÃO vai recriar 'user' se ela já existir.
-    # Só criaria outras tabelas dos modelos que ainda não existem.
     from flask import (
         current_app,
     )  # Importar aqui para evitar import circular no topo se routes for grande
 
     try:
-        from sqlalchemy import inspect  # Importar aqui
+        from sqlalchemy import inspect
 
         inspector = inspect(db.engine)
 
@@ -61,14 +58,9 @@ def setup_db():
             },
         }
 
-        # Se forçar ou se alguma das tabelas principais (project, user) não existir
         if force_creation or not tabela_project_existe or not tabela_user_existe:
             # CUIDADO: db.drop_all() APAGA TODOS OS DADOS. NÃO use em produção sem backup.
-            # if force_creation:
-            #     # db.drop_all() # Comentado por segurança
-            #     resultado["mensagem"] += " (DROP ALL FOI COMENTADO POR SEGURANÇA) "
-
-            db.create_all()  # Cria tabelas FALTANTES. Não recria as existentes.
+            db.create_all()
             resultado[
                 "mensagem"
             ] += "Banco de dados configurado. Tabelas faltantes (re)criadas."

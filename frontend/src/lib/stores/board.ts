@@ -2,14 +2,13 @@
  * Store do Kanban de Tarefas (Fase 5b-1) — FACTORY com ESTADO CANÔNICO.
  *
  * A store Svelte é a ÚNICA fonte de verdade do board (colunas + cards). O DOM é
- * derivado dela — NUNCA o contrário (o JS legado fazia DOM-as-state via
- * `data-*`; aqui não). Mutações de DnD são OTIMISTAS: aplicamos na store, depois
- * confirmamos com o backend (autoritativo) e revertemos (rollback) se o servidor
- * recusar — ex.: 403 ao finalizar sem permissão.
+ * derivado dela — NUNCA o contrário. Mutações de DnD são OTIMISTAS: aplicamos na
+ * store, depois confirmamos com o backend (autoritativo) e revertemos (rollback)
+ * se o servidor recusar — ex.: 403 ao finalizar sem permissão.
  *
  * Projetada para 2 modos sem acoplar a UI:
  *   - 'board'  -> board completo (5 colunas), usado por /spa/tarefas (kanban).
- *   - 'drawer' -> futuro (5b-2): mesma store, carregada/operada para uma tarefa.
+ *   - 'drawer' -> mesma store carregada/operada para uma única tarefa.
  * O modo é metadado da store; a UI escolhe como renderizar. Sem libs externas
  * de estado (apenas `writable` do Svelte).
  *

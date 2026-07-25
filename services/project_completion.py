@@ -1,8 +1,8 @@
-"""Conclusão de projeto reusável por Jinja (``concluir_project``) e API.
+"""Conclusão de projeto.
 
-Centraliza as 3 validações de ``concluir_project`` (permissão, status Vigente,
-todas as etapas concluídas) e a mutação ``status = "Finalizado"`` + histórico,
-SEM commit nem flash — o chamador decide o envelope (Jinja redirect vs. JSON).
+Centraliza as 3 validações (permissão, status Vigente, todas as etapas
+concluídas) e a mutação ``status = "Finalizado"`` + histórico, SEM commit —
+o chamador decide o envelope.
 
 A celebração épica do front (som + confetes + overlay) é puramente client-side;
 este service só garante a transição autoritativa de estado.
@@ -20,8 +20,8 @@ from routes.shared import log_project_action
 class ProjectCompletionError(Exception):
     """Erro de regra ao concluir projeto, com mensagem/categoria/status HTTP.
 
-    ``category`` espelha a categoria de flash do legado ("danger"/"warning") e
-    ``status`` o HTTP que a API deve devolver (403/400).
+    ``category`` é a severidade da mensagem ("danger"/"warning") e ``status``
+    o HTTP que a API deve devolver (403/400).
     """
 
     message: str
@@ -31,10 +31,6 @@ class ProjectCompletionError(Exception):
 
 def complete_project(project, user) -> None:
     """Valida e conclui o ``project`` para o ``user`` SEM commit.
-
-    Replica EXATAMENTE as três checagens de ``concluir_project`` (mesma fonte de
-    verdade das mensagens). Em violação levanta ``ProjectCompletionError`` com a
-    mensagem/categoria/status equivalentes ao flash legado.
 
     Args:
         project: ``Project`` a concluir.

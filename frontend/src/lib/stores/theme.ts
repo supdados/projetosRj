@@ -40,13 +40,11 @@ function applyTheme(theme: Theme): void {
 	}
 }
 
-/** Define o tema explicitamente. */
 export function setTheme(theme: Theme): void {
 	applyTheme(theme);
 	store.set(theme);
 }
 
-/** Alterna entre claro e escuro. */
 export function toggleTheme(): void {
 	store.update((current) => {
 		const next: Theme = current === 'dark' ? 'light' : 'dark';

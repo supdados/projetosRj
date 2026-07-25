@@ -104,9 +104,6 @@ def _sync_outcome(connection: Any, sync_warning: str | None) -> tuple[str, str]:
     return "synced", "Evento salvo e sincronizado com Google Calendar."
 
 
-# ── CRUD de evento ──────────────────────────────────────────────────────────
-
-
 @main_bp.route("/api/calendarios/eventos", methods=["POST"])
 @api_login_required
 def api_calendar_event_create() -> Response | tuple[Response, int]:
@@ -398,9 +395,6 @@ def api_calendar_event_delete(event_id: int) -> Response | tuple[Response, int]:
     if remote_warning:
         return ok({"deleted": True, "remote_warning": remote_warning})
     return ok({"deleted": True})
-
-
-# ── Reuniões de etapa (Detalhe do Projeto) ────────────────────────────────────
 
 
 def _meeting_response(

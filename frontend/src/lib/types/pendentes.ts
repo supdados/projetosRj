@@ -153,8 +153,6 @@ export interface PendingFilters {
 	page?: number;
 }
 
-// ── Quick-add de tarefas por etapa (mutações) ────────────────────────────────
-
 /**
  * Card de tarefa de uma etapa (`_stage_task_card`): card canônico
  * (`serialize_task_card`) + contadores e flags de permissão usados no quick-add.

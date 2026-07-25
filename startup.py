@@ -63,8 +63,7 @@ def _rebuild_task_table_with_etapa_fk() -> None:
             CREATE TABLE task_with_etapa_fk_tmp AS
             SELECT * FROM task WHERE 0
             """))
-    # CREATE AS SELECT não preserva FKs; usamos a definição declarativa
-    # via reflexão do schema atual + adiciona FK manualmente.
+    # CREATE AS SELECT não preserva FKs.
     db.session.execute(text("DROP TABLE task_with_etapa_fk_tmp"))
     db.session.execute(text(f"""
             CREATE TABLE task_new (

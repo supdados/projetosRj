@@ -3,11 +3,9 @@
 Fase 2 (telas de leitura). Dois endpoints, ambos no envelope canônico e
 protegidos por ``api_login_required`` (401 JSON):
 
-    - ``GET /api/projetos-pendentes`` — espelha a tela Jinja
-      ``/projetos_pendentes``, reaproveitando ``build_projetos_pendentes_context``
-      (mesma fonte de verdade). Respeita o escopo de órgão server-side
-      (``orgao_scope``); filtro de órgão inválido => 422 (em vez do redirect 302
-      do Jinja).
+    - ``GET /api/projetos-pendentes`` — reaproveita
+      ``build_projetos_pendentes_context``. Respeita o escopo de órgão
+      server-side (``orgao_scope``); filtro de órgão inválido => 422.
     - ``GET /api/projetos/<id>/historico`` — sucessor da extinta rota Jinja
       ``/project/<id>/history``, reaproveitando ``build_project_history_context``
       e validando o acesso via

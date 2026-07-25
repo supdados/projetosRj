@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * Tela "Lista de Projetos" (paridade v4.5 — templates/projects/list.html).
+	 * Tela "Lista de Projetos".
 	 *
 	 * Consome `GET /api/projetos` via `$lib/api/projects` e reproduz o conjunto
 	 * COMPLETO de filtros do original: busca livre (debounce), Órgão, Status,
@@ -15,16 +15,6 @@
 	 * houver filtro avançado ativo. Os filtros são refletidos de volta na URL
 	 * (replaceState) para deep-link / voltar / reload preservarem o estado,
 	 * espelhando o `?status=...` do form GET Jinja.
-	 *
-	 * Micro-interações replicadas do original (list.html + list.css + list.js):
-	 *   - Painel "Mais filtros" com slide animado (grid-template-rows 0fr→1fr),
-	 *     `inert`/`aria-hidden`/`aria-expanded`, rótulo "Mais/Menos filtros".
-	 *   - Combobox ABEP filtrável + navegável por teclado (↑/↓/Enter/Esc).
-	 *   - Badges de status/prioridade com tons fiéis (vigente/finalizado/
-	 *     suspenso/cancelado/em andamento; baixa/media/alta/urgente).
-	 *   - Tabela: ID-chip, link de título, datas mono, hover de linha, ações
-	 *     (editar) com fade-out na remoção.
-	 *   - Paginação numerada (primeira/anterior/janela/próxima/última).
 	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { base } from '$app/paths';
@@ -60,7 +50,6 @@
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
-	/** Janela de debounce da busca textual (ms). */
 	const DEBOUNCE_MS = 300;
 
 	/** Status default aplicado pelo backend quando ?status= é omitido. */
@@ -1283,9 +1272,9 @@
 />
 
 <!--
-	Confirmação de exclusão em dois passos (espelha o DeleteProjectModal do
-	list.js). A persistência é REAL: confirmar dispara DELETE /api/projetos/<id>
-	e a linha só some (com fade) após o sucesso; em erro mantém a linha + flash.
+	Confirmação de exclusão em dois passos. A persistência é REAL: confirmar
+	dispara DELETE /api/projetos/<id> e a linha só some (com fade) após o
+	sucesso; em erro mantém a linha + flash.
 -->
 <svelte:window
 	onkeydown={(e) => {

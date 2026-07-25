@@ -94,19 +94,16 @@
 	let description = $state('');
 	let location = $state('');
 	let allDay = $state(false);
-	// Par com hora.
 	let startDate = $state('');
 	let startTime = $state('');
 	let endDate = $state('');
 	let endTime = $state('');
-	// Par dia-inteiro (so data).
 	let allDayStartDate = $state('');
 	let allDayEndDate = $state('');
 
 	let createConference = $state(false);
 	let clientError = $state<string | null>(null);
 
-	// Meet (modo editar).
 	let regenMeet = $state(false);
 	let copied = $state(false);
 
@@ -460,7 +457,6 @@
 		timePicker = { field, x: 0, y: 0 };
 		await tick();
 		positionPicker('.cdp-timelist', anchor, 'time');
-		// Scroll ate o selecionado.
 		const sel = document.querySelector('.cdp-time-option--selected') as HTMLElement | null;
 		sel?.scrollIntoView({ block: 'center' });
 	}
@@ -918,11 +914,8 @@
 {/if}
 
 <style>
-	/* ════════════════════════════════════════════════════════════════════
-	   Modal de evento — portado 1:1 de calendar-event-modal.css + cal-datetime-
-	   picker.css (v4.5), com os tokens --app-color-* mapeados para os tokens
-	   semanticos da SPA (--color-*, --ds-color-*) para o dark trocar sozinho.
-	   ════════════════════════════════════════════════════════════════════ */
+	/* Tokens --app-color-* mapeados para os tokens semanticos da SPA
+	   (--color-*, --ds-color-*) para o dark trocar sozinho. */
 	.cal-modal-overlay {
 		position: fixed;
 		inset: 0;

@@ -46,9 +46,6 @@ def get_indicadores(resultado_id):
     return jsonify(get_indicadores_for_resultado(resultado_id))
 
 
-# --- API para Modelos de Etapas ---
-
-
 @main_bp.route("/api/templates")
 @login_required
 def get_templates():

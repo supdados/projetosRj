@@ -2,11 +2,6 @@ from .blueprint import main_bp
 from .shared import inject_current_year
 
 # Importa módulos para registrar rotas no blueprint compartilhado.
-# Ordem natural: o ciclo que exigia carregar `etapas` antes de `api` foi
-# eliminado no débito técnico #11 — os serviços `etapas_mutation`/`etapas_cascade`
-# agora importam os helpers puros de `services/etapas_dates.py` (não mais de
-# `routes.etapas.helpers`), então `routes.api` não depende mais de `routes.etapas`
-# em tempo de import.
 from . import admin_templates  # noqa: F401,E402
 from . import admin_users  # noqa: F401,E402
 from . import api  # noqa: F401,E402

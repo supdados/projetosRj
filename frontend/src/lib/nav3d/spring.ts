@@ -1,9 +1,6 @@
 /**
  * Integrador de mola (Euler semi-implícito) para os ícones 3D do topnav.
- *
- * O protótipo aprovado usava `lerp(a, b, 0.13)` por frame: a 120 Hz a animação
- * roda ao dobro da velocidade de 60 Hz. Aqui o passo é o tempo real, com
- * substep fixo — a 120 Hz o resultado é o mesmo que a 60 Hz.
+ * Passo em tempo real com substep fixo: independe da taxa de quadros.
  *
  * Exemplo:
  *     const s: SpringState = { x: 1, v: 0 };

@@ -2,10 +2,9 @@
  * Sistema de FLASH/TOAST da SPA (equivalente a `window.showFlash` +
  * `static/js/app-shell/flash.js` do Jinja).
  *
- * O legado mostra toasts no topo da tela com auto-dismiss (~2.2s para sucesso) e
- * categorias `success`/`info`/`warning`/`danger` (mapeadas dos `flash()`/
- * `showFlash()` do Flask). A SPA não tinha esse canal; este store o provê de
- * forma consistente, consumido pelo `<FlashToasts>` montado uma vez por tela.
+ * Toasts no topo da tela com auto-dismiss (~2.2s para sucesso) e categorias
+ * `success`/`info`/`warning`/`danger` (mapeadas dos `flash()`/`showFlash()` do
+ * Flask), consumidos pelo `<FlashToasts>` montado uma vez por tela.
  *
  * Exemplo:
  *   import { flash } from '$lib/stores/flash';

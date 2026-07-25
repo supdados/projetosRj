@@ -2,12 +2,7 @@
 	/**
 	 * Cartao de metrica (contador) do Dashboard, fiel aos KPI cards "glass" do
 	 * original (templates/index.html + static/css/index.css):
-	 *   icone em wrapper arredondado (44x44, radius 12px) + numero grande colorido
-	 *   por tom + rotulo + subtitulo opcional.
-	 *
-	 * APIs retrocompativeis: `label`/`value`/`tone` continuam funcionando como
-	 * antes. As novas props (`icon`, `subtitle`) sao OPCIONAIS — call-sites
-	 * existentes (dashboard) nao quebram. O slot `icon` permite passar um SVG.
+	 *   icone + numero grande colorido por tom + rotulo + subtitulo opcional.
 	 *
 	 * Acessivel: o grupo numero+rotulo e exposto como uma unica figura; o icone
 	 * decorativo fica fora do fluxo de leitura (aria-hidden no wrapper).

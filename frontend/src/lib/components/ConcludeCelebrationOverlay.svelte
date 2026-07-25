@@ -41,9 +41,6 @@
 </div>
 
 <style>
-	/* Porte 1:1 de static/css/projects/detail/03-stages-and-interactions.css
-	   (.project-conclude-celebration*). Mantém z-index, animações e keyframes
-	   idênticos ao legado para fidelidade total do aviso de conclusão. */
 	.project-conclude-celebration {
 		position: fixed;
 		inset: 0;
