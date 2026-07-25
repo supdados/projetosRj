@@ -9,6 +9,7 @@
 		parseLocal,
 	} from '$lib/components/calendar/weekDates';
 	import { eventColorClasses } from '$lib/components/calendar/eventVisual';
+	import { heightToViewportBottom } from '$lib/components/calendar/fillToBottom';
 	import DayColumn from '$lib/components/calendar/DayColumn.svelte';
 
 	interface Props {
@@ -35,8 +36,9 @@
 
 	function recomputeGridHeight(): void {
 		if (!timeGridEl) return;
-		const top = timeGridEl.getBoundingClientRect().top;
-		availForGrid = Math.max(260, window.innerHeight - top - 24);
+		// Mesma medida da visão Mês (heightToViewportBottom): as três visões
+		// terminam na mesma linha, acima do rodapé.
+		availForGrid = heightToViewportBottom(timeGridEl);
 	}
 
 	onMount(() => {
@@ -101,9 +103,7 @@
 	role="grid"
 	aria-label="Grade semanal de eventos"
 >
-	<!-- ============================================================
-	     HEADER STICKY — nomes dos dias + números
-	     ============================================================ -->
+	<!-- HEADER STICKY — nomes dos dias + números -->
 	<div
 		class="sticky top-0 z-10 flex border-b border-border-subtle bg-surface"
 		role="row"
@@ -138,9 +138,7 @@
 		{/each}
 	</div>
 
-	<!-- ============================================================
-	     FAIXA ALL-DAY
-	     ============================================================ -->
+	<!-- FAIXA ALL-DAY -->
 	<div
 		class="flex border-b border-border-subtle"
 		role="row"
@@ -181,9 +179,7 @@
 		{/each}
 	</div>
 
-	<!-- ============================================================
-	     TIME GRID — gutter de horas + 7 DayColumns
-	     ============================================================ -->
+	<!-- TIME GRID — gutter de horas + 7 DayColumns -->
 	<div class="flex" role="row" bind:this={timeGridEl}>
 		<!-- Gutter de horas -->
 		<div

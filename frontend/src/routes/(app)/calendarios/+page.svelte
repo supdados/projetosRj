@@ -1,22 +1,12 @@
 <script lang="ts">
 	/**
-	 * Tela "Calendario" — HUB completo (paridade v4.5).
-	 *
-	 * Reproduz o hub legado (templates/calendars + static/js/pages/calendars.js):
-	 *   - Header compacto: badge Google (menu com sync/renovar/desconectar ao
-	 *     clicar), navegacao de periodo, toggle de visao (dia/semana/mes) e botao
-	 *     "Novo evento".
-	 *   - Visao MES: grade mensal com celulas, pilulas de evento de um dia,
-	 *     barras de span (eventos multi-dia) sobrepostas em lanes, "+N mais" com
-	 *     densidade calculada pela altura disponivel da celula, popover do dia e
-	 *     popover de detalhe do evento (estilo Google).
-	 *   - Visoes SEMANA/DIA: grade de horarios (time grid) com criacao por clique.
+	 * Tela "Calendario" — HUB completo (visoes dia/semana/mes).
 	 *
 	 * O CRUD de evento e delegado ao <CalendarEventModal>; a pagina chama os
 	 * endpoints /api dedicados (lib/api/calendars.ts) e recarrega o hub. A geracao
 	 * de Meet no popover de detalhe usa `generateMeet` e atualiza o evento local.
 	 *
-	 * `localStorage('cal_view')` persiste a visao escolhida (paridade legado).
+	 * `localStorage('cal_view')` persiste a visao escolhida.
 	 */
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
@@ -47,6 +37,7 @@
 	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import CalendarWeekGrid from '$lib/components/calendar/CalendarWeekGrid.svelte';
+	import { fillToBottom } from '$lib/components/calendar/fillToBottom';
 	import CalendarRightPanel from '$lib/components/calendar/CalendarRightPanel.svelte';
 	import CalendariosSkeleton from '$lib/components/skeletons/CalendariosSkeleton.svelte';
 	import {
@@ -81,7 +72,6 @@
 	let anchorDate = $state(new Date());
 	let members = $state<CalendarMember[]>([]);
 
-	// Modal.
 	let modalOpen = $state<boolean>(false);
 	let modalEvent = $state<CalendarEvent | null>(null);
 	let modalBusy = $state<boolean>(false);
@@ -175,7 +165,6 @@
 	const eventCount = $derived(events.length);
 	const hasGoogle = $derived(hub?.connection != null);
 
-	// --- View toggle ---
 	function switchView(v: ViewMode): void {
 		closeDayPopover();
 		closeEventPopover();
@@ -245,7 +234,7 @@
 	// Mini-calendario: modo de destaque conforme a visao ativa.
 	const miniMode = $derived<'week' | 'day'>(curView === 'week' ? 'week' : 'day');
 
-	// --- Date math (1:1 com calendars.js) ---
+	// --- Date math ---
 	function dayTs(dateStr: string): number {
 		const d = new Date(dateStr);
 		return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -689,7 +678,6 @@
 		}
 	}
 
-	// --- Connection actions ---
 	async function runConnectionAction(action: () => Promise<unknown>, fallback: string): Promise<void> {
 		if (connectionBusy) return;
 		connectionBusy = true;
@@ -759,7 +747,6 @@
 		}
 	}
 
-	// --- Modal ---
 	function openCreate(dateStr = ''): void {
 		modalEvent = null;
 		modalCreateDate = dateStr;
@@ -1001,7 +988,7 @@
 			{:else if curView === 'day'}
 				<CalendarWeekGrid weekStart={anchorDate} days={[anchorDate]} {events} onSelectEvent={openEdit} onCreateAt={openCreateAt} />
 			{:else}
-			<div class="cal-view cal-view--calendar is-active">
+			<div class="cal-view cal-view--calendar is-active" use:fillToBottom>
 				<div class="cal-grid-wrap">
 					<div class="cal-grid" style="grid-template-rows: {gridTemplateRows};">
 						<div class="cal-grid-headers">
@@ -1126,7 +1113,6 @@
 	{/if}
 </section>
 
-<!-- ── Day popover (estilo Google) ──────────────────────────────────── -->
 {#if dayPopover}
 	{@const items = dayPopoverItems(dayPopover.day)}
 	<div
@@ -1168,7 +1154,6 @@
 	</div>
 {/if}
 
-<!-- ── Event detail popover (estilo Google) ─────────────────────────── -->
 {#if eventPopover}
 	{@const ev = eventPopover.ev}
 	<div
@@ -1280,8 +1265,7 @@
 
 <style>
 	/* ════════════════════════════════════════════════════════════════════
-	   Calendario hub — portado 1:1 de static/css/calendars/calendars.css (v4.5),
-	   com os tokens --app-color-* mapeados para os tokens semanticos da SPA
+	   Calendario hub — tokens --app-color-* mapeados para os tokens semanticos da SPA
 	   (--color-*, --ds-color-*) para o dark mode trocar sozinho.
 	   ════════════════════════════════════════════════════════════════════ */
 	.cal-page {
@@ -1466,15 +1450,13 @@
 		color: var(--app-color-text-primary);
 	}
 	/* Selecionado SUTIL: tint claro de primary (primary-100) + texto primary-700,
-	   bem menos pesado que o gradiente sólido do botão "Novo evento" — antes usava
-	   o mesmo primary cheio e rivalizava com a ação primária. */
+	   para nao rivalizar com a acao primaria "Novo evento". */
 	.cal-toggle-btn.is-active {
 		background: var(--ds-color-primary-100);
 		color: var(--ds-color-primary-700);
 		font-weight: 600;
 	}
 
-	/* ── Buttons ────────────────────────────────────────────────────── */
 	.cal-btn-sm {
 		display: inline-flex;
 		align-items: center;
@@ -1525,7 +1507,6 @@
 		color: var(--ds-color-warning-600);
 	}
 
-	/* ── Views ──────────────────────────────────────────────────────── */
 	.cal-view {
 		display: none;
 	}
@@ -1535,11 +1516,8 @@
 	.cal-view--calendar.is-active {
 		display: flex;
 		flex-direction: column;
-		/* Altura RESPONSIVA: cresce com a viewport (telas maiores => mês maior),
-		   clampada p/ caber sem scroll (≈ a mesma da visão Semana). 17rem ≈ chrome
-		   acima/abaixo (topnav, header da página, barra de navegação, respiros) —
-		   16rem deixava a grade ~1rem alta demais e sobrava um mini scroll vertical. */
-		min-height: clamp(30rem, calc(100vh - 17rem), 52rem);
+		/* Altura vem de `use:fillToBottom`, a mesma regra da visão Semana/Dia. */
+		min-height: 0;
 	}
 
 	/* ── Month nav ──────────────────────────────────────────────────────
@@ -1621,7 +1599,6 @@
 		transform: translateY(-50%);
 	}
 
-	/* ── Grid ───────────────────────────────────────────────────────── */
 	.cal-grid-wrap {
 		border: 1px solid var(--app-color-border);
 		/* Cola no cabecalho .cal-nav-bar acima: sem borda/raio no topo. */
@@ -1855,7 +1832,6 @@
 		background: linear-gradient(180deg, transparent 0%, var(--app-color-surface-muted) 48%);
 	}
 
-	/* ── Day popover ────────────────────────────────────────────────── */
 	.cal-day-popover {
 		position: fixed;
 		z-index: 800;
@@ -2009,7 +1985,6 @@
 		clip-path: polygon(0.8rem 0, calc(100% - 0.8rem) 0, 100% 50%, calc(100% - 0.8rem) 100%, 0.8rem 100%, 0 50%);
 	}
 
-	/* ── Event detail popover ───────────────────────────────────────── */
 	.cal-event-popover {
 		position: fixed;
 		z-index: 820;
@@ -2207,7 +2182,6 @@
 		outline-offset: 2px;
 	}
 
-	/* ── Responsive ─────────────────────────────────────────────────── */
 	@media (max-width: 600px) {
 		.cal-cell {
 			min-height: 0;

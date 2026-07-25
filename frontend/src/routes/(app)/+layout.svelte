@@ -1,14 +1,11 @@
 <script lang="ts">
 	/**
-	 * Layout do grupo autenticado (PILOTO).
+	 * Layout do grupo autenticado.
 	 *
 	 * - Carrega `/api/me` no boot (store de auth).
 	 * - Guard: enquanto carrega, mostra estado de loading; se 401, `client.ts`
 	 *   ja navegou top-level para /login (aqui so evitamos renderizar conteudo
 	 *   protegido).
-	 * - Renderiza a AppTopnav minima (titulo + theme toggle).
-	 *
-	 * Stubs visuais de notificacoes/busca/chatbot NAO entram nesta etapa.
 	 */
 	import { onMount } from 'svelte';
 	import { afterNavigate } from '$app/navigation';
@@ -29,7 +26,8 @@
 		'/projetos',
 		'/projetos/pendentes',
 		'/tarefas',
-		'/admin/usuarios'
+		'/admin/usuarios',
+		'/calendarios'
 	]);
 	const footerInScroll = $derived(
 		SCROLL_FOOTER_ROUTES.has($page.url.pathname) ||
