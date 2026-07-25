@@ -353,26 +353,6 @@
 								: 'border-border-subtle bg-surface'}"
 						>
 							<span
-								class="absolute right-3 top-3 z-10 grid h-5 w-5 place-items-center rounded-full border-[1.5px] transition-colors duration-fast {selected
-									? 'border-primary-600 bg-primary-600'
-									: 'border-border-strong bg-surface'}"
-								aria-hidden="true"
-							>
-								<svg
-									viewBox="0 0 24 24"
-									class="h-3 w-3 text-primary-fg transition-opacity duration-fast {selected
-										? 'opacity-100'
-										: 'opacity-0'}"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="3.5"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								>
-									<path d="M5 13l4.5 4.5L19 7" />
-								</svg>
-							</span>
-							<span
 								class="pointer-events-none absolute -bottom-4 right-2 text-[64px] font-extralight leading-none tabular-nums {selected
 									? 'text-[color-mix(in_srgb,var(--ds-color-primary-600)_22%,transparent)]'
 									: 'text-[color-mix(in_srgb,var(--color-text-primary)_7%,transparent)]'}"
