@@ -233,9 +233,9 @@ def _user_can_edit_meeting_project(user, meeting):
     ):
         return False
 
-    from routes.orgao_scope import user_can_access_project
+    from services.authorization import user_can_edit_project
 
-    return user_can_access_project(user, meeting.etapa.project)
+    return user_can_edit_project(user, meeting.etapa.project)
 
 
 def _sync_project_meeting_from_calendar_event(event, *, connection=None, user=None):

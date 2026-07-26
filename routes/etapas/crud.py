@@ -1,6 +1,6 @@
 import datetime
 
-from flask import flash, g, jsonify, redirect, request, url_for
+from flask import flash, jsonify, redirect, request, url_for
 
 from models import Etapa, Project, db
 from services.etapas_cascade import cascade_subsequent_dates
@@ -20,7 +20,6 @@ from services.project_meetings import (
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
-from routes.orgao_scope import user_can_access_project
 from routes.shared import get_or_404, log_project_action
 from routes.etapas.helpers import (
     _connection_for_current_user,
@@ -312,7 +311,7 @@ def delete_etapa(etapa_id):
 @login_required
 def reorder_etapas(project_id):
     project = get_or_404(Project, project_id)
-    if not user_can_access_project(g.user, project):
+    if not _current_user_can_edit_project(project):
         return (
             jsonify(
                 {

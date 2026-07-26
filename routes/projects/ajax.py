@@ -13,7 +13,10 @@ from catalogs.inventario import sanitize_special_project_for_orgao
 from models import IndicadorProjeto, OrgaoUnidade, db
 from catalogs.objectives import normalize_goal_selection
 
-from routes.orgao_scope import get_user_orgao_subtree_ids
+from services.authorization import (
+    user_can_edit_project,
+    user_can_reassign_project_to_orgao,
+)
 from services.link_validation import LinkValidationError, normalize_link_url
 from services.project_custom_links import (
     parse_custom_links_payload,
@@ -30,10 +33,10 @@ class ProjectInlineError(Exception):
     """Erro de validação na edição inline de um projeto.
 
     Carrega a ``message`` legível e o ``status`` HTTP que a rota deve devolver
-    (400 para entrada inválida, 403 quando o usuário não pode mover o projeto
-    para o órgão alvo). Permite que ``apply_project_inline_changes`` sinalize
-    falhas de validação sem acoplar-se ao formato de resposta (Jinja jsonify vs.
-    envelope canônico da API SPA).
+    (400 para entrada inválida, 403 quando o usuário não alcança rank ``editor``
+    no projeto ou no órgão alvo). Permite que ``apply_project_inline_changes``
+    sinalize falhas de validação e permissão sem acoplar-se ao formato de
+    resposta (Jinja jsonify vs. envelope canônico da API SPA).
     """
 
     def __init__(self, message: str, status: int = 400) -> None:
@@ -94,6 +97,29 @@ def _apply_custom_links_change(
         )
 
 
+def _require_editor_rank(project_to_edit) -> None:
+    """Gate de escrita da edição inline: rank >= editor no projeto (§5.4, F2-3).
+
+    Levanta ``ProjectInlineError`` (403) em vez do envelope canônico porque a
+    função é compartilhada por chamadores com formatos de resposta distintos.
+    """
+    if not user_can_edit_project(getattr(g, "user", None), project_to_edit):
+        raise ProjectInlineError(
+            "Você não tem permissão para editar este projeto.", status=403
+        )
+
+
+def _require_orgao_reassign_rank(project_to_edit, new_orgao_id: int) -> None:
+    """Regra dupla da §5.4: rank >= editor no órgão DESTINO e no próprio projeto."""
+    if not user_can_reassign_project_to_orgao(
+        getattr(g, "user", None), project_to_edit, new_orgao_id
+    ):
+        raise ProjectInlineError(
+            "Você não tem permissão para mover o projeto para este órgão.",
+            status=403,
+        )
+
+
 def _normalize_inline_link(raw_value: object) -> str | None:
     """Normaliza/valida um link fixo; scheme inválido vira ProjectInlineError 400."""
     value = raw_value if isinstance(raw_value, str) else None
@@ -121,9 +147,12 @@ def apply_project_inline_changes(project_to_edit, data):
         Lista de strings descrevendo cada mudança aplicada (para o histórico).
 
     Raises:
-        ProjectInlineError: Quando um campo é inválido (órgão inexistente/
-            inativo) ou o usuário não pode mover o projeto para o órgão alvo.
+        ProjectInlineError: Quando o usuário não alcança rank ``editor`` no
+            projeto (403), quando um campo é inválido (órgão inexistente/inativo,
+            400) ou quando não pode mover o projeto para o órgão alvo (403).
     """
+    _require_editor_rank(project_to_edit)
+
     # Regra 1: finalizar NUNCA passa pelo inline — só pelo botão Concluir
     # (POST /api/projetos/<id>/concluir, services/project_completion.py).
     if data.get("status") == "Finalizado":
@@ -182,13 +211,7 @@ def apply_project_inline_changes(project_to_edit, data):
                 "Este órgão está inativo e não pode receber novos projetos.",
                 status=400,
             )
-        if not g.user.is_admin and new_orgao_id not in get_user_orgao_subtree_ids(
-            g.user
-        ):
-            raise ProjectInlineError(
-                "Você não tem permissão para mover o projeto para este órgão.",
-                status=403,
-            )
+        _require_orgao_reassign_rank(project_to_edit, new_orgao_id)
         if project_to_edit.orgao_id != new_orgao_id:
             old_sigla = (
                 project_to_edit.orgao_ref.sigla

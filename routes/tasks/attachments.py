@@ -18,6 +18,9 @@ from routes.shared import format_local_time
 import routes.tasks.helpers as _task_helpers
 from routes.tasks.helpers import (
     _allowed_attachment,
+    _audit_denied_task_action,
+    _can_edit_task,
+    _can_manage_task_restricted_actions,
     _can_view_task,
     _extension_of,
     _file_content_matches_extension,
@@ -60,7 +63,8 @@ def add_task_anexo(task_id):
     task = db.session.get(Task, task_id)
     if not task:
         return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_view_task(g.user, task):
+    # Anexar é escrita: rank >= editor (S3/F2-5), como as demais mutações de tarefa.
+    if not _can_edit_task(g.user, task):
         return jsonify({"success": False, "message": "Sem permissão"}), 403
 
     if "file" not in request.files:
@@ -182,6 +186,18 @@ def delete_task_item_anexo(anexo_id):
     task = anexo.task
     if not _can_view_task(g.user, task):
         return jsonify({"success": False, "message": "Sem permissão"}), 403
+    # Paridade com api_anexo_delete: excluir anexo é ação restrita (autor/admin).
+    if not _can_manage_task_restricted_actions(g.user, task):
+        _audit_denied_task_action(task, "forbidden_edit_restricted")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Somente o autor da tarefa ou um administrador pode excluir anexos.",
+                }
+            ),
+            403,
+        )
 
     upload_folder = _task_helpers._get_upload_folder()
     file_path = os.path.join(upload_folder, anexo.stored_filename)

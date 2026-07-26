@@ -4,8 +4,8 @@ Cobre o CRUD de etapas, edição inline de campos (com cascata de datas
 server-side), comentários, toggles de iniciada/concluída, reordenação (que
 dispara a cascata de datas) e a importação de um modelo de etapas para o
 projeto. TODOS no envelope canônico (``ok``/``fail``), protegidos por
-``api_login_required`` (401 JSON) e por ``user_can_access_project`` — via o
-projeto da etapa — (404 inexistente / 403 fora de escopo).
+``api_login_required`` (401 JSON) e por ``require_project_rank(..., editor)`` —
+via o projeto da etapa — (404 inexistente / 403 rank insuficiente).
 
 REUSO sem duplicar regra de negócio:
     - Criação/edição/exclusão/comentário/campo: ``services/etapas_mutation.py``.
@@ -47,10 +47,10 @@ from services.etapas_mutation import (
     save_etapa_comentario,
     update_regular_field,
 )
+from services.authorization import PAPEL_EDITOR, require_project_rank
 from services.project_meetings import is_google_meeting_stage
 
 from ..blueprint import main_bp
-from ..orgao_scope import user_can_access_project
 from ..shared import log_project_action
 from .envelope import fail, ok
 from .negotiation import api_login_required
@@ -61,30 +61,32 @@ _REGULAR_FIELDS = {"descricao", "data_inicio", "data_fim", "responsavel"}
 
 
 def _load_project_or_error(project_id: int) -> tuple[Project | None, Any]:
-    """Carrega o projeto validando existência (404) e escopo de órgão (403)."""
+    """Carrega o projeto validando existência (404) e rank >= editor (403)."""
     project = db.session.get(Project, project_id)
     if project is None:
         return None, fail("Projeto não encontrado.", status=404, code="not_found")
-    if not user_can_access_project(g.user, project):
-        return None, fail(
-            "Você não tem permissão para acessar este projeto.",
-            status=403,
-            code="forbidden",
-        )
+    denied = require_project_rank(
+        project,
+        PAPEL_EDITOR,
+        message="Você não tem permissão para acessar este projeto.",
+    )
+    if denied is not None:
+        return None, denied
     return project, None
 
 
 def _load_etapa_or_error(etapa_id: int) -> tuple[Etapa | None, Any]:
-    """Carrega a etapa validando existência (404) e escopo via projeto (403)."""
+    """Carrega a etapa validando existência (404) e rank >= editor no projeto (403)."""
     etapa = db.session.get(Etapa, etapa_id)
     if etapa is None:
         return None, fail("Etapa não encontrada.", status=404, code="not_found")
-    if not user_can_access_project(g.user, etapa.project):
-        return None, fail(
-            "Você não tem permissão para alterar etapas deste projeto.",
-            status=403,
-            code="forbidden",
-        )
+    denied = require_project_rank(
+        etapa.project,
+        PAPEL_EDITOR,
+        message="Você não tem permissão para alterar etapas deste projeto.",
+    )
+    if denied is not None:
+        return None, denied
     return etapa, None
 
 

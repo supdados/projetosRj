@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from routes.orgao_scope import user_can_access_project
 from routes.shared import log_project_action
+from services.authorization import user_can_manage_project
 
 
 @dataclass
@@ -37,14 +37,14 @@ def complete_project(project, user) -> None:
         user: Usuário corrente (``g.user``).
 
     Raises:
-        ProjectCompletionError: permissão (403/danger), status != Vigente
+        ProjectCompletionError: rank < gestor (403/danger), status != Vigente
             (400/warning) ou etapas incompletas (400/warning).
 
     Exemplo:
         >>> complete_project(project, g.user)
         >>> db.session.commit()
     """
-    if not user_can_access_project(user, project):
+    if not user_can_manage_project(user, project):
         raise ProjectCompletionError(
             "Você não tem permissão para concluir este projeto.",
             category="danger",

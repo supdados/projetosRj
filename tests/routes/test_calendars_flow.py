@@ -6,7 +6,17 @@ import routes.calendars.sync as calendar_sync
 import routes.calendars.views as calendar_views
 import routes.calendars.webhook as calendar_webhook
 import routes.calendars.events as calendar_events
-from models import CalendarEvent, Etapa, ProjectStageMeeting, UserCalendarConnection, db
+from models import (
+    CalendarEvent,
+    Etapa,
+    Project,
+    ProjectStageMeeting,
+    User,
+    UserCalendarConnection,
+    UserOrgao,
+    db,
+)
+from services.authorization import PAPEL_EDITOR, PAPEL_LEITOR
 from services.google_calendar import GoogleCalendarError
 
 
@@ -912,3 +922,45 @@ def test_upsert_google_cancelled_event_does_not_touch_linked_project_without_acc
         assert meeting is not None
         assert meeting.sync_status == "ok"
         assert not meeting.sync_error
+
+
+class FakeEtapaComProjeto:
+    """Substitui ``Etapa``: o helper só lê ``etapa.project``."""
+
+    def __init__(self, project) -> None:
+        self.project = project
+
+
+class FakeMeetingComEtapa:
+    """Substitui ``ProjectStageMeeting``: o helper só lê ``meeting.etapa``."""
+
+    def __init__(self, project) -> None:
+        self.etapa = FakeEtapaComProjeto(project)
+
+
+def _usuario_com_papel(orgao_id, username, papel):
+    user = User(username=username, name=username, orgao="Orgao Teste")
+    user.set_password("senha123")
+    db.session.add(user)
+    db.session.flush()
+    db.session.add(UserOrgao(user_id=user.id, orgao_id=orgao_id, papel=papel))
+    db.session.commit()
+    return user
+
+
+def test_user_can_edit_meeting_project_exige_editor(app, seed_data):
+    """Regressão S3: leitor com vínculo não muta mais a reunião via calendário."""
+    with app.app_context():
+        project = db.session.get(Project, seed_data["project_id"])
+        leitor = _usuario_com_papel(
+            seed_data["auditoria_orgao_id"], "cal_leitor", PAPEL_LEITOR
+        )
+        editor = _usuario_com_papel(
+            seed_data["auditoria_orgao_id"], "cal_editor", PAPEL_EDITOR
+        )
+        meeting = FakeMeetingComEtapa(project)
+
+        assert not calendar_helpers._user_can_edit_meeting_project(leitor, meeting)
+        assert calendar_helpers._user_can_edit_meeting_project(editor, meeting)
+        assert not calendar_helpers._user_can_edit_meeting_project(None, meeting)
+        assert not calendar_helpers._user_can_edit_meeting_project(leitor, None)

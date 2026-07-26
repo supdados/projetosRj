@@ -18,6 +18,7 @@ from sqlalchemy import or_
 
 from models import OrgaoUnidade
 from routes.orgao_tree import get_orgao_ancestors, get_orgao_descendants
+from services.authorization import assignable_orgao_ids
 from services.authorization import (
     get_user_orgao_subtree_ids as _resolve_user_orgao_subtree_ids,
 )
@@ -266,26 +267,29 @@ def get_user_orgao_options(user) -> list[dict]:
 def scoped_orgao_options(user) -> list[dict]:
     """Órgãos atribuíveis ao projeto pelo usuário, para o picker de Área Responsável.
 
-    Admin enxerga todos os órgãos ativos; demais enxergam apenas a própria subtree
-    (vínculo + descendentes), também restrita a ativos. Mesma regra de
-    ``get_project_edit_data`` (routes/projects/ajax.py), isolada aqui para reuso no
-    payload do Detalhe sem duplicar a query.
+    Contexto de ESCRITA (§5.4 do plano): lista apenas os órgãos onde o rank é
+    ≥ editor (``assignable_orgao_ids``), sempre restrita a ativos — não basta
+    enxergar o órgão para poder atribuir o projeto a ele. Admin segue com todos
+    os ativos; com todo vínculo em ``gestor`` o resultado é idêntico ao anterior.
+    Seletores de LEITURA/filtro continuam em ``get_user_orgao_options``.
 
     Args:
         user: Instância de ``User`` (ou ``None``).
 
     Returns:
         Lista de ``{id, sigla, nome, pai_id}`` ordenada por ``sigla``; vazia
-        quando um não-admin não tem vínculos. ``pai_id`` alimenta a árvore do
-        OrgaoTreeSelect no frontend.
+        quando o usuário não tem rank ≥ editor em órgão nenhum. ``pai_id``
+        alimenta a árvore do OrgaoTreeSelect no frontend.
     """
-    query = OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True))
-    if not getattr(user, "is_admin", False):
-        subtree_ids = get_user_orgao_subtree_ids(user)
-        if not subtree_ids:
-            return []
-        query = query.filter(OrgaoUnidade.id.in_(subtree_ids))
-    rows = query.order_by(OrgaoUnidade.sigla).all()
+    assignable_ids = assignable_orgao_ids(user)
+    if not assignable_ids:
+        return []
+    rows = (
+        OrgaoUnidade.query.filter(OrgaoUnidade.ativo.is_(True))
+        .filter(OrgaoUnidade.id.in_(assignable_ids))
+        .order_by(OrgaoUnidade.sigla)
+        .all()
+    )
     return [
         {"id": o.id, "sigla": o.sigla, "nome": o.nome, "pai_id": o.pai_id} for o in rows
     ]

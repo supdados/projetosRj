@@ -27,6 +27,21 @@ export interface OrgaoOption {
 	is_inactive: boolean;
 }
 
+/**
+ * Órgão ATRIBUÍVEL como Área Responsável no modal Criar Projeto (§5.4).
+ *
+ * Lista plana já filtrada pelo backend por rank >= editor
+ * (routes/orgao_scope.scoped_orgao_options) — mesma fonte/shape do
+ * `OrgaoDetailOption` do picker inline do Detalhe. O filtro da lista continua
+ * em `orgaos_options` (visibilidade, sem rank).
+ */
+export interface OrgaoAssignableOption {
+	id: number;
+	sigla: string;
+	nome: string;
+	pai_id: number | null;
+}
+
 /** Opção de indicador ABEP (catalogs/abep.py: ABEP_INDICADORES_OPTIONS). */
 export interface AbepIndicadorOption {
 	code: string;
@@ -69,6 +84,7 @@ export interface ProjectsListOptions {
 	statuses: string[];
 	atrasos_options: ValueLabelOption[];
 	orgaos_options: OrgaoOption[];
+	orgaos_assignable_options: OrgaoAssignableOption[];
 }
 
 /** Metadados de paginação da listagem (`pagination`). */

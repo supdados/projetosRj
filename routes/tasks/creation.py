@@ -24,6 +24,7 @@ from routes.tasks.constants import (
 )
 from routes.tasks.permissions import (
     _can_access_project_in_tasks,
+    _can_edit_project_in_tasks,
     task_permission_flags,
 )
 
@@ -72,7 +73,13 @@ def _resolve_etapa_token(
     return etapa, None, 200
 
 
-def _resolve_project_token(raw_project_value, allow_empty=False):
+def _resolve_project_token(raw_project_value, allow_empty=False, *, for_write=False):
+    """Resolve o token de projeto de form/JSON para um ``Project``.
+
+    ``for_write=True`` exige rank >= editor no projeto (criar/editar tarefa);
+    o padrão exige apenas acesso de leitura (pickers e sugestões).
+    Retorna ``(project, error_message, status_code)``.
+    """
     # Coage para str antes de .strip(): a SPA envia `project_id` como inteiro
     # (JSON number), enquanto o form Jinja envia string. Espelha _resolve_etapa_token.
     project_value = "" if raw_project_value is None else str(raw_project_value).strip()
@@ -93,7 +100,12 @@ def _resolve_project_token(raw_project_value, allow_empty=False):
     if not project:
         return None, "Projeto não encontrado.", 404
 
-    if not _can_access_project_in_tasks(project):
+    permitted = (
+        _can_edit_project_in_tasks(project)
+        if for_write
+        else _can_access_project_in_tasks(project)
+    )
+    if not permitted:
         return None, "Sem permissão para este projeto.", 403
 
     return project, None, 200
@@ -296,7 +308,7 @@ def _create_task_common(default_project=None):
     payload = _extract_creation_payload(default_project=default_project)
 
     project, project_error, status_code = _resolve_project_token(
-        payload["project_raw"], allow_empty=True
+        payload["project_raw"], allow_empty=True, for_write=True
     )
     if project_error:
         if is_ajax:

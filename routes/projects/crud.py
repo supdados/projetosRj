@@ -9,14 +9,15 @@ importado por ``routes/api/projects_write.py``.
 from flask import g
 
 from models import OrgaoUnidade, db
-from routes.orgao_scope import get_user_orgao_subtree_ids
+from services.authorization import can_assign_project_to_orgao
 
 
 def _resolve_orgao_from_form(form_value, *, current_orgao_id=None):
-    """Parseia project_orgao_id do form e valida contra o subtree do usuario.
+    """Parseia project_orgao_id do form e valida o rank no orgao DESTINO.
 
     Retorna ``(orgao_unidade, erro_msg)`` - um deles sempre None.
-    - Admin pode escolher qualquer orgao ativo; nao-admin so dentro do seu subtree.
+    - Condicao (a) da §5.4: rank >= editor no destino via vinculo de area
+      (``can_assign_project_to_orgao``); admin sempre pode.
     - Orgaos inativos são rejeitados — exceto quando ``current_orgao_id`` aponta para
       eles (caso de edição de projeto legado vinculado a orgao desligado): nesse
       cenário preservamos o vínculo se o admin não mexeu no campo.
@@ -30,12 +31,11 @@ def _resolve_orgao_from_form(form_value, *, current_orgao_id=None):
     orgao = db.session.get(OrgaoUnidade, orgao_id)
     if orgao is None:
         return None, "Órgão não encontrado."
-    if not g.user.is_admin:
-        if orgao_id not in get_user_orgao_subtree_ids(g.user):
-            return (
-                None,
-                "Você não tem permissão para criar/editar projetos neste órgão.",
-            )
+    if not can_assign_project_to_orgao(g.user, orgao_id):
+        return (
+            None,
+            "Você não tem permissão para criar/editar projetos neste órgão.",
+        )
     if not orgao.ativo and orgao_id != current_orgao_id:
         return None, "Este órgão está inativo e não pode receber novos projetos."
     return orgao, None

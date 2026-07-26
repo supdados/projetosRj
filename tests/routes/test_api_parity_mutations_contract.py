@@ -427,3 +427,126 @@ def test_api_project_meeting_edit_not_found(client_user):
     )
     assert response.status_code == 404
     _fail(response.get_json(), code="not_found")
+
+
+# ── Enforcement de rank nas escritas de projeto (S3/F2-2) ─────────────────────
+#
+# O backfill da S2 nasceu tudo `gestor`: nenhum usuário real muda de
+# comportamento. As restrições só mordem depois do rebaixamento manual — por
+# isso cada caso abaixo prova os DOIS lados (gestor mantém, editor/leitor perde).
+
+
+def _rebaixar_vinculo(app, user_id: int, orgao_id: int, papel: str) -> None:
+    """Troca o papel do vínculo de área do usuário (simula a curadoria F2-9)."""
+    from models import UserOrgao, db
+
+    with app.app_context():
+        vinculo = UserOrgao.query.filter_by(user_id=user_id, orgao_id=orgao_id).one()
+        vinculo.papel = papel
+        db.session.commit()
+
+
+def _criar_projeto(client, seed_data):
+    return client.post(
+        "/api/projetos",
+        json={
+            "titulo": "Projeto Rank",
+            "orgao_id": str(seed_data["auditoria_orgao_id"]),
+        },
+    )
+
+
+def test_gestor_mantem_criar_concluir_excluir(client_user, seed_data):
+    """Equivalência gestor: o papel do backfill preserva as três escritas."""
+    assert _criar_projeto(client_user, seed_data).status_code == 200
+    concluir = client_user.post(
+        f"/api/projetos/{seed_data['project_complete_id']}/concluir"
+    )
+    assert concluir.status_code == 200
+    excluir = client_user.delete(f"/api/projetos/{seed_data['project_id']}")
+    assert excluir.status_code == 200
+
+
+def test_admin_mantem_criar_concluir_excluir(client_admin, seed_data):
+    assert _criar_projeto(client_admin, seed_data).status_code == 200
+    concluir = client_admin.post(
+        f"/api/projetos/{seed_data['project_complete_id']}/concluir"
+    )
+    assert concluir.status_code == 200
+    excluir = client_admin.delete(f"/api/projetos/{seed_data['project_id']}")
+    assert excluir.status_code == 200
+
+
+def test_editor_cria_projeto_mas_nao_conclui_nem_exclui(app, client_user, seed_data):
+    _rebaixar_vinculo(
+        app, seed_data["user_id"], seed_data["auditoria_orgao_id"], "editor"
+    )
+
+    assert _criar_projeto(client_user, seed_data).status_code == 200
+
+    concluir = client_user.post(
+        f"/api/projetos/{seed_data['project_complete_id']}/concluir"
+    )
+    assert concluir.status_code == 403
+    _fail(concluir.get_json(), code="forbidden")
+
+    excluir = client_user.delete(f"/api/projetos/{seed_data['project_id']}")
+    assert excluir.status_code == 403
+    _fail(excluir.get_json(), code="forbidden")
+
+
+def test_leitor_perde_toda_escrita_de_projeto(app, client_user, seed_data):
+    _rebaixar_vinculo(
+        app, seed_data["user_id"], seed_data["auditoria_orgao_id"], "leitor"
+    )
+
+    criar = _criar_projeto(client_user, seed_data)
+    assert criar.status_code == 403
+    _fail(criar.get_json(), code="forbidden")
+
+    concluir = client_user.post(
+        f"/api/projetos/{seed_data['project_complete_id']}/concluir"
+    )
+    assert concluir.status_code == 403
+    _fail(concluir.get_json(), code="forbidden")
+
+    excluir = client_user.delete(f"/api/projetos/{seed_data['project_id']}")
+    assert excluir.status_code == 403
+    _fail(excluir.get_json(), code="forbidden")
+
+
+def test_leitor_ainda_le_tarefas_da_etapa(app, client_user, seed_data):
+    """A leitura desta fase segue em `user_can_access_project` — sem regressão."""
+    _rebaixar_vinculo(
+        app, seed_data["user_id"], seed_data["auditoria_orgao_id"], "leitor"
+    )
+    response = client_user.get(
+        f"/api/projetos/{seed_data['project_id']}/etapas/{seed_data['etapa_id']}/tarefas"
+    )
+    assert response.status_code == 200
+
+
+def test_rank_zero_continua_403_e_nao_404(client_outsider, seed_data):
+    """Contrato desta fase: sem vínculo => 403 `forbidden` (o 404 é S5)."""
+    excluir = client_outsider.delete(f"/api/projetos/{seed_data['project_id']}")
+    assert excluir.status_code == 403
+    _fail(excluir.get_json(), code="forbidden")
+
+    concluir = client_outsider.post(
+        f"/api/projetos/{seed_data['project_complete_id']}/concluir"
+    )
+    assert concluir.status_code == 403
+    _fail(concluir.get_json(), code="forbidden")
+
+
+def test_editor_nao_cria_projeto_em_orgao_fora_do_vinculo(app, client_user, seed_data):
+    """Condição (a) da §5.4: rank >= editor no órgão DESTINO, não só visibilidade."""
+    _rebaixar_vinculo(
+        app, seed_data["user_id"], seed_data["auditoria_orgao_id"], "editor"
+    )
+    response = client_user.post(
+        "/api/projetos",
+        json={"titulo": "Captura", "orgao_id": str(seed_data["vpd_orgao_id"])},
+    )
+    assert response.status_code == 403
+    _fail(response.get_json(), code="forbidden")

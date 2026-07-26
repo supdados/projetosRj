@@ -32,6 +32,7 @@ from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from catalogs.inventario import orgao_allows_inventario
 from models import Project, Task, db
 
+from services.authorization import user_can_edit_project
 from services.etapas_dates import meeting_payload_block
 
 from ..blueprint import main_bp
@@ -138,7 +139,9 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
     etapas = sorted(
         project.etapas, key=lambda e: (e.ordem if e.ordem is not None else 0)
     )
-    can_edit = user_can_access_project(g.user, project)
+    # UX-only (autorização segue server-side por rota): leitor não deve ver
+    # affordances de edição que responderiam 403 (F2-7).
+    can_edit = user_can_edit_project(g.user, project)
     connection = _connection_for_current_user()
     special_project_options = list(_SPECIAL_PROJECT_OPTIONS)
     if orgao_allows_inventario(project.orgao_ref.sigla if project.orgao_ref else None):

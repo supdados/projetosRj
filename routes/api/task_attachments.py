@@ -10,8 +10,9 @@ legadas em ``routes/tasks/attachments.py`` nem o JS legado):
 
     - ``GET  /api/tarefas/<id>/anexos``    — lista anexos da tarefa.
     - ``POST /api/tarefas/<id>/anexos``    — UPLOAD via ``request.files["file"]``
-      (multipart). Valida tipo/conteúdo (reusa os helpers legados) e o limite de
-      tamanho (``MAX_CONTENT_LENGTH`` = 10MB, ``config.py:65``): excesso => 413.
+      (multipart), rank >= editor (``_can_edit_task``, S3/F2-5). Valida
+      tipo/conteúdo (reusa os helpers legados) e o limite de tamanho
+      (``MAX_CONTENT_LENGTH`` = 10MB, ``config.py:65``): excesso => 413.
     - ``GET  /api/anexos/<id>``            — DOWNLOAD binário (``send_file``); NÃO
       envelopado, mas protegido por ``api_login_required`` + ``_can_view_task``.
     - ``POST /api/anexos/<id>/delete``     — exclui o anexo (autor/admin).
@@ -45,6 +46,7 @@ from ..tasks.constants import (
 )
 from ..tasks.permissions import (
     _audit_denied_task_action,
+    _can_edit_task,
     _can_manage_task_restricted_actions,
     _can_view_task,
 )
@@ -77,13 +79,18 @@ def _serialize_anexo_list(task: Task) -> list[dict[str, Any]]:
     ]
 
 
-def _load_viewable_task(task_id: int) -> tuple[Task | None, Any]:
-    """Carrega a tarefa validando existência (404) e escopo de visão (403).
+def _load_viewable_task(
+    task_id: int, *, for_write: bool = False
+) -> tuple[Task | None, Any]:
+    """Carrega a tarefa validando existência (404) e rank no projeto (403).
 
-    Reusa ``_can_view_task`` (MESMA regra das rotas legadas de anexo).
+    ``for_write=True`` exige rank >= editor (``_can_edit_task``, S3/F2-5 — MESMA
+    regra das demais escritas de tarefa); o padrão exige rank >= leitor
+    (``_can_view_task``, MESMA regra das rotas legadas de anexo).
 
     Args:
         task_id: ID da tarefa.
+        for_write: Se a chamada antecede uma escrita na tarefa (upload).
 
     Returns:
         ``(task, None)`` quando autorizado; ``(None, fail_response)`` (404/403).
@@ -91,7 +98,10 @@ def _load_viewable_task(task_id: int) -> tuple[Task | None, Any]:
     task = db.session.get(Task, task_id)
     if task is None:
         return None, fail("Tarefa não encontrada.", status=404, code="not_found")
-    if not _can_view_task(g.user, task):
+    permitted = (
+        _can_edit_task(g.user, task) if for_write else _can_view_task(g.user, task)
+    )
+    if not permitted:
         return None, fail(
             "Você não tem permissão para acessar esta tarefa.",
             status=403,
@@ -174,7 +184,7 @@ def api_tarefa_anexo_upload(task_id: int) -> Response | tuple[Response, int]:
         Envelope ``{"ok": true, "data": {"anexo": {...}, "anexos": [...],
         "count": <int>}}`` (200); 404/403/422; 413 (excesso); 401 JSON sem sessão.
     """
-    task, error = _load_viewable_task(task_id)
+    task, error = _load_viewable_task(task_id, for_write=True)
     if error is not None:
         return error
 

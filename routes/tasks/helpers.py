@@ -23,6 +23,8 @@ from routes.tasks.permissions import (  # noqa: F401
     FINALIZE_DENIED_MESSAGE,
     _audit_denied_task_action,
     _can_access_project_in_tasks,
+    _can_edit_project_in_tasks,
+    _can_edit_task,
     _can_manage_task_restricted_actions,
     _can_transition_task_to_status,
     _can_view_task,

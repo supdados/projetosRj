@@ -188,6 +188,9 @@ def _serialize_projects_list_context(context: dict[str, Any]) -> dict[str, Any]:
             "orgaos_options": [
                 serialize_orgao_option(node) for node in context["orgaos_options"]
             ],
+            # Picker de escrita do modal Criar Projeto: shape {id, sigla, nome,
+            # pai_id} de scoped_orgao_options (já JSON-safe), rank >= editor.
+            "orgaos_assignable_options": context["orgaos_assignable_options"],
         },
         "pagination": {
             "page": context["page"],

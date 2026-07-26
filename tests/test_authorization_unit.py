@@ -6,22 +6,34 @@ resolvendo todos os descendentes.
 """
 
 import pytest
+from flask import g
 from sqlalchemy import event
 
 from models import OrgaoUnidade, db
 from routes import orgao_scope
+from routes.api.negotiation import api_admin_required
+from routes.tasks.permissions import (
+    _can_edit_task,
+    _can_manage_task_restricted_actions,
+    _can_view_task,
+)
 from services.authorization import (
     ADMIN_RANK,
     PAPEL_EDITOR,
     PAPEL_GESTOR,
     PAPEL_LEITOR,
     PAPEL_RANK,
+    area_project_rank,
+    assignable_orgao_ids,
+    can_assign_project_to_orgao,
     effective_project_rank,
     get_user_orgao_role_map,
     get_user_orgao_subtree_ids,
+    require_project_rank,
     user_can_access_project,
     user_can_edit_project,
     user_can_manage_project,
+    user_can_reassign_project_to_orgao,
     user_can_view_project,
 )
 from services.orgao_tree import rebuild_orgao_closure
@@ -498,3 +510,363 @@ def test_user_can_view_project_equivale_ao_acesso_de_hoje(app, orgao_arvore):
             assert user_can_view_project(user, None) == user_can_access_project(
                 user, None
             )
+
+
+# ── require_project_rank (gate HTTP no corpo do endpoint) ─────────────────────
+
+
+def _envelope(denied):
+    """Desempacota ``(Response, status)`` em ``(status, code)``."""
+    response, status = denied
+    return status, response.get_json()["error"]["code"]
+
+
+@pytest.mark.parametrize(
+    "papel, libera_leitor, libera_editor, libera_gestor",
+    [
+        (PAPEL_LEITOR, True, False, False),
+        (PAPEL_EDITOR, True, True, False),
+        (PAPEL_GESTOR, True, True, True),
+    ],
+)
+def test_require_project_rank_nos_tres_limiares(
+    app, orgao_arvore, papel, libera_leitor, libera_editor, libera_gestor
+):
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], papel),))
+        projeto = FakeProject(orgao_arvore["sup"])
+        liberados = (libera_leitor, libera_editor, libera_gestor)
+        for minimo, libera in zip(
+            (PAPEL_LEITOR, PAPEL_EDITOR, PAPEL_GESTOR), liberados
+        ):
+            denied = require_project_rank(projeto, minimo, user=user)
+            assert (denied is None) is libera
+
+
+def test_require_project_rank_nega_com_403_forbidden(app, orgao_arvore):
+    """Contrato desta fase: rank 0 continua 403 (a unificação 404 é S5)."""
+    with app.app_context():
+        sem_vinculo = FakeUser()
+        denied = require_project_rank(
+            FakeProject(orgao_arvore["sec"]), PAPEL_LEITOR, user=sem_vinculo
+        )
+        assert _envelope(denied) == (403, "forbidden")
+
+
+def test_require_project_rank_usa_mensagem_do_endpoint(app, orgao_arvore):
+    with app.app_context():
+        denied = require_project_rank(
+            FakeProject(orgao_arvore["sec"]),
+            PAPEL_GESTOR,
+            user=FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_EDITOR),)),
+            message="Você não tem permissão para excluir este projeto.",
+        )
+        response, _status = denied
+        assert (
+            response.get_json()["error"]["message"]
+            == "Você não tem permissão para excluir este projeto."
+        )
+
+
+def test_require_project_rank_sem_sessao_e_401(app, orgao_arvore):
+    with app.app_context():
+        denied = require_project_rank(FakeProject(orgao_arvore["sec"]), PAPEL_LEITOR)
+        assert _envelope(denied) == (401, "unauthenticated")
+
+
+def test_require_project_rank_cai_no_g_user_por_padrao(app, orgao_arvore):
+    with app.app_context():
+        g.user = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_GESTOR),))
+        assert (
+            require_project_rank(FakeProject(orgao_arvore["sup"]), PAPEL_GESTOR) is None
+        )
+
+
+def test_require_project_rank_libera_admin_em_qualquer_projeto(app, orgao_arvore):
+    with app.app_context():
+        admin = FakeUser(is_admin=True)
+        for projeto in (FakeProject(orgao_arvore["outra"]), FakeProject(None)):
+            assert require_project_rank(projeto, PAPEL_GESTOR, user=admin) is None
+
+
+def test_require_project_rank_rejeita_papel_fora_da_taxonomia(app, orgao_arvore):
+    with app.app_context():
+        with pytest.raises(ValueError) as exc:
+            require_project_rank(
+                FakeProject(orgao_arvore["sec"]), "dono", user=FakeUser(is_admin=False)
+            )
+        assert "dono" in str(exc.value)
+
+
+# ── Regra dupla de reatribuição de Área Responsável (§5.4) ────────────────────
+
+
+@pytest.mark.parametrize(
+    "papel, permitido",
+    [(PAPEL_LEITOR, False), (PAPEL_EDITOR, True), (PAPEL_GESTOR, True)],
+)
+def test_condicao_a_exige_editor_no_orgao_destino(app, orgao_arvore, papel, permitido):
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], papel),))
+        assert can_assign_project_to_orgao(user, orgao_arvore["sup"]) is permitido
+
+
+def test_condicao_a_nega_orgao_fora_da_subarvore(app, orgao_arvore):
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_GESTOR),))
+        assert can_assign_project_to_orgao(user, orgao_arvore["outra"]) is False
+
+
+def test_condicao_a_nega_sem_usuario_ou_sem_orgao(app, orgao_arvore):
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_GESTOR),))
+        assert can_assign_project_to_orgao(user, None) is False
+        assert can_assign_project_to_orgao(None, orgao_arvore["sec"]) is False
+
+
+def test_condicao_a_libera_admin(app, orgao_arvore):
+    with app.app_context():
+        assert can_assign_project_to_orgao(
+            FakeUser(is_admin=True), orgao_arvore["morto"]
+        )
+
+
+def test_regra_dupla_exige_editor_no_projeto_alem_do_destino(app, orgao_arvore):
+    """Fecha a 'captura': rank no destino não basta sem rank no projeto de origem."""
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_EDITOR),))
+        projeto_alheio = FakeProject(orgao_arvore["outra"])
+        assert can_assign_project_to_orgao(user, orgao_arvore["sec"]) is True
+        assert (
+            user_can_reassign_project_to_orgao(
+                user, projeto_alheio, orgao_arvore["sec"]
+            )
+            is False
+        )
+
+
+def test_regra_dupla_nega_mover_para_orgao_arbitrario(app, orgao_arvore):
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_GESTOR),))
+        projeto = FakeProject(orgao_arvore["sup"])
+        assert (
+            user_can_reassign_project_to_orgao(user, projeto, orgao_arvore["outra"])
+            is False
+        )
+
+
+def test_regra_dupla_permite_editor_dentro_da_propria_subarvore(app, orgao_arvore):
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_EDITOR),))
+        projeto = FakeProject(orgao_arvore["sup"])
+        assert user_can_reassign_project_to_orgao(user, projeto, orgao_arvore["sub"])
+
+
+def test_regra_dupla_nega_leitor_nos_dois_lados(app, orgao_arvore):
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_LEITOR),))
+        projeto = FakeProject(orgao_arvore["sup"])
+        assert (
+            user_can_reassign_project_to_orgao(user, projeto, orgao_arvore["sub"])
+            is False
+        )
+
+
+def test_regra_dupla_libera_admin_e_nega_anonimo(app, orgao_arvore):
+    with app.app_context():
+        projeto = FakeProject(orgao_arvore["outra"])
+        assert user_can_reassign_project_to_orgao(
+            FakeUser(is_admin=True), projeto, orgao_arvore["sec"]
+        )
+        assert (
+            user_can_reassign_project_to_orgao(None, projeto, orgao_arvore["sec"])
+            is False
+        )
+
+
+def test_condicao_b_ignora_convite_por_construcao(app, orgao_arvore):
+    """``area_project_rank`` nunca somará convite (S4) — trava da §5.4."""
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_GESTOR),))
+        assert area_project_rank(user, FakeProject(orgao_arvore["outra"])) == 0
+        assert area_project_rank(user, FakeProject(orgao_arvore["sup"])) == (
+            PAPEL_RANK[PAPEL_GESTOR]
+        )
+
+
+def test_regra_dupla_equivale_ao_fluxo_de_hoje_com_todo_vinculo_gestor(
+    app, orgao_arvore
+):
+    """Backfill S2: gestor move dentro da própria subárvore exatamente como antes."""
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_GESTOR),))
+        subtree = get_user_orgao_subtree_ids(user)
+        for destino in (orgao_arvore["sec"], orgao_arvore["sub"], orgao_arvore["sup"]):
+            projeto = FakeProject(orgao_arvore["sup"])
+            esperado = destino in subtree
+            assert (
+                user_can_reassign_project_to_orgao(user, projeto, destino) is esperado
+            )
+
+
+# ── assignable_orgao_ids / scoped_orgao_options (picker de escrita) ───────────
+
+
+def test_assignable_ids_excluem_orgaos_de_vinculo_leitor(app, orgao_arvore):
+    with app.app_context():
+        leitor = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_LEITOR),))
+        assert assignable_orgao_ids(leitor) == set()
+
+
+def test_assignable_ids_cobrem_a_subarvore_do_vinculo_editor(app, orgao_arvore):
+    with app.app_context():
+        editor = FakeUser(vinculos=((orgao_arvore["sub"], PAPEL_EDITOR),))
+        assert assignable_orgao_ids(editor) == {
+            orgao_arvore["sub"],
+            orgao_arvore["sup"],
+        }
+
+
+def test_assignable_ids_de_admin_cobrem_todos_os_ativos(app, orgao_arvore):
+    with app.app_context():
+        ids = assignable_orgao_ids(FakeUser(is_admin=True))
+        assert orgao_arvore["outra"] in ids
+        assert orgao_arvore["morto"] not in ids
+
+
+def test_scoped_orgao_options_vazio_para_leitor(app, orgao_arvore):
+    with app.app_context():
+        leitor = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_LEITOR),))
+        assert orgao_scope.scoped_orgao_options(leitor) == []
+
+
+def test_scoped_orgao_options_do_editor_ficam_na_subarvore(app, orgao_arvore):
+    with app.app_context():
+        editor = FakeUser(vinculos=((orgao_arvore["sub"], PAPEL_EDITOR),))
+        siglas = [o["sigla"] for o in orgao_scope.scoped_orgao_options(editor)]
+        assert siglas == ["SUB", "SUP"]
+
+
+def test_scoped_orgao_options_de_gestor_equivalem_a_subarvore_ativa(app, orgao_arvore):
+    """Com todo vínculo em ``gestor``, o picker devolve o mesmo de antes do filtro."""
+    with app.app_context():
+        gestor = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_GESTOR),))
+        ids = {o["id"] for o in orgao_scope.scoped_orgao_options(gestor)}
+        ativos = {
+            row_id
+            for (row_id,) in db.session.query(OrgaoUnidade.id)
+            .filter(OrgaoUnidade.ativo.is_(True))
+            .all()
+        }
+        assert ids == get_user_orgao_subtree_ids(gestor) & ativos
+
+
+# ── Matriz papel × ação × via de área (§3, F2-8) ──────────────────────────────
+
+
+class FakeTarefa:
+    """Substitui ``Task``: os gates só leem ``project``/``project_id``/``created_by_id``."""
+
+    def __init__(self, project: FakeProject | None, *, autor_id: int | None) -> None:
+        self.project = project
+        self.project_id = None if project is None else 1
+        self.created_by_id = autor_id
+
+
+@pytest.mark.parametrize(
+    "papel, ve, comenta, escreve_projeto, escreve_tarefa, reatribui, gere",
+    [
+        (PAPEL_LEITOR, True, True, False, False, False, False),
+        (PAPEL_EDITOR, True, True, True, True, True, False),
+        (PAPEL_GESTOR, True, True, True, True, True, True),
+    ],
+)
+def test_matriz_papel_acao_na_via_de_area(
+    app,
+    orgao_arvore,
+    papel,
+    ve,
+    comenta,
+    escreve_projeto,
+    escreve_tarefa,
+    reatribui,
+    gere,
+):
+    """Uma célula por linha da matriz da §3; falha se qualquer gate for removido.
+
+    Vias cobertas pelo mesmo gate: ver alimenta lista/detalhe/dashboard/busca;
+    comentar usa ``_can_view_task`` (routes/tasks/comments.py e
+    ``/api/tarefas/<id>/comentarios``); escrever tarefa usa ``_can_edit_task``
+    (rotas legadas, board e drawer); excluir/concluir usam
+    ``user_can_manage_project``.
+    """
+    with app.app_context():
+        user = FakeUser(user_id=10, vinculos=((orgao_arvore["sec"], papel),))
+        projeto = FakeProject(orgao_arvore["sup"])
+        tarefa = FakeTarefa(projeto, autor_id=99)
+        assert user_can_view_project(user, projeto) is ve
+        assert _can_view_task(user, tarefa) is comenta
+        assert user_can_edit_project(user, projeto) is escreve_projeto
+        assert _can_edit_task(user, tarefa) is escreve_tarefa
+        assert (
+            user_can_reassign_project_to_orgao(user, projeto, orgao_arvore["sub"])
+            is reatribui
+        )
+        assert user_can_manage_project(user, projeto) is gere
+
+
+def test_matriz_admin_passa_em_todas_as_celulas(app, orgao_arvore):
+    with app.app_context():
+        admin = FakeUser(is_admin=True, user_id=1)
+        projeto = FakeProject(orgao_arvore["outra"])
+        tarefa = FakeTarefa(projeto, autor_id=99)
+        assert user_can_view_project(admin, projeto) is True
+        assert _can_view_task(admin, tarefa) is True
+        assert user_can_edit_project(admin, projeto) is True
+        assert _can_edit_task(admin, tarefa) is True
+        assert user_can_reassign_project_to_orgao(admin, projeto, orgao_arvore["sec"])
+        assert user_can_manage_project(admin, projeto) is True
+        assert _can_manage_task_restricted_actions(admin, tarefa) is True
+
+
+@pytest.mark.parametrize("papel", [PAPEL_LEITOR, PAPEL_EDITOR, PAPEL_GESTOR])
+def test_matriz_finalizar_excluir_tarefa_alheia_nega_todo_papel(
+    app, orgao_arvore, papel
+):
+    """Célula 'finalizar/excluir alheia': admin ou autor — gestor NÃO herda (§9.1)."""
+    with app.app_context():
+        user = FakeUser(user_id=10, vinculos=((orgao_arvore["sec"], papel),))
+        tarefa_alheia = FakeTarefa(FakeProject(orgao_arvore["sup"]), autor_id=99)
+        assert _can_manage_task_restricted_actions(user, tarefa_alheia) is False
+
+
+def test_matriz_autor_mantem_acoes_restritas_da_propria_tarefa(app, orgao_arvore):
+    with app.app_context():
+        autor = FakeUser(user_id=10, vinculos=((orgao_arvore["sec"], PAPEL_GESTOR),))
+        tarefa_propria = FakeTarefa(FakeProject(orgao_arvore["sup"]), autor_id=10)
+        assert _can_manage_task_restricted_actions(autor, tarefa_propria) is True
+
+
+@pytest.mark.parametrize("papel", [PAPEL_LEITOR, PAPEL_EDITOR, PAPEL_GESTOR])
+def test_matriz_importar_csv_e_crud_admin_negam_todo_papel(app, orgao_arvore, papel):
+    """Célula 'importar CSV / CRUD admin': ``api_admin_required`` só libera admin."""
+
+    @api_admin_required
+    def acao_admin() -> str:
+        return "ok"
+
+    with app.app_context():
+        g.user = FakeUser(user_id=10, vinculos=((orgao_arvore["sec"], papel),))
+        response, status = acao_admin()
+        assert status == 403
+        assert response.get_json()["error"]["code"] == "forbidden"
+
+
+def test_matriz_importar_csv_e_crud_admin_liberam_admin(app):
+    @api_admin_required
+    def acao_admin() -> str:
+        return "ok"
+
+    with app.app_context():
+        g.user = FakeUser(is_admin=True, user_id=1)
+        assert acao_admin() == "ok"

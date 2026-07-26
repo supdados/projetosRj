@@ -16,6 +16,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from models import User, UserOrgao, db
+from services.authorization import PAPEL_LEITOR
+
 
 def _assert_ok_envelope(payload: Any) -> dict[str, Any]:
     """Valida o envelope de sucesso e devolve o ``data``."""
@@ -116,6 +119,47 @@ def test_api_projetos_returns_401_json_when_unauthenticated(client):
 
     assert response.status_code == 401
     _assert_fail_envelope(response.get_json(), code="unauthenticated")
+
+
+def test_api_projetos_expoe_orgaos_assignable_options_para_gestor(
+    client_user, seed_data
+):
+    """Picker do modal Criar Projeto (§5.4): gestor mantém a própria subárvore."""
+    data = _assert_ok_envelope(client_user.get("/api/projetos").get_json())
+    options = data["options"]
+
+    assignable = options["orgaos_assignable_options"]
+    assert assignable, "gestor (backfill S2) deve poder atribuir a própria área"
+    assert {"id", "sigla", "nome", "pai_id"} == set(assignable[0].keys())
+    assert seed_data["auditoria_orgao_id"] in {o["id"] for o in assignable}
+
+
+def test_api_projetos_orgaos_assignable_options_vazio_para_leitor(app, seed_data):
+    """Leitor vê o filtro (visibilidade), mas não recebe órgão atribuível."""
+    with app.app_context():
+        user = User(username="lista_leitor", name="Lista Leitor", orgao="x")
+        user.set_password("senha123")
+        db.session.add(user)
+        db.session.flush()
+        db.session.add(
+            UserOrgao(
+                user_id=user.id,
+                orgao_id=seed_data["auditoria_orgao_id"],
+                papel=PAPEL_LEITOR,
+            )
+        )
+        db.session.commit()
+        user_id = user.id
+
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session["user_id"] = user_id
+
+    data = _assert_ok_envelope(client.get("/api/projetos").get_json())
+    options = data["options"]
+
+    assert options["orgaos_assignable_options"] == []
+    assert options["orgaos_options"], "filtro da lista continua por visibilidade"
 
 
 def test_api_projetos_invalid_orgao_filter_returns_422_envelope(client_user):

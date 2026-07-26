@@ -51,8 +51,8 @@ from ..calendars.helpers import (
     _user_can_edit_meeting_project,
 )
 from ..etapas.helpers import _serialize_etapa_payload
-from ..orgao_scope import user_can_access_project
 from ..shared import get_or_404, log_project_action
+from services.authorization import PAPEL_EDITOR, require_project_rank
 from .envelope import fail, fail_internal, ok
 from .negotiation import api_login_required
 from .serializers import serialize_calendar_event
@@ -436,12 +436,13 @@ def api_project_meeting_create(
     project = db.session.get(Project, project_id)
     if project is None:
         return fail("Projeto não encontrado.", status=404, code="not_found")
-    if not user_can_access_project(g.user, project):
-        return fail(
-            "Você não tem permissão para adicionar reuniões a este projeto.",
-            status=403,
-            code="forbidden",
-        )
+    denied = require_project_rank(
+        project,
+        PAPEL_EDITOR,
+        message="Você não tem permissão para adicionar reuniões a este projeto.",
+    )
+    if denied:
+        return denied
 
     connection = _connection_for_current_user()
     if connection is None or not (connection.google_account_id or "").strip():
@@ -508,12 +509,13 @@ def api_project_meeting_edit(etapa_id: int) -> Response | tuple[Response, int]:
     if etapa is None:
         return fail("Etapa não encontrada.", status=404, code="not_found")
     project = etapa.project
-    if not user_can_access_project(g.user, project):
-        return fail(
-            "Você não tem permissão para editar esta reunião.",
-            status=403,
-            code="forbidden",
-        )
+    denied = require_project_rank(
+        project,
+        PAPEL_EDITOR,
+        message="Você não tem permissão para editar esta reunião.",
+    )
+    if denied:
+        return denied
 
     if not is_google_meeting_stage(etapa) or etapa.meeting is None:
         return fail(
@@ -597,12 +599,13 @@ def api_project_meeting_delete(etapa_id: int) -> Response | tuple[Response, int]
     if etapa is None:
         return fail("Etapa não encontrada.", status=404, code="not_found")
     project = etapa.project
-    if not user_can_access_project(g.user, project):
-        return fail(
-            "Você não tem permissão para excluir esta reunião.",
-            status=403,
-            code="forbidden",
-        )
+    denied = require_project_rank(
+        project,
+        PAPEL_EDITOR,
+        message="Você não tem permissão para excluir esta reunião.",
+    )
+    if denied:
+        return denied
     if not is_google_meeting_stage(etapa) or etapa.meeting is None:
         return fail(
             "Esta etapa não é uma reunião Google.", status=422, code="validation"

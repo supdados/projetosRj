@@ -16,7 +16,8 @@ REUSO sem duplicar regra:
       ``concluir_project``).
     - Órgão: ``routes/projects/crud._resolve_orgao_from_form`` (mesma validação
       de escopo do form Jinja).
-    - Permissão de leitura/escopo: ``user_can_access_project``.
+    - Permissão de leitura/escopo: ``user_can_access_project``; escrita por rank
+      (``require_project_rank``, ``can_assign_project_to_orgao``).
 
 Anexa ao ``main_bp`` ÚNICO; NÃO cria blueprint novo e NÃO altera as rotas Jinja.
 """
@@ -44,6 +45,7 @@ from ..tasks.permissions import task_permission_flags
 from .envelope import fail, fail_internal, ok
 from .negotiation import api_login_required
 from .serializers import serialize_project_card, serialize_task_card
+from services.authorization import PAPEL_GESTOR, require_project_rank
 from services.project_completion import ProjectCompletionError, complete_project
 from services.project_creation import (
     ProjectCreationInput,
@@ -123,8 +125,8 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
     ``template_id``.
 
     Returns:
-        ``ok({id, redirect_to, message})`` (200); 422 validação; 403 órgão fora
-        do escopo; 401 sem sessão.
+        ``ok({id, redirect_to, message})`` (200); 422 validação; 403 sem rank
+        editor no órgão destino (condição (a) da §5.4); 401 sem sessão.
     """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -229,7 +231,7 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
 def api_projeto_concluir(project_id: int) -> Response | tuple[Response, int]:
     """Conclui um projeto (envelope), reusando ``complete_project``.
 
-    Replica as 3 validações de ``concluir_project`` (permissão 403, status
+    Replica as 3 validações de ``concluir_project`` (rank gestor 403, status
     Vigente 400, todas as etapas concluídas 400). Em sucesso devolve a mensagem
     de celebração e ``redirect_to`` apontando para a rota SPA do detalhe (não o
     Jinja) — o front toca o chime + confetes + overlay e navega via router.
@@ -271,24 +273,25 @@ def api_projeto_concluir(project_id: int) -> Response | tuple[Response, int]:
 def api_projeto_excluir(project_id: int) -> Response | tuple[Response, int]:
     """Exclui um projeto de verdade (envelope), espelhando ``delete_project``.
 
-    Mesma regra do Jinja (``routes/projects/crud.delete_project``): permissão por
-    escopo de órgão (``user_can_access_project`` => 403), registro no histórico
-    antes da exclusão e exclusão em cascata (``db.session.delete``). Antes a SPA
-    só "apagava" no cliente; agora a remoção persiste.
+    Exclusão exige rank ``gestor`` no projeto (``require_project_rank`` => 403),
+    registro no histórico antes da exclusão e exclusão em cascata
+    (``db.session.delete``). Antes a SPA só "apagava" no cliente; agora a
+    remoção persiste.
 
     Returns:
-        ``ok({deleted: True, id})`` (200); 404 inexistente; 403 fora do escopo;
+        ``ok({deleted: True, id})`` (200); 404 inexistente; 403 rank < gestor;
         401 sem sessão.
     """
     project = db.session.get(Project, project_id)
     if project is None:
         return fail("Projeto não encontrado.", status=404, code="not_found")
-    if not user_can_access_project(g.user, project):
-        return fail(
-            "Você não tem permissão para excluir este projeto.",
-            status=403,
-            code="forbidden",
-        )
+    denied = require_project_rank(
+        project,
+        PAPEL_GESTOR,
+        message="Você não tem permissão para excluir este projeto.",
+    )
+    if denied:
+        return denied
 
     titulo = project.titulo
     try:

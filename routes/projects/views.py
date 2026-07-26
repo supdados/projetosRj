@@ -30,6 +30,7 @@ from routes.orgao_scope import (
     get_user_orgao_siglas,
     get_user_orgao_subtree_ids,
     sanitize_orgao_filter_for_current_user,
+    scoped_orgao_options,
     user_can_access_project,
 )
 from services.etapa_positions import build_etapa_position_map
@@ -235,6 +236,9 @@ def build_projects_list_context(
     # Subárvore de órgãos visível ao usuário (escopo server-side) para popular o
     # <select> de filtro de órgão na SPA.
     orgaos_options = get_user_orgao_options(g.user)
+    # Picker do modal Criar Projeto (§5.4/F2-6): atribuir Área Responsável exige
+    # rank >= editor — filtro da lista acima continua por visibilidade.
+    orgaos_assignable_options = scoped_orgao_options(g.user)
 
     return {
         "projects": projects_paginated,
@@ -256,6 +260,7 @@ def build_projects_list_context(
         "atrasos_options": atrasos_options,
         "objetivos": objetivos,
         "orgaos_options": orgaos_options,
+        "orgaos_assignable_options": orgaos_assignable_options,
         "special_projects_options": special_projects_options,
         "delivery_types_options": delivery_types_options,
         "abep_indicadores_options": ABEP_INDICADORES_OPTIONS,

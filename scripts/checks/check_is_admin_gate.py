@@ -33,21 +33,25 @@ ALLOWLIST: frozenset[str] = frozenset(
     }
 )
 
-# Baseline congelada em 2026-07-26 (S1/F0-6): 21 usos inline em 14 arquivos.
+# Baseline congelada em 2026-07-26 (S1/F0-6): nasceu com 21 usos em 14 arquivos;
+# S3/F2-2 pagou `routes/projects/crud.py` (centralizado em
+# `can_assign_project_to_orgao`), S3/F2-3 pagou `routes/projects/ajax.py`
+# (centralizado em `user_can_reassign_project_to_orgao`) e S3/F2-5 pagou metade de
+# `routes/tasks/permissions.py` (`_can_view_task` -> `user_can_view_project`; o uso
+# restante é `_can_manage_task_restricted_actions`, intocado por decisão de
+# produto) => 18 usos em 12 arquivos.
 # Baixar um número aqui só depois de trocar o uso por chamada ao serviço (S3/S4).
 BASELINE: dict[str, int] = {
     "app.py": 1,
     "routes/api/calendars.py": 1,
     "routes/dashboard.py": 3,
     "routes/decorators.py": 1,
-    "routes/projects/ajax.py": 1,
-    "routes/projects/crud.py": 1,
     "routes/projects/views.py": 5,
     "routes/search.py": 1,
     "routes/tasks/creation.py": 1,
     "routes/tasks/crud.py": 1,
     "routes/tasks/hub.py": 1,
-    "routes/tasks/permissions.py": 2,
+    "routes/tasks/permissions.py": 1,
     "routes/tasks/queries.py": 1,
     "services/notifications.py": 1,
 }

@@ -10,6 +10,7 @@ from routes.tasks.helpers import (
     FINALIZE_DENIED_MESSAGE,
     _audit_denied_task_action,
     _build_visible_tasks_query,
+    _can_edit_task,
     _can_manage_task_restricted_actions,
     _can_transition_task_to_status,
     _can_view_task,
@@ -104,7 +105,9 @@ def _check_restricted_fields_permission(task, inputs):
 def _resolve_project_for_edit(project_raw, task):
     if project_raw is None:
         return task.project, None
-    project, error, status_code = _resolve_project_token(project_raw, allow_empty=True)
+    project, error, status_code = _resolve_project_token(
+        project_raw, allow_empty=True, for_write=True
+    )
     if error:
         return None, (jsonify({"success": False, "message": error}), status_code)
     return project, None
@@ -141,6 +144,8 @@ def _group_ids_by_reorder_scope(ordem_ids):
     for task_id in ordem_ids:
         task = tasks_by_id.get(task_id)
         if task is None:
+            continue
+        if not _can_edit_task(g.user, task):
             continue
         scope_key = _task_hub_reorder_scope_key(task)
         if scope_key not in scope_orders:
@@ -225,7 +230,7 @@ def move_task_etapa(task_id):
     task = db.session.get(Task, task_id)
     if not task:
         return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_view_task(g.user, task):
+    if not _can_edit_task(g.user, task):
         return jsonify({"success": False, "message": "Sem permissão"}), 403
 
     payload = request.get_json(silent=True) or {}
@@ -267,7 +272,7 @@ def edit_task(task_id):
     task = db.session.get(Task, task_id)
     if not task:
         return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_view_task(g.user, task):
+    if not _can_edit_task(g.user, task):
         return jsonify({"success": False, "message": "Sem permissão"}), 403
 
     payload = request.get_json(silent=True) or {}
@@ -370,7 +375,7 @@ def delete_task(task_id):
         flash("Tarefa não encontrada.", "warning")
         return _redirect_back_or("main.list_tasks")
 
-    if not _can_view_task(g.user, task):
+    if not _can_edit_task(g.user, task):
         if is_ajax:
             return (
                 jsonify(
@@ -432,7 +437,7 @@ def update_task_status(task_id):
     task = db.session.get(Task, task_id)
     if not task:
         return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_view_task(g.user, task):
+    if not _can_edit_task(g.user, task):
         return jsonify({"success": False, "message": "Sem permissão"}), 403
 
     payload = request.get_json(silent=True) or {}
@@ -464,7 +469,7 @@ def update_task_prioridade(task_id):
     task = db.session.get(Task, task_id)
     if not task:
         return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_view_task(g.user, task):
+    if not _can_edit_task(g.user, task):
         return jsonify({"success": False, "message": "Sem permissão"}), 403
 
     payload = request.get_json(silent=True) or {}
@@ -499,7 +504,7 @@ def update_task_tipo(task_id):
     task = db.session.get(Task, task_id)
     if not task:
         return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_view_task(g.user, task):
+    if not _can_edit_task(g.user, task):
         return jsonify({"success": False, "message": "Sem permissão"}), 403
 
     payload = request.get_json(silent=True) or {}
@@ -524,7 +529,7 @@ def update_task_tipo(task_id):
 def finalize_task(task_id):
     is_ajax = _wants_json()
     task = db.session.get(Task, task_id)
-    if not task or not _can_view_task(g.user, task):
+    if not task or not _can_edit_task(g.user, task):
         if is_ajax:
             return (
                 jsonify(
@@ -585,7 +590,7 @@ def finalize_task(task_id):
 def unarchive_task(task_id):
     task = db.session.get(Task, task_id)
     is_ajax = _wants_json()
-    if not task or not _can_view_task(g.user, task):
+    if not task or not _can_edit_task(g.user, task):
         return jsonify({"success": False, "message": "Sem permissão"}), 403
 
     mutate_unarchive_task(task)
@@ -639,6 +644,8 @@ def archive_finalized_tasks():
         .filter(Task.status == "finalizada")
         .all()
     )
+    # Arquivar é escrita: quem só lê o projeto não arquiva as tarefas dele.
+    finalized_tasks = [task for task in finalized_tasks if _can_edit_task(g.user, task)]
 
     try:
         archived_ids = bulk_archive_finalized(finalized_tasks)

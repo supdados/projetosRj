@@ -21,6 +21,8 @@ from models import OrgaoClosure, OrgaoUnidade, db
 from services.orgao_tree import get_orgao_descendants
 
 if TYPE_CHECKING:
+    from flask import Response
+
     from models import Project, User, UserOrgao
 
 PAPEL_LEITOR = "leitor"
@@ -37,6 +39,8 @@ PAPEL_RANK: dict[str, int] = {
 ADMIN_RANK: int = 100
 
 ROLE_MAP_CACHE_ATTR = "_authz_role_map"
+
+FORBIDDEN_PROJECT_MESSAGE = "Você não tem permissão para esta ação neste projeto."
 
 
 def get_user_orgao_role_map(user: "User | None") -> dict[int, int]:
@@ -74,14 +78,15 @@ def get_user_orgao_subtree_ids(user: "User | None") -> set[int]:
     return set(get_user_orgao_role_map(user))
 
 
-def effective_project_rank(user: "User | None", project: "Project | None") -> int:
-    """Retorna o rank efetivo do usuario no projeto (``0`` = sem acesso).
+def area_project_rank(user: "User | None", project: "Project | None") -> int:
+    """Rank do usuario no projeto contando SO vinculo de area (e o piso do admin).
 
-    Admin recebe ``ADMIN_RANK``; os demais herdam o rank do orgao responsavel
-    pelo projeto. O componente direto (convite por projeto) e fixo em ``0``
-    nesta fase — entra com ``project_member``.
+    Convite por projeto (``project_member``, S4) NUNCA entra aqui: reatribuir a
+    Area Responsavel por convite e exatamente a escalacao da §5.4 do plano.
+    Quando ``effective_project_rank`` passar a somar o convite (S4/F3-6), esta
+    funcao continua ignorando-o — e a base da condicao (b) da regra dupla.
 
-    Exemplo: ``effective_project_rank(user, projeto) >= PAPEL_RANK["gestor"]``.
+    Exemplo: ``area_project_rank(user, projeto) >= PAPEL_RANK["editor"]``.
     """
     if user is None:
         return 0
@@ -91,6 +96,18 @@ def effective_project_rank(user: "User | None", project: "Project | None") -> in
     if orgao_id is None:
         return 0
     return get_user_orgao_role_map(user).get(orgao_id, 0)
+
+
+def effective_project_rank(user: "User | None", project: "Project | None") -> int:
+    """Retorna o rank efetivo do usuario no projeto (``0`` = sem acesso).
+
+    Admin recebe ``ADMIN_RANK``; os demais herdam o rank do orgao responsavel
+    pelo projeto. O componente direto (convite por projeto) e fixo em ``0``
+    nesta fase — entra com ``project_member``.
+
+    Exemplo: ``effective_project_rank(user, projeto) >= PAPEL_RANK["gestor"]``.
+    """
+    return area_project_rank(user, project)
 
 
 def user_can_view_project(user: "User | None", project: "Project | None") -> bool:
@@ -106,6 +123,106 @@ def user_can_edit_project(user: "User | None", project: "Project | None") -> boo
 def user_can_manage_project(user: "User | None", project: "Project | None") -> bool:
     """True quando o rank efetivo alcanca ``gestor`` (excluir/concluir)."""
     return effective_project_rank(user, project) >= PAPEL_RANK[PAPEL_GESTOR]
+
+
+def can_assign_project_to_orgao(user: "User | None", orgao_id: int | None) -> bool:
+    """Condicao (a) da §5.4: rank >= editor no orgao DESTINO via vinculo de area.
+
+    Admin sempre pode (inclusive para orgao inativo, caso preservado do fluxo
+    atual). Convite (S4) nunca conta: ``project_member`` nao cria vinculo de
+    area, entao jamais habilita atribuir a Area Responsavel.
+
+    Exemplo: ``can_assign_project_to_orgao(g.user, novo_orgao_id)``.
+    """
+    if user is None or orgao_id is None:
+        return False
+    if getattr(user, "is_admin", False):
+        return True
+    rank = get_user_orgao_role_map(user).get(int(orgao_id), 0)
+    return rank >= PAPEL_RANK[PAPEL_EDITOR]
+
+
+def user_can_reassign_project_to_orgao(
+    user: "User | None", project: "Project | None", orgao_id: int | None
+) -> bool:
+    """Regra DUPLA da §5.4 para gravar ``Project.orgao_id`` (criacao e edicao).
+
+    Exige (a) ``can_assign_project_to_orgao`` no orgao DESTINO e (b) rank >=
+    editor no PROPRIO projeto via vinculo de area ou admin
+    (``area_project_rank``). A condicao (b) fecha a "captura": quem so tem acesso
+    pontual ao projeto (convite, S4) nao o move para a propria area, por mais
+    alto que seja seu rank no destino.
+
+    Na criacao o projeto ainda nao existe — passe ``project=None`` so quando o
+    chamador ja tiver garantido (a); do contrario a condicao (b) reprova.
+
+    Exemplo: ``user_can_reassign_project_to_orgao(g.user, projeto, novo_id)``.
+    """
+    if not can_assign_project_to_orgao(user, orgao_id):
+        return False
+    return area_project_rank(user, project) >= PAPEL_RANK[PAPEL_EDITOR]
+
+
+def assignable_orgao_ids(user: "User | None") -> set[int]:
+    """IDs de orgaos onde o usuario pode atribuir a Area Responsavel (>= editor).
+
+    Subconjunto de ``get_user_orgao_role_map``; alimenta o picker de escrita
+    (``scoped_orgao_options``). Filtros de LEITURA continuam na arvore visivel
+    (``get_user_orgao_options``), que nao olha rank.
+    """
+    role_map = get_user_orgao_role_map(user)
+    minimo = PAPEL_RANK[PAPEL_EDITOR]
+    return {orgao_id for orgao_id, rank in role_map.items() if rank >= minimo}
+
+
+def require_project_rank(
+    project: "Project | None",
+    min_papel: str,
+    *,
+    user: "User | None" = None,
+    message: str | None = None,
+) -> "tuple[Response, int] | None":
+    """Gate de rank para o CORPO do endpoint: ``None`` libera, ``fail(...)`` nega.
+
+    Checagem no corpo (o projeto ja esta carregado), nunca em decorator. Contrato
+    HTTP desta fase: sem sessao => 401 ``unauthenticated``; rank insuficiente,
+    inclusive rank 0 => 403 ``forbidden``. A unificacao 404 anti-enumeracao e S5
+    — nao antecipar aqui.
+
+    Args:
+        project: Projeto ja carregado (``None`` reprova qualquer nao-admin).
+        min_papel: ``"leitor"`` | ``"editor"`` | ``"gestor"``.
+        user: Usuario a avaliar; por padrao ``g.user``.
+        message: Mensagem 403 especifica do endpoint (mantem o texto atual).
+
+    Exemplo:
+        >>> denied = require_project_rank(project, PAPEL_EDITOR)
+        >>> if denied:
+        ...     return denied
+    """
+    # Import local: `routes.api.envelope` executa `routes/api/__init__`, que
+    # importa este modulo de volta — no topo o ciclo estoura no boot.
+    from routes.api.envelope import fail
+
+    actual_user = user if user is not None else getattr(g, "user", None)
+    if actual_user is None:
+        return fail(
+            "Sessão expirada. Faça login novamente.",
+            status=401,
+            code="unauthenticated",
+        )
+    if effective_project_rank(actual_user, project) >= _papel_to_rank(min_papel):
+        return None
+    return fail(message or FORBIDDEN_PROJECT_MESSAGE, status=403, code="forbidden")
+
+
+def _papel_to_rank(papel: str) -> int:
+    rank = PAPEL_RANK.get(papel)
+    if rank is None:
+        raise ValueError(
+            f"papel inválido: {papel!r}; esperado um de {sorted(PAPEL_RANK)}"
+        )
+    return rank
 
 
 def user_can_access_project(user: "User | None", project: "Project | None") -> bool:

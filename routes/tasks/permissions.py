@@ -4,8 +4,9 @@ from models import (
     TaskAccessAudit,
     db,
 )
-from routes.orgao_scope import get_user_orgao_subtree_ids, user_can_access_project
+from routes.orgao_scope import user_can_access_project
 from routes.tasks.constants import _preview_text
+from services.authorization import user_can_edit_project, user_can_view_project
 
 #: Mensagem canônica quando alguém sem permissão tenta mover uma tarefa para
 #: "finalizada". Definida aqui (junto de ``_can_transition_task_to_status``) para
@@ -15,14 +16,26 @@ from routes.tasks.constants import _preview_text
 FINALIZE_DENIED_MESSAGE = "Apenas o criador da tarefa pode movê-la para Finalizada."
 
 
-def _can_view_task(user, task):
-    if user.is_admin:
-        return True
-    if task.project_id is None:
-        return task.created_by_id == user.id
-    if task.project is None or task.project.orgao_id is None:
+def _can_view_task(user, task) -> bool:
+    """Ver tarefa: rank >= leitor no projeto; tarefa avulsa só do criador (ou admin).
+
+    Exemplo: ``_can_view_task(g.user, task)``.
+    """
+    if task is None or user is None:
         return False
-    return task.project.orgao_id in get_user_orgao_subtree_ids(user)
+    # Admin e projeto sem órgão já saem resolvidos por `area_project_rank`.
+    if user_can_view_project(user, task.project):
+        return True
+    return task.project_id is None and task.created_by_id == user.id
+
+
+def _can_edit_task(user, task) -> bool:
+    """Escrever na tarefa: rank >= editor no projeto; avulsa segue a regra de visão."""
+    if task is None or user is None:
+        return False
+    if task.project_id is None:
+        return _can_view_task(user, task)
+    return user_can_edit_project(user, task.project)
 
 
 def _can_manage_task_restricted_actions(user, task):
@@ -85,3 +98,10 @@ def _can_access_project_in_tasks(project):
     if project is None:
         return True
     return user_can_access_project(g.user, project)
+
+
+def _can_edit_project_in_tasks(project) -> bool:
+    """Criar/editar tarefa DE PROJETO exige rank >= editor; avulsa (None) libera."""
+    if project is None:
+        return True
+    return user_can_edit_project(g.user, project)

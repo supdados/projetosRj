@@ -17,7 +17,6 @@ from services.project_meetings import (
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
-from routes.orgao_scope import user_can_access_project
 from routes.shared import get_or_404, log_project_action
 from routes.etapas.helpers import (
     _connection_for_current_user,
@@ -204,7 +203,7 @@ def import_model_to_project(project_id):
     """Importa etapas de um modelo para um projeto existente"""
     project = get_or_404(Project, project_id)
 
-    if not user_can_access_project(g.user, project):
+    if not _current_user_can_edit_project(project):
         flash("Você não tem permissão para importar modelos neste projeto.", "danger")
         return redirect(url_for("main.project_detail", project_id=project_id))
 

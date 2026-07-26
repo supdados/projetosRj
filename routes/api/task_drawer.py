@@ -22,7 +22,8 @@ legadas em ``routes/tasks/{crud,comments,attachments}.py``):
     - ``GET  /api/tarefas/<id>/sugestoes-responsavel`` — picker de responsável.
 
 SERVIDOR AUTORITATIVO: as regras de permissão/transição são REUSADAS das mesmas
-funções das rotas legadas (``_can_view_task``, ``_can_manage_task_restricted_actions``,
+funções das rotas legadas (``_can_view_task`` na leitura, ``_can_edit_task``
+— rank >= editor — em TODA escrita, ``_can_manage_task_restricted_actions``,
 ``_can_transition_task_to_status``), sem duplicação. O drawer e a board (Fase 5b-1)
 compartilham a MESMA fonte de verdade: a resposta inclui o card atualizado
 (``serialize_task_card``) para a store reconciliar.
@@ -54,6 +55,7 @@ from ..tasks.queries import serialize_assignee, set_task_assignees
 from ..tasks.permissions import (
     FINALIZE_DENIED_MESSAGE,
     _audit_denied_task_action,
+    _can_edit_task,
     _can_manage_task_restricted_actions,
     _can_view_task,
     task_permission_flags,
@@ -89,14 +91,18 @@ def _anexo_download_url(anexo: Any) -> str:
     return url_for("main.view_task_item_anexo", anexo_id=anexo.id)
 
 
-def _load_drawer_task(task_id: int) -> tuple[Task | None, Any]:
-    """Carrega a tarefa validando existência (404) e escopo de visão (403).
+def _load_drawer_task(
+    task_id: int, *, for_write: bool = False
+) -> tuple[Task | None, Any]:
+    """Carrega a tarefa validando existência (404) e rank no projeto (403).
 
-    Reusa ``_can_view_task`` (a MESMA regra das rotas legadas), devolvendo o
-    envelope canônico em vez de ``jsonify(success=...)``.
+    ``for_write=True`` exige rank >= editor (``_can_edit_task``, MESMA regra das
+    rotas legadas de mutação); o padrão exige rank >= leitor. Tarefa avulsa
+    segue restrita ao criador (ou admin) nos dois modos.
 
     Args:
         task_id: ID da tarefa.
+        for_write: Se a chamada antecede uma escrita na tarefa.
 
     Returns:
         ``(task, None)`` quando autorizado; ``(None, fail_response)`` (404/403).
@@ -104,7 +110,10 @@ def _load_drawer_task(task_id: int) -> tuple[Task | None, Any]:
     task = db.session.get(Task, task_id)
     if task is None:
         return None, fail("Tarefa não encontrada.", status=404, code="not_found")
-    if not _can_view_task(g.user, task):
+    permitted = (
+        _can_edit_task(g.user, task) if for_write else _can_view_task(g.user, task)
+    )
+    if not permitted:
         return None, fail(
             "Você não tem permissão para acessar esta tarefa.",
             status=403,
@@ -281,7 +290,7 @@ def api_tarefa_campos(task_id: int) -> Response | tuple[Response, int]:
         Envelope ``{"ok": true, "data": {"task": {...}, "detail": {...}}}`` (200);
         404/403/422 canônicos; 401 JSON sem sessão.
     """
-    task, error = _load_drawer_task(task_id)
+    task, error = _load_drawer_task(task_id, for_write=True)
     if error is not None:
         return error
 
@@ -319,7 +328,7 @@ def api_tarefa_finalizar(task_id: int) -> Response | tuple[Response, int]:
     Returns:
         Envelope com ``{task, detail}`` (200); 404/403/422; 401 JSON sem sessão.
     """
-    task, error = _load_drawer_task(task_id)
+    task, error = _load_drawer_task(task_id, for_write=True)
     if error is not None:
         return error
 
@@ -360,7 +369,7 @@ def api_tarefa_arquivar(task_id: int) -> Response | tuple[Response, int]:
     Returns:
         Envelope com ``{task, detail}`` (200); 404/403/422; 401 JSON sem sessão.
     """
-    task, error = _load_drawer_task(task_id)
+    task, error = _load_drawer_task(task_id, for_write=True)
     if error is not None:
         return error
 
@@ -400,7 +409,7 @@ def _unarchive_and_respond(task_id: int) -> Response | tuple[Response, int]:
     Returns:
         Envelope com ``{task, detail}`` (200); 404/403/422.
     """
-    task, error = _load_drawer_task(task_id)
+    task, error = _load_drawer_task(task_id, for_write=True)
     if error is not None:
         return error
 
@@ -493,7 +502,7 @@ def api_tarefa_responsaveis(task_id: int) -> Response | tuple[Response, int]:
         Envelope ``{"ok": true, "data": {"task": {...}, "detail": {...}}}`` (200);
         404/403/422 canônicos; 401 JSON sem sessão.
     """
-    task, error = _load_drawer_task(task_id)
+    task, error = _load_drawer_task(task_id, for_write=True)
     if error is not None:
         return error
 

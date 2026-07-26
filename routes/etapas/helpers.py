@@ -16,7 +16,7 @@ from services.etapas_dates import (  # noqa: F401
     _normalize_to_business_day,
     _serialize_etapa_payload,
 )
-from routes.orgao_scope import user_can_access_project
+from services.authorization import user_can_edit_project
 
 
 def _is_ajax_request():
@@ -47,5 +47,6 @@ def _connection_for_current_user():
     return connection
 
 
-def _current_user_can_edit_project(project):
-    return user_can_access_project(g.user, project)
+def _current_user_can_edit_project(project) -> bool:
+    """Gate compartilhado das rotas de escrita de etapa/reunião: rank >= editor."""
+    return user_can_edit_project(getattr(g, "user", None), project)

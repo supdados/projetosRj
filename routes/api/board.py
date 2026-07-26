@@ -48,8 +48,8 @@ from ..tasks.notifications import notify_status_change
 from ..tasks.permissions import (
     FINALIZE_DENIED_MESSAGE,
     _audit_denied_task_action,
+    _can_edit_task,
     _can_transition_task_to_status,
-    _can_view_task,
 )
 from ..tasks.queries import _build_visible_tasks_query, _read_task_filter_values
 from .envelope import fail, ok
@@ -130,10 +130,11 @@ def _group_tasks_into_columns(tasks: list[Any]) -> list[dict[str, Any]]:
 
 
 def _load_task_for_mutation(task_id: int) -> tuple[Task | None, Any]:
-    """Carrega a tarefa validando existência (404) e escopo de visão (403).
+    """Carrega a tarefa validando existência (404) e rank de escrita (403).
 
-    Espelha o guard das rotas Jinja de tarefa (``_can_view_task``), porém devolve
-    o envelope canônico em vez de ``jsonify(success=...)``.
+    Espelha o guard das rotas Jinja de mutação de tarefa (``_can_edit_task``,
+    rank >= editor; tarefa avulsa segue restrita ao criador/admin), porém
+    devolve o envelope canônico em vez de ``jsonify(success=...)``.
 
     Args:
         task_id: ID da tarefa.
@@ -145,7 +146,7 @@ def _load_task_for_mutation(task_id: int) -> tuple[Task | None, Any]:
     task = db.session.get(Task, task_id)
     if task is None:
         return None, fail("Tarefa não encontrada.", status=404, code="not_found")
-    if not _can_view_task(g.user, task):
+    if not _can_edit_task(g.user, task):
         return None, fail(
             "Você não tem permissão para acessar esta tarefa.",
             status=403,
@@ -164,7 +165,7 @@ def _apply_status_transition(task: Task, new_status: str) -> Any | None:
     persistir, para agrupar reordenação + status numa transação só).
 
     Args:
-        task: Tarefa carregada e já validada para visão.
+        task: Tarefa carregada e já validada para escrita (rank >= editor).
         new_status: Status alvo (deve estar em ``VALID_STATUSES``).
 
     Returns:
@@ -239,7 +240,7 @@ def api_tarefa_status(task_id: int) -> Response | tuple[Response, int]:
 
     AUTORITATIVO: reusa ``_can_transition_task_to_status`` (a MESMA regra da rota
     Jinja legada ``update_task_status``), sem duplicar a lógica. Validações:
-    404 (tarefa inexistente), 403 ``forbidden`` (fora de escopo de visão OU
+    404 (tarefa inexistente), 403 ``forbidden`` (sem rank de escrita OU
     finalizar sem permissão, com ``FINALIZE_DENIED_MESSAGE``), 422 ``validation``
     (status ausente/ inválido). Em sucesso devolve o card atualizado — o cliente
     deve confirmar o move com esta resposta e reverter (rollback) se vier erro.
@@ -374,6 +375,8 @@ def _apply_moved_task_transition(
 
     Os demais ids do payload NUNCA transicionam: um snapshot obsoleto do cliente
     não pode desfazer a mudança de coluna feita por outro usuário (bug 2.10).
+    Mudar status é escrita: exige rank >= editor (MESMO gate de
+    ``POST /api/tarefas/<id>/status``), além da validação de transição.
 
     Returns:
         ``None`` em sucesso/ausência de move; ou ``fail(...)`` (403) negado.
@@ -381,10 +384,23 @@ def _apply_moved_task_transition(
     if moved_task_id is None:
         return None
     task = tasks_by_id[moved_task_id]
-    for column in columns:
-        if moved_task_id in column["task_ids"] and task.status != column["status"]:
-            return _apply_status_transition(task, column["status"])
-    return None
+    target_status = next(
+        (
+            column["status"]
+            for column in columns
+            if moved_task_id in column["task_ids"] and task.status != column["status"]
+        ),
+        None,
+    )
+    if target_status is None:
+        return None
+    if not _can_edit_task(g.user, task):
+        return fail(
+            "Você não tem permissão para acessar esta tarefa.",
+            status=403,
+            code="forbidden",
+        )
+    return _apply_status_transition(task, target_status)
 
 
 def _drop_stale_task_ids(
@@ -490,9 +506,12 @@ def api_tarefas_board_reordenar() -> Response | tuple[Response, int]:
 
     _drop_stale_task_ids(columns, tasks_by_id)
 
+    # Ordem é escrita: quem só lê o projeto não reordena as tarefas dele —
+    # mesmo skip silencioso do reorder legado (`_group_ids_by_reorder_scope`).
     for column in columns:
         for index, task_id in enumerate(column["task_ids"], start=1):
-            tasks_by_id[task_id].ordem = index
+            if _can_edit_task(g.user, tasks_by_id[task_id]):
+                tasks_by_id[task_id].ordem = index
 
     try:
         db.session.commit()

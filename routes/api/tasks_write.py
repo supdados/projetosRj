@@ -42,6 +42,7 @@ from ..tasks.notifications import (
 )
 from ..tasks.permissions import (
     _audit_denied_task_action,
+    _can_edit_task,
     _can_manage_task_restricted_actions,
     _can_view_task,
 )
@@ -56,12 +57,21 @@ from services.task_mutation import bulk_archive_finalized, move_task_to_etapa
 DELETE_DENIED_MESSAGE = "Somente o autor da tarefa ou um administrador pode excluí-la."
 
 
-def _load_task_or_error(task_id: int) -> tuple[Task | None, Any]:
-    """Carrega a tarefa validando existência (404) e escopo de visão (403)."""
+def _load_task_or_error(
+    task_id: int, *, for_write: bool = False
+) -> tuple[Task | None, Any]:
+    """Carrega a tarefa validando existência (404) e rank no projeto (403).
+
+    ``for_write=True`` exige rank >= editor (mutação); o padrão exige rank >=
+    leitor. Tarefa avulsa segue restrita ao criador (ou admin) nos dois modos.
+    """
     task = db.session.get(Task, task_id)
     if task is None:
         return None, fail("Tarefa não encontrada.", status=404, code="not_found")
-    if not _can_view_task(g.user, task):
+    permitted = (
+        _can_edit_task(g.user, task) if for_write else _can_view_task(g.user, task)
+    )
+    if not permitted:
         return None, fail(
             "Você não tem permissão para acessar esta tarefa.",
             status=403,
@@ -97,7 +107,7 @@ def api_tarefa_criar() -> Response | tuple[Response, int]:
     descricao = (data.get("descricao") or data.get("titulo") or "").strip()
 
     project, project_error, status_code = _resolve_project_token(
-        project_raw, allow_empty=True
+        project_raw, allow_empty=True, for_write=True
     )
     if project_error:
         code = (
@@ -245,7 +255,7 @@ def api_tarefa_excluir(task_id: int) -> Response | tuple[Response, int]:
     Returns:
         ``ok({item_id, message})`` (200); 404 inexistente; 403 sem permissão; 401.
     """
-    task, error = _load_task_or_error(task_id)
+    task, error = _load_task_or_error(task_id, for_write=True)
     if error is not None:
         return error
 
@@ -279,7 +289,7 @@ def api_tarefa_mover_etapa(task_id: int) -> Response | tuple[Response, int]:
     Returns:
         ``ok({task_id, etapa_id, previous_etapa_id, warning?})`` (200); 404/403/422.
     """
-    task, error = _load_task_or_error(task_id)
+    task, error = _load_task_or_error(task_id, for_write=True)
     if error is not None:
         return error
 
@@ -369,6 +379,7 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
         task
         for task in finalized_tasks
         if _can_manage_task_restricted_actions(g.user, task)
+        and _can_edit_task(g.user, task)
     ]
 
     try:

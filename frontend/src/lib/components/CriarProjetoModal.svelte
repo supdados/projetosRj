@@ -66,11 +66,7 @@
 	import DatePickerPanel from '$lib/components/DatePickerPanel.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
-	import type {
-		AbepIndicadorOption,
-		OrgaoOption,
-		ProjectsListOptions
-	} from '$lib/types/projects';
+	import type { AbepIndicadorOption, ProjectsListOptions } from '$lib/types/projects';
 	import { flash } from '$lib/stores/flash';
 
 	interface Props {
@@ -207,7 +203,17 @@
 		orgaoId: string;
 	} | null = null;
 
-	const orgaoOptions = $derived<OrgaoOption[]>(options?.orgaos_options ?? []);
+	// Picker de ESCRITA (§5.4): só órgãos com rank >= editor
+	// (orgaos_assignable_options); o filtro da lista continua em orgaos_options.
+	const orgaoOptions = $derived(
+		(options?.orgaos_assignable_options ?? []).map((o) => ({
+			value: String(o.id),
+			label: o.sigla || o.nome,
+			sigla: o.sigla,
+			nome: o.nome,
+			pai_id: o.pai_id
+		}))
+	);
 	// Adapta a lista plana ao shape numérico do OrgaoTreeSelect.
 	const orgaoTreeOptions = $derived<OrgaoSelectOption[]>(
 		orgaoOptions.map((o) => ({
@@ -215,8 +221,7 @@
 			label: o.label,
 			sigla: o.sigla,
 			nome: o.nome,
-			pai_id: o.pai_id,
-			is_inactive: o.is_inactive
+			pai_id: o.pai_id
 		}))
 	);
 	const abepOptions = $derived<AbepIndicadorOption[]>(
@@ -333,9 +338,9 @@
 		etapasImportadas = null;
 		modeloImportadoLabel = '';
 		titulo = '';
-		// Pré-seleciona quando há um único órgão disponível (paridade Jinja).
-		const opts = options?.orgaos_options ?? [];
-		orgaoId = opts.length === 1 ? opts[0].value : '';
+		// Pré-seleciona quando há um único órgão ATRIBUÍVEL (paridade Jinja).
+		const opts = options?.orgaos_assignable_options ?? [];
+		orgaoId = opts.length === 1 ? String(opts[0].id) : '';
 		prioridade = 'baixa';
 		shortDescription = '';
 		orgaoTexto = '';
