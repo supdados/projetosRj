@@ -4,7 +4,9 @@ Helpers que traduzem o vinculo de um usuario com orgaos (tabela user_orgao)
 em conjuntos de IDs que incluem os descendentes - heranca descendente:
 um usuario vinculado a SETD enxerga tudo de SUPDADOS, SUBEDD, etc.
 
-Reusa `get_orgao_descendants` de routes.orgao_tree.
+Reusa `get_orgao_descendants` de routes.orgao_tree. A decisao de escopo em si
+(`get_user_orgao_subtree_ids`, `user_can_access_project`) vive em
+`services.authorization`; aqui ficam wrappers finos que preservam os call sites.
 """
 
 from __future__ import annotations
@@ -14,33 +16,19 @@ from urllib.parse import urlencode
 from flask import g, redirect, request, url_for
 from sqlalchemy import or_
 
-from models import OrgaoUnidade, db
+from models import OrgaoUnidade
 from routes.orgao_tree import get_orgao_ancestors, get_orgao_descendants
+from services.authorization import (
+    get_user_orgao_subtree_ids as _resolve_user_orgao_subtree_ids,
+)
+from services.authorization import (
+    user_can_access_project as _resolve_user_can_access_project,
+)
 
 
 def get_user_orgao_subtree_ids(user) -> set[int]:
-    """Retorna o conjunto de orgao_ids acessiveis ao usuario.
-
-    - admin: todos os orgaos ativos.
-    - demais: uniao dos subtrees de cada orgao vinculado (inclusivo do no raiz).
-    - sem vinculos: conjunto vazio.
-    """
-    if user is None:
-        return set()
-
-    if getattr(user, "is_admin", False):
-        rows = (
-            db.session.query(OrgaoUnidade.id).filter(OrgaoUnidade.ativo.is_(True)).all()
-        )
-        return {row_id for (row_id,) in rows}
-
-    vinculos = getattr(user, "orgaos", None) or []
-    subtree: set[int] = set()
-    for uo in vinculos:
-        root_id = uo.orgao_id
-        subtree.add(root_id)
-        subtree.update(get_orgao_descendants(root_id))
-    return subtree
+    """Wrapper de compatibilidade — implementacao em ``services.authorization``."""
+    return _resolve_user_orgao_subtree_ids(user)
 
 
 def sanitize_orgao_filter_for_user(user, selected_orgao_id):
@@ -304,16 +292,5 @@ def scoped_orgao_options(user) -> list[dict]:
 
 
 def user_can_access_project(user, project) -> bool:
-    """Retorna True se o usuario pode acessar o projeto via subtree de orgao.
-
-    Admin sempre acessa. Demais: projeto deve estar no subtree dos orgaos
-    vinculados ao usuario (heranca descendente). Projeto sem orgao_id nao e
-    acessivel a nao-admins.
-    """
-    if user is None:
-        return False
-    if getattr(user, "is_admin", False):
-        return True
-    if project is None or project.orgao_id is None:
-        return False
-    return project.orgao_id in get_user_orgao_subtree_ids(user)
+    """Wrapper de compatibilidade — implementacao em ``services.authorization``."""
+    return _resolve_user_can_access_project(user, project)
