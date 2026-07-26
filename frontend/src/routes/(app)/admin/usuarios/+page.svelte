@@ -18,6 +18,7 @@
 	import { ApiClientError } from '$lib/api/client';
 	import type { AdminUser, AdminUsersPageMeta, AdminOrgaoOption } from '$lib/types/adminUsers';
 	import { auth } from '$lib/stores/auth';
+	import { papelLabel } from '$lib/utils/orgaoPapel';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
@@ -372,9 +373,11 @@
 										{#if user.orgaos.length > 0}
 											<span
 												class="block truncate text-sm text-text-secondary"
-												title={user.orgaos.map((o) => o.nome).join(', ')}
+												title={user.orgaos
+													.map((o) => `${o.nome} — ${papelLabel(o.papel)}`)
+													.join(', ')}
 											>
-												{user.orgaos.map((o) => o.sigla).join(', ')}
+												{user.orgaos.map((o) => `${o.sigla} (${papelLabel(o.papel)})`).join(', ')}
 											</span>
 										{:else}
 											<span class="text-sm italic text-text-muted">Sem órgão definido</span>

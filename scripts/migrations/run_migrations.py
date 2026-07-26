@@ -132,6 +132,7 @@ STAGE_TEMPLATE_AUDIT_COLUMNS = [
     ("updated_by_id", "INTEGER"),
 ]
 PROJECT_ORGAO_COLUMN = ("orgao_id", "INTEGER")
+USER_ORGAO_PAPEL_COLUMN = ("papel", "VARCHAR(10) NOT NULL DEFAULT 'gestor'")
 ORGAO_UNIDADE_INCREMENTAL_COLUMNS = [
     ("tipo_id", "INTEGER"),
     ("codigo_externo", "VARCHAR(80)"),
@@ -1558,6 +1559,35 @@ def ensure_etapa_responsavel_table(emit_output=True):
         return {"success": False, "error": str(exc), "created": False}
 
 
+def ensure_user_orgao_papel_column(emit_output=True):
+    """Garante user_orgao.papel (S2/F1-1); linhas antigas nascem 'gestor'."""
+    column_name, column_type = USER_ORGAO_PAPEL_COLUMN
+    _emit("→ Garantindo coluna user_orgao.papel...", emit_output)
+    try:
+        inspector = inspect(db.engine)
+        if not _table_exists(inspector, "user_orgao"):
+            _emit("   ✓ Tabela user_orgao ainda não existe.", emit_output)
+            return {"success": True, "added": False}
+        if column_name in _column_names(inspector, "user_orgao"):
+            _emit("   ✓ Coluna user_orgao.papel já existe.", emit_output)
+            return {"success": True, "added": False}
+        db.session.execute(
+            text(f"ALTER TABLE user_orgao ADD COLUMN {column_name} {column_type}")
+        )
+        # O DEFAULT server-side já preenche as linhas existentes; o UPDATE cobre
+        # bancos que aceitam ADD COLUMN NOT NULL deixando NULL nas linhas antigas.
+        db.session.execute(
+            text("UPDATE user_orgao SET papel = 'gestor' WHERE papel IS NULL")
+        )
+        db.session.commit()
+        _emit("   ✓ Coluna user_orgao.papel criada (backfill 'gestor').", emit_output)
+        return {"success": True, "added": True}
+    except Exception as exc:
+        db.session.rollback()
+        _emit(f"   ✗ ERRO ao garantir user_orgao.papel: {exc}", emit_output)
+        return {"success": False, "error": str(exc), "added": False}
+
+
 def ensure_siorg_sync_log_table(emit_output=True):
     """Garante a tabela siorg_sync_log (integração SIORG — auditoria de sync)."""
     _emit("→ Garantindo tabela siorg_sync_log...", emit_output)
@@ -1679,6 +1709,7 @@ def _run_migration_steps(emit_output: bool) -> list[tuple[str, dict]]:
         ("backfill_task_assignees", backfill_task_assignees),
         ("backfill_sei_processes", backfill_sei_processes),
         ("ensure_etapa_responsavel_table", ensure_etapa_responsavel_table),
+        ("ensure_user_orgao_papel_column", ensure_user_orgao_papel_column),
         ("ensure_siorg_sync_log_table", ensure_siorg_sync_log_table),
         ("ensure_codigo_externo_unique_index", ensure_codigo_externo_unique_index),
     ]

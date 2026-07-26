@@ -19,7 +19,11 @@
 	} from '$lib/api/adminUsers';
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
-	import type { AdminOrgaoOption, AdminUserCreatePayload } from '$lib/types/adminUsers';
+	import type {
+		AdminOrgaoOption,
+		AdminUserCreatePayload,
+		AdminUserOrgaoVinculo
+	} from '$lib/types/adminUsers';
 	import UserForm from '../UserForm.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -47,7 +51,7 @@
 		cpf_govbr: '',
 		password: '',
 		is_admin: false,
-		orgaos_responsavel: [] as number[]
+		orgaos: [] as AdminUserOrgaoVinculo[]
 	});
 
 	let inFlight: AbortController | null = null;
@@ -101,7 +105,7 @@
 			orgao: values.orgao.trim() || undefined,
 			is_admin: values.is_admin,
 			cpf_govbr: values.cpf_govbr.trim() || undefined,
-			orgaos_responsavel: values.orgaos_responsavel
+			orgaos: values.orgaos
 		};
 		try {
 			await createAdminUser(payload);

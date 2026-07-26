@@ -25,6 +25,7 @@ from typing import Any
 from flask import Response, g, request
 
 from models import OrgaoUnidade, User, UserOrgao, db
+from services.authorization import PAPEL_GESTOR, PAPEL_RANK
 from services.password_policy import validate_password_strength
 from time_utils import utc_now
 
@@ -147,12 +148,16 @@ def api_admin_usuarios_create() -> Response | tuple[Response, int]:
     unicidade de ``username``/``cpf_govbr``. Aceita JSON ou form. Falhas de
     validação => ``fail(..., 422, "validation")``.
 
+    Vínculos de área: formato novo ``orgaos: [{"orgao_id", "papel"}]`` ou o antigo
+    ``orgaos_responsavel: [id]`` (interpretado como ``gestor``) — ver
+    ``_parse_orgao_papel_pairs``.
+
     Returns:
         Envelope ``{"ok": true, "data": {"usuario": {...}}}`` com HTTP 200 ao
         criar; ``fail(..., 422)`` em erro de validação.
     """
     payload = request.get_json(silent=True) or request.form
-    selected_orgao_ids, invalid_orgaos = _parse_selected_orgaos(_get_orgao_ids(payload))
+    orgao_pairs, invalid_orgaos, papel_error = _parse_orgao_papel_pairs(payload)
     username = (payload.get("username") or "").strip()
     name = (payload.get("name") or "").strip()
     password = payload.get("password") or ""
@@ -177,6 +182,8 @@ def api_admin_usuarios_create() -> Response | tuple[Response, int]:
             status=422,
             code="validation",
         )
+    if papel_error:
+        return fail(papel_error, status=422, code="validation")
     if User.query.filter_by(username=username).first():
         return fail(
             "Este nome de usuário já está em uso. Escolha outro.",
@@ -200,7 +207,7 @@ def api_admin_usuarios_create() -> Response | tuple[Response, int]:
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.flush()
-    new_user.set_orgaos(selected_orgao_ids)
+    new_user.set_orgaos_com_papeis(orgao_pairs)
     db.session.commit()
     return ok({"usuario": serialize_admin_user(new_user)})
 
@@ -213,7 +220,9 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
     Preserva o comportamento do Jinja: ``username`` não é editável; órgãos
     inativos pré-vinculados são mantidos; o CPF só é alterado quando o vínculo
     Gov.br não está travado (``govbr_sub`` presente); o último administrador não
-    pode ser despromovido; a senha só muda se uma nova for fornecida.
+    pode ser despromovido; a senha só muda se uma nova for fornecida. Os vínculos
+    aceitam os dois formatos de ``_parse_orgao_papel_pairs`` (novo com papel e
+    ``orgaos_responsavel[]`` legado como ``gestor``).
 
     Args:
         user_id: ID do usuário a editar.
@@ -233,7 +242,9 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
     orgao = (payload.get("orgao") or "").strip()
     is_admin_flag = _parse_bool(payload.get("is_admin"))
 
-    selected_orgao_ids, invalid_orgaos = _resolve_update_orgao_ids(user, payload)
+    orgao_pairs, invalid_orgaos, papel_error = _resolve_update_orgao_pairs(
+        user, payload
+    )
 
     should_update_cpf = not hide_govbr_link_fields and "cpf_govbr" in payload
     cpf_govbr = user.cpf_govbr
@@ -257,6 +268,8 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
             status=422,
             code="validation",
         )
+    if papel_error:
+        return fail(papel_error, status=422, code="validation")
     if cpf_error:
         return fail(f"CPF gov.br inválido: {cpf_error}", status=422, code="validation")
     if (
@@ -278,7 +291,7 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
         user.cpf_govbr = cpf_govbr
         if not cpf_govbr or (old_cpf and old_cpf != cpf_govbr):
             user.govbr_sub = None
-    user.set_orgaos(selected_orgao_ids)
+    user.set_orgaos_com_papeis(orgao_pairs)
 
     new_password = payload.get("password")
     if new_password:
@@ -386,6 +399,74 @@ def _get_orgao_ids(payload: Any) -> list[Any]:
     return raw if isinstance(raw, list) else [raw]
 
 
+def _get_orgao_papel_entries(payload: Any) -> list[Any] | None:
+    """Itens do payload NOVO ``orgaos`` (``[{orgao_id, papel}]``), ou ``None``.
+
+    ``None`` significa "formato novo ausente" — o chamador cai na compat de
+    ``orgaos_responsavel[]``. Requisições form-encoded não trafegam objetos, então
+    só o formato antigo vale para elas.
+    """
+    if hasattr(payload, "getlist"):
+        return None
+    raw = payload.get("orgaos")
+    if raw is None:
+        return None
+    return raw if isinstance(raw, list) else [raw]
+
+
+def _split_orgao_papel_entry(entry: Any) -> tuple[Any, str]:
+    """Extrai ``(orgao_id, papel)`` de um item do payload novo (default gestor)."""
+    if not isinstance(entry, dict):
+        return entry, PAPEL_GESTOR
+    raw_id = entry.get("orgao_id", entry.get("id"))
+    papel = str(entry.get("papel") or PAPEL_GESTOR).strip().lower()
+    return raw_id, papel
+
+
+def _first_invalid_papel_error(papeis: list[str]) -> str | None:
+    """Mensagem 422 do primeiro papel fora da taxonomia (valor + esperados)."""
+    for papel in papeis:
+        if papel not in PAPEL_RANK:
+            esperados = "|".join(PAPEL_RANK)
+            return f"Papel inválido: {papel!r}. Esperado um de {esperados}."
+    return None
+
+
+def _papel_por_orgao_id(raw_pairs: list[tuple[Any, str]]) -> dict[int, str]:
+    """Indexa o papel por ``orgao_id``; a primeira ocorrência do id vence."""
+    papel_by_id: dict[int, str] = {}
+    for raw_id, papel in raw_pairs:
+        try:
+            papel_by_id.setdefault(int(raw_id), papel)
+        except (TypeError, ValueError):
+            continue
+    return papel_by_id
+
+
+def _parse_orgao_papel_pairs(
+    payload: Any,
+) -> tuple[list[tuple[int, str]], list[str], str | None]:
+    """Resolve os pares ``(orgao_id, papel)`` do payload, com compat do antigo.
+
+    Formato novo: ``orgaos: [{"orgao_id": 3, "papel": "editor"}]``. Formato antigo
+    (mantido para o deploy desacoplado do frontend): ``orgaos_responsavel: [3, 7]``
+    — JSON ou form — em que todo vínculo é gravado como ``gestor``.
+
+    Returns:
+        Tupla ``(pares, orgaos_invalidos, papel_error)``.
+    """
+    entries = _get_orgao_papel_entries(payload)
+    if entries is None:
+        ids, invalid = _parse_selected_orgaos(_get_orgao_ids(payload))
+        return [(orgao_id, PAPEL_GESTOR) for orgao_id in ids], invalid, None
+    raw_pairs = [_split_orgao_papel_entry(entry) for entry in entries]
+    ids, invalid = _parse_selected_orgaos([raw_id for raw_id, _ in raw_pairs])
+    papel_by_id = _papel_por_orgao_id(raw_pairs)
+    pares = [(orgao_id, papel_by_id[orgao_id]) for orgao_id in ids]
+    papel_error = _first_invalid_papel_error([papel for _, papel in raw_pairs])
+    return pares, invalid, papel_error
+
+
 def _parse_bool(value: Any) -> bool:
     """Normaliza flags admin (``on``/``true``/``1``/bool) para ``bool``."""
     if isinstance(value, bool):
@@ -393,29 +474,39 @@ def _parse_bool(value: Any) -> bool:
     return str(value).strip().lower() in {"on", "true", "1", "yes"}
 
 
-def _resolve_update_orgao_ids(user: User, payload: Any) -> tuple[list[int], list[str]]:
-    """Resolve os órgãos a vincular na edição, preservando inativos pré-vinculados.
+def _inactive_current_pairs(
+    user: User, selected_ids: set[int]
+) -> list[tuple[int, str]]:
+    """Vínculos a órgãos INATIVOS do usuário, com o papel atual preservado.
 
-    Espelha a lógica do POST de ``edit_user``: vínculos a órgãos inativos (que não
-    aparecem como opção em ``_list_orgaos_with_parent``) são preservados para
-    não serem apagados silenciosamente. Sempre substitui o conjunto de vínculos
-    (o form admin sempre envia o estado completo dos órgãos).
+    Órgãos inativos não aparecem como opção em ``_list_orgaos_with_parent``, logo
+    nunca voltam no payload — sem isto seriam apagados silenciosamente na edição.
+    """
+    return [
+        (uo.orgao_id, uo.papel)
+        for uo in user.orgaos
+        if uo.orgao_id not in selected_ids
+        and (orgao := db.session.get(OrgaoUnidade, uo.orgao_id)) is not None
+        and not orgao.ativo
+    ]
+
+
+def _resolve_update_orgao_pairs(
+    user: User, payload: Any
+) -> tuple[list[tuple[int, str]], list[str], str | None]:
+    """Resolve os pares (órgão, papel) da edição, preservando inativos vinculados.
+
+    Sempre substitui o conjunto de vínculos (o form admin envia o estado completo
+    dos órgãos), acrescido dos inativos pré-existentes.
 
     Args:
         user: Usuário sendo editado.
         payload: Payload da requisição (JSON ou form).
 
     Returns:
-        Tupla ``(selected_orgao_ids, invalid_orgaos)``.
+        Tupla ``(pares, orgaos_invalidos, papel_error)``.
     """
-    selected_orgao_ids, invalid_orgaos = _parse_selected_orgaos(_get_orgao_ids(payload))
-    current_orgao_ids = [uo.orgao_id for uo in user.orgaos]
-    inactive_current_ids = {
-        oid
-        for oid in current_orgao_ids
-        if (o := db.session.get(OrgaoUnidade, oid)) is not None and not o.ativo
-    }
-    for oid in inactive_current_ids:
-        if oid not in selected_orgao_ids:
-            selected_orgao_ids.append(oid)
-    return selected_orgao_ids, invalid_orgaos
+    pares, invalid_orgaos, papel_error = _parse_orgao_papel_pairs(payload)
+    selected_ids = {orgao_id for orgao_id, _ in pares}
+    pares.extend(_inactive_current_pairs(user, selected_ids))
+    return pares, invalid_orgaos, papel_error

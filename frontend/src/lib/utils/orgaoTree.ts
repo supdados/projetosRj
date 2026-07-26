@@ -147,22 +147,28 @@ export function computeOrgaoCoverage<T extends OrgaoTreeOptionLike>(
 	return out;
 }
 
-/** Remove da seleção todo id cujo ancestral também esteja selecionado — payload mínimo. */
-export function minimizeOrgaoSelection<T extends OrgaoTreeOptionLike>(
+/**
+ * Ancestral SELECIONADO mais próximo de cada nó (`null` quando não há).
+ *
+ * Diferente de `computeOrgaoCoverage`, não interrompe a descida ao encontrar um
+ * selecionado: um nó selecionado DENTRO de outro selecionado continua mapeado
+ * ao ancestral — é essa dupla que dispara o aviso do `max()` no repeater.
+ *
+ * Exemplo: selecionados {GOVRJ, SETD} ⇒ `map.get(SETD) === GOVRJ`.
+ */
+export function computeCoveringAncestors<T extends OrgaoTreeOptionLike>(
 	tree: OrgaoTreeNode<T>[],
-	selectedIds: number[]
-): number[] {
-	const selectedSet = new Set(selectedIds);
-	const kept: number[] = [];
-	const walk = (nodes: OrgaoTreeNode<T>[], ancestorSelected: boolean): void => {
+	selectedIds: ReadonlySet<number>
+): Map<number, number | null> {
+	const out = new Map<number, number | null>();
+	const walk = (nodes: OrgaoTreeNode<T>[], nearestSelected: number | null): void => {
 		for (const node of nodes) {
-			const isSelected = selectedSet.has(node.value);
-			if (isSelected && !ancestorSelected) kept.push(node.value);
-			walk(node.children, ancestorSelected || isSelected);
+			out.set(node.value, nearestSelected);
+			walk(node.children, selectedIds.has(node.value) ? node.value : nearestSelected);
 		}
 	};
-	walk(tree, false);
-	return kept;
+	walk(tree, null);
+	return out;
 }
 
 /** Linhas visíveis: árvore respeitando expansão, ou matches achatados na busca. */

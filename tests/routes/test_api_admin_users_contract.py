@@ -256,6 +256,179 @@ def test_update_returns_403_for_non_admin(client_user, seed_data):
 
 
 # ---------------------------------------------------------------------------
+# Papel por vínculo de área (novo payload + compat de `orgaos_responsavel[]`)
+# ---------------------------------------------------------------------------
+
+
+def _orgao_id_por_sigla(app, sigla: str) -> int:
+    from models import OrgaoUnidade
+
+    with app.app_context():
+        return OrgaoUnidade.query.filter_by(sigla=sigla).first().id
+
+
+def _papeis_gravados(app, username: str) -> dict[str, str]:
+    """{sigla: papel} dos vínculos persistidos do usuário."""
+    from models import User
+
+    with app.app_context():
+        user = User.query.filter_by(username=username).first()
+        return {uo.orgao.sigla: uo.papel for uo in user.orgaos}
+
+
+def test_list_exposes_papel_por_orgao(client_admin, seed_data):
+    """Todo vínculo do seed nasce `gestor` (backfill) e o papel vai no payload."""
+    data = _assert_ok_envelope(client_admin.get("/api/admin/usuarios").get_json())
+    vinculos = [orgao for user in data["usuarios"] for orgao in user["orgaos"]]
+
+    assert vinculos
+    for orgao in vinculos:
+        assert set(orgao.keys()) == {"id", "sigla", "nome", "papel"}
+        assert orgao["papel"] == "gestor"
+
+
+def test_create_com_pares_grava_papeis_distintos(app, client_admin, seed_data):
+    response = client_admin.post(
+        "/api/admin/usuarios",
+        json={
+            "username": "papel_novo",
+            "name": "Papel Novo",
+            "password": "senhaContrato123",
+            "orgaos": [
+                {"orgao_id": _orgao_id_por_sigla(app, "SUPDADOS"), "papel": "editor"},
+                {"orgao_id": _orgao_id_por_sigla(app, "VPD"), "papel": "leitor"},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    data = _assert_ok_envelope(response.get_json())
+    assert {o["sigla"]: o["papel"] for o in data["usuario"]["orgaos"]} == {
+        "SUPDADOS": "editor",
+        "VPD": "leitor",
+    }
+    assert _papeis_gravados(app, "papel_novo") == {
+        "SUPDADOS": "editor",
+        "VPD": "leitor",
+    }
+
+
+def test_create_com_payload_antigo_grava_gestor(app, client_admin, seed_data):
+    """`orgaos_responsavel[]` (lista de ids) continua aceito => papel `gestor`."""
+    response = client_admin.post(
+        "/api/admin/usuarios",
+        json={
+            "username": "papel_legado",
+            "name": "Papel Legado",
+            "password": "senhaContrato123",
+            "orgaos_responsavel": [_orgao_id_por_sigla(app, "VPD")],
+        },
+    )
+
+    assert response.status_code == 200
+    assert _papeis_gravados(app, "papel_legado") == {"VPD": "gestor"}
+
+
+def test_create_com_payload_antigo_em_form_grava_gestor(app, client_admin, seed_data):
+    response = client_admin.post(
+        "/api/admin/usuarios",
+        data={
+            "username": "papel_legado_form",
+            "name": "Papel Legado Form",
+            "password": "senhaContrato123",
+            "orgaos_responsavel": str(_orgao_id_por_sigla(app, "VPD")),
+        },
+    )
+
+    assert response.status_code == 200
+    assert _papeis_gravados(app, "papel_legado_form") == {"VPD": "gestor"}
+
+
+def test_create_com_papel_invalido_retorna_422(app, client_admin, seed_data):
+    response = client_admin.post(
+        "/api/admin/usuarios",
+        json={
+            "username": "papel_ruim",
+            "name": "Papel Ruim",
+            "password": "senhaContrato123",
+            "orgaos": [{"orgao_id": _orgao_id_por_sigla(app, "VPD"), "papel": "chefe"}],
+        },
+    )
+
+    assert response.status_code == 422
+    payload = response.get_json()
+    _assert_fail_envelope(payload, code="validation")
+    assert "chefe" in payload["error"]["message"]
+    assert "leitor|editor|gestor" in payload["error"]["message"]
+
+
+def test_create_sem_papel_no_par_usa_gestor(app, client_admin, seed_data):
+    response = client_admin.post(
+        "/api/admin/usuarios",
+        json={
+            "username": "papel_omitido",
+            "name": "Papel Omitido",
+            "password": "senhaContrato123",
+            "orgaos": [{"orgao_id": _orgao_id_por_sigla(app, "VPD")}],
+        },
+    )
+
+    assert response.status_code == 200
+    assert _papeis_gravados(app, "papel_omitido") == {"VPD": "gestor"}
+
+
+def test_update_altera_o_papel_do_vinculo(app, client_admin, seed_data):
+    user_id = seed_data["editable_user_id"]
+    response = client_admin.put(
+        f"/api/admin/usuarios/{user_id}",
+        json={
+            "name": "Usuario Editavel",
+            "orgaos": [
+                {"orgao_id": _orgao_id_por_sigla(app, "Auditoria"), "papel": "leitor"}
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    data = _assert_ok_envelope(response.get_json())
+    assert {o["sigla"]: o["papel"] for o in data["usuario"]["orgaos"]} == {
+        "Auditoria": "leitor"
+    }
+    assert _papeis_gravados(app, "user_editavel") == {"Auditoria": "leitor"}
+
+
+def test_update_com_payload_antigo_mantem_gestor(app, client_admin, seed_data):
+    user_id = seed_data["editable_user_id"]
+    response = client_admin.put(
+        f"/api/admin/usuarios/{user_id}",
+        json={
+            "name": "Usuario Editavel",
+            "orgaos_responsavel": [_orgao_id_por_sigla(app, "Auditoria")],
+        },
+    )
+
+    assert response.status_code == 200
+    assert _papeis_gravados(app, "user_editavel") == {"Auditoria": "gestor"}
+
+
+def test_update_com_papel_invalido_retorna_422(app, client_admin, seed_data):
+    response = client_admin.put(
+        f"/api/admin/usuarios/{seed_data['editable_user_id']}",
+        json={
+            "name": "Usuario Editavel",
+            "orgaos": [
+                {"orgao_id": _orgao_id_por_sigla(app, "Auditoria"), "papel": "root"}
+            ],
+        },
+    )
+
+    assert response.status_code == 422
+    payload = response.get_json()
+    _assert_fail_envelope(payload, code="validation")
+    assert "root" in payload["error"]["message"]
+
+
+# ---------------------------------------------------------------------------
 # POST /api/admin/usuarios/<id>/remover-cpf
 # ---------------------------------------------------------------------------
 

@@ -1,3 +1,6 @@
+from collections.abc import Iterable
+
+from sqlalchemy.orm import validates
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from time_utils import utc_now
@@ -40,15 +43,29 @@ class User(db.Model):
         """True se o hash atual usa algoritmo legado (pré-scrypt)."""
         return not (self.password_hash or "").startswith("scrypt:")
 
-    def set_orgaos(self, orgao_ids):
-        """Substitui os vinculos em user_orgao."""
+    def set_orgaos(self, orgao_ids: Iterable[int]) -> None:
+        """Substitui os vinculos em user_orgao, todos com papel `gestor`.
+
+        Wrapper de compat de `set_orgaos_com_papeis` para chamadores que só
+        conhecem ids. Ex.: `user.set_orgaos([3, 7])`.
+        """
+        from services.authorization import PAPEL_GESTOR
+
+        self.set_orgaos_com_papeis((orgao_id, PAPEL_GESTOR) for orgao_id in orgao_ids)
+
+    def set_orgaos_com_papeis(self, pares: Iterable[tuple[int, str]]) -> None:
+        """Substitui os vinculos em user_orgao a partir de pares (orgao_id, papel).
+
+        Duplicatas de `orgao_id` são ignoradas (a primeira ocorrência vence).
+        Ex.: `user.set_orgaos_com_papeis([(3, "editor"), (7, "leitor")])`.
+        """
         UserOrgao.query.filter_by(user_id=self.id).delete()
-        seen = set()
-        for orgao_id in orgao_ids:
+        seen: set[int] = set()
+        for orgao_id, papel in pares:
             if orgao_id in seen:
                 continue
             seen.add(orgao_id)
-            db.session.add(UserOrgao(user_id=self.id, orgao_id=orgao_id))
+            db.session.add(UserOrgao(user_id=self.id, orgao_id=orgao_id, papel=papel))
 
     def __repr__(self):
         return f"<User {self.username}>"
@@ -68,6 +85,12 @@ class UserOrgao(db.Model):
         nullable=False,
     )
 
+    # Papel do vínculo (leitor|editor|gestor). String + validação Python em vez
+    # de Enum de banco: o runner custom roda em SQLite e Postgres.
+    papel = db.Column(
+        db.String(10), nullable=False, default="gestor", server_default="gestor"
+    )
+
     orgao = db.relationship("OrgaoUnidade")
 
     __table_args__ = (
@@ -75,6 +98,17 @@ class UserOrgao(db.Model):
         db.Index("ix_user_orgao_user_id", "user_id"),
         db.Index("ix_user_orgao_orgao_id", "orgao_id"),
     )
+
+    @validates("papel")
+    def validate_papel(self, _key: str, value: str) -> str:
+        """Rejeita papel fora da taxonomia. Ex.: `UserOrgao(papel="editor")`."""
+        # Import tardio: services.authorization importa models (ciclo no topo).
+        from services.authorization import PAPEL_RANK
+
+        if value in PAPEL_RANK:
+            return value
+        esperados = "|".join(PAPEL_RANK)
+        raise ValueError(f"papel inválido: {value!r}; esperado um de {esperados}")
 
     def __repr__(self):
         return f"<UserOrgao user_id={self.user_id} orgao_id={self.orgao_id}>"

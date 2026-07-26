@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from services.authorization import PAPEL_GESTOR
 from services.calendar_core import format_human_datetime, format_input_datetime
 from time_utils import iso_utc
 
@@ -29,6 +30,30 @@ def _orgao_ref_brief(orgao: Any) -> dict[str, Any]:
         ``{"id": int, "sigla": str, "nome": str}``.
     """
     return {"id": orgao.id, "sigla": orgao.sigla, "nome": orgao.nome}
+
+
+def _orgao_vinculo_ref(vinculo: Any) -> dict[str, Any]:
+    """Serializa um vínculo `UserOrgao` como ``{id, sigla, nome, papel}``.
+
+    Args:
+        vinculo: Instância de ``UserOrgao`` com ``orgao`` carregado.
+
+    Returns:
+        O órgão do vínculo acrescido do ``papel`` gravado em ``user_orgao``.
+    """
+    ref = _orgao_ref_brief(vinculo.orgao)
+    ref["papel"] = getattr(vinculo, "papel", None) or PAPEL_GESTOR
+    return ref
+
+
+def _user_orgao_refs(user: Any) -> list[dict[str, Any]]:
+    """Vínculos de área do usuário como ``[{id, sigla, nome, papel}]``."""
+    vinculos = getattr(user, "orgaos", None) or []
+    return [
+        _orgao_vinculo_ref(uo)
+        for uo in vinculos
+        if getattr(uo, "orgao", None) is not None
+    ]
 
 
 def serialize_orgao_option(node: dict[str, Any]) -> dict[str, Any]:
@@ -175,27 +200,21 @@ def serialize_user(user: Any) -> dict[str, Any]:
         user: Instância de ``User``.
 
     Returns:
-        ``{id, name, username, is_admin, orgaos: [{id, sigla, nome}],
+        ``{id, name, username, is_admin, orgaos: [{id, sigla, nome, papel}],
         auth_provider}``.
 
     Exemplo:
         >>> serialize_user(g.user)
         {'id': 1, 'name': 'Ana', 'username': 'ana', 'is_admin': False,
-         'orgaos': [{'id': 3, 'sigla': 'SETD', 'nome': '...'}],
+         'orgaos': [{'id': 3, 'sigla': 'SETD', 'nome': '...', 'papel': 'gestor'}],
          'auth_provider': 'govbr'}
     """
-    vinculos = getattr(user, "orgaos", None) or []
-    orgaos = [
-        _orgao_ref_brief(uo.orgao)
-        for uo in vinculos
-        if getattr(uo, "orgao", None) is not None
-    ]
     return {
         "id": user.id,
         "name": user.name,
         "username": user.username,
         "is_admin": bool(user.is_admin),
-        "orgaos": orgaos,
+        "orgaos": _user_orgao_refs(user),
         "auth_provider": _resolve_auth_provider(user),
     }
 
@@ -215,14 +234,9 @@ def serialize_admin_user(user: Any) -> dict[str, Any]:
 
     Returns:
         ``dict`` JSON-safe ``{id, name, username, is_admin, orgao, orgaos,
-        cpf_govbr, has_govbr_link, govbr_link_locked, auth_provider}``.
+        cpf_govbr, has_govbr_link, govbr_link_locked, auth_provider}``, com
+        ``orgaos`` no formato ``[{id, sigla, nome, papel}]``.
     """
-    vinculos = getattr(user, "orgaos", None) or []
-    orgaos = [
-        _orgao_ref_brief(uo.orgao)
-        for uo in vinculos
-        if getattr(uo, "orgao", None) is not None
-    ]
     has_govbr_link = bool(
         getattr(user, "cpf_govbr", None) and getattr(user, "govbr_sub", None)
     )
@@ -232,7 +246,7 @@ def serialize_admin_user(user: Any) -> dict[str, Any]:
         "username": user.username,
         "is_admin": bool(user.is_admin),
         "orgao": user.orgao,
-        "orgaos": orgaos,
+        "orgaos": _user_orgao_refs(user),
         "cpf_govbr": user.cpf_govbr,
         "has_govbr_link": has_govbr_link,
         "govbr_link_locked": has_govbr_link,

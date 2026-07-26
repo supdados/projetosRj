@@ -26,10 +26,11 @@
 	import type {
 		AdminOrgaoOption,
 		AdminUser,
+		AdminUserOrgaoVinculo,
 		AdminUserUpdatePayload
 	} from '$lib/types/adminUsers';
 	import UserForm from '../UserForm.svelte';
-	import { buildOrgaoTree, minimizeOrgaoSelection } from '$lib/utils/orgaoTree';
+	import { vinculosFromRefs } from '$lib/utils/orgaoPapel';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import AdminUsuarioEditSkeleton from '$lib/components/skeletons/AdminUsuarioEditSkeleton.svelte';
@@ -54,18 +55,8 @@
 	let removingCpf = $state<boolean>(false);
 	let formError = $state<string>('');
 
-	/**
-	 * Normaliza vínculos legados redundantes (pai+filho salvos pela grade
-	 * antiga): mantém só os ancestrais — mesma cobertura, payload mínimo.
-	 * Só chega ao backend se o usuário submeter o form.
-	 */
-	function minimizeIds(orgaoIds: number[], options: AdminOrgaoOption[]): number[] {
-		const tree = buildOrgaoTree(options.map((o) => ({ value: o.id, pai_id: o.pai_id })));
-		return minimizeOrgaoSelection(tree, orgaoIds);
-	}
-
 	/** Monta os valores do form a partir do usuário carregado (função pura). */
-	function valuesFromUser(user: AdminUser, orgaoIds: number[]) {
+	function valuesFromUser(user: AdminUser, options: AdminOrgaoOption[]) {
 		return {
 			name: user.name ?? '',
 			username: user.username ?? '',
@@ -73,15 +64,12 @@
 			cpf_govbr: user.cpf_govbr ?? '',
 			password: '',
 			is_admin: user.is_admin,
-			orgaos_responsavel: [...orgaoIds]
+			orgaos: vinculosFromRefs(user.orgaos, new Set(options.map((o) => o.id)))
 		};
 	}
 
 	const initialValues = initialDetail
-		? valuesFromUser(
-				initialDetail.usuario,
-				minimizeIds(initialDetail.orgao_ids, initialDetail.orgaos_options)
-			)
+		? valuesFromUser(initialDetail.usuario, initialDetail.orgaos_options)
 		: {
 				name: '',
 				username: '',
@@ -89,7 +77,7 @@
 				cpf_govbr: '',
 				password: '',
 				is_admin: false,
-				orgaos_responsavel: [] as number[]
+				orgaos: [] as AdminUserOrgaoVinculo[]
 			};
 	let values = $state(initialValues);
 
@@ -97,9 +85,10 @@
 
 	const listHref = `${base}/admin/usuarios`;
 
-	function hydrate(user: AdminUser, orgaoIds: number[]): void {
+	/** Reidrata o form com o estado canônico do backend (vínculos + papéis). */
+	function hydrate(user: AdminUser): void {
 		usuario = user;
-		values = valuesFromUser(user, minimizeIds(orgaoIds, orgaosOptions));
+		values = valuesFromUser(user, orgaosOptions);
 	}
 
 	async function load(): Promise<void> {
@@ -114,7 +103,7 @@
 		const cached = peekAdminUserDetail(userId);
 		if (cached) {
 			orgaosOptions = cached.orgaos_options;
-			hydrate(cached.usuario, cached.orgao_ids);
+			hydrate(cached.usuario);
 			loadState = 'ready';
 		} else {
 			loadState = 'loading';
@@ -123,7 +112,7 @@
 			const detail = await fetchAdminUserDetail(userId, controller.signal);
 			if (controller.signal.aborted) return;
 			orgaosOptions = detail.orgaos_options;
-			hydrate(detail.usuario, detail.orgao_ids);
+			hydrate(detail.usuario);
 			loadState = 'ready';
 		} catch (err) {
 			if (controller.signal.aborted) return;
@@ -156,7 +145,7 @@
 			name: values.name.trim(),
 			orgao: values.orgao.trim() || undefined,
 			is_admin: values.is_admin,
-			orgaos_responsavel: values.orgaos_responsavel
+			orgaos: values.orgaos
 		};
 		// Senha só é enviada quando preenchida (preserva a existente).
 		if (values.password) payload.password = values.password;
@@ -167,7 +156,7 @@
 		try {
 			const result = await updateAdminUser(userId, payload);
 			// Reidrata com o estado canônico do backend (CPF/órgãos resolvidos).
-			hydrate(result.usuario, values.orgaos_responsavel);
+			hydrate(result.usuario);
 			saving = false;
 			await goto(listHref);
 		} catch (err) {
@@ -187,7 +176,7 @@
 		formError = '';
 		try {
 			const result = await removeAdminUserCpf(userId);
-			hydrate(result.usuario, values.orgaos_responsavel);
+			hydrate(result.usuario);
 			removingCpf = false;
 		} catch (err) {
 			removingCpf = false;

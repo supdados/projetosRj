@@ -10,21 +10,16 @@
 	 *   - CPF gov.br não editável quando o vínculo está travado
 	 *     (`govbr_link_locked`) — nesse caso oferece "Retirar CPF".
 	 *
-	 * O seletor de órgãos responsáveis é o OrgaoTreeMultiSelect: árvore com
-	 * herança descendente (selecionar um pai cobre os filhos, que saem do
-	 * payload), busca e chips dos selecionados diretos.
+	 * O seletor de órgãos responsáveis é o OrgaoPapelRepeater: uma linha por
+	 * vínculo (área × papel) sobre a árvore de seleção com herança descendente.
 	 *
 	 * A submissão é delegada ao pai via `onSubmit` (que chama o módulo
 	 * `adminUsers.ts` com `client.post`). Acessível: labels associadas,
 	 * `required`/`aria-invalid`, erro em `role=alert`.
 	 */
-	import OrgaoTreeMultiSelect from '$lib/components/OrgaoTreeMultiSelect.svelte';
-	import {
-		buildOrgaoTree,
-		computeOrgaoCoverage,
-		type OrgaoTreeNode
-	} from '$lib/utils/orgaoTree';
-	import type { AdminOrgaoOption } from '$lib/types/adminUsers';
+	import OrgaoPapelRepeater from '$lib/components/OrgaoPapelRepeater.svelte';
+	import { buildOrgaoTree, computeOrgaoCoverage } from '$lib/utils/orgaoTree';
+	import type { AdminOrgaoOption, AdminUserOrgaoVinculo } from '$lib/types/adminUsers';
 
 	type Mode = 'create' | 'edit';
 
@@ -35,7 +30,7 @@
 		cpf_govbr: string;
 		password: string;
 		is_admin: boolean;
-		orgaos_responsavel: number[];
+		orgaos: AdminUserOrgaoVinculo[];
 	}
 
 	interface Props {
@@ -80,16 +75,15 @@
 		'h-10 w-full rounded-lg border border-border-subtle bg-surface-muted px-3 text-sm text-text-primary transition-colors duration-fast placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-primary-500 focus:bg-surface focus:outline-none disabled:opacity-60';
 	const labelClass = 'text-2xs font-bold uppercase tracking-caps text-text-muted';
 
-	// --- Seletor de órgãos responsáveis ------------------------------------
-	// Contador "N selecionados · cobre M unidades": M = selecionados + cobertos
-	// pela herança descendente (mesma conta do backend).
+	// --- Vínculos de área (repeater área × papel) --------------------------
+	// Contador "N vínculos · cobre M unidades": M = vinculados + cobertos pela
+	// herança descendente (mesma conta do backend).
 	const orgaoTree = $derived.by(() =>
-		buildOrgaoTree(
-			orgaosOptions.map((o) => ({ value: o.id, pai_id: o.pai_id, sigla: o.sigla, nome: o.nome }))
-		)
+		buildOrgaoTree(orgaosOptions.map((o) => ({ value: o.id, pai_id: o.pai_id })))
 	);
 	const coveredCount = $derived.by(() => {
-		const coverage = computeOrgaoCoverage(orgaoTree, new Set(values.orgaos_responsavel));
+		const ids = new Set(values.orgaos.map((v) => v.orgao_id));
+		const coverage = computeOrgaoCoverage(orgaoTree, ids);
 		return [...coverage.values()].filter((c) => c.state !== 'none').length;
 	});
 
@@ -261,8 +255,8 @@
 		<div class="flex flex-col gap-0.5">
 			<h2 class="font-heading text-base font-bold text-text-primary">Vínculo e Permissões</h2>
 			<p class="text-xs text-text-muted">
-				Órgãos que o usuário pode acessar. A herança é descendente: marcar um órgão-pai dá
-				acesso a todos os filhos.
+				Áreas que o usuário pode acessar e o papel dele em cada uma. A herança é descendente:
+				vincular um órgão-pai dá o mesmo papel em todos os filhos.
 			</p>
 		</div>
 
@@ -292,10 +286,10 @@
 
 		<div class="flex flex-col gap-2">
 			<div class="flex flex-wrap items-center justify-between gap-2">
-				<span class={labelClass}>Órgãos Responsáveis</span>
+				<span class={labelClass}>Áreas e Papéis</span>
 				<span class="text-xs text-text-muted" aria-live="polite">
-					{values.orgaos_responsavel.length}
-					{values.orgaos_responsavel.length === 1 ? 'selecionado' : 'selecionados'} · cobre {coveredCount}
+					{values.orgaos.length}
+					{values.orgaos.length === 1 ? 'vínculo' : 'vínculos'} · cobre {coveredCount}
 					{coveredCount === 1 ? 'unidade' : 'unidades'}
 				</span>
 			</div>
@@ -303,13 +297,12 @@
 			{#if orgaosOptions.length === 0}
 				<p class="text-sm text-text-muted">Nenhum órgão ativo disponível.</p>
 			{:else}
-				<OrgaoTreeMultiSelect
+				<OrgaoPapelRepeater
 					options={orgaosOptions}
-					value={values.orgaos_responsavel}
-					onChange={(next) => (values.orgaos_responsavel = next)}
+					value={values.orgaos}
+					onChange={(next) => (values.orgaos = next)}
 					disabled={saving}
 					id="user-orgaos"
-					ariaLabel="Órgãos responsáveis"
 				/>
 			{/if}
 		</div>

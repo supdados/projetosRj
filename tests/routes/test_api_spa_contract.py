@@ -64,6 +64,17 @@ def test_api_me_returns_ok_envelope_with_safe_user_fields(client_user, seed_data
     assert data["auth_provider"] in {"govbr", "local"}
 
 
+def test_api_me_expoe_papel_por_orgao(client_user, seed_data):
+    """Cada vínculo de área carrega o papel; `is_admin` permanece no payload."""
+    data = _assert_ok_envelope(client_user.get("/api/me").get_json())
+
+    assert data["orgaos"]
+    for orgao in data["orgaos"]:
+        assert set(orgao.keys()) == {"id", "sigla", "nome", "papel"}
+        assert orgao["papel"] == "gestor"
+    assert data["is_admin"] is False
+
+
 def test_api_me_never_serializes_secrets(client_user):
     data = _assert_ok_envelope(client_user.get("/api/me").get_json())
     assert "password_hash" not in data

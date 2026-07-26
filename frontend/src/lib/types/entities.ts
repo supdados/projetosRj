@@ -31,11 +31,15 @@ export type ProjectStatus = 'Vigente' | 'Finalizado';
 /** Provedor de autenticacao derivado em serialize_user. */
 export type AuthProvider = 'local' | 'govbr';
 
-/** Vinculo minimo de orgao (serialize_user -> _orgao_ref_brief). */
+/** Papel do usuario no vinculo de area (`user_orgao.papel`, services/authorization). */
+export type OrgaoPapel = 'leitor' | 'editor' | 'gestor';
+
+/** Vinculo minimo de orgao (serialize_user -> _orgao_vinculo_ref). */
 export interface OrgaoRef {
 	id: number;
 	sigla: string;
 	nome: string;
+	papel: OrgaoPapel;
 }
 
 /** Usuario autenticado (GET /api/me). Sem segredos. */
