@@ -744,11 +744,7 @@
 			</div>
 
 			<p class="text-[13px] leading-relaxed text-text-secondary">
-				Como {convitePapelLabel(papel)}, {sujeitoPapel} {consequenciaPapel}.{#if modo === 'area'}
-					<span class="text-text-muted">
-						Vale para quem está na área hoje — quem entrar depois não recebe acesso.
-					</span>
-				{/if}
+				Como {convitePapelLabel(papel)}, {sujeitoPapel} {consequenciaPapel}.
 			</p>
 
 			{#if formError}
