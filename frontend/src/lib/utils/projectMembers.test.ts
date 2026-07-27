@@ -6,6 +6,7 @@
  * tradução do contrato anti-enumeração (404/403) das rotas novas.
  */
 import { describe, it, expect } from 'vitest';
+import type { ProjectMemberDireto, ProjectMemberHerdado } from '$lib/types/projectMembers';
 import { MSG_PROJETO_INACESSIVEL } from './accessErrorMessages';
 import {
 	CONVITE_EXPIRACAO_DIAS,
@@ -13,6 +14,7 @@ import {
 	CONVITE_PAPEL_PADRAO,
 	CONVITE_PERIODO_OPTIONS,
 	CONVITE_PERIODO_PADRAO_DIAS,
+	contarAreasHerdadas,
 	conviteErrorMessage,
 	conviteLoteResumo,
 	convitePapelLabel,
@@ -20,6 +22,7 @@ import {
 	convitePeriodoValue,
 	expiracaoDoPeriodo,
 	expiracaoPadraoIso,
+	filtrarConcessoes,
 	isAcessoPorConvite,
 	normalizeConvitePapel
 } from './projectMembers';
@@ -114,6 +117,106 @@ describe('isAcessoPorConvite (badge "Convidado")', () => {
 		expect(isAcessoPorConvite('area')).toBe(false);
 		expect(isAcessoPorConvite('admin')).toBe(false);
 		expect(isAcessoPorConvite(undefined)).toBe(false);
+	});
+});
+
+/** Concessão direta mínima; cada teste sobrescreve só o que importa. */
+function direto(over: Partial<ProjectMemberDireto> = {}): ProjectMemberDireto {
+	return {
+		id: 1,
+		user_id: 1,
+		user_name: 'Jose Silva',
+		user_username: 'jsilva',
+		user_orgao_sigla: 'SEFAZ',
+		papel: 'leitor',
+		status: 'ativo',
+		created_at: null,
+		expires_at: null,
+		revoked_at: null,
+		...over
+	};
+}
+
+/** Membro herdado mínimo (só `orgao_id` importa para a contagem de áreas). */
+function herdado(over: Partial<ProjectMemberHerdado> = {}): ProjectMemberHerdado {
+	return {
+		user_id: 1,
+		user_name: 'Ana Lima',
+		user_username: 'alima',
+		papel: 'leitor',
+		orgao_id: 10,
+		orgao_sigla: 'SEFAZ',
+		orgao_nome: 'Secretaria de Fazenda',
+		...over
+	};
+}
+
+describe('filtrarConcessoes (busca da tela Gerenciar acesso)', () => {
+	const maria = direto({
+		id: 2,
+		user_id: 2,
+		user_name: 'Maria Antônia',
+		user_username: 'mantonia',
+		user_orgao_sigla: 'SEEDUC'
+	});
+	const revogado = direto({
+		id: 3,
+		user_id: 3,
+		user_name: 'Carlos Dias',
+		user_username: 'cdias',
+		user_orgao_sigla: null,
+		status: 'revogado'
+	});
+	const expirado = direto({ id: 4, user_id: 4, user_name: 'Bruno Reis', status: 'expirado' });
+	const todos = [direto(), maria, revogado, expirado];
+
+	it('acha por nome ignorando acento e caixa nos DOIS sentidos', () => {
+		expect(filtrarConcessoes(todos, 'josé', 'todos').map((d) => d.id)).toEqual([1]);
+		expect(filtrarConcessoes(todos, 'JOSE', 'todos').map((d) => d.id)).toEqual([1]);
+		expect(filtrarConcessoes(todos, 'antonia', 'todos').map((d) => d.id)).toEqual([2]);
+		expect(filtrarConcessoes(todos, 'ANTÔNIA', 'todos').map((d) => d.id)).toEqual([2]);
+	});
+
+	it('acha por username e por sigla do órgão', () => {
+		expect(filtrarConcessoes(todos, 'mantonia', 'todos').map((d) => d.id)).toEqual([2]);
+		expect(filtrarConcessoes(todos, 'seeduc', 'todos').map((d) => d.id)).toEqual([2]);
+		expect(filtrarConcessoes(todos, 'sefaz', 'todos').map((d) => d.id)).toEqual([1, 3, 4]);
+	});
+
+	it('sigla ausente não quebra a busca', () => {
+		expect(filtrarConcessoes([revogado], 'carlos', 'todos')).toHaveLength(1);
+	});
+
+	it('termo vazio (ou só espaços) não filtra por texto', () => {
+		expect(filtrarConcessoes(todos, '', 'todos')).toHaveLength(4);
+		expect(filtrarConcessoes(todos, '   ', 'todos')).toHaveLength(4);
+	});
+
+	it('segmenta por status — expirado conta como ativo', () => {
+		expect(filtrarConcessoes(todos, '', 'ativos').map((d) => d.id)).toEqual([1, 2, 4]);
+		expect(filtrarConcessoes(todos, '', 'revogados').map((d) => d.id)).toEqual([3]);
+	});
+
+	it('combina texto e status (sem casar, devolve vazio)', () => {
+		expect(filtrarConcessoes(todos, 'carlos', 'ativos')).toEqual([]);
+		expect(filtrarConcessoes(todos, 'carlos', 'revogados').map((d) => d.id)).toEqual([3]);
+	});
+
+	it('preserva a ordem de entrada e não muta a lista original', () => {
+		const entrada = [...todos];
+		expect(filtrarConcessoes(entrada, '', 'todos').map((d) => d.id)).toEqual([1, 2, 3, 4]);
+		expect(entrada).toEqual(todos);
+	});
+});
+
+describe('contarAreasHerdadas', () => {
+	it('conta áreas DISTINTAS, não pessoas', () => {
+		const herdados = [herdado(), herdado({ user_id: 2 }), herdado({ user_id: 3, orgao_id: 20 })];
+		expect(contarAreasHerdadas(herdados)).toBe(2);
+	});
+
+	it('sem herdados devolve 0 (rodapé omite o trecho de áreas)', () => {
+		expect(contarAreasHerdadas([])).toBe(0);
 	});
 });
 

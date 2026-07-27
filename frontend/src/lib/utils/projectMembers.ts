@@ -7,7 +7,12 @@
  * backend (`models/project_member.papeis_de_convite`), aqui é só a superfície.
  */
 
-import type { ConvitePapel, ConviteLoteResultado } from '$lib/types/projectMembers';
+import type {
+	ConvitePapel,
+	ConviteLoteResultado,
+	ProjectMemberDireto,
+	ProjectMemberHerdado
+} from '$lib/types/projectMembers';
 import type { ProjectAccessVia } from '$lib/types/entities';
 import { MSG_PROJETO_INACESSIVEL } from '$lib/utils/accessErrorMessages';
 
@@ -108,6 +113,49 @@ export function conviteLoteResumo(resultado: ConviteLoteResultado): string {
 /** Badge "Convidado": só quando o acesso passa por convite (`access_via`). */
 export function isAcessoPorConvite(accessVia: ProjectAccessVia | null | undefined): boolean {
 	return accessVia === 'convite' || accessVia === 'ambos';
+}
+
+/** Segmentação da lista de concessões na tela "Gerenciar acesso". */
+export type ConcessaoFiltro = 'todos' | 'ativos' | 'revogados';
+
+/** Minúsculas sem acento — servidor e usuário digitam "Jose" e "José". */
+function normalizarBusca(texto: string): string {
+	return texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+/** Campos pesquisáveis de uma concessão, já normalizados e concatenados. */
+function textoBuscavel(direto: ProjectMemberDireto): string {
+	const campos = [direto.user_name, direto.user_username, direto.user_orgao_sigla];
+	return normalizarBusca(campos.filter(Boolean).join(' '));
+}
+
+/** `ativos` inclui expirado: a segmentação separa por decisão humana, não por lazy expiry. */
+function combinaFiltro(direto: ProjectMemberDireto, filtro: ConcessaoFiltro): boolean {
+	if (filtro === 'ativos') return direto.status !== 'revogado';
+	if (filtro === 'revogados') return direto.status === 'revogado';
+	return true;
+}
+
+/**
+ * Filtra concessões diretas por texto (acento/caixa-insensível em nome, username
+ * e sigla do órgão) e por status. Termo vazio não filtra por texto.
+ *
+ * Exemplo: `filtrarConcessoes(diretos, 'josé', 'ativos')` acha "Jose Silva".
+ */
+export function filtrarConcessoes(
+	diretos: ProjectMemberDireto[],
+	termo: string,
+	filtro: ConcessaoFiltro
+): ProjectMemberDireto[] {
+	const alvo = normalizarBusca(termo.trim());
+	const porStatus = diretos.filter((d) => combinaFiltro(d, filtro));
+	if (!alvo) return porStatus;
+	return porStatus.filter((d) => textoBuscavel(d).includes(alvo));
+}
+
+/** Áreas distintas (`orgao_id`) presentes nos herdados. */
+export function contarAreasHerdadas(herdados: ProjectMemberHerdado[]): number {
+	return new Set(herdados.map((h) => h.orgao_id)).size;
 }
 
 /**

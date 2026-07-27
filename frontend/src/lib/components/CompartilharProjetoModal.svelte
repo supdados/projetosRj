@@ -1,17 +1,17 @@
 <script lang="ts">
 	/**
-	 * Modal "Compartilhar" do Detalhe de Projeto (S4/F3-19, layout 2a "refino direto").
+	 * Modal "Compartilhar" do Detalhe de Projeto (S4/F3-19, layout em 2 telas).
 	 *
 	 * Convida um usuário JÁ existente e ativo para o projeto (sem token, sem
-	 * aceite — §7). O convite é um bloco único: modo + busca + papel + expiração
-	 * + ação costurados numa moldura segmentada. Convidados ganham avatar, papel
-	 * editável inline e expiração legível; o acesso HERDADO por área desce para
-	 * uma linha recolhível no rodapé (read-only: herdado não é linha de
-	 * `project_member` e só muda na tela de admin).
+	 * aceite — §7). Convidar e gerenciar são tarefas de tempos diferentes, então
+	 * moram em telas distintas do MESMO painel: a tela 1 é a barra de convite
+	 * compacta (modo + busca + ação, com papel/período em seletores inline) e um
+	 * rodapé-resumo clicável; a tela 2 ("Gerenciar acesso") traz busca e a lista
+	 * de concessões diretas, com os revogados recolhidos no fim da lista.
 	 *
 	 * O modo ÁREA convida em LOTE (POST .../membros/lote): snapshot de HOJE dos
 	 * vínculos diretos do órgão, sem subárvore e sem dinamismo — cada pessoa vira
-	 * uma linha comum na lista de Convidados, então nada muda daqui para baixo.
+	 * uma linha comum na tela 2, então nada muda daqui para baixo.
 	 *
 	 * O componente consome `routes/api/project_members.py` diretamente (como o
 	 * ProjectHistoryDrawer) e RE-BUSCA a lista após cada mutação. Quem pode
@@ -45,12 +45,14 @@
 		CONVITE_PAPEL_PADRAO,
 		CONVITE_PERIODO_OPTIONS,
 		CONVITE_PERIODO_PADRAO_DIAS,
+		contarAreasHerdadas,
 		conviteErrorMessage,
 		conviteLoteResumo,
 		convitePapelLabel,
 		convitePeriodoDias,
 		convitePeriodoValue,
 		expiracaoDoPeriodo,
+		filtrarConcessoes,
 		normalizeConvitePapel
 	} from '$lib/utils/projectMembers';
 	import { buildOrgaoTree, flattenTreeWithPath, type OrgaoTreeRow } from '$lib/utils/orgaoTree';
@@ -68,6 +70,9 @@
 	/** Alvo do convite: uma pessoa (busca) ou um órgão inteiro (lote). */
 	type ConviteModo = 'pessoa' | 'area';
 
+	/** Telas do painel: convidar (default) e gerenciar as concessões. */
+	type Tela = 'convite' | 'gerenciar';
+
 	/** `AreaOption` no formato que `buildOrgaoTree` espera (`value` + `pai_id`). */
 	type OrgaoCandidato = AreaOption & { value: number };
 
@@ -75,6 +80,8 @@
 	let diretos = $state<ProjectMemberDireto[]>([]);
 	let herdados = $state<ProjectMemberHerdado[]>([]);
 	let loadError = $state<string>('');
+
+	let tela = $state<Tela>('convite');
 
 	// Formulário de convite
 	let modo = $state<ConviteModo>('pessoa');
@@ -89,7 +96,10 @@
 	let periodoDias = $state<number | null>(CONVITE_PERIODO_PADRAO_DIAS);
 	let enviando = $state<boolean>(false);
 	let formError = $state<string>('');
-	let areaAberta = $state<boolean>(false);
+
+	// Tela 2: busca livre (client-side); revogados ficam recolhidos no fim da lista.
+	let filtroTermo = $state<string>('');
+	let revogadosAbertos = $state<boolean>(false);
 
 	// Modo Área: catálogo de órgãos (GET /api/areas, busca client-side).
 	let orgaos = $state<AreaOption[]>([]);
@@ -98,8 +108,8 @@
 	let orgaoSelecionado = $state<AreaOption | null>(null);
 	let listaOrgaoAberta = $state<boolean>(false);
 	let destaqueOrgao = $state<number>(-1);
-	/** Resumo do último lote — ocupa o lugar do `formError` quando dá certo. */
-	let resumoLote = $state<string>('');
+	/** Recibo da última ação de convite — ocupa o lugar do `formError` quando dá certo. */
+	let resumoAcao = $state<string>('');
 	let campoConvite = $state<HTMLDivElement | null>(null);
 
 	/** Id da linha em mutação — desabilita só aquela linha. */
@@ -121,7 +131,10 @@
 			? 'pode ver e editar etapas, tarefas e anexos deste projeto'
 			: 'visualiza todo o conteúdo deste projeto sem alterar nada'
 	);
-	const sujeitoPapel = $derived(modo === 'pessoa' ? 'a pessoa' : 'cada pessoa da área');
+	const sujeitoPapel = $derived(modo === 'pessoa' ? 'A pessoa' : 'Cada pessoa da área');
+
+	/** Data em que o convite vai expirar com o período escolhido (null = nunca). */
+	const expiracaoPrevista = $derived(expiracaoDoPeriodo(periodoDias));
 
 	const orgaoCandidatos = $derived<OrgaoCandidato[]>(orgaos.map((a) => ({ ...a, value: a.id })));
 
@@ -129,6 +142,20 @@
 	const linhasOrgao = $derived.by<OrgaoTreeRow<OrgaoCandidato>[]>(() =>
 		flattenTreeWithPath(buildOrgaoTree(orgaoCandidatos), termoOrgao, { omitRootAncestor: true })
 	);
+
+	// Expirado não abre porta: o resumo conta só quem entra hoje.
+	const diretosComAcesso = $derived(diretos.filter((m) => m.status === 'ativo'));
+	const pessoasComAcesso = $derived(diretosComAcesso.length);
+	const areasHerdadas = $derived(contarAreasHerdadas(herdados));
+	const concessoesVisiveis = $derived(filtrarConcessoes(diretos, filtroTermo, 'ativos'));
+	const revogadosVisiveis = $derived(filtrarConcessoes(diretos, filtroTermo, 'revogados'));
+	const sufixoAreas = $derived(
+		areasHerdadas > 0 ? ` e ${contagem(areasHerdadas, 'área', 'áreas')} com acesso` : ' com acesso'
+	);
+	const subtituloGerenciar = $derived.by<string>(() => {
+		if (loadState !== 'ready' || diretos.length === 0) return projectTitulo;
+		return `${contagem(diretos.length, 'concessão', 'concessões')} · ${projectTitulo}`;
+	});
 
 	/** Traduz qualquer falha da API para PT-BR (404/403 do §6.3). */
 	function mensagemDeErro(err: unknown, fallback: string): string {
@@ -235,7 +262,7 @@
 		if (modo === alvo) return;
 		modo = alvo;
 		formError = '';
-		resumoLote = '';
+		resumoAcao = '';
 		listaAberta = false;
 		listaOrgaoAberta = false;
 		void focarCampoDoModo();
@@ -246,6 +273,18 @@
 		await tick();
 		const campo = modo === 'area' ? 'compartilhar-orgao' : 'compartilhar-busca';
 		document.getElementById(campo)?.focus();
+	}
+
+	/** Tela 2 abre com o cursor no filtro; a volta devolve o foco ao convite. */
+	async function abrirGerenciar(): Promise<void> {
+		tela = 'gerenciar';
+		await tick();
+		document.getElementById('compartilhar-filtro')?.focus();
+	}
+
+	function voltarParaConvite(): void {
+		tela = 'convite';
+		void focarCampoDoModo();
 	}
 
 	/** Catálogo completo de órgãos, uma vez por abertura do modal. */
@@ -276,12 +315,13 @@
 		destaqueOrgao = -1;
 	}
 
-	// A lista de órgãos abre no foco (para navegar a árvore), então precisa fechar
-	// no clique fora — a de pessoas só abre digitando e fecha ao escolher.
+	// Clique fora do campo fecha os dois autocompletes (pessoas e órgãos).
 	$effect(() => {
-		if (!listaOrgaoAberta) return;
+		if (!listaOrgaoAberta && !listaAberta) return;
 		const fecharSeFora = (event: PointerEvent): void => {
-			if (campoConvite && !campoConvite.contains(event.target as Node)) listaOrgaoAberta = false;
+			if (campoConvite?.contains(event.target as Node)) return;
+			listaOrgaoAberta = false;
+			listaAberta = false;
 		};
 		window.addEventListener('pointerdown', fecharSeFora, true);
 		return () => window.removeEventListener('pointerdown', fecharSeFora, true);
@@ -314,14 +354,14 @@
 		if (!orgaoSelecionado) return;
 		enviando = true;
 		formError = '';
-		resumoLote = '';
+		resumoAcao = '';
 		try {
 			const contagens = await bulkInviteOrgao(projectId, {
 				orgao_id: orgaoSelecionado.id,
 				papel,
 				expires_at: expiracaoDoPeriodo(periodoDias)
 			});
-			resumoLote = conviteLoteResumo(contagens);
+			resumoAcao = conviteLoteResumo(contagens);
 			limparOrgao();
 			await recarregar();
 		} catch (err) {
@@ -335,16 +375,16 @@
 		if (!selecionado) return;
 		enviando = true;
 		formError = '';
-		resumoLote = '';
+		resumoAcao = '';
 		try {
+			const nome = selecionado.name;
 			await createProjectMember(projectId, {
 				user_id: selecionado.id,
 				papel,
 				expires_at: expiracaoDoPeriodo(periodoDias)
 			});
 			limparSelecao();
-			papel = CONVITE_PAPEL_PADRAO;
-			periodoDias = CONVITE_PERIODO_PADRAO_DIAS;
+			resumoAcao = `${nome} agora tem acesso como ${convitePapelLabel(papel)}.`;
 			await recarregar();
 		} catch (err) {
 			formError = mensagemDeErro(err, 'Falha ao criar o convite.');
@@ -357,7 +397,7 @@
 	async function mutarLinha(id: number, acao: () => Promise<void>, fallback: string): Promise<void> {
 		linhaOcupada = id;
 		formError = '';
-		resumoLote = '';
+		resumoAcao = '';
 		try {
 			await acao();
 			await recarregar();
@@ -462,14 +502,10 @@
 		return partes.join(' · ');
 	}
 
-	const resumoArea = $derived.by<string>(() => {
-		const n = herdados.length;
-		if (n === 0) return '';
-		const base = n === 1 ? '1 pessoa' : `${n} pessoas`;
-		const siglas = new Set(herdados.map((h) => h.orgao_sigla ?? h.orgao_nome ?? ''));
-		const unica = siglas.size === 1 ? [...siglas][0] : '';
-		return unica ? `${base} da ${unica}` : base;
-	});
+	/** "1 pessoa" / "4 pessoas" — usado nos resumos das duas telas. */
+	function contagem(n: number, singular: string, plural: string): string {
+		return `${n} ${n === 1 ? singular : plural}`;
+	}
 
 	function onKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape') {
@@ -480,7 +516,7 @@
 </script>
 
 <div
-	class="fixed inset-0 z-[1050] flex items-start justify-center overflow-y-auto bg-overlay p-4 py-10"
+	class="fixed inset-0 z-modal flex items-start justify-center overflow-y-auto bg-overlay p-4 py-10"
 	role="presentation"
 	transition:fade={{ duration: 200, easing: cubicOut }}
 	onclick={onClose}
@@ -494,147 +530,218 @@
 		onkeydown={onKeydown}
 		onclick={(e) => e.stopPropagation()}
 		transition:fly={{ y: 18, duration: 280, easing: cubicOut }}
-		class="flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
+		class="flex w-full max-w-2xl flex-col rounded-xl border border-border-subtle bg-surface shadow-modal"
 	>
-		<header class="flex items-start justify-between gap-4 px-5 pb-4 pt-5">
-			<div class="flex min-w-0 flex-col gap-0.5">
-				<h2 id="compartilhar-titulo" class="font-heading text-lg font-semibold text-text-primary">
-					Compartilhar projeto
-				</h2>
-				<p class="line-clamp-1 text-[13px] text-text-secondary">{projectTitulo}</p>
-			</div>
-			<button
-				type="button"
-				onclick={onClose}
-				aria-label="Fechar"
-				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-			>
-				<i class="fas fa-times" aria-hidden="true"></i>
-			</button>
-		</header>
+		{#if tela === 'convite'}
+			<header class="flex items-start justify-between gap-4 px-5 pb-4 pt-5">
+				<div class="flex min-w-0 flex-col gap-0.5">
+					<h2 id="compartilhar-titulo" class="font-heading text-base font-semibold text-text-primary">
+						Compartilhar projeto
+					</h2>
+					<p class="line-clamp-1 text-sm text-text-secondary">{projectTitulo}</p>
+				</div>
+				{@render fecharBotao()}
+			</header>
 
-		<div class="h-px bg-border-subtle" aria-hidden="true"></div>
+			<div class="h-px bg-border-subtle" aria-hidden="true"></div>
 
-		<!-- Convite: busca + papel + expiração + ação num bloco único -->
-		<section class="flex flex-col gap-2.5 px-5 py-4" aria-labelledby="compartilhar-convite-titulo">
-			<h3
-				id="compartilhar-convite-titulo"
-				class="text-[11px] font-bold uppercase tracking-wider text-text-secondary"
-			>
-				{modo === 'pessoa' ? 'Convidar pessoa' : 'Convidar área'}
-			</h3>
-
-			<div bind:this={campoConvite} class="relative">
-				<div
-					class="flex items-stretch overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm transition-colors duration-fast focus-within:border-primary-500"
-				>
+			<!-- Tela 1: modo + busca + ação numa moldura só; papel/período embaixo -->
+			<section class="flex flex-col gap-3 px-5 py-4" aria-label="Convidar para o projeto">
+				<div bind:this={campoConvite} class="relative">
 					<div
-						class="flex shrink-0 items-center gap-0.5 py-[5px] pl-[5px]"
-						role="group"
-						aria-label="Convidar por"
+						class="flex items-stretch overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm transition-colors duration-fast focus-within:border-primary-500"
 					>
-						{@render modoBotao('pessoa', 'Pessoa', 'fa-user')}
-						{@render modoBotao('area', 'Área', 'fa-sitemap')}
+						<div
+							class="flex shrink-0 items-stretch border-r border-border-subtle bg-surface-muted"
+							role="group"
+							aria-label="Convidar por"
+						>
+							{@render modoBotao('pessoa', 'Usuário')}
+							{@render modoBotao('area', 'Área')}
+						</div>
+
+						{#if modo === 'pessoa'}
+							<div class="flex min-h-[40px] min-w-0 flex-1 items-center gap-2.5 pl-3 pr-2">
+								<i
+									class="fas fa-magnifying-glass shrink-0 text-xs text-text-faint"
+									aria-hidden="true"
+								></i>
+								<input
+									id="compartilhar-busca"
+									type="text"
+									autocomplete="off"
+									role="combobox"
+									aria-expanded={listaAberta && resultados.length > 0}
+									aria-controls="compartilhar-resultados"
+									aria-autocomplete="list"
+									aria-activedescendant={destaque >= 0 && listaAberta
+										? `compartilhar-resultado-${destaque}`
+										: undefined}
+									placeholder="Nome ou usuário…"
+									bind:value={termo}
+									oninput={() => {
+										selecionado = null;
+										listaAberta = true;
+									}}
+									onkeydown={onBuscaKeydown}
+									class="min-w-0 flex-1 border-none bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
+								/>
+								{#if selecionado}
+									<button
+										type="button"
+										onclick={limparSelecao}
+										aria-label="Limpar pessoa selecionada"
+										class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									>
+										<i class="fas fa-times" aria-hidden="true"></i>
+									</button>
+								{/if}
+							</div>
+						{:else}
+							<div class="flex min-h-[40px] min-w-0 flex-1 items-center gap-2.5 pl-3 pr-2">
+								<i
+									class="fas fa-magnifying-glass shrink-0 text-xs text-text-faint"
+									aria-hidden="true"
+								></i>
+								<input
+									id="compartilhar-orgao"
+									type="text"
+									autocomplete="off"
+									role="combobox"
+									aria-expanded={listaOrgaoAberta && linhasOrgao.length > 0}
+									aria-controls="compartilhar-orgaos"
+									aria-autocomplete="list"
+									aria-activedescendant={destaqueOrgao >= 0 && listaOrgaoAberta
+										? `compartilhar-orgao-${destaqueOrgao}`
+										: undefined}
+									placeholder={orgaosCarregando ? 'Carregando áreas…' : 'Sigla ou nome do órgão…'}
+									bind:value={termoOrgao}
+									oninput={() => {
+										orgaoSelecionado = null;
+										listaOrgaoAberta = true;
+										destaqueOrgao = 0;
+									}}
+									onclick={() => (listaOrgaoAberta = true)}
+									onkeydown={onOrgaoKeydown}
+									class="min-w-0 flex-1 border-none bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
+								/>
+								{#if orgaoSelecionado}
+									<button
+										type="button"
+										onclick={limparOrgao}
+										aria-label="Limpar área selecionada"
+										class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									>
+										<i class="fas fa-times" aria-hidden="true"></i>
+									</button>
+								{/if}
+							</div>
+						{/if}
+
+						<button
+							type="button"
+							onclick={convidar}
+							disabled={!podeConvidar}
+							class="shrink-0 self-stretch rounded-none bg-primary-600 px-[18px] text-sm font-semibold text-white transition-colors duration-fast hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+						>
+							{enviando ? 'Convidando…' : 'Convidar'}
+						</button>
 					</div>
 
-					<div class="my-2 w-px self-stretch bg-border-subtle" aria-hidden="true"></div>
-
-					{#if modo === 'pessoa'}
-						<div class="flex min-h-[44px] min-w-0 flex-1 items-center gap-2.5 pl-3.5 pr-2">
-							<i
-								class="fas fa-magnifying-glass shrink-0 text-[12px] text-text-faint"
-								aria-hidden="true"
-							></i>
-							<input
-								id="compartilhar-busca"
-								type="text"
-								autocomplete="off"
-								role="combobox"
-								aria-expanded={listaAberta && resultados.length > 0}
-								aria-controls="compartilhar-resultados"
-								aria-autocomplete="list"
-								placeholder="Nome ou usuário…"
-								bind:value={termo}
-								oninput={() => {
-									selecionado = null;
-									listaAberta = true;
-								}}
-								onkeydown={onBuscaKeydown}
-								class="min-w-0 flex-1 border-none bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
-							/>
-							{#if selecionado}
-								<button
-									type="button"
-									onclick={limparSelecao}
-									aria-label="Limpar pessoa selecionada"
-									class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-								>
-									<i class="fas fa-times" aria-hidden="true"></i>
-								</button>
-							{/if}
-						</div>
-					{:else}
-						<div class="flex min-h-[44px] min-w-0 flex-1 items-center gap-2.5 pl-3.5 pr-2">
-							<i class="fas fa-sitemap shrink-0 text-[12px] text-text-faint" aria-hidden="true"></i>
-							<input
-								id="compartilhar-orgao"
-								type="text"
-								autocomplete="off"
-								role="combobox"
-								aria-expanded={listaOrgaoAberta && linhasOrgao.length > 0}
-								aria-controls="compartilhar-orgaos"
-								aria-autocomplete="list"
-								placeholder={orgaosCarregando ? 'Carregando áreas…' : 'Sigla ou nome do órgão…'}
-								bind:value={termoOrgao}
-								oninput={() => {
-									orgaoSelecionado = null;
-									listaOrgaoAberta = true;
-									destaqueOrgao = 0;
-								}}
-								onfocus={() => (listaOrgaoAberta = true)}
-								onkeydown={onOrgaoKeydown}
-								class="min-w-0 flex-1 border-none bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
-							/>
-							{#if orgaoSelecionado}
-								<button
-									type="button"
-									onclick={limparOrgao}
-									aria-label="Limpar área selecionada"
-									class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-								>
-									<i class="fas fa-times" aria-hidden="true"></i>
-								</button>
-							{/if}
-						</div>
+					{#if modo === 'area' && listaOrgaoAberta && linhasOrgao.length > 0}
+						<ul
+							id="compartilhar-orgaos"
+							role="listbox"
+							aria-label="Órgãos encontrados"
+							class="absolute left-0 right-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
+						>
+							{#each linhasOrgao as linha, index (linha.value)}
+								<li role="none">
+									<button
+										type="button"
+										role="option"
+										id="compartilhar-orgao-{index}"
+										aria-selected={index === destaqueOrgao}
+										onclick={() => escolherOrgao(linha.option)}
+										onmouseenter={() => (destaqueOrgao = index)}
+										class="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-muted {index ===
+										destaqueOrgao
+											? 'bg-surface-muted'
+											: ''}"
+									>
+										<span class="shrink-0 truncate">
+											{#if linha.path}<span class="mr-1 font-mono text-[11px] text-text-muted"
+													>{linha.path} ›</span
+												>{/if}<span class="font-mono text-xs font-semibold text-text-primary"
+												>{linha.option.sigla}</span
+											>
+										</span>
+										<span class="min-w-0 flex-1 truncate text-xs text-text-secondary">
+											{linha.option.nome}
+										</span>
+									</button>
+								</li>
+							{/each}
+						</ul>
 					{/if}
 
-					<div class="my-2 w-px self-stretch bg-border-subtle" aria-hidden="true"></div>
+					{#if listaAberta && resultados.length > 0}
+						<ul
+							id="compartilhar-resultados"
+							role="listbox"
+							aria-label="Usuários encontrados"
+							class="absolute left-0 right-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
+						>
+							{#each resultados as usuario, index (usuario.id)}
+								<li role="none">
+									<button
+										type="button"
+										role="option"
+										id="compartilhar-resultado-{index}"
+										aria-selected={index === destaque}
+										onclick={() => escolher(usuario)}
+										class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-text-primary hover:bg-surface-muted {index ===
+										destaque
+											? 'bg-surface-muted'
+											: ''}"
+									>
+										<span class="min-w-0 truncate">
+											{usuario.name}
+											<span class="text-text-muted">@{usuario.username}</span>
+										</span>
+										{#if usuario.orgao_sigla}
+											<span class="shrink-0 text-xs text-text-secondary">
+												{usuario.orgao_sigla}
+											</span>
+										{/if}
+									</button>
+								</li>
+							{/each}
+						</ul>
+					{:else if buscando}
+						<p class="absolute top-full mt-1 text-xs text-text-muted" role="status">Buscando…</p>
+					{/if}
+				</div>
 
+				<!-- Papel e período viram texto editável: leem como uma frase -->
+				<div class="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
+					<span>como</span>
 					<div class="shrink-0">
 						<SelectMenu
 							options={papelOptions}
 							value={papel}
 							onSelect={(v) => (papel = normalizeConvitePapel(v))}
 							unstyled
+							hideCheck
 							ariaLabel="Papel do convite"
 						>
 							{#snippet trigger({ open, label })}
-								<span
-									class="flex min-h-[44px] items-center gap-1.5 whitespace-nowrap px-3.5 text-[13.5px] font-semibold text-text-primary transition-colors duration-fast hover:bg-surface-muted"
-								>
-									{label}
-									<i
-										class="fas fa-chevron-down text-[9px] text-text-faint transition-transform duration-fast"
-										style:transform={open ? 'rotate(180deg)' : 'none'}
-										aria-hidden="true"
-									></i>
-								</span>
+								{@render gatilhoInline(label, open, false)}
 							{/snippet}
 						</SelectMenu>
 					</div>
-
-					<div class="my-2 w-px self-stretch bg-border-subtle" aria-hidden="true"></div>
-
+					<span class="h-3.5 w-px bg-border-subtle" aria-hidden="true"></span>
+					<span>por</span>
 					<div class="shrink-0">
 						<SelectMenu
 							id="compartilhar-expira"
@@ -642,324 +749,323 @@
 							value={convitePeriodoValue(periodoDias)}
 							onSelect={(v) => (periodoDias = convitePeriodoDias(v))}
 							unstyled
-							align="right"
+							hideCheck
 							ariaLabel="Período de validade do convite"
 						>
 							{#snippet trigger({ open, label })}
-								<span
-									class="flex min-h-[44px] items-center gap-1.5 whitespace-nowrap px-3.5 text-[13.5px] font-semibold tabular-nums text-text-primary transition-colors duration-fast hover:bg-surface-muted"
-								>
-									{label}
-									<i
-										class="fas fa-chevron-down text-[9px] text-text-faint transition-transform duration-fast"
-										style:transform={open ? 'rotate(180deg)' : 'none'}
-										aria-hidden="true"
-									></i>
-								</span>
+								{@render gatilhoInline(label, open, true)}
 							{/snippet}
 						</SelectMenu>
 					</div>
-
-					<button
-						type="button"
-						onclick={convidar}
-						disabled={!podeConvidar}
-						class="shrink-0 self-stretch rounded-none bg-primary-600 px-[18px] text-sm font-semibold text-white transition-colors duration-fast hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
-					>
-						{enviando ? 'Convidando…' : 'Convidar'}
-					</button>
 				</div>
 
-				{#if modo === 'area' && listaOrgaoAberta && linhasOrgao.length > 0}
-					<ul
-						id="compartilhar-orgaos"
-						role="listbox"
-						aria-label="Órgãos encontrados"
-						class="absolute left-0 right-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
-					>
-						{#each linhasOrgao as linha, index (linha.value)}
-							<li role="none">
-								<button
-									type="button"
-									role="option"
-									aria-selected={index === destaqueOrgao}
-									onclick={() => escolherOrgao(linha.option)}
-									onmouseenter={() => (destaqueOrgao = index)}
-									class="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-muted {index ===
-									destaqueOrgao
-										? 'bg-surface-muted'
-										: ''}"
-								>
-									<span class="shrink-0 truncate">
-										{#if linha.path}<span class="font-mono text-[11px] text-text-muted"
-												>{linha.path} › </span
-											>{/if}<span class="font-mono text-[12px] font-semibold text-text-primary"
-											>{linha.option.sigla}</span
-										>
-									</span>
-									<span class="min-w-0 flex-1 truncate text-xs text-text-secondary">
-										{linha.option.nome}
-									</span>
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-
-				{#if listaAberta && resultados.length > 0}
-					<ul
-						id="compartilhar-resultados"
-						role="listbox"
-						aria-label="Usuários encontrados"
-						class="absolute left-0 right-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
-					>
-						{#each resultados as usuario, index (usuario.id)}
-							<li role="none">
-								<button
-									type="button"
-									role="option"
-									aria-selected={index === destaque}
-									onclick={() => escolher(usuario)}
-									class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-text-primary hover:bg-surface-muted {index ===
-									destaque
-										? 'bg-surface-muted'
-										: ''}"
-								>
-									<span class="min-w-0 truncate">
-										{usuario.name}
-										<span class="text-text-muted">@{usuario.username}</span>
-									</span>
-									{#if usuario.orgao_sigla}
-										<span class="shrink-0 text-xs text-text-secondary">
-											{usuario.orgao_sigla}
-										</span>
-									{/if}
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{:else if buscando}
-					<p class="absolute top-full mt-1 text-xs text-text-muted" role="status">Buscando…</p>
-				{/if}
-			</div>
-
-			<p class="text-[13px] leading-relaxed text-text-secondary">
-				Como {convitePapelLabel(papel)}, {sujeitoPapel} {consequenciaPapel}.
-			</p>
-
-			{#if formError}
-				<p role="alert" class="text-sm text-danger">{formError}</p>
-			{:else if resumoLote}
-				<p role="status" aria-live="polite" class="text-[13px] font-medium text-text-secondary">
-					<i class="fas fa-check text-[11px] text-success" aria-hidden="true"></i>
-					{resumoLote}
+				<p class="rounded-lg bg-surface-muted px-3 py-3 text-[12.5px] leading-relaxed text-text-secondary">
+					{sujeitoPapel} {consequenciaPapel}.
+					{#if expiracaoPrevista}
+						O acesso expira em
+						<strong class="font-semibold tabular-nums text-text-primary"
+							>{formatarData(expiracaoPrevista)}</strong
+						>.
+					{:else}
+						O acesso não expira.
+					{/if}
 				</p>
-			{/if}
-		</section>
 
-		<div class="h-px bg-border-subtle" aria-hidden="true"></div>
+				{#if formError}
+					<p role="alert" class="text-sm text-danger">{formError}</p>
+				{:else if resumoAcao}
+					<p role="status" aria-live="polite" class="text-sm font-medium text-text-secondary">
+						<i class="fas fa-check text-[11px] text-success" aria-hidden="true"></i>
+						{resumoAcao}
+					</p>
+				{/if}
 
-		<!-- Convites diretos -->
-		<section class="flex flex-col gap-2.5 px-5 py-4" aria-labelledby="compartilhar-diretos-titulo">
-			<h3
-				id="compartilhar-diretos-titulo"
-				class="flex items-baseline gap-2 text-[11px] font-bold uppercase tracking-wider text-text-secondary"
+				{#if loadState === 'error'}
+					<p role="alert" class="text-sm text-danger">{loadError}</p>
+				{/if}
+			</section>
+
+			<!-- Rodapé-resumo: único caminho para a tela de gerenciar -->
+			<button
+				type="button"
+				onclick={abrirGerenciar}
+				class="group flex w-full items-center gap-3 rounded-b-xl border-t border-border-subtle bg-surface-muted px-5 py-3 text-left transition-colors duration-fast hover:bg-surface-chip focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
 			>
-				Convidados
-				{#if loadState === 'ready'}
-					<span class="text-xs font-semibold normal-case tracking-normal text-text-muted">
-						{diretos.length}
-					</span>
-				{/if}
-			</h3>
-
-			{#if loadState === 'loading'}
-				<p role="status" aria-live="polite" class="text-sm text-text-secondary">
-					Carregando membros…
-				</p>
-			{:else if loadState === 'error'}
-				<p role="alert" class="text-sm text-danger">{loadError}</p>
-			{:else if diretos.length === 0}
-				<p class="text-sm text-text-muted">
-					Nenhuma pessoa convidada até agora. Quem você convida entra na hora e aparece aqui.
-				</p>
-			{:else}
-				<ul class="flex flex-col gap-1.5">
-					{#each diretos as membro (membro.id)}
-						<li
-							class="flex flex-wrap items-center gap-3 rounded-lg border border-border-subtle bg-surface px-3 py-2.5 transition-colors duration-fast hover:bg-surface-muted/50"
-						>
+				{#if pessoasComAcesso > 0}
+					<span class="flex shrink-0 items-center pl-2" aria-hidden="true">
+						{#each diretosComAcesso.slice(0, 5) as membro (membro.id)}
 							<span
-								class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[11px] font-bold text-primary-700 {membro.status ===
-								'revogado'
-									? 'opacity-60'
-									: ''}"
-								aria-hidden="true"
+								class="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface-muted bg-primary-100 text-[9px] font-bold text-primary-700 transition-colors duration-fast group-hover:border-surface-chip"
 							>
 								{iniciais(membro.user_name)}
 							</span>
+						{/each}
+					</span>
+				{/if}
 
-							<div
-								class="flex min-w-0 flex-1 flex-col {membro.status === 'revogado' ? 'opacity-60' : ''}"
-							>
-								<span class="truncate text-sm font-medium text-text-primary">
-									{membro.user_name}
-									<span class="font-normal text-text-muted">@{membro.user_username}</span>
-								</span>
-								<span class="truncate text-xs text-text-secondary">{metaConvidado(membro)}</span>
-							</div>
-
-							<span
-								class="flex shrink-0 items-center gap-1.5 text-xs font-medium tabular-nums text-text-secondary"
-							>
-								<span
-									class="h-1.5 w-1.5 rounded-full {corExpiracao(membro)}"
-									aria-hidden="true"
-								></span>
-								{textoExpiracao(membro)}
-							</span>
-
-							{#if membro.status === 'revogado'}
-								<span class="shrink-0 text-xs font-semibold uppercase tracking-wide text-text-muted">
-									{convitePapelLabel(membro.papel)}
-								</span>
-							{:else}
-								<div class="shrink-0">
-									<SelectMenu
-										options={papelOptions}
-										value={membro.papel}
-										onSelect={(v) => trocarPapel(membro, v)}
-										disabled={linhaOcupada === membro.id}
-										unstyled
-										align="right"
-										ariaLabel={`Papel de ${membro.user_name}`}
-									>
-										{#snippet trigger({ open, label })}
-											<span
-												class="flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-[13px] font-semibold text-text-primary transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted"
-											>
-												{label}
-												<i
-													class="fas fa-chevron-down text-[9px] text-text-muted transition-transform duration-fast"
-													style:transform={open ? 'rotate(180deg)' : 'none'}
-													aria-hidden="true"
-												></i>
-											</span>
-										{/snippet}
-									</SelectMenu>
-								</div>
-							{/if}
-
-							<div class="shrink-0">
-								<SelectMenu
-									options={acaoOptions(membro)}
-									value={null}
-									onSelect={(v) => executarAcao(membro, v)}
-									disabled={linhaOcupada === membro.id}
-									unstyled
-									align="right"
-									ariaLabel={`Ações do convite de ${membro.user_name}`}
-								>
-									{#snippet trigger()}
-										<span
-											class="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary"
-										>
-											<i class="fas fa-ellipsis" aria-hidden="true"></i>
-										</span>
-									{/snippet}
-								</SelectMenu>
-							</div>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</section>
-
-		<!-- Herdados por área: linha recolhível (read-only, muda só no admin) -->
-		{#if loadState === 'ready' && herdados.length > 0}
-			<button
-				type="button"
-				onclick={() => (areaAberta = !areaAberta)}
-				aria-expanded={areaAberta}
-				aria-controls="compartilhar-herdados-lista"
-				class="flex w-full items-center gap-2.5 border-t border-border-subtle bg-surface-muted px-5 py-3 text-left transition-colors duration-fast hover:bg-surface-chip focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
-			>
-				<i
-					class="fas fa-chevron-right text-[10px] text-text-muted transition-transform duration-fast"
-					style:transform={areaAberta ? 'rotate(90deg)' : 'none'}
-					aria-hidden="true"
-				></i>
-				<span class="text-[13px] font-semibold text-text-primary">Acesso por área</span>
-				<span class="min-w-0 truncate text-[13px] text-text-secondary">{resumoArea}</span>
-				<span class="ml-auto flex shrink-0 pl-2" aria-hidden="true">
-					{#each herdados.slice(0, 3) as membro (membro.user_id + '-' + membro.orgao_id)}
-						<span
-							class="-mr-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface-muted bg-primary-100 text-[9px] font-bold text-primary-700"
-						>
-							{iniciais(membro.user_name)}
-						</span>
-					{/each}
-					{#if herdados.length > 3}
-						<span
-							class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface-muted bg-surface-chip text-[9px] font-bold text-text-secondary"
-						>
-							+{herdados.length - 3}
-						</span>
+				<span class="min-w-0 flex-1 truncate text-sm text-text-secondary">
+					{#if loadState === 'loading'}
+						Carregando acessos…
+					{:else if loadState === 'error'}
+						<span class="text-danger">Não foi possível carregar os acessos</span>
+					{:else if pessoasComAcesso === 0 && areasHerdadas === 0}
+						Ninguém com acesso ainda
+					{:else if pessoasComAcesso === 0}
+						<strong class="font-semibold text-text-primary"
+							>{contagem(areasHerdadas, 'área', 'áreas')}</strong
+						>{' com acesso'}
 					{:else}
-						<span class="-mr-2 w-0"></span>
+						<strong class="font-semibold text-text-primary"
+							>{contagem(pessoasComAcesso, 'pessoa', 'pessoas')}</strong
+						>{sufixoAreas}
 					{/if}
 				</span>
-			</button>
 
-			{#if areaAberta}
+				<span class="shrink-0 text-sm font-semibold text-primary-600">Gerenciar acesso →</span>
+			</button>
+		{:else}
+			<header class="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+				<div class="flex min-w-0 items-start gap-3">
+					<button
+						type="button"
+						onclick={voltarParaConvite}
+						aria-label="Voltar para o convite"
+						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						<i class="fas fa-arrow-left" aria-hidden="true"></i>
+					</button>
+					<div class="flex min-w-0 flex-col gap-0.5">
+						<h2 id="compartilhar-titulo" class="font-heading text-base font-semibold text-text-primary">
+							Gerenciar acesso
+						</h2>
+						<p class="line-clamp-1 text-sm text-text-secondary">{subtituloGerenciar}</p>
+					</div>
+				</div>
+				{@render fecharBotao()}
+			</header>
+
+			<div class="h-px bg-border-subtle" aria-hidden="true"></div>
+
+			<!-- Filtros da lista (client-side; nada volta ao servidor) -->
+			<div class="flex flex-wrap items-center gap-2.5 px-5 py-4">
 				<div
-					id="compartilhar-herdados-lista"
-					class="flex flex-col gap-2 border-t border-border-subtle bg-surface-muted px-5 pb-4 pt-3"
+					class="flex h-[34px] min-w-0 flex-1 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 transition-colors duration-fast focus-within:border-primary-500"
 				>
-					<ul class="flex max-h-52 flex-col gap-1.5 overflow-y-auto pr-1">
-						{#each herdados as membro (membro.user_id + '-' + membro.orgao_id)}
-							<li
-								class="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-border-subtle bg-surface px-3 py-2"
-							>
-								<span
-									class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700"
-									aria-hidden="true"
-								>
-									{iniciais(membro.user_name)}
-								</span>
-								<div class="flex min-w-0 flex-1 flex-col">
-									<span class="truncate text-sm text-text-primary">
-										{membro.user_name}
-										<span class="text-text-muted">@{membro.user_username}</span>
-									</span>
-									<span class="text-xs text-text-secondary">
-										via área {membro.orgao_sigla ?? membro.orgao_nome ?? '—'}
-									</span>
-								</div>
-								<span class="shrink-0 text-xs font-semibold uppercase tracking-wide text-text-secondary">
-									{membro.papel}
-								</span>
-							</li>
+					<i
+						class="fas fa-magnifying-glass shrink-0 text-[11px] text-text-faint"
+						aria-hidden="true"
+					></i>
+					<input
+						id="compartilhar-filtro"
+						type="text"
+						autocomplete="off"
+						placeholder="Filtrar por nome, área…"
+						aria-label="Filtrar concessões"
+						bind:value={filtroTermo}
+						class="min-w-0 flex-1 border-none bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
+					/>
+					{#if filtroTermo}
+						<button
+							type="button"
+							onclick={() => (filtroTermo = '')}
+							aria-label="Limpar filtro"
+							class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						>
+							<i class="fas fa-times" aria-hidden="true"></i>
+						</button>
+					{/if}
+				</div>
+			</div>
+
+			<!-- Concessões diretas: uma linha por convite, ações por linha -->
+			<div class="max-h-[300px] overflow-auto border-t border-border-subtle">
+				{#if loadState === 'loading'}
+					<p role="status" aria-live="polite" class="px-5 py-6 text-sm text-text-secondary">
+						Carregando membros…
+					</p>
+				{:else if loadState === 'error'}
+					<p role="alert" class="px-5 py-6 text-sm text-danger">{loadError}</p>
+				{:else if diretos.length === 0}
+					<p class="px-5 py-6 text-sm text-text-muted">
+						Nenhuma pessoa convidada até agora. Quem você convida entra na hora e aparece aqui.
+					</p>
+				{:else if concessoesVisiveis.length === 0}
+					<p class="px-5 py-6 text-sm text-text-muted">
+						{#if filtroTermo.trim()}
+							Nenhuma concessão encontrada para «{filtroTermo.trim()}».
+						{:else}
+							Nenhuma concessão ativa.
+						{/if}
+					</p>
+				{:else}
+					<ul class="flex flex-col">
+						{#each concessoesVisiveis as membro (membro.id)}
+							{@render linhaConcessao(membro)}
 						{/each}
 					</ul>
-				</div>
+				{/if}
+
+				{#if loadState === 'ready' && revogadosVisiveis.length > 0}
+					<button
+						type="button"
+						onclick={() => (revogadosAbertos = !revogadosAbertos)}
+						aria-expanded={revogadosAbertos}
+						aria-controls="compartilhar-revogados"
+						class="flex w-full items-center gap-2 border-t border-border-subtle bg-surface-muted px-5 py-2.5 text-left text-sm text-text-secondary transition-colors duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+					>
+						<i
+							class="fas fa-chevron-right text-[10px] text-text-muted transition-transform duration-fast"
+							style:transform={revogadosAbertos ? 'rotate(90deg)' : 'none'}
+							aria-hidden="true"
+						></i>
+						{contagem(revogadosVisiveis.length, 'revogado', 'revogados')}
+					</button>
+					{#if revogadosAbertos}
+						<ul id="compartilhar-revogados" class="flex flex-col border-t border-border-subtle">
+							{#each revogadosVisiveis as membro (membro.id)}
+								{@render linhaConcessao(membro)}
+							{/each}
+						</ul>
+					{/if}
+				{/if}
+			</div>
+
+			{#if formError}
+				<p role="alert" class="border-t border-border-subtle px-5 py-2.5 text-sm text-danger">
+					{formError}
+				</p>
 			{/if}
+
 		{/if}
 	</div>
 </div>
 
-<!-- Toggle do alvo do convite: troca só o primeiro campo da barra. -->
-{#snippet modoBotao(alvo: ConviteModo, rotulo: string, icone: string)}
+<!-- Fechar: o mesmo botão nas duas telas (Escape também fecha, nunca volta). -->
+{#snippet fecharBotao()}
+	<button
+		type="button"
+		onclick={onClose}
+		aria-label="Fechar"
+		class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+	>
+		<i class="fas fa-times" aria-hidden="true"></i>
+	</button>
+{/snippet}
+
+<!-- Toggle do alvo do convite: segmento chato colado à borda, sem ícone (design 43194251). -->
+{#snippet modoBotao(alvo: ConviteModo, rotulo: string)}
 	<button
 		type="button"
 		aria-pressed={modo === alvo}
 		onclick={() => trocarModo(alvo)}
-		class="flex h-[34px] items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {modo ===
+		class="grid w-[82px] place-items-center text-[12.5px] transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {modo ===
 		alvo
-			? 'bg-surface-chip text-text-primary'
-			: 'text-text-muted hover:bg-surface-muted hover:text-text-secondary'}"
+			? 'bg-primary-600 font-semibold text-white'
+			: 'font-medium text-text-muted hover:text-text-primary'}"
 	>
-		<i class="fas {icone} text-[10px]" aria-hidden="true"></i>
 		{rotulo}
 	</button>
+{/snippet}
+
+<!-- Gatilho textual de papel/período: parece palavra da frase, não campo. -->
+{#snippet gatilhoInline(rotulo: string, aberto: boolean, numerico: boolean)}
+	<span
+		class="flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-sm font-semibold text-text-primary transition-colors duration-fast hover:bg-surface-muted {numerico
+			? 'tabular-nums'
+			: ''}"
+	>
+		{rotulo}
+		<i
+			class="fas fa-chevron-down text-[9px] text-text-faint transition-transform duration-fast"
+			style:transform={aberto ? 'rotate(180deg)' : 'none'}
+			aria-hidden="true"
+		></i>
+	</span>
+{/snippet}
+
+<!-- Linha de concessão direta: usada na lista principal e na seção recolhida de revogados. -->
+{#snippet linhaConcessao(membro: ProjectMemberDireto)}
+	<li
+		class="flex flex-wrap items-center gap-3 border-b border-border-subtle px-5 py-2.5 transition-colors duration-fast last:border-b-0 hover:bg-surface-muted"
+	>
+		<span
+			class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[11px] font-bold text-primary-700 {membro.status ===
+			'revogado'
+				? 'opacity-60'
+				: ''}"
+			aria-hidden="true"
+		>
+			{iniciais(membro.user_name)}
+		</span>
+
+		<div class="flex min-w-0 flex-1 flex-col {membro.status === 'revogado' ? 'opacity-60' : ''}">
+			<span class="truncate text-[13.5px] font-medium text-text-primary">
+				{membro.user_name}
+				<span class="font-normal text-text-muted">@{membro.user_username}</span>
+			</span>
+			<span class="truncate text-[11.5px] text-text-secondary">
+				{metaConvidado(membro)}
+			</span>
+		</div>
+
+		<span
+			class="flex shrink-0 items-center gap-1.5 text-xs font-medium tabular-nums text-text-secondary"
+		>
+			<span class="h-1.5 w-1.5 rounded-full {corExpiracao(membro)}" aria-hidden="true"></span>
+			{textoExpiracao(membro)}
+		</span>
+
+		{#if membro.status === 'revogado'}
+			<span class="shrink-0 px-2 py-1 text-sm font-semibold text-text-muted">
+				{convitePapelLabel(membro.papel)}
+			</span>
+		{:else}
+			<div class="shrink-0">
+				<SelectMenu
+					options={papelOptions}
+					value={membro.papel}
+					onSelect={(v) => trocarPapel(membro, v)}
+					disabled={linhaOcupada === membro.id}
+					unstyled
+					hideCheck
+					align="right"
+					ariaLabel={`Papel de ${membro.user_name}`}
+				>
+					{#snippet trigger({ open, label })}
+						<span
+							class="flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-semibold text-text-primary transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted"
+						>
+							{label}
+							<i
+								class="fas fa-chevron-down text-[9px] text-text-muted transition-transform duration-fast"
+								style:transform={open ? 'rotate(180deg)' : 'none'}
+								aria-hidden="true"
+							></i>
+						</span>
+					{/snippet}
+				</SelectMenu>
+			</div>
+		{/if}
+
+		<div class="shrink-0">
+			<SelectMenu
+				options={acaoOptions(membro)}
+				value={null}
+				onSelect={(v) => executarAcao(membro, v)}
+				disabled={linhaOcupada === membro.id}
+				unstyled
+				hideCheck
+				align="right"
+				ariaLabel={`Ações do convite de ${membro.user_name}`}
+			>
+				{#snippet trigger()}
+					<span
+						class="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary"
+					>
+						<i class="fas fa-ellipsis" aria-hidden="true"></i>
+					</span>
+				{/snippet}
+			</SelectMenu>
+		</div>
+	</li>
 {/snippet}

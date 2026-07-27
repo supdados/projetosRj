@@ -20,6 +20,8 @@
 		searchable?: boolean;
 		align?: 'left' | 'right';
 		unstyled?: boolean;
+		/** Esconde o ✓ da opção selecionada (o realce de fundo/peso permanece). */
+		hideCheck?: boolean;
 		trigger?: Snippet<[{ open: boolean; label: string; selected: SelectMenuOption | null }]>;
 	}
 
@@ -37,6 +39,7 @@
 		searchable = false,
 		align = 'left',
 		unstyled = false,
+		hideCheck = false,
 		trigger
 	}: Props = $props();
 
@@ -193,6 +196,8 @@
 	function onTriggerKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape' && open) {
 			event.preventDefault();
+			// Esc fecha só o painel — modal/drawer pai não deve fechar junto.
+			event.stopPropagation();
 			closePanel();
 			return;
 		}
@@ -204,7 +209,10 @@
 
 	function onPanelKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape' || event.key === 'Tab') {
-			if (event.key === 'Escape') event.preventDefault();
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				event.stopPropagation();
+			}
 			closePanel();
 			triggerEl?.focus();
 			return;
@@ -401,7 +409,7 @@
 						>
 							{item.label}
 						</span>
-						{#if isSelected}
+						{#if isSelected && !hideCheck}
 							{@render checkIcon()}
 						{/if}
 					</div>
