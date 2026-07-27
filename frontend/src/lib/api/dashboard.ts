@@ -6,6 +6,9 @@
  * `DashboardData` (mesmos nomes do template Jinja `index.html`). Este modulo
  * busca a forma crua e a ACHATA para `DashboardData` — sem este mapeamento os
  * numeros somem (todos os campos planos ficavam `undefined`).
+ *
+ * Sem 403/404 de autorizacao: o backend AGREGA so o que o usuario ve — projeto
+ * fora do rank nao entra nos contadores em vez de virar erro.
  */
 
 import { get } from './client';

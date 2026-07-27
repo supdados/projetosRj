@@ -16,8 +16,9 @@ REUSO sem duplicar regra:
       ``concluir_project``).
     - Órgão: ``routes/projects/crud._resolve_orgao_from_form`` (mesma validação
       de escopo do form Jinja).
-    - Permissão de leitura/escopo: ``user_can_access_project``; escrita por rank
-      (``require_project_rank``, ``can_assign_project_to_orgao``).
+    - Permissão de leitura/escopo e escrita por rank: ``require_project_rank`` /
+      ``project_access_verdict`` (rank 0 => 404 anti-enumeração, S5/F4-2) e
+      ``can_assign_project_to_orgao``.
 
 Anexa ao ``main_bp`` ÚNICO; NÃO cria blueprint novo e NÃO altera as rotas Jinja.
 """
@@ -37,15 +38,20 @@ from catalogs.objectives import (
 from models import Etapa, Project, Task, db
 
 from ..blueprint import main_bp
-from ..orgao_scope import user_can_access_project
 from ..projects.crud import _resolve_orgao_from_form
 from ..shared import log_project_action
 from ..tasks.constants import task_priority_sort_rank, task_status_sort_rank
 from ..tasks.permissions import task_permission_flags
-from .envelope import fail, fail_internal, ok
+from .envelope import fail, fail_internal, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import serialize_project_card, serialize_task_card
-from services.authorization import PAPEL_GESTOR, require_project_rank
+from services.authorization import (
+    ACCESS_NOT_FOUND,
+    PAPEL_GESTOR,
+    PAPEL_LEITOR,
+    project_access_verdict,
+    require_project_rank,
+)
 from services.project_completion import ProjectCompletionError, complete_project
 from services.project_creation import (
     ProjectCreationInput,
@@ -238,11 +244,12 @@ def api_projeto_concluir(project_id: int) -> Response | tuple[Response, int]:
 
     Returns:
         ``ok({message, redirect_to, status})`` (200); 403/400 com a mensagem e a
-        categoria de flash equivalentes ao legado; 404 projeto inexistente; 401.
+        categoria de flash equivalentes ao legado; 404 projeto inexistente ou
+        invisível ao usuário (rank 0, S5/F4-2b); 401.
     """
     project = db.session.get(Project, project_id)
-    if project is None:
-        return fail("Projeto não encontrado.", status=404, code="not_found")
+    if project_access_verdict(g.user, project, PAPEL_GESTOR) == ACCESS_NOT_FOUND:
+        return fail_not_found()
 
     try:
         complete_project(project, g.user)
@@ -273,18 +280,17 @@ def api_projeto_concluir(project_id: int) -> Response | tuple[Response, int]:
 def api_projeto_excluir(project_id: int) -> Response | tuple[Response, int]:
     """Exclui um projeto de verdade (envelope), espelhando ``delete_project``.
 
-    Exclusão exige rank ``gestor`` no projeto (``require_project_rank`` => 403),
+    Exclusão exige rank ``gestor`` no projeto (``require_project_rank`` =>
+    404 para rank 0, 403 para leitor/editor),
     registro no histórico antes da exclusão e exclusão em cascata
     (``db.session.delete``). Antes a SPA só "apagava" no cliente; agora a
     remoção persiste.
 
     Returns:
-        ``ok({deleted: True, id})`` (200); 404 inexistente; 403 rank < gestor;
-        401 sem sessão.
+        ``ok({deleted: True, id})`` (200); 404 inexistente ou invisível (rank 0,
+        S5/F4-2b); 403 rank leitor/editor; 401 sem sessão.
     """
     project = db.session.get(Project, project_id)
-    if project is None:
-        return fail("Projeto não encontrado.", status=404, code="not_found")
     denied = require_project_rank(
         project,
         PAPEL_GESTOR,
@@ -354,8 +360,8 @@ def api_etapa_tarefas(
     """Lista as tarefas (não arquivadas) de uma etapa no envelope (quick-add).
 
     Substitui o HTML de ``project_stage_tasks_panel`` por dados serializados.
-    Valida escopo via ``user_can_access_project`` e que a etapa pertence ao
-    projeto.
+    Valida escopo via ``require_project_rank`` (rank 0 => 404 anti-enumeração)
+    e que a etapa pertence ao projeto.
 
     A ordenação segue a MESMA regra do hub de tarefas
     (``routes/tasks/hub._task_status_priority_rank``): status primeiro
@@ -364,17 +370,13 @@ def api_etapa_tarefas(
     estável sobre a query já ordenada.
 
     Returns:
-        ``ok({tarefas: [...], total, done})`` (200); 404 projeto/etapa; 403; 401.
+        ``ok({tarefas: [...], total, done})`` (200); 404 projeto inexistente ou
+        invisível (rank 0) e etapa fora do projeto; 401.
     """
     project = db.session.get(Project, project_id)
-    if project is None:
-        return fail("Projeto não encontrado.", status=404, code="not_found")
-    if not user_can_access_project(g.user, project):
-        return fail(
-            "Você não tem permissão para acessar este projeto.",
-            status=403,
-            code="forbidden",
-        )
+    denied = require_project_rank(project, PAPEL_LEITOR)
+    if denied:
+        return denied
 
     etapa = db.session.get(Etapa, etapa_id)
     if etapa is None or etapa.project_id != project.id:

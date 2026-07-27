@@ -1,4 +1,4 @@
-from flask import g
+from flask import g, jsonify
 
 from models import (
     TaskAccessAudit,
@@ -6,7 +6,14 @@ from models import (
 )
 from routes.orgao_scope import user_can_access_project
 from routes.tasks.constants import _preview_text
-from services.authorization import user_can_edit_project, user_can_view_project
+from services.authorization import (
+    ACCESS_FORBIDDEN,
+    ACCESS_NOT_FOUND,
+    ACCESS_OK,
+    AccessVerdict,
+    user_can_edit_project,
+    user_can_view_project,
+)
 
 #: Mensagem canônica quando alguém sem permissão tenta mover uma tarefa para
 #: "finalizada". Definida aqui (junto de ``_can_transition_task_to_status``) para
@@ -36,6 +43,70 @@ def _can_edit_task(user, task) -> bool:
     if task.project_id is None:
         return _can_view_task(user, task)
     return user_can_edit_project(user, task.project)
+
+
+#: Mensagem 403 das superfícies de tarefa quando o usuário VÊ a tarefa mas a
+#: ação exige rank >= editor (envelope ``/api/*`` e rotas legadas ``jsonify``).
+TASK_FORBIDDEN_MESSAGE = "Você não tem permissão para acessar esta tarefa."
+LEGACY_TASK_FORBIDDEN_MESSAGE = "Sem permissão"
+
+
+def task_access_verdict(user, task, *, for_write: bool = False) -> AccessVerdict:
+    """Decisão ÚNICA 404-vs-403 de tarefa (S5/F4-2) — não replicar por endpoint.
+
+    - ``ACCESS_NOT_FOUND``: tarefa inexistente OU invisível (rank 0 no projeto;
+      avulsa de outro autor). O chamador responde o MESMO corpo do caso "id
+      inexistente" (anti-enumeração F4-2b), nunca uma mensagem própria.
+    - ``ACCESS_FORBIDDEN``: vê a tarefa mas a escrita exige rank >= editor.
+    - ``ACCESS_OK``: liberado.
+
+    Exemplo: ``task_access_verdict(g.user, task, for_write=True)``.
+    """
+    if task is None or not _can_view_task(user, task):
+        return ACCESS_NOT_FOUND
+    if for_write and not _can_edit_task(user, task):
+        return ACCESS_FORBIDDEN
+    return ACCESS_OK
+
+
+def api_task_denial(task, *, for_write: bool = False):
+    """Negativa da tarefa no envelope canônico; ``None`` libera o endpoint.
+
+    Exemplo:
+        >>> denied = api_task_denial(task, for_write=True)
+        >>> if denied is not None:
+        ...     return denied
+    """
+    # Import local: `routes.api.envelope` executa `routes/api/__init__`, que
+    # importa este módulo de volta — no topo o ciclo estoura no boot.
+    from routes.api.envelope import fail, fail_not_found
+
+    verdict = task_access_verdict(getattr(g, "user", None), task, for_write=for_write)
+    if verdict == ACCESS_NOT_FOUND:
+        return fail_not_found()
+    if verdict == ACCESS_FORBIDDEN:
+        return fail(TASK_FORBIDDEN_MESSAGE, status=403, code="forbidden")
+    return None
+
+
+def legacy_not_found():
+    """404 canônico das rotas legadas (``jsonify``) — corpo único anti-enumeração."""
+    from routes.api.envelope import NOT_FOUND_MESSAGE
+
+    return jsonify({"success": False, "message": NOT_FOUND_MESSAGE}), 404
+
+
+def legacy_task_denial(task, *, for_write: bool = False):
+    """Mesma decisão de ``api_task_denial`` no formato ``jsonify`` das rotas legadas."""
+    verdict = task_access_verdict(getattr(g, "user", None), task, for_write=for_write)
+    if verdict == ACCESS_NOT_FOUND:
+        return legacy_not_found()
+    if verdict == ACCESS_FORBIDDEN:
+        return (
+            jsonify({"success": False, "message": LEGACY_TASK_FORBIDDEN_MESSAGE}),
+            403,
+        )
+    return None
 
 
 def _can_manage_task_restricted_actions(user, task):

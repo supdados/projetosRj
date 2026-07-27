@@ -72,7 +72,8 @@ def test_task_hub_global_add_item_in_sem_projeto_anchor(client_user, seed_data):
     assert payload["item"]["project_value"] == "sem_projeto"
 
 
-def test_task_hub_global_add_forbidden_for_outsider(client_outsider, seed_data):
+def test_task_hub_global_add_not_found_for_outsider(client_outsider, seed_data):
+    """S5/F4-2: projeto invisível responde o mesmo 404 do projeto inexistente."""
     response = client_outsider.post(
         "/tarefas/add",
         headers=AJAX_HEADERS,
@@ -81,9 +82,15 @@ def test_task_hub_global_add_forbidden_for_outsider(client_outsider, seed_data):
             "descricao": "Tentativa sem permissao",
         },
     )
-    assert response.status_code == 403
-    payload = response.get_json()
-    assert payload["success"] is False
+    inexistente = client_outsider.post(
+        "/tarefas/add",
+        headers=AJAX_HEADERS,
+        data={"project": "999999", "descricao": "Tentativa sem permissao"},
+    )
+
+    assert response.status_code == 404
+    assert response.get_json()["success"] is False
+    assert response.get_json() == inexistente.get_json()
 
 
 def test_task_hub_assignable_users_by_project_context(client_user, seed_data):

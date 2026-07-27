@@ -9,8 +9,9 @@ admin (``_can_manage_task_restricted_actions``) nas DUAS vias — fecha a
 inconsistência em que a rota legada deixava qualquer usuário com visão excluir
 anexo alheio.
 
-Contrato HTTP preservado: rank insuficiente — inclusive rank 0 — continua 403;
-a unificação 404 anti-enumeração é da S5.
+Contrato HTTP (S5/F4-2): rank 0 responde **404 ``not_found``** com o corpo
+canônico do id inexistente; 403 fica para quem vê a tarefa (leitor no upload,
+não-autor na exclusão).
 """
 
 import io
@@ -159,12 +160,23 @@ def test_upload_api_permitido_para_gestor(app, gestor, seed_data):
     assert response.get_json()["ok"] is True
 
 
-def test_upload_api_rank_zero_continua_403(app, client_outsider, seed_data):
-    """Contrato desta fase: fora de escopo é 403; o 404 anti-enumeração é S5."""
-    response = _upload_api(client_outsider, seed_data["task_id"])
+def test_upload_api_rank_zero_responde_404(app, client_outsider, seed_data):
+    """S5/F4-2: tarefa invisível responde o MESMO 404 da tarefa inexistente."""
+    fora_do_escopo = _upload_api(client_outsider, seed_data["task_id"])
+    inexistente = _upload_api(client_outsider, 999999)
 
-    assert response.status_code == 403
-    assert response.get_json()["error"]["code"] == "forbidden"
+    assert fora_do_escopo.status_code == 404
+    assert fora_do_escopo.get_json()["error"]["code"] == "not_found"
+    assert fora_do_escopo.get_json() == inexistente.get_json()
+
+
+def test_upload_legado_rank_zero_responde_404(app, client_outsider, seed_data):
+    """Mesma decisão na superfície legada (``jsonify``)."""
+    fora_do_escopo = _upload_legado(client_outsider, seed_data["task_id"])
+    inexistente = _upload_legado(client_outsider, 999999)
+
+    assert fora_do_escopo.status_code == 404
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 # ── Leitura preservada (rank >= leitor) ──────────────────────────────────────

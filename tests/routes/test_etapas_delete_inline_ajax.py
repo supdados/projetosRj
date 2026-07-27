@@ -34,21 +34,22 @@ def test_delete_etapa_ajax_success_returns_json_and_removes_row(
         assert Etapa.query.filter_by(project_id=project_id).count() == total_before - 1
 
 
-def test_delete_etapa_ajax_forbidden_without_area_access(
+def test_delete_etapa_ajax_not_found_without_area_access(
     app, client_outsider, seed_data
 ):
+    """S5/F4-2b: o 404 não devolve ``etapa_id``/``project_id`` — vazaria existência."""
     etapa_id = seed_data["etapa_id"]
 
     response = client_outsider.post(
         f"/etapa/{etapa_id}/delete",
         headers=AJAX_HEADERS,
     )
+    inexistente = client_outsider.post("/etapa/999999/delete", headers=AJAX_HEADERS)
 
-    assert response.status_code == 403
+    assert response.status_code == 404
     payload = response.get_json()
     assert payload["success"] is False
-    assert payload["etapa_id"] == etapa_id
-    assert payload["project_id"] == seed_data["project_id"]
+    assert payload == inexistente.get_json()
 
     with app.app_context():
         etapa = db.session.get(Etapa, etapa_id)

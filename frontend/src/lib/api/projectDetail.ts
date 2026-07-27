@@ -8,6 +8,14 @@
  * CASCATA DE DATAS É SERVER-SIDE: ao reordenar etapas ou editar uma data, o
  * backend recalcula dias úteis e RE-BUSCA o estado; o front NUNCA reimplementa
  * dias úteis nem recalcula datas — apenas envia o pedido e renderiza a resposta.
+ *
+ * Contrato S5 de autorização, válido para TODAS as funções deste módulo:
+ *   - 404 `not_found`: o projeto/etapa não existe OU o usuário não tem acesso a
+ *     ele. Os dois casos devolvem o MESMO corpo (anti-enumeração) e a tela
+ *     mostra "não existe ou você não tem acesso", sem revelar qual dos dois.
+ *   - 403 `forbidden`: ele VÊ o projeto (rank ≥ leitor) mas não pode ESTA ação —
+ *     as leituras (`fetchProjectDetail`, `fetchEtapaTasks`) portanto nunca dão
+ *     403, só as mutações (que exigem editor/gestor).
  */
 
 import { get, post } from './client';
@@ -243,8 +251,9 @@ export function importStageModel(
 /**
  * Conclui o projeto (POST /api/projetos/<id>/concluir). Sem corpo. Em sucesso
  * devolve a mensagem de celebração e o `redirect_to` da rota SPA do detalhe; o
- * front toca o chime + confetes + overlay e navega via router. Erros (403/400)
- * sobem como `ApiClientError` com a mensagem do envelope.
+ * front toca o chime + confetes + overlay e navega via router. Erros sobem como
+ * `ApiClientError`: 400/422 (regra de negócio), 403 (vê o projeto mas não é
+ * gestor), 404 (não existe ou sem acesso).
  */
 export function concludeProject(
 	projectId: number,
@@ -288,8 +297,9 @@ export function updateStageMeeting(
 
 /**
  * Exclui uma reunião Google de etapa (POST /api/etapas/<id>/reuniao/excluir).
- * Sem corpo. Só a conta Google dona pode excluir (403); falha remota ABORTA
- * (502). Em sucesso devolve o total de etapas para recalcular o botão concluir.
+ * Sem corpo. Só a conta Google dona pode excluir — 403 mesmo para quem tem rank
+ * de escrita no projeto; falha remota ABORTA (502). Em sucesso devolve o total
+ * de etapas para recalcular o botão concluir.
  */
 export function deleteStageMeeting(
 	etapaId: number,

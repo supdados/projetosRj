@@ -11,8 +11,9 @@ Invariantes que a sprint NÃO mexe (decisão de produto, §9.1):
       sem qualquer relação com rank de projeto;
     - comentar continua em rank >= leitor.
 
-Contrato HTTP preservado: rank insuficiente — inclusive rank 0 — continua 403;
-a unificação 404 anti-enumeração é da S5.
+Contrato HTTP (S5/F4-2): rank 0 responde **404 ``not_found``** com o corpo
+canônico do id inexistente (anti-enumeração); 403 fica para leitor/editor que já
+veem a tarefa e tentam ação acima do rank.
 """
 
 import pytest
@@ -173,15 +174,19 @@ def test_api_criar_tarefa_permitido_para_gestor(app, gestor, seed_data):
     assert response.status_code == 200
 
 
-def test_api_criar_tarefa_rank_zero_continua_403(app, client_outsider, seed_data):
-    """Contrato desta fase: fora de escopo é 403; o 404 anti-enumeração é S5."""
-    response = client_outsider.post(
+def test_api_criar_tarefa_rank_zero_responde_404(app, client_outsider, seed_data):
+    """S5/F4-2: projeto invisível e projeto inexistente devolvem o MESMO 404."""
+    fora_do_escopo = client_outsider.post(
         "/api/tarefas",
         json={"project_id": seed_data["project_id"], "descricao": "Fora de escopo"},
     )
+    inexistente = client_outsider.post(
+        "/api/tarefas", json={"project_id": 999999, "descricao": "Fora de escopo"}
+    )
 
-    assert response.status_code == 403
-    assert _erro(response)["code"] == "forbidden"
+    assert fora_do_escopo.status_code == 404
+    assert _erro(fora_do_escopo)["code"] == "not_found"
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 # ── Editar tarefa de projeto (rank >= editor) ────────────────────────────────
@@ -463,22 +468,27 @@ def test_leitor_exclui_a_propria_tarefa_avulsa(app, leitor):
 
 
 def test_tarefa_avulsa_alheia_nao_vaza_para_gestor(app, gestor, seed_data):
+    """Avulsa de outro autor é invisível: 404, não 403 (S5/F4-2)."""
     client, _ = gestor
 
     response = client.post(
         f"/tarefas/{seed_data['orphan_task_id']}/edit", json={"status": "em_andamento"}
     )
+    inexistente = client.post("/tarefas/999999/edit", json={"status": "em_andamento"})
 
-    assert response.status_code == 403
+    assert response.status_code == 404
+    assert response.get_json() == inexistente.get_json()
 
 
 def test_api_tarefa_avulsa_alheia_nao_vaza_para_editor(app, editor, seed_data):
     client, _ = editor
 
     response = client.post(f"/api/tarefas/{seed_data['orphan_task_id']}/excluir")
+    inexistente = client.post("/api/tarefas/999999/excluir")
 
-    assert response.status_code == 403
-    assert _erro(response)["code"] == "forbidden"
+    assert response.status_code == 404
+    assert _erro(response)["code"] == "not_found"
+    assert response.get_json() == inexistente.get_json()
 
 
 # ── Leitura e comentário continuam em rank >= leitor ─────────────────────────

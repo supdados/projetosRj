@@ -1,6 +1,6 @@
-from flask import current_app, g, request
+from flask import current_app, g, jsonify, request
 
-from models import UserCalendarConnection
+from models import Etapa, Project, UserCalendarConnection, db
 from services.calendar_sync import hydrate_google_connection_identity
 from services.google_calendar import is_google_calendar_enabled
 
@@ -16,7 +16,11 @@ from services.etapas_dates import (  # noqa: F401
     _normalize_to_business_day,
     _serialize_etapa_payload,
 )
-from services.authorization import user_can_edit_project
+from services.authorization import (
+    AccessVerdict,
+    PAPEL_EDITOR,
+    project_access_verdict,
+)
 
 
 def _is_ajax_request():
@@ -47,6 +51,49 @@ def _connection_for_current_user():
     return connection
 
 
-def _current_user_can_edit_project(project) -> bool:
-    """Gate compartilhado das rotas de escrita de etapa/reunião: rank >= editor."""
-    return user_can_edit_project(getattr(g, "user", None), project)
+def _legacy_not_found():
+    """404 anti-enumeração das rotas legadas de etapa/reunião (S5/F4-2b).
+
+    Recurso inexistente e recurso invisível (rank 0 no projeto) devem sair por
+    aqui — mesmo status, mesmo corpo, sem mensagem própria que revele qual dos
+    dois é o caso.
+
+    Exemplo:
+        >>> if verdict == ACCESS_NOT_FOUND:
+        ...     return _legacy_not_found()
+    """
+    # Import local: `routes.api.envelope` dispara `routes/api/__init__`, que
+    # importa este módulo de volta — no topo o ciclo estoura no boot.
+    from routes.api.envelope import NOT_FOUND_MESSAGE
+
+    return jsonify({"success": False, "message": NOT_FOUND_MESSAGE}), 404
+
+
+def _project_write_verdict(project: "Project | None") -> AccessVerdict:
+    """Veredito 404-vs-403 das escritas de etapa/reunião (rank >= editor)."""
+    return project_access_verdict(getattr(g, "user", None), project, PAPEL_EDITOR)
+
+
+def _load_project_for_etapa_write(
+    project_id: int,
+) -> "tuple[Project | None, AccessVerdict]":
+    """Projeto + veredito de escrita: ``ACCESS_NOT_FOUND`` cobre id inexistente E rank 0.
+
+    O chamador responde ``_legacy_not_found()`` nos dois casos, sem distinguir.
+
+    Exemplo:
+        >>> project, verdict = _load_project_for_etapa_write(7)
+    """
+    project = db.session.get(Project, project_id)
+    return project, _project_write_verdict(project)
+
+
+def _load_etapa_for_write(etapa_id: int) -> "tuple[Etapa | None, AccessVerdict]":
+    """Etapa + veredito de escrita no projeto dela (mesma regra de ``_load_project_for_etapa_write``).
+
+    Exemplo:
+        >>> etapa, verdict = _load_etapa_for_write(42)
+    """
+    etapa = db.session.get(Etapa, etapa_id)
+    project = etapa.project if etapa is not None else None
+    return etapa, _project_write_verdict(project)

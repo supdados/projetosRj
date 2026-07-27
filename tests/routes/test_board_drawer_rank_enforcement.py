@@ -12,8 +12,9 @@ Os dois lados da sprint:
     - leitor perde as escritas (status, campos, finalizar, arquivar,
       desarquivar, responsáveis, reordenar), mas segue LENDO board e drawer.
 
-Contrato HTTP preservado: rank insuficiente continua 403 ``forbidden``; a
-unificação 404 anti-enumeração é da S5.
+Contrato HTTP (S5/F4-2): todos os casos aqui são de rank >= leitor (o usuário VÊ
+a tarefa), logo permanecem em 403 ``forbidden``. O 404 anti-enumeração vale só
+para rank 0 e está coberto em ``test_api_error_envelope_contract.py``.
 """
 
 import pytest

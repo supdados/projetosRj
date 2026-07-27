@@ -103,9 +103,10 @@ def test_convite_concede_leitura_e_revogacao_a_retira(
     client_user.delete(f"/api/projetos/{project_id}/membros/{membro['id']}")
     depois = client_outsider.get(f"/api/projetos/{project_id}/detalhe")
 
-    assert antes.status_code == 403
+    # Fora do convite o projeto simplesmente não existe para o convidado (S5/F4-2).
+    assert antes.status_code == 404
     assert durante.status_code == 200
-    assert depois.status_code == 403
+    assert depois.status_code == 404
 
 
 def test_convite_nao_cria_rank_de_area_nem_habilita_reatribuicao(

@@ -9,6 +9,7 @@
 
 import type { ConvitePapel } from '$lib/types/projectMembers';
 import type { ProjectAccessVia } from '$lib/types/entities';
+import { MSG_PROJETO_INACESSIVEL } from '$lib/utils/accessErrorMessages';
 
 /** Papel sugerido em um convite novo (o mais restritivo). */
 export const CONVITE_PAPEL_PADRAO: ConvitePapel = 'leitor';
@@ -69,10 +70,11 @@ export function isAcessoPorConvite(accessVia: ProjectAccessVia | null | undefine
 
 /**
  * Mensagem PT-BR para as falhas das rotas de membro (contrato anti-enumeração
- * do §6.3: 404 = não vê o projeto OU flag off; 403 = vê mas não gerencia).
+ * do §6.3: 404 = não existe, não vê o projeto ou flag off — os três com a MESMA
+ * mensagem; 403 = vê o projeto mas não gerencia membros).
  */
 export function conviteErrorMessage(status: number, code: string): string {
-	if (status === 404 || code === 'not_found') return 'Projeto não encontrado.';
+	if (status === 404 || code === 'not_found') return MSG_PROJETO_INACESSIVEL;
 	if (status === 403 || code === 'forbidden')
 		return 'Você não pode gerenciar os membros deste projeto.';
 	if (status === 400 || code === 'validation') return 'Dados do convite inválidos.';

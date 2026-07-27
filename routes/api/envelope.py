@@ -88,6 +88,29 @@ def fail(
     return jsonify(body), status
 
 
+# Mensagem única do 404 anti-enumeração (S5/F4-2b): id inexistente e recurso
+# invisível (rank 0) devem responder byte a byte o mesmo corpo.
+NOT_FOUND_MESSAGE = "Recurso não encontrado."
+
+
+def fail_not_found() -> tuple[Response, int]:
+    """404 canônico anti-enumeração — único corpo permitido para ``not_found``.
+
+    Todo 404 de recurso sob ``/api/*`` (id inexistente, projeto fora do escopo,
+    rank 0) deve sair por aqui para que "não existe" e "não é visível" sejam
+    indistinguíveis (S5/F4-2b). Não aceita mensagem customizada por design.
+
+    Returns:
+        ``fail(NOT_FOUND_MESSAGE, status=404, code="not_found")`` — corpo
+        ``{"ok": false, "error": {"code": "not_found", "message": "Recurso não encontrado."}}``.
+
+    Exemplo:
+        >>> if project is None or verdict == ACCESS_NOT_FOUND:
+        ...     return fail_not_found()
+    """
+    return fail(NOT_FOUND_MESSAGE, status=404, code="not_found")
+
+
 def fail_internal(
     exc: Exception,
     log_label: str,

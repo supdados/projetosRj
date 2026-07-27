@@ -7,6 +7,9 @@
  *
  * Aceita um `AbortSignal` para cancelar a requisicao anterior em buscas com
  * debounce (evita resultados fora de ordem).
+ *
+ * Sem 403/404 de autorizacao: a busca FILTRA pelo que o usuario ve — recurso
+ * fora do rank nao aparece nos resultados em vez de virar erro.
  */
 
 import { get } from './client';

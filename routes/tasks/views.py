@@ -20,8 +20,14 @@ from routes.tasks.helpers import (
     _build_legacy_query_args,
     _can_access_project_in_tasks,
     _can_view_task,
+    legacy_not_found,
 )
 from routes.tasks.queries import _read_task_filter_values
+from services.authorization import (
+    ACCESS_OK,
+    PAPEL_LEITOR,
+    project_access_verdict,
+)
 
 
 def _serve_task_hub_spa_or_redirect():
@@ -157,14 +163,9 @@ def list_project_etapas(project_id):
                                       "done": false}]}
     """
     project = db.session.get(Project, project_id)
-    if project is None:
-        return jsonify({"success": False, "message": "Projeto não encontrado."}), 404
-
-    if not _can_access_project_in_tasks(project):
-        return (
-            jsonify({"success": False, "message": "Sem permissão para este projeto."}),
-            403,
-        )
+    # Projeto inexistente e projeto invisível (rank 0) respondem o MESMO 404 (F4-2b).
+    if project_access_verdict(g.user, project, PAPEL_LEITOR) != ACCESS_OK:
+        return legacy_not_found()
 
     etapas = (
         Etapa.query.filter(Etapa.project_id == project.id)
@@ -199,12 +200,9 @@ def project_tasks(project_id):
     existencia/permissao do projeto (302 para a Lista quando inacessivel).
     """
     project = db.session.get(Project, project_id)
-    if not project:
+    # Rank 0 não distingue "não existe" de "não vejo" (F4-2b): mesma mensagem.
+    if project_access_verdict(g.user, project, PAPEL_LEITOR) != ACCESS_OK:
         flash("Projeto não encontrado.", "warning")
-        return redirect("/projetos")
-
-    if not _can_access_project_in_tasks(project):
-        flash("Você não tem permissão para acessar este projeto.", "danger")
         return redirect("/projetos")
 
     query_args = request.args.to_dict(flat=True)

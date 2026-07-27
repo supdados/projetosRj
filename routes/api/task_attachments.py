@@ -46,11 +46,10 @@ from ..tasks.constants import (
 )
 from ..tasks.permissions import (
     _audit_denied_task_action,
-    _can_edit_task,
     _can_manage_task_restricted_actions,
-    _can_view_task,
+    api_task_denial,
 )
-from .envelope import fail, ok
+from .envelope import fail, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import _serialize_task_anexo
 
@@ -82,7 +81,7 @@ def _serialize_anexo_list(task: Task) -> list[dict[str, Any]]:
 def _load_viewable_task(
     task_id: int, *, for_write: bool = False
 ) -> tuple[Task | None, Any]:
-    """Carrega a tarefa validando existência (404) e rank no projeto (403).
+    """Carrega a tarefa aplicando o contrato S5 (404 invisível, 403 rank baixo).
 
     ``for_write=True`` exige rank >= editor (``_can_edit_task``, S3/F2-5 — MESMA
     regra das demais escritas de tarefa); o padrão exige rank >= leitor
@@ -93,20 +92,13 @@ def _load_viewable_task(
         for_write: Se a chamada antecede uma escrita na tarefa (upload).
 
     Returns:
-        ``(task, None)`` quando autorizado; ``(None, fail_response)`` (404/403).
+        ``(task, None)`` quando autorizado; ``(None, fail_response)`` com 404
+        (inexistente/invisível, mesmo corpo) ou 403 (vê a tarefa, rank < editor).
     """
     task = db.session.get(Task, task_id)
-    if task is None:
-        return None, fail("Tarefa não encontrada.", status=404, code="not_found")
-    permitted = (
-        _can_edit_task(g.user, task) if for_write else _can_view_task(g.user, task)
-    )
-    if not permitted:
-        return None, fail(
-            "Você não tem permissão para acessar esta tarefa.",
-            status=403,
-            code="forbidden",
-        )
+    denied = api_task_denial(task, for_write=for_write)
+    if denied is not None:
+        return None, denied
     return task, None
 
 
@@ -263,14 +255,12 @@ def api_anexo_download(anexo_id: int) -> Response | tuple[Response, int]:
         ``send_file`` (200, binário) em sucesso; 404/403 envelopados; 401 JSON.
     """
     anexo = db.session.get(TaskAnexo, anexo_id)
+    # Anexo inexistente e anexo de tarefa invisível respondem o MESMO 404 (F4-2b).
     if anexo is None:
-        return fail("Anexo não encontrado.", status=404, code="not_found")
-    if not _can_view_task(g.user, anexo.task):
-        return fail(
-            "Você não tem permissão para acessar este anexo.",
-            status=403,
-            code="forbidden",
-        )
+        return fail_not_found()
+    denied = api_task_denial(anexo.task)
+    if denied is not None:
+        return denied
 
     file_path = os.path.join(_get_upload_folder(), anexo.stored_filename)
     if not os.path.exists(file_path):
@@ -297,15 +287,12 @@ def api_anexo_delete(anexo_id: int) -> Response | tuple[Response, int]:
     """
     anexo = db.session.get(TaskAnexo, anexo_id)
     if anexo is None:
-        return fail("Anexo não encontrado.", status=404, code="not_found")
+        return fail_not_found()
 
     task = anexo.task
-    if not _can_view_task(g.user, task):
-        return fail(
-            "Você não tem permissão para acessar este anexo.",
-            status=403,
-            code="forbidden",
-        )
+    denied = api_task_denial(task)
+    if denied is not None:
+        return denied
     if not _can_manage_task_restricted_actions(g.user, task):
         _audit_denied_task_action(task, "forbidden_edit_restricted")
         return fail(

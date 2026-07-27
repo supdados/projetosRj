@@ -11,13 +11,22 @@
  *   - Em 401 (`unauthenticated`), navega top-level para `/login` (NAO fetch),
  *     porque o callback Gov.br depende do cookie `govbr_refresh_token`
  *     (SameSite=Strict) que so flui em navegacao de primeiro nivel.
+ *   - 403/404 NAO sao tratados aqui: sobem como `ApiClientError` para a tela
+ *     decidir a mensagem (contrato S5, ver `ApiClientError` abaixo).
  *
  * NAO usa o monkeypatch de fetch do base.html (so existe no Jinja legado).
  */
 
 import type { ApiResult, PageMeta } from '$lib/types/api';
 
-/** Erro estruturado lancado quando o backend devolve `{ok:false}`. */
+/**
+ * Erro estruturado lancado quando o backend devolve `{ok:false}`.
+ *
+ * `code`/`status` carregam o contrato de autorizacao S5 (`$lib/types/api`):
+ * `not_found` (404) = nao existe OU sem acesso, indistinguiveis por design —
+ * a tela mostra "não existe ou você não tem acesso"; `forbidden` (403) = ve o
+ * recurso mas nao pode esta acao. Rotas `/admin/*` seguem so em 403.
+ */
 export class ApiClientError extends Error {
 	readonly code: string;
 	readonly status: number;

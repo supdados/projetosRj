@@ -23,9 +23,14 @@ from routes.tasks.constants import (
     _task_status_label,
 )
 from routes.tasks.permissions import (
-    _can_access_project_in_tasks,
-    _can_edit_project_in_tasks,
     task_permission_flags,
+)
+from services.authorization import (
+    ACCESS_FORBIDDEN,
+    ACCESS_NOT_FOUND,
+    PAPEL_EDITOR,
+    PAPEL_LEITOR,
+    project_access_verdict,
 )
 
 
@@ -60,12 +65,13 @@ def _resolve_etapa_token(
     except (TypeError, ValueError):
         return None, "Etapa inválida.", 400
 
-    etapa = db.session.get(Etapa, etapa_id)
-    if etapa is None:
-        return None, "Etapa não encontrada.", 404
+    from routes.api.envelope import NOT_FOUND_MESSAGE
 
-    if project is None or etapa.project_id != project.id:
-        return None, "Etapa não pertence a este projeto.", 400
+    # Anti-enumeração (F4-2b): etapa inexistente e etapa de projeto invisível
+    # ou alheio colapsam no mesmo 404 — sem revelar existência do id.
+    etapa = db.session.get(Etapa, etapa_id)
+    if etapa is None or project is None or etapa.project_id != project.id:
+        return None, NOT_FOUND_MESSAGE, 404
 
     if etapa.done and not allow_done:
         return None, "Etapa concluída não aceita novas tarefas.", 400
@@ -78,7 +84,8 @@ def _resolve_project_token(raw_project_value, allow_empty=False, *, for_write=Fa
 
     ``for_write=True`` exige rank >= editor no projeto (criar/editar tarefa);
     o padrão exige apenas acesso de leitura (pickers e sugestões).
-    Retorna ``(project, error_message, status_code)``.
+    Retorna ``(project, error_message, status_code)``. Contrato S5 (F4-2):
+    projeto inexistente e projeto invisível (rank 0) devolvem o MESMO 404.
     """
     # Coage para str antes de .strip(): a SPA envia `project_id` como inteiro
     # (JSON number), enquanto o form Jinja envia string. Espelha _resolve_etapa_token.
@@ -96,16 +103,17 @@ def _resolve_project_token(raw_project_value, allow_empty=False, *, for_write=Fa
     except (TypeError, ValueError):
         return None, "Projeto inválido.", 400
 
-    project = db.session.get(Project, project_id)
-    if not project:
-        return None, "Projeto não encontrado.", 404
+    # Import local: `routes.api.envelope` executa `routes/api/__init__`, que
+    # importa este módulo de volta — no topo o ciclo estoura no boot.
+    from routes.api.envelope import NOT_FOUND_MESSAGE
 
-    permitted = (
-        _can_edit_project_in_tasks(project)
-        if for_write
-        else _can_access_project_in_tasks(project)
+    project = db.session.get(Project, project_id)
+    verdict = project_access_verdict(
+        g.user, project, PAPEL_EDITOR if for_write else PAPEL_LEITOR
     )
-    if not permitted:
+    if verdict == ACCESS_NOT_FOUND:
+        return None, NOT_FOUND_MESSAGE, 404
+    if verdict == ACCESS_FORBIDDEN:
         return None, "Sem permissão para este projeto.", 403
 
     return project, None, 200

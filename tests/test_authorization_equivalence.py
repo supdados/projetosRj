@@ -316,4 +316,5 @@ def test_detalhe_de_projeto_responde_conforme_o_caminho_antigo(
     for project_id, permitido in esperado.items():
         response = clients[perfil].get(f"/api/projetos/{project_id}/detalhe")
         assert (response.status_code == 200) is permitido
-        assert response.status_code in (200, 403)
+        # S5/F4-2: a negativa de acesso virou 404 anti-enumeração.
+        assert response.status_code in (200, 404)

@@ -12,7 +12,7 @@ já no request seguinte.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterable, Literal
 
 from flask import g, has_request_context
 from sqlalchemy import false, or_
@@ -46,6 +46,12 @@ ROLE_MAP_CACHE_ATTR = "_authz_role_map"
 MEMBERSHIP_MAP_CACHE_ATTR = "_authz_membership_map"
 
 FORBIDDEN_PROJECT_MESSAGE = "Você não tem permissão para esta ação neste projeto."
+
+AccessVerdict = Literal["ok", "forbidden", "not_found"]
+
+ACCESS_OK: AccessVerdict = "ok"
+ACCESS_FORBIDDEN: AccessVerdict = "forbidden"
+ACCESS_NOT_FOUND: AccessVerdict = "not_found"
 
 
 def get_user_orgao_role_map(user: "User | None") -> dict[int, int]:
@@ -242,6 +248,44 @@ def assignable_orgao_ids(user: "User | None") -> set[int]:
     return {orgao_id for orgao_id, rank in role_map.items() if rank >= minimo}
 
 
+def project_access_verdict(
+    user: "User | None",
+    project: "Project | None",
+    min_papel: str,
+) -> AccessVerdict:
+    """Decisao UNICA 404-vs-403 do contrato S5 (F4-2) — nao replicar por endpoint.
+
+    - ``ACCESS_NOT_FOUND``: projeto ``None`` OU rank efetivo 0. O chamador
+      responde o MESMO corpo 404 do caso "id inexistente" (anti-enumeracao,
+      F4-2b) — nunca uma mensagem propria.
+    - ``ACCESS_FORBIDDEN``: rank >= leitor mas abaixo de ``min_papel``. O
+      usuario ja ve o projeto; responder 403 com a mensagem atual do endpoint.
+    - ``ACCESS_OK``: rank alcanca ``min_papel``.
+
+    Admin tem ``ADMIN_RANK`` e por isso nunca recebe ``not_found`` por
+    autorizacao — so quando o projeto realmente nao existe (``project is None``).
+
+    Uso em rota ``/api/*`` (envelope canonico):
+        >>> verdict = project_access_verdict(g.user, project, PAPEL_EDITOR)
+        >>> if verdict == ACCESS_NOT_FOUND:
+        ...     return fail_not_found()
+        >>> if verdict == ACCESS_FORBIDDEN:
+        ...     return fail(FORBIDDEN_PROJECT_MESSAGE, status=403, code="forbidden")
+
+    Uso em rota legada (``jsonify``):
+        >>> if verdict == ACCESS_NOT_FOUND:
+        ...     return jsonify({"success": False, "message": "Recurso não encontrado."}), 404
+        >>> if verdict == ACCESS_FORBIDDEN:
+        ...     return jsonify({"success": False, "message": FORBIDDEN_PROJECT_MESSAGE}), 403
+    """
+    rank = effective_project_rank(user, project)
+    if project is None or rank < PAPEL_RANK[PAPEL_LEITOR]:
+        return ACCESS_NOT_FOUND
+    if rank < _papel_to_rank(min_papel):
+        return ACCESS_FORBIDDEN
+    return ACCESS_OK
+
+
 def require_project_rank(
     project: "Project | None",
     min_papel: str,
@@ -251,16 +295,19 @@ def require_project_rank(
 ) -> "tuple[Response, int] | None":
     """Gate de rank para o CORPO do endpoint: ``None`` libera, ``fail(...)`` nega.
 
-    Checagem no corpo (o projeto ja esta carregado), nunca em decorator. Contrato
-    HTTP desta fase: sem sessao => 401 ``unauthenticated``; rank insuficiente,
-    inclusive rank 0 => 403 ``forbidden``. A unificacao 404 anti-enumeracao e S5
-    — nao antecipar aqui.
+    Checagem no corpo (o projeto ja esta carregado), nunca em decorator.
+    Contrato S5 (F4-2, anti-enumeracao): sem sessao => 401 ``unauthenticated``;
+    projeto ``None`` OU rank 0 => 404 via ``fail_not_found()`` (corpo byte a
+    byte igual ao de id inexistente); rank >= leitor abaixo de ``min_papel`` =>
+    403 ``forbidden``. Decisao delegada a ``project_access_verdict``.
 
     Args:
-        project: Projeto ja carregado (``None`` reprova qualquer nao-admin).
+        project: Projeto ja carregado; ``None`` => 404 (dispensa null-check
+            previo no call site).
         min_papel: ``"leitor"`` | ``"editor"`` | ``"gestor"``.
         user: Usuario a avaliar; por padrao ``g.user``.
-        message: Mensagem 403 especifica do endpoint (mantem o texto atual).
+        message: Mensagem 403 especifica do endpoint. O 404 NAO e customizavel
+            por design (F4-2b).
 
     Exemplo:
         >>> denied = require_project_rank(project, PAPEL_EDITOR)
@@ -269,7 +316,7 @@ def require_project_rank(
     """
     # Import local: `routes.api.envelope` executa `routes/api/__init__`, que
     # importa este modulo de volta — no topo o ciclo estoura no boot.
-    from routes.api.envelope import fail
+    from routes.api.envelope import fail, fail_not_found
 
     actual_user = user if user is not None else getattr(g, "user", None)
     if actual_user is None:
@@ -278,9 +325,12 @@ def require_project_rank(
             status=401,
             code="unauthenticated",
         )
-    if effective_project_rank(actual_user, project) >= _papel_to_rank(min_papel):
-        return None
-    return fail(message or FORBIDDEN_PROJECT_MESSAGE, status=403, code="forbidden")
+    verdict = project_access_verdict(actual_user, project, min_papel)
+    if verdict == ACCESS_NOT_FOUND:
+        return fail_not_found()
+    if verdict == ACCESS_FORBIDDEN:
+        return fail(message or FORBIDDEN_PROJECT_MESSAGE, status=403, code="forbidden")
+    return None
 
 
 def _papel_to_rank(papel: str) -> int:

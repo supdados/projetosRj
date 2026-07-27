@@ -2054,4 +2054,7 @@ ROUTE_CASES += [
 # +1 da verificacao da S4 (F3-25): GET /api/admin/relatorios/grants-orfaos —
 # superficie do relatorio de grants orfaos que estava sem consumidor.
 # 164 + 1 = 165.
+# S5/F4-4b: a sprint do contrato 404 anti-enumeracao nao cria nem remove rota, e
+# nenhum caso desta matriz roda com rank 0 (papeis "user"/"admin"/"anon" veem os
+# recursos semeados), entao nenhum status esperado mudou. 165.
 assert len(ROUTE_CASES) == 165

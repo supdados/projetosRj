@@ -5,7 +5,9 @@ server-side), comentários, toggles de iniciada/concluída, reordenação (que
 dispara a cascata de datas) e a importação de um modelo de etapas para o
 projeto. TODOS no envelope canônico (``ok``/``fail``), protegidos por
 ``api_login_required`` (401 JSON) e por ``require_project_rank(..., editor)`` —
-via o projeto da etapa — (404 inexistente / 403 rank insuficiente).
+via o projeto da etapa. Contrato S5 (F4-2/F4-2b): recurso inexistente E recurso
+invisível (rank 0) respondem o MESMO 404 (``fail_not_found``); rank >= leitor
+insuficiente para a ação responde 403 ``forbidden``.
 
 REUSO sem duplicar regra de negócio:
     - Criação/edição/exclusão/comentário/campo: ``services/etapas_mutation.py``.
@@ -52,7 +54,7 @@ from services.project_meetings import is_google_meeting_stage
 
 from ..blueprint import main_bp
 from ..shared import log_project_action
-from .envelope import fail, ok
+from .envelope import fail, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import serialize_etapa_detail, serialize_project_detail
 
@@ -61,10 +63,8 @@ _REGULAR_FIELDS = {"descricao", "data_inicio", "data_fim", "responsavel"}
 
 
 def _load_project_or_error(project_id: int) -> tuple[Project | None, Any]:
-    """Carrega o projeto validando existência (404) e rank >= editor (403)."""
+    """Carrega o projeto: 404 se inexistente OU invisível; 403 se rank < editor."""
     project = db.session.get(Project, project_id)
-    if project is None:
-        return None, fail("Projeto não encontrado.", status=404, code="not_found")
     denied = require_project_rank(
         project,
         PAPEL_EDITOR,
@@ -76,10 +76,10 @@ def _load_project_or_error(project_id: int) -> tuple[Project | None, Any]:
 
 
 def _load_etapa_or_error(etapa_id: int) -> tuple[Etapa | None, Any]:
-    """Carrega a etapa validando existência (404) e rank >= editor no projeto (403)."""
+    """Carrega a etapa: 404 se inexistente OU invisível; 403 se rank < editor."""
     etapa = db.session.get(Etapa, etapa_id)
     if etapa is None:
-        return None, fail("Etapa não encontrada.", status=404, code="not_found")
+        return None, fail_not_found()
     denied = require_project_rank(
         etapa.project,
         PAPEL_EDITOR,
@@ -724,7 +724,7 @@ def _resolve_cascade_request(
 
     base_etapa = db.session.get(Etapa, base_etapa_id)
     if base_etapa is None or base_etapa.project_id != project_id:
-        return None, fail("Etapa base não encontrada.", status=404, code="not_found")
+        return None, fail_not_found()
     if is_google_meeting_stage(base_etapa):
         return None, fail(
             "Reuniões Google não participam da cascata de datas.",
@@ -863,7 +863,7 @@ def api_projeto_importar_modelo(project_id: int) -> Response | tuple[Response, i
 
     template = db.session.get(StageTemplate, template_id)
     if template is None:
-        return fail("Modelo não encontrado.", status=404, code="not_found")
+        return fail_not_found()
     if not template.items:
         return fail("Este modelo não possui etapas.", status=422, code="validation")
 

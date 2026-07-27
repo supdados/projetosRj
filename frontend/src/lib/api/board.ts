@@ -8,7 +8,9 @@
  *
  * Tudo desempacotado do envelope por `client.ts`; mutações via `post`
  * (que injeta `X-CSRFToken`). O servidor é AUTORITATIVO: as mutações podem
- * recusar (403 `forbidden` ao finalizar sem permissão) — a store reverte.
+ * recusar — a store reverte em qualquer erro. Contrato S5: 403 `forbidden`
+ * quando o usuário vê a tarefa mas não pode a ação; 404 `not_found` quando a
+ * tarefa não existe OU ele não tem acesso (indistinguíveis por design).
  */
 
 import { get, post } from './client';
@@ -52,7 +54,8 @@ export function getBoard(
 /**
  * Muda o status de UMA tarefa (drop entre colunas). Autoritativo no servidor:
  * 403 `forbidden` (`FINALIZE_DENIED_MESSAGE`) ao finalizar sem permissão,
- * 404 (inexistente), 422 (status inválido). Devolve o card atualizado.
+ * 404 `not_found` (não existe OU sem acesso), 422 (status inválido). Devolve o
+ * card atualizado.
  */
 export function updateTaskStatus(
 	taskId: number,

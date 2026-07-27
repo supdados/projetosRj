@@ -13,7 +13,6 @@ from routes.tasks.helpers import (
     _can_edit_task,
     _can_manage_task_restricted_actions,
     _can_transition_task_to_status,
-    _can_view_task,
     _create_task_common,
     _format_invalid_responsavel_message,
     _get_assignable_users_for_orgao,
@@ -26,6 +25,8 @@ from routes.tasks.helpers import (
     _resolve_project_token,
     _resolve_responsavel_for_edit,
     _serialize_task_payload,
+    legacy_task_denial,
+    task_access_verdict,
 )
 from routes.tasks.notifications import (
     notify_prioridade_change,
@@ -38,6 +39,7 @@ from routes.tasks.notifications import (
     notify_tipo_change,
 )
 from routes.tasks.validators import extract_edit_inputs
+from services.authorization import ACCESS_NOT_FOUND, ACCESS_OK
 from services.task_mutation import (
     apply_task_edits,
     apply_task_order,
@@ -57,6 +59,42 @@ def _wants_json() -> bool:
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
         or request.accept_mimetypes.best == "application/json"
     )
+
+
+def _hybrid_task_denial(
+    task,
+    *,
+    is_ajax: bool,
+    forbidden_message: str,
+    forbidden_flash: str | None = None,
+    item_id: int | None = None,
+):
+    """Negativa do contrato S5 nas rotas híbridas (JSON x flash+redirect).
+
+    Tarefa inexistente e tarefa invisível caem no MESMO ramo 404 (F4-2b); rank
+    >= leitor abaixo de editor continua 403 com a mensagem do endpoint.
+    """
+    # Import local: `routes.api.envelope` executa `routes/api/__init__`, que
+    # importa este pacote de volta.
+    from routes.api.envelope import NOT_FOUND_MESSAGE
+
+    verdict = task_access_verdict(g.user, task, for_write=True)
+    if verdict == ACCESS_OK:
+        return None
+
+    not_found = verdict == ACCESS_NOT_FOUND
+    message = NOT_FOUND_MESSAGE if not_found else forbidden_message
+    if is_ajax:
+        body = {"success": False, "message": message}
+        if item_id is not None:
+            body["item_id"] = item_id
+        return jsonify(body), 404 if not_found else 403
+
+    flash(
+        message if not_found else (forbidden_flash or forbidden_message),
+        "warning" if not_found else "danger",
+    )
+    return _redirect_back_or("main.list_tasks")
 
 
 def _task_hub_reorder_scope_key(task):
@@ -228,10 +266,9 @@ def move_task_etapa(task_id):
     concluída. Não permite mover tarefa entre projetos pelo DnD.
     """
     task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_edit_task(g.user, task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+    denied = legacy_task_denial(task, for_write=True)
+    if denied is not None:
+        return denied
 
     payload = request.get_json(silent=True) or {}
     etapa_raw = payload.get("etapa")
@@ -270,10 +307,9 @@ def move_task_etapa(task_id):
 @login_required
 def edit_task(task_id):
     task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_edit_task(g.user, task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+    denied = legacy_task_denial(task, for_write=True)
+    if denied is not None:
+        return denied
 
     payload = request.get_json(silent=True) or {}
     inputs = extract_edit_inputs(task, request.form, payload)
@@ -360,35 +396,15 @@ def delete_task(task_id):
     task = db.session.get(Task, task_id)
     is_ajax = _wants_json()
 
-    if not task:
-        if is_ajax:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "Tarefa não encontrada.",
-                        "item_id": task_id,
-                    }
-                ),
-                404,
-            )
-        flash("Tarefa não encontrada.", "warning")
-        return _redirect_back_or("main.list_tasks")
-
-    if not _can_edit_task(g.user, task):
-        if is_ajax:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "Sem permissão para excluir esta tarefa.",
-                        "item_id": task_id,
-                    }
-                ),
-                403,
-            )
-        flash("Você não tem permissão para excluir esta tarefa.", "danger")
-        return _redirect_back_or("main.list_tasks")
+    denied = _hybrid_task_denial(
+        task,
+        is_ajax=is_ajax,
+        forbidden_message="Sem permissão para excluir esta tarefa.",
+        forbidden_flash="Você não tem permissão para excluir esta tarefa.",
+        item_id=task_id,
+    )
+    if denied is not None:
+        return denied
 
     if not _can_manage_task_restricted_actions(g.user, task):
         _audit_denied_task_action(task, "forbidden_delete")
@@ -435,10 +451,9 @@ def delete_task(task_id):
 @login_required
 def update_task_status(task_id):
     task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_edit_task(g.user, task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+    denied = legacy_task_denial(task, for_write=True)
+    if denied is not None:
+        return denied
 
     payload = request.get_json(silent=True) or {}
     status = payload.get("status")
@@ -467,10 +482,9 @@ def update_task_status(task_id):
 @login_required
 def update_task_prioridade(task_id):
     task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_edit_task(g.user, task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+    denied = legacy_task_denial(task, for_write=True)
+    if denied is not None:
+        return denied
 
     payload = request.get_json(silent=True) or {}
     prioridade = payload.get("prioridade", "") or None
@@ -502,10 +516,9 @@ def update_task_prioridade(task_id):
 @login_required
 def update_task_tipo(task_id):
     task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_edit_task(g.user, task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+    denied = legacy_task_denial(task, for_write=True)
+    if denied is not None:
+        return denied
 
     payload = request.get_json(silent=True) or {}
     tipo = payload.get("tipo_pedido", "") or None
@@ -529,19 +542,13 @@ def update_task_tipo(task_id):
 def finalize_task(task_id):
     is_ajax = _wants_json()
     task = db.session.get(Task, task_id)
-    if not task or not _can_edit_task(g.user, task):
-        if is_ajax:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "Você não tem permissão para finalizar esta tarefa.",
-                    }
-                ),
-                403,
-            )
-        flash("Você não tem permissão para finalizar esta tarefa.", "danger")
-        return _redirect_back_or("main.list_tasks")
+    denied = _hybrid_task_denial(
+        task,
+        is_ajax=is_ajax,
+        forbidden_message="Você não tem permissão para finalizar esta tarefa.",
+    )
+    if denied is not None:
+        return denied
 
     if not _can_manage_task_restricted_actions(g.user, task):
         _audit_denied_task_action(
@@ -590,8 +597,9 @@ def finalize_task(task_id):
 def unarchive_task(task_id):
     task = db.session.get(Task, task_id)
     is_ajax = _wants_json()
-    if not task or not _can_edit_task(g.user, task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+    denied = legacy_task_denial(task, for_write=True)
+    if denied is not None:
+        return denied
 
     mutate_unarchive_task(task)
 
@@ -728,10 +736,9 @@ def get_hub_assignable_users():
 @login_required
 def get_task_assignable_users(task_id):
     task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_view_task(g.user, task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+    denied = legacy_task_denial(task)
+    if denied is not None:
+        return denied
 
     users = _get_assignable_users_for_project(task.project)
     return jsonify({"users": _filter_users_by_query(users, request.args.get("q"))})

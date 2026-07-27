@@ -5,8 +5,9 @@ Prova os dois lados exigidos pela sprint:
       comportamento de hoje — nenhum usuário real perde acesso no deploy;
     - editor mantém as escritas de etapa/reunião; leitor perde todas elas.
 
-Contrato HTTP preservado: rank insuficiente — inclusive rank 0 (usuário de
-outro órgão) — continua 403 ``forbidden``; a unificação 404 é da S5.
+Contrato HTTP (S5/F4-2): rank 0 (usuário de outro órgão) responde **404
+``not_found``** com o corpo canônico do id inexistente; 403 ``forbidden`` fica
+para quem já vê o projeto e tenta ação acima do rank (leitor nas escritas).
 """
 
 import pytest
@@ -158,14 +159,18 @@ def test_api_importar_modelo_negado_para_leitor(app, client_leitor, seed_data):
     assert response.status_code == 403
 
 
-def test_api_rank_zero_continua_403_e_nao_404(app, client_outsider, seed_data):
-    """Contrato desta fase: fora de escopo é 403; o 404 anti-enumeração é S5."""
-    response = client_outsider.post(
+def test_api_rank_zero_responde_404_anti_enumeracao(app, client_outsider, seed_data):
+    """S5/F4-2: fora de escopo é 404, byte a byte igual ao do id inexistente."""
+    fora_do_escopo = client_outsider.post(
         f"/api/projetos/{seed_data['project_id']}/etapas", json=_payload_etapa()
     )
+    inexistente = client_outsider.post(
+        "/api/projetos/999999/etapas", json=_payload_etapa()
+    )
 
-    assert response.status_code == 403
-    assert _erro(response)["code"] == "forbidden"
+    assert fora_do_escopo.status_code == 404
+    assert _erro(fora_do_escopo)["code"] == "not_found"
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 def test_api_projeto_inexistente_continua_404(app, client_editor):
@@ -323,13 +328,27 @@ def test_api_meeting_create_passa_o_gate_para_gestor(app, client_gestor, seed_da
     assert _erro(response)["code"] == "validation"
 
 
-def test_api_meeting_create_rank_zero_continua_403(app, client_outsider, seed_data):
-    response = client_outsider.post(
+def test_api_meeting_create_rank_zero_responde_404(app, client_outsider, seed_data):
+    """S5/F4-2: rank 0 não recebe a mensagem de reunião — recebe o 404 canônico."""
+    fora_do_escopo = client_outsider.post(
         f"/api/projetos/{seed_data['project_id']}/reunioes", json={}
     )
+    inexistente = client_outsider.post("/api/projetos/999999/reunioes", json={})
 
-    assert response.status_code == 403
-    assert _erro(response)["code"] == "forbidden"
+    assert fora_do_escopo.status_code == 404
+    assert _erro(fora_do_escopo)["code"] == "not_found"
+    assert fora_do_escopo.get_json() == inexistente.get_json()
+
+
+def test_api_meeting_edit_rank_zero_responde_404(app, client_outsider, seed_data):
+    """Etapa de projeto invisível some: mesmo 404 da etapa inexistente."""
+    fora_do_escopo = client_outsider.post(
+        f"/api/etapas/{seed_data['etapa_id']}/reuniao", json={}
+    )
+    inexistente = client_outsider.post("/api/etapas/999999/reuniao", json={})
+
+    assert fora_do_escopo.status_code == 404
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 def test_api_meeting_edit_negado_para_leitor(app, client_leitor, seed_data):

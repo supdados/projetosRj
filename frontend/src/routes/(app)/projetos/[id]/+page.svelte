@@ -14,8 +14,10 @@
 	 * recalcula datas nem dias uteis.
 	 *
 	 * Acessivel: heading de nivel 1 (no ProjectHeader), estados loading/erro/vazio
-	 * anunciados via aria-live/role=alert, retry focavel. Erros tratados:
-	 *   - 404 `not_found`; 403 `forbidden`; 401 ja redireciona em `client.ts`.
+	 * anunciados via aria-live/role=alert, retry focavel. Erros tratados (S5, §6.3):
+	 *   - 404 `not_found` — nao existe OU sem acesso (indistinguiveis por design);
+	 *   - 403 `forbidden` — ve o projeto, mas a acao exige papel maior;
+	 *   - 401 ja redireciona em `client.ts`.
 	 * Links internos sao base-aware (`$app/paths`).
 	 */
 	import { onMount, setContext, tick } from 'svelte';
@@ -73,6 +75,13 @@
 	import Card from '$lib/components/Card.svelte';
 	import ConcludeCelebrationOverlay from '$lib/components/ConcludeCelebrationOverlay.svelte';
 	import ProjetoDetalheSkeleton from '$lib/components/skeletons/ProjetoDetalheSkeleton.svelte';
+	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import {
+		MSG_PROJETO_INACESSIVEL,
+		accessErrorKind,
+		accessErrorMessage,
+		type AccessErrorKind
+	} from '$lib/utils/accessErrorMessages';
 	import MeetingDisplay from '$lib/components/MeetingDisplay.svelte';
 	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
 	import {
@@ -112,7 +121,7 @@
 	let loadState = $state<LoadState>(initialData ? 'ready' : 'loading');
 	let data = $state<ProjectDetailData | null>(initialData);
 	let errorMessage = $state<string>('');
-	let errorKind = $state<'forbidden' | 'not_found' | 'generic'>('generic');
+	let errorKind = $state<AccessErrorKind>('generic');
 
 	// Estados de edicao inline do cabecalho e dos campos do projeto.
 	let projectFieldStates = $state<Record<string, FieldState>>({});
@@ -421,11 +430,12 @@
 			loadState = 'ready';
 		} catch (err) {
 			if (isUnauthenticated(err)) return;
-			if (err instanceof ApiClientError) {
-				if (err.code === 'not_found') errorKind = 'not_found';
-				else if (err.code === 'forbidden') errorKind = 'forbidden';
-			}
-			const message = messageOf(err, 'Falha ao carregar o detalhe do projeto.');
+			errorKind = accessErrorKind(err);
+			const message = accessErrorMessage(
+				err,
+				MSG_PROJETO_INACESSIVEL,
+				'Falha ao carregar o detalhe do projeto.'
+			);
 			// Revalidacao falhou com dado stale na tela: mantem o dado e avisa via
 			// flash, em vez de trocar o detalhe inteiro pelo painel de erro.
 			if (data) {
@@ -443,7 +453,12 @@
 			data = await fetchProjectDetail(projectId);
 		} catch (err) {
 			if (isUnauthenticated(err)) return;
-			errorMessage = messageOf(err, 'Falha ao recarregar o projeto.');
+			errorKind = accessErrorKind(err);
+			errorMessage = accessErrorMessage(
+				err,
+				MSG_PROJETO_INACESSIVEL,
+				'Falha ao recarregar o projeto.'
+			);
 		}
 	}
 
@@ -1123,37 +1138,13 @@
 		<p role="status" aria-live="polite" class="sr-only">Carregando projeto…</p>
 		<ProjetoDetalheSkeleton />
 	{:else if loadState === 'error'}
-		<div
-			role="alert"
-			class="flex flex-col items-start gap-3 rounded-lg border border-danger bg-surface px-5 py-4"
-		>
-			{#if errorKind === 'not_found'}
-				<p class="text-text-primary">Projeto não encontrado.</p>
-				<a
-					href={`${base}/projetos`}
-					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					Voltar aos projetos
-				</a>
-			{:else if errorKind === 'forbidden'}
-				<p class="text-text-primary">Você não tem permissão para visualizar este projeto.</p>
-				<a
-					href={`${base}/projetos`}
-					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					Voltar aos projetos
-				</a>
-			{:else}
-				<p class="text-text-primary">{errorMessage}</p>
-				<button
-					type="button"
-					onclick={load}
-					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					Tentar novamente
-				</button>
-			{/if}
-		</div>
+		<LoadErrorState
+			message={errorMessage}
+			kind={errorKind}
+			onRetry={load}
+			backHref={`${base}/projetos`}
+			backLabel="Voltar aos projetos"
+		/>
 	{:else if data}
 		<ProjectHeader
 			project={data.project}

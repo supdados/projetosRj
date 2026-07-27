@@ -14,6 +14,10 @@
  * `/toggle-iniciada` (vira iniciada); started -> `/toggle` (vira concluída);
  * desmarcar iniciada zera `done`. O backend valida concluir etapa não iniciada
  * e etapa com tarefas abertas (422 `validation`).
+ *
+ * Contrato S5 nas três rotas: 404 `not_found` quando a etapa/projeto não existe
+ * OU o usuário não tem acesso (mesmo corpo — "não existe ou você não tem
+ * acesso"); 403 `forbidden` quando ele vê o projeto mas não tem rank editor.
  */
 
 import { get, post } from './client';

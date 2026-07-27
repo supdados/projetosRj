@@ -11,8 +11,9 @@
  * cada uma, então nenhum estado depende do corpo da resposta.
  *
  * Falhas chegam como `ApiClientError` (`client.ts`) com `code`/`status`:
- *   - 404 `not_found`  — rank 0 no projeto OU `CONVITES_HABILITADOS` off
- *     (anti-enumeração: flag desligada é indistinguível de projeto invisível);
+ *   - 404 `not_found`  — projeto inexistente, rank 0 no projeto OU
+ *     `CONVITES_HABILITADOS` off (anti-enumeração: os três respondem o MESMO
+ *     corpo, "não existe ou você não tem acesso");
  *   - 403 `forbidden`  — vê o projeto mas não pode gerenciar membros;
  *   - 401 já redireciona para /login dentro do `client.ts`.
  * Use `conviteErrorMessage` (`$lib/utils/projectMembers`) para o texto PT-BR.

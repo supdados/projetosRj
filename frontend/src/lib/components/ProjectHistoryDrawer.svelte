@@ -21,6 +21,12 @@
 	import { cubicOut } from 'svelte/easing';
 	import { fetchProjectHistory } from '$lib/api/history';
 	import { ApiClientError } from '$lib/api/client';
+	import {
+		MSG_PROJETO_INACESSIVEL,
+		accessErrorKind,
+		accessErrorMessage,
+		type AccessErrorKind
+	} from '$lib/utils/accessErrorMessages';
 	import { focusTrap } from '$lib/actions/focusTrap';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
@@ -39,6 +45,7 @@
 	let loadState = $state<LoadState>('loading');
 	let history = $state<HistoryEntry[]>([]);
 	let errorMessage = $state<string>('');
+	let errorKind = $state<AccessErrorKind>('generic');
 
 	// ── Apresentação dos tipos de evento ────────────────────────────────────
 	// Rótulos espelham a tela original; o "tom" foi reduzido a 3 estados para
@@ -202,14 +209,19 @@
 	async function load(): Promise<void> {
 		loadState = 'loading';
 		errorMessage = '';
+		errorKind = 'generic';
 		try {
 			const data = await fetchProjectHistory(projectId);
 			history = data.history;
 			loadState = 'ready';
 		} catch (err) {
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			errorMessage =
-				err instanceof Error ? err.message : 'Falha ao carregar o histórico do projeto.';
+			errorKind = accessErrorKind(err);
+			errorMessage = accessErrorMessage(
+				err,
+				MSG_PROJETO_INACESSIVEL,
+				'Falha ao carregar o histórico do projeto.'
+			);
 			loadState = 'error';
 		}
 	}
@@ -330,13 +342,16 @@
 		{:else if loadState === 'error'}
 			<div role="alert" class="flex flex-col items-start gap-2 rounded-lg border border-danger bg-surface px-4 py-3 text-sm text-text-primary">
 				<p class="m-0">{errorMessage}</p>
-				<button
-					type="button"
-					onclick={() => void load()}
-					class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-				>
-					Tentar novamente
-				</button>
+				<!-- 404/403 nao se resolvem repetindo a requisicao (S5, §6.3). -->
+				{#if errorKind === 'generic'}
+					<button
+						type="button"
+						onclick={() => void load()}
+						class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					>
+						Tentar novamente
+					</button>
+				{/if}
 			</div>
 		{:else if history.length === 0}
 			<div

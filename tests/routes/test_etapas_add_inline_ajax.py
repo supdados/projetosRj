@@ -49,18 +49,24 @@ def test_add_etapa_inline_ajax_requires_descricao(client_user, seed_data):
     assert "descrição" in payload["message"].lower()
 
 
-def test_add_etapa_inline_ajax_forbidden_without_area_access(
+def test_add_etapa_inline_ajax_not_found_without_area_access(
     client_outsider, seed_data
 ):
+    """S5/F4-2: rank 0 recebe o 404 canônico, idêntico ao do projeto inexistente."""
     response = client_outsider.post(
         f"/project/{seed_data['project_id']}/etapa/add",
         data={"etapa_descricao": "Tentativa sem permissão"},
         headers=AJAX_HEADERS,
     )
+    inexistente = client_outsider.post(
+        "/project/999999/etapa/add",
+        data={"etapa_descricao": "Tentativa sem permissão"},
+        headers=AJAX_HEADERS,
+    )
 
-    assert response.status_code == 403
-    payload = response.get_json()
-    assert payload["success"] is False
+    assert response.status_code == 404
+    assert response.get_json()["success"] is False
+    assert response.get_json() == inexistente.get_json()
 
 
 def test_add_etapa_inline_ajax_normalizes_done_when_not_started(client_user, seed_data):

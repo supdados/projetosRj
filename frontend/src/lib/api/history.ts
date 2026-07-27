@@ -3,11 +3,13 @@
  * (GET /api/projetos/<id>/historico).
  *
  * Devolve a `ProjectHistoryData` ja desempacotada do envelope (`client.ts`),
- * respeitando o `orgao_scope` aplicado no servidor (`user_can_access_project`).
- * Em falha, `client.ts` lanca `ApiClientError` com `code`:
- *   - `not_found` (404) quando o projeto nao existe;
- *   - `forbidden` (403) quando esta fora do escopo do usuario;
+ * respeitando o rank efetivo do usuario no projeto. Em falha, `client.ts` lanca
+ * `ApiClientError` com `code` (contrato S5):
+ *   - `not_found` (404) quando o projeto nao existe OU o usuario nao tem acesso
+ *     — casos indistinguiveis por design; a tela mostra "não existe ou você não
+ *     tem acesso" e nunca revela qual dos dois;
  *   - `unauthenticated` (401) ja redireciona para /login.
+ * Nao ha 403 aqui: ler o historico exige apenas rank leitor.
  */
 
 import { get } from './client';

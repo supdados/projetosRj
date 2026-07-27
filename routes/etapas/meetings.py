@@ -1,8 +1,6 @@
-from flask import abort, current_app, flash, g, jsonify, redirect, request, url_for
+from flask import current_app, flash, g, jsonify, redirect, request, url_for
 
 from models import (
-    Etapa,
-    Project,
     StageTemplate,
     db,
 )
@@ -20,18 +18,23 @@ from routes.decorators import login_required
 from routes.shared import get_or_404, log_project_action
 from routes.etapas.helpers import (
     _connection_for_current_user,
-    _current_user_can_edit_project,
     _is_ajax_request,
+    _legacy_not_found,
+    _load_etapa_for_write,
+    _load_project_for_etapa_write,
     _serialize_etapa_payload,
 )
+from services.authorization import ACCESS_FORBIDDEN, ACCESS_NOT_FOUND
 
 
 @main_bp.route("/project/<int:project_id>/meeting/add", methods=["POST"])
 @login_required
 def add_project_meeting(project_id):
     ajax_request = _is_ajax_request()
-    project = get_or_404(Project, project_id)
-    if not _current_user_can_edit_project(project):
+    project, verdict = _load_project_for_etapa_write(project_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
+    if verdict == ACCESS_FORBIDDEN:
         message = "Você não tem permissão para adicionar reuniões a este projeto."
         if ajax_request:
             return jsonify({"success": False, "message": message}), 403
@@ -112,11 +115,17 @@ def add_project_meeting(project_id):
 @login_required
 def edit_project_meeting(etapa_id):
     ajax_request = _is_ajax_request()
-    etapa = get_or_404(Etapa, etapa_id)
+    etapa, verdict = _load_etapa_for_write(etapa_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
     project = etapa.project
 
-    if not _current_user_can_edit_project(project):
-        abort(404)
+    if verdict == ACCESS_FORBIDDEN:
+        message = "Você não tem permissão para editar reuniões deste projeto."
+        if ajax_request:
+            return jsonify({"success": False, "message": message}), 403
+        flash(message, "danger")
+        return redirect(url_for("main.project_detail", project_id=project.id))
 
     if not is_google_meeting_stage(etapa) or etapa.meeting is None:
         message = "Esta etapa não é uma reunião Google editável."
@@ -201,9 +210,10 @@ def edit_project_meeting(etapa_id):
 @login_required
 def import_model_to_project(project_id):
     """Importa etapas de um modelo para um projeto existente"""
-    project = get_or_404(Project, project_id)
-
-    if not _current_user_can_edit_project(project):
+    project, verdict = _load_project_for_etapa_write(project_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
+    if verdict == ACCESS_FORBIDDEN:
         flash("Você não tem permissão para importar modelos neste projeto.", "danger")
         return redirect(url_for("main.project_detail", project_id=project_id))
 

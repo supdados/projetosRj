@@ -20,6 +20,9 @@ from routes.tasks.permissions import (
     _can_view_task,
 )
 from services.authorization import (
+    ACCESS_FORBIDDEN,
+    ACCESS_NOT_FOUND,
+    ACCESS_OK,
     ADMIN_RANK,
     PAPEL_EDITOR,
     PAPEL_GESTOR,
@@ -32,6 +35,7 @@ from services.authorization import (
     get_active_membership_map,
     get_user_orgao_role_map,
     get_user_orgao_subtree_ids,
+    project_access_verdict,
     require_project_rank,
     user_can_access_project,
     user_can_edit_project,
@@ -517,6 +521,117 @@ def test_user_can_view_project_equivale_ao_acesso_de_hoje(app, orgao_arvore):
             )
 
 
+# ── project_access_verdict (decisão ÚNICA 404-vs-403, S5/F4-2) ────────────────
+
+
+@pytest.mark.parametrize("minimo", [PAPEL_LEITOR, PAPEL_EDITOR, PAPEL_GESTOR])
+def test_verdict_de_rank_zero_e_not_found_em_qualquer_limiar(app, orgao_arvore, minimo):
+    """Rank 0 nunca vira ``forbidden`` — é indistinguível de projeto inexistente."""
+    with app.app_context():
+        sem_vinculo = FakeUser()
+        projeto = FakeProject(orgao_arvore["sec"])
+        assert project_access_verdict(sem_vinculo, projeto, minimo) == ACCESS_NOT_FOUND
+
+
+def test_verdict_de_projeto_none_e_not_found(app, orgao_arvore):
+    with app.app_context():
+        gestor = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_GESTOR),))
+        assert project_access_verdict(gestor, None, PAPEL_LEITOR) == ACCESS_NOT_FOUND
+
+
+def test_verdict_de_projeto_inexistente_e_de_invisivel_sao_iguais(app, orgao_arvore):
+    """Base do anti-enumeração (F4-2b): os dois casos produzem o MESMO veredito."""
+    with app.app_context():
+        sem_vinculo = FakeUser()
+        invisivel = project_access_verdict(
+            sem_vinculo, FakeProject(orgao_arvore["outra"]), PAPEL_LEITOR
+        )
+        inexistente = project_access_verdict(sem_vinculo, None, PAPEL_LEITOR)
+        assert invisivel == inexistente == ACCESS_NOT_FOUND
+
+
+def test_verdict_de_user_none_e_not_found(app, orgao_arvore):
+    with app.app_context():
+        projeto = FakeProject(orgao_arvore["sec"])
+        assert project_access_verdict(None, projeto, PAPEL_LEITOR) == ACCESS_NOT_FOUND
+
+
+@pytest.mark.parametrize(
+    "papel, minimo",
+    [
+        (PAPEL_LEITOR, PAPEL_EDITOR),
+        (PAPEL_LEITOR, PAPEL_GESTOR),
+        (PAPEL_EDITOR, PAPEL_GESTOR),
+    ],
+)
+def test_verdict_de_rank_insuficiente_acima_de_zero_e_forbidden(
+    app, orgao_arvore, papel, minimo
+):
+    """Rank 10/20 abaixo do exigido: o usuário VÊ o projeto, logo 403."""
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], papel),))
+        projeto = FakeProject(orgao_arvore["sup"])
+        assert project_access_verdict(user, projeto, minimo) == ACCESS_FORBIDDEN
+
+
+@pytest.mark.parametrize(
+    "papel, minimo",
+    [
+        (PAPEL_LEITOR, PAPEL_LEITOR),
+        (PAPEL_EDITOR, PAPEL_LEITOR),
+        (PAPEL_EDITOR, PAPEL_EDITOR),
+        (PAPEL_GESTOR, PAPEL_GESTOR),
+    ],
+)
+def test_verdict_de_rank_suficiente_e_ok(app, orgao_arvore, papel, minimo):
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], papel),))
+        projeto = FakeProject(orgao_arvore["sup"])
+        assert project_access_verdict(user, projeto, minimo) == ACCESS_OK
+
+
+def test_verdict_de_admin_nunca_e_not_found_por_autorizacao(app, orgao_arvore):
+    """Admin só toma ``not_found`` quando o projeto realmente não existe."""
+    with app.app_context():
+        admin = FakeUser(is_admin=True)
+        for orgao_id in (orgao_arvore["outra"], orgao_arvore["morto_filho"], None):
+            for minimo in (PAPEL_LEITOR, PAPEL_EDITOR, PAPEL_GESTOR):
+                verdict = project_access_verdict(admin, FakeProject(orgao_id), minimo)
+                assert verdict == ACCESS_OK
+        assert project_access_verdict(admin, None, PAPEL_LEITOR) == ACCESS_NOT_FOUND
+
+
+def test_verdict_com_convite_leitor_troca_not_found_por_forbidden(app, orgao_arvore):
+    """Convite (F3-7) tira o usuário do rank 0: a negativa de escrita vira 403.
+
+    O convite é gravado ANTES de qualquer leitura porque
+    ``get_active_membership_map`` cacheia por usuário no ``g`` do contexto.
+    """
+    with app.app_context():
+        projeto = FakeProject(orgao_arvore["outra"], project_id=903)
+        _convida(903, 60, PAPEL_LEITOR)
+        convidado = FakeUser(user_id=60)
+        sem_convite = FakeUser(user_id=61)
+
+        assert project_access_verdict(convidado, projeto, PAPEL_LEITOR) == ACCESS_OK
+        assert (
+            project_access_verdict(convidado, projeto, PAPEL_EDITOR) == ACCESS_FORBIDDEN
+        )
+        assert (
+            project_access_verdict(sem_convite, projeto, PAPEL_LEITOR)
+            == ACCESS_NOT_FOUND
+        )
+
+
+def test_verdict_rejeita_papel_fora_da_taxonomia(app, orgao_arvore):
+    """A validação do limiar só é alcançada por quem já vê o projeto."""
+    with app.app_context():
+        user = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_LEITOR),))
+        with pytest.raises(ValueError) as exc:
+            project_access_verdict(user, FakeProject(orgao_arvore["sec"]), "dono")
+        assert "dono" in str(exc.value)
+
+
 # ── require_project_rank (gate HTTP no corpo do endpoint) ─────────────────────
 
 
@@ -548,14 +663,46 @@ def test_require_project_rank_nos_tres_limiares(
             assert (denied is None) is libera
 
 
-def test_require_project_rank_nega_com_403_forbidden(app, orgao_arvore):
-    """Contrato desta fase: rank 0 continua 403 (a unificação 404 é S5)."""
+def test_require_project_rank_nega_rank_zero_com_404_not_found(app, orgao_arvore):
+    """Contrato S5: rank 0 sai em 404 — mesmo envelope do projeto inexistente."""
     with app.app_context():
         sem_vinculo = FakeUser()
-        denied = require_project_rank(
+        invisivel = require_project_rank(
             FakeProject(orgao_arvore["sec"]), PAPEL_LEITOR, user=sem_vinculo
         )
+        inexistente = require_project_rank(None, PAPEL_LEITOR, user=sem_vinculo)
+
+        assert _envelope(invisivel) == (404, "not_found")
+        assert invisivel[0].get_json() == inexistente[0].get_json()
+
+
+def test_require_project_rank_nega_rank_insuficiente_com_403_forbidden(
+    app, orgao_arvore
+):
+    """403 fica só para quem já vê o projeto: leitor tentando ação de gestor."""
+    with app.app_context():
+        leitor = FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_LEITOR),))
+        denied = require_project_rank(
+            FakeProject(orgao_arvore["sup"]), PAPEL_GESTOR, user=leitor
+        )
         assert _envelope(denied) == (403, "forbidden")
+
+
+def test_require_project_rank_ignora_message_no_404(app, orgao_arvore):
+    """A mensagem do endpoint só vale no 403; o 404 não é customizável (F4-2b)."""
+    with app.app_context():
+        # Import local: o modulo de envelope puxa routes.api de volta.
+        from routes.api.envelope import NOT_FOUND_MESSAGE
+
+        denied = require_project_rank(
+            FakeProject(orgao_arvore["sec"]),
+            PAPEL_GESTOR,
+            user=FakeUser(),
+            message="Você não tem permissão para excluir este projeto.",
+        )
+        response, status = denied
+        assert status == 404
+        assert response.get_json()["error"]["message"] == NOT_FOUND_MESSAGE
 
 
 def test_require_project_rank_usa_mensagem_do_endpoint(app, orgao_arvore):
@@ -595,10 +742,13 @@ def test_require_project_rank_libera_admin_em_qualquer_projeto(app, orgao_arvore
 
 
 def test_require_project_rank_rejeita_papel_fora_da_taxonomia(app, orgao_arvore):
+    """Usuário com rank > 0: sem isso o veredito sai em 404 antes da validação."""
     with app.app_context():
         with pytest.raises(ValueError) as exc:
             require_project_rank(
-                FakeProject(orgao_arvore["sec"]), "dono", user=FakeUser(is_admin=False)
+                FakeProject(orgao_arvore["sec"]),
+                "dono",
+                user=FakeUser(vinculos=((orgao_arvore["sec"], PAPEL_LEITOR),)),
             )
         assert "dono" in str(exc.value)
 

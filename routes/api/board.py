@@ -50,9 +50,10 @@ from ..tasks.permissions import (
     _audit_denied_task_action,
     _can_edit_task,
     _can_transition_task_to_status,
+    api_task_denial,
 )
 from ..tasks.queries import _build_visible_tasks_query, _read_task_filter_values
-from .envelope import fail, ok
+from .envelope import fail, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import serialize_task_card
 
@@ -130,7 +131,7 @@ def _group_tasks_into_columns(tasks: list[Any]) -> list[dict[str, Any]]:
 
 
 def _load_task_for_mutation(task_id: int) -> tuple[Task | None, Any]:
-    """Carrega a tarefa validando existência (404) e rank de escrita (403).
+    """Carrega a tarefa aplicando o contrato S5 (404 invisível, 403 rank baixo).
 
     Espelha o guard das rotas Jinja de mutação de tarefa (``_can_edit_task``,
     rank >= editor; tarefa avulsa segue restrita ao criador/admin), porém
@@ -140,18 +141,13 @@ def _load_task_for_mutation(task_id: int) -> tuple[Task | None, Any]:
         task_id: ID da tarefa.
 
     Returns:
-        ``(task, None)`` quando autorizado; ``(None, fail_response)`` com 404/403
-        canônico caso contrário.
+        ``(task, None)`` quando autorizado; ``(None, fail_response)`` com 404
+        (inexistente/invisível, mesmo corpo) ou 403 (vê a tarefa, rank < editor).
     """
     task = db.session.get(Task, task_id)
-    if task is None:
-        return None, fail("Tarefa não encontrada.", status=404, code="not_found")
-    if not _can_edit_task(g.user, task):
-        return None, fail(
-            "Você não tem permissão para acessar esta tarefa.",
-            status=403,
-            code="forbidden",
-        )
+    denied = api_task_denial(task, for_write=True)
+    if denied is not None:
+        return None, denied
     return task, None
 
 
@@ -394,12 +390,9 @@ def _apply_moved_task_transition(
     )
     if target_status is None:
         return None
-    if not _can_edit_task(g.user, task):
-        return fail(
-            "Você não tem permissão para acessar esta tarefa.",
-            status=403,
-            code="forbidden",
-        )
+    denied = api_task_denial(task, for_write=True)
+    if denied is not None:
+        return denied
     return _apply_status_transition(task, target_status)
 
 
@@ -457,11 +450,7 @@ def _collect_reorder_tasks(
     tasks_by_id = {task.id: task for task in visible}
     missing = requested_ids - set(tasks_by_id)
     if missing:
-        return None, fail(
-            "Tarefa não encontrada ou fora do escopo.",
-            status=404,
-            code="not_found",
-        )
+        return None, fail_not_found()
     return tasks_by_id, None
 
 

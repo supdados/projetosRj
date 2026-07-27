@@ -20,13 +20,16 @@ from services.project_meetings import (
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
-from routes.shared import get_or_404, log_project_action
+from routes.shared import log_project_action
 from routes.etapas.helpers import (
     _connection_for_current_user,
-    _current_user_can_edit_project,
     _is_ajax_request,
+    _legacy_not_found,
+    _load_etapa_for_write,
+    _load_project_for_etapa_write,
     _serialize_etapa_payload,
 )
+from services.authorization import ACCESS_FORBIDDEN, ACCESS_NOT_FOUND
 
 MAX_CASCADE_BUSINESS_DAYS = 365
 
@@ -35,8 +38,10 @@ MAX_CASCADE_BUSINESS_DAYS = 365
 @login_required
 def add_etapa(project_id):
     ajax_request = _is_ajax_request()
-    project = get_or_404(Project, project_id)
-    if not _current_user_can_edit_project(project):
+    project, verdict = _load_project_for_etapa_write(project_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
+    if verdict == ACCESS_FORBIDDEN:
         if ajax_request:
             return (
                 jsonify(
@@ -175,11 +180,13 @@ def add_etapa(project_id):
 @login_required
 def delete_etapa(etapa_id):
     ajax_request = _is_ajax_request()
-    etapa_to_delete = get_or_404(Etapa, etapa_id)
+    etapa_to_delete, verdict = _load_etapa_for_write(etapa_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
     project_of_etapa = etapa_to_delete.project
     project_id_for_redirect = etapa_to_delete.project_id
 
-    if not _current_user_can_edit_project(project_of_etapa):
+    if verdict == ACCESS_FORBIDDEN:
         message = "Você não tem permissão para excluir etapas deste projeto."
         if ajax_request:
             return (
@@ -310,8 +317,10 @@ def delete_etapa(etapa_id):
 @main_bp.route("/project/<int:project_id>/etapas/reordenar", methods=["POST"])
 @login_required
 def reorder_etapas(project_id):
-    project = get_or_404(Project, project_id)
-    if not _current_user_can_edit_project(project):
+    project, verdict = _load_project_for_etapa_write(project_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
+    if verdict == ACCESS_FORBIDDEN:
         return (
             jsonify(
                 {
@@ -352,9 +361,10 @@ def reorder_etapas(project_id):
 @main_bp.route("/etapa/<int:etapa_id>/toggle_iniciada", methods=["POST"])
 @login_required
 def toggle_iniciada_etapa(etapa_id):
-    etapa = get_or_404(Etapa, etapa_id)
-    project_of_etapa = etapa.project
-    if not _current_user_can_edit_project(project_of_etapa):
+    etapa, verdict = _load_etapa_for_write(etapa_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
+    if verdict == ACCESS_FORBIDDEN:
         return (
             jsonify(
                 {
@@ -405,9 +415,10 @@ def toggle_iniciada_etapa(etapa_id):
 @main_bp.route("/etapa/<int:etapa_id>/toggle", methods=["POST"])
 @login_required
 def toggle_etapa(etapa_id):
-    etapa = get_or_404(Etapa, etapa_id)
-    project_of_etapa = etapa.project
-    if not _current_user_can_edit_project(project_of_etapa):
+    etapa, verdict = _load_etapa_for_write(etapa_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
+    if verdict == ACCESS_FORBIDDEN:
         return (
             jsonify(
                 {
@@ -479,10 +490,10 @@ def toggle_etapa(etapa_id):
 @main_bp.route("/etapa/<int:etapa_id>/update_field", methods=["POST"])
 @login_required
 def update_etapa_field(etapa_id):
-    etapa = get_or_404(Etapa, etapa_id)
-    project_of_etapa = etapa.project
-
-    if not _current_user_can_edit_project(project_of_etapa):
+    etapa, verdict = _load_etapa_for_write(etapa_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
+    if verdict == ACCESS_FORBIDDEN:
         return jsonify({"success": False, "message": "Permissão negada."}), 403
 
     data = request.get_json()
@@ -579,10 +590,10 @@ def update_etapa_field(etapa_id):
 @main_bp.route("/etapa/<int:etapa_id>/comentario", methods=["POST"])
 @login_required
 def update_etapa_comentario(etapa_id):
-    etapa = get_or_404(Etapa, etapa_id)
-    project_of_etapa = etapa.project
-
-    if not _current_user_can_edit_project(project_of_etapa):
+    etapa, verdict = _load_etapa_for_write(etapa_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
+    if verdict == ACCESS_FORBIDDEN:
         return jsonify({"success": False, "message": "Permissão negada."}), 403
     if is_google_meeting_stage(etapa):
         return (
@@ -620,8 +631,10 @@ def update_etapa_comentario(etapa_id):
 @main_bp.route("/project/<int:project_id>/cascade_update", methods=["POST"])
 @login_required
 def cascade_date_update(project_id):
-    project = get_or_404(Project, project_id)
-    if not _current_user_can_edit_project(project):
+    _project, verdict = _load_project_for_etapa_write(project_id)
+    if verdict == ACCESS_NOT_FOUND:
+        return _legacy_not_found()
+    if verdict == ACCESS_FORBIDDEN:
         return jsonify({"success": False, "message": "Permissão negada."}), 403
 
     data = request.get_json() or {}
@@ -655,10 +668,7 @@ def cascade_date_update(project_id):
     try:
         base_etapa = db.session.get(Etapa, base_etapa_id)
         if not base_etapa or base_etapa.project_id != project_id:
-            return (
-                jsonify({"success": False, "message": "Etapa base não encontrada."}),
-                404,
-            )
+            return _legacy_not_found()
         if is_google_meeting_stage(base_etapa):
             return (
                 jsonify(

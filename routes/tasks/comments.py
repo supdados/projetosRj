@@ -13,30 +13,31 @@ from routes.decorators import login_required
 from routes.shared import format_local_time
 
 from routes.tasks.helpers import (
-    _can_view_task,
     _preview_text,
+    legacy_not_found,
+    task_access_verdict,
 )
+from services.authorization import ACCESS_OK
 
 
 @main_bp.route("/tarefas/<int:task_id>/comentarios/add", methods=["POST"])
 @login_required
 def add_task_comment(task_id):
-    task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
+    # Import local: `routes.api.envelope` executa `routes/api/__init__`, que
+    # importa este pacote de volta.
+    from routes.api.envelope import NOT_FOUND_MESSAGE
 
+    task = db.session.get(Task, task_id)
     is_ajax = (
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
         or request.accept_mimetypes.best == "application/json"
     )
 
-    if not _can_view_task(g.user, task):
+    # Tarefa inexistente e tarefa invisível respondem o MESMO 404 (F4-2b).
+    if task_access_verdict(g.user, task) != ACCESS_OK:
         if is_ajax:
-            return (
-                jsonify({"success": False, "message": "Sem permissão para comentar."}),
-                403,
-            )
-        flash("Você não tem permissão para comentar nesta tarefa.", "danger")
+            return legacy_not_found()
+        flash(NOT_FOUND_MESSAGE, "warning")
         return redirect(url_for("main.list_tasks"))
 
     content = request.form.get("content", "").strip()
@@ -106,7 +107,7 @@ def add_task_comment(task_id):
 def edit_task_item_comment(comment_id):
     comment = db.session.get(TaskComment, comment_id)
     if not comment:
-        return jsonify({"success": False, "message": "Comentário não encontrado."}), 404
+        return legacy_not_found()
 
     is_ajax = (
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -114,6 +115,9 @@ def edit_task_item_comment(comment_id):
     )
 
     if comment.user_id != g.user.id:
+        # Quem nao ve a tarefa nem sabe que o comentario existe (F4-2b).
+        if task_access_verdict(g.user, comment.task) != ACCESS_OK:
+            return legacy_not_found()
         if is_ajax:
             return (
                 jsonify(
@@ -198,16 +202,7 @@ def edit_task_item_comment(comment_id):
 def delete_task_item_comment(comment_id):
     comment = db.session.get(TaskComment, comment_id)
     if not comment:
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Comentário não encontrado.",
-                    "comment_id": comment_id,
-                }
-            ),
-            404,
-        )
+        return legacy_not_found()
 
     is_ajax = (
         request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -215,6 +210,9 @@ def delete_task_item_comment(comment_id):
     )
 
     if comment.user_id != g.user.id:
+        # Quem nao ve a tarefa nem sabe que o comentario existe (F4-2b).
+        if task_access_verdict(g.user, comment.task) != ACCESS_OK:
+            return legacy_not_found()
         message = "Você só pode excluir seus próprios comentários."
         if is_ajax:
             return (

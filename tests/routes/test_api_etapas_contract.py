@@ -2,7 +2,7 @@
 
 Cobrem o envelope canônico, a cascata de datas SEMPRE server-side (reordenar e
 editar data disparam ``cascade_subsequent_dates``; o endpoint devolve o estado
-atualizado) e o escopo de órgão (403 fora de escopo).
+atualizado) e o escopo de órgão (404 anti-enumeração fora de escopo, S5/F4-2).
 """
 
 import datetime
@@ -237,28 +237,38 @@ def test_importar_modelo_creates_stages(app, client_user, seed_data):
     assert isinstance(data["etapas"], list)
 
 
-# ── Escopo de órgão (403) ─────────────────────────────────────────────────────
+# ── Escopo de órgão (404 anti-enumeração, S5/F4-2) ────────────────────────────
 
 
-def test_update_field_forbidden_out_of_scope(app, client_user, seed_data):
-    # foreign_etapa pertence ao projeto VPD, fora do escopo do usuário Auditoria.
-    response = client_user.post(
+def test_update_field_out_of_scope_is_404(app, client_user, seed_data):
+    # foreign_etapa pertence ao projeto VPD, fora do escopo do usuário Auditoria:
+    # o corpo tem de ser o mesmo de um id que nunca existiu (F4-2b).
+    fora_do_escopo = client_user.post(
         f"/api/etapas/{seed_data['foreign_etapa_id']}/update-field",
         json={"field": "descricao", "value": "hack"},
     )
+    inexistente = client_user.post(
+        "/api/etapas/999999/update-field",
+        json={"field": "descricao", "value": "hack"},
+    )
 
-    assert response.status_code == 403
-    assert _error(response)["code"] == "forbidden"
+    assert fora_do_escopo.status_code == 404
+    assert _error(fora_do_escopo)["code"] == "not_found"
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
-def test_add_etapa_forbidden_out_of_scope(app, client_user, seed_data):
-    response = client_user.post(
+def test_add_etapa_out_of_scope_is_404(app, client_user, seed_data):
+    fora_do_escopo = client_user.post(
         f"/api/projetos/{seed_data['foreign_project_id']}/etapas",
         json={"descricao": "hack"},
     )
+    inexistente = client_user.post(
+        "/api/projetos/999999/etapas", json={"descricao": "hack"}
+    )
 
-    assert response.status_code == 403
-    assert _error(response)["code"] == "forbidden"
+    assert fora_do_escopo.status_code == 404
+    assert _error(fora_do_escopo)["code"] == "not_found"
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 def test_etapa_not_found_returns_404(app, client_user, seed_data):

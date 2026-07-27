@@ -29,7 +29,7 @@ from flask import Response, request
 from werkzeug.exceptions import HTTPException, MethodNotAllowed, NotFound
 
 from ..blueprint import main_bp
-from .envelope import fail
+from .envelope import fail, fail_not_found
 
 
 def _is_api_request() -> bool:
@@ -62,7 +62,9 @@ def api_not_found(error: NotFound) -> Response | tuple[Response, int] | NotFound
     """
     if not _is_api_request():
         return error
-    return fail("Recurso não encontrado.", status=404, code="not_found")
+    # fail_not_found: o 404 do roteador e o 404 de autorização (S5) devem ser
+    # byte a byte idênticos — anti-enumeração.
+    return fail_not_found()
 
 
 @main_bp.app_errorhandler(MethodNotAllowed)

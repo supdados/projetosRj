@@ -205,8 +205,8 @@ def test_leitor_da_area_dona_nao_move_projeto(app, seed_data):
 def test_rank_zero_no_projeto_nao_captura_projeto_para_a_propria_area(app, seed_data):
     """Variante 2 da escalação (condição (b)): editor no DESTINO não basta.
 
-    Exercitado na função porque a rota nem chega lá — rank 0 no projeto já é 403
-    de acesso. Reproduz o convidado-editor que S4 vai introduzir.
+    Exercitado na função porque a rota nem chega lá — rank 0 no projeto para no
+    404 anti-enumeração (S5/F4-2). Reproduz o convidado-editor da S4.
     """
     project_id = seed_data["project_id"]
     with app.test_request_context():

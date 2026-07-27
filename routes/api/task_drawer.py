@@ -55,9 +55,8 @@ from ..tasks.queries import serialize_assignee, set_task_assignees
 from ..tasks.permissions import (
     FINALIZE_DENIED_MESSAGE,
     _audit_denied_task_action,
-    _can_edit_task,
     _can_manage_task_restricted_actions,
-    _can_view_task,
+    api_task_denial,
     task_permission_flags,
 )
 from .envelope import fail, ok
@@ -94,7 +93,7 @@ def _anexo_download_url(anexo: Any) -> str:
 def _load_drawer_task(
     task_id: int, *, for_write: bool = False
 ) -> tuple[Task | None, Any]:
-    """Carrega a tarefa validando existência (404) e rank no projeto (403).
+    """Carrega a tarefa aplicando o contrato S5 (404 invisível, 403 rank baixo).
 
     ``for_write=True`` exige rank >= editor (``_can_edit_task``, MESMA regra das
     rotas legadas de mutação); o padrão exige rank >= leitor. Tarefa avulsa
@@ -105,20 +104,13 @@ def _load_drawer_task(
         for_write: Se a chamada antecede uma escrita na tarefa.
 
     Returns:
-        ``(task, None)`` quando autorizado; ``(None, fail_response)`` (404/403).
+        ``(task, None)`` quando autorizado; ``(None, fail_response)`` com 404
+        (inexistente/invisível, mesmo corpo) ou 403 (vê a tarefa, rank < editor).
     """
     task = db.session.get(Task, task_id)
-    if task is None:
-        return None, fail("Tarefa não encontrada.", status=404, code="not_found")
-    permitted = (
-        _can_edit_task(g.user, task) if for_write else _can_view_task(g.user, task)
-    )
-    if not permitted:
-        return None, fail(
-            "Você não tem permissão para acessar esta tarefa.",
-            status=403,
-            code="forbidden",
-        )
+    denied = api_task_denial(task, for_write=for_write)
+    if denied is not None:
+        return None, denied
     return task, None
 
 

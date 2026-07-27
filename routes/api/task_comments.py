@@ -29,8 +29,8 @@ from time_utils import utc_now
 
 from ..blueprint import main_bp
 from ..tasks.constants import _preview_text
-from ..tasks.permissions import _can_view_task
-from .envelope import fail, ok
+from ..tasks.permissions import api_task_denial
+from .envelope import fail, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import _serialize_task_comment
 
@@ -55,26 +55,22 @@ def _serialize_comment_list(task: Task) -> list[dict[str, Any]]:
 
 
 def _load_commentable_task(task_id: int) -> tuple[Task | None, Any]:
-    """Carrega a tarefa validando existência (404) e escopo de visão (403).
+    """Carrega a tarefa validando existência e escopo de visão (contrato S5).
 
     Reusa ``_can_view_task`` (MESMA regra de ``add_task_comment`` legada): quem
-    enxerga a tarefa pode comentar. Devolve o envelope canônico.
+    enxerga a tarefa pode comentar. Tarefa inexistente e tarefa invisível
+    respondem o MESMO 404 (anti-enumeração F4-2b).
 
     Args:
         task_id: ID da tarefa.
 
     Returns:
-        ``(task, None)`` quando autorizado; ``(None, fail_response)`` (404/403).
+        ``(task, None)`` quando autorizado; ``(None, fail_response)`` (404).
     """
     task = db.session.get(Task, task_id)
-    if task is None:
-        return None, fail("Tarefa não encontrada.", status=404, code="not_found")
-    if not _can_view_task(g.user, task):
-        return None, fail(
-            "Você não tem permissão para acessar esta tarefa.",
-            status=403,
-            code="forbidden",
-        )
+    denied = api_task_denial(task)
+    if denied is not None:
+        return None, denied
     return task, None
 
 
@@ -82,7 +78,10 @@ def _load_own_comment(comment_id: int) -> tuple[TaskComment | None, Any]:
     """Carrega um comentário exigindo autoria (404/403).
 
     Reusa a regra legada (``edit_task_item_comment``/``delete_task_item_comment``):
-    só o próprio autor pode editar/excluir.
+    só o próprio autor pode editar/excluir — o autor passa mesmo sem enxergar a
+    tarefa hoje (enforcement inalterado na S5). Quem não é autor e não vê a
+    tarefa recebe o MESMO 404 do comentário inexistente (F4-2b); quem vê a
+    tarefa recebe 403.
 
     Args:
         comment_id: ID do comentário.
@@ -92,9 +91,10 @@ def _load_own_comment(comment_id: int) -> tuple[TaskComment | None, Any]:
     """
     comment = db.session.get(TaskComment, comment_id)
     if comment is None:
-        return None, fail("Comentário não encontrado.", status=404, code="not_found")
+        return None, fail_not_found()
     if comment.user_id != g.user.id:
-        return None, fail(
+        invisible = api_task_denial(comment.task)
+        return None, invisible or fail(
             "Você só pode editar seus próprios comentários.",
             status=403,
             code="forbidden",

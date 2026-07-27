@@ -19,12 +19,12 @@ import routes.tasks.helpers as _task_helpers
 from routes.tasks.helpers import (
     _allowed_attachment,
     _audit_denied_task_action,
-    _can_edit_task,
     _can_manage_task_restricted_actions,
-    _can_view_task,
     _extension_of,
     _file_content_matches_extension,
     _preview_text,
+    legacy_not_found,
+    legacy_task_denial,
 )
 
 
@@ -32,10 +32,9 @@ from routes.tasks.helpers import (
 @login_required
 def list_task_anexos(task_id):
     task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
-    if not _can_view_task(g.user, task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+    denied = legacy_task_denial(task)
+    if denied is not None:
+        return denied
 
     return jsonify(
         {
@@ -61,11 +60,10 @@ def list_task_anexos(task_id):
 @login_required
 def add_task_anexo(task_id):
     task = db.session.get(Task, task_id)
-    if not task:
-        return jsonify({"success": False, "message": "Tarefa não encontrada"}), 404
     # Anexar é escrita: rank >= editor (S3/F2-5), como as demais mutações de tarefa.
-    if not _can_edit_task(g.user, task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+    denied = legacy_task_denial(task, for_write=True)
+    if denied is not None:
+        return denied
 
     if "file" not in request.files:
         return jsonify({"success": False, "message": "Nenhum arquivo enviado."}), 400
@@ -163,10 +161,12 @@ def add_task_anexo(task_id):
 @login_required
 def view_task_item_anexo(anexo_id):
     anexo = db.session.get(TaskAnexo, anexo_id)
+    # Anexo inexistente e anexo de tarefa invisível respondem o MESMO 404 (F4-2b).
     if not anexo:
-        return jsonify({"success": False, "message": "Anexo não encontrado."}), 404
-    if not _can_view_task(g.user, anexo.task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+        return legacy_not_found()
+    denied = legacy_task_denial(anexo.task)
+    if denied is not None:
+        return denied
 
     upload_folder = _task_helpers._get_upload_folder()
     file_path = os.path.join(upload_folder, anexo.stored_filename)
@@ -181,11 +181,12 @@ def view_task_item_anexo(anexo_id):
 def delete_task_item_anexo(anexo_id):
     anexo = db.session.get(TaskAnexo, anexo_id)
     if not anexo:
-        return jsonify({"success": False, "message": "Anexo não encontrado."}), 404
+        return legacy_not_found()
 
     task = anexo.task
-    if not _can_view_task(g.user, task):
-        return jsonify({"success": False, "message": "Sem permissão"}), 403
+    denied = legacy_task_denial(task)
+    if denied is not None:
+        return denied
     # Paridade com api_anexo_delete: excluir anexo é ação restrita (autor/admin).
     if not _can_manage_task_restricted_actions(g.user, task):
         _audit_denied_task_action(task, "forbidden_edit_restricted")

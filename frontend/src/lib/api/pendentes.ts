@@ -41,7 +41,8 @@ function buildQuery(filters: PendingFilters): string {
  * Busca a listagem de "Projetos Pendentes" do usuário autenticado.
  *
  * Um filtro de órgão fora do escopo do usuário faz o backend devolver
- * `fail(422,'validation')`, que `client.ts` converte em `ApiClientError`.
+ * `fail(422,'validation')`, que `client.ts` converte em `ApiClientError`. Não há
+ * 403/404 de autorização: projeto fora do rank não entra na listagem.
  */
 export async function fetchPendentes(
 	filters: PendingFilters = {},

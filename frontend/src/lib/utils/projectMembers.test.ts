@@ -6,6 +6,7 @@
  * tradução do contrato anti-enumeração (404/403) das rotas novas.
  */
 import { describe, it, expect } from 'vitest';
+import { MSG_PROJETO_INACESSIVEL } from './accessErrorMessages';
 import {
 	CONVITE_EXPIRACAO_DIAS,
 	CONVITE_PAPEL_OPTIONS,
@@ -76,7 +77,7 @@ describe('isAcessoPorConvite (badge "Convidado")', () => {
 
 describe('conviteErrorMessage', () => {
 	it('separa 404 (não vê o projeto OU flag off) de 403 (vê mas não gerencia)', () => {
-		expect(conviteErrorMessage(404, 'not_found')).toBe('Projeto não encontrado.');
+		expect(conviteErrorMessage(404, 'not_found')).toBe(MSG_PROJETO_INACESSIVEL);
 		expect(conviteErrorMessage(403, 'forbidden')).toBe(
 			'Você não pode gerenciar os membros deste projeto.'
 		);

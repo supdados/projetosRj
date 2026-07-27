@@ -8,9 +8,8 @@ protegidos por ``api_login_required`` (401 JSON):
       server-side (``orgao_scope``); filtro de órgão inválido => 422.
     - ``GET /api/projetos/<id>/historico`` — sucessor da extinta rota Jinja
       ``/project/<id>/history``, reaproveitando ``build_project_history_context``
-      e validando o acesso via
-      ``user_can_access_project`` (404 quando o projeto não existe; 403 quando
-      fora do escopo do usuário).
+      e validando o acesso via ``require_project_rank`` (404 idêntico para
+      projeto inexistente e para projeto fora do escopo do usuário).
 
 Anexa ao ``main_bp`` ÚNICO (``routes/blueprint.py``); NÃO cria blueprint novo.
 """
@@ -19,20 +18,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Response, g, request
+from flask import Response, request
 from werkzeug.exceptions import NotFound
 
+from services.authorization import PAPEL_LEITOR, require_project_rank
+
 from ..blueprint import main_bp
-from ..orgao_scope import (
-    sanitize_orgao_filter_for_current_user,
-    user_can_access_project,
-)
+from ..orgao_scope import sanitize_orgao_filter_for_current_user
 from ..projects.views import (
     build_project_history_context,
     build_projects_list_context,
     build_projetos_pendentes_context,
 )
-from .envelope import fail, ok
+from .envelope import fail, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import (
     serialize_orgao_option,
@@ -278,28 +276,25 @@ def api_projeto_historico(project_id: int) -> Response | tuple[Response, int]:
     """Retorna o histórico de um projeto no envelope canônico para a SPA.
 
     Reaproveita ``build_project_history_context`` e valida o acesso via
-    ``user_can_access_project`` (escopo de órgão server-side). Diferente da rota
-    Jinja (flash + redirect), devolve erros estruturados: 404 quando o projeto
-    não existe e 403 quando está fora do escopo do usuário.
+    ``require_project_rank`` no rank ``leitor``. Diferente da rota Jinja (flash +
+    redirect), devolve erro estruturado: 404 idêntico para projeto inexistente e
+    para projeto invisível ao usuário (S5/F4-2b).
 
     Args:
         project_id: ID do projeto cujo histórico será carregado.
 
     Returns:
         Envelope ``{"ok": true, "data": {...}}`` com HTTP 200; ou
-        ``fail(..., 404, "not_found")`` / ``fail(..., 403, "forbidden")``.
-        ``api_login_required`` devolve 401 JSON quando não há sessão.
+        ``fail_not_found()``. ``api_login_required`` devolve 401 JSON quando não
+        há sessão.
     """
     try:
         context = build_project_history_context(project_id)
     except NotFound:
-        return fail("Projeto não encontrado.", status=404, code="not_found")
+        return fail_not_found()
 
-    if not user_can_access_project(g.user, context["project"]):
-        return fail(
-            "Você não tem permissão para visualizar este projeto.",
-            status=403,
-            code="forbidden",
-        )
+    denied = require_project_rank(context["project"], PAPEL_LEITOR)
+    if denied:
+        return denied
 
     return ok(_serialize_history_context(context))

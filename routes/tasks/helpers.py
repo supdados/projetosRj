@@ -21,6 +21,7 @@ from routes.tasks.constants import (  # noqa: F401
 )
 from routes.tasks.permissions import (  # noqa: F401
     FINALIZE_DENIED_MESSAGE,
+    TASK_FORBIDDEN_MESSAGE,
     _audit_denied_task_action,
     _can_access_project_in_tasks,
     _can_edit_project_in_tasks,
@@ -29,6 +30,10 @@ from routes.tasks.permissions import (  # noqa: F401
     _can_transition_task_to_status,
     _can_view_task,
     _task_permission_flags,
+    api_task_denial,
+    legacy_not_found,
+    legacy_task_denial,
+    task_access_verdict,
     task_permission_flags,
 )
 from routes.tasks.queries import (  # noqa: F401

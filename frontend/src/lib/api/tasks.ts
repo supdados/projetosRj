@@ -77,8 +77,10 @@ export async function fetchTarefas(
  * `POST /api/tarefas` — body `{project, etapa, descricao, status, responsavel,
  * prioridade, tipo_pedido}` (`project_id`/`etapa_id` aceitos como alias). Devolve
  * `{task}` com o card serializado (mesma base do board) + extras de contexto.
- * 422 (sem descrição/ responsável inválido), 403/404 (projeto/etapa fora de
- * escopo). FRONT: inserir card otimista SEM toast/som/confete (paridade).
+ * 422 (sem descrição/responsável inválido); **404** quando o projeto/etapa não
+ * existe OU o usuário não tem acesso (indistinguíveis — "não existe ou você não
+ * tem acesso"); **403** quando ele vê o projeto mas é só leitor.
+ * FRONT: inserir card otimista SEM toast/som/confete (paridade).
  */
 export function createTarefa(
 	input: CreateTarefaInput,
@@ -90,7 +92,9 @@ export function createTarefa(
 /**
  * Exclui uma tarefa (card/drawer). `POST /api/tarefas/<id>/excluir`.
  *
- * Só autor/admin (403 `forbidden` com a mensagem do backend). Em sucesso devolve
+ * Só autor/admin: 403 `forbidden` com a mensagem do backend (quem vê a tarefa
+ * mas não pode excluí-la); 404 quando a tarefa não existe OU está fora do
+ * acesso do usuário. Em sucesso devolve
  * `{item_id, message}`. FRONT: remover card/row, recolher grupo vazio, fechar
  * drawer; SEM toast/som/confete.
  */
@@ -134,7 +138,8 @@ export function archiveFinalizadas(
  * Sugestões de responsável do hub (composer). `GET /api/tarefas/sugestoes-responsavel`.
  *
  * Aceita `?project=` OU `?orgao=`/`?area=` (sigla|id) e `?q=` (filtra por nome).
- * 400 (nenhum projeto/órgão), 403 (órgão fora do escopo), 404 (projeto).
+ * 400 (nenhum projeto/órgão), 403 (órgão fora do escopo), 404 (projeto
+ * inexistente OU sem acesso — indistinguíveis).
  */
 export function fetchHubResponsaveis(
 	params: { project?: string; orgao?: string; q?: string },
@@ -167,8 +172,9 @@ export function fetchTaskCandidates(
 
 /**
  * Define os responsáveis múltiplos de uma tarefa e notifica os adicionados.
- * `POST /api/tarefas/<id>/responsaveis` — body `{user_ids}`. 403 (não autor/admin),
- * 422 (payload inválido). Devolve `{task, detail}` com o card atualizado
+ * `POST /api/tarefas/<id>/responsaveis` — body `{user_ids}`. 403 (vê a tarefa mas
+ * não é autor/admin), 404 (não existe OU sem acesso), 422 (payload inválido).
+ * Devolve `{task, detail}` com o card atualizado
  * (`task.assignees` reflete a nova lista).
  */
 export function saveTaskAssignees(

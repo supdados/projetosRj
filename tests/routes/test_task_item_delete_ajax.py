@@ -22,12 +22,13 @@ def test_delete_task_item_ajax_returns_json_and_deletes_item(
         assert db.session.get(TaskItem, item_id) is None
 
 
-def test_delete_task_item_ajax_forbidden_for_outsider(app, client_outsider, seed_data):
+def test_delete_task_item_ajax_not_found_for_outsider(app, client_outsider, seed_data):
+    """S5/F4-2: rank 0 vira 404; ``item_id`` continua ecoando o id PEDIDO."""
     item_id = seed_data["task_item_id"]
 
     response = client_outsider.post(f"/tarefas/{item_id}/delete", headers=AJAX_HEADERS)
 
-    assert response.status_code == 403
+    assert response.status_code == 404
     payload = response.get_json()
     assert payload["success"] is False
     assert payload["item_id"] == item_id

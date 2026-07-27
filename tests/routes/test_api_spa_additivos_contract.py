@@ -2,8 +2,8 @@
 
 Cobrem os endpoints novos da fase atual e os campos novos de serializer:
 
-    - ``DELETE /api/projetos/<id>``        — exclusão REAL (sucesso + 403 fora do
-      escopo + 404 + 401).
+    - ``DELETE /api/projetos/<id>``        — exclusão REAL (sucesso + 404 fora do
+      escopo, idêntico ao inexistente (S5/F4-2) + 401).
     - ``GET    /api/notificacoes``         — lista visível + ``unread_count``.
     - ``POST   /api/notificacoes/marcar-lidas`` — marca lidas (envelope).
     - ``GET    /api/orgaos/escopo``        — árvore aninhada do escopo do usuário.
@@ -66,14 +66,17 @@ def test_delete_project_registra_historico(app, client_user, seed_data):
     assert response.status_code == 200
 
 
-def test_delete_project_returns_403_fora_do_escopo(app, client_user, seed_data):
+def test_delete_project_returns_404_fora_do_escopo(app, client_user, seed_data):
+    """S5/F4-2: projeto de outra área responde o 404 do id inexistente."""
     from models import Project, db
 
     foreign_id = seed_data["foreign_project_id"]
-    response = client_user.delete(f"/api/projetos/{foreign_id}")
+    fora_do_escopo = client_user.delete(f"/api/projetos/{foreign_id}")
+    inexistente = client_user.delete("/api/projetos/999999")
 
-    assert response.status_code == 403
-    _assert_fail_envelope(response.get_json(), code="forbidden")
+    assert fora_do_escopo.status_code == 404
+    _assert_fail_envelope(fora_do_escopo.get_json(), code="not_found")
+    assert fora_do_escopo.get_json() == inexistente.get_json()
     with app.app_context():
         assert db.session.get(Project, foreign_id) is not None  # NÃO foi apagado
 

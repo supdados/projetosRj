@@ -3,8 +3,8 @@
 Afirmam o shape ``{"ok": true, "data": ...}`` / ``{"ok": false, "error":
 {"code", "message"}}`` de ``/api/projetos-pendentes``,
 ``/api/projetos/<id>/historico`` e ``/api/busca``, o 401 JSON do guard
-``api_login_required`` quando não há sessão e, para o histórico, os 403/404
-estruturados (acesso fora do escopo / projeto inexistente).
+``api_login_required`` quando não há sessão e, para o histórico, o 404 canônico
+da S5 (projeto inexistente e projeto invisível respondem o MESMO envelope).
 
 Reutiliza as fixtures de ``tests/conftest.py`` (``client`` anônimo,
 ``client_user`` autenticado como ``user_auditoria``, ``client_outsider`` como
@@ -181,15 +181,17 @@ def test_api_projeto_historico_returns_404_envelope_for_missing_project(client_u
     _assert_fail_envelope(response.get_json(), code="not_found")
 
 
-def test_api_projeto_historico_returns_403_envelope_out_of_scope(
+def test_api_projeto_historico_returns_404_envelope_for_rank_zero(
     client_outsider, seed_data
 ):
-    """``user_vpd`` não acessa o projeto da Auditoria => 403 ``forbidden``."""
+    """``user_vpd`` tem rank 0 no projeto da Auditoria => 404 igual ao inexistente."""
     project_id = seed_data["project_id"]
-    response = client_outsider.get(f"/api/projetos/{project_id}/historico")
+    fora_do_escopo = client_outsider.get(f"/api/projetos/{project_id}/historico")
+    inexistente = client_outsider.get("/api/projetos/999999/historico")
 
-    assert response.status_code == 403
-    _assert_fail_envelope(response.get_json(), code="forbidden")
+    assert fora_do_escopo.status_code == 404
+    _assert_fail_envelope(fora_do_escopo.get_json(), code="not_found")
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 # ---------------------------------------------------------------------------

@@ -37,8 +37,10 @@ def complete_project(project, user) -> None:
         user: Usuário corrente (``g.user``).
 
     Raises:
-        ProjectCompletionError: rank < gestor (403/danger), status != Vigente
-            (400/warning) ou etapas incompletas (400/warning).
+        ProjectCompletionError: rank leitor/editor (403/danger), status !=
+            Vigente (400/warning) ou etapas incompletas (400/warning). Rank 0 é
+            filtrado ANTES pelo call site (404 anti-enumeração, S5/F4-2b) — este
+            service nunca decide 404 porque não conhece o envelope HTTP.
 
     Exemplo:
         >>> complete_project(project, g.user)

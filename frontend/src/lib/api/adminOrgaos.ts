@@ -7,6 +7,9 @@
  * do contrato (`{"configurado": ...}` / `{"status": "sucesso", ...}` /
  * `{"error": "..."}` em 409/502) — por isso usam fetch próprio tolerante a
  * envelope, e não `client.request`.
+ *
+ * Rotas admin (`api_admin_required`): ficam no contrato 403 `forbidden` — o 404
+ * anti-enumeração da S5 vale só para recurso de projeto (TR-1).
  */
 
 import { get } from './client';

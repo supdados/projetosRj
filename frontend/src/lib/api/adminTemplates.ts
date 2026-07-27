@@ -7,6 +7,8 @@
  * isso usa `getWithMeta`. As demais leituras/escritas reusam `get`/`post`.
  *
  * Backend: routes/api/admin_templates.py (envelope ok/fail, api_admin_required).
+ * Rota admin: fica no contrato 403 `forbidden` — o 404 anti-enumeração da S5
+ * vale só para recurso de projeto (TR-1).
  */
 
 import { get, getWithMeta, post, put, del } from './client';

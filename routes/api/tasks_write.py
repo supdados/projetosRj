@@ -44,7 +44,7 @@ from ..tasks.permissions import (
     _audit_denied_task_action,
     _can_edit_task,
     _can_manage_task_restricted_actions,
-    _can_view_task,
+    api_task_denial,
 )
 from ..tasks.queries import _build_visible_tasks_query, _read_task_filter_values
 from .envelope import fail, fail_internal, ok
@@ -60,23 +60,17 @@ DELETE_DENIED_MESSAGE = "Somente o autor da tarefa ou um administrador pode excl
 def _load_task_or_error(
     task_id: int, *, for_write: bool = False
 ) -> tuple[Task | None, Any]:
-    """Carrega a tarefa validando existência (404) e rank no projeto (403).
+    """Carrega a tarefa aplicando o contrato S5 (404 invisível, 403 rank baixo).
 
     ``for_write=True`` exige rank >= editor (mutação); o padrão exige rank >=
     leitor. Tarefa avulsa segue restrita ao criador (ou admin) nos dois modos.
+    Decisão única em ``api_task_denial`` — tarefa inexistente e tarefa invisível
+    respondem o MESMO 404 (anti-enumeração F4-2b).
     """
     task = db.session.get(Task, task_id)
-    if task is None:
-        return None, fail("Tarefa não encontrada.", status=404, code="not_found")
-    permitted = (
-        _can_edit_task(g.user, task) if for_write else _can_view_task(g.user, task)
-    )
-    if not permitted:
-        return None, fail(
-            "Você não tem permissão para acessar esta tarefa.",
-            status=403,
-            code="forbidden",
-        )
+    denied = api_task_denial(task, for_write=for_write)
+    if denied is not None:
+        return None, denied
     return task, None
 
 

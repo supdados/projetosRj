@@ -126,7 +126,9 @@ export interface CreateProjectResult {
  * Cria um projeto (Quick Create) via `POST /api/projetos`, reusando o pipeline
  * de envelope/CSRF de `client.ts`. Em falha de validação/permissão o backend
  * devolve `{ok:false}` e `client.ts` lança `ApiClientError` (422 validation,
- * 403 forbidden, 500 server) — o chamador exibe a mensagem como flash.
+ * 403 forbidden, 500 server) — o chamador exibe a mensagem como flash. Aqui não
+ * há 404 de autorização: o projeto ainda não existe, e órgão destino fora do
+ * rank editor é 403 (o usuário enxerga o órgão, só não pode criar nele).
  *
  * Exemplo:
  *   const { redirect_to, message } = await createProject({
@@ -146,10 +148,11 @@ export interface DeleteProjectResult {
 }
 
 /**
- * Exclui um projeto DE VERDADE via `DELETE /api/projetos/<id>`, espelhando a
- * regra do Jinja (`routes/projects/crud.delete_project`): permissão por escopo
- * de órgão (403 fora do escopo), 404 inexistente, exclusão em cascata. Em falha
- * o backend devolve `{ok:false}` e `client.ts` lança `ApiClientError` — o
+ * Exclui um projeto DE VERDADE via `DELETE /api/projetos/<id>`: exige rank
+ * gestor e apaga em cascata. Contrato S5 — **404** quando o projeto não existe
+ * OU o usuário não tem acesso (mesmo corpo nos dois casos: "não existe ou você
+ * não tem acesso"); **403** quando ele vê o projeto mas é leitor/editor. Em
+ * falha o backend devolve `{ok:false}` e `client.ts` lança `ApiClientError` — o
  * chamador deve manter a linha na UI e exibir a mensagem como flash.
  *
  * Exemplo:

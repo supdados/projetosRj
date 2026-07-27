@@ -48,12 +48,17 @@ from ..calendars.helpers import (
     _delete_project_meeting,
     _get_user_event_or_404,
     _sync_project_meeting_from_calendar_event,
-    _user_can_edit_meeting_project,
 )
 from ..etapas.helpers import _serialize_etapa_payload
-from ..shared import get_or_404, log_project_action
-from services.authorization import PAPEL_EDITOR, require_project_rank
-from .envelope import fail, fail_internal, ok
+from ..shared import log_project_action
+from services.authorization import (
+    ACCESS_FORBIDDEN,
+    ACCESS_NOT_FOUND,
+    PAPEL_EDITOR,
+    project_access_verdict,
+    require_project_rank,
+)
+from .envelope import fail, fail_internal, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import serialize_calendar_event
 
@@ -169,12 +174,20 @@ def _guard_linked_meeting(event: CalendarEvent, connection: Any) -> Any | None:
     """Aplica os guards de reunião vinculada (mesma regra do legado).
 
     Returns:
-        ``None`` quando autorizado; um ``fail`` (403 ``forbidden``) caso a conta
-        Google ou o acesso ao projeto não permitam a operação.
+        ``None`` quando autorizado; 404 (``fail_not_found``) quando o projeto da
+        reunião é invisível ao usuário (rank 0) e 403 ``forbidden`` quando ele vê
+        o projeto mas a conta Google/o rank não permitem a operação.
     """
     linked = find_project_meeting_for_calendar_event(event, connection=connection)
     if linked is None:
         return None
+    # Rank 0 decide antes da conta Google: rank 0 nunca pode receber 403 (S5/F4-2).
+    etapa = getattr(linked, "etapa", None)
+    verdict = project_access_verdict(
+        g.user, getattr(etapa, "project", None), PAPEL_EDITOR
+    )
+    if verdict == ACCESS_NOT_FOUND:
+        return fail_not_found()
     if not can_manage_project_meeting(connection, linked):
         return fail(
             "Somente quem estiver com a mesma conta Google conectada pode "
@@ -182,7 +195,7 @@ def _guard_linked_meeting(event: CalendarEvent, connection: Any) -> Any | None:
             status=403,
             code="forbidden",
         )
-    if not _user_can_edit_meeting_project(g.user, linked):
+    if verdict == ACCESS_FORBIDDEN:
         return fail("Permissão negada.", status=403, code="forbidden")
     return None
 
@@ -192,7 +205,7 @@ def _load_event_or_404(event_id: int) -> tuple[CalendarEvent | None, Any]:
     try:
         return _get_user_event_or_404(event_id), None
     except NotFound:
-        return None, fail("Evento não encontrado.", status=404, code="not_found")
+        return None, fail_not_found()
 
 
 @main_bp.route("/api/calendarios/eventos/<int:event_id>/editar", methods=["POST"])
@@ -431,11 +444,10 @@ def api_project_meeting_create(
     ``warning`` (o evento/etapa persistem).
 
     Returns:
-        ``ok({etapa, warning, message})`` (200); 403/400/422; 404 projeto; 500.
+        ``ok({etapa, warning, message})`` (200); 403/400/422; 404 projeto
+        inexistente ou invisível (mesmo corpo); 500.
     """
     project = db.session.get(Project, project_id)
-    if project is None:
-        return fail("Projeto não encontrado.", status=404, code="not_found")
     denied = require_project_rank(
         project,
         PAPEL_EDITOR,
@@ -503,11 +515,12 @@ def api_project_meeting_edit(etapa_id: int) -> Response | tuple[Response, int]:
     sync é somente-leitura (409) e o parse do evento (422).
 
     Returns:
-        ``ok({etapa, warning, message})`` (200); 400/403/409/422; 404 etapa; 500.
+        ``ok({etapa, warning, message})`` (200); 400/403/409/422; 404 etapa
+        inexistente ou invisível (mesmo corpo); 500.
     """
     etapa = db.session.get(Etapa, etapa_id)
     if etapa is None:
-        return fail("Etapa não encontrada.", status=404, code="not_found")
+        return fail_not_found()
     project = etapa.project
     denied = require_project_rank(
         project,
@@ -592,12 +605,13 @@ def api_project_meeting_delete(etapa_id: int) -> Response | tuple[Response, int]
     etapas para a página recalcular o botão "Concluir". NÃO serializa tokens.
 
     Returns:
-        ``ok({deleted_id, project_id, total_etapas, message})`` (200); 403/404/422;
-        502 quando a remoção remota falha; 500 commit.
+        ``ok({deleted_id, project_id, total_etapas, message})`` (200); 403/422;
+        404 etapa inexistente ou invisível (mesmo corpo); 502 quando a remoção
+        remota falha; 500 commit.
     """
     etapa = db.session.get(Etapa, etapa_id)
     if etapa is None:
-        return fail("Etapa não encontrada.", status=404, code="not_found")
+        return fail_not_found()
     project = etapa.project
     denied = require_project_rank(
         project,

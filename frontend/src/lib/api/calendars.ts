@@ -19,6 +19,11 @@
  *     Google NAO e erro HTTP (o evento persiste): criar/editar devolvem
  *     `sync_outcome`/`sync_message` (espelhando o flash legado) para a SPA
  *     exibir o aviso equivalente; excluir devolve `remote_warning` opcional.
+ *
+ * Contrato S5 no CRUD de evento: 404 `not_found` quando o evento nao existe OU
+ * nao e do usuario (indistinguiveis por design — "não existe ou você não tem
+ * acesso"); 403 `forbidden` no evento vinculado a reuniao de etapa cuja conta
+ * Google dona e outra (ele VE o evento, so nao pode altera-lo).
  */
 
 import { get, post } from './client';
@@ -124,7 +129,8 @@ export function createEvent(
  * Edita um evento (`POST /api/calendarios/eventos/<id>/editar`).
  *
  * Mesmo contrato de `createEvent` (`{event, sync_outcome, sync_message}`).
- * Reuniao vinculada sem permissao -> 403 (`ApiClientError`).
+ * Reuniao vinculada de outra conta Google -> 403; evento inexistente ou de
+ * outro usuario -> 404 (ambos `ApiClientError`).
  */
 export function updateEvent(
 	id: number,

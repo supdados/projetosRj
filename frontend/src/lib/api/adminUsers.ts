@@ -9,6 +9,9 @@
  * Exceção: a LISTA paginada precisa da `meta` do envelope (page/per_page/
  * total/total_pages), que `client.get` descarta ao devolver só `data` — por
  * isso usa `getWithMeta`.
+ *
+ * Rotas admin (`api_admin_required`): ficam no contrato 403 `forbidden` — o 404
+ * anti-enumeração da S5 vale só para recurso de projeto (TR-1).
  */
 
 import { get, getWithMeta, post, put, del } from './client';

@@ -41,6 +41,7 @@ import {
 } from '$lib/api/taskDrawer';
 import { deleteTarefa, moverEtapa } from '$lib/api/tasks';
 import { createAutosave, type Autosave, type AutosavePhase } from '$lib/utils/autosave';
+import { MSG_TAREFA_INACESSIVEL, accessErrorMessage } from '$lib/utils/accessErrorMessages';
 import { normalizeStatus } from '$lib/utils/taskStatus';
 import type { BoardCard } from '$lib/types/board';
 import type {
@@ -241,7 +242,8 @@ export function createTaskDrawerStore(
 			store.update((state) => ({
 				...state,
 				status: 'error',
-				error: errorMessage(err, 'Falha ao carregar a tarefa.')
+				// 404 aqui e anti-enumeracao (nao existe OU sem acesso), S5 §6.3.
+				error: accessErrorMessage(err, MSG_TAREFA_INACESSIVEL, 'Falha ao carregar a tarefa.')
 			}));
 		}
 	}

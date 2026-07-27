@@ -9,8 +9,9 @@ Afirmam o envelope canônico ``{"ok": true, "data": ...}`` /
       (UPLOAD multipart request.files["file"]) ; GET /api/anexos/<id> (DOWNLOAD
       binário send_file — NÃO envelopado) ; POST /api/anexos/<id>/delete.
 
-Cobrem os guards/validações: 200, 401 (sem sessão), 403 (editar comentário
-alheio / excluir anexo sem ser autor), 422 (conteúdo vazio / arquivo inválido) e
+Cobrem os guards/validações: 200, 401 (sem sessão), 403 (não-autor que VÊ a
+tarefa), 404 anti-enumeração da S5 (recurso inexistente e recurso de tarefa
+invisível com envelope idêntico), 422 (conteúdo vazio / arquivo inválido) e
 413 (upload acima do limite). O download é binário (200, bytes). Reutilizam as
 fixtures de ``tests/conftest.py`` (``client`` anônimo, ``client_user`` = autor,
 ``client_outsider`` = fora do escopo) e o banco semeado. Sem mocks de rede.
@@ -107,11 +108,23 @@ def test_api_comentario_edit_own_succeeds(client_user, seed_data):
     assert data["comment"]["content"] == "Editado"
 
 
-def test_api_comentario_edit_foreign_is_403(client_user, seed_data):
-    """Editar comentário de outro autor é recusado (autoridade server-side)."""
+def test_api_comentario_edit_de_tarefa_invisivel_is_404(client_user, seed_data):
+    """S5/F4-2: não-autor SEM visão da tarefa não descobre que o comentário existe."""
     foreign_comment_id = seed_data["foreign_comment_id"]
-    response = client_user.post(
+    fora_do_escopo = client_user.post(
         f"/api/comentarios/{foreign_comment_id}", json={"content": "hack"}
+    )
+    inexistente = client_user.post("/api/comentarios/999999", json={"content": "hack"})
+
+    assert fora_do_escopo.status_code == 404
+    _assert_fail_envelope(fora_do_escopo.get_json(), code="not_found")
+    assert fora_do_escopo.get_json() == inexistente.get_json()
+
+
+def test_api_comentario_edit_de_nao_autor_com_visao_is_403(client_editable, seed_data):
+    """Não-autor que VÊ a tarefa continua em 403 (autoridade server-side)."""
+    response = client_editable.post(
+        f"/api/comentarios/{seed_data['comment_id']}", json={"content": "hack"}
     )
 
     assert response.status_code == 403
@@ -136,9 +149,22 @@ def test_api_comentario_delete_own_succeeds(client_user, seed_data):
     assert all(c["id"] != comment_id for c in data["comentarios"])
 
 
-def test_api_comentario_delete_foreign_is_403(client_user, seed_data):
+def test_api_comentario_delete_de_tarefa_invisivel_is_404(client_user, seed_data):
     foreign_comment_id = seed_data["foreign_comment_id"]
-    response = client_user.post(f"/api/comentarios/{foreign_comment_id}/delete")
+    fora_do_escopo = client_user.post(f"/api/comentarios/{foreign_comment_id}/delete")
+    inexistente = client_user.post("/api/comentarios/999999/delete")
+
+    assert fora_do_escopo.status_code == 404
+    _assert_fail_envelope(fora_do_escopo.get_json(), code="not_found")
+    assert fora_do_escopo.get_json() == inexistente.get_json()
+
+
+def test_api_comentario_delete_de_nao_autor_com_visao_is_403(
+    client_editable, seed_data
+):
+    response = client_editable.post(
+        f"/api/comentarios/{seed_data['comment_id']}/delete"
+    )
 
     assert response.status_code == 403
     _assert_fail_envelope(response.get_json(), code="forbidden")
@@ -281,10 +307,8 @@ def test_api_anexo_download_unknown_is_404_envelope(client_user):
     _assert_fail_envelope(response.get_json(), code="not_found")
 
 
-def test_api_anexo_download_out_of_scope_is_403(
-    client_outsider, seed_data, client_user
-):
-    """Anexo de tarefa fora do escopo do usuário => 403 envelopado."""
+def test_api_anexo_download_rank_zero_is_404(client_outsider, seed_data, client_user):
+    """S5/F4-2: anexo de tarefa invisível responde o 404 do anexo inexistente."""
     task_id = seed_data["task_id"]
     upload = client_user.post(
         f"/api/tarefas/{task_id}/anexos",
@@ -293,10 +317,12 @@ def test_api_anexo_download_out_of_scope_is_403(
     )
     anexo_id = _assert_ok_envelope(upload.get_json())["anexo"]["id"]
 
-    response = client_outsider.get(f"/api/anexos/{anexo_id}")
+    fora_do_escopo = client_outsider.get(f"/api/anexos/{anexo_id}")
+    inexistente = client_outsider.get("/api/anexos/999999")
 
-    assert response.status_code == 403
-    _assert_fail_envelope(response.get_json(), code="forbidden")
+    assert fora_do_escopo.status_code == 404
+    _assert_fail_envelope(fora_do_escopo.get_json(), code="not_found")
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 def test_api_anexo_delete_author_succeeds(client_user, seed_data):

@@ -225,6 +225,12 @@ def _refresh_connection_identity(connection, *, access_token=None):
 
 
 def _user_can_edit_meeting_project(user, meeting):
+    """Predicado booleano do sync/webhook e das telas Jinja de calendário.
+
+    NÃO decide status HTTP: a decisão 404-vs-403 do contrato S5 mora em
+    ``project_access_verdict`` e é aplicada no call site ``/api/*``
+    (``routes/api/calendars_events.py::_guard_linked_meeting``).
+    """
     if (
         user is None
         or meeting is None

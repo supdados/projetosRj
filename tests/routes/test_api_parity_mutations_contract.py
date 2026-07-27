@@ -2,7 +2,9 @@
 
 Afirmam o envelope canônico (``{ok, data}`` / ``{ok, error: {code, message}}``),
 o 401 do guard ``api_login_required`` sem sessão e os 403/404/422 estruturados
-das novas rotas:
+das novas rotas. Contrato S5 (F4-2): rank 0 no projeto responde **404
+``not_found``** com corpo idêntico ao do id inexistente; 403 ``forbidden`` fica
+reservado a quem já vê o projeto e tenta ação acima do seu rank. Rotas cobertas:
 
     - ``POST /api/projetos`` / ``POST /api/projetos/<id>/concluir``
     - ``GET  /api/catalogos/objetivos``
@@ -123,12 +125,16 @@ def test_api_projeto_concluir_blocks_incomplete_stages(client_user, seed_data):
     _fail(response.get_json(), code="validation")
 
 
-def test_api_projeto_concluir_forbidden(client_outsider, seed_data):
-    response = client_outsider.post(
+def test_api_projeto_concluir_rank_zero_e_404(client_outsider, seed_data):
+    """S5/F4-2: sem vínculo => 404 idêntico ao do id inexistente."""
+    fora_do_escopo = client_outsider.post(
         f"/api/projetos/{seed_data['project_complete_id']}/concluir"
     )
-    assert response.status_code == 403
-    _fail(response.get_json(), code="forbidden")
+    inexistente = client_outsider.post("/api/projetos/999999/concluir")
+
+    assert fora_do_escopo.status_code == 404
+    _fail(fora_do_escopo.get_json(), code="not_found")
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 def test_api_projeto_concluir_not_found(client_user):
@@ -158,12 +164,17 @@ def test_api_etapa_tarefas_envelope(client_user, seed_data):
     assert "total" in data and "done" in data
 
 
-def test_api_etapa_tarefas_forbidden(client_outsider, seed_data):
-    response = client_outsider.get(
+def test_api_etapa_tarefas_rank_zero_e_404(client_outsider, seed_data):
+    fora_do_escopo = client_outsider.get(
         f"/api/projetos/{seed_data['project_id']}/etapas/{seed_data['etapa_id']}/tarefas"
     )
-    assert response.status_code == 403
-    _fail(response.get_json(), code="forbidden")
+    inexistente = client_outsider.get(
+        f"/api/projetos/999999/etapas/{seed_data['etapa_id']}/tarefas"
+    )
+
+    assert fora_do_escopo.status_code == 404
+    _fail(fora_do_escopo.get_json(), code="not_found")
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 def test_api_etapa_tarefas_ordered_by_status_then_priority(client_user, seed_data):
@@ -257,13 +268,16 @@ def test_api_tarefa_excluir_success(client_user, seed_data):
     assert data["item_id"] == seed_data["task_id"]
 
 
-def test_api_tarefa_excluir_forbidden(client_outsider, seed_data):
-    # outsider vê a foreign_task mas não é autor dela? foreign_task é dele.
-    # Para 403, tenta excluir a task da Auditoria (não é autor nem admin).
-    response = client_outsider.post(f"/api/tarefas/{seed_data['task_id']}/excluir")
-    assert response.status_code in (403, 404)
-    code = "forbidden" if response.status_code == 403 else "not_found"
-    _fail(response.get_json(), code=code)
+def test_api_tarefa_excluir_rank_zero_e_404(client_outsider, seed_data):
+    """Tarefa de projeto invisível: mesmo 404 do id inexistente (F4-2b)."""
+    fora_do_escopo = client_outsider.post(
+        f"/api/tarefas/{seed_data['task_id']}/excluir"
+    )
+    inexistente = client_outsider.post("/api/tarefas/999999/excluir")
+
+    assert fora_do_escopo.status_code == 404
+    _fail(fora_do_escopo.get_json(), code="not_found")
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 def test_api_tarefa_mover_etapa_success(client_user, seed_data):
@@ -389,17 +403,20 @@ def test_api_project_meeting_create_requires_google(client_user, seed_data):
     _fail(response.get_json(), code="validation")
 
 
-def test_api_project_meeting_create_forbidden(client_outsider, seed_data):
-    response = client_outsider.post(
-        f"/api/projetos/{seed_data['project_id']}/reunioes",
-        json={
-            "title": "Reunião Contrato",
-            "starts_at": "2026-05-02T09:00",
-            "ends_at": "2026-05-02T10:00",
-        },
+def test_api_project_meeting_create_rank_zero_e_404(client_outsider, seed_data):
+    payload = {
+        "title": "Reunião Contrato",
+        "starts_at": "2026-05-02T09:00",
+        "ends_at": "2026-05-02T10:00",
+    }
+    fora_do_escopo = client_outsider.post(
+        f"/api/projetos/{seed_data['project_id']}/reunioes", json=payload
     )
-    assert response.status_code == 403
-    _fail(response.get_json(), code="forbidden")
+    inexistente = client_outsider.post("/api/projetos/999999/reunioes", json=payload)
+
+    assert fora_do_escopo.status_code == 404
+    _fail(fora_do_escopo.get_json(), code="not_found")
+    assert fora_do_escopo.get_json() == inexistente.get_json()
 
 
 def test_api_project_meeting_edit_rejects_regular_stage(client_user, seed_data):
@@ -526,17 +543,57 @@ def test_leitor_ainda_le_tarefas_da_etapa(app, client_user, seed_data):
     assert response.status_code == 200
 
 
-def test_rank_zero_continua_403_e_nao_404(client_outsider, seed_data):
-    """Contrato desta fase: sem vínculo => 403 `forbidden` (o 404 é S5)."""
+def test_rank_zero_responde_404_e_nunca_403(client_outsider, seed_data):
+    """Contrato S5: sem vínculo => 404 `not_found` em TODA escrita de projeto.
+
+    Cada par abaixo compara a negativa do recurso invisível com a do id
+    inexistente: envelope igual byte a byte, sem vazar existência (F4-2b).
+    """
     excluir = client_outsider.delete(f"/api/projetos/{seed_data['project_id']}")
-    assert excluir.status_code == 403
-    _fail(excluir.get_json(), code="forbidden")
+    assert excluir.status_code == 404
+    _fail(excluir.get_json(), code="not_found")
+    assert (
+        excluir.get_json() == client_outsider.delete("/api/projetos/999999").get_json()
+    )
 
     concluir = client_outsider.post(
         f"/api/projetos/{seed_data['project_complete_id']}/concluir"
     )
-    assert concluir.status_code == 403
-    _fail(concluir.get_json(), code="forbidden")
+    assert concluir.status_code == 404
+    _fail(concluir.get_json(), code="not_found")
+
+    detalhe = client_outsider.get(f"/api/projetos/{seed_data['project_id']}/detalhe")
+    assert detalhe.status_code == 404
+    _fail(detalhe.get_json(), code="not_found")
+
+    historico = client_outsider.get(
+        f"/api/projetos/{seed_data['project_id']}/historico"
+    )
+    assert historico.status_code == 404
+    _fail(historico.get_json(), code="not_found")
+
+
+def test_paridade_do_contrato_entre_superficie_api_e_legada(client_outsider, seed_data):
+    """A MESMA negativa nas duas superfícies: 404 no envelope e no jsonify legado.
+
+    A SPA usa `/api/*` e as telas antigas usam `jsonify` — o contrato S5 vale
+    nos dois, com a mesma mensagem canônica (`NOT_FOUND_MESSAGE`).
+    """
+    from routes.api.envelope import NOT_FOUND_MESSAGE
+
+    api = client_outsider.post(
+        f"/api/etapas/{seed_data['etapa_id']}/update-field",
+        json={"field": "descricao", "value": "Bloqueado"},
+    )
+    legada = client_outsider.post(
+        f"/etapa/{seed_data['etapa_id']}/update_field",
+        json={"field": "descricao", "value": "Bloqueado"},
+    )
+
+    assert api.status_code == legada.status_code == 404
+    assert api.get_json()["error"]["message"] == NOT_FOUND_MESSAGE
+    assert legada.get_json()["message"] == NOT_FOUND_MESSAGE
+    assert legada.get_json()["success"] is False
 
 
 def test_editor_nao_cria_projeto_em_orgao_fora_do_vinculo(app, client_user, seed_data):

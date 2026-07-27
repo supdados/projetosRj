@@ -7,8 +7,8 @@ tarefas/drawer fica para a Fase 5b e as reuniões Google para a Fase 6 (quando
 presentes no payload, são renderizadas read-only).
 
 Três endpoints, todos no envelope canônico, protegidos por ``api_login_required``
-(401 JSON) e por ``user_can_access_project`` (404 quando o projeto não existe;
-403 quando fora do escopo do usuário):
+(401 JSON) e por ``require_project_rank`` no rank ``leitor`` — 404 idêntico para
+projeto inexistente e para projeto invisível ao usuário (S5/F4-2b):
 
     - ``GET  /api/projetos/<id>/detalhe``        — payload completo do detalhe.
     - ``POST /api/projetos/<id>/inline``         — edição inline de campos do
@@ -32,12 +32,13 @@ from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from catalogs.inventario import orgao_allows_inventario
 from models import Project, Task, db
 
+from services.authorization import PAPEL_LEITOR, require_project_rank
 from services.etapas_dates import meeting_payload_block
 from services.project_membership import project_permission_flags
 
 from ..blueprint import main_bp
 from ..calendars.helpers import _connection_for_current_user
-from ..orgao_scope import scoped_orgao_options, user_can_access_project
+from ..orgao_scope import scoped_orgao_options
 from ..projects.ajax import ProjectInlineError, apply_project_inline_changes
 from ..shared import log_project_action
 from .envelope import fail, ok
@@ -185,21 +186,17 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
 
 
 def _load_project_or_error(project_id: int) -> tuple[Project | None, Any]:
-    """Carrega o projeto validando existência e escopo de órgão.
+    """Carrega o projeto validando existência e rank de leitura.
 
     Returns:
         ``(project, None)`` quando autorizado; ``(None, fail_response)`` com o
-        404/403 canônico caso contrário.
+        404 canônico (inexistente OU rank 0 — corpos idênticos, S5/F4-2b) caso
+        contrário.
     """
     project = db.session.get(Project, project_id)
-    if project is None:
-        return None, fail("Projeto não encontrado.", status=404, code="not_found")
-    if not user_can_access_project(g.user, project):
-        return None, fail(
-            "Você não tem permissão para acessar este projeto.",
-            status=403,
-            code="forbidden",
-        )
+    denied = require_project_rank(project, PAPEL_LEITOR)
+    if denied:
+        return None, denied
     return project, None
 
 
@@ -208,15 +205,15 @@ def _load_project_or_error(project_id: int) -> tuple[Project | None, Any]:
 def api_projeto_detalhe(project_id: int) -> Response | tuple[Response, int]:
     """Retorna o payload completo do Detalhe de Projeto no envelope canônico.
 
-    Valida o acesso via ``user_can_access_project`` (404 inexistente / 403 fora
-    de escopo). As tarefas de cada etapa entram SOMENTE como contagem (Fase 5a);
+    Valida o acesso via ``require_project_rank`` (404 para inexistente e para
+    rank 0). As tarefas de cada etapa entram SOMENTE como contagem (Fase 5a);
     a mutação fica para a Fase 5b.
 
     Args:
         project_id: ID do projeto.
 
     Returns:
-        Envelope ``{"ok": true, "data": {...}}`` (200); ou 404/403 canônicos.
+        Envelope ``{"ok": true, "data": {...}}`` (200); ou 404 canônico.
         401 JSON quando não há sessão (``api_login_required``).
     """
     project, error = _load_project_or_error(project_id)
@@ -241,8 +238,8 @@ def api_projeto_inline(project_id: int) -> Response | tuple[Response, int]:
 
     Returns:
         Envelope ``{"ok": true, "data": {"project": {...}, "changed": [...]}}``
-        (200); 404/403 de acesso; 422 (validation) ou 403 (forbidden) de
-        validação; 401 JSON quando não há sessão.
+        (200); 404 de acesso (rank 0); 422 (validation) ou 403 (forbidden, rank
+        leitor) de validação; 401 JSON quando não há sessão.
     """
     project, error = _load_project_or_error(project_id)
     if error is not None:
@@ -296,8 +293,8 @@ def api_projeto_tarefas_etapa(project_id: int) -> Response | tuple[Response, int
 
     Returns:
         Envelope ``{"ok": true, "data": {"etapa_id", "tasks": [...]}}`` (200);
-        404 (projeto inexistente ou etapa fora do projeto) / 403 (fora de
-        escopo) / 422 (``etapa_id`` ausente/inválido); 401 JSON sem sessão.
+        404 (projeto inexistente ou invisível) / 422 (``etapa_id``
+        ausente/inválido); 401 JSON sem sessão.
     """
     project, error = _load_project_or_error(project_id)
     if error is not None:

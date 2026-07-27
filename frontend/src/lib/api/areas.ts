@@ -18,7 +18,11 @@ export function fetchAreas(signal?: AbortSignal): Promise<{ areas: AreaOption[] 
 	return get<{ areas: AreaOption[] }>('/api/areas', signal);
 }
 
-/** POST /api/etapas/<id>/responsaveis — substitui a lista completa. */
+/**
+ * POST /api/etapas/<id>/responsaveis — substitui a lista completa. Contrato S5:
+ * 404 quando a etapa não existe OU o usuário não tem acesso ao projeto dela;
+ * 403 quando ele vê o projeto mas não tem rank editor.
+ */
 export function saveEtapaResponsaveis(
 	etapaId: number,
 	areas: EtapaResponsavelArea[],

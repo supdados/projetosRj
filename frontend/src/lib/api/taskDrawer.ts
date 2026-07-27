@@ -14,8 +14,14 @@
  *     download binário via URL, mesma origin).
  *
  * Mutações via `post` (JSON, injeta X-CSRFToken) e o UPLOAD via `postForm`
- * (multipart, SEM Content-Type). O servidor é AUTORITATIVO: finalizar respeita
- * `can_finalize` (403 -> `ApiClientError` que o drawer trata com rollback/erro).
+ * (multipart, SEM Content-Type). O servidor é AUTORITATIVO e todo erro sobe como
+ * `ApiClientError` (o drawer faz rollback). Contrato S5, válido para TODAS as
+ * funções abaixo:
+ *   - 404 `not_found`: a tarefa não existe OU o usuário não tem acesso ao
+ *     projeto dela — mesmo corpo nos dois casos, indistinguíveis por design
+ *     ("não existe ou você não tem acesso").
+ *   - 403 `forbidden`: ele vê a tarefa mas não pode ESTA ação (ex.: finalizar
+ *     sem `can_finalize`, editar campo restrito sem ser autor/admin).
  */
 
 import { get, post, postForm } from './client';
@@ -38,7 +44,8 @@ export function getTaskDetail(taskId: number, signal?: AbortSignal): Promise<Tas
 /**
  * AUTOSAVE inline de campos (descricao/prioridade/tipo_pedido/responsavel). O
  * `status` NÃO passa por aqui — continua em `POST /api/tarefas/<id>/status`
- * (Fase 5b-1). Campos restritos sem permissão => 403; valores inválidos => 422.
+ * (Fase 5b-1). Campos restritos sem permissão => 403 (vê a tarefa mas não pode);
+ * valores inválidos => 422.
  */
 export function saveFields(
 	taskId: number,
@@ -48,7 +55,7 @@ export function saveFields(
 	return post<TaskDrawerPayload>(`/api/tarefas/${taskId}/campos`, fields, signal);
 }
 
-/** Finaliza a tarefa (respeita `can_finalize`; 403 -> rollback no drawer). */
+/** Finaliza a tarefa (respeita `can_finalize`; 403 = vê mas não pode finalizar). */
 export function finalizarTask(taskId: number, signal?: AbortSignal): Promise<TaskDrawerPayload> {
 	return post<TaskDrawerPayload>(`/api/tarefas/${taskId}/finalizar`, undefined, signal);
 }
