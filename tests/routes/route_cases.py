@@ -1974,6 +1974,17 @@ ROUTE_CASES += [
         "requires_admin": False,
     },
     {
+        "id": "api_projeto_membros_lote_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/membros/lote",
+        "path": "/api/projetos/{project_id}/membros/lote",
+        "role": "user",
+        "json": {"orgao_id": 999999, "papel": "leitor"},
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
         "id": "api_usuarios_busca_get",
         "method": "GET",
         "rule": "/api/usuarios/busca",
@@ -2057,4 +2068,7 @@ ROUTE_CASES += [
 # S5/F4-4b: a sprint do contrato 404 anti-enumeracao nao cria nem remove rota, e
 # nenhum caso desta matriz roda com rank 0 (papeis "user"/"admin"/"anon" veem os
 # recursos semeados), entao nenhum status esperado mudou. 165.
-assert len(ROUTE_CASES) == 165
+# +1 do compartilhar com area (convite em lote/snapshot): POST
+# /api/projetos/<id>/membros/lote, mesmo 404 anti-enumeracao com a flag off.
+# 165 + 1 = 166.
+assert len(ROUTE_CASES) == 166

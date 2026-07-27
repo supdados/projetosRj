@@ -77,6 +77,24 @@ export interface ConviteCreatePayload {
 	expires_at?: string | null;
 }
 
+/**
+ * Corpo de POST /api/projetos/<id>/membros/lote (compartilhar com uma ÁREA).
+ * Snapshot: convida quem tem vínculo DIRETO no órgão hoje, sem subárvore.
+ */
+export interface ConviteLotePayload {
+	orgao_id: number;
+	papel: ConvitePapel;
+	/** ISO YYYY-MM-DD; omitido = convites sem expiração. */
+	expires_at?: string | null;
+}
+
+/** Contagens devolvidas pelo convite em lote (a rota não devolve as linhas). */
+export interface ConviteLoteResultado {
+	convidados: number;
+	reativados: number;
+	pulados: number;
+}
+
 /** Corpo de PUT /api/projetos/<id>/membros/<mid> (papel e/ou expiração). */
 export interface ConviteUpdatePayload {
 	papel?: ConvitePapel;

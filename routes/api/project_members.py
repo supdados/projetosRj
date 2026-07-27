@@ -23,12 +23,13 @@ dispensa ler a flag global inline aqui (grep-gate F0-6).
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Callable
 
 from flask import Response, g, request
 from sqlalchemy.orm import joinedload
 
-from models import Project, ProjectMember, User, db
+from models import OrgaoUnidade, Project, ProjectMember, User, UserOrgao, db
 from services.authorization import (
     ADMIN_RANK,
     PAPEL_GESTOR,
@@ -43,6 +44,7 @@ from services.project_invites import (
     alterar_convite,
     buscar_convidaveis,
     conceder_convite,
+    find_membro,
     parse_expires_at,
     parse_papel_convite,
     revogar_convite,
@@ -326,6 +328,85 @@ def api_projeto_membro_revogar(project_id: int, member_id: int) -> _ApiResponse:
     return _commit_convite(
         lambda: revogar_convite(membro, ator=g.user), "revogar convite de projeto"
     )
+
+
+# ── Convite em lote por órgão (compartilhar com área = snapshot) ─────────────
+
+
+def _resolve_orgao_do_lote(raw: object) -> OrgaoUnidade:
+    # Órgão não é recurso protegido por rank: inexistente responde 400, não 404.
+    if not isinstance(raw, int) or isinstance(raw, bool):
+        raise ConviteInvalido(
+            f"orgao_id inválido: {raw!r}; esperado o id inteiro do órgão"
+        )
+    orgao = db.session.get(OrgaoUnidade, raw)
+    if orgao is None:
+        raise ConviteInvalido(f"órgão inválido: orgao_id={raw} inexistente")
+    return orgao
+
+
+def _usuarios_diretos_do_orgao(orgao_id: int) -> list[User]:
+    """Ativos com vínculo DIRETO no órgão — sem subárvore (decisão de 2026-07-27)."""
+    return (
+        User.query.join(UserOrgao, UserOrgao.user_id == User.id)
+        .filter(UserOrgao.orgao_id == orgao_id, User.deleted_at.is_(None))
+        .order_by(User.id)
+        .all()
+    )
+
+
+def _convidar_lote(project: Project, payload: dict[str, Any]) -> dict[str, int]:
+    """Valida o payload UMA vez e aplica a semântica do POST individual por alvo."""
+    papel = parse_papel_convite(payload.get("papel"))
+    expires_at = parse_expires_at(payload.get("expires_at"))
+    orgao = _resolve_orgao_do_lote(payload.get("orgao_id"))
+    contagens = {"convidados": 0, "reativados": 0, "pulados": 0}
+    for alvo in _usuarios_diretos_do_orgao(orgao.id):
+        contagens[_convidar_alvo_do_lote(project, alvo, papel, expires_at)] += 1
+    return contagens
+
+
+def _convidar_alvo_do_lote(
+    project: Project, alvo: User, papel: str, expires_at: datetime | None
+) -> str:
+    """O que no POST individual seria 400 (self, convite ativo) aqui vira pulo."""
+    if alvo.id == g.user.id or area_project_rank(alvo, project) > 0:
+        return "pulados"
+    existente = find_membro(project.id, alvo.id)
+    if existente is not None and existente.is_active:
+        return "pulados"
+    membro = conceder_convite(
+        project, alvo, papel=papel, expires_at=expires_at, ator=g.user
+    )
+    db.session.flush()
+    notify_project_invite(project, membro.user_id, g.user.id, membro.papel)
+    return "convidados" if existente is None else "reativados"
+
+
+@main_bp.route("/api/projetos/<int:project_id>/membros/lote", methods=["POST"])
+@api_login_required
+def api_projeto_membros_lote(project_id: int) -> _ApiResponse:
+    """Convite em LOTE por órgão: ``{orgao_id, papel, expires_at?}`` → contagens.
+
+    Snapshot de HOJE dos vínculos DIRETOS do órgão (sem subárvore, sem vínculo
+    dinâmico projeto×órgão — sprint futura). Transação única: erro desfaz tudo.
+    """
+    project, denied = _load_projeto_gerenciavel(project_id)
+    if denied:
+        return denied
+    payload, invalid = _read_json_object()
+    if invalid:
+        return invalid
+    try:
+        contagens = _convidar_lote(project, payload)
+        db.session.commit()
+    except ConviteInvalido as exc:
+        db.session.rollback()
+        return _invalid(str(exc))
+    except Exception as exc:
+        db.session.rollback()
+        return fail_internal(exc, "convite em lote por órgão")
+    return ok(contagens)
 
 
 def _pode_convidar_em_algum_orgao(user: User | None) -> bool:

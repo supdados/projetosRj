@@ -3,6 +3,7 @@
  *
  *   GET    /api/projetos/<id>/membros        -> { diretos, herdados }
  *   POST   /api/projetos/<id>/membros        -> cria/reativa convite
+ *   POST   /api/projetos/<id>/membros/lote   -> convida um órgão inteiro (contagens)
  *   PUT    /api/projetos/<id>/membros/<mid>  -> altera papel/expiração
  *   DELETE /api/projetos/<id>/membros/<mid>  -> revoga (soft)
  *   GET    /api/usuarios/busca?q=            -> { usuarios } convidáveis
@@ -22,6 +23,8 @@
 import { get, post, put, del } from './client';
 import type {
 	ConviteCreatePayload,
+	ConviteLotePayload,
+	ConviteLoteResultado,
 	ConviteUpdatePayload,
 	ProjectMembersData,
 	UsuarioBuscaData,
@@ -42,6 +45,18 @@ export async function createProjectMember(
 	payload: ConviteCreatePayload
 ): Promise<void> {
 	await post<unknown>(`/api/projetos/${projectId}/membros`, payload);
+}
+
+/**
+ * Convida de uma vez os vínculos DIRETOS de um órgão (transação única no
+ * backend) e devolve só as contagens `{convidados, reativados, pulados}` — a
+ * lista de membros vem da re-busca, como nas demais mutações.
+ */
+export function bulkInviteOrgao(
+	projectId: number,
+	payload: ConviteLotePayload
+): Promise<ConviteLoteResultado> {
+	return post<ConviteLoteResultado>(`/api/projetos/${projectId}/membros/lote`, payload);
 }
 
 /** Altera papel e/ou expiração de um convite existente. */

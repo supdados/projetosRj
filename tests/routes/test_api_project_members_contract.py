@@ -15,8 +15,16 @@ from typing import Any
 
 import pytest
 
-from models import AutorizacaoAudit, ProjectMember, UserNotification, UserOrgao, db
+from models import (
+    AutorizacaoAudit,
+    ProjectMember,
+    User,
+    UserNotification,
+    UserOrgao,
+    db,
+)
 from services.authorization import PAPEL_EDITOR, PAPEL_LEITOR
+from time_utils import utc_now
 
 
 @pytest.fixture
@@ -401,3 +409,215 @@ def test_busca_exige_sessao(convites_ligados, client):
 
     assert response.status_code == 401
     _assert_fail(response.get_json(), code="unauthenticated")
+
+
+# ── POST /api/projetos/<id>/membros/lote ─────────────────────────────────────
+
+
+def _post_lote(client, project_id: int, payload: dict[str, Any]):
+    return client.post(f"/api/projetos/{project_id}/membros/lote", json=payload)
+
+
+def _cria_usuario_no_orgao(app, username: str, orgao_id: int) -> int:
+    with app.app_context():
+        user = User(username=username, name=username, orgao="Orgao Teste")
+        user.set_password("senha123")
+        db.session.add(user)
+        db.session.flush()
+        db.session.add(UserOrgao(user_id=user.id, orgao_id=orgao_id))
+        db.session.commit()
+        return user.id
+
+
+def _vincula_orgao(app, user_id: int, orgao_id: int) -> None:
+    with app.app_context():
+        db.session.add(UserOrgao(user_id=user_id, orgao_id=orgao_id))
+        db.session.commit()
+
+
+def _revoga_direto(app, member_id: int, ator_id: int) -> None:
+    with app.app_context():
+        membro = db.session.get(ProjectMember, member_id)
+        membro.revoked_at = utc_now()
+        membro.revoked_by_id = ator_id
+        db.session.commit()
+
+
+class FakeNotificadorExplosivo:
+    """Falha na 2ª notificação para provar o rollback do lote INTEIRO."""
+
+    def __init__(self) -> None:
+        self.chamadas = 0
+
+    def __call__(self, *args: Any, **kwargs: Any) -> int:
+        self.chamadas += 1
+        if self.chamadas == 2:
+            raise RuntimeError("falha simulada no meio do lote")
+        return 1
+
+
+def test_lote_flag_desligada_responde_404_identico_ao_inexistente(
+    app, client_user, seed_data
+):
+    payload = {"orgao_id": seed_data["vpd_orgao_id"], "papel": "leitor"}
+    desligado = _post_lote(client_user, seed_data["project_id"], payload)
+    app.config["CONVITES_HABILITADOS"] = True
+    try:
+        inexistente = _post_lote(client_user, 99999, payload)
+    finally:
+        app.config["CONVITES_HABILITADOS"] = False
+
+    assert desligado.status_code == inexistente.status_code == 404
+    assert desligado.get_data() == inexistente.get_data()
+    _assert_fail(desligado.get_json(), code="not_found")
+    with app.app_context():
+        assert ProjectMember.query.count() == 0
+
+
+def test_lote_nao_gestor_recusa_403(app, convites_ligados, seed_data):
+    _rebaixa_vinculo(app, seed_data["editable_user_id"], PAPEL_LEITOR)
+    client = _cliente_de(app, seed_data["editable_user_id"])
+
+    response = _post_lote(
+        client,
+        seed_data["project_id"],
+        {"orgao_id": seed_data["vpd_orgao_id"], "papel": "leitor"},
+    )
+
+    assert response.status_code == 403
+    _assert_fail(response.get_json(), code="forbidden")
+
+
+def test_lote_cria_para_elegiveis_e_pula_self_area_e_convite_ativo(
+    app, convites_ligados, client_user, seed_data
+):
+    vpd = seed_data["vpd_orgao_id"]
+    com_convite_ativo = _cria_usuario_no_orgao(app, "vpd_convidado", vpd)
+    _grava_convite(
+        app,
+        seed_data["project_id"],
+        com_convite_ativo,
+        PAPEL_LEITOR,
+        seed_data["user_id"],
+    )
+    # Self no órgão-alvo e alguém que já vê o projeto pela área: ambos pulam.
+    _vincula_orgao(app, seed_data["user_id"], vpd)
+    _vincula_orgao(app, seed_data["editable_user_id"], vpd)
+
+    response = _post_lote(
+        client_user, seed_data["project_id"], {"orgao_id": vpd, "papel": "editor"}
+    )
+
+    assert response.status_code == 200
+    contagens = _assert_ok(response.get_json())
+    assert contagens == {"convidados": 1, "reativados": 0, "pulados": 3}
+    with app.app_context():
+        assert ProjectMember.query.count() == 2
+        novo = ProjectMember.query.filter_by(user_id=seed_data["outsider_id"]).one()
+        assert novo.papel == PAPEL_EDITOR
+        assert novo.granted_by_id == seed_data["user_id"]
+        assert novo.is_active is True
+        audit = AutorizacaoAudit.query.one()
+        assert audit.evento == "convite_criado"
+        assert audit.user_id == seed_data["outsider_id"]
+        assert audit.ator_id == seed_data["user_id"]
+        notificacoes = UserNotification.query.filter_by(
+            event_type="projeto_convite"
+        ).all()
+        assert [n.recipient_user_id for n in notificacoes] == [seed_data["outsider_id"]]
+
+
+def test_lote_reativa_convite_revogado(app, convites_ligados, client_user, seed_data):
+    member_id = _grava_convite(
+        app,
+        seed_data["project_id"],
+        seed_data["outsider_id"],
+        PAPEL_LEITOR,
+        seed_data["user_id"],
+    )
+    _revoga_direto(app, member_id, seed_data["user_id"])
+
+    response = _post_lote(
+        client_user,
+        seed_data["project_id"],
+        {"orgao_id": seed_data["vpd_orgao_id"], "papel": "editor"},
+    )
+
+    assert response.status_code == 200
+    assert _assert_ok(response.get_json()) == {
+        "convidados": 0,
+        "reativados": 1,
+        "pulados": 0,
+    }
+    with app.app_context():
+        membro = ProjectMember.query.one()
+        assert membro.id == member_id
+        assert membro.revoked_at is None
+        assert membro.papel == PAPEL_EDITOR
+        assert membro.is_active is True
+        assert AutorizacaoAudit.query.one().evento == "convite_reativado"
+
+
+def test_lote_com_papel_gestor_recusa_400(
+    app, convites_ligados, client_user, seed_data
+):
+    response = _post_lote(
+        client_user,
+        seed_data["project_id"],
+        {"orgao_id": seed_data["vpd_orgao_id"], "papel": "gestor"},
+    )
+
+    assert response.status_code == 400
+    _assert_fail(response.get_json(), code="validation")
+    with app.app_context():
+        assert ProjectMember.query.count() == 0
+
+
+def test_lote_orgao_inexistente_responde_400(convites_ligados, client_user, seed_data):
+    response = _post_lote(
+        client_user, seed_data["project_id"], {"orgao_id": 99999, "papel": "leitor"}
+    )
+
+    assert response.status_code == 400
+    _assert_fail(response.get_json(), code="validation")
+
+
+def test_lote_orgao_sem_elegiveis_responde_contagens_zeradas(
+    convites_ligados, client_user, seed_data
+):
+    response = _post_lote(
+        client_user,
+        seed_data["project_id"],
+        {"orgao_id": seed_data["vpe_orgao_id"], "papel": "leitor"},
+    )
+
+    assert response.status_code == 200
+    assert _assert_ok(response.get_json()) == {
+        "convidados": 0,
+        "reativados": 0,
+        "pulados": 0,
+    }
+
+
+def test_lote_erro_no_meio_desfaz_tudo(
+    app, convites_ligados, client_user, seed_data, monkeypatch
+):
+    _cria_usuario_no_orgao(app, "vpd_extra", seed_data["vpd_orgao_id"])
+    monkeypatch.setattr(
+        "routes.api.project_members.notify_project_invite", FakeNotificadorExplosivo()
+    )
+
+    response = _post_lote(
+        client_user,
+        seed_data["project_id"],
+        {"orgao_id": seed_data["vpd_orgao_id"], "papel": "leitor"},
+    )
+
+    assert response.status_code == 500
+    _assert_fail(response.get_json(), code="server")
+    with app.app_context():
+        assert ProjectMember.query.count() == 0
+        assert AutorizacaoAudit.query.count() == 0
+        assert (
+            UserNotification.query.filter_by(event_type="projeto_convite").count() == 0
+        )

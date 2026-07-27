@@ -105,6 +105,7 @@ def app(tmp_path):
             # explicitamente via app.config.update(...).
             "CHATBOT_ENABLED": False,
             "GOVBR_OIDC_ENABLED": False,
+            "CONVITES_HABILITADOS": False,
             # Chave vazia = integração desconfigurada: nenhum teste sai para a
             # rede do SIORG só porque o .env local tem SIORG_API_KEY.
             "SIORG_API_KEY": "",

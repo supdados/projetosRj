@@ -1,8 +1,8 @@
 /**
  * Testes unitários dos utils PUROS dos convites por projeto (S4).
  *
- * Cobre o teto de papéis (gestor nunca é opção), os rótulos de status, a janela
- * padrão de 90 dias do formulário (§7), o gatilho do badge "Convidado" e a
+ * Cobre o teto de papéis (gestor nunca é opção), os rótulos de status, os
+ * períodos de expiração do formulário (§7), o gatilho do badge "Convidado" e a
  * tradução do contrato anti-enumeração (404/403) das rotas novas.
  */
 import { describe, it, expect } from 'vitest';
@@ -11,10 +11,14 @@ import {
 	CONVITE_EXPIRACAO_DIAS,
 	CONVITE_PAPEL_OPTIONS,
 	CONVITE_PAPEL_PADRAO,
+	CONVITE_PERIODO_OPTIONS,
+	CONVITE_PERIODO_PADRAO_DIAS,
 	conviteErrorMessage,
-	conviteStatusLabel,
-	conviteStatusTone,
+	conviteLoteResumo,
 	convitePapelLabel,
+	convitePeriodoDias,
+	convitePeriodoValue,
+	expiracaoDoPeriodo,
 	expiracaoPadraoIso,
 	isAcessoPorConvite,
 	normalizeConvitePapel
@@ -39,21 +43,6 @@ describe('papéis concedíveis por convite', () => {
 	});
 });
 
-describe('status do convite', () => {
-	it('rotula os três estados e trata o desconhecido como revogado', () => {
-		expect(conviteStatusLabel('ativo')).toBe('Ativo');
-		expect(conviteStatusLabel('expirado')).toBe('Expirado');
-		expect(conviteStatusLabel('revogado')).toBe('Revogado');
-		expect(conviteStatusLabel('vencido')).toBe('Revogado');
-	});
-
-	it('mapeia o tom do badge por status', () => {
-		expect(conviteStatusTone('ativo')).toBe('success');
-		expect(conviteStatusTone('expirado')).toBe('warning');
-		expect(conviteStatusTone('revogado')).toBe('neutral');
-	});
-});
-
 describe('expiracaoPadraoIso', () => {
 	it('sugere 90 dias à frente em ISO (YYYY-MM-DD)', () => {
 		expect(CONVITE_EXPIRACAO_DIAS).toBe(90);
@@ -62,6 +51,59 @@ describe('expiracaoPadraoIso', () => {
 
 	it('atravessa a virada de ano sem estourar o mês', () => {
 		expect(expiracaoPadraoIso(new Date('2026-12-15T00:00:00Z'), 30)).toBe('2027-01-14');
+	});
+});
+
+describe('períodos do formulário de convite', () => {
+	it('oferece 15/30/45 dias e indeterminado, com 30 como padrão', () => {
+		expect(CONVITE_PERIODO_OPTIONS.map((o) => o.value)).toEqual([
+			'15',
+			'30',
+			'45',
+			'indeterminado'
+		]);
+		expect(CONVITE_PERIODO_OPTIONS.map((o) => o.dias)).toEqual([15, 30, 45, null]);
+		expect(CONVITE_PERIODO_PADRAO_DIAS).toBe(30);
+	});
+
+	it('converte dias ⇄ valor da opção (null = indeterminado)', () => {
+		expect(convitePeriodoValue(45)).toBe('45');
+		expect(convitePeriodoValue(null)).toBe('indeterminado');
+		expect(convitePeriodoDias('15')).toBe(15);
+		expect(convitePeriodoDias('indeterminado')).toBeNull();
+	});
+
+	it('cai no padrão quando o valor é ausente ou desconhecido', () => {
+		expect(convitePeriodoDias(null)).toBe(CONVITE_PERIODO_PADRAO_DIAS);
+		expect(convitePeriodoDias('7')).toBe(CONVITE_PERIODO_PADRAO_DIAS);
+	});
+
+	it('deriva expires_at do período (indeterminado ⇒ null = sem expiração)', () => {
+		expect(expiracaoDoPeriodo(30, new Date('2026-01-01T12:00:00Z'))).toBe('2026-01-31');
+		expect(expiracaoDoPeriodo(null, new Date('2026-01-01T12:00:00Z'))).toBeNull();
+	});
+});
+
+describe('conviteLoteResumo (compartilhar com área)', () => {
+	it('junta só as contagens não-zeradas, na ordem convidados › reativados › pulados', () => {
+		expect(conviteLoteResumo({ convidados: 12, reativados: 0, pulados: 3 })).toBe(
+			'12 pessoas convidadas · 3 já tinham acesso'
+		);
+		expect(conviteLoteResumo({ convidados: 2, reativados: 4, pulados: 1 })).toBe(
+			'2 pessoas convidadas · 4 convites reativados · 1 já tinha acesso'
+		);
+	});
+
+	it('flexiona o singular', () => {
+		expect(conviteLoteResumo({ convidados: 1, reativados: 1, pulados: 0 })).toBe(
+			'1 pessoa convidada · 1 convite reativado'
+		);
+	});
+
+	it('órgão sem elegíveis (tudo zerado) vira frase própria, não "0 · 0 · 0"', () => {
+		expect(conviteLoteResumo({ convidados: 0, reativados: 0, pulados: 0 })).toBe(
+			'Ninguém novo para convidar nesta área.'
+		);
 	});
 });
 
