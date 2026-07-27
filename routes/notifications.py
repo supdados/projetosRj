@@ -7,7 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from models import Etapa, Project, Task, UserNotification, db
-from routes.orgao_scope import get_user_orgao_subtree_ids
+from routes.orgao_scope import user_can_access_project
 from time_utils import iso_utc, utc_now
 
 from .api.envelope import ok
@@ -52,19 +52,16 @@ def _project_ids_by_task(task_ids: set[int]) -> dict[int, int | None]:
 
 
 def _accessible_project_ids(project_ids: set[int]) -> set[int]:
-    """Filtra em lote os projetos que ``g.user`` pode ver (escopo de órgão).
+    """Filtra em lote os projetos que ``g.user`` pode ver (área OU convite).
 
-    Mesma semântica de ``user_can_access_project`` (admin sempre; ``orgao_id``
-    None nega), mas resolve o subtree UMA vez — evita 1 query de closure por
-    projeto no badge da topnav.
+    Delegado a ``user_can_access_project``: os mapas de papel e de convite são
+    cacheados em ``g`` por request, então o custo segue 1 query de closure + 1
+    de membership por request, não por projeto.
     """
     if not project_ids or g.user is None:
         return set()
     projects = Project.query.filter(Project.id.in_(project_ids)).all()
-    if getattr(g.user, "is_admin", False):
-        return {p.id for p in projects}
-    subtree = get_user_orgao_subtree_ids(g.user)
-    return {p.id for p in projects if p.orgao_id is not None and p.orgao_id in subtree}
+    return {p.id for p in projects if user_can_access_project(g.user, p)}
 
 
 def _can_show_notification(

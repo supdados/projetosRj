@@ -1927,6 +1927,76 @@ ROUTE_CASES += [
         "requires_login": True,
         "requires_admin": False,
     },
+    # Membros do projeto (convites, S4/F3-11..F3-12). CONVITES_HABILITADOS nasce
+    # off (config.py) e o app de teste nao liga a flag: as 5 rotas respondem o
+    # 404 anti-enumeracao aqui. O comportamento com a flag ligada esta em
+    # tests/routes/test_api_project_members_contract.py.
+    {
+        "id": "api_projeto_membros_list_get",
+        "method": "GET",
+        "rule": "/api/projetos/<int:project_id>/membros",
+        "path": "/api/projetos/{project_id}/membros",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_projeto_membro_criar_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/membros",
+        "path": "/api/projetos/{project_id}/membros",
+        "role": "user",
+        "json": {"user_id": 999999, "papel": "leitor"},
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_projeto_membro_atualizar_put",
+        "method": "PUT",
+        "rule": "/api/projetos/<int:project_id>/membros/<int:member_id>",
+        "path": "/api/projetos/{project_id}/membros/1",
+        "role": "user",
+        "json": {"papel": "leitor"},
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_projeto_membro_revogar_delete",
+        "method": "DELETE",
+        "rule": "/api/projetos/<int:project_id>/membros/<int:member_id>",
+        "path": "/api/projetos/{project_id}/membros/1",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_usuarios_busca_get",
+        "method": "GET",
+        "rule": "/api/usuarios/busca",
+        "path": "/api/usuarios/busca",
+        "role": "user",
+        "query_string": {"q": "usu"},
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    # Relatorio admin de grants orfaos (S4/F3-25; api_admin_required, sem gate
+    # de flag: revisar convites ja gravados vale mesmo com CONVITES_HABILITADOS
+    # off).
+    {
+        "id": "api_admin_grants_orfaos_get",
+        "method": "GET",
+        "rule": "/api/admin/relatorios/grants-orfaos",
+        "path": "/api/admin/relatorios/grants-orfaos",
+        "role": "admin",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": True,
+    },
 ]
 
 # Corte Grupo B (rotas Jinja canonicas -> SPA via catch-all):
@@ -1978,4 +2048,10 @@ ROUTE_CASES += [
 # 169 - 10 + 2 = 161.
 # -2 do corte do catálogo local de tipos (sem consumidor em frontend/src): GET
 # /api/admin/orgaos/tipos e GET /api/admin/orgaos/tipos/<id>. 161 - 2 = 159.
-assert len(ROUTE_CASES) == 159
+# +5 da S4 (convites por projeto, F3-27): GET/POST /api/projetos/<id>/membros,
+# PUT/DELETE /api/projetos/<id>/membros/<mid> e GET /api/usuarios/busca.
+# 159 + 5 = 164.
+# +1 da verificacao da S4 (F3-25): GET /api/admin/relatorios/grants-orfaos —
+# superficie do relatorio de grants orfaos que estava sem consumidor.
+# 164 + 1 = 165.
+assert len(ROUTE_CASES) == 165

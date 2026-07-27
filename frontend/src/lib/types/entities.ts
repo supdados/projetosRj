@@ -50,6 +50,21 @@ export interface User {
 	is_admin: boolean;
 	orgaos: OrgaoRef[];
 	auth_provider: AuthProvider;
+	/** Tem ao menos um vinculo de area (§5.3): controla o seletor de orgao. */
+	tem_vinculo_de_area?: boolean;
+}
+
+/**
+ * Via pelo qual o usuario enxerga o projeto (serializers, §6.4). `convite` e
+ * `ambos` sao as vias que ganham o badge "Convidado"; NUNCA recalculado aqui.
+ */
+export type ProjectAccessVia = 'admin' | 'area' | 'convite' | 'ambos';
+
+/** Flags autoritativas de acao sobre um projeto (servidor manda). */
+export interface ProjectPermissions {
+	can_edit: boolean;
+	can_manage: boolean;
+	can_manage_members: boolean;
 }
 
 /**
@@ -74,6 +89,10 @@ export interface Project {
 	total_workflow_etapas: number;
 	etapas_concluidas: number;
 	todas_etapas_concluidas: boolean;
+	// Autorizacao (S4). Opcionais: backend do release anterior nao emite as
+	// chaves (rolling deploy), como em `sei_processes` no detalhe.
+	permissions?: ProjectPermissions;
+	access_via?: ProjectAccessVia;
 }
 
 /**

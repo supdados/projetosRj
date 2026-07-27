@@ -58,10 +58,18 @@ def test_api_me_returns_ok_envelope_with_safe_user_fields(client_user, seed_data
         "username",
         "is_admin",
         "orgaos",
+        "tem_vinculo_de_area",
         "auth_provider",
     }
     assert isinstance(data["orgaos"], list)
     assert data["auth_provider"] in {"govbr", "local"}
+
+
+def test_api_me_expoe_tem_vinculo_de_area(client_user):
+    """F3-9: a SPA só mostra o seletor de órgão para quem tem vínculo de área."""
+    data = _assert_ok_envelope(client_user.get("/api/me").get_json())
+
+    assert data["tem_vinculo_de_area"] is True
 
 
 def test_api_me_expoe_papel_por_orgao(client_user, seed_data):

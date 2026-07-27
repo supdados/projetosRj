@@ -25,6 +25,7 @@
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import AdminUsuariosSkeleton from '$lib/components/skeletons/AdminUsuariosSkeleton.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
+	import GrantsOrfaosPanel from '$lib/components/GrantsOrfaosPanel.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 
 	type LoadState = 'loading' | 'ready' | 'error';
@@ -257,6 +258,8 @@
 			{actionError}
 		</div>
 	{/if}
+
+	<GrantsOrfaosPanel />
 
 	{#if loadState === 'loading'}
 		<p role="status" class="sr-only">Carregando usuários…</p>

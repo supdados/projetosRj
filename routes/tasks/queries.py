@@ -252,7 +252,8 @@ def _build_visible_tasks_query(
     include_relations=True,
     orgao_filter_id=None,
 ):
-    from routes.orgao_scope import expand_orgao_filter_ids, get_user_orgao_subtree_ids
+    from routes.orgao_scope import expand_orgao_filter_ids
+    from services.authorization import project_visibility_criterion
 
     query = Task.query
     if include_relations:
@@ -266,18 +267,12 @@ def _build_visible_tasks_query(
     query = query.outerjoin(Project, Task.project_id == Project.id)
 
     if not g.user.is_admin:
-        user_subtree_ids = get_user_orgao_subtree_ids(g.user)
-        visibility_filters = [
-            and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)
-        ]
-        if user_subtree_ids:
-            visibility_filters.insert(
-                0,
-                and_(
-                    Task.project_id.isnot(None), Project.orgao_id.in_(user_subtree_ids)
-                ),
+        query = query.filter(
+            or_(
+                and_(Task.project_id.isnot(None), project_visibility_criterion(g.user)),
+                and_(Task.project_id.is_(None), Task.created_by_id == g.user.id),
             )
-        query = query.filter(or_(*visibility_filters))
+        )
 
     if orgao_filter_id is not None:
         subtree_ids = expand_orgao_filter_ids(orgao_filter_id)

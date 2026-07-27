@@ -19,6 +19,11 @@ class SiorgSyncLog(db.Model):
     atualizadas = db.Column(db.Integer, nullable=False, default=0)
     desativadas = db.Column(db.Integer, nullable=False, default=0)
     erro = db.Column(db.Text, nullable=True)
+    # TR-2: JSON [{id, username, name}] dos usuários cujo escopo de área ficou
+    # sem nenhum órgão ativo por causa das desativações DESTE sync. Só é gravado
+    # quando o sync desativa alguma unidade; leia com
+    # `services.authorization_reports.ler_escopo_zerado`.
+    usuarios_escopo_zerado = db.Column(db.Text, nullable=True)
     disparado_por_id = db.Column(
         db.Integer,
         db.ForeignKey("user.id", ondelete="SET NULL"),

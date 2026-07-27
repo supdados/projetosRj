@@ -58,6 +58,7 @@
 	} from '$lib/types/projectDetail';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import ProjectHistoryDrawer from '$lib/components/ProjectHistoryDrawer.svelte';
+	import CompartilharProjetoModal from '$lib/components/CompartilharProjetoModal.svelte';
 	import type { CalendarEvent, CalendarEventInput } from '$lib/types/calendar';
 	import ProjectHeader from '$lib/components/ProjectHeader.svelte';
 	import InlineEditField from '$lib/components/InlineEditField.svelte';
@@ -156,6 +157,12 @@
 	let topOffset = $state<number>(0);
 
 	const canEdit = $derived(data?.permissions.can_edit ?? false);
+
+	// --- Modal "Compartilhar" (S4) ------------------------------------------
+	// `can_manage_members` já embute a flag CONVITES_HABILITADOS no servidor
+	// (user_can_manage_members): contrato único, nada recalculado no cliente.
+	let shareOpen = $state(false);
+	const canShare = $derived(data?.permissions.can_manage_members ?? false);
 
 	const quickAddEtapa = $derived(
 		quickAddEtapaId === null ? null : (data?.etapas.find((e) => e.id === quickAddEtapaId) ?? null)
@@ -1164,6 +1171,7 @@
 				special_project: projectFieldStates.special_project
 			}}
 			onEditField={onHeaderEditField}
+			onShare={canShare ? () => (shareOpen = true) : undefined}
 		/>
 
 		<!-- Detalhes editaveis do projeto (campos fora do cabecalho) -->
@@ -1717,6 +1725,14 @@
 		projectId={data.project.id}
 		projectTitulo={data.project.titulo}
 		onClose={closeHistory}
+	/>
+{/if}
+
+{#if shareOpen && data}
+	<CompartilharProjetoModal
+		projectId={data.project.id}
+		projectTitulo={data.project.titulo}
+		onClose={() => (shareOpen = false)}
 	/>
 {/if}
 

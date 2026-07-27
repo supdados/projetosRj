@@ -115,6 +115,9 @@ def build_app_config(*, is_testing=False, is_debug=False):
         SIORG_API_KEY=os.getenv("SIORG_API_KEY", "").strip(),
         SIORG_TIMEOUT_SECONDS=_env_int("SIORG_TIMEOUT_SECONDS", default=10),
         SIORG_RAIZ_CODIGO=_env_int("SIORG_RAIZ_CODIGO", default=2),
+        # Gate das rotas de convite (S4/F3-23); a RESOLUÇÃO de convites já
+        # gravados não é gateada — sem linhas em project_member, nada muda.
+        CONVITES_HABILITADOS=_env_flag_is_true("CONVITES_HABILITADOS", default="false"),
         CHATBOT_ENABLED=_env_flag_is_true("CHATBOT_ENABLED", default="false"),
         CHATBOT_BASE_URL=os.getenv("CHATBOT_BASE_URL", "").strip().rstrip("/"),
         CHATBOT_PORTAL_API_KEY=os.getenv("CHATBOT_PORTAL_API_KEY", "").strip(),

@@ -15,15 +15,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Iterable
 
 from flask import g, has_request_context
+from sqlalchemy import false, or_
 from sqlalchemy.exc import OperationalError, ProgrammingError
 
-from models import OrgaoClosure, OrgaoUnidade, db
+from models import OrgaoClosure, OrgaoUnidade, Project, ProjectMember, db
 from services.orgao_tree import get_orgao_descendants
+from time_utils import utc_now
 
 if TYPE_CHECKING:
+    from sqlalchemy.sql.elements import ColumnElement
+
     from flask import Response
 
-    from models import Project, User, UserOrgao
+    from models import User, UserOrgao
 
 PAPEL_LEITOR = "leitor"
 PAPEL_EDITOR = "editor"
@@ -39,6 +43,7 @@ PAPEL_RANK: dict[str, int] = {
 ADMIN_RANK: int = 100
 
 ROLE_MAP_CACHE_ATTR = "_authz_role_map"
+MEMBERSHIP_MAP_CACHE_ATTR = "_authz_membership_map"
 
 FORBIDDEN_PROJECT_MESSAGE = "Você não tem permissão para esta ação neste projeto."
 
@@ -78,6 +83,56 @@ def get_user_orgao_subtree_ids(user: "User | None") -> set[int]:
     return set(get_user_orgao_role_map(user))
 
 
+def get_active_membership_map(user: "User | None") -> dict[int, int]:
+    """Retorna ``{project_id: rank}`` dos convites ATIVOS do usuario (S4/F3-5).
+
+    UMA query batched, cacheada em ``g`` por request. Ficam de fora: convite
+    revogado, expirado (lazy, decidido na leitura — sem cron) e usuario
+    soft-deletado. O rank ja sai clampado ao teto de convite (editor).
+
+    Exemplo: ``get_active_membership_map(user).get(projeto.id, 0)``.
+    """
+    if user is None or getattr(user, "deleted_at", None) is not None:
+        return {}
+    cached = _read_user_scoped_cache(MEMBERSHIP_MAP_CACHE_ATTR, user)
+    if cached is not None:
+        return cached
+    membership_map = _build_membership_map(user)
+    _write_user_scoped_cache(MEMBERSHIP_MAP_CACHE_ATTR, user, membership_map)
+    return membership_map
+
+
+def _build_membership_map(user: "User") -> dict[int, int]:
+    teto = PAPEL_RANK[PAPEL_EDITOR]
+    return {
+        project_id: min(PAPEL_RANK[papel], teto)
+        for project_id, papel in _active_membership_rows(getattr(user, "id", None))
+        if papel in PAPEL_RANK
+    }
+
+
+def _active_membership_rows(user_id: int | None) -> "Iterable[tuple[int, str]]":
+    if not isinstance(user_id, int):
+        return []
+    try:
+        return (
+            db.session.query(ProjectMember.project_id, ProjectMember.papel)
+            .filter(
+                ProjectMember.user_id == user_id,
+                ProjectMember.revoked_at.is_(None),
+                or_(
+                    ProjectMember.expires_at.is_(None),
+                    ProjectMember.expires_at > utc_now(),
+                ),
+            )
+            .all()
+        )
+    except (OperationalError, ProgrammingError):
+        # Janela de deploy anterior ao step de migração: sem tabela, sem convite.
+        db.session.rollback()
+        return []
+
+
 def area_project_rank(user: "User | None", project: "Project | None") -> int:
     """Rank do usuario no projeto contando SO vinculo de area (e o piso do admin).
 
@@ -101,13 +156,25 @@ def area_project_rank(user: "User | None", project: "Project | None") -> int:
 def effective_project_rank(user: "User | None", project: "Project | None") -> int:
     """Retorna o rank efetivo do usuario no projeto (``0`` = sem acesso).
 
-    Admin recebe ``ADMIN_RANK``; os demais herdam o rank do orgao responsavel
-    pelo projeto. O componente direto (convite por projeto) e fixo em ``0``
-    nesta fase — entra com ``project_member``.
+    ``max(herdado, convite)`` da §5.2: admin recebe ``ADMIN_RANK``; o rank de
+    area propaga pela subarvore; o convite SOMA, nunca subtrai, com teto rigido
+    em editor. Projeto sem ``orgao_id`` so alcanca rank por admin ou convite.
 
     Exemplo: ``effective_project_rank(user, projeto) >= PAPEL_RANK["gestor"]``.
     """
-    return area_project_rank(user, project)
+    herdado = area_project_rank(user, project)
+    if herdado >= ADMIN_RANK:
+        return herdado
+    return max(herdado, _invited_project_rank(user, project))
+
+
+def _invited_project_rank(user: "User | None", project: "Project | None") -> int:
+    project_id = getattr(project, "id", None)
+    if not isinstance(project_id, int):
+        return 0
+    direto = get_active_membership_map(user).get(project_id, 0)
+    # Defesa em profundidade: o teto editor vale mesmo com linha adulterada.
+    return min(direto, PAPEL_RANK[PAPEL_EDITOR])
 
 
 def user_can_view_project(user: "User | None", project: "Project | None") -> bool:
@@ -226,19 +293,33 @@ def _papel_to_rank(papel: str) -> int:
 
 
 def user_can_access_project(user: "User | None", project: "Project | None") -> bool:
-    """Retorna True se o usuario pode acessar o projeto via subtree de orgao.
+    """Retorna True se o usuario pode LER o projeto: area OU convite ativo (F3-7).
 
-    Admin sempre acessa. Demais: projeto deve estar no subtree dos orgaos
-    vinculados ao usuario (heranca descendente). Projeto sem orgao_id nao e
-    acessivel a nao-admins.
+    Wrapper de ``effective_project_rank >= leitor`` — e por aqui que o
+    convidado abre detalhe, eventos, reunioes e anexos sem tocar cada endpoint.
+    Sem convites cadastrados a semantica e identica a de sempre: admin sempre
+    acessa; demais so com o projeto na subarvore dos orgaos vinculados.
     """
-    if user is None:
-        return False
-    if getattr(user, "is_admin", False):
-        return True
-    if project is None or project.orgao_id is None:
-        return False
-    return project.orgao_id in get_user_orgao_subtree_ids(user)
+    return effective_project_rank(user, project) >= PAPEL_RANK[PAPEL_LEITOR]
+
+
+def project_visibility_criterion(user: "User | None") -> "ColumnElement[bool]":
+    """Filtro §5.3 das listagens de NAO-admin: subtree de area OR convite ativo.
+
+    Uso: ``query.filter(project_visibility_criterion(g.user))`` em query que ja
+    envolve ``Project``. Sem vinculo e sem convite devolve ``false()`` (lista
+    vazia), como o antigo ``Project.id == -1``.
+    """
+    clauses = []
+    subtree_ids = get_user_orgao_subtree_ids(user)
+    if subtree_ids:
+        clauses.append(Project.orgao_id.in_(subtree_ids))
+    member_project_ids = set(get_active_membership_map(user))
+    if member_project_ids:
+        clauses.append(Project.id.in_(member_project_ids))
+    if not clauses:
+        return false()
+    return or_(*clauses)
 
 
 def _build_role_map(user: "User") -> dict[int, int]:
@@ -306,7 +387,7 @@ def _closure_rows(root_ids: set[int]) -> Iterable[tuple[int, int]]:
         return []
 
 
-def _role_map_cache_key(user: "User") -> int | None:
+def _user_cache_key(user: "User") -> int | None:
     """Chave de cache por request; ``None`` desliga o cache (TR-3)."""
     if not has_request_context():
         return None
@@ -314,19 +395,27 @@ def _role_map_cache_key(user: "User") -> int | None:
     return user_id if isinstance(user_id, int) else None
 
 
-def _read_cached_role_map(user: "User") -> dict[int, int] | None:
-    key = _role_map_cache_key(user)
+def _read_user_scoped_cache(attr: str, user: "User") -> dict[int, int] | None:
+    key = _user_cache_key(user)
     if key is None:
         return None
-    return getattr(g, ROLE_MAP_CACHE_ATTR, {}).get(key)
+    return getattr(g, attr, {}).get(key)
+
+
+def _write_user_scoped_cache(attr: str, user: "User", value: dict[int, int]) -> None:
+    key = _user_cache_key(user)
+    if key is None:
+        return
+    cache = getattr(g, attr, None)
+    if cache is None:
+        cache = {}
+        setattr(g, attr, cache)
+    cache[key] = value
+
+
+def _read_cached_role_map(user: "User") -> dict[int, int] | None:
+    return _read_user_scoped_cache(ROLE_MAP_CACHE_ATTR, user)
 
 
 def _write_cached_role_map(user: "User", role_map: dict[int, int]) -> None:
-    key = _role_map_cache_key(user)
-    if key is None:
-        return
-    cache = getattr(g, ROLE_MAP_CACHE_ATTR, None)
-    if cache is None:
-        cache = {}
-        setattr(g, ROLE_MAP_CACHE_ATTR, cache)
-    cache[key] = role_map
+    _write_user_scoped_cache(ROLE_MAP_CACHE_ATTR, user, role_map)

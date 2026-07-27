@@ -12,6 +12,10 @@ from datetime import timedelta
 from typing import Any
 
 from models import OrgaoUnidade, SiorgSyncLog, db
+from services.authorization_reports import (
+    serializar_escopo_zerado,
+    usuarios_com_escopo_zerado,
+)
 from services.siorg_client import SiorgClient
 from time_utils import utc_now
 
@@ -56,14 +60,18 @@ def _executar_com_lock(
         return _finalizar(log, "sucesso")
 
     nos = _achatar_arvore(client.obter_arvore(codigo_raiz))
-    criadas, atualizadas, desativadas = _aplicar_nos(nos)
+    criadas, atualizadas, desativados_ids = _aplicar_nos(nos)
     _rebuild_closure()
     return _finalizar(
         log,
         "sucesso",
         criadas=criadas,
         atualizadas=atualizadas,
-        desativadas=desativadas,
+        desativadas=len(desativados_ids),
+        # TR-2: só há o que relatar quando o sync desativou alguma unidade.
+        usuarios_escopo_zerado=serializar_escopo_zerado(
+            usuarios_com_escopo_zerado(desativados_ids)
+        ),
     )
 
 
@@ -143,7 +151,7 @@ def _achatar_arvore(nos: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return achatados
 
 
-def _aplicar_nos(nos: list[dict[str, Any]]) -> tuple[int, int, int]:
+def _aplicar_nos(nos: list[dict[str, Any]]) -> tuple[int, int, list[int]]:
     existentes = {
         orgao.codigo_externo: orgao
         for orgao in OrgaoUnidade.query.filter(
@@ -152,8 +160,8 @@ def _aplicar_nos(nos: list[dict[str, Any]]) -> tuple[int, int, int]:
     }
     por_codigo, criadas = _garantir_unidades(nos, existentes)
     atualizadas = _atualizar_unidades(nos, existentes, por_codigo)
-    desativadas = _desativar_ausentes(existentes, por_codigo)
-    return criadas, atualizadas, desativadas
+    desativados_ids = _desativar_ausentes(existentes, por_codigo)
+    return criadas, atualizadas, desativados_ids
 
 
 def _garantir_unidades(
@@ -232,14 +240,15 @@ def _resolver_pai_id(
 
 def _desativar_ausentes(
     existentes: dict[str, OrgaoUnidade], por_codigo: dict[str, OrgaoUnidade]
-) -> int:
-    desativadas = 0
+) -> list[int]:
+    """Desativa (nunca deleta) o que sumiu do payload; devolve os ids afetados."""
+    desativados_ids: list[int] = []
     for codigo, orgao in existentes.items():
         if codigo in por_codigo or not orgao.ativo:
             continue
         orgao.ativo = False
-        desativadas += 1
-    return desativadas
+        desativados_ids.append(orgao.id)
+    return desativados_ids
 
 
 def _rebuild_closure() -> None:

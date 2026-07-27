@@ -8,9 +8,10 @@ from models import Etapa, Project, Task, db
 
 from .blueprint import main_bp
 from .decorators import login_required
+from services.authorization import project_visibility_criterion
+
 from .orgao_scope import (
     expand_orgao_filter_ids,
-    get_user_orgao_subtree_ids,
     redirect_to_current_route_without_orgao,
     sanitize_orgao_filter_for_current_user,
 )
@@ -42,17 +43,13 @@ def build_dashboard_context(selected_orgao_id: Optional[int]) -> dict[str, Any]:
         >>> ctx["num_projects"]
         12
     """
-    user_subtree_ids = set() if g.user.is_admin else get_user_orgao_subtree_ids(g.user)
     selected_subtree_ids = (
         expand_orgao_filter_ids(selected_orgao_id) if selected_orgao_id else set()
     )
 
     def apply_project_scope(query):
         if not g.user.is_admin:
-            if user_subtree_ids:
-                query = query.filter(Project.orgao_id.in_(user_subtree_ids))
-            else:
-                query = query.filter(Project.id == -1)
+            query = query.filter(project_visibility_criterion(g.user))
         if selected_subtree_ids:
             query = query.filter(Project.orgao_id.in_(selected_subtree_ids))
         return query
@@ -117,25 +114,20 @@ def build_dashboard_context(selected_orgao_id: Optional[int]) -> dict[str, Any]:
                 )
             return query
 
-        effective_subtree_ids = (
-            selected_subtree_ids & user_subtree_ids
-            if selected_subtree_ids
-            else user_subtree_ids
+        project_branch = and_(
+            Task.project_id.isnot(None), project_visibility_criterion(g.user)
         )
-
-        visibility_filters = [
-            and_(Task.project_id.is_(None), Task.created_by_id == g.user.id)
-        ]
-        if effective_subtree_ids:
-            visibility_filters.insert(
-                0,
-                and_(
-                    Task.project_id.isnot(None),
-                    Project.orgao_id.in_(effective_subtree_ids),
-                ),
+        if selected_subtree_ids:
+            project_branch = and_(
+                project_branch, Project.orgao_id.in_(selected_subtree_ids)
             )
 
-        return query.filter(or_(*visibility_filters))
+        return query.filter(
+            or_(
+                project_branch,
+                and_(Task.project_id.is_(None), Task.created_by_id == g.user.id),
+            )
+        )
 
     open_tasks_count_query = (
         db.session.query(db.func.count(Task.id))

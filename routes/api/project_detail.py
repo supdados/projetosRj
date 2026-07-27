@@ -32,8 +32,8 @@ from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from catalogs.inventario import orgao_allows_inventario
 from models import Project, Task, db
 
-from services.authorization import user_can_edit_project
 from services.etapas_dates import meeting_payload_block
+from services.project_membership import project_permission_flags
 
 from ..blueprint import main_bp
 from ..calendars.helpers import _connection_for_current_user
@@ -141,7 +141,7 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
     )
     # UX-only (autorização segue server-side por rota): leitor não deve ver
     # affordances de edição que responderiam 403 (F2-7).
-    can_edit = user_can_edit_project(g.user, project)
+    permissions = project_permission_flags(g.user, project)
     connection = _connection_for_current_user()
     special_project_options = list(_SPECIAL_PROJECT_OPTIONS)
     if orgao_allows_inventario(project.orgao_ref.sigla if project.orgao_ref else None):
@@ -180,7 +180,7 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
             "abep_indicator": ABEP_INDICADORES_OPTIONS,
             "orgaos": scoped_orgao_options(g.user),
         },
-        "permissions": {"can_edit": can_edit},
+        "permissions": permissions,
     }
 
 

@@ -15,8 +15,11 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from flask import g, has_request_context
+
 from services.authorization import PAPEL_GESTOR
 from services.calendar_core import format_human_datetime, format_input_datetime
+from services.project_membership import project_access_via, project_permission_flags
 from time_utils import iso_utc
 
 
@@ -190,6 +193,18 @@ def _resolve_auth_provider(user: Any) -> str:
     return "local"
 
 
+def _tem_vinculo_de_area(user: Any) -> bool:
+    """True quando o usuário alcança órgãos por vínculo de área (ou é admin).
+
+    Controla a exibição do seletor de órgão na SPA (§5.3/F3-9): quem só entra por
+    convite recebe ``False``, esconde o filtro e nunca chega a tomar o 422 de
+    ``sanitize_orgao_filter_for_user`` (que fica inalterada).
+    """
+    if bool(user.is_admin):
+        return True
+    return bool(getattr(user, "orgaos", None))
+
+
 def serialize_user(user: Any) -> dict[str, Any]:
     """Serializa um usuário para ``/api/me`` e afins.
 
@@ -201,13 +216,13 @@ def serialize_user(user: Any) -> dict[str, Any]:
 
     Returns:
         ``{id, name, username, is_admin, orgaos: [{id, sigla, nome, papel}],
-        auth_provider}``.
+        tem_vinculo_de_area, auth_provider}``.
 
     Exemplo:
         >>> serialize_user(g.user)
         {'id': 1, 'name': 'Ana', 'username': 'ana', 'is_admin': False,
          'orgaos': [{'id': 3, 'sigla': 'SETD', 'nome': '...', 'papel': 'gestor'}],
-         'auth_provider': 'govbr'}
+         'tem_vinculo_de_area': True, 'auth_provider': 'govbr'}
     """
     return {
         "id": user.id,
@@ -215,6 +230,7 @@ def serialize_user(user: Any) -> dict[str, Any]:
         "username": user.username,
         "is_admin": bool(user.is_admin),
         "orgaos": _user_orgao_refs(user),
+        "tem_vinculo_de_area": _tem_vinculo_de_area(user),
         "auth_provider": _resolve_auth_provider(user),
     }
 
@@ -263,7 +279,27 @@ def _iso_or_none(value: Any) -> Optional[str]:
     return iso_utc(value)
 
 
-def serialize_project_card(project: Any) -> dict[str, Any]:
+def _current_viewer() -> Any:
+    """Usuário do request corrente (``None`` fora de request ou sem sessão)."""
+    if not has_request_context():
+        return None
+    return getattr(g, "user", None)
+
+
+def _project_access_block(viewer: Any, project: Any) -> dict[str, Any]:
+    """``permissions`` + ``access_via`` do projeto para o viewer (§6.4/F3-10).
+
+    Custo ZERO de query por projeto: os dois mapas (área e convite) já vêm
+    cacheados em ``g`` por ``services.authorization`` — serializar N projetos
+    consulta o banco as mesmas 2 vezes que serializar um.
+    """
+    return {
+        "permissions": project_permission_flags(viewer, project),
+        "access_via": project_access_via(viewer, project),
+    }
+
+
+def serialize_project_card(project: Any, *, viewer: Any = None) -> dict[str, Any]:
     """Serializa um projeto no formato de "card" para listas/dashboard.
 
     Usa CAMPOS REAIS do modelo ``Project`` mais os derivados read-only
@@ -272,12 +308,15 @@ def serialize_project_card(project: Any) -> dict[str, Any]:
 
     Args:
         project: Instância de ``Project``.
+        viewer: Usuário para quem as flags são calculadas; por padrão o
+            ``g.user`` do request corrente.
 
     Returns:
-        ``dict`` JSON-safe com os campos do card.
+        ``dict`` JSON-safe com os campos do card, mais ``permissions`` e
+        ``access_via`` (``"admin"``/``"area"``/``"convite"``/``"ambos"``/``None``).
     """
     orgao_ref = getattr(project, "orgao_ref", None)
-    return {
+    card = {
         "id": project.id,
         "titulo": project.titulo,
         "status": project.status,
@@ -297,9 +336,15 @@ def serialize_project_card(project: Any) -> dict[str, Any]:
         "etapas_concluidas": project.etapas_concluidas,
         "todas_etapas_concluidas": project.todas_etapas_concluidas,
     }
+    card.update(
+        _project_access_block(
+            viewer if viewer is not None else _current_viewer(), project
+        )
+    )
+    return card
 
 
-def serialize_project_detail(project: Any) -> dict[str, Any]:
+def serialize_project_detail(project: Any, *, viewer: Any = None) -> dict[str, Any]:
     """Serializa um projeto para a tela de Detalhe (card + campos editáveis).
 
     Reusa ``serialize_project_card`` (id/titulo/status/derivados read-only) e
@@ -310,11 +355,13 @@ def serialize_project_detail(project: Any) -> dict[str, Any]:
 
     Args:
         project: Instância de ``Project``.
+        viewer: Usuário para quem ``permissions``/``access_via`` são calculados;
+            por padrão o ``g.user`` do request corrente.
 
     Returns:
         ``dict`` JSON-safe com os campos do card mais os editáveis do detalhe.
     """
-    card = serialize_project_card(project)
+    card = serialize_project_card(project, viewer=viewer)
     card.update(
         {
             "observacao": project.observacao,

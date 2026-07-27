@@ -8,8 +8,8 @@ from models import (
 )
 from routes.orgao_scope import (
     expand_orgao_filter_ids,
-    get_user_orgao_subtree_ids,
 )
+from services.authorization import project_visibility_criterion
 from routes.tasks.permissions import (
     task_permission_flags as _public_task_permission_flags,
 )
@@ -197,11 +197,7 @@ def _build_task_hub_project_options(include_archived=False, orgao_filter_id=None
     query = Project.query
 
     if not g.user.is_admin:
-        subtree_ids = get_user_orgao_subtree_ids(g.user)
-        if subtree_ids:
-            query = query.filter(Project.orgao_id.in_(subtree_ids))
-        else:
-            query = query.filter(db.false())
+        query = query.filter(project_visibility_criterion(g.user))
 
     if orgao_filter_id is not None:
         filter_subtree_ids = expand_orgao_filter_ids(orgao_filter_id)

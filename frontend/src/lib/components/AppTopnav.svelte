@@ -203,6 +203,8 @@
 		)
 			return 'fa-check-circle';
 		if (t === 'task_assignment' || t === 'task_item_assignment') return 'fa-user-check';
+		// S4: convite por projeto (`projeto_convite`) — nao casa com `project_`.
+		if (t === 'projeto_convite') return 'fa-user-plus';
 		if (t.startsWith('task_comment_') || t.startsWith('task_item_comment_'))
 			return 'fa-comments';
 		if (t.startsWith('project_')) return 'fa-folder-tree';

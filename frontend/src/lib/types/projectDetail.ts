@@ -153,9 +153,16 @@ export interface ProjectDetailOptions {
 	orgaos: OrgaoDetailOption[];
 }
 
-/** Permissões da tela de detalhe (_serialize_detail.permissions). */
+/**
+ * Permissões da tela de detalhe (_serialize_detail.permissions).
+ *
+ * `can_manage`/`can_manage_members` (S4) são opcionais porque o backend do
+ * release anterior não emite as chaves (rolling deploy); ausente = negado.
+ */
 export interface ProjectDetailPermissions {
 	can_edit: boolean;
+	can_manage?: boolean;
+	can_manage_members?: boolean;
 }
 
 /** Carga completa de GET /api/projetos/<id>/detalhe (já desempacotada). */

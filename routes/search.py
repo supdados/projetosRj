@@ -16,12 +16,12 @@ from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import joinedload
 
 from models import CalendarEvent, Etapa, Project, Task
+from services.authorization import project_visibility_criterion
 
 from .blueprint import main_bp
 from .decorators import login_required
 from .orgao_scope import (
     expand_orgao_filter_ids,
-    get_user_orgao_subtree_ids,
     sanitize_orgao_filter_for_current_user,
 )
 from .search_serializers import (
@@ -49,16 +49,17 @@ _SEARCH_SERIALIZERS = {
 @dataclass(frozen=True)
 class _SearchScope:
     user_scope_restricted: bool
-    user_subtree_ids: set[int]
+    # Criterion §5.3 (subtree de área OR convite ativo); None quando irrestrito.
+    project_criterion: object
     selected_subtree_ids: set[int]
 
 
 def _resolve_search_scope(user, selected_orgao_id) -> _SearchScope:
     if user and not user.is_admin:
-        user_subtree_ids = get_user_orgao_subtree_ids(user)
+        project_criterion = project_visibility_criterion(user)
         user_scope_restricted = True
     else:
-        user_subtree_ids = set()
+        project_criterion = None
         user_scope_restricted = False
 
     selected_subtree_ids = (
@@ -66,7 +67,7 @@ def _resolve_search_scope(user, selected_orgao_id) -> _SearchScope:
     )
     return _SearchScope(
         user_scope_restricted=user_scope_restricted,
-        user_subtree_ids=user_subtree_ids,
+        project_criterion=project_criterion,
         selected_subtree_ids=selected_subtree_ids,
     )
 
@@ -95,12 +96,7 @@ def _project_search_query(term: str, user, scope: _SearchScope):
         else project_text_filters
     )
     if scope.user_scope_restricted:
-        if scope.user_subtree_ids:
-            project_query = project_query.filter(
-                Project.orgao_id.in_(scope.user_subtree_ids)
-            )
-        else:
-            project_query = project_query.filter(Project.id == -1)
+        project_query = project_query.filter(scope.project_criterion)
     if scope.selected_subtree_ids:
         project_query = project_query.filter(
             Project.orgao_id.in_(scope.selected_subtree_ids)
@@ -124,12 +120,7 @@ def _stage_search_query(term: str, user, scope: _SearchScope):
         )
     )
     if scope.user_scope_restricted:
-        if scope.user_subtree_ids:
-            stage_query = stage_query.filter(
-                Project.orgao_id.in_(scope.user_subtree_ids)
-            )
-        else:
-            stage_query = stage_query.filter(Project.id == -1)
+        stage_query = stage_query.filter(scope.project_criterion)
     if scope.selected_subtree_ids:
         stage_query = stage_query.filter(
             Project.orgao_id.in_(scope.selected_subtree_ids)
@@ -155,20 +146,12 @@ def _task_search_query(term: str, user, scope: _SearchScope):
         )
     )
     if scope.user_scope_restricted:
-        if scope.user_subtree_ids:
-            task_query = task_query.filter(
-                or_(
-                    and_(
-                        Task.project_id.isnot(None),
-                        Project.orgao_id.in_(scope.user_subtree_ids),
-                    ),
-                    and_(Task.project_id.is_(None), Task.created_by_id == user.id),
-                )
+        task_query = task_query.filter(
+            or_(
+                and_(Task.project_id.isnot(None), scope.project_criterion),
+                and_(Task.project_id.is_(None), Task.created_by_id == user.id),
             )
-        else:
-            task_query = task_query.filter(
-                and_(Task.project_id.is_(None), Task.created_by_id == user.id)
-            )
+        )
     if scope.selected_subtree_ids:
         task_query = task_query.filter(
             Task.project_id.isnot(None),

@@ -17,6 +17,15 @@ from .task import (
     TaskAssignee,
 )
 from .siorg_sync import SiorgSyncLog, SIORG_SYNC_STATUSES
+from .project_member import ORIGEM_CONVITE, ProjectMember, papeis_de_convite
+from .authorization_audit import (
+    ALVOS_AUTORIZACAO,
+    ALVO_ORGAO,
+    ALVO_PROJETO,
+    EVENTOS_AUTORIZACAO,
+    AutorizacaoAudit,
+    registrar_autorizacao,
+)
 from .orgao import (
     ALLOWED_TIPOS,
     DEFAULT_ORGAO_TIPOS,
@@ -64,6 +73,15 @@ __all__ = [
     "OrgaoUnidade",
     "SiorgSyncLog",
     "SIORG_SYNC_STATUSES",
+    "ProjectMember",
+    "ORIGEM_CONVITE",
+    "papeis_de_convite",
+    "AutorizacaoAudit",
+    "EVENTOS_AUTORIZACAO",
+    "ALVOS_AUTORIZACAO",
+    "ALVO_ORGAO",
+    "ALVO_PROJETO",
+    "registrar_autorizacao",
     "ALLOWED_TIPOS",
     "DEFAULT_ORGAO_TIPOS",
     "MAX_DEPTH",

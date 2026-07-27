@@ -26,6 +26,7 @@
 		ProjectDetailDerived
 	} from '$lib/types/projectDetail';
 	import { base } from '$app/paths';
+	import { isAcessoPorConvite } from '$lib/utils/projectMembers';
 
 	type HeaderField =
 		| 'titulo'
@@ -51,6 +52,8 @@
 		/** Projeto finalizado: header inteiro vira somente leitura (reabrir só pelo botão). */
 		locked?: boolean;
 		onEditField: (field: HeaderField, value: string) => void;
+		/** Abre o modal "Compartilhar" (S4). Ausente = botão não aparece. */
+		onShare?: () => void;
 	}
 
 	let {
@@ -61,8 +64,13 @@
 		topOffset = 0,
 		fieldStates = {},
 		locked = false,
-		onEditField
+		onEditField,
+		onShare
 	}: Props = $props();
+
+	// Gate autoritativo do servidor; ausente (release anterior) = negado.
+	const canShare = $derived(Boolean(onShare && permissions.can_manage_members));
+	const isConvidado = $derived(isAcessoPorConvite(project.access_via));
 
 	let compact = $state(false);
 	const canEdit = $derived(permissions.can_edit && !locked);
@@ -329,6 +337,12 @@
 			     <h1> fica SEMPRE no DOM (oculto visualmente ao editar) para preservar o
 			     heading de nível 1 e o nome da região (header/section aria-labelledby);
 			     o textarea tem id próprio para não roubar o id do heading. -->
+			{#if isConvidado}
+				<span class="ph-guest-badge" title="Você acessa este projeto por convite">
+					<i class="fas fa-user-check" aria-hidden="true"></i>
+					Convidado
+				</span>
+			{/if}
 			<div class="ph-title-row">
 				<h1
 					id="project-detail-title"
@@ -454,10 +468,18 @@
 				</p>
 			{/if}
 		</div>
-		<a href={`${base}/projetos`} class="ph-back-button">
-			<i class="fas fa-arrow-left" aria-hidden="true"></i>
-			<span>Voltar</span>
-		</a>
+		<div class="ph-header-actions">
+			{#if canShare}
+				<button type="button" class="ph-back-button" onclick={() => onShare?.()}>
+					<i class="fas fa-user-plus" aria-hidden="true"></i>
+					<span>Compartilhar</span>
+				</button>
+			{/if}
+			<a href={`${base}/projetos`} class="ph-back-button">
+				<i class="fas fa-arrow-left" aria-hidden="true"></i>
+				<span>Voltar</span>
+			</a>
+		</div>
 	</div>
 
 	<div class="project-header-chips">
@@ -987,13 +1009,40 @@
 		color: #fecaca;
 	}
 
+	/* Badge "Convidado": acesso por convite (access_via), sobre o header glass. */
+	.ph-guest-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		align-self: flex-start;
+		margin-bottom: 0.4rem;
+		padding: 0.15rem 0.6rem;
+		border-radius: 999px;
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: #fff;
+		background: rgba(255, 255, 255, 0.16);
+		border: 1px solid rgba(255, 255, 255, 0.32);
+	}
+
+	.ph-header-actions {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
+		margin-left: 0.75rem;
+	}
+
 	.ph-back-button {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
 		flex-shrink: 0;
-		margin-left: 0.75rem;
 		padding: 0.4rem 0.85rem;
+		font-family: inherit;
+		cursor: pointer;
 		border-radius: 8px;
 		font-size: 0.82rem;
 		font-weight: 600;

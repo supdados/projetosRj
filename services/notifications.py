@@ -243,6 +243,24 @@ def notify_project_history_action(
     )
 
 
+def notify_project_invite(project, recipient_user_id, actor_user_id, papel):
+    """Avisa o convidado do acesso concedido (S4/F3-17): sem e-mail, sem aceite.
+
+    Ex.: `notify_project_invite(projeto, convidado.id, g.user.id, "leitor")`.
+    """
+    if not project or not recipient_user_id:
+        return 0
+
+    return create_user_notifications(
+        [recipient_user_id],
+        actor_user_id=actor_user_id,
+        event_type="projeto_convite",
+        title=f'Voce foi convidado para o projeto "{_truncate_text(project.titulo, 80)}"',
+        message=f"Seu acesso e de {papel}: voce vera todo o conteudo deste projeto.",
+        target_url=url_for("main.project_detail", project_id=project.id),
+    )
+
+
 def notify_task_event(
     task, actor_user_id, event_type, title, message, item_id=None, target_url=None
 ):

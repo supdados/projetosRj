@@ -5,11 +5,13 @@ Trava do comportamento ATUAL de escopo (S1/F0-2): o ramo não-admin NÃO filtra
 resolvendo todos os descendentes.
 """
 
+from datetime import timedelta
+
 import pytest
 from flask import g
-from sqlalchemy import event
+from sqlalchemy import event, text
 
-from models import OrgaoUnidade, db
+from models import OrgaoUnidade, ProjectMember, db
 from routes import orgao_scope
 from routes.api.negotiation import api_admin_required
 from routes.tasks.permissions import (
@@ -27,6 +29,7 @@ from services.authorization import (
     assignable_orgao_ids,
     can_assign_project_to_orgao,
     effective_project_rank,
+    get_active_membership_map,
     get_user_orgao_role_map,
     get_user_orgao_subtree_ids,
     require_project_rank,
@@ -37,6 +40,7 @@ from services.authorization import (
     user_can_view_project,
 )
 from services.orgao_tree import rebuild_orgao_closure
+from time_utils import utc_now
 
 # ── Fakes nomeados ────────────────────────────────────────────────────────────
 
@@ -88,10 +92,11 @@ class SqlQueryCounter:
 
 
 class FakeProject:
-    """Substitui ``Project``: o serviço só lê ``orgao_id``."""
+    """Substitui ``Project``: o serviço só lê ``orgao_id`` e ``id`` (convites)."""
 
-    def __init__(self, orgao_id: int | None) -> None:
+    def __init__(self, orgao_id: int | None, project_id: int | None = None) -> None:
         self.orgao_id = orgao_id
+        self.id = project_id
 
 
 # ── Fixture de árvore ─────────────────────────────────────────────────────────
@@ -870,3 +875,166 @@ def test_matriz_importar_csv_e_crud_admin_liberam_admin(app):
     with app.app_context():
         g.user = FakeUser(is_admin=True, user_id=1)
         assert acao_admin() == "ok"
+
+
+# ── Convites por projeto (S4: F3-6 rank efetivo + F3-7 wrapper de leitura) ────
+
+
+def _convida(project_id: int, user_id: int, papel: str) -> ProjectMember:
+    convite = ProjectMember(
+        project_id=project_id, user_id=user_id, papel=papel, granted_by_id=1
+    )
+    db.session.add(convite)
+    db.session.flush()
+    return convite
+
+
+def test_convite_leitor_da_leitura_sem_vinculo_de_area(app, orgao_arvore):
+    with app.app_context():
+        convidado = FakeUser(user_id=50)
+        projeto = FakeProject(orgao_arvore["outra"], project_id=901)
+        _convida(901, 50, PAPEL_LEITOR)
+        assert effective_project_rank(convidado, projeto) == PAPEL_RANK[PAPEL_LEITOR]
+        assert user_can_access_project(convidado, projeto) is True
+        assert user_can_view_project(convidado, projeto) is True
+        assert user_can_edit_project(convidado, projeto) is False
+
+
+def test_convite_editor_da_edicao_mas_nunca_gestao(app, orgao_arvore):
+    with app.app_context():
+        convidado = FakeUser(user_id=50)
+        projeto = FakeProject(orgao_arvore["outra"], project_id=901)
+        _convida(901, 50, PAPEL_EDITOR)
+        assert effective_project_rank(convidado, projeto) == PAPEL_RANK[PAPEL_EDITOR]
+        assert user_can_edit_project(convidado, projeto) is True
+        assert user_can_manage_project(convidado, projeto) is False
+        assert require_project_rank(projeto, PAPEL_EDITOR, user=convidado) is None
+        assert _envelope(
+            require_project_rank(projeto, PAPEL_GESTOR, user=convidado)
+        ) == (403, "forbidden")
+
+
+def test_rank_efetivo_soma_convite_por_max_sem_subtrair(app, orgao_arvore):
+    """Regra 4 da §5.2: editor da área convidado como leitor continua editor."""
+    with app.app_context():
+        projeto = FakeProject(orgao_arvore["sup"], project_id=902)
+        editor_de_area = FakeUser(
+            user_id=51, vinculos=((orgao_arvore["sec"], PAPEL_EDITOR),)
+        )
+        _convida(902, 51, PAPEL_LEITOR)
+        assert effective_project_rank(editor_de_area, projeto) == (
+            PAPEL_RANK[PAPEL_EDITOR]
+        )
+        leitor_de_area = FakeUser(
+            user_id=52, vinculos=((orgao_arvore["sec"], PAPEL_LEITOR),)
+        )
+        _convida(902, 52, PAPEL_EDITOR)
+        assert effective_project_rank(leitor_de_area, projeto) == (
+            PAPEL_RANK[PAPEL_EDITOR]
+        )
+
+
+def test_convite_alcanca_projeto_sem_orgao(app, orgao_arvore):
+    """Regra 5 da §5.2: projeto legado sem ``orgao_id`` abre por admin OU convite."""
+    with app.app_context():
+        convidado = FakeUser(user_id=50)
+        projeto_orfao = FakeProject(None, project_id=903)
+        assert user_can_access_project(convidado, projeto_orfao) is False
+        _convida(903, 50, PAPEL_LEITOR)
+        assert effective_project_rank(convidado, projeto_orfao) == (
+            PAPEL_RANK[PAPEL_LEITOR]
+        )
+        assert user_can_access_project(convidado, projeto_orfao) is True
+
+
+def test_linha_adulterada_com_gestor_no_banco_clampa_a_editor(app, orgao_arvore):
+    """Teto rígido do convite: gestor via project_member nunca vira gestão."""
+    with app.app_context():
+        db.session.execute(
+            text(
+                "INSERT INTO project_member "
+                "(project_id, user_id, papel, origem, granted_by_id, created_at) "
+                "VALUES (904, 50, 'gestor', 'convite', 1, :agora)"
+            ),
+            {"agora": utc_now()},
+        )
+        convidado = FakeUser(user_id=50)
+        projeto = FakeProject(orgao_arvore["outra"], project_id=904)
+        assert effective_project_rank(convidado, projeto) == PAPEL_RANK[PAPEL_EDITOR]
+        assert user_can_manage_project(convidado, projeto) is False
+
+
+def test_convite_expirado_ou_revogado_nao_conta(app, orgao_arvore):
+    with app.app_context():
+        projeto = FakeProject(orgao_arvore["outra"], project_id=905)
+        expirado = _convida(905, 53, PAPEL_EDITOR)
+        expirado.expires_at = utc_now() - timedelta(days=1)
+        revogado = _convida(905, 54, PAPEL_EDITOR)
+        revogado.revoked_at = utc_now()
+        db.session.flush()
+        assert effective_project_rank(FakeUser(user_id=53), projeto) == 0
+        assert effective_project_rank(FakeUser(user_id=54), projeto) == 0
+        assert user_can_access_project(FakeUser(user_id=53), projeto) is False
+
+
+def test_convite_nao_afeta_area_project_rank_nem_regra_dupla(app, orgao_arvore):
+    """Captura da §5.4 re-testada com convite REAL: convidado-editor não move."""
+    with app.app_context():
+        convidado_editor = FakeUser(
+            user_id=55, vinculos=((orgao_arvore["outra"], PAPEL_EDITOR),)
+        )
+        projeto_convidado = FakeProject(orgao_arvore["sec"], project_id=906)
+        _convida(906, 55, PAPEL_EDITOR)
+        assert effective_project_rank(convidado_editor, projeto_convidado) == (
+            PAPEL_RANK[PAPEL_EDITOR]
+        )
+        assert area_project_rank(convidado_editor, projeto_convidado) == 0
+        assert can_assign_project_to_orgao(convidado_editor, orgao_arvore["outra"])
+        assert (
+            user_can_reassign_project_to_orgao(
+                convidado_editor, projeto_convidado, orgao_arvore["outra"]
+            )
+            is False
+        )
+
+
+def test_admin_nao_precisa_de_convite_nem_e_rebaixado_por_ele(app, orgao_arvore):
+    with app.app_context():
+        admin = FakeUser(is_admin=True, user_id=56)
+        projeto = FakeProject(orgao_arvore["outra"], project_id=907)
+        assert effective_project_rank(admin, projeto) == ADMIN_RANK
+        _convida(907, 56, PAPEL_LEITOR)
+        assert effective_project_rank(admin, projeto) == ADMIN_RANK
+
+
+def test_sem_convites_rank_efetivo_equivale_ao_de_area(app, orgao_arvore):
+    """Equivalência S4: zero linhas em project_member ⇒ comportamento bit-a-bit."""
+    with app.app_context():
+        usuarios = (
+            FakeUser(is_admin=True, user_id=60),
+            FakeUser(user_id=61),
+            FakeUser(user_id=62, vinculos=((orgao_arvore["sec"], PAPEL_EDITOR),)),
+            FakeUser(user_id=63, vinculos=((orgao_arvore["outra"], PAPEL_GESTOR),)),
+        )
+        projetos = (
+            FakeProject(orgao_arvore["sup"], project_id=910),
+            FakeProject(orgao_arvore["outra"], project_id=911),
+            FakeProject(None, project_id=912),
+            None,
+        )
+        for user in usuarios:
+            assert get_active_membership_map(user) == {}
+            for projeto in projetos:
+                assert effective_project_rank(user, projeto) == area_project_rank(
+                    user, projeto
+                )
+
+
+def test_wrapper_de_acesso_inclui_convite(app, orgao_arvore):
+    """F3-7: os ~35 call sites de leitura herdam o convite pelo wrapper."""
+    with app.app_context():
+        convidado = FakeUser(user_id=57)
+        projeto = FakeProject(orgao_arvore["outra"], project_id=908)
+        assert orgao_scope.user_can_access_project(convidado, projeto) is False
+        _convida(908, 57, PAPEL_LEITOR)
+        assert orgao_scope.user_can_access_project(convidado, projeto) is True

@@ -28,11 +28,11 @@ from routes.orgao_scope import (
     expand_orgao_filter_ids,
     get_user_orgao_options,
     get_user_orgao_siglas,
-    get_user_orgao_subtree_ids,
     sanitize_orgao_filter_for_current_user,
     scoped_orgao_options,
     user_can_access_project,
 )
+from services.authorization import project_visibility_criterion
 from services.etapa_positions import build_etapa_position_map
 from routes.shared import (
     get_or_404,
@@ -97,11 +97,7 @@ def build_projects_list_context(
     query = Project.query
 
     if not g.user.is_admin:
-        user_orgao_subtree_ids = get_user_orgao_subtree_ids(g.user)
-        if user_orgao_subtree_ids:
-            query = query.filter(Project.orgao_id.in_(user_orgao_subtree_ids))
-        else:
-            query = query.filter(Project.id == -1)
+        query = query.filter(project_visibility_criterion(g.user))
 
     if selected_orgao_id is not None:
         subtree_ids = expand_orgao_filter_ids(selected_orgao_id)
@@ -181,13 +177,7 @@ def build_projects_list_context(
 
     options_query = Project.query
     if not g.user.is_admin:
-        user_orgao_subtree_ids = get_user_orgao_subtree_ids(g.user)
-        if user_orgao_subtree_ids:
-            options_query = options_query.filter(
-                Project.orgao_id.in_(user_orgao_subtree_ids)
-            )
-        else:
-            options_query = options_query.filter(Project.id == -1)
+        options_query = options_query.filter(project_visibility_criterion(g.user))
 
     scoped_option_projects = options_query.all()
     priorities_options = sorted(
@@ -358,13 +348,9 @@ def build_projetos_pendentes_context(
     query_projetos_base = Project.query.filter(Project.status == "Vigente")
 
     if not g.user.is_admin:
-        user_orgao_subtree_ids = get_user_orgao_subtree_ids(g.user)
-        if user_orgao_subtree_ids:
-            query_projetos_base = query_projetos_base.filter(
-                Project.orgao_id.in_(user_orgao_subtree_ids)
-            )
-        else:
-            query_projetos_base = query_projetos_base.filter(Project.id == -1)
+        query_projetos_base = query_projetos_base.filter(
+            project_visibility_criterion(g.user)
+        )
 
     if selected_orgao_id is not None:
         orgao_subtree = expand_orgao_filter_ids(selected_orgao_id)

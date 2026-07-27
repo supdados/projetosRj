@@ -32,6 +32,7 @@
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 	import type { Project } from '$lib/types/entities';
+	import { isAcessoPorConvite } from '$lib/utils/projectMembers';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -94,6 +95,9 @@
 
 	/** Só admin importa projetos via CSV (espelha @admin_required do backend). */
 	const isAdmin = $derived($auth.user?.is_admin ?? false);
+
+	/** F3-9: usuário só-convite não vê o seletor de órgão (e nunca toma o 422). */
+	const temVinculoDeArea = $derived($auth.user?.tem_vinculo_de_area ?? true);
 
 	/** Sucesso da importação CSV: flash + recarrega a lista. */
 	function onProjectsImported(count: number): void {
@@ -758,7 +762,7 @@
 				/>
 			</div>
 
-			{#if orgaoTreeOptions.length > 0}
+			{#if temVinculoDeArea && orgaoTreeOptions.length > 0}
 				<div class="min-w-[10rem] flex-1">
 					<OrgaoTreeSelect
 						id="projetosOrgao"
@@ -1117,6 +1121,14 @@
 										>
 											{project.titulo}
 										</a>
+										{#if isAcessoPorConvite(project.access_via)}
+											<span
+												title="Você acessa este projeto por convite"
+												class="ml-2 inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 align-middle text-2xs font-bold uppercase tracking-wide text-primary-700"
+											>
+												<i class="fas fa-user-check" aria-hidden="true"></i>Convidado
+											</span>
+										{/if}
 									</td>
 									<td
 										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle text-text-secondary"

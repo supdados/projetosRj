@@ -39,12 +39,13 @@ ALLOWLIST: frozenset[str] = frozenset(
 # (centralizado em `user_can_reassign_project_to_orgao`) e S3/F2-5 pagou metade de
 # `routes/tasks/permissions.py` (`_can_view_task` -> `user_can_view_project`; o uso
 # restante é `_can_manage_task_restricted_actions`, intocado por decisão de
-# produto) => 18 usos em 12 arquivos.
+# produto) => 18 usos em 12 arquivos; S4/F3-8 pagou 1 uso de `routes/dashboard.py`
+# (escopo de projeto centralizado em `project_visibility_criterion`) => 17 usos.
 # Baixar um número aqui só depois de trocar o uso por chamada ao serviço (S3/S4).
 BASELINE: dict[str, int] = {
     "app.py": 1,
     "routes/api/calendars.py": 1,
-    "routes/dashboard.py": 3,
+    "routes/dashboard.py": 2,
     "routes/decorators.py": 1,
     "routes/projects/views.py": 5,
     "routes/search.py": 1,

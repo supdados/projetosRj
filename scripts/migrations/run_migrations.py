@@ -133,6 +133,13 @@ STAGE_TEMPLATE_AUDIT_COLUMNS = [
 ]
 PROJECT_ORGAO_COLUMN = ("orgao_id", "INTEGER")
 USER_ORGAO_PAPEL_COLUMN = ("papel", "VARCHAR(10) NOT NULL DEFAULT 'gestor'")
+PROJECT_MEMBER_TABLE = "project_member"
+AUTORIZACAO_AUDIT_TABLE = "autorizacao_audit"
+SIORG_SYNC_LOG_INCREMENTAL_COLUMNS = [
+    ("codigo_raiz", "INTEGER"),
+    # TR-2: JSON dos usuários cujo escopo de área zerou no sync.
+    ("usuarios_escopo_zerado", "TEXT"),
+]
 ORGAO_UNIDADE_INCREMENTAL_COLUMNS = [
     ("tipo_id", "INTEGER"),
     ("codigo_externo", "VARCHAR(80)"),
@@ -1589,28 +1596,37 @@ def ensure_user_orgao_papel_column(emit_output=True):
 
 
 def ensure_siorg_sync_log_table(emit_output=True):
-    """Garante a tabela siorg_sync_log (integração SIORG — auditoria de sync)."""
+    """Garante a tabela siorg_sync_log e suas colunas incrementais."""
     _emit("→ Garantindo tabela siorg_sync_log...", emit_output)
     try:
         inspector = inspect(db.engine)
-        if _table_exists(inspector, "siorg_sync_log"):
-            colunas = {c["name"] for c in inspector.get_columns("siorg_sync_log")}
-            if "codigo_raiz" not in colunas:
-                db.session.execute(
-                    text("ALTER TABLE siorg_sync_log ADD COLUMN codigo_raiz INTEGER")
-                )
-                db.session.commit()
-                _emit("   ✓ Coluna codigo_raiz adicionada.", emit_output)
-                return {"success": True, "created": True}
-            _emit("   ✓ Tabela siorg_sync_log já existe.", emit_output)
-            return {"success": True, "created": False}
-        db.create_all()
-        _emit("   ✓ Tabela siorg_sync_log criada.", emit_output)
-        return {"success": True, "created": True}
+        if not _table_exists(inspector, "siorg_sync_log"):
+            db.create_all()
+            _emit("   ✓ Tabela siorg_sync_log criada.", emit_output)
+            return {"success": True, "created": True, "added_columns": []}
+        adicionadas = _add_siorg_sync_log_columns(inspector, emit_output)
+        return {"success": True, "created": False, "added_columns": adicionadas}
     except Exception as exc:
         db.session.rollback()
         _emit(f"   ✗ ERRO ao criar siorg_sync_log: {exc}", emit_output)
         return {"success": False, "error": str(exc), "created": False}
+
+
+def _add_siorg_sync_log_columns(inspector, emit_output):
+    """Aplica as colunas que nasceram depois da tabela (nullable, sem backfill)."""
+    existentes = {c["name"] for c in inspector.get_columns("siorg_sync_log")}
+    adicionadas = []
+    for nome, tipo in SIORG_SYNC_LOG_INCREMENTAL_COLUMNS:
+        if nome in existentes:
+            continue
+        db.session.execute(text(f"ALTER TABLE siorg_sync_log ADD COLUMN {nome} {tipo}"))
+        adicionadas.append(nome)
+    if not adicionadas:
+        _emit("   ✓ Tabela siorg_sync_log já existe.", emit_output)
+        return adicionadas
+    db.session.commit()
+    _emit(f"   ✓ Colunas adicionadas: {', '.join(adicionadas)}.", emit_output)
+    return adicionadas
 
 
 def ensure_codigo_externo_unique_index(emit_output=True):
@@ -1652,6 +1668,31 @@ def ensure_codigo_externo_unique_index(emit_output=True):
         db.session.rollback()
         _emit(f"   ✗ ERRO ao criar índice único de codigo_externo: {exc}", emit_output)
         return {"success": False, "error": str(exc), "changed": False}
+
+
+def ensure_project_member_table(emit_output=True):
+    """Garante a tabela project_member (S4/F3-1 — convite por projeto)."""
+    return _ensure_table_from_models(PROJECT_MEMBER_TABLE, emit_output)
+
+
+def ensure_autorizacao_audit_table(emit_output=True):
+    """Garante a tabela autorizacao_audit (S4/F3-3 — trilha de concessões)."""
+    return _ensure_table_from_models(AUTORIZACAO_AUDIT_TABLE, emit_output)
+
+
+def _ensure_table_from_models(table_name, emit_output):
+    _emit(f"→ Garantindo tabela {table_name}...", emit_output)
+    try:
+        if _table_exists(inspect(db.engine), table_name):
+            _emit(f"   ✓ Tabela {table_name} já existe.", emit_output)
+            return {"success": True, "created": False}
+        db.create_all()
+        _emit(f"   ✓ Tabela {table_name} criada.", emit_output)
+        return {"success": True, "created": True}
+    except Exception as exc:
+        db.session.rollback()
+        _emit(f"   ✗ ERRO ao criar {table_name}: {exc}", emit_output)
+        return {"success": False, "error": str(exc), "created": False}
 
 
 def stamp_alembic_head(emit_output=True):
@@ -1712,6 +1753,8 @@ def _run_migration_steps(emit_output: bool) -> list[tuple[str, dict]]:
         ("ensure_user_orgao_papel_column", ensure_user_orgao_papel_column),
         ("ensure_siorg_sync_log_table", ensure_siorg_sync_log_table),
         ("ensure_codigo_externo_unique_index", ensure_codigo_externo_unique_index),
+        ("ensure_project_member_table", ensure_project_member_table),
+        ("ensure_autorizacao_audit_table", ensure_autorizacao_audit_table),
     ]
     return [(name, step(emit_output=emit_output)) for name, step in steps]
 
