@@ -1,6 +1,7 @@
 """Garante que POST /tarefas/add aceita etapa_id e valida pertencimento ao projeto."""
 
 from models import Task, db
+from routes.api.envelope import NOT_FOUND_MESSAGE
 
 
 def _ajax_headers():
@@ -59,21 +60,35 @@ def test_create_task_without_etapa_keeps_field_null(app, client_user, seed_data)
         assert task.etapa_id is None
 
 
-def test_create_task_etapa_from_other_project_returns_400(app, client_user, seed_data):
+def test_create_task_etapa_from_other_project_is_indistinguishable_from_missing(
+    app, client_user, seed_data
+):
+    """S5/F4-2b: etapa alheia e etapa inexistente colapsam no MESMO 404.
+
+    Substitui o contrato pré-S5 (400 "não pertence ao projeto"), que confirmava
+    a existência do id ao atacante. A tarefa segue não criada nos dois casos.
+    """
     project_id = seed_data["project_id"]
-    foreign_etapa_id = seed_data["foreign_etapa_id"]
 
-    response = client_user.post(
-        "/tarefas/add",
-        data={
-            "project": str(project_id),
-            "etapa": str(foreign_etapa_id),
-            "descricao": "Tentativa cross-project",
-        },
-        headers=_ajax_headers(),
-    )
+    def _post(etapa_value):
+        return client_user.post(
+            "/tarefas/add",
+            data={
+                "project": str(project_id),
+                "etapa": str(etapa_value),
+                "descricao": "Tentativa cross-project",
+            },
+            headers=_ajax_headers(),
+        )
 
-    assert response.status_code == 400
-    payload = response.get_json()
-    assert payload["success"] is False
-    assert "projeto" in payload["message"].lower()
+    foreign = _post(seed_data["foreign_etapa_id"])
+    missing = _post(999999)
+
+    assert foreign.status_code == 404
+    assert foreign.get_json()["success"] is False
+    assert foreign.get_json()["message"] == NOT_FOUND_MESSAGE
+    assert foreign.status_code == missing.status_code
+    assert foreign.get_data() == missing.get_data()
+
+    with app.app_context():
+        assert Task.query.filter_by(descricao="Tentativa cross-project").first() is None

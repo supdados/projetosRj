@@ -28,7 +28,7 @@ from services.project_membership import (
     project_permission_flags,
     user_can_manage_members,
 )
-from tests.test_authorization_unit import SqlQueryCounter
+from tests.sql_query_counter import SqlQueryCounter
 from time_utils import utc_now
 
 # ── Fakes nomeados ────────────────────────────────────────────────────────────

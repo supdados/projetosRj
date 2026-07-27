@@ -16,15 +16,21 @@ from time_utils import utc_now
 
 @pytest.fixture
 def backfill_setup(app):
-    """Dois usuários ativos com nomes distintos, para casar os textos legados."""
+    """Dois usuários ativos com nomes distintos, para casar os textos legados.
+
+    Commita e fecha o contexto antes do yield: cada teste abre o próprio
+    app_context (= outra sessão/conexão no SQLite de arquivo), e uma transação
+    de escrita aberta aqui travaria a escrita do teste ("database is locked").
+    """
     with app.app_context():
         jose = User(username="jhudson", name="Jose Hudson", orgao="SETD")
         jose.set_password("senha123")
         sandra = User(username="sbaldine", name="Sandra Baldine", orgao="SETD")
         sandra.set_password("senha123")
         db.session.add_all([jose, sandra])
-        db.session.flush()
-        yield {"jose_id": jose.id, "sandra_id": sandra.id}
+        db.session.commit()
+        ids = {"jose_id": jose.id, "sandra_id": sandra.id}
+    return ids
 
 
 def _add_task(descricao, responsavel, created_by_id):

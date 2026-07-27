@@ -56,11 +56,21 @@ def _build_client(case, app, seed_data):
     raise ValueError(f'Role nao suportado no caso {case["id"]}: {role}')
 
 
-def _assert_expected_status(response, expected_status):
+def _allowed_statuses(expected_status):
     if isinstance(expected_status, int):
-        assert response.status_code == expected_status
-        return
-    assert response.status_code in set(expected_status)
+        return {expected_status}
+    return set(expected_status)
+
+
+def _assert_expected_status(response, expected_status):
+    assert response.status_code in _allowed_statuses(expected_status)
+
+
+def _assert_no_unhandled_server_error(response, expected_status):
+    """5xx só passa se o caso o declarar — o guard caça crash, não resposta de projeto."""
+    assert response.status_code < 500 or response.status_code in _allowed_statuses(
+        expected_status
+    )
 
 
 @pytest.mark.parametrize("case", ROUTE_CASES, ids=[case["id"] for case in ROUTE_CASES])
@@ -76,4 +86,4 @@ def test_routes_smoke(case, app, seed_data):
     )
 
     _assert_expected_status(response, case["expected_status"])
-    assert response.status_code < 500
+    _assert_no_unhandled_server_error(response, case["expected_status"])

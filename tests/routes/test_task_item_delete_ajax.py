@@ -1,4 +1,7 @@
+import logging
+
 from models import TaskAccessAudit, TaskItem, db
+from routes.tasks.crud import GENERIC_DB_ERROR_MESSAGE
 
 AJAX_HEADERS = {
     "X-Requested-With": "XMLHttpRequest",
@@ -66,8 +69,14 @@ def test_delete_task_item_ajax_forbidden_for_non_author_collaborator_and_audited
 
 
 def test_delete_task_item_ajax_error_keeps_json_contract(
-    app, client_user, seed_data, monkeypatch
+    app, client_user, seed_data, monkeypatch, caplog
 ):
+    """500 mantém o envelope JSON; o detalhe da exceção só vai para o log.
+
+    A mensagem crua deixou de ser ecoada ao cliente (``GENERIC_DB_ERROR_MESSAGE``,
+    OWASP A09/A10) — o teste passou a exigir o oposto: nada de detalhe interno no
+    corpo, e o traceback preservado no log do servidor.
+    """
     item_id = seed_data["task_item_id"]
 
     def fail_commit():
@@ -75,13 +84,16 @@ def test_delete_task_item_ajax_error_keeps_json_contract(
 
     monkeypatch.setattr(db.session, "commit", fail_commit)
 
-    response = client_user.post(f"/tarefas/{item_id}/delete", headers=AJAX_HEADERS)
+    with caplog.at_level(logging.ERROR):
+        response = client_user.post(f"/tarefas/{item_id}/delete", headers=AJAX_HEADERS)
 
     assert response.status_code == 500
     payload = response.get_json()
     assert payload["success"] is False
     assert payload["item_id"] == item_id
-    assert "erro-forcado-delete-item" in payload["message"]
+    assert payload["message"] == GENERIC_DB_ERROR_MESSAGE
+    assert "erro-forcado-delete-item" not in response.get_data(as_text=True)
+    assert "erro-forcado-delete-item" in caplog.text
 
     with app.app_context():
         assert db.session.get(TaskItem, item_id) is not None

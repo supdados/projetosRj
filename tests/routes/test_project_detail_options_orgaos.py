@@ -1,8 +1,9 @@
 """Contrato: ``options.orgaos`` no payload de ``GET /api/projetos/<id>/detalhe``.
 
 O picker de Área Responsável (Detalhe SPA) lê os órgãos escopados de
-``data.options.orgaos`` — mesma regra de escopo do editor inline legado
-(subtree + ativo). Estes testes fixam a presença e o shape ``{id, sigla, nome}``,
+``data.options.orgaos`` — escopo de ESCRITA (``scoped_orgao_options``: rank >=
+editor na subárvore, sempre ativos). Estes testes fixam a presença e o shape
+``{id, sigla, nome, pai_id}`` (``pai_id`` alimenta a árvore do OrgaoTreeSelect),
 além de garantir que o admin enxerga mais órgãos que um não-admin restrito à
 própria subtree.
 
@@ -31,10 +32,11 @@ def test_options_include_orgaos_with_expected_shape(client_user, seed_data):
     assert isinstance(orgaos, list)
     assert orgaos, "user_auditoria possui vínculo, então a lista não pode ser vazia"
     for orgao in orgaos:
-        assert set(orgao.keys()) == {"id", "sigla", "nome"}
+        assert set(orgao.keys()) == {"id", "sigla", "nome", "pai_id"}
         assert isinstance(orgao["id"], int)
         assert isinstance(orgao["sigla"], str)
         assert isinstance(orgao["nome"], str)
+        assert orgao["pai_id"] is None or isinstance(orgao["pai_id"], int)
 
 
 def test_options_orgaos_sorted_by_sigla(client_user, seed_data):

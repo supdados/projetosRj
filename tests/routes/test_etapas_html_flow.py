@@ -1,13 +1,16 @@
-from html import unescape
+"""Fluxo HTML (form, não-AJAX) de ``POST /project/<id>/etapa/add``.
+
+O destino do 302 (``/project/<id>``) virou redirect legado para a SPA, que não
+renderiza mais flashes do Jinja — o feedback é lido direto da sessão, que é o
+que a rota efetivamente produz.
+"""
 
 from models import Etapa, Project, db
 
 
-def _follow_redirect_and_get_html(client, response):
-    location = response.headers["Location"]
-    followed = client.get(location)
-    assert followed.status_code == 200
-    return unescape(followed.get_data(as_text=True))
+def _flashed_messages(client):
+    with client.session_transaction() as session:
+        return [message for _category, message in session.get("_flashes", [])]
 
 
 def test_add_etapa_html_redirects_back_with_success_flash_and_persists_stage(
@@ -26,9 +29,7 @@ def test_add_etapa_html_redirects_back_with_success_flash_and_persists_stage(
 
     assert response.status_code == 302
     assert response.headers["Location"].endswith(f"/project/{seed_data['project_id']}")
-
-    html = _follow_redirect_and_get_html(client_user, response)
-    assert "Etapa adicionada com sucesso!" in html
+    assert "Etapa adicionada com sucesso!" in _flashed_messages(client_user)
 
     with app.app_context():
         etapa = (
@@ -63,11 +64,9 @@ def test_add_etapa_html_requires_confirmation_for_finalized_project(
     assert response.headers["Location"].endswith(
         f"/project/{seed_data['project_complete_id']}"
     )
-
-    html = _follow_redirect_and_get_html(client_user, response)
     assert (
         "Ao adicionar uma nova etapa, o projeto voltará para o status Vigente. Deseja continuar?"
-        in html
+        in _flashed_messages(client_user)
     )
 
     with app.app_context():

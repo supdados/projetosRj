@@ -18,7 +18,7 @@ from services.authorization import (
     get_active_membership_map,
     project_visibility_criterion,
 )
-from tests.test_authorization_unit import SqlQueryCounter
+from tests.sql_query_counter import SqlQueryCounter
 from time_utils import utc_now
 
 # ── Fakes nomeados ────────────────────────────────────────────────────────────
@@ -110,13 +110,17 @@ def cenario_listagem(app):
     with app.app_context():
         area = _add_orgao("AREA", None)
         fora = _add_orgao("FORA", None)
-        yield {
+        cenario = {
             "area": area,
             "fora": fora,
             "proj_area": _add_projeto("Projeto da área", area),
             "proj_fora": _add_projeto("Projeto alheio", fora),
             "proj_sem_orgao": _add_projeto("Projeto órfão", None),
         }
+        # Commit: o teste abre outro app_context, logo outra sessão/conexão —
+        # sem commit as linhas somem e a transação aberta trava o sqlite.
+        db.session.commit()
+    return cenario
 
 
 # ── get_active_membership_map ─────────────────────────────────────────────────

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Grep-gate contra novos usos inline de `.is_admin` no fonte (S1/F0-6).
 
-A BASELINE congela os 21 usos que existiam quando o gate nasceu: o gate não
+A BASELINE congela os usos inline restantes (21 no nascimento, 17 depois de
+S3/S4 pagarem parte deles) e só pode encolher: o gate não
 conserta a dívida, impede que ela cresça enquanto as Fases 1-2 a pagam arquivo a
 arquivo. Toda checagem de permissão nova nasce em `services/authorization.py`.
 
@@ -110,7 +111,7 @@ def find_new_usages(counts: dict[str, int]) -> list[str]:
 
 
 def find_stale_baseline(counts: dict[str, int]) -> list[str]:
-    """Lista entradas já pagas em S3/S4 — informativo, não reprova o gate."""
+    """Lista entradas já pagas — o gate segue exit 0, mas a suíte exige lista vazia (baixar a BASELINE junto com o pagamento)."""
     stale: list[str] = []
     for relative, frozen in sorted(BASELINE.items()):
         hits = counts.get(relative, 0)

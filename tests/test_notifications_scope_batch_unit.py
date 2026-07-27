@@ -2,25 +2,46 @@
 
 O check por projeto via ``user_can_access_project`` recomputava o subtree de
 órgãos (query em OrgaoClosure) a cada projeto — N+1 no GET /api/notificacoes.
+Hoje a resolução vive em ``services.authorization`` com os mapas de área e de
+convite cacheados em ``g``; o invariante medido aqui deixou de ser "quantas
+vezes o resolver é chamado" e passou a ser o custo em statements: filtrar N
+projetos custa as MESMAS queries que filtrar um (partindo de cache frio).
 """
 
 from flask import g
 
-import routes.notifications as notifications_module
 from models import Project, User, db
 from routes.notifications import _accessible_project_ids
+from services.authorization import (
+    MEMBERSHIP_MAP_CACHE_ATTR,
+    ROLE_MAP_CACHE_ATTR,
+)
+from tests.sql_query_counter import SqlQueryCounter
 
 
-class FakeSubtreeResolver:
-    """Substitui ``get_user_orgao_subtree_ids`` contando quantas vezes é chamado."""
+def _custo_com_cache_frio(project_ids: set[int]) -> tuple[set[int], int]:
+    """Roda o filtro com os caches de ``g`` derrubados e conta os statements."""
+    g.pop(ROLE_MAP_CACHE_ATTR, None)
+    g.pop(MEMBERSHIP_MAP_CACHE_ATTR, None)
+    with SqlQueryCounter(db.engine) as counter:
+        acessiveis = _accessible_project_ids(project_ids)
+    return acessiveis, counter.total
 
-    def __init__(self, subtree: set[int]):
-        self.subtree = subtree
-        self.calls = 0
 
-    def __call__(self, user) -> set[int]:
-        self.calls += 1
-        return self.subtree
+def _add_projetos(quantidade: int, orgao_id: int) -> set[int]:
+    ids = set()
+    for numero in range(quantidade):
+        projeto = Project(
+            titulo=f"Projeto lote {numero}",
+            orgao_id=orgao_id,
+            status="Vigente",
+            objetivo_id=1,
+            resultado_esperado_id=1,
+        )
+        db.session.add(projeto)
+        db.session.flush()
+        ids.add(projeto.id)
+    return ids
 
 
 def _project_without_orgao() -> Project:
@@ -58,30 +79,31 @@ def test_admin_sees_all_existing_projects(app, seed_data):
         }
 
 
-def test_subtree_resolved_once_for_many_projects(app, seed_data, monkeypatch):
+def test_escopo_de_muitos_projetos_custa_o_mesmo_que_de_um(app, seed_data):
     with app.test_request_context():
         g.user = db.session.get(User, seed_data["user_id"])
-        resolver = FakeSubtreeResolver({seed_data["auditoria_orgao_id"]})
-        monkeypatch.setattr(
-            notifications_module, "get_user_orgao_subtree_ids", resolver
-        )
-        result = _accessible_project_ids(
-            {
-                seed_data["project_id"],
-                seed_data["project_complete_id"],
-                seed_data["foreign_project_id"],
-            }
-        )
-        assert result == {seed_data["project_id"], seed_data["project_complete_id"]}
-        assert resolver.calls == 1
+        # Vínculos do usuário fora do contador: lazy load é do fixture, não do filtro.
+        list(g.user.orgaos)
+        do_lote = _add_projetos(20, seed_data["auditoria_orgao_id"])
+        muitos = do_lote | {
+            seed_data["project_id"],
+            seed_data["project_complete_id"],
+            seed_data["foreign_project_id"],
+        }
+
+        acessiveis, custo_muitos = _custo_com_cache_frio(muitos)
+        _, custo_um = _custo_com_cache_frio({seed_data["project_id"]})
+
+        assert acessiveis == do_lote | {
+            seed_data["project_id"],
+            seed_data["project_complete_id"],
+        }
+        assert custo_muitos == custo_um
 
 
-def test_empty_input_short_circuits_without_queries(app, seed_data, monkeypatch):
+def test_empty_input_short_circuits_without_queries(app, seed_data):
     with app.test_request_context():
         g.user = db.session.get(User, seed_data["user_id"])
-        resolver = FakeSubtreeResolver(set())
-        monkeypatch.setattr(
-            notifications_module, "get_user_orgao_subtree_ids", resolver
-        )
-        assert _accessible_project_ids(set()) == set()
-        assert resolver.calls == 0
+        acessiveis, custo = _custo_com_cache_frio(set())
+        assert acessiveis == set()
+        assert custo == 0

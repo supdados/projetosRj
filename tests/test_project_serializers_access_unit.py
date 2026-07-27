@@ -1,9 +1,9 @@
 """Testes dos serializers de projeto e de `/api/me` na S4 (F3-9 e F3-10).
 
 Trava o contrato novo (`permissions`, `access_via`, `tem_vinculo_de_area`) e,
-com contador de statements, que expor essas chaves NÃO introduz N+1: serializar
-25 projetos custa as mesmas 2 queries (os dois mapas cacheados em `g`) que
-serializar 1.
+com contador de statements, que expor essas chaves NÃO introduz N+1: partindo de
+cache frio, serializar 25 projetos custa as mesmas queries (as dos dois mapas
+cacheados em `g`) que serializar 1.
 """
 
 import pytest
@@ -15,14 +15,19 @@ from routes.api.serializers import (
     serialize_project_detail,
     serialize_user,
 )
-from services.authorization import PAPEL_EDITOR, PAPEL_GESTOR
+from services.authorization import (
+    MEMBERSHIP_MAP_CACHE_ATTR,
+    PAPEL_EDITOR,
+    PAPEL_GESTOR,
+    ROLE_MAP_CACHE_ATTR,
+)
 from services.orgao_tree import rebuild_orgao_closure
 from services.project_membership import (
     ACCESS_VIA_ADMIN,
     ACCESS_VIA_AREA,
     ACCESS_VIA_CONVITE,
 )
-from tests.test_authorization_unit import SqlQueryCounter
+from tests.sql_query_counter import SqlQueryCounter
 
 # ── Helpers de fixture ────────────────────────────────────────────────────────
 
@@ -152,15 +157,23 @@ def test_detalhe_carrega_o_mesmo_bloco_de_acesso(app, cenario):
 
 
 def _custo_do_bloco_de_acesso(app, cenario, quantidade: int) -> int:
-    """Queries gastas para serializar `quantidade` projetos já aquecidos."""
+    """Queries para serializar `quantidade` projetos já aquecidos, com cache frio.
+
+    Sem derrubar os mapas de `g` a segunda medição sairia de graça (o request
+    context de teste reaproveita o app context do fixture) e a comparação viraria
+    frio-vs-quente, não N+1.
+    """
     with app.test_request_context("/"):
         gestor = db.session.get(User, cenario["gestor_id"])
+        list(gestor.orgaos)
         projetos = [
             db.session.get(Project, pid) for pid in cenario["ids_area"][:quantidade]
         ]
         # Primeira passada sem viewer: aquece os lazy loads do próprio card.
         for projeto in projetos:
             serialize_project_card(projeto)
+        g.pop(ROLE_MAP_CACHE_ATTR, None)
+        g.pop(MEMBERSHIP_MAP_CACHE_ATTR, None)
         with SqlQueryCounter(db.engine) as counter:
             cards = [serialize_project_card(p, viewer=gestor) for p in projetos]
         assert all(card["access_via"] == ACCESS_VIA_AREA for card in cards)

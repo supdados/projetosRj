@@ -1,6 +1,7 @@
 """Cobre a rota POST /tarefas/<id>/mover-etapa usada pelo DnD do hub."""
 
 from models import Etapa, Task, db
+from routes.api.envelope import NOT_FOUND_MESSAGE
 
 
 def _ajax_headers():
@@ -52,20 +53,34 @@ def test_move_task_to_empty_etapa_clears_field(app, client_user, seed_data):
     assert payload["previous_etapa_id"] == etapa_id
 
 
-def test_move_task_to_other_project_etapa_returns_400(app, client_user, seed_data):
+def test_move_task_to_other_project_etapa_is_indistinguishable_from_missing(
+    app, client_user, seed_data
+):
+    """S5/F4-2b: etapa alheia e etapa inexistente colapsam no MESMO 404.
+
+    Substitui o contrato pré-S5 (400 "não pertence ao projeto"), que confirmava
+    a existência do id ao atacante. A tarefa não muda de etapa nos dois casos.
+    """
     task_id = seed_data["task_id"]
-    foreign_etapa_id = seed_data["foreign_etapa_id"]
 
-    response = client_user.post(
-        f"/tarefas/{task_id}/mover-etapa",
-        json={"etapa_id": foreign_etapa_id},
-        headers=_ajax_headers(),
-    )
+    def _move(etapa_id):
+        return client_user.post(
+            f"/tarefas/{task_id}/mover-etapa",
+            json={"etapa_id": etapa_id},
+            headers=_ajax_headers(),
+        )
 
-    assert response.status_code == 400
-    payload = response.get_json()
-    assert payload["success"] is False
-    assert "projeto" in payload["message"].lower()
+    foreign = _move(seed_data["foreign_etapa_id"])
+    missing = _move(999999)
+
+    assert foreign.status_code == 404
+    assert foreign.get_json()["success"] is False
+    assert foreign.get_json()["message"] == NOT_FOUND_MESSAGE
+    assert foreign.status_code == missing.status_code
+    assert foreign.get_data() == missing.get_data()
+
+    with app.app_context():
+        assert db.session.get(Task, task_id).etapa_id is None
 
 
 def test_move_task_to_done_etapa_succeeds_with_warning(app, client_user, seed_data):

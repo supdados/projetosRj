@@ -9,7 +9,7 @@ from datetime import timedelta
 
 import pytest
 from flask import g
-from sqlalchemy import event, text
+from sqlalchemy import text
 
 from models import OrgaoUnidade, ProjectMember, db
 from routes import orgao_scope
@@ -44,6 +44,7 @@ from services.authorization import (
     user_can_view_project,
 )
 from services.orgao_tree import rebuild_orgao_closure
+from tests.sql_query_counter import SqlQueryCounter
 from time_utils import utc_now
 
 # ── Fakes nomeados ────────────────────────────────────────────────────────────
@@ -75,24 +76,6 @@ class FakeUser:
         self.is_admin = is_admin
         self.orgaos = [FakeVinculo(oid) for oid in orgao_ids]
         self.orgaos += [FakeVinculo(oid, papel) for oid, papel in vinculos]
-
-
-class SqlQueryCounter:
-    """Conta statements executados no engine — guarda-corpo do N+1."""
-
-    def __init__(self, engine) -> None:
-        self.engine = engine
-        self.total = 0
-
-    def _on_execute(self, *_args) -> None:
-        self.total += 1
-
-    def __enter__(self) -> "SqlQueryCounter":
-        event.listen(self.engine, "before_cursor_execute", self._on_execute)
-        return self
-
-    def __exit__(self, *_exc) -> None:
-        event.remove(self.engine, "before_cursor_execute", self._on_execute)
 
 
 class FakeProject:
