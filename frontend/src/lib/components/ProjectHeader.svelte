@@ -1312,7 +1312,7 @@
 		border: 1px solid var(--ds-color-border-base);
 		background: var(--ds-color-surface-muted);
 		color: var(--ds-color-text-secondary);
-		border-radius: 999px;
+		border-radius: 6px;
 		padding: 0.18rem 0.55rem;
 		font-size: 0.72rem;
 		font-weight: 600;

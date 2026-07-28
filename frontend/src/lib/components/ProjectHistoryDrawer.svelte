@@ -275,7 +275,7 @@
 			<div class="flex shrink-0 items-center gap-2">
 				{#if loadState === 'ready'}
 					<span
-						class="inline-flex items-center rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-xs font-semibold text-text-secondary"
+						class="inline-flex items-center rounded-md border border-border-subtle bg-surface px-2 py-0.5 text-xs font-semibold text-text-secondary"
 						aria-live="polite"
 					>
 						{filteredHistory.length}
