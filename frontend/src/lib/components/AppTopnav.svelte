@@ -338,7 +338,7 @@
 							if (e.key === 'Enter') pressedPath = null;
 						}}
 						class="relative z-[1] inline-flex h-[1.95rem] items-center gap-2 rounded-md px-3 text-[0.85rem] font-medium leading-none no-underline transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {active
-							? 'text-brand dark:text-white'
+							? 'text-brand'
 							: 'text-white/[0.78] hover:text-white'}"
 					>
 						<Nav3dIcon
