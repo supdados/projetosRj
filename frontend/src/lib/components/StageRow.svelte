@@ -21,6 +21,7 @@
 	import InlineEditField from './InlineEditField.svelte';
 	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
 	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
+	import { podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
 	import '$lib/styles/stage-chips.css';
 
 	interface FieldState {
@@ -41,7 +42,8 @@
 		highlighted?: boolean;
 		fieldStates?: Partial<Record<EtapaInlineField, FieldState>>;
 		busy?: boolean;
-		rowError?: string | null;
+		/** Erro do ciclo de status apenas — nunca do comentário/campos inline. */
+		/** Dispensa manual do aviso da linha (o aviso não some por tempo). */
 		meetingSlot?: import('svelte').Snippet<[EtapaDetail]>;
 		onUpdateField: (field: EtapaInlineField, value: string) => void;
 		/** Ciclo de status (idle→started→done→idle) — o pai decide o endpoint. */
@@ -67,7 +69,6 @@
 		highlighted = false,
 		fieldStates = {},
 		busy = false,
-		rowError = null,
 		meetingSlot,
 		onUpdateField,
 		onCycleStatus,
@@ -102,7 +103,7 @@
 			sawCommentBusy = true;
 			return;
 		}
-		if ((etapa.comentarios ?? '') === optimisticComment || rowError || sawCommentBusy) {
+		if ((etapa.comentarios ?? '') === optimisticComment || sawCommentBusy) {
 			optimisticComment = null;
 			sawCommentBusy = false;
 		}
@@ -176,19 +177,26 @@
 				? 'fas fa-play-circle'
 				: 'far fa-circle'
 	);
-	// UX preventivo: a validação dura de datas na conclusão é do backend.
-	const missingDatesForDone = $derived(
-		statusState === 'started' && (!etapa.data_inicio || !etapa.data_fim)
+	// UX preventivo: a validação dura da conclusão é do backend.
+	const motivoBloqueio = $derived(
+		statusState === 'started'
+			? podeConcluirEtapa(etapa.task_count, etapa.data_inicio, etapa.data_fim).motivo
+			: null
 	);
 	const statusTitle = $derived(
-		missingDatesForDone
-			? 'Defina as datas de início e fim antes de concluir a etapa'
-			: statusState === 'done'
+		motivoBloqueio ??
+			(statusState === 'done'
 				? 'Clique para voltar para não iniciada'
 				: statusState === 'started'
 					? 'Clique para marcar como concluída'
-					: 'Clique para marcar como iniciada'
+					: 'Clique para marcar como iniciada')
 	);
+
+	// `disabled` durante o busy jogaria o foco para o <body> a cada clique.
+	function handleStatusClick(): void {
+		if (busy) return;
+		onCycleStatus();
+	}
 
 	const rowTextClass = $derived(etapa.done && !isMeeting ? 'etapa-done-text' : '');
 </script>
@@ -402,7 +410,6 @@
 					class:is-empty={etapa.task_count.total === 0}
 					class:is-stage-done={etapa.done}
 					aria-disabled={etapa.done ? 'true' : undefined}
-					tabindex={etapa.done ? -1 : undefined}
 					title={etapa.done
 						? 'Etapa concluída — desfaça a conclusão para criar tarefas'
 						: 'Criar tarefa nesta etapa'}
@@ -425,9 +432,10 @@
 				type="button"
 				class="etapa-status-toggle etapa-status-toggle-{statusState}"
 				data-state={statusState}
-				disabled={readonly || busy}
+				disabled={readonly}
+				aria-disabled={busy || motivoBloqueio ? 'true' : undefined}
 				title={statusTitle}
-				onclick={onCycleStatus}
+				onclick={handleStatusClick}
 			>
 				<i class={statusIcon} aria-hidden="true"></i>
 				<span>{statusLabel}</span>
@@ -757,6 +765,8 @@
 		width: 150px;
 		text-align: center;
 	}
+	/* Erro de precondição fica ao lado do controle e sem timer: some quando a
+	   precondição deixa de valer ou quando o usuário dispensa. */
 
 	.cell-actions {
 		width: 72px;
@@ -765,8 +775,6 @@
 	.btn-floating {
 		width: 32px;
 		height: 32px;
-	/* Erro de precondição fica ao lado do controle e sem timer: some quando a
-	   precondição deixa de valer ou quando o usuário dispensa. */
 		border-radius: 8px;
 		display: inline-flex;
 		align-items: center;

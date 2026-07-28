@@ -19,7 +19,11 @@
 	import StageRow from './StageRow.svelte';
 	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
 	import DatePickerPanel from './DatePickerPanel.svelte';
-	import type { EtapaDetail, EtapaInlineField, EtapaResponsavelArea } from '$lib/types/projectDetail';
+	import type {
+		EtapaDetail,
+		EtapaInlineField,
+		EtapaResponsavelArea
+	} from '$lib/types/projectDetail';
 	import { dropStagePinningMeetings, moveStageSkippingMeetings } from '$lib/utils/stageReorder';
 	import '$lib/styles/stage-chips.css';
 
@@ -49,11 +53,15 @@
 		addStageError?: string | null;
 		rowStates?: Record<
 			number,
-			{ fields?: Partial<Record<EtapaInlineField, FieldState>>; busy?: boolean; error?: string | null }
+			{
+				fields?: Partial<Record<EtapaInlineField, FieldState>>;
+				busy?: boolean;
+			}
 		>;
 		onReorder: (orderedIds: number[]) => void;
 		onUpdateField: (etapaId: number, field: EtapaInlineField, value: string) => void;
 		onCycleStatus: (etapaId: number) => void;
+		/** Dispensa manual do aviso inline de uma linha. */
 		onSaveComentario: (etapaId: number, comentario: string) => void;
 		onDelete: (etapaId: number) => void;
 		onOpenTasks: (etapaId: number) => void;
@@ -495,7 +503,6 @@
 						highlighted={highlightEtapaId === etapa.id}
 						fieldStates={st.fields}
 						busy={st.busy}
-						rowError={st.error}
 						onUpdateField={(field, value) => onUpdateField(etapa.id, field, value)}
 						onCycleStatus={() => onCycleStatus(etapa.id)}
 						onSaveComentario={(c) => onSaveComentario(etapa.id, c)}

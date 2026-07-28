@@ -58,14 +58,17 @@
 .etapa-status-toggle i {
 	font-size: 0.875rem;
 }
-.etapa-status-toggle:hover:not(:disabled),
-.etapa-status-toggle:focus-visible:not(:disabled) {
+.etapa-status-toggle:hover:not(:disabled):not([aria-disabled='true']),
+.etapa-status-toggle:focus-visible:not(:disabled):not([aria-disabled='true']) {
 	background: var(--stage-chip-bg-hover);
 	border-color: var(--stage-chip-border-hover);
 	color: var(--stage-chip-text-hover);
 	outline: none;
 }
-.etapa-status-toggle:disabled {
+/* aria-disabled (não `disabled`) mantém o botão focável quando a ação está
+   indisponível — trocar `disabled` sob foco jogaria o foco para o <body>. */
+.etapa-status-toggle:disabled,
+.etapa-status-toggle[aria-disabled='true'] {
 	opacity: 0.45;
 	cursor: not-allowed;
 }
@@ -74,8 +77,8 @@
 	border-color: var(--stage-chip-done-border);
 	color: var(--stage-chip-done-text);
 }
-.etapa-status-toggle-done:hover:not(:disabled),
-.etapa-status-toggle-done:focus-visible:not(:disabled) {
+.etapa-status-toggle-done:hover:not(:disabled):not([aria-disabled='true']),
+.etapa-status-toggle-done:focus-visible:not(:disabled):not([aria-disabled='true']) {
 	background: var(--stage-chip-done-bg-hover);
 	border-color: var(--stage-chip-done-border-hover);
 	color: var(--stage-chip-done-text-hover);
@@ -85,8 +88,8 @@
 	border-color: var(--stage-chip-started-border);
 	color: var(--stage-chip-started-text);
 }
-.etapa-status-toggle-started:hover:not(:disabled),
-.etapa-status-toggle-started:focus-visible:not(:disabled) {
+.etapa-status-toggle-started:hover:not(:disabled):not([aria-disabled='true']),
+.etapa-status-toggle-started:focus-visible:not(:disabled):not([aria-disabled='true']) {
 	background: var(--stage-chip-started-bg-hover);
 	border-color: var(--stage-chip-started-border-hover);
 	color: var(--stage-chip-started-text-hover);

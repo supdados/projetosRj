@@ -25,6 +25,7 @@
 	import { ApiClientError } from '$lib/api/client';
 	import { toggleEtapaIniciada, toggleEtapaDone } from '$lib/api/pendentesMutations';
 	import { normalizeStatus } from '$lib/utils/taskStatus';
+	import { podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
 	import type {
 		PendingProjectRow,
 		PendingEtapa,
@@ -32,8 +33,8 @@
 		EtapaTaskProgress
 	} from '$lib/types/pendentes';
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
-
 	import '$lib/styles/stage-chips.css';
+
 	interface QuickAddRequest {
 		projectId: number;
 		projectTitulo: string;
@@ -214,6 +215,14 @@
 		if (inFlightEtapa !== null) return;
 		const state = etapaState[etapa.id] ?? { iniciada: false, done: false };
 		const wasDone = state.done;
+		// Gate cliente da conclusão: evita a rajada de 422 idênticos do clique repetido.
+		if (state.iniciada && !state.done) {
+			const { motivo } = podeConcluirEtapa(progressOf(etapa), etapa.data_inicio, etapa.data_fim);
+			if (motivo) {
+				flash.warning(motivo);
+				return;
+			}
+		}
 		inFlightEtapa = etapa.id;
 		try {
 			const result = state.iniciada

@@ -71,6 +71,7 @@
 	import EeggInlineEditor from '$lib/components/EeggInlineEditor.svelte';
 	import StageList from '$lib/components/StageList.svelte';
 	import { resolveFocusEtapaId } from '$lib/utils/focusEtapa';
+	import { podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
 	import ImportModelModal from '$lib/components/ImportModelModal.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import ConcludeCelebrationOverlay from '$lib/components/ConcludeCelebrationOverlay.svelte';
@@ -108,7 +109,7 @@
 	interface RowState {
 		fields?: Partial<Record<EtapaInlineField, FieldState>>;
 		busy?: boolean;
-		error?: string | null;
+		/** Só do ciclo de status; comentário e campos inline têm canal próprio. */
 	}
 
 	const projectId = $derived(Number($page.params.id));
@@ -774,8 +775,8 @@
 		rowStates = { ...rowStates, [etapaId]: next };
 	}
 
-	function setRowBusy(etapaId: number, busy: boolean, error: string | null = null): void {
-		setRowState(etapaId, { ...getRowState(etapaId), busy, error });
+	function setRowBusy(etapaId: number, busy: boolean): void {
+		setRowState(etapaId, { ...getRowState(etapaId), busy });
 	}
 
 	function setRowFieldState(etapaId: number, field: EtapaInlineField, next: FieldState): void {
@@ -785,6 +786,8 @@
 			fields: { ...current.fields, [field]: next }
 		});
 	}
+
+
 
 	/** Aplica uma etapa atualizada (vinda de um endpoint que devolve 1 etapa). */
 	function replaceEtapa(updated: EtapaDetail): void {
@@ -844,14 +847,20 @@
 	 *     limpa a conclusao, zerando o status);
 	 *   - started   -> toggle (marca conclusao).
 	 * Re-busca apos o sucesso (derivados do projeto e botao concluir).
+	 *
+	 * A precondicao de conclusao e checada no cliente ANTES da rede: sem
+	 * requisicao nao ha 422 repetido para notificar, com 1 ou 300 cliques.
 	 */
 	async function onCycleStatus(etapaId: number): Promise<void> {
 		const etapa = data?.etapas.find((e) => e.id === etapaId);
 		if (!etapa) return;
 		const state = etapa.done ? 'done' : etapa.iniciada ? 'started' : 'idle';
-		if (state === 'started' && (!etapa.data_inicio || !etapa.data_fim)) {
-			flash.warning('Defina as datas de início e de término da etapa antes de concluí-la.');
-			return;
+		if (state === 'started') {
+			const precondicao = podeConcluirEtapa(etapa.task_count, etapa.data_inicio, etapa.data_fim);
+			if (!precondicao.ok) {
+				flash.warning(precondicao.motivo);
+				return;
+			}
 		}
 		setRowBusy(etapaId, true);
 		try {
@@ -861,11 +870,17 @@
 			setRowBusy(etapaId, false);
 			await refresh();
 		} catch (err) {
+			if (isUnauthenticated(err)) {
+				setRowBusy(etapaId, false);
+				return;
+			}
 			setRowBusy(etapaId, false);
-			if (isUnauthenticated(err)) return;
-			flashEtapaError(err, 'Falha ao alternar o status da etapa.');
+			flash.danger(messageOf(err, 'Falha ao alternar o status da etapa.'));
+			// Reconcilia um task_count obsoleto que tenha deixado o gate acima passar.
+			await refresh();
 		}
 	}
+
 
 	async function onSaveComentario(etapaId: number, comentario: string): Promise<void> {
 		setRowBusy(etapaId, true);
