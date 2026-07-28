@@ -64,6 +64,7 @@
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import DatePickerPanel from '$lib/components/DatePickerPanel.svelte';
+	import { priorityDotColor } from '$lib/utils/taskLabels';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type { AbepIndicadorOption, ProjectsListOptions } from '$lib/types/projects';
@@ -1399,28 +1400,31 @@
 					<div class={bodyOpenClass}>
 						{@render segmentProgress(3, 3, 'Passo 3 de 3')}
 						<h3 id="criar-projeto-title" class={sectionTitleClass}>Prioridade e responsável</h3>
-						<div class="mt-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-9">
+						<div class="mt-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-6">
 							<div class="flex flex-col gap-2">
 								<span class={labelClass} id="cp-prioridade-label">Prioridade</span>
 								<div
 									id="cp-prioridade"
 									role="group"
 									aria-labelledby="cp-prioridade-label"
-									class="flex flex-wrap items-center gap-2"
+									class="flex flex-wrap items-center gap-2 sm:flex-nowrap"
 								>
+									<!-- Prioridade = ponto sólido + rótulo em tinta neutra (inversão de forma, plano-regua-de-cor §7.4). -->
 									{#each PRIORITIES as p (p.value)}
 										{@const selected = prioridade === p.value}
 										<button
 											type="button"
 											aria-pressed={selected}
 											onclick={() => (prioridade = p.value)}
-											style={selected
-												? `background: var(--ds-color-priority-${p.value}); border-color: var(--ds-color-priority-${p.value});`
-												: ''}
-											class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border px-5 text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {selected
-												? 'font-bold text-on-brand'
+											class="inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-3 text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {selected
+												? 'border-brand bg-wash-brand font-bold text-text-primary'
 												: 'border-border-subtle bg-surface font-semibold text-text-secondary hover:bg-surface-muted'}"
 										>
+											<span
+												aria-hidden="true"
+												class="h-2 w-2 shrink-0 rounded-full"
+												style:background={priorityDotColor(p.value)}
+											></span>
 											{p.label}
 										</button>
 									{/each}
@@ -1648,8 +1652,8 @@
 									</div>
 								{/if}
 							{:else if secaoAtiva === 1}
-								<div class="grid grid-cols-1 gap-x-[22px] gap-y-[18px] md:grid-cols-2">
-									<div class="flex flex-col gap-1.5">
+								<div class="grid grid-cols-1 gap-x-[22px] gap-y-[18px] md:grid-cols-12">
+									<div class="flex flex-col gap-1.5 md:col-span-6">
 										<label for="cp-orgao-texto" class={labelClass}>Órgão</label>
 										<input
 											id="cp-orgao-texto"
@@ -1659,15 +1663,7 @@
 											class={fieldMdClass}
 										/>
 									</div>
-									<div class="flex flex-col gap-1.5">
-										<label for="cp-sei" class={labelClass}>Processo SEI-RJ</label>
-										<SeiProcessField
-											fieldId="cp-sei"
-											processes={seiList}
-											onSave={(list) => (seiList = list)}
-										/>
-									</div>
-									<div class="flex flex-col gap-1.5">
+									<div class="flex flex-col gap-1.5 md:col-span-6">
 										<label for="cp-delivery" class={labelClass}>Tipo de entrega</label>
 										<SelectMenu
 											id="cp-delivery"
@@ -1679,7 +1675,15 @@
 											ariaLabel="Tipo de entrega"
 										/>
 									</div>
-									<div class="flex flex-col gap-1.5">
+									<div class="flex flex-col gap-1.5 md:col-span-7">
+										<label for="cp-sei" class={labelClass}>Processo SEI-RJ</label>
+										<SeiProcessField
+											fieldId="cp-sei"
+											processes={seiList}
+											onSave={(list) => (seiList = list)}
+										/>
+									</div>
+									<div class="flex flex-col gap-1.5 md:col-span-5">
 										<span id="cp-special-label" class={labelClass}>Projetos especiais</span>
 										<div
 											id="cp-special"
@@ -1702,7 +1706,7 @@
 											{/each}
 										</div>
 									</div>
-									<div class="flex flex-col gap-1.5 md:col-span-2">
+									<div class="flex flex-col gap-1.5 md:col-span-12">
 										<label for="cp-obs" class={labelClass}>Observações</label>
 										<textarea
 											id="cp-obs"

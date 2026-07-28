@@ -380,9 +380,21 @@
 						disabled={!canAddDraft}
 						onmousedown={(e) => e.preventDefault()}
 						onclick={addDraft}
-						class="inline-flex h-7 shrink-0 items-center rounded-full border border-brand bg-surface px-3 text-xs font-medium text-brand transition-colors duration-fast hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						aria-label="Adicionar processo SEI"
+						title="Adicionar"
+						class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface hover:text-brand active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
-						Adicionar
+						<svg
+							viewBox="0 0 24 24"
+							class="h-3.5 w-3.5"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							aria-hidden="true"
+						>
+							<path d="M12 5v14M5 12h14" />
+						</svg>
 					</button>
 				</div>
 			{/if}
