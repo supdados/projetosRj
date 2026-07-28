@@ -189,6 +189,118 @@
 	--ds-color-danger-700: #b4483e;
 	--ds-shadow-modal: 0 24px 64px rgba(10, 30, 45, 0.35);
 
+	/* ========================================================================
+	 * CAMADA DE PAPEL (plano-regua-de-cor §2) — o que os componentes consomem.
+	 * NESTA FASE aponta para os tokens/valores ATUAIS (não para a régua nova):
+	 * separa "criar vocabulário" de "trocar valor". Referências a tokens
+	 * theme-aware (--color-*, --ds-color-*-600) resolvem o dark por cascata.
+	 * O flip para a régua acontece num commit único posterior.
+	 * ====================================================================== */
+
+	/* --- Texto neutro -------------------------------------------------------- */
+	--ds-color-text-primary: var(--color-text-primary);
+	--ds-color-text-secondary: var(--color-text-secondary);
+	--ds-color-text-muted: var(--color-text-muted);
+	--ds-color-text-label: var(--color-text-label);
+	--ds-color-text-faint: var(--color-text-faint);
+
+	/* --- Texto de marca e de estado (tinta) ---------------------------------- */
+	--ds-color-text-brand: var(--ds-color-primary-700);
+	--ds-color-text-success: var(--ds-color-success-600);
+	--ds-color-text-warning: var(--ds-color-warning-600);
+	--ds-color-text-attention: var(--ds-color-orange-600);
+	--ds-color-text-danger: var(--ds-color-danger-600);
+
+	/* --- Fills sólidos + tinta sobre eles ------------------------------------ */
+	--ds-color-fill-brand: var(--ds-color-primary-600);
+	--ds-color-fill-brand-hover: var(--ds-color-primary-700);
+	--ds-color-fill-brand-fg: var(--ds-color-primary-fg);
+	--ds-color-fill-success: var(--ds-color-success-600);
+	--ds-color-fill-success-fg: var(--ds-color-success-fg);
+	--ds-color-fill-warning: var(--ds-color-warning-600);
+	--ds-color-fill-warning-fg: #ffffff;
+	--ds-color-fill-attention: var(--ds-color-orange-600);
+	--ds-color-fill-attention-fg: #ffffff;
+	--ds-color-fill-danger: var(--ds-color-danger-600);
+	--ds-color-fill-danger-hover: var(--ds-color-danger-700);
+	--ds-color-fill-danger-fg: var(--ds-color-danger-fg);
+	--ds-color-fill-pending: var(--ds-color-pending);
+
+	/* --- Branco sobre marca: 4 níveis fixos (§7.8) --------------------------- */
+	--ds-color-on-brand-strong: color-mix(in srgb, var(--ds-color-neutral-0) 95%, transparent);
+	--ds-color-on-brand-muted: color-mix(in srgb, var(--ds-color-neutral-0) 70%, transparent);
+	--ds-color-on-brand-divider: color-mix(in srgb, var(--ds-color-neutral-0) 18%, transparent);
+	--ds-color-on-brand-hover: color-mix(in srgb, var(--ds-color-neutral-0) 10%, transparent);
+
+	/* --- Bordas -------------------------------------------------------------- */
+	--ds-color-border-base: var(--color-border);
+	--ds-color-border-strong: var(--color-border-strong);
+	--ds-color-border-faint: var(--color-border-faint);
+	--ds-color-border-hairline: var(--color-border-hairline);
+	--ds-color-border-brand: var(--ds-color-primary-500);
+	--ds-color-border-brand-soft: var(--ds-color-primary-200);
+	--ds-color-border-success-soft: var(--ds-color-success-200);
+	--ds-color-border-warning-soft: var(--ds-color-warning-200);
+	--ds-color-border-attention-soft: var(--ds-color-attention-200);
+	--ds-color-border-danger-soft: var(--ds-color-danger-200);
+	--ds-color-border-danger: var(--ds-color-danger-600);
+
+	/* --- Washes (fundo suave de chip/linha/estado) --------------------------- */
+	/* wash-neutral × wash-brand: MESMO valor hoje (primary-100); o flip separa
+	   hover/faixa (neutro) de selecionado (banho azul) — decisão §3.1. */
+	--ds-color-wash-neutral: var(--ds-color-primary-100);
+	--ds-color-wash-brand: var(--ds-color-primary-100);
+	--ds-color-wash-success: var(--ds-color-success-100);
+	--ds-color-wash-success-strong: var(--ds-color-success-200);
+	--ds-color-wash-warning: var(--ds-color-warning-light-bg);
+	--ds-color-wash-attention: var(--ds-color-attention-100);
+	--ds-color-wash-danger: var(--ds-color-danger-light-bg);
+
+	/* --- Foco (WCAG 1.4.11/2.4.11): único papel idêntico nos dois temas ------ */
+	--ds-color-focus-ring: var(--ds-color-primary-500);
+	--ds-color-focus-halo: color-mix(in srgb, var(--ds-color-primary-500) 25%, transparent);
+	--ds-focus-ring-width: 2px;
+	--ds-focus-ring-offset: 2px;
+	--ds-focus-halo-width: 5px;
+	--ds-color-focus-ring-onbrand: var(--ds-color-neutral-0);
+
+	/* --- Superfícies --------------------------------------------------------- */
+	--ds-color-surface-canvas: var(--color-canvas);
+	--ds-color-surface-base: var(--color-surface);
+	--ds-color-surface-raised: var(--color-surface-elevated);
+	--ds-color-surface-muted: var(--color-surface-muted);
+	--ds-color-surface-chip: var(--color-surface-chip);
+	--ds-color-surface-track: var(--color-progress-track);
+	--ds-color-surface-skeleton: var(--ds-color-skeleton-base);
+	--ds-color-surface-skeleton-hi: var(--ds-color-skeleton-highlight);
+	--ds-color-surface-topnav: var(--ds-color-topnav-from);
+	--ds-color-surface-topnav-hover: var(--ds-color-primary-600);
+	--ds-color-surface-topnav-fg: var(--ds-color-neutral-0);
+	--ds-color-overlay: var(--color-overlay);
+
+	/* --- Ilustração 3D (regra de marca: 600 contorno / 400 base / 300-200 luz /
+	       100 interior). Consumida por lib/components/micro/* e lib/nav3d/*. --- */
+	--ds-color-icon-outline: var(--ds-color-primary-600);
+	--ds-color-icon-base: var(--ds-color-primary-400);
+	--ds-color-icon-light: var(--ds-color-primary-300);
+	--ds-color-icon-glow: var(--ds-color-primary-200);
+	--ds-color-icon-inner: var(--ds-color-primary-100);
+	--ds-color-icon-faint: var(--color-icon-faint);
+
+	/* --- Status de tarefa/etapa: separa por MATIZ (§7.2) --------------------- */
+	--ds-color-status-nao-iniciada: var(--color-text-muted);
+	--ds-color-status-andamento: var(--ds-color-primary-600);
+	--ds-color-status-validacao: var(--ds-color-warning-600);
+	--ds-color-status-ajustes: var(--ds-color-orange-600);
+	--ds-color-status-finalizada: var(--ds-color-success-600);
+
+	/* --- Fatia do donut do dashboard: degrau 400 (§7.2) ---------------------- */
+	--ds-color-slice-nao-iniciada: var(--ds-color-neutral-400);
+	--ds-color-slice-andamento: var(--ds-color-primary-400);
+	--ds-color-slice-validacao: var(--ds-color-warning-400);
+	--ds-color-slice-ajustes: var(--ds-color-attention-400);
+	--ds-color-slice-finalizada: var(--ds-color-success-400);
+
 	/* Altura de controles de formulário (trigger/campo) — escala única, em REM
 	   para escalar com o zoom de texto do usuário (WCAG 1.4.4). Não se aplica a
 	   botões de ação/linhas de tabela, que têm densidade própria. */

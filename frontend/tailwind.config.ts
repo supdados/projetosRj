@@ -128,6 +128,71 @@ export default {
 					urgente: 'var(--ds-color-priority-urgente)'
 				}
 			},
+			// Camada de papel por UTILITÁRIO (plano-regua-de-cor §5.1b): text-danger
+			// e bg-danger são valores DIFERENTES (tinta × fill), então cada mapa
+			// declara o seu — uma chave em colors geraria os quatro com o mesmo valor.
+			textColor: {
+				brand: 'var(--ds-color-text-brand)',
+				// DEFAULT = papel (tinta); degraus/fg preservados até a migração total
+				success: {
+					DEFAULT: 'var(--ds-color-text-success)',
+					200: 'var(--ds-color-success-200)',
+					300: 'var(--ds-color-success-300)',
+					600: 'var(--ds-color-success-600)',
+					700: 'var(--ds-color-success-700)',
+					fg: 'var(--ds-color-success-fg)'
+				},
+				warning: {
+					DEFAULT: 'var(--ds-color-text-warning)',
+					300: 'var(--ds-color-warning-300)',
+					600: 'var(--ds-color-warning-600)',
+					700: 'var(--ds-color-warning-700)'
+				},
+				attention: {
+					DEFAULT: 'var(--ds-color-text-attention)',
+					300: 'var(--ds-color-attention-300)',
+					600: 'var(--ds-color-attention-600)',
+					700: 'var(--ds-color-attention-700)'
+				},
+				danger: {
+					DEFAULT: 'var(--ds-color-text-danger)',
+					300: 'var(--ds-color-danger-300)',
+					600: 'var(--ds-color-danger-600)',
+					700: 'var(--ds-color-danger-700)',
+					fg: 'var(--ds-color-danger-fg)'
+				},
+				'on-brand': 'var(--ds-color-fill-brand-fg)',
+				'on-topnav': 'var(--ds-color-surface-topnav-fg)'
+			},
+			backgroundColor: {
+				brand: 'var(--ds-color-fill-brand)',
+				'brand-hover': 'var(--ds-color-fill-brand-hover)',
+				'wash-brand': 'var(--ds-color-wash-brand)',
+				'wash-neutral': 'var(--ds-color-wash-neutral)',
+				'wash-success': 'var(--ds-color-wash-success)',
+				'wash-warning': 'var(--ds-color-wash-warning)',
+				'wash-attention': 'var(--ds-color-wash-attention)',
+				'wash-danger': 'var(--ds-color-wash-danger)',
+				topnav: 'var(--ds-color-surface-topnav)'
+			},
+			borderColor: {
+				DEFAULT: 'var(--ds-color-border-base)',
+				brand: 'var(--ds-color-border-brand)',
+				'brand-soft': 'var(--ds-color-border-brand-soft)',
+				'success-soft': 'var(--ds-color-border-success-soft)',
+				'warning-soft': 'var(--ds-color-border-warning-soft)',
+				'attention-soft': 'var(--ds-color-border-attention-soft)',
+				'danger-soft': 'var(--ds-color-border-danger-soft)',
+				danger: 'var(--ds-color-border-danger)'
+			},
+			ringColor: {
+				DEFAULT: 'var(--ds-color-focus-ring)',
+				brand: 'var(--ds-color-focus-ring)',
+				'on-brand': 'var(--ds-color-focus-ring-onbrand)'
+			},
+			ringOffsetColor: {
+				DEFAULT: 'var(--ds-color-surface-base)'
+			},
 			backgroundImage: {
 				// Gradiente do topbar/brand do original (#1769a8). Util reutilizavel.
 				'topnav-gradient':
