@@ -30,24 +30,32 @@
 	font-display: swap;
 }
 
+/* ============================================================================
+ * RÉGUA — única fonte de cor do produto.
+ * 6 famílias × 10 degraus (+ extremos da neutral). NUNCA redefinida por tema:
+ * o dark desloca o PAPEL de degrau (bloco [data-theme='dark'] abaixo), não
+ * redesenha o matiz. Convenção obrigatória: --ds-color-<familia>-<degrau>.
+ * ========================================================================== */
 :root {
-	/* ========================================================================
-	 * RÉGUA — --ds-color-<familia>-<degrau> (plano-regua-de-cor §2).
-	 * Nesta fase entram APENAS os degraus que não existiam; os já consumidos
-	 * (primary-100/500/600/700, success-100/200/600/700, warning-600,
-	 * danger-600/700) mantêm os valores antigos até o flip da régua.
-	 * ====================================================================== */
 	--ds-color-primary-50: #f0f8ff;
+	--ds-color-primary-100: #ddf0ff;
 	--ds-color-primary-200: #b7dfff;
 	--ds-color-primary-300: #8dc6f4;
 	--ds-color-primary-400: #60a7de;
+	--ds-color-primary-500: #2f82bc;
+	--ds-color-primary-600: #0b6397;
+	--ds-color-primary-700: #004973;
 	--ds-color-primary-800: #003353;
 	--ds-color-primary-900: #012036;
 
 	--ds-color-success-50: #eefbf1;
+	--ds-color-success-100: #daf5e0;
+	--ds-color-success-200: #b7e7c2;
 	--ds-color-success-300: #8dd29f;
 	--ds-color-success-400: #5eb679;
 	--ds-color-success-500: #299251;
+	--ds-color-success-600: #007137;
+	--ds-color-success-700: #005427;
 	--ds-color-success-800: #003c19;
 	--ds-color-success-900: #00260e;
 
@@ -57,6 +65,7 @@
 	--ds-color-warning-300: #f2b240;
 	--ds-color-warning-400: #d29200;
 	--ds-color-warning-500: #a37100;
+	--ds-color-warning-600: #7c5500;
 	--ds-color-warning-700: #5d3e00;
 	--ds-color-warning-800: #432b00;
 	--ds-color-warning-900: #2c1a00;
@@ -67,13 +76,16 @@
 	--ds-color-danger-300: #fca59c;
 	--ds-color-danger-400: #e57e75;
 	--ds-color-danger-500: #c2554e;
+	--ds-color-danger-600: #9b3733;
+	--ds-color-danger-700: #762522;
 	--ds-color-danger-800: #551816;
 	--ds-color-danger-900: #370e0d;
 
-	/* attention (h 50) — 5ª família, aprovada pelo design em 2026-07-27. Ocupa o
-	   vão entre warning (h 78) e danger (h 26): status e prioridade precisavam de
-	   9 estados distinguíveis. Com ela, danger significa APENAS risco.
-	   600 = 6,9:1 no branco · 300 = 10,6:1 sobre neutral-1000. */
+	/* attention (h 50) — 5ª família, aprovada pelo design em 2026-07-27.
+	   Ocupa o vão entre warning (h 78) e danger (h 26). Existe porque status e
+	   prioridade precisavam de 9 estados distinguíveis e a régua só tinha 4
+	   matizes; com ela, danger deixa de ser status de fluxo e passa a significar
+	   APENAS risco. 600 = 6,9:1 no branco · 300 = 10,6:1 sobre neutral-1000. */
 	--ds-color-attention-50: #fff4ef;
 	--ds-color-attention-100: #ffe7db;
 	--ds-color-attention-200: #ffcdb2;
@@ -95,191 +107,112 @@
 	--ds-color-neutral-700: #41464b;
 	--ds-color-neutral-800: #2d3135;
 	--ds-color-neutral-900: #1c1e21;
-	/* Extremos: só a neutral tem 0/1000 — branco e preto passam pela régua. */
+	/* Extremos da família neutral. Existem para que branco e preto deixem de ser
+	   literais do Tailwind (`white`/`black`) e passem pela régua. */
 	--ds-color-neutral-0: #ffffff;
 	--ds-color-neutral-1000: #06070a;
 
-	/* --ds-color-primary-* (light) consumidos pelo tailwind.config (primary.*) */
-	--ds-color-primary-700: #004b79;
-	--ds-color-primary-600: #005a92;
-	--ds-color-primary-500: #1f73b5;
-	--ds-color-primary-100: #e6f0f6;
-	--ds-color-success-600: #16a34a;
-	--ds-color-warning-600: #ca8a04;
-	--ds-color-danger-600: #dc2626;
-	--ds-color-info-600: #0ea5e9;
-	--ds-color-violet-600: #7c3aed;
-	/* Texto sobre fills sólidos (primary/success/danger); no dark os fills clareiam
-	   e o fg inverte para tinta escura (método siorg). */
-	--ds-color-primary-fg: #ffffff;
-	--ds-color-success-fg: #ffffff;
-	--ds-color-danger-fg: #ffffff;
-	/* Estado "pendente de sincronização" (calendários) */
-	--ds-color-pending: #94a3b8;
-	/* Laranja da prioridade "alta" (00-foundation.css:1650 → #ea580c) */
-	--ds-color-orange-600: #ea580c;
+	/* ==========================================================================
+	 * CAMADA DE PAPEL — o que os componentes consomem.
+	 * Nenhum componente deve referenciar um degrau da régua diretamente, exceto
+	 * ilustração (família `icon-*`, abaixo) e utilitários de degrau no Tailwind.
+	 * ======================================================================== */
 
-	/* Cores de prioridade dos badges — valores 1:1 de 00-foundation.css:1634-1652 */
-	--ds-color-priority-baixa: #16a34a;
-	--ds-color-priority-media: #ca8a04;
-	--ds-color-priority-alta: #ea580c;
-	--ds-color-priority-urgente: #dc2626;
-
-	/* Fundos translucidos dos stat-cards da dashboard (00-foundation.css:19-23) */
-	--ds-color-primary-light-bg: rgba(0, 90, 146, 0.08);
-	--ds-color-success-light-bg: rgba(22, 163, 74, 0.08);
-	--ds-color-warning-light-bg: rgba(202, 138, 4, 0.1);
-	--ds-color-danger-light-bg: rgba(220, 38, 38, 0.08);
-
-	/* Topbar/brand (00-foundation.css:191 → #1769a8) */
-	--ds-color-topnav-from: #1769a8;
-	--ds-color-topnav-to: #1769a8;
-
-	/* Azul de marca dos BOTÕES primários: constante em light E dark (o topnav
-	   acima vira surface escuro no dark, mas o botão deve seguir azul). */
-	--ds-color-brand-from: #1769a8;
-	--ds-color-brand-to: #1769a8;
-
-	/* Skeleton shimmer (10-skeleton.css:52) */
-	--ds-color-skeleton-base: #eeeeee;
-	--ds-color-skeleton-highlight: #f5f5f5;
-
-	/* Sombra de popover/painel flutuante (ex --ds-glass-shadow) */
-	--ds-shadow-popover: 0 4px 16px rgba(0, 90, 146, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04),
-		inset 0 1px 0 rgba(255, 255, 255, 0.8);
-
-	/* Sombras (mesmos literais do antigo boxShadow do tailwind.config; re-temperadas no dark) */
-	--ds-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
-	--ds-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
-	--ds-shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.12);
-
-	/* Badges por tipo da busca global (literais de GlobalSearchBox.svelte) */
-	--search-badge-project-bg: #ddefff;
-	--search-badge-project-fg: #03568c;
-	--search-badge-stage-bg: #f9f0d0;
-	--search-badge-stage-fg: #6c5000;
-	--search-badge-task-bg: #e0f6df;
-	--search-badge-task-fg: #24571f;
-	--search-badge-event-bg: #e7eefb;
-	--search-badge-event-fg: #304d80;
-
-	/* Semanticas (light) — consumidas pelo tailwind.config (canvas/surface/text/border) */
-	--color-canvas: #f7f9fc;
-	--color-surface: #ffffff;
-	--color-surface-elevated: #ffffff;
-	--color-surface-muted: #f8fafc;
-	--color-border: #dee2e6;
-	--color-border-strong: #cbd5e1;
-	--color-text-primary: #212529;
-	--color-text-secondary: #475569;
-	--color-text-muted: #6c757d;
-	--color-overlay: rgba(0, 0, 0, 0.4);
-
-	/* Tons "faint" do CriarProjetoModal v2 (spec Novo Projeto v2) */
-	--color-text-faint: #8395a3;
-	--color-text-label: #5a6b78;
-	--color-icon-faint: #a9bcc8;
-	--color-border-faint: #e8eef2;
-	--color-border-hairline: #edf2f5;
-	--color-surface-chip: #e9eff3;
-	--color-progress-track: #e3eaef;
-	--ds-color-success-700: #1b7f4d;
-	--ds-color-success-200: #cfe3d8;
-	--ds-color-success-100: #e7f4ec;
-	--ds-color-danger-700: #b4483e;
-	--ds-shadow-modal: 0 24px 64px rgba(10, 30, 45, 0.35);
-
-	/* ========================================================================
-	 * CAMADA DE PAPEL (plano-regua-de-cor §2) — o que os componentes consomem.
-	 * NESTA FASE aponta para os tokens/valores ATUAIS (não para a régua nova):
-	 * separa "criar vocabulário" de "trocar valor". Referências a tokens
-	 * theme-aware (--color-*, --ds-color-*-600) resolvem o dark por cascata.
-	 * O flip para a régua acontece num commit único posterior.
-	 * ====================================================================== */
-
-	/* --- Texto neutro -------------------------------------------------------- */
-	--ds-color-text-primary: var(--color-text-primary);
-	--ds-color-text-secondary: var(--color-text-secondary);
-	--ds-color-text-muted: var(--color-text-muted);
-	--ds-color-text-label: var(--color-text-label);
-	--ds-color-text-faint: var(--color-text-faint);
+	/* --- Texto neutro (rótulo/subtítulo = neutro, por regra de marca) --------- */
+	--ds-color-text-primary: var(--ds-color-neutral-900);
+	--ds-color-text-secondary: var(--ds-color-neutral-700);
+	--ds-color-text-muted: var(--ds-color-neutral-500);
+	--ds-color-text-label: var(--ds-color-neutral-600);
+	--ds-color-text-faint: var(--ds-color-neutral-400);
 
 	/* --- Texto de marca e de estado (tinta) ---------------------------------- */
-	--ds-color-text-brand: var(--ds-color-primary-700);
+	--ds-color-text-brand: var(--ds-color-primary-600);
 	--ds-color-text-success: var(--ds-color-success-600);
 	--ds-color-text-warning: var(--ds-color-warning-600);
-	--ds-color-text-attention: var(--ds-color-orange-600);
+	--ds-color-text-attention: var(--ds-color-attention-600);
 	--ds-color-text-danger: var(--ds-color-danger-600);
 
 	/* --- Fills sólidos + tinta sobre eles ------------------------------------ */
+	/* fill-brand NÃO desloca no dark: primary-600 é o único degrau que passa
+	   4,5:1 com texto branco, e o azul é cor de AÇÃO — o botão primário é o
+	   mesmo objeto nos dois temas. Quem muda com o tema é o chrome (topnav). */
 	--ds-color-fill-brand: var(--ds-color-primary-600);
 	--ds-color-fill-brand-hover: var(--ds-color-primary-700);
-	--ds-color-fill-brand-fg: var(--ds-color-primary-fg);
+	--ds-color-fill-brand-fg: var(--ds-color-neutral-0);
 	--ds-color-fill-success: var(--ds-color-success-600);
-	--ds-color-fill-success-fg: var(--ds-color-success-fg);
+	--ds-color-fill-success-fg: var(--ds-color-neutral-0);
 	--ds-color-fill-warning: var(--ds-color-warning-600);
-	--ds-color-fill-warning-fg: #ffffff;
-	--ds-color-fill-attention: var(--ds-color-orange-600);
-	--ds-color-fill-attention-fg: #ffffff;
+	--ds-color-fill-warning-fg: var(--ds-color-neutral-0);
+	--ds-color-fill-attention: var(--ds-color-attention-600);
+	--ds-color-fill-attention-fg: var(--ds-color-neutral-0);
 	--ds-color-fill-danger: var(--ds-color-danger-600);
 	--ds-color-fill-danger-hover: var(--ds-color-danger-700);
-	--ds-color-fill-danger-fg: var(--ds-color-danger-fg);
-	--ds-color-fill-pending: var(--ds-color-pending);
+	--ds-color-fill-danger-fg: var(--ds-color-neutral-0);
+	/* Estado "pendente de sincronização" (calendários): é cinza, não é família */
+	--ds-color-fill-pending: var(--ds-color-neutral-400);
 
-	/* --- Branco sobre marca: 4 níveis fixos (§7.8) --------------------------- */
+	/* --- Branco sobre marca: 4 níveis fixos (§7.8) ---------------------------- */
+	/* Substituem os rgba(255,255,255,α) do ProjectHeader (22 alphas distintos).
+	   Constantes nos dois temas: são tinta SOBRE o fill de marca, que também não
+	   desloca. */
 	--ds-color-on-brand-strong: color-mix(in srgb, var(--ds-color-neutral-0) 95%, transparent);
 	--ds-color-on-brand-muted: color-mix(in srgb, var(--ds-color-neutral-0) 70%, transparent);
 	--ds-color-on-brand-divider: color-mix(in srgb, var(--ds-color-neutral-0) 18%, transparent);
 	--ds-color-on-brand-hover: color-mix(in srgb, var(--ds-color-neutral-0) 10%, transparent);
 
 	/* --- Bordas -------------------------------------------------------------- */
-	--ds-color-border-base: var(--color-border);
-	--ds-color-border-strong: var(--color-border-strong);
-	--ds-color-border-faint: var(--color-border-faint);
-	--ds-color-border-hairline: var(--color-border-hairline);
+	--ds-color-border-base: var(--ds-color-neutral-200);
+	--ds-color-border-strong: var(--ds-color-neutral-300);
+	--ds-color-border-faint: var(--ds-color-neutral-100);
+	--ds-color-border-hairline: var(--ds-color-neutral-100);
+	/* -brand = seleção/estado ativo (visível); -soft = contorno de chip */
 	--ds-color-border-brand: var(--ds-color-primary-500);
 	--ds-color-border-brand-soft: var(--ds-color-primary-200);
 	--ds-color-border-success-soft: var(--ds-color-success-200);
 	--ds-color-border-warning-soft: var(--ds-color-warning-200);
 	--ds-color-border-attention-soft: var(--ds-color-attention-200);
 	--ds-color-border-danger-soft: var(--ds-color-danger-200);
+	/* -danger sem sufixo = campo inválido, precisa gritar; -success = confirmação */
 	--ds-color-border-danger: var(--ds-color-danger-600);
-	/* borda sólida de confirmação (par do border-danger; extensão ao contrato §2,
-	   consumida por siorg-feedback/copy-btn/toggle-done) */
 	--ds-color-border-success: var(--ds-color-success-600);
 
 	/* --- Washes (fundo suave de chip/linha/estado) --------------------------- */
-	/* wash-neutral × wash-brand: MESMO valor hoje (primary-100); o flip separa
-	   hover/faixa (neutro) de selecionado (banho azul) — decisão §3.1. */
-	--ds-color-wash-neutral: var(--ds-color-primary-100);
+	/* wash-neutral existe para separar "hover/faixa de seção" (que NÃO deve ser
+	   azul no dark — ver nota histórica no bloco dark) de "selecionado". */
+	--ds-color-wash-neutral: var(--ds-color-neutral-100);
 	--ds-color-wash-brand: var(--ds-color-primary-100);
 	--ds-color-wash-success: var(--ds-color-success-100);
 	--ds-color-wash-success-strong: var(--ds-color-success-200);
-	--ds-color-wash-warning: var(--ds-color-warning-light-bg);
+	--ds-color-wash-warning: var(--ds-color-warning-100);
 	--ds-color-wash-attention: var(--ds-color-attention-100);
-	--ds-color-wash-danger: var(--ds-color-danger-light-bg);
+	--ds-color-wash-danger: var(--ds-color-danger-100);
 
-	/* --- Foco (WCAG 1.4.11/2.4.11): único papel idêntico nos dois temas ------ */
+	/* --- Foco (WCAG 1.4.11 / 2.4.11) ----------------------------------------- */
+	/* ÚNICO papel que NÃO desloca no dark: o anel precisa aparecer sobre
+	   qualquer superfície, então é o mesmo degrau nos dois temas.
+	   Geometria fixa: 2px de anel, 2px de offset, halo de 5px a 25%. */
 	--ds-color-focus-ring: var(--ds-color-primary-500);
 	--ds-color-focus-halo: color-mix(in srgb, var(--ds-color-primary-500) 25%, transparent);
 	--ds-focus-ring-width: 2px;
 	--ds-focus-ring-offset: 2px;
 	--ds-focus-halo-width: 5px;
+	/* Foco sobre superfície de marca (topnav no claro): precisa de neutro */
 	--ds-color-focus-ring-onbrand: var(--ds-color-neutral-0);
 
 	/* --- Superfícies --------------------------------------------------------- */
-	--ds-color-surface-canvas: var(--color-canvas);
-	--ds-color-surface-base: var(--color-surface);
-	--ds-color-surface-raised: var(--color-surface-elevated);
-	--ds-color-surface-muted: var(--color-surface-muted);
-	--ds-color-surface-chip: var(--color-surface-chip);
-	--ds-color-surface-track: var(--color-progress-track);
-	--ds-color-surface-skeleton: var(--ds-color-skeleton-base);
-	--ds-color-surface-skeleton-hi: var(--ds-color-skeleton-highlight);
-	--ds-color-surface-topnav: var(--ds-color-topnav-from);
+	--ds-color-surface-canvas: var(--ds-color-neutral-50);
+	--ds-color-surface-base: var(--ds-color-neutral-0);
+	--ds-color-surface-raised: var(--ds-color-neutral-0);
+	--ds-color-surface-muted: var(--ds-color-neutral-50);
+	--ds-color-surface-chip: var(--ds-color-neutral-100);
+	--ds-color-surface-track: var(--ds-color-neutral-200);
+	--ds-color-surface-skeleton: var(--ds-color-neutral-100);
+	--ds-color-surface-skeleton-hi: var(--ds-color-neutral-50);
+	/* Topnav: superfície chapada, não gradiente de marca. */
+	--ds-color-surface-topnav: var(--ds-color-primary-700);
 	--ds-color-surface-topnav-hover: var(--ds-color-primary-600);
 	--ds-color-surface-topnav-fg: var(--ds-color-neutral-0);
-	--ds-color-overlay: var(--color-overlay);
+	--ds-color-overlay: color-mix(in srgb, var(--ds-color-neutral-1000) 45%, transparent);
 
 	/* --- Ilustração 3D (regra de marca: 600 contorno / 400 base / 300-200 luz /
 	       100 interior). Consumida por lib/components/micro/* e lib/nav3d/*. --- */
@@ -288,108 +221,204 @@
 	--ds-color-icon-light: var(--ds-color-primary-300);
 	--ds-color-icon-glow: var(--ds-color-primary-200);
 	--ds-color-icon-inner: var(--ds-color-primary-100);
-	--ds-color-icon-faint: var(--color-icon-faint);
+	--ds-color-icon-faint: var(--ds-color-neutral-300);
 
-	/* --- Status de tarefa/etapa: separa por MATIZ (§7.2) --------------------- */
-	--ds-color-status-nao-iniciada: var(--color-text-muted);
+	/* --- Prioridade: separa por DEGRAU, não por matiz -----------------------
+	   Forma: PONTO SÓLIDO (a pílula pertence ao status — §7.4).
+	   "baixa" é neutro de propósito: baixa prioridade é ausência de risco, não
+	   sucesso; o verde ali roubava o único sinal de "terminou e foi aceito".
+	   Sem token -wash: ponto sólido não tem fundo. */
+	--ds-color-priority-baixa: var(--ds-color-neutral-300);
+	--ds-color-priority-media: var(--ds-color-danger-300);
+	--ds-color-priority-alta: var(--ds-color-danger-500);
+	--ds-color-priority-urgente: var(--ds-color-danger-700);
+
+	/* --- Status de tarefa/etapa: separa por MATIZ (§7.2) ---------------------
+	   Forma: PÍLULA COM BORDA, receita de chip 100/200/600 (.chip abaixo).
+	   `andamento` absorve o antigo `info` (ciano); `ajustes` usa a família
+	   attention porque há retrabalho, não risco — danger sai do fluxo. */
+	--ds-color-status-nao-iniciada: var(--ds-color-neutral-500);
 	--ds-color-status-andamento: var(--ds-color-primary-600);
 	--ds-color-status-validacao: var(--ds-color-warning-600);
-	--ds-color-status-ajustes: var(--ds-color-orange-600);
+	--ds-color-status-ajustes: var(--ds-color-attention-600);
 	--ds-color-status-finalizada: var(--ds-color-success-600);
 
-	/* --- Fatia do donut do dashboard: degrau 400 (§7.2) ---------------------- */
+	/* Fatia do donut do dashboard: degrau 400 (mais claro que a tinta, para as
+	   fatias se separarem sem legenda encostada). */
 	--ds-color-slice-nao-iniciada: var(--ds-color-neutral-400);
 	--ds-color-slice-andamento: var(--ds-color-primary-400);
 	--ds-color-slice-validacao: var(--ds-color-warning-400);
 	--ds-color-slice-ajustes: var(--ds-color-attention-400);
 	--ds-color-slice-finalizada: var(--ds-color-success-400);
 
-	/* Altura de controles de formulário (trigger/campo) — escala única, em REM
-	   para escalar com o zoom de texto do usuário (WCAG 1.4.4). Não se aplica a
-	   botões de ação/linhas de tabela, que têm densidade própria. */
+	/* --- Sombras (derivadas da régua; sem rgba literal) ---------------------- */
+	--ds-shadow-sm: 0 2px 8px color-mix(in srgb, var(--ds-color-neutral-900) 8%, transparent);
+	--ds-shadow-md: 0 4px 12px color-mix(in srgb, var(--ds-color-neutral-900) 12%, transparent);
+	--ds-shadow-lg: 0 8px 24px color-mix(in srgb, var(--ds-color-neutral-900) 16%, transparent);
+	--ds-shadow-modal: 0 24px 64px color-mix(in srgb, var(--ds-color-neutral-900) 32%, transparent);
+	--ds-shadow-popover: 0 4px 16px color-mix(in srgb, var(--ds-color-neutral-900) 10%, transparent);
+
+	/* ==========================================================================
+	 * ALIASES DE COMPATIBILIDADE. Existem só para que tailwind.config.ts e os
+	 * consumidores ainda não migrados continuem resolvendo durante a migração.
+	 * Resolvem em cascata, então NÃO precisam ser repetidos no bloco dark.
+	 * Remover no commit final, junto com o replace de theme.colors.
+	 * ======================================================================== */
+	--color-canvas: var(--ds-color-surface-canvas);
+	--color-surface: var(--ds-color-surface-base);
+	--color-surface-elevated: var(--ds-color-surface-raised);
+	--color-surface-muted: var(--ds-color-surface-muted);
+	--color-surface-chip: var(--ds-color-surface-chip);
+	--color-progress-track: var(--ds-color-surface-track);
+	--color-border: var(--ds-color-border-base);
+	--color-border-strong: var(--ds-color-border-strong);
+	--color-border-faint: var(--ds-color-border-faint);
+	--color-border-hairline: var(--ds-color-border-hairline);
+	--color-text-primary: var(--ds-color-text-primary);
+	--color-text-secondary: var(--ds-color-text-secondary);
+	--color-text-muted: var(--ds-color-text-muted);
+	--color-text-label: var(--ds-color-text-label);
+	--color-text-faint: var(--ds-color-text-faint);
+	--color-icon-faint: var(--ds-color-icon-faint);
+	--color-overlay: var(--ds-color-overlay);
+	/* fg legados (tailwind primary/success/danger .fg) */
+	--ds-color-primary-fg: var(--ds-color-fill-brand-fg);
+	--ds-color-success-fg: var(--ds-color-fill-success-fg);
+	--ds-color-danger-fg: var(--ds-color-fill-danger-fg);
+
+	/* Altura de controles de formulário — escala única, em REM para escalar com
+	   o zoom de texto do usuário (WCAG 1.4.4). */
 	--control-h-sm: 2.125rem; /* 34px — SelectMenu size="sm", forms compactos */
 	--control-h-md: 2.375rem; /* 38px — campos de detalhe (Área/Órgão/SEI) */
 }
 
-/* Dark — esquema carvão do produto irmão (siorg-rj): canvas preto, cards #202020,
-   color-blocking em vez de azul-acinzentado; acentos seguem o azul de marca. */
+/* ============================================================================
+ * DARK — desloca, não redesenha.
+ * Nenhum hex aqui. Cada PAPEL troca de degrau na MESMA família:
+ *   número/tinta   600 → 300      contorno de ícone 600 → 500
+ *   base de ícone  400 → 300      luz  300/200 → 200/100
+ *   interior/wash  100 → 800      rótulo neutral-700 → neutral-200
+ *   subtítulo      neutral-500 → neutral-400
+ * NOTA HISTÓRICA (substitui os comentários de 2026 sobre "azul acinzentado" e
+ * "wash neutro"): a decisão de não gritar azul sobre o carvão NÃO foi revogada
+ * — mudou de mecanismo. Antes: achatar a rampa (primary dessaturada). Agora:
+ * escolher o degrau POR PAPEL. O azul saturado aparece só em 4 papéis (tinta
+ * de marca, ícone, anel de foco, fill); rótulo/subtítulo seguem neutros e o
+ * hover/faixa de seção usa wash-NEUTRAL (cinza), nunca wash-brand. wash-brand
+ * (banho azul) é reservado a SELECIONADO/ativo, onde é sinal, não decoração.
+ * ========================================================================== */
 [data-theme='dark'] {
-	--color-canvas: #000000;
-	--color-surface: #202020;
-	--color-surface-elevated: #2a2a2a;
-	--color-surface-muted: #181818;
-	--color-border: #3f3f3f;
-	--color-border-strong: #555555;
-	--color-text-primary: #fcfcfc;
-	--color-text-secondary: #e0e0e0;
-	--color-text-muted: #b5b5b5;
-	--color-overlay: rgba(0, 0, 0, 0.6);
+	/* --- Texto neutro -------------------------------------------------------- */
+	--ds-color-text-primary: var(--ds-color-neutral-50);
+	--ds-color-text-secondary: var(--ds-color-neutral-200);
+	--ds-color-text-muted: var(--ds-color-neutral-400);
+	--ds-color-text-label: var(--ds-color-neutral-300);
+	--ds-color-text-faint: var(--ds-color-neutral-500);
 
-	--color-text-faint: #8a8a8a;
-	--color-text-label: #a3a3a3;
-	--color-icon-faint: #6f6f6f;
-	--color-border-faint: #2f2f2f;
-	--color-border-hairline: #2a2a2a;
-	--color-surface-chip: #2a2a2a;
-	--color-progress-track: #3a3a3a;
-	--ds-color-success-700: #6fcf9f;
-	--ds-color-success-200: rgba(73, 185, 135, 0.28);
-	--ds-color-success-100: rgba(73, 185, 135, 0.14);
-	--ds-color-danger-700: #e59a9a;
-	--ds-shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
+	/* --- Tinta de marca e de estado: 600 → 300 ------------------------------- */
+	--ds-color-text-brand: var(--ds-color-primary-300);
+	--ds-color-text-success: var(--ds-color-success-300);
+	--ds-color-text-warning: var(--ds-color-warning-300);
+	--ds-color-text-attention: var(--ds-color-attention-300);
+	--ds-color-text-danger: var(--ds-color-danger-300);
 
-	/* Primária no dark: azul-ACINZENTADO quase neutro (links/títulos não devem
-	   gritar sobre o carvão; azul saturado fica só nos fills de marca). */
-	--ds-color-primary-700: #8fa1b3;
-	--ds-color-primary-600: #a9bac9;
-	--ds-color-primary-500: #c4d2de;
-	/* Wash de destaque NEUTRO no dark (faixas de seção, chips, estados ativos):
-	   cinza elevado em vez de banho azul — o azul fica só em texto/ícone. */
-	--ds-color-primary-100: rgba(255, 255, 255, 0.07);
-	--ds-color-success-600: #49b987;
-	--ds-color-warning-600: #d8a24d;
-	--ds-color-danger-600: #d97a7a;
-	--ds-color-info-600: #a9bac9;
-	--ds-color-pending: #8398ad;
-	--ds-color-violet-600: #a78bfa;
-	--ds-color-primary-fg: #0d1a2d;
-	--ds-color-success-fg: #052010;
-	--ds-color-danger-fg: #2d0a09;
+	/* --- Fills ---------------------------------------------------------------
+	   fill-brand NÃO aparece aqui: o botão primário é primary-600 nos DOIS
+	   temas (o azul é cor de ação, não de chrome). Os demais clareiam e a tinta
+	   inverte para o extremo escuro da própria família. */
+	--ds-color-fill-success: var(--ds-color-success-400);
+	--ds-color-fill-success-fg: var(--ds-color-success-900);
+	--ds-color-fill-warning: var(--ds-color-warning-400);
+	--ds-color-fill-warning-fg: var(--ds-color-warning-900);
+	--ds-color-fill-attention: var(--ds-color-attention-400);
+	--ds-color-fill-attention-fg: var(--ds-color-attention-900);
+	--ds-color-fill-danger: var(--ds-color-danger-400);
+	--ds-color-fill-danger-hover: var(--ds-color-danger-300);
+	--ds-color-fill-danger-fg: var(--ds-color-danger-900);
+	--ds-color-fill-pending: var(--ds-color-neutral-600);
 
-	/* Prioridade no dark — alinhada aos tons escuros da paleta (theme-dark.css).
-	   "alta" (laranja) amaciada para o fundo escuro; demais reusam os tons dark. */
-	--ds-color-orange-600: #e08b5c;
-	--ds-color-priority-baixa: #49b987;
-	--ds-color-priority-media: #d8a24d;
-	--ds-color-priority-alta: #e08b5c;
-	--ds-color-priority-urgente: #d97a7a;
+	/* --- Bordas: contorno acompanha o fundo escuro -------------------------- */
+	--ds-color-border-base: var(--ds-color-neutral-700);
+	--ds-color-border-strong: var(--ds-color-neutral-600);
+	--ds-color-border-faint: var(--ds-color-neutral-800);
+	--ds-color-border-hairline: var(--ds-color-neutral-800);
+	--ds-color-border-brand: var(--ds-color-primary-400);
+	--ds-color-border-brand-soft: var(--ds-color-primary-700);
+	--ds-color-border-success-soft: var(--ds-color-success-700);
+	--ds-color-border-warning-soft: var(--ds-color-warning-700);
+	--ds-color-border-attention-soft: var(--ds-color-attention-700);
+	--ds-color-border-danger-soft: var(--ds-color-danger-700);
+	--ds-color-border-danger: var(--ds-color-danger-400);
+	--ds-color-border-success: var(--ds-color-success-400);
 
-	/* Stat-card translucidos no dark (mesmos hues, alfa levemente maior) */
-	--ds-color-primary-light-bg: rgba(169, 186, 201, 0.14);
-	--ds-color-success-light-bg: rgba(73, 185, 135, 0.14);
-	--ds-color-danger-light-bg: rgba(217, 122, 122, 0.14);
+	/* --- Washes: interior 100 → 800 ----------------------------------------- */
+	--ds-color-wash-neutral: var(--ds-color-neutral-800);
+	--ds-color-wash-brand: var(--ds-color-primary-800);
+	--ds-color-wash-success: var(--ds-color-success-800);
+	--ds-color-wash-success-strong: var(--ds-color-success-700);
+	--ds-color-wash-warning: var(--ds-color-warning-800);
+	--ds-color-wash-attention: var(--ds-color-attention-800);
+	--ds-color-wash-danger: var(--ds-color-danger-800);
 
-	/* Topbar no dark: carvão translúcido sobre o canvas preto (color-blocking) */
-	--ds-color-topnav-from: rgba(24, 24, 24, 0.94);
-	--ds-color-topnav-to: rgba(24, 24, 24, 0.94);
+	/* --- Foco: NÃO desloca. Ausente de propósito ----------------------------
+	   O anel é o único papel idêntico nos dois temas — precisa aparecer sobre
+	   qualquer superfície. Os tokens de foco ficam só no :root. */
 
-	--ds-color-skeleton-base: #2a2a2a;
-	--ds-color-skeleton-highlight: #363636;
+	/* --- Superfícies: color-blocking carvão preservado ----------------------- */
+	--ds-color-surface-canvas: var(--ds-color-neutral-1000);
+	--ds-color-surface-base: var(--ds-color-neutral-900);
+	--ds-color-surface-raised: var(--ds-color-neutral-800);
+	--ds-color-surface-muted: var(--ds-color-neutral-1000);
+	--ds-color-surface-chip: var(--ds-color-neutral-800);
+	--ds-color-surface-track: var(--ds-color-neutral-700);
+	--ds-color-surface-skeleton: var(--ds-color-neutral-800);
+	--ds-color-surface-skeleton-hi: var(--ds-color-neutral-700);
+	--ds-color-surface-topnav: var(--ds-color-neutral-900);
+	--ds-color-surface-topnav-hover: var(--ds-color-neutral-800);
+	--ds-color-surface-topnav-fg: var(--ds-color-neutral-50);
+	--ds-color-overlay: color-mix(in srgb, var(--ds-color-neutral-1000) 70%, transparent);
 
-	--ds-shadow-popover: 0 12px 30px rgba(0, 0, 0, 0.5);
+	/* --- Ilustração 3D: contorno 600→500, base 400→300, luz 300/200→200/100,
+	       interior 100→800 (tabela literal da regra de marca) ----------------- */
+	--ds-color-icon-outline: var(--ds-color-primary-500);
+	--ds-color-icon-base: var(--ds-color-primary-300);
+	--ds-color-icon-light: var(--ds-color-primary-200);
+	--ds-color-icon-glow: var(--ds-color-primary-100);
+	--ds-color-icon-inner: var(--ds-color-primary-800);
+	--ds-color-icon-faint: var(--ds-color-neutral-600);
 
-	--ds-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
-	--ds-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
-	--ds-shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.55);
+	/* --- Prioridade: a escala ESPELHA -----------------------------------------
+	   No claro a severidade cresce escurecendo (300→500→700); sobre o carvão
+	   isso inverte, senão "urgente" fica invisível. Monotonicidade preservada,
+	   direção trocada. Confirmado pelo usuário em 2026-07-28 (proposta §7.3). */
+	--ds-color-priority-baixa: var(--ds-color-neutral-600);
+	--ds-color-priority-media: var(--ds-color-danger-600);
+	--ds-color-priority-alta: var(--ds-color-danger-400);
+	--ds-color-priority-urgente: var(--ds-color-danger-300);
 
-	--search-badge-project-bg: rgba(196, 210, 222, 0.18);
-	--search-badge-project-fg: var(--ds-color-primary-500);
-	--search-badge-stage-bg: rgba(216, 162, 77, 0.18);
-	--search-badge-stage-fg: var(--ds-color-warning-600);
-	--search-badge-task-bg: rgba(73, 185, 135, 0.18);
-	--search-badge-task-fg: var(--ds-color-success-600);
-	--search-badge-event-bg: rgba(196, 210, 222, 0.14);
-	--search-badge-event-fg: var(--ds-color-primary-500);
+	/* --- Status ------------------------------------------------------------- */
+	--ds-color-status-nao-iniciada: var(--ds-color-neutral-400);
+	--ds-color-status-andamento: var(--ds-color-primary-300);
+	--ds-color-status-validacao: var(--ds-color-warning-300);
+	--ds-color-status-ajustes: var(--ds-color-attention-300);
+	--ds-color-status-finalizada: var(--ds-color-success-300);
+
+	/* --- Donut: 400 → 300 --------------------------------------------------- */
+	--ds-color-slice-nao-iniciada: var(--ds-color-neutral-500);
+	--ds-color-slice-andamento: var(--ds-color-primary-300);
+	--ds-color-slice-validacao: var(--ds-color-warning-300);
+	--ds-color-slice-ajustes: var(--ds-color-attention-300);
+	--ds-color-slice-finalizada: var(--ds-color-success-300);
+
+	/* --- Sombras ------------------------------------------------------------
+	   No escuro a ELEVAÇÃO é degrau, não sombra: canvas 1000 → superfície 900 →
+	   elevada 800. As sombras abaixo sobrevivem só para separar camadas
+	   flutuantes (modal, popover) do que está atrás — não para sugerir altura. */
+	--ds-shadow-sm: 0 2px 8px color-mix(in srgb, var(--ds-color-neutral-1000) 35%, transparent);
+	--ds-shadow-md: 0 4px 12px color-mix(in srgb, var(--ds-color-neutral-1000) 45%, transparent);
+	--ds-shadow-lg: 0 12px 28px color-mix(in srgb, var(--ds-color-neutral-1000) 55%, transparent);
+	--ds-shadow-modal: 0 24px 64px color-mix(in srgb, var(--ds-color-neutral-1000) 60%, transparent);
+	--ds-shadow-popover: 0 12px 30px color-mix(in srgb, var(--ds-color-neutral-1000) 50%, transparent);
 
 	color-scheme: dark;
 }
@@ -648,15 +677,6 @@
 		--chip-bg: var(--ds-color-neutral-800);
 		--chip-border: var(--ds-color-neutral-700);
 		--chip-fg: var(--ds-color-neutral-500);
-	}
-
-	/* Gradiente do topbar/brand — 00-foundation.css:191 (#1769a8) */
-	.gradient-topnav {
-		background-image: linear-gradient(
-			135deg,
-			var(--ds-color-topnav-from) 0%,
-			var(--ds-color-topnav-to) 100%
-		);
 	}
 
 	/* Skeleton shimmer — 10-skeleton.css:52-56 (gradiente 90deg + animacao 1.5s) */

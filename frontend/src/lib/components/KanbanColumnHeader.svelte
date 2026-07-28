@@ -51,7 +51,7 @@
 		color: var(--ds-color-text-warning);
 	}
 	.kcol-head--para_ajustes {
-		background-color: color-mix(in srgb, var(--ds-color-orange-600) 8%, var(--color-surface));
+		background-color: color-mix(in srgb, var(--ds-color-attention-600) 8%, var(--color-surface));
 		color: var(--ds-color-text-attention);
 	}
 	.kcol-head--finalizada {
