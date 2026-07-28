@@ -19,20 +19,23 @@ const STATUS_LABEL: Record<string, string> = {
 	finalizada: 'Finalizada'
 };
 
+/* Mapeamento status→tom arbitrado pelo design (plano-regua-de-cor §7.2):
+   andamento=primary, validação=warning (bola com outro), ajustes=orange→attention
+   (retrabalho, não risco), finalizada=success. Danger sai do fluxo de status. */
 const STATUS_TONE: Record<string, BadgeTone> = {
 	nao_iniciada: 'neutral',
-	em_andamento: 'info',
-	para_validacao: 'primary',
-	para_ajustes: 'warning',
+	em_andamento: 'primary',
+	para_validacao: 'warning',
+	para_ajustes: 'orange',
 	finalizada: 'success'
 };
 
 /** Classe de fundo da barra/realce vertical da linha, por status (tokens DS). */
 const STATUS_BAR_CLASS: Record<string, string> = {
 	nao_iniciada: 'bg-text-muted',
-	em_andamento: 'bg-info',
-	para_validacao: 'bg-primary-500',
-	para_ajustes: 'bg-warning',
+	em_andamento: 'bg-primary-500',
+	para_validacao: 'bg-warning',
+	para_ajustes: 'bg-orange',
 	finalizada: 'bg-success'
 };
 

@@ -506,10 +506,9 @@
 		color: var(--color-text-secondary);
 	}
 
-	/* Lixeira sem fundo (só o ícone): o hover ACENDE o vermelho via color-mix
-	 * (não há token danger-700; escurecemos o 600 na mão). */
+	/* Lixeira sem fundo (só o ícone): o hover acende o vermelho (token puro). */
 	.kc-delete-btn:hover {
-		color: color-mix(in srgb, var(--ds-color-danger-600) 78%, var(--color-text-primary));
+		color: var(--ds-color-danger-600);
 	}
 
 	/*

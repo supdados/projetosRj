@@ -40,21 +40,23 @@
 		background-color: color-mix(in srgb, var(--color-text-muted) 8%, var(--color-surface));
 		color: var(--color-text-secondary);
 	}
+	/* Tinta = token puro (sem color-mix escurecedor) e mapeamento arbitrado em
+	   plano-regua-de-cor §7.2: andamento=primary, ajustes=orange (vira attention). */
 	.kcol-head--em_andamento {
-		background-color: color-mix(in srgb, var(--ds-color-info-600) 9%, var(--color-surface));
-		color: color-mix(in srgb, var(--ds-color-info-600) 62%, var(--color-text-primary));
+		background-color: color-mix(in srgb, var(--ds-color-primary-600) 9%, var(--color-surface));
+		color: var(--ds-color-primary-600);
 	}
 	.kcol-head--para_validacao {
 		background-color: color-mix(in srgb, var(--ds-color-warning-600) 10%, var(--color-surface));
-		color: color-mix(in srgb, var(--ds-color-warning-600) 62%, var(--color-text-primary));
+		color: var(--ds-color-warning-600);
 	}
 	.kcol-head--para_ajustes {
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 8%, var(--color-surface));
-		color: color-mix(in srgb, var(--ds-color-danger-600) 62%, var(--color-text-primary));
+		background-color: color-mix(in srgb, var(--ds-color-orange-600) 8%, var(--color-surface));
+		color: var(--ds-color-orange-600);
 	}
 	.kcol-head--finalizada {
 		background-color: color-mix(in srgb, var(--ds-color-success-600) 8%, var(--color-surface));
-		color: color-mix(in srgb, var(--ds-color-success-600) 62%, var(--color-text-primary));
+		color: var(--ds-color-success-600);
 	}
 
 	/* Pop da contagem quando o número muda (remontada via {#key}). */

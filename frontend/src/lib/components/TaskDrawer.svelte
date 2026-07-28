@@ -551,14 +551,14 @@
 	/* Chip "Arquivada" do header (tinta âmbar suave). color-mix sobre tokens DS
 	 * (dark-safe); o Tailwind 3 não gera `bg-x/10` p/ cores via var(). */
 	.td-archived-chip {
-		color: color-mix(in srgb, var(--ds-color-warning-600) 80%, black);
+		color: var(--ds-color-warning-600);
 		border-color: color-mix(in srgb, var(--ds-color-warning-600) 45%, transparent);
 		background-color: color-mix(in srgb, var(--ds-color-warning-600) 12%, transparent);
 	}
 
 	/* Aviso de tarefa sem etapa (tinta âmbar, mais visível que o muted). */
 	.td-no-etapa {
-		color: color-mix(in srgb, var(--ds-color-warning-600) 72%, black);
+		color: var(--ds-color-warning-600);
 		border-color: color-mix(in srgb, var(--ds-color-warning-600) 40%, transparent);
 		background-color: color-mix(in srgb, var(--ds-color-warning-600) 8%, transparent);
 	}
