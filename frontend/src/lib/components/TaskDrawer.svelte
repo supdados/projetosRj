@@ -29,6 +29,7 @@
 	import type { TaskDrawerPayload } from '$lib/types/taskDrawer';
 	import type { TaskAssignee } from '$lib/types/tasks';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
+	import { priorityDotColor } from '$lib/utils/taskLabels';
 	import { ApiClientError } from '$lib/api/client';
 	import { fetchProjectDetail } from '$lib/api/projectDetail';
 	import type { EtapaDetail } from '$lib/types/projectDetail';
@@ -47,10 +48,10 @@
 	let { store }: Props = $props();
 
 	const PRIORIDADE_OPTIONS: SelectMenuOption[] = [
-		{ value: 'baixa', label: 'Baixa', dot: 'var(--ds-color-priority-baixa)' },
-		{ value: 'media', label: 'Média', dot: 'var(--ds-color-priority-media)' },
-		{ value: 'alta', label: 'Alta', dot: 'var(--ds-color-priority-alta)' },
-		{ value: 'urgente', label: 'Urgente', dot: 'var(--ds-color-priority-urgente)' }
+		{ value: 'baixa', label: 'Baixa', dot: priorityDotColor('baixa') },
+		{ value: 'media', label: 'Média', dot: priorityDotColor('media') },
+		{ value: 'alta', label: 'Alta', dot: priorityDotColor('alta') },
+		{ value: 'urgente', label: 'Urgente', dot: priorityDotColor('urgente') }
 	];
 
 	// Sem "implementacao" por padrão: é tipo LEGADO (`LEGACY_TIPOS`) e o save

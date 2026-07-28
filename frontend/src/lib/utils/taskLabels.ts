@@ -3,9 +3,9 @@
  * reusada pela lista (modo lista do hub) e pelos chips. Espelha os
  * `status_labels`/`prioridade_labels`/`tipo_labels` do hub Jinja.
  *
- * As cores usam os tokens do design system (--ds-color-*), via classes Tailwind
- * (`success`/`warning`/`danger`/`info`/`primary`), então trocam sozinhas no dark
- * mode — não há hex hardcoded por tema aqui.
+ * As cores usam os tokens do design system (--ds-color-*): status vira pílula
+ * `.chip` (app.css) e prioridade vira ponto sólido — ambos trocam sozinhos no
+ * dark mode, sem hex hardcoded por tema aqui.
  */
 
 /** Tons do `Badge` (= união aceita por `Badge.svelte`). */
@@ -46,13 +46,13 @@ const PRIORIDADE_LABEL: Record<string, string> = {
 	urgente: 'Urgente'
 };
 
-// Tons alinhados aos dots do SelectMenu (--ds-color-priority-*): baixa verde,
-// média amarelo, alta laranja, urgente vermelho.
-const PRIORIDADE_TONE: Record<string, BadgeTone> = {
-	baixa: 'success',
-	media: 'warning',
-	alta: 'orange',
-	urgente: 'danger'
+/* Prioridade NÃO usa chip (inversão de forma, plano-regua-de-cor §7.4): vira
+   ponto sólido + rótulo em texto normal. Cor do ponto via tokens dedicados. */
+const PRIORIDADE_DOT_VAR: Record<string, string> = {
+	baixa: 'var(--ds-color-priority-baixa)',
+	media: 'var(--ds-color-priority-media)',
+	alta: 'var(--ds-color-priority-alta)',
+	urgente: 'var(--ds-color-priority-urgente)'
 };
 
 const TIPO_LABEL: Record<string, string> = {
@@ -81,9 +81,10 @@ export function prioridadeLabel(value: string | null): string | null {
 	return PRIORIDADE_LABEL[value] ?? value;
 }
 
-export function prioridadeTone(value: string | null): BadgeTone {
-	if (!value) return 'neutral';
-	return PRIORIDADE_TONE[value] ?? 'neutral';
+/** Cor CSS do ponto sólido de prioridade (dot do SelectMenu e dos rodapés). */
+export function priorityDotColor(value: string | null | undefined): string | undefined {
+	if (!value) return undefined;
+	return PRIORIDADE_DOT_VAR[value];
 }
 
 export function tipoLabel(value: string | null): string | null {
@@ -92,24 +93,24 @@ export function tipoLabel(value: string | null): string | null {
 }
 
 /**
- * Chip padronizado (prioridade/tipo/status): TODOS com o mesmo formato — radius
- * 5px, mesma fonte/padding/peso — variando só a cor por tom. Fundo suave + texto
- * + borda do mesmo tom (tokens DS, dark-safe).
+ * Chip canônico de status/tipo — receita única `.chip` do app.css
+ * (plano-regua-de-cor §2.1/§7.9): 22px, raio 6px, 12px/500, sem uppercase.
+ * Cada tom mapeia para uma família da régua; os estados (hover/pressed/
+ * desabilitado/dark) vivem na própria classe, não aqui.
  */
-export const CHIP_BASE =
-	'inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md border px-2 py-1 text-[11px] font-semibold uppercase leading-none tracking-wide';
+export const CHIP_BASE = 'chip';
 
 const CHIP_TONE: Record<BadgeTone, string> = {
-	neutral: 'border-border-subtle bg-surface text-text-secondary dark:border-white/10',
-	primary: 'border-primary-500/30 bg-primary-500/10 text-brand dark:border-white/10',
-	info: 'border-info/30 bg-info/10 text-info dark:border-white/10',
-	warning: 'border-warning/40 bg-warning/10 text-warning dark:border-white/10',
-	orange: 'border-orange/40 bg-orange/10 text-orange dark:border-white/10',
-	success: 'border-success/40 bg-success/10 text-success dark:border-white/10',
-	danger: 'border-danger/40 bg-danger/10 text-danger dark:border-white/10'
+	neutral: 'chip--neutral',
+	primary: 'chip--brand',
+	info: 'chip--brand',
+	warning: 'chip--warning',
+	orange: 'chip--attention',
+	success: 'chip--success',
+	danger: 'chip--danger'
 };
 
-/** Classes completas do chip para um tom (base + cores). */
+/** Classes completas do chip para um tom (base + família). */
 export function chipClass(tone: BadgeTone): string {
 	return `${CHIP_BASE} ${CHIP_TONE[tone]}`;
 }

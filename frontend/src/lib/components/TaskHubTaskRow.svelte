@@ -21,7 +21,7 @@
 	import {
 		statusLabel,
 		statusTone,
-		prioridadeTone,
+		priorityDotColor,
 		chipClass
 	} from '$lib/utils/taskLabels';
 	import { saveFields } from '$lib/api/taskDrawer';
@@ -74,14 +74,8 @@
 	// Trigger do SelectMenu unstyled: o próprio chip (chipClass do tom atual).
 	const CHIP_TRIGGER = 'w-full cursor-pointer';
 
-	// Dots dos chips: mesmas cores já usadas no hub (priority-* tokens e tons de
-	// STATUS_TONE/STATUS_BAR_CLASS de taskLabels.ts), não inventadas aqui.
-	const PRIORIDADE_DOT: Record<string, string> = {
-		baixa: 'var(--ds-color-priority-baixa)',
-		media: 'var(--ds-color-priority-media)',
-		alta: 'var(--ds-color-priority-alta)',
-		urgente: 'var(--ds-color-priority-urgente)'
-	};
+	// Dots: prioridade via priorityDotColor (taskLabels.ts); status com os tons
+	// de STATUS_TONE/STATUS_BAR_CLASS, não inventados aqui.
 	const STATUS_DOT: Record<string, string> = {
 		nao_iniciada: 'var(--ds-color-text-muted)',
 		em_andamento: 'var(--ds-color-status-andamento)',
@@ -93,7 +87,7 @@
 	const prioridadeMenuOptions: SelectMenuOption[] = PRIORIDADE_OPTS.map((opt) => ({
 		value: opt.value,
 		label: opt.label,
-		dot: PRIORIDADE_DOT[opt.value]
+		dot: priorityDotColor(opt.value)
 	}));
 	const tipoMenuOptions: SelectMenuOption[] = TIPO_OPTS.map((opt) => ({
 		value: opt.value,
@@ -544,22 +538,36 @@
 	</svg>
 {/snippet}
 
+<!-- Inversão de forma (plano-regua-de-cor §7.4): prioridade = ponto sólido +
+     rótulo em texto normal; a pílula (.chip) pertence ao status e ao tipo. -->
 {#snippet prioridadeTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}
-	<span class="{chipClass(prioridadeTone(task.prioridade))} {CHIP_TRIGGER} gap-1">
+	<span
+		class="inline-flex h-[22px] {CHIP_TRIGGER} items-center justify-center gap-1.5 whitespace-nowrap text-xs text-text-primary"
+	>
+		{#if priorityDotColor(task.prioridade)}
+			<span
+				aria-hidden="true"
+				class="h-2 w-2 shrink-0 rounded-full"
+				style:background={priorityDotColor(task.prioridade)}
+			></span>
+		{/if}
 		{selected?.label ?? '—'}
 		{@render chipCaret(open)}
 	</span>
 {/snippet}
 
 {#snippet tipoTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}
-	<span class="{chipClass(task.tipo_pedido ? 'primary' : 'neutral')} {CHIP_TRIGGER} gap-1">
+	<span class="{chipClass('neutral')} {CHIP_TRIGGER} justify-center gap-1">
 		{selected?.label ?? '—'}
 		{@render chipCaret(open)}
 	</span>
 {/snippet}
 
 {#snippet statusTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}
-	<span bind:this={statusChipEl} class="{chipClass(statusTone(task.status))} {CHIP_TRIGGER} gap-1">
+	<span
+		bind:this={statusChipEl}
+		class="{chipClass(statusTone(task.status))} {CHIP_TRIGGER} justify-center gap-1"
+	>
 		{selected?.label ?? statusLabel(task.status)}
 		{@render chipCaret(open)}
 	</span>

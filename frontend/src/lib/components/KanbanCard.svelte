@@ -24,6 +24,7 @@
 	 */
 	import { getContext, tick, untrack } from 'svelte';
 	import type { BoardCard } from '$lib/types/board';
+	import { priorityDotColor } from '$lib/utils/taskLabels';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
 	import {
 		KANBAN_COLUMN_MOTION,
@@ -97,11 +98,9 @@
 	const prioridadeLabel = $derived(
 		card.prioridade ? (PRIORIDADE_LABEL[card.prioridade] ?? card.prioridade) : null
 	);
-	/** Classe da variante de cor do chip (cai em "media" p/ valor desconhecido). */
-	const prioridadeChipClass = $derived(
-		card.prioridade && card.prioridade in PRIORIDADE_LABEL
-			? `kc-chip--${card.prioridade}`
-			: 'kc-chip--media'
+	/** Cor do ponto de prioridade (cai em "media" p/ valor desconhecido). */
+	const prioridadeDotColor = $derived(
+		priorityDotColor(card.prioridade) ?? 'var(--ds-color-priority-media)'
 	);
 	const tipoLabel = $derived(
 		card.tipo_pedido ? (TIPO_LABEL[card.tipo_pedido] ?? card.tipo_pedido) : null
@@ -328,7 +327,10 @@
 	-->
 	<div bind:this={footerEl} class="mt-auto flex min-w-0 items-center gap-1.5 pt-0.5">
 		{#if prioridadeLabel}
-			<span class="kc-chip {prioridadeChipClass}">{prioridadeLabel}</span>
+			<span class="kc-chip kc-chip--prio">
+				<span aria-hidden="true" class="kc-prio-dot" style:background={prioridadeDotColor}
+				></span>{prioridadeLabel}
+			</span>
 		{/if}
 		{#if prioridadeLabel && tipoLabel && fitLevel < 1}
 			<!-- Separador "·" bem sutil, centralizado na vertical pela linha. -->
@@ -461,8 +463,9 @@
 
 <style>
 	/*
-	 * Rótulos do rodapé (Variação B). As cores de prioridade usam as MESMAS
-	 * vars dos badges do hub (`--ds-color-priority-*`, dark-safe).
+	 * Rótulos do rodapé (Variação B). Prioridade = PONTO SÓLIDO + rótulo em
+	 * texto normal (inversão de forma, plano-regua-de-cor §7.4); a cor do ponto
+	 * vem das vars `--ds-color-priority-*` (dark-safe).
 	 */
 	.kc-chip {
 		display: inline-flex;
@@ -474,24 +477,14 @@
 		white-space: nowrap;
 		flex: none;
 	}
-	/* Prioridade: rótulo em texto puro na cor do status (sem ponto). */
-	.kc-chip--baixa,
-	.kc-chip--media,
-	.kc-chip--alta,
-	.kc-chip--urgente {
-		letter-spacing: 0.01em;
+	.kc-chip--prio {
+		color: var(--ds-color-text-secondary);
 	}
-	.kc-chip--baixa {
-		color: var(--ds-color-priority-baixa);
-	}
-	.kc-chip--media {
-		color: var(--ds-color-priority-media);
-	}
-	.kc-chip--alta {
-		color: var(--ds-color-priority-alta);
-	}
-	.kc-chip--urgente {
-		color: var(--ds-color-priority-urgente);
+	.kc-prio-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex: none;
 	}
 	/* Tipo de pedido: texto puro apagado (separado da prioridade por "·").
 	 * `flex: none` de propósito: o rótulo não trunca no meio — quando não cabe,

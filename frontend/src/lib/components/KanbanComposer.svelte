@@ -30,6 +30,7 @@
 	import type { TaskStatus } from '$lib/utils/taskStatus';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
+	import { priorityDotColor } from '$lib/utils/taskLabels';
 
 	interface Props {
 		/** Status (coluna) onde a tarefa será criada. */
@@ -77,10 +78,10 @@
 	const PROJECT_TRIGGER_ID = `kanban-composer-project-${status}`;
 
 	const PRIORIDADE_OPTIONS: SelectMenuOption[] = [
-		{ value: 'baixa', label: 'Baixa', dot: 'var(--ds-color-priority-baixa)' },
-		{ value: 'media', label: 'Média', dot: 'var(--ds-color-priority-media)' },
-		{ value: 'alta', label: 'Alta', dot: 'var(--ds-color-priority-alta)' },
-		{ value: 'urgente', label: 'Urgente', dot: 'var(--ds-color-priority-urgente)' }
+		{ value: 'baixa', label: 'Baixa', dot: priorityDotColor('baixa') },
+		{ value: 'media', label: 'Média', dot: priorityDotColor('media') },
+		{ value: 'alta', label: 'Alta', dot: priorityDotColor('alta') },
+		{ value: 'urgente', label: 'Urgente', dot: priorityDotColor('urgente') }
 	];
 	// Sem "implementacao": é tipo LEGADO (`LEGACY_TIPOS`) — a criação via
 	// /api/tarefas só aceita VALID_TIPOS e descartaria o valor silenciosamente.

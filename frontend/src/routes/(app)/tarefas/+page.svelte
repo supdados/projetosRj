@@ -65,6 +65,7 @@
 	import { orgaoScope } from '$lib/stores/orgaoScope';
 	import type { BoardCard, BoardQuery } from '$lib/types/board';
 	import { normalizeStatus, type TaskStatus } from '$lib/utils/taskStatus';
+	import { priorityDotColor } from '$lib/utils/taskLabels';
 	import {
 		triggerTaskFinalizeConfetti,
 		type CelebrationOriginLike
@@ -438,15 +439,9 @@
 		{ value: 'implementacao', label: 'Implementação' }
 	];
 
-	// Dots dos SelectMenu de prioridade/status — mesmas cores dos chips/barra da
-	// lista (taskLabels.ts: PRIORIDADE_TONE/STATUS_TONE/STATUS_BAR_CLASS), via
-	// tokens do design system (sem hex hardcoded).
-	const PRIORIDADE_DOT: Record<string, string> = {
-		baixa: 'var(--ds-color-priority-baixa)',
-		media: 'var(--ds-color-priority-media)',
-		alta: 'var(--ds-color-priority-alta)',
-		urgente: 'var(--ds-color-priority-urgente)'
-	};
+	// Dots dos SelectMenu: prioridade via priorityDotColor (taskLabels.ts);
+	// status com as mesmas cores da barra da lista (STATUS_TONE/STATUS_BAR_CLASS),
+	// via tokens do design system (sem hex hardcoded).
 	const STATUS_DOT: Record<string, string> = {
 		nao_iniciada: 'var(--ds-color-text-muted)',
 		em_andamento: 'var(--ds-color-status-andamento)',
@@ -462,7 +457,7 @@
 		ADD_PRIORIDADE_OPTIONS.slice(1).map((o) => ({
 			value: o.value,
 			label: o.label,
-			dot: PRIORIDADE_DOT[o.value]
+			dot: priorityDotColor(o.value)
 		}))
 	);
 	const statusSelectOptions = $derived<SelectMenuOption[]>(

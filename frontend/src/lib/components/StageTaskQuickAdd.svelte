@@ -34,6 +34,7 @@
 	import type { TaskAssignee, TaskCard } from '$lib/types/tasks';
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
 	import { normalizeStatus } from '$lib/utils/taskStatus';
+	import { priorityDotColor } from '$lib/utils/taskLabels';
 	import TaskHubTaskRow from '$lib/components/TaskHubTaskRow.svelte';
 	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
@@ -184,14 +185,8 @@
 		{ value: 'outros', label: 'Outros' }
 	];
 
-	// Dots dos chips: mesmas cores dos tons já usados no hub (taskLabels.ts —
-	// STATUS_TONE/STATUS_BAR_CLASS e priority-* tokens), não inventadas aqui.
-	const PRIORIDADE_DOT: Record<string, string> = {
-		baixa: 'var(--ds-color-priority-baixa)',
-		media: 'var(--ds-color-priority-media)',
-		alta: 'var(--ds-color-priority-alta)',
-		urgente: 'var(--ds-color-priority-urgente)'
-	};
+	// Dots: prioridade via priorityDotColor (taskLabels.ts); status com os tons
+	// já usados no hub (STATUS_TONE/STATUS_BAR_CLASS), não inventados aqui.
 	const STATUS_DOT: Record<string, string> = {
 		nao_iniciada: 'var(--ds-color-text-muted)',
 		em_andamento: 'var(--ds-color-status-andamento)',
@@ -203,7 +198,7 @@
 	// Placeholder "" vira `SelectMenu` sem opção (value null = mostra o placeholder).
 	const PRIORIDADE_MENU_OPTIONS: SelectMenuOption[] = ADD_PRIORIDADE_OPTIONS.filter(
 		(opt) => opt.value
-	).map((opt) => ({ value: opt.value, label: opt.label, dot: PRIORIDADE_DOT[opt.value] }));
+	).map((opt) => ({ value: opt.value, label: opt.label, dot: priorityDotColor(opt.value) }));
 	const TIPO_MENU_OPTIONS: SelectMenuOption[] = ADD_TIPO_OPTIONS.filter((opt) => opt.value).map(
 		(opt) => ({ value: opt.value, label: opt.label })
 	);
